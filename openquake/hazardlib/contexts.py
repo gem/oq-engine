@@ -602,10 +602,10 @@ class ContextMaker(object):
             setattr(ctx, param, value)
         return ctx
 
-    def get_ctxs(self, src, sitecol, step=1):
+    def get_ctxs(self, src, sitecol, src_id=None, step=1):
         """
         :param src:
-            a source object (already split) or a list of ruptures
+            a source object (already split) or a rupture in event based
         :param sitecol:
             a (filtered) SiteCollection
         :param step:
@@ -613,16 +613,17 @@ class ContextMaker(object):
         :returns:
             fat RuptureContexts sorted by mag
         """
-        if step > 1:  # in estimate_weight
-            ruptures = list(src.few_ruptures())[::step]
-        else:
-            ruptures = self._gen_rups(src, sitecol)
         ctxs = []
         fewsites = len(sitecol.complete) <= self.max_sites_disagg
+        if hasattr(src, 'source_id'):
+            rups = self._gen_rups(src, sitecol, step)
+            src_id = src.id
+        else:
+            rups = src  # in event based a list with a single rupture
 
         # Create the distance cache. A dictionary of dictionaries
         dcache = {}
-        for rup in ruptures:
+        for rup in rups:
             caching = (isinstance(rup.surface, MultiSurface) and
                        hasattr(rup.surface.surfaces[0], 'suid'))
             sites = getattr(rup, 'sites', sitecol)
@@ -654,7 +655,7 @@ class ContextMaker(object):
                         reqv**2 + rup.hypocenter.depth**2)
             for name in r_sites.array.dtype.names:
                 setattr(ctx, name, r_sites[name])
-            ctx.src_id = src_id if isinstance(src, list) else src.id
+            ctx.src_id = src_id
             for par in self.REQUIRES_DISTANCES | {'rrup'}:
                 setattr(ctx, par, getattr(dctx, par))
             if fewsites:
@@ -697,13 +698,12 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
-    def _ruptures(self, src, filtermag=None, point_rup=False):
+    def _ruptures(self, src, filtermag=None, step=1):
         with self.ir_mon:
             return list(src.iter_ruptures(
-                shift_hypo=self.shift_hypo,
-                mag=filtermag, point_rup=point_rup))
+                shift_hypo=self.shift_hypo, mag=filtermag))[::step]
 
-    def _gen_rups(self, src, sites):
+    def _gen_rups(self, src, sites, step):
         # yield ruptures, each one with a .sites attribute
         def rups(rupiter, sites):
             for rup in rupiter:
@@ -712,19 +712,15 @@ class ContextMaker(object):
         if getattr(src, 'location', None) and src.count_nphc() > 1:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
-            for r, s in self._cps_rups(src, sites):
+            for r, s in self._cps_rups(src, sites, step):
                 yield from rups(r, s)
         else:  # just add the ruptures
-            yield from rups(self._ruptures(src), sites)
+            yield from rups(self._ruptures(src, step), sites)
 
-    def _cps_rups(self, src, sites, fast=False):
+    def _cps_rups(self, src, sites, step):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        if fast:  # in preclassical
-            rups = src._pointruptures(step=5)
-        else:
-            rups = src.iruptures()
-        for rup in rups:
+        for rup in src.iruptures():
             psdist = self.pointsource_distance + src.get_radius(rup)
             close = sites.filter(cdist <= psdist)
             far = sites.filter(cdist > psdist)
@@ -732,15 +728,15 @@ class ContextMaker(object):
                 if close is None:  # all is far, common for small mag
                     yield [rup], sites
                 else:  # something is close
-                    yield self._ruptures(src, rup.mag, fast), sites
+                    yield self._ruptures(src, rup.mag, step), sites
             else:  # many sites
                 if close is None:  # all is far
                     yield [rup], far
                 elif far is None:  # all is close
-                    yield self._ruptures(src, rup.mag, fast), close
+                    yield self._ruptures(src, rup.mag, step), close
                 else:  # some sites are far, some are close
                     yield [rup], far
-                    yield self._ruptures(src, rup.mag, fast), close
+                    yield self._ruptures(src, rup.mag, step), close
 
     # not used by the engine, is is meant for notebooks
     def get_poes(self, srcs, sitecol, collapse_level=-1):
@@ -984,9 +980,8 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        step = 25 if src.code == b'p' else 5
         try:
-            ctxs = self.get_ctxs(src, sites, step)
+            ctxs = self.get_ctxs(src, sites, step=5)
         except ValueError:
             sys.stderr.write('In source %s\n' % src.source_id)
             raise
