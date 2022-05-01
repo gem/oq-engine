@@ -991,7 +991,12 @@ class ContextMaker(object):
         if not ctxs:
             return src.num_ruptures if N == 1 else 0
         nsites = numpy.array([len(ctx) for ctx in ctxs])
-        return src.num_ruptures * (nsites.mean() / N + .02)
+        if hasattr(src, 'pointsources'):  # ComplexFaultSource
+            eff_rups = src.num_ruptures / len(src.pointsources)
+        else:
+            eff_rups = src.num_ruptures
+        weight = eff_rups * (nsites.mean() / N + .02)
+        return weight
 
     def set_weight(self, sources, srcfilter, mon=Monitor()):
         """
