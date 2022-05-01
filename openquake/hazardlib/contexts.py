@@ -18,7 +18,6 @@
 
 import os
 import abc
-import sys
 import copy
 import time
 import operator

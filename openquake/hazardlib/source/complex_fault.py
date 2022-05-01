@@ -184,7 +184,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         """
         step = kwargs.get('step', 1)
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
-            self.edges, self.rupture_mesh_spacing*step)
+            self.edges, self.rupture_mesh_spacing)
         whole_fault_mesh = whole_fault_surface.mesh
         cell_center, cell_length, cell_width, cell_area = (
             whole_fault_mesh.get_cell_dimensions())
@@ -199,7 +199,7 @@ class ComplexFaultSource(ParametricSeismicSource):
             rupture_slices = _float_ruptures(
                 rupture_area, rupture_length, cell_area, cell_length)
             occurrence_rate = mag_occ_rate / float(len(rupture_slices))
-            for rupture_slice in rupture_slices[::step]:
+            for rupture_slice in rupture_slices[::step**2]:
                 mesh = whole_fault_mesh[rupture_slice]
                 # XXX: use surface centroid as rupture's hypocenter
                 # XXX: instead of point with middle index
