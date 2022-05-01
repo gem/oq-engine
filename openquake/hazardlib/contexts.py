@@ -727,7 +727,7 @@ class ContextMaker(object):
     def _cps_rups(self, src, sites, step):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        for rup in src.iruptures():
+        for rup in list(src.iruptures())[::step]:
             psdist = self.pointsource_distance + src.get_radius(rup)
             close = sites.filter(cdist <= psdist)
             far = sites.filter(cdist > psdist)
