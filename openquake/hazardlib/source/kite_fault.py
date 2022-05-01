@@ -138,9 +138,9 @@ class KiteFaultSource(ParametricSeismicSource):
 
             # Compute the area, length and width of the ruptures
             area = msr.get_median_area(mag=mag, rake=self.rake)
-            lng, wdt = get_discrete_dimensions(area, self.rupture_mesh_spacing,
-                                               self.rupture_aspect_ratio,
-                                               self.profiles_sampling)
+            lng, wdt = get_discrete_dimensions(
+                area, self.rupture_mesh_spacing * step,
+                self.rupture_aspect_ratio, self.profiles_sampling)
 
             # Get the number of nodes along the strike and dip. Note that
             # len and wdt should be both multiples of the sampling distances
@@ -175,7 +175,7 @@ class KiteFaultSource(ParametricSeismicSource):
             occurrence_rate = mag_occ_rate / len(ruptures)
 
             # Rupture generator
-            for rup in ruptures[::step]:
+            for rup in ruptures:
                 hypocenter = rup[0].get_center()
                 # Yield an instance of a ParametricProbabilisticRupture
                 yield ppr(mag, self.rake, self.tectonic_region_type,

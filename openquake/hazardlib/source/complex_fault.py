@@ -184,7 +184,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         """
         step = kwargs.get('step', 1)
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
-            self.edges, self.rupture_mesh_spacing)
+            self.edges, self.rupture_mesh_spacing*step)
         whole_fault_mesh = whole_fault_surface.mesh
         cell_center, cell_length, cell_width, cell_area = (
             whole_fault_mesh.get_cell_dimensions())
