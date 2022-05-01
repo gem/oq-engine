@@ -154,7 +154,7 @@ class SimpleFaultSource(ParametricSeismicSource):
             num_rup = num_rup_along_length * num_rup_along_width
             occurrence_rate = mag_occ_rate / float(num_rup)
             for first_row in range(num_rup_along_width)[::step]:
-                for first_col in range(num_rup_along_length):
+                for first_col in range(num_rup_along_length)[::step]:
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
                                             first_col: first_col + rup_cols]
 

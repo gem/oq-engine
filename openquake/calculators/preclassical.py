@@ -83,6 +83,7 @@ def preclassical(srcs, sites, cmaker, monitor):
     # this is also prefiltering the split sources
     mon = monitor('weighting sources', measuremem=False)
     cmaker.set_weight(dic[grp_id], sf, mon)
+    # print(mon.duration, [s.source_id for s in dic[grp_id]])
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
     return dic

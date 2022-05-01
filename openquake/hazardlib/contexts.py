@@ -987,12 +987,11 @@ class ContextMaker(object):
             return 0
         src.nsites = len(sites)
         N = len(srcfilter.sitecol.complete)  # total sites
-        ctxs = self.get_ctxs(src, sites, step=5)  # reduced number
-        nrups = src.num_ruptures  # total number
+        ctxs = self.get_ctxs(src, sites, step=10)  # reduced number
         if not ctxs:
-            return nrups if N == 1 else 0
+            return src.num_ruptures if N == 1 else 0
         nsites = numpy.array([len(ctx) for ctx in ctxs])
-        return nrups * (nsites.mean() / N + .02)
+        return src.num_ruptures * (nsites.mean() / N + .02)
 
     def set_weight(self, sources, srcfilter, mon=Monitor()):
         """

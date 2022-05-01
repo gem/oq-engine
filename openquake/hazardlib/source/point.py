@@ -156,7 +156,7 @@ def _gen_ruptures(src, nplanes=(), hypos=(), filtermag=None,
                         surface.hc, surface, rate,
                         src.temporal_occurrence_model)
     else:  # in preclassical return point ruptures (fast)
-        for mrate, mag in list(zip(rates, mags))[::step]:
+        for mrate, mag in list(zip(rates, mags))[::-step]:
             np = nplanes[0]
             rate = mrate * np_probs[0] * hc_probs[0]
             yield PointRupture(
