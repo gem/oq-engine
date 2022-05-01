@@ -992,7 +992,7 @@ class ContextMaker(object):
             return src.num_ruptures if N == 1 else 0
         nsites = numpy.array([len(ctx) for ctx in ctxs])
         if hasattr(src, 'pointsources'):  # ComplexFaultSource
-            eff_rups = src.num_ruptures / len(src.pointsources)
+            eff_rups = src.num_ruptures / 5  # heuristic
         else:
             eff_rups = src.num_ruptures
         weight = eff_rups * (nsites.mean() / N + .02)
