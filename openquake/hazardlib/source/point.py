@@ -143,23 +143,25 @@ def _gen_ruptures(src, nplanes=(), hypos=(), filtermag=None,
         hypos = [Point(src.location.x, src.location.y, dep) for dep in depths]
     else:
         hc_probs = [1.]
-    if step == 1:  # regular case
+    if step == 1:  # regular case, return full ruptures
         surfin = src.get_surfin(mags, nplanes)
         surfaces = build_planar_surfaces(surfin, hypos, shift_hypo)
-    for m, mag in enumerate(mags[::step]):
-        for n, np in enumerate(nplanes[::step]):
-            for d, hypo in enumerate(hypos[::step]):
-                rate = rates[m] * np_probs[n] * hc_probs[d]
-                if step > 1:  # in preclassical, fast
-                    yield PointRupture(
-                        mag, src.tectonic_region_type, hypo, np.strike,
-                        np.rake, rate, src.temporal_occurrence_model)
-                else:  # regular case
+        for m, mag in enumerate(mags):
+            for n, np in enumerate(nplanes):
+                for d, hypo in enumerate(hypos):
+                    rate = rates[m] * np_probs[n] * hc_probs[d]
                     surface = surfaces[m, n, d]
                     yield ParametricProbabilisticRupture(
                         mag, np.rake, src.tectonic_region_type,
                         surface.hc, surface, rate,
                         src.temporal_occurrence_model)
+    else:  # in preclassical return point ruptures (fast)
+        for mrate, mag in list(zip(rates, mags))[::step]:
+            np = nplanes[0]
+            rate = mrate * np_probs[0] * hc_probs[0]
+            yield PointRupture(
+                mags[0], src.tectonic_region_type, hypos[0], np.strike,
+                np.rake, rate, src.temporal_occurrence_model)
 
 
 class PointSource(ParametricSeismicSource):

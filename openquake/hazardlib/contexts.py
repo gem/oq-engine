@@ -703,11 +703,8 @@ class ContextMaker(object):
     def _ruptures(self, src, filtermag=None, step=1):
         with self.ir_mon:
             if step > 1:  # in preclassical
-                if hasattr(src, 'few_ruptures'):
-                    irups = src.few_ruptures()
-                else:  # pointlike sources
-                    irups = src.iter_ruptures(
-                        shift_hypo=self.shift_hypo, mag=filtermag, step=step)
+                irups = src.iter_ruptures(
+                    shift_hypo=self.shift_hypo, mag=filtermag, step=step)
             else:  # regular case
                 irups = src.iter_ruptures(
                     shift_hypo=self.shift_hypo, mag=filtermag)
