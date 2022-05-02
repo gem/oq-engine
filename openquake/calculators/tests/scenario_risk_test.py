@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
+import unittest
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
     case_6a, case_7, case_8, case_10, occupants, case_master,
@@ -139,7 +140,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_1g(self):
         out = self.run_calc(case_1g.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
-        [fname] = out['aggrisk', 'csv']
+        [_tot, fname] = out['aggrisk', 'csv']
         self.assertEqualFiles('expected/agg-gsimltp_@.csv', fname)
 
     def test_case_1h(self):
@@ -194,14 +195,14 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         aac(tot10, tot20, atol=.0001)  # must be around 230.0107
 
         # check aggregate_by site_id
-        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        [_tot, fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
     def test_case_8(self):
         # a complex scenario_risk from GMFs where the hazard sites are
         # not in the asset locations
         self.run_calc(case_8.__file__, 'job.ini')
-        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        [_tot, fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
         agglosses = extract(self.calc.datastore, 'agg_losses/structural')
@@ -233,6 +234,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/realizations.csv', fname)
 
     def test_case_shapefile(self):
+        try:
+            import shapefile
+        except ImportError:
+            raise unittest.SkipTest('Missing pyshp')
         self.run_calc(case_shapefile.__file__, 'prepare_job.ini')
         pre_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_shapefile.__file__, 'job.ini',

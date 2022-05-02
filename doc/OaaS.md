@@ -58,9 +58,9 @@ I will also be necessary to configure three directories in the
 `openquake.cfg` file:
 ```
 [directory]
-shared_dir = /var/lib/openquake
-mosaic_dir = /var/lib/openquake/mosaic
-custom_tmp = /var/lib/openquake/tmp
+shared_dir = /opt/openquake
+mosaic_dir = /opt/openquake/mosaic
+custom_tmp = /op/openquake/tmp
 ```
 The `mosaic_dir` and `custom_tmp` directories must subdirectories of
 `shared_dir`; in this way the workers will be able to read the models
@@ -71,7 +71,7 @@ outputs at download time and unzip the inputs at start time. Actually
 the WebUI is designed so that the received archives are unzipped in
 directories of kind
 ```
-/var/lib/openquake/tmp/calc_XXX
+/opt/openquake/tmp/calc_XXX
 ```
 where `XXX` is the number of the calculation being executed.
 
@@ -80,9 +80,11 @@ out of disk space. After a calculation started, the inputs
 can be safely removed since they are copied in the datastore
 and a calculation can always be repeated.
 
-On top of these directories, there is a fourth essential directory:
+On top of these directories, there are two other essential directories:
 ```
-/var/lib/openquake/oqdata
+/opt/openquake/venv
+/opt/openquake/oqdata
 ```
-That also must be a subdirectory of the `shared_dir`; its purpose is to
-store the database and the .hdf5 calculation files.
+They both must be subdirectories of the `shared_dir`;
+`/opt/openquake/venv` stores the source code and `/opt/openquake/oqdata`
+the database and the .hdf5 calculation files.

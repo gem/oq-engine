@@ -18,7 +18,6 @@
 
 import os
 import abc
-import sys
 import copy
 import time
 import operator
@@ -30,18 +29,13 @@ from unittest.mock import patch
 import numpy
 import pandas
 from scipy.interpolate import interp1d
-try:
-    import numba
-except ImportError:
-    numba = None
-
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
-from openquake.baselib.performance import Monitor, split_array
+from openquake.baselib.performance import Monitor, split_array, compile, numba
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.tom import registry, get_probability_no_exceedance
+from openquake.hazardlib.tom import registry, get_pnes, FatedTOM
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
@@ -62,6 +56,51 @@ KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
 IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
+
+
+def get_maxsize(M, G):
+    """
+    :returns: an integer N such that arrays N*M*G fit in the CPU cache
+    """
+    maxs = 1024**2 // (8*M*G)
+    assert maxs > 1, maxs
+    return min(maxs, 5000)
+
+
+# numbified below
+def update_pmap_n(dic, poes, rates, probs_occur, sids, itime):
+    for poe, rate, probs, sid in zip(poes, rates, probs_occur, sids):
+        dic[sid] *= get_pnes(rate, probs, poe, itime)
+
+
+# numbified below
+def update_pmap_c(dic, poes, rates, probs_occur, allsids, sizes, itime):
+    start = 0
+    for poe, rate, probs, size in zip(poes, rates, probs_occur, sizes):
+        pne = get_pnes(rate, probs, poe, itime)
+        for sid in allsids[start:start + size]:
+            dic[sid] *= pne
+        start += size
+
+
+if numba:
+    t = numba.types
+    sig = t.void(t.DictType(t.uint32, t.float64[:, :]),  # dic
+                 t.float64[:, :, :],                     # poes
+                 t.float64[:],                           # rates
+                 t.float64[:, :],                        # probs_occur
+                 t.uint32[:],                            # sids
+                 t.float64)                              # itime
+    update_pmap_n = compile(sig)(update_pmap_n)
+
+    sig = t.void(t.DictType(t.uint32, t.float64[:, :]),  # dic
+                 t.float64[:, :, :],                     # poes
+                 t.float64[:],                           # rates
+                 t.float64[:, :],                        # probs_occur
+                 t.uint32[:],                            # allsids
+                 t.uint32[:],                            # sizes
+                 t.float64)                              # itime
+    update_pmap_c = compile(sig)(update_pmap_c)
 
 
 def size(imtls):
@@ -331,7 +370,7 @@ class ContextMaker(object):
             self.tom = registry['PoissonTOM'](self.investigation_time)
         self.ses_seed = param.get('ses_seed', 42)
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
-        self.truncation_level = param.get('truncation_level')
+        self.truncation_level = param.get('truncation_level', 99.)
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = param.get('split_sources')
@@ -393,7 +432,8 @@ class ContextMaker(object):
         self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
-        self.pne_mon = monitor('computing pnes', measuremem=False)
+        self.pne_mon = monitor('composing pnes', measuremem=False)
+        self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
@@ -498,15 +538,9 @@ class ContextMaker(object):
         :returns: a list RuptureContexts
         """
         allctxs = []
-        cnt = 0
         for i, src in enumerate(srcs):
             src.id = i
-            rctxs = []
-            for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
-                rup.rup_id = cnt
-                rctxs.append(self.make_rctx(rup))
-                cnt += 1
-            allctxs.extend(self.get_ctxs(rctxs, sitecol, src.id))
+            allctxs.extend(self.get_ctxs(src, sitecol))
         allctxs.sort(key=operator.attrgetter('mag'))
         return allctxs
 
@@ -567,27 +601,30 @@ class ContextMaker(object):
             setattr(ctx, param, value)
         return ctx
 
-    def get_ctxs(self, src_or_ruptures, sitecol, src_id=None):
+    def get_ctxs(self, src, sitecol, src_id=None, step=1):
         """
-        :param src_or_ruptures:
-            a source or a list of ruptures generated by a source
+        :param src:
+            a source object (already split) or a list of ruptures
         :param sitecol:
             a (filtered) SiteCollection
         :param src_id:
-            the numeric ID of the source (to be assigned to the ruptures)
+            integer source ID used where src is actually a list
+        :param step:
+            > 1 only in preclassical
         :returns:
             fat RuptureContexts sorted by mag
         """
-        if hasattr(src_or_ruptures, 'source_id'):
-            irups = self._gen_rups(src_or_ruptures, sitecol)
-        else:
-            irups = src_or_ruptures
         ctxs = []
         fewsites = len(sitecol.complete) <= self.max_sites_disagg
+        if hasattr(src, 'source_id'):  # is a real source
+            rups = self._gen_rups(src, sitecol, step)
+            src_id = src.id
+        else:  # in event based we get a list with a single rupture
+            rups = src
 
         # Create the distance cache. A dictionary of dictionaries
         dcache = {}
-        for rup in irups:
+        for rup in rups:
             caching = (isinstance(rup.surface, MultiSurface) and
                        hasattr(rup.surface.surfaces[0], 'suid'))
             sites = getattr(rup, 'sites', sitecol)
@@ -662,32 +699,32 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
-    def _ruptures(self, src, filtermag=None, point_rup=False):
-        return src.iter_ruptures(
-            shift_hypo=self.shift_hypo, mag=filtermag, point_rup=point_rup)
-
-    def _gen_rups(self, src, sites):
+    def _gen_rups(self, src, sites, step):
         # yield ruptures, each one with a .sites attribute
         def rups(rupiter, sites):
             for rup in rupiter:
                 rup.sites = sites
                 yield rup
-        if getattr(src, 'location', None):
+        if getattr(src, 'location', None) and src.count_nphc() > 1:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
-            for r, s in self._cps_rups(src, sites):
+            for r, s in self._cps_rups(src, sites, step):
                 yield from rups(r, s)
         else:  # just add the ruptures
-            yield from rups(self._ruptures(src), sites)
+            with self.ir_mon:
+                lst = list(src.iter_ruptures(
+                    shift_hypo=self.shift_hypo, step=step))
+            yield from rups(lst, sites)
 
-    def _cps_rups(self, src, sites, point_rup=False):
-        if src.count_nphc() == 1:  # nothing to collapse
-            for rup in src.iruptures(point_rup):
-                yield self._ruptures(src, rup.mag, point_rup), sites
-            return
+    def _cps_rups(self, src, sites, step):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        for rup in src.iruptures(point_rup):
+        with self.ir_mon:
+            allrups = numpy.array(
+                list(src.iter_ruptures(shift_hypo=self.shift_hypo, step=step)))
+        m_idx = numpy.array([rup.m for rup in allrups])
+        for rup in src.iruptures(step):
+            rups = allrups[m_idx == rup.m]  # ruptures with magnitude index `m`
             psdist = self.pointsource_distance + src.get_radius(rup)
             close = sites.filter(cdist <= psdist)
             far = sites.filter(cdist > psdist)
@@ -695,15 +732,15 @@ class ContextMaker(object):
                 if close is None:  # all is far, common for small mag
                     yield [rup], sites
                 else:  # something is close
-                    yield self._ruptures(src, rup.mag, point_rup), sites
+                    yield rups, sites
             else:  # many sites
                 if close is None:  # all is far
                     yield [rup], far
                 elif far is None:  # all is close
-                    yield self._ruptures(src, rup.mag, point_rup), close
+                    yield rups, close
                 else:  # some sites are far, some are close
                     yield [rup], far
-                    yield self._ruptures(src, rup.mag, point_rup), close
+                    yield rups, close
 
     # not used by the engine, is is meant for notebooks
     def get_poes(self, srcs, sitecol, collapse_level=-1):
@@ -751,31 +788,62 @@ class ContextMaker(object):
         :param probmap: if not None, update it
         :returns: a new ProbabilityMap if probmap is None
         """
-        rup_indep = self.rup_indep
         if probmap is None:  # create new pmap
             pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
+        if self.tom is None:
+            itime = -1.
+        elif isinstance(self.tom, FatedTOM):
+            itime = 0.
+        else:
+            itime = self.tom.time_span
+        if numba:
+            dic = numba.typed.Dict.empty(
+                key_type=t.uint32,
+                value_type=t.float64[:, :])
+        else:
+            dic = {}  # sid -> array of shape (L, G)
         for ctx in self.recarrays(ctxs):
-            for poes, pnes, weights, slcsids in self.gen_poes(ctx):
-                # the following is relatively fast
-                for poe, pne, wei, sids in zip(poes, pnes, weights, slcsids):
-                    # sids has length 1 unless there is collapsing
-                    for sid in sids:
-                        probs = pmap.setdefault(sid, rup_indep).array  # (L, G)
-                        if rup_indep:
-                            probs *= pne
-                        else:  # mutex nonparametric rupture
-                            # USAmodel, New Madrid cluster
-                            probs += (1. - pne) * wei
+            # allocating pmap in advance
+            for sid in numpy.unique(ctx.sids):
+                dic[sid] = pmap.setdefault(sid, self.rup_indep).array
+            for poes, ctxt, slcsids in self.gen_poes(ctx):
+                probs_occur = getattr(ctxt, 'probs_occur',
+                                      numpy.zeros((len(ctxt), 0)))
+                rates = getattr(ctxt, 'occurrence_rate',
+                                numpy.zeros(len(ctxt)))
+                with self.pne_mon:
+                    if isinstance(slcsids, numpy.ndarray):
+                        # no collapse: avoiding an inner loop can give a 25%
+                        if self.rup_indep:
+                            update_pmap_n(dic, poes, rates, probs_occur,
+                                          ctxt.sids, itime)
+                        else:  # USAmodel, New Madrid cluster
+                            z = zip(poes, rates, probs_occur,
+                                    ctxt.weight, ctxt.sids)
+                            for poe, rate, probs, wei, sid in z:
+                                pne = get_pnes(rate, probs, poe, itime)
+                                dic[sid] += (1. - pne) * wei
+                    else:  # collapse is possible only for rup_indep
+                        allsids = []
+                        sizes = []
+                        for sids in slcsids:
+                            allsids.extend(sids)
+                            sizes.append(len(sids))
+                        update_pmap_c(dic, poes, rates, probs_occur,
+                                      U32(allsids), U32(sizes), itime)
 
         if probmap is None:  # return the new pmap
-            return ~pmap if rup_indep else pmap
+            if self.rup_indep:
+                for arr in dic.values():
+                    arr[:] = 1. - arr
+            return pmap
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs):
         """
-        :param ctxs: a list of contexts
+        :param ctxs: a list of contexts with N=sum(len(ctx) for ctx in ctxs)
         :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
         if not hasattr(self, 'imts'):
@@ -804,7 +872,8 @@ class ContextMaker(object):
                 start = slc.stop
             if self.adj[gsim]:
                 self.adj[gsim] = numpy.concatenate(self.adj[gsim])
-            if self.truncation_level and (out[1, g] == 0.).any():
+            if self.truncation_level not in (0, 99.) and (
+                    out[1, g] == 0.).any():
                 raise ValueError('Total StdDev is zero for %s' % gsim)
         return out
 
@@ -871,12 +940,13 @@ class ContextMaker(object):
     def gen_poes(self, ctx):
         """
         :param ctx: a vectorized context (recarray) of size N
-        :yields: poes, pnes, weights, slcsids with poes of shape (N, L, G)
+        :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
-        L, G = self.loglevels.size, len(self.gsims)
-        maxsize = TWO32 // (L * G * 128)  # .25 GB per poes
-        assert maxsize, 'L * G > 33_554_432!'
+        (M, L1), G = self.loglevels.array.shape, len(self.gsims)
+        maxsize = get_maxsize(M, G)
+        # L1 is the reduction factor such that the NLG arrays have
+        # the same size as the GMN array and fit in the CPU cache
 
         # collapse if possible
         with self.col_mon:
@@ -886,59 +956,51 @@ class ContextMaker(object):
         if ctx.nbytes > maxsize:
             slices = gen_slices(0, len(ctx), maxsize)
         else:
-            slices = [slice(None)]
+            slices = [slice(0, len(ctx))]
 
-        for slc in slices:
-            slcsids = allsids[slc]
-            ctxt = ctx[slc]
+        for bigslc in slices:
+            s = bigslc.start
             with self.gmf_mon:
-                mean_stdt = self.get_mean_stds([ctxt])
-            with self.poe_mon:
-                poes = numpy.zeros((len(ctxt), L, G))
-                for g, gsim in enumerate(self.gsims):
-                    ms = mean_stdt[:2, g]
-                    # builds poes of shape (n, L, G)
-                    if self.af:  # kernel amplification method for single site
-                        poes[:, :, g] = get_poes_site(ms, self, ctxt)
-                    else:  # regular case
-                        poes[:, :, g] = gsim.get_poes(ms, self, ctxt)
-            with self.pne_mon:
-                if hasattr(ctx, 'probs_occur'):  # nonparametric
-                    probs_or_tom = ctxt.probs_occur
-                else:  # parametric ruptures
-                    probs_or_tom = self.tom
-                weights = getattr(ctxt, 'weight', numpy.zeros(len(ctxt)))
-                pnes = get_probability_no_exceedance(ctxt, poes, probs_or_tom)
-            yield poes, pnes, weights, slcsids
+                mean_stdt = self.get_mean_stds([ctx[bigslc]])
+            for slc in gen_slices(bigslc.start, bigslc.stop, maxsize // L1):
+                slcsids = allsids[slc]
+                ctxt = ctx[slc]
+                self.slc = slice(slc.start - s, slc.stop - s)  # in get_poes
+                with self.poe_mon:
+                    poes = numpy.zeros((len(ctxt), M*L1, G))
+                    for g, gsim in enumerate(self.gsims):
+                        ms = mean_stdt[:2, g, :, self.slc]
+                        # builds poes of shape (n, L, G)
+                        if self.af:  # kernel amplification method
+                            poes[:, :, g] = get_poes_site(ms, self, ctxt)
+                        else:  # regular case
+                            poes[:, :, g] = gsim.get_poes(ms, self, ctxt)
+                yield poes, ctxt, slcsids
 
+    # tested in test_collapse_small
     def estimate_weight(self, src, srcfilter):
-        N = len(srcfilter.sitecol.complete)
+        """
+        :param src: a source object
+        :param srcfilter: a SourceFilter instance
+        :returns: the weight of the source (num_ruptures * <num_sites/N>)
+        """
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        if src.code in b'pP':
-            allrups = []
-            for irups, r_sites in self._cps_rups(src, sites, point_rup=True):
-                for rup in irups:
-                    rup.sites = r_sites
-                    allrups.append(rup)
-            rups = allrups[::25]
-            nrups = len(allrups)
-            # print(nrups, len(rups))
-        else:
-            rups = list(src.few_ruptures())
-            nrups = src.num_ruptures
-        try:
-            ctxs = self.get_ctxs(rups, sites)
-        except ValueError:
-            sys.stderr.write('In source %s\n' % src.source_id)
-            raise
+        N = len(srcfilter.sitecol.complete)  # total sites
+        ctxs = self.get_ctxs(src, sites, step=10)  # reduced number
         if not ctxs:
-            return nrups if N == 1 else 0
+            return src.num_ruptures if N == 1 else 0
         nsites = numpy.array([len(ctx) for ctx in ctxs])
-        return nrups * (nsites.mean() / N + .02)
+        if (hasattr(src, 'location') and src.count_nphc() > 1 and
+                self.pointsource_distance < 1000):
+            eff_rups = src.num_ruptures / 6  # heuristic
+        else:
+            eff_rups = src.num_ruptures
+        weight = eff_rups * (nsites.mean() / N + .02)
+        return weight
 
     def set_weight(self, sources, srcfilter, mon=Monitor()):
         """
@@ -1020,9 +1082,9 @@ class PmapMaker(object):
             nbytes += 8 * dparams * nsites
         return nbytes
 
-    def _get_ctxs(self, rups, sites, srcid):
+    def _get_ctxs(self, src, sites):
         with self.cmaker.ctx_mon:
-            ctxs = self.cmaker.get_ctxs(rups, sites, srcid)
+            ctxs = self.cmaker.get_ctxs(src, sites)
             if self.fewsites:  # keep rupdata in memory
                 for ctx in ctxs:
                     self.rupdata.append(ctx)
@@ -1031,20 +1093,19 @@ class PmapMaker(object):
     def _make_src_indep(self):
         # sources with the same ID
         pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
-        # split the sources only if there is more than 1 site
-        filt = (self.srcfilter.filter if not self.split_sources or self.N == 1
-                else self.srcfilter.split)
         cm = self.cmaker
         allctxs = []
-        for src, sites in filt(self.group):
+        totlen = 0
+        for src, sites in self.srcfilter.split(self.group):
             t0 = time.time()
             if self.fewsites:
                 sites = sites.complete
-            ctxs = self._get_ctxs(cm._gen_rups(src, sites), sites, src.id)
+            ctxs = self._get_ctxs(src, sites)
             allctxs.extend(ctxs)
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
-            if nsites and sum(len(ctx) for ctx in allctxs) > MAXSIZE:
+            totlen += nsites
+            if nsites and totlen > MAXSIZE:
                 cm.get_pmap(allctxs, pmap)
                 allctxs.clear()
             dt = time.time() - t0
@@ -1065,7 +1126,7 @@ class PmapMaker(object):
         for src, sites in self.srcfilter.filter(self.group):
             t0 = time.time()
             pm = ProbabilityMap(cm.imtls.size, len(cm.gsims))
-            ctxs = self._get_ctxs(cm._ruptures(src), sites, src.id)
+            ctxs = self._get_ctxs(src, sites)
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
@@ -1089,19 +1150,18 @@ class PmapMaker(object):
         dic = {'src_id': []}  # par -> array
         if not ctxs:
             return dic
-        ctx = ctxs[0]
+        z0 = numpy.zeros(0)
         for par in self.cmaker.get_ctx_params():
             pa = par[:-1] if par.endswith('_') else par
-            if pa not in vars(ctx):
-                continue
-            elif par.endswith('_'):
+            if par.endswith('_'):
                 if par == 'probs_occur_':
-                    lst = [getattr(ctx, pa, []) for ctx in ctxs]
+                    lst = [getattr(ctx, pa, z0) for ctx in ctxs]
                 else:
                     lst = [getattr(ctx, pa) for ctx in ctxs]
                 dic[par] = numpy.array(lst, dtype=object)
             else:
-                dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
+                dic[par] = numpy.array([getattr(ctx, par, numpy.nan)
+                                        for ctx in ctxs])
         dic['id'] = numpy.arange(len(ctxs)) * TWO32 + self.cmaker.out_no
         return dic
 
@@ -1256,7 +1316,7 @@ def get_mean_stds(gsim, ctx, imts, **kw):
     :param gsim: a single GSIM or a a list of GSIMs
     :param ctx: a RuptureContext or a recarray of size N
     :param imts: a list of M IMTs
-    :param mags: a list of magnitudes as strings (used only in GMPETables)
+    :param kw: additional keyword arguments
     :returns:
         an array of shape (4, M, N) obtained by applying the
         given GSIM, ctx amd imts, or an array of shape (G, 4, M, N)

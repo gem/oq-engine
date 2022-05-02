@@ -223,25 +223,25 @@ Traceback (most recent call last):
     array = download_array(array_or_id)
   File "/Users/openquake/openquake/oq-engine/openquake/hazardlib/shakemap.py", line 74, in download_array
     contents = json.loads(urlopen(url).read())[
-  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 223, in urlopen
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 223, in urlopen
     return opener.open(url, data, timeout)
-  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 526, in open
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 526, in open
     response = self._open(req, data)
-  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 544, in _open
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 544, in _open
     '_open', req)
-  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 504, in _call_chain
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 504, in _call_chain
     result = func(*args)
-  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 1361, in https_open
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 1361, in https_open
     context=self._context, check_hostname=self._check_hostname)
-  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 1320, in do_open
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 1320, in do_open
     raise URLError(err)
 urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:852)>
 ```
 
-Please have a look at `/Applications/Python 3.6/ReadMe.rtf` for possible solutions. If unsure run from a terminal the following command:
+Please have a look at `/Applications/Python 3.8/ReadMe.rtf` for possible solutions. If unsure run from a terminal the following command:
 
 ```bash
-sudo /Applications/Python\ 3.6/install_certificates.command  # NB: use the appropriate Python version!
+sudo /Applications/Python\ 3.8/install_certificates.command  # NB: use the appropriate Python version!
 ```
 
 ******

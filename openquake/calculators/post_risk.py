@@ -25,7 +25,7 @@ import pandas
 
 from openquake.baselib import general, parallel, python3compat
 from openquake.commonlib import datastore, logs
-from openquake.risklib import scientific
+from openquake.risklib import asset, scientific
 from openquake.engine import engine
 from openquake.calculators import base, views
 
@@ -179,6 +179,8 @@ def store_agg(dstore, rbe_df, num_events):
     Build the aggrisk and aggcurves tables from the risk_by_event table
     """
     oq = dstore['oqparam']
+    if oq.investigation_time:
+        T = oq.investigation_time * oq.ses_per_logic_tree_path
     size = dstore.getsize('risk_by_event')
     logging.info('Building aggrisk from %s of risk_by_event',
                  general.humansize(size))
@@ -205,7 +207,8 @@ def store_agg(dstore, rbe_df, num_events):
             ndamaged = sum(df[col].sum() for col in dmgs)
             aggrisk['dmg_0'].append(aggnumber[agg_id] - ndamaged / ne)
         for col in columns:
-            aggrisk[col].append(df[col].sum() / ne)
+            agg = df[col].sum()
+            aggrisk[col].append(agg/T if oq.investigation_time else agg/ne)
     fix_dtypes(aggrisk)
     aggrisk = pandas.DataFrame(aggrisk)
     dstore.create_df(
@@ -242,16 +245,15 @@ class PostRiskCalculator(base.RiskCalculator):
         self.reaggreate = False
         if oq.hazard_calculation_id and not ds.parent:
             ds.parent = datastore.read(oq.hazard_calculation_id)
-            self.aggkey = base.save_agg_values(
+            base.save_agg_values(
                 ds, self.assetcol, oq.loss_types, oq.aggregate_by)
             aggby = ds.parent['oqparam'].aggregate_by
-            self.reaggreate = aggby and oq.aggregate_by != aggby
+            self.reaggreate = (
+                aggby and oq.aggregate_by and oq.aggregate_by[0] not in aggby)
             if self.reaggreate:
+                [names] = aggby
                 self.num_tags = dict(
-                    zip(aggby, self.assetcol.tagcol.agg_shape(aggby)))
-        else:
-            assetcol = ds['assetcol']
-            self.aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)
+                    zip(names, self.assetcol.tagcol.agg_shape(names)))
         self.L = len(oq.loss_types)
         if self.R > 1:
             self.num_events = numpy.bincount(
@@ -278,7 +280,7 @@ class PostRiskCalculator(base.RiskCalculator):
                 self.datastore.set_shape_descr('src_loss_table',
                                                source=source_ids,
                                                loss_type=oq.loss_types)
-        K = len(self.aggkey) if oq.aggregate_by else 0
+        K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
         rbe_df = self.datastore.read_df('risk_by_event')
         if self.reaggreate:
             idxs = numpy.concatenate([
@@ -309,9 +311,7 @@ class PostRiskCalculator(base.RiskCalculator):
         if 'avg_losses-rlzs' in self.datastore:
             url = ('https://docs.openquake.org/oq-engine/advanced/'
                    'addition-is-non-associative.html')
-            num_haz_rlzs = len(self.datastore['weights'])
-            event_rates = oq.risk_event_rates(self.num_events, num_haz_rlzs)
-            K = len(self.aggkey) if oq.aggregate_by else 0
+            K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
             aggrisk = self.aggrisk[self.aggrisk.agg_id == K]
             avg_losses = self.datastore['avg_losses-rlzs'][:].sum(axis=0)
             # shape (R, L)
@@ -319,7 +319,7 @@ class PostRiskCalculator(base.RiskCalculator):
                 ri, li = int(row.rlz_id), int(row.loss_id)
                 # check on the sum of the average losses
                 avg = avg_losses[ri, li]
-                agg = row.loss * event_rates[ri]
+                agg = row.loss
                 if not numpy.allclose(avg, agg, rtol=.001):
                     logging.warning(
                         'Due to rounding errors inherent in floating-point '
@@ -334,9 +334,8 @@ def post_aggregate(calc_id: int, aggregate_by):
     parent = datastore.read(calc_id)
     oqp = parent['oqparam']
     aggby = aggregate_by.split(',')
-    for tagname in aggby:
-        if tagname not in oqp.aggregate_by:
-            raise ValueError('%r not in %s' % (tagname, oqp.aggregate_by))
+    if aggby and aggby[0] not in asset.tagset(oqp.aggregate_by):
+        raise ValueError('%r not in %s' % (aggby, oqp.aggregate_by))
     dic = dict(
         calculation_mode='reaggregate',
         description=oqp.description + '[aggregate_by=%s]' % aggregate_by,
@@ -350,5 +349,5 @@ def post_aggregate(calc_id: int, aggregate_by):
         parallel.Starmap.init()
         prc = PostRiskCalculator(oqp, log.calc_id)
         prc.assetcol = parent['assetcol']
-        prc.run(aggregate_by=aggby)
+        prc.run(aggregate_by=[aggby])
         engine.expose_outputs(prc.datastore)

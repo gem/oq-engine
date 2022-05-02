@@ -65,8 +65,7 @@ class Print(object):
 
     @classmethod
     def patch(cls):
-        bprint = 'builtins.print' if sys.version > '3' else '__builtin__.print'
-        return mock.patch(bprint, cls())
+        return mock.patch('builtins.print', cls())
 
 
 class InfoTestCase(unittest.TestCase):
@@ -444,60 +443,6 @@ class ZipTestCase(unittest.TestCase):
         names = sorted(zipfile.ZipFile(job_zip).namelist())
         self.assertIn('shakefile/usp000fjta.npy', names)
         shutil.rmtree(dtemp)
-
-
-class SourceModelShapefileConverterTestCase(unittest.TestCase):
-    """
-    Simple conversion test for the Source Model to shapefile converter
-    - more tests will follow
-    """
-
-    def setUp(self):
-        self.OUTDIR = tempfile.mkdtemp()
-        self.out = os.path.join(self.OUTDIR, 'smc')
-
-    def test_roundtrip_invalid(self):
-        # test the conversion to shapefile and back for an invalid file
-        smc = os.path.join(os.path.dirname(__file__),
-                           "data", "source_model_complete.xml")
-
-        sap.runline(
-            f'openquake.commands to_shapefile {smc} --output={self.out}')
-        shpfiles = ' '.join(os.path.join(self.OUTDIR, f)
-                            for f in os.listdir(self.OUTDIR))
-        sap.runline(
-            f'openquake.commands from_shapefile {shpfiles} -o{self.out}')
-
-        # test invalid file
-        with self.assertRaises(Exception) as ctx:
-            sap.runline(
-                f'openquake.commands to_shapefile -v {smc} -o{self.out}')
-        self.assertIn('Edges points are not in the right order',
-                      str(ctx.exception))
-
-    def test_roundtrip_valid_04(self):
-        # test the conversion to shapefile and back for a valid file NRML 0.4
-        ssm = os.path.join(os.path.dirname(__file__),
-                           "data", "sample_source_model.xml")
-        sap.runline(f'openquake.commands to_shapefile -v {ssm} -o{self.out}')
-        shpfiles = ' '.join(os.path.join(self.OUTDIR, f)
-                            for f in os.listdir(self.OUTDIR))
-        sap.runline(
-            f'openquake.commands from_shapefile -v {shpfiles} -o{self.out}')
-
-    def test_roundtrip_valid_05(self):
-        # test the conversion to shapefile and back for a valid file NRML 0.5
-        ssm = os.path.join(os.path.dirname(__file__),
-                           "data", "sample_source_model_05.xml")
-        sap.runline(f'openquake.commands to_shapefile -v {ssm} -o{self.out}')
-        shpfiles = ' '.join(os.path.join(self.OUTDIR, f)
-                            for f in os.listdir(self.OUTDIR))
-        sap.runline(
-            f'openquake.commands from_shapefile -v {shpfiles} -o{self.out}')
-
-    def tearDown(self):
-        # comment out the line below if you need to debug the test
-        shutil.rmtree(self.OUTDIR)
 
 
 class DbTestCase(unittest.TestCase):

@@ -1,4 +1,58 @@
   [Michele Simionato]
+  * Fixed a logging statement that could run out of memory in large calculations
+  * Optimized `iter_ruptures` for point sources by vectorizing the generation of
+    planar surfaces by magnitude, nodal plane and hypocenter
+
+  [Tom Son]
+  * Implemented a missing piece in Chiou & Youngs (2014) model
+    Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
+    when it falls below the predicted PGA
+
+  [Marco Pagani]
+  * Added the possibility of disaggregating in terms of epsilon*
+  * Added a method to compute the cross-correlation matrix
+
+  [Michele Simionato]
+  * Fixed disaggregation returning NaNs in some situations with
+    nonParametric/multiFaultSources
+  * Bug fix: not storing far away ruptures coming from multiFaultSources
+  * Implemented CScalingMSR
+  * Optimized context collapsing in classical calculations
+  * Setting `ps_grid_spacing` now sets the `pointsource_distance` too
+  * Saving memory in preclassical calculations on machines with 8 cores or less
+  * Changed the magnitude-dependent `maximum_distance` feature to discard
+    ruptures below `minmag` and above `maxmag`
+  * Added the ability to estimate the runtime of a calculation by using
+    the `--sample-sources` option
+  * Fixed a wrong formula in `modifiable_gmpe.add_between_within_stds`
+  * Reduced the stress on the memory in classical calculations, thus
+    improving the performance
+  * Setting the truncation_level to the empty string is now forbidden;
+    some GMFs calculations not setting truncation_level can now give
+    different results since truncation_level=None is now replaced with
+    truncation_level=99
+
+python3-oq-engine (3.14.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Changed the definition of `aggrisk`: dividing by the effective time
+  * Internal: removed flag `save_disk_space` since now it is always on
+  * Slightly changed the collapsing of nodal planes and hypocenters in
+    presence of the equivalent distance approximation (`reqv`)
+  * Extended `oq reduce_sm` to multiFaultSources
+  * Fixed the check on unique section IDs for multiFaultSources
+  * Implemented multi-aggregation with a syntax like
+    `aggregate_by=taxonomy,region;taxonomy;region`
+  * Removed the obsolete commands `oq to_shapefile` and `oq from_shapefile`
+    and turned pyshp into an optional dependency
+  * Setting `num_rlzs_disagg=0` is now valid and it means considering
+    all realizations in a disaggregation calculation
+  * Rounded the magnitudes in multiFaultSources to two digits
+
+  [Marco Pagani]
+  * Extended ModifiableGMPE to work with GMPETable and subclasses
+
+  [Michele Simionato]
   * Upgraded shapely from version 1.7 to version 1.8: this causes slight
     changes in the results for most calculations
   * Removed the not used (and not working) functionality `applyToSourceType`
@@ -6,8 +60,8 @@
     truncation_level is set to zero
 
   [Tom Son]
-  * Fixed a typo within Kuehn et al. (2020) model to include Z2.5 when the given
-    region is JAPAN
+  * Fixed a typo and a few bugs within Kuehn et al. (2020) model to include
+    Z2.5 when the given region is JAPAN
 
   [Michele Simionato]
   * Changed /extract/events to return events sorted by ID
@@ -19,7 +73,7 @@
   * Internal: introduced limited unique rupture IDs in classical calculations
     with few sites
 
-  [Prajacta Jadhav, Dharma Wijewickreme]
+  [Prajakta Jadhav, Dharma Wijewickreme]
   * Added GMPE Youd et al. (2002) and the corresponding site parameters
 
   [Michele Simionato]
@@ -41,6 +95,8 @@
   * Extended `oq postzip` to multiple files and `oq abort` to multiple jobs
   * Internal: changed install.py to install the venv in /opt/openquake/venv
   * Fixed a BOM issue on Windows when reading job.ini files
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 12 Apr 2022 12:27:58 +0000
 
 python3-oq-engine (3.13.0-1~xenial01) xenial; urgency=low
 

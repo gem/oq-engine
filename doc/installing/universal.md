@@ -9,7 +9,7 @@ Since version 3.11 of the OpenQuake-engine, there is a universal installation sc
 - **Note 5**: Users with no knowledge of virtual environments are referred to this page of the Python tutorial: https://docs.python.org/3/tutorial/venv.html
 - **Note 6**: Conda is not supported; some users have been able to run the OpenQuake-engine with Conda, but GEM is not using and not testing conda; you are on your own.
 
-The script allows the user to select between three different kinds of installations:
+The script allows the user to select between different kinds of installations:
 
 1. `devel` installation (Windows, macOS, and Linux)
 2. `user` installation (Windows, macOS, and Linux)
@@ -21,7 +21,8 @@ A few notes about macOS:
 - macOS 11.x (Big Sur) and macOS 12.x (Monterey) are not officially supported 
 but users have managed to install the engine on both operating systems
 using the system provided Python (version 3.8).
-- new Macs with the M1 CPU are unsupported
+- new Macs with the M1 CPU are unsupported but users have managed to install
+the engine via Rosetta or natively by using the system Python (version 3.9)
 - make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](../faq.md#certificate-verification-on-macOS).
 
 ## `devel` installation
@@ -171,8 +172,8 @@ C:\>python install.py devel --remove
 C:\>python install.py user --remove
 ```
 
-The calculation data (in `$HOME/oqdata` or `/var/lib/openquake/oqdata`) _WILL NOT_ be removed.
-You will have to remove these two directories manually, if needed.
+The calculation data (in the `oqdata` directory) WILL NOT be removed.
+You will have to remove the data manually, if desired.
 
 ***
 

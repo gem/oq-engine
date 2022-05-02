@@ -142,7 +142,8 @@ class KiteFaultSource(ParametricSeismicSource):
         # Format for the unique IDs of ruptures
         fmt = "{:s}-{:.2f}-{:d}-{:d}"
 
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+        step = kwargs.get('step', 1)
+        for mag, mag_occ_rate in self.get_annual_occurrence_rates()[::step]:
 
             # Create the list of ruptures for the current magnitude given a
             # list of rupture IDs
@@ -157,9 +158,9 @@ class KiteFaultSource(ParametricSeismicSource):
 
             # Compute the area, length and width of the ruptures
             area = msr.get_median_area(mag=mag, rake=self.rake)
-            lng, wdt = get_discrete_dimensions(area, self.rupture_mesh_spacing,
-                                               self.rupture_aspect_ratio,
-                                               self.profiles_sampling)
+            lng, wdt = get_discrete_dimensions(
+                area, self.rupture_mesh_spacing * step,
+                self.rupture_aspect_ratio, self.profiles_sampling)
 
             # Get the number of nodes along the strike and dip. Note that
             # len and wdt should be both multiples of the sampling distances
@@ -186,7 +187,6 @@ class KiteFaultSource(ParametricSeismicSource):
             # Get the geometry of all the ruptures that the fault surface
             # accommodates
             ruptures = []
-
             for rup in self._get_ruptures(surface.mesh, rup_len, rup_wid,
                                           f_strike=fstrike, f_dip=fdip,
                                           rids=rids_per_mag):
@@ -196,7 +196,7 @@ class KiteFaultSource(ParametricSeismicSource):
             occurrence_rate = mag_occ_rate / len(ruptures)
 
             # Rupture generator
-            for rup in ruptures[slc]:
+            for rup in ruptures:
                 hypocenter = rup[0].get_center()
 
                 # Yield an instance of a ParametricProbabilisticRupture
@@ -204,12 +204,6 @@ class KiteFaultSource(ParametricSeismicSource):
                           hypocenter, rup[0], occurrence_rate, tom)
                 out.uid = fmt.format(self.source_id, mag, rup[1], rup[2])
                 yield out
-
-    def few_ruptures(self):
-        """
-        Fast version of iter_ruptures used in estimate_weight
-        """
-        yield from self.iter_ruptures(slc=slice(None, None, 25))
 
     def _get_ruptures(self, omsh, rup_s, rup_d, f_strike=1, f_dip=1,
                       rids=None):
@@ -293,12 +287,11 @@ class KiteFaultSource(ParametricSeismicSource):
                                omsh.depths[j:j + rup_d, i:i + rup_s])
                     yield (KiteSurface(msh), j, i)
 
-    # TODO
     def get_fault_surface_area(self) -> float:
         """
         Returns the area of the fault surface
         """
-        pass
+        raise NotImplementedError
 
     def __iter__(self):
         """

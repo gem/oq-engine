@@ -18,7 +18,6 @@
 from urllib.parse import parse_qs
 from unittest.mock import Mock
 from functools import lru_cache
-import collections
 import logging
 import json
 import gzip
@@ -40,6 +39,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
+from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
 from openquake.calculators import getters
 
@@ -77,7 +77,7 @@ def get_info(dstore):
                 imtls=oq.imtls, investigation_time=oq.investigation_time,
                 poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt(),
                 limit_states=oq.limit_states,
-                tagnames=oq.aggregate_by)
+                tagnames=tagset(oq.aggregate_by))
 
 
 def _normalize(kinds, info):
@@ -686,28 +686,26 @@ def extract_agg_curves(dstore, what):
     lt = tagdict.pop('lt')  # loss type string
     [l] = qdic['loss_type']  # loss type index
     tagnames = sorted(tagdict)
-    if set(tagnames) != set(info['tagnames']):
+    if set(tagnames) != info['tagnames']:
         raise ValueError('Expected tagnames=%s, got %s' %
                          (info['tagnames'], tagnames))
     tagvalues = [tagdict[t][0] for t in tagnames]
-    idx = -1
+    agg_id = -1
     if tagnames:
-        for i, tags in enumerate(dstore['agg_keys'][:][tagnames]):
-            if decode([v for v in tags]) == tagvalues:
-                idx = i
-                break
+        lst = decode(dstore['agg_keys'][:])
+        agg_id = lst.index(','.join(tagvalues))
     kinds = list(info['stats'])
     name = 'agg_curves-stats'
     units = dstore.get_attr(name, 'units')
     shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
     units = dstore.get_attr(name, 'units')
     rps = shape_descr['return_period']
-    tup = (idx, k, l)
+    tup = (agg_id, k, l)
     arr = dstore[name][tup].T  # shape P, R
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
-        evalue, = dstore['agg_values'][idx][lt]
+        evalue, = dstore['agg_values'][agg_id][lt]
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)

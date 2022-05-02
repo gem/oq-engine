@@ -45,11 +45,12 @@ from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
-    Branch, BranchSet, Realization, CompositeLogicTree, dummy_branchset,
-    LogicTreeError, parse_uncertainty, random, attach_to_branches)
+    Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
+    dummy_branchset, LogicTreeError, parse_uncertainty, random,
+    attach_to_branches)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
-ID_REGEX = re.compile(r'id="([^"]+?)"')
+ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -79,6 +80,16 @@ src_group_dt = numpy.dtype(
 
 branch_dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
              ('utype', hdf5.vstr), ('uvalue', hdf5.vstr), ('weight', float)]
+
+
+def prod(iterator):
+    """
+    Replacement of math.prod for Python < 3.8
+    """
+    res = 1
+    for el in iterator:
+        res *= el
+    return res
 
 
 def unique(objects, key=None):
@@ -253,7 +264,7 @@ def reduce_full(full_lt, rlz_clusters):
     f2, *p2 = reducible(full_lt.gsim_lt, gsrlz_clusters)
     before = (full_lt.source_model_lt.get_num_paths() *
               full_lt.gsim_lt.get_num_paths())
-    after = before / numpy.prod([len(p[1]) for p in p1 + p2])
+    after = before / prod(len(p[1]) for p in p1 + p2)
     return {f1: dict(p1), f2: dict(p2), 'size_before_after': (before, after)}
 
 
@@ -325,20 +336,29 @@ class SourceModelLogicTree(object):
         dicts = list(self.bsetdict.values())[1:]
         if not dicts:
             self.is_source_specific = False
+            self.num_paths = count_paths(self.root_branchset)
             return
         src_ids = set()
         for dic in dicts:
             ats = dic.get('applyToSources')
             if not ats:
                 self.is_source_specific = False
+                self.num_paths = count_paths(self.root_branchset)
                 return
             elif len(ats.split()) != 1:
                 self.is_source_specific = False
+                self.num_paths = count_paths(self.root_branchset)
                 return
             src_ids.add(ats)
         # to be source-specific applyToBranches must be trivial
         self.is_source_specific = all(
             bset.applied is None for bset in self.branchsets)
+        if self.is_source_specific:
+            # fast algorithm, otherwise models like ZAF would hang
+            self.num_paths = prod(
+                sslt.num_paths for sslt in self.decompose().values())
+        else:  # slow algorithm
+            self.num_paths = count_paths(self.root_branchset)
 
     def parse_tree(self, tree_node):
         """
@@ -389,7 +409,6 @@ class SourceModelLogicTree(object):
         self.parse_branches(branchset_node, branchset)
         dummies = []  # dummy branches in case of applyToBranches
         if self.root_branchset is None:  # not set yet
-            self.num_paths = 1
             self.root_branchset = branchset
         else:
             prev_ids = ' '.join(pb.branch_id for pb in self.previous_branches)
@@ -407,7 +426,6 @@ class SourceModelLogicTree(object):
                 for branch in self.previous_branches:
                     branch.bset = branchset
         self.previous_branches = branchset.branches + dummies
-        self.num_paths *= len(branchset)
         self.branchsets.append(branchset)
 
     def get_num_paths(self):

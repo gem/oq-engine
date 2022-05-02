@@ -173,7 +173,7 @@ def add_between_within_stds(self, ctx, imt, with_betw_ratio):
         The ratio between the within and between-event standard deviations
     """
     total = getattr(self, StdDev.TOTAL)
-    between = (total**2 / (1 + with_betw_ratio))**0.5
+    between = (total**2 / (1 + with_betw_ratio**2))**0.5
     within = with_betw_ratio * between
     setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
             {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
@@ -317,6 +317,7 @@ class ModifiableGMPE(GMPE):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.mags = ()  # used in GMPETables
 
         # Create the original GMPE
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
@@ -360,6 +361,18 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
+    # called by the ContextMaker
+    def set_tables(self, mags, imts):
+        """
+        :param mags: a list of magnitudes as strings
+        :param imts: a list of IMTs as strings
+
+        Set the .mean_table and .sig_table attributes on the underlying gmpe
+        """
+        if hasattr(self.gmpe, 'set_tables'):
+            self.gmpe.set_tables(mags, imts)
+            self.mags = mags
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -383,7 +396,7 @@ class ModifiableGMPE(GMPE):
 
         # Compute the original mean and standard deviations
         mean[:], sig[:], tau[:], phi[:] = get_mean_stds(
-            self.gmpe, ctx_rock, imts)
+            self.gmpe, ctx_rock, imts, mags=self.mags)
 
         g = globals()
         for m, imt in enumerate(imts):

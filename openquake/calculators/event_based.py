@@ -223,14 +223,7 @@ class EventBasedCalculator(base.HazardCalculator):
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         source_data = AccumDict(accum=[])
         allargs = []
-        if self.oqparam.is_ucerf():
-            # manage the filtering in a special way
-            for sg in self.csm.src_groups:
-                for src in sg:
-                    src.src_filter = self.srcfilter
-            srcfilter = nofilter  # otherwise it would be ultra-slow
-        else:
-            srcfilter = self.srcfilter
+        srcfilter = self.srcfilter
         logging.info('Building ruptures')
         for sg in self.csm.src_groups:
             if not sg.sources:
