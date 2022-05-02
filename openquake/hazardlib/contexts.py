@@ -699,11 +699,6 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
-    def _ruptures(self, src, step=1):
-        with self.ir_mon:
-            irups = src.iter_ruptures(shift_hypo=self.shift_hypo, step=step)
-            return list(irups)
-
     def _gen_rups(self, src, sites, step):
         # yield ruptures, each one with a .sites attribute
         def rups(rupiter, sites):
@@ -716,7 +711,10 @@ class ContextMaker(object):
             for r, s in self._cps_rups(src, sites, step):
                 yield from rups(r, s)
         else:  # just add the ruptures
-            yield from rups(self._ruptures(src, step=step), sites)
+            with self.ir_mon:
+                lst = list(src.iter_ruptures(
+                    shift_hypo=self.shift_hypo, step=step))
+            yield from rups(lst, sites)
 
     def _cps_rups(self, src, sites, step):
         fewsites = len(sites) <= self.max_sites_disagg
@@ -725,8 +723,8 @@ class ContextMaker(object):
             allrups = numpy.array(
                 list(src.iter_ruptures(shift_hypo=self.shift_hypo, step=step)))
         m_idx = numpy.array([rup.m for rup in allrups])
-        for m, rup in enumerate(src.iruptures(step)):
-            rups = allrups[m_idx == m]  # ruptures with magnitude index `m`
+        for rup in src.iruptures(step):
+            rups = allrups[m_idx == rup.m]  # ruptures with magnitude index `m`
             psdist = self.pointsource_distance + src.get_radius(rup)
             close = sites.filter(cdist <= psdist)
             far = sites.filter(cdist > psdist)
