@@ -31,13 +31,7 @@ import pathlib
 import logging
 import json
 import zipfile
-
 from shapely.geometry import Polygon
-try:
-    import shapefile  # optional dependency
-except ImportError:
-    pass
-
 import numpy
 from openquake.baselib.general import CallableDict
 from openquake.baselib.node import node_from_xml
@@ -113,6 +107,7 @@ def get_array_shapefile(kind, fname):
     either a zip or the location of one of the files,
     *.shp and *.dbf are necessary, *.prj and *.shx optional
     """
+    import shapefile  # optional dependency
     fname = path2url(fname)
 
     extensions = ['shp', 'dbf', 'prj', 'shx']

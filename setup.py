@@ -85,7 +85,7 @@ extras_require = {
         'flake8 >=3.5',
         'pdbpp',
         'ipython',
-        'silx == 0.10',
+        'silx',
     ]
 }
 
