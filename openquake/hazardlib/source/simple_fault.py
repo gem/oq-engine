@@ -152,6 +152,9 @@ class SimpleFaultSource(ParametricSeismicSource):
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
         fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
 
+        # String for creating the unique rupture ID
+        fmt = "{:s}-{:.2f}-{:d}-{:d}"
+
         for mag, mag_occ_rate in self.get_annual_occurrence_rates()[::step]:
             rup_cols, rup_rows = self._get_rupture_dimensions(
                 fault_length, fault_width, mag)
@@ -161,11 +164,16 @@ class SimpleFaultSource(ParametricSeismicSource):
             occurrence_rate = mag_occ_rate / float(num_rup)
             for first_row in range(num_rup_along_width)[::step]:
                 for first_col in range(num_rup_along_length)[::step]:
+                    # Unique ID
+                    unique_id = fmt.format(self.source_id, mag, first_row,
+                                        first_col)
+                    # Skipping ruptures not included in the input list
+                    if rids is not None and unique_id not in rids:
+                        continue
+                    # Rupture mesh
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
                                             first_col: first_col + rup_cols]
-
                     if not len(self.hypo_list) and not len(self.slip_list):
-
                         hypocenter = mesh.get_middle_point()
                         occurrence_rate_hypo = occurrence_rate
                         surface = SimpleFaultSurface(mesh)
