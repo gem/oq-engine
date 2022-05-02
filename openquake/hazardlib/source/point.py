@@ -124,16 +124,8 @@ def calc_average(pointsources):
     return dic
 
 
-def _gen_ruptures(src, nplanes=(), hypos=(), filtermag=None,
-                  shift_hypo=False, step=1):
-    if filtermag:
-        mag_rates = [mr for mr in src.get_annual_occurrence_rates()
-                     if mr[0] == filtermag]
-    else:
-        mag_rates = src.get_annual_occurrence_rates()
-    if not mag_rates:
-        return
-    mags, rates = zip(*mag_rates)
+def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
+    mags, rates = zip(*src.get_annual_occurrence_rates())
     if not nplanes:
         np_probs, nplanes = zip(*src.nodal_plane_distribution.data)
     else:
@@ -151,17 +143,22 @@ def _gen_ruptures(src, nplanes=(), hypos=(), filtermag=None,
                 for d, hypo in enumerate(hypos):
                     rate = rates[m] * np_probs[n] * hc_probs[d]
                     surface = surfaces[m, n, d]
-                    yield ParametricProbabilisticRupture(
+                    rup = ParametricProbabilisticRupture(
                         mag, np.rake, src.tectonic_region_type,
                         surface.hc, surface, rate,
                         src.temporal_occurrence_model)
+                    rup.m = m
+                    yield rup
     else:  # in preclassical return point ruptures (fast)
-        for mrate, mag in list(zip(rates, mags))[::-step]:
+        items = list(enumerate((zip(rates, mags))))[::-step]
+        for m, (mrate, mag) in items:
             np = nplanes[0]
             rate = mrate * np_probs[0] * hc_probs[0]
-            yield PointRupture(
+            rup = PointRupture(
                 mags[0], src.tectonic_region_type, hypos[0], np.strike,
                 np.rake, rate, src.temporal_occurrence_model)
+            rup.m = m
+            yield rup
 
 
 class PointSource(ParametricSeismicSource):
@@ -286,19 +283,18 @@ class PointSource(ParametricSeismicSource):
         """
         return _gen_ruptures(
             self,
-            filtermag=kwargs.get('mag'),
             shift_hypo=kwargs.get('shift_hypo'),
             step=kwargs.get('step', 1))
 
     # PointSource
-    def iruptures(self):
+    def iruptures(self, step=1):
         """
         Generate one rupture for each magnitude, called only if nphc > 1
         """
         avg = calc_average([self])  # over nodal planes and hypocenters
         np = Mock(strike=avg['strike'], dip=avg['dip'], rake=avg['rake'])
         hc = Point(avg['lon'], avg['lat'], avg['dep'])
-        yield from _gen_ruptures(self, [np], [hc])
+        yield from _gen_ruptures(self, [np], [hc], step=step)
 
     def count_nphc(self):
         """
@@ -382,12 +378,12 @@ class CollapsedPointSource(PointSource):
             yield from src.iter_ruptures(**kwargs)
 
     # CollapsedPointSource
-    def iruptures(self):
+    def iruptures(self, step=1):
         """
         :yields: the underlying ruptures with mean nodal plane and hypocenter
         """
         np = NodalPlane(self.strike, self.dip, self.rake)
-        yield from _gen_ruptures(self, [np], [self.location])
+        yield from _gen_ruptures(self, [np], [self.location], step=step)
 
     def _get_max_rupture_projection_radius(self, mag=None):
         """
