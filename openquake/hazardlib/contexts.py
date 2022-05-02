@@ -997,7 +997,7 @@ class ContextMaker(object):
         nsites = numpy.array([len(ctx) for ctx in ctxs])
         if (hasattr(src, 'location') and src.count_nphc() > 1 and
                 self.pointsource_distance < 1000):
-            eff_rups = src.num_ruptures / 6  # heuristic
+            eff_rups = src.num_ruptures / 5  # heuristic
         else:
             eff_rups = src.num_ruptures
         weight = eff_rups * (nsites.mean() / N + .02)
