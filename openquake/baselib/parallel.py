@@ -843,9 +843,9 @@ class Starmap(object):
         """
         Submit the given arguments to the underlying task
         """
-        if self.num_cores <= 8:  # do not split, use less memory
-            self.submit(args)
-            return
+        # if self.num_cores <= 8:  # do not split, use less memory
+        #     self.submit(args)
+        #    return
         self.monitor.operation = self.task_func.__name__ + '_'
         self.submit(
             (args[0], self.task_func, args[1:], duration, outs_per_task),

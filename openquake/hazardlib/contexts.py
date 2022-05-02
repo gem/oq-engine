@@ -18,7 +18,6 @@
 
 import os
 import abc
-import sys
 import copy
 import time
 import operator
@@ -700,19 +699,6 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
-    def _ruptures(self, src, filtermag=None, step=1):
-        with self.ir_mon:
-            if step > 1:  # in preclassical
-                if hasattr(src, 'few_ruptures'):
-                    irups = src.few_ruptures()
-                else:  # pointlike sources
-                    irups = src.iter_ruptures(
-                        shift_hypo=self.shift_hypo, mag=filtermag, step=step)
-            else:  # regular case
-                irups = src.iter_ruptures(
-                    shift_hypo=self.shift_hypo, mag=filtermag)
-            return list(irups)
-
     def _gen_rups(self, src, sites, step):
         # yield ruptures, each one with a .sites attribute
         def rups(rupiter, sites):
@@ -725,12 +711,20 @@ class ContextMaker(object):
             for r, s in self._cps_rups(src, sites, step):
                 yield from rups(r, s)
         else:  # just add the ruptures
-            yield from rups(self._ruptures(src, step=step), sites)
+            with self.ir_mon:
+                lst = list(src.iter_ruptures(
+                    shift_hypo=self.shift_hypo, step=step))
+            yield from rups(lst, sites)
 
     def _cps_rups(self, src, sites, step):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        for rup in src.iruptures():
+        with self.ir_mon:
+            allrups = numpy.array(
+                list(src.iter_ruptures(shift_hypo=self.shift_hypo, step=step)))
+        m_idx = numpy.array([rup.m for rup in allrups])
+        for rup in src.iruptures(step):
+            rups = allrups[m_idx == rup.m]  # ruptures with magnitude index `m`
             psdist = self.pointsource_distance + src.get_radius(rup)
             close = sites.filter(cdist <= psdist)
             far = sites.filter(cdist > psdist)
@@ -738,15 +732,15 @@ class ContextMaker(object):
                 if close is None:  # all is far, common for small mag
                     yield [rup], sites
                 else:  # something is close
-                    yield self._ruptures(src, rup.mag, step), sites
+                    yield rups, sites
             else:  # many sites
                 if close is None:  # all is far
                     yield [rup], far
                 elif far is None:  # all is close
-                    yield self._ruptures(src, rup.mag, step), close
+                    yield rups, close
                 else:  # some sites are far, some are close
                     yield [rup], far
-                    yield self._ruptures(src, rup.mag, step), close
+                    yield rups, close
 
     # not used by the engine, is is meant for notebooks
     def get_poes(self, srcs, sitecol, collapse_level=-1):
@@ -983,19 +977,30 @@ class ContextMaker(object):
                             poes[:, :, g] = gsim.get_poes(ms, self, ctxt)
                 yield poes, ctxt, slcsids
 
+    # tested in test_collapse_small
     def estimate_weight(self, src, srcfilter):
+        """
+        :param src: a source object
+        :param srcfilter: a SourceFilter instance
+        :returns: the weight of the source (num_ruptures * <num_sites/N>)
+        """
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
         N = len(srcfilter.sitecol.complete)  # total sites
-        ctxs = self.get_ctxs(src, sites, step=5)  # reduced number
-        nrups = src.num_ruptures  # total number
+        ctxs = self.get_ctxs(src, sites, step=10)  # reduced number
         if not ctxs:
-            return nrups if N == 1 else 0
+            return src.num_ruptures if N == 1 else 0
         nsites = numpy.array([len(ctx) for ctx in ctxs])
-        return nrups * (nsites.mean() / N + .02)
+        if (hasattr(src, 'location') and src.count_nphc() > 1 and
+                self.pointsource_distance < 1000):
+            eff_rups = src.num_ruptures / 6  # heuristic
+        else:
+            eff_rups = src.num_ruptures
+        weight = eff_rups * (nsites.mean() / N + .02)
+        return weight
 
     def set_weight(self, sources, srcfilter, mon=Monitor()):
         """

@@ -87,7 +87,8 @@ class AreaSource(ParametricSeismicSource):
         """
         shift_hypo = kwargs.get('shift_hypo')
         step = kwargs.get('step', 1)
-        polygon_mesh = self.polygon.discretize(self.area_discretization)
+        polygon_mesh = self.polygon.discretize(
+            self.area_discretization)[::step]
         scaling_rate_factor = 1. / len(polygon_mesh)
 
         # take the very first point of the polygon mesh
@@ -98,7 +99,7 @@ class AreaSource(ParametricSeismicSource):
         # NB: all this mumbo-jumbo is done to avoid multiple calls to
         # PointSource._get_rupture_surface
         ref_ruptures = []
-        mags, rates = zip(*self.get_annual_occurrence_rates())
+        mags, rates = zip(*self.get_annual_occurrence_rates()[::step])
         np_probs, nplanes = zip(*self.nodal_plane_distribution.data)
         hc_probs, depths = zip(*self.hypocenter_distribution.data)
         surfin = PointSource.get_surfin(self, mags, nplanes)
@@ -119,7 +120,7 @@ class AreaSource(ParametricSeismicSource):
         # for each of the epicenter positions generate as many ruptures
         # as we generated "reference" ones: new ruptures differ only
         # in hypocenter and surface location
-        for epicenter in polygon_mesh[::step]:
+        for epicenter in polygon_mesh:
             for mag, rake, hc_depth, surface, occ_rate in ref_ruptures:
                 # translate the surface from first epicenter position
                 # to the target one preserving it's geometry
