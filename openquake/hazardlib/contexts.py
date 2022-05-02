@@ -980,6 +980,11 @@ class ContextMaker(object):
                 yield poes, ctxt, slcsids
 
     def estimate_weight(self, src, srcfilter):
+        """
+        :param src: a source object
+        :param srcfilter: a SourceFilter instance
+        :returns: the weight of the source (num_ruptures * <num_sites/N>)
+        """
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
@@ -990,8 +995,9 @@ class ContextMaker(object):
         if not ctxs:
             return src.num_ruptures if N == 1 else 0
         nsites = numpy.array([len(ctx) for ctx in ctxs])
-        if hasattr(src, 'pointsources'):  # ComplexFaultSource
-            eff_rups = src.num_ruptures / 5  # heuristic
+        if (hasattr(src, 'location') and src.count_nphc() > 1 and
+                self.pointsource_distance < 1000):
+            eff_rups = src.num_ruptures / 6  # heuristic
         else:
             eff_rups = src.num_ruptures
         weight = eff_rups * (nsites.mean() / N + .02)
