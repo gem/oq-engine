@@ -18,7 +18,6 @@
 
 import os
 import abc
-import sys
 import copy
 import time
 import operator
@@ -539,15 +538,9 @@ class ContextMaker(object):
         :returns: a list RuptureContexts
         """
         allctxs = []
-        cnt = 0
         for i, src in enumerate(srcs):
             src.id = i
-            rctxs = []
-            for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
-                rup.rup_id = cnt
-                rctxs.append(self.make_rctx(rup))
-                cnt += 1
-            allctxs.extend(self.get_ctxs(rctxs, sitecol, src.id))
+            allctxs.extend(self.get_ctxs(src, sitecol))
         allctxs.sort(key=operator.attrgetter('mag'))
         return allctxs
 
@@ -608,27 +601,30 @@ class ContextMaker(object):
             setattr(ctx, param, value)
         return ctx
 
-    def get_ctxs(self, src, sitecol, src_id=None):
+    def get_ctxs(self, src, sitecol, src_id=None, step=1):
         """
         :param src:
             a source object (already split) or a list of ruptures
         :param sitecol:
             a (filtered) SiteCollection
         :param src_id:
-            the numeric ID of the source (to be assigned to the ruptures)
+            integer source ID used where src is actually a list
+        :param step:
+            > 1 only in preclassical
         :returns:
             fat RuptureContexts sorted by mag
         """
-        if isinstance(src, list):  # in estimate_weight
-            ruptures = src
-        else:
-            ruptures = self._gen_rups(src, sitecol)
         ctxs = []
         fewsites = len(sitecol.complete) <= self.max_sites_disagg
+        if hasattr(src, 'source_id'):  # is a real source
+            rups = self._gen_rups(src, sitecol, step)
+            src_id = src.id
+        else:  # in event based we get a list with a single rupture
+            rups = src
 
         # Create the distance cache. A dictionary of dictionaries
         dcache = {}
-        for rup in ruptures:
+        for rup in rups:
             caching = (isinstance(rup.surface, MultiSurface) and
                        hasattr(rup.surface.surfaces[0], 'suid'))
             sites = getattr(rup, 'sites', sitecol)
@@ -660,7 +656,7 @@ class ContextMaker(object):
                         reqv**2 + rup.hypocenter.depth**2)
             for name in r_sites.array.dtype.names:
                 setattr(ctx, name, r_sites[name])
-            ctx.src_id = src_id if isinstance(src, list) else src.id
+            ctx.src_id = src_id
             for par in self.REQUIRES_DISTANCES | {'rrup'}:
                 setattr(ctx, par, getattr(dctx, par))
             if fewsites:
@@ -703,13 +699,17 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
-    def _ruptures(self, src, filtermag=None, point_rup=False):
+    def _ruptures(self, src, filtermag=None, step=1):
         with self.ir_mon:
-            return list(src.iter_ruptures(
-                shift_hypo=self.shift_hypo,
-                mag=filtermag, point_rup=point_rup))
+            if step > 1:  # in preclassical
+                irups = src.iter_ruptures(
+                    shift_hypo=self.shift_hypo, mag=filtermag, step=step)
+            else:  # regular case
+                irups = src.iter_ruptures(
+                    shift_hypo=self.shift_hypo, mag=filtermag)
+            return list(irups)
 
-    def _gen_rups(self, src, sites):
+    def _gen_rups(self, src, sites, step):
         # yield ruptures, each one with a .sites attribute
         def rups(rupiter, sites):
             for rup in rupiter:
@@ -718,19 +718,15 @@ class ContextMaker(object):
         if getattr(src, 'location', None) and src.count_nphc() > 1:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
-            for r, s in self._cps_rups(src, sites):
+            for r, s in self._cps_rups(src, sites, step):
                 yield from rups(r, s)
         else:  # just add the ruptures
-            yield from rups(self._ruptures(src), sites)
+            yield from rups(self._ruptures(src, step=step), sites)
 
-    def _cps_rups(self, src, sites, fast=False):
+    def _cps_rups(self, src, sites, step):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        if fast:  # in preclassical
-            rups = src._pointruptures(step=5)
-        else:
-            rups = src.iruptures()
-        for rup in rups:
+        for rup in list(src.iruptures())[::step]:
             psdist = self.pointsource_distance + src.get_radius(rup)
             close = sites.filter(cdist <= psdist)
             far = sites.filter(cdist > psdist)
@@ -738,15 +734,15 @@ class ContextMaker(object):
                 if close is None:  # all is far, common for small mag
                     yield [rup], sites
                 else:  # something is close
-                    yield self._ruptures(src, rup.mag, fast), sites
+                    yield self._ruptures(src, rup.mag, step), sites
             else:  # many sites
                 if close is None:  # all is far
                     yield [rup], far
                 elif far is None:  # all is close
-                    yield self._ruptures(src, rup.mag, fast), close
+                    yield self._ruptures(src, rup.mag, step), close
                 else:  # some sites are far, some are close
                     yield [rup], far
-                    yield self._ruptures(src, rup.mag, fast), close
+                    yield self._ruptures(src, rup.mag, step), close
 
     # not used by the engine, is is meant for notebooks
     def get_poes(self, srcs, sitecol, collapse_level=-1):
@@ -984,33 +980,28 @@ class ContextMaker(object):
                 yield poes, ctxt, slcsids
 
     def estimate_weight(self, src, srcfilter):
-        N = len(srcfilter.sitecol.complete)
+        """
+        :param src: a source object
+        :param srcfilter: a SourceFilter instance
+        :returns: the weight of the source (num_ruptures * <num_sites/N>)
+        """
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        if src.code in b'pP':
-            allrups = []
-            for irups, r_sites in self._cps_rups(src, sites, fast=True):
-                for rup in irups:
-                    rup.sites = r_sites
-                    allrups.append(rup)
-            rups = allrups[::25]
-            nrups = len(allrups)
-            # print(nrups, len(rups))
-        else:
-            rups = list(src.few_ruptures())
-            nrups = src.num_ruptures
-        try:
-            ctxs = self.get_ctxs(rups, sites)
-        except ValueError:
-            sys.stderr.write('In source %s\n' % src.source_id)
-            raise
+        N = len(srcfilter.sitecol.complete)  # total sites
+        ctxs = self.get_ctxs(src, sites, step=10)  # reduced number
         if not ctxs:
-            return nrups if N == 1 else 0
+            return src.num_ruptures if N == 1 else 0
         nsites = numpy.array([len(ctx) for ctx in ctxs])
-        return nrups * (nsites.mean() / N + .02)
+        if (hasattr(src, 'location') and src.count_nphc() > 1 and
+                self.pointsource_distance < 1000):
+            eff_rups = src.num_ruptures / 6  # heuristic
+        else:
+            eff_rups = src.num_ruptures
+        weight = eff_rups * (nsites.mean() / N + .02)
+        return weight
 
     def set_weight(self, sources, srcfilter, mon=Monitor()):
         """

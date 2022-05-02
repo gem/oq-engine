@@ -86,7 +86,9 @@ class AreaSource(ParametricSeismicSource):
         of points the polygon discretizes to.
         """
         shift_hypo = kwargs.get('shift_hypo')
-        polygon_mesh = self.polygon.discretize(self.area_discretization)
+        step = kwargs.get('step', 1)
+        polygon_mesh = self.polygon.discretize(
+            self.area_discretization)[::step]
         scaling_rate_factor = 1. / len(polygon_mesh)
 
         # take the very first point of the polygon mesh
@@ -97,7 +99,7 @@ class AreaSource(ParametricSeismicSource):
         # NB: all this mumbo-jumbo is done to avoid multiple calls to
         # PointSource._get_rupture_surface
         ref_ruptures = []
-        mags, rates = zip(*self.get_annual_occurrence_rates())
+        mags, rates = zip(*self.get_annual_occurrence_rates()[::step])
         np_probs, nplanes = zip(*self.nodal_plane_distribution.data)
         hc_probs, depths = zip(*self.hypocenter_distribution.data)
         surfin = PointSource.get_surfin(self, mags, nplanes)
@@ -129,14 +131,6 @@ class AreaSource(ParametricSeismicSource):
                     mag, rake, self.tectonic_region_type, hypocenter,
                     surface, occ_rate, self.temporal_occurrence_model)
                 yield rupture
-
-    def few_ruptures(self):
-        """
-        Fast version of iter_ruptures used in estimate_weight
-        """
-        for i, ps in enumerate(self):
-            if i % 10 == 0:
-                yield from ps.few_ruptures()
 
     def count_ruptures(self):
         """
