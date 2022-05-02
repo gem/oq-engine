@@ -724,9 +724,9 @@ class ContextMaker(object):
         with self.ir_mon:
             allrups = numpy.array(
                 list(src.iter_ruptures(shift_hypo=self.shift_hypo, step=step)))
-        ms = numpy.array([rup.m for rup in allrups])
+        m_idx = numpy.array([rup.m for rup in allrups])
         for m, rup in enumerate(src.iruptures(step)):
-            rups = allrups[ms == m]
+            rups = allrups[m_idx == m]  # ruptures with magnitude index `m`
             psdist = self.pointsource_distance + src.get_radius(rup)
             close = sites.filter(cdist <= psdist)
             far = sites.filter(cdist > psdist)
@@ -979,6 +979,7 @@ class ContextMaker(object):
                             poes[:, :, g] = gsim.get_poes(ms, self, ctxt)
                 yield poes, ctxt, slcsids
 
+    # tested in test_collapse_small
     def estimate_weight(self, src, srcfilter):
         """
         :param src: a source object
@@ -997,7 +998,7 @@ class ContextMaker(object):
         nsites = numpy.array([len(ctx) for ctx in ctxs])
         if (hasattr(src, 'location') and src.count_nphc() > 1 and
                 self.pointsource_distance < 1000):
-            eff_rups = src.num_ruptures / 5  # heuristic
+            eff_rups = src.num_ruptures / 6  # heuristic
         else:
             eff_rups = src.num_ruptures
         weight = eff_rups * (nsites.mean() / N + .02)
