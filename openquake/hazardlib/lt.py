@@ -690,14 +690,13 @@ class BranchSet(object):
 
 # NB: this function cannot be used with monster logic trees like the one for
 # South Africa (ZAF), since it is too slow; the engine use a trick instead
-def count_paths(bset):
+def count_paths(branches):
     """
-    :param bset: a BranchSet instance
+    :param branches: a list of branches (endpoints or nodes)
     :returns: the number of paths in the branchset (slow)
     """
-    if bset is None:
-        return 1
-    return sum(count_paths(br.bset) for br in bset.branches)
+    return sum(1 if br.bset is None else count_paths(br.bset.branches)
+               for br in branches)
 
 
 dummy_counter = itertools.count(1)
@@ -788,7 +787,21 @@ class CompositeLogicTree(object):
         return '<%s>' % self.branchsets
 
 
-def build(*bslists):
+def easybuild(*bslists):
+    """
+    :param bslists: a list of lists describing branchsets
+    :returns: a `CompositeLogicTree` instance
+
+    >>> lt = easybuild(['sourceModel', '',
+    ...              ['A', 'common1', 0.6],
+    ...              ['B', 'common2', 0.4]],
+    ...           ['extendModel', '',
+    ...              ['A', 'extra1', 0.6],
+    ...              ['B', 'extra2', 0.2],
+    ...              ['C', 'extra2', 0.2]])
+    >>> lt.get_all_paths()
+    ['AA', 'AB', 'AC', 'BA', 'BB', 'BC']
+    """
     bsets = []
     for i, (utype, applyto, *brlists) in enumerate(bslists):
         branches = []

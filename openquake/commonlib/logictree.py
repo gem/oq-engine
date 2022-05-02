@@ -336,18 +336,18 @@ class SourceModelLogicTree(object):
         dicts = list(self.bsetdict.values())[1:]
         if not dicts:
             self.is_source_specific = False
-            self.num_paths = count_paths(self.root_branchset)
+            self.num_paths = count_paths(self.root_branchset.branches)
             return
         src_ids = set()
         for dic in dicts:
             ats = dic.get('applyToSources')
             if not ats:
                 self.is_source_specific = False
-                self.num_paths = count_paths(self.root_branchset)
+                self.num_paths = count_paths(self.root_branchset.branches)
                 return
             elif len(ats.split()) != 1:
                 self.is_source_specific = False
-                self.num_paths = count_paths(self.root_branchset)
+                self.num_paths = count_paths(self.root_branchset.branches)
                 return
             src_ids.add(ats)
         # to be source-specific applyToBranches must be trivial
@@ -358,7 +358,7 @@ class SourceModelLogicTree(object):
             self.num_paths = prod(
                 sslt.num_paths for sslt in self.decompose().values())
         else:  # slow algorithm
-            self.num_paths = count_paths(self.root_branchset)
+            self.num_paths = count_paths(self.root_branchset.branches)
 
     def parse_tree(self, tree_node):
         """

@@ -167,36 +167,36 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         for branch in bs1.branches:
             branch.bset = bs2
         clt = lt.CompositeLogicTree([bs0, bs1, bs2])
-        self.assertEqual(lt.count_paths(bs0), 5)
+        self.assertEqual(lt.count_paths(bs0.branches), 5)
         self.assertEqual(clt.get_all_paths(),
                          ['AAA', 'AAB', 'ABA', 'ABB', 'B..'])
         self.assertEqual(clt.basepaths,
                          ['A**', 'B**', '*A*', '*B*', '**A', '**B'])
 
-    def test_build(self):
-        clt = lt.build(['sourceModel', '',
-                        ['A', 'common1', 0.6],
-                        ['B', 'common2', 0.4]],
-                       ['extendModel', '',
-                        ['C', 'extra1', 0.6],
-                        ['D', 'extra2', 0.2],
-                        ['E', 'extra2', 0.2]])
+    def test_easybuild(self):
+        clt = lt.easybuild(['sourceModel', '',
+                            ['A', 'common1', 0.6],
+                            ['B', 'common2', 0.4]],
+                           ['extendModel', '',
+                            ['C', 'extra1', 0.6],
+                            ['D', 'extra2', 0.2],
+                            ['E', 'extra2', 0.2]])
         print(clt.get_all_paths())
 
-        clt = lt.build(['sourceModel', '',
-                        ['A', 'common1', 0.6],
-                        ['B', 'common2', 0.4]],
-                       ['extendModel', 'AB',
-                        ['C', 'extra1', 0.6],
-                        ['D', 'extra2', 0.2],
-                        ['E', 'extra2', 0.2]])
+        clt = lt.easybuild(['sourceModel', '',
+                            ['A', 'common1', 0.6],
+                            ['B', 'common2', 0.4]],
+                           ['extendModel', 'AB',
+                            ['A', 'extra1', 0.6],
+                            ['B', 'extra2', 0.2],
+                            ['C', 'extra2', 0.2]])
         print(clt.get_all_paths())
 
-        clt = lt.build(['sourceModel', '',
-                        ['A', 'common1', 0.6],
-                        ['B', 'common2', 0.4]],
-                       ['extendModel', 'A',
-                        ['C', 'extra1', 0.6],
-                        ['D', 'extra2', 0.2],
-                        ['E', 'extra2', 0.2]])
+        clt = lt.easybuild(['sourceModel', '',
+                            ['A', 'common1', 0.6],
+                            ['B', 'common2', 0.4]],
+                           ['extendModel', 'A',
+                            ['A', 'extra1', 0.6],
+                            ['B', 'extra2', 0.2],
+                            ['C', 'extra2', 0.2]])
         print(clt.get_all_paths())
