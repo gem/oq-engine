@@ -721,8 +721,9 @@ class ContextMaker(object):
     def _cps_rups(self, src, sites, step):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        allrups = numpy.array(
-            list(src.iter_ruptures(shift_hypo=self.shift_hypo, step=step)))
+        with self.ir_mon:
+            allrups = numpy.array(
+                list(src.iter_ruptures(shift_hypo=self.shift_hypo, step=step)))
         ms = numpy.array([rup.m for rup in allrups])
         for m, rup in enumerate(src.iruptures(step)):
             rups = allrups[ms == m]
