@@ -699,14 +699,9 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
-    def _ruptures(self, src, filtermag=None, step=1):
+    def _ruptures(self, src, step=1):
         with self.ir_mon:
-            if step > 1:  # in preclassical
-                irups = src.iter_ruptures(
-                    shift_hypo=self.shift_hypo, mag=filtermag, step=step)
-            else:  # regular case
-                irups = src.iter_ruptures(
-                    shift_hypo=self.shift_hypo, mag=filtermag)
+            irups = src.iter_ruptures(shift_hypo=self.shift_hypo, step=step)
             return list(irups)
 
     def _gen_rups(self, src, sites, step):
@@ -726,7 +721,11 @@ class ContextMaker(object):
     def _cps_rups(self, src, sites, step):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        for rup in list(src.iruptures())[::step]:
+        allrups = numpy.array(
+            list(src.iter_ruptures(shift_hypo=self.shift_hypo, step=step)))
+        ms = numpy.array([rup.m for rup in allrups])
+        for m, rup in enumerate(src.iruptures(step)):
+            rups = allrups[ms == m]
             psdist = self.pointsource_distance + src.get_radius(rup)
             close = sites.filter(cdist <= psdist)
             far = sites.filter(cdist > psdist)
@@ -734,15 +733,15 @@ class ContextMaker(object):
                 if close is None:  # all is far, common for small mag
                     yield [rup], sites
                 else:  # something is close
-                    yield self._ruptures(src, rup.mag, step), sites
+                    yield rups, sites
             else:  # many sites
                 if close is None:  # all is far
                     yield [rup], far
                 elif far is None:  # all is close
-                    yield self._ruptures(src, rup.mag, step), close
+                    yield rups, close
                 else:  # some sites are far, some are close
                     yield [rup], far
-                    yield self._ruptures(src, rup.mag, step), close
+                    yield rups, close
 
     # not used by the engine, is is meant for notebooks
     def get_poes(self, srcs, sitecol, collapse_level=-1):
