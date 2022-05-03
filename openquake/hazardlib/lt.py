@@ -627,7 +627,7 @@ class BranchSet(object):
             branches = self.branches
         for branch in branches:
             path_branch = [prefix_path, branch]
-            if not branch.is_leaf():
+            if branch.bset is not None:  # dummies can be branchpoints
                 yield from branch.bset._enumerate_paths(path_branch)
             else:
                 yield path_branch
@@ -771,7 +771,7 @@ class CompositeLogicTree(object):
         branchdic = {br.branch_id: br for br in previous_branches}
         for i, bset in enumerate(self.branchsets[1:]):
             for br in bset.branches:
-                if br.branch_id in branchdic:
+                if br.branch_id != '.' and br.branch_id in branchdic:
                     raise NameError('The branch ID %s is duplicated'
                                     % br.branch_id)
                 branchdic[br.branch_id] = br
@@ -782,8 +782,9 @@ class CompositeLogicTree(object):
                 for branch_id in app2brs:
                     branchdic[branch_id].bset = bset
                 for brid in prev_ids:
+                    br = branchdic[brid]
                     if brid not in app2brs:
-                        branchdic[brid].bset = dummy = dummy_branchset()
+                        br.bset = dummy = dummy_branchset()
                         [dummybranch] = dummy.branches
                         branchdic[dummybranch.branch_id] = dummybranch
                         dummies.append(dummybranch)
