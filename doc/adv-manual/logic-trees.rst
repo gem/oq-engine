@@ -47,12 +47,12 @@ to one or more base models. An example will explain it all:
   </nrml>
 
 In this example there are two base source models, named
-``commom1.xml`` and ``common2.xml``; the branchset with
-``uncertaintyType = "extendModel"`` is telling the engine to generate
-six effective source models by extending ``common1.xml`` and
-``common2.xml`` first with ``extra1.xml``, then with ``extra2.xml``
+``commom1.xml`` and ``common2.xml`` and three possibile extensions
+``extra1.xml``, ``extra2.xml`` and ``extra3.xml`. The engine will
+generate six effective source models by extending first ``common1.xml`` and
+then ``common2.xml`` with ``extra1.xml``, then with ``extra2.xml``
 and then with ``extra3.xml`` (``extra1.xml``, ``extra2.xml`` and
-``extra3.xml`` can be two versions of the same source with different
+``extra3.xml`` can be two versions of the same sources with different
 parameters or geometries).
 
 Since engine 3.15 it is possible to describe logic trees as python
@@ -63,14 +63,18 @@ engine. For instance, the logic tree above would be written as follows:
 
 .. code-block:: python
 
- >>> from openquake.hazardlib.lt import build_clt
- >>> logictree = build_clt(
+ >>> from openquake.hazardlib.lt import build
+ >>> logictree = build(
  ...     ['sourceModel', '', ['A', 'common1.xml', 0.6],
  ...                         ['B', 'common2.xml', 0.4]],
  ...     ['extendModel', '', ['C', 'extra1.xml', 0.6],
- ...                         ['D', 'extra2.xml', 0.4]])
+ ...                         ['D', 'extra2.xml', 0.2],
+ ...                         ['E', 'extra2.xml', 0.2]])
+
+ and the 6 possible paths can be extracted as follows:
+ 
  >>> logictree.get_all_paths()
- ['AC', 'AD', 'BC', 'BD']
+ ['AC', 'AD', 'AE', 'BC', 'BD', 'BE']
 
 This case is trivial, however it can be made nontrivial by adding an additional
 ``extendModel`` and by using ``applyToBranches`` to implement *correlated
@@ -122,22 +126,12 @@ uncertainties*:
     </logicTree>
   </nrml>
 
-.. code-block:: python
+The uncertainties are correlated in the sense than not all possible
+2x3x2=12 combinations are considered, but only a subset of 3+2=5
+combinations. You can see which are the combinations by building
+the logic tree:
 
- >>> from openquake.hazardlib.lt import build_clt
- >>> logictree = build_clt(
- ...     ['sourceModel', '', ['A', 'common1.xml', 0.6],
- ...                         ['B', 'common2.xml', 0.4]],
- ...     ['extendModel', '', ['C', 'extra1.xml', 0.6],
- ...                         ['D', 'extra2.xml', 0.2],
- ...                         ['E', 'extra3.xml', 0.2]],
- ...     ['extendModel', '', ['F', 'extra4.xml', 0.6],
- ...                         ['G', 'extra5.xml', 0.4]])
- >>> logictree.get_all_paths() # 12 paths
- ['ACF', 'ACG', 'ADF', 'ADG', 'AEF', 'AEG', 'BCF', 'BCG', 'BDF', 'BDG', 'BEF', 'BEG']
-
- >>> from openquake.hazardlib.lt import build_clt
- >>> logictree = build_clt(
+ >>> logictree = build(
  ...     ['sourceModel', '', ['A', 'common1.xml', 0.6],
  ...                         ['B', 'common2.xml', 0.4]],
  ...     ['extendModel', 'A', ['C', 'extra1.xml', 0.6],
@@ -147,6 +141,22 @@ uncertainties*:
  ...                          ['G', 'extra5.xml', 0.4]])
  >>> logictree.get_all_paths()
  ['AC.', 'AD.', 'AE..', 'BF.', 'BG.']
+
+The uncorrelated realizations can be obtained by not specifying
+``applyToSources``:
+
+.. code-block:: python
+
+ >>> logictree = build(
+ ...     ['sourceModel', '', ['A', 'common1.xml', 0.6],
+ ...                         ['B', 'common2.xml', 0.4]],
+ ...     ['extendModel', '', ['C', 'extra1.xml', 0.6],
+ ...                         ['D', 'extra2.xml', 0.2],
+ ...                         ['E', 'extra3.xml', 0.2]],
+ ...     ['extendModel', '', ['F', 'extra4.xml', 0.6],
+ ...                         ['G', 'extra5.xml', 0.4]])
+ >>> logictree.get_all_paths() # 12 paths
+ ['ACF', 'ACG', 'ADF', 'ADG', 'AEF', 'AEG', 'BCF', 'BCG', 'BDF', 'BDG', 'BEF', 'BEG']
 
 
 

@@ -809,12 +809,12 @@ class CompositeLogicTree(object):
         return '<%s>' % self.branchsets
 
 
-def build_clt(*bslists):
+def build(*bslists):
     """
     :param bslists: a list of lists describing branchsets
     :returns: a `CompositeLogicTree` instance
 
-    >>> lt = build_clt(['sourceModel', '',
+    >>> lt = build(['sourceModel', '',
     ...              ['A', 'common1', 0.6],
     ...              ['B', 'common2', 0.4]],
     ...           ['extendModel', '',
