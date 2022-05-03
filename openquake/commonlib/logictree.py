@@ -509,7 +509,8 @@ class SourceModelLogicTree(object):
             for branches in self.root_branchset.sample(
                     probs, self.sampling_method):
                 value = [br.value for br in branches]
-                smlt_path_ids = [br.branch_id for br in branches]
+                smlt_path_ids = [br.branch_id for br in branches
+                                 if br.branch_id != '.']
                 if self.sampling_method.startswith('early_'):
                     weight = 1. / self.num_samples  # already accounted
                 elif self.sampling_method.startswith('late_'):

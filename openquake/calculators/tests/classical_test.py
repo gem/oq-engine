@@ -288,8 +288,8 @@ hazard_uhs-std.csv
         # check deserialization of source_model_lt
         r0, r1, r2 = self.calc.datastore['full_lt/source_model_lt']
         self.assertEqual(repr(r0),
-                         "<Realization #0 ['source_model_1.xml', None], "
-                         "path=SM1~., weight=0.5>")
+                         "<Realization #0 ['source_model_1.xml'], "
+                         "path=SM1, weight=0.5>")
         self.assertEqual(repr(r1), "<Realization #1 ['source_model_2.xml', "
                          "(3.2, 0.8)], path=SM2~a3pt2b0pt8, "
                          "weight=0.25>")

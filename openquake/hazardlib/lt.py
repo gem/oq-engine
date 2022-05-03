@@ -626,9 +626,8 @@ class BranchSet(object):
         else:
             branches = self.branches
         for branch in branches:
-            bset = branch.bset
             path_branch = [prefix_path, branch]
-            if bset is not None and bset.uncertainty_type != 'dummy':
+            if not branch.is_leaf():
                 yield from branch.bset._enumerate_paths(path_branch)
             else:
                 yield path_branch
@@ -772,6 +771,9 @@ class CompositeLogicTree(object):
         branchdic = {br.branch_id: br for br in previous_branches}
         for i, bset in enumerate(self.branchsets[1:]):
             for br in bset.branches:
+                if br.branch_id in branchdic:
+                    raise NameError('The branch ID %s is duplicated'
+                                    % br.branch_id)
                 branchdic[br.branch_id] = br
             dummies = []
             prev_ids = [pb.branch_id for pb in previous_branches]
@@ -796,8 +798,6 @@ class CompositeLogicTree(object):
         for weight, branches in self.branchsets[0].enumerate_paths():
             value = [br.value for br in branches]
             lt_path = ''.join(branch.short_id for branch in branches)
-            if lt_path.endswith('..'):
-                import pdb; pdb.set_trace()
             yield Realization(value, weight, ordinal, lt_path.ljust(nb, '.'))
             ordinal += 1
 
@@ -817,11 +817,11 @@ def build_clt(*bslists):
     ...              ['A', 'common1', 0.6],
     ...              ['B', 'common2', 0.4]],
     ...           ['extendModel', '',
-    ...              ['A', 'extra1', 0.6],
-    ...              ['B', 'extra2', 0.2],
-    ...              ['C', 'extra2', 0.2]])
+    ...              ['C', 'extra1', 0.6],
+    ...              ['D', 'extra2', 0.2],
+    ...              ['E', 'extra2', 0.2]])
     >>> lt.get_all_paths()
-    ['AA', 'AB', 'AC', 'BA', 'BB', 'BC']
+    ['AC', 'AD', 'AE', 'BC', 'BD', 'BE']
     """
     bsets = []
     for i, (utype, applyto, *brlists) in enumerate(bslists):
