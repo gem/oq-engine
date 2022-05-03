@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a check for inconsistent IDs across different kinds of risk functions
+    (i.e. fragility and consequence)
   * Fixed a logging statement that could run out of memory in large calculations
   * Optimized `iter_ruptures` for point sources by vectorizing the generation of
     planar surfaces by magnitude, nodal plane and hypocenter
