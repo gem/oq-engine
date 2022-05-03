@@ -1,8 +1,183 @@
-Logic trees FAQ
-===============
+Logic trees and correlated uncertainties
+========================================
 
 Logic trees are documented in the OpenQuake manual (section "Defining
-Logic Trees"). Here we will discuss some example for users already
+Logic Trees"). However some recent developments are missing, in particular
+the ``extendModel`` feature which allows to implement both *correlated and
+uncorrelated uncertainties*. Here we will document it.
+
+extendModel
+---------------------------------
+
+Starting from engine 3.9 it is possible to define logic trees by adding sources
+to one or more base models. An example will explain it all:
+
+.. code-block:: xml
+
+  <?xml version="1.0" encoding="UTF-8"?>
+  <nrml xmlns:gml="http://www.opengis.net/gml"
+        xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID="lt1">
+      <logicTreeBranchSet uncertaintyType="sourceModel"
+                          branchSetID="bs0">
+        <logicTreeBranch branchID="A">
+          <uncertaintyModel>common1.xml</uncertaintyModel>
+          <uncertaintyWeight>0.6</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="B">
+          <uncertaintyModel>common2.xml</uncertaintyModel>
+          <uncertaintyWeight>0.4</uncertaintyWeight>
+        </logicTreeBranch>
+      </logicTreeBranchSet>
+      <logicTreeBranchSet uncertaintyType="extendModel" branchSetID="bs1">
+        <logicTreeBranch branchID="C">
+          <uncertaintyModel>extra1.xml</uncertaintyModel>
+          <uncertaintyWeight>0.6</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="D">
+          <uncertaintyModel>extra2.xml</uncertaintyModel>
+          <uncertaintyWeight>0.2</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="E">
+          <uncertaintyModel>extra3.xml</uncertaintyModel>
+          <uncertaintyWeight>0.2</uncertaintyWeight>
+        </logicTreeBranch>
+      </logicTreeBranchSet>
+    </logicTree>
+  </nrml>
+
+In this example there are two base source models, named
+``commom1.xml`` and ``common2.xml`` and three possibile extensions
+``extra1.xml``, ``extra2.xml`` and ``extra3.xml`. The engine will
+generate six effective source models by extending first ``common1.xml`` and
+then ``common2.xml`` with ``extra1.xml``, then with ``extra2.xml``
+and then with ``extra3.xml`` (``extra1.xml``, ``extra2.xml`` and
+``extra3.xml`` can be two versions of the same sources with different
+parameters or geometries).
+
+Since engine 3.15 it is possible to describe logic trees as python
+lists (one list for each branchset) and to programmatically generate
+the realizations by using a simplified logic tree implementation in
+hazardlib/ This is extremely useful to understand the behavior of the
+engine. For instance, the logic tree above would be written as follows:
+
+.. code-block:: python
+
+ >>> from openquake.hazardlib.lt import build
+ >>> logictree = build(
+ ...     ['sourceModel', '', ['A', 'common1.xml', 0.6],
+ ...                         ['B', 'common2.xml', 0.4]],
+ ...     ['extendModel', '', ['C', 'extra1.xml', 0.6],
+ ...                         ['D', 'extra2.xml', 0.2],
+ ...                         ['E', 'extra2.xml', 0.2]])
+
+ and the 6 possible paths can be extracted as follows:
+ 
+ >>> logictree.get_all_paths()
+ ['AC', 'AD', 'AE', 'BC', 'BD', 'BE']
+
+This case is trivial, however it can be made nontrivial by adding an additional
+``extendModel`` and by using ``applyToBranches`` to implement *correlated
+uncertainties*:
+
+.. code-block:: xml
+
+  <?xml version="1.0" encoding="UTF-8"?>
+  <nrml xmlns:gml="http://www.opengis.net/gml"
+        xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID="lt1">
+      <logicTreeBranchSet uncertaintyType="sourceModel"
+                          branchSetID="bs0">
+        <logicTreeBranch branchID="A">
+          <uncertaintyModel>common1.xml</uncertaintyModel>
+          <uncertaintyWeight>0.6</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="B">
+          <uncertaintyModel>common2.xml</uncertaintyModel>
+          <uncertaintyWeight>0.4</uncertaintyWeight>
+        </logicTreeBranch>
+      </logicTreeBranchSet>
+      <logicTreeBranchSet uncertaintyType="extendModel" branchSetID="bs1"
+                          applyToBranches="A">
+        <logicTreeBranch branchID="C">
+          <uncertaintyModel>extra1.xml</uncertaintyModel>
+          <uncertaintyWeight>0.6</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="D">
+          <uncertaintyModel>extra2.xml</uncertaintyModel>
+          <uncertaintyWeight>0.2</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="E">
+          <uncertaintyModel>extra3.xml</uncertaintyModel>
+          <uncertaintyWeight>0.2</uncertaintyWeight>
+        </logicTreeBranch>
+      </logicTreeBranchSet>
+      <logicTreeBranchSet uncertaintyType="extendModel" branchSetID="bs2"
+                          applyToBranches="B">
+        <logicTreeBranch branchID="F">
+          <uncertaintyModel>extra4.xml</uncertaintyModel>
+          <uncertaintyWeight>0.6</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="G">
+          <uncertaintyModel>extra5.xml</uncertaintyModel>
+          <uncertaintyWeight>0.4</uncertaintyWeight>
+        </logicTreeBranch>
+      </logicTreeBranchSet>
+    </logicTree>
+  </nrml>
+
+The uncertainties are correlated in the sense than not all possible
+2x3x2=12 combinations are considered, but only a subset of 3+2=5
+combinations. You can see which are the combinations by building
+the logic tree:
+
+ >>> logictree = build(
+ ...     ['sourceModel', '', ['A', 'common1.xml', 0.6],
+ ...                         ['B', 'common2.xml', 0.4]],
+ ...     ['extendModel', 'A', ['C', 'extra1.xml', 0.6],
+ ...                          ['D', 'extra2.xml', 0.2],
+ ...                          ['E', 'extra3.xml', 0.2]],
+ ...     ['extendModel', 'B', ['F', 'extra4.xml', 0.6],
+ ...                          ['G', 'extra5.xml', 0.4]])
+ >>> logictree.get_all_paths()  # 3 + 2 paths
+ ['AC.', 'AD.', 'AE..', 'BF.', 'BG.']
+
+Partially uncorrelated uncertainties can be obtained by applying only on
+the 'A' model on only on the 'B' model; for instance
+
+ >>> logictree = build(
+ ...     ['sourceModel', '', ['A', 'common1.xml', 0.6],
+ ...                         ['B', 'common2.xml', 0.4]],
+ ...     ['extendModel', 'A', ['C', 'extra1.xml', 0.6],
+ ...                          ['D', 'extra2.xml', 0.2],
+ ...                          ['E', 'extra3.xml', 0.2]],
+ ...     ['extendModel', '', ['F', 'extra4.xml', 0.6],
+ ...                         ['G', 'extra5.xml', 0.4]])
+ >>> logictree.get_all_paths()  # (3 + 1) * 2 paths
+ ['ACF', 'ACG', 'ADF', 'ADG', 'AEF', 'AEG', 'B.F', 'B.G']
+
+The fully uncorrelated realizations can be obtained by not specifying
+``applyToSources``:
+
+.. code-block:: python
+
+ >>> logictree = build(
+ ...     ['sourceModel', '', ['A', 'common1.xml', 0.6],
+ ...                         ['B', 'common2.xml', 0.4]],
+ ...     ['extendModel', '', ['C', 'extra1.xml', 0.6],
+ ...                         ['D', 'extra2.xml', 0.2],
+ ...                         ['E', 'extra3.xml', 0.2]],
+ ...     ['extendModel', '', ['F', 'extra4.xml', 0.6],
+ ...                         ['G', 'extra5.xml', 0.4]])
+ >>> logictree.get_all_paths() # 12 paths
+ ['ACF', 'ACG', 'ADF', 'ADG', 'AEF', 'AEG', 'BCF', 'BCG', 'BDF', 'BDG', 'BEF', 'BEG']
+
+
+
+Othe examples
+------------------
+
+Here we will discuss some example for users already
 familiar with the concept and we will answer the following frequently asked
 questions:
 
@@ -83,11 +258,7 @@ branch IDs by using the command ``oq show branches``::
 The first character of the ``abbrev`` specifies the branch number ("A"
 means the first branch, "B" the second, etc) while the other characters
 are the branch set number starting from zero. The format works up to
-64 branches per branchset, and the characters used in the abbreviations are in
-the following order::
-
- ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-
-
+184 branches per branchset, bu using printable UTF8 characters.
 For instance the realization #322 has the following branch path in
 compact form::
 

@@ -604,11 +604,11 @@ class BranchSet(object):
             branches) and list of path's :class:`Branch` objects. Total sum
             of all paths' weights is 1.0
         """
-        for path in self._enumerate_paths([]):
+        for path_branch in self._enumerate_paths([]):
             flat_path = []
             weight = 1.0
-            while path:
-                path, branch = path
+            while path_branch:
+                path_branch, branch = path_branch
                 weight *= branch.weight
                 flat_path.append(branch)
             yield weight, flat_path[::-1]
@@ -626,15 +626,15 @@ class BranchSet(object):
         else:
             branches = self.branches
         for branch in branches:
-            path = [prefix_path, branch]
-            if branch.bset is not None:
-                yield from branch.bset._enumerate_paths(path)
+            path_branch = [prefix_path, branch]
+            if branch.bset is not None:  # dummies can be branchpoints
+                yield from branch.bset._enumerate_paths(path_branch)
             else:
-                yield path
+                yield path_branch
 
     def __getitem__(self, branch_id):
         """
-        Return :class:`Branch` object belonging to this branch set with id
+        Return :class:`Branch` object belonging to this branchset with id
         equal to ``branch_id``.
         """
         for branch in self.branches:
@@ -678,6 +678,16 @@ class BranchSet(object):
                 break
         return pairs
 
+    def to_list(self):
+        """
+        :returns: a literal list describing the branchset
+        """
+        atb = ' '.join(self.filters.get("applyToBranches", []))
+        lst = [self.uncertainty_type, atb]
+        for br in self.branches:
+            lst.append([br.branch_id, '...', br.weight])
+        return lst
+
     def __len__(self):
         return len(self.branches)
 
@@ -690,14 +700,13 @@ class BranchSet(object):
 
 # NB: this function cannot be used with monster logic trees like the one for
 # South Africa (ZAF), since it is too slow; the engine use a trick instead
-def count_paths(bset):
+def count_paths(branches):
     """
-    :param bset: a BranchSet instance
+    :param branches: a list of branches (endpoints or nodes)
     :returns: the number of paths in the branchset (slow)
     """
-    if bset is None:
-        return 1
-    return sum(count_paths(br.bset) for br in bset.branches)
+    return sum(1 if br.bset is None else count_paths(br.bset.branches)
+               for br in branches)
 
 
 dummy_counter = itertools.count(1)
@@ -736,25 +745,6 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
-def attach_to_branches(branchsets):
-    """
-    Attach branchsets to branches depending on the applyToBranches
-    attribute. Also attaches dummy branchsets to dummy branches.
-    """
-    previous_branches = branchsets[0].branches
-    for i, bset in enumerate(branchsets[1:]):
-        prev_ids = ' '.join(pb.branch_id for pb in previous_branches)
-        atb = bset.filters.get('applyToBranches') or prev_ids
-        dummies = []
-        for branch in previous_branches:
-            if branch.branch_id in atb:
-                branch.bset = bset
-            else:
-                branch.bset = dummy = dummy_branchset()
-                dummies.append(dummy.branches[0])
-        previous_branches = bset.branches + dummies
-
-
 class CompositeLogicTree(object):
     """
     Build a logic tree from a set of branches by automatically
@@ -762,7 +752,7 @@ class CompositeLogicTree(object):
     """
     def __init__(self, branchsets):
         self.branchsets = branchsets
-        attach_to_branches(branchsets)
+        self._attach_to_branches()
         nb = len(branchsets)
         paths = []
         brno = 0
@@ -773,6 +763,35 @@ class CompositeLogicTree(object):
                 paths.append(''.join(path))
                 brno += 1
         self.basepaths = paths
+
+    def _attach_to_branches(self):
+        # attach branchsets to branches depending on the applyToBranches
+        # attribute; also attaches dummy branchsets to dummy branches.
+        previous_branches = self.branchsets[0].branches
+        branchdic = {br.branch_id: br for br in previous_branches}
+        for i, bset in enumerate(self.branchsets[1:]):
+            for br in bset.branches:
+                if br.branch_id != '.' and br.branch_id in branchdic:
+                    raise NameError('The branch ID %s is duplicated'
+                                    % br.branch_id)
+                branchdic[br.branch_id] = br
+            dummies = []
+            prev_ids = [pb.branch_id for pb in previous_branches]
+            app2brs = list(bset.filters.get('applyToBranches', '')) or prev_ids
+            if app2brs != prev_ids:
+                for branch_id in app2brs:
+                    branchdic[branch_id].bset = bset
+                for brid in prev_ids:
+                    br = branchdic[brid]
+                    if brid not in app2brs:
+                        br.bset = dummy = dummy_branchset()
+                        [dummybranch] = dummy.branches
+                        branchdic[dummybranch.branch_id] = dummybranch
+                        dummies.append(dummybranch)
+            else:  # apply to all previous branches
+                for branch in previous_branches:
+                    branch.bset = bset
+            previous_branches = bset.branches + dummies
 
     def __iter__(self):
         nb = len(self.branchsets)
@@ -788,3 +807,29 @@ class CompositeLogicTree(object):
 
     def __repr__(self):
         return '<%s>' % self.branchsets
+
+
+def build(*bslists):
+    """
+    :param bslists: a list of lists describing branchsets
+    :returns: a `CompositeLogicTree` instance
+
+    >>> lt = build(['sourceModel', '',
+    ...              ['A', 'common1', 0.6],
+    ...              ['B', 'common2', 0.4]],
+    ...           ['extendModel', '',
+    ...              ['C', 'extra1', 0.6],
+    ...              ['D', 'extra2', 0.2],
+    ...              ['E', 'extra2', 0.2]])
+    >>> lt.get_all_paths()
+    ['AC', 'AD', 'AE', 'BC', 'BD', 'BE']
+    """
+    bsets = []
+    for i, (utype, applyto, *brlists) in enumerate(bslists):
+        branches = []
+        for brid, value, weight in brlists:
+            branches.append(Branch('bs%02d' % i, brid, weight, value))
+        bset = BranchSet(utype, i, dict(applyToBranches=applyto))
+        bset.branches = branches
+        bsets.append(bset)
+    return CompositeLogicTree(bsets)

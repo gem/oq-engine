@@ -161,14 +161,60 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                         lt.Branch('bs1', 'D', .5, 7.6)]
 
         bs2 = lt.BranchSet('applyToTRT',
-                           filters={'applyToBranches': 'C D'})
+                           filters={'applyToBranches': 'CD'})
         bs2.branches = [lt.Branch('bs2', 'E', .3, 'A'),
                         lt.Branch('bs2', 'F', .7, 'B')]
         for branch in bs1.branches:
             branch.bset = bs2
         clt = lt.CompositeLogicTree([bs0, bs1, bs2])
-        self.assertEqual(lt.count_paths(bs0), 5)
+        self.assertEqual(lt.count_paths(bs0.branches), 5)
         self.assertEqual(clt.get_all_paths(),
                          ['ACE', 'ACF', 'ADE', 'ADF', 'B..'])
         self.assertEqual(clt.basepaths,
                          ['A**', 'B**', '*C*', '*D*', '**E', '**F'])
+
+    def test_build(self):
+        clt = lt.build(['sourceModel', '',
+                        ['A', 'common1', 0.6],
+                        ['B', 'common2', 0.4]],
+                       ['extendModel', 'A',
+                        ['C', 'extra1', 0.4],
+                        ['D', 'extra2', 0.2],
+                        ['E', 'extra3', 0.2],
+                        ['F', 'extra4', 0.2]],
+                       ['extendModel', 'B',
+                        ['G', 'extra5', 0.4],
+                        ['H', 'extra6', 0.2],
+                        ['I', 'extra7', 0.2],
+                        ['J', 'extra8', 0.2]])
+        self.assertEqual(clt.get_all_paths(),  # 4 + 4 rlzs
+                         ['AC.', 'AD.', 'AE.', 'AF..',
+                          'BG.', 'BH.', 'BI.', 'BJ.'])
+
+        clt = lt.build(['sourceModel', '',
+                        ['A', 'common1', 0.6],
+                        ['B', 'common2', 0.4]],
+                       ['extendModel', 'A',
+                        ['C', 'extra1', 0.6],
+                        ['D', 'extra2', 0.2],
+                        ['E', 'extra3', 0.2]])
+        self.assertEqual(clt.get_all_paths(), ['AC', 'AD', 'AE', 'B.'])
+
+        clt = lt.build(['sourceModel', '',
+                        ['A', 'common1', 0.6],
+                        ['B', 'common2', 0.4]],
+                       ['extendModel', 'B',
+                        ['C', 'extra1', 0.6],
+                        ['D', 'extra2', 0.2],
+                        ['E', 'extra3', 0.2]])
+        self.assertEqual(clt.get_all_paths(), ['A.', 'BC', 'BD', 'BE'])
+
+        clt = lt.build(['sourceModel', '',
+                        ['A', 'common1', 0.6],
+                        ['B', 'common2', 0.4]],
+                       ['extendModel', 'AB',
+                        ['C', 'extra1', 0.6],
+                        ['D', 'extra2', 0.2],
+                        ['E', 'extra3', 0.2]])
+        self.assertEqual(clt.get_all_paths(),
+                         ['AC', 'AD', 'AE', 'BC', 'BD', 'BE'])
