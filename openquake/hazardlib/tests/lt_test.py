@@ -145,10 +145,10 @@ class CollapseTestCase(unittest.TestCase):
 class CompositeLogicTreeTestCase(unittest.TestCase):
     def test(self):
         # simple logic tree with 5 realizations
-        #        __/ AAA
-        #    bs1/  \ AAB
-        #   /   \__/ ABA
-        # bs0      \ ABB
+        #        _C/ E
+        #    _A_/  \ F
+        #   /   \_D/ E
+        #          \ F
         #   \_______
         #            B..
         bs0 = lt.BranchSet('abGRAbsolute')
@@ -157,50 +157,50 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
 
         bs1 = lt.BranchSet('maxMagGRAbsolute',
                            filters={'applyToBranches': 'A'})
-        bs1.branches = [lt.Branch('bs1', 'A', .5, 7.0),
-                        lt.Branch('bs1', 'B', .5, 7.6)]
+        bs1.branches = [lt.Branch('bs1', 'C', .5, 7.0),
+                        lt.Branch('bs1', 'D', .5, 7.6)]
 
         bs2 = lt.BranchSet('applyToTRT',
-                           filters={'applyToBranches': 'A B'})
-        bs2.branches = [lt.Branch('bs2', 'A', .3, 'A'),
-                        lt.Branch('bs2', 'B', .7, 'B')]
+                           filters={'applyToBranches': 'C D'})
+        bs2.branches = [lt.Branch('bs2', 'E', .3, 'A'),
+                        lt.Branch('bs2', 'F', .7, 'B')]
         for branch in bs1.branches:
             branch.bset = bs2
         clt = lt.CompositeLogicTree([bs0, bs1, bs2])
         self.assertEqual(lt.count_paths(bs0.branches), 5)
         self.assertEqual(clt.get_all_paths(),
-                         ['AAA', 'AAB', 'ABA', 'ABB', 'B..'])
+                         ['ACE', 'ACF', 'ADE', 'ADF', 'B..'])
         self.assertEqual(clt.basepaths,
-                         ['A**', 'B**', '*A*', '*B*', '**A', '**B'])
+                         ['A**', 'B**', '*C*', '*D*', '**E', '**F'])
 
     def test_easybuild(self):
         clt = lt.easybuild(['sourceModel', '',
                             ['A', 'common1', 0.6],
                             ['B', 'common2', 0.4]],
                            ['extendModel', 'A',
-                            ['A', 'extra1', 0.6],
-                            ['B', 'extra2', 0.2],
-                            ['C', 'extra3', 0.2]])
-        self.assertEqual(clt.get_all_paths(), ['AA', 'AB', 'AC', 'B.'])
+                            ['C', 'extra1', 0.6],
+                            ['D', 'extra2', 0.2],
+                            ['E', 'extra3', 0.2]])
+        self.assertEqual(clt.get_all_paths(), ['AC', 'AD', 'AE', 'B.'])
 
         clt = lt.easybuild(['sourceModel', '',
                             ['A', 'common1', 0.6],
                             ['B', 'common2', 0.4]],
                            ['extendModel', 'B',
-                            ['A', 'extra1', 0.6],
-                            ['B', 'extra2', 0.2],
-                            ['C', 'extra3', 0.2]])
-        self.assertEqual(clt.get_all_paths(), ['A.', 'BA', 'BB', 'BC'])
+                            ['C', 'extra1', 0.6],
+                            ['D', 'extra2', 0.2],
+                            ['E', 'extra3', 0.2]])
+        self.assertEqual(clt.get_all_paths(), ['A.', 'BC', 'BD', 'BE'])
 
         clt = lt.easybuild(['sourceModel', '',
                             ['A', 'common1', 0.6],
                             ['B', 'common2', 0.4]],
                            ['extendModel', 'AB',
-                            ['A', 'extra1', 0.6],
-                            ['B', 'extra2', 0.2],
-                            ['C', 'extra3', 0.2]])
+                            ['C', 'extra1', 0.6],
+                            ['D', 'extra2', 0.2],
+                            ['E', 'extra3', 0.2]])
         self.assertEqual(clt.get_all_paths(),
-                         ['AA', 'AB', 'AC', 'BA', 'BB', 'BC'])
+                         ['AC', 'AD', 'AE', 'BC', 'BD', 'BE'])
 
         clt = lt.easybuild(['sourceModel', '',
                             ['A', 'common1', 0.6],
@@ -216,5 +216,4 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                             ['I', 'extra7', 0.2],
                             ['J', 'extra8', 0.2]])
         self.assertEqual(clt.get_all_paths(),  # 4 + 4 rlzs
-                         ['AA.', 'ABA', 'ABB', 'ABC',
-                          'ABD', 'AC.', 'AD.', 'B..'])
+                         ['AC.', 'AD.', 'AE.', 'AF.', 'B..'])

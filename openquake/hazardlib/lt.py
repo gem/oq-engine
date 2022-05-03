@@ -21,7 +21,7 @@ import itertools
 import collections
 import numpy
 
-from openquake.baselib.general import CallableDict, BASE94
+from openquake.baselib.general import CallableDict, BASE184
 from openquake.hazardlib import geo
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
@@ -634,7 +634,7 @@ class BranchSet(object):
 
     def __getitem__(self, branch_id):
         """
-        Return :class:`Branch` object belonging to this branch set with id
+        Return :class:`Branch` object belonging to this branchset with id
         equal to ``branch_id``.
         """
         for branch in self.branches:
@@ -774,11 +774,13 @@ class CompositeLogicTree(object):
         attach_to_branches(branchsets)
         nb = len(branchsets)
         paths = []
+        brno = 0
         for bsno, bset in enumerate(branchsets):
-            for brno, br in enumerate(bset.branches):
+            for br in bset.branches:
                 path = ['*'] * nb
-                path[bsno] = br.short_id = BASE94[brno]
+                path[bsno] = br.short_id = BASE184[brno]
                 paths.append(''.join(path))
+                brno += 1
         self.basepaths = paths
 
     def __iter__(self):
