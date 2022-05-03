@@ -153,7 +153,7 @@ the 'A' model:
  ...                          ['E', 'extra3.xml', 0.2]],
  ...     ['extendModel', '', ['F', 'extra4.xml', 0.6],
  ...                         ['G', 'extra5.xml', 0.4]])
- >>> logictree.get_all_paths()  # (3 + 1) * 2 paths
+ >>> logictree.get_all_paths()  # 3 * 2 + 2 paths
  ['ACF', 'ACG', 'ADF', 'ADG', 'AEF', 'AEG', 'B.F', 'B.G']
 
 The fully uncorrelated realizations can be obtained by not specifying
