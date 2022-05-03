@@ -145,10 +145,10 @@ class CollapseTestCase(unittest.TestCase):
 class CompositeLogicTreeTestCase(unittest.TestCase):
     def test(self):
         # simple logic tree with 5 realizations
-        #        __/ ACE
-        #    ___/  \ ACF
-        #   /   \__/ ADE
-        #        \__ ADF
+        #        _C/ E
+        #    _A_/  \ F
+        #   /   \_D/ E
+        #          \ F
         #   \_______
         #            B..
         bs0 = lt.BranchSet('abGRAbsolute')
