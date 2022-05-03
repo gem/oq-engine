@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml='http://www.opengis.net/gml'
+      xmlns='http://openquake.org/xmlns/nrml/0.5'>
+
+<logicTree logicTreeID='lt1'>
+  <logicTreeBranchingLevel branchingLevelID='bl1'>
+    <logicTreeBranchSet uncertaintyType='gmpeModel'
+                        branchSetID='bs1' 
+                        applyToTectonicRegionType='Active Shallow Crust'>
+      <logicTreeBranch branchID='b0'>
+        <uncertaintyModel>AkkarEtAlRjb2014</uncertaintyModel>
+        <uncertaintyWeight>0.250</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID='b1'>
+        <uncertaintyModel>BindiEtAl2011</uncertaintyModel>
+        <uncertaintyWeight>0.250</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID='b2'>
+        <uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
+        <uncertaintyWeight>0.250</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID='b3'>
+        <uncertaintyModel>ZhaoEtAl2016Asc</uncertaintyModel>
+        <uncertaintyWeight>0.250</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTreeBranchingLevel>
+</logicTree>
+</nrml>

@@ -90,21 +90,24 @@ class RiskFuncList(list):
     """
     A list of risk functions with attributes .id, .loss_type, .kind
     """
-    def check_misprints_in_risk_ids(self):
+    def check_misprints_in_risk_ids(self, inputs):
         """
         Check that there are no missing risk IDs for some risk functions
         """
         ids_by_kind = AccumDict(accum=set())
         for riskfunc in self:
             ids_by_kind[riskfunc.kind].add(riskfunc.id)
+        kinds = tuple(ids_by_kind)
+        fnames = [fname for kind, fname in inputs.items()
+                  if kind.endswith(kinds)]
         if len(ids_by_kind) > 1:
             k = next(iter(ids_by_kind))
-            base_ids = ids_by_kind.pop(k)
+            base_ids = set(ids_by_kind.pop(k))
             for kind, ids in ids_by_kind.items():
                 if ids != base_ids:
-                    raise ValueError(
-                        'Check the risk function IDs, %s=%s, %s=%s!' %
-                        (k, base_ids, kind, ids))
+                    raise NameError(
+                        'Check in the files %s the IDs %s' %
+                        (fnames, base_ids.symmetric_difference(ids)))
 
     def groupby_id(self, kind=None):
         """
@@ -574,7 +577,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 if kind in 'vulnerability fragility':
                     imt = rm.risk_functions[lt, kind].imt
                     rm.imt_by_lt[lt] = imt
-        self.risklist.check_misprints_in_risk_ids()
+        self.risklist.check_misprints_in_risk_ids(oq.inputs)
         self.curve_params = self.make_curve_params()
         iml = collections.defaultdict(list)
         # ._riskmodels is empty if read from the hazard calculation
