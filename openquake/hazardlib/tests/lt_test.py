@@ -173,8 +173,8 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         self.assertEqual(clt.basepaths,
                          ['A**', 'B**', '*C*', '*D*', '**E', '**F'])
 
-    def test_easybuild(self):
-        clt = lt.easybuild(['sourceModel', '',
+    def test_build_clt(self):
+        clt = lt.build_clt(['sourceModel', '',
                             ['A', 'common1', 0.6],
                             ['B', 'common2', 0.4]],
                            ['extendModel', 'A',
@@ -191,7 +191,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                          ['AC.', 'AD.', 'AE.', 'AF.',
                           'BG.', 'BH.', 'BI.', 'BJ.'])
 
-        clt = lt.easybuild(['sourceModel', '',
+        clt = lt.build_clt(['sourceModel', '',
                             ['A', 'common1', 0.6],
                             ['B', 'common2', 0.4]],
                            ['extendModel', 'A',
@@ -200,7 +200,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                             ['E', 'extra3', 0.2]])
         self.assertEqual(clt.get_all_paths(), ['AC', 'AD', 'AE', 'B.'])
 
-        clt = lt.easybuild(['sourceModel', '',
+        clt = lt.build_clt(['sourceModel', '',
                             ['A', 'common1', 0.6],
                             ['B', 'common2', 0.4]],
                            ['extendModel', 'B',
@@ -209,7 +209,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                             ['E', 'extra3', 0.2]])
         self.assertEqual(clt.get_all_paths(), ['A.', 'BC', 'BD', 'BE'])
 
-        clt = lt.easybuild(['sourceModel', '',
+        clt = lt.build_clt(['sourceModel', '',
                             ['A', 'common1', 0.6],
                             ['B', 'common2', 0.4]],
                            ['extendModel', 'AB',
