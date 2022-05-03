@@ -59,7 +59,7 @@ def create_source_info(csm, h5):
             trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
             code = csm.code.get(srcid, b'P')
             lens.append(len(src.trt_smrs))
-            row = [srcid, src.grp_id, code, 0, 0, 0, trti, 0]
+            row = [srcid, src.grp_id, code, 0, 0, 0, src.weight, trti]
             wkts.append(getattr(src, '_wkt', ''))
             data[srcid] = row
             src.id = len(data) - 1
