@@ -161,7 +161,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                         lt.Branch('bs1', 'D', .5, 7.6)]
 
         bs2 = lt.BranchSet('applyToTRT',
-                           filters={'applyToBranches': 'C D'})
+                           filters={'applyToBranches': 'CD'})
         bs2.branches = [lt.Branch('bs2', 'E', .3, 'A'),
                         lt.Branch('bs2', 'F', .7, 'B')]
         for branch in bs1.branches:
