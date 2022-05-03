@@ -139,10 +139,24 @@ the logic tree:
  ...                          ['E', 'extra3.xml', 0.2]],
  ...     ['extendModel', 'B', ['F', 'extra4.xml', 0.6],
  ...                          ['G', 'extra5.xml', 0.4]])
- >>> logictree.get_all_paths()
+ >>> logictree.get_all_paths()  # 3 + 2 paths
  ['AC.', 'AD.', 'AE..', 'BF.', 'BG.']
 
-The uncorrelated realizations can be obtained by not specifying
+Partially uncorrelated uncertainties can be obtained by applying only on
+the 'A' model on only on the 'B' model; for instance
+
+ >>> logictree = build(
+ ...     ['sourceModel', '', ['A', 'common1.xml', 0.6],
+ ...                         ['B', 'common2.xml', 0.4]],
+ ...     ['extendModel', 'A', ['C', 'extra1.xml', 0.6],
+ ...                          ['D', 'extra2.xml', 0.2],
+ ...                          ['E', 'extra3.xml', 0.2]],
+ ...     ['extendModel', '', ['F', 'extra4.xml', 0.6],
+ ...                         ['G', 'extra5.xml', 0.4]])
+ >>> logictree.get_all_paths()  # (3 + 1) * 2 paths
+ ['ACF', 'ACG', 'ADF', 'ADG', 'AEF', 'AEG', 'B.F', 'B.G']
+
+The fully uncorrelated realizations can be obtained by not specifying
 ``applyToSources``:
 
 .. code-block:: python
