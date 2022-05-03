@@ -146,7 +146,7 @@ uncertainties*:
  ...     ['extendModel', 'B', ['F', 'extra4.xml', 0.6],
  ...                          ['G', 'extra5.xml', 0.4]])
  >>> logictree.get_all_paths()
- ['AC.', 'AD.', 'AE.', 'BF.', 'BG.']
+ ['AC.', 'AD.', 'AE..', 'BF.', 'BG.']
 
 
 

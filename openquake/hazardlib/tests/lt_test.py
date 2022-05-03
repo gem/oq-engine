@@ -188,7 +188,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                             ['I', 'extra7', 0.2],
                             ['J', 'extra8', 0.2]])
         self.assertEqual(clt.get_all_paths(),  # 4 + 4 rlzs
-                         ['AC.', 'AD.', 'AE.', 'AF.',
+                         ['AC.', 'AD.', 'AE.', 'AF..',
                           'BG.', 'BH.', 'BI.', 'BJ.'])
 
         clt = lt.build_clt(['sourceModel', '',
