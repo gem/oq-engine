@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the field `source_info.trti` in the datastore to point to the
+    correct tectonic region type index and not to zero
   * Added a check for inconsistent IDs across different kinds of risk functions
     (i.e. fragility and consequence)
   * Fixed a logging statement that could run out of memory in large calculations

@@ -490,6 +490,13 @@ hazard_uhs-std.csv
         for f in out['uhs', 'csv']:
             self.assertEqualFiles('expected/' + strip_calc_id(f), f)
 
+        # checking that source_info is stored correctly
+        info = self.calc.datastore['source_info'][:]
+        ae(info['source_id'], [b'21;0', b'21;1', b'22'])
+        ae(info['grp_id'], [0, 1, 2])
+        ae(info['weight'] > 0, [True, True, True])
+        ae(info['trti'], [0, 0, 1])
+
     def test_case_29(self):  # non parametric source with 2 KiteSurfaces
         check = False
 
