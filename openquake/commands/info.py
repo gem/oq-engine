@@ -185,7 +185,8 @@ def main(what, report=False):
             bset = node[0][0]
             if bset.tag.endswith("logicTreeBranchingLevel"):
                 bset = bset[0]
-            if bset.attrib['uncertaintyType'] == 'sourceModel':
+            if bset.attrib['uncertaintyType'] in (
+                    'sourceModel', 'extendModel'):
                 sm_nodes = []
                 for smpath in logictree.collect_info(what).smpaths:
                     sm_nodes.append(nrml.read(smpath))
