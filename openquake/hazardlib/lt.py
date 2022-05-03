@@ -651,6 +651,9 @@ class BranchSet(object):
             if key == 'applyToTectonicRegionType':
                 if value != source.tectonic_region_type:
                     return False
+            elif key == 'applyToSources':
+                if source and source.source_id not in value:
+                    return False
             elif key == 'applyToBranches':
                 pass
             else:
