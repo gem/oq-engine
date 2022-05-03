@@ -22,7 +22,6 @@ import logging
 import operator
 import functools
 import collections
-from scipy import sparse
 import numpy
 import pandas
 
@@ -91,9 +90,24 @@ class RiskFuncList(list):
     """
     A list of risk functions with attributes .id, .loss_type, .kind
     """
+    def check_misprints_in_risk_ids(self):
+        """
+        Check that there are no missing risk IDs for some risk functions
+        """
+        ids_by_kind = AccumDict(accum=set())
+        for riskfunc in self:
+            ids_by_kind[riskfunc.kind].add(riskfunc.id)
+        if len(ids_by_kind) > 1:
+            k = next(iter(ids_by_kind))
+            base_ids = ids_by_kind.pop(k)
+            for kind, ids in ids_by_kind.items():
+                if ids != base_ids:
+                    raise ValueError(
+                        'Check the risk function IDs, %s=%s, %s=%s!' %
+                        (k, base_ids, kind, ids))
+
     def groupby_id(self, kind=None):
         """
-        :param kind: if not None, filter the risk functions on that kind
         :returns: double dictionary id -> loss_type, kind -> risk_function
         """
         ddic = {}
@@ -560,12 +574,13 @@ class CompositeRiskModel(collections.abc.Mapping):
                 if kind in 'vulnerability fragility':
                     imt = rm.risk_functions[lt, kind].imt
                     rm.imt_by_lt[lt] = imt
+        self.risklist.check_misprints_in_risk_ids()
         self.curve_params = self.make_curve_params()
         iml = collections.defaultdict(list)
         # ._riskmodels is empty if read from the hazard calculation
         for riskid, rm in self._riskmodels.items():
             for lt, rf in rm.risk_functions.items():
-                if hasattr(rf, 'imt'):
+                if hasattr(rf, 'imt'):  # vulnerability
                     iml[rf.imt].append(rf.imls[0])
         if sum(oq.minimum_intensity.values()) == 0 and iml:
             oq.minimum_intensity = {imt: min(ls) for imt, ls in iml.items()}
