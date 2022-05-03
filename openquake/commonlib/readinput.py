@@ -38,7 +38,7 @@ import requests
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.general import (
     random_filter, countby, group_array, get_duplicates, gettemp)
-from openquake.baselib.python3compat import zip
+from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -287,7 +287,6 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
         # reduce the logic tree to one random realization
         # reduce the sites by a factor of `re`
         # reduce the ses by a factor of `re`
-        # set save_disk_space = true
         os.environ['OQ_SAMPLE_SITES'] = re
         job_ini['number_of_logic_tree_samples'] = '1'
         ses = job_ini.get('ses_per_logic_tree_path')
@@ -300,7 +299,6 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
             imt = next(iter(imtls))
             job_ini['intensity_measure_types_and_levels'] = repr(
                 {imt: imtls[imt]})
-        job_ini['save_disk_space'] = 'true'
     oqparam = OqParam(**job_ini)
     oqparam._input_files = get_input_files(oqparam)
     if validate:  # always true except from oqzip
@@ -653,8 +651,6 @@ def get_source_model_lt(oqparam, branchID=None):
     if discard_trts:
         # smlt.tectonic_region_types comes from applyToTectonicRegionType
         smlt.tectonic_region_types = smlt.tectonic_region_types - discard_trts
-    if oqparam.is_ucerf():
-        smlt.tectonic_region_types = {'Active Shallow Crust'}
     return smlt
 
 
@@ -778,7 +774,7 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
     # then read the composite source model from the cache if possible
     if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
         os.makedirs(oqparam.cachedir)
-    if oqparam.cachedir and not oqparam.is_ucerf():
+    if oqparam.cachedir:
         # for UCERF pickling the csm is slower
         checksum = get_checksum32(oqparam, h5)
         fname = os.path.join(oqparam.cachedir, 'csm_%s.pik' % checksum)
@@ -792,7 +788,7 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
 
     # read and process the composite source model from the input files
     csm = get_csm(oqparam, full_lt, h5)
-    if oqparam.cachedir and not oqparam.is_ucerf():
+    if oqparam.cachedir:
         logging.info('Saving %s', fname)
         with open(fname, 'wb') as f:
             pickle.dump(csm, f)
@@ -889,7 +885,7 @@ def get_exposure(oqparam):
     exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs,
-        by_country='country' in oqparam.aggregate_by,
+        by_country='country' in asset.tagset(oqparam.aggregate_by),
         errors='ignore' if oqparam.ignore_encoding_errors else None)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
     if oqparam.cachedir:
@@ -1045,13 +1041,14 @@ def get_pmap_from_csv(oqparam, fnames):
     return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
 
 
-tag2code = {'ar': b'A',
-            'mu': b'M',
-            'po': b'P',
-            'si': b'S',
-            'co': b'C',
-            'ch': b'X',
-            'no': b'N'}
+tag2code = {'multiFaultSource': b'F',
+            'areaSource': b'A',
+            'multiPointSource': b'M',
+            'pointSource': b'P',
+            'simpleFaultSource': b'S',
+            'complexFaultSource': b'C',
+            'characteristicSource': b'X',
+            'nonParametricSource': b'N'}
 
 
 # tested in commands_test
@@ -1065,7 +1062,9 @@ def reduce_sm(paths, source_ids):
     """
     if isinstance(source_ids, dict):  # in oq reduce_sm
         def ok(src_node):
-            code = tag2code[re.search(r'\}(\w\w)', src_node.tag).group(1)]
+            if src_node.tag.endswith('Surface'):  # in geometrySections
+                return True
+            code = tag2code[re.search(r'\}(\w+)', src_node.tag).group(1)]
             arr = source_ids.get(src_node['id'])
             if arr is None:
                 return False
@@ -1123,6 +1122,8 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     total = good = 0
     to_remove = set()
     paths = logictree.collect_info(smlt_file).smpaths
+    if isinstance(source_ids, dict):
+        source_ids = {decode(k): v for k, v in source_ids.items()}
     for dic in parallel.Starmap.apply(reduce_sm, (paths, source_ids)):
         path = dic['path']
         model = dic['model']

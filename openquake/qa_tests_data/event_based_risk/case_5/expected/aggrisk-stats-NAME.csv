@@ -1,0 +1,14 @@
+#,,,"generated_by='OpenQuake engine 3.14.0-git10ba91dcbd', start_date='2022-04-09T05:36:12', checksum=3248968340"
+loss_type,loss,stat,NAME_1
+business_interruption,18.626227188110352,mean,Mid-Western
+business_interruption,9.132193035549587,quantile-0.15,Mid-Western
+business_interruption,17.87669817606608,quantile-0.85,Mid-Western
+structural,23.749995422363284,mean,Mid-Western
+structural,18.055858188205296,quantile-0.15,Mid-Western
+structural,23.300458272298176,quantile-0.85,Mid-Western
+business_interruption,9.156351518630983,mean,Far-Western
+business_interruption,5.679034365548028,quantile-0.15,Far-Western
+business_interruption,8.881826480229696,quantile-0.85,Far-Western
+structural,27.63014135360718,mean,Far-Western
+structural,16.33857594596015,quantile-0.15,Far-Western
+structural,26.738701979319252,quantile-0.85,Far-Western

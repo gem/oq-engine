@@ -262,7 +262,7 @@ class SphericalToCartesianAndBackTestCase(unittest.TestCase):
                          numpy.array([lons, lats, depths]).shape)
         aac([lons, lats, depths], res_sphe)
 
-    def test_zero_zero_zero(self):
+    def test_tl_zero(self):
         self._test((0, 0, 0), (6371, 0, 0))
         self._test((0, 0, None), (6371, 0, 0))
         self._test(([0], [0], [0]), [(6371, 0, 0)])

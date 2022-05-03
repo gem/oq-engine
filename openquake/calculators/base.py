@@ -19,6 +19,7 @@ import os
 import sys
 import abc
 import pdb
+import time
 import logging
 import operator
 import traceback
@@ -184,7 +185,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.oqparam, self.datastore.hdf5)
             logging.info(f'Checksum of the inputs: {check} '
                          f'(total size {general.humansize(size)})')
-        self.datastore.flush()
 
     def check_precalc(self, precalc_mode):
         """
@@ -470,9 +470,16 @@ class HazardCalculator(BaseCalculator):
                     oq, self.datastore.hdf5)
                 oq.mags_by_trt = csm.get_mags_by_trt()
                 for trt in oq.mags_by_trt:
-                    self.datastore['source_mags/' + trt] = numpy.array(
-                        oq.mags_by_trt[trt])
+                    mags = oq.mags_by_trt[trt]
+                    min_mag, max_mag = float(mags[0]), float(mags[-1])
+                    self.datastore['source_mags/' + trt] = numpy.array(mags)
                     interp = oq.maximum_distance(trt)
+                    if min_mag < interp.x[0]:
+                        logging.warning(
+                            'discarding magnitudes < %.2f', interp.x[0])
+                    if max_mag > interp.x[-1]:
+                        logging.warning(
+                            'discarding magnitudes > %.2f', interp.x[-1])
                     if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (
                             interp.x[0], interp.y[0],
@@ -482,10 +489,7 @@ class HazardCalculator(BaseCalculator):
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
         self.pre_checks()
-
-        if (not oq.hazard_calculation_id
-                and oq.calculation_mode != 'preclassical'
-                and not oq.save_disk_space):
+        if oq.calculation_mode == 'multi_risk':
             self.gzip_inputs()
 
         # check DEFINED_FOR_REFERENCE_VELOCITY
@@ -503,6 +507,7 @@ class HazardCalculator(BaseCalculator):
         If yes, read the inputs by retrieving the previous calculation;
         if not, read the inputs directly.
         """
+        self.t0 = time.time()
         oq = self.oqparam
         if 'gmfs' in oq.inputs or 'multi_peril' in oq.inputs:
             # read hazard from files
@@ -734,10 +739,7 @@ class HazardCalculator(BaseCalculator):
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_crmodel()  # must be called first
-        if (oq.calculation_mode == 'preclassical' and
-                'exposure' not in oq.inputs):
-            return
-        elif (not oq.imtls and 'shakemap' not in oq.inputs
+        if (not oq.imtls and 'shakemap' not in oq.inputs
                 and oq.ground_motion_fields):
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
@@ -780,6 +782,7 @@ class HazardCalculator(BaseCalculator):
                     exposure.exposures, hdf5.vstr)
         elif 'assetcol' in self.datastore.parent:
             assetcol = self.datastore.parent['assetcol']
+            assetcol.update_tagcol(oq.aggregate_by)
             if oq.region:
                 region = wkt.loads(oq.region)
                 self.sitecol = haz_sitecol.within(region)
@@ -832,14 +835,16 @@ class HazardCalculator(BaseCalculator):
                     for taxo, weight in items:
                         if taxo != '?':
                             taxonomies.add(taxo)
-            # check that we are covering all the taxonomy strings in the exposure
+            # check that we are covering all the taxonomies in the exposure
             missing = taxonomies - set(self.crmodel.taxonomies)
             if self.crmodel and missing:
-                raise RuntimeError('The exposure contains the taxonomy strings %s '
-                                   'which are not in the risk model' % missing)
+                raise RuntimeError(
+                    'The exposure contains the taxonomy strings '
+                    '%s which are not in the risk model' % missing)
             if len(self.crmodel.taxonomies) > len(taxonomies):
-                logging.info('Reducing risk model from %d to %d taxonomy strings',
-                             len(self.crmodel.taxonomies), len(taxonomies))
+                logging.info(
+                    'Reducing risk model from %d to %d taxonomy strings',
+                    len(self.crmodel.taxonomies), len(taxonomies))
                 self.crmodel = self.crmodel.reduce(taxonomies)
                 self.crmodel.tmap = tmap
 
@@ -931,8 +936,7 @@ class HazardCalculator(BaseCalculator):
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         if 'source_info' not in self.datastore:
-            source_reader.create_source_info(
-                self.csm, source_data, self.datastore.hdf5)
+            source_reader.create_source_info(self.csm, self.datastore.hdf5)
         self.csm.update_source_info(source_data)
         recs = [tuple(row) for row in self.csm.source_info.values()]
         self.datastore['source_info'][:] = numpy.array(
@@ -1180,35 +1184,15 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     Store agg_keys, agg_values.
     :returns: the aggkey dictionary key -> tags
     """
-    lst = []
-    aggkey = assetcol.tagcol.get_aggkey(aggby)
     if aggby:
-        logging.info('Storing %d aggregation keys', len(aggkey))
-        dt = [(name + '_', U16) for name in aggby] + [
-            (name, hdf5.vstr) for name in aggby]
-        kvs = []
-        for key, val in aggkey.items():
-            val = tuple(python3compat.decode(val))
-            kvs.append(key + val)
-            lst.append(' '.join(val))
-        dstore['agg_keys'] = numpy.array(kvs, dt)
-        if aggby == ['id']:
-            kids = assetcol['ordinal']
-        elif aggby == ['site_id']:
-            kids = assetcol['site_id']
-        else:
-            key2i = {key: i for i, key in enumerate(aggkey)}
-            kids = [key2i[tuple(t)] for t in assetcol[aggby]]
+        aggids, aggtags = assetcol.build_aggids(aggby)
+        logging.info('Storing %d aggregation keys', len(aggids))
+        agg_keys = [','.join(tags) for tags in aggtags]
+        dstore['agg_keys'] = numpy.array(agg_keys, hdf5.vstr)
         if 'assetcol' not in set(dstore):
             dstore['assetcol'] = assetcol
-        grp = dstore.getitem('assetcol')
-        if 'kids' not in grp:
-            grp['kids'] = U16(kids)
-    lst.append('*total*')
     if assetcol.get_value_fields():
         dstore['agg_values'] = assetcol.get_agg_values(aggby)
-        dstore.set_shape_descr('agg_values', aggregation=lst)
-    return aggkey if aggby else {}
 
 
 def read_shakemap(calc, haz_sitecol, assetcol):
@@ -1297,7 +1281,10 @@ def create_risk_by_event(calc):
     """
     oq = calc.oqparam
     dstore = calc.datastore
-    aggkey = getattr(calc, 'aggkey', {})  # empty if not aggregate_by
+    try:
+        K = len(dstore['agg_keys'])
+    except KeyError:
+        K = 0
     crmodel = calc.crmodel
     if 'risk' in oq.calculation_mode:
         fields = [('loss', F32)]
@@ -1305,11 +1292,10 @@ def create_risk_by_event(calc):
             fields.append(('ins_loss', F32))
         descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
                  ('variance', F32)] + fields
-        dstore.create_df('risk_by_event', descr, K=len(aggkey),
-                         L=len(oq.loss_types))
+        dstore.create_df('risk_by_event', descr, K=K, L=len(oq.loss_types))
     else:  # damage + consequences
         dmgs = ' '.join(crmodel.damage_states[1:])
         descr = ([('event_id', U32), ('agg_id', U32), ('loss_id', U8)] +
                  [(dc, F32) for dc in crmodel.get_dmg_csq()])
-        dstore.create_df('risk_by_event', descr, K=len(aggkey),
+        dstore.create_df('risk_by_event', descr, K=K,
                          L=len(oq.loss_types), limit_states=dmgs)

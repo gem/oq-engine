@@ -374,6 +374,31 @@ def namelist(value):
     return names
 
 
+def namelists(value):
+    """
+    :param value: input string
+    :returns: list of lists of identifiers
+
+    >>> namelists('a,b')
+    [['a', 'b']]
+    >>> namelists('a1, b_2; _c')
+    [['a1', 'b_2'], ['_c']]
+
+    >>> namelists('a1; b_2; 1c')
+    [['a1'], ['b_2'], ['1c']]
+    """
+    lists = []
+    for string in value.split(';'):
+        names = string.replace(',', ' ').split()
+        for n in names:
+            try:
+                source_id(n)
+            except ValueError:
+                raise ValueError('Invalid name: %s' % n)
+        lists.append(names)
+    return lists
+
+
 def float_(value):
     """
     :param value: input string
@@ -864,15 +889,24 @@ def dictionary(value):
 def mag_scale_rel(value):
     """
     :param value:
-        name of a Magnitude-Scale relationship in hazardlib
+        a Magnitude-Scale relationship in hazardlib
     :returns:
         the corresponding hazardlib object
+
+    Parametric MSR classes are supported with TOML syntax; for instance
+
+    >>> mag_scale_rel("CScalingMSR.C=4.7")
+    <CScalingMSR>
     """
     value = value.strip()
+    if '.' in value or '[' in value:
+        [(value, kwargs)] = toml.loads(value).items()
+    else:
+        kwargs = {}
     if value not in SCALEREL:
         raise ValueError(
             "'%s' is not a recognized magnitude-scale relationship" % value)
-    return value
+    return SCALEREL[value](**kwargs)
 
 
 def pmf(value):

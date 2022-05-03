@@ -22,7 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import CallableDict, BASE184
-from openquake.hazardlib import geo, source as ohs
+from openquake.hazardlib import geo
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 from openquake.hazardlib import valid
@@ -94,8 +94,7 @@ def trucMFDFromSlip_absolute(utype, node, filename):
 
 @parse_uncertainty.add('setMSRAbsolute')
 def setMSR_absolute(utype, node, filename):
-    tmps = valid.mag_scale_rel(node.text)
-    return valid.SCALEREL[tmps]()
+    return valid.mag_scale_rel(node.text)
 
 
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')
@@ -711,6 +710,18 @@ class BranchSet(object):
 
     def __repr__(self):
         return '<%s(%d)>' % (self.uncertainty_type, len(self))
+
+
+# NB: this function cannot be used with monster logic trees like the one for
+# South Africa (ZAF), since it is too slow; the engine use a trick instead
+def count_paths(bset):
+    """
+    :param bset: a BranchSet instance
+    :returns: the number of paths in the branchset (slow)
+    """
+    if bset is None:
+        return 1
+    return sum(count_paths(br.bset) for br in bset.branches)
 
 
 dummy_counter = itertools.count(1)

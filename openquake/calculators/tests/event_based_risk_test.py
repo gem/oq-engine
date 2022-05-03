@@ -91,9 +91,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqual(aw.stats, ['mean'])
         numpy.testing.assert_allclose(aw.array, [685.5015], atol=.001)
 
-        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
-                              fname, delta=1E-5)
+        fnames = export(('aggrisk', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
+                                  fname, delta=1E-5)
 
         fnames = export(('aggcurves', 'csv'), self.calc.datastore)
         for fname in fnames:
@@ -232,9 +233,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
-        [fname] = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
-                              delta=1E-5)
+        for fname in export(('aggcurves', 'csv'), self.calc.datastore):
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
     def test_case_4(self):
         # Turkey with SHARE logic tree
@@ -252,6 +253,18 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # taxonomy mapping, the numbers are different in Ubuntu 20 vs 18
         self.run_calc(case_5.__file__, 'job_eb.ini')
         fnames = export(('aggcurves', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                  fname, delta=5E-4)
+
+        # check aggrisk-stats
+        fnames = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                  fname, delta=5E-4)
+
+        # check aggcurves-stats
+        fnames = export(('aggcurves-stats', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=5E-4)
@@ -352,12 +365,12 @@ agg_id
         aac(sig1 ** 2 + sig2 ** 2 + sig3 ** 2, tot.variance)
 
         # check aggcurves-stats
-        [fname] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
+        [_, fname] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
                               fname, delta=2E-5)
 
         # check aggrisk-stats
-        [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        [_, fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
                               fname, delta=2E-5)
 
@@ -487,22 +500,22 @@ agg_id
         # nontrivial taxonomy mapping
         out = self.run_calc(case_8.__file__,  'job.ini', exports='csv',
                             concurrent_tasks='0')
-        [fname] = out['aggrisk', 'csv']
-        self.assertEqualFiles('expected/aggrisk.csv', fname)
+        for fname in out['aggrisk', 'csv']:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
         # NB: there was a taskno-dependency here, so make sure there are
         # no regressions
         out = self.run_calc(case_8.__file__,  'job.ini', exports='csv',
                             concurrent_tasks='4')
-        [fname] = out['aggrisk', 'csv']
-        self.assertEqualFiles('expected/aggrisk.csv', fname)
+        for fname in out['aggrisk', 'csv']:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
     # NB: big difference between Ubuntu 18 and 20
     def test_asset_loss_table(self):
         # this is a case with L=1, R=1, T1=2, P=6
         out = self.run_calc(case_6c.__file__, 'job_eb.ini', exports='csv',
                             minimum_asset_loss='100')
-        [fname] = out['aggcurves', 'csv']
+        _tot, fname = out['aggcurves', 'csv']
         # very sensitive to shapely version
         self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=2E-3)
 
@@ -513,22 +526,22 @@ agg_id
         out = self.run_calc(
             case_6c.__file__, 'job_eb.ini', exports='csv',
             hazard_calculation_id=str(self.calc.datastore.calc_id))
-        [fname] = out['aggcurves', 'csv']
+        _tot, fname = out['aggcurves', 'csv']
         self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=2E-3)
 
     def test_recompute(self):
         # test recomputing aggregate loss curves with post_risk
         # this is starting from a ruptures.csv file
         out = self.run_calc(recompute.__file__, 'job.ini', exports='csv')
-        [fname] = out['aggrisk', 'csv']
+        [_total, fname] = out['aggrisk', 'csv']
         self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
-        [fname] = out['aggcurves', 'csv']
+        [_total, fname] = out['aggcurves', 'csv']
         self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-5)
 
         parent = self.calc.datastore
         # the parent has aggregate_by = NAME_1, NAME_2, taxonomy
         oq = parent['oqparam']
-        oq.__dict__['aggregate_by'] = ['NAME_1']
+        oq.__dict__['aggregate_by'] = [['NAME_1']]
         log = logs.init('job', {'calculation_mode': 'post_risk',
                                 'description': 'test recompute'})
         prc = PostRiskCalculator(oq, log.calc_id)
@@ -536,7 +549,7 @@ agg_id
         oq.hazard_calculation_id = parent.calc_id
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}), log:
             prc.run()
-        [fname] = export(('aggrisk', 'csv'), prc.datastore)
+        [_total, fname] = export(('aggrisk', 'csv'), prc.datastore)
         self.assertEqualFiles('expected/recomputed_losses.csv', fname,
                               delta=1E-5)
 

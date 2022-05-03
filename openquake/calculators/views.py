@@ -272,7 +272,6 @@ def view_params(token, dstore):
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
               'pointsource_distance',
-              'floating_x_step', 'floating_y_step',
               'ground_motion_correlation_model', 'minimum_intensity',
               'random_seed', 'master_seed', 'ses_seed']
     if 'risk' in oq.calculation_mode:
@@ -603,7 +602,7 @@ def view_required_params_per_trt(token, dstore):
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((trt, ' '.join(map(repr, map(repr, gsims))),
+        tbl.append((trt, ' '.join(map(repr, gsims)).replace('\n', '\\n'),
                     distances, siteparams, ruptparams))
     return text_table(
         tbl, header='trt_smr gsims distances siteparams ruptparams'.split(),
@@ -1328,3 +1327,13 @@ def view_collapsible(token, dstore):
         n, u = len(df), len(df.mdvbin.unique())
         out.append((sid, u, n, n / u))
     return numpy.array(out, dt('site_id eff_rups num_rups cfactor'))
+
+
+# tested in oq-risk-tests etna
+@view.add('event_based_mfd')
+def view_event_based_mfd(token, dstore):
+    """
+    Compare n_occ/eff_time with occurrence_rate
+    """
+    aw = extract(dstore, 'event_based_mfd?')
+    return pandas.DataFrame(aw.to_dict()).set_index('mag')

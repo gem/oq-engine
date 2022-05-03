@@ -181,7 +181,10 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_17(self):
         # CSV exposure in latin1
         self.run_calc(case_17.__file__, 'job.ini')
-        tbl = text_table(self.calc.datastore['agg_keys'][:], ext='org')
+        rows = [row.decode('utf8').split(',')
+                for row in self.calc.datastore['agg_keys'][:]]
+        header = self.calc.oqparam.aggregate_by
+        tbl = text_table(rows, header=header, ext='org')
         self.assertEqualFiles('agg_keys.org', gettemp(tbl))
 
     def test_case_18(self):

@@ -118,6 +118,8 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
         allctxs = cmaker.read_ctxs(dstore, slc)
         for magidx, ctx in zip(magi, allctxs):
             ctx.magi = magidx
+    # Set epsstar boolean variable
+    epsstar = dstore['oqparam'].epsilon_star
     dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
     N, M, P, Z = hmap4.shape
@@ -147,7 +149,8 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
             with dis_mon:
                 # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
                 matrix = disagg.disaggregate(close, cmaker.tom, g_by_z[s],
-                                             iml2, eps3, s, bins)  # 7D-matrix
+                                             iml2, eps3, s, bins,
+                                             epsstar=epsstar)  # 7D-matrix
                 for m in range(M):
                     mat6 = matrix[..., m, :, :]
                     if mat6.any():
@@ -246,6 +249,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         Run the disaggregation phase.
         """
         oq = self.oqparam
+        ws = [rlz.weight for rlz in self.full_lt.get_realizations()]
+        if oq.rlz_index is None and oq.num_rlzs_disagg == 0:
+            oq.num_rlzs_disagg = len(ws)  # 0 means all rlzs
         edges, self.shapedic = disagg.get_edges_shapedic(
             oq, self.sitecol, self.datastore['source_mags'])
         self.save_bin_edges(edges)
@@ -253,7 +259,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
         self.M = len(self.imts)
-        ws = [rlz.weight for rlz in self.full_lt.get_realizations()]
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         nrows = len(dstore['_poes/sid'])
@@ -262,7 +267,7 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
-            Z = oq.num_rlzs_disagg or 1
+            Z = oq.num_rlzs_disagg
             rlzs = numpy.zeros((self.N, Z), int)
             if self.R > 1:
                 for sid in self.sitecol.sids:

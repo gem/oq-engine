@@ -31,10 +31,7 @@ def build_rupdict(srcs):
     """
     dic = {f: [] for f in rupfields}
     for src in srcs:
-        if hasattr(src, 'nodal_plane_distribution'):
-            irups = src.iruptures(point_rup=True)  # fast
-        else:
-            irups = src.iter_ruptures()
+        irups = src.iter_ruptures(step=5)  # fast
         for rupno, rup in enumerate(irups):
             assert rupno < MAX_RUPS_PER_SOURCE
             dic['mag'].append(rup.mag)

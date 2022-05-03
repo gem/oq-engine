@@ -51,7 +51,7 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-3)
 
         # check aggcurves, sensitive to shapely version
-        [f] = export(('aggcurves', 'csv'), self.calc.datastore)
+        [_, f] = export(('aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=2E-3)
 
     def test_case_12a(self):
@@ -106,7 +106,7 @@ class EventBasedDamageTestCase(CalculatorTestCase):
     def test_case_14(self):
         # test event_based_damage, aggregate_by=NAME_1
         self.run_calc(case_14.__file__, 'job.ini')
-        [f] = export(('aggcurves', 'csv'), self.calc.datastore)
+        [_, f] = export(('aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=5E-5)
 
     def test_case_15(self):

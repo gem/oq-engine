@@ -29,6 +29,59 @@ from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 
 
+class ModifiableGMPEAlAtik2015SigmaTest(unittest.TestCase):
+
+    def setUp(self):
+        self.ctx = ctx = RuptureContext()
+        ctx.mag = 6.
+        ctx.rake = 0.
+        ctx.hypo_depth = 10.
+        ctx.occurrence_rate = .001
+        sites = Dummy.get_site_collection(4, vs30=760.)
+        for name in sites.array.dtype.names:
+            setattr(ctx, name, sites[name])
+        ctx.rrup = np.array([1., 10., 30., 70.])
+        ctx.rjb = np.array([1., 10., 30., 70.])
+        self.imt = PGA()
+
+    def test_sigma_model_alatik2015_01(self):
+        """ Checks that the modified GMM provides the expected values """
+        stds_types = [const.StdDev.TOTAL, const.StdDev.INTRA_EVENT,
+                      const.StdDev.INTER_EVENT]
+        params = {"tau_model": "global", "ergodic": False}
+        gmm = ModifiableGMPE(gmpe={'YenierAtkinson2015BSSA': {}},
+                             sigma_model_alatik2015=params)
+        out = gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
+                                       self.imt, stds_types)
+        # Expected results hand computed
+        expected_with = np.ones(4) * 0.41623333
+        expected_betw = np.ones(4) * 0.36855
+        aae = np.testing.assert_array_almost_equal
+        aae(expected_betw, out[1][2])
+        aae(expected_with, out[1][1])
+
+    def test_sigma_model_alatik2015_02(self):
+        """ Checks that the modified GMM provides the expected values """
+        params = {"tau_model": "cena", "ergodic": True}
+        gmm = ModifiableGMPE(gmpe={'YenierAtkinson2015BSSA': {}},
+                             sigma_model_alatik2015=params)
+        out = get_mean_stds(gmm, self.ctx, [self.imt])
+        # Expected results hand computed
+        expected_betw = np.ones((1, 4)) * 0.32195
+        aae = np.testing.assert_array_almost_equal
+        aae(expected_betw, out[2])
+
+    def test_sigma_model_alatik2015_03(self):
+        """ Checks that the modified GMM provides the expected values """
+        gmm = ModifiableGMPE(gmpe={'YenierAtkinson2015BSSA': {}},
+                             sigma_model_alatik2015={})
+        out = get_mean_stds(gmm, self.ctx, [self.imt], truncation_level=0)
+        # Expected results hand computed
+        expected_betw = np.ones((1, 4)) * 0.36855
+        aae = np.testing.assert_array_almost_equal
+        aae(expected_betw, out[2])
+
+
 class ModifiableGMPEAddWithBetweenTest(unittest.TestCase):
 
     def setUp(self):
@@ -52,8 +105,8 @@ class ModifiableGMPEAddWithBetweenTest(unittest.TestCase):
                              add_between_within_stds={'with_betw_ratio': 0.6})
         out = gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
                                        self.imt, stds_types)
-        expected_with = np.ones(4) * 0.24381161
-        expected_betw = np.ones(4) * 0.40635268
+        expected_with = np.ones(4) * 0.264451
+        expected_betw = np.ones(4) * 0.440751
         aae = np.testing.assert_array_almost_equal
         aae(expected_betw, out[1][2])
         aae(expected_with, out[1][1])
@@ -334,15 +387,14 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
                           'BaumontEtAl2018High2210IAVGDC30n7',
                           'FaccioliCauzzi2006']:
 
-            stds_types = [const.StdDev.TOTAL]
             gmm = ModifiableGMPE(gmpe={gmpe_name: {}},
                                  apply_swiss_amplification={})
-            mean, stds = gmm.get_mean_and_stddevs(
-                self.ctx, self.ctx, self.ctx, self.imt, stds_types)
+            mean = get_mean_stds(gmm, self.ctx, [self.imt],
+                                 truncation_level=0)[0]
 
             gmpe = registry[gmpe_name]()
-            emean, estds = gmpe.get_mean_and_stddevs(
-                self.ctx, self.ctx, self.ctx, self.imt, stds_types)
+            emean = get_mean_stds(gmpe, self.ctx, [self.imt],
+                                  truncation_level=0)[0]
 
             exp_mean = emean + np.array([-1.00, 1.50, 0, -1.99])
 

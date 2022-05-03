@@ -116,8 +116,8 @@ parameter: you can set it in the ``job.ini`` as a dictionary (tectonic
 region type -> distance in km) or as a scalar (in that case it is
 converted into a dictionary ``{"default": distance}`` and the same
 distance is used for all TRTs).  For sites that are more distant than
-the `pointsource_distance` from the point source, the engine (starting
-from release 3.11) creates an average rupture by taking weighted means
+the `pointsource_distance` plus the rupture radius from the point
+source, the engine creates an average rupture by taking weighted means
 of the parameters `strike`, `dip`, `rake` and `depth` from the nodal
 plane and hypocenter distributions and by rescaling the occurrence
 rate. For closer points, all the original ruptures are considered.

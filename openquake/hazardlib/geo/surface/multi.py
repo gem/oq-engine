@@ -19,7 +19,6 @@
 Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 :class:`MultiSurface`.
 """
-import copy
 import numpy as np
 from shapely.geometry import Polygon
 from openquake.hazardlib.geo.surface.base import BaseSurface

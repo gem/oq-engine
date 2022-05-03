@@ -1,0 +1,26 @@
+#,,,"generated_by='OpenQuake engine 3.14.0-git10ba91dcbd', start_date='2022-04-09T05:36:12', checksum=3248968340"
+loss_type,loss,stat,taxonomy
+business_interruption,9.21219780445099,mean,Wood/Res
+business_interruption,3.035866803593106,quantile-0.15,Wood/Res
+business_interruption,8.724592725435892,quantile-0.85,Wood/Res
+structural,2.5612490475177765,mean,Wood/Res
+structural,0.6274526284800634,quantile-0.15,Wood/Res
+structural,2.4085809091726937,quantile-0.85,Wood/Res
+business_interruption,5.217368221282959,mean,Wood/Com
+business_interruption,3.3818522029452853,quantile-0.15,Wood/Com
+business_interruption,5.072459061940511,quantile-0.85,Wood/Com
+structural,1.6387330532073976,mean,Wood/Com
+structural,0.5746201144324409,quantile-0.15,Wood/Com
+structural,1.554724136988322,quantile-0.85,Wood/Com
+business_interruption,4.196660828590393,mean,Adobe/Res
+business_interruption,2.714474903212653,quantile-0.15,Adobe/Res
+business_interruption,4.079646150271098,quantile-0.85,Adobe/Res
+structural,19.550012588500977,mean,Adobe/Res
+structural,16.853784561157227,quantile-0.15,Adobe/Res
+structural,19.3371524810791,quantile-0.85,Adobe/Res
+business_interruption,9.156351518630983,mean,Adobe/Com
+business_interruption,5.679034365548028,quantile-0.15,Adobe/Com
+business_interruption,8.881826480229696,quantile-0.85,Adobe/Com
+structural,27.63014135360718,mean,Adobe/Com
+structural,16.33857594596015,quantile-0.15,Adobe/Com
+structural,26.738701979319252,quantile-0.85,Adobe/Com

@@ -753,29 +753,32 @@ class DictArray(Mapping):
     """
     def __init__(self, imtls):
         levels = imtls[next(iter(imtls))]
+        self.M = len(imtls)
         self.L1 = len(levels)
-        self.size = len(imtls) * self.L1
+        self.size = self.M * self.L1
         self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
                                for imt, imls in sorted(imtls.items())])
-        self.array = numpy.zeros(self.size, F64)
+        self.array = numpy.zeros((self.M, self.L1), F64)
         self.slicedic = {}
         n = 0
-        for imt, imls in sorted(imtls.items()):
+        self.mdic = {}
+        for m, (imt, imls) in enumerate(sorted(imtls.items())):
             if len(imls) != self.L1:
                 raise ValueError('imt=%s has %d levels, expected %d' %
                                  (imt, len(imls), self.L1))
-            self.slicedic[imt] = slc = slice(n, n + self.L1)
-            self.array[slc] = imls
+            self.slicedic[imt] = slice(n, n + self.L1)
+            self.mdic[imt] = m
+            self.array[m] = imls
             n += self.L1
 
     def __call__(self, imt):
         return self.slicedic[imt]
 
     def __getitem__(self, imt):
-        return self.array[self(imt)]
+        return self.array[self.mdic[imt]]
 
     def __setitem__(self, imt, array):
-        self.array[self(imt)] = array
+        self.array[self.mdic[imt]] = array
 
     def __iter__(self):
         for imt in self.dt.names:
@@ -1056,7 +1059,9 @@ def kmean(structured_array, kfield, uniq_indices_counts=()):
         if name == kfield:
             dic[kfield] = uniq
         else:
-            dic[name] = fast_agg(indices, structured_array[name]) / counts
+            values = structured_array[name]
+            dic[name] = fast_agg(indices, values) / (
+                counts if len(values.shape) == 1 else counts.reshape(-1, 1))
         dtlist.append((name, structured_array.dtype[name]))
     res = numpy.zeros(len(uniq), dtlist)
     for name in dic:
@@ -1477,14 +1482,14 @@ class RecordBuilder(object):
             if isinstance(value, (str, bytes)):
                 tp = (numpy.string_, len(value) or 1)
             elif isinstance(value, numpy.ndarray):
-                tp = value.dtype
+                tp = (value.dtype, len(value))
             else:
                 tp = type(value)
             dtypes.append(tp)
         self.dtype = numpy.dtype([(n, d) for n, d in zip(self.names, dtypes)])
 
     def zeros(self, shape):
-        return numpy.zeros(shape, self.dtype)
+        return numpy.zeros(shape, self.dtype).view(numpy.recarray)
 
     def dictarray(self, shape):
         return {n: numpy.ones(shape, self.dtype[n]) for n in self.names}
@@ -1500,6 +1505,18 @@ class RecordBuilder(object):
             except IndexError:
                 rec[name] = self.values[i]
         return rec
+
+
+def rmsdiff(a, b):
+    """
+    :param a: an array of shape (N, ...)
+    :param b: an array with the same shape of a
+    :returns: an array of shape (N,) with the root mean squares of a-b
+    """
+    assert a.shape == b.shape
+    axis = tuple(range(1, len(a.shape)))
+    rms = numpy.sqrt(((a - b)**2).mean(axis=axis))
+    return rms
 
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 

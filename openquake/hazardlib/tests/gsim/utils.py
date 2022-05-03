@@ -23,7 +23,7 @@ import unittest
 
 import numpy as np
 import pandas
-from openquake.baselib.general import all_equals
+from openquake.baselib.general import all_equals, RecordBuilder
 from openquake.hazardlib import contexts, imt
 
 NORMALIZE = False
@@ -131,22 +131,19 @@ def read_cmaker_df(gsim, csvfnames):
     cmaker = contexts.ContextMaker(
         trt.value if trt else "*", [gsim], {'imtls': imtls, 'mags': mags},
         extraparams={col[5:] for col in df.columns if col.startswith('site_')})
+    dtype = RecordBuilder(**cmaker.defaultdict).zeros(0).dtype
     for dist in cmaker.REQUIRES_DISTANCES:
         name = 'dist_' + dist
-        df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
-        logging.info(name, df[name].unique())
+        df[name] = np.array(df[name].to_numpy(), dtype[dist])
     for sitepar in cmaker.REQUIRES_SITES_PARAMETERS:
         name = 'site_' + sitepar
-        df[name] = np.array(df[name].to_numpy(), cmaker.dtype[sitepar])
-        logging.info(name, df[name].unique())
+        df[name] = np.array(df[name].to_numpy(), dtype[sitepar])
     for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
         name = 'rup_' + par
         if name not in df.columns:  # i.e. missing rake
-            df[name] = np.zeros(len(df), cmaker.dtype[par])
+            df[name] = np.zeros(len(df), dtype[par])
         else:
-            df[name] = np.array(df[name].to_numpy(), cmaker.dtype[par])
-        logging.info(name, df[name].unique())
-    logging.info('result_type', df['result_type'].unique())
+            df[name] = np.array(df[name].to_numpy(), dtype[par])
     return cmaker, df.rename(columns=cmap)
 
 
@@ -199,7 +196,7 @@ class BaseGSIMTestCase(unittest.TestCase):
     GSIM_CLASS = None
 
     def check(self, *filenames, max_discrep_percentage,
-              std_discrep_percentage=None, **kwargs):
+              std_discrep_percentage=None, truncation_level=99., **kwargs):
         if std_discrep_percentage is None:
             std_discrep_percentage = max_discrep_percentage
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
@@ -213,13 +210,12 @@ class BaseGSIMTestCase(unittest.TestCase):
             if sdt in gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
                 out_types.append(sdt.upper().replace(' ', '_') + '_STDDEV')
         cmaker, df = read_cmaker_df(gsim, fnames)
+        if truncation_level != 99.:
+            cmaker.truncation_level = truncation_level
         for ctx in gen_ctxs(df):
             ctx.occurrence_rate = 0
             out = cmaker.get_mean_stds([ctx])[:, 0]
             for o, out_type in enumerate(out_types):
-                # YenierAtkinson2015BSSA has TOTAL_STDDEV == 0
-                # if out_type == 'TOTAL_STDDEV' and (out[o] == 0).any():
-                #    raise ValueError('TOTAL_STDDEV=0 for %s' % gsim)
                 if not hasattr(ctx, out_type):
                     # for instance MEAN is missing in zhao_2016_test
                     continue

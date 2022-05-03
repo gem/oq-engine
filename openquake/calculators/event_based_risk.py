@@ -51,9 +51,9 @@ def save_curve_stats(dstore):
     oq = dstore['oqparam']
     units = dstore['cost_calculator'].get_units(oq.loss_types)
     try:
-        K1 = len(dstore['agg_keys']) + 1
+        K = len(dstore['agg_keys'])
     except KeyError:
-        K1 = 1
+        K = 0
     stats = oq.hazard_stats()
     S = len(stats)
     L = len(oq.lti)
@@ -61,7 +61,7 @@ def save_curve_stats(dstore):
     aggcurves_df = dstore.read_df('aggcurves')
     periods = aggcurves_df.return_period.unique()
     P = len(periods)
-    out = numpy.zeros((K1, S, L, P))
+    out = numpy.zeros((K + 1, S, L, P))
     for (agg_id, loss_id), df in aggcurves_df.groupby(["agg_id", "loss_id"]):
         for s, stat in enumerate(stats.values()):
             for p in range(P):
@@ -70,7 +70,7 @@ def save_curve_stats(dstore):
                 ws /= ws.sum()
                 out[agg_id, s, loss_id, p] = stat(dfp.loss.to_numpy(), ws)
     dstore['agg_curves-stats'] = out
-    dstore.set_shape_descr('agg_curves-stats', agg_id=K1, stat=list(stats),
+    dstore.set_shape_descr('agg_curves-stats', agg_id=K+1, stat=list(stats),
                            lti=L, return_period=periods)
     dstore.set_attrs('agg_curves-stats', units=units)
 
@@ -111,7 +111,7 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
-def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
+def aggreg(outputs, crmodel, ARKD, aggids, rlz_id, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
     """
@@ -140,9 +140,10 @@ def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
                 eids = alt.eid.to_numpy() * TWO32  # U64
                 values = numpy.array([alt[col] for col in value_cols]).T
                 fast_agg(eids + U64(K), values, correl, li, acc)
-                if len(kids):
+                if len(aggids):
                     aids = alt.aid.to_numpy()
-                    fast_agg(eids + U64(kids[aids]), values, correl, li, acc)
+                    for kids in aggids[:, aids]:
+                        fast_agg(eids + U64(kids), values, correl, li, acc)
     with mon_df:
         dic = general.AccumDict(accum=[])
         for ukey, arr in acc.items():
@@ -170,12 +171,15 @@ def event_based_risk(df, oqparam, monitor):
     with dstore, monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
-        assets_df = dstore.read_df('assetcol/array', 'ordinal')
-        kids = dstore['assetcol/kids'][:] if oqparam.K else ()
+        assetcol = dstore['assetcol']
+        if oqparam.K:
+            aggids, _ = assetcol.build_aggids(oqparam.aggregate_by)
+        else:
+            aggids = ()
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]
-    ARKD = len(assets_df), len(weights), oqparam.K, oqparam.D
+    ARKD = len(assetcol), len(weights), oqparam.K, oqparam.D
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
     else:
@@ -184,17 +188,16 @@ def event_based_risk(df, oqparam, monitor):
 
     def outputs():
         mon_risk = monitor('computing risk', measuremem=False)
-        for taxo, asset_df in assets_df.groupby('taxonomy'):
-            gmf_df = df[numpy.isin(df.sid.to_numpy(),
-                                   asset_df.site_id.to_numpy())]
+        for taxo, adf in assetcol.to_dframe().groupby('taxonomy'):
+            gmf_df = df[numpy.isin(df.sid.to_numpy(), adf.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
             with mon_risk:
                 out = crmodel.get_output(
-                    taxo, asset_df, gmf_df, oqparam._sec_losses, rng)
+                    taxo, adf, gmf_df, oqparam._sec_losses, rng)
             yield out
 
-    return aggreg(outputs(), crmodel, ARKD, kids, rlz_id, monitor)
+    return aggreg(outputs(), crmodel, ARKD, aggids, rlz_id, monitor)
 
 
 def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
@@ -252,6 +255,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         logging.info(
             'There are {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
+        try:
+            K = len(self.datastore['agg_keys'])
+        except KeyError:
+            K = 0
         self.datastore.swmr_on()
         sec_losses = []  # one insured loss for each loss type with a policy
         oq.D = 2
@@ -259,12 +266,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             sec_losses.append(
                 InsuredLosses(self.policy_name, self.policy_dict))
             self.oqparam.D = 3
-        if not hasattr(self, 'aggkey'):
-            self.aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
         oq._sec_losses = sec_losses
         oq.M = len(oq.all_imts())
         oq.N = self.N
-        oq.K = len(self.aggkey)
+        oq.K = K
         ct = oq.concurrent_tasks or 1
         oq.maxweight = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
@@ -275,7 +280,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                             'minimum_asset_loss')
         base.create_risk_by_event(self)
         self.rlzs = self.datastore['events']['rlz_id']
-        self.num_events = numpy.bincount(self.rlzs)  # events by rlz
+        self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
         if oq.avg_losses:
             self.create_avg_losses()
         alt_nbytes = 4 * self.E * L
@@ -347,7 +352,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             self.datastore.swmr_on()  # crucial!
             smap = parallel.Starmap(
                 event_based_risk, self.gen_args(eids), h5=self.datastore.hdf5)
-            smap.monitor.save('assets', self.assetcol.to_dframe())
+            smap.monitor.save('assets', self.assetcol.to_dframe('id'))
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
             smap.reduce(self.agg_dicts)

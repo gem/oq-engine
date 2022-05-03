@@ -360,7 +360,7 @@ def get_shallow_site_response_term(C, region, vs30, pga1100):
         Array of Vs30 values (m/s)
 
     :param numpy ndarray pga1100:
-        Peak ground acceletaion on reference rock (Vs30 1100 m/s)
+        Peak ground acceleration on reference rock (Vs30 1100 m/s)
     """
     # c7 is the same for interface or inslab - so just read from interface
     c_7 = C[REGION_TERMS_IF[region]["c7"]]
@@ -567,7 +567,7 @@ class KuehnEtAl2020SInter(GMPE):
     - Alaska (USA-AK)
     - Cascadia (CAS)
     - Central America & Mexico (CAM)
-    - Japan (JPM)
+    - Japan (JPN)
     - New Zealand (NZL)
     - South America (SAM)
     - Taiwan (TWN)
@@ -639,8 +639,8 @@ class KuehnEtAl2020SInter(GMPE):
         self.region = region
 
         # For some regions a basin depth term is defined
-        if self.region in ("CAS", "JAP"):
-            # If region is CAS or JAP then the GMPE needs Z2.5
+        if self.region in ("CAS", "JPN"):
+            # If region is CAS or JPN then the GMPE needs Z2.5
             self.REQUIRES_SITES_PARAMETERS = \
                  self.REQUIRES_SITES_PARAMETERS.union({"z2pt5", })
         elif self.region in ("NZL", "TWN"):
@@ -690,14 +690,14 @@ class KuehnEtAl2020SInter(GMPE):
                 break
         [mag] = np.unique(np.round(ctx.mag, 6))
         for m, imt in enumerate(imts):
-            # Get coefficinets for imt
+            # Get coefficients for imt
             C = self.COEFFS[imt]
-            m_break = m_b + C["dm_b"] if trt == const.TRT.SUBDUCTION_INTERFACE\
-                else m_b
-
+            m_break = m_b + C["dm_b"] if (
+                trt == const.TRT.SUBDUCTION_INTERFACE and
+                self.region in ("JPN", "SAM")) else m_b
             if imt.string == "PGA":
                 mean[m] = pga_soil
-            elif ("SA" in imt.string) and (imt.period <= 0.1):
+            elif "SA" in imt.string and imt.period <= 0.1:
                 # If Sa (T) < PGA for T <= 0.1 then set mean Sa(T) to mean PGA
                 mean[m] = get_mean_values(C, self.region, trt, m_break,
                                           ctx, pga1100)

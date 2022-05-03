@@ -824,32 +824,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
 
-    def test_filters_on_first_branching_level(self):
-        filters = ('applyToSources="src01"',
-                   'applyToTectonicRegionType="Active Shallow Crust"',
-                   'applyToSourceType="point"')
-        for filter_ in filters:
-            lt = _make_nrml("""\
-                <logicTree logicTreeID="lt1">
-                  <logicTreeBranchingLevel branchingLevelID="bl1">
-                    <logicTreeBranchSet uncertaintyType="sourceModel"
-                                        branchSetID="bs1" %s>
-                      <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>sm.xml</uncertaintyModel>
-                        <uncertaintyWeight>1.0</uncertaintyWeight>
-                      </logicTreeBranch>
-                    </logicTreeBranchSet>
-                  </logicTreeBranchingLevel>
-                </logicTree>
-            """ % filter_)
-            sm = _whatever_sourcemodel()
-            exc = self._assert_logic_tree_error(
-                'lt', {'lt': lt, 'sm.xml': sm}, logictree.LogicTreeError)
-            self.assertEqual(exc.lineno, 4)
-            error = 'filters are not allowed on source model uncertainty'
-            self.assertEqual(exc.message, error,
-                             "wrong exception message: %s" % exc.message)
-
     def test_referencing_nonexistent_source(self):
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
@@ -915,38 +889,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
 
-    def test_referencing_nonexistent_source_type(self):
-        lt = _make_nrml("""\
-            <logicTree logicTreeID="lt1">
-              <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>sm.xml</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-              <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
-                                    branchSetID="bs1"
-                                    applyToSourceType="complexFault">
-                  <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>123</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-            </logicTree>
-        """)
-        sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm},
-                                            logictree.LogicTreeError)
-        self.assertEqual(exc.lineno, 13)
-        error = "source models don't define sources of type 'complexFault'"
-        self.assertEqual(exc.message, error,
-                         "wrong exception message: %s" % exc.message)
-
     def test_more_than_one_filters_on_one_branchset(self):
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
@@ -962,7 +904,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
               <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
                             branchSetID="bs1"
-                            applyToSourceType="simpleFault"
                             applyToTectonicRegionType="Active Shallow Crust"
                             applyToSources="src01">
                   <logicTreeBranch branchID="b2">
@@ -985,8 +926,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         uncertainties_and_values = [('abGRAbsolute', '123 45'),
                                     ('maxMagGRAbsolute', '678')]
         filters = ('applyToSources="src01 src02"',
-                   'applyToTectonicRegionType="Active Shallow Crust"',
-                   'applyToSourceType="simpleFault"')
+                   'applyToTectonicRegionType="Active Shallow Crust"')
         for uncertainty, value in uncertainties_and_values:
             for filter_ in filters:
                 lt = _make_nrml("""\
@@ -1714,42 +1654,6 @@ class BranchSetFilterTestCase(unittest.TestCase):
         bs = logictree.BranchSet(
             None, filters={'applyToSources': [1], 'foo': 'bar'})
         self.assertRaises(AssertionError, bs.filter_source, None)
-
-    def test_source_type(self):
-        bs = logictree.BranchSet(
-            None, filters={'applyToSourceType': 'area'})
-        for src in (self.simple_fault, self.complex_fault, self.point,
-                    self.characteristic_fault):
-            self.assertEqual(bs.filter_source(src), False)
-        self.assertEqual(bs.filter_source(self.area), True)
-
-        bs = logictree.BranchSet(
-            None, filters={'applyToSourceType': 'point'})
-        for source in (self.simple_fault, self.complex_fault, self.area,
-                       self.characteristic_fault):
-            self.assertEqual(bs.filter_source(source), False)
-        self.assertEqual(bs.filter_source(self.point), True)
-
-        bs = logictree.BranchSet(
-            None, filters={'applyToSourceType': 'simpleFault'})
-        for source in (self.complex_fault, self.point, self.area,
-                       self.characteristic_fault):
-            self.assertEqual(bs.filter_source(source), False)
-        self.assertEqual(bs.filter_source(self.simple_fault), True)
-
-        bs = logictree.BranchSet(
-            None, filters={'applyToSourceType': 'complexFault'})
-        for source in (self.simple_fault, self.point, self.area,
-                       self.characteristic_fault):
-            self.assertEqual(bs.filter_source(source), False)
-        self.assertEqual(bs.filter_source(self.complex_fault), True)
-
-        bs = logictree.BranchSet(
-            None, filters={'applyToSourceType': 'characteristicFault'})
-        for source in (self.simple_fault, self.point, self.area,
-                       self.complex_fault):
-            self.assertEqual(bs.filter_source(source), False)
-        self.assertEqual(bs.filter_source(self.characteristic_fault), True)
 
     def test_tectonic_region_type(self):
         test = lambda trt, source: \

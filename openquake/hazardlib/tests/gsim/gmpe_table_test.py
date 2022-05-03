@@ -203,17 +203,17 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         imts = [imt_module.PGA(), imt_module.SA(1.0), imt_module.PGV()]
         # PGA
         [mean], [sigma], _, _ = contexts.get_mean_stds(
-            gsim, ctx, [imts[0]], mags)
+            gsim, ctx, [imts[0]], mags=mags)
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma, expected_sigma, 5)
         # SA
         [mean], [sigma], _, _ = contexts.get_mean_stds(
-            gsim, ctx, [imts[1]], mags)
+            gsim, ctx, [imts[1]], mags=mags)
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma, 0.8 * np.ones(5), 5)
         # PGV
         [mean], [sigma], _, _ = contexts.get_mean_stds(
-            gsim, ctx, [imts[2]], mags)
+            gsim, ctx, [imts[2]], mags=mags)
         np.testing.assert_array_almost_equal(
             np.exp(mean), 10. * expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma, expected_sigma, 5)

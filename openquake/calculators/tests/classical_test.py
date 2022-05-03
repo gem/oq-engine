@@ -21,7 +21,7 @@ import unittest
 import numpy
 from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import InvalidFile, contexts
+from openquake.hazardlib import InvalidFile, contexts, nrml
 from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.commonlib import readinput
@@ -40,7 +40,7 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
     case_66, case_67, case_68, case_69, case_70, case_71, case_72, case_73,
-    case_74, case_75, case_76)
+    case_74, case_75, case_76, case_77)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -452,7 +452,7 @@ hazard_uhs-std.csv
         total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
         self.assertEqual(total, 780)  # 260 x 3
         self.assertEqual(len(self.calc.datastore['rup/mag']), 780)
-        numpy.testing.assert_equal(self.calc.cfactor, [463, 1560])
+        numpy.testing.assert_equal(self.calc.cfactor, [371, 1560])
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
 
@@ -622,7 +622,7 @@ hazard_uhs-std.csv
         self.run_calc(case_43.__file__, 'job.ini',
                       hazard_calculation_id=hc_id)
         data = self.calc.datastore.read_df('source_data')
-        self.assertEqual(data.nrupts.sum(), 5020)  # number of ruptures
+        self.assertEqual(data.nrupts.sum(), 5803)  # number of ruptures
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
@@ -922,10 +922,26 @@ hazard_uhs-std.csv
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', f, delta=1E-5)
 
+        # make sure we are not storing far away ruptures
+        r = self.calc.datastore['ruptures'][:]
+        [lon] = self.calc.sitecol.lons
+        [lat] = self.calc.sitecol.lats
+        # check bounding box close to the site
+        deltalon = (r['maxlon'] - lon).max()
+        deltalat = (r['maxlat'] - lat).max()
+        assert deltalon <= .65, deltalon
+        assert deltalat <= .49, deltalat
+        deltalon = (lon - r['minlon']).max()
+        deltalat = (lat - r['minlat']).max()
+        assert deltalon <= .35, deltalon
+        assert deltalat == .0, deltalat
+
+        # check ruptures.csv
         rups = extract(self.calc.datastore, 'ruptures')
         csv = general.gettemp(rups.array)
         self.assertEqualFiles('expected/full_ruptures.csv', csv, delta=1E-5)
 
+        # check GMFs
         files = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf_data.csv', files[0], delta=1E-4)
 
@@ -1019,6 +1035,11 @@ hazard_uhs-std.csv
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
+        # test for duplicated section IDs
+        with self.assertRaises(nrml.DuplicatedID):
+            self.run_calc(case_75.__file__, 'job.ini',
+                          source_model_logic_tree_file='wrong_ssmLT.xml')
+
     def test_case_76(self):
         # reserving the test number for CanadaSHM6
         """
@@ -1033,3 +1054,9 @@ hazard_uhs-std.csv
                 gsim_str += '_' + gsim.submodel
             self.assertEqualFiles('expected/%s.csv' % gsim_str, csv)
         """
+
+    def test_case_77(self):
+        # test calculation for modifiable GMPE with original tabular GMM
+        self.run_calc(case_77.__file__, 'job.ini')
+        [f1] = export(('uhs/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/uhs-mean.csv', f1)

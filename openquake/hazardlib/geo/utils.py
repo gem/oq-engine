@@ -49,6 +49,42 @@ class BBoxError(ValueError):
     """Bounding box too large"""
 
 
+class PolygonPlotter(object):
+    """
+    Add polygons to a given axis object
+    """
+    def __init__(self, ax):
+        self.ax = ax
+        self.minxs = []
+        self.maxxs = []
+        self.minys = []
+        self.maxys = []
+
+    def add(self, poly, **kw):
+        from openquake.hmtk.plotting.patch import PolygonPatch
+        minx, miny, maxx, maxy = poly.bounds
+        self.minxs.append(minx)
+        self.maxxs.append(maxx)
+        self.minys.append(miny)
+        self.maxys.append(maxy)
+        try:
+            self.ax.add_patch(PolygonPatch(poly, **kw))
+        except ValueError:  # LINESTRING, not POLYGON
+            pass
+
+    def set_lim(self, xs=(), ys=()):
+        if len(xs):
+            self.minxs.append(min(xs))
+            self.maxxs.append(max(xs))
+        if len(ys):
+            self.minys.append(min(ys))
+            self.maxys.append(max(ys))
+        if self.minxs and self.maxxs:
+            self.ax.set_xlim(min(self.minxs), max(self.maxxs))
+        if self.minys and self.maxys:
+            self.ax.set_ylim(min(self.minys), max(self.maxys))
+
+
 def angular_distance(km, lat=0, lat2=None):
     """
     Return the angular distance of two points at the given latitude.

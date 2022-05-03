@@ -21,10 +21,8 @@ import logging
 import operator
 import numpy
 from openquake.baselib import general, parallel, hdf5
-from openquake.baselib.python3compat import encode
-from openquake.baselib.general import (
-    AccumDict, groupby, get_nbytes_msg)
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.baselib.general import AccumDict, groupby
+from openquake.hazardlib.contexts import read_cmakers, get_maxsize
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -38,15 +36,15 @@ F64 = numpy.float64
 TWO32 = 2 ** 32
 
 
-def zero_times(sources):
-    source_data = AccumDict(accum=[])
+def source_data(sources):
+    data = AccumDict(accum=[])
     for src in sources:
-        source_data['src_id'].append(src.source_id)
-        source_data['nsites'].append(src.nsites)
-        source_data['nrupts'].append(src.num_ruptures)
-        source_data['weight'].append(src.weight)
-        source_data['ctimes'].append(0)
-    return source_data
+        data['src_id'].append(src.source_id)
+        data['nsites'].append(src.nsites)
+        data['nrupts'].append(src.num_ruptures)
+        data['weight'].append(src.weight)
+        data['ctimes'].append(0)
+    return data
 
 
 def preclassical(srcs, sites, cmaker, monitor):
@@ -85,10 +83,9 @@ def preclassical(srcs, sites, cmaker, monitor):
     # this is also prefiltering the split sources
     mon = monitor('weighting sources', measuremem=False)
     cmaker.set_weight(dic[grp_id], sf, mon)
+    # print(mon.duration, [s.source_id for s in dic[grp_id]])
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
-    if spacing:
-        dic['ps_grid/%02d' % monitor.task_no] = dic[grp_id]
     return dic
 
 
@@ -103,6 +100,11 @@ def run_preclassical(calc):
     calc.datastore['toms'] = numpy.array(
         [sg.tom_name for sg in csm.src_groups], hdf5.vstr)
     cmakers = read_cmakers(calc.datastore, csm.full_lt)
+    M = len(calc.oqparam.imtls)
+    G = max(len(cm.gsims) for cm in cmakers)
+    N = get_maxsize(M, G)
+    logging.info('NMG = ({:_d}, {:_d}, {:_d}) = {:.1f} MB'.format(
+        N, M, G, N*M*G*8 / 1024**2))
     h5 = calc.datastore.hdf5
     calc.sitecol = sites = csm.sitecol if csm.sitecol else None
     # do nothing for atomic sources except counting the ruptures
@@ -137,7 +139,9 @@ def run_preclassical(calc):
             if pointsources or pointlike:
                 smap.submit((pointsources + pointlike, sites, cmakers[grp_id]))
         else:
-            smap.submit_split((pointsources, sites, cmakers[grp_id]), 10, 160)
+            if pointsources:
+                smap.submit_split(
+                    (pointsources, sites, cmakers[grp_id]), 10, 160)
             for src in pointlike:  # area, multipoint
                 smap.submit(([src], sites, cmakers[grp_id]))
         if others:
@@ -178,21 +182,7 @@ def run_preclassical(calc):
     for val, key in sorted((val, key) for key, val in acc.items()):
         cls = code2cls[key].__name__
         logging.info('{} ruptures: {:_d}'.format(cls, val))
-
-    source_data = zero_times(csm.get_sources())
-    calc.store_source_info(source_data)
-    # store ps_grid data, if any
-    for key, sources in res.items():
-        if isinstance(key, str) and key.startswith('ps_grid/'):
-            arrays = []
-            for ps in sources:
-                if hasattr(ps, 'location'):
-                    lonlats = [ps.location.x, ps.location.y]
-                    for src in getattr(ps, 'pointsources', []):
-                        lonlats.extend([src.location.x, src.location.y])
-                    arrays.append(F32(lonlats))
-            h5[key] = arrays
-
+    calc.store_source_info(source_data(csm.get_sources()))
     h5['full_lt'] = csm.full_lt
     return res
 
@@ -204,28 +194,6 @@ class PreClassicalCalculator(base.HazardCalculator):
     """
     core_task = preclassical
     accept_precalc = []
-
-    def get_source_ids(self):
-        """
-        :returns: the unique source IDs contained in the composite model
-        """
-        oq = self.oqparam
-        self.M = len(oq.imtls)
-        self.L1 = oq.imtls.size // self.M
-        sources = encode([src_id for src_id in self.csm.source_info])
-        size, msg = get_nbytes_msg(
-            dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
-        ps = 'pointSource' in self.full_lt.source_model_lt.source_types
-        if size > TWO32 and not ps:
-            raise RuntimeError('The matrix disagg_by_src is too large: %s'
-                               % msg)
-        elif size > TWO32:
-            msg = ('The source model contains point sources: you cannot set '
-                   'disagg_by_src=true unless you convert them to multipoint '
-                   'sources with the command oq upgrade_nrml --multipoint %s'
-                   ) % oq.base_path
-            raise RuntimeError(msg)
-        return sources
 
     def init(self):
         super().init()
