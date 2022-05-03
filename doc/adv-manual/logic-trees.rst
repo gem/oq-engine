@@ -69,7 +69,7 @@ engine. For instance, the logic tree above would be written as follows:
  ...                         ['B', 'common2.xml', 0.4]],
  ...     ['extendModel', '', ['C', 'extra1.xml', 0.6],
  ...                         ['D', 'extra2.xml', 0.2],
- ...                         ['E', 'extra2.xml', 0.2]])
+ ...                         ['E', 'extra3.xml', 0.2]])
 
  and the 6 possible paths can be extracted as follows:
  
