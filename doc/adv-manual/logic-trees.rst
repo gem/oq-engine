@@ -143,7 +143,7 @@ the logic tree:
  ['AC.', 'AD.', 'AE..', 'BF.', 'BG.']
 
 Partially uncorrelated uncertainties can be obtained by applying only on
-the 'A' model on only on the 'B' model; for instance
+the 'A' model:
 
  >>> logictree = build(
  ...     ['sourceModel', '', ['A', 'common1.xml', 0.6],
