@@ -172,38 +172,83 @@ The fully uncorrelated realizations can be obtained by not specifying
  >>> logictree.get_all_paths() # 12 paths
  ['ACF', 'ACG', 'ADF', 'ADG', 'AEF', 'AEG', 'BCF', 'BCG', 'BDF', 'BDG', 'BEF', 'BEG']
 
+The logic tree demo
+-------------------
 
-
-Othe examples
-------------------
-
-Here we will discuss some example for users already
-familiar with the concept and we will answer the following frequently asked
-questions:
 
 - what is the meaning of the ``branch_path`` column in the "Realizations"
   output?
 - given a realization, how do I extract the corresponding source model,
   modifications parameters and GMPEs?
 
-As a concrete example we will consider the demo
-``LogicTreeCase2ClassicalPSHA`` in the engine distribution; the source
-model logic tree file has the following structure branchset ->
-branches::
+As another example we will consider the demo
+``LogicTreeCase2ClassicalPSHA`` in the engine distribution; the
+logic tree has the following structure:
 
-   bs1[sourceModel] ->      b11[source_model.xml]
-   bs2[abGRAbsolute] ->     b21[4.6 1.1], b22[4.5 1.0], b23[4.4 0.9]
-   bs3[abGRAbsolute] ->     b31[3.3 1.0], b32[3.2 0.9], b33[3.1 0.8]
-   bs4[maxMagGRAbsolute] -> b41[7.0], b42[7.3], b43[7.6]
-   bs5[maxMagGRAbsolute] -> b51[7.5], b52[7.8], b53[8.0]
+.. code-block:: python
 
-while the gsim logic tree file has the following structure::
-
-  bs1[Active Shallow Crust] ->     b11[BooreAtkinson2008], b12[ChiouYoungs2008]
-  bs2[Stable Continental Crust] -> b21[ToroEtAl2002], b22[Campbell2003]
+ >>> lt = build(
+ ...    ['sourceModel', '', ['b11', 'source_model.xml', .333]],
+ ...    ['abGRAbsolute', '', ['b21', '4.6 1.1', .333],
+ ...                         ['b22', '4.5 1.0', .333],
+ ...                         ['b23', '4.4 0.9', .334]],
+ ...    ['abGRAbsolute', '', ['b31', '3.3 1.0', .333],
+ ...                         ['b32', '3.2 0.9', .333],
+ ...                         ['b33', '3.1 0.0', .334]],
+ ...    ['maxMagGRAbsolute', '', ['b41', 7.0, .333],
+ ...                             ['b42', 7.3, .333],
+ ...                             ['b43', 7.6, .334]],
+ ...    ['maxMagGRAbsolute', '', ['b51', 7.5, .333],
+ ...                             ['b52', 7.8, .333],
+ ...                             ['b53', 8.0, .334]],
+ ...    ['Active Shallow Crust', '', ['c11', 'BA08', .5],
+ ...                                 ['c12', 'CY12', .5]],
+ ...    ['Stable Continental Crust', '', ['c21', 'TA02', .5],
+ ...                                     ['c22', 'CA03', .5]])
 
 Since the demo is using full enumeration there are 3**4 * 2**2 = 324
-realizations in total.
+realizations in total that you can build as follows:
+
+ >>> import numpy
+ >>> paths = numpy.array(lt.get_all_paths())
+ >>> for row in paths.reshape(36, 9):
+ ...      print(' '.join(row))
+ ABEHKNP ABEHKNQ ABEHKOP ABEHKOQ ABEHLNP ABEHLNQ ABEHLOP ABEHLOQ ABEHMNP
+ ABEHMNQ ABEHMOP ABEHMOQ ABEIKNP ABEIKNQ ABEIKOP ABEIKOQ ABEILNP ABEILNQ
+ ABEILOP ABEILOQ ABEIMNP ABEIMNQ ABEIMOP ABEIMOQ ABEJKNP ABEJKNQ ABEJKOP
+ ABEJKOQ ABEJLNP ABEJLNQ ABEJLOP ABEJLOQ ABEJMNP ABEJMNQ ABEJMOP ABEJMOQ
+ ABFHKNP ABFHKNQ ABFHKOP ABFHKOQ ABFHLNP ABFHLNQ ABFHLOP ABFHLOQ ABFHMNP
+ ABFHMNQ ABFHMOP ABFHMOQ ABFIKNP ABFIKNQ ABFIKOP ABFIKOQ ABFILNP ABFILNQ
+ ABFILOP ABFILOQ ABFIMNP ABFIMNQ ABFIMOP ABFIMOQ ABFJKNP ABFJKNQ ABFJKOP
+ ABFJKOQ ABFJLNP ABFJLNQ ABFJLOP ABFJLOQ ABFJMNP ABFJMNQ ABFJMOP ABFJMOQ
+ ABGHKNP ABGHKNQ ABGHKOP ABGHKOQ ABGHLNP ABGHLNQ ABGHLOP ABGHLOQ ABGHMNP
+ ABGHMNQ ABGHMOP ABGHMOQ ABGIKNP ABGIKNQ ABGIKOP ABGIKOQ ABGILNP ABGILNQ
+ ABGILOP ABGILOQ ABGIMNP ABGIMNQ ABGIMOP ABGIMOQ ABGJKNP ABGJKNQ ABGJKOP
+ ABGJKOQ ABGJLNP ABGJLNQ ABGJLOP ABGJLOQ ABGJMNP ABGJMNQ ABGJMOP ABGJMOQ
+ ACEHKNP ACEHKNQ ACEHKOP ACEHKOQ ACEHLNP ACEHLNQ ACEHLOP ACEHLOQ ACEHMNP
+ ACEHMNQ ACEHMOP ACEHMOQ ACEIKNP ACEIKNQ ACEIKOP ACEIKOQ ACEILNP ACEILNQ
+ ACEILOP ACEILOQ ACEIMNP ACEIMNQ ACEIMOP ACEIMOQ ACEJKNP ACEJKNQ ACEJKOP
+ ACEJKOQ ACEJLNP ACEJLNQ ACEJLOP ACEJLOQ ACEJMNP ACEJMNQ ACEJMOP ACEJMOQ
+ ACFHKNP ACFHKNQ ACFHKOP ACFHKOQ ACFHLNP ACFHLNQ ACFHLOP ACFHLOQ ACFHMNP
+ ACFHMNQ ACFHMOP ACFHMOQ ACFIKNP ACFIKNQ ACFIKOP ACFIKOQ ACFILNP ACFILNQ
+ ACFILOP ACFILOQ ACFIMNP ACFIMNQ ACFIMOP ACFIMOQ ACFJKNP ACFJKNQ ACFJKOP
+ ACFJKOQ ACFJLNP ACFJLNQ ACFJLOP ACFJLOQ ACFJMNP ACFJMNQ ACFJMOP ACFJMOQ
+ ACGHKNP ACGHKNQ ACGHKOP ACGHKOQ ACGHLNP ACGHLNQ ACGHLOP ACGHLOQ ACGHMNP
+ ACGHMNQ ACGHMOP ACGHMOQ ACGIKNP ACGIKNQ ACGIKOP ACGIKOQ ACGILNP ACGILNQ
+ ACGILOP ACGILOQ ACGIMNP ACGIMNQ ACGIMOP ACGIMOQ ACGJKNP ACGJKNQ ACGJKOP
+ ACGJKOQ ACGJLNP ACGJLNQ ACGJLOP ACGJLOQ ACGJMNP ACGJMNQ ACGJMOP ACGJMOQ
+ ADEHKNP ADEHKNQ ADEHKOP ADEHKOQ ADEHLNP ADEHLNQ ADEHLOP ADEHLOQ ADEHMNP
+ ADEHMNQ ADEHMOP ADEHMOQ ADEIKNP ADEIKNQ ADEIKOP ADEIKOQ ADEILNP ADEILNQ
+ ADEILOP ADEILOQ ADEIMNP ADEIMNQ ADEIMOP ADEIMOQ ADEJKNP ADEJKNQ ADEJKOP
+ ADEJKOQ ADEJLNP ADEJLNQ ADEJLOP ADEJLOQ ADEJMNP ADEJMNQ ADEJMOP ADEJMOQ
+ ADFHKNP ADFHKNQ ADFHKOP ADFHKOQ ADFHLNP ADFHLNQ ADFHLOP ADFHLOQ ADFHMNP
+ ADFHMNQ ADFHMOP ADFHMOQ ADFIKNP ADFIKNQ ADFIKOP ADFIKOQ ADFILNP ADFILNQ
+ ADFILOP ADFILOQ ADFIMNP ADFIMNQ ADFIMOP ADFIMOQ ADFJKNP ADFJKNQ ADFJKOP
+ ADFJKOQ ADFJLNP ADFJLNQ ADFJLOP ADFJLOQ ADFJMNP ADFJMNQ ADFJMOP ADFJMOQ
+ ADGHKNP ADGHKNQ ADGHKOP ADGHKOQ ADGHLNP ADGHLNQ ADGHLOP ADGHLOQ ADGHMNP
+ ADGHMNQ ADGHMOP ADGHMOQ ADGIKNP ADGIKNQ ADGIKOP ADGIKOQ ADGILNP ADGILNQ
+ ADGILOP ADGILOQ ADGIMNP ADGIMNQ ADGIMOP ADGIMOQ ADGJKNP ADGJKNQ ADGJKOP
+ ADGJKOQ ADGJLNP ADGJLNQ ADGJLOP ADGJLOQ ADGJMNP ADGJMNQ ADGJMOP ADGJMOQ
 
 After running the calculations you will see an output called
 "Realizations". If you export it, you will get a CSV file with the
