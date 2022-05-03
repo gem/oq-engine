@@ -178,6 +178,23 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                             ['A', 'common1', 0.6],
                             ['B', 'common2', 0.4]],
                            ['extendModel', 'A',
+                            ['C', 'extra1', 0.4],
+                            ['D', 'extra2', 0.2],
+                            ['E', 'extra3', 0.2],
+                            ['F', 'extra4', 0.2]],
+                           ['extendModel', 'B',
+                            ['G', 'extra5', 0.4],
+                            ['H', 'extra6', 0.2],
+                            ['I', 'extra7', 0.2],
+                            ['J', 'extra8', 0.2]])
+        self.assertEqual(clt.get_all_paths(),  # 4 + 4 rlzs
+                         ['AC.', 'AD.', 'AE.', 'AF.',
+                          'BG.', 'BH.', 'BI.', 'BJ.'])
+
+        clt = lt.easybuild(['sourceModel', '',
+                            ['A', 'common1', 0.6],
+                            ['B', 'common2', 0.4]],
+                           ['extendModel', 'A',
                             ['C', 'extra1', 0.6],
                             ['D', 'extra2', 0.2],
                             ['E', 'extra3', 0.2]])
@@ -201,19 +218,3 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                             ['E', 'extra3', 0.2]])
         self.assertEqual(clt.get_all_paths(),
                          ['AC', 'AD', 'AE', 'BC', 'BD', 'BE'])
-
-        clt = lt.easybuild(['sourceModel', '',
-                            ['A', 'common1', 0.6],
-                            ['B', 'common2', 0.4]],
-                           ['extendModel', 'A',
-                            ['C', 'extra1', 0.4],
-                            ['D', 'extra2', 0.2],
-                            ['E', 'extra3', 0.2],
-                            ['F', 'extra4', 0.2]],
-                           ['extendModel', 'B',
-                            ['G', 'extra5', 0.4],
-                            ['H', 'extra6', 0.2],
-                            ['I', 'extra7', 0.2],
-                            ['J', 'extra8', 0.2]])
-        self.assertEqual(clt.get_all_paths(),  # 4 + 4 rlzs
-                         ['AC.', 'AD.', 'AE.', 'AF.', 'B..'])

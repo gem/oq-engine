@@ -750,7 +750,7 @@ def attach_to_branches(branchsets):
     Attach branchsets to branches depending on the applyToBranches
     attribute. Also attaches dummy branchsets to dummy branches.
     """
-    previous_branches = branchsets[0].branches
+    previous_branches = branchsets[0].branches[:]  # make a copy
     for i, bset in enumerate(branchsets[1:]):
         prev_ids = ' '.join(pb.branch_id for pb in previous_branches)
         atb = bset.filters.get('applyToBranches') or prev_ids
@@ -758,10 +758,10 @@ def attach_to_branches(branchsets):
         for branch in previous_branches:
             if branch.branch_id in atb:
                 branch.bset = bset
-            else:
+            elif branch.bset is None:
                 branch.bset = dummy = dummy_branchset()
                 dummies.append(dummy.branches[0])
-        previous_branches = bset.branches + dummies
+        previous_branches.extend(bset.branches)
 
 
 class CompositeLogicTree(object):
