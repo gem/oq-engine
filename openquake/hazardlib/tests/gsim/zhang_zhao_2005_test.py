@@ -46,7 +46,7 @@ class Zhang_Zhao2005_SSlab_TestCase(BaseGSIMTestCase):
     def test_mean(self):
         
         self.check('ZHANG05/Zhang2005SSlab_MEAN.csv',
-                   max_discrep_percentage=0.44)
+                   max_discrep_percentage=0.47)
 
     def test_std_total(self):
         self.check('ZHANG05/Zhang2005SSlab_STDDEV.csv',

@@ -24,7 +24,7 @@ Module exports :class:`Zhang_Zhao2005SInter`,
 import numpy as np
 
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGD
+from openquake.hazardlib.imt import LSD
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
     
@@ -73,7 +73,7 @@ class Zhang_Zhao2005SInter(GMPE):
 
     #: Supported intensity measure types are Permanent ground deformation (m)
     #: from lateral spread
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGD}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {LSD}
 
     #: Supported intensity measure component is the horizontal
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
@@ -118,11 +118,11 @@ class Zhang_Zhao2005SInter(GMPE):
 
     COEFFS_SLOPE = CoeffsTable(table="""\
     IMT              c4       c5     c6       c7      c8   sigma
-    PGD           0.356   0.0606  3.204  -1.0248  -4.292    0.22
+    LSD           0.356   0.0606  3.204  -1.0248  -4.292    0.22
     """)
     COEFFS_FREEFACE = CoeffsTable(table="""\
     IMT              c4       c5     c6       c7      c8   sigma
-    PGD           0.456   0.0552  3.204  -1.0248  -4.743    0.22
+    LSD           0.456   0.0552  3.204  -1.0248  -4.743    0.22
     """)
 
 class Zhang_Zhao2005SSlab(Zhang_Zhao2005SInter):

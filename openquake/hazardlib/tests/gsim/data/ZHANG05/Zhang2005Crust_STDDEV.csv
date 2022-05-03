@@ -1,4 +1,4 @@
-rup_mag,rup_hypo_depth,dist_rrup,rup_rake,site_slope,site_freeface_ratio,site_T_15,site_F_15,site_D50_15,result_type,PGD
+rup_mag,rup_hypo_depth,dist_rrup,rup_rake,site_slope,site_freeface_ratio,site_T_15,site_F_15,site_D50_15,result_type,LSD
 4.5,10,10.05,40,6,0,10,5,4,TOTAL_STDDEV,0.50656872
 4.5,10,10.08,40,6,0,10,5,4,TOTAL_STDDEV,0.50656872
 4.5,10,10.12,40,6,0,10,5,4,TOTAL_STDDEV,0.50656872

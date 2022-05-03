@@ -263,6 +263,13 @@ def PGDMax(vert_settlement, lat_spread):
     """
     return numpy.maximum(vert_settlement, lat_spread)
 
+    
+def LSD():
+    """
+    Liquefaction-induced lateral spread displacements measured in units of ``m``.
+    """
+    return IMT('LSD')    
+    
 
 def PGDGeomMean(vert_settlement, lat_spread):
     """
