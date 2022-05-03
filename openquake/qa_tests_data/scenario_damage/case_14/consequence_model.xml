@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+	<consequenceModel id="consequence-from-IPT" assetCategory="buildings" lossCategory="structural">
+		<description>modelo_consecuencia_rep_sal_21_04_2022</description>
+		<limitStates>slight moderate extensive collapse</limitStates>
+		<consequenceFunction id="CR/LFM/HBET:1.3/m" dist="LN">
+			<params ls="slight" mean="0.1" stddev="0"/>
+			<params ls="moderate" mean="0.3" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR/LFM/HBET:4.7/m" dist="LN">
+			<params ls="slight" mean="0.1" stddev="0"/>
+			<params ls="moderate" mean="0.3" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR+PC/LDUAL/HBET:4.7/l" dist="LN">
+			<params ls="slight" mean="0.1" stddev="0"/>
+			<params ls="moderate" mean="0.3" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR+PC/LDUAL/HBET:4.7/m" dist="LN">
+			<params ls="slight" mean="0.1" stddev="0"/>
+			<params ls="moderate" mean="0.3" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR+PC/LDUAL/HBET:4.7/p" dist="LN">
+			<params ls="slight" mean="0.1" stddev="0"/>
+			<params ls="moderate" mean="0.3" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR+PC/LDUAL/HBET:8.19/m" dist="LN">
+			<params ls="slight" mean="0.1" stddev="0"/>
+			<params ls="moderate" mean="0.3" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR+PC/LDUAL/HBET:8.19/h" dist="LN">
+			<params ls="slight" mean="0.1" stddev="0"/>
+			<params ls="moderate" mean="0.3" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="S/LFM/HBET:1.3/l" dist="LN">
+			<params ls="slight" mean="0.1" stddev="0"/>
+			<params ls="moderate" mean="0.3" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="S/LFM/HBET:8.19/h" dist="LN">
+			<params ls="slight" mean="0.1" stddev="0"/>
+			<params ls="moderate" mean="0.3" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+	</consequenceModel>
+</nrml>
