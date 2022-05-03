@@ -145,10 +145,10 @@ class CollapseTestCase(unittest.TestCase):
 class CompositeLogicTreeTestCase(unittest.TestCase):
     def test(self):
         # simple logic tree with 5 realizations
-        #        __/ AAA
-        #    bs1/  \ AAB
-        #   /   \__/ ABA
-        # bs0      \ ABB
+        #        __/ ACE
+        #    ___/  \ ACF
+        #   /   \__/ ADE
+        #        \__ ADF
         #   \_______
         #            B..
         bs0 = lt.BranchSet('abGRAbsolute')
@@ -157,18 +157,18 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
 
         bs1 = lt.BranchSet('maxMagGRAbsolute',
                            filters={'applyToBranches': 'A'})
-        bs1.branches = [lt.Branch('bs1', 'A', .5, 7.0),
-                        lt.Branch('bs1', 'B', .5, 7.6)]
+        bs1.branches = [lt.Branch('bs1', 'C', .5, 7.0),
+                        lt.Branch('bs1', 'D', .5, 7.6)]
 
         bs2 = lt.BranchSet('applyToTRT',
-                           filters={'applyToBranches': 'A B'})
-        bs2.branches = [lt.Branch('bs2', 'A', .3, 'A'),
-                        lt.Branch('bs2', 'B', .7, 'B')]
+                           filters={'applyToBranches': 'C D'})
+        bs2.branches = [lt.Branch('bs2', 'E', .3, 'A'),
+                        lt.Branch('bs2', 'F', .7, 'B')]
         for branch in bs1.branches:
             branch.bset = bs2
         clt = lt.CompositeLogicTree([bs0, bs1, bs2])
         self.assertEqual(lt.count_paths(bs0), 5)
         self.assertEqual(clt.get_all_paths(),
-                         ['AAA', 'AAB', 'ABA', 'ABB', 'B..'])
+                         ['ACE', 'ACF', 'ADE', 'ADF', 'B..'])
         self.assertEqual(clt.basepaths,
-                         ['A**', 'B**', '*A*', '*B*', '**A', '**B'])
+                         ['A**', 'B**', '*C*', '*D*', '**E', '**F'])
