@@ -206,15 +206,15 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                             ['A', 'common1', 0.6],
                             ['B', 'common2', 0.4]],
                            ['extendModel', 'A',
-                            ['A', 'extra1', 0.4],
-                            ['B', 'extra2', 0.2],
-                            ['C', 'extra3', 0.2],
-                            ['D', 'extra4', 0.2]],
+                            ['C', 'extra1', 0.4],
+                            ['D', 'extra2', 0.2],
+                            ['E', 'extra3', 0.2],
+                            ['F', 'extra4', 0.2]],
                            ['extendModel', 'B',
-                            ['A', 'extra5', 0.4],
-                            ['B', 'extra6', 0.2],
-                            ['C', 'extra7', 0.2],
-                            ['D', 'extra8', 0.2]])
+                            ['G', 'extra5', 0.4],
+                            ['H', 'extra6', 0.2],
+                            ['I', 'extra7', 0.2],
+                            ['J', 'extra8', 0.2]])
         self.assertEqual(clt.get_all_paths(),  # 4 + 4 rlzs
                          ['AA.', 'ABA', 'ABB', 'ABC',
                           'ABD', 'AC.', 'AD.', 'B..'])

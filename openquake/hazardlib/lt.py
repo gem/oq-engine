@@ -678,6 +678,16 @@ class BranchSet(object):
                 break
         return pairs
 
+    def to_list(self):
+        """
+        :returns: a literal list describing the branchset
+        """
+        atb = ' '.join(self.filters.get("applyToBranches", []))
+        lst = [self.uncertainty_type, atb]
+        for br in self.branches:
+            lst.append([br.branch_id, '...', br.weight])
+        return lst
+
     def __len__(self):
         return len(self.branches)
 
