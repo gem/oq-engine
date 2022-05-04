@@ -454,7 +454,7 @@ def _get_distances_from_cache(dcache: dict, suids: list, param: str):
     if param in ['rjb', 'rrup']:
         distances = dcache[suids[0]][param]
         # This is looping over all the surface IDs composing the rupture
-        for suid in suids:
+        for suid in suids[1:]:
             distances = np.minimum(distances, dcache[suid][param])
         params = [param]
         distances = [distances]
