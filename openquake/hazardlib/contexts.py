@@ -40,7 +40,7 @@ from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
-    MINMAG, MAXMAG, get_dist)
+    MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
@@ -555,9 +555,8 @@ class ContextMaker(object):
         :returns:
             (filtered sites, distance context)
         """
-        if (self.cache_distances and isinstance(rup.surface, MultiSurface) and
-                hasattr(rup.surface.surfaces[0], 'suid')):
-            rrup = get_dist(rup, sites.complete, 'rrup', self.dcache)
+        if self.cache_distances:
+            rrup = get_distances(rup, sites.complete, 'rrup', self.dcache)
             distances = rrup[sites.sids]
         else:
             distances = get_distances(rup, sites, 'rrup')
@@ -637,7 +636,7 @@ class ContextMaker(object):
             # In case of a multifault source we use a cache with distances
             if caching_mfs:
                 for param in self.REQUIRES_DISTANCES - {'rrup'}:
-                    dist = get_dist(rup, r_sites.complete, param, dcache)
+                    dist = get_distances(rup, r_sites.complete, param, dcache)
                     setattr(dctx, param, dist[r_sites.sids])
             else:
                 for param in self.REQUIRES_DISTANCES - {'rrup'}:

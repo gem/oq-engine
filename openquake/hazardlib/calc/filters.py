@@ -27,7 +27,7 @@ from scipy.interpolate import interp1d
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import site
 from openquake.hazardlib.geo.surface.multi import (
-    _multi_distances, _multi_rx_ry0)
+    MultiSurface, _multi_distances, _multi_rx_ry0)
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
@@ -46,7 +46,7 @@ def magstr(mag):
     return '%.2f' % numpy.float32(mag)
 
 
-def get_dist(rup, sites, param, dcache):
+def _distances_from_dcache(rup, sites, param, dcache):
     """
     Calculates the distances for multi-surfaces using a cache.
 
@@ -62,7 +62,7 @@ def get_dist(rup, sites, param, dcache):
         calculation dcache is instatianted by in the `get_ctxs` method of the
         :class:`openquake.hazardlib.contexts.ContextMaker`
     :returns:
-        A dictionary with the computed distances for the rupture in input
+        The computed distances for the rupture in input
     """
     # Update the distance cache
     suids = []  # surface IDs
@@ -101,6 +101,9 @@ def get_distances(rupture, sites, param, dcache=None):
     :param dcache: a dictionary (surfaceID, dist_type) -> distances
     :returns: an array of distances from the given sites
     """
+    if (dcache and isinstance(rupture.surface, MultiSurface) and
+            hasattr(rupture.surface.surfaces[0], 'suid')):
+        return _distances_from_dcache(rupture, sites, param, dcache)
     if not rupture.surface:  # PointRupture
         dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'rrup':
