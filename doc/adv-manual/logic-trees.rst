@@ -1,5 +1,5 @@
-Logic trees and correlated uncertainties
-========================================
+Advanced logic trees
+====================
 
 Logic trees are documented in the OpenQuake manual (section "Defining
 Logic Trees"). However some features are only mentioned without giving
