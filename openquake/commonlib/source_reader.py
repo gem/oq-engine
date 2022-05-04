@@ -158,6 +158,7 @@ def get_csm(oq, full_lt, h5=None):
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
     fix_geometry_sections(smdict)
+    logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
 
     # checking the changes
