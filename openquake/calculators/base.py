@@ -225,6 +225,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if ct != self.oqparam.concurrent_tasks:
                 # save the used concurrent_tasks
                 self.oqparam.concurrent_tasks = ct
+            logging.info('Using concurrent_tasks = %d', ct)
             self.save_params(**kw)
             try:
                 if pre_execute:

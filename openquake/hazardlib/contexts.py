@@ -43,7 +43,6 @@ from openquake.hazardlib.calc.filters import (
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.hazardlib.geo.surface.multi import MultiSurface
 
 U32 = numpy.uint32
 F64 = numpy.float64
@@ -993,7 +992,7 @@ class ContextMaker(object):
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
             elif N <= self.max_sites_disagg and src.code == b'F':  # test_ucerf
-                src.weight = src.num_ruptures * 40
+                src.weight = src.num_ruptures * 30
             else:
                 with mon:
                     src.weight = 1. + self.estimate_weight(src, srcfilter)
