@@ -101,9 +101,10 @@ def get_distances(rupture, sites, param, dcache=None):
     :param dcache: a dictionary (surfaceID, dist_type) -> distances
     :returns: an array of distances from the given sites
     """
-    if (dcache and isinstance(rupture.surface, MultiSurface) and
+    if (dcache is not None and isinstance(rupture.surface, MultiSurface) and
             hasattr(rupture.surface.surfaces[0], 'suid')):
-        return _distances_from_dcache(rupture, sites, param, dcache)
+        return _distances_from_dcache(
+            rupture, sites.complete, param, dcache)[sites.sids]
     if not rupture.surface:  # PointRupture
         dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'rrup':
