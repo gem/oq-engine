@@ -373,8 +373,6 @@ class SourceModelLogicTree(object):
         dt = time.time() - t0
         bname = os.path.basename(self.filename)
         logging.info('Validated %s in %.2f seconds', bname, dt)
-        for bset in self.branchsets:
-            logging.info(bset.to_list())
 
     def parse_branchset(self, branchset_node, depth):
         """

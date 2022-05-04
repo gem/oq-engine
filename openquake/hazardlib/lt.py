@@ -682,7 +682,7 @@ class BranchSet(object):
         """
         :returns: a literal list describing the branchset
         """
-        atb = ' '.join(self.filters.get("applyToBranches", []))
+        atb = self.filters.get("applyToBranches", [])
         lst = [self.uncertainty_type, atb]
         for br in self.branches:
             lst.append([br.branch_id, '...', br.weight])
