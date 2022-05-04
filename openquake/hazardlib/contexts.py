@@ -617,54 +617,55 @@ class ContextMaker(object):
         ctxs = []
         fewsites = len(sitecol.complete) <= self.max_sites_disagg
         if hasattr(src, 'source_id'):  # is a real source
-            rups = self._gen_rups(src, sitecol, step)
+            rups_sites = self._gen_rups(src, sitecol, step)
             src_id = src.id
         else:  # in event based we get a list with a single rupture
-            rups = src
+            rups_sites = [(src, sitecol)]
 
         # Create the distance cache. A dictionary of dictionaries
         dcache = {}  # used only for MultiFaultSources
-        for rup in rups:
-            caching_mfs = (isinstance(rup.surface, MultiSurface) and
-                           hasattr(rup.surface.surfaces[0], 'suid'))
-            sites = getattr(rup, 'sites', sitecol)
-            try:
-                r_sites, dctx = self.filter(sites, rup)
-            except FarAwayRupture:
-                continue
-            ctx = self.make_rctx(rup)
-            ctx.sites = r_sites
+        # cps = hasattr(src, 'location') and src.count_nphc() > 1
+        for rups, sites in rups_sites:
+            caching_mfs = (isinstance(rups[0].surface, MultiSurface) and
+                           hasattr(rups[0].surface.surfaces[0], 'suid'))
+            for rup in rups:
+                try:
+                    r_sites, dctx = self.filter(sites, rup)
+                except FarAwayRupture:
+                    continue
+                ctx = self.make_rctx(rup)
+                ctx.sites = r_sites
 
-            # In case of a multifault source we use a cache with distances
-            if caching_mfs:
-                params = self.REQUIRES_DISTANCES - {'rrup'}
-                distdic = get_distdic(rup, r_sites.complete, params, dcache)
-                for key, val in distdic.items():
-                    setattr(dctx, key, val[r_sites.sids])
-            else:
-                for param in self.REQUIRES_DISTANCES - {'rrup'}:
-                    setattr(dctx, param, get_distances(rup, r_sites, param))
+                # In case of a multifault source we use a cache with distances
+                if caching_mfs:
+                    params = self.REQUIRES_DISTANCES - {'rrup'}
+                    distd = get_distdic(rup, r_sites.complete, params, dcache)
+                    for key, val in distd.items():
+                        setattr(dctx, key, val[r_sites.sids])
+                else:
+                    for par in self.REQUIRES_DISTANCES - {'rrup'}:
+                        setattr(dctx, par, get_distances(rup, r_sites, par))
 
-            # Equivalent distances
-            reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
-            if reqv_obj and isinstance(rup.surface, PlanarSurface):
-                reqv = reqv_obj.get(dctx.repi, rup.mag)
-                if 'rjb' in self.REQUIRES_DISTANCES:
-                    dctx.rjb = reqv
-                if 'rrup' in self.REQUIRES_DISTANCES:
-                    dctx.rrup = numpy.sqrt(
-                        reqv**2 + rup.hypocenter.depth**2)
-            for name in r_sites.array.dtype.names:
-                setattr(ctx, name, r_sites[name])
-            ctx.src_id = src_id
-            for par in self.REQUIRES_DISTANCES | {'rrup'}:
-                setattr(ctx, par, getattr(dctx, par))
-            if fewsites:
-                # get closest point on the surface
-                closest = rup.surface.get_closest_points(sitecol.complete)
-                ctx.clon = closest.lons[ctx.sids]
-                ctx.clat = closest.lats[ctx.sids]
-            ctxs.append(ctx)
+                # Equivalent distances
+                reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
+                if reqv_obj and isinstance(rup.surface, PlanarSurface):
+                    reqv = reqv_obj.get(dctx.repi, rup.mag)
+                    if 'rjb' in self.REQUIRES_DISTANCES:
+                        dctx.rjb = reqv
+                    if 'rrup' in self.REQUIRES_DISTANCES:
+                        dctx.rrup = numpy.sqrt(
+                            reqv**2 + rup.hypocenter.depth**2)
+                for name in r_sites.array.dtype.names:
+                    setattr(ctx, name, r_sites[name])
+                ctx.src_id = src_id
+                for par in self.REQUIRES_DISTANCES | {'rrup'}:
+                    setattr(ctx, par, getattr(dctx, par))
+                if fewsites:
+                    # get closest point on the surface
+                    closest = rup.surface.get_closest_points(sitecol.complete)
+                    ctx.clon = closest.lons[ctx.sids]
+                    ctx.clat = closest.lats[ctx.sids]
+                ctxs.append(ctx)
         return ctxs  # sorted by mag by construction
 
     def max_intensity(self, sitecol1, mags, dists):
@@ -699,23 +700,19 @@ class ContextMaker(object):
         return gmv
 
     def _gen_rups(self, src, sites, step):
-        # yield ruptures, each one with a .sites attribute
-        def rups(rupiter, sites):
-            for rup in rupiter:
-                rup.sites = sites
-                yield rup
+        # yield ruptures, sites
         if getattr(src, 'location', None) and src.count_nphc() > 1:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
-            for r, s in self._cps_rups(src, sites, step):
-                yield from rups(r, s)
+            yield from self._cps_rups(src, sites, step)
         else:  # just add the ruptures
             with self.ir_mon:
                 lst = list(src.iter_ruptures(
                     shift_hypo=self.shift_hypo, step=step))
-            yield from rups(lst, sites)
+            yield lst, sites
 
     def _cps_rups(self, src, sites, step):
+        # collapsible point sources (i.e. with src.count_nphc() > 1)
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
         with self.ir_mon:
