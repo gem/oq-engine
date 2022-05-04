@@ -55,7 +55,7 @@ generate six effective source models by extending first
 with ``extra2.xml`` and then with ``extra3.xml`` respectively. Notice
 that ``extra1.xml``, ``extra2.xml`` and ``extra3.xml`` can be different
 versions of the same sources with different parameters or geometries,
-so ``extendModel`` can be used to implement *correlated* uncertainties.
+so ``extendModel`` can be used to implement correlated uncertainties.
 
 Since engine 3.15 it is possible to describe logic trees as python
 lists (one list for each branchset) and to programmatically generate
@@ -148,7 +148,7 @@ are the combinations by building the logic tree:
  >>> logictree.get_all_paths()  # 3 + 2 paths
  ['AC.', 'AD.', 'AE..', 'BF.', 'BG.']
 
-``applyToBranches can be used in different ways. For instance you can
+``applyToBranches`` can be used in different ways. For instance you can
 attach the second ``extendModel`` to everything and get 8 paths:
 
  >>> logictree = build(
