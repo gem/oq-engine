@@ -397,54 +397,7 @@ class MultiSurface(BaseSurface):
         return self.tors.get_ry0_distance(mesh)
 
 
-def get_dist(rup, sites, param, dcache):
-    """
-    Calculates the distances for multi-surfaces using a cache.
-
-    :param rup:
-        An instance of :class:`openquake.hazardlib.source.rupture.BaseRupture`
-    :param sites:
-        A list of sites or a site collection
-    :param param:
-        The required rupture-distance parameter
-    :param dcache:
-        A dictionary with the distances. The first key is the
-        surface ID and the second one is the type of distance. In a traditional
-        calculation dcache is instatianted by in the `get_ctxs` method of the
-        :class:`openquake.hazardlib.contexts.ContextMaker`
-    :returns:
-        A dictionary with the computed distances for the rupture in input
-    """
-    # Update the distance cache
-    suids = []  # surface IDs
-    for srf in rup.surface.surfaces:
-        suids.append(srf.suid)
-        if srf.suid not in dcache:
-            # This function returns the distances that will be added to the
-            # cache. In case of Rx and Ry0, the information cache will
-            # include the ToR of each surface as well as the GC2 t and u
-            # coordinates for each section.
-            distdic = _get_distances(srf, sites, param)
-            # Save information into the cache for the current surfac.
-            for key in distdic:
-                dcache[srf.suid, key] = distdic[key]
-
-    # Computing distances using the cache
-    if param in ['rjb', 'rrup']:
-        distances = dcache[suids[0], param]
-        # This is looping over all the surface IDs composing the rupture
-        for suid in suids[1:]:
-            distances = np.minimum(distances, dcache[suid, param])
-    elif param in ['rx', 'ry0']:
-        # The computed distances. In this case we are not going to add them to
-        # the cache since they cannot be reused
-        distances = _get_rx_ry0_from_cache(dcache, suids, param)
-    else:
-        raise ValueError("Unknown distance measure %r" % param)
-    return distances
-
-
-def _get_distances(surface, sites, param):
+def _multi_distances(surface, sites, param):
     if param == 'rrup':
         dist = surface.get_min_distance(sites)
     elif param == 'rjb':
@@ -468,7 +421,7 @@ def _get_distances(surface, sites, param):
     return dists
 
 
-def _get_rx_ry0_from_cache(dcache, suids, param):
+def _multi_rx_ry0(dcache, suids, param):
 
     # Get the multiline used to compute distances
     multil = _get_multi_line(dcache, suids)

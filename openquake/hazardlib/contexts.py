@@ -40,10 +40,10 @@ from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
-    MINMAG, MAXMAG)
+    MINMAG, MAXMAG, get_dist)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.hazardlib.geo.surface.multi import get_dist, MultiSurface
+from openquake.hazardlib.geo.surface.multi import MultiSurface
 
 U32 = numpy.uint32
 F64 = numpy.float64
