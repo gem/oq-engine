@@ -99,12 +99,13 @@ def classical(group, sitecol, cmaker):
         # set the proper TOM in case of a cluster
         if cluster:
             # Check if all the ruptures in the cluster are
-            for dat in src.data:
-                nonp = False
-                if (isinstance(src, NonParametricSeismicSource) and
-                    dat[1].data[0][0] < 1.0 and dat[1].data[0][0] > 0.0):
-                    nonp = True
-                are_np_srcs.append(nonp)
+            if hasattr(src, 'data'):
+                for dat in src.data:
+                    nonp = False
+                    if (isinstance(src, NonParametricSeismicSource) and
+                        dat[1].data[0][0] < 1.0 and dat[1].data[0][0] > 0.0):
+                        nonp = True
+                    are_np_srcs.append(nonp)
             # Define a fated temporal occurrence model only when there in no
             # specific probability of occurrence
             if ~numpy.all(numpy.array(are_np_srcs)):
