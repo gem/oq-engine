@@ -213,16 +213,19 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.set_weight(srcs, inp.sitecol)
         weights = [src.weight for src in srcs]  # 3 within, 3 outside
         numpy.testing.assert_allclose(
-            weights, [3.04, 3.04, 3.04, 1, 1, 1])
+            weights, [7.8, 7.8, 7.8, 1, 1, 1])
 
         # set different vs30s on the two sites
         inp.sitecol.array['vs30'] = [600., 700.]
         ctxs = cmaker.from_srcs(srcs, inp.sitecol)
-        numpy.testing.assert_equal(len(ctxs), 120)  # 3x40 ruptures
+        # the 3 sources within are still more distant than the pointsource
+        # distance, so the 4 hypocenters are collapsed to 1 and the number
+        # of ruptures is down from 30 x 4 to 30
+        numpy.testing.assert_equal(len(ctxs), 30)  # 3x10 mags
 
         # compute original curves
         pmap = cmaker.get_pmap(ctxs)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [34, 240])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [34, 60])
 
         # compute collapsed curves
         cmaker.collapser.cfactor = numpy.zeros(2)
@@ -230,11 +233,7 @@ class CollapseTestCase(unittest.TestCase):
         cmap = cmaker.get_pmap(ctxs)
         self.assertLess(rms(pmap[0].array - cmap[0].array), 3E-4)
         self.assertLess(rms(pmap[1].array - cmap[1].array), 3E-4)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [34, 240])
-
-        # test collapse2
-        [(ctx, allsids)] = cmaker.collapse2(ctxs, collapse_level=2)
-        self.assertEqual(len(ctx), 34)
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [34, 60])
 
     def test_collapse_big(self):
         smpath = os.path.join(os.path.dirname(__file__),

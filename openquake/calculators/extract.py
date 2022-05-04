@@ -230,7 +230,7 @@ def extract_realizations(dstore, dummy):
         arr['branch_path'] = ['"%s"' % repr(gsim)[1:-1].replace('"', '""')
                               for gsim in gsims]  # quotes Excel-friendly
     else:
-        arr['branch_path'] = rlzs['branch_path']
+        arr['branch_path'] = encode(rlzs['branch_path'])
     return arr
 
 

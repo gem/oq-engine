@@ -4,8 +4,7 @@
 # GEM Mirror
 # We also provide pre-compiled manylinux1 wheels for
 # h5py, Shapely, psutil
-https://wheelhouse.openquake.org/v3/linux/py/setuptools-56.0.0-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/linux/py/pytz-2019.1-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py37/numba-0.55.1-1-cp37-cp37m-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py37/h5py-3.1.0-cp37-cp37m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py37/setproctitle-1.2.2-cp37-cp37m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py37/numpy-1.20.0-cp37-cp37m-manylinux1_x86_64.whl
@@ -29,6 +28,8 @@ https://wheelhouse.openquake.org/v3/linux/py/Django-3.2.12-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/asgiref-3.4.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/django_pam-2.0.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/python_pam-1.8.4-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py/setuptools-56.0.0-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py/pytz-2019.1-py2.py3-none-any.whl
 
 ### Plotting ###
 # comment the following lines to skip installation
