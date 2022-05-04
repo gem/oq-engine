@@ -771,17 +771,6 @@ class ContextMaker(object):
             out.append(self.recarray(nonparametric))
         return out
 
-    def collapse2(self, ctxs, collapse_level=None):
-        """
-        :param ctxs: a list of RuptureContexts
-        :param collapse_level: if None, use .collapse_level
-        :returns: a list of pairs (ctx, allsids)
-        """
-        self.collapser.cfactor = numpy.zeros(2)
-        lst = [self.collapser.collapse(ctx, self.rup_indep, collapse_level)
-               for ctx in self.recarrays(ctxs)]
-        return lst
-
     def get_pmap(self, ctxs, probmap=None):
         """
         :param ctxs: a list of contexts

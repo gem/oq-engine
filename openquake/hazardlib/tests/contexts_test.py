@@ -235,10 +235,6 @@ class CollapseTestCase(unittest.TestCase):
         self.assertLess(rms(pmap[1].array - cmap[1].array), 3E-4)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [34, 60])
 
-        # test collapse2
-        [(ctx, allsids)] = cmaker.collapse2(ctxs, collapse_level=2)
-        self.assertEqual(len(ctx), 34)
-
     def test_collapse_big(self):
         smpath = os.path.join(os.path.dirname(__file__),
                               'data/context/source_model.xml')
