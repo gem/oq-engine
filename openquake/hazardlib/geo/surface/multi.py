@@ -430,23 +430,6 @@ def get_dist(rup, sites, param, dcache):
                 dcache[srf.suid, key] = distdic[key]
 
     # Computing distances using the cache
-    try:
-        distances = _get_distances_from_cache(dcache, suids, param)
-    except KeyError:
-        import pdb; pdb.set_trace()
-    return distances
-
-
-def _get_distances_from_cache(dcache: dict, suids: list, param: str):
-    """
-    :param dcache:
-        See description in
-        :method:`openquake.hazardlib.geo.surface.multi.get_dist`
-    :param suids:
-        A list with the IDs of the surfaces to consider
-    :param param:
-        A string defining a rupture-site metric (e.g. 'rjb')
-    """
     if param in ['rjb', 'rrup']:
         distances = dcache[suids[0], param]
         # This is looping over all the surface IDs composing the rupture
@@ -462,16 +445,6 @@ def _get_distances_from_cache(dcache: dict, suids: list, param: str):
 
 
 def _get_distances(surface, sites, param):
-    """
-    :param surface:
-        An instance of :class:`openquake.hazardlib.geo.surface.BaseSurface`
-    :param sites:
-        An instance of :class:`openquake.hazardlib.geo.Mesh`
-    :param param:
-        A string defining a rupture-site metric (e.g. 'rjb')
-    :returns:
-        The requested distances as a dictionary
-    """
     if param == 'rrup':
         dist = surface.get_min_distance(sites)
     elif param == 'rjb':
