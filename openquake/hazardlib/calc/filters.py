@@ -98,7 +98,7 @@ def get_distances(rupture, sites, param, dcache=None):
     :param rupture: a rupture
     :param sites: a mesh of points or a site collection
     :param param: the kind of distance to compute (default rjb)
-    :param dcache: a dictionary (surfaceID, dist_type) -> distances
+    :param dcache: None or a dictionary (surfaceID, dist_type) -> distances
     :returns: an array of distances from the given sites
     """
     if (dcache is not None and isinstance(rupture.surface, MultiSurface) and
