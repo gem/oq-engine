@@ -2,21 +2,22 @@ Logic trees and correlated uncertainties
 ========================================
 
 Logic trees are documented in the OpenQuake manual (section "Defining
-Logic Trees"). However some recent developments are missing, in particular
-the ``extendModel`` feature which allows to implement both *correlated and
-uncorrelated uncertainties*. Here we will document it.
+Logic Trees"). However some features are only mentioned without giving
+examples (such as ``applyToBranches``) and some recent developments
+are missing, in particular the ``extendModel`` feature. Here we
+will document both.
 
 extendModel
 ---------------------------------
 
 Starting from engine 3.9 it is possible to define logic trees by adding sources
-to one or more base models. An example will explain it all:
+to one or more base models. An example will make things clear:
 
 .. code-block:: xml
 
   <?xml version="1.0" encoding="UTF-8"?>
   <nrml xmlns:gml="http://www.opengis.net/gml"
-        xmlns="http://openquake.org/xmlns/nrml/0.4">
+        xmlns="http://openquake.org/xmlns/nrml/0.5">
     <logicTree logicTreeID="lt1">
       <logicTreeBranchSet uncertaintyType="sourceModel"
                           branchSetID="bs0">
@@ -48,37 +49,44 @@ to one or more base models. An example will explain it all:
 
 In this example there are two base source models, named
 ``commom1.xml`` and ``common2.xml`` and three possibile extensions
-``extra1.xml``, ``extra2.xml`` and ``extra3.xml`. The engine will
-generate six effective source models by extending first ``common1.xml`` and
-then ``common2.xml`` with ``extra1.xml``, then with ``extra2.xml``
-and then with ``extra3.xml`` (``extra1.xml``, ``extra2.xml`` and
-``extra3.xml`` can be two versions of the same sources with different
-parameters or geometries).
+``extra1.xml``, ``extra2.xml`` and ``extra3.xml``. The engine will
+generate six effective source models by extending first
+``common1.xml`` and then ``common2.xml`` with ``extra1.xml``, then
+with ``extra2.xml`` and then with ``extra3.xml`` respectively. Notice
+that ``extra1.xml``, ``extra2.xml`` and ``extra3.xml`` can be different
+versions of the same sources with different parameters or geometries,
+so ``extendModel`` can be used to implement *correlated* uncertainties.
 
 Since engine 3.15 it is possible to describe logic trees as python
 lists (one list for each branchset) and to programmatically generate
 the realizations by using a simplified logic tree implementation in
-hazardlib/ This is extremely useful to understand the behavior of the
-engine. For instance, the logic tree above would be written as follows:
+hazardlib. This is extremely useful. For instance, the logic tree
+above would be written as follows:
 
 .. code-block:: python
 
  >>> from openquake.hazardlib.lt import build
  >>> logictree = build(
- ...     ['sourceModel', '', ['A', 'common1.xml', 0.6],
+ ...     ['sourceModel', [], ['A', 'common1.xml', 0.6],
  ...                         ['B', 'common2.xml', 0.4]],
- ...     ['extendModel', '', ['C', 'extra1.xml', 0.6],
+ ...     ['extendModel', [], ['C', 'extra1.xml', 0.6],
  ...                         ['D', 'extra2.xml', 0.2],
  ...                         ['E', 'extra3.xml', 0.2]])
 
- and the 6 possible paths can be extracted as follows:
+and the 6 possible paths can be extracted as follows:
  
- >>> logictree.get_all_paths()
+ >>> logictree.get_all_paths()  # 2 x 3 paths
  ['AC', 'AD', 'AE', 'BC', 'BD', 'BE']
 
-This case is trivial, however it can be made nontrivial by adding an additional
-``extendModel`` and by using ``applyToBranches`` to implement *correlated
-uncertainties*:
+The empty square brackets means that the branchset should be applied to all
+branches in the previous branchset and correspond to the ``applyToBranches``
+tag in the XML version of the logic tree. If ``applyToBranches`` is missing
+the logic tree is multiplicative and the total number of paths can be
+obtained simply by multiplying the number of paths in each branchset.
+When ``applyToBranches`` is used the logic tree becomes additive and the
+total number of paths can be obtained by summing the number of paths in
+the different subtrees. For instance, let us extend the previous example
+by adding another ``extendModel`` branchset and by using ``applyToBranches``:
 
 .. code-block:: xml
 
@@ -126,60 +134,51 @@ uncertainties*:
     </logicTree>
   </nrml>
 
-The uncertainties are correlated in the sense than not all possible
-2x3x2=12 combinations are considered, but only a subset of 3+2=5
-combinations. You can see which are the combinations by building
-the logic tree:
+In this case only 3 + 2 = 5 paths are considered. You can see which
+are the combinations by building the logic tree:
 
  >>> logictree = build(
- ...     ['sourceModel', '', ['A', 'common1.xml', 0.6],
+ ...     ['sourceModel', [], ['A', 'common1.xml', 0.6],
  ...                         ['B', 'common2.xml', 0.4]],
- ...     ['extendModel', 'A', ['C', 'extra1.xml', 0.6],
- ...                          ['D', 'extra2.xml', 0.2],
- ...                          ['E', 'extra3.xml', 0.2]],
- ...     ['extendModel', 'B', ['F', 'extra4.xml', 0.6],
- ...                          ['G', 'extra5.xml', 0.4]])
+ ...     ['extendModel', ['A'], ['C', 'extra1.xml', 0.6],
+ ...                            ['D', 'extra2.xml', 0.2],
+ ...                            ['E', 'extra3.xml', 0.2]],
+ ...     ['extendModel', ['B'], ['F', 'extra4.xml', 0.6],
+ ...                            ['G', 'extra5.xml', 0.4]])
  >>> logictree.get_all_paths()  # 3 + 2 paths
  ['AC.', 'AD.', 'AE..', 'BF.', 'BG.']
 
-Partially uncorrelated uncertainties can be obtained by applying only on
-the 'A' model:
+``applyToBranches can be used in different ways. For instance you can
+attach the second ``extendModel`` to everything and get 8 paths:
 
  >>> logictree = build(
- ...     ['sourceModel', '', ['A', 'common1.xml', 0.6],
+ ...     ['sourceModel', [], ['A', 'common1.xml', 0.6],
  ...                         ['B', 'common2.xml', 0.4]],
- ...     ['extendModel', 'A', ['C', 'extra1.xml', 0.6],
- ...                          ['D', 'extra2.xml', 0.2],
- ...                          ['E', 'extra3.xml', 0.2]],
- ...     ['extendModel', '', ['F', 'extra4.xml', 0.6],
+ ...     ['extendModel', ['A'], ['C', 'extra1.xml', 0.6],
+ ...                            ['D', 'extra2.xml', 0.2],
+ ...                            ['E', 'extra3.xml', 0.2]],
+ ...     ['extendModel', [], ['F', 'extra4.xml', 0.6],
  ...                         ['G', 'extra5.xml', 0.4]])
  >>> logictree.get_all_paths()  # 3 * 2 + 2 paths
  ['ACF', 'ACG', 'ADF', 'ADG', 'AEF', 'AEG', 'B.F', 'B.G']
 
-The fully uncorrelated realizations can be obtained by not specifying
-``applyToSources``:
+The complete realizations can be obtained by not specifying ``applyToSources``:
 
 .. code-block:: python
 
  >>> logictree = build(
- ...     ['sourceModel', '', ['A', 'common1.xml', 0.6],
+ ...     ['sourceModel', [], ['A', 'common1.xml', 0.6],
  ...                         ['B', 'common2.xml', 0.4]],
- ...     ['extendModel', '', ['C', 'extra1.xml', 0.6],
+ ...     ['extendModel', [], ['C', 'extra1.xml', 0.6],
  ...                         ['D', 'extra2.xml', 0.2],
  ...                         ['E', 'extra3.xml', 0.2]],
- ...     ['extendModel', '', ['F', 'extra4.xml', 0.6],
+ ...     ['extendModel', [], ['F', 'extra4.xml', 0.6],
  ...                         ['G', 'extra5.xml', 0.4]])
  >>> logictree.get_all_paths() # 12 paths
  ['ACF', 'ACG', 'ADF', 'ADG', 'AEF', 'AEG', 'BCF', 'BCG', 'BDF', 'BDG', 'BEF', 'BEG']
 
 The logic tree demo
 -------------------
-
-
-- what is the meaning of the ``branch_path`` column in the "Realizations"
-  output?
-- given a realization, how do I extract the corresponding source model,
-  modifications parameters and GMPEs?
 
 As another example we will consider the demo
 ``LogicTreeCase2ClassicalPSHA`` in the engine distribution; the
@@ -188,25 +187,25 @@ logic tree has the following structure:
 .. code-block:: python
 
  >>> lt = build(
- ...    ['sourceModel', '', ['b11', 'source_model.xml', .333]],
- ...    ['abGRAbsolute', '', ['b21', '4.6 1.1', .333],
+ ...    ['sourceModel', [], ['b11', 'source_model.xml', .333]],
+ ...    ['abGRAbsolute', [], ['b21', '4.6 1.1', .333],
  ...                         ['b22', '4.5 1.0', .333],
  ...                         ['b23', '4.4 0.9', .334]],
- ...    ['abGRAbsolute', '', ['b31', '3.3 1.0', .333],
+ ...    ['abGRAbsolute', [], ['b31', '3.3 1.0', .333],
  ...                         ['b32', '3.2 0.9', .333],
  ...                         ['b33', '3.1 0.0', .334]],
- ...    ['maxMagGRAbsolute', '', ['b41', 7.0, .333],
+ ...    ['maxMagGRAbsolute', [], ['b41', 7.0, .333],
  ...                             ['b42', 7.3, .333],
  ...                             ['b43', 7.6, .334]],
- ...    ['maxMagGRAbsolute', '', ['b51', 7.5, .333],
+ ...    ['maxMagGRAbsolute', [], ['b51', 7.5, .333],
  ...                             ['b52', 7.8, .333],
  ...                             ['b53', 8.0, .334]],
- ...    ['Active Shallow Crust', '', ['c11', 'BA08', .5],
+ ...    ['Active Shallow Crust', [], ['c11', 'BA08', .5],
  ...                                 ['c12', 'CY12', .5]],
- ...    ['Stable Continental Crust', '', ['c21', 'TA02', .5],
+ ...    ['Stable Continental Crust', [], ['c21', 'TA02', .5],
  ...                                     ['c22', 'CA03', .5]])
 
-Since the demo is using full enumeration there are 3**4 * 2**2 = 324
+Since the demo is using full enumeration there are 1*3*3*3*3*2*2 = 324
 realizations in total that you can build as follows:
 
  >>> import numpy
@@ -250,9 +249,9 @@ realizations in total that you can build as follows:
  ADGILOP ADGILOQ ADGIMNP ADGIMNQ ADGIMOP ADGIMOQ ADGJKNP ADGJKNQ ADGJKOP
  ADGJKOQ ADGJLNP ADGJLNQ ADGJLOP ADGJLOQ ADGJMNP ADGJMNQ ADGJMOP ADGJMOQ
 
-After running the calculations you will see an output called
-"Realizations". If you export it, you will get a CSV file with the
-following structure::
+The engine is computing all such realizations; after running the
+calculations you will see an output called "Realizations". If you
+export it, you will get a CSV file with the following structure::
 
   #,,"generated_by='OpenQuake engine 3.13..."
   rlz_id,branch_path,weight

@@ -780,6 +780,7 @@ class CompositeLogicTree(object):
             app2brs = list(bset.filters.get('applyToBranches', '')) or prev_ids
             if app2brs != prev_ids:
                 for branch_id in app2brs:
+                    # NB: if branch_id has already a branchset it is overridden
                     branchdic[branch_id].bset = bset
                 for brid in prev_ids:
                     br = branchdic[brid]
