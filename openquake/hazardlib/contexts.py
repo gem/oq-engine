@@ -622,6 +622,7 @@ class ContextMaker(object):
             rups = src
 
         # Create the distance cache. A dictionary of dictionaries
+        dcache = {}  # used only for MultiFaultSources
         for rup in rups:
             sites = getattr(rup, 'sites', sitecol)
             try:

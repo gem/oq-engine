@@ -107,7 +107,7 @@ class RiskFuncList(list):
                 if ids != base_ids:
                     raise NameError(
                         'Check in the files %s the IDs %s' %
-                        (fnames, base_ids.symmetric_difference(ids)))
+                        (fnames, sorted(base_ids.symmetric_difference(ids))))
 
     def groupby_id(self, kind=None):
         """
