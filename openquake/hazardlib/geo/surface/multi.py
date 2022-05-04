@@ -389,29 +389,12 @@ class MultiSurface(BaseSurface):
     def get_ry0_distance(self, mesh):
         """
         :param mesh:
+            An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
+            coordinates of the sites.
         """
         if self.tors is None:
             self._set_tor()
         return self.tors.get_ry0_distance(mesh)
-
-
-"""
-    def get_ry0_distance(self, mesh):
-        if self.uut is None or self.site_mesh != mesh:
-            self._set_tu(mesh)
-
-        if self.tors.u_max is None:
-            self.tors.set_u_max()
-
-        ry0 = np.zeros_like(mesh.lons)
-        ry0[self.uut < 0] = abs(self.uut[self.uut < 0])
-
-        condition = self.uut > self.tors.u_max
-        ry0[condition] = self.uut[condition] - self.tors.u_max
-
-        out = ry0[0] if len(ry0.shape) > 1 else ry0
-        return out
-"""
 
 
 def _update_cache(rup, sites, params, dcache):
