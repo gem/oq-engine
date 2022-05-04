@@ -110,7 +110,7 @@ def classical(group, sitecol, cmaker):
             # specific probability of occurrence
             if ~numpy.all(numpy.array(are_np_srcs)):
                 src.temporal_occurrence_model = FatedTOM(time_span=1)
-            print(are_np_srcs)
+            print(">>", are_np_srcs)
         trts.add(src.tectonic_region_type)
     [trt] = trts  # there must be a single tectonic region type
     if cmaker.trt != '*':
@@ -120,7 +120,9 @@ def classical(group, sitecol, cmaker):
     except AttributeError:  # got a list of sources, not a group
         time_span = cmaker.investigation_time  # None for nonparametric
         cmaker.tom = PoissonTOM(time_span) if time_span else None
-    if cluster and ~numpy.all(numpy.array(are_np_srcs)):
+    breakpoint()
+    if cluster and (len(are_np_srcs) == 0 or
+                    ~numpy.all(numpy.array(are_np_srcs))):
         cmaker.tom = FatedTOM(time_span=1)
     dic = PmapMaker(cmaker, src_filter, group).make()
     if cluster:
