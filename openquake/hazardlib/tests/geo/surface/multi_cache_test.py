@@ -30,7 +30,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 
 from openquake.hazardlib.geo.surface.multi import (
-    _get_multi_line, _update_cache, get_distdic)
+    _get_multi_line, _update_cache, get_dist)
 from openquake.hazardlib.geo.multiline import get_tus
 
 aac = numpy.testing.assert_allclose
@@ -90,7 +90,7 @@ class GetRxRy0FromCacheTestCase(unittest.TestCase):
 
         # Test Ry0
         cache_save = copy.deepcopy(dcache)
-        dd = get_distdic(rup, self.sitec, ['ry0'], dcache)
+        dd = get_dist(rup, self.sitec, ['ry0'], dcache)
         aae(dd['ry0'], expected, decimal=3)
 
         # Get cached distances
@@ -131,7 +131,7 @@ class GetRxRy0FromCacheTestCase(unittest.TestCase):
         #aae(ml1.tut, ml2.tut, decimal=3)
 
         # Check the recomputed ry0
-        dd = get_distdic(rup, self.sitec, ['ry0'], dcache)
+        dd = get_dist(rup, self.sitec, ['ry0'], dcache)
         aae(dd['ry0'], expected, decimal=3)
 
     def test_multi_cache_02(self):
