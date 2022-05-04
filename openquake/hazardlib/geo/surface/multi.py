@@ -397,31 +397,6 @@ class MultiSurface(BaseSurface):
         return self.tors.get_ry0_distance(mesh)
 
 
-def _update_cache(rup, sites, params, dcache):
-    """ Updating distance cache """
-
-    # This is a list with the IDs of the surfaces representing the geometry of
-    # the rupture in question
-    suids = []
-
-    # Updating the cache with the distances for the surfaces not yet
-    # considered
-    for srf in rup.surface.surfaces:
-        suids.append(srf.suid)
-        if srf.suid not in dcache:
-            dcache[srf.suid] = {}
-            for param in params:
-                # This function returns the distances that will be added to the
-                # cache. In case of Rx and Ry0, the information cache will
-                # include the ToR of each surface as well as the GC2 t and u
-                # coordinates for each section.
-                distances = _get_distances(srf, sites, param)
-                # Save information into the cache for the current surfac.
-                for key in distances.keys():
-                    dcache[srf.suid][key] = distances[key]
-    return dcache, suids
-
-
 def get_distdic(rup, sites, params, dcache):
     """
     Calculates the distances for multi-surfaces using a cache.
@@ -440,9 +415,21 @@ def get_distdic(rup, sites, params, dcache):
     :returns:
         A dictionary with the computed distances for the rupture in input
     """
-
     # Update the distance cache
-    dcache, suids = _update_cache(rup, sites, params, dcache)
+    suids = []  # surface IDs
+    for srf in rup.surface.surfaces:
+        suids.append(srf.suid)
+        if srf.suid not in dcache:
+            dcache[srf.suid] = {}
+            for param in params:
+                # This function returns the distances that will be added to the
+                # cache. In case of Rx and Ry0, the information cache will
+                # include the ToR of each surface as well as the GC2 t and u
+                # coordinates for each section.
+                distances = _get_distances(srf, sites, param)
+                # Save information into the cache for the current surfac.
+                for key in distances:
+                    dcache[srf.suid][key] = distances[key]
 
     # Computing distances using the cache
     output = {}
