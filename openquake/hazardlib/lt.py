@@ -672,10 +672,12 @@ class BranchSet(object):
         bset = self
         while ltpath:
             brid, ltpath = ltpath[0], ltpath[1:]
-            pairs.append((bset, bset[brid].value))
-            bset = bset[brid].bset
-            if bset is None:
+            br = bset[brid]
+            pairs.append((bset, br.value))
+            if br.is_leaf():
                 break
+            else:
+                bset = br.bset
         return pairs
 
     def to_list(self):
