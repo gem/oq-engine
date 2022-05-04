@@ -53,6 +53,7 @@ from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import PoissonTOM, FatedTOM
+from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource
 
 
 def _cluster(imtls, tom, gsims, pmap):
@@ -61,7 +62,6 @@ def _cluster(imtls, tom, gsims, pmap):
     """
     L, G = imtls.size, len(gsims)
     pmapclu = ProbabilityMap(L, G)
-    # Get temporal occurrence model
     # Number of occurrences for the cluster
     first = True
     for nocc in range(0, 50):
@@ -91,13 +91,25 @@ def classical(group, sitecol, cmaker):
     src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
     cluster = getattr(group, 'cluster', None)
     trts = set()
+    are_np_srcs = []
     for src in group:
         if not src.num_ruptures:
             # src.num_ruptures may not be set, so it is set here
             src.num_ruptures = src.count_ruptures()
         # set the proper TOM in case of a cluster
         if cluster:
-            src.temporal_occurrence_model = FatedTOM(time_span=1)
+            # Check if all the ruptures in the cluster are
+            for dat in src.data:
+                nonp = False
+                if (isinstance(src, NonParametricSeismicSource) and
+                    dat[1].data[0][0] < 1.0 and dat[1].data[0][0] > 0.0):
+                    nonp = True
+                are_np_srcs.append(nonp)
+            # Define a fated temporal occurrence model only when there in no
+            # specific probability of occurrence
+            if ~numpy.all(numpy.array(are_np_srcs)):
+                src.temporal_occurrence_model = FatedTOM(time_span=1)
+            print(are_np_srcs)
         trts.add(src.tectonic_region_type)
     [trt] = trts  # there must be a single tectonic region type
     if cmaker.trt != '*':
@@ -107,7 +119,7 @@ def classical(group, sitecol, cmaker):
     except AttributeError:  # got a list of sources, not a group
         time_span = cmaker.investigation_time  # None for nonparametric
         cmaker.tom = PoissonTOM(time_span) if time_span else None
-    if cluster:
+    if cluster and ~numpy.all(numpy.array(are_np_srcs)):
         cmaker.tom = FatedTOM(time_span=1)
     dic = PmapMaker(cmaker, src_filter, group).make()
     if cluster:
