@@ -623,10 +623,10 @@ class ContextMaker(object):
             rups = src
 
         # Create the distance cache. A dictionary of dictionaries
-        dcache = {}
+        dcache = {}  # used only for MultiFaultSources
         for rup in rups:
-            caching = (isinstance(rup.surface, MultiSurface) and
-                       hasattr(rup.surface.surfaces[0], 'suid'))
+            caching_mfs = (isinstance(rup.surface, MultiSurface) and
+                           hasattr(rup.surface.surfaces[0], 'suid'))
             sites = getattr(rup, 'sites', sitecol)
             try:
                 r_sites, dctx = self.filter(sites, rup)
@@ -636,7 +636,7 @@ class ContextMaker(object):
             ctx.sites = r_sites
 
             # In case of a multifault source we use a cache with distances
-            if caching:
+            if caching_mfs:
                 params = self.REQUIRES_DISTANCES - {'rrup'}
                 distdic = get_distdic(rup, r_sites.complete, params, dcache)
                 for key, val in distdic.items():
@@ -665,8 +665,7 @@ class ContextMaker(object):
                 ctx.clon = closest.lons[ctx.sids]
                 ctx.clat = closest.lats[ctx.sids]
             ctxs.append(ctx)
-        ctxs.sort(key=operator.attrgetter('mag'))
-        return ctxs
+        return ctxs  # sorted by mag by construction
 
     def max_intensity(self, sitecol1, mags, dists):
         """
