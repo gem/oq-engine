@@ -43,7 +43,7 @@ from openquake.hazardlib.calc.filters import (
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.hazardlib.geo.surface.multi import get_distdic, MultiSurface
+from openquake.hazardlib.geo.surface.multi import MultiSurface
 
 U32 = numpy.uint32
 F64 = numpy.float64
@@ -344,8 +344,11 @@ class ContextMaker(object):
         elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
 
-        self.dcache = {}
         self.cache_distances = param.get('cache_distances', False)
+        if self.cache_distances:
+            self.dcache = {}  # (surface ID, dist_type) for MultiFaultSources
+        else:
+            self.dcache = None  # disabled
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
@@ -441,10 +444,11 @@ class ContextMaker(object):
         """
         :returns: the size in bytes of the distance cache
         """
+        if not self.dcache:
+            return 0
         nbytes = 0
-        for suid, dic in self.dcache.items():
-            for dst, arr in dic.items():
-                nbytes += arr.nbytes
+        for arr in self.dcache.values():
+            nbytes += arr.nbytes
         return nbytes
 
     def read_ctxs(self, dstore, slc=None):
@@ -556,12 +560,7 @@ class ContextMaker(object):
         :returns:
             (filtered sites, distance context)
         """
-        if (self.cache_distances and isinstance(rup.surface, MultiSurface) and
-                hasattr(rup.surface.surfaces[0], 'suid')):
-            distdic = get_distdic(rup, sites.complete, ['rrup'], self.dcache)
-            distances = distdic['rrup'][sites.sids]
-        else:
-            distances = get_distances(rup, sites, 'rrup')
+        distances = get_distances(rup, sites, 'rrup', self.dcache)
         mdist = self.maximum_distance(rup.mag)
         mask = distances <= mdist
         if mask.any():
@@ -623,10 +622,7 @@ class ContextMaker(object):
             rups = src
 
         # Create the distance cache. A dictionary of dictionaries
-        dcache = {}  # used only for MultiFaultSources
         for rup in rups:
-            caching_mfs = (isinstance(rup.surface, MultiSurface) and
-                           hasattr(rup.surface.surfaces[0], 'suid'))
             sites = getattr(rup, 'sites', sitecol)
             try:
                 r_sites, dctx = self.filter(sites, rup)
@@ -635,15 +631,9 @@ class ContextMaker(object):
             ctx = self.make_rctx(rup)
             ctx.sites = r_sites
 
-            # In case of a multifault source we use a cache with distances
-            if caching_mfs:
-                params = self.REQUIRES_DISTANCES - {'rrup'}
-                distdic = get_distdic(rup, r_sites.complete, params, dcache)
-                for key, val in distdic.items():
-                    setattr(dctx, key, val[r_sites.sids])
-            else:
-                for param in self.REQUIRES_DISTANCES - {'rrup'}:
-                    setattr(dctx, param, get_distances(rup, r_sites, param))
+            for param in self.REQUIRES_DISTANCES - {'rrup'}:
+                dists = get_distances(rup, r_sites, param, self.dcache)
+                setattr(dctx, param, dists)
 
             # Equivalent distances
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
