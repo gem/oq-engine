@@ -638,9 +638,12 @@ class ContextMaker(object):
                 rups_sites = self._cps_rups_sites(src, sitecol, step)
             else:  # just add the ruptures
                 with self.ir_mon:
-                    rups = list(src.iter_ruptures(
-                        shift_hypo=self.shift_hypo, step=step))
-                rups_sites = [(rups, sitecol)]
+                    allrups = numpy.array(list(src.iter_ruptures(
+                        shift_hypo=self.shift_hypo, step=step)))
+                    # sorted by mag by construction
+                    u32mags = U32([rup.mag * 100 for rup in allrups])
+                    rups_sites = [(rups, sitecol)
+                                  for rups in split_array(allrups, u32mags)]
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             cps = False
@@ -651,7 +654,7 @@ class ContextMaker(object):
                 if ctx:
                     ctx.src_id = src_id
                     ctxs.append(ctx)
-        return ctxs  # sorted by mag by construction
+        return ctxs
 
     def max_intensity(self, sitecol1, mags, dists):
         """
