@@ -136,6 +136,87 @@ def _project(self, points):
     return dists, mat @ self.uv1, mat @ self.uv2
 
 
+def get_rrup(planar, xyz):
+    """
+    :param planar: a PlanarSurface or a planar array
+    :param xyz: an array of euclidean coordinates of shape (N, 3)
+    :returns: N distances for the surface to the points.
+    """
+    width, length = planar.wld[:2]
+    # we project all the points of the mesh on a plane that contains
+    # the surface (translating coordinates of the projections to a local
+    # 2d space) and at the same time calculate the distance to that
+    # plane.
+    dists, xx, yy = _project(planar, xyz)
+    # the actual resulting distance is a square root of squares
+    # of a distance from a point to a plane that contains the surface
+    # and a distance from a projection of that point on that plane
+    # and a surface rectangle. we have former (``dists``), now we need
+    # to find latter.
+    #
+    # we process separately two coordinate components of the point
+    # projection. for abscissa we consider three possible cases:
+    #
+    #  I  . III .  II
+    #     .     .
+    #     0-----+                → x axis direction
+    #     |     |
+    #     +-----+
+    #     .     .
+    #     .     .
+    #
+    mxx = numpy.select(
+        condlist=[
+            # case "I": point on the left hand side from the rectangle
+            xx < 0,
+            # case "II": point is on the right hand side
+            xx > length
+            # default -- case "III": point is in between vertical sides
+        ],
+        choicelist=[
+            # case "I": we need to consider distance between a point
+            # and a line containing left side of the rectangle
+            xx,
+            # case "II": considering a distance between a point and
+            # a line containing the right side
+            xx - length
+        ],
+        # case "III": abscissa doesn't have an effect on a distance
+        # to the rectangle
+        default=0
+    )
+    # for ordinate we do the same operation (again three cases):
+    #
+    #    I
+    #  - - - 0---+ - - -         ↓ y axis direction
+    #   III  |   |
+    #  - - - +---+ - - -
+    #    II
+    #
+    myy = numpy.select(
+        condlist=[
+            # case "I": point is above the rectangle top edge
+            yy < 0,
+            # case "II": point is below the rectangle bottom edge
+            yy > width
+            # default -- case "III": point is in between lines containing
+            # top and bottom edges
+        ],
+        choicelist=[
+            # case "I": considering a distance to a line containing
+            # a top edge
+            yy,
+            # case "II": considering a distance to a line containing
+            # a bottom edge
+            yy - width
+        ],
+        # case "III": ordinate doesn't affect the distance
+        default=0
+    )
+    # combining distance on a plane with distance to a plane
+    return numpy.sqrt(dists ** 2 + mxx ** 2 + myy ** 2)
+
+
 class PlanarSurface(BaseSurface):
     """
     Planar rectangular surface with two sides parallel to the Earth surface.
@@ -437,79 +518,7 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
-        width, length = self.wld[:2]
-        # we project all the points of the mesh on a plane that contains
-        # the surface (translating coordinates of the projections to a local
-        # 2d space) and at the same time calculate the distance to that
-        # plane.
-        dists, xx, yy = _project(self, mesh.xyz)
-        # the actual resulting distance is a square root of squares
-        # of a distance from a point to a plane that contains the surface
-        # and a distance from a projection of that point on that plane
-        # and a surface rectangle. we have former (``dists``), now we need
-        # to find latter.
-        #
-        # we process separately two coordinate components of the point
-        # projection. for abscissa we consider three possible cases:
-        #
-        #  I  . III .  II
-        #     .     .
-        #     0-----+                → x axis direction
-        #     |     |
-        #     +-----+
-        #     .     .
-        #     .     .
-        #
-        mxx = numpy.select(
-            condlist=[
-                # case "I": point on the left hand side from the rectangle
-                xx < 0,
-                # case "II": point is on the right hand side
-                xx > length
-                # default -- case "III": point is in between vertical sides
-            ],
-            choicelist=[
-                # case "I": we need to consider distance between a point
-                # and a line containing left side of the rectangle
-                xx,
-                # case "II": considering a distance between a point and
-                # a line containing the right side
-                xx - length
-            ],
-            # case "III": abscissa doesn't have an effect on a distance
-            # to the rectangle
-            default=0
-        )
-        # for ordinate we do the same operation (again three cases):
-        #
-        #    I
-        #  - - - 0---+ - - -         ↓ y axis direction
-        #   III  |   |
-        #  - - - +---+ - - -
-        #    II
-        #
-        myy = numpy.select(
-            condlist=[
-                # case "I": point is above the rectangle top edge
-                yy < 0,
-                # case "II": point is below the rectangle bottom edge
-                yy > width
-                # default -- case "III": point is in between lines containing
-                # top and bottom edges
-            ],
-            choicelist=[
-                # case "I": considering a distance to a line containing
-                # a top edge
-                yy,
-                # case "II": considering a distance to a line containing
-                # a bottom edge
-                yy - width
-            ],
-            # case "III": ordinate doesn't affect the distance
-            default=0
-        )
-        # combining distance on a plane with distance to a plane
-        return numpy.sqrt(dists ** 2 + mxx ** 2 + myy ** 2)
+        return get_rrup(self, mesh.xyz)
 
     def get_closest_points(self, mesh):
         """
