@@ -123,6 +123,10 @@ def to_csv_array(ruptures):
 
 
 def to_arrays(geom):
+    """
+    :param geom: an array [num_surfaces, shape_x, shape_y ..., coords]
+    :returns: a list of num_surfaces arrays with shape (3, shape_x, shape_y)
+    """
     arrays = []
     num_surfaces = int(geom[0])
     start = num_surfaces * 2 + 1
