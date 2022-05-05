@@ -46,8 +46,7 @@ from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
-    dummy_branchset, LogicTreeError, parse_uncertainty, random,
-    attach_to_branches)
+    dummy_branchset, LogicTreeError, parse_uncertainty, random)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
@@ -336,18 +335,18 @@ class SourceModelLogicTree(object):
         dicts = list(self.bsetdict.values())[1:]
         if not dicts:
             self.is_source_specific = False
-            self.num_paths = count_paths(self.root_branchset)
+            self.num_paths = count_paths(self.root_branchset.branches)
             return
         src_ids = set()
         for dic in dicts:
             ats = dic.get('applyToSources')
             if not ats:
                 self.is_source_specific = False
-                self.num_paths = count_paths(self.root_branchset)
+                self.num_paths = count_paths(self.root_branchset.branches)
                 return
             elif len(ats.split()) != 1:
                 self.is_source_specific = False
-                self.num_paths = count_paths(self.root_branchset)
+                self.num_paths = count_paths(self.root_branchset.branches)
                 return
             src_ids.add(ats)
         # to be source-specific applyToBranches must be trivial
@@ -358,7 +357,7 @@ class SourceModelLogicTree(object):
             self.num_paths = prod(
                 sslt.num_paths for sslt in self.decompose().values())
         else:  # slow algorithm
-            self.num_paths = count_paths(self.root_branchset)
+            self.num_paths = count_paths(self.root_branchset.branches)
 
     def parse_tree(self, tree_node):
         """
@@ -772,7 +771,7 @@ class SourceModelLogicTree(object):
                     br.branch_id, ordinal, no, attrs['filename'])
                 bset.branches.append(br)
             bsets.append(bset)
-        attach_to_branches(bsets)
+        CompositeLogicTree(bsets)  # perform attach_to_branches
         self.branchsets = bsets
         # bsets [<b11>, <b21 b22>, <b31 b32>]
         self.root_branchset = bsets[0]

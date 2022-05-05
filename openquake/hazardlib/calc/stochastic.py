@@ -143,7 +143,12 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         # the first element is the number of surfaces, then there are
         # 2 * num_surfaces integers describing the first and second
         # dimension of each surface, and then the lons, lats and deps of
-        # the underlying meshes of points.
+        # the underlying meshes of points; in event_based/case_1 there
+        # is a point source, i.e. planar surfaces, with shapes = [1, 4]
+        # and points.reshape(3, 4) containing lons, lats and depths
+        # in classical/case_29 there is a non parametric source containing
+        # 2 KiteSurfaces with shapes=[8, 5, 8, 5] and 240 = 3*2*8*5 coordinates
+        # NB: the geometries are read by source.rupture.to_arrays
         geom = numpy.concatenate([[len(shapes) // 2], shapes, points])
         geoms.append(geom)
     if not rups:

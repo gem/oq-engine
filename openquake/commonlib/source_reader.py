@@ -59,7 +59,7 @@ def create_source_info(csm, h5):
             trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
             code = csm.code.get(srcid, b'P')
             lens.append(len(src.trt_smrs))
-            row = [srcid, src.grp_id, code, 0, 0, 0, trti, 0]
+            row = [srcid, src.grp_id, code, 0, 0, 0, src.weight, trti]
             wkts.append(getattr(src, '_wkt', ''))
             data[srcid] = row
             src.id = len(data) - 1
@@ -158,6 +158,7 @@ def get_csm(oq, full_lt, h5=None):
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
     fix_geometry_sections(smdict)
+    logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
 
     # checking the changes
@@ -202,6 +203,7 @@ def fix_geometry_sections(smdict):
     nrml.check_unique(
         sec_ids, 'section ID in files ' + ' '.join(gfiles))
     sections = {sid: sections[sid] for sid in sorted(sections)}
+    # section_arrays = [sec.geom() for sec in sections.values()]
 
     # fix the MultiFaultSources
     for smod in smodels:
@@ -401,12 +403,6 @@ class CompositeSourceModel:
             for src in sg:
                 if hasattr(src, 'mags'):  # MultiFaultSource
                     srcmags = {magstr(mag) for mag in src.mags}
-                    if hasattr(src, 'source_file'):  # UcerfSource
-                        grid_key = "/".join(["Grid", src.ukey["grid_key"]])
-                        # for instance Grid/FM0_0_MEANFS_MEANMSR_MeanRates
-                        with hdf5.File(src.source_file, "r") as h5:
-                            srcmags.update(magstr(mag) for mag in
-                                           h5[grid_key + "/Magnitude"][:])
                 elif hasattr(src, 'data'):  # nonparametric
                     srcmags = {magstr(item[0].mag) for item in src.data}
                 else:

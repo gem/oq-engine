@@ -249,7 +249,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         Run the disaggregation phase.
         """
         oq = self.oqparam
-        ws = [rlz.weight for rlz in self.full_lt.get_realizations()]
+        try:
+            full_lt = self.full_lt
+        except AttributeError:
+            full_lt = self.datastore['full_lt']
+        ws = [rlz.weight for rlz in full_lt.get_realizations()]
         if oq.rlz_index is None and oq.num_rlzs_disagg == 0:
             oq.num_rlzs_disagg = len(ws)  # 0 means all rlzs
         edges, self.shapedic = disagg.get_edges_shapedic(
