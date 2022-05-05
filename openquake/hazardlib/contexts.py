@@ -578,13 +578,12 @@ class ContextMaker(object):
             setattr(ctx, param, value)
         return ctx
 
-    def get_ctx(self, rup, sites):
+    def get_ctx(self, rup, sites, magdist):
         """
         :returns: a RuptureContext (or None if filtered away)
         """
         distances = get_distances(rup, sites, 'rrup', self.dcache)
-        mdist = self.maximum_distance(rup.mag)
-        mask = distances <= mdist
+        mask = distances <= magdist
         if mask.any():
             r_sites, distances = sites.filter(mask), distances[mask]
         else:
@@ -648,9 +647,10 @@ class ContextMaker(object):
         else:  # in event based we get a list with a single rupture
             cps = False
             rups_sites = [(src, sitecol)]
-        for rups, sites in rups_sites:
+        for rups, sites in rups_sites:  # ruptures with the same magnitude
+            magdist = self.maximum_distance(rups[0].mag)
             for rup in rups:
-                ctx = self.get_ctx(rup, sites)
+                ctx = self.get_ctx(rup, sites, magdist)
                 if ctx:
                     ctx.src_id = src_id
                     ctxs.append(ctx)
