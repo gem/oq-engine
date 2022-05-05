@@ -203,6 +203,7 @@ def fix_geometry_sections(smdict):
     nrml.check_unique(
         sec_ids, 'section ID in files ' + ' '.join(gfiles))
     sections = {sid: sections[sid] for sid in sorted(sections)}
+    # section_arrays = [sec.geom() for sec in sections.values()]
 
     # fix the MultiFaultSources
     for smod in smodels:
