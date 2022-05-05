@@ -557,7 +557,7 @@ class ContextMaker(object):
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
         :returns:
-            (filtered sites, distance context)
+            (filtered sites, distances)
         """
         distances = get_distances(rup, sites, 'rrup', self.dcache)
         mdist = self.maximum_distance(rup.mag)
@@ -566,7 +566,7 @@ class ContextMaker(object):
             sites, distances = sites.filter(mask), distances[mask]
         else:
             raise FarAwayRupture('%d: %d km' % (rup.rup_id, distances.min()))
-        return sites, DistancesContext([('rrup', distances)])
+        return sites, distances
 
     def make_rctx(self, rup):
         """
@@ -601,37 +601,36 @@ class ContextMaker(object):
 
     def get_ctx(self, rup, sites):
         """
-        Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
+        :returns: a RuptureContext (or None if filtered away)
         """
         try:
-            r_sites, dctx = self.filter(sites, rup)
+            r_sites, distances = self.filter(sites, rup)
         except FarAwayRupture:
             return
 
+        # add distances to the context
         ctx = self.make_rctx(rup)
+        ctx.rrup = distances
         ctx.sites = r_sites
-
         for param in self.REQUIRES_DISTANCES - {'rrup'}:
             dists = get_distances(rup, r_sites, param, self.dcache)
-            setattr(dctx, param, dists)
+            setattr(ctx, param, dists)
 
         # Equivalent distances
         reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
         if reqv_obj and isinstance(rup.surface, PlanarSurface):
-            reqv = reqv_obj.get(dctx.repi, rup.mag)
+            reqv = reqv_obj.get(ctx.repi, rup.mag)
             if 'rjb' in self.REQUIRES_DISTANCES:
-                dctx.rjb = reqv
+                ctx.rjb = reqv
             if 'rrup' in self.REQUIRES_DISTANCES:
-                dctx.rrup = numpy.sqrt(
-                    reqv**2 + rup.hypocenter.depth**2)
+                ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
 
         # add site parameters
         for name in r_sites.array.dtype.names:
             setattr(ctx, name, r_sites[name])
-        for par in self.REQUIRES_DISTANCES | {'rrup'}:
-            setattr(ctx, par, getattr(dctx, par))
+
+        # get closest point on the surface
         if len(sites.complete) <= self.max_sites_disagg:
-            # get closest point on the surface
             closest = rup.surface.get_closest_points(sites.complete)
             ctx.clon = closest.lons[ctx.sids]
             ctx.clat = closest.lats[ctx.sids]
