@@ -22,8 +22,8 @@ Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 """
 import logging
 import numpy
+from openquake.baselib.performance import compile
 from openquake.hazardlib.geo.geodetic import point_at
-from openquake.baselib.node import Node
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
@@ -528,7 +528,7 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
-        return get_rrup(self.array.reshape(1, 3), mesh.xyz)
+        return get_rrup(self.array.reshape(1, 3), mesh.xyz)[0]
 
     def get_closest_points(self, mesh):
         """

@@ -658,8 +658,8 @@ class ContextMaker(object):
                 for rup, dists in zip(rups, alldists):
                     mask = dists <= magdist
                     if mask.any():
-                        r_sites, distances = sites.filter(mask), dists[mask]
-                        ctx = self.get_ctx(rup, r_sites, distances)
+                        r_sites = sites.filter(mask)
+                        ctx = self.get_ctx(rup, r_sites, dists[mask])
                         ctx.src_id = src_id
                         ctxs.append(ctx)
         return ctxs
