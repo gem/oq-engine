@@ -547,27 +547,6 @@ class ContextMaker(object):
         allctxs.sort(key=operator.attrgetter('mag'))
         return allctxs
 
-    def filter(self, sites, rup):
-        """
-        Filter the site collection with respect to the rupture.
-
-        :param sites:
-            Instance of :class:`openquake.hazardlib.site.SiteCollection`.
-        :param rup:
-            Instance of
-            :class:`openquake.hazardlib.source.rupture.BaseRupture`
-        :returns:
-            (filtered sites, distances)
-        """
-        distances = get_distances(rup, sites, 'rrup', self.dcache)
-        mdist = self.maximum_distance(rup.mag)
-        mask = distances <= mdist
-        if mask.any():
-            sites, distances = sites.filter(mask), distances[mask]
-        else:
-            raise FarAwayRupture('%d: %d km' % (rup.rup_id, distances.min()))
-        return sites, distances
-
     def make_rctx(self, rup):
         """
         Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
@@ -603,9 +582,12 @@ class ContextMaker(object):
         """
         :returns: a RuptureContext (or None if filtered away)
         """
-        try:
-            r_sites, distances = self.filter(sites, rup)
-        except FarAwayRupture:
+        distances = get_distances(rup, sites, 'rrup', self.dcache)
+        mdist = self.maximum_distance(rup.mag)
+        mask = distances <= mdist
+        if mask.any():
+            r_sites, distances = sites.filter(mask), distances[mask]
+        else:
             return
 
         # add distances to the context
