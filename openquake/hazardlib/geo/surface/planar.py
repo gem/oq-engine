@@ -22,7 +22,7 @@ Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 """
 import logging
 import numpy
-from openquake.baselib.performance import compile
+from openquake.baselib.performance import numba
 from openquake.hazardlib.geo.geodetic import point_at
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
@@ -48,6 +48,7 @@ planar_array_dt = numpy.dtype([
     ('hypo', float)])
 
 
+@numba.njit()
 def dot(a, b):
     return (a[..., 0] * b[..., 0] +
             a[..., 1] * b[..., 1] +
@@ -136,6 +137,7 @@ def _project(self, points):
     return dists, mat @ self.uv1, mat @ self.uv2
 
 
+@numba.njit()
 def get_rrup(planar, xyz):
     """
     :param planar: a planar array of shape (U, 3)
@@ -151,7 +153,7 @@ def get_rrup(planar, xyz):
         # the surface (translating coordinates of the projections to a local
         # 2d space) and at the same time calculate the distance to that
         # plane.
-        dists = planar.normal @ point + d  # shape U
+        dists = dot(planar.normal, point) + d  # shape U
         # translate projected points to surface coordinate space, shape (N, 3)
         mat = point - planar.xyz[:, :, 0]  # shape (U, 3)
         xx, yy = dot(mat, planar.uv1), dot(mat, planar.uv2)  # shape U each
