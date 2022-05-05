@@ -42,7 +42,8 @@ from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.geo.surface import PlanarSurface
+from openquake.hazardlib.geo.surface.planar import (
+    PlanarSurface, get_rrup)
 
 U32 = numpy.uint32
 F64 = numpy.float64
@@ -646,8 +647,14 @@ class ContextMaker(object):
                 if len(rups) == 0:  # may happen in case of min_mag/max_mag
                     continue
                 magdist = self.maximum_distance(rups[0].mag)
-                alldists = [get_distances(rup, sites, 'rrup', self.dcache)
-                            for rup in rups]
+                if cps and step == 1:  # fast lane
+                    planar = numpy.array(
+                        [rup.surface.array for rup in rups]
+                    ).view(numpy.recarray)  # shape (U, 3)
+                    alldists = get_rrup(planar, sites.xyz)  # shape (U, N)
+                else:  # regular
+                    alldists = [get_distances(rup, sites, 'rrup', self.dcache)
+                                for rup in rups]
                 for rup, dists in zip(rups, alldists):
                     mask = dists <= magdist
                     if mask.any():
