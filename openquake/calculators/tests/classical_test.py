@@ -106,7 +106,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check extraction
         sitecol = extract(self.calc.datastore, 'sitecol')
-        self.assertEqual(len(sitecol.array), 1)
+        self.assertEqual(len(sitecol.array), 4)
 
         # check minimum_magnitude discards the source
         with self.assertRaises(RuntimeError) as ctx:

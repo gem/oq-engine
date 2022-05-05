@@ -40,11 +40,10 @@ xmlns:gml="http://www.opengis.net/gml"
       </incrementalMFD>
       <nodalPlaneDist>
         <!-- the first nodal plane appears twice: it counts as one with
-        probability 0.50; this is why there are 3 ruptures and not 4 -->
+        probability 0.50; this is why there are 2 ruptures and not 3 -->
         <nodalPlane strike="144" dip="87" rake="-179" probability="0.25"/>
         <nodalPlane strike="144" dip="87" rake="-179" probability="0.25"/>
-        <nodalPlane strike="0" dip="90" rake="0" probability="0.25"/>
-        <nodalPlane strike="90" dip="90" rake="0" probability="0.25"/>
+        <nodalPlane strike="0" dip="90" rake="0" probability="0.50"/>
       </nodalPlaneDist>
       <hypoDepthDist>
         <hypoDepth depth="4" probability="1"/>
