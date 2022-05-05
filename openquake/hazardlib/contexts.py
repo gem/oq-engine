@@ -568,35 +568,66 @@ class ContextMaker(object):
             raise FarAwayRupture('%d: %d km' % (rup.rup_id, distances.min()))
         return sites, DistancesContext([('rrup', distances)])
 
-    def make_rctx(self, rupture):
+    def make_rctx(self, rup, sites):
         """
         Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
         """
+        try:
+            r_sites, dctx = self.filter(sites, rup)
+        except FarAwayRupture:
+            return
         ctx = RuptureContext()
-        vars(ctx).update(vars(rupture))
+        vars(ctx).update(vars(rup))
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             if param == 'mag':
-                value = numpy.round(rupture.mag, 6)
+                value = numpy.round(rup.mag, 6)
             elif param == 'strike':
-                value = rupture.surface.get_strike()
+                value = rup.surface.get_strike()
             elif param == 'dip':
-                value = rupture.surface.get_dip()
+                value = rup.surface.get_dip()
             elif param == 'rake':
-                value = rupture.rake
+                value = rup.rake
             elif param == 'ztor':
-                value = rupture.surface.get_top_edge_depth()
+                value = rup.surface.get_top_edge_depth()
             elif param == 'hypo_lon':
-                value = rupture.hypocenter.longitude
+                value = rup.hypocenter.longitude
             elif param == 'hypo_lat':
-                value = rupture.hypocenter.latitude
+                value = rup.hypocenter.latitude
             elif param == 'hypo_depth':
-                value = rupture.hypocenter.depth
+                value = rup.hypocenter.depth
             elif param == 'width':
-                value = rupture.surface.get_width()
+                value = rup.surface.get_width()
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
             setattr(ctx, param, value)
+
+        ctx.sites = r_sites
+
+        for param in self.REQUIRES_DISTANCES - {'rrup'}:
+            dists = get_distances(rup, r_sites, param, self.dcache)
+            setattr(dctx, param, dists)
+
+        # Equivalent distances
+        reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
+        if reqv_obj and isinstance(rup.surface, PlanarSurface):
+            reqv = reqv_obj.get(dctx.repi, rup.mag)
+            if 'rjb' in self.REQUIRES_DISTANCES:
+                dctx.rjb = reqv
+            if 'rrup' in self.REQUIRES_DISTANCES:
+                dctx.rrup = numpy.sqrt(
+                    reqv**2 + rup.hypocenter.depth**2)
+
+        # add site parameters
+        for name in r_sites.array.dtype.names:
+            setattr(ctx, name, r_sites[name])
+        for par in self.REQUIRES_DISTANCES | {'rrup'}:
+            setattr(ctx, par, getattr(dctx, par))
+        if len(sites.complete) <= self.max_sites_disagg:
+            # get closest point on the surface
+            closest = rup.surface.get_closest_points(sites.complete)
+            ctx.clon = closest.lons[ctx.sids]
+            ctx.clat = closest.lats[ctx.sids]
         return ctx
 
     def get_ctxs(self, src, sitecol, src_id=None, step=1):
@@ -613,48 +644,17 @@ class ContextMaker(object):
             fat RuptureContexts sorted by mag
         """
         ctxs = []
-        fewsites = len(sitecol.complete) <= self.max_sites_disagg
         if hasattr(src, 'source_id'):  # is a real source
             rups = self._gen_rups(src, sitecol, step)
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups = src
-
-        # Create the distance cache. A dictionary of dictionaries
-        dcache = {}  # used only for MultiFaultSources
         for rup in rups:
             sites = getattr(rup, 'sites', sitecol)
-            try:
-                r_sites, dctx = self.filter(sites, rup)
-            except FarAwayRupture:
-                continue
-            ctx = self.make_rctx(rup)
-            ctx.sites = r_sites
-
-            for param in self.REQUIRES_DISTANCES - {'rrup'}:
-                dists = get_distances(rup, r_sites, param, self.dcache)
-                setattr(dctx, param, dists)
-
-            # Equivalent distances
-            reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
-            if reqv_obj and isinstance(rup.surface, PlanarSurface):
-                reqv = reqv_obj.get(dctx.repi, rup.mag)
-                if 'rjb' in self.REQUIRES_DISTANCES:
-                    dctx.rjb = reqv
-                if 'rrup' in self.REQUIRES_DISTANCES:
-                    dctx.rrup = numpy.sqrt(
-                        reqv**2 + rup.hypocenter.depth**2)
-            for name in r_sites.array.dtype.names:
-                setattr(ctx, name, r_sites[name])
-            ctx.src_id = src_id
-            for par in self.REQUIRES_DISTANCES | {'rrup'}:
-                setattr(ctx, par, getattr(dctx, par))
-            if fewsites:
-                # get closest point on the surface
-                closest = rup.surface.get_closest_points(sitecol.complete)
-                ctx.clon = closest.lons[ctx.sids]
-                ctx.clat = closest.lats[ctx.sids]
-            ctxs.append(ctx)
+            ctx = self.make_rctx(rup, sites)
+            if ctx:
+                ctx.src_id = src_id
+                ctxs.append(ctx)
         return ctxs  # sorted by mag by construction
 
     def max_intensity(self, sitecol1, mags, dists):
