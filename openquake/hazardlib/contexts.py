@@ -568,14 +568,10 @@ class ContextMaker(object):
             raise FarAwayRupture('%d: %d km' % (rup.rup_id, distances.min()))
         return sites, DistancesContext([('rrup', distances)])
 
-    def make_rctx(self, rup, sites):
+    def make_rctx(self, rup):
         """
         Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
         """
-        try:
-            r_sites, dctx = self.filter(sites, rup)
-        except FarAwayRupture:
-            return
         ctx = RuptureContext()
         vars(ctx).update(vars(rup))
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
@@ -601,7 +597,18 @@ class ContextMaker(object):
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
             setattr(ctx, param, value)
+        return ctx
 
+    def get_rctx(self, rup, sites):
+        """
+        Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
+        """
+        try:
+            r_sites, dctx = self.filter(sites, rup)
+        except FarAwayRupture:
+            return
+
+        ctx = self.make_rctx(rup)
         ctx.sites = r_sites
 
         for param in self.REQUIRES_DISTANCES - {'rrup'}:
@@ -645,16 +652,16 @@ class ContextMaker(object):
         """
         ctxs = []
         if hasattr(src, 'source_id'):  # is a real source
-            rups = self._gen_rups(src, sitecol, step)
+            rups_sites = self._gen_rups(src, sitecol, step)
             src_id = src.id
         else:  # in event based we get a list with a single rupture
-            rups = src
-        for rup in rups:
-            sites = getattr(rup, 'sites', sitecol)
-            ctx = self.make_rctx(rup, sites)
-            if ctx:
-                ctx.src_id = src_id
-                ctxs.append(ctx)
+            rups_sites = [(src, sitecol)]
+        for rups, sites in rups_sites:
+            for rup in rups:
+                ctx = self.get_rctx(rup, sites)
+                if ctx:
+                    ctx.src_id = src_id
+                    ctxs.append(ctx)
         return ctxs  # sorted by mag by construction
 
     def max_intensity(self, sitecol1, mags, dists):
@@ -689,21 +696,16 @@ class ContextMaker(object):
         return gmv
 
     def _gen_rups(self, src, sites, step):
-        # yield ruptures, each one with a .sites attribute
-        def rups(rupiter, sites):
-            for rup in rupiter:
-                rup.sites = sites
-                yield rup
+        # yield ruptures, sites
         if getattr(src, 'location', None) and src.count_nphc() > 1:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
-            for r, s in self._cps_rups(src, sites, step):
-                yield from rups(r, s)
+            yield from self._cps_rups(src, sites, step)
         else:  # just add the ruptures
             with self.ir_mon:
                 lst = list(src.iter_ruptures(
                     shift_hypo=self.shift_hypo, step=step))
-            yield from rups(lst, sites)
+            yield lst, sites
 
     def _cps_rups(self, src, sites, step):
         fewsites = len(sites) <= self.max_sites_disagg
