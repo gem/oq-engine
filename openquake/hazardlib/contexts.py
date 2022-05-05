@@ -599,7 +599,7 @@ class ContextMaker(object):
             setattr(ctx, param, value)
         return ctx
 
-    def get_rctx(self, rup, sites):
+    def get_ctx(self, rup, sites):
         """
         Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
         """
@@ -652,13 +652,13 @@ class ContextMaker(object):
         """
         ctxs = []
         if hasattr(src, 'source_id'):  # is a real source
-            rups_sites = self._gen_rups(src, sitecol, step)
+            rups_sites = self._gen_rups_sites(src, sitecol, step)
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
         for rups, sites in rups_sites:
             for rup in rups:
-                ctx = self.get_rctx(rup, sites)
+                ctx = self.get_ctx(rup, sites)
                 if ctx:
                     ctx.src_id = src_id
                     ctxs.append(ctx)
@@ -695,19 +695,19 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
-    def _gen_rups(self, src, sites, step):
+    def _gen_rups_sites(self, src, sites, step):
         # yield ruptures, sites
         if getattr(src, 'location', None) and src.count_nphc() > 1:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
-            yield from self._cps_rups(src, sites, step)
+            yield from self._cps_rups_sites(src, sites, step)
         else:  # just add the ruptures
             with self.ir_mon:
                 lst = list(src.iter_ruptures(
                     shift_hypo=self.shift_hypo, step=step))
             yield lst, sites
 
-    def _cps_rups(self, src, sites, step):
+    def _cps_rups_sites(self, src, sites, step):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
         with self.ir_mon:
