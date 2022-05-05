@@ -709,7 +709,7 @@ class KuehnEtAl2020SInter(GMPE):
                                           ctx, pga1100)
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
-                [mag] = np.unique(np.round(ctx.mag, 6))
+                [mag] = np.unique(np.round(ctx.mag, 2))
                 sigma_mu_adjust = get_sigma_mu_adjustment(
                     self.sigma_mu_model, imt, mag, ctx.rrup)
                 mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
