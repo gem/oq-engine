@@ -435,6 +435,7 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
+        self.dst_mon = monitor('computing distances', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
@@ -633,10 +634,10 @@ class ContextMaker(object):
         ctxs = []
         if hasattr(src, 'source_id'):  # is a real source
             cps = getattr(src, 'location', None) and src.count_nphc() > 1
-            if cps:  # collapsible point source
-                rups_sites = self._cps_rups_sites(src, sitecol, step)
-            else:  # just add the ruptures
-                with self.ir_mon:
+            with self.ir_mon:
+                if cps:  # collapsible point source
+                    rups_sites = list(self._cps_rups_sites(src, sitecol, step))
+                else:  # just add the ruptures
                     allrups = numpy.array(list(src.iter_ruptures(
                         shift_hypo=self.shift_hypo, step=step)))
                     # sorted by mag by construction
@@ -647,13 +648,16 @@ class ContextMaker(object):
         else:  # in event based we get a list with a single rupture
             cps = False
             rups_sites = [(src, sitecol)]
-        for rups, sites in rups_sites:  # ruptures with the same magnitude
-            magdist = self.maximum_distance(rups[0].mag)
-            for rup in rups:
-                ctx = self.get_ctx(rup, sites, magdist)
-                if ctx:
-                    ctx.src_id = src_id
-                    ctxs.append(ctx)
+        with self.dst_mon:
+            for rups, sites in rups_sites:  # ruptures with the same magnitude
+                if len(rups) == 0:  # may happen in case of min_mag/max_mag
+                    continue
+                magdist = self.maximum_distance(rups[0].mag)
+                for rup in rups:
+                    ctx = self.get_ctx(rup, sites, magdist)
+                    if ctx:
+                        ctx.src_id = src_id
+                        ctxs.append(ctx)
         return ctxs
 
     def max_intensity(self, sitecol1, mags, dists):
@@ -690,9 +694,8 @@ class ContextMaker(object):
     def _cps_rups_sites(self, src, sites, step):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        with self.ir_mon:
-            allrups = numpy.array(
-                list(src.iter_ruptures(shift_hypo=self.shift_hypo, step=step)))
+        allrups = numpy.array(
+            list(src.iter_ruptures(shift_hypo=self.shift_hypo, step=step)))
         m_idx = numpy.array([rup.m for rup in allrups])
         for rup in src.iruptures(step):
             rups = allrups[m_idx == rup.m]  # ruptures with magnitude index `m`
