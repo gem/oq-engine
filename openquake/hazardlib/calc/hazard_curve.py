@@ -120,7 +120,6 @@ def classical(group, sitecol, cmaker):
     except AttributeError:  # got a list of sources, not a group
         time_span = cmaker.investigation_time  # None for nonparametric
         cmaker.tom = PoissonTOM(time_span) if time_span else None
-    breakpoint()
     if cluster and (len(are_np_srcs) == 0 or
                     ~numpy.all(numpy.array(are_np_srcs))):
         cmaker.tom = FatedTOM(time_span=1)
