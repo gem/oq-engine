@@ -22,7 +22,7 @@ Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 """
 import logging
 import numpy
-from openquake.baselib.performance import numba
+from openquake.baselib.performance import numba, compile
 from openquake.hazardlib.geo.geodetic import point_at
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
@@ -46,6 +46,7 @@ planar_array_dt = numpy.dtype([
     ('uv2', float),
     ('wld', float),
     ('hypo', float)])
+planar_t = numba.from_dtype(planar_array_dt)
 
 
 @numba.njit()
@@ -137,7 +138,7 @@ def _project(self, points):
     return dists, mat @ self.uv1, mat @ self.uv2
 
 
-@numba.njit()
+@compile(numba.float64[:, :](planar_t[:, :], numba.float64[:, :]))
 def get_rrup(planar, points):
     """
     :param planar: a planar array of shape (U, 3)
