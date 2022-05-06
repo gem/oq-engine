@@ -48,6 +48,7 @@ planar_array_dt = numpy.dtype([
     ('wld', float),
     ('hypo', float)])
 
+
 def dot(a, b):
     return (a[..., 0] * b[..., 0] +
             a[..., 1] * b[..., 1] +
