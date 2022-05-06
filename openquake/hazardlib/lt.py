@@ -487,6 +487,10 @@ class Branch(object):
         self.value = value
         self.bset = None
 
+    @property
+    def id(self):
+        return self.branch_id if len(self.branch_id) == 1 else self.short_id
+
     def is_leaf(self):
         """
         :returns: True if the branch has no branchset or has a dummy branchset
@@ -747,18 +751,16 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
-def trivial(bset, previous_branches):
-    if 'applyToBranches' not in bset.filters:
-        return True
-    return len(bset.filters['applyToBranches']) == len(previous_branches)
-
-
-def add_path(bset, bsno, brno, nb, paths):
+def add_path(bset, bsno, brno, num_prev, tot, paths):
     for br in bset.branches:
-        path = ['*'] * nb
-        path[bsno] = br.short_id = BASE183[brno]
+        br.short_id = BASE183[brno]
+        path = ['*'] * tot
+        path[bsno] = br.id
         paths.append(''.join(path))
         brno += 1
+    if 'applyToBranches' not in bset.filters or len(
+            bset.filters['applyToBranches']) == num_prev:
+        return 0
     return brno
 
 
@@ -776,7 +778,7 @@ class CompositeLogicTree(object):
         # attribute; also attaches dummy branchsets to dummy branches.
         paths = []
         nb = len(self.branchsets)
-        brno = add_path(self.branchsets[0], 0, 0, nb, paths)
+        brno = add_path(self.branchsets[0], 0, 0, 0, nb, paths)
         previous_branches = self.branchsets[0].branches
         branchdic = {br.branch_id: br for br in previous_branches}
         for i, bset in enumerate(self.branchsets[1:]):
@@ -802,9 +804,7 @@ class CompositeLogicTree(object):
             else:  # apply to all previous branches
                 for branch in previous_branches:
                     branch.bset = bset
-            brno = add_path(bset, i+1, brno, nb, paths)
-            if trivial(bset, previous_branches):
-                brno = 0
+            brno = add_path(bset, i+1, brno, len(previous_branches), nb, paths)
             previous_branches = bset.branches + dummies
         return paths
 
@@ -813,7 +813,7 @@ class CompositeLogicTree(object):
         ordinal = 0
         for weight, branches in self.branchsets[0].enumerate_paths():
             value = [br.value for br in branches]
-            lt_path = ''.join(branch.short_id for branch in branches)
+            lt_path = ''.join(branch.id for branch in branches)
             yield Realization(value, weight, ordinal, lt_path.ljust(nb, '.'))
             ordinal += 1
 
