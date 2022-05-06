@@ -21,7 +21,7 @@ import itertools
 import collections
 import numpy
 
-from openquake.baselib.general import CallableDict, BASE184
+from openquake.baselib.general import CallableDict, BASE183
 from openquake.hazardlib import geo
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
@@ -747,10 +747,16 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
+def trivial(bset, previous_branches):
+    if 'applyToBranches' not in bset.filters:
+        return True
+    return len(bset.filters['applyToBranches']) == len(previous_branches)
+
+
 def add_path(bset, bsno, brno, nb, paths):
     for br in bset.branches:
         path = ['*'] * nb
-        path[bsno] = br.short_id = BASE184[brno]
+        path[bsno] = br.short_id = BASE183[brno]
         paths.append(''.join(path))
         brno += 1
     return brno
@@ -797,6 +803,8 @@ class CompositeLogicTree(object):
                 for branch in previous_branches:
                     branch.bset = bset
             brno = add_path(bset, i+1, brno, nb, paths)
+            if trivial(bset, previous_branches):
+                brno = 0
             previous_branches = bset.branches + dummies
         return paths
 

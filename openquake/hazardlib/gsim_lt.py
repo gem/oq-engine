@@ -29,7 +29,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node as N, context
-from openquake.baselib.general import duplicated, BASE184, group_array
+from openquake.baselib.general import duplicated, BASE183, group_array
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
 from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -130,7 +130,7 @@ class ImtWeight(object):
         return '<%s %s>' % (self.__class__.__name__, self.dic)
 
 
-def keyno(branch_id, bsno, brno, fname='', chars=BASE184):
+def keyno(branch_id, bsno, brno, fname='', chars=BASE183):
     """
     :param branch_id: a branch ID string
     :param bsno: number of the branchset (starting from 0)
@@ -388,7 +388,7 @@ class GsimLogicTree(object):
             for brno, branch in enumerate(branchset):
                 weight = ImtWeight(branch, self.filename)
                 weights.append(weight)
-                branch_id = 'g' + BASE184[brno] + str(bsno)
+                branch_id = 'g' + BASE183[brno] + str(bsno)
                 branch_ids.append(branch_id)
                 try:
                     gsim = valid.gsim(branch.uncertaintyModel, basedir)
