@@ -221,10 +221,12 @@ def project_back(planar, xx, yy):
     arr = numpy.zeros((3, U, N))
     for u in range(U):
         arr3N = numpy.zeros((3, N))
+        mxx = numpy.clip(xx[u], 0., planar.wld[u, 1])
+        myy = numpy.clip(yy[u], 0., planar.wld[u, 0])
         for i in range(3):
             arr3N[i] = (planar.xyz[u, i, 0] +
-                        planar.uv1[u, i] * xx[u] +
-                        planar.uv2[u, i] * yy[u])
+                        planar.uv1[u, i] * mxx +
+                        planar.uv2[u, i] * myy)
         arr[:, u] = geo_utils.cartesian_to_spherical(arr3N.T)
     return arr
 
