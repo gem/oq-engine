@@ -526,12 +526,10 @@ class PlanarSurface(BaseSurface):
         make use of the mesh.
         """
         mat = mesh.xyz - self.xyz[:, 0]
-        dists, xx, yy = mat @ self.normal, mat @ self.uv1, mat @ self.uv2
-        mxx = xx.clip(0, self.wld[1])
-        myy = yy.clip(0, self.wld[0])
-        dists.fill(0)
-        lons, lats, depths = self._project_back(dists, mxx, myy)
-        return Mesh(lons, lats, depths)
+        mxx = numpy.clip(mat @ self.uv1, 0, self.wld[1])
+        myy = numpy.clip(mat @ self.uv2, 0, self.wld[0])
+        lons, lats, deps = self._project_back(numpy.zeros_like(mxx), mxx, myy)
+        return Mesh(lons, lats, deps)
 
     def _get_top_edge_centroid(self):
         """
