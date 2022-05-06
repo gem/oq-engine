@@ -747,6 +747,15 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
+def add_path(bset, bsno, brno, nb, paths):
+    for br in bset.branches:
+        path = ['*'] * nb
+        path[bsno] = br.short_id = BASE184[brno]
+        paths.append(''.join(path))
+        brno += 1
+    return brno
+
+
 class CompositeLogicTree(object):
     """
     Build a logic tree from a set of branches by automatically
@@ -754,21 +763,14 @@ class CompositeLogicTree(object):
     """
     def __init__(self, branchsets):
         self.branchsets = branchsets
-        self._attach_to_branches()
-        nb = len(branchsets)
-        paths = []
-        brno = 0
-        for bsno, bset in enumerate(branchsets):
-            for br in bset.branches:
-                path = ['*'] * nb
-                path[bsno] = br.short_id = BASE184[brno]
-                paths.append(''.join(path))
-                brno += 1
-        self.basepaths = paths
+        self.basepaths = self._attach_to_branches()
 
     def _attach_to_branches(self):
         # attach branchsets to branches depending on the applyToBranches
         # attribute; also attaches dummy branchsets to dummy branches.
+        paths = []
+        nb = len(self.branchsets)
+        brno = add_path(self.branchsets[0], 0, 0, nb, paths)
         previous_branches = self.branchsets[0].branches
         branchdic = {br.branch_id: br for br in previous_branches}
         for i, bset in enumerate(self.branchsets[1:]):
@@ -794,7 +796,9 @@ class CompositeLogicTree(object):
             else:  # apply to all previous branches
                 for branch in previous_branches:
                     branch.bset = bset
+            brno = add_path(bset, i+1, brno, nb, paths)
             previous_branches = bset.branches + dummies
+        return paths
 
     def __iter__(self):
         nb = len(self.branchsets)
