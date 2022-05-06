@@ -87,11 +87,11 @@ def build_planar_array(corners, hypo=None, check=False):
     planar_array['uv2'] = uv2 = numpy.cross(n, uv1)
 
     # translate projected points to surface coordinate space, shape (N, 3)
-    dists = dot(xyz, n) + d
-    xx, yy = numpy.zeros(shape), numpy.zeros(shape)
+    delta = xyz - xyz[0]
+    dists, xx, yy = numpy.zeros(shape), numpy.zeros(shape), numpy.zeros(shape)
     for i in range(1, 4):
-        mat = xyz[i] - xyz[0]
-        xx[i], yy[i] = dot(mat, uv1), dot(mat, uv2)
+        mat = delta[i]
+        dists[i], xx[i], yy[i] = dot(mat, n), dot(mat, uv1), dot(mat, uv2)
 
     # "length" of the rupture is measured along the top edge
     length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
@@ -131,10 +131,8 @@ def _project(self, points):
         projections to the plane (in a surface's coordinate space).
     """
     # uses method from http://www.9math.com/book/projection-point-plane
-    dists = points @ self.normal + self.wld[2]
-    # translate projected points to surface coordinate space, shape (N, 3)
     mat = points - self.xyz[:, 0]
-    return dists, mat @ self.uv1, mat @ self.uv2
+    return mat @ self.normal, mat @ self.uv1, mat @ self.uv2
 
 
 # numbified below
