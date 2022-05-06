@@ -49,7 +49,6 @@ planar_array_dt = numpy.dtype([
 planar_t = numba.from_dtype(planar_array_dt)
 
 
-@numba.njit()
 def dot(a, b):
     return (a[..., 0] * b[..., 0] +
             a[..., 1] * b[..., 1] +
@@ -146,6 +145,9 @@ def get_rrup(planar, points):
     :returns: (U, N) distances for the surface to the points.
     """
     distances = numpy.zeros((len(planar), len(points)))
+
+    def dot(a, v):  # array @ vector
+        return a[:, 0] * v[0] + a[:, 1] * v[1] + a[:, 2] * v[2]
     for p, pla in enumerate(planar):
         width, length, d = pla.wld
         # we project all the points of the mesh on a plane that contains
@@ -154,7 +156,8 @@ def get_rrup(planar, points):
         # plane.
         dists = dot(points, pla.normal) + d
         mat = points - pla.xyz[:, 0]
-        xx, yy = dot(mat, pla.uv1), dot(mat, pla.uv2)
+        xx = dot(mat, pla.uv1)
+        yy = dot(mat, pla.uv2)
 
         # the actual resulting distance is a square root of squares
         # of a distance from a point to a plane that contains the surface
