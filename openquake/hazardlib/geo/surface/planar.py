@@ -46,8 +46,6 @@ planar_array_dt = numpy.dtype([
     ('uv2', float),
     ('wld', float),
     ('hypo', float)])
-planar_t = numba.from_dtype(planar_array_dt)
-
 
 def dot(a, b):
     return (a[..., 0] * b[..., 0] +
@@ -137,7 +135,6 @@ def _project(self, points):
     return dists, mat @ self.uv1, mat @ self.uv2
 
 
-@compile(numba.float64[:, :](planar_t[:, :], numba.float64[:, :]))
 def get_rrup(planar, points):
     """
     :param planar: a planar array of shape (U, 3)
@@ -227,6 +224,12 @@ def get_rrup(planar, points):
         # combining distance on a plane with distance to a plane
         distances[p] = numpy.sqrt(dists ** 2 + mxx ** 2 + myy ** 2)
     return distances
+
+
+if numba:
+    planar_nt = numba.from_dtype(planar_array_dt)
+    sig = numba.float64[:, :](planar_nt[:, :], numba.float64[:, :])
+    get_rrup = compile(sig)(get_rrup)
 
 
 class PlanarSurface(BaseSurface):
