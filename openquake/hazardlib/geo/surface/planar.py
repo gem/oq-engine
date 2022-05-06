@@ -137,9 +137,10 @@ def _project(self, points):
     return dists, mat @ self.uv1, mat @ self.uv2
 
 
+# numbified below
 def get_rrup(planar, points):
     """
-    :param planar: a planar array of shape (U, 3)
+    :param planar: a planar recarray of shape (U, 3)
     :param points: an array of euclidean coordinates of shape (N, 3)
     :returns: (U, N) distances for the surface to the points.
     """
