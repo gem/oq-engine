@@ -42,7 +42,8 @@ from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.geo.surface import PlanarSurface
+from openquake.hazardlib.geo.surface.planar import (
+    PlanarSurface, get_rrup)
 
 U32 = numpy.uint32
 F64 = numpy.float64
@@ -435,7 +436,7 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
-        self.dst_mon = monitor('computing distances', measuremem=False)
+        self.dst_mon = monitor('computing rrup', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
@@ -579,23 +580,16 @@ class ContextMaker(object):
             setattr(ctx, param, value)
         return ctx
 
-    def get_ctx(self, rup, sites, magdist):
+    def get_ctx(self, rup, sites, distances):
         """
         :returns: a RuptureContext (or None if filtered away)
         """
-        distances = get_distances(rup, sites, 'rrup', self.dcache)
-        mask = distances <= magdist
-        if mask.any():
-            r_sites, distances = sites.filter(mask), distances[mask]
-        else:
-            return
-
         # add distances to the context
         ctx = self.make_rctx(rup)
         ctx.rrup = distances
-        ctx.sites = r_sites
+        ctx.sites = sites
         for param in self.REQUIRES_DISTANCES - {'rrup'}:
-            dists = get_distances(rup, r_sites, param, self.dcache)
+            dists = get_distances(rup, sites, param, self.dcache)
             setattr(ctx, param, dists)
 
         # Equivalent distances
@@ -608,8 +602,8 @@ class ContextMaker(object):
                 ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
 
         # add site parameters
-        for name in r_sites.array.dtype.names:
-            setattr(ctx, name, r_sites[name])
+        for name in sites.array.dtype.names:
+            setattr(ctx, name, sites[name])
 
         # get closest point on the surface
         if len(sites.complete) <= self.max_sites_disagg:
@@ -648,16 +642,26 @@ class ContextMaker(object):
         else:  # in event based we get a list with a single rupture
             cps = False
             rups_sites = [(src, sitecol)]
-        with self.dst_mon:
-            for rups, sites in rups_sites:  # ruptures with the same magnitude
-                if len(rups) == 0:  # may happen in case of min_mag/max_mag
-                    continue
-                magdist = self.maximum_distance(rups[0].mag)
-                for rup in rups:
-                    ctx = self.get_ctx(rup, sites, magdist)
-                    if ctx:
-                        ctx.src_id = src_id
-                        ctxs.append(ctx)
+        for rups, sites in rups_sites:  # ruptures with the same magnitude
+            if len(rups) == 0:  # may happen in case of min_mag/max_mag
+                continue
+            magdist = self.maximum_distance(rups[0].mag)
+            with self.dst_mon:
+                if cps and step == 1:  # fast lane
+                    planar = numpy.array(
+                        [rup.surface.array for rup in rups]
+                    ).view(numpy.recarray)  # shape (U, 3)
+                    alldists = get_rrup(planar, sites.xyz)  # shape (U, N)
+                else:  # regular
+                    alldists = [get_distances(rup, sites, 'rrup', self.dcache)
+                                for rup in rups]
+            for rup, dists in zip(rups, alldists):
+                mask = dists <= magdist
+                if mask.any():
+                    r_sites = sites.filter(mask)
+                    ctx = self.get_ctx(rup, r_sites, dists[mask])
+                    ctx.src_id = src_id
+                    ctxs.append(ctx)
         return ctxs
 
     def max_intensity(self, sitecol1, mags, dists):
