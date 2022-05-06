@@ -262,23 +262,17 @@ class SphericalToCartesianAndBackTestCase(unittest.TestCase):
         aac([lons, lats, depths], res_sphe)
 
     def test_tl_zero(self):
-        self._test((0, 0, 0), (6371, 0, 0))
-        self._test((0, 0, None), (6371, 0, 0))
         self._test(([0], [0], [0]), [(6371, 0, 0)])
         self._test(([0], [0], None), [(6371, 0, 0)])
 
     def test_north_pole(self):
-        self._test((0, 90, 0), (0, 0, 6371))
-        self._test((0, 90, None), (0, 0, 6371))
         self._test(([0], [90], [0]), [(0, 0, 6371)])
         self._test(([0], [90], None), [(0, 0, 6371)])
 
     def test_north_pole_10_km_depth(self):
-        self._test((0, 90, 10), (0, 0, 6361))
         self._test(([0], [90], [10]), [(0, 0, 6361)])
 
     def test_topo(self):
-        self._test((0, 0, -10), (6381, 0, 0))
         self._test(([0], [0], [-10]), [(6381, 0, 0)])
 
     def test_arrays(self):
