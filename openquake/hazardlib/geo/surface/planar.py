@@ -492,23 +492,6 @@ class PlanarSurface(BaseSurface):
         """
         return self.dip
 
-    def _project_back(self, dists, xx, yy):
-        """
-        Convert coordinates in plane's Cartesian space back to spherical
-        coordinates.
-
-        Parameters are numpy arrays, as returned from :meth:`_project`, which
-        this method does the opposite to.
-
-        :return:
-            Tuple of longitudes, latitudes and depths numpy arrays.
-        """
-        vectors = (self.xyz[:, 0] +
-                   self.uv1 * xx.reshape(xx.shape + (1, )) +
-                   self.uv2 * yy.reshape(yy.shape + (1, )) +
-                   self.normal * dists.reshape(dists.shape + (1, )))
-        return geo_utils.cartesian_to_spherical(vectors)
-
     def get_min_distance(self, mesh):
         """
         See :meth:`superclass' method
@@ -530,7 +513,10 @@ class PlanarSurface(BaseSurface):
         mat = mesh.xyz - self.xyz[:, 0]
         xx = numpy.clip(mat @ self.uv1, 0, self.wld[1])
         yy = numpy.clip(mat @ self.uv2, 0, self.wld[0])
-        return Mesh(*self._project_back(numpy.zeros_like(xx), xx, yy))
+        vectors = (self.xyz[:, 0] +
+                   self.uv1 * xx.reshape(xx.shape + (1, )) +
+                   self.uv2 * yy.reshape(yy.shape + (1, )))
+        return Mesh(*geo_utils.cartesian_to_spherical(vectors))
 
     def _get_top_edge_centroid(self):
         """
