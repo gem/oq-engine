@@ -1,3 +1,6 @@
+  [Tom Son, Claudio Schill]
+  * Simple performance improvement of Kuehn et al. 2020 model
+
   [Michele Simionato]
   * Changed again the string representation of logic tree paths and added
     an utility `hazardlib.lt.build` to build trees from literal lists
