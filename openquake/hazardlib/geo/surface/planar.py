@@ -89,8 +89,8 @@ def build_planar_array(corners, hypo=None, check=False):
     # translate projected points to surface coordinate space, shape (N, 3)
     dists = dot(xyz, n) + d
     xx, yy = numpy.zeros(shape), numpy.zeros(shape)
-    for i in range(4):
-        mat = xyz[i] - tl
+    for i in range(1, 4):
+        mat = xyz[i] - xyz[0]
         xx[i], yy[i] = dot(mat, uv1), dot(mat, uv2)
 
     # "length" of the rupture is measured along the top edge
