@@ -75,9 +75,7 @@ def build_planar_array(corners, hypo=None, check=False):
     # (in 3d Cartesian space): a normal unit vector,
     planar_array['normal'] = n = geo_utils.normalized(
         numpy.cross(tl - tr, tl - bl))
-    # ... and scalar "d" parameter from the plane equation (uses
-    # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-    d = - dot(n, tl)
+
     # these two 3d vectors together with a zero point represent surface's
     # coordinate space (the way to translate 3d Cartesian space with
     # a center in earth's center to 2d space centered in surface's top
@@ -102,7 +100,6 @@ def build_planar_array(corners, hypo=None, check=False):
     wld = planar_array['wld']
     wld[..., 0] = width
     wld[..., 1] = length
-    wld[..., 2] = d
 
     if check:
         # calculate the imperfect rectangle tolerance
@@ -147,13 +144,13 @@ def get_rrup(planar, points):
     def dot(a, v):  # array @ vector
         return a[:, 0] * v[0] + a[:, 1] * v[1] + a[:, 2] * v[2]
     for p, pla in enumerate(planar):
-        width, length, d = pla.wld
+        width, length, _ = pla.wld
         # we project all the points of the mesh on a plane that contains
         # the surface (translating coordinates of the projections to a local
         # 2d space) and at the same time calculate the distance to that
         # plane.
-        dists = dot(points, pla.normal) + d
         mat = points - pla.xyz[:, 0]
+        dists = dot(mat, pla.normal)
         xx = dot(mat, pla.uv1)
         yy = dot(mat, pla.uv2)
 
