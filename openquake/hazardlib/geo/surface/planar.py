@@ -22,6 +22,7 @@ Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 """
 import logging
 import numpy
+from openquake.baselib.node import Node
 from openquake.baselib.performance import numba, compile
 from openquake.hazardlib.geo.geodetic import point_at
 from openquake.hazardlib.geo import Point
