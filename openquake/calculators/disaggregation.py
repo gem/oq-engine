@@ -187,7 +187,7 @@ class DisaggregationCalculator(base.HazardCalculator):
     Classical PSHA disaggregation calculator
     """
     precalc = 'classical'
-    accept_precalc = ['classical', 'disaggregation']
+    accept_precalc = ['preclassical', 'classical', 'disaggregation']
 
     def pre_checks(self):
         """
