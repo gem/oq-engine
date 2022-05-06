@@ -116,7 +116,7 @@ def build_planar_array(corners, hypo=None, check=False):
 
 
 # numbified below
-def get_dxy(planar, points):
+def project(planar, points):
     """
     :param planar: a planar recarray of shape (U, 3)
     :param points: an array of euclidean coordinates of shape (N, 3)
@@ -209,10 +209,33 @@ def get_dxy(planar, points):
     return out
 
 
+# numbified below
+def project_back(planar, xx, yy):
+    """
+    :param planar: a planar recarray of shape (U, 3)
+    :param xx: an array of of shape (U, N)
+    :param yy: an array of of shape (U, N)
+    :returns: (3, U, N) values
+    """
+    U, N = xx.shape
+    arr = numpy.zeros((3, U, N))
+    for u in range(U):
+        arr3N = numpy.zeros((3, N))
+        for i in range(3):
+            arr3N[i] = (planar.xyz[u, i, 0] +
+                        planar.uv1[u, i] * xx[u] +
+                        planar.uv2[u, i] * yy[u])
+        arr[:, u] = geo_utils.cartesian_to_spherical(arr3N.T)
+    return arr
+
+
 if numba:
     planar_nt = numba.from_dtype(planar_array_dt)
     sig = numba.float64[:, :, :](planar_nt[:, :], numba.float64[:, :])
-    get_dxy = compile(sig)(get_dxy)
+    project = compile(sig)(project)
+    sig = numba.float64[:, :, :](
+        planar_nt[:, :], numba.float64[:, :], numba.float64[:, :])
+    project_back = compile(sig)(project_back)
 
 
 class PlanarSurface(BaseSurface):
@@ -496,19 +519,13 @@ class PlanarSurface(BaseSurface):
         """
         See :meth:`superclass' method
         <openquake.hazardlib.geo.surface.base.BaseSurface.get_min_distance>`.
-
-        This is an optimized version specific to planar surface that doesn't
-        make use of the mesh.
         """
-        return get_dxy(self.array.reshape(1, 3), mesh.xyz)[0, 0]
+        return project(self.array.reshape(1, 3), mesh.xyz)[0, 0]
 
     def get_closest_points(self, mesh):
         """
         See :meth:`superclass' method
         <openquake.hazardlib.geo.surface.base.BaseSurface.get_closest_points>`.
-
-        This is an optimized version specific to planar surface that doesn't
-        make use of the mesh.
         """
         mat = mesh.xyz - self.xyz[:, 0]
         xx = numpy.clip(mat @ self.uv1, 0, self.wld[1])

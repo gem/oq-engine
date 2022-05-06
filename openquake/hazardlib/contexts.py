@@ -43,7 +43,7 @@ from openquake.hazardlib.calc.filters import (
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface.planar import (
-    PlanarSurface, get_dxy)
+    PlanarSurface, project, project_back)
 
 U32 = numpy.uint32
 F64 = numpy.float64
@@ -622,7 +622,8 @@ class ContextMaker(object):
         """
         ctxs = []
         if hasattr(src, 'source_id'):  # is a real source
-            cps = getattr(src, 'location', None) and src.count_nphc() > 1
+            cps = (getattr(src, 'location', None) and src.count_nphc() > 1
+                   and step == 1)
             with self.ir_mon:
                 if cps:  # collapsible point source
                     rups_sites = list(self._cps_rups_sites(src, sitecol, step))
@@ -643,15 +644,19 @@ class ContextMaker(object):
                 continue
             magdist = self.maximum_distance(rups[0].mag)
             with self.dst_mon:
-                if cps and step == 1:  # fast lane
+                if cps:  # fast lane
                     planar = numpy.array(
                         [rup.surface.array for rup in rups]
                     ).view(numpy.recarray)  # shape (U, 3)
-                    alldists = get_dxy(planar, sites.xyz)[0]  # shape (U, N)
+                    proj = project(planar, sites.xyz)  # shape (3, U, N)
+                    alldists, xx, yy = proj
+                    if fewsites:
+                        coords = project_back(planar, xx, yy)
                 else:  # regular
                     alldists = [get_distances(rup, sites, 'rrup', self.dcache)
                                 for rup in rups]
-            for rup, dists in zip(rups, alldists):
+            for r, rup in enumerate(rups):
+                dists = alldists[r]
                 mask = dists <= magdist
                 if mask.any():
                     r_sites = sites.filter(mask)
