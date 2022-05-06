@@ -436,7 +436,7 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
-        self.dst_mon = monitor('computing distances', measuremem=False)
+        self.dst_mon = monitor('computing rrup', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
@@ -642,11 +642,11 @@ class ContextMaker(object):
         else:  # in event based we get a list with a single rupture
             cps = False
             rups_sites = [(src, sitecol)]
-        with self.dst_mon:
-            for rups, sites in rups_sites:  # ruptures with the same magnitude
-                if len(rups) == 0:  # may happen in case of min_mag/max_mag
-                    continue
-                magdist = self.maximum_distance(rups[0].mag)
+        for rups, sites in rups_sites:  # ruptures with the same magnitude
+            if len(rups) == 0:  # may happen in case of min_mag/max_mag
+                continue
+            magdist = self.maximum_distance(rups[0].mag)
+            with self.dst_mon:
                 if cps and step == 1:  # fast lane
                     planar = numpy.array(
                         [rup.surface.array for rup in rups]
@@ -655,13 +655,13 @@ class ContextMaker(object):
                 else:  # regular
                     alldists = [get_distances(rup, sites, 'rrup', self.dcache)
                                 for rup in rups]
-                for rup, dists in zip(rups, alldists):
-                    mask = dists <= magdist
-                    if mask.any():
-                        r_sites = sites.filter(mask)
-                        ctx = self.get_ctx(rup, r_sites, dists[mask])
-                        ctx.src_id = src_id
-                        ctxs.append(ctx)
+            for rup, dists in zip(rups, alldists):
+                mask = dists <= magdist
+                if mask.any():
+                    r_sites = sites.filter(mask)
+                    ctx = self.get_ctx(rup, r_sites, dists[mask])
+                    ctx.src_id = src_id
+                    ctxs.append(ctx)
         return ctxs
 
     def max_intensity(self, sitecol1, mags, dists):
