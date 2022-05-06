@@ -116,13 +116,13 @@ def build_planar_array(corners, hypo=None, check=False):
 
 
 # numbified below
-def get_rrup(planar, points):
+def get_dxy(planar, points):
     """
     :param planar: a planar recarray of shape (U, 3)
     :param points: an array of euclidean coordinates of shape (N, 3)
-    :returns: (U, N) distances for the surface to the points.
+    :returns: (3, U, N) values
     """
-    distances = numpy.zeros((len(planar), len(points)))
+    out = numpy.zeros((3, len(planar), len(points)))
 
     def dot(a, v):  # array @ vector
         return a[:, 0] * v[0] + a[:, 1] * v[1] + a[:, 2] * v[2]
@@ -203,14 +203,16 @@ def get_rrup(planar, points):
             default=0
         )
         # combining distance on a plane with distance to a plane
-        distances[p] = numpy.sqrt(dists ** 2 + mxx ** 2 + myy ** 2)
-    return distances
+        out[0, p] = numpy.sqrt(dists ** 2 + mxx ** 2 + myy ** 2)
+        out[1, p] = mxx
+        out[2, p] = myy
+    return out
 
 
 if numba:
     planar_nt = numba.from_dtype(planar_array_dt)
-    sig = numba.float64[:, :](planar_nt[:, :], numba.float64[:, :])
-    get_rrup = compile(sig)(get_rrup)
+    sig = numba.float64[:, :, :](planar_nt[:, :], numba.float64[:, :])
+    get_dxy = compile(sig)(get_dxy)
 
 
 class PlanarSurface(BaseSurface):
@@ -515,7 +517,7 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
-        return get_rrup(self.array.reshape(1, 3), mesh.xyz)[0]
+        return get_dxy(self.array.reshape(1, 3), mesh.xyz)[0, 0]
 
     def get_closest_points(self, mesh):
         """

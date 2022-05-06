@@ -43,7 +43,7 @@ from openquake.hazardlib.calc.filters import (
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface.planar import (
-    PlanarSurface, get_rrup)
+    PlanarSurface, get_dxy)
 
 U32 = numpy.uint32
 F64 = numpy.float64
@@ -647,7 +647,7 @@ class ContextMaker(object):
                     planar = numpy.array(
                         [rup.surface.array for rup in rups]
                     ).view(numpy.recarray)  # shape (U, 3)
-                    alldists = get_rrup(planar, sites.xyz)  # shape (U, N)
+                    alldists = get_dxy(planar, sites.xyz)[0]  # shape (U, N)
                 else:  # regular
                     alldists = [get_distances(rup, sites, 'rrup', self.dcache)
                                 for rup in rups]
