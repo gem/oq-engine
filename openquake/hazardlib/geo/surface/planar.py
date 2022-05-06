@@ -115,23 +115,6 @@ def build_planar_array(corners, hypo=None, check=False):
     return planar_array
 
 
-def _project(self, points):
-    """
-    Project points (as an array of shape (N, 3)) to a surface's plane.
-
-    Parameters are lists or numpy arrays of coordinates of points
-    to project.
-
-    :returns:
-        A tuple of three arrays: distances between original points
-        and surface's plane in km, "x" and "y" coordinates of points'
-        projections to the plane (in a surface's coordinate space).
-    """
-    # uses method from http://www.9math.com/book/projection-point-plane
-    mat = points - self.xyz[:, 0]
-    return mat @ self.normal, mat @ self.uv1, mat @ self.uv2
-
-
 # numbified below
 def get_rrup(planar, points):
     """
@@ -542,7 +525,8 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
-        dists, xx, yy = _project(self, mesh.xyz)
+        mat = mesh.xyz - self.xyz[:, 0]
+        dists, xx, yy = mat @ self.normal, mat @ self.uv1, mat @ self.uv2
         mxx = xx.clip(0, self.wld[1])
         myy = yy.clip(0, self.wld[0])
         dists.fill(0)
