@@ -605,11 +605,6 @@ class ContextMaker(object):
         for name in sites.array.dtype.names:
             setattr(ctx, name, sites[name])
 
-        # get closest point on the surface
-        if len(sites.complete) <= self.max_sites_disagg:
-            closest = rup.surface.get_closest_points(sites.complete)
-            ctx.clon = closest.lons[ctx.sids]
-            ctx.clat = closest.lats[ctx.sids]
         return ctx
 
     def get_ctxs(self, src, sitecol, src_id=None, step=1):
@@ -642,6 +637,7 @@ class ContextMaker(object):
         else:  # in event based we get a list with a single rupture
             cps = False
             rups_sites = [(src, sitecol)]
+        fewsites = len(sitecol.complete) <= self.max_sites_disagg
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             if len(rups) == 0:  # may happen in case of min_mag/max_mag
                 continue
@@ -662,6 +658,11 @@ class ContextMaker(object):
                     ctx = self.get_ctx(rup, r_sites, dists[mask])
                     ctx.src_id = src_id
                     ctxs.append(ctx)
+                    if fewsites:
+                        # get closest point on the surface
+                        closest = rup.surface.get_closest_points(sites.complete)
+                        ctx.clon = closest.lons[ctx.sids]
+                        ctx.clat = closest.lats[ctx.sids]
         return ctxs
 
     def max_intensity(self, sitecol1, mags, dists):
