@@ -138,25 +138,22 @@ def _project(self, points):
 
 
 @numba.njit()
-def get_rrup(planar, xyz):
+def get_rrup(planar, points):
     """
     :param planar: a planar array of shape (U, 3)
-    :param xyz: an array of euclidean coordinates of shape (N, 3)
+    :param points: an array of euclidean coordinates of shape (N, 3)
     :returns: (U, N) distances for the surface to the points.
     """
-    distances = numpy.zeros((len(planar), len(xyz)))
-    for p, point in enumerate(xyz):
-        width = planar.wld[:, 0]  # shape U
-        length = planar.wld[:, 1]  # shape U
-        d = planar.wld[:, 2]  # shape U
+    distances = numpy.zeros((len(planar), len(points)))
+    for p, pla in enumerate(planar):
+        width, length, d = pla.wld
         # we project all the points of the mesh on a plane that contains
         # the surface (translating coordinates of the projections to a local
         # 2d space) and at the same time calculate the distance to that
         # plane.
-        dists = dot(planar.normal, point) + d  # shape U
-        # translate projected points to surface coordinate space, shape (N, 3)
-        mat = point - planar.xyz[:, :, 0]  # shape (U, 3)
-        xx, yy = dot(mat, planar.uv1), dot(mat, planar.uv2)  # shape U each
+        dists = dot(points, pla.normal) + d
+        mat = points - pla.xyz[:, 0]
+        xx, yy = dot(mat, pla.uv1), dot(mat, pla.uv2)
 
         # the actual resulting distance is a square root of squares
         # of a distance from a point to a plane that contains the surface
@@ -224,7 +221,7 @@ def get_rrup(planar, xyz):
             default=0
         )
         # combining distance on a plane with distance to a plane
-        distances[:, p] = numpy.sqrt(dists ** 2 + mxx ** 2 + myy ** 2)
+        distances[p] = numpy.sqrt(dists ** 2 + mxx ** 2 + myy ** 2)
     return distances
 
 
