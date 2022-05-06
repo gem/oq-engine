@@ -254,7 +254,6 @@ class SphericalToCartesianAndBackTestCase(unittest.TestCase):
         res_cart = utils.spherical_to_cartesian(lons, lats, depths)
         aac(vectors, res_cart, atol=1E-7)
         res_sphe = utils.cartesian_to_spherical(res_cart)
-        self.assertIsInstance(res_sphe, tuple)
         self.assertEqual(len(res_sphe), 3)
         if depths is None:
             depths = numpy.zeros_like(lons)

@@ -587,8 +587,8 @@ def cartesian_to_spherical(arrayN3):
     out = numpy.zeros_like(arrayN3)
     rr = numpy.sqrt(numpy.sum(arrayN3 * arrayN3, axis=-1))
     xx, yy, zz = arrayN3.T
-    out[:, 0] = numpy.degrees(numpy.arcsin((zz / rr).clip(-1., 1.)))
-    out[:, 1] = numpy.degrees(numpy.arctan2(yy, xx))
+    out[:, 0] = numpy.degrees(numpy.arctan2(yy, xx))
+    out[:, 1] = numpy.degrees(numpy.arcsin(numpy.clip(zz / rr, -1., 1.)))
     out[:, 2] = EARTH_RADIUS - rr
     return out.T  # shape (3, N)
 
