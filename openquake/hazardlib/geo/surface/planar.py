@@ -75,9 +75,7 @@ def build_planar_array(corners, hypo=None, check=False):
     # (in 3d Cartesian space): a normal unit vector,
     planar_array['normal'] = n = geo_utils.normalized(
         numpy.cross(tl - tr, tl - bl))
-    # ... and scalar "d" parameter from the plane equation (uses
-    # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-    d = - dot(n, tl)
+
     # these two 3d vectors together with a zero point represent surface's
     # coordinate space (the way to translate 3d Cartesian space with
     # a center in earth's center to 2d space centered in surface's top
@@ -87,11 +85,11 @@ def build_planar_array(corners, hypo=None, check=False):
     planar_array['uv2'] = uv2 = numpy.cross(n, uv1)
 
     # translate projected points to surface coordinate space, shape (N, 3)
-    dists = dot(xyz, n) + d
-    xx, yy = numpy.zeros(shape), numpy.zeros(shape)
-    for i in range(4):
-        mat = xyz[i] - tl
-        xx[i], yy[i] = dot(mat, uv1), dot(mat, uv2)
+    delta = xyz - xyz[0]
+    dists, xx, yy = numpy.zeros(shape), numpy.zeros(shape), numpy.zeros(shape)
+    for i in range(1, 4):
+        mat = delta[i]
+        dists[i], xx[i], yy[i] = dot(mat, n), dot(mat, uv1), dot(mat, uv2)
 
     # "length" of the rupture is measured along the top edge
     length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
@@ -102,7 +100,6 @@ def build_planar_array(corners, hypo=None, check=False):
     wld = planar_array['wld']
     wld[..., 0] = width
     wld[..., 1] = length
-    wld[..., 2] = d
 
     if check:
         # calculate the imperfect rectangle tolerance
@@ -118,44 +115,25 @@ def build_planar_array(corners, hypo=None, check=False):
     return planar_array
 
 
-def _project(self, points):
-    """
-    Project points (as an array of shape (N, 3)) to a surface's plane.
-
-    Parameters are lists or numpy arrays of coordinates of points
-    to project.
-
-    :returns:
-        A tuple of three arrays: distances between original points
-        and surface's plane in km, "x" and "y" coordinates of points'
-        projections to the plane (in a surface's coordinate space).
-    """
-    # uses method from http://www.9math.com/book/projection-point-plane
-    dists = points @ self.normal + self.wld[2]
-    # translate projected points to surface coordinate space, shape (N, 3)
-    mat = points - self.xyz[:, 0]
-    return dists, mat @ self.uv1, mat @ self.uv2
-
-
 # numbified below
-def get_rrup(planar, points):
+def project(planar, points):
     """
     :param planar: a planar recarray of shape (U, 3)
     :param points: an array of euclidean coordinates of shape (N, 3)
-    :returns: (U, N) distances for the surface to the points.
+    :returns: (3, U, N) values
     """
-    distances = numpy.zeros((len(planar), len(points)))
+    out = numpy.zeros((3, len(planar), len(points)))
 
     def dot(a, v):  # array @ vector
         return a[:, 0] * v[0] + a[:, 1] * v[1] + a[:, 2] * v[2]
-    for p, pla in enumerate(planar):
-        width, length, d = pla.wld
+    for u, pla in enumerate(planar):
+        width, length, _ = pla.wld
         # we project all the points of the mesh on a plane that contains
         # the surface (translating coordinates of the projections to a local
         # 2d space) and at the same time calculate the distance to that
         # plane.
-        dists = dot(points, pla.normal) + d
         mat = points - pla.xyz[:, 0]
+        dists = dot(mat, pla.normal)
         xx = dot(mat, pla.uv1)
         yy = dot(mat, pla.uv2)
 
@@ -225,14 +203,41 @@ def get_rrup(planar, points):
             default=0
         )
         # combining distance on a plane with distance to a plane
-        distances[p] = numpy.sqrt(dists ** 2 + mxx ** 2 + myy ** 2)
-    return distances
+        out[0, u] = numpy.sqrt(dists ** 2 + mxx ** 2 + myy ** 2)
+        out[1, u] = xx
+        out[2, u] = yy
+    return out
+
+
+# numbified below
+def project_back(planar, xx, yy):
+    """
+    :param planar: a planar recarray of shape (U, 3)
+    :param xx: an array of of shape (U, N)
+    :param yy: an array of of shape (U, N)
+    :returns: (3, U, N) values
+    """
+    U, N = xx.shape
+    arr = numpy.zeros((3, U, N))
+    for u in range(U):
+        arr3N = numpy.zeros((3, N))
+        mxx = numpy.clip(xx[u], 0., planar.wld[u, 1])
+        myy = numpy.clip(yy[u], 0., planar.wld[u, 0])
+        for i in range(3):
+            arr3N[i] = (planar.xyz[u, i, 0] +
+                        planar.uv1[u, i] * mxx +
+                        planar.uv2[u, i] * myy)
+        arr[:, u] = geo_utils.cartesian_to_spherical(arr3N.T)
+    return arr
 
 
 if numba:
     planar_nt = numba.from_dtype(planar_array_dt)
-    sig = numba.float64[:, :](planar_nt[:, :], numba.float64[:, :])
-    get_rrup = compile(sig)(get_rrup)
+    sig = numba.float64[:, :, :](planar_nt[:, :], numba.float64[:, :])
+    project = compile(sig)(project)
+    sig = numba.float64[:, :, :](
+        planar_nt[:, :], numba.float64[:, :], numba.float64[:, :])
+    project_back = compile(sig)(project_back)
 
 
 class PlanarSurface(BaseSurface):
@@ -512,47 +517,25 @@ class PlanarSurface(BaseSurface):
         """
         return self.dip
 
-    def _project_back(self, dists, xx, yy):
-        """
-        Convert coordinates in plane's Cartesian space back to spherical
-        coordinates.
-
-        Parameters are numpy arrays, as returned from :meth:`_project`, which
-        this method does the opposite to.
-
-        :return:
-            Tuple of longitudes, latitudes and depths numpy arrays.
-        """
-        vectors = (self.xyz[:, 0] +
-                   self.uv1 * xx.reshape(xx.shape + (1, )) +
-                   self.uv2 * yy.reshape(yy.shape + (1, )) +
-                   self.normal * dists.reshape(dists.shape + (1, )))
-        return geo_utils.cartesian_to_spherical(vectors)
-
     def get_min_distance(self, mesh):
         """
         See :meth:`superclass' method
         <openquake.hazardlib.geo.surface.base.BaseSurface.get_min_distance>`.
-
-        This is an optimized version specific to planar surface that doesn't
-        make use of the mesh.
         """
-        return get_rrup(self.array.reshape(1, 3), mesh.xyz)[0]
+        return project(self.array.reshape(1, 3), mesh.xyz)[0, 0]
 
     def get_closest_points(self, mesh):
         """
         See :meth:`superclass' method
         <openquake.hazardlib.geo.surface.base.BaseSurface.get_closest_points>`.
-
-        This is an optimized version specific to planar surface that doesn't
-        make use of the mesh.
         """
-        dists, xx, yy = _project(self, mesh.xyz)
-        mxx = xx.clip(0, self.wld[1])
-        myy = yy.clip(0, self.wld[0])
-        dists.fill(0)
-        lons, lats, depths = self._project_back(dists, mxx, myy)
-        return Mesh(lons, lats, depths)
+        mat = mesh.xyz - self.xyz[:, 0]
+        xx = numpy.clip(mat @ self.uv1, 0, self.wld[1])
+        yy = numpy.clip(mat @ self.uv2, 0, self.wld[0])
+        vectors = (self.xyz[:, 0] +
+                   self.uv1 * xx.reshape(xx.shape + (1, )) +
+                   self.uv2 * yy.reshape(yy.shape + (1, )))
+        return Mesh(*geo_utils.cartesian_to_spherical(vectors))
 
     def _get_top_edge_centroid(self):
         """

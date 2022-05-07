@@ -43,7 +43,7 @@ from openquake.hazardlib.calc.filters import (
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface.planar import (
-    PlanarSurface, get_rrup)
+    PlanarSurface, project, project_back)
 
 U32 = numpy.uint32
 F64 = numpy.float64
@@ -605,11 +605,6 @@ class ContextMaker(object):
         for name in sites.array.dtype.names:
             setattr(ctx, name, sites[name])
 
-        # get closest point on the surface
-        if len(sites.complete) <= self.max_sites_disagg:
-            closest = rup.surface.get_closest_points(sites.complete)
-            ctx.clon = closest.lons[ctx.sids]
-            ctx.clat = closest.lats[ctx.sids]
         return ctx
 
     def get_ctxs(self, src, sitecol, src_id=None, step=1):
@@ -627,7 +622,8 @@ class ContextMaker(object):
         """
         ctxs = []
         if hasattr(src, 'source_id'):  # is a real source
-            cps = getattr(src, 'location', None) and src.count_nphc() > 1
+            cps = (getattr(src, 'location', None) and src.count_nphc() > 1
+                   and step == 1)
             with self.ir_mon:
                 if cps:  # collapsible point source
                     rups_sites = list(self._cps_rups_sites(src, sitecol, step))
@@ -642,26 +638,38 @@ class ContextMaker(object):
         else:  # in event based we get a list with a single rupture
             cps = False
             rups_sites = [(src, sitecol)]
+        fewsites = len(sitecol.complete) <= self.max_sites_disagg
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             if len(rups) == 0:  # may happen in case of min_mag/max_mag
                 continue
             magdist = self.maximum_distance(rups[0].mag)
             with self.dst_mon:
-                if cps and step == 1:  # fast lane
+                if cps:  # fast lane
                     planar = numpy.array(
                         [rup.surface.array for rup in rups]
                     ).view(numpy.recarray)  # shape (U, 3)
-                    alldists = get_rrup(planar, sites.xyz)  # shape (U, N)
+                    dists, xx, yy = project(planar, sites.xyz)  # (3, U, N)
+                    if fewsites:
+                        # get the closest points on the surface
+                        closest = project_back(planar, xx, yy)  # (3, U, N)
                 else:  # regular
-                    alldists = [get_distances(rup, sites, 'rrup', self.dcache)
-                                for rup in rups]
-            for rup, dists in zip(rups, alldists):
-                mask = dists <= magdist
+                    dists = [get_distances(rup, sites, 'rrup', self.dcache)
+                             for rup in rups]
+            for u, rup in enumerate(rups):
+                mask = dists[u] <= magdist
                 if mask.any():
                     r_sites = sites.filter(mask)
-                    ctx = self.get_ctx(rup, r_sites, dists[mask])
+                    ctx = self.get_ctx(rup, r_sites, dists[u][mask])
                     ctx.src_id = src_id
                     ctxs.append(ctx)
+                    if fewsites:
+                        if cps:  # reuse already computed coordinates
+                            ctx.clon = closest[0, u, mask]
+                            ctx.clat = closest[1, u, mask]
+                        else:  # slow lane
+                            c = rup.surface.get_closest_points(sites.complete)
+                            ctx.clon = c.lons[ctx.sids]
+                            ctx.clat = c.lats[ctx.sids]
         return ctxs
 
     def max_intensity(self, sitecol1, mags, dists):

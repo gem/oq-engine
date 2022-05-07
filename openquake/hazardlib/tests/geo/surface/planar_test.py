@@ -19,7 +19,7 @@ import numpy
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils as geo_utils
-from openquake.hazardlib.geo.surface.planar import PlanarSurface, _project
+from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tests.geo.surface import _planar_test_data as tdata
 from openquake.hazardlib.scalerel import WC1994
 
@@ -169,45 +169,6 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         self.assertEqual(surf.top_right, Point(0.025650, 0.149496, 10.2623))
         self.assertEqual(surf.bottom_left, Point(-0.025650, -0.149496, 29.7377))
         self.assertEqual(surf.bottom_right, Point(0.149496, 0.025650, 29.7377))
-
-
-class PlanarSurfaceProjectTestCase(unittest.TestCase):
-    def test1(self):
-        lons, lats, depths = geo_utils.cartesian_to_spherical(
-            numpy.array([[60, -10, -10], [60, -10, 10],
-                         [60, 10, 10], [60, 10, -10]], float)
-        )
-        surface = PlanarSurface(20, 30, *Mesh(lons, lats, depths))
-        aaae = numpy.testing.assert_array_almost_equal
-
-        xyz = numpy.array(
-            [[60., -10., -10.], [59., 0., 0.], [70., -11., -10.]])
-        plons, plats, pdepths = geo_utils.cartesian_to_spherical(xyz)
-
-        dists, xx, yy = _project(surface, xyz)
-        aaae(xx, [0, 10, 0])
-        aaae(yy, [0, 10, -1])
-        aaae(dists, [0, 1, -10])
-
-        lons, lats, depths = surface._project_back(dists, xx, yy)
-        aaae(lons, plons)
-        aaae(lats, plats)
-        aaae(depths, pdepths)
-
-    def test2(self):
-        surface = PlanarSurface(
-            20, 30,
-            Point(3.9, 2.2, 10), Point(4.90402718, 3.19634248, 10),
-            Point(5.9, 2.2, 90), Point(4.89746275, 1.20365263, 90))
-        plons, plats, pdepths = [[4., 4.3, 3.1], [1.5, 1.7, 3.5],
-                                 [11., 12., 13.]]
-        xyz = geo_utils.spherical_to_cartesian(plons, plats, pdepths)
-        dists, xx, yy = _project(surface, xyz)
-        lons, lats, depths = surface._project_back(dists, xx, yy)
-        aaae = numpy.testing.assert_array_almost_equal
-        aaae(lons, plons)
-        aaae(lats, plats)
-        aaae(depths, pdepths)
 
 
 class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
