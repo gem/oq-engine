@@ -126,7 +126,7 @@ def project(planar, points):
 
     def dot(a, v):  # array @ vector
         return a[:, 0] * v[0] + a[:, 1] * v[1] + a[:, 2] * v[2]
-    for p, pla in enumerate(planar):
+    for u, pla in enumerate(planar):
         width, length, _ = pla.wld
         # we project all the points of the mesh on a plane that contains
         # the surface (translating coordinates of the projections to a local
@@ -203,9 +203,9 @@ def project(planar, points):
             default=0
         )
         # combining distance on a plane with distance to a plane
-        out[0, p] = numpy.sqrt(dists ** 2 + mxx ** 2 + myy ** 2)
-        out[1, p] = mxx
-        out[2, p] = myy
+        out[0, u] = numpy.sqrt(dists ** 2 + mxx ** 2 + myy ** 2)
+        out[1, u] = xx
+        out[2, u] = yy
     return out
 
 
