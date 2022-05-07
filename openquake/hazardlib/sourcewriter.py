@@ -751,6 +751,10 @@ def write_source_model(dest, sources_or_groups, name=None,
         groups = sources_or_groups.src_groups
         attrs = dict(name=sources_or_groups.name,
                      investigation_time=sources_or_groups.investigation_time)
+    elif isinstance(sources_or_groups, sourceconverter.SourceGroup):
+        groups = sources_or_groups
+        attrs = dict(investigation_time=investigation_time)
+        groups = [groups]
     elif isinstance(sources_or_groups[0], sourceconverter.SourceGroup):
         groups = sources_or_groups
         attrs = dict(investigation_time=investigation_time)
