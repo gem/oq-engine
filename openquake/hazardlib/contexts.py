@@ -648,19 +648,17 @@ class ContextMaker(object):
                     planar = numpy.array(
                         [rup.surface.array for rup in rups]
                     ).view(numpy.recarray)  # shape (U, 3)
-                    proj = project(planar, sites.xyz)  # shape (3, U, N)
-                    alldists, xx, yy = proj
+                    dists, xx, yy = project(planar, sites.xyz)  # (3, U, N)
                     if fewsites:
                         coords = project_back(planar, xx, yy)  # (3, U, N)
                 else:  # regular
-                    alldists = [get_distances(rup, sites, 'rrup', self.dcache)
-                                for rup in rups]
+                    dists = [get_distances(rup, sites, 'rrup', self.dcache)
+                             for rup in rups]
             for u, rup in enumerate(rups):
-                dists = alldists[u]
-                mask = dists <= magdist
+                mask = dists[u] <= magdist
                 if mask.any():
                     r_sites = sites.filter(mask)
-                    ctx = self.get_ctx(rup, r_sites, dists[mask])
+                    ctx = self.get_ctx(rup, r_sites, dists[u][mask])
                     ctx.src_id = src_id
                     ctxs.append(ctx)
                     if fewsites:
