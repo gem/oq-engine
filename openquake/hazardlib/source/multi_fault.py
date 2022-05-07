@@ -53,6 +53,16 @@ class FaultSection(object):
         self.sec_id = sec_id
         self.surface = surface
 
+    def geom(self):
+        """
+        :returns:
+            an array of float32 with structure
+            [1., shape_y, shape_z, coords, ...]
+        """
+        shape_y, shape_z = self.surface.mesh.array.shape[1:]
+        coords = F32(self.surface.mesh.array.flat)
+        return np.concatenate([F32([1, shape_y, shape_z]), coords])
+
 
 class MultiFaultSource(BaseSeismicSource):
     """

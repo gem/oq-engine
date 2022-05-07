@@ -19,6 +19,7 @@ import os
 import sys
 import string
 import inspect
+from pprint import pprint
 import unittest.mock as mock
 import logging
 import operator
@@ -206,8 +207,8 @@ def main(what, report=False):
                 print('calculation_mode: %s' % oq.calculation_mode)
                 print('description: %s' % oq.description)
                 print('input size: %s' % size)
-                for i, bset in enumerate(lt.branchsets):
-                    print('branchset%d: %r' % (i, bset))
+                for bset in lt.branchsets:
+                    pprint(bset.to_list())
         if mon.duration > 1:
             print(mon)
     elif what:

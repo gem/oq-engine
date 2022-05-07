@@ -106,7 +106,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check extraction
         sitecol = extract(self.calc.datastore, 'sitecol')
-        self.assertEqual(len(sitecol.array), 1)
+        self.assertEqual(len(sitecol.array), 4)
 
         # check minimum_magnitude discards the source
         with self.assertRaises(RuntimeError) as ctx:
@@ -489,6 +489,13 @@ hazard_uhs-std.csv
         out = self.run_calc(case_28.__file__, 'job.ini', exports='csv')
         for f in out['uhs', 'csv']:
             self.assertEqualFiles('expected/' + strip_calc_id(f), f)
+
+        # checking that source_info is stored correctly
+        info = self.calc.datastore['source_info'][:]
+        ae(info['source_id'], [b'21;0', b'21;1', b'22'])
+        ae(info['grp_id'], [0, 1, 2])
+        ae(info['weight'] > 0, [True, True, True])
+        ae(info['trti'], [0, 0, 1])
 
     def test_case_29(self):  # non parametric source with 2 KiteSurfaces
         check = False

@@ -21,7 +21,7 @@ import itertools
 import collections
 import numpy
 
-from openquake.baselib.general import CallableDict, BASE184
+from openquake.baselib.general import CallableDict, BASE183
 from openquake.hazardlib import geo
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
@@ -487,6 +487,10 @@ class Branch(object):
         self.value = value
         self.bset = None
 
+    @property
+    def id(self):
+        return self.branch_id if len(self.branch_id) == 1 else self.short_id
+
     def is_leaf(self):
         """
         :returns: True if the branch has no branchset or has a dummy branchset
@@ -672,17 +676,19 @@ class BranchSet(object):
         bset = self
         while ltpath:
             brid, ltpath = ltpath[0], ltpath[1:]
-            pairs.append((bset, bset[brid].value))
-            bset = bset[brid].bset
-            if bset is None:
+            br = bset[brid]
+            pairs.append((bset, br.value))
+            if br.is_leaf():
                 break
+            else:
+                bset = br.bset
         return pairs
 
     def to_list(self):
         """
         :returns: a literal list describing the branchset
         """
-        atb = ' '.join(self.filters.get("applyToBranches", []))
+        atb = self.filters.get("applyToBranches", [])
         lst = [self.uncertainty_type, atb]
         for br in self.branches:
             lst.append([br.branch_id, '...', br.weight])
@@ -745,6 +751,19 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
+def add_path(bset, bsno, brno, num_prev, tot, paths):
+    for br in bset.branches:
+        br.short_id = BASE183[brno]
+        path = ['*'] * tot
+        path[bsno] = br.id
+        paths.append(''.join(path))
+        brno += 1
+    if 'applyToBranches' not in bset.filters or len(
+            bset.filters['applyToBranches']) == num_prev:
+        return 0
+    return brno
+
+
 class CompositeLogicTree(object):
     """
     Build a logic tree from a set of branches by automatically
@@ -752,21 +771,14 @@ class CompositeLogicTree(object):
     """
     def __init__(self, branchsets):
         self.branchsets = branchsets
-        self._attach_to_branches()
-        nb = len(branchsets)
-        paths = []
-        brno = 0
-        for bsno, bset in enumerate(branchsets):
-            for br in bset.branches:
-                path = ['*'] * nb
-                path[bsno] = br.short_id = BASE184[brno]
-                paths.append(''.join(path))
-                brno += 1
-        self.basepaths = paths
+        self.basepaths = self._attach_to_branches()
 
     def _attach_to_branches(self):
         # attach branchsets to branches depending on the applyToBranches
         # attribute; also attaches dummy branchsets to dummy branches.
+        paths = []
+        nb = len(self.branchsets)
+        brno = add_path(self.branchsets[0], 0, 0, 0, nb, paths)
         previous_branches = self.branchsets[0].branches
         branchdic = {br.branch_id: br for br in previous_branches}
         for i, bset in enumerate(self.branchsets[1:]):
@@ -780,6 +792,7 @@ class CompositeLogicTree(object):
             app2brs = list(bset.filters.get('applyToBranches', '')) or prev_ids
             if app2brs != prev_ids:
                 for branch_id in app2brs:
+                    # NB: if branch_id has already a branchset it is overridden
                     branchdic[branch_id].bset = bset
                 for brid in prev_ids:
                     br = branchdic[brid]
@@ -791,14 +804,16 @@ class CompositeLogicTree(object):
             else:  # apply to all previous branches
                 for branch in previous_branches:
                     branch.bset = bset
+            brno = add_path(bset, i+1, brno, len(previous_branches), nb, paths)
             previous_branches = bset.branches + dummies
+        return paths
 
     def __iter__(self):
         nb = len(self.branchsets)
         ordinal = 0
         for weight, branches in self.branchsets[0].enumerate_paths():
             value = [br.value for br in branches]
-            lt_path = ''.join(branch.short_id for branch in branches)
+            lt_path = ''.join(branch.id for branch in branches)
             yield Realization(value, weight, ordinal, lt_path.ljust(nb, '.'))
             ordinal += 1
 

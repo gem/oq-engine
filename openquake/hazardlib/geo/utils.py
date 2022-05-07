@@ -585,10 +585,10 @@ def cartesian_to_spherical(vectors):
     """
     rr = numpy.sqrt(numpy.sum(vectors * vectors, axis=-1))
     xx, yy, zz = vectors.T
-    lats = numpy.degrees(numpy.arcsin((zz / rr).clip(-1., 1.)))
+    lats = numpy.degrees(numpy.arcsin(numpy.clip(zz / rr, -1., 1.)))
     lons = numpy.degrees(numpy.arctan2(yy, xx))
     depths = EARTH_RADIUS - rr
-    return lons.T, lats.T, depths
+    return lons.T, lats.T, depths.T
 
 
 def triangle_area(e1, e2, e3):
