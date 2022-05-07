@@ -180,7 +180,8 @@ class PlanarSurfaceProjectTestCase(unittest.TestCase):
         surface = PlanarSurface(20, 30, *Mesh(lons, lats, depths))
         aaae = numpy.testing.assert_array_almost_equal
 
-        xyz = numpy.array([[60, -10, -10], [59, 0, 0], [70, -11, -10]])
+        xyz = numpy.array(
+            [[60., -10., -10.], [59., 0., 0.], [70., -11., -10.]])
         plons, plats, pdepths = geo_utils.cartesian_to_spherical(xyz)
 
         dists, xx, yy = _project(surface, xyz)
