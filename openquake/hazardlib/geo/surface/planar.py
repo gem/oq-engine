@@ -22,9 +22,10 @@ Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 """
 import logging
 import numpy
+from scipy.spatial.distance import cdist
 from openquake.baselib.node import Node
 from openquake.baselib.performance import numba, compile
-from openquake.hazardlib.geo.geodetic import point_at
+from openquake.hazardlib.geo.geodetic import point_at, spherical_to_cartesian
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
@@ -606,12 +607,14 @@ class PlanarSurface(BaseSurface):
         # calculate distances from all the target points to all four arcs
         dists_to_arcs = geodetic.distance_to_arc(
             arcs_lons, arcs_lats, arcs_azimuths, mesh_lons, mesh_lats
-        )
+        )  # shape (N, 4)
         # ... and distances from all the target points to each of surface's
         # corners' projections (we might not need all of those but it's
         # better to do that calculation once for all).
-        dists_to_corners = geodetic.min_geodetic_distance(
-            (self.corner_lons, self.corner_lats), mesh.xyz)
+
+        corners = spherical_to_cartesian(self.corner_lons, self.corner_lats)
+        # shape (4, 3) and (N, 3) -> (4, N) -> N
+        dists_to_corners = cdist(corners, mesh.xyz).min(axis=0)  # shape N
 
         # extract from ``dists_to_arcs`` signs (represent relative positions
         # of an arc and a point: +1 means on the left hand side, 0 means
