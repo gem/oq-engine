@@ -597,21 +597,19 @@ class PlanarSurface(BaseSurface):
         # to corner.
         #
         # indices 0, 2 and 1 represent corners TL, BL and TR respectively.
-        arcs_lons = self.corner_lons.take([0, 2, 0, 1])
-        arcs_lats = self.corner_lats.take([0, 2, 0, 1])
-        downdip_azimuth = (self.strike + 90) % 360
-        arcs_azimuths = [self.strike, self.strike,
-                         downdip_azimuth, downdip_azimuth]
-        mesh_lons = mesh.lons.reshape((-1, 1))
-        mesh_lats = mesh.lats.reshape((-1, 1))
-        # calculate distances from all the target points to all four arcs
-        dists_to_arcs = geodetic.distance_to_arc(
-            arcs_lons, arcs_lats, arcs_azimuths, mesh_lons, mesh_lats
-        )  # shape (N, 4)
-        # ... and distances from all the target points to each of surface's
+        downdip = (self.strike + 90) % 360
+        arcs = zip(self.corner_lons.take([0, 2, 0, 1]),
+                   self.corner_lats.take([0, 2, 0, 1]),
+                   [self.strike, self.strike, downdip, downdip])
+        dists_to_arcs = numpy.zeros((len(mesh), 4))
+        for a, (lon, lat, azi) in enumerate(arcs):
+            # calculate distances from all the target points to all four arcs
+            dists_to_arcs[:, a] = geodetic.distance_to_arc(
+                lon, lat, azi, mesh.lons, mesh.lats)
+
+        # distances from all the target points to each of surface's
         # corners' projections (we might not need all of those but it's
         # better to do that calculation once for all).
-
         corners = spherical_to_cartesian(self.corner_lons, self.corner_lats)
         # shape (4, 3) and (N, 3) -> (4, N) -> N
         dists_to_corners = cdist(corners, mesh.xyz).min(axis=0)  # shape N
