@@ -650,7 +650,8 @@ class ContextMaker(object):
                     ).view(numpy.recarray)  # shape (U, 3)
                     dists, xx, yy = project(planar, sites.xyz)  # (3, U, N)
                     if fewsites:
-                        coords = project_back(planar, xx, yy)  # (3, U, N)
+                        # get the closest points on the surface
+                        closest = project_back(planar, xx, yy)  # (3, U, N)
                 else:  # regular
                     dists = [get_distances(rup, sites, 'rrup', self.dcache)
                              for rup in rups]
@@ -662,14 +663,13 @@ class ContextMaker(object):
                     ctx.src_id = src_id
                     ctxs.append(ctx)
                     if fewsites:
-                        if cps:
-                            ctx.clon = coords[0, u, mask]
-                            ctx.clat = coords[1, u, mask]
+                        if cps:  # reuse already computed coordinates
+                            ctx.clon = closest[0, u, mask]
+                            ctx.clat = closest[1, u, mask]
                         else:  # slow lane
-                            closest = rup.surface.get_closest_points(
-                                sites.complete)
-                            ctx.clon = closest.lons[ctx.sids]
-                            ctx.clat = closest.lats[ctx.sids]
+                            c = rup.surface.get_closest_points(sites.complete)
+                            ctx.clon = c.lons[ctx.sids]
+                            ctx.clat = c.lats[ctx.sids]
         return ctxs
 
     def max_intensity(self, sitecol1, mags, dists):
