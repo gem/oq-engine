@@ -604,7 +604,7 @@ class PlanarSurface(BaseSurface):
         dists_to_arcs = numpy.zeros((len(mesh), 4))  # shape (N, 4)
         for a, (lon, lat, azi) in enumerate(arcs):
             # calculate distances from all the target points to all four arcs
-            dists_to_arcs[:, a] = geodetic.distance_to_arc(
+            dists_to_arcs[:, a] = geodetic.distances_to_arc(
                 lon, lat, azi, mesh.lons, mesh.lats)
 
         # distances from all the target points to each of surface's
