@@ -40,7 +40,7 @@ def get_code2cls():
     return dic
 
 
-def _build(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
+def _update(corners, usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     # from the rupture center we can now compute the coordinates of the
     # four coorners by moving along the diagonals of the plane. This seems
     # to be better then moving along the perimeter, because in this case
@@ -50,7 +50,6 @@ def _build(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     # and the line passing through the rupture center and parallel to the
     # top and bottom edges. Theta is zero for vertical ruptures (because
     # rup_proj_width is zero)
-    array = numpy.zeros((3, 4))
     half_length, half_width, half_height = dims / 2.
     rdip = math.radians(dip)
 
@@ -94,12 +93,17 @@ def _build(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
         cdep += vshift
     theta = math.degrees(math.atan(half_width / half_length))
     hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
-    azimuths = numpy.array([strike + 180 + theta, strike - theta,
-                            strike + 180 - theta, strike + theta])
-    array[:2, :4] = geodetic.point_at(clon, clat, azimuths, hor_dist)
-    array[2, 0:2] = cdep - half_height
-    array[2, 2:4] = cdep + half_height
-    return array, [clon, clat, cdep]
+    corners[0, :2] = geodetic.point_at(
+        clon, clat, strike + 180 + theta, hor_dist)
+    corners[1, :2] = geodetic.point_at(
+        clon, clat, strike - theta, hor_dist)
+    corners[2, :2] = geodetic.point_at(
+        clon, clat, strike + 180 - theta, hor_dist)
+    corners[3, :2] = geodetic.point_at(
+        clon, clat, strike + theta, hor_dist)
+    corners[0:2, 2] = cdep - half_height
+    corners[2:4, 2] = cdep + half_height
+    return [clon, clat, cdep]
 
 
 def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo=False):
@@ -125,11 +129,9 @@ def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo=False):
         for n in range(N):
             rec = surfin[m, n]
             for d, dep in enumerate(deps):
-                corn34, shypo = _build(
-                    rec.usd, rec.lsd, rec.mag, rec.dims,
+                shifted_hypo[m, n, d] = _update(
+                    corners[:, m, n, d], rec.usd, rec.lsd, rec.mag, rec.dims,
                     rec.strike, rec.dip, lon, lat, dep)
-                corners[:, m, n, d] = corn34.T
-                shifted_hypo[m, n, d] = shypo
 
     # building planar_array is slow
     planar_array = build_planar_array(corners, shifted_hypo)
