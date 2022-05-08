@@ -24,25 +24,10 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import (
-    ParametricSeismicSource, build_planar_surfaces)
+    ParametricSeismicSource, build_planar_surfaces, surfin_dt)
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
-
-surfin_dt = numpy.dtype([
-    ('usd', float),
-    ('lsd', float),
-    ('rar', float),
-    ('mag', float),
-    ('area', float),
-    ('strike', float),
-    ('dip', float),
-    ('rake', float),
-    ('lon', float),
-    ('lat', float),
-    ('dep', float),
-    ('dims', (float, 3)),
-])
 
 
 def _get_rupture_dimensions(surfin):

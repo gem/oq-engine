@@ -21,26 +21,32 @@ import abc
 import math
 import zlib
 import numpy
-from openquake.baselib import general, performance
+from openquake.baselib import general
+from openquake.baselib.performance import compile, numba
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import (
     PlanarSurface, build_planar_array)
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
+F8 = numba.float64
+surfin_dt = numpy.dtype([
+    ('usd', float),
+    ('lsd', float),
+    ('rar', float),
+    ('mag', float),
+    ('area', float),
+    ('strike', float),
+    ('dip', float),
+    ('rake', float),
+    ('lon', float),
+    ('lat', float),
+    ('dep', float),
+    ('dims', (float, 3)),
+])
 
-def get_code2cls():
-    """
-    :returns: a dictionary source code -> source class
-    """
-    dic = {}
-    for cls in general.gen_subclasses(BaseSeismicSource):
-        if hasattr(cls, 'code'):
-            dic[cls.code] = cls
-    return dic
 
-
-@performance.compile("f8[:](f8[:, :], f8, f8, f8, f8[:], f8, f8, f8, f8, f8)")
+@compile("(f8[:, :], f8, f8, f8, f8[:], f8, f8, f8, f8, f8)")
 def _update(corners, usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     # from the rupture center we can now compute the coordinates of the
     # four coorners by moving along the diagonals of the plane. This seems
@@ -104,22 +110,35 @@ def _update(corners, usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
         clon, clat, strike + theta, hor_dist)
     corners[0:2, 2] = cdep - half_height
     corners[2:4, 2] = cdep + half_height
-    return numpy.array([clon, clat, cdep])
+    corners[4, 0] = clon
+    corners[4, 1] = clat
+    corners[4, 2] = cdep
 
 
-@performance.numba.njit
-def build_corners_hypos(surfin, lon, lat, deps, shift_hypo):
-    (M, N), D = surfin.shape, len(deps)
-    corners = numpy.zeros((4, M, N, D, 3))
-    shifted_hypo = numpy.zeros((M, N, D, 3))
+# numbified below
+def build_corners(usd, lsd, mag, dims, strike, dip, lon, lat, deps):
+    (M, N), D = usd.shape, len(deps)
+    corners = numpy.zeros((5, M, N, D, 3))
     for m in range(M):
         for n in range(N):
-            rec = surfin[m, n]
             for d, dep in enumerate(deps):
-                shifted_hypo[m, n, d] = _update(
-                    corners[:, m, n, d], rec.usd, rec.lsd, rec.mag, rec.dims,
-                    rec.strike, rec.dip, lon, lat, dep)
-    return corners, shifted_hypo
+                _update(corners[:, m, n, d], usd[m, n], lsd[m, n], mag[m, n],
+                        dims[m, n], strike[m, n], dip[m, n], lon, lat, dep)
+    return corners
+
+
+if numba:
+    build_corners = compile(F8[:, :, :, :, :](
+        F8[:, :],     # usd
+        F8[:, :],     # lsd
+        F8[:, :],     # mag
+        F8[:, :, :],  # dims
+        F8[:, :],     # strike
+        F8[:, :],     # dip
+        F8,           # lon
+        F8,           # lat
+        F8[:],        # dep
+    ))(build_corners)
 
 
 def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo):
@@ -135,8 +154,10 @@ def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo):
     :return:
         an array of PlanarSurfaces of shape (M, N, D)
     """
-    corners, hypos = build_corners_hypos(surfin, lon, lat, deps, shift_hypo)
-    planar_array = build_planar_array(corners, hypos)
+    corners = build_corners(
+        surfin.usd, surfin.lsd, surfin.mag, surfin.dims,
+        surfin.strike, surfin.dip, lon, lat, numpy.array(deps))
+    planar_array = build_planar_array(corners[:4], corners[4])
     out = numpy.zeros(surfin.shape + (len(deps),), object)  # shape (M, N, D)
     M, N, D = out.shape
     for m in range(M):
@@ -146,11 +167,22 @@ def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo):
                 surface = PlanarSurface.from_(
                     planar_array[m, n, d], rec.strike, rec.dip)
                 if shift_hypo:
-                    surface.hc = Point(*hypos[m, n, d])
+                    surface.hc = Point(*corners[4, m, n, d])
                 else:
                     surface.hc = Point(lon, lat, deps[d])
                 out[m, n, d] = surface
     return out
+
+
+def get_code2cls():
+    """
+    :returns: a dictionary source code -> source class
+    """
+    dic = {}
+    for cls in general.gen_subclasses(BaseSeismicSource):
+        if hasattr(cls, 'code'):
+            dic[cls.code] = cls
+    return dic
 
 
 class BaseSeismicSource(metaclass=abc.ABCMeta):
