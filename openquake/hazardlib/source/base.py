@@ -58,9 +58,9 @@ def _build(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     # moves from one point to another on the plane defined by strike
     # and dip:
     azimuth_right = strike
-    azimuth_down = (azimuth_right + 90) % 360
-    azimuth_left = (azimuth_down + 90) % 360
-    azimuth_up = (azimuth_left + 90) % 360
+    azimuth_down = azimuth_right + 90
+    azimuth_left = azimuth_down + 90
+    azimuth_up = azimuth_left + 90
 
     # half height of the vertical component of rupture width
     # is the vertical distance between the rupture geometrical
@@ -94,10 +94,8 @@ def _build(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
         cdep += vshift
     theta = math.degrees(math.atan(half_width / half_length))
     hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
-    azimuths = numpy.array([(strike + 180 + theta) % 360,
-                            (strike - theta) % 360,
-                            (strike + 180 - theta) % 360,
-                            (strike + theta) % 360])
+    azimuths = numpy.array([strike + 180 + theta, strike - theta,
+                            strike + 180 - theta, strike + theta])
     array[:2, :4] = geodetic.point_at(clon, clat, azimuths, hor_dist)
     array[2, 0:2] = cdep - half_height
     array[2, 2:4] = cdep + half_height
