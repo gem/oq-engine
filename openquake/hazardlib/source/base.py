@@ -115,7 +115,7 @@ def _update(corners, usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     corners[4, 2] = cdep
 
 
-# numbified below
+# numbified below, ultrafast
 def build_corners(usd, lsd, mag, dims, strike, dip, lon, lat, deps):
     (M, N), D = usd.shape, len(deps)
     corners = numpy.zeros((5, M, N, D, 3))
@@ -141,7 +141,7 @@ if numba:
     ))(build_corners)
 
 
-def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo):
+def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo=False):
     """
     :param surfin:
         Surface input parameters as an array of shape (M, N)
@@ -335,7 +335,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 _, np_prob, hc_prob, mag, np, lon, lat, hc_depth, src = args
                 hc = Point(lon, lat, hc_depth)
                 [[[surface]]] = build_planar_surfaces(
-                    src.get_surfin([mag], [np]), [hc])
+                    src.get_surfin([mag], [np]), lon, lat, [hc.depth])
                 rup = ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type, hc,
                     surface, rate, tom)

@@ -622,8 +622,7 @@ class ContextMaker(object):
         """
         ctxs = []
         if hasattr(src, 'source_id'):  # is a real source
-            cps = (getattr(src, 'location', None) and src.count_nphc() > 1
-                   and step == 1)
+            cps = getattr(src, 'location', None) and step == 1
             with self.ir_mon:
                 if cps:  # collapsible point source
                     rups_sites = list(self._cps_rups_sites(src, sitecol, step))
