@@ -104,18 +104,20 @@ def _build(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     return array, [clon, clat, cdep]
 
 
-def build_planar_surfaces(surfin, hypos, shift_hypo=False):
+def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo=False):
     """
     :param surfin:
         Surface input parameters as an array of shape (M, N)
-    :param hypos:
-        A list of hypocenters with different depths
+    :param lon, lat
+        Longitude and latitude of the hypocenters (scalars)
+    :parameter deps:
+        Depths of the hypocenters (vector)
     :param shift_hypo:
         If true, change .hc to the shifted hypocenter
     :return:
         an array of PlanarSurfaces of shape (M, N, D)
     """
-    out = numpy.zeros(surfin.shape + (len(hypos),), object)  # shape (M, N, D)
+    out = numpy.zeros(surfin.shape + (len(deps),), object)  # shape (M, N, D)
     M, N, D = out.shape
 
     # populating the arrays is fast enough
@@ -124,10 +126,10 @@ def build_planar_surfaces(surfin, hypos, shift_hypo=False):
     for m in range(M):
         for n in range(N):
             rec = surfin[m, n]
-            for d, hypo in enumerate(hypos):
+            for d, dep in enumerate(deps):
                 corn34, shypo = _build(
                     rec.usd, rec.lsd, rec.mag, rec.dims,
-                    rec.strike, rec.dip, hypo.x, hypo.y, hypo.z)
+                    rec.strike, rec.dip, lon, lat, dep)
                 corners[:, m, n, d] = corn34.T
                 shifted_hypo[m, n, d] = shypo
 
@@ -142,7 +144,7 @@ def build_planar_surfaces(surfin, hypos, shift_hypo=False):
                 if shift_hypo:
                     surface.hc = Point(*shifted_hypo[m, n, d])
                 else:
-                    surface.hc = hypos[d]
+                    surface.hc = Point(lon, lat, deps[d])
                 out[m, n, d] = surface
     return out
 

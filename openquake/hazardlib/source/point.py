@@ -131,17 +131,18 @@ def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
     else:
         np_probs = [1.]
     if not hypos:
-        hc_probs, depths = zip(*src.hypocenter_distribution.data)
-        hypos = [Point(src.location.x, src.location.y, dep) for dep in depths]
+        hc_probs, cdeps = zip(*src.hypocenter_distribution.data)
+        clon, clat = src.location.x, src.location.y
     else:
-        hc_probs = [1.]
+        hc_probs, hypo = [1.], hypos[0]
+        clon, clat, cdeps = hypo.x, hypo.y, [hypo.z]
     if step == 1:  # regular case, return full ruptures
         surfin = src.get_surfin(mags, nplanes)
-        surfaces = build_planar_surfaces(surfin, hypos, shift_hypo)
+        surfaces = build_planar_surfaces(surfin, clon, clat, cdeps, shift_hypo)
         for m, mag in enumerate(mags):
             for n, np in enumerate(nplanes):
-                for d, hypo in enumerate(hypos):
-                    rate = rates[m] * np_probs[n] * hc_probs[d]
+                for d, hc_prob in enumerate(hc_probs):
+                    rate = rates[m] * np_probs[n] * hc_prob
                     surface = surfaces[m, n, d]
                     rup = ParametricProbabilisticRupture(
                         mag, np.rake, src.tectonic_region_type,
@@ -150,12 +151,13 @@ def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
                     rup.m = m
                     yield rup
     else:  # in preclassical return point ruptures (fast)
+        hc = Point(clon, clat, cdeps[0])
         items = list(enumerate((zip(rates, mags))))[::-step]
         for m, (mrate, mag) in items:
             np = nplanes[0]
             rate = mrate * np_probs[0] * hc_probs[0]
             rup = PointRupture(
-                mags[0], src.tectonic_region_type, hypos[0], np.strike,
+                mags[0], src.tectonic_region_type, hc, np.strike,
                 np.rake, rate, src.temporal_occurrence_model)
             rup.m = m
             yield rup

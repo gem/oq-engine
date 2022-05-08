@@ -103,9 +103,8 @@ class AreaSource(ParametricSeismicSource):
         np_probs, nplanes = zip(*self.nodal_plane_distribution.data)
         hc_probs, depths = zip(*self.hypocenter_distribution.data)
         surfin = PointSource.get_surfin(self, mags, nplanes)
-        points = [geo.Point(epicenter0.x, epicenter0.y, depth)
-                  for depth in depths]
-        surfaces = build_planar_surfaces(surfin, points, shift_hypo)
+        surfaces = build_planar_surfaces(
+            surfin, epicenter0.x, epicenter0.y, depths, shift_hypo)
         for m, mag in enumerate(mags):
             for n, np in enumerate(nplanes):
                 for d, hc_depth in enumerate(depths):
