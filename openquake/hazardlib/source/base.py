@@ -87,19 +87,19 @@ def _update(corners, usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
         # we need to move the rupture center to make the rupture fit
         # inside the seismogenic layer.
         hshift = abs(vshift / math.tan(rdip))
-        clon, clat = geodetic.point_at(
+        clon, clat = geodetic.fast_point_at(
             clon, clat, azimuth_up if vshift < 0 else azimuth_down,
             hshift)
         cdep += vshift
     theta = math.degrees(math.atan(half_width / half_length))
     hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
-    corners[0, :2] = geodetic.point_at(
+    corners[0, :2] = geodetic.fast_point_at(
         clon, clat, strike + 180 + theta, hor_dist)
-    corners[1, :2] = geodetic.point_at(
+    corners[1, :2] = geodetic.fast_point_at(
         clon, clat, strike - theta, hor_dist)
-    corners[2, :2] = geodetic.point_at(
+    corners[2, :2] = geodetic.fast_point_at(
         clon, clat, strike + 180 - theta, hor_dist)
-    corners[3, :2] = geodetic.point_at(
+    corners[3, :2] = geodetic.fast_point_at(
         clon, clat, strike + theta, hor_dist)
     corners[0:2, 2] = cdep - half_height
     corners[2:4, 2] = cdep + half_height

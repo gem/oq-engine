@@ -20,9 +20,11 @@
 Module :mod:`openquake.hazardlib.geo.geodetic` contains functions for geodetic
 transformations, optimized for massive calculations.
 """
+import math
 import numpy
 from scipy.spatial.distance import cdist
 from openquake.baselib.python3compat import round
+from openquake.baselib.performance import compile
 
 #: Earth radius in km.
 EARTH_RADIUS = 6371.0
@@ -391,6 +393,43 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     depths[0] = depth
 
     return lons, lats, depths
+
+
+@compile('f8[:](f8, f8, f8, f8)')
+def fast_point_at(lon, lat, azimuth, distance):
+    """
+    Perform a forward geodetic transformation: find points lying at a given
+    distances from a given point on a great circle arc defined by azimuth.
+
+    :param lon, lat:
+        Coordinates of the reference point, in radians
+    :param azimuth:
+        An azimuth of a great circle arc of interest measured in a reference
+        point in decimal degrees.
+    :param distance:
+        Distance to target point in km.
+    :returns:
+        Array of shape (2, N) with longitudes and latitudes
+
+    Implements the same approach as :func:`npoints_towards`.
+    """
+    out = numpy.zeros(2)
+    lon, lat = math.radians(lon), math.radians(lat)
+    tc = - math.radians(azimuth)
+    sin_dists = math.sin(distance / EARTH_RADIUS)
+    cos_dists = math.cos(distance / EARTH_RADIUS)
+    sin_lat = math.sin(lat)
+    cos_lat = math.cos(lat)
+
+    sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * math.cos(tc)
+
+    dlon = math.atan2(math.sin(tc) * sin_dists * cos_lat,
+                      cos_dists - sin_lat * sin_lats)
+    lons = (lon - dlon + math.pi) % (2 * math.pi) - math.pi
+    out[0] = math.degrees(lons)
+    out[1] = math.degrees(math.asin(sin_lats))
+
+    return out
 
 
 def point_at(lon, lat, azimuth, distance):
