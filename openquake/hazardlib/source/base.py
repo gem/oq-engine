@@ -107,7 +107,8 @@ def _update(corners, usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     return numpy.array([clon, clat, cdep])
 
 
-def build_corners_hypos(surfin, lon, lat, deps, shift_hypo=False):
+@performance.numba.njit
+def build_corners_hypos(surfin, lon, lat, deps, shift_hypo):
     (M, N), D = surfin.shape, len(deps)
     corners = numpy.zeros((4, M, N, D, 3))
     shifted_hypo = numpy.zeros((M, N, D, 3))
