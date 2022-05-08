@@ -21,7 +21,7 @@ import abc
 import math
 import zlib
 import numpy
-from openquake.baselib import general
+from openquake.baselib import general, performance
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import (
@@ -40,6 +40,7 @@ def get_code2cls():
     return dic
 
 
+@performance.compile("f8[:](f8[:, :], f8, f8, f8, f8[:], f8, f8, f8, f8, f8)")
 def _update(corners, usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     # from the rupture center we can now compute the coordinates of the
     # four coorners by moving along the diagonals of the plane. This seems
@@ -103,7 +104,7 @@ def _update(corners, usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
         clon, clat, strike + theta, hor_dist)
     corners[0:2, 2] = cdep - half_height
     corners[2:4, 2] = cdep + half_height
-    return [clon, clat, cdep]
+    return numpy.array([clon, clat, cdep])
 
 
 def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo=False):
