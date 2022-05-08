@@ -107,7 +107,21 @@ def _update(corners, usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     return numpy.array([clon, clat, cdep])
 
 
-def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo=False):
+def build_corners_hypos(surfin, lon, lat, deps, shift_hypo=False):
+    (M, N), D = surfin.shape, len(deps)
+    corners = numpy.zeros((4, M, N, D, 3))
+    shifted_hypo = numpy.zeros((M, N, D, 3))
+    for m in range(M):
+        for n in range(N):
+            rec = surfin[m, n]
+            for d, dep in enumerate(deps):
+                shifted_hypo[m, n, d] = _update(
+                    corners[:, m, n, d], rec.usd, rec.lsd, rec.mag, rec.dims,
+                    rec.strike, rec.dip, lon, lat, dep)
+    return corners, shifted_hypo
+
+
+def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo):
     """
     :param surfin:
         Surface input parameters as an array of shape (M, N)
@@ -120,22 +134,10 @@ def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo=False):
     :return:
         an array of PlanarSurfaces of shape (M, N, D)
     """
+    corners, hypos = build_corners_hypos(surfin, lon, lat, deps, shift_hypo)
+    planar_array = build_planar_array(corners, hypos)
     out = numpy.zeros(surfin.shape + (len(deps),), object)  # shape (M, N, D)
     M, N, D = out.shape
-
-    # populating the arrays is fast enough
-    corners = numpy.zeros((4, M, N, D, 3))
-    shifted_hypo = numpy.zeros((M, N, D, 3))
-    for m in range(M):
-        for n in range(N):
-            rec = surfin[m, n]
-            for d, dep in enumerate(deps):
-                shifted_hypo[m, n, d] = _update(
-                    corners[:, m, n, d], rec.usd, rec.lsd, rec.mag, rec.dims,
-                    rec.strike, rec.dip, lon, lat, dep)
-
-    # building planar_array is slow
-    planar_array = build_planar_array(corners, shifted_hypo)
     for m in range(M):
         for n in range(N):
             rec = surfin[m, n]
@@ -143,7 +145,7 @@ def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo=False):
                 surface = PlanarSurface.from_(
                     planar_array[m, n, d], rec.strike, rec.dip)
                 if shift_hypo:
-                    surface.hc = Point(*shifted_hypo[m, n, d])
+                    surface.hc = Point(*hypos[m, n, d])
                 else:
                     surface.hc = Point(lon, lat, deps[d])
                 out[m, n, d] = surface
