@@ -40,7 +40,7 @@ def distances(lon, lat, lons, lats):
     """
     dists = np.arcsin(np.sqrt(
         np.sin((lat - lats) / 2.0) ** 2 +
-        np.cos(lat) * np.cos(lats) * np.sin((lons - lons) / 2.0) ** 2
+        np.cos(lat) * np.cos(lats) * np.sin((lon - lons) / 2.0) ** 2
     ))
     return dists * 2. * EARTH_RADIUS
 
@@ -54,7 +54,7 @@ def distances_to_arc(lon, lat, azi, lons, lats):
     lon, lat, azi = np.radians([lon, lat, azi])
     lons, lats = np.radians(lons), np.radians(lats)
     coss = np.cos(lats)
-    azi_to_target = np.arctan2(
+    azi_to_target = - np.arctan2(
         np.sin(lon - lons) * coss,
         np.cos(lat) * np.sin(lats) - np.sin(lat) * coss * np.cos(lon - lons))
     distance_to_target = distances(lon, lat, lons, lats)
