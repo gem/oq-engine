@@ -622,10 +622,10 @@ class ContextMaker(object):
         """
         ctxs = []
         if hasattr(src, 'source_id'):  # is a real source
-            cps = getattr(src, 'location', None) and step == 1
+            ps = getattr(src, 'location', None) and step == 1
             with self.ir_mon:
-                if cps:  # collapsible point source
-                    rups_sites = list(self._cps_rups_sites(src, sitecol, step))
+                if ps:  # collapsible point source
+                    rups_sites = list(self._ps_rups_sites(src, sitecol))
                 else:  # just add the ruptures
                     allrups = numpy.array(list(src.iter_ruptures(
                         shift_hypo=self.shift_hypo, step=step)))
@@ -635,7 +635,7 @@ class ContextMaker(object):
                                   for rups in split_array(allrups, u32mags)]
             src_id = src.id
         else:  # in event based we get a list with a single rupture
-            cps = False
+            ps = False
             rups_sites = [(src, sitecol)]
         fewsites = len(sitecol.complete) <= self.max_sites_disagg
         for rups, sites in rups_sites:  # ruptures with the same magnitude
@@ -643,7 +643,7 @@ class ContextMaker(object):
                 continue
             magdist = self.maximum_distance(rups[0].mag)
             with self.dst_mon:
-                if cps:  # fast lane
+                if ps:  # fast lane
                     planar = numpy.array(
                         [rup.surface.array for rup in rups]
                     ).view(numpy.recarray)  # shape (U, 3)
@@ -662,7 +662,7 @@ class ContextMaker(object):
                     ctx.src_id = src_id
                     ctxs.append(ctx)
                     if fewsites:
-                        if cps:  # reuse already computed coordinates
+                        if ps:  # reuse already computed coordinates
                             ctx.clon = closest[0, u, mask]
                             ctx.clat = closest[1, u, mask]
                         else:  # slow lane
@@ -702,14 +702,14 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
-    def _cps_rups_sites(self, src, sites, step):
+    def _ps_rups_sites(self, src, sites):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
         allrups = numpy.array(
-            list(src.iter_ruptures(shift_hypo=self.shift_hypo, step=step)))
+            list(src.iter_ruptures(shift_hypo=self.shift_hypo)))
         m_idx = numpy.array([rup.m for rup in allrups])
-        for rup in src.iruptures(step):
-            rups = allrups[m_idx == rup.m]  # ruptures with magnitude index `m`
+        for rup in src.iruptures():
+            rups = allrups[m_idx == rup.m]
             psdist = self.pointsource_distance + src.get_radius(rup)
             close = sites.filter(cdist <= psdist)
             far = sites.filter(cdist > psdist)
