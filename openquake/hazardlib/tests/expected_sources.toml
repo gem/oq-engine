@@ -79,7 +79,7 @@ lowerSeismoDepth = 10.0
 [areaSource.incrementalMFD]
 _binWidth = 0.1
 _minMag = 6.55
-occurRates = [ 0.0010614989, 0.00088291627, 0.00073437777, 0.0006108288, 0.0005080653,]
+occurRates = [ 0.0010614989, 0.00088291627, 0.00073437777, 0.0006108287999999999, 0.0005080653,]
 
 [areaSource.nodalPlaneDist]
 [[areaSource.nodalPlaneDist.nodalPlane]]
@@ -120,7 +120,7 @@ lowerSeismoDepth = 20.0
 [simpleFaultSource.incrementalMFD]
 _binWidth = 0.1
 _minMag = 5.0
-occurRates = [ 0.0010614989, 0.00088291627, 0.00073437777, 0.0006108288, 0.0005080653,]
+occurRates = [ 0.0010614989, 0.00088291627, 0.00073437777, 0.0006108287999999999, 0.0005080653,]
 
 [simpleFaultSource.hypoList]
 [[simpleFaultSource.hypoList.hypo]]
@@ -164,7 +164,7 @@ rake = 60.0
 [characteristicFaultSource.incrementalMFD]
 _binWidth = 0.1
 _minMag = 5.0
-occurRates = [ 0.0010614989, 0.00088291627, 0.00073437777, 0.0006108288, 0.0005080653,]
+occurRates = [ 0.0010614989, 0.00088291627, 0.00073437777, 0.0006108287999999999, 0.0005080653,]
 
 [characteristicFaultSource.surface.complexFaultGeometry]
 [[characteristicFaultSource.surface.complexFaultGeometry.intermediateEdge]]
@@ -256,8 +256,8 @@ _name = "characteristic source, complex fault arbitrary mfd"
 rake = 60.0
 
 [characteristicFaultSource.arbitraryMFD]
-magnitudes = [ 8.6, 8.8, 9.0,]
-occurRates = [ 0.0006, 0.0008, 0.0004,]
+magnitudes = [ 8.6, 8.800000000000001, 9.0,]
+occurRates = [ 0.0005999999999999999, 0.0008, 0.0004,]
 
 [characteristicFaultSource.surface.complexFaultGeometry]
 [[characteristicFaultSource.surface.complexFaultGeometry.intermediateEdge]]
@@ -316,7 +316,7 @@ magScaleRel = "PeerMSR"
 ruptAspectRatio = 1.0
 
 [multiPointSource.multiPointGeometry]
-"gml:posList" = [ 0.10000000149011612, 1.100000023841858,]
+"gml:posList" = [ 0.1000000014901161, 1.100000023841858,]
 upperSeismoDepth = 5.0
 lowerSeismoDepth = 10.0
 
