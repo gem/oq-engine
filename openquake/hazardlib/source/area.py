@@ -17,7 +17,7 @@
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import math
-from copy import deepcopy
+from copy import copy
 from openquake.hazardlib import geo, mfd
 from openquake.hazardlib.source.point import PointSource, build_planar_surfaces
 from openquake.hazardlib.source.base import ParametricSeismicSource
@@ -113,22 +113,25 @@ class AreaSource(ParametricSeismicSource):
                                        * scaling_rate_factor)
                     if kwargs.get('shift_hypo'):
                         hc_depth = surface.hc.depth
-                    ref_ruptures.append((mag, np.rake, hc_depth,
-                                         surface, occurrence_rate))
+                    hypo = copy(epicenter0)
+                    hypo.depth = hc_depth
+                    rup = ParametricProbabilisticRupture(
+                        mag, np.rake, self.tectonic_region_type, hypo,
+                        surface, occurrence_rate,
+                        self.temporal_occurrence_model)
+                    ref_ruptures.append(rup)
 
         # for each of the epicenter positions generate as many ruptures
         # as we generated "reference" ones: new ruptures differ only
         # in hypocenter and surface location
         for epicenter in polygon_mesh:
-            for mag, rake, hc_depth, surface, occ_rate in ref_ruptures:
+            for rup in ref_ruptures:
+                rupture = copy(rup)
                 # translate the surface from first epicenter position
                 # to the target one preserving it's geometry
-                surface = surface.translate(epicenter0, epicenter)
-                hypocenter = deepcopy(epicenter)
-                hypocenter.depth = hc_depth
-                rupture = ParametricProbabilisticRupture(
-                    mag, rake, self.tectonic_region_type, hypocenter,
-                    surface, occ_rate, self.temporal_occurrence_model)
+                rupture.surface = surface.translate(epicenter0, epicenter)
+                rupture.hypocenter = copy(epicenter)
+                rupture.hypocenter.depth = rup.hypocenter.depth
                 yield rupture
 
     def count_ruptures(self):
