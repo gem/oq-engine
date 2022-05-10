@@ -594,11 +594,15 @@ def cartesian_to_spherical(arrayN3):
 
 
 @compile("f8(f8[:], f8[:, :])")
-def min_distance(point, points):
-    x0, y0, z0 = point
-    d2 = numpy.zeros(len(points))
-    for i, (x, y, z) in enumerate(points):
-        d2[i] = (x-x0)**2 + (y-y0)**2 + (z-z0)**2
+def min_distance(xyz, xyzs):
+    """
+    :param xyz: an array of shape (3,)
+    :param xyzs: an array of shape (N, 3)
+    :returns: the minimum euclidean distance between the point and the points
+    """
+    x, y, z = xyz
+    xs, ys, zs = xyzs.T
+    d2 = (xs-x)**2 + (ys-y)**2 + (zs-z)**2
     return math.sqrt(d2.min())
 
 
