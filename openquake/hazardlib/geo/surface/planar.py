@@ -356,6 +356,29 @@ def get_rx(planar, points):
     return out
 
 
+# numbified below
+def get_ry0(planar, points):
+    """
+    :param planar: a planar recarray of shape (U, 3)
+    :param points: an array of of shape (N, 3)
+    :returns: (U, N) values
+    """
+    lons, lats, deps = geo_utils.cartesian_to_spherical(points)
+    out = numpy.zeros((len(planar), len(points)))
+    for u, pla in enumerate(planar):
+        llon, llat, _ = pla.corners[:, 0]  # top left
+        rlon, rlat, _ = pla.corners[:, 1]  # top right
+        strike = (pla.sdr[0] + 90.) % 360.
+
+        dst1 = geodetic.distances_to_arc(llon, llat, strike, lons, lats)
+        dst2 = geodetic.distances_to_arc(rlon, rlat, strike, lons, lats)
+
+        # Get the shortest distance from the two lines
+        idx = numpy.sign(dst1) == numpy.sign(dst2)
+        out[u][idx] = numpy.fmin(numpy.abs(dst1[idx]), numpy.abs(dst2[idx]))
+    return out
+
+
 if numba:
     planar_nt = numba.from_dtype(planar_array_dt)
     project = compile(numba.float64[:, :, :](
@@ -375,6 +398,10 @@ if numba:
         planar_nt[:, :],
         numba.float64[:, :],
     ))(get_rx)
+    get_ry0 = compile(numba.float64[:, :](
+        planar_nt[:, :],
+        numba.float64[:, :],
+    ))(get_ry0)
 
 
 class PlanarSurface(BaseSurface):
@@ -727,22 +754,7 @@ class PlanarSurface(BaseSurface):
         This is version specific to the planar surface doesn't make use of the
         mesh
         """
-        dst1 = geodetic.distance_to_arc(self.top_left.longitude,
-                                        self.top_left.latitude,
-                                        (self.strike + 90.) % 360,
-                                        mesh.lons, mesh.lats)
-
-        dst2 = geodetic.distance_to_arc(self.top_right.longitude,
-                                        self.top_right.latitude,
-                                        (self.strike + 90.) % 360,
-                                        mesh.lons, mesh.lats)
-        # Find the points on the rupture
-
-        # Get the shortest distance from the two lines
-        idx = numpy.sign(dst1) == numpy.sign(dst2)
-        dst = numpy.zeros_like(dst1)
-        dst[idx] = numpy.fmin(numpy.abs(dst1[idx]), numpy.abs(dst2[idx]))
-        return dst
+        return get_ry0(self.array.reshape(1, 3), mesh.xyz)[0]
 
     def get_width(self):
         """
