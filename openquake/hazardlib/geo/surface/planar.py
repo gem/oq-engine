@@ -342,6 +342,7 @@ if numba:
         numba.float64[:, :],
         numba.float64[:, :]
     ))(project_back)
+    # need to numbify spherical_to_cartesian
     #get_rjb = compile(numba.float64[:, :](
     #    planar_nt[:, :],
     #    numba.float64[:, :],
@@ -424,7 +425,7 @@ class PlanarSurface(BaseSurface):
                 top_left.depth, top_right.depth,
                 bottom_left.depth, bottom_right.depth]]).T  # shape (4, 3)
         # now set the attributes normal, d, uv1, uv2, tl
-        self._init_plane(check)
+        self._init_plane(check, [float(strike), float(dip), 0.])
 
     @classmethod
     def from_corner_points(cls, top_left, top_right,
@@ -549,12 +550,12 @@ class PlanarSurface(BaseSurface):
         self = cls(strike, dip, tl, tr, br, bl, check=False)
         return self
 
-    def _init_plane(self, check=False):
+    def _init_plane(self, check=False, sdr=None):
         """
         Prepare everything needed for projecting arbitrary points on a plane
         containing the surface.
         """
-        self.array = build_planar_array(self.corners, check=check)
+        self.array = build_planar_array(self.corners, sdr, check=check)
 
     # this is not used anymore by the engine
     def translate(self, p1, p2):
