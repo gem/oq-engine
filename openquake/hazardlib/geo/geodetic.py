@@ -46,13 +46,13 @@ def distances(lon, lat, lons, lats):
     return dists * 2. * EARTH_RADIUS
 
 
-#@compile("f8[:](f8, f8, f8, f8[:], f8[:])")
+@compile("f8[:](f8, f8, f8, f8[:], f8[:])")
 def distances_to_arc(lon, lat, azi, lons, lats):
     """
     Calculate the distances between one arc and a collection of
     points by using numba. Assume the parameters are in degrees.
     """
-    lon, lat, azi = np.radians([lon, lat, azi])
+    lon, lat, azi = np.radians(np.array([lon, lat, azi]))
     lons, lats = np.radians(lons), np.radians(lats)
     coss = np.cos(lats)
     azi_to_target = - np.arctan2(
