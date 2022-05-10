@@ -110,7 +110,7 @@ def _fix_toml(v):
     # using toml.loads(s, _dict=dict) would be the right way, but it does
     # not work :-(
     if isinstance(v, numpy.ndarray):
-        return list(v.round(6))
+        return list(v)
     elif hasattr(v, 'items'):
         return {k1: _fix_toml(v1) for k1, v1 in v.items()}
     return v
