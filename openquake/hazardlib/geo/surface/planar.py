@@ -26,7 +26,7 @@ from scipy.spatial.distance import cdist
 from openquake.baselib.node import Node
 from openquake.baselib.performance import numba, compile
 from openquake.hazardlib.geo.geodetic import (
-    point_at, spherical_to_cartesian)
+    point_at, spherical_to_cartesian, fast_spherical_to_cartesian)
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
@@ -290,8 +290,7 @@ def get_rjb(planar, points):
         # distances from all the target points to each of surface's
         # corners' projections (we might not need all of those but it's
         # better to do that calculation once for all).
-        corners = spherical_to_cartesian(
-            corners[0], corners[1], numpy.zeros_like(corners[0]))
+        corners = fast_spherical_to_cartesian(corners[0], corners[1])
         # shape (4, 3) and (N, 3) -> (4, N) -> N
         dists_to_corners = cdist(corners, points).min(axis=0)  # shape N
 

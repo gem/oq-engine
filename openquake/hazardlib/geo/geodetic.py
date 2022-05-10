@@ -213,8 +213,7 @@ def _reshape(array, orig_shape):
     return array[0]  # scalar array
 
 
-@compile("f8[:, :](f8[:], f8[:], f8[:])")
-def spherical_to_cartesian(lons, lats, depths):
+def spherical_to_cartesian(lons, lats, depths=None):
     """
     Return the position vectors (in Cartesian coordinates) of list of spherical
     coordinates.
@@ -236,12 +235,45 @@ def spherical_to_cartesian(lons, lats, depths):
     """
     phi = np.radians(lons)
     theta = np.radians(lats)
+    if depths is None:
+        depths = np.zeros_like(phi)
     rr = EARTH_RADIUS - np.array(depths)
     cos_theta_r = rr * np.cos(theta)
     arr = np.zeros(phi.shape + (3,))
     arr[..., 0] = cos_theta_r * np.cos(phi)
     arr[..., 1] = cos_theta_r * np.sin(phi)
     arr[..., 2] = rr * np.sin(theta)
+    return arr
+
+
+@compile("f8[:, :](f8[:], f8[:])")
+def fast_spherical_to_cartesian(lons, lats):
+    """
+    Return the position vectors (in Cartesian coordinates) of list of spherical
+    coordinates.
+
+    For equations see: http://mathworld.wolfram.com/SphericalCoordinates.html.
+
+    Parameters are components of spherical coordinates in a form of scalars,
+    lists or numpy arrays. ``depths`` can be ``None`` in which case it's
+    considered zero for all points.
+
+    :returns:
+        ``np.array`` of 3d vectors representing points' coordinates in
+        Cartesian space in km. The array has shape `lons.shape + (3,)`.
+        In particular, if ``lons`` and ``lats`` are scalars the result is a
+        3D vector and if they are vectors the result is a matrix of shape
+        (N, 3).
+
+    See also :func:`cartesian_to_spherical`.
+    """
+    phi = np.radians(lons)
+    theta = np.radians(lats)
+    cos_theta_r = EARTH_RADIUS * np.cos(theta)
+    arr = np.zeros((len(phi), 3))
+    arr[:, 0] = cos_theta_r * np.cos(phi)
+    arr[:, 1] = cos_theta_r * np.sin(phi)
+    arr[:, 2] = EARTH_RADIUS * np.sin(theta)
     return arr
 
 
