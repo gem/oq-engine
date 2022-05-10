@@ -630,7 +630,7 @@ class ContextMaker(object):
         if hasattr(src, 'source_id'):  # is a real source
             ps = getattr(src, 'location', None) and step == 1
             with self.ir_mon:
-                if ps:  # collapsible point source
+                if ps:  # point source
                     rups_sites = list(self._ps_rups_sites(src, sitecol))
                 else:  # just add the ruptures
                     allrups = numpy.array(list(src.iter_ruptures(
@@ -709,7 +709,7 @@ class ContextMaker(object):
         return gmv
 
     def _ps_rups_sites(self, src, sites):
-        if src.count_nphc() == 1:
+        if src.count_nphc() == 1:  # one rupture per magnitude
             for rup in src.iter_ruptures():
                 yield [rup], sites
             return
