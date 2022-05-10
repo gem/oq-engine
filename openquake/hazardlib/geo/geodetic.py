@@ -20,6 +20,7 @@
 Module :mod:`openquake.hazardlib.geo.geodetic` contains functions for geodetic
 transformations, optimized for massive calculations.
 """
+import math
 import numpy as np
 from scipy.spatial.distance import cdist
 from openquake.baselib.python3compat import round
@@ -305,7 +306,7 @@ def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
     :param length:
         Required distance between two subsequent resulting points, in km.
     :returns:
-        Tuple of three 1d np arrays: longitudes, latitudes and depths
+        Tuple of three 1d numpy arrays: longitudes, latitudes and depths
         of resulting points respectively.
 
     Rounds the distance between two reference points with respect
@@ -349,7 +350,7 @@ def npoints_between(lon1, lat1, depth1, lon2, lat2, depth2, npoints):
         Integer number of points to return. First and last points count,
         so if there have to be two intervals, ``npoints`` should be 3.
     :returns:
-        Tuple of three 1d np arrays: longitudes, latitudes and depths
+        Tuple of three 1d numpy arrays: longitudes, latitudes and depths
         of resulting points respectively.
 
     Finds distance between two reference points and calls
@@ -423,6 +424,43 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     depths[0] = depth
 
     return lons, lats, depths
+
+
+@compile('f8[:](f8, f8, f8, f8)')
+def fast_point_at(lon, lat, azimuth, distance):
+    """
+    Perform a forward geodetic transformation: find points lying at a given
+    distances from a given point on a great circle arc defined by azimuth.
+
+    :param lon, lat:
+        Coordinates of the reference point, in radians
+    :param azimuth:
+        An azimuth of a great circle arc of interest measured in a reference
+        point in decimal degrees.
+    :param distance:
+        Distance to target point in km.
+    :returns:
+        Array of shape (2, N) with longitudes and latitudes
+
+    Implements the same approach as :func:`npoints_towards`.
+    """
+    out = np.zeros(2)
+    lon, lat = math.radians(lon), math.radians(lat)
+    tc = - math.radians(azimuth)
+    sin_dists = math.sin(distance / EARTH_RADIUS)
+    cos_dists = math.cos(distance / EARTH_RADIUS)
+    sin_lat = math.sin(lat)
+    cos_lat = math.cos(lat)
+
+    sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * math.cos(tc)
+
+    dlon = math.atan2(math.sin(tc) * sin_dists * cos_lat,
+                      cos_dists - sin_lat * sin_lats)
+    lons = (lon - dlon + math.pi) % (2 * math.pi) - math.pi
+    out[0] = math.degrees(lons)
+    out[1] = math.degrees(math.asin(sin_lats))
+
+    return out
 
 
 def point_at(lon, lat, azimuth, distance):
@@ -530,9 +568,9 @@ def distance_to_arc(alon, alat, aazimuth, plons, plats):
         direction), measured in a reference point, in decimal degrees.
     :param float plons, plats:
         Longitudes and latitudes of points to measure distance. Either scalar
-        values or np arrays of decimal degrees.
+        values or numpy arrays of decimal degrees.
     :returns:
-        Distance in km, a scalar value or np array depending on ``plons``
+        Distance in km, a scalar value or numpy array depending on ``plons``
         and ``plats``. A distance is negative if the target point lies on the
         right hand side of the arc.
 
@@ -559,7 +597,7 @@ def distance_to_arc(alon, alat, aazimuth, plons, plats):
 def _prepare_coords(lons1, lats1, lons2, lats2):
     """
     Convert two pairs of spherical coordinates in decimal degrees
-    to np arrays of radians. Makes sure that respective coordinates
+    to numpy arrays of radians. Makes sure that respective coordinates
     in pairs have the same shape.
     """
     lons1 = np.radians(lons1)
