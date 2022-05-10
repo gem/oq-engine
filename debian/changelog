@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Optimized rupture instantiation for point sources
+  * Optimized distance calculations for point point sources
+
   [Tom Son, Claudio Schill]
   * Simple performance improvement of Kuehn et al. 2020 model
 
