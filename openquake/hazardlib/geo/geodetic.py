@@ -213,7 +213,7 @@ def _reshape(array, orig_shape):
     return array[0]  # scalar array
 
 
-def spherical_to_cartesian(lons, lats, depths=None):
+def spherical_to_cartesian(lons, lats, depths):
     """
     Return the position vectors (in Cartesian coordinates) of list of spherical
     coordinates.
@@ -235,19 +235,9 @@ def spherical_to_cartesian(lons, lats, depths=None):
     """
     phi = np.radians(lons)
     theta = np.radians(lats)
-    if depths is None:
-        rr = EARTH_RADIUS
-    else:
-        rr = EARTH_RADIUS - np.array(depths)
+    rr = EARTH_RADIUS - np.array(depths)
     cos_theta_r = rr * np.cos(theta)
-    try:
-        shape = lons.shape
-    except AttributeError:  # a list/tuple was passed
-        try:
-            shape = (len(lons),)
-        except TypeError:  # a scalar was passed
-            shape = ()
-    arr = np.zeros(shape + (3,))
+    arr = np.zeros(phi.shape + (3,))
     arr[..., 0] = cos_theta_r * np.cos(phi)
     arr[..., 1] = cos_theta_r * np.sin(phi)
     arr[..., 2] = rr * np.sin(theta)
