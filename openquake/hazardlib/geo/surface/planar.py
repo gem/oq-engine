@@ -237,6 +237,11 @@ def project_back(planar, xx, yy):
 
 # numbified below
 def get_rjb(planar, points):
+    """
+    :param planar: a planar recarray of shape (U, 3)
+    :param points: an array of of shape (N, 3)
+    :returns: (U, N) values
+    """
     lons, lats, deps = geo_utils.cartesian_to_spherical(points)
     out = numpy.zeros((len(planar), len(points)))
     for u, pla in enumerate(planar):
@@ -337,14 +342,17 @@ def get_rjb(planar, points):
 
 # numbified below
 def get_rx(planar, points):
+    """
+    :param planar: a planar recarray of shape (U, 3)
+    :param points: an array of of shape (N, 3)
+    :returns: (U, N) values
+    """
     lons, lats, deps = geo_utils.cartesian_to_spherical(points)
     out = numpy.zeros((len(planar), len(points)))
     for u, pla in enumerate(planar):
-        clons, clats = numpy.zeros(4), numpy.zeros(4)
-        clons[:], clats[:] = pla.corners[0], pla.corners[1]
+        clon, clat, _ = pla.corners[:, 0]
         strike = pla.sdr[0]
-        out[u] = geodetic.distances_to_arc(
-            clons[0], clats[0], strike, lons, lats)
+        out[u] = geodetic.distances_to_arc(clon, clat, strike, lons, lats)
     return out
 
 
