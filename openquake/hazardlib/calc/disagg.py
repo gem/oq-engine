@@ -114,11 +114,11 @@ DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
 
 
 # this is inside an inner loop
-def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
+def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
                  epsstar=False):
     """
-    :param ctxs: a list of U RuptureContexts
-    :param tom: a temporal occurrence model
+    :param ctxs: a recarray of size U for a single site and magnitude bin
+    :param cmaker: a ContextMaker instance
     :param g_by_z: an array of gsim indices
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
@@ -132,12 +132,9 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
     # M - Number of IMTs
     # P - Number of PoEs in poes_disagg
     # Z - Number of realizations to consider
-    U, E, M = len(ctxs), len(eps3[2]), len(iml2dict)
+    U, E, M = len(ctx), len(eps3[2]), len(iml2dict)
     iml2 = next(iter(iml2dict.values()))
     P, Z = iml2.shape
-    dists = numpy.zeros(U)
-    lons = numpy.zeros(U)
-    lats = numpy.zeros(U)
 
     # switch to logarithmic intensities
     iml3 = numpy.zeros((M, P, Z))
@@ -147,24 +144,15 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
 
     truncnorm, epsilons, eps_bands = eps3
     cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
-    G = ctxs[0].mean_std.shape[1]
     # Array with mean and total std values. Shape of this is:
-    # U - Number of contexts (i.e. ruptures)
+    # U - Number of contexts (i.e. ruptures if there is a single site)
     # M - Number of IMTs
     # G - Number of gsims
-    mean_std = numpy.zeros((2, U, M, G), numpy.float32)
-    for u, ctx in enumerate(ctxs):
-        # Search the index associated to the site ID; for instance
-        # searchsorted([2, 4, 6], 4) => 1
-        idx = numpy.searchsorted(ctx.sids, sid)
-        dists[u] = ctx.rrup[idx]  # distance to the site
-        lons[u] = ctx.clon[idx]  # closest point of the rupture lon
-        lats[u] = ctx.clat[idx]  # closest point of the rupture lat
-        for g in range(G):
-            mean_std[:, u, :, g] = ctx.mean_std[:, g, :, idx]  # (2, M)
+    mean_std = cmaker.get_mean_stds([ctx])[:2]  # (2, G, M, U)
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
     # Multi-dimensional iteration
+    min_eps = min(epsilons)
     for (m, p, z), iml in numpy.ndenumerate(iml3):
         if iml == -numpy.inf:  # zero hazard
             continue
@@ -174,33 +162,28 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
             g = g_by_z[z]
         except KeyError:
             continue
-        lvls = (iml - mean_std[0, :, m, g]) / mean_std[1, :, m, g]
+        lvls = (iml - mean_std[0, g, m]) / mean_std[1, g, m]
         # Find the index in the epsilons-bins vector where lvls (which are
         # epsilons) should be included.
         idxs = numpy.searchsorted(epsilons, lvls)
         # Now we split the epsilon into parts (one for each epsilon-bin larger
         # than lvls)
         if epsstar:
-            assert numpy.all(lvls > min(epsilons))
+            assert (lvls > min_eps).all()
             poes[:, idxs-1, m, p, z] = truncnorm.sf(lvls)
         else:
             poes[:, :, m, p, z] = _disagg_eps(
                 truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
     z0 = numpy.zeros(0)
-    for u, ctx in enumerate(ctxs):
-        pnes[u] *= get_pnes(ctx.occurrence_rate,
-                            getattr(ctx, 'probs_occur', z0),
-                            poes[u], tom.time_span)
-    bindata = BinData(dists, lons, lats, pnes)
-    DEBUG[idx].append(pnes.mean())
+    time_span = cmaker.tom.time_span
+    for u, rec in enumerate(ctx):
+        pnes[u] *= get_pnes(rec.occurrence_rate,
+                            getattr(rec, 'probs_occur', z0),
+                            poes[u], time_span)
+    bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
     if not bin_edges:
         return bindata
     return _build_disagg_matrix(bindata, bin_edges)
-
-
-def set_mean_std(ctxs, cmaker):
-    for u, ctx in enumerate(ctxs):
-        ctx.mean_std = cmaker.get_mean_stds([ctx])[:2]
 
 
 def _disagg_eps(survival, bins, eps_bands, cum_bands):

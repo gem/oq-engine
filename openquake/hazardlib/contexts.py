@@ -478,13 +478,17 @@ class ContextMaker(object):
         # ctxs.sort(key=operator.attrgetter('mag'))
         return ctxs
 
-    def recarray(self, ctxs):
+    def recarray(self, ctxs, magi=None):
         """
         :params ctxs: a non-empty list of homogeneous contexts
         :returns: a recarray, possibly collapsed
         """
         assert ctxs
         dd = self.defaultdict.copy()
+        if magi is not None:  # magnitude bin used in disaggregation
+            dd['magi'] = numpy.uint8(0)
+            dd['clon'] = numpy.float64(0.)
+            dd['clat'] = numpy.float64(0.)
         if hasattr(ctxs[0], 'weight'):
             dd['weight'] = numpy.float64(0.)
             noweight = False
