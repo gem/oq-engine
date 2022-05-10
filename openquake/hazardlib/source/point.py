@@ -24,25 +24,10 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import (
-    ParametricSeismicSource, build_planar_surfaces)
+    ParametricSeismicSource, build_planar_surfaces, surfin_dt)
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
-
-surfin_dt = numpy.dtype([
-    ('usd', float),
-    ('lsd', float),
-    ('rar', float),
-    ('mag', float),
-    ('area', float),
-    ('strike', float),
-    ('dip', float),
-    ('rake', float),
-    ('lon', float),
-    ('lat', float),
-    ('dep', float),
-    ('dims', (float, 3)),
-])
 
 
 def _get_rupture_dimensions(surfin):
@@ -131,17 +116,18 @@ def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
     else:
         np_probs = [1.]
     if not hypos:
-        hc_probs, depths = zip(*src.hypocenter_distribution.data)
-        hypos = [Point(src.location.x, src.location.y, dep) for dep in depths]
+        hc_probs, cdeps = zip(*src.hypocenter_distribution.data)
+        clon, clat = src.location.x, src.location.y
     else:
-        hc_probs = [1.]
+        hc_probs, hypo = [1.], hypos[0]
+        clon, clat, cdeps = hypo.x, hypo.y, [hypo.z]
     if step == 1:  # regular case, return full ruptures
         surfin = src.get_surfin(mags, nplanes)
-        surfaces = build_planar_surfaces(surfin, hypos, shift_hypo)
+        surfaces = build_planar_surfaces(surfin, clon, clat, cdeps, shift_hypo)
         for m, mag in enumerate(mags):
             for n, np in enumerate(nplanes):
-                for d, hypo in enumerate(hypos):
-                    rate = rates[m] * np_probs[n] * hc_probs[d]
+                for d, hc_prob in enumerate(hc_probs):
+                    rate = rates[m] * np_probs[n] * hc_prob
                     surface = surfaces[m, n, d]
                     rup = ParametricProbabilisticRupture(
                         mag, np.rake, src.tectonic_region_type,
@@ -150,12 +136,13 @@ def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
                     rup.m = m
                     yield rup
     else:  # in preclassical return point ruptures (fast)
+        hc = Point(clon, clat, cdeps[0])
         items = list(enumerate((zip(rates, mags))))[::-step]
         for m, (mrate, mag) in items:
             np = nplanes[0]
             rate = mrate * np_probs[0] * hc_probs[0]
             rup = PointRupture(
-                mags[0], src.tectonic_region_type, hypos[0], np.strike,
+                mags[0], src.tectonic_region_type, hc, np.strike,
                 np.rake, rate, src.temporal_occurrence_model)
             rup.m = m
             yield rup
@@ -287,14 +274,14 @@ class PointSource(ParametricSeismicSource):
             step=kwargs.get('step', 1))
 
     # PointSource
-    def iruptures(self, step=1):
+    def iruptures(self):
         """
         Generate one rupture for each magnitude, called only if nphc > 1
         """
         avg = calc_average([self])  # over nodal planes and hypocenters
         np = Mock(strike=avg['strike'], dip=avg['dip'], rake=avg['rake'])
         hc = Point(avg['lon'], avg['lat'], avg['dep'])
-        yield from _gen_ruptures(self, [np], [hc], step=step)
+        yield from _gen_ruptures(self, [np], [hc])
 
     def count_nphc(self):
         """
@@ -378,12 +365,12 @@ class CollapsedPointSource(PointSource):
             yield from src.iter_ruptures(**kwargs)
 
     # CollapsedPointSource
-    def iruptures(self, step=1):
+    def iruptures(self):
         """
         :yields: the underlying ruptures with mean nodal plane and hypocenter
         """
         np = NodalPlane(self.strike, self.dip, self.rake)
-        yield from _gen_ruptures(self, [np], [self.location], step=step)
+        yield from _gen_ruptures(self, [np], [self.location])
 
     def _get_max_rupture_projection_radius(self, mag=None):
         """

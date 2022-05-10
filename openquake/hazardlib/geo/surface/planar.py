@@ -279,23 +279,23 @@ class PlanarSurface(BaseSurface):
         return [node]
 
     @property
-    def mesh(self):
+    def mesh(self):  # used in event based
         """
         :returns: a mesh with the 4 corner points tl, tr, bl, br
         """
-        return Mesh(*self.corners)
+        return Mesh(*self.array.corners)
 
     @property
     def corner_lons(self):
-        return self.corners[0]
+        return self.array.corners[0]
 
     @property
     def corner_lats(self):
-        return self.corners[1]
+        return self.array.corners[1]
 
     @property
     def corner_depths(self):
-        return self.corners[2]
+        return self.array.corners[2]
 
     def __init__(self, strike, dip,
                  top_left, top_right, bottom_right, bottom_left, check=True):
@@ -407,8 +407,6 @@ class PlanarSurface(BaseSurface):
         self.strike = strike
         self.dip = dip
         self.array = planar_array
-        for par in planar_array.dtype.names:
-            setattr(self, par, planar_array[par])
         return self
 
     @classmethod
@@ -448,8 +446,6 @@ class PlanarSurface(BaseSurface):
         containing the surface.
         """
         self.array = build_planar_array(self.corners, check=check)
-        for par in self.array.dtype.names:
-            setattr(self, par, self.array[par])
 
     # this is not used anymore by the engine
     def translate(self, p1, p2):
@@ -530,12 +526,13 @@ class PlanarSurface(BaseSurface):
         See :meth:`superclass' method
         <openquake.hazardlib.geo.surface.base.BaseSurface.get_closest_points>`.
         """
-        mat = mesh.xyz - self.xyz[:, 0]
-        xx = numpy.clip(mat @ self.uv1, 0, self.wld[1])
-        yy = numpy.clip(mat @ self.uv2, 0, self.wld[0])
-        vectors = (self.xyz[:, 0] +
-                   self.uv1 * xx.reshape(xx.shape + (1, )) +
-                   self.uv2 * yy.reshape(yy.shape + (1, )))
+        array = self.array
+        mat = mesh.xyz - array.xyz[:, 0]
+        xx = numpy.clip(mat @ array.uv1, 0, array.wld[1])
+        yy = numpy.clip(mat @ array.uv2, 0, array.wld[0])
+        vectors = (array.xyz[:, 0] +
+                   array.uv1 * xx.reshape(xx.shape + (1, )) +
+                   array.uv2 * yy.reshape(yy.shape + (1, )))
         return Mesh(*geo_utils.cartesian_to_spherical(vectors))
 
     def _get_top_edge_centroid(self):
@@ -702,14 +699,14 @@ class PlanarSurface(BaseSurface):
         Return surface's width value (in km) as computed in the constructor
         (that is mean value of left and right surface sides).
         """
-        return self.wld[0]
+        return self.array.wld[0]
 
     def get_area(self):
         """
         Return surface's area value (in squared km) obtained as the product
         of surface length and width.
         """
-        return self.wld[0] * self.wld[1]
+        return self.array.wld[0] * self.array.wld[1]
 
     def get_bounding_box(self):
         """
