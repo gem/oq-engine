@@ -596,8 +596,8 @@ class PlanarSurface(BaseSurface):
         #
         # indices 0, 2 and 1 represent corners TL, BL and TR respectively.
         downdip = (self.strike + 90) % 360
-        arcs = zip(self.corner_lons.take([0, 2, 0, 1]),
-                   self.corner_lats.take([0, 2, 0, 1]),
+        corners = self.array.corners
+        arcs = zip(corners[0, [0, 2, 0, 1]], corners[1, [0, 2, 0, 1]],
                    [self.strike, self.strike, downdip, downdip])
         dists_to_arcs = numpy.zeros((len(mesh), 4))  # shape (N, 4)
         for a, (lon, lat, azi) in enumerate(arcs):
