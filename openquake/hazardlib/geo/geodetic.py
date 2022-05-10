@@ -213,6 +213,7 @@ def _reshape(array, orig_shape):
     return array[0]  # scalar array
 
 
+@compile("f8[:, :](f8[:], f8[:], f8[:])")
 def spherical_to_cartesian(lons, lats, depths):
     """
     Return the position vectors (in Cartesian coordinates) of list of spherical
