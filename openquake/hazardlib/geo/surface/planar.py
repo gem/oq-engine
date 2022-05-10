@@ -22,9 +22,10 @@ Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 """
 import logging
 import numpy
+from scipy.spatial.distance import cdist
 from openquake.baselib.node import Node
 from openquake.baselib.performance import numba, compile
-from openquake.hazardlib.geo.geodetic import point_at
+from openquake.hazardlib.geo.geodetic import point_at, spherical_to_cartesian
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
@@ -594,22 +595,22 @@ class PlanarSurface(BaseSurface):
         # to corner.
         #
         # indices 0, 2 and 1 represent corners TL, BL and TR respectively.
-        arcs_lons = self.corner_lons.take([0, 2, 0, 1])
-        arcs_lats = self.corner_lats.take([0, 2, 0, 1])
-        downdip_azimuth = (self.strike + 90) % 360
-        arcs_azimuths = [self.strike, self.strike,
-                         downdip_azimuth, downdip_azimuth]
-        mesh_lons = mesh.lons.reshape((-1, 1))
-        mesh_lats = mesh.lats.reshape((-1, 1))
-        # calculate distances from all the target points to all four arcs
-        dists_to_arcs = geodetic.distance_to_arc(
-            arcs_lons, arcs_lats, arcs_azimuths, mesh_lons, mesh_lats
-        )
-        # ... and distances from all the target points to each of surface's
+        downdip = (self.strike + 90) % 360
+        corners = self.array.corners
+        arcs = zip(corners[0, [0, 2, 0, 1]], corners[1, [0, 2, 0, 1]],
+                   [self.strike, self.strike, downdip, downdip])
+        dists_to_arcs = numpy.zeros((len(mesh), 4))  # shape (N, 4)
+        for a, (lon, lat, azi) in enumerate(arcs):
+            # calculate distances from all the target points to all four arcs
+            dists_to_arcs[:, a] = geodetic.distances_to_arc(
+                lon, lat, azi, mesh.lons, mesh.lats)
+
+        # distances from all the target points to each of surface's
         # corners' projections (we might not need all of those but it's
         # better to do that calculation once for all).
-        dists_to_corners = geodetic.min_geodetic_distance(
-            (self.corner_lons, self.corner_lats), mesh.xyz)
+        corners = spherical_to_cartesian(self.corner_lons, self.corner_lats)
+        # shape (4, 3) and (N, 3) -> (4, N) -> N
+        dists_to_corners = cdist(corners, mesh.xyz).min(axis=0)  # shape N
 
         # extract from ``dists_to_arcs`` signs (represent relative positions
         # of an arc and a point: +1 means on the left hand side, 0 means
