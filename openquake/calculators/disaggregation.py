@@ -116,8 +116,6 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         allctxs = cmaker.read_ctxs(dstore, slc)
-        for magidx, ctx in zip(magi, allctxs):
-            ctx.magi = magidx
     # Set epsstar boolean variable
     epsstar = dstore['oqparam'].epsilon_star
     dis_mon = monitor('disaggregate', measuremem=False)

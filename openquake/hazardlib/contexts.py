@@ -515,7 +515,9 @@ class ContextMaker(object):
                 gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
             for par in dd:
-                if par == 'mdvbin':
+                if par == 'magi':  # in disaggregation
+                    val = magi
+                elif par == 'mdvbin':
                     val = self.collapser.calc_mdvbin(ctx)
                 elif par == 'weight' and noweight:
                     val = 0.

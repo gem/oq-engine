@@ -117,7 +117,7 @@ DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
 def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
                  epsstar=False):
     """
-    :param ctxs: a recarray of size U for a single site and magnitude bin
+    :param ctx: a recarray of size U for a single site and magnitude bin
     :param cmaker: a ContextMaker instance
     :param g_by_z: an array of gsim indices
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
@@ -373,24 +373,23 @@ def disaggregation(
     rups = AccumDict(accum=[])
     cmaker = {}  # trt -> cmaker
     for trt, srcs in by_trt.items():
-        tom = srcs[0].temporal_occurrence_model
-        cmaker[trt] = ContextMaker(
+        cmaker[trt] = cm = ContextMaker(
             trt, rlzs_by_gsim,
             {'truncation_level': truncation_level,
              'maximum_distance': source_filter.integration_distance(trt),
              'imtls': {str(imt): [iml]}})
-        rups[trt].extend(cmaker[trt].from_srcs(srcs, sitecol))
-    min_mag = min(r.mag for rs in rups.values() for r in rs)
-    max_mag = max(r.mag for rs in rups.values() for r in rs)
+        cm.tom = srcs[0].temporal_occurrence_model
+        rups[trt].extend(cm.from_srcs(srcs, sitecol))
+    mags = numpy.array([r.mag for rs in rups.values() for r in rs])
     mag_bins = mag_bin_width * numpy.arange(
-        int(numpy.floor(min_mag / mag_bin_width)),
-        int(numpy.ceil(max_mag / mag_bin_width) + 1))
+        int(numpy.floor(mags.min() / mag_bin_width)),
+        int(numpy.ceil(mags.max() / mag_bin_width) + 1))
 
-    for trt in cmaker:
+    for trt, cm in cmaker.items():
         for magi, ctxs in enumerate(_magbin_groups(rups[trt], mag_bins)):
-            set_mean_std(ctxs, cmaker[trt])
-            bdata[trt, magi] = disaggregate(ctxs, tom, [0], {imt: iml2}, eps3,
-                                            epsstar=epsstar)
+            ctx = cm.recarray(ctxs, magi)
+            bdata[trt, magi] = disaggregate(
+                ctx, cm, [0], {imt: iml2}, eps3, epsstar=epsstar)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(
