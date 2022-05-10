@@ -121,7 +121,6 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
     # Set epsstar boolean variable
     epsstar = dstore['oqparam'].epsilon_star
     dis_mon = monitor('disaggregate', measuremem=False)
-    ms_mon = monitor('disagg mean_std', measuremem=True)
     N, M, P, Z = hmap4.shape
     g_by_z = AccumDict(accum={})  # dict s -> z -> g
     for g, rlzs in enumerate(cmaker.gsims.values()):
@@ -131,15 +130,12 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
     eps3 = disagg._eps3(cmaker.truncation_level, cmaker.num_epsilon_bins)
     imts = [from_string(im) for im in cmaker.imtls]
     for magi, ctxs in groupby(allctxs, operator.attrgetter('magi')).items():
+        ctx = cmaker.recarray(ctxs, magi)
         res = {'trti': cmaker.trti, 'magi': magi}
-        with ms_mon:
-            # compute mean and std (N * U * M * G * 16 bytes)
-            disagg.set_mean_std(ctxs, cmaker)
-
         # disaggregate by site, IMT
         for s, iml3 in enumerate(hmap4):
-            close = [ctx for ctx in ctxs if ctx.magi == magi and s in ctx.sids]
-            if not g_by_z[s] or not close:
+            close = ctx[(ctx.sids == s) & (ctx.magi == magi)]
+            if len(g_by_z[s]) == 0 or len(close) == 0:
                 # g_by_z[s] is empty in test case_7
                 continue
             # dist_bins, lon_bins, lat_bins, eps_bins
@@ -148,7 +144,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
             iml2 = dict(zip(imts, iml3))
             with dis_mon:
                 # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
-                matrix = disagg.disaggregate(close, cmaker.tom, g_by_z[s],
+                matrix = disagg.disaggregate(close, cmaker, g_by_z[s],
                                              iml2, eps3, s, bins,
                                              epsstar=epsstar)  # 7D-matrix
                 for m in range(M):
