@@ -525,11 +525,7 @@ class ContextMaker(object):
                     val = numpy.nan
                 else:  # never missing
                     val = getattr(ctx, par)
-                try:
-                    getattr(ra, par)[slc] = val
-                except:
-                    import pdb; pdb.set_trace()
-                pass
+                getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
         return ra
