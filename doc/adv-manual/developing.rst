@@ -302,7 +302,7 @@ to compute directly the probability map, which internally calls
 
 >>> cmaker.get_pmap(ctxs)
 {0: <ProbabilityCurve
-[[0.00508693]]>}
+[[0.00507997]]>}
 
 This is exactly the result provided by
 ``calc_hazard_curve(sitecol, src, gsims, oq)`` in the section before.

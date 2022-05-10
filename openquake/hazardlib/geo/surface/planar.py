@@ -451,6 +451,7 @@ class PlanarSurface(BaseSurface):
         #for par in self.array.dtype.names:
         #    setattr(self, par, self.array[par])
 
+    # this is not used anymore by the engine
     def translate(self, p1, p2):
         """
         Translate the surface for a specific distance along a specific azimuth
