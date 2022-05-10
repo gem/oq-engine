@@ -407,8 +407,6 @@ class PlanarSurface(BaseSurface):
         self.strike = strike
         self.dip = dip
         self.array = planar_array
-        #for par in planar_array.dtype.names:
-        #    setattr(self, par, planar_array[par])
         return self
 
     @classmethod
@@ -448,8 +446,6 @@ class PlanarSurface(BaseSurface):
         containing the surface.
         """
         self.array = build_planar_array(self.corners, check=check)
-        #for par in self.array.dtype.names:
-        #    setattr(self, par, self.array[par])
 
     # this is not used anymore by the engine
     def translate(self, p1, p2):
