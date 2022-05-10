@@ -593,6 +593,19 @@ def cartesian_to_spherical(arrayN3):
     return out.T  # shape (3, N)
 
 
+@compile("f8(f8[:], f8[:, :])")
+def min_distance(xyz, xyzs):
+    """
+    :param xyz: an array of shape (3,)
+    :param xyzs: an array of shape (N, 3)
+    :returns: the minimum euclidean distance between the point and the points
+    """
+    x, y, z = xyz
+    xs, ys, zs = xyzs.T
+    d2 = (xs-x)**2 + (ys-y)**2 + (zs-z)**2
+    return math.sqrt(d2.min())
+
+
 def triangle_area(e1, e2, e3):
     """
     Get the area of triangle formed by three vectors.

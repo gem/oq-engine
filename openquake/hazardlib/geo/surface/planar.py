@@ -22,11 +22,10 @@ Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 """
 import logging
 import numpy
-from scipy.spatial.distance import cdist
 from openquake.baselib.node import Node
 from openquake.baselib.performance import numba, compile
 from openquake.hazardlib.geo.geodetic import (
-    point_at, spherical_to_cartesian)
+    point_at, spherical_to_cartesian, fast_spherical_to_cartesian)
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
@@ -177,7 +176,7 @@ def project(planar, points):
             ],
             # case "III": abscissa doesn't have an effect on a distance
             # to the rectangle
-            default=0
+            default=0.
         )
         # for ordinate we do the same operation (again three cases):
         #
@@ -279,27 +278,35 @@ def get_rjb(planar, points):
         strike, dip, rake = pla['sdr']
         downdip = (strike + 90) % 360
         corners = pla.corners
-        arcs = zip(corners[0, [0, 2, 0, 1]], corners[1, [0, 2, 0, 1]],
-                   [strike, strike, downdip, downdip])
+        clons, clats = numpy.zeros(4), numpy.zeros(4)
+        clons[:], clats[:] = corners[0], corners[1]
         dists_to_arcs = numpy.zeros((len(lons), 4))  # shape (N, 4)
-        for a, (lon, lat, azi) in enumerate(arcs):
-            # calculate distances from all the target points to all four arcs
-            dists_to_arcs[:, a] = geodetic.distances_to_arc(
-                lon, lat, azi, lons, lats)
+        # calculate distances from all the target points to all four arcs
+        dists_to_arcs[:, 0] = geodetic.distances_to_arc(
+            clons[2], clats[2], strike, lons, lats)
+        dists_to_arcs[:, 1] = geodetic.distances_to_arc(
+            clons[0], clats[0], strike, lons, lats)
+        dists_to_arcs[:, 2] = geodetic.distances_to_arc(
+            clons[0], clats[0], downdip, lons, lats)
+        dists_to_arcs[:, 3] = geodetic.distances_to_arc(
+            clons[1], clats[1], downdip, lons, lats)
 
         # distances from all the target points to each of surface's
         # corners' projections (we might not need all of those but it's
         # better to do that calculation once for all).
-        corners = spherical_to_cartesian(corners[0], corners[1])
+        corners = fast_spherical_to_cartesian(clons, clats)
         # shape (4, 3) and (N, 3) -> (4, N) -> N
-        dists_to_corners = cdist(corners, points).min(axis=0)  # shape N
+        dists_to_corners = numpy.array([geo_utils.min_distance(point, corners)
+                                        for point in points])
 
         # extract from ``dists_to_arcs`` signs (represent relative positions
         # of an arc and a point: +1 means on the left hand side, 0 means
         # on arc and -1 means on the right hand side) and minimum absolute
         # values of distances to each pair of parallel arcs.
         ds1, ds2, ds3, ds4 = numpy.sign(dists_to_arcs).transpose()
-        dists_to_arcs = numpy.abs(dists_to_arcs).reshape(-1, 2, 2).min(axis=-1)
+        dta = numpy.abs(dists_to_arcs).reshape(-1, 2, 2)
+        dists_to_arcs0 = numpy.array([d2[0].min() for d2 in dta])
+        dists_to_arcs1 = numpy.array([d2[1].min() for d2 in dta])
 
         out[u] = numpy.select(
             # consider four possible relative positions of point and arcs:
@@ -320,14 +327,14 @@ def get_rjb(planar, points):
                 dists_to_corners,
                 # case "II": closest distance is distance to arc "1" or "2",
                 # whichever is closer
-                dists_to_arcs[:, 0],
+                dists_to_arcs0,
                 # case "III": closest distance is distance to either
                 # arc "3" or "4"
-                dists_to_arcs[:, 1]
+                dists_to_arcs1
             ],
 
             # default -- case "IV"
-            default=0)
+            default=0.)
     return out
 
 
@@ -342,11 +349,10 @@ if numba:
         numba.float64[:, :],
         numba.float64[:, :]
     ))(project_back)
-    # need to numbify spherical_to_cartesian
-    #get_rjb = compile(numba.float64[:, :](
-    #    planar_nt[:, :],
-    #    numba.float64[:, :],
-    #))(get_rjb)
+    get_rjb = compile(numba.float64[:, :](
+        planar_nt[:, :],
+        numba.float64[:, :],
+    ))(get_rjb)
 
 
 class PlanarSurface(BaseSurface):
