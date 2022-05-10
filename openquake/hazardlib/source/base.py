@@ -46,8 +46,8 @@ surfin_dt = numpy.dtype([
 ])
 
 
-@compile("(f8[:, :], f8, f8, f8, f8[:], f8, f8, f8, f8, f8)")
-def _update(corners, usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
+@compile("(f8[:, :], f8, f8, f8, f8[:], f8, f8, f8, f8, f8, f8)")
+def _update(corners, usd, lsd, mag, dims, strike, dip, rake, clon, clat, cdep):
     # from the rupture center we can now compute the coordinates of the
     # four coorners by moving along the diagonals of the plane. This seems
     # to be better then moving along the perimeter, because in this case
@@ -110,20 +110,27 @@ def _update(corners, usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
         clon, clat, strike + theta, hor_dist)
     corners[0:2, 2] = cdep - half_height
     corners[2:4, 2] = cdep + half_height
-    corners[4, 0] = clon
-    corners[4, 1] = clat
-    corners[4, 2] = cdep
+    corners[4, 0] = strike
+    corners[4, 1] = dip
+    corners[4, 2] = rake
+    corners[5, 0] = clon
+    corners[5, 1] = clat
+    corners[5, 2] = cdep
 
 
 # numbified below, ultrafast
-def build_corners(usd, lsd, mag, dims, strike, dip, lon, lat, deps):
+def build_corners(usd, lsd, mag, dims, strike, dip, rake, lon, lat, deps):
     (M, N), D = usd.shape, len(deps)
-    corners = numpy.zeros((5, M, N, D, 3))
+    corners = numpy.zeros((6, M, N, D, 3))
+    # 0,1,2,3: tl, tr, bl, br
+    # 4: (strike, dip, rake)
+    # 5: hypo
     for m in range(M):
         for n in range(N):
             for d, dep in enumerate(deps):
                 _update(corners[:, m, n, d], usd[m, n], lsd[m, n], mag[m, n],
-                        dims[m, n], strike[m, n], dip[m, n], lon, lat, dep)
+                        dims[m, n], strike[m, n], dip[m, n], rake[m, n],
+                        lon, lat, dep)
     return corners
 
 
@@ -135,6 +142,7 @@ if numba:
         F8[:, :, :],  # dims
         F8[:, :],     # strike
         F8[:, :],     # dip
+        F8[:, :],     # rake
         F8,           # lon
         F8,           # lat
         F8[:],        # dep
@@ -156,18 +164,16 @@ def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo=False):
     """
     corners = build_corners(
         surfin.usd, surfin.lsd, surfin.mag, surfin.dims,
-        surfin.strike, surfin.dip, lon, lat, numpy.array(deps))
-    planar_array = build_planar_array(corners[:4], corners[4])
+        surfin.strike, surfin.dip, surfin.rake, lon, lat, numpy.array(deps))
+    planar_array = build_planar_array(corners[:4], corners[4], corners[5])
     out = numpy.zeros(surfin.shape + (len(deps),), object)  # shape (M, N, D)
     M, N, D = out.shape
     for m in range(M):
         for n in range(N):
-            rec = surfin[m, n]
             for d in range(D):
-                surface = PlanarSurface.from_(
-                    planar_array[m, n, d], rec.strike, rec.dip)
+                surface = PlanarSurface.from_(planar_array[m, n, d])
                 if shift_hypo:
-                    surface.hc = Point(*corners[4, m, n, d])
+                    surface.hc = Point(*corners[5, m, n, d])
                 else:
                     surface.hc = Point(lon, lat, deps[d])
                 out[m, n, d] = surface
