@@ -749,7 +749,7 @@ class ContextMaker(object):
         with patch.object(self.collapser, 'collapse_level', collapse_level):
             return self.get_pmap(ctxs).array(len(sitecol))
 
-    def recarrays(self, ctxs):
+    def recarrays(self, ctxs, magi=None):
         """
         :returns: a list of one or two recarrays
         """
@@ -761,9 +761,9 @@ class ContextMaker(object):
             else:
                 parametric.append(ctx)
         if parametric:
-            out.append(self.recarray(parametric))
+            out.append(self.recarray(parametric, magi))
         if nonparametric:
-            out.append(self.recarray(nonparametric))
+            out.append(self.recarray(nonparametric, magi))
         return out
 
     def get_pmap(self, ctxs, probmap=None):
