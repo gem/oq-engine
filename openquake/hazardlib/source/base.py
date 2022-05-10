@@ -22,25 +22,32 @@ import math
 import zlib
 import numpy
 from openquake.baselib import general
+from openquake.baselib.performance import compile, numba
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import (
     PlanarSurface, build_planar_array)
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
+F8 = numba.float64
+surfin_dt = numpy.dtype([
+    ('usd', float),
+    ('lsd', float),
+    ('rar', float),
+    ('mag', float),
+    ('area', float),
+    ('strike', float),
+    ('dip', float),
+    ('rake', float),
+    ('lon', float),
+    ('lat', float),
+    ('dep', float),
+    ('dims', (float, 3)),
+])
 
-def get_code2cls():
-    """
-    :returns: a dictionary source code -> source class
-    """
-    dic = {}
-    for cls in general.gen_subclasses(BaseSeismicSource):
-        if hasattr(cls, 'code'):
-            dic[cls.code] = cls
-    return dic
 
-
-def _build(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
+@compile("(f8[:, :], f8, f8, f8, f8[:], f8, f8, f8, f8, f8)")
+def _update(corners, usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     # from the rupture center we can now compute the coordinates of the
     # four coorners by moving along the diagonals of the plane. This seems
     # to be better then moving along the perimeter, because in this case
@@ -50,7 +57,6 @@ def _build(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     # and the line passing through the rupture center and parallel to the
     # top and bottom edges. Theta is zero for vertical ruptures (because
     # rup_proj_width is zero)
-    array = numpy.zeros((3, 4))
     half_length, half_width, half_height = dims / 2.
     rdip = math.radians(dip)
 
@@ -58,9 +64,9 @@ def _build(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     # moves from one point to another on the plane defined by strike
     # and dip:
     azimuth_right = strike
-    azimuth_down = (azimuth_right + 90) % 360
-    azimuth_left = (azimuth_down + 90) % 360
-    azimuth_up = (azimuth_left + 90) % 360
+    azimuth_down = azimuth_right + 90
+    azimuth_left = azimuth_down + 90
+    azimuth_up = azimuth_left + 90
 
     # half height of the vertical component of rupture width
     # is the vertical distance between the rupture geometrical
@@ -88,51 +94,72 @@ def _build(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
         # we need to move the rupture center to make the rupture fit
         # inside the seismogenic layer.
         hshift = abs(vshift / math.tan(rdip))
-        clon, clat = geodetic.point_at(
+        clon, clat = geodetic.fast_point_at(
             clon, clat, azimuth_up if vshift < 0 else azimuth_down,
             hshift)
         cdep += vshift
     theta = math.degrees(math.atan(half_width / half_length))
     hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
-    azimuths = numpy.array([(strike + 180 + theta) % 360,
-                            (strike - theta) % 360,
-                            (strike + 180 - theta) % 360,
-                            (strike + theta) % 360])
-    array[:2, :4] = geodetic.point_at(clon, clat, azimuths, hor_dist)
-    array[2, 0:2] = cdep - half_height
-    array[2, 2:4] = cdep + half_height
-    return array, [clon, clat, cdep]
+    corners[0, :2] = geodetic.fast_point_at(
+        clon, clat, strike + 180 + theta, hor_dist)
+    corners[1, :2] = geodetic.fast_point_at(
+        clon, clat, strike - theta, hor_dist)
+    corners[2, :2] = geodetic.fast_point_at(
+        clon, clat, strike + 180 - theta, hor_dist)
+    corners[3, :2] = geodetic.fast_point_at(
+        clon, clat, strike + theta, hor_dist)
+    corners[0:2, 2] = cdep - half_height
+    corners[2:4, 2] = cdep + half_height
+    corners[4, 0] = clon
+    corners[4, 1] = clat
+    corners[4, 2] = cdep
 
 
-def build_planar_surfaces(surfin, hypos, shift_hypo=False):
+# numbified below, ultrafast
+def build_corners(usd, lsd, mag, dims, strike, dip, lon, lat, deps):
+    (M, N), D = usd.shape, len(deps)
+    corners = numpy.zeros((5, M, N, D, 3))
+    for m in range(M):
+        for n in range(N):
+            for d, dep in enumerate(deps):
+                _update(corners[:, m, n, d], usd[m, n], lsd[m, n], mag[m, n],
+                        dims[m, n], strike[m, n], dip[m, n], lon, lat, dep)
+    return corners
+
+
+if numba:
+    build_corners = compile(F8[:, :, :, :, :](
+        F8[:, :],     # usd
+        F8[:, :],     # lsd
+        F8[:, :],     # mag
+        F8[:, :, :],  # dims
+        F8[:, :],     # strike
+        F8[:, :],     # dip
+        F8,           # lon
+        F8,           # lat
+        F8[:],        # dep
+    ))(build_corners)
+
+
+def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo=False):
     """
     :param surfin:
         Surface input parameters as an array of shape (M, N)
-    :param hypos:
-        A list of hypocenters with different depths
+    :param lon, lat
+        Longitude and latitude of the hypocenters (scalars)
+    :parameter deps:
+        Depths of the hypocenters (vector)
     :param shift_hypo:
         If true, change .hc to the shifted hypocenter
     :return:
         an array of PlanarSurfaces of shape (M, N, D)
     """
-    out = numpy.zeros(surfin.shape + (len(hypos),), object)  # shape (M, N, D)
+    corners = build_corners(
+        surfin.usd, surfin.lsd, surfin.mag, surfin.dims,
+        surfin.strike, surfin.dip, lon, lat, numpy.array(deps))
+    planar_array = build_planar_array(corners[:4], corners[4])
+    out = numpy.zeros(surfin.shape + (len(deps),), object)  # shape (M, N, D)
     M, N, D = out.shape
-
-    # populating the arrays is fast enough
-    corners = numpy.zeros((4, M, N, D, 3))
-    shifted_hypo = numpy.zeros((M, N, D, 3))
-    for m in range(M):
-        for n in range(N):
-            rec = surfin[m, n]
-            for d, hypo in enumerate(hypos):
-                corn34, shypo = _build(
-                    rec.usd, rec.lsd, rec.mag, rec.dims,
-                    rec.strike, rec.dip, hypo.x, hypo.y, hypo.z)
-                corners[:, m, n, d] = corn34.T
-                shifted_hypo[m, n, d] = shypo
-
-    # building planar_array is slow
-    planar_array = build_planar_array(corners, shifted_hypo)
     for m in range(M):
         for n in range(N):
             rec = surfin[m, n]
@@ -140,11 +167,22 @@ def build_planar_surfaces(surfin, hypos, shift_hypo=False):
                 surface = PlanarSurface.from_(
                     planar_array[m, n, d], rec.strike, rec.dip)
                 if shift_hypo:
-                    surface.hc = Point(*shifted_hypo[m, n, d])
+                    surface.hc = Point(*corners[4, m, n, d])
                 else:
-                    surface.hc = hypos[d]
+                    surface.hc = Point(lon, lat, deps[d])
                 out[m, n, d] = surface
     return out
+
+
+def get_code2cls():
+    """
+    :returns: a dictionary source code -> source class
+    """
+    dic = {}
+    for cls in general.gen_subclasses(BaseSeismicSource):
+        if hasattr(cls, 'code'):
+            dic[cls.code] = cls
+    return dic
 
 
 class BaseSeismicSource(metaclass=abc.ABCMeta):
@@ -297,7 +335,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 _, np_prob, hc_prob, mag, np, lon, lat, hc_depth, src = args
                 hc = Point(lon, lat, hc_depth)
                 [[[surface]]] = build_planar_surfaces(
-                    src.get_surfin([mag], [np]), [hc])
+                    src.get_surfin([mag], [np]), lon, lat, [hc.depth])
                 rup = ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type, hc,
                     surface, rate, tom)
