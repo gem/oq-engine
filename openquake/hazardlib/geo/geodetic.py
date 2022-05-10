@@ -70,13 +70,13 @@ def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
     of points.
 
     Parameters are coordinates in decimal degrees. They could be scalar
-    float numbers or np arrays, in which case they should "broadcast
+    float numbers or numpy arrays, in which case they should "broadcast
     together".
 
     Implements http://williams.best.vwh.net/avform.htm#Dist
 
     :returns:
-        Distance in km, floating point scalar or np array of such.
+        Distance in km, floating point scalar or numpy array of such.
     """
     lons1, lats1, lons2, lats2 = _prepare_coords(lons1, lats1, lons2, lats2)
     distance = np.arcsin(np.sqrt(
@@ -221,7 +221,7 @@ def spherical_to_cartesian(lons, lats, depths=None):
     For equations see: http://mathworld.wolfram.com/SphericalCoordinates.html.
 
     Parameters are components of spherical coordinates in a form of scalars,
-    lists or np arrays. ``depths`` can be ``None`` in which case it's
+    lists or numpy arrays. ``depths`` can be ``None`` in which case it's
     considered zero for all points.
 
     :returns:
@@ -389,7 +389,7 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
         Integer number of points to return. First and last points count,
         so if there have to be two intervals, ``npoints`` should be 3.
     :returns:
-        Tuple of three 1d np arrays: longitudes, latitudes and depths
+        Tuple of three 1d numpy arrays: longitudes, latitudes and depths
         of resulting points respectively.
 
     Implements "completely general but more complicated algorithm" from
@@ -412,7 +412,7 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     lats = np.degrees(np.arcsin(sin_lats))
 
     dlon = np.arctan2(np.sin(tc) * sin_dists * cos_lat,
-                         cos_dists - sin_lat * sin_lats)
+                      cos_dists - sin_lat * sin_lats)
     lons = np.mod(rlon - dlon + np.pi, 2 * np.pi) - np.pi
     lons = np.degrees(lons)
 
@@ -494,7 +494,7 @@ def point_at(lon, lat, azimuth, distance):
     lats = np.degrees(np.arcsin(sin_lats))
 
     dlon = np.arctan2(np.sin(tc) * sin_dists * cos_lat,
-                         cos_dists - sin_lat * sin_lats)
+                      cos_dists - sin_lat * sin_lats)
     lons = np.mod(lon - dlon + np.pi, 2 * np.pi) - np.pi
     lons = np.degrees(lons)
 
@@ -540,8 +540,7 @@ def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
                                                plons[idx], plats[idx])
         t_angle = (azimuth_to_target[idx] - aazimuth + 360) % 360
         angle = np.arccos((np.sin(np.radians(t_angle)) *
-                              np.sin(distance_to_target /
-                                        EARTH_RADIUS)))
+                           np.sin(distance_to_target / EARTH_RADIUS)))
         distance[idx] = (np.pi / 2 - angle) * EARTH_RADIUS
 
     # Compute the distance between the reference point and the set of sites
