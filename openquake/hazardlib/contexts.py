@@ -709,6 +709,10 @@ class ContextMaker(object):
         return gmv
 
     def _ps_rups_sites(self, src, sites):
+        if src.count_nphc() == 1:
+            for rup in src.iter_ruptures():
+                yield [rup], sites
+            return
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
         allrups = numpy.array(
