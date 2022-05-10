@@ -239,9 +239,6 @@ def project_back(planar, xx, yy):
 def get_rjb(planar, points):
     lons, lats, deps = geo_utils.cartesian_to_spherical(points)
     out = numpy.zeros((len(planar), len(points)))
-
-    def dot(a, v):  # array @ vector
-        return a[:, 0] * v[0] + a[:, 1] * v[1] + a[:, 2] * v[2]
     for u, pla in enumerate(planar):
         # we define four great circle arcs that contain four sides
         # of projected planar surface:
@@ -338,6 +335,19 @@ def get_rjb(planar, points):
     return out
 
 
+# numbified below
+def get_rx(planar, points):
+    lons, lats, deps = geo_utils.cartesian_to_spherical(points)
+    out = numpy.zeros((len(planar), len(points)))
+    for u, pla in enumerate(planar):
+        clons, clats = numpy.zeros(4), numpy.zeros(4)
+        clons[:], clats[:] = pla.corners[0], pla.corners[1]
+        strike = pla.sdr[0]
+        out[u] = geodetic.distances_to_arc(
+            clons[0], clats[0], strike, lons, lats)
+    return out
+
+
 if numba:
     planar_nt = numba.from_dtype(planar_array_dt)
     project = compile(numba.float64[:, :, :](
@@ -353,6 +363,10 @@ if numba:
         planar_nt[:, :],
         numba.float64[:, :],
     ))(get_rjb)
+    get_rx = compile(numba.float64[:, :](
+        planar_nt[:, :],
+        numba.float64[:, :],
+    ))(get_rx)
 
 
 class PlanarSurface(BaseSurface):
@@ -689,9 +703,7 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
-        return geodetic.distance_to_arc(
-            self.corner_lons[0], self.corner_lats[0], self.strike,
-            mesh.lons, mesh.lats)
+        return get_rx(self.array.reshape(1, 3), mesh.xyz)[0]
 
     def get_ry0_distance(self, mesh):
         """
