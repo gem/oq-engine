@@ -22,7 +22,6 @@ Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 """
 import logging
 import numpy
-from scipy.spatial.distance import cdist
 from openquake.baselib.node import Node
 from openquake.baselib.performance import numba, compile
 from openquake.hazardlib.geo.geodetic import (
@@ -279,20 +278,24 @@ def get_rjb(planar, points):
         strike, dip, rake = pla['sdr']
         downdip = (strike + 90) % 360
         corners = pla.corners
-        arcs = zip(corners[0, [0, 2, 0, 1]], corners[1, [0, 2, 0, 1]],
-                   [strike, strike, downdip, downdip])
         dists_to_arcs = numpy.zeros((len(lons), 4))  # shape (N, 4)
-        for a, (lon, lat, azi) in enumerate(arcs):
-            # calculate distances from all the target points to all four arcs
-            dists_to_arcs[:, a] = geodetic.distances_to_arc(
-                lon, lat, azi, lons, lats)
+        # calculate distances from all the target points to all four arcs
+        dists_to_arcs[:, 0] = geodetic.distances_to_arc(
+            corners[0, 2], corners[1, 2], strike, lons, lats)
+        dists_to_arcs[:, 1] = geodetic.distances_to_arc(
+            corners[0, 0], corners[1, 0], strike, lons, lats)
+        dists_to_arcs[:, 2] = geodetic.distances_to_arc(
+            corners[0, 0], corners[1, 0], downdip, lons, lats)
+        dists_to_arcs[:, 3] = geodetic.distances_to_arc(
+            corners[0, 1], corners[1, 1], downdip, lons, lats)
 
         # distances from all the target points to each of surface's
         # corners' projections (we might not need all of those but it's
         # better to do that calculation once for all).
         corners = fast_spherical_to_cartesian(corners[0], corners[1])
         # shape (4, 3) and (N, 3) -> (4, N) -> N
-        dists_to_corners = cdist(corners, points).min(axis=0)  # shape N
+        dists_to_corners = [geo_utils.min_distance(point, corners)
+                            for point in points]
 
         # extract from ``dists_to_arcs`` signs (represent relative positions
         # of an arc and a point: +1 means on the left hand side, 0 means

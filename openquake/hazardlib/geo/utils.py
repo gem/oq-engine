@@ -593,6 +593,15 @@ def cartesian_to_spherical(arrayN3):
     return out.T  # shape (3, N)
 
 
+@compile("f8(f8[:], f8[:, :])")
+def min_distance(point, points):
+    x0, y0, z0 = point
+    d2 = numpy.zeros(len(points))
+    for i, (x, y, z) in enumerate(points):
+        d2[i] = (x-x0)**2 + (y-y0)**2 + (z-z0)**2
+    return math.sqrt(d2.min())
+
+
 def triangle_area(e1, e2, e3):
     """
     Get the area of triangle formed by three vectors.
