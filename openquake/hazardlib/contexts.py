@@ -525,7 +525,11 @@ class ContextMaker(object):
                     val = numpy.nan
                 else:  # never missing
                     val = getattr(ctx, par)
-                getattr(ra, par)[slc] = val
+                try:
+                    getattr(ra, par)[slc] = val
+                except:
+                    import pdb; pdb.set_trace()
+                pass
             ra.sids[slc] = ctx.sids
             start = slc.stop
         return ra
@@ -756,7 +760,7 @@ class ContextMaker(object):
         parametric, nonparametric, out = [], [], []
         for ctx in ctxs:
             assert not isinstance(ctx, numpy.recarray), ctx
-            if hasattr(ctx, 'probs_occur'):
+            if numpy.isnan(getattr(ctx, 'occurrence_rate', numpy.nan)):
                 nonparametric.append(ctx)
             else:
                 parametric.append(ctx)
