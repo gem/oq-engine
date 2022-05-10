@@ -25,7 +25,8 @@ import numpy
 from scipy.spatial.distance import cdist
 from openquake.baselib.node import Node
 from openquake.baselib.performance import numba, compile
-from openquake.hazardlib.geo.geodetic import point_at, spherical_to_cartesian
+from openquake.hazardlib.geo.geodetic import (
+    point_at, spherical_to_cartesian)
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
@@ -47,6 +48,7 @@ planar_array_dt = numpy.dtype([
     ('uv1', float),
     ('uv2', float),
     ('wld', float),
+    ('sdr', float),
     ('hypo', float)])
 
 
@@ -56,18 +58,20 @@ def dot(a, b):
             a[..., 2] * b[..., 2])
 
 
-def build_planar_array(corners, hypo=None, check=False):
+def build_planar_array(corners, sdr=None, hypo=None, check=False):
     """
     :param corners: array of shape (4, M, N, D, 3)
-    :param hypo: None or array of shapee (M, N, D, 3)
+    :param hypo: None or array of shape (M, N, D, 3)
     :returns: a planar_array array of length (M, N, D)
     """
     shape = corners.shape[:-1]  # (4, M, N, D)
     planar_array = numpy.zeros(corners.shape[1:], planar_array_dt).view(
         numpy.recarray)
+    if sdr is not None:
+        planar_array['sdr'] = sdr  # strike, dip, rake
     if hypo is not None:
         planar_array['hypo'] = hypo
-    tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(
+    tl, tr, bl, br = xyz = spherical_to_cartesian(
         corners[..., 0], corners[..., 1], corners[..., 2])
     for i, corner in enumerate(corners):
         planar_array['corners'][..., i] = corner
@@ -232,13 +236,116 @@ def project_back(planar, xx, yy):
     return arr
 
 
+# numbified below
+def get_rjb(planar, points):
+    lons, lats, deps = geo_utils.cartesian_to_spherical(points)
+    out = numpy.zeros((len(planar), len(points)))
+
+    def dot(a, v):  # array @ vector
+        return a[:, 0] * v[0] + a[:, 1] * v[1] + a[:, 2] * v[2]
+    for u, pla in enumerate(planar):
+        # we define four great circle arcs that contain four sides
+        # of projected planar surface:
+        #
+        #       ↓     II    ↓
+        #    I  ↓           ↓  I
+        #       ↓     +     ↓
+        #  →→→→→TL→→→→1→→→→TR→→→→→     → azimuth direction →
+        #       ↓     -     ↓
+        #       ↓           ↓
+        # III  -3+   IV    -4+  III             ↓
+        #       ↓           ↓            downdip direction
+        #       ↓     +     ↓                   ↓
+        #  →→→→→BL→→→→2→→→→BR→→→→→
+        #       ↓     -     ↓
+        #    I  ↓           ↓  I
+        #       ↓     II    ↓
+        #
+        # arcs 1 and 2 are directed from left corners to right ones (the
+        # direction has an effect on the sign of the distance to an arc,
+        # as it shown on the figure), arcs 3 and 4 are directed from top
+        # corners to bottom ones.
+        #
+        # then we measure distance from each of the points in a mesh
+        # to each of those arcs and compare signs of distances in order
+        # to find a relative positions of projections of points and
+        # projection of a surface.
+        #
+        # then we consider four special cases (labeled with Roman numerals)
+        # and either pick one of distances to arcs or a closest distance
+        # to corner.
+        #
+        # indices 0, 2 and 1 represent corners TL, BL and TR respectively.
+        strike, dip, rake = pla['sdr']
+        downdip = (strike + 90) % 360
+        corners = pla.corners
+        arcs = zip(corners[0, [0, 2, 0, 1]], corners[1, [0, 2, 0, 1]],
+                   [strike, strike, downdip, downdip])
+        dists_to_arcs = numpy.zeros((len(lons), 4))  # shape (N, 4)
+        for a, (lon, lat, azi) in enumerate(arcs):
+            # calculate distances from all the target points to all four arcs
+            dists_to_arcs[:, a] = geodetic.distances_to_arc(
+                lon, lat, azi, lons, lats)
+
+        # distances from all the target points to each of surface's
+        # corners' projections (we might not need all of those but it's
+        # better to do that calculation once for all).
+        corners = spherical_to_cartesian(corners[0], corners[1])
+        # shape (4, 3) and (N, 3) -> (4, N) -> N
+        dists_to_corners = cdist(corners, points).min(axis=0)  # shape N
+
+        # extract from ``dists_to_arcs`` signs (represent relative positions
+        # of an arc and a point: +1 means on the left hand side, 0 means
+        # on arc and -1 means on the right hand side) and minimum absolute
+        # values of distances to each pair of parallel arcs.
+        ds1, ds2, ds3, ds4 = numpy.sign(dists_to_arcs).transpose()
+        dists_to_arcs = numpy.abs(dists_to_arcs).reshape(-1, 2, 2).min(axis=-1)
+
+        out[u] = numpy.select(
+            # consider four possible relative positions of point and arcs:
+            condlist=[
+                # signs of distances to both parallel arcs are the same
+                # in both pairs, case "I" on a figure above
+                (ds1 == ds2) & (ds3 == ds4),
+                # sign of distances to two parallels is the same only
+                # in one pair, case "II"
+                ds1 == ds2,
+                # ... or another (case "III")
+                ds3 == ds4
+                # signs are different in both pairs (this is a "default"),
+                # case "IV"
+            ],
+            choicelist=[
+                # case "I": closest distance is the closest distance to corners
+                dists_to_corners,
+                # case "II": closest distance is distance to arc "1" or "2",
+                # whichever is closer
+                dists_to_arcs[:, 0],
+                # case "III": closest distance is distance to either
+                # arc "3" or "4"
+                dists_to_arcs[:, 1]
+            ],
+
+            # default -- case "IV"
+            default=0)
+    return out
+
+
 if numba:
     planar_nt = numba.from_dtype(planar_array_dt)
-    sig = numba.float64[:, :, :](planar_nt[:, :], numba.float64[:, :])
-    project = compile(sig)(project)
-    sig = numba.float64[:, :, :](
-        planar_nt[:, :], numba.float64[:, :], numba.float64[:, :])
-    project_back = compile(sig)(project_back)
+    project = compile(numba.float64[:, :, :](
+        planar_nt[:, :],
+        numba.float64[:, :]
+    ))(project)
+    project_back = compile(numba.float64[:, :, :](
+        planar_nt[:, :],
+        numba.float64[:, :],
+        numba.float64[:, :]
+    ))(project_back)
+    #get_rjb = compile(numba.float64[:, :](
+    #    planar_nt[:, :],
+    #    numba.float64[:, :],
+    #))(get_rjb)
 
 
 class PlanarSurface(BaseSurface):
@@ -403,10 +510,11 @@ class PlanarSurface(BaseSurface):
         return cls(strike, dip, ptl, ptr, pbr, pbl)
 
     @classmethod
-    def from_(cls, planar_array, strike, dip):
+    def from_(cls, planar_array):
         self = object.__new__(PlanarSurface)
-        self.strike = strike
-        self.dip = dip
+        sdr = planar_array['sdr']
+        self.strike = sdr[..., 0]
+        self.dip = sdr[..., 1]
         self.array = planar_array
         return self
 
@@ -563,93 +671,7 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
-        # we define four great circle arcs that contain four sides
-        # of projected planar surface:
-        #
-        #       ↓     II    ↓
-        #    I  ↓           ↓  I
-        #       ↓     +     ↓
-        #  →→→→→TL→→→→1→→→→TR→→→→→     → azimuth direction →
-        #       ↓     -     ↓
-        #       ↓           ↓
-        # III  -3+   IV    -4+  III             ↓
-        #       ↓           ↓            downdip direction
-        #       ↓     +     ↓                   ↓
-        #  →→→→→BL→→→→2→→→→BR→→→→→
-        #       ↓     -     ↓
-        #    I  ↓           ↓  I
-        #       ↓     II    ↓
-        #
-        # arcs 1 and 2 are directed from left corners to right ones (the
-        # direction has an effect on the sign of the distance to an arc,
-        # as it shown on the figure), arcs 3 and 4 are directed from top
-        # corners to bottom ones.
-        #
-        # then we measure distance from each of the points in a mesh
-        # to each of those arcs and compare signs of distances in order
-        # to find a relative positions of projections of points and
-        # projection of a surface.
-        #
-        # then we consider four special cases (labeled with Roman numerals)
-        # and either pick one of distances to arcs or a closest distance
-        # to corner.
-        #
-        # indices 0, 2 and 1 represent corners TL, BL and TR respectively.
-        downdip = (self.strike + 90) % 360
-        corners = self.array.corners
-        arcs = zip(corners[0, [0, 2, 0, 1]], corners[1, [0, 2, 0, 1]],
-                   [self.strike, self.strike, downdip, downdip])
-        dists_to_arcs = numpy.zeros((len(mesh), 4))  # shape (N, 4)
-        for a, (lon, lat, azi) in enumerate(arcs):
-            # calculate distances from all the target points to all four arcs
-            dists_to_arcs[:, a] = geodetic.distances_to_arc(
-                lon, lat, azi, mesh.lons, mesh.lats)
-
-        # distances from all the target points to each of surface's
-        # corners' projections (we might not need all of those but it's
-        # better to do that calculation once for all).
-        corners = spherical_to_cartesian(self.corner_lons, self.corner_lats)
-        # shape (4, 3) and (N, 3) -> (4, N) -> N
-        dists_to_corners = cdist(corners, mesh.xyz).min(axis=0)  # shape N
-
-        # extract from ``dists_to_arcs`` signs (represent relative positions
-        # of an arc and a point: +1 means on the left hand side, 0 means
-        # on arc and -1 means on the right hand side) and minimum absolute
-        # values of distances to each pair of parallel arcs.
-        ds1, ds2, ds3, ds4 = numpy.sign(dists_to_arcs).transpose()
-        dists_to_arcs = numpy.abs(dists_to_arcs).reshape(-1, 2, 2).min(axis=-1)
-
-        jb_dists = numpy.select(
-            # consider four possible relative positions of point and arcs:
-            condlist=[
-                # signs of distances to both parallel arcs are the same
-                # in both pairs, case "I" on a figure above
-                (ds1 == ds2) & (ds3 == ds4),
-                # sign of distances to two parallels is the same only
-                # in one pair, case "II"
-                ds1 == ds2,
-                # ... or another (case "III")
-                ds3 == ds4
-                # signs are different in both pairs (this is a "default"),
-                # case "IV"
-            ],
-
-            choicelist=[
-                # case "I": closest distance is the closest distance to corners
-                dists_to_corners,
-                # case "II": closest distance is distance to arc "1" or "2",
-                # whichever is closer
-                dists_to_arcs[:, 0],
-                # case "III": closest distance is distance to either
-                # arc "3" or "4"
-                dists_to_arcs[:, 1]
-            ],
-
-            # default -- case "IV"
-            default=0
-        )
-
-        return jb_dists.reshape(mesh.lons.shape)
+        return get_rjb(self.array.reshape(1, 3), mesh.xyz)[0]
 
     def get_rx_distance(self, mesh):
         """
