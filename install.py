@@ -327,7 +327,8 @@ def install(inst, version):
         except KeyError:
             subprocess.check_call(['useradd', '-m', '-U', 'openquake'])
             print('Created user openquake')
-        remove_old_venv(os.path.dirname(inst.VENV))
+    # remove function due package installation on /opt/openquake
+        #remove_old_venv(os.path.dirname(inst.VENV))
 
     # create the database
     if not os.path.exists(inst.OQDATA):
