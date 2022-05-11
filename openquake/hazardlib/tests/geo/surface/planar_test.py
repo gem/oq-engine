@@ -334,7 +334,7 @@ class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
     def _test1to7surface(self):
         corners = [Point(0, 0, 8), Point(-0.1, 0, 8),
                    Point(-0.1, 0, 9), Point(0, 0, 9)]
-        surface = PlanarSurface(270, 90, *corners)
+        surface = PlanarSurface(270., 90., *corners)
         return surface
 
     def test1_site_on_the_hangin_wall(self):
@@ -362,7 +362,7 @@ class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
                                        Point(90.33, 0)])
         dists = surface.get_rx_distance(sites)
         expected_dists = [0] * 3
-        aac(dists, expected_dists)
+        aac(dists, expected_dists, atol=1E-11)
 
     def test5_site_opposite_to_strike_direction(self):
         surface = self._test1to7surface()
@@ -370,7 +370,7 @@ class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
                                        Point(-90.33, 0)])
         dists = surface.get_rx_distance(sites)
         expected_dists = [0] * 3
-        aac(dists, expected_dists)
+        aac(dists, expected_dists, atol=1E-11)
 
     def test6_one_degree_distance(self):
         surface = self._test1to7surface()
