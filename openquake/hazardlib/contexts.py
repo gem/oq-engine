@@ -551,14 +551,13 @@ class ContextMaker(object):
         """
         :param srcs: a list of Source objects
         :param sitecol: a SiteCollection instance
-        :returns: a list RuptureContexts
+        :returns: a list of context arrays
         """
-        allctxs = []
+        ctxs = []
         for i, src in enumerate(srcs):
             src.id = i
-            allctxs.extend(self.get_ctxs(src, sitecol))
-        allctxs.sort(key=operator.attrgetter('mag'))
-        return allctxs
+            ctxs.extend(self.get_ctxs(src, sitecol))
+        return ctxs
 
     def make_rctx(self, rup):
         """

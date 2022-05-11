@@ -191,12 +191,15 @@ class EffectTestCase(unittest.TestCase):
             ctx.vs30 = numpy.array([760.])
             ctx.rrup = numpy.array([100.])
             ctx.rjb = numpy.array([99.])
+            ctx.src_id = 0
+            ctx.clon = 0.
+            ctx.clat = 0.
             ctx.weight = 0.
             ctxs.append(ctx)
         cmaker = ContextMaker(
             'TRT', gsims, dict(imtls=imtls, truncation_level=truncation_level))
         cmaker.tom = PoissonTOM(time_span=50)
-        pmap = cmaker.get_pmap(ctxs)
+        pmap = cmaker.get_pmap(cmaker.recarrays(ctxs))
         numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)
 
 
