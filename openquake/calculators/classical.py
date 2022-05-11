@@ -62,20 +62,21 @@ def get_source_id(src):  # used in submit_tasks
     return src.source_id.split(':')[0]
 
 
-def store_ctxs(dstore, rupdata, grp_id):
+def store_ctxs(dstore, rupdata_list, grp_id):
     """
     Store contexts in the datastore
     """
-    nr = len(rupdata)
-    known = set(rupdata.dtype.names)
-    for par in dstore['rup']:
-        if par not in known:
-            pass
-        elif par == 'probs_occur':
-            dstore.hdf5.save_vlen('rup/probs_occur', rupdata[par])
-        else:
-            hdf5.extend(dstore['rup/' + par], rupdata[par])
-    hdf5.extend(dstore['rup/grp_id'], numpy.repeat(grp_id, nr))
+    for rupdata in rupdata_list:
+        nr = len(rupdata)
+        known = set(rupdata.dtype.names)
+        for par in dstore['rup']:
+            if par not in known:
+                pass
+            elif par == 'probs_occur':
+                dstore.hdf5.save_vlen('rup/probs_occur', rupdata[par])
+            else:
+                hdf5.extend(dstore['rup/' + par], rupdata[par])
+        hdf5.extend(dstore['rup/grp_id'], numpy.repeat(grp_id, nr))
 
 
 #  ########################### task functions ############################ #
@@ -286,7 +287,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cfactor += dic.pop('cfactor')
 
         # store rup_data if there are few sites
-        if self.few_sites and len(dic['rup_data']['src_id']):
+        if self.few_sites and len(dic['rup_data']):
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 

@@ -1147,8 +1147,16 @@ class PmapMaker(object):
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
-        rupdata = numpy.concatenate(self.rupdata) if self.rupdata else {
-            'src_id': []}
+        rupdata, parametric, nonparam = [], [], []
+        for ctx in self.rupdata:
+            if numpy.isnan(ctx.occurrence_rate).all():
+                nonparam.append(ctx)
+            else:
+                parametric.append(ctx)
+        if parametric:
+            rupdata.append(numpy.concatenate(parametric))
+        if nonparam:
+            rupdata.append(numpy.concatenate(nonparam))
         dic = {'pmap': pmap,
                'cfactor': self.cmaker.collapser.cfactor,
                'rup_data': rupdata,
