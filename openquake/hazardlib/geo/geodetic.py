@@ -20,15 +20,48 @@
 Module :mod:`openquake.hazardlib.geo.geodetic` contains functions for geodetic
 transformations, optimized for massive calculations.
 """
-import numpy
+import math
+import numpy as np
 from scipy.spatial.distance import cdist
 from openquake.baselib.python3compat import round
+from openquake.baselib.performance import compile
 
 #: Earth radius in km.
 EARTH_RADIUS = 6371.0
 
 #: Maximum elevation on Earth in km.
 EARTH_ELEVATION = -8.848
+
+
+@compile("f8[:](f8, f8, f8[:], f8[:])")
+def distances(lon, lat, lons, lats):
+    """
+    Calculate the geodetic distances between one point and a collection of
+    points by using numba. Assume the parameters are in radians.
+    """
+    dists = np.arcsin(np.sqrt(
+        np.sin((lat - lats) / 2.0) ** 2 +
+        np.cos(lat) * np.cos(lats) * np.sin((lon - lons) / 2.0) ** 2
+    ))
+    return dists * 2. * EARTH_RADIUS
+
+
+@compile("f8[:](f8, f8, f8, f8[:], f8[:])")
+def distances_to_arc(lon, lat, azi, lons, lats):
+    """
+    Calculate the distances between one arc and a collection of
+    points by using numba. Assume the parameters are in degrees.
+    """
+    lon, lat, azi = np.radians(np.array([lon, lat, azi]))
+    lons, lats = np.radians(lons), np.radians(lats)
+    coss = np.cos(lats)
+    azi_to_target = - np.arctan2(
+        np.sin(lon - lons) * coss,
+        np.cos(lat) * np.sin(lats) - np.sin(lat) * coss * np.cos(lon - lons))
+    distance_to_target = distances(lon, lat, lons, lats)
+    sin = np.sin(azi_to_target - azi)
+    angle = np.arccos(sin * np.sin(distance_to_target / EARTH_RADIUS))
+    return (np.pi / 2. - angle) * EARTH_RADIUS
 
 
 def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
@@ -46,10 +79,10 @@ def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
         Distance in km, floating point scalar or numpy array of such.
     """
     lons1, lats1, lons2, lats2 = _prepare_coords(lons1, lats1, lons2, lats2)
-    distance = numpy.arcsin(numpy.sqrt(
-        numpy.sin((lats1 - lats2) / 2.0) ** 2.0
-        + numpy.cos(lats1) * numpy.cos(lats2)
-        * numpy.sin((lons1 - lons2) / 2.0) ** 2.0
+    distance = np.arcsin(np.sqrt(
+        np.sin((lats1 - lats2) / 2.0) ** 2.0
+        + np.cos(lats1) * np.cos(lats2)
+        * np.sin((lons1 - lons2) / 2.0) ** 2.0
     ))
     return diameter * distance
 
@@ -68,11 +101,11 @@ def azimuth(lons1, lats1, lons2, lats2):
         direction to the second point measured clockwise in decimal degrees.
     """
     lons1, lats1, lons2, lats2 = _prepare_coords(lons1, lats1, lons2, lats2)
-    cos_lat2 = numpy.cos(lats2)
-    true_course = numpy.degrees(numpy.arctan2(
-        numpy.sin(lons1 - lons2) * cos_lat2,
-        numpy.cos(lats1) * numpy.sin(lats2)
-        - numpy.sin(lats1) * cos_lat2 * numpy.cos(lons1 - lons2)
+    cos_lat2 = np.cos(lats2)
+    true_course = np.degrees(np.arctan2(
+        np.sin(lons1 - lons2) * cos_lat2,
+        np.cos(lats1) * np.sin(lats2)
+        - np.sin(lats1) * cos_lat2 * np.cos(lons1 - lons2)
     ))
     return (360 - true_course) % 360
 
@@ -93,7 +126,7 @@ def distance(lons1, lats1, depths1, lons2, lats2, depths2):
     """
     hdist = geodetic_distance(lons1, lats1, lons2, lats2)
     vdist = depths1 - depths2
-    return numpy.sqrt(hdist ** 2 + vdist ** 2)
+    return np.sqrt(hdist ** 2 + vdist ** 2)
 
 
 def min_distance_to_segment(seglons, seglats, lons, lats):
@@ -138,24 +171,24 @@ def min_distance_to_segment(seglons, seglats, lons, lats):
     # Find the points inside the band defined by the two lines perpendicular
     # to the segment direction passing through the two vertexes of the segment.
     # For these points the closest distance is the distance from the great arc.
-    idx_in = numpy.nonzero(
-        (numpy.cos(numpy.radians(seg_azim-azimuth1)) >= 0.0) &
-        (numpy.cos(numpy.radians(seg_azim-azimuth2)) <= 0.0))
+    idx_in = np.nonzero(
+        (np.cos(np.radians(seg_azim-azimuth1)) >= 0.0) &
+        (np.cos(np.radians(seg_azim-azimuth2)) <= 0.0))
 
     # Find the points outside the band defined by the two line perpendicular
     # to the segment direction passing through the two vertexes of the segment.
     # For these points the closest distance is the minimum of the distance from
     # the two point vertexes.
-    idx_out = numpy.nonzero(
-        (numpy.cos(numpy.radians(seg_azim-azimuth1)) < 0.0) |
-        (numpy.cos(numpy.radians(seg_azim-azimuth2)) > 0.0))
+    idx_out = np.nonzero(
+        (np.cos(np.radians(seg_azim-azimuth1)) < 0.0) |
+        (np.cos(np.radians(seg_azim-azimuth2)) > 0.0))
 
     # Find the indexes of points 'on the left of the segment'
-    idx_neg = numpy.nonzero(numpy.sin(numpy.radians(
+    idx_neg = np.nonzero(np.sin(np.radians(
         (azimuth1-seg_azim))) < 0.0)
 
     # Now let's compute the distances for the two cases.
-    dists = numpy.zeros_like(lons)
+    dists = np.zeros_like(lons)
     if len(idx_in[0]):
         dists[idx_in] = distance_to_arc(
             seglons[0], seglats[0], seg_azim, lons[idx_in], lats[idx_in])
@@ -192,7 +225,7 @@ def spherical_to_cartesian(lons, lats, depths=None):
     considered zero for all points.
 
     :returns:
-        ``numpy.array`` of 3d vectors representing points' coordinates in
+        ``np.array`` of 3d vectors representing points' coordinates in
         Cartesian space in km. The array has shape `lons.shape + (3,)`.
         In particular, if ``lons`` and ``lats`` are scalars the result is a
         3D vector and if they are vectors the result is a matrix of shape
@@ -200,24 +233,47 @@ def spherical_to_cartesian(lons, lats, depths=None):
 
     See also :func:`cartesian_to_spherical`.
     """
-    phi = numpy.radians(lons)
-    theta = numpy.radians(lats)
+    phi = np.radians(lons)
+    theta = np.radians(lats)
     if depths is None:
-        rr = EARTH_RADIUS
-    else:
-        rr = EARTH_RADIUS - numpy.array(depths)
-    cos_theta_r = rr * numpy.cos(theta)
-    try:
-        shape = lons.shape
-    except AttributeError:  # a list/tuple was passed
-        try:
-            shape = (len(lons),)
-        except TypeError:  # a scalar was passed
-            shape = ()
-    arr = numpy.zeros(shape + (3,))
-    arr[..., 0] = cos_theta_r * numpy.cos(phi)
-    arr[..., 1] = cos_theta_r * numpy.sin(phi)
-    arr[..., 2] = rr * numpy.sin(theta)
+        depths = np.zeros_like(phi)
+    rr = EARTH_RADIUS - np.array(depths)
+    cos_theta_r = rr * np.cos(theta)
+    arr = np.zeros(phi.shape + (3,))
+    arr[..., 0] = cos_theta_r * np.cos(phi)
+    arr[..., 1] = cos_theta_r * np.sin(phi)
+    arr[..., 2] = rr * np.sin(theta)
+    return arr
+
+
+@compile("f8[:, :](f8[:], f8[:])")
+def fast_spherical_to_cartesian(lons, lats):
+    """
+    Return the position vectors (in Cartesian coordinates) of list of spherical
+    coordinates.
+
+    For equations see: http://mathworld.wolfram.com/SphericalCoordinates.html.
+
+    Parameters are components of spherical coordinates in a form of scalars,
+    lists or numpy arrays. ``depths`` can be ``None`` in which case it's
+    considered zero for all points.
+
+    :returns:
+        ``np.array`` of 3d vectors representing points' coordinates in
+        Cartesian space in km. The array has shape `lons.shape + (3,)`.
+        In particular, if ``lons`` and ``lats`` are scalars the result is a
+        3D vector and if they are vectors the result is a matrix of shape
+        (N, 3).
+
+    See also :func:`cartesian_to_spherical`.
+    """
+    phi = np.radians(lons)
+    theta = np.radians(lats)
+    cos_theta_r = EARTH_RADIUS * np.cos(theta)
+    arr = np.zeros((len(phi), 3))
+    arr[:, 0] = cos_theta_r * np.cos(phi)
+    arr[:, 1] = cos_theta_r * np.sin(phi)
+    arr[:, 2] = EARTH_RADIUS * np.sin(theta)
     return arr
 
 
@@ -244,15 +300,15 @@ def distance_matrix(lons, lats, diameter=2*EARTH_RADIUS):
     """
     m = len(lons)
     assert m == len(lats), (m, len(lats))
-    lons = numpy.radians(lons)
-    lats = numpy.radians(lats)
-    cos_lats = numpy.cos(lats)
-    result = numpy.zeros((m, m))
+    lons = np.radians(lons)
+    lats = np.radians(lats)
+    cos_lats = np.cos(lats)
+    result = np.zeros((m, m))
     for i in range(len(lons)):
-        a = numpy.sin((lats[i] - lats) / 2.0)
-        b = numpy.sin((lons[i] - lons) / 2.0)
-        result[i, :] = numpy.arcsin(
-            numpy.sqrt(a * a + cos_lats[i] * cos_lats * b * b)) * diameter
+        a = np.sin((lats[i] - lats) / 2.0)
+        b = np.sin((lons[i] - lons) / 2.0)
+        result[i, :] = np.arcsin(
+            np.sqrt(a * a + cos_lats[i] * cos_lats * b * b)) * diameter
     return result
 
 
@@ -292,10 +348,10 @@ def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
     # should have the same number of intervals. To reduce potential differences
     # due to floating point errors, we therefore round total_distance to a
     # fixed precision (7)
-    total_distance = round(numpy.sqrt(hdist ** 2 + vdist ** 2), 7)
+    total_distance = round(np.sqrt(hdist ** 2 + vdist ** 2), 7)
     num_intervals = int(round(total_distance / length))
     if num_intervals == 0:
-        return numpy.array([lon1]), numpy.array([lat1]), numpy.array([depth1])
+        return np.array([lon1]), np.array([lat1]), np.array([depth1])
     dist_factor = (length * num_intervals) / total_distance
     return npoints_towards(
         lon1, lat1, depth1, azimuth(lon1, lat1, lon2, lat2),
@@ -363,25 +419,25 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     http://williams.best.vwh.net/avform.htm#LL
     """
     assert npoints > 1
-    rlon, rlat = numpy.radians(lon), numpy.radians(lat)
-    tc = numpy.radians(360 - azimuth)
-    hdists = numpy.arange(npoints, dtype=float)
+    rlon, rlat = np.radians(lon), np.radians(lat)
+    tc = np.radians(360 - azimuth)
+    hdists = np.arange(npoints, dtype=float)
     hdists *= (hdist / EARTH_RADIUS) / (npoints - 1)
-    vdists = numpy.arange(npoints, dtype=float)
+    vdists = np.arange(npoints, dtype=float)
     vdists *= vdist / (npoints - 1)
 
-    sin_dists = numpy.sin(hdists)
-    cos_dists = numpy.cos(hdists)
-    sin_lat = numpy.sin(rlat)
-    cos_lat = numpy.cos(rlat)
+    sin_dists = np.sin(hdists)
+    cos_dists = np.cos(hdists)
+    sin_lat = np.sin(rlat)
+    cos_lat = np.cos(rlat)
 
-    sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * numpy.cos(tc)
-    lats = numpy.degrees(numpy.arcsin(sin_lats))
+    sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * np.cos(tc)
+    lats = np.degrees(np.arcsin(sin_lats))
 
-    dlon = numpy.arctan2(numpy.sin(tc) * sin_dists * cos_lat,
-                         cos_dists - sin_lat * sin_lats)
-    lons = numpy.mod(rlon - dlon + numpy.pi, 2 * numpy.pi) - numpy.pi
-    lons = numpy.degrees(lons)
+    dlon = np.arctan2(np.sin(tc) * sin_dists * cos_lat,
+                      cos_dists - sin_lat * sin_lats)
+    lons = np.mod(rlon - dlon + np.pi, 2 * np.pi) - np.pi
+    lons = np.degrees(lons)
 
     depths = vdists + depth
 
@@ -391,6 +447,43 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     depths[0] = depth
 
     return lons, lats, depths
+
+
+@compile('f8[:](f8, f8, f8, f8)')
+def fast_point_at(lon, lat, azimuth, distance):
+    """
+    Perform a forward geodetic transformation: find points lying at a given
+    distances from a given point on a great circle arc defined by azimuth.
+
+    :param lon, lat:
+        Coordinates of the reference point, in radians
+    :param azimuth:
+        An azimuth of a great circle arc of interest measured in a reference
+        point in decimal degrees.
+    :param distance:
+        Distance to target point in km.
+    :returns:
+        Array of shape (2, N) with longitudes and latitudes
+
+    Implements the same approach as :func:`npoints_towards`.
+    """
+    out = np.zeros(2)
+    lon, lat = math.radians(lon), math.radians(lat)
+    tc = - math.radians(azimuth)
+    sin_dists = math.sin(distance / EARTH_RADIUS)
+    cos_dists = math.cos(distance / EARTH_RADIUS)
+    sin_lat = math.sin(lat)
+    cos_lat = math.cos(lat)
+
+    sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * math.cos(tc)
+
+    dlon = math.atan2(math.sin(tc) * sin_dists * cos_lat,
+                      cos_dists - sin_lat * sin_lats)
+    lons = (lon - dlon + math.pi) % (2 * math.pi) - math.pi
+    out[0] = math.degrees(lons)
+    out[1] = math.degrees(math.asin(sin_lats))
+
+    return out
 
 
 def point_at(lon, lat, azimuth, distance):
@@ -413,20 +506,20 @@ def point_at(lon, lat, azimuth, distance):
     """
     # this is a simplified version of npoints_towards().
     # code duplication is justified by performance reasons.
-    lon, lat = numpy.radians(lon), numpy.radians(lat)
-    tc = numpy.radians(360 - azimuth)
-    sin_dists = numpy.sin(distance / EARTH_RADIUS)
-    cos_dists = numpy.cos(distance / EARTH_RADIUS)
-    sin_lat = numpy.sin(lat)
-    cos_lat = numpy.cos(lat)
+    lon, lat = np.radians(lon), np.radians(lat)
+    tc = np.radians(360 - azimuth)
+    sin_dists = np.sin(distance / EARTH_RADIUS)
+    cos_dists = np.cos(distance / EARTH_RADIUS)
+    sin_lat = np.sin(lat)
+    cos_lat = np.cos(lat)
 
-    sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * numpy.cos(tc)
-    lats = numpy.degrees(numpy.arcsin(sin_lats))
+    sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * np.cos(tc)
+    lats = np.degrees(np.arcsin(sin_lats))
 
-    dlon = numpy.arctan2(numpy.sin(tc) * sin_dists * cos_lat,
-                         cos_dists - sin_lat * sin_lats)
-    lons = numpy.mod(lon - dlon + numpy.pi, 2 * numpy.pi) - numpy.pi
-    lons = numpy.degrees(lons)
+    dlon = np.arctan2(np.sin(tc) * sin_dists * cos_lat,
+                      cos_dists - sin_lat * sin_lats)
+    lons = np.mod(lon - dlon + np.pi, 2 * np.pi) - np.pi
+    lons = np.degrees(lons)
 
     return lons, lats
 
@@ -441,25 +534,25 @@ def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
     """
 
     if type(plons) is float:
-        plons = numpy.array([plons])
-        plats = numpy.array([plats])
+        plons = np.array([plons])
+        plats = np.array([plats])
 
     azimuth_to_target = azimuth(alon, alat, plons, plats)
 
     # Find the indexes of the points in the positive y halfspace
-    idx = numpy.nonzero(numpy.cos(
-        numpy.radians((aazimuth-azimuth_to_target))) > 0.0)
+    idx = np.nonzero(np.cos(
+        np.radians((aazimuth-azimuth_to_target))) > 0.0)
 
     # Find the indexes of the points in the negative y halfspace
-    idx_not = numpy.nonzero(numpy.cos(
-        numpy.radians((aazimuth-azimuth_to_target))) <= 0.0)
+    idx_not = np.nonzero(np.cos(
+        np.radians((aazimuth-azimuth_to_target))) <= 0.0)
 
-    idx_ll_quadr = numpy.nonzero(
-        (numpy.cos(numpy.radians((aazimuth-azimuth_to_target))) <= 0.0) &
-        (numpy.sin(numpy.radians((aazimuth-azimuth_to_target))) > 0.0))
+    idx_ll_quadr = np.nonzero(
+        (np.cos(np.radians((aazimuth-azimuth_to_target))) <= 0.0) &
+        (np.sin(np.radians((aazimuth-azimuth_to_target))) > 0.0))
 
     # Initialise the array containing the final distances
-    distance = numpy.zeros_like(plons)
+    distance = np.zeros_like(plons)
 
     # Compute the distance between the semi-arc with 'aazimuth' direction
     # and the set of sites in the positive half-space. The shortest distance to
@@ -469,10 +562,9 @@ def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
         distance_to_target = geodetic_distance(alon, alat,
                                                plons[idx], plats[idx])
         t_angle = (azimuth_to_target[idx] - aazimuth + 360) % 360
-        angle = numpy.arccos((numpy.sin(numpy.radians(t_angle)) *
-                              numpy.sin(distance_to_target /
-                                        EARTH_RADIUS)))
-        distance[idx] = (numpy.pi / 2 - angle) * EARTH_RADIUS
+        angle = np.arccos((np.sin(np.radians(t_angle)) *
+                           np.sin(distance_to_target / EARTH_RADIUS)))
+        distance[idx] = (np.pi / 2 - angle) * EARTH_RADIUS
 
     # Compute the distance between the reference point and the set of sites
     # in the negative half-space. The shortest distance for the semi-arc for
@@ -518,10 +610,10 @@ def distance_to_arc(alon, alat, aazimuth, plons, plats):
     # augmented to pi/2 is equal to sine of an opposite angle times
     # sine of hypotenuse, see
     # http://en.wikipedia.org/wiki/Spherical_trigonometry#Napier.27s_Pentagon
-    angle = numpy.arccos(
-        (numpy.sin(numpy.radians(t_angle))
-         * numpy.sin(distance_to_target / EARTH_RADIUS)))
-    return (numpy.pi / 2 - angle) * EARTH_RADIUS
+    angle = np.arccos(
+        (np.sin(np.radians(t_angle))
+         * np.sin(distance_to_target / EARTH_RADIUS)))
+    return (np.pi / 2 - angle) * EARTH_RADIUS
 
 
 def _prepare_coords(lons1, lats1, lons2, lats2):
@@ -530,10 +622,10 @@ def _prepare_coords(lons1, lats1, lons2, lats2):
     to numpy arrays of radians. Makes sure that respective coordinates
     in pairs have the same shape.
     """
-    lons1 = numpy.radians(lons1)
-    lats1 = numpy.radians(lats1)
+    lons1 = np.radians(lons1)
+    lats1 = np.radians(lats1)
     assert lons1.shape == lats1.shape
-    lons2 = numpy.radians(lons2)
-    lats2 = numpy.radians(lats2)
+    lons2 = np.radians(lons2)
+    lats2 = np.radians(lats2)
     assert lons2.shape == lats2.shape
     return lons1, lats1, lons2, lats2

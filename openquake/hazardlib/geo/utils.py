@@ -32,6 +32,7 @@ import shapely.geometry
 from shapely.strtree import STRtree
 
 from openquake.baselib.hdf5 import vstr
+from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import geodetic
 
 U32 = numpy.uint32
@@ -570,25 +571,39 @@ def get_middle_point(lon1, lat1, lon2, lat2):
     return geodetic.point_at(lon1, lat1, azimuth, dist / 2.0)
 
 
-def cartesian_to_spherical(vectors):
+@compile("f8[:,:](f8[:,:])")
+def cartesian_to_spherical(arrayN3):
     """
     Return the spherical coordinates for coordinates in Cartesian space.
 
     This function does an opposite to :func:`spherical_to_cartesian`.
 
-    :param vectors:
-        Array of 3d vectors in Cartesian space of shape (..., 3)
+    :param arrayN3:
+        Array of cartesian coordinates of shape (N, 3)
     :returns:
-        Tuple of three arrays of the same shape as ``vectors`` representing
-        longitude (decimal degrees), latitude (decimal degrees) and depth (km)
-        in specified order.
+        Array of shape (3, N) representing longitude (decimal degrees),
+        latitude (decimal degrees) and depth (km) in specified order.
     """
-    rr = numpy.sqrt(numpy.sum(vectors * vectors, axis=-1))
-    xx, yy, zz = vectors.T
-    lats = numpy.degrees(numpy.arcsin((zz / rr).clip(-1., 1.)))
-    lons = numpy.degrees(numpy.arctan2(yy, xx))
-    depths = EARTH_RADIUS - rr
-    return lons.T, lats.T, depths
+    out = numpy.zeros_like(arrayN3)
+    rr = numpy.sqrt(numpy.sum(arrayN3 * arrayN3, axis=-1))
+    xx, yy, zz = arrayN3.T
+    out[:, 0] = numpy.degrees(numpy.arctan2(yy, xx))
+    out[:, 1] = numpy.degrees(numpy.arcsin(numpy.clip(zz / rr, -1., 1.)))
+    out[:, 2] = EARTH_RADIUS - rr
+    return out.T  # shape (3, N)
+
+
+@compile("f8(f8[:], f8[:, :])")
+def min_distance(xyz, xyzs):
+    """
+    :param xyz: an array of shape (3,)
+    :param xyzs: an array of shape (N, 3)
+    :returns: the minimum euclidean distance between the point and the points
+    """
+    x, y, z = xyz
+    xs, ys, zs = xyzs.T
+    d2 = (xs-x)**2 + (ys-y)**2 + (zs-z)**2
+    return math.sqrt(d2.min())
 
 
 def triangle_area(e1, e2, e3):

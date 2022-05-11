@@ -1,4 +1,13 @@
   [Michele Simionato]
+  * Optimized rupture instantiation for point sources
+  * Optimized distance calculations for point point sources
+
+  [Tom Son, Claudio Schill]
+  * Simple performance improvement of Kuehn et al. 2020 model
+
+  [Michele Simionato]
+  * Changed again the string representation of logic tree paths and added
+    an utility `hazardlib.lt.build` to build trees from literal lists
   * Fixed the field `source_info.trti` in the datastore to point to the
     correct tectonic region type index and not to zero
   * Added a check for inconsistent IDs across different kinds of risk functions

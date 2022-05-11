@@ -106,7 +106,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check extraction
         sitecol = extract(self.calc.datastore, 'sitecol')
-        self.assertEqual(len(sitecol.array), 1)
+        self.assertEqual(len(sitecol.array), 4)
 
         # check minimum_magnitude discards the source
         with self.assertRaises(RuntimeError) as ctx:
@@ -1021,8 +1021,9 @@ hazard_uhs-std.csv
     def test_case_72(self):
         # reduced USA model
         self.run_calc(case_72.__file__, 'job.ini')
-        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurve-mean.csv', f)
+        # rlz#2 corresponds to the CambellBozorgnia2014
+        [f] = export(('hcurves/rlz-002', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-002.csv', f)
 
     def test_case_73(self):
         # test LT

@@ -28,7 +28,7 @@ from openquake.baselib.node import Node
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
-from openquake.hazardlib.geo.surface.planar import PlanarSurface, _project
+from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
 
@@ -221,9 +221,9 @@ class ComplexFaultSurface(BaseSurface):
 
         # project surface boundary to reference plane and check for
         # validity.
-        ref_plane = PlanarSurface.from_corner_points(ul, ur, br, bl)
-        _, xx, yy = _project(ref_plane,
-                             spherical_to_cartesian(lons, lats, depths))
+        ref_plane = PlanarSurface.from_corner_points(ul, ur, br, bl).array
+        mat = spherical_to_cartesian(lons, lats, depths) - ref_plane.xyz[:, 0]
+        xx, yy = mat @ ref_plane.uv1, mat @ ref_plane.uv2
         coords = [(x, y) for x, y in zip(xx, yy)]
         p = shapely.geometry.Polygon(coords)
         if not p.is_valid:

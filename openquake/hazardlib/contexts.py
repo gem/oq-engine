@@ -42,7 +42,8 @@ from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.geo.surface import PlanarSurface
+from openquake.hazardlib.geo.surface.planar import (
+    PlanarSurface, project, project_back)
 
 U32 = numpy.uint32
 F64 = numpy.float64
@@ -435,6 +436,7 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
+        self.dst_mon = monitor('computing rrup', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
@@ -476,13 +478,17 @@ class ContextMaker(object):
         # ctxs.sort(key=operator.attrgetter('mag'))
         return ctxs
 
-    def recarray(self, ctxs):
+    def recarray(self, ctxs, magi=None):
         """
         :params ctxs: a non-empty list of homogeneous contexts
         :returns: a recarray, possibly collapsed
         """
         assert ctxs
         dd = self.defaultdict.copy()
+        if magi is not None:  # magnitude bin used in disaggregation
+            dd['magi'] = numpy.uint8(0)
+            dd['clon'] = numpy.float64(0.)
+            dd['clat'] = numpy.float64(0.)
         if hasattr(ctxs[0], 'weight'):
             dd['weight'] = numpy.float64(0.)
             noweight = False
@@ -509,7 +515,9 @@ class ContextMaker(object):
                 gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
             for par in dd:
-                if par == 'mdvbin':
+                if par == 'magi':  # in disaggregation
+                    val = magi
+                elif par == 'mdvbin':
                     val = self.collapser.calc_mdvbin(ctx)
                 elif par == 'weight' and noweight:
                     val = 0.
@@ -547,56 +555,62 @@ class ContextMaker(object):
         allctxs.sort(key=operator.attrgetter('mag'))
         return allctxs
 
-    def filter(self, sites, rup):
-        """
-        Filter the site collection with respect to the rupture.
-
-        :param sites:
-            Instance of :class:`openquake.hazardlib.site.SiteCollection`.
-        :param rup:
-            Instance of
-            :class:`openquake.hazardlib.source.rupture.BaseRupture`
-        :returns:
-            (filtered sites, distance context)
-        """
-        distances = get_distances(rup, sites, 'rrup', self.dcache)
-        mdist = self.maximum_distance(rup.mag)
-        mask = distances <= mdist
-        if mask.any():
-            sites, distances = sites.filter(mask), distances[mask]
-        else:
-            raise FarAwayRupture('%d: %d km' % (rup.rup_id, distances.min()))
-        return sites, DistancesContext([('rrup', distances)])
-
-    def make_rctx(self, rupture):
+    def make_rctx(self, rup):
         """
         Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
         """
         ctx = RuptureContext()
-        vars(ctx).update(vars(rupture))
+        vars(ctx).update(vars(rup))
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             if param == 'mag':
-                value = numpy.round(rupture.mag, 6)
+                value = numpy.round(rup.mag, 6)
             elif param == 'strike':
-                value = rupture.surface.get_strike()
+                value = rup.surface.get_strike()
             elif param == 'dip':
-                value = rupture.surface.get_dip()
+                value = rup.surface.get_dip()
             elif param == 'rake':
-                value = rupture.rake
+                value = rup.rake
             elif param == 'ztor':
-                value = rupture.surface.get_top_edge_depth()
+                value = rup.surface.get_top_edge_depth()
             elif param == 'hypo_lon':
-                value = rupture.hypocenter.longitude
+                value = rup.hypocenter.longitude
             elif param == 'hypo_lat':
-                value = rupture.hypocenter.latitude
+                value = rup.hypocenter.latitude
             elif param == 'hypo_depth':
-                value = rupture.hypocenter.depth
+                value = rup.hypocenter.depth
             elif param == 'width':
-                value = rupture.surface.get_width()
+                value = rup.surface.get_width()
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
             setattr(ctx, param, value)
+        return ctx
+
+    def get_ctx(self, rup, sites, distances):
+        """
+        :returns: a RuptureContext (or None if filtered away)
+        """
+        # add distances to the context
+        ctx = self.make_rctx(rup)
+        ctx.rrup = distances
+        ctx.sites = sites
+        for param in self.REQUIRES_DISTANCES - {'rrup'}:
+            dists = get_distances(rup, sites, param, self.dcache)
+            setattr(ctx, param, dists)
+
+        # Equivalent distances
+        reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
+        if reqv_obj and isinstance(rup.surface, PlanarSurface):
+            reqv = reqv_obj.get(ctx.repi, rup.mag)
+            if 'rjb' in self.REQUIRES_DISTANCES:
+                ctx.rjb = reqv
+            if 'rrup' in self.REQUIRES_DISTANCES:
+                ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
+
+        # add site parameters
+        for name in sites.array.dtype.names:
+            setattr(ctx, name, sites[name])
+
         return ctx
 
     def get_ctxs(self, src, sitecol, src_id=None, step=1):
@@ -613,49 +627,55 @@ class ContextMaker(object):
             fat RuptureContexts sorted by mag
         """
         ctxs = []
-        fewsites = len(sitecol.complete) <= self.max_sites_disagg
         if hasattr(src, 'source_id'):  # is a real source
-            rups = self._gen_rups(src, sitecol, step)
+            ps = getattr(src, 'location', None) and step == 1
+            with self.ir_mon:
+                if ps:  # point source
+                    rups_sites = list(self._ps_rups_sites(src, sitecol))
+                else:  # just add the ruptures
+                    allrups = numpy.array(list(src.iter_ruptures(
+                        shift_hypo=self.shift_hypo, step=step)))
+                    # sorted by mag by construction
+                    u32mags = U32([rup.mag * 100 for rup in allrups])
+                    rups_sites = [(rups, sitecol)
+                                  for rups in split_array(allrups, u32mags)]
             src_id = src.id
         else:  # in event based we get a list with a single rupture
-            rups = src
-
-        # Create the distance cache. A dictionary of dictionaries
-        dcache = {}  # used only for MultiFaultSources
-        for rup in rups:
-            sites = getattr(rup, 'sites', sitecol)
-            try:
-                r_sites, dctx = self.filter(sites, rup)
-            except FarAwayRupture:
+            ps = False
+            rups_sites = [(src, sitecol)]
+        fewsites = len(sitecol.complete) <= self.max_sites_disagg
+        for rups, sites in rups_sites:  # ruptures with the same magnitude
+            if len(rups) == 0:  # may happen in case of min_mag/max_mag
                 continue
-            ctx = self.make_rctx(rup)
-            ctx.sites = r_sites
-
-            for param in self.REQUIRES_DISTANCES - {'rrup'}:
-                dists = get_distances(rup, r_sites, param, self.dcache)
-                setattr(dctx, param, dists)
-
-            # Equivalent distances
-            reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
-            if reqv_obj and isinstance(rup.surface, PlanarSurface):
-                reqv = reqv_obj.get(dctx.repi, rup.mag)
-                if 'rjb' in self.REQUIRES_DISTANCES:
-                    dctx.rjb = reqv
-                if 'rrup' in self.REQUIRES_DISTANCES:
-                    dctx.rrup = numpy.sqrt(
-                        reqv**2 + rup.hypocenter.depth**2)
-            for name in r_sites.array.dtype.names:
-                setattr(ctx, name, r_sites[name])
-            ctx.src_id = src_id
-            for par in self.REQUIRES_DISTANCES | {'rrup'}:
-                setattr(ctx, par, getattr(dctx, par))
-            if fewsites:
-                # get closest point on the surface
-                closest = rup.surface.get_closest_points(sitecol.complete)
-                ctx.clon = closest.lons[ctx.sids]
-                ctx.clat = closest.lats[ctx.sids]
-            ctxs.append(ctx)
-        return ctxs  # sorted by mag by construction
+            magdist = self.maximum_distance(rups[0].mag)
+            with self.dst_mon:
+                if ps:  # fast lane
+                    planar = numpy.array(
+                        [rup.surface.array for rup in rups]
+                    ).view(numpy.recarray)  # shape (U, 3)
+                    dists, xx, yy = project(planar, sites.xyz)  # (3, U, N)
+                    if fewsites:
+                        # get the closest points on the surface
+                        closest = project_back(planar, xx, yy)  # (3, U, N)
+                else:  # regular
+                    dists = [get_distances(rup, sites, 'rrup', self.dcache)
+                             for rup in rups]
+            for u, rup in enumerate(rups):
+                mask = dists[u] <= magdist
+                if mask.any():
+                    r_sites = sites.filter(mask)
+                    ctx = self.get_ctx(rup, r_sites, dists[u][mask])
+                    ctx.src_id = src_id
+                    ctxs.append(ctx)
+                    if fewsites:
+                        if ps:  # reuse already computed coordinates
+                            ctx.clon = closest[0, u, mask]
+                            ctx.clat = closest[1, u, mask]
+                        else:  # slow lane
+                            c = rup.surface.get_closest_points(sites.complete)
+                            ctx.clon = c.lons[ctx.sids]
+                            ctx.clat = c.lats[ctx.sids]
+        return ctxs
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -688,32 +708,18 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
-    def _gen_rups(self, src, sites, step):
-        # yield ruptures, each one with a .sites attribute
-        def rups(rupiter, sites):
-            for rup in rupiter:
-                rup.sites = sites
-                yield rup
-        if getattr(src, 'location', None) and src.count_nphc() > 1:
-            # finite site effects are averaged for sites over the
-            # pointsource_distance from the rupture (if any)
-            for r, s in self._cps_rups(src, sites, step):
-                yield from rups(r, s)
-        else:  # just add the ruptures
-            with self.ir_mon:
-                lst = list(src.iter_ruptures(
-                    shift_hypo=self.shift_hypo, step=step))
-            yield from rups(lst, sites)
-
-    def _cps_rups(self, src, sites, step):
+    def _ps_rups_sites(self, src, sites):
+        if src.count_nphc() == 1:  # one rupture per magnitude
+            for rup in src.iter_ruptures():
+                yield [rup], sites
+            return
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        with self.ir_mon:
-            allrups = numpy.array(
-                list(src.iter_ruptures(shift_hypo=self.shift_hypo, step=step)))
+        allrups = numpy.array(
+            list(src.iter_ruptures(shift_hypo=self.shift_hypo)))
         m_idx = numpy.array([rup.m for rup in allrups])
-        for rup in src.iruptures(step):
-            rups = allrups[m_idx == rup.m]  # ruptures with magnitude index `m`
+        for rup in src.iruptures():
+            rups = allrups[m_idx == rup.m]
             psdist = self.pointsource_distance + src.get_radius(rup)
             close = sites.filter(cdist <= psdist)
             far = sites.filter(cdist > psdist)
@@ -743,21 +749,21 @@ class ContextMaker(object):
         with patch.object(self.collapser, 'collapse_level', collapse_level):
             return self.get_pmap(ctxs).array(len(sitecol))
 
-    def recarrays(self, ctxs):
+    def recarrays(self, ctxs, magi=None):
         """
         :returns: a list of one or two recarrays
         """
         parametric, nonparametric, out = [], [], []
         for ctx in ctxs:
             assert not isinstance(ctx, numpy.recarray), ctx
-            if hasattr(ctx, 'probs_occur'):
+            if numpy.isnan(getattr(ctx, 'occurrence_rate', numpy.nan)):
                 nonparametric.append(ctx)
             else:
                 parametric.append(ctx)
         if parametric:
-            out.append(self.recarray(parametric))
+            out.append(self.recarray(parametric, magi))
         if nonparametric:
-            out.append(self.recarray(nonparametric))
+            out.append(self.recarray(nonparametric, magi))
         return out
 
     def get_pmap(self, ctxs, probmap=None):

@@ -20,7 +20,7 @@ A few notes about macOS:
 
 - macOS 11.x (Big Sur) and macOS 12.x (Monterey) are not officially supported 
 but users have managed to install the engine on both operating systems
-using the system provided Python (version 3.8).
+(see for instance https://groups.google.com/g/openquake-users/c/hl8uI_j6zwM/m/A0LzduANAgAJ).
 - new Macs with the M1 CPU are unsupported but users have managed to install
 the engine via Rosetta or natively by using the system Python (version 3.9)
 - make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](../faq.md#certificate-verification-on-macOS).

@@ -48,8 +48,8 @@ U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
-BASE184 = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmno"
-           "pqrstuvwxyz{|}!#$%&'()*+-./0123456789:;<=>?@¡¢"
+BASE183 = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmno"
+           "pqrstuvwxyz{|}!#$%&'()*+-/0123456789:;<=>?@¡¢"
            "£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑ"
            "ÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ")
 
@@ -1400,12 +1400,12 @@ def add_columns(a, b, on, cols=None):
 def categorize(values, nchars=2):
     """
     Takes an array with duplicate values and categorize it, i.e. replace
-    the values with codes of length nchars in BASE184. With nchars=2 33856
+    the values with codes of length nchars in BASE183. With nchars=2 33856
     unique values can be encoded, if there are more nchars must be increased
     otherwise a ValueError will be raised.
 
     :param values: an array of V non-unique values
-    :param nchars: number of characters in BASE184 for each code
+    :param nchars: number of characters in BASE183 for each code
     :returns: an array of V non-unique codes
 
     >>> categorize([1,2,2,3,4,1,1,2]) # 8 values, 4 unique ones
@@ -1417,7 +1417,7 @@ def categorize(values, nchars=2):
     if len(uvalues) > mvalues:
         raise ValueError(
             f'There are too many unique values ({len(uvalues)} > {mvalues})')
-    prod = itertools.product(*[BASE184] * nchars)
+    prod = itertools.product(*[BASE183] * nchars)
     dic = {uvalue: ''.join(chars) for uvalue, chars in zip(uvalues, prod)}
     return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
 

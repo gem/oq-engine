@@ -64,9 +64,9 @@ class Point(object):
         if not -90.0 <= latitude <= 90.0:
             raise ValueError("latitude %.6f outside range" % latitude)
 
-        self.depth = depth
-        self.latitude = latitude
-        self.longitude = longitude
+        self.depth = float(depth)
+        self.latitude = float(latitude)
+        self.longitude = float(longitude)
 
     @property
     def x(self):
