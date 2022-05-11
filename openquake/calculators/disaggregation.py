@@ -127,28 +127,35 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     eps3 = disagg._eps3(cmaker.truncation_level, cmaker.num_epsilon_bins)
     imts = [from_string(im) for im in cmaker.imtls]
     for magi in numpy.unique(magidx):
-        ctx = fullctx[fullctx.magi == magi]
-        res = {'trti': cmaker.trti, 'magi': magi}
-        # disaggregate by site, IMT
-        for s, iml3 in enumerate(hmap4):
-            close = ctx[ctx.sids == s]
-            if len(g_by_z[s]) == 0 or len(close) == 0:
-                # g_by_z[s] is empty in test case_7
-                continue
-            # dist_bins, lon_bins, lat_bins, eps_bins
-            bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
-                    bin_edges[4])
-            iml2 = dict(zip(imts, iml3))
-            with dis_mon:
-                # 7D-matrix #disbins, #lonbins, #latbins, #epsbins, M, P, Z
-                matrix = disagg.disaggregate(close, cmaker, g_by_z[s],
-                                             iml2, eps3, s, bins,
-                                             epsstar=epsstar)  # 7D-matrix
-                for m in range(M):
-                    mat6 = matrix[..., m, :, :]
-                    if mat6.any():
-                        res[s, m] = output(mat6)
-        yield res
+        ctxt = fullctx[fullctx.magi == magi]
+        nans = numpy.isnan(ctxt.occurrence_rate)
+        count_nans = nans.sum()
+        if count_nans in (0, len(ctxt)):  # no nans or all nans
+            ctxs = [ctxt]
+        else:
+            ctxs = [ctxt[nans], ctxt[~nans]]
+        for ctx in ctxs:
+            res = {'trti': cmaker.trti, 'magi': magi}
+            # disaggregate by site, IMT
+            for s, iml3 in enumerate(hmap4):
+                close = ctx[ctx.sids == s]
+                if len(g_by_z[s]) == 0 or len(close) == 0:
+                    # g_by_z[s] is empty in test case_7
+                    continue
+                # dist_bins, lon_bins, lat_bins, eps_bins
+                bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
+                        bin_edges[4])
+                iml2 = dict(zip(imts, iml3))
+                with dis_mon:
+                    # 7D-matrix #disbins, #lonbins, #latbins, #epsbins, M, P, Z
+                    matrix = disagg.disaggregate(close, cmaker, g_by_z[s],
+                                                 iml2, eps3, s, bins,
+                                                 epsstar=epsstar)  # 7D-matrix
+                    for m in range(M):
+                        mat6 = matrix[..., m, :, :]
+                        if mat6.any():
+                            res[s, m] = output(mat6)
+            yield res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
 
