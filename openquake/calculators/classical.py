@@ -64,20 +64,14 @@ def get_source_id(src):  # used in submit_tasks
 
 def store_ctxs(dstore, rupdata, grp_id):
     """
-    Store contexts with the same magnitude in the datastore
+    Store contexts in the datastore
     """
-    nr = len(rupdata['mag'])
-    rupdata['grp_id'] = numpy.repeat(grp_id, nr)
-    nans = numpy.repeat(numpy.nan, nr)
+    nr = len(rupdata)
+    known = set(rupdata.dtype.names)
     for par in dstore['rup']:
-        n = 'rup/' + par
-        if par.endswith('_'):
-            if par in rupdata:
-                dstore.hdf5.save_vlen(n, rupdata[par])
-            else:  # add nr empty rows
-                dstore[n].resize((len(dstore[n]) + nr,))
-        else:
-            hdf5.extend(dstore[n], rupdata.get(par, nans))
+        if par in known:
+            hdf5.extend(dstore['rup/' + par], rupdata[par])
+    hdf5.extend(dstore['rup/grp_id'], numpy.repeat(grp_id, nr))
 
 
 #  ########################### task functions ############################ #
@@ -311,25 +305,22 @@ class ClassicalCalculator(base.HazardCalculator):
         Store some empty datasets in the datastore
         """
         self.init_poes()
-        params = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_',
-                  'probs_occur_', 'sids_', 'src_id'}
+        params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
+                  'probs_occur', 'sids', 'src_id'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
 
         for trt, gsims in gsims_by_trt.items():
             cm = ContextMaker(trt, gsims, self.oqparam)
             params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
-            for dparam in cm.REQUIRES_DISTANCES:
-                params.add(dparam + '_')
+            params.update(cm.REQUIRES_DISTANCES)
         if self.few_sites:
             # self.oqparam.time_per_task = 1_000_000  # disable task splitting
-            descr = [('id', I64)]  # (param, dt)
+            descr = []  # (param, dt)
             for param in params:
-                if param == 'sids_':
-                    dt = hdf5.vuint16
-                elif param == 'probs_occur_':
+                if param == 'sids':
+                    dt = U16  # storing only for few sites
+                elif param == 'probs_occur':
                     dt = hdf5.vfloat64
-                elif param.endswith('_'):
-                    dt = hdf5.vfloat32
                 elif param == 'src_id':
                     dt = U32
                 elif param == 'grp_id':
@@ -561,14 +552,9 @@ class ClassicalCalculator(base.HazardCalculator):
             elif slow_tasks:
                 logging.info(msg)
 
-        # sanity check on the rupture IDs
         if 'rup' in self.datastore:
-            rup_id = self.datastore['rup/id']
-            tot = len(rup_id)
+            tot = len(self.datastore['rup/mag'])
             logging.info('Stored {:_d} ruptures'.format(tot))
-            if 0 < tot < 1_000_000:
-                uniq = len(numpy.unique(rup_id[:]))
-                assert tot == uniq, (tot, uniq)
 
         if '_poes' in self.datastore:
             self.post_classical()

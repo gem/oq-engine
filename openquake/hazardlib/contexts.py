@@ -413,6 +413,7 @@ class ContextMaker(object):
                     dic[req] = dt(0)
             else:
                 dic[req] = 0.
+        dic['src_id'] = U32(0)
         dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
@@ -485,10 +486,10 @@ class ContextMaker(object):
         """
         assert ctxs
         dd = self.defaultdict.copy()
+        dd['clon'] = numpy.float64(0.)
+        dd['clat'] = numpy.float64(0.)
         if magi is not None:  # magnitude bin used in disaggregation
             dd['magi'] = numpy.uint8(0)
-            dd['clon'] = numpy.float64(0.)
-            dd['clat'] = numpy.float64(0.)
         if hasattr(ctxs[0], 'weight'):
             dd['weight'] = numpy.float64(0.)
             noweight = False
@@ -534,8 +535,8 @@ class ContextMaker(object):
         """
         :returns: the interesting attributes of the context
         """
-        params = {'occurrence_rate', 'sids_', 'src_id',
-                  'probs_occur_', 'clon_', 'clat_', 'rrup_'}
+        params = {'occurrence_rate', 'sids', 'src_id',
+                  'probs_occur', 'clon', 'clat', 'rrup'}
         params.update(self.REQUIRES_RUPTURE_PARAMETERS)
         params.update(self.REQUIRES_COMPUTED_PARAMETERS)
         for dparam in self.REQUIRES_DISTANCES:
@@ -675,7 +676,9 @@ class ContextMaker(object):
                             c = rup.surface.get_closest_points(sites.complete)
                             ctx.clon = c.lons[ctx.sids]
                             ctx.clat = c.lats[ctx.sids]
-        return ctxs
+        ctx = self.recarray(ctxs)
+        ctx['src_id'] = src_id
+        return [ctx]
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -768,7 +771,7 @@ class ContextMaker(object):
 
     def get_pmap(self, ctxs, probmap=None):
         """
-        :param ctxs: a list of contexts
+        :param ctxs: a list of context arrays
         :param probmap: if not None, update it
         :returns: a new ProbabilityMap if probmap is None
         """
@@ -788,7 +791,7 @@ class ContextMaker(object):
                 value_type=t.float64[:, :])
         else:
             dic = {}  # sid -> array of shape (L, G)
-        for ctx in self.recarrays(ctxs):
+        for ctx in ctxs:
             # allocating pmap in advance
             for sid in numpy.unique(ctx.sids):
                 dic[sid] = pmap.setdefault(sid, self.rup_indep).array
@@ -1130,25 +1133,6 @@ class PmapMaker(object):
             timer.save(src, nctxs, nsites, dt, cm.task_no)
         return pmap
 
-    def dictarray(self, ctxs):
-        dic = {'src_id': []}  # par -> array
-        if not ctxs:
-            return dic
-        z0 = numpy.zeros(0)
-        for par in self.cmaker.get_ctx_params():
-            pa = par[:-1] if par.endswith('_') else par
-            if par.endswith('_'):
-                if par == 'probs_occur_':
-                    lst = [getattr(ctx, pa, z0) for ctx in ctxs]
-                else:
-                    lst = [getattr(ctx, pa) for ctx in ctxs]
-                dic[par] = numpy.array(lst, dtype=object)
-            else:
-                dic[par] = numpy.array([getattr(ctx, par, numpy.nan)
-                                        for ctx in ctxs])
-        dic['id'] = numpy.arange(len(ctxs)) * TWO32 + self.cmaker.out_no
-        return dic
-
     def make(self):
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
@@ -1156,9 +1140,10 @@ class PmapMaker(object):
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
+        rupdata = numpy.concatenate(self.rupdata) if self.rupdata else []
         dic = {'pmap': pmap,
                'cfactor': self.cmaker.collapser.cfactor,
-               'rup_data': self.dictarray(self.rupdata),
+               'rup_data': rupdata,
                'source_data': self.source_data,
                'task_no': self.task_no,
                'grp_id': self.group[0].grp_id}
