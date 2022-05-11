@@ -55,7 +55,7 @@ STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
-IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
+IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'sids', 'mdvbin'}
 
 
 def get_maxsize(M, G):
@@ -417,6 +417,7 @@ class ContextMaker(object):
         dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
+        dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
         self.collapser = Collapser(
             self.collapse_level, REQUIRES_DISTANCES[0], 'vs30' in dic)
@@ -453,31 +454,40 @@ class ContextMaker(object):
             nbytes += arr.nbytes
         return nbytes
 
-    def read_ctxs(self, dstore, slc=None):
+    def read_ctxs(self, dstore, slc=None, magi=None):
         """
         :param dstore: a DataStore instance
         :param slice: a slice of contexts with the same grp_id
         :returns: a list of contexts plus N lists of contexts for each site
         """
-        sitecol = dstore['sitecol'].complete
+        sitecol = dstore['sitecol'].complete.array
         if slc is None:
             slc = dstore['rup/grp_id'][:] == self.grp_id
         params = {n: dstore['rup/' + n][slc] for n in dstore['rup']}
-        ctxs = []
-        for u in range(len(params['mag'])):
-            ctx = RuptureContext()
-            for par, arr in params.items():
-                if par.endswith('_'):
-                    par = par[:-1]
-                elif par == 'probs_occur' and len(arr) == 0:  # poissonian
-                    continue
-                setattr(ctx, par, arr[u])
-            for par in sitecol.array.dtype.names:
-                setattr(ctx, par, sitecol[par][ctx.sids])
-            ctxs.append(ctx)
+        dtlist = []
+        for par, val in params.items():
+            if par == 'probs_occur':
+                item = (par, object)
+            elif par == 'occurrence_rate':
+                item = (par, F64)
+            else:
+                item = (par, val[0].dtype)
+            dtlist.append(item)
+        for par in sitecol.dtype.names:
+            if par != 'sids':
+                dtlist.append((par, sitecol.dtype[par]))
+        if magi is not None:
+            dtlist.append(('magi', numpy.uint8))
+        ctx = numpy.zeros(len(params['grp_id']), dtlist)
+        for par, val in params.items():
+            ctx[par] = val
+        for par in sitecol.dtype.names:
+            if par != 'sids':
+                ctx[par] = sitecol[par][ctx['sids']]
+        if magi is not None:
+            ctx['magi'] = magi
         # NB: sorting the contexts break the disaggregation! (see case_1)
-        # ctxs.sort(key=operator.attrgetter('mag'))
-        return ctxs
+        return ctx.view(numpy.recarray)
 
     def recarray(self, ctxs, magi=None):
         """
@@ -496,16 +506,12 @@ class ContextMaker(object):
         else:
             noweight = True
 
-        if hasattr(ctxs[0], 'occurrence_rate'):
-            dd['occurrence_rate'] = numpy.float64(0)
-            norate = False
-        else:
-            norate = True
+        if not hasattr(ctxs[0], 'probs_occur'):
+            for ctx in ctxs:
+                ctx.probs_occur = []
 
-        if hasattr(ctxs[0], 'probs_occur'):
-            np = max(len(ctx.probs_occur) for ctx in ctxs)
-            if np:  # nonparametric rupture
-                dd['probs_occur'] = numpy.zeros(np)
+        np = max(len(ctx.probs_occur) for ctx in ctxs)
+        dd['probs_occur'] = numpy.zeros(np)
 
         C = sum(len(ctx) for ctx in ctxs)
         ra = RecordBuilder(**dd).zeros(C)
@@ -522,8 +528,6 @@ class ContextMaker(object):
                     val = self.collapser.calc_mdvbin(ctx)
                 elif par == 'weight' and noweight:
                     val = 0.
-                elif par == 'occurrence_rate' and norate:
-                    val = numpy.nan
                 else:  # never missing
                     val = getattr(ctx, par)
                 getattr(ra, par)[slc] = val
@@ -585,6 +589,8 @@ class ContextMaker(object):
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
             setattr(ctx, param, value)
+        if not hasattr(ctx, 'occurrence_rate'):
+            ctx.occurrence_rate = numpy.nan
         return ctx
 
     def get_ctx(self, rup, sites, distances):
@@ -676,6 +682,8 @@ class ContextMaker(object):
                             c = rup.surface.get_closest_points(sites.complete)
                             ctx.clon = c.lons[ctx.sids]
                             ctx.clat = c.lats[ctx.sids]
+        if not ctxs:
+            return []
         ctx = self.recarray(ctxs)
         ctx['src_id'] = src_id
         return [ctx]
@@ -798,8 +806,7 @@ class ContextMaker(object):
             for poes, ctxt, slcsids in self.gen_poes(ctx):
                 probs_occur = getattr(ctxt, 'probs_occur',
                                       numpy.zeros((len(ctxt), 0)))
-                rates = getattr(ctxt, 'occurrence_rate',
-                                numpy.zeros(len(ctxt)))
+                rates = ctxt.occurrence_rate
                 with self.pne_mon:
                     if isinstance(slcsids, numpy.ndarray):
                         # no collapse: avoiding an inner loop can give a 25%
@@ -1140,7 +1147,8 @@ class PmapMaker(object):
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
-        rupdata = numpy.concatenate(self.rupdata) if self.rupdata else []
+        rupdata = numpy.concatenate(self.rupdata) if self.rupdata else {
+            'src_id': []}
         dic = {'pmap': pmap,
                'cfactor': self.cmaker.collapser.cfactor,
                'rup_data': rupdata,

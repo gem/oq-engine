@@ -69,7 +69,11 @@ def store_ctxs(dstore, rupdata, grp_id):
     nr = len(rupdata)
     known = set(rupdata.dtype.names)
     for par in dstore['rup']:
-        if par in known:
+        if par not in known:
+            pass
+        elif par == 'probs_occur':
+            dstore.hdf5.save_vlen('rup/probs_occur', rupdata[par])
+        else:
             hdf5.extend(dstore['rup/' + par], rupdata[par])
     hdf5.extend(dstore['rup/grp_id'], numpy.repeat(grp_id, nr))
 
