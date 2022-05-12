@@ -322,7 +322,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.few_sites:
             # self.oqparam.time_per_task = 1_000_000  # disable task splitting
             descr = []  # (param, dt)
-            for param in params:
+            for param in sorted(params):
                 if param == 'sids':
                     dt = U16  # storing only for few sites
                 elif param == 'probs_occur':
