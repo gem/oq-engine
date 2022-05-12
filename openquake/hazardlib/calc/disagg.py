@@ -282,15 +282,6 @@ def _digitize_lons(lons, lon_bins):
         return numpy.digitize(lons, lon_bins) - 1
 
 
-def _magbin_groups(rups, mag_bins):
-    # returns lists of ruptures, one list per each magnitude bin
-    groups = [[] for _ in mag_bins[1:]]
-    for rup in rups:
-        magi = numpy.searchsorted(mag_bins, rup.mag) - 1
-        groups[magi].append(rup)
-    return groups
-
-
 # this is used in the hazardlib tests, not in the engine
 def disaggregation(
         sources, site, imt, iml, gsim_by_trt, truncation_level,
@@ -386,10 +377,12 @@ def disaggregation(
         int(numpy.ceil(mags.max() / mag_bin_width) + 1))
 
     for trt, cm in cmaker.items():
-        for magi, ctxs in enumerate(_magbin_groups(rups[trt], mag_bins)):
-            ctx = cm.recarray(ctxs, magi)
+        [ctx] = rups[trt]
+        ctx.magi = numpy.searchsorted(mag_bins, ctx.mag) - 1
+        for magi in numpy.unique(ctx.magi):
             bdata[trt, magi] = disaggregate(
-                ctx, cm, [0], {imt: iml2}, eps3, epsstar=epsstar)
+                ctx[ctx.magi == magi], cm, [0],
+                {imt: iml2}, eps3, epsstar=epsstar)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(
