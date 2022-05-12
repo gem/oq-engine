@@ -26,6 +26,7 @@ import numpy
 
 from openquake.baselib import parallel, general, hdf5
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, pmf, geo
+from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
@@ -173,7 +174,7 @@ def get_csm(oq, full_lt, h5=None):
         for group in groups:
             for src in group:
                 collapse_nphc(src)
-
+                src.magnitude_scaling_relationship = PointMSR()
     return _get_csm(full_lt, groups)
 
 

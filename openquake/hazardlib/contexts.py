@@ -691,7 +691,8 @@ class ContextMaker(object):
             fat RuptureContexts sorted by mag
         """
         ctxs = []
-        if getattr(src, 'location', None) and step == 1:  # point source
+        if getattr(src, 'location', None) and step == 1 and (  # point source
+                str(src.magnitude_scaling_relationship) != 'PointMSR'):
             return self.get_ctxs_ps(src, sitecol)
         elif hasattr(src, 'source_id'):  # other source
             with self.ir_mon:
