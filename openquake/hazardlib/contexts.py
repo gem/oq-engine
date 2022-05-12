@@ -642,6 +642,41 @@ class ContextMaker(object):
             setattr(ctx, name, sites[name])
         return ctx
 
+    def get_ctxs_ps(self, src, sitecol):
+        """
+        :param src: a (Collapsed)PointSource
+        :param sitecol: a filtered SiteCollection
+        :returns: a list with 0 or 1 context array
+        """
+        with self.ir_mon:
+            rups_sites = list(self._ps_rups_sites(src, sitecol))
+        fewsites = len(sitecol.complete) <= self.max_sites_disagg
+        ctxs = []
+        for rups, sites in rups_sites:  # ruptures with the same magnitude
+            if len(rups) == 0:  # may happen in case of min_mag/max_mag
+                continue
+            with self.dst_mon:
+                magdist = self.maximum_distance(rups[0].mag)
+                planar = numpy.array(
+                    [rup.surface.array for rup in rups]
+                ).view(numpy.recarray)  # shape (U, 3)
+                dists, xx, yy = project(planar, sites.xyz)  # (3, U, N)
+                if fewsites:
+                    # get the closest points on the surface
+                    closest = project_back(planar, xx, yy)  # (3, U, N)
+            for u, rup in enumerate(rups):
+                mask = dists[u] <= magdist
+                if mask.any():
+                    r_sites = sites.filter(mask)
+                    ctx = self.get_ctx(rup, r_sites, dists[u][mask])
+                    ctx.src_id = src.id
+                    ctxs.append(ctx)
+                    if fewsites:
+                        ctx.clon = closest[0, u, mask]
+                        ctx.clat = closest[1, u, mask]
+
+        return [] if not ctxs else [self.recarray(ctxs)]
+
     def get_ctxs(self, src, sitecol, src_id=0, step=1):
         """
         :param src:
@@ -656,39 +691,28 @@ class ContextMaker(object):
             fat RuptureContexts sorted by mag
         """
         ctxs = []
-        if hasattr(src, 'source_id'):  # is a real source
-            ps = getattr(src, 'location', None) and step == 1
+        if getattr(src, 'location', None) and step == 1 and (  # point source
+                str(src.magnitude_scaling_relationship) != 'PointMSR'):
+            return self.get_ctxs_ps(src, sitecol)
+        elif hasattr(src, 'source_id'):  # other source
             with self.ir_mon:
-                if ps:  # point source
-                    rups_sites = list(self._ps_rups_sites(src, sitecol))
-                else:  # just add the ruptures
-                    allrups = numpy.array(list(src.iter_ruptures(
-                        shift_hypo=self.shift_hypo, step=step)))
-                    # sorted by mag by construction
-                    u32mags = U32([rup.mag * 100 for rup in allrups])
-                    rups_sites = [(rups, sitecol)
-                                  for rups in split_array(allrups, u32mags)]
+                allrups = numpy.array(list(src.iter_ruptures(
+                    shift_hypo=self.shift_hypo, step=step)))
+                # sorted by mag by construction
+                u32mags = U32([rup.mag * 100 for rup in allrups])
+                rups_sites = [(rups, sitecol)
+                              for rups in split_array(allrups, u32mags)]
             src_id = src.id
         else:  # in event based we get a list with a single rupture
-            ps = False
             rups_sites = [(src, sitecol)]
         fewsites = len(sitecol.complete) <= self.max_sites_disagg
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             if len(rups) == 0:  # may happen in case of min_mag/max_mag
                 continue
-            magdist = self.maximum_distance(rups[0].mag)
             with self.dst_mon:
-                if ps:  # fast lane
-                    planar = numpy.array(
-                        [rup.surface.array for rup in rups]
-                    ).view(numpy.recarray)  # shape (U, 3)
-                    dists, xx, yy = project(planar, sites.xyz)  # (3, U, N)
-                    if fewsites:
-                        # get the closest points on the surface
-                        closest = project_back(planar, xx, yy)  # (3, U, N)
-                else:  # regular
-                    dists = [get_distances(rup, sites, 'rrup', self.dcache)
-                             for rup in rups]
+                magdist = self.maximum_distance(rups[0].mag)
+                dists = [get_distances(rup, sites, 'rrup', self.dcache)
+                         for rup in rups]
             for u, rup in enumerate(rups):
                 mask = dists[u] <= magdist
                 if mask.any():
@@ -697,17 +721,11 @@ class ContextMaker(object):
                     ctx.src_id = src_id
                     ctxs.append(ctx)
                     if fewsites:
-                        if ps:  # reuse already computed coordinates
-                            ctx.clon = closest[0, u, mask]
-                            ctx.clat = closest[1, u, mask]
-                        else:  # slow lane
-                            c = rup.surface.get_closest_points(sites.complete)
-                            ctx.clon = c.lons[ctx.sids]
-                            ctx.clat = c.lats[ctx.sids]
-        if not ctxs:
-            return []
-        ctx = self.recarray(ctxs)
-        return [ctx]
+                        c = rup.surface.get_closest_points(sites.complete)
+                        ctx.clon = c.lons[ctx.sids]
+                        ctx.clat = c.lats[ctx.sids]
+
+        return [] if not ctxs else [self.recarray(ctxs)]
 
     def max_intensity(self, sitecol1, mags, dists):
         """
