@@ -630,7 +630,7 @@ class ContextMaker(object):
 
         # Equivalent distances
         reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
-        if reqv_obj and not rup.surface:  # PointRuptures have no surface
+        if reqv_obj and isinstance(rup.surface, PlanarSurface):
             reqv = reqv_obj.get(ctx.repi, rup.mag)
             if 'rjb' in self.REQUIRES_DISTANCES:
                 ctx.rjb = reqv
