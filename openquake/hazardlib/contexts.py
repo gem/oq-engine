@@ -20,7 +20,6 @@ import os
 import abc
 import copy
 import time
-import operator
 import warnings
 import itertools
 import collections
@@ -55,7 +54,26 @@ STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
-IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'sids', 'mdvbin'}
+# the following is used in the collapse method
+IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
+
+
+def concat(ctxs):
+    """
+    Concatenate context arrays, if possible.
+    :returns: list with 1 or 2 elements
+    """
+    out, parametric, nonparam = [], [], []
+    for ctx in ctxs:
+        if numpy.isnan(ctx.occurrence_rate).all():
+            nonparam.append(ctx)
+        else:
+            parametric.append(ctx)
+    if parametric:
+        out.append(numpy.concatenate(parametric).view(numpy.recarray))
+    if nonparam:
+        out.append(numpy.concatenate(nonparam).view(numpy.recarray))
+    return out
 
 
 def get_maxsize(M, G):
@@ -458,7 +476,7 @@ class ContextMaker(object):
         """
         :param dstore: a DataStore instance
         :param slice: a slice of contexts with the same grp_id
-        :returns: a list of contexts plus N lists of contexts for each site
+        :returns: a list with one or two context arrays
         """
         sitecol = dstore['sitecol'].complete.array
         if slc is None:
@@ -478,7 +496,7 @@ class ContextMaker(object):
                 dtlist.append((par, sitecol.dtype[par]))
         if magi is not None:
             dtlist.append(('magi', numpy.uint8))
-        ctx = numpy.zeros(len(params['grp_id']), dtlist)
+        ctx = numpy.zeros(len(params['grp_id']), dtlist).view(numpy.recarray)
         for par, val in params.items():
             ctx[par] = val
         for par in sitecol.dtype.names:
@@ -487,7 +505,13 @@ class ContextMaker(object):
         if magi is not None:
             ctx['magi'] = magi
         # NB: sorting the contexts break the disaggregation! (see case_1)
-        return ctx.view(numpy.recarray)
+
+        # split parametric vs nonparametric contexts
+        nans = numpy.isnan(ctx.occurrence_rate)
+        if nans.sum() in (0, len(ctx)):  # no nans or all nans
+            return [ctx]
+        else:
+            return [ctx[nans], ctx[~nans]]
 
     def recarray(self, ctxs, magi=None):
         """
@@ -528,8 +552,8 @@ class ContextMaker(object):
                     val = self.collapser.calc_mdvbin(ctx)
                 elif par == 'weight' and noweight:
                     val = 0.
-                else:  # never missing
-                    val = getattr(ctx, par)
+                else:
+                    val = getattr(ctx, par, numpy.nan)
                 getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
@@ -557,7 +581,7 @@ class ContextMaker(object):
         for i, src in enumerate(srcs):
             src.id = i
             ctxs.extend(self.get_ctxs(src, sitecol))
-        return ctxs
+        return concat(ctxs)
 
     def make_rctx(self, rup):
         """
@@ -619,7 +643,7 @@ class ContextMaker(object):
 
         return ctx
 
-    def get_ctxs(self, src, sitecol, src_id=None, step=1):
+    def get_ctxs(self, src, sitecol, src_id=0, step=1):
         """
         :param src:
             a source object (already split) or a list of ruptures
@@ -871,10 +895,10 @@ class ContextMaker(object):
         return out
 
     # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-    def get_cs_contrib(self, ctxs, imti, imls):
+    def get_cs_contrib(self, ctx, imti, imls):
         """
-        :param ctxs:
-           list of contexts defined on N sites
+        :param ctx:
+           a context array
         :param imti:
             IMT index in the range 0..M-1
         :param imls:
@@ -886,23 +910,26 @@ class ContextMaker(object):
 
         Compute the contributions to the conditional spectra, in a form
         suitable for later composition.
+
+        NB: at the present if works only for poissonian contexts
         """
         assert self.tom
-        N = len(ctxs[0].sids)
-        assert all(len(ctx) == N for ctx in ctxs[1:])
-        C = len(ctxs)
+        sids, counts = numpy.unique(ctx.sids, return_counts=True)
+        assert len(set(counts)) == 1, counts  # must be all equal
+        N = len(sids)
+        U = len(ctx) // N
         G = len(self.gsims)
         M = len(self.imtls)
         P = len(imls)
         out = csdict(M, N, P, self.start, self.start + G)
-        mean_stds = self.get_mean_stds(ctxs)  # (4, G, M, N*C)
+        mean_stds = self.get_mean_stds([ctx])  # (4, G, M, N*C)
         imt_ref = self.imts[imti]
         rho = numpy.array([self.cross_correl.get_correlation(imt_ref, imt)
                            for imt in self.imts])
         m_range = range(len(self.imts))
         # probs = 1 - exp(-occurrence_rates*time_span)
         probs = self.tom.get_probability_one_or_more_occurrences(
-            numpy.array([ctx.occurrence_rate for ctx in ctxs]))  # shape C
+            ctx.occurrence_rate)  # shape N * U
         for n in range(N):
             # NB: to understand the code below, consider the case with
             # N=3 sites and C=2 contexts; then the indices N*C are
@@ -913,17 +940,17 @@ class ContextMaker(object):
             # 4: second site
             # 5: third site
             # i.e. idxs = [0, 3], [1, 4], [2, 5] for sites 0, 1, 2
-            slc = slice(n, N * C, N)  # C indices
+            slc = slice(n, N * U, N)  # U indices
             for g in range(G):
-                mu = mean_stds[0, g, :, slc]  # shape (M, C)
-                sig = mean_stds[1, g, :, slc]  # shape (M, C)
+                mu = mean_stds[0, g, :, slc]  # shape (M, U)
+                sig = mean_stds[1, g, :, slc]  # shape (M, U)
                 c = out[self.start + g]['_c']
                 s = out[self.start + g]['_s']
                 for p in range(P):
-                    eps = (imls[p] - mu[imti]) / sig[imti]  # shape C
-                    poes = _truncnorm_sf(self.truncation_level, eps)  # shape C
+                    eps = (imls[p] - mu[imti]) / sig[imti]  # shape U
+                    poes = _truncnorm_sf(self.truncation_level, eps)  # shape U
                     ws = -numpy.log(
-                        (1. - probs) ** poes) / self.investigation_time
+                        (1. - probs[slc]) ** poes) / self.investigation_time
                     s[n, p] = ws.sum()  # weights not summing up to 1
                     for m in m_range:
                         c[m, n, 0, p] = ws @ (mu[m] + rho[m] * eps * sig[m])
@@ -1095,8 +1122,8 @@ class PmapMaker(object):
                 sites = sites.complete
             ctxs = self._get_ctxs(src, sites)
             allctxs.extend(ctxs)
-            nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
+            # TODO: remove nrupts
             totlen += nsites
             if nsites and totlen > MAXSIZE:
                 cm.get_pmap(allctxs, pmap)
@@ -1104,11 +1131,11 @@ class PmapMaker(object):
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(nsites)
-            self.source_data['nrupts'].append(nctxs)
+            self.source_data['nrupts'].append(nsites)
             self.source_data['weight'].append(src.weight)
             self.source_data['ctimes'].append(dt)
             self.source_data['taskno'].append(cm.task_no)
-            timer.save(src, nctxs, nsites, dt, cm.task_no)
+            timer.save(src, nsites, nsites, dt, cm.task_no)
         if allctxs:
             cm.get_pmap(allctxs, pmap)
         return ~pmap if cm.rup_indep else pmap
@@ -1146,19 +1173,9 @@ class PmapMaker(object):
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
-        rupdata, parametric, nonparam = [], [], []
-        for ctx in self.rupdata:
-            if numpy.isnan(ctx.occurrence_rate).all():
-                nonparam.append(ctx)
-            else:
-                parametric.append(ctx)
-        if parametric:
-            rupdata.append(numpy.concatenate(parametric))
-        if nonparam:
-            rupdata.append(numpy.concatenate(nonparam))
         dic = {'pmap': pmap,
                'cfactor': self.cmaker.collapser.cfactor,
-               'rup_data': rupdata,
+               'rup_data': concat(self.rupdata),
                'source_data': self.source_data,
                'task_no': self.task_no,
                'grp_id': self.group[0].grp_id}

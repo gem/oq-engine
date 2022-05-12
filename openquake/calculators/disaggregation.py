@@ -114,7 +114,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     """
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        fullctx = cmaker.read_ctxs(dstore, slc, magidx)
+        ctxs = cmaker.read_ctxs(dstore, slc, magidx)
     # Set epsstar boolean variable
     epsstar = dstore['oqparam'].epsilon_star
     dis_mon = monitor('disaggregate', measuremem=False)
@@ -127,14 +127,8 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     eps3 = disagg._eps3(cmaker.truncation_level, cmaker.num_epsilon_bins)
     imts = [from_string(im) for im in cmaker.imtls]
     for magi in numpy.unique(magidx):
-        ctxt = fullctx[fullctx.magi == magi]
-        nans = numpy.isnan(ctxt.occurrence_rate)
-        count_nans = nans.sum()
-        if count_nans in (0, len(ctxt)):  # no nans or all nans
-            ctxs = [ctxt]
-        else:
-            ctxs = [ctxt[nans], ctxt[~nans]]
-        for ctx in ctxs:
+        for ctxt in ctxs:
+            ctx = ctxt[ctxt.magi == magi]
             res = {'trti': cmaker.trti, 'magi': magi}
             # disaggregate by site, IMT
             for s, iml3 in enumerate(hmap4):

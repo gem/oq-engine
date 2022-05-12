@@ -441,17 +441,17 @@ hazard_uhs-std.csv
         self.assertIn('input_size', attrs)
 
     def test_case_24(self):  # UHS
-        # this is a case with rjb and an hypocenter distribution
+        # this is a case with rjb, an hypocenter distribution, and collapse
         self.assert_curves_ok([
             'hazard_curve-PGA.csv', 'hazard_curve-PGV.csv',
             'hazard_curve-SA(0.025).csv', 'hazard_curve-SA(0.05).csv',
             'hazard_curve-SA(0.1).csv', 'hazard_curve-SA(0.2).csv',
             'hazard_curve-SA(0.5).csv', 'hazard_curve-SA(1.0).csv',
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'],
-                              case_24.__file__, delta=1E-5)
+                              case_24.__file__, delta=1E-3)
         total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
         self.assertEqual(total, 780)  # 260 x 3
-        self.assertEqual(len(self.calc.datastore['rup/mag']), 780)
+        self.assertEqual(len(self.calc.datastore['rup/mag']), 1560)
         numpy.testing.assert_equal(self.calc.cfactor, [371, 1560])
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
@@ -511,7 +511,8 @@ hazard_uhs-std.csv
         # check what QGIS will be seeing
         aw = extract(self.calc.datastore, 'rupture_info')
         poly = gzip.decompress(aw.boundaries).decode('ascii')
-        self.assertEqual(poly, '''POLYGON((0.17961 0.00000, 0.13492 0.00000, 0.08980 0.00000, 0.04512 0.00000, 0.00000 0.00000, 0.00000 0.04006, 0.00000 0.08013, 0.00000 0.12019, 0.00000 0.16025, 0.00000 0.20032, 0.00000 0.24038, 0.00000 0.28045, 0.04512 0.28045, 0.08980 0.28045, 0.13492 0.28045, 0.17961 0.28045, 0.17961 0.24038, 0.17961 0.20032, 0.17961 0.16025, 0.17961 0.12019, 0.17961 0.08013, 0.17961 0.04006, 0.17961 0.00000, 0.00000 0.10000, 0.04512 0.10000, 0.08980 0.10000, 0.13492 0.10000, 0.17961 0.10000, 0.17961 0.14006, 0.17961 0.18013, 0.17961 0.22019, 0.17961 0.26025, 0.17961 0.30032, 0.17961 0.34038, 0.17961 0.38045, 0.13492 0.38045, 0.08980 0.38045, 0.04512 0.38045, 0.00000 0.38045, 0.00000 0.34038, 0.00000 0.30032, 0.00000 0.26025, 0.00000 0.22019, 0.00000 0.18013, 0.00000 0.14006, 0.00000 0.10000))''')
+        expected = '''POLYGON((0.17961 0.00000, 0.13492 0.00000, 0.08980 0.00000, 0.04512 0.00000, 0.00000 0.00000, 0.00000 0.04006, 0.00000 0.08013, 0.00000 0.12019, 0.00000 0.16025, 0.00000 0.20032, 0.00000 0.24038, 0.00000 0.28045, 0.04512 0.28045, 0.08980 0.28045, 0.13492 0.28045, 0.17961 0.28045, 0.17961 0.24038, 0.17961 0.20032, 0.17961 0.16025, 0.17961 0.12019, 0.17961 0.08013, 0.17961 0.04006, 0.17961 0.00000, 0.00000 0.10000, 0.04512 0.10000, 0.08980 0.10000, 0.13492 0.10000, 0.17961 0.10000, 0.17961 0.14006, 0.17961 0.18013, 0.17961 0.22019, 0.17961 0.26025, 0.17961 0.30032, 0.17961 0.34038, 0.17961 0.38045, 0.13492 0.38045, 0.08980 0.38045, 0.04512 0.38045, 0.00000 0.38045, 0.00000 0.34038, 0.00000 0.30032, 0.00000 0.26025, 0.00000 0.22019, 0.00000 0.18013, 0.00000 0.14006, 0.00000 0.10000))'''
+        self.assertEqual(poly, expected)
 
         # This is for checking purposes. It creates a .txt file that can be
         # read with QGIS

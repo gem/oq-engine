@@ -122,7 +122,7 @@ class GmfComputer(object):
         else:  # in the hazardlib tests
             self.source_id = '?'
         self.seed = rupture.rup_id
-        ctxs = cmaker.get_ctxs([rupture], sitecol, self.source_id)
+        ctxs = cmaker.get_ctxs([rupture], sitecol)
         if not ctxs:
             raise FarAwayRupture
         [self.ctx] = ctxs

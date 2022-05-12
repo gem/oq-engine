@@ -224,7 +224,7 @@ class CollapseTestCase(unittest.TestCase):
         # the 3 sources within are still more distant than the pointsource
         # distance, so the 4 hypocenters are collapsed to 1 and the number
         # of ruptures is down from 30 x 4 to 30
-        numpy.testing.assert_equal(len(ctxs), 30)  # 3x10 mags
+        numpy.testing.assert_equal(len(ctxs[0]), 60)  # 2sites x 3srcs x 10mags
 
         # compute original curves
         pmap = cmaker.get_pmap(ctxs)
@@ -255,7 +255,6 @@ class CollapseTestCase(unittest.TestCase):
         [srcs] = inp.groups  # a single area source
         # get the context
         ctxs = cmaker.from_srcs(srcs, inp.sitecol)
-        numpy.testing.assert_equal(len(ctxs), 5808)
         pcurve0 = cmaker.get_pmap(ctxs)[0]
         cmaker.collapser.cfactor = numpy.zeros(2)
         cmaker.collapser.collapse_level = 1
@@ -452,29 +451,27 @@ class GetCtxs01TestCase(unittest.TestCase):
         param = dict(imtls={'PGA': []})
         cm = ContextMaker('*', [gmm], param)
 
-        # With this we get a list with six RuptureContexts
-        ctxs = cm.get_ctxs(self.src, self.sitec)
+        # extract magnitude 7 context
+        [ctx] = cm.get_ctxs(self.src, self.sitec)
+        self.ctx = ctx[ctx.mag == 7.0]
 
-        # Find index of rupture with three sections
-        for i, ctx in enumerate(ctxs):
-            if ctx.mag == 7.0:
-                idx = i
-        self.ctx = ctxs[idx]
+        # extract magnitude 7 rupture
+        [self.rup] = [rup for rup in self.src.iter_ruptures() if rup.mag == 7.]
 
     def test_rjb_distance(self):
-        rjb = self.ctx.surface.get_joyner_boore_distance(self.sitec.mesh)
+        rjb = self.rup.surface.get_joyner_boore_distance(self.sitec.mesh)
         self.assertAlmostEqual(rjb, self.ctx.rjb, delta=1e-3)
 
     def test_rrup_distance(self):
-        rrup = self.ctx.surface.get_min_distance(self.sitec.mesh)
+        rrup = self.rup.surface.get_min_distance(self.sitec.mesh)
         self.assertAlmostEqual(rrup, self.ctx.rrup, delta=1e-3)
 
     def test_rx_distance(self):
-        rx = self.ctx.surface.get_rx_distance(self.sitec.mesh)
+        rx = self.rup.surface.get_rx_distance(self.sitec.mesh)
         self.assertAlmostEqual(rx, self.ctx.rx, delta=1e-3)
 
     def test_ry0_distance(self):
-        dst = self.ctx.surface.get_ry0_distance(self.sitec.mesh)
+        dst = self.rup.surface.get_ry0_distance(self.sitec.mesh)
         self.assertAlmostEqual(dst, self.ctx.ry0, delta=1e-3)
 
 
@@ -507,27 +504,25 @@ class GetCtxs02TestCase(unittest.TestCase):
         param = dict(imtls={'PGA': []})
         cm = ContextMaker('*', [gmm], param)
 
-        # With this we get a list with six RuptureContexts
-        ctxs = cm.get_ctxs(self.src, self.sitec)
+        # extract magnitude 7 context
+        [ctx] = cm.get_ctxs(self.src, self.sitec)
+        self.ctx = ctx[ctx.mag == 7.0]
 
-        # Find index of rupture with three sections
-        for i, ctx in enumerate(ctxs):
-            if ctx.mag == 7.0:
-                idx = i
-        self.ctx = ctxs[idx]
+        # extract magnitude 7 rupture
+        [self.rup] = [rup for rup in self.src.iter_ruptures() if rup.mag == 7.]
 
     def test_rjb_distance(self):
-        rjb = self.ctx.surface.get_joyner_boore_distance(self.sitec.mesh)
+        rjb = self.rup.surface.get_joyner_boore_distance(self.sitec.mesh)
         self.assertAlmostEqual(rjb, self.ctx.rjb, delta=1e-3)
 
     def test_rrup_distance(self):
-        rrup = self.ctx.surface.get_min_distance(self.sitec.mesh)
+        rrup = self.rup.surface.get_min_distance(self.sitec.mesh)
         self.assertAlmostEqual(rrup, self.ctx.rrup, delta=1e-3)
 
     def test_rx_distance(self):
-        rx = self.ctx.surface.get_rx_distance(self.sitec.mesh)
+        rx = self.rup.surface.get_rx_distance(self.sitec.mesh)
         self.assertAlmostEqual(rx, self.ctx.rx, delta=1e-3)
 
     def test_ry0_distance(self):
-        dst = self.ctx.surface.get_ry0_distance(self.sitec.mesh)
+        dst = self.rup.surface.get_ry0_distance(self.sitec.mesh)
         self.assertAlmostEqual(dst, self.ctx.ry0, delta=1e-3)
