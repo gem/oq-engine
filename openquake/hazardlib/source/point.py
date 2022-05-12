@@ -133,8 +133,9 @@ def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
                     surface = surfaces[m, n, d]
                     if real_ps:
                         rup = PointRupture(
-                            mags[0], np.rake, src.tectonic_region_type, hc,
-                            np.strike, rate, src.temporal_occurrence_model)
+                            mag, np.rake, src.tectonic_region_type,
+                            hc, np.strike, rate,
+                            src.temporal_occurrence_model)
                     else:
                         rup = ParametricProbabilisticRupture(
                             mag, np.rake, src.tectonic_region_type,
