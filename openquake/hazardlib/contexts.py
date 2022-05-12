@@ -60,8 +60,8 @@ IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
 
 def concat(ctxs):
     """
-    Concatenate context arrays, if possible.
-    :returns: list with 1 or 2 elements
+    Concatenate context arrays.
+    :returns: list with 0, 1 or 2 elements
     """
     out, parametric, nonparam = [], [], []
     for ctx in ctxs:
@@ -346,7 +346,7 @@ class ContextMaker(object):
             param['split_sources'] = oq.split_sources
             param['min_iml'] = oq.min_iml
             param['reqv'] = oq.get_reqv()
-            param['af'] = getattr(oq, 'af', 'amplification' in oq.inputs)
+            param['af'] = getattr(oq, 'af', None)
             self.cross_correl = oq.cross_correl
             self.imtls = oq.imtls
             try:
@@ -707,7 +707,6 @@ class ContextMaker(object):
         if not ctxs:
             return []
         ctx = self.recarray(ctxs)
-        ctx['src_id'] = src_id
         return [ctx]
 
     def max_intensity(self, sitecol1, mags, dists):

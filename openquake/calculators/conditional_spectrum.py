@@ -78,7 +78,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         """
         Compute the conditional spectrum in a sequential way.
         NB: since conditional spectra are meant to be computed only for few
-        sites, there is no point in parallelizing: the computation is dominate
+        sites, there is no point in parallelizing: the computation is dominated
         by the time spent reading the contexts, not by the CPU.
         """
         oq = self.oqparam
