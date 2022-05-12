@@ -346,7 +346,7 @@ class ContextMaker(object):
             param['split_sources'] = oq.split_sources
             param['min_iml'] = oq.min_iml
             param['reqv'] = oq.get_reqv()
-            param['af'] = getattr(oq, 'af', None)
+            param['af'] = getattr(oq, 'af', 'amplification' in oq.inputs)
             self.cross_correl = oq.cross_correl
             self.imtls = oq.imtls
             try:
@@ -367,7 +367,7 @@ class ContextMaker(object):
             self.dcache = {}  # (surface ID, dist_type) for MultiFaultSources
         else:
             self.dcache = None  # disabled
-        self.af = param.get('af', None)
+        self.af = param.get('af')
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
         self.time_per_task = param.get('time_per_task', 60)
@@ -640,7 +640,6 @@ class ContextMaker(object):
         # add site parameters
         for name in sites.array.dtype.names:
             setattr(ctx, name, sites[name])
-
         return ctx
 
     def get_ctxs(self, src, sitecol, src_id=0, step=1):
@@ -1348,9 +1347,10 @@ class RuptureContext(BaseContext):
     """
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
-        'hypo_depth', 'width', 'hypo_loc')
+        'hypo_depth', 'width', 'hypo_loc', 'src_id')
 
     def __init__(self, param_pairs=()):
+        self.src_id = 0
         for param, value in param_pairs:
             setattr(self, param, value)
 
