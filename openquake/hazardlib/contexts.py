@@ -1291,11 +1291,14 @@ def get_dists(ctx):
             if par in KNOWN_DISTANCES}
 
 
+# used to produce a RuptureContext suitable for legacy code, i.e. for calls
+# to .get_mean_and_stddevs, like for instance in the SMTK
 def full_context(sites, rup, dctx=None):
     """
     :returns: a full RuptureContext with all the relevant attributes
     """
     self = RuptureContext()
+    self.src_id = 0
     for par, val in vars(rup).items():
         setattr(self, par, val)
     if not hasattr(self, 'occurrence_rate'):
