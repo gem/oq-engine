@@ -644,6 +644,9 @@ class ContextMaker(object):
 
     def get_ctxs_ps(self, src, sitecol):
         """
+        :param src: a (Collapsed)PointSource
+        :param sitecol: a filtered SiteCollection
+        :returns: a list with 0 or 1 context array
         """
         with self.ir_mon:
             rups_sites = list(self._ps_rups_sites(src, sitecol))
