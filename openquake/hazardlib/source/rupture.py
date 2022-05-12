@@ -599,8 +599,8 @@ class PointRupture(ParametricProbabilisticRupture):
     A rupture coming from a far away PointSource, so that the finite
     size effects can be neglected.
     """
-    def __init__(self, mag, tectonic_region_type, hypocenter, strike,
-                 rake, occurrence_rate, temporal_occurrence_model):
+    def __init__(self, mag, rake, tectonic_region_type, hypocenter, strike,
+                 occurrence_rate, temporal_occurrence_model):
         self.tectonic_region_type = tectonic_region_type
         self.hypocenter = hypocenter
         self.mag = mag

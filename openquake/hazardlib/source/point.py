@@ -142,8 +142,8 @@ def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
             np = nplanes[0]
             rate = mrate * np_probs[0] * hc_probs[0]
             rup = PointRupture(
-                mags[0], src.tectonic_region_type, hc, np.strike,
-                np.rake, rate, src.temporal_occurrence_model)
+                mags[0], np.rake, src.tectonic_region_type, hc, np.strike,
+                rate, src.temporal_occurrence_model)
             rup.m = m
             yield rup
 
