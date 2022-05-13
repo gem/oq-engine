@@ -69,7 +69,7 @@ Provides: python-oq-hazardlib python-oq-engine
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Copyright (C) 2010-2019 GEM Foundation
+Copyright (C) 2010-2022 GEM Foundation
 
 %package master
 Summary: OpenQuake Engine multi-node cluster support (master node)
@@ -84,22 +84,7 @@ OpenQuake Engine multi-node cluster support (master node)
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Copyright (C) 2010-2019 GEM Foundation
-
-%package worker
-Summary: OpenQuake Engine multi-node cluster support (worker node)
-Group: Applications/Engineering
-Requires: %{name} = %{version}-%{release}
-Obsoletes: python-oq-engine-worker
-Provides: python-oq-engine-worker
-
-%description worker
-OpenQuake Engine multi-node cluster support (worker node)
-
-OpenQuake is an open source application that allows users to
-compute seismic hazard and seismic risk of earthquakes on a global scale.
-
-Copyright (C) 2010-2019 GEM Foundation
+Copyright (C) 2010-2022 GEM Foundation
 
 %prep
 %setup -n %{oqformat}
@@ -199,19 +184,6 @@ fi
 
 %files master
 %doc openquake/engine/openquake.cfg.cluster-sample
-
-%post worker
-%systemd_post openquake-celery.service
-
-%preun worker
-%systemd_preun openquake-celery.service
-
-%postun worker
-%systemd_postun_with_restart openquake-celery.service
-
-%files worker
-%doc openquake/engine/openquake.cfg.cluster-sample
-%{_unitdir}/openquake-celery.service
 
 %changelog
 %if %{oqstable} == 1
