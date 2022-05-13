@@ -24,7 +24,7 @@ from openquake.baselib import general
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import (
-    PlanarSurface, build_planar_array)
+    PlanarSurface, build_planar_array, build_planar_surfaces)
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 
