@@ -134,7 +134,7 @@ def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
                     if pointmsr:
                         rup = PointRupture(
                             mag, np.rake, src.tectonic_region_type,
-                            hc, np.strike, rate,
+                            hc, np.strike, np.dip, rate,
                             src.temporal_occurrence_model)
                     else:
                         rup = ParametricProbabilisticRupture(
@@ -150,7 +150,7 @@ def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
             rate = mrate * np_probs[0] * hc_probs[0]
             rup = PointRupture(
                 mags[0], np.rake, src.tectonic_region_type, hc, np.strike,
-                rate, src.temporal_occurrence_model)
+                np.dip, rate, src.temporal_occurrence_model)
             rup.m = m
             yield rup
 
