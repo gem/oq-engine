@@ -588,7 +588,14 @@ class PointSurface:
         return 0
 
     def get_closest_points(self, mesh):
-        return mesh
+        """
+        :returns: N times the hypocenter if N is the number of points
+        """
+        N = len(mesh)
+        lons = numpy.full(N, self.hypocenter.x)
+        lats = numpy.full(N, self.hypocenter.y)
+        deps = numpy.full(N, self.hypocenter.z)
+        return Mesh(lons, lats, deps)
 
     def __bool__(self):
         return False
