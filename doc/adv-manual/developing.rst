@@ -225,13 +225,12 @@ a dictionary of parameters:
 ...              investigation_time=oq.investigation_time)
 >>> cmaker = ContextMaker(src.tectonic_region_type, gsims, param)
 
-Then you can use the ``ContextMaker`` to generate context objects
+Then you can use the ``ContextMaker`` to generate context arrays
 from the sources:
 
->>> ctxs = cmaker.from_srcs([src], sitecol)
+>>> [ctx] = cmaker.from_srcs([src], sitecol)
 
-There is a context for each rupture in the source. In our example, there
-are 15 magnitudes
+In our example, there are 15 magnitudes
 
 >>> len(src.get_annual_occurrence_rates())
 15
@@ -243,7 +242,7 @@ and the area source contains 47 point sources
 
 so in total there are 15 x 47 = 705 ruptures:
 
->>> len(ctxs)
+>>> len(ctx)
 705
 
 The ``ContextMaker`` takes care of the maximum_distance filtering, so in
@@ -251,18 +250,15 @@ general the number of contexts is lower than the total number of ruptures,
 since some ruptures are normally discarded, being distant from the sites.
 
 The contexts contains all the rupture, site and distance parameters.
-Consider for instance the first context:
-
->>> ctx = ctxs[0]
 
 Then you have
 
->>> ctx.mag
+>>> ctx.mag[0]
 4.7
->>> ctx.rrup
-array([106.40112646])
->>> ctx.rjb
-array([105.8963247])
+>>> ctx.rrup[0]
+106.4011264574155
+>>> ctx.rjb[0]
+105.89632469731306
 
 In this example, the GMPE ``ToroEtAl2002SHARE`` does not require site
 parameters, so calling ``ctx.vs30`` will raise an ``AttributeError``
@@ -270,14 +266,15 @@ but in general the contexts contains also arrays of site parameters.
 There is also an array of indices telling which are the sites affected
 by the rupture associated to the context:
 
->>> ctx.sids
+>>> import numpy
+>>> numpy.unique(ctx.sids)
 array([0], dtype=uint32)
 
 Once you have the contexts, the ``ContextMaker`` is able to compute
 means and standard deviations from the underlying GMPEs as follows
 (for engine version >= 3.13):
 
->>> mean, sig, tau, phi = cmaker.get_mean_stds(ctxs)
+>>> mean, sig, tau, phi = cmaker.get_mean_stds([ctx])
 
 Since in this example there is a single gsim and a single IMT you will get:
 
@@ -300,7 +297,7 @@ probabilities of exceedence. The ``ContextMaker`` provides a method
 to compute directly the probability map, which internally calls
 ``cmaker.get_mean_stds(ctxs)``:
 
->>> cmaker.get_pmap(ctxs)
+>>> cmaker.get_pmap([ctx])
 {0: <ProbabilityCurve
 [[0.00507997]]>}
 

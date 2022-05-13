@@ -29,7 +29,6 @@ from openquake.hazardlib.geo.surface.planar import (
     PlanarSurface, build_planar_array)
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
-F8 = numba.float64
 surfin_dt = numpy.dtype([
     ('usd', float),
     ('lsd', float),
@@ -135,6 +134,7 @@ def build_corners(usd, lsd, mag, dims, strike, dip, rake, lon, lat, deps):
 
 
 if numba:
+    F8 = numba.float64
     build_corners = compile(F8[:, :, :, :, :](
         F8[:, :],     # usd
         F8[:, :],     # lsd
