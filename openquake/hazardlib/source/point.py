@@ -124,7 +124,7 @@ def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
         clon, clat, cdeps = hypo.x, hypo.y, [hypo.z]
     hc = Point(clon, clat, cdeps[0])
     if step == 1:  # regular case, return full ruptures
-        surfin = src.get_surfin(mags, nplanes)
+        surfin = src.get_planin(mags, nplanes)
         surfaces = build_planar_surfaces(surfin, clon, clat, cdeps, shift_hypo)
         for m, mag in enumerate(mags):
             for n, np in enumerate(nplanes):
@@ -221,7 +221,7 @@ class PointSource(ParametricSeismicSource):
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
 
-    def get_surfin(self, mags, nplanes):
+    def get_planin(self, mags, nplanes):
         """
         :return: array of dtype surfin_dt of shape (num_mags, num_planes)
         """
@@ -254,7 +254,7 @@ class PointSource(ParametricSeismicSource):
             mag, _rate = self.get_annual_occurrence_rates()[-1]
         radius = []
         _, nplanes = zip(*self.nodal_plane_distribution.data)
-        for surfin in self.get_surfin([mag], nplanes)[0]:
+        for surfin in self.get_planin([mag], nplanes)[0]:
             rup_length, rup_width, _ = _get_rupture_dimensions(surfin)
             # the projection radius is half of the rupture diagonal
             radius.append(math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
@@ -265,7 +265,7 @@ class PointSource(ParametricSeismicSource):
         """
         :returns: half of maximum rupture's diagonal surface projection
         """
-        [[surfin]] = self.get_surfin(
+        [[surfin]] = self.get_planin(
             [rup.mag], [NodalPlane(rup.surface.strike, dip, rup.rake)])
         rup_length, rup_width, _ = _get_rupture_dimensions(surfin)
         return math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
@@ -389,7 +389,7 @@ class CollapsedPointSource(PointSource):
         """
         if mag is None:
             mag, _rate = self.get_annual_occurrence_rates()[-1]
-        [[surfin]] = self.get_surfin(
+        [[surfin]] = self.get_planin(
             [mag], [NodalPlane(self.strike, self.dip, self.rake)])
         rup_length, rup_width, _ = _get_rupture_dimensions(surfin)
         # the projection radius is half of the rupture diagonal
