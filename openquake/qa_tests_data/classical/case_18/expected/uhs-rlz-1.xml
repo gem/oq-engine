@@ -4,7 +4,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <uniformHazardSpectra
-    gsimTreePath="b12"
+    gsimTreePath="gB0"
     investigationTime="1.0"
     poE="0.002105"
     sourceModelTreePath="b1"
