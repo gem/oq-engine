@@ -110,6 +110,7 @@ def calc_average(pointsources):
 
 
 def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
+    pointmsr = str(src.magnitude_scaling_relationship) == 'PointMSR'
     mags, rates = zip(*src.get_annual_occurrence_rates())
     if not nplanes:
         np_probs, nplanes = zip(*src.nodal_plane_distribution.data)
@@ -121,6 +122,7 @@ def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
     else:
         hc_probs, hypo = [1.], hypos[0]
         clon, clat, cdeps = hypo.x, hypo.y, [hypo.z]
+    hc = Point(clon, clat, cdeps[0])
     if step == 1:  # regular case, return full ruptures
         surfin = src.get_surfin(mags, nplanes)
         surfaces = build_planar_surfaces(surfin, clon, clat, cdeps, shift_hypo)
@@ -129,21 +131,26 @@ def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
                 for d, hc_prob in enumerate(hc_probs):
                     rate = rates[m] * np_probs[n] * hc_prob
                     surface = surfaces[m, n, d]
-                    rup = ParametricProbabilisticRupture(
-                        mag, np.rake, src.tectonic_region_type,
-                        surface.hc, surface, rate,
-                        src.temporal_occurrence_model)
+                    if pointmsr:
+                        rup = PointRupture(
+                            mag, np.rake, src.tectonic_region_type,
+                            hc, np.strike, np.dip, rate,
+                            src.temporal_occurrence_model)
+                    else:
+                        rup = ParametricProbabilisticRupture(
+                            mag, np.rake, src.tectonic_region_type,
+                            surface.hc, surface, rate,
+                            src.temporal_occurrence_model)
                     rup.m = m
                     yield rup
     else:  # in preclassical return point ruptures (fast)
-        hc = Point(clon, clat, cdeps[0])
         items = list(enumerate((zip(rates, mags))))[::-step]
         for m, (mrate, mag) in items:
             np = nplanes[0]
             rate = mrate * np_probs[0] * hc_probs[0]
             rup = PointRupture(
-                mags[0], src.tectonic_region_type, hc, np.strike,
-                np.rake, rate, src.temporal_occurrence_model)
+                mags[0], np.rake, src.tectonic_region_type, hc, np.strike,
+                np.dip, rate, src.temporal_occurrence_model)
             rup.m = m
             yield rup
 

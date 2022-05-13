@@ -630,7 +630,7 @@ class ContextMaker(object):
 
         # Equivalent distances
         reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
-        if reqv_obj and isinstance(rup.surface, PlanarSurface):
+        if reqv_obj and not rup.surface:  # PointRuptures have no surface
             reqv = reqv_obj.get(ctx.repi, rup.mag)
             if 'rjb' in self.REQUIRES_DISTANCES:
                 ctx.rjb = reqv
@@ -642,9 +642,9 @@ class ContextMaker(object):
             setattr(ctx, name, sites[name])
         return ctx
 
-    def get_ctxs_ps(self, src, sitecol):
+    def get_ctxs_planar(self, src, sitecol):
         """
-        :param src: a (Collapsed)PointSource
+        :param src: a (Collapsed)PointSource with no PointMSR
         :param sitecol: a filtered SiteCollection
         :returns: a list with 0 or 1 context array
         """
@@ -693,7 +693,7 @@ class ContextMaker(object):
         ctxs = []
         if getattr(src, 'location', None) and step == 1 and (  # point source
                 str(src.magnitude_scaling_relationship) != 'PointMSR'):
-            return self.get_ctxs_ps(src, sitecol)
+            return self.get_ctxs_planar(src, sitecol)
         elif hasattr(src, 'source_id'):  # other source
             with self.ir_mon:
                 allrups = numpy.array(list(src.iter_ruptures(
@@ -724,7 +724,6 @@ class ContextMaker(object):
                         c = rup.surface.get_closest_points(sites.complete)
                         ctx.clon = c.lons[ctx.sids]
                         ctx.clat = c.lats[ctx.sids]
-
         return [] if not ctxs else [self.recarray(ctxs)]
 
     def max_intensity(self, sitecol1, mags, dists):
