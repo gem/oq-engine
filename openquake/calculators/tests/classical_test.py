@@ -322,7 +322,7 @@ hazard_uhs-std.csv
         ids = decode(self.calc.datastore['source_info']['source_id'])
         numpy.testing.assert_equal(ids, ['A;0', 'B', 'A;1'])
 
-    def test_case_18(self):  # GMPEtable
+    def test_case_18(self):  # GMPEtable, PointMSR, psdist=50
         self.assert_curves_ok(
             ['hazard_curve-mean_PGA.csv',
              'hazard_curve-mean_SA(0.2).csv',
