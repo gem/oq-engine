@@ -926,15 +926,15 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         for sid, assets in zip(sitecol.sids, assets_by):
             assets_by_site[sid] = assets
             num_assets += len(assets)
-        logging.info('Associated {:_d} assets to {:_d} sites'.format(
-            num_assets, len(sitecol)))
+        logging.info('Associated {:_d} assets to {:_d} sites'.
+                     format(num_assets, len(sitecol)))
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
         assets_by_site = exposure.assets_by_site
         discarded = []
-        logging.info('Read %d sites and %d assets from the exposure',
-                     len(sitecol), sum(len(a) for a in assets_by_site))
+        logging.info('Read {:_d} sites and {:_d} assets from the exposure'.
+                     format(len(sitecol), sum(len(a) for a in assets_by_site)))
 
     assetcol = asset.AssetCollection(
         exposure, assets_by_site, oqparam.time_event, oqparam.aggregate_by)
