@@ -110,7 +110,7 @@ def calc_average(pointsources):
 
 
 def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
-    real_ps = str(src.magnitude_scaling_relationship) == 'PointMSR'
+    pointmsr = str(src.magnitude_scaling_relationship) == 'PointMSR'
     mags, rates = zip(*src.get_annual_occurrence_rates())
     if not nplanes:
         np_probs, nplanes = zip(*src.nodal_plane_distribution.data)
@@ -131,7 +131,7 @@ def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
                 for d, hc_prob in enumerate(hc_probs):
                     rate = rates[m] * np_probs[n] * hc_prob
                     surface = surfaces[m, n, d]
-                    if real_ps:
+                    if pointmsr:
                         rup = PointRupture(
                             mag, np.rake, src.tectonic_region_type,
                             hc, np.strike, rate,
