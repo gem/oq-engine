@@ -696,8 +696,9 @@ class ContextMaker(object):
                 if fewsites:
                     # get the closest points on the surface
                     closest = project_back(planar, xx, yy)  # (3, U, N)
+                umask = dists <= magdist[m]  # shape (U, N)
             for u, rup in enumerate(rups):
-                mask = dists[u] <= magdist[m]
+                mask = umask[u]
                 if mask.any():
                     r_sites = sites.filter(mask)
                     ctx = self.get_ctx(rup, r_sites, dists[u][mask])
