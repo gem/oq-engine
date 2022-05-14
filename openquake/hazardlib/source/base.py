@@ -23,8 +23,7 @@ import numpy
 from openquake.baselib import general
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point
-from openquake.hazardlib.geo.surface.planar import (
-    PlanarSurface, build_planar_array, build_planar_surfaces)
+from openquake.hazardlib.geo.surface.planar import build_planar_surfaces
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 
@@ -314,8 +313,8 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         Get a list of pairs "magnitude -- annual occurrence rate".
 
-        The list is taken from assigned MFD object
-        (see :meth:`openquake.hazardlib.mfd.base.BaseMFD.get_annual_occurrence_rates`)
+        The list is taken from assigned MFD object (see :meth:
+        `openquake.hazardlib.mfd.base.BaseMFD.get_annual_occurrence_rates`)
         with simple filtering by rate applied.
 
         :param min_rate:
