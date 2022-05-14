@@ -17,7 +17,7 @@
 Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
-from unittest.mock import Mock
+import copy
 import numpy
 from openquake.baselib.general import AccumDict, groupby_grid
 from openquake.baselib.performance import Monitor
@@ -25,6 +25,7 @@ from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
     build_planar_surfaces, planin_dt)
+from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
@@ -110,19 +111,12 @@ def calc_average(pointsources):
     return dic
 
 
-def _gen_ruptures(src, nplanes=(), hypos=(), shift_hypo=False, step=1):
+def _gen_ruptures(src, shift_hypo=False, step=1):
     pointmsr = str(src.magnitude_scaling_relationship) == 'PointMSR'
     mags, rates = zip(*src.get_annual_occurrence_rates())
-    if not nplanes:
-        np_probs, nplanes = zip(*src.nodal_plane_distribution.data)
-    else:
-        np_probs = [1.]
-    if not hypos:
-        hc_probs, cdeps = zip(*src.hypocenter_distribution.data)
-        clon, clat = src.location.x, src.location.y
-    else:
-        hc_probs, hypo = [1.], hypos[0]
-        clon, clat, cdeps = hypo.x, hypo.y, [hypo.z]
+    np_probs, nplanes = zip(*src.nodal_plane_distribution.data)
+    hc_probs, cdeps = zip(*src.hypocenter_distribution.data)
+    clon, clat = src.location.x, src.location.y
     hc = Point(clon, clat, cdeps[0])
     if step == 1:  # regular case, return full ruptures
         planin = src.get_planin(mags, nplanes)
@@ -222,6 +216,15 @@ class PointSource(ParametricSeismicSource):
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
 
+    def restricted(self, nodalplane, depth):
+        """
+        :returns: source restricted to a single nodal plane and depth
+        """
+        new = copy.copy(self)
+        new.nodal_plane_distribution = PMF([(1., nodalplane)])
+        new.hypocenter_distribution = PMF([(1., depth)])
+        return new
+
     def get_planin(self, mags, nplanes):
         """
         :return: array of dtype planin_dt of shape (num_mags, num_planes)
@@ -287,9 +290,8 @@ class PointSource(ParametricSeismicSource):
         Generate one rupture for each magnitude, called only if nphc > 1
         """
         avg = calc_average([self])  # over nodal planes and hypocenters
-        np = Mock(strike=avg['strike'], dip=avg['dip'], rake=avg['rake'])
-        hc = Point(avg['lon'], avg['lat'], avg['dep'])
-        yield from _gen_ruptures(self, [np], [hc])
+        np = NodalPlane(avg['strike'], avg['dip'], avg['rake'])
+        yield from _gen_ruptures(self.restricted(np, avg['dep']))
 
     def count_nphc(self):
         """
@@ -378,7 +380,7 @@ class CollapsedPointSource(PointSource):
         :yields: the underlying ruptures with mean nodal plane and hypocenter
         """
         np = NodalPlane(self.strike, self.dip, self.rake)
-        yield from _gen_ruptures(self, [np], [self.location])
+        yield from _gen_ruptures(self.restricted(np, self.location.z))
 
     def _get_max_rupture_projection_radius(self, mag=None):
         """
