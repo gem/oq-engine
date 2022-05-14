@@ -648,15 +648,43 @@ class ContextMaker(object):
         :param sitecol: a filtered SiteCollection
         :returns: a list with 0 or 1 context array
         """
+        rups_sites = []
+        fewsites = len(sitecol) <= self.max_sites_disagg
         with self.ir_mon:
-            rups_sites = list(self._ps_rups_sites(src, sitecol))
-        fewsites = len(sitecol.complete) <= self.max_sites_disagg
+            allrups = numpy.array(
+                list(src.iter_ruptures(shift_hypo=self.shift_hypo)))
+        if src.count_nphc() == 1:
+            # one rupture per magnitude
+            for rup in allrups:
+                rups_sites.append(([rup], sitecol))
+        else:
+            # multiple ruptures per magnitude, collapsing makes sense
+            cdist = sitecol.get_cdist(src.location)
+            m_idx = numpy.array([rup.m for rup in allrups])
+            for m, rup in enumerate(src.iruptures()):
+                rups = allrups[m_idx == m]
+                psdist = self.pointsource_distance + src.get_radius(rup)
+                close = sitecol.filter(cdist <= psdist)
+                far = sitecol.filter(cdist > psdist)
+                if fewsites:
+                    if close is None:  # all is far, common for small mag
+                        rups_sites.append(([rup], sitecol))
+                    else:  # something is close
+                        rups_sites.append((rups, sitecol))
+                else:  # many sites
+                    if close is None:  # all is far
+                        rups_sites.append(([rup], far))
+                    elif far is None:  # all is close
+                        rups_sites.append((rups, close))
+                    else:  # some sites are far, some are close
+                        rups_sites.append(([rup], far))
+                        rups_sites.append((rups, close))
         ctxs = []
-        for rups, sites in rups_sites:  # ruptures with the same magnitude
+        for rups, sites in rups_sites:
+            # loop over ruptures with the same magnitude
             if len(rups) == 0:  # may happen in case of min_mag/max_mag
                 continue
             with self.dst_mon:
-                magdist = self.maximum_distance(rups[0].mag)
                 planar = numpy.array(
                     [rup.surface.array for rup in rups]
                 ).view(numpy.recarray)  # shape (U, 3)
@@ -664,8 +692,9 @@ class ContextMaker(object):
                 if fewsites:
                     # get the closest points on the surface
                     closest = project_back(planar, xx, yy)  # (3, U, N)
+                umask = dists <= self.maximum_distance(rups[0].mag)  # (U, N)
             for u, rup in enumerate(rups):
-                mask = dists[u] <= magdist
+                mask = umask[u]
                 if mask.any():
                     r_sites = sites.filter(mask)
                     ctx = self.get_ctx(rup, r_sites, dists[u][mask])
@@ -756,35 +785,6 @@ class ContextMaker(object):
             else:
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
-
-    def _ps_rups_sites(self, src, sites):
-        if src.count_nphc() == 1:  # one rupture per magnitude
-            for rup in src.iter_ruptures():
-                yield [rup], sites
-            return
-        fewsites = len(sites) <= self.max_sites_disagg
-        cdist = sites.get_cdist(src.location)
-        allrups = numpy.array(
-            list(src.iter_ruptures(shift_hypo=self.shift_hypo)))
-        m_idx = numpy.array([rup.m for rup in allrups])
-        for rup in src.iruptures():
-            rups = allrups[m_idx == rup.m]
-            psdist = self.pointsource_distance + src.get_radius(rup)
-            close = sites.filter(cdist <= psdist)
-            far = sites.filter(cdist > psdist)
-            if fewsites:
-                if close is None:  # all is far, common for small mag
-                    yield [rup], sites
-                else:  # something is close
-                    yield rups, sites
-            else:  # many sites
-                if close is None:  # all is far
-                    yield [rup], far
-                elif far is None:  # all is close
-                    yield rups, close
-                else:  # some sites are far, some are close
-                    yield [rup], far
-                    yield rups, close
 
     # not used by the engine, is is meant for notebooks
     def get_poes(self, srcs, sitecol, collapse_level=-1):
