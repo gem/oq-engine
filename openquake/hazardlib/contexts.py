@@ -652,37 +652,39 @@ class ContextMaker(object):
         fewsites = len(sitecol) <= self.max_sites_disagg
         mags = []
         with self.ir_mon:
-            if src.count_nphc() == 1:  # one rupture per magnitude
-                for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
-                    rups_sites.append(([rup], sitecol))
-                    mags.append(rup.mag)
-            else:  # multiple ruptures per magnitude, collapsing makes sense
-                cdist = sitecol.get_cdist(src.location)
-                allrups = numpy.array(
-                    list(src.iter_ruptures(shift_hypo=self.shift_hypo)))
-                m_idx = numpy.array([rup.m for rup in allrups])
-                for rup in src.iruptures():
-                    mags.append(rup.mag)
-                    rups = allrups[m_idx == rup.m]
-                    psdist = self.pointsource_distance + src.get_radius(rup)
-                    close = sitecol.filter(cdist <= psdist)
-                    far = sitecol.filter(cdist > psdist)
-                    if fewsites:
-                        if close is None:  # all is far, common for small mag
-                            rups_sites.append(([rup], sitecol))
-                        else:  # something is close
-                            rups_sites.append((rups, sitecol))
-                    else:  # many sites
-                        if close is None:  # all is far
-                            rups_sites.append(([rup], far))
-                        elif far is None:  # all is close
-                            rups_sites.append((rups, close))
-                        else:  # some sites are far, some are close
-                            rups_sites.append(([rup], far))
-                            rups_sites.append((rups, close))
+            allrups = numpy.array(
+                list(src.iter_ruptures(shift_hypo=self.shift_hypo)))
+        if src.count_nphc() == 1:
+            # one rupture per magnitude
+            for m, rup in enumerate(allrups):
+                rups_sites.append((m, [rup], sitecol))
+                mags.append(rup.mag)
+        else:
+            # multiple ruptures per magnitude, collapsing makes sense
+            cdist = sitecol.get_cdist(src.location)
+            m_idx = numpy.array([rup.m for rup in allrups])
+            for m, rup in enumerate(src.iruptures()):
+                mags.append(rup.mag)
+                rups = allrups[m_idx == m]
+                psdist = self.pointsource_distance + src.get_radius(rup)
+                close = sitecol.filter(cdist <= psdist)
+                far = sitecol.filter(cdist > psdist)
+                if fewsites:
+                    if close is None:  # all is far, common for small mag
+                        rups_sites.append((m, [rup], sitecol))
+                    else:  # something is close
+                        rups_sites.append((m, rups, sitecol))
+                else:  # many sites
+                    if close is None:  # all is far
+                        rups_sites.append((m, [rup], far))
+                    elif far is None:  # all is close
+                        rups_sites.append((m, rups, close))
+                    else:  # some sites are far, some are close
+                        rups_sites.append((m, [rup], far))
+                        rups_sites.append((m, rups, close))
         magdist = [self.maximum_distance(mag) for mag in mags]
         ctxs = []
-        for m, (rups, sites) in enumerate(rups_sites):
+        for m, rups, sites in rups_sites:
             # loop over ruptures with the same magnitude
             if len(rups) == 0:  # may happen in case of min_mag/max_mag
                 continue
