@@ -47,7 +47,7 @@ planar_array_dt = numpy.dtype([
     ('normal', float),
     ('uv1', float),
     ('uv2', float),
-    ('wld', float),
+    ('wlr', float),
     ('sdr', float),
     ('hypo', float)])
 
@@ -253,9 +253,9 @@ def build_planar_array(corners, sdr=None, hypo=None, check=False):
     width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
     width = (width1 + width2) / 2.0
     length = (length1 + length2) / 2.0
-    wld = planar_array['wld']
-    wld[..., 0] = width
-    wld[..., 1] = length
+    wlr = planar_array['wlr']
+    wlr[..., 0] = width
+    wlr[..., 1] = length
 
     if check:
         # calculate the imperfect rectangle tolerance
@@ -283,7 +283,7 @@ def project(planar, points):
     def dot(a, v):  # array @ vector
         return a[:, 0] * v[0] + a[:, 1] * v[1] + a[:, 2] * v[2]
     for u, pla in enumerate(planar):
-        width, length, _ = pla.wld
+        width, length, _ = pla.wlr
         # we project all the points of the mesh on a plane that contains
         # the surface (translating coordinates of the projections to a local
         # 2d space) and at the same time calculate the distance to that
@@ -377,8 +377,8 @@ def project_back(planar, xx, yy):
     arr = numpy.zeros((3, U, N))
     for u in range(U):
         arr3N = numpy.zeros((3, N))
-        mxx = numpy.clip(xx[u], 0., planar.wld[u, 1])
-        myy = numpy.clip(yy[u], 0., planar.wld[u, 0])
+        mxx = numpy.clip(xx[u], 0., planar.wlr[u, 1])
+        myy = numpy.clip(yy[u], 0., planar.wlr[u, 0])
         for i in range(3):
             arr3N[i] = (planar.xyz[u, i, 0] +
                         planar.uv1[u, i] * mxx +
@@ -845,8 +845,8 @@ class PlanarSurface(BaseSurface):
         """
         array = self.array
         mat = mesh.xyz - array.xyz[:, 0]
-        xx = numpy.clip(mat @ array.uv1, 0, array.wld[1])
-        yy = numpy.clip(mat @ array.uv2, 0, array.wld[0])
+        xx = numpy.clip(mat @ array.uv1, 0, array.wlr[1])
+        yy = numpy.clip(mat @ array.uv2, 0, array.wlr[0])
         vectors = (array.xyz[:, 0] +
                    array.uv1 * xx.reshape(xx.shape + (1, )) +
                    array.uv2 * yy.reshape(yy.shape + (1, )))
@@ -913,14 +913,14 @@ class PlanarSurface(BaseSurface):
         Return surface's width value (in km) as computed in the constructor
         (that is mean value of left and right surface sides).
         """
-        return self.array.wld[0]
+        return self.array.wlr[0]
 
     def get_area(self):
         """
         Return surface's area value (in squared km) obtained as the product
         of surface length and width.
         """
-        return self.array.wld[0] * self.array.wld[1]
+        return self.array.wlr[0] * self.array.wlr[1]
 
     def get_bounding_box(self):
         """

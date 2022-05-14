@@ -220,7 +220,7 @@ class PointSource(ParametricSeismicSource):
         radius = []
         _, nplanes = zip(*self.nodal_plane_distribution.data)
         for planin in self.get_planin([mag], nplanes)[0]:
-            rup_length, rup_width, _ = _get_rupture_dimensions(planin)
+            rup_length, rup_width, _ = planin.dims
             # the projection radius is half of the rupture diagonal
             radius.append(math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
         self.radius = max(radius)
@@ -232,7 +232,7 @@ class PointSource(ParametricSeismicSource):
         """
         [[planin]] = self.get_planin(
             [rup.mag], [NodalPlane(rup.surface.strike, dip, rup.rake)])
-        rup_length, rup_width, _ = _get_rupture_dimensions(planin)
+        rup_length, rup_width, _ = planin.dims
         return math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
 
     def _gen_ruptures(self, shift_hypo=False, step=1):
@@ -349,6 +349,8 @@ class CollapsedPointSource(PointSource):
             pointsources[0].temporal_occurrence_model)
         vars(self).update(calc_average(pointsources))
         self.location = Point(self.lon, self.lat, self.dep)
+        self.nodal_plane_distribution = PMF(
+            [(1., NodalPlane(self.strike, self.dip, self.rake))])
 
     def get_annual_occurrence_rates(self):
         """
@@ -380,23 +382,6 @@ class CollapsedPointSource(PointSource):
         """
         np = NodalPlane(self.strike, self.dip, self.rake)
         yield from self.restricted(np, self.location.z)._gen_ruptures()
-
-    def _get_max_rupture_projection_radius(self, mag=None):
-        """
-        Find a maximum radius of a circle on Earth surface enveloping a rupture
-        produced by this source.
-
-        :returns:
-            Half of maximum rupture's diagonal surface projection.
-        """
-        if mag is None:
-            mag, _rate = self.get_annual_occurrence_rates()[-1]
-        [[planin]] = self.get_planin(
-            [mag], [NodalPlane(self.strike, self.dip, self.rake)])
-        rup_length, rup_width, _ = _get_rupture_dimensions(planin)
-        # the projection radius is half of the rupture diagonal
-        self.radius = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
-        return self.radius
 
     def count_ruptures(self):
         """
