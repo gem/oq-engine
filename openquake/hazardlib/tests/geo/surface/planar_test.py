@@ -83,7 +83,7 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
             self.assertEqual(surface.get_strike(), strike)
             self.assertEqual(surface.dip, dip)
             self.assertEqual(surface.get_dip(), dip)
-            width, length, _ = surface.array.wld
+            width, length, _ = surface.array.wlr
             self.assertAlmostEqual(length, tl.distance(tr), delta=0.2)
             self.assertAlmostEqual(width, tl.distance(bl), delta=0.2)
 

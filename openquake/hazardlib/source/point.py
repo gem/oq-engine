@@ -220,7 +220,7 @@ class PointSource(ParametricSeismicSource):
         radius = []
         _, nplanes = zip(*self.nodal_plane_distribution.data)
         for planin in self.get_planin([mag], nplanes)[0]:
-            rup_length, rup_width, _ = _get_rupture_dimensions(planin)
+            rup_length, rup_width, _ = planin.dims
             # the projection radius is half of the rupture diagonal
             radius.append(math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
         self.radius = max(radius)
@@ -232,7 +232,7 @@ class PointSource(ParametricSeismicSource):
         """
         [[planin]] = self.get_planin(
             [rup.mag], [NodalPlane(rup.surface.strike, dip, rup.rake)])
-        rup_length, rup_width, _ = _get_rupture_dimensions(planin)
+        rup_length, rup_width, _ = planin.dims
         return math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
 
     def _gen_ruptures(self, shift_hypo=False, step=1):
@@ -393,7 +393,7 @@ class CollapsedPointSource(PointSource):
             mag, _rate = self.get_annual_occurrence_rates()[-1]
         [[planin]] = self.get_planin(
             [mag], [NodalPlane(self.strike, self.dip, self.rake)])
-        rup_length, rup_width, _ = _get_rupture_dimensions(planin)
+        rup_length, rup_width, _ = planin.dims
         # the projection radius is half of the rupture diagonal
         self.radius = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius
