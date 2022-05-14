@@ -257,10 +257,12 @@ class PointSource(ParametricSeismicSource):
                         rup.m = m
                         yield rup
         else:  # return point ruptures
-            items = list(enumerate((zip(mrates, mags))))[::step]
-            for m, (mrate, mag) in items:
-                for n, np in enumerate(nplanes):
-                    for d, cdep in enumerate(cdeps):
+            magrates_ = list(enumerate((zip(mags, mrates))))
+            nplanes_ = list(enumerate((nplanes)))
+            cdeps_ = list(enumerate((cdeps)))
+            for m, (mag, mrate) in magrates_[::step]:
+                for n, np in nplanes_[::step]:
+                    for d, cdep in cdeps_[::step]:
                         rate = mrate * np_probs[n] * hc_probs[d]
                         rup = PointRupture(
                             mag, np.rake, self.tectonic_region_type,
