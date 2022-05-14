@@ -19,7 +19,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </gml:pos>
             </gml:Point>
             <IMLs>
-                2.6518570E-03 1.1211547E-02 1.2184155E-02
+                2.6511394E-03 1.1209286E-02 1.2182754E-02
             </IMLs>
         </uhs>
         <uhs>
@@ -29,7 +29,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </gml:pos>
             </gml:Point>
             <IMLs>
-                2.6041584E-03 1.1061328E-02 1.2091137E-02
+                2.6034508E-03 1.1059094E-02 1.2089749E-02
             </IMLs>
         </uhs>
         <uhs>
@@ -39,7 +39,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </gml:pos>
             </gml:Point>
             <IMLs>
-                2.6058163E-03 1.1066550E-02 1.2094378E-02
+                2.6051085E-03 1.1064315E-02 1.2092989E-02
             </IMLs>
         </uhs>
     </uniformHazardSpectra>

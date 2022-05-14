@@ -41,8 +41,7 @@ from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.geo.surface.planar import (
-    PlanarSurface, project, project_back)
+from openquake.hazardlib.geo.surface.planar import project, project_back
 
 U32 = numpy.uint32
 F64 = numpy.float64
