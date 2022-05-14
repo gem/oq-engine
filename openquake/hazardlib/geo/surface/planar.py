@@ -61,6 +61,7 @@ planin_dt = numpy.dtype([
     ('strike', float),
     ('dip', float),
     ('rake', float),
+    ('rate', float),
     ('lon', float),
     ('lat', float),
     ('dep', float),
