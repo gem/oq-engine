@@ -158,8 +158,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :param eff_num_ses: number of stochastic event sets * number of samples
         :yields: pairs (rupture, num_occurrences[num_samples])
         """
-        usd = self.upper_seismogenic_depth
-        lsd = self.lower_seismogenic_depth
         tom = self.temporal_occurrence_model
         if not hasattr(self, 'nodal_plane_distribution'):  # fault
             ruptures = list(self.iter_ruptures())
@@ -170,6 +168,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                     yield rup, num_occ
             return
         # else (multi)point sources and area sources
+        usd = self.upper_seismogenic_depth
+        lsd = self.lower_seismogenic_depth
         rup_args = []
         rates = []
         for src in self:
