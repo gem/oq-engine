@@ -53,9 +53,6 @@ planar_array_dt = numpy.dtype([
 
 
 planin_dt = numpy.dtype([
-    ('usd', float),
-    ('lsd', float),
-    ('rar', float),
     ('mag', float),
     ('area', float),
     ('strike', float),
@@ -143,7 +140,7 @@ def _update(corners, usd, lsd, mag, dims, strike, dip, rake, clon, clat, cdep):
 
 # numbified below, ultrafast
 def build_corners(usd, lsd, mag, dims, strike, dip, rake, lon, lat, dep):
-    M, N, D = usd.shape
+    M, N, D = mag.shape
     corners = numpy.zeros((6, M, N, D, 3))
     # 0,1,2,3: tl, tr, bl, br
     # 4: (strike, dip, rake)
@@ -151,7 +148,7 @@ def build_corners(usd, lsd, mag, dims, strike, dip, rake, lon, lat, dep):
     for m in range(M):
         for n in range(N):
             for d in range(D):
-                _update(corners[:, m, n, d], usd[m, n, d], lsd[m, n, d],
+                _update(corners[:, m, n, d], usd, lsd,
                         mag[m, n, d], dims[m, n, d], strike[m, n, d],
                         dip[m, n, d], rake[m, n, d], lon, lat, dep[m, n, d])
     return corners
@@ -160,8 +157,8 @@ def build_corners(usd, lsd, mag, dims, strike, dip, rake, lon, lat, dep):
 if numba:
     F8 = numba.float64
     build_corners = compile(F8[:, :, :, :, :](
-        F8[:, :, :],     # usd
-        F8[:, :, :],     # lsd
+        F8,              # usd
+        F8,              # lsd
         F8[:, :, :],     # mag
         F8[:, :, :, :],  # dims
         F8[:, :, :],     # strike
@@ -173,7 +170,8 @@ if numba:
     ))(build_corners)
 
 
-def build_planar(planin, lon, lat):
+# not numbified but fast anyway
+def build_planar(planin, lon, lat, usd, lsd):
     """
     :param planin:
         Surface input parameters as an array of shape (M, N, D)
@@ -185,7 +183,7 @@ def build_planar(planin, lon, lat):
         an array of shape (M, N, D, 3)
     """
     corners = build_corners(
-        planin.usd, planin.lsd, planin.mag, planin.dims,
+        usd, lsd, planin.mag, planin.dims,
         planin.strike, planin.dip, planin.rake, lon, lat, planin.dep)
     planar_array = build_planar_array(corners[:4], corners[4], corners[5])
     planar_array.wlr[:, :, :, 2] = planin.rate
@@ -198,7 +196,7 @@ def dot(a, b):
             a[..., 2] * b[..., 2])
 
 
-# not numbified
+# not numbified but fast anyway
 def build_planar_array(corners, sdr=None, hypo=None, check=False):
     """
     :param corners: array of shape (4, M, N, D, 3)

@@ -158,6 +158,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :param eff_num_ses: number of stochastic event sets * number of samples
         :yields: pairs (rupture, num_occurrences[num_samples])
         """
+        usd = self.upper_seismogenic_depth
+        lsd = self.lower_seismogenic_depth
         tom = self.temporal_occurrence_model
         if not hasattr(self, 'nodal_plane_distribution'):  # fault
             ruptures = list(self.iter_ruptures())
@@ -189,7 +191,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 hc = Point(lon, lat, hc_depth)
                 planar = build_planar(
                     src.get_planin([(1., mag)], [(1., np)], [(1., hc.depth)]),
-                    lon, lat)[0, 0, 0]
+                    lon, lat, usd, lsd)[0, 0, 0]
                 rup = ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type, hc,
                     PlanarSurface.from_(planar), rate, tom)

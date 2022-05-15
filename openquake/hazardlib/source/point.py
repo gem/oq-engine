@@ -32,7 +32,7 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
 
-def _get_rupture_dimensions(planin):
+def _get_rupture_dimensions(planin, width, rar):
     """
     Calculate and return the rupture length and width
     for given magnitude surface parameters.
@@ -52,11 +52,10 @@ def _get_rupture_dimensions(planin):
     depth, the rupture width is shrunken to a maximum possible
     and rupture length is extended to preserve the same area.
     """
-    rup_length = math.sqrt(planin.area * planin.rar)
+    rup_length = math.sqrt(planin.area * rar)
     rup_width = planin.area / rup_length
-    seismogenic_layer_width = planin.lsd - planin.usd
     rdip = math.radians(planin.dip)
-    max_width = seismogenic_layer_width / math.sin(rdip)
+    max_width = width / math.sin(rdip)
     if rup_width > max_width:
         rup_width = max_width
         rup_length = planin.area / rup_width
@@ -193,14 +192,13 @@ class PointSource(ParametricSeismicSource):
         msr = self.magnitude_scaling_relationship
         planin = numpy.zeros((len(magd), len(npd), len(hdd)), planin_dt).view(
             numpy.recarray)
+        width = self.lower_seismogenic_depth - self.upper_seismogenic_depth
+        rar = self.rupture_aspect_ratio
         for m, (mrate, mag) in enumerate(magd):
             for n, (nrate, np) in enumerate(npd):
                 area = msr.get_median_area(mag, np.rake)
                 for d, (drate, dep) in enumerate(hdd):
                     rec = planin[m, n, d]
-                    rec['usd'] = self.upper_seismogenic_depth
-                    rec['lsd'] = self.lower_seismogenic_depth
-                    rec['rar'] = self.rupture_aspect_ratio
                     rec['mag'] = mag
                     rec['area'] = area
                     rec['strike'] = np.strike
@@ -208,7 +206,8 @@ class PointSource(ParametricSeismicSource):
                     rec['rake'] = np.rake
                     rec['rate'] = mrate * nrate * drate
                     rec['dep'] = dep
-                planin[m, n]['dims'] = _get_rupture_dimensions(planin[m, n, 0])
+                planin[m, n]['dims'] = _get_rupture_dimensions(
+                    planin[m, n, 0], width, rar)
         return planin
 
     def _get_max_rupture_projection_radius(self, mag=None):
@@ -249,10 +248,12 @@ class PointSource(ParametricSeismicSource):
         npd = self.nodal_plane_distribution.data
         hdd = self.hypocenter_distribution.data
         clon, clat = self.location.x, self.location.y
+        usd = self.upper_seismogenic_depth
+        lsd = self.lower_seismogenic_depth
         if step == 1 and not pointmsr:
             # return full ruptures
             planin = self.get_planin(magd, npd, hdd)
-            planar = build_planar(planin, clon, clat)
+            planar = build_planar(planin, clon, clat, usd, lsd)
             for (m, n, d), inp in numpy.ndenumerate(planin):
                 pla = planar[m, n, d]
                 surface = PlanarSurface.from_(pla)
