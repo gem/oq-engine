@@ -61,6 +61,7 @@ planin_dt = numpy.dtype([
     ('strike', float),
     ('dip', float),
     ('rake', float),
+    ('rate', float),
     ('lon', float),
     ('lat', float),
     ('dep', float),
@@ -141,41 +142,41 @@ def _update(corners, usd, lsd, mag, dims, strike, dip, rake, clon, clat, cdep):
 
 
 # numbified below, ultrafast
-def build_corners(usd, lsd, mag, dims, strike, dip, rake, lon, lat, deps):
-    (M, N), D = usd.shape, len(deps)
+def build_corners(usd, lsd, mag, dims, strike, dip, rake, lon, lat, dep):
+    M, N, D = usd.shape
     corners = numpy.zeros((6, M, N, D, 3))
     # 0,1,2,3: tl, tr, bl, br
     # 4: (strike, dip, rake)
     # 5: hypo
     for m in range(M):
         for n in range(N):
-            for d, dep in enumerate(deps):
-                _update(corners[:, m, n, d], usd[m, n], lsd[m, n], mag[m, n],
-                        dims[m, n], strike[m, n], dip[m, n], rake[m, n],
-                        lon, lat, dep)
+            for d in range(D):
+                _update(corners[:, m, n, d], usd[m, n, d], lsd[m, n, d],
+                        mag[m, n, d], dims[m, n, d], strike[m, n, d],
+                        dip[m, n, d], rake[m, n, d], lon, lat, dep[m, n, d])
     return corners
 
 
 if numba:
     F8 = numba.float64
     build_corners = compile(F8[:, :, :, :, :](
-        F8[:, :],     # usd
-        F8[:, :],     # lsd
-        F8[:, :],     # mag
-        F8[:, :, :],  # dims
-        F8[:, :],     # strike
-        F8[:, :],     # dip
-        F8[:, :],     # rake
-        F8,           # lon
-        F8,           # lat
-        F8[:],        # dep
+        F8[:, :, :],     # usd
+        F8[:, :, :],     # lsd
+        F8[:, :, :],     # mag
+        F8[:, :, :, :],  # dims
+        F8[:, :, :],     # strike
+        F8[:, :, :],     # dip
+        F8[:, :, :],     # rake
+        F8,              # lon
+        F8,              # lat
+        F8[:, :, :],     # dep
     ))(build_corners)
 
 
-def build_planar_surfaces(planin, lon, lat, deps, shift_hypo=False):
+def build_planar_surfaces(planin, lon, lat, shift_hypo=False):
     """
     :param planin:
-        Surface input parameters as an array of shape (M, N)
+        Surface input parameters as an array of shape (M, N, D)
     :param lon, lat
         Longitude and latitude of the hypocenters (scalars)
     :parameter deps:
@@ -187,18 +188,20 @@ def build_planar_surfaces(planin, lon, lat, deps, shift_hypo=False):
     """
     corners = build_corners(
         planin.usd, planin.lsd, planin.mag, planin.dims,
-        planin.strike, planin.dip, planin.rake, lon, lat, numpy.array(deps))
+        planin.strike, planin.dip, planin.rake, lon, lat, planin.dep)
     planar_array = build_planar_array(corners[:4], corners[4], corners[5])
-    out = numpy.zeros(planin.shape + (len(deps),), object)  # shape (M, N, D)
+    planar_array.wlr[:, :, :, 2] = planin.rate
+    out = numpy.zeros(planin.shape, object)  # shape (M, N, D)
     M, N, D = out.shape
     for m in range(M):
         for n in range(N):
             for d in range(D):
-                surface = PlanarSurface.from_(planar_array[m, n, d])
+                pla = planar_array[m, n, d]
+                surface = PlanarSurface.from_(pla)
                 if shift_hypo:
                     surface.hc = Point(*corners[5, m, n, d])
                 else:
-                    surface.hc = Point(lon, lat, deps[d])
+                    surface.hc = Point(lon, lat, planin[m, n, d].dep)
                 out[m, n, d] = surface
     return out
 
@@ -209,6 +212,7 @@ def dot(a, b):
             a[..., 2] * b[..., 2])
 
 
+# not numbified
 def build_planar_array(corners, sdr=None, hypo=None, check=False):
     """
     :param corners: array of shape (4, M, N, D, 3)
