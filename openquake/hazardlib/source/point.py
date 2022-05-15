@@ -24,7 +24,7 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
-    build_planar_surfaces, planin_dt)
+    build_planar, PlanarSurface, planin_dt)
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
@@ -251,14 +251,19 @@ class PointSource(ParametricSeismicSource):
         if step == 1 and not pointmsr:
             # return full ruptures
             planin = self.get_planin(magd, npd, hdd)
-            surfaces = build_planar_surfaces(planin, clon, clat, shift_hypo)
-            for (m, n, d), surface in numpy.ndenumerate(surfaces):
-                strike, dip, rake = surface.array.sdr
-                rate = surface.array.wlr[2]
+            planar = build_planar(planin, clon, clat)
+            for (m, n, d), inp in numpy.ndenumerate(planin):
+                pla = planar[m, n, d]
+                surface = PlanarSurface.from_(pla)
+                strike, dip, rake = pla.sdr
+                rate = pla.wlr[2]
+                if shift_hypo:
+                    hc = Point(*pla.hypo)
+                else:
+                    hc = Point(clon, clat, inp.dep)
                 rup = ParametricProbabilisticRupture(
                     magd[m][1], rake, self.tectonic_region_type,
-                    surface.hc, surface, rate,
-                    self.temporal_occurrence_model)
+                    hc, surface, rate,  self.temporal_occurrence_model)
                 rup.m = m
                 yield rup
         else:

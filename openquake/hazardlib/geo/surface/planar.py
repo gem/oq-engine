@@ -173,7 +173,7 @@ if numba:
     ))(build_corners)
 
 
-def build_planar_surfaces(planin, lon, lat, shift_hypo=False):
+def build_planar(planin, lon, lat):
     """
     :param planin:
         Surface input parameters as an array of shape (M, N, D)
@@ -181,29 +181,15 @@ def build_planar_surfaces(planin, lon, lat, shift_hypo=False):
         Longitude and latitude of the hypocenters (scalars)
     :parameter deps:
         Depths of the hypocenters (vector)
-    :param shift_hypo:
-        If true, change .hc to the shifted hypocenter
     :return:
-        an array of PlanarSurfaces of shape (M, N, D)
+        an array of shape (M, N, D, 3)
     """
     corners = build_corners(
         planin.usd, planin.lsd, planin.mag, planin.dims,
         planin.strike, planin.dip, planin.rake, lon, lat, planin.dep)
     planar_array = build_planar_array(corners[:4], corners[4], corners[5])
     planar_array.wlr[:, :, :, 2] = planin.rate
-    out = numpy.zeros(planin.shape, object)  # shape (M, N, D)
-    M, N, D = out.shape
-    for m in range(M):
-        for n in range(N):
-            for d in range(D):
-                pla = planar_array[m, n, d]
-                surface = PlanarSurface.from_(pla)
-                if shift_hypo:
-                    surface.hc = Point(*corners[5, m, n, d])
-                else:
-                    surface.hc = Point(lon, lat, planin[m, n, d].dep)
-                out[m, n, d] = surface
-    return out
+    return planar_array
 
 
 def dot(a, b):
