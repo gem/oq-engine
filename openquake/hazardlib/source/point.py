@@ -195,19 +195,20 @@ class PointSource(ParametricSeismicSource):
             numpy.recarray)
         for m, (mrate, mag) in enumerate(magd):
             for n, (nrate, np) in enumerate(npd):
+                area = msr.get_median_area(mag, np.rake)
                 for d, (drate, dep) in enumerate(hdd):
                     rec = planin[m, n, d]
                     rec['usd'] = self.upper_seismogenic_depth
                     rec['lsd'] = self.lower_seismogenic_depth
                     rec['rar'] = self.rupture_aspect_ratio
                     rec['mag'] = mag
-                    rec['area'] = msr.get_median_area(mag, np.rake)
+                    rec['area'] = area
                     rec['strike'] = np.strike
                     rec['dip'] = np.dip
                     rec['rake'] = np.rake
-                    rec['dims'] = _get_rupture_dimensions(rec)
                     rec['rate'] = mrate * nrate * drate
                     rec['dep'] = dep
+                planin[m, n]['dims'] = _get_rupture_dimensions(planin[m, n, 0])
         return planin
 
     def _get_max_rupture_projection_radius(self, mag=None):
