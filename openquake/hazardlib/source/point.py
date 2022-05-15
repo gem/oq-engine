@@ -207,6 +207,7 @@ class PointSource(ParametricSeismicSource):
                     rec['rake'] = np.rake
                     rec['dims'] = _get_rupture_dimensions(rec)
                     rec['rate'] = mrate * nrate * drate
+                    rec['dep'] = dep
         return planin
 
     def _get_max_rupture_projection_radius(self, mag=None):
@@ -221,7 +222,7 @@ class PointSource(ParametricSeismicSource):
             mag, _ = self.get_annual_occurrence_rates()[-1]
         magd = [(1., mag)]
         npd = self.nodal_plane_distribution.data
-        hdd = self.hypocenter_distribution.data
+        hdd = [(1., self.location.depth)]
         radius = []
         for planin in self.get_planin(magd, npd, hdd)[0].flat:
             rup_length, rup_width, _ = planin.dims
