@@ -24,7 +24,7 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
-    build_planar_surfaces, planin_dt)
+    build_planar, PlanarSurface, planin_dt)
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
@@ -32,7 +32,7 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
 
-def _get_rupture_dimensions(planin):
+def _get_rupture_dimensions(planin, width, rar):
     """
     Calculate and return the rupture length and width
     for given magnitude surface parameters.
@@ -52,11 +52,10 @@ def _get_rupture_dimensions(planin):
     depth, the rupture width is shrunken to a maximum possible
     and rupture length is extended to preserve the same area.
     """
-    rup_length = math.sqrt(planin.area * planin.rar)
+    rup_length = math.sqrt(planin.area * rar)
     rup_width = planin.area / rup_length
-    seismogenic_layer_width = planin.lsd - planin.usd
     rdip = math.radians(planin.dip)
-    max_width = seismogenic_layer_width / math.sin(rdip)
+    max_width = width / math.sin(rdip)
     if rup_width > max_width:
         rup_width = max_width
         rup_length = planin.area / rup_width
@@ -193,21 +192,22 @@ class PointSource(ParametricSeismicSource):
         msr = self.magnitude_scaling_relationship
         planin = numpy.zeros((len(magd), len(npd), len(hdd)), planin_dt).view(
             numpy.recarray)
+        width = self.lower_seismogenic_depth - self.upper_seismogenic_depth
+        rar = self.rupture_aspect_ratio
         for m, (mrate, mag) in enumerate(magd):
             for n, (nrate, np) in enumerate(npd):
+                area = msr.get_median_area(mag, np.rake)
                 for d, (drate, dep) in enumerate(hdd):
                     rec = planin[m, n, d]
-                    rec['usd'] = self.upper_seismogenic_depth
-                    rec['lsd'] = self.lower_seismogenic_depth
-                    rec['rar'] = self.rupture_aspect_ratio
                     rec['mag'] = mag
-                    rec['area'] = msr.get_median_area(mag, np.rake)
+                    rec['area'] = area
                     rec['strike'] = np.strike
                     rec['dip'] = np.dip
                     rec['rake'] = np.rake
-                    rec['dims'] = _get_rupture_dimensions(rec)
                     rec['rate'] = mrate * nrate * drate
                     rec['dep'] = dep
+                planin[m, n]['dims'] = _get_rupture_dimensions(
+                    planin[m, n, 0], width, rar)
         return planin
 
     def _get_max_rupture_projection_radius(self, mag=None):
@@ -248,17 +248,24 @@ class PointSource(ParametricSeismicSource):
         npd = self.nodal_plane_distribution.data
         hdd = self.hypocenter_distribution.data
         clon, clat = self.location.x, self.location.y
+        usd = self.upper_seismogenic_depth
+        lsd = self.lower_seismogenic_depth
         if step == 1 and not pointmsr:
             # return full ruptures
             planin = self.get_planin(magd, npd, hdd)
-            surfaces = build_planar_surfaces(planin, clon, clat, shift_hypo)
-            for (m, n, d), surface in numpy.ndenumerate(surfaces):
-                strike, dip, rake = surface.array.sdr
-                rate = surface.array.wlr[2]
+            planar = build_planar(planin, clon, clat, usd, lsd)
+            for (m, n, d), inp in numpy.ndenumerate(planin):
+                pla = planar[m, n, d]
+                surface = PlanarSurface.from_(pla)
+                strike, dip, rake = pla.sdr
+                rate = pla.wlr[2]
+                if shift_hypo:
+                    hc = Point(*pla.hypo)
+                else:
+                    hc = Point(clon, clat, inp.dep)
                 rup = ParametricProbabilisticRupture(
                     magd[m][1], rake, self.tectonic_region_type,
-                    surface.hc, surface, rate,
-                    self.temporal_occurrence_model)
+                    hc, surface, rate,  self.temporal_occurrence_model)
                 rup.m = m
                 yield rup
         else:
