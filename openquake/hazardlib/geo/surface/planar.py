@@ -190,19 +190,18 @@ def build_planar_surfaces(planin, lon, lat, shift_hypo=False):
         planin.usd, planin.lsd, planin.mag, planin.dims,
         planin.strike, planin.dip, planin.rake, lon, lat, planin.dep)
     planar_array = build_planar_array(corners[:4], corners[4], corners[5])
+    planar_array.wlr[:, :, :, 2] = planin.rate
     out = numpy.zeros(planin.shape, object)  # shape (M, N, D)
     M, N, D = out.shape
     for m in range(M):
         for n in range(N):
             for d in range(D):
-                inp = planin[m, n, d]
                 pla = planar_array[m, n, d]
-                pla.wlr[2] = inp.rate
                 surface = PlanarSurface.from_(pla)
                 if shift_hypo:
                     surface.hc = Point(*corners[5, m, n, d])
                 else:
-                    surface.hc = Point(lon, lat, inp.dep)
+                    surface.hc = Point(lon, lat, planin[m, n, d].dep)
                 out[m, n, d] = surface
     return out
 
@@ -213,6 +212,7 @@ def dot(a, b):
             a[..., 2] * b[..., 2])
 
 
+# not numbified
 def build_planar_array(corners, sdr=None, hypo=None, check=False):
     """
     :param corners: array of shape (4, M, N, D, 3)
