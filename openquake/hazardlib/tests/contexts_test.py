@@ -37,6 +37,8 @@ from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.mfd import ArbitraryMFD
 from openquake.hazardlib.scalerel import WC1994
 from openquake.hazardlib.geo.nodalplane import NodalPlane
+from openquake.hazardlib.geo.surface.planar import (
+    get_distances_planar, build_planar)
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
@@ -566,3 +568,10 @@ class PlanarDistancesTestCase(unittest.TestCase):
         aac(ctx.rjb, [9.26597481, 20.3854596])
         aac(ctx.repi, [27.79873166, 38.91822433])
         aac(ctx.azimuth, [0., 0.])
+
+        magd = [(r, mag) for mag, r in src.get_annual_occurrence_rates()]
+        planin = src.get_planin(magd, npd.data, hdd.data)
+        planar = build_planar(planin, loc.x, loc.y, usd, lsd)[0, 0]
+        for par in ('rx', 'ry0', 'rjb', 'rhypo', 'repi'):
+            dist = get_distances_planar(planar, sites, par)[0]
+            aac(dist, ctx[par], err_msg=par)
