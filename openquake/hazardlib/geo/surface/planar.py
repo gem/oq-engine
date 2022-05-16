@@ -528,8 +528,7 @@ def get_rhypo(planar, points):
     """
     out = numpy.zeros((len(planar), len(points)))
     lons, lats, deps = geo_utils.cartesian_to_spherical(points)
-    hypo = numpy.zeros((len(planar), 3))
-    hypo[:, :] = planar.hypo  # convert unaligned->aligned
+    hypo = planar.hypo
     for u, pla in enumerate(planar):
         hdist = geodetic.distances(
             math.radians(hypo[u, 0]), math.radians(hypo[u, 1]),
