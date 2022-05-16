@@ -545,8 +545,9 @@ class PlanarDistancesTestCase(unittest.TestCase):
         npd = PMF([(1.0, NodalPlane(90., 90., 90.))])
         hdd = PMF([(1.0, 10.)])
         imtls = DictArray({'PGA': [0.01]})
-        gsims = [valid.gsim('AkkarBommer2010'),
-                 valid.gsim('Atkinson2015')]
+        gsims = [valid.gsim('GulerceEtAl2017'),
+                 valid.gsim('Atkinson2015'),
+                 valid.gsim('YuEtAl2013Ms')]
         src = PointSource(
             "ps", "pointsource", trt, mfd, rms, msr, rar, tom,
             usd, lsd, loc, npd, hdd)
@@ -557,4 +558,11 @@ class PlanarDistancesTestCase(unittest.TestCase):
             trt, gsims, dict(imtls=imtls, truncation_level=3.))
         cmaker.tom = tom
         ctx, = cmaker.get_ctxs(src, sites)
-        print(ctx)
+        aac(ctx.rrup, [9.32409196, 20.44343079])
+        aac(ctx.rx, [0., 0.])
+        aac(ctx.ry0, [9.26597563, 20.38546829])
+        aac(ctx.rjb, [9.26597481, 20.3854596])
+        aac(ctx.rhypo, [29.54267222, 40.18243627])
+        aac(ctx.rjb, [9.26597481, 20.3854596])
+        aac(ctx.repi, [27.79873166, 38.91822433])
+        aac(ctx.azimuth, [0., 0.])
