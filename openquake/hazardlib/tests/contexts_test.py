@@ -37,6 +37,8 @@ from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.mfd import ArbitraryMFD
 from openquake.hazardlib.scalerel import WC1994
 from openquake.hazardlib.geo.nodalplane import NodalPlane
+from openquake.hazardlib.geo.surface.planar import (
+    get_distances_planar, build_planar)
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
@@ -526,3 +528,50 @@ class GetCtxs02TestCase(unittest.TestCase):
     def test_ry0_distance(self):
         dst = self.rup.surface.get_ry0_distance(self.sitec.mesh)
         self.assertAlmostEqual(dst, self.ctx.ry0, delta=1e-3)
+
+
+class PlanarDistancesTestCase(unittest.TestCase):
+    """
+    Test for calculation of planar distances
+    """
+    def test(self):
+        trt = TRT.ACTIVE_SHALLOW_CRUST
+        rms = 2.5
+        msr = WC1994()
+        rar = 1.0
+        tom = PoissonTOM(1.)
+        usd = 0.0
+        lsd = 20.0
+        loc = Point(0.0, 0.0)
+        mfd = ArbitraryMFD([7.0], [1.])
+        npd = PMF([(1.0, NodalPlane(90., 90., 90.))])
+        hdd = PMF([(1.0, 10.)])
+        imtls = DictArray({'PGA': [0.01]})
+        gsims = [valid.gsim('GulerceEtAl2017'),
+                 valid.gsim('Atkinson2015'),
+                 valid.gsim('YuEtAl2013Ms')]
+        src = PointSource(
+            "ps", "pointsource", trt, mfd, rms, msr, rar, tom,
+            usd, lsd, loc, npd, hdd)
+
+        sites = SiteCollection([Site(Point(0.25, 0.0, 0.0)),
+                                Site(Point(0.35, 0.0, 0.0))])
+        cmaker = ContextMaker(
+            trt, gsims, dict(imtls=imtls, truncation_level=3.))
+        cmaker.tom = tom
+        ctx, = cmaker.get_ctxs(src, sites)
+        aac(ctx.rrup, [9.32409196, 20.44343079])
+        aac(ctx.rx, [0., 0.])
+        aac(ctx.ry0, [9.26597563, 20.38546829])
+        aac(ctx.rjb, [9.26597481, 20.3854596])
+        aac(ctx.rhypo, [29.54267222, 40.18243627])
+        aac(ctx.rjb, [9.26597481, 20.3854596])
+        aac(ctx.repi, [27.79873166, 38.91822433])
+        aac(ctx.azimuth, [0., 0.])
+
+        magd = [(r, mag) for mag, r in src.get_annual_occurrence_rates()]
+        planin = src.get_planin(magd, npd.data, hdd.data)
+        planar = build_planar(planin, loc.x, loc.y, usd, lsd)[0, 0]
+        for par in ('rx', 'ry0', 'rjb', 'rhypo', 'repi'):
+            dist = get_distances_planar(planar, sites, par)[0]
+            aac(dist, ctx[par], err_msg=par)

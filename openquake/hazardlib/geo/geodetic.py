@@ -246,8 +246,8 @@ def spherical_to_cartesian(lons, lats, depths=None):
     return arr
 
 
-@compile("f8[:, :](f8[:], f8[:])")
-def fast_spherical_to_cartesian(lons, lats):
+@compile("f8[:, :](f8[:], f8[:], f8[:])")
+def fast_spherical_to_cartesian(lons, lats, deps):
     """
     Return the position vectors (in Cartesian coordinates) of list of spherical
     coordinates.
@@ -269,11 +269,12 @@ def fast_spherical_to_cartesian(lons, lats):
     """
     phi = np.radians(lons)
     theta = np.radians(lats)
-    cos_theta_r = EARTH_RADIUS * np.cos(theta)
+    rr = EARTH_RADIUS - deps
+    cos_theta_r = rr * np.cos(theta)
     arr = np.zeros((len(phi), 3))
     arr[:, 0] = cos_theta_r * np.cos(phi)
     arr[:, 1] = cos_theta_r * np.sin(phi)
-    arr[:, 2] = EARTH_RADIUS * np.sin(theta)
+    arr[:, 2] = rr * np.sin(theta)
     return arr
 
 
