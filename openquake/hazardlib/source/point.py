@@ -32,7 +32,7 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
 
-def _get_rupture_dimensions(planin, width, rar):
+def _get_rupdims(planin, width, rar):
     """
     Calculate and return the rupture length and width
     for given magnitude surface parameters.
@@ -192,22 +192,23 @@ class PointSource(ParametricSeismicSource):
         msr = self.magnitude_scaling_relationship
         planin = numpy.zeros((len(magd), len(npd), len(hdd)), planin_dt).view(
             numpy.recarray)
+        mrate = numpy.array([mrate for mrate, mag in magd])[:, None]
+        nrate = numpy.array([nrate for nrate, np in npd])
+        for d, (drate, dep) in enumerate(hdd):
+            arr = planin[:, :, d]
+            arr['dep'] = dep
+            arr['rate'] = drate * mrate * nrate
         width = self.lower_seismogenic_depth - self.upper_seismogenic_depth
         rar = self.rupture_aspect_ratio
         for m, (mrate, mag) in enumerate(magd):
             for n, (nrate, np) in enumerate(npd):
-                area = msr.get_median_area(mag, np.rake)
-                for d, (drate, dep) in enumerate(hdd):
-                    rec = planin[m, n, d]
-                    rec['mag'] = mag
-                    rec['area'] = area
-                    rec['strike'] = np.strike
-                    rec['dip'] = np.dip
-                    rec['rake'] = np.rake
-                    rec['rate'] = mrate * nrate * drate
-                    rec['dep'] = dep
-                planin[m, n]['dims'] = _get_rupture_dimensions(
-                    planin[m, n, 0], width, rar)
+                arr = planin[m, n]
+                arr['mag'] = mag
+                arr['area'] = msr.get_median_area(mag, np.rake)
+                arr['strike'] = np.strike
+                arr['dip'] = np.dip
+                arr['rake'] = np.rake
+                arr['dims'] = _get_rupdims(arr[0], width, rar)
         return planin
 
     def _get_max_rupture_projection_radius(self, mag=None):
