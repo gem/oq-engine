@@ -534,7 +534,6 @@ class PlanarDistancesTestCase(unittest.TestCase):
     """
     def test(self):
         trt = TRT.ACTIVE_SHALLOW_CRUST
-        mfd = ArbitraryMFD([7.0], [1.])
         rms = 2.5
         msr = WC1994()
         rar = 1.0
@@ -542,19 +541,20 @@ class PlanarDistancesTestCase(unittest.TestCase):
         usd = 0.0
         lsd = 20.0
         loc = Point(0.0, 0.0)
+        mfd = ArbitraryMFD([7.0], [1.])
         npd = PMF([(1.0, NodalPlane(90., 90., 90.))])
-        hyd = PMF([(1.0, 10.)])
+        hdd = PMF([(1.0, 10.)])
         imtls = DictArray({'PGA': [0.01]})
-        gsims = [valid.gsim('AkkarBommer2010')]
+        gsims = [valid.gsim('AkkarBommer2010'),
+                 valid.gsim('Atkinson2015')]
         src = PointSource(
             "ps", "pointsource", trt, mfd, rms, msr, rar, tom,
-            usd, lsd, loc, npd, hyd)
+            usd, lsd, loc, npd, hdd)
 
         sites = SiteCollection([Site(Point(0.25, 0.0, 0.0)),
                                 Site(Point(0.35, 0.0, 0.0))])
         cmaker = ContextMaker(
             trt, gsims, dict(imtls=imtls, truncation_level=3.))
         cmaker.tom = tom
-        cmaker.REQUIRES_DISTANCES = {'rhypo'}
         ctx, = cmaker.get_ctxs(src, sites)
         print(ctx)
