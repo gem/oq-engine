@@ -546,14 +546,12 @@ def get_repi(planar, points):
     :returns: (U, N) distances
     """
     out = numpy.zeros((len(planar), len(points)))
-    # convert unaligned->aligned
-    hypo = numpy.zeros((len(planar), 3))
-    hypo[:, 0] = planar.hypo[:, 0]
-    hypo[:, 1] = planar.hypo[:, 1]
-    hypo = fast_spherical_to_cartesian(hypo[:, 0], hypo[:, 1], hypo[:, 2])
+    lons, lats, deps = geo_utils.cartesian_to_spherical(points)
+    hypo = planar.hypo
     for u, pla in enumerate(planar):
-        # TODO: reduce depths to zero even for the points
-        out[u] = geo_utils.min_distance(hypo[u], points)
+        out[u] = geodetic.distances(
+            math.radians(hypo[u, 0]), math.radians(hypo[u, 1]),
+            numpy.radians(lons), numpy.radians(lats))
     return out
 
 
