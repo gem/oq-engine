@@ -526,3 +526,35 @@ class GetCtxs02TestCase(unittest.TestCase):
     def test_ry0_distance(self):
         dst = self.rup.surface.get_ry0_distance(self.sitec.mesh)
         self.assertAlmostEqual(dst, self.ctx.ry0, delta=1e-3)
+
+
+class PlanarDistancesTestCase(unittest.TestCase):
+    """
+    Test for calculation of planar distances
+    """
+    def test(self):
+        trt = TRT.ACTIVE_SHALLOW_CRUST
+        mfd = ArbitraryMFD([7.0], [1.])
+        rms = 2.5
+        msr = WC1994()
+        rar = 1.0
+        tom = PoissonTOM(1.)
+        usd = 0.0
+        lsd = 20.0
+        loc = Point(0.0, 0.0)
+        npd = PMF([(1.0, NodalPlane(90., 90., 90.))])
+        hyd = PMF([(1.0, 10.)])
+        imtls = DictArray({'PGA': [0.01]})
+        gsims = [valid.gsim('AkkarBommer2010')]
+        src = PointSource(
+            "ps", "pointsource", trt, mfd, rms, msr, rar, tom,
+            usd, lsd, loc, npd, hyd)
+
+        sites = SiteCollection([Site(Point(0.25, 0.0, 0.0)),
+                                Site(Point(0.35, 0.0, 0.0))])
+        cmaker = ContextMaker(
+            trt, gsims, dict(imtls=imtls, truncation_level=3.))
+        cmaker.tom = tom
+        cmaker.REQUIRES_DISTANCES = {'rhypo'}
+        ctx, = cmaker.get_ctxs(src, sites)
+        print(ctx)
