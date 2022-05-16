@@ -570,10 +570,10 @@ class PointSurface:
     The parameters `hypocenter` and `strike` are determined by
     collapsing the corresponding parameters in the original PointSource.
     """
-    def __init__(self, hypocenter, strike):
+    def __init__(self, hypocenter, strike, dip):
         self.hypocenter = hypocenter
         self.strike = strike
-        self.dip = 90.
+        self.dip = dip
 
     def get_strike(self):
         return self.strike
@@ -588,7 +588,14 @@ class PointSurface:
         return 0
 
     def get_closest_points(self, mesh):
-        return mesh
+        """
+        :returns: N times the hypocenter if N is the number of points
+        """
+        N = len(mesh)
+        lons = numpy.full(N, self.hypocenter.x)
+        lats = numpy.full(N, self.hypocenter.y)
+        deps = numpy.full(N, self.hypocenter.z)
+        return Mesh(lons, lats, deps)
 
     def __bool__(self):
         return False
@@ -599,16 +606,17 @@ class PointRupture(ParametricProbabilisticRupture):
     A rupture coming from a far away PointSource, so that the finite
     size effects can be neglected.
     """
-    def __init__(self, mag, tectonic_region_type, hypocenter, strike,
-                 rake, occurrence_rate, temporal_occurrence_model):
+    def __init__(self, mag, rake, tectonic_region_type, hypocenter, strike,
+                 dip, occurrence_rate, temporal_occurrence_model):
         self.tectonic_region_type = tectonic_region_type
         self.hypocenter = hypocenter
         self.mag = mag
         self.strike = strike
         self.rake = rake
+        self.dip = dip
         self.occurrence_rate = occurrence_rate
         self.temporal_occurrence_model = temporal_occurrence_model
-        self.surface = PointSurface(hypocenter, strike)
+        self.surface = PointSurface(hypocenter, strike, dip)
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface,

@@ -20,6 +20,7 @@
 Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 :class:`PlanarSurface`.
 """
+import math
 import logging
 import numpy
 from openquake.baselib.node import Node
@@ -46,9 +47,147 @@ planar_array_dt = numpy.dtype([
     ('normal', float),
     ('uv1', float),
     ('uv2', float),
-    ('wld', float),
+    ('wlr', float),
     ('sdr', float),
     ('hypo', float)])
+
+
+planin_dt = numpy.dtype([
+    ('mag', float),
+    ('area', float),
+    ('strike', float),
+    ('dip', float),
+    ('rake', float),
+    ('rate', float),
+    ('lon', float),
+    ('lat', float),
+    ('dep', float),
+    ('dims', (float, 3)),
+])
+
+
+@compile("(f8[:, :], f8, f8, f8, f8[:], f8, f8, f8, f8, f8, f8)")
+def _update(corners, usd, lsd, mag, dims, strike, dip, rake, clon, clat, cdep):
+    # from the rupture center we can now compute the coordinates of the
+    # four coorners by moving along the diagonals of the plane. This seems
+    # to be better then moving along the perimeter, because in this case
+    # errors are accumulated that induce distorsions in the shape with
+    # consequent raise of exceptions when creating PlanarSurface objects
+    # theta is the angle between the diagonal of the surface projection
+    # and the line passing through the rupture center and parallel to the
+    # top and bottom edges. Theta is zero for vertical ruptures (because
+    # rup_proj_width is zero)
+    half_length, half_width, half_height = dims / 2.
+    rdip = math.radians(dip)
+
+    # precalculated azimuth values for horizontal-only and vertical-only
+    # moves from one point to another on the plane defined by strike
+    # and dip:
+    azimuth_right = strike
+    azimuth_down = azimuth_right + 90
+    azimuth_left = azimuth_down + 90
+    azimuth_up = azimuth_left + 90
+
+    # half height of the vertical component of rupture width
+    # is the vertical distance between the rupture geometrical
+    # center and it's upper and lower borders:
+    # calculate how much shallower the upper border of the rupture
+    # is than the upper seismogenic depth:
+    vshift = usd - cdep + half_height
+    # if it is shallower (vshift > 0) than we need to move the rupture
+    # by that value vertically.
+    if vshift < 0:
+        # the top edge is below upper seismogenic depth. now we need
+        # to check that we do not cross the lower border.
+        vshift = lsd - cdep - half_height
+        if vshift > 0:
+            # the bottom edge of the rupture is above the lower seismo
+            # depth; that means that we don't need to move the rupture
+            # as it fits inside seismogenic layer.
+            vshift = 0
+        # if vshift < 0 than we need to move the rupture up.
+
+    # now we need to find the position of rupture's geometrical center.
+    # in any case the hypocenter point must lie on the surface, however
+    # the rupture center might be off (below or above) along the dip.
+    if vshift != 0:
+        # we need to move the rupture center to make the rupture fit
+        # inside the seismogenic layer.
+        hshift = abs(vshift / math.tan(rdip))
+        clon, clat = geodetic.fast_point_at(
+            clon, clat, azimuth_up if vshift < 0 else azimuth_down,
+            hshift)
+        cdep += vshift
+    theta = math.degrees(math.atan(half_width / half_length))
+    hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
+    corners[0, :2] = geodetic.fast_point_at(
+        clon, clat, strike + 180 + theta, hor_dist)
+    corners[1, :2] = geodetic.fast_point_at(
+        clon, clat, strike - theta, hor_dist)
+    corners[2, :2] = geodetic.fast_point_at(
+        clon, clat, strike + 180 - theta, hor_dist)
+    corners[3, :2] = geodetic.fast_point_at(
+        clon, clat, strike + theta, hor_dist)
+    corners[0:2, 2] = cdep - half_height
+    corners[2:4, 2] = cdep + half_height
+    corners[4, 0] = strike
+    corners[4, 1] = dip
+    corners[4, 2] = rake
+    corners[5, 0] = clon
+    corners[5, 1] = clat
+    corners[5, 2] = cdep
+
+
+# numbified below, ultrafast
+def build_corners(usd, lsd, mag, dims, strike, dip, rake, lon, lat, dep):
+    M, N, D = mag.shape
+    corners = numpy.zeros((6, M, N, D, 3))
+    # 0,1,2,3: tl, tr, bl, br
+    # 4: (strike, dip, rake)
+    # 5: hypo
+    for m in range(M):
+        for n in range(N):
+            for d in range(D):
+                _update(corners[:, m, n, d], usd, lsd,
+                        mag[m, n, d], dims[m, n, d], strike[m, n, d],
+                        dip[m, n, d], rake[m, n, d], lon, lat, dep[m, n, d])
+    return corners
+
+
+if numba:
+    F8 = numba.float64
+    build_corners = compile(F8[:, :, :, :, :](
+        F8,              # usd
+        F8,              # lsd
+        F8[:, :, :],     # mag
+        F8[:, :, :, :],  # dims
+        F8[:, :, :],     # strike
+        F8[:, :, :],     # dip
+        F8[:, :, :],     # rake
+        F8,              # lon
+        F8,              # lat
+        F8[:, :, :],     # dep
+    ))(build_corners)
+
+
+# not numbified but fast anyway
+def build_planar(planin, lon, lat, usd, lsd):
+    """
+    :param planin:
+        Surface input parameters as an array of shape (M, N, D)
+    :param lon, lat
+        Longitude and latitude of the hypocenters (scalars)
+    :parameter deps:
+        Depths of the hypocenters (vector)
+    :return:
+        an array of shape (M, N, D, 3)
+    """
+    corners = build_corners(
+        usd, lsd, planin.mag, planin.dims,
+        planin.strike, planin.dip, planin.rake, lon, lat, planin.dep)
+    planar_array = build_planar_array(corners[:4], corners[4], corners[5])
+    planar_array.wlr[:, :, :, 2] = planin.rate
+    return planar_array
 
 
 def dot(a, b):
@@ -57,6 +196,7 @@ def dot(a, b):
             a[..., 2] * b[..., 2])
 
 
+# not numbified but fast anyway
 def build_planar_array(corners, sdr=None, hypo=None, check=False):
     """
     :param corners: array of shape (4, M, N, D, 3)
@@ -101,9 +241,9 @@ def build_planar_array(corners, sdr=None, hypo=None, check=False):
     width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
     width = (width1 + width2) / 2.0
     length = (length1 + length2) / 2.0
-    wld = planar_array['wld']
-    wld[..., 0] = width
-    wld[..., 1] = length
+    wlr = planar_array['wlr']
+    wlr[..., 0] = width
+    wlr[..., 1] = length
 
     if check:
         # calculate the imperfect rectangle tolerance
@@ -131,7 +271,7 @@ def project(planar, points):
     def dot(a, v):  # array @ vector
         return a[:, 0] * v[0] + a[:, 1] * v[1] + a[:, 2] * v[2]
     for u, pla in enumerate(planar):
-        width, length, _ = pla.wld
+        width, length, _ = pla.wlr
         # we project all the points of the mesh on a plane that contains
         # the surface (translating coordinates of the projections to a local
         # 2d space) and at the same time calculate the distance to that
@@ -225,8 +365,8 @@ def project_back(planar, xx, yy):
     arr = numpy.zeros((3, U, N))
     for u in range(U):
         arr3N = numpy.zeros((3, N))
-        mxx = numpy.clip(xx[u], 0., planar.wld[u, 1])
-        myy = numpy.clip(yy[u], 0., planar.wld[u, 0])
+        mxx = numpy.clip(xx[u], 0., planar.wlr[u, 1])
+        myy = numpy.clip(yy[u], 0., planar.wlr[u, 0])
         for i in range(3):
             arr3N[i] = (planar.xyz[u, i, 0] +
                         planar.uv1[u, i] * mxx +
@@ -693,8 +833,8 @@ class PlanarSurface(BaseSurface):
         """
         array = self.array
         mat = mesh.xyz - array.xyz[:, 0]
-        xx = numpy.clip(mat @ array.uv1, 0, array.wld[1])
-        yy = numpy.clip(mat @ array.uv2, 0, array.wld[0])
+        xx = numpy.clip(mat @ array.uv1, 0, array.wlr[1])
+        yy = numpy.clip(mat @ array.uv2, 0, array.wlr[0])
         vectors = (array.xyz[:, 0] +
                    array.uv1 * xx.reshape(xx.shape + (1, )) +
                    array.uv2 * yy.reshape(yy.shape + (1, )))
@@ -761,14 +901,14 @@ class PlanarSurface(BaseSurface):
         Return surface's width value (in km) as computed in the constructor
         (that is mean value of left and right surface sides).
         """
-        return self.array.wld[0]
+        return self.array.wlr[0]
 
     def get_area(self):
         """
         Return surface's area value (in squared km) obtained as the product
         of surface length and width.
         """
-        return self.array.wld[0] * self.array.wld[1]
+        return self.array.wlr[0] * self.array.wlr[1]
 
     def get_bounding_box(self):
         """
