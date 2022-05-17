@@ -164,16 +164,16 @@ class Collapser(object):
         self.npartial = 0
         self.nfull = 0
 
-    def calc_mdvbin(self, rup):
+    def calc_mdvbin(self, ctx):
         """
-        :param rup: a RuptureContext
+        :param ctx: a RuptureContext or a context array
         :return: an array of dtype numpy.uint32
         """
-        dist = getattr(rup, self.dist_type)
-        magbin = numpy.searchsorted(self.mag_bins, rup.mag)
+        dist = getattr(ctx, self.dist_type)
+        magbin = numpy.searchsorted(self.mag_bins, ctx.mag)
         distbin = numpy.searchsorted(self.dist_bins, dist)
         if self.has_vs30:
-            vs30bin = numpy.searchsorted(self.vs30_bins, dist)
+            vs30bin = numpy.searchsorted(self.vs30_bins, ctx.vs30)
             return magbin * TWO24 + distbin * TWO16 + vs30bin
         else:  # in test_collapse_area
             return magbin * TWO24 + distbin * TWO16
@@ -230,7 +230,6 @@ class Collapser(object):
         allsids = [[sid] for sid in close['sids']]
         if len(far):  # this is slow
             allsids.extend(split_array(far['sids'], uic[1], uic[2]))
-        # print(len(out), len(ctx))
         return out.view(numpy.recarray), allsids
 
 
@@ -732,8 +731,6 @@ class ContextMaker(object):
                         rec[par] = planar.hypo[u, 1]
                     elif par == 'hypo_depth':
                         rec[par] = planar.hypo[u, 2]
-            if self.collapse_level >= 0:
-                ctx['mdvbin'] = self.collapser.calc_mdvbin(ctx)
 
             # setting distance parameters
             for par in dists:
@@ -750,8 +747,10 @@ class ContextMaker(object):
                 for par in siteparams:
                     rec[par] = sites.array[par]
 
+            # filter and append
             ctxt = ctx[ctx.rrup < magdist].flatten()
             if len(ctxt):
+                ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
                 ctxs.append(ctxt)
 
         return ctxs
