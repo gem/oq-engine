@@ -487,7 +487,7 @@ class SourceModelLogicTree(object):
             raise LogicTreeError(
                 branchset_node, self.filename,
                 "branchset weights don't sum up to 1.0")
-        if len(set(values)) < len(values):
+        if ''.join(values) and len(set(values)) < len(values):
             raise LogicTreeError(
                 branchset_node, self.filename,
                 "there are duplicate values in uncertaintyModel: " +

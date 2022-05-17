@@ -18,9 +18,8 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import math
 from openquake.hazardlib import geo, mfd
-from openquake.hazardlib.source.point import PointSource, build_planar_surfaces
+from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 
 class AreaSource(ParametricSeismicSource):

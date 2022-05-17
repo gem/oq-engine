@@ -296,25 +296,6 @@ def fix_version(commit, venv):
     with open(fname, 'w') as f:
         f.write(''.join(lines))
 
-
-def remove_old_venv(basedir):
-    """
-    Engine versions < 3.14 were installing the venv in /opt/openquake,
-    so we need to remove leftover directories and files
-    """
-    def find(*names):
-        for name in names:
-            path = os.path.join(basedir, name)
-            if os.path.exists(path):
-                yield path
-    for dname in find("bin", "include", "lib"):
-        print('Removing', dname)
-        shutil.rmtree(dname)
-    for fname in find("lib64", "openquake.cfg", "pyvenv.cfg"):
-        print('Removing', fname)
-        os.remove(fname)
-
-
 def install(inst, version):
     """
     Install the engine in one of the three possible modes
@@ -327,7 +308,6 @@ def install(inst, version):
         except KeyError:
             subprocess.check_call(['useradd', '-m', '-U', 'openquake'])
             print('Created user openquake')
-        remove_old_venv(os.path.dirname(inst.VENV))
 
     # create the database
     if not os.path.exists(inst.OQDATA):
@@ -436,7 +416,7 @@ def install(inst, version):
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
                     srv = SERVICE.format(service=service, OQDATA=inst.OQDATA,
-                                         afterservice=afterservice, 
+                                         afterservice=afterservice,
                                          command=command)
                     f.write(srv)
             subprocess.check_call(
