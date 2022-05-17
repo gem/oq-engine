@@ -644,22 +644,75 @@ class ContextMaker(object):
             setattr(ctx, name, sites[name])
         return ctx
 
+    def _get_ctx(self, mag, planar, sites, src_id):
+        rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
+        if self.fewsites:
+            # get the closest points on the surface
+            closest = project_back(planar, xx, yy)  # (3, U, N)
+        dists = {'rrup': rrup}
+        for par in self.REQUIRES_DISTANCES - {'rrup'}:
+            dists[par] = get_distances_planar(planar, sites, par)
+
+        ctx = self.build_ctx((len(planar), len(sites)))
+        ctx['src_id'] = src_id
+        # setting rupture parameters
+        for par in self.ruptparams:
+            for u, rec in enumerate(ctx):
+                if par == 'mag':
+                    rec[par] = mag
+                elif par == 'occurrence_rate':
+                    rec[par] = planar.wlr[u, 2]
+                elif par == 'width':
+                    rec[par] = planar.wlr[u, 0]
+                elif par == 'strike':
+                    rec[par] = planar.sdr[u, 0]
+                elif par == 'dip':
+                    rec[par] = planar.sdr[u, 1]
+                elif par == 'rake':
+                    rec[par] = planar.sdr[u, 2]
+                elif par == 'ztor':  # top edge depth
+                    rec[par] = planar.corners[u, 2, 0]
+                elif par == 'hypo_lon':
+                    rec[par] = planar.hypo[u, 0]
+                elif par == 'hypo_lat':
+                    rec[par] = planar.hypo[u, 1]
+                elif par == 'hypo_depth':
+                    rec[par] = planar.hypo[u, 2]
+
+        # setting distance parameters
+        for par in dists:
+            dst = dists[par]
+            if self.minimum_distance:
+                dst[dst < self.minimum_distance] = self.minimum_distance
+            ctx[par] = dst
+        if self.fewsites:
+            ctx['clon'] = closest[0]
+            ctx['clat'] = closest[1]
+
+        # setting site parameters
+        for u, rec in enumerate(ctx):
+            for par in self.siteparams:
+                rec[par] = sites.array[par]
+        return ctx
+
     def get_ctxs_planar(self, src, sitecol):
         """
         :param src: a (Collapsed)PointSource with no PointMSR
         :param sitecol: a filtered SiteCollection
         :returns: a list with 0 or 1 context array
         """
-        rups_sites = []
-        fewsites = len(sitecol) <= self.max_sites_disagg
+        triples = []
+        self.fewsites = len(sitecol) <= self.max_sites_disagg
         dd = self.defaultdict.copy()
         dd['probs_occur'] = numpy.zeros(0)
-        if fewsites:
+        if self.fewsites:
             dd['clon'] = numpy.float64(0.)
             dd['clat'] = numpy.float64(0.)
-        build_ctx = RecordBuilder(**dd).zeros
-        siteparams = [par for par in sitecol.array.dtype.names if par in dd]
-        ruptparams = self.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
+        self.build_ctx = RecordBuilder(**dd).zeros
+        self.siteparams = [par for par in sitecol.array.dtype.names
+                           if par in dd]
+        self.ruptparams = (self.REQUIRES_RUPTURE_PARAMETERS |
+                           {'occurrence_rate'})
 
         with self.ir_mon:
             # iter_ruptures can be replaced with a fast call to get_planar
@@ -673,7 +726,7 @@ class ContextMaker(object):
         if src.count_nphc() == 1:
             # one rupture per magnitude
             for m, pla in enumerate(allplanar):
-                rups_sites.append((m, pla.reshape(-1, 3), sitecol))
+                triples.append((m, pla.reshape(-1, 3), sitecol))
         else:
             # multiple ruptures per magnitude, collapsing makes sense
             cdist = sitecol.get_cdist(src.location)
@@ -683,78 +736,28 @@ class ContextMaker(object):
                 psdist = self.pointsource_distance + src.get_radius(rup)
                 close = sitecol.filter(cdist <= psdist)
                 far = sitecol.filter(cdist > psdist)
-                if fewsites:
+                if self.fewsites:
                     if close is None:  # all is far, common for small mag
-                        rups_sites.append((m, arr, sitecol))
+                        triples.append((m, arr, sitecol))
                     else:  # something is close
-                        rups_sites.append((m, pla, sitecol))
+                        triples.append((m, pla, sitecol))
                 else:  # many sites
                     if close is None:  # all is far
-                        rups_sites.append((m, arr, far))
+                        triples.append((m, arr, far))
                     elif far is None:  # all is close
-                        rups_sites.append((m, pla, close))
+                        triples.append((m, pla, close))
                     else:  # some sites are far, some are close
-                        rups_sites.append((m, arr, far))
-                        rups_sites.append((m, pla, close))
+                        triples.append((m, arr, far))
+                        triples.append((m, pla, close))
         ctxs = []
-        for m, planar, sites in rups_sites:
-            # loop over ruptures with the same magnitude
-            with self.dst_mon:
-                rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
-                if fewsites:
-                    # get the closest points on the surface
-                    closest = project_back(planar, xx, yy)  # (3, U, N)
-                dists = {'rrup': rrup}
-                for par in self.REQUIRES_DISTANCES - {'rrup'}:
-                    dists[par] = get_distances_planar(planar, sites, par)
-
-            ctx = build_ctx((len(planar), len(sites)))
-            ctx['src_id'] = src.id
-            # setting rupture parameters
-            for par in ruptparams:
-                for u, rec in enumerate(ctx):
-                    if par == 'mag':
-                        rec[par] = mags[m]
-                    elif par == 'occurrence_rate':
-                        rec[par] = planar.wlr[u, 2]
-                    elif par == 'width':
-                        rec[par] = planar.wlr[u, 0]
-                    elif par == 'strike':
-                        rec[par] = planar.sdr[u, 0]
-                    elif par == 'dip':
-                        rec[par] = planar.sdr[u, 1]
-                    elif par == 'rake':
-                        rec[par] = planar.sdr[u, 2]
-                    elif par == 'ztor':  # top edge depth
-                        rec[par] = planar.corners[u, 2, 0]
-                    elif par == 'hypo_lon':
-                        rec[par] = planar.hypo[u, 0]
-                    elif par == 'hypo_lat':
-                        rec[par] = planar.hypo[u, 1]
-                    elif par == 'hypo_depth':
-                        rec[par] = planar.hypo[u, 2]
-
-            # setting distance parameters
-            for par in dists:
-                dst = dists[par]
-                if self.minimum_distance:
-                    dst[dst < self.minimum_distance] = self.minimum_distance
-                ctx[par] = dst
-            if fewsites:
-                ctx['clon'] = closest[0]
-                ctx['clat'] = closest[1]
-
-            # setting site parameters
-            for u, rec in enumerate(ctx):
-                for par in siteparams:
-                    rec[par] = sites.array[par]
-
-            # filter and append
-            ctxt = ctx[ctx.rrup < magdist[m]].flatten()
-            if len(ctxt):
-                ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
-                ctxs.append(ctxt)
-            #import pdb; pdb.set_trace()
+        with self.dst_mon:
+            # computing distances and building contexts
+            for m, planar, sites in triples:
+                ctx = self._get_ctx(mags[m], planar, sites, src.id)
+                ctxt = ctx[ctx.rrup < magdist[m]].flatten()
+                if len(ctxt):
+                    ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
+                    ctxs.append(ctxt)
         return ctxs
 
     def get_ctxs(self, src, sitecol, src_id=0, step=1):
