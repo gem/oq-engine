@@ -255,7 +255,9 @@ class PointSource(ParametricSeismicSource):
         lsd = self.lower_seismogenic_depth
         planin = self.get_planin(magd, npd, hdd)
         planar = build_planar(planin, clon, clat, usd, lsd)
-        if not shift_hypo:
+        if not shift_hypo:  # use the original hypocenter
+            planar.hypo[:, :, :, 0] = clon
+            planar.hypo[:, :, :, 1] = clat
             planar.hypo[:, :, :, 2] = planin.dep
         return planar
 
@@ -265,24 +267,19 @@ class PointSource(ParametricSeismicSource):
         npd = self.nodal_plane_distribution.data
         hdd = self.hypocenter_distribution.data
         clon, clat = self.location.x, self.location.y
-        usd = self.upper_seismogenic_depth
-        lsd = self.lower_seismogenic_depth
         if step == 1 and not pointmsr:
             # return full ruptures
             planar = self.get_planar(shift_hypo)
-            for (m, n, d), pla in numpy.ndenumerate(planar):
-                surface = PlanarSurface.from_(pla)
-                strike, dip, rake = pla.sdr
-                rate = pla.wlr[2]
-                if not shift_hypo:  # use the original hypocenter
-                    pla.hypo[:] = [clon, clat, inp.dep]
-                hc = Point(*pla.hypo)
-                rup = ParametricProbabilisticRupture(
-                    magd[m][1], rake, self.tectonic_region_type,
-                    Point(*pla.hypo), surface, rate,
-                    self.temporal_occurrence_model)
-                rup.m = m
-                yield rup
+            for m, plan in enumerate(planar):
+                _mrate, mag = magd[m]
+                for pla in plan.reshape(-1, 3):
+                    surface = PlanarSurface.from_(pla)
+                    strike, dip, rake = pla.sdr
+                    rate = pla.wlr[2]
+                    yield ParametricProbabilisticRupture(
+                        mag, rake, self.tectonic_region_type,
+                        Point(*pla.hypo), surface, rate,
+                        self.temporal_occurrence_model)
         else:
             # return point ruptures (fast)
             magd_ = list(enumerate(magd))
@@ -292,12 +289,10 @@ class PointSource(ParametricSeismicSource):
                 for n, (nrate, np) in npd_[::step]:
                     for d, (drate, cdep) in hdd_[::step]:
                         rate = mrate * nrate * drate
-                        rup = PointRupture(
+                        yield PointRupture(
                             mag, np.rake, self.tectonic_region_type,
                             Point(clon, clat, cdep), np.strike, np.dip, rate,
                             self.temporal_occurrence_model)
-                        rup.m = m
-                        yield rup
 
     def iter_ruptures(self, **kwargs):
         """

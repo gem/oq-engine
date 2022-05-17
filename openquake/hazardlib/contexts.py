@@ -660,21 +660,23 @@ class ContextMaker(object):
         ruptparams = self.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
         with self.ir_mon:
+            # iter_ruptures can be replaced with a fast call to get_planar
             allplanar = src.get_planar(self.shift_hypo)
 
-        magdist = []
+        mags, magdist = [], []
         for mag, rate in src.get_annual_occurrence_rates():
+            mags.append(mag)
             magdist.append(self.maximum_distance(mag))
 
         if src.count_nphc() == 1:
             # one rupture per magnitude
             for m, pla in enumerate(allplanar):
-                rups_sites.append((m, pla.reshape(-1), sitecol))
+                rups_sites.append((m, pla.reshape(-1, 3), sitecol))
         else:
             # multiple ruptures per magnitude, collapsing makes sense
             cdist = sitecol.get_cdist(src.location)
             for m, rup in enumerate(src.iruptures()):
-                pla = allplanar[m].reshape(-1)
+                pla = allplanar[m].reshape(-1, 3)
                 psdist = self.pointsource_distance + src.get_radius(rup)
                 close = sitecol.filter(cdist <= psdist)
                 far = sitecol.filter(cdist > psdist)
@@ -709,7 +711,7 @@ class ContextMaker(object):
             for par in ruptparams:
                 for u, rec in enumerate(ctx):
                     if par == 'mag':
-                        rec[par] = mag
+                        rec[par] = mags[m]
                     elif par == 'occurrence_rate':
                         rec[par] = planar.wlr[u, 2]
                     elif par == 'width':
@@ -749,7 +751,6 @@ class ContextMaker(object):
             if len(ctxt):
                 ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
                 ctxs.append(ctxt)
-
         return ctxs
 
     def get_ctxs(self, src, sitecol, src_id=0, step=1):
