@@ -455,7 +455,7 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
-        self.dst_mon = monitor('computing rrup', measuremem=False)
+        self.dst_mon = monitor('computing distances', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
@@ -700,15 +700,14 @@ class ContextMaker(object):
             for u, rup in enumerate(rups):
                 mask = umask[u]
                 if mask.any():
-                    r_sites = sites.filter(mask)
                     ctx = self.make_rctx(rup)
                     ctx.rrup = dists['rrup'][u, mask]
-                    ctx.sites = r_sites
                     ctx.src_id = src.id
                     for par in self.REQUIRES_DISTANCES - {'rrup'}:
                         setattr(ctx, par, dists[par][u, mask])
-                    for par in r_sites.array.dtype.names:
-                        setattr(ctx, par, r_sites[par])
+                    siteparam = sites.array[mask]
+                    for par in siteparam.dtype.names:
+                        setattr(ctx, par, siteparam[par])
                     ctxs.append(ctx)
                     if fewsites:
                         ctx.clon = closest[0, u, mask]
