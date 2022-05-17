@@ -696,8 +696,15 @@ class ContextMaker(object):
                 mask = umask[u]
                 if mask.any():
                     r_sites = sites.filter(mask)
-                    ctx = self.get_ctx(rup, r_sites, dists[u][mask])
+                    ctx = self.make_rctx(rup)
+                    ctx.rrup = dists[u][mask]
+                    ctx.sites = r_sites
                     ctx.src_id = src.id
+                    for param in self.REQUIRES_DISTANCES - {'rrup'}:
+                        dst = get_distances(rup, r_sites, param)
+                        setattr(ctx, param, dst)
+                    for name in r_sites.array.dtype.names:
+                        setattr(ctx, name, r_sites[name])
                     ctxs.append(ctx)
                     if fewsites:
                         ctx.clon = closest[0, u, mask]
