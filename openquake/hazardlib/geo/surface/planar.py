@@ -380,7 +380,7 @@ def get_rjb(planar, points):
     """
     :param planar: a planar recarray of shape (U, 3)
     :param points: an array of of shape (N, 3)
-    :returns: (U, N) distances
+    :returns: (U, N) values
     """
     lons, lats, deps = geo_utils.cartesian_to_spherical(points)
     out = numpy.zeros((len(planar), len(points)))
@@ -555,6 +555,23 @@ def get_repi(planar, points):
     return out
 
 
+# numbified below
+def get_azimuth(planar, points):
+    """
+    :param planar: a planar recarray of shape (U, 3)
+    :param points: an array of of shape (N, 3)
+    :returns: (U, N) distances
+    """
+    out = numpy.zeros((len(planar), len(points)))
+    lons, lats, deps = geo_utils.cartesian_to_spherical(points)
+    hypo = planar.hypo
+    for u, pla in enumerate(planar):
+        azim = geodetic.fast_azimuth(hypo[u, 0], hypo[u, 1], lons, lats)
+        strike = planar.sdr[u, 0]
+        out[u] = (azim - strike) % 360
+    return out
+
+
 if numba:
     planar_nt = numba.from_dtype(planar_array_dt)
     project = compile(numba.float64[:, :, :](
@@ -572,6 +589,7 @@ if numba:
     get_ry0 = comp(get_ry0)
     get_rhypo = comp(get_rhypo)
     get_repi = comp(get_repi)
+    get_azimuth = comp(get_azimuth)
 
 
 def get_distances_planar(planar, sites, dist_type):
@@ -908,7 +926,8 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
-        return get_rjb(self.array.reshape(1, 3), mesh.xyz)[0]
+        rjb = get_rjb(self.array.reshape(1, 3), mesh.xyz)[0]
+        return rjb
 
     def get_rx_distance(self, mesh):
         """
