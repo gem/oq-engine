@@ -345,6 +345,20 @@ def _compute_forearc_backarc_term_slab(C, sites, dists):
     f_faba = sites.backarc * C['Teta6']
     return f_faba
 
+def _get_stddevs_slab(C, rhypo):
+    """
+    Return standard deviations as defined in Table 3
+    """
+    phi = np.zeros_like(rhypo)
+    tau = np.zeros_like(rhypo)
+    phi[rhypo <= 150] = C["Phi1"]
+    phi[rhypo >= 200] = C["Phi1"]
+    idx = (rhypo > 150) & (rhypo < 200)
+    phi[idx] = C["Phi1"] + ((C["Phi2"] - C["Phi1"]) * (rhypo[idx] - 150) * 0.02)
+    tau = C['Tau']
+    return [np.sqrt(tau**2 + phi**2), tau, phi]
+
+
 
 class ArtetaEtAl2021Slab(ArtetaEtAl2021Inter):
 
@@ -402,7 +416,6 @@ class ArtetaEtAl2021Slab(ArtetaEtAl2021Inter):
         6	-1.825	1.07	-0.109	-0.933	-0.002	-0.018	0.427	0.627	0.813	0.758	0.918	0.607	0.501	0.658
         7.5	-2.265	1.07	-0.109	-0.933	-0.002	-0.018	0.446	0.68	0.825	0.813	0.938	0.635	0.519	0.684
         10	-2.755	1.07	-0.109	-0.933	-0.002	-0.018	0.486	0.691	0.761	0.845	0.903	0.598	0.544	0.73
-
     """)
 
     # Se añade esta tabla para los coeficientes
@@ -459,7 +472,6 @@ class ArtetaEtAl2021Slab(ArtetaEtAl2021Inter):
         6	-1.825	1.07	-0.109	-0.933	-0.002	-0.018	0.427	0.627	0.813	0.758	0.918	0.607	0.501	0.658
         7.5	-2.265	1.07	-0.109	-0.933	-0.002	-0.018	0.446	0.68	0.825	0.813	0.938	0.635	0.519	0.684
         10	-2.755	1.07	-0.109	-0.933	-0.002	-0.018	0.486	0.691	0.761	0.845	0.903	0.598	0.544	0.73
-
     """)
 
     # Se añade esta tabla para los coeficientes
