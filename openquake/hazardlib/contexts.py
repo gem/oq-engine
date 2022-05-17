@@ -455,7 +455,7 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
-        self.dst_mon = monitor('computing rrup', measuremem=False)
+        self.dst_mon = monitor('computing distances', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
@@ -687,17 +687,27 @@ class ContextMaker(object):
                 planar = numpy.array(
                     [rup.surface.array for rup in rups]
                 ).view(numpy.recarray)  # shape (U, 3)
-                dists, xx, yy = project(planar, sites.xyz)  # (3, U, N)
+                rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
                 if fewsites:
                     # get the closest points on the surface
                     closest = project_back(planar, xx, yy)  # (3, U, N)
-                umask = dists <= self.maximum_distance(rups[0].mag)  # (U, N)
+                umask = rrup <= self.maximum_distance(rups[0].mag)  # (U, N)
+                dists = {'rrup': rrup}
+                for par in self.REQUIRES_DISTANCES - {'rrup'}:
+                    dists[par] = numpy.array([
+                        get_distances(rup, sites, par) for rup in rups])
+
             for u, rup in enumerate(rups):
                 mask = umask[u]
                 if mask.any():
-                    r_sites = sites.filter(mask)
-                    ctx = self.get_ctx(rup, r_sites, dists[u][mask])
+                    ctx = self.make_rctx(rup)
+                    ctx.rrup = dists['rrup'][u, mask]
                     ctx.src_id = src.id
+                    for par in self.REQUIRES_DISTANCES - {'rrup'}:
+                        setattr(ctx, par, dists[par][u, mask])
+                    siteparam = sites.array[mask]
+                    for par in siteparam.dtype.names:
+                        setattr(ctx, par, siteparam[par])
                     ctxs.append(ctx)
                     if fewsites:
                         ctx.clon = closest[0, u, mask]
