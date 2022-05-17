@@ -41,7 +41,8 @@ from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.geo.surface.planar import project, project_back
+from openquake.hazardlib.geo.surface.planar import (
+    project, project_back, get_distances_planar)
 
 U32 = numpy.uint32
 F64 = numpy.float64
@@ -694,8 +695,7 @@ class ContextMaker(object):
                 umask = rrup <= self.maximum_distance(rups[0].mag)  # (U, N)
                 dists = {'rrup': rrup}
                 for par in self.REQUIRES_DISTANCES - {'rrup'}:
-                    dists[par] = numpy.array([
-                        get_distances(rup, sites, par) for rup in rups])
+                    dists[par] = get_distances_planar(planar, sites, par)
 
             for u, rup in enumerate(rups):
                 mask = umask[u]

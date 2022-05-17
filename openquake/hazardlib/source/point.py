@@ -260,10 +260,9 @@ class PointSource(ParametricSeismicSource):
                 surface = PlanarSurface.from_(pla)
                 strike, dip, rake = pla.sdr
                 rate = pla.wlr[2]
-                if shift_hypo:
-                    hc = Point(*pla.hypo)
-                else:
-                    hc = Point(clon, clat, inp.dep)
+                if not shift_hypo:  # use the original hypocenter
+                    pla.hypo[:] = [clon, clat, inp.dep]
+                hc = Point(*pla.hypo)
                 rup = ParametricProbabilisticRupture(
                     magd[m][1], rake, self.tectonic_region_type,
                     hc, surface, rate,  self.temporal_occurrence_model)
