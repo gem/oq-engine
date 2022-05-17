@@ -230,7 +230,7 @@ class CollapseTestCase(unittest.TestCase):
 
         # compute original curves
         pmap = cmaker.get_pmap(ctxs)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [34, 60])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [33, 60])
 
         # compute collapsed curves
         cmaker.collapser.cfactor = numpy.zeros(2)
@@ -238,7 +238,7 @@ class CollapseTestCase(unittest.TestCase):
         cmap = cmaker.get_pmap(ctxs)
         self.assertLess(rms(pmap[0].array - cmap[0].array), 3E-4)
         self.assertLess(rms(pmap[1].array - cmap[1].array), 3E-4)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [34, 60])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [33, 60])
 
     def test_collapse_big(self):
         smpath = os.path.join(os.path.dirname(__file__),
@@ -262,7 +262,7 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.collapser.collapse_level = 1
         pcurve1 = cmaker.get_pmap(ctxs)[0]
         self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [218, 11616])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [42, 11616])
 
     def test_collapse_azimuth(self):
         # YuEtAl2013Ms has an azimuth distance causing a lower precision

@@ -265,6 +265,8 @@ class PointSource(ParametricSeismicSource):
         npd = self.nodal_plane_distribution.data
         hdd = self.hypocenter_distribution.data
         clon, clat = self.location.x, self.location.y
+        usd = self.upper_seismogenic_depth
+        lsd = self.lower_seismogenic_depth
         if step == 1 and not pointmsr:
             # return full ruptures
             planar = self.get_planar(shift_hypo)
@@ -272,6 +274,9 @@ class PointSource(ParametricSeismicSource):
                 surface = PlanarSurface.from_(pla)
                 strike, dip, rake = pla.sdr
                 rate = pla.wlr[2]
+                if not shift_hypo:  # use the original hypocenter
+                    pla.hypo[:] = [clon, clat, inp.dep]
+                hc = Point(*pla.hypo)
                 rup = ParametricProbabilisticRupture(
                     magd[m][1], rake, self.tectonic_region_type,
                     Point(*pla.hypo), surface, rate,
@@ -386,14 +391,6 @@ class CollapsedPointSource(PointSource):
         :returns: the total number of nodal planes and hypocenters
         """
         return sum(src.count_nphc() for src in self.pointsources)
-
-    def get_planar(self, shift_hypo=False):
-        """
-        :returns: a planar array of shape M, P, N, D
-        """
-        planar = numpy.array([src.get_planar(shift_hypo)
-                              for src in self.pointsources])
-        return planar.transpose(1, 0, 2, 3)
 
     def iter_ruptures(self, **kwargs):
         """
