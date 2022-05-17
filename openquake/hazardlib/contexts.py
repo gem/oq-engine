@@ -651,48 +651,42 @@ class ContextMaker(object):
         rups_sites = []
         fewsites = len(sitecol) <= self.max_sites_disagg
         with self.ir_mon:
-            allrups = numpy.array(
-                list(src.iter_ruptures(shift_hypo=self.shift_hypo)))
+            allplanar = src.get_planar(self.shift_hypo)
         if src.count_nphc() == 1:
             # one rupture per magnitude
-            for rup in allrups:
-                rups_sites.append(([rup], sitecol))
+            for pla in allplanar:
+                rups_sites.append((pla.reshape(-1), sitecol))
         else:
             # multiple ruptures per magnitude, collapsing makes sense
             cdist = sitecol.get_cdist(src.location)
-            m_idx = numpy.array([rup.m for rup in allrups])
             for m, rup in enumerate(src.iruptures()):
-                rups = allrups[m_idx == m]
+                pla = allplanar[m].reshape(-1)
                 psdist = self.pointsource_distance + src.get_radius(rup)
                 close = sitecol.filter(cdist <= psdist)
                 far = sitecol.filter(cdist > psdist)
                 if fewsites:
                     if close is None:  # all is far, common for small mag
-                        rups_sites.append(([rup], sitecol))
+                        rups_sites.append((rup.planar, sitecol))
                     else:  # something is close
-                        rups_sites.append((rups, sitecol))
+                        rups_sites.append((pla, sitecol))
                 else:  # many sites
                     if close is None:  # all is far
-                        rups_sites.append(([rup], far))
+                        rups_sites.append((rup.planar, far))
                     elif far is None:  # all is close
-                        rups_sites.append((rups, close))
+                        rups_sites.append((pla, close))
                     else:  # some sites are far, some are close
-                        rups_sites.append(([rup], far))
-                        rups_sites.append((rups, close))
+                        rups_sites.append((rup.planar, far))
+                        rups_sites.append((pla, close))
         ctxs = []
-        for rups, sites in rups_sites:
+        for planar, sites in rups_sites:
             # loop over ruptures with the same magnitude
-            if len(rups) == 0:  # may happen in case of min_mag/max_mag
-                continue
+            mag = planar
             with self.dst_mon:
-                planar = numpy.array(
-                    [rup.surface.array for rup in rups]
-                ).view(numpy.recarray)  # shape (U, 3)
                 rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
                 if fewsites:
                     # get the closest points on the surface
                     closest = project_back(planar, xx, yy)  # (3, U, N)
-                umask = rrup <= self.maximum_distance(rups[0].mag)  # (U, N)
+                umask = rrup <= self.maximum_distance(mag)  # (U, N)
                 dists = {'rrup': rrup}
                 for par in self.REQUIRES_DISTANCES - {'rrup'}:
                     dists[par] = get_distances_planar(planar, sites, par)
