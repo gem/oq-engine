@@ -105,12 +105,7 @@ def get_distances(rupture, sites, param, dcache=None):
             hasattr(rupture.surface.surfaces[0], 'suid')):
         return _distances_from_dcache(
             rupture, sites.complete, param, dcache)[sites.sids]
-    if param == 'rhypo':
-        dist = rupture.hypocenter.distance_to_mesh(sites)
-    elif param == 'repi':
-        dist = rupture.hypocenter.distance_to_mesh(sites, with_depths=False)
-    elif not rupture.surface:  # PointRupture
-        # TODO: refine this
+    if not rupture.surface:  # PointRupture
         dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'rrup':
         dist = rupture.surface.get_min_distance(sites)
@@ -120,6 +115,12 @@ def get_distances(rupture, sites, param, dcache=None):
         dist = rupture.surface.get_ry0_distance(sites)
     elif param == 'rjb':
         dist = rupture.surface.get_joyner_boore_distance(sites)
+    elif param == 'rhypo':
+        dist = rupture.hypocenter.distance_to_mesh(sites)
+    elif param == 'repi':
+        dist = rupture.hypocenter.distance_to_mesh(sites, with_depths=False)
+    elif param == 'rcdpp':
+        dist = rupture.get_cdppvalue(sites)
     elif param == 'azimuth':
         dist = rupture.surface.get_azimuth(sites)
     elif param == 'azimuth_cp':
@@ -127,8 +128,6 @@ def get_distances(rupture, sites, param, dcache=None):
     elif param == 'closest_point':
         t = rupture.surface.get_closest_points(sites)
         dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
-    elif param == 'rcdpp':
-        dist = rupture.get_cdppvalue(sites)
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(sites.lons)
