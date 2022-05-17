@@ -676,22 +676,23 @@ class ContextMaker(object):
             # multiple ruptures per magnitude, collapsing makes sense
             cdist = sitecol.get_cdist(src.location)
             for m, rup in enumerate(src.iruptures()):
+                arr = rup.surface.array.reshape(-1, 3)
                 pla = allplanar[m].reshape(-1, 3)
                 psdist = self.pointsource_distance + src.get_radius(rup)
                 close = sitecol.filter(cdist <= psdist)
                 far = sitecol.filter(cdist > psdist)
                 if fewsites:
                     if close is None:  # all is far, common for small mag
-                        rups_sites.append((m, rup.planar, sitecol))
+                        rups_sites.append((m, arr, sitecol))
                     else:  # something is close
                         rups_sites.append((m, pla, sitecol))
                 else:  # many sites
                     if close is None:  # all is far
-                        rups_sites.append((m, rup.planar, far))
+                        rups_sites.append((m, arr, far))
                     elif far is None:  # all is close
                         rups_sites.append((m, pla, close))
                     else:  # some sites are far, some are close
-                        rups_sites.append((m, rup.planar, far))
+                        rups_sites.append((m, arr, far))
                         rups_sites.append((m, pla, close))
         ctxs = []
         for m, planar, sites in rups_sites:
