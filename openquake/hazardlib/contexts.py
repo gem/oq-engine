@@ -701,7 +701,6 @@ class ContextMaker(object):
         :param sitecol: a filtered SiteCollection
         :returns: a list with 0 or 1 context array
         """
-        triples = []
         self.fewsites = len(sitecol) <= self.max_sites_disagg
         dd = self.defaultdict.copy()
         dd['probs_occur'] = numpy.zeros(0)
@@ -714,15 +713,12 @@ class ContextMaker(object):
         self.ruptparams = (self.REQUIRES_RUPTURE_PARAMETERS |
                            {'occurrence_rate'})
 
+        # iter_ruptures replaced with a fast call to get_planar
         with self.ir_mon:
-            # iter_ruptures can be replaced with a fast call to get_planar
             allplanar = src.get_planar(self.shift_hypo)
 
-        mags, magdist = [], []
-        for mag, rate in src.get_annual_occurrence_rates():
-            mags.append(mag)
-            magdist.append(self.maximum_distance(mag))
-
+        # splitting ruptures by magnitude and pointsource_distance
+        triples = []
         if src.count_nphc() == 1:
             # one rupture per magnitude
             for m, pla in enumerate(allplanar):
@@ -749,9 +745,14 @@ class ContextMaker(object):
                     else:  # some sites are far, some are close
                         triples.append((m, arr, far))
                         triples.append((m, pla, close))
+
+        # computing distances and building contexts
         ctxs = []
         with self.dst_mon:
-            # computing distances and building contexts
+            mags, magdist = [], []
+            for mag, rate in src.get_annual_occurrence_rates():
+                mags.append(mag)
+                magdist.append(self.maximum_distance(mag))
             for m, planar, sites in triples:
                 ctx = self._get_ctx(mags[m], planar, sites, src.id)
                 ctxt = ctx[ctx.rrup < magdist[m]].flatten()
