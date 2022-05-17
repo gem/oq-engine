@@ -371,6 +371,7 @@ class CollapsedPointSource(PointSource):
         self.location = Point(self.lon, self.lat, self.dep)
         self.nodal_plane_distribution = PMF(
             [(1., NodalPlane(self.strike, self.dip, self.rake))])
+        self.hypocenter_distribution = PMF([(1., self.dep)])
 
     def get_annual_occurrence_rates(self):
         """

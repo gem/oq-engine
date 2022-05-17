@@ -754,6 +754,7 @@ class ContextMaker(object):
             if len(ctxt):
                 ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
                 ctxs.append(ctxt)
+            #import pdb; pdb.set_trace()
         return ctxs
 
     def get_ctxs(self, src, sitecol, src_id=0, step=1):
