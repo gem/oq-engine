@@ -616,12 +616,14 @@ class ContextMaker(object):
             ctx.occurrence_rate = numpy.nan
         return ctx
 
-    def get_ctx(self, rup, sites, distances):
+    def get_ctx(self, rup, sites, distances=None):
         """
         :returns: a RuptureContext (or None if filtered away)
         """
-        # add distances to the context
         ctx = self.make_rctx(rup)
+        # add distances to the context
+        if distances is None:
+            distances = rup.surface.get_min_distance(sites.mesh)
         ctx.rrup = distances
         ctx.sites = sites
         for param in self.REQUIRES_DISTANCES - {'rrup'}:
