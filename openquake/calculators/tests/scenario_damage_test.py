@@ -23,7 +23,8 @@ from openquake.baselib.writers import write_csv
 from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
-    case_6, case_7, case_8, case_9, case_10, case_11, case_12, case_13)
+    case_6, case_7, case_8, case_9, case_10, case_11, case_12, case_13,
+    case_14)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -241,6 +242,14 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/aggrisk.csv', fname)
         [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk-stats.csv', fname)
+
+    def test_case_14(self):
+        # inconsistent IDs between fragility and consequence
+        with self.assertRaises(NameError) as ctx:
+            self.run_calc(case_14.__file__, 'job.ini')
+        self.assertIn(
+            "['CR+PC/LDUAL/HBET:8.19/m', 'CR+PC/LDUAL/HBET:8.19/m ']",
+            str(ctx.exception))
 
 
 def losses(aid, alt):

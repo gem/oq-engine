@@ -172,6 +172,7 @@ def gen_ctxs(df):
         if len(rrp) == 1:
             rup_params = [rup_params]
         ctx = contexts.RuptureContext()
+        ctx.src_id = 0
         for par, rp in zip(rrp, rup_params):
             setattr(ctx, par[4:], rp)
             del grp[par]

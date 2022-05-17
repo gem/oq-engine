@@ -115,6 +115,7 @@ Engine 3.15
 | composing pnes             | 7_996    | 0.0       | 5_354_733 |
 | computing mean_std         | 6_195    | 0.0       | 268_571   |
 | ClassicalCalculator.run    | 661.7    | 1_233     | 1         |
+| total preclassical         | 356.4    | 214.0     | 81        |
 
 | operation-duration | counts | mean    | stddev | min     | max     | slowfac |
 |--------------------+--------+---------+--------+---------+---------+---------|

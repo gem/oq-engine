@@ -389,125 +389,15 @@ class MultiSurface(BaseSurface):
     def get_ry0_distance(self, mesh):
         """
         :param mesh:
+            An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
+            coordinates of the sites.
         """
         if self.tors is None:
             self._set_tor()
         return self.tors.get_ry0_distance(mesh)
 
 
-"""
-    def get_ry0_distance(self, mesh):
-        if self.uut is None or self.site_mesh != mesh:
-            self._set_tu(mesh)
-
-        if self.tors.u_max is None:
-            self.tors.set_u_max()
-
-        ry0 = np.zeros_like(mesh.lons)
-        ry0[self.uut < 0] = abs(self.uut[self.uut < 0])
-
-        condition = self.uut > self.tors.u_max
-        ry0[condition] = self.uut[condition] - self.tors.u_max
-
-        out = ry0[0] if len(ry0.shape) > 1 else ry0
-        return out
-"""
-
-
-def _update_cache(rup, sites, params, dcache):
-    """ Updating distance cache """
-
-    # This is a list with the IDs of the surfaces representing the geometry of
-    # the rupture in question
-    suids = []
-
-    # Updating the cache with the distances for the surfaces not yet
-    # considered
-    for srf in rup.surface.surfaces:
-        suids.append(srf.suid)
-        if srf.suid not in dcache:
-            dcache[srf.suid] = {}
-            for param in params:
-                # This function returns the distances that will be added to the
-                # cache. In case of Rx and Ry0, the information cache will
-                # include the ToR of each surface as well as the GC2 t and u
-                # coordinates for each section.
-                distances = _get_distances(srf, sites, param)
-                # Save information into the cache for the current surfac.
-                for key in distances.keys():
-                    dcache[srf.suid][key] = distances[key]
-    return dcache, suids
-
-
-def get_distdic(rup, sites, params, dcache):
-    """
-    Calculates the distances for multi-surfaces using a cache.
-
-    :param rup:
-        An instance of :class:`openquake.hazardlib.source.rupture.BaseRupture`
-    :param sites:
-        A list of sites or a site collection
-    :param params:
-        A list of keys defining the required rupture-distance parameters
-    :param dcache:
-        A dictionary of dictionaries with the distances. The first key is the
-        surface ID and the second one is the type of distance. In a traditional
-        calculation dcache is instatianted by in the `get_ctxs` method of the
-        :class:`openquake.hazardlib.contexts.ContextMaker`
-    :returns:
-        A dictionary with the computed distances for the rupture in input
-    """
-
-    # Update the distance cache
-    dcache, suids = _update_cache(rup, sites, params, dcache)
-
-    # Computing distances using the cache
-    output = {}
-    for param in params:
-        if param not in output:
-            distances, keys = _get_distances_from_cache(dcache, suids, param)
-            for dst, key in zip(distances, keys):
-                output[key] = dst
-    return output
-
-
-def _get_distances_from_cache(dcache: dict, suids: list, param: str):
-    """
-    :param dcache:
-        See description in
-        :method:`openquake.hazardlib.geo.surface.multi.get_distdic`
-    :param suids:
-        A list with the IDs of the surfaces to consider
-    :param param:
-        A string defining a rupture-site metric (e.g. 'rjb')
-    """
-    if param in ['rjb', 'rrup']:
-        distances = dcache[suids[0]][param]
-        # This is looping over all the surface IDs composing the rupture
-        for suid in suids:
-            distances = np.minimum(distances, dcache[suid][param])
-        params = [param]
-        distances = [distances]
-    elif param in ['rx', 'ry0']:
-        # The computed distances. In this case we are not going to add them to
-        # the cache since they cannot be reused
-        distances, params = _get_rx_ry0_from_cache(dcache, suids, param)
-    else:
-        raise ValueError("Unknown distance measure %r" % param)
-    return distances, params
-
-
-def _get_distances(surface, sites, param):
-    """
-    :param surface:
-        An instance of :class:`openquake.hazardlib.geo.surface.BaseSurface`
-    :param sites:
-        An instance of :class:`openquake.hazardlib.geo.Mesh`
-    :param param:
-        A string defining a rupture-site metric (e.g. 'rjb')
-    :returns:
-        The requested distances
-    """
+def _multi_distances(surface, sites, param):
     if param == 'rrup':
         dist = surface.get_min_distance(sites)
     elif param == 'rjb':
@@ -531,14 +421,7 @@ def _get_distances(surface, sites, param):
     return dists
 
 
-def _get_rx_ry0_from_cache(dcache, suids, param):
-    """
-    See :function:`openquake.hazardlib.geo.surface.multi._get_distances`
-
-    :returns:
-        Two lists. One with distances and one with the corresponding distance
-        names.
-    """
+def _multi_rx_ry0(dcache, suids, param):
 
     # Get the multiline used to compute distances
     multil = _get_multi_line(dcache, suids)
@@ -547,16 +430,18 @@ def _get_rx_ry0_from_cache(dcache, suids, param):
     multil.set_tu()
 
     # Get Rx and Ry0
-    rx = multil.get_rx_distance()
-    ry0 = multil.get_ry0_distance()
-
-    return [rx, ry0], ['rx', 'ry0']
+    if param == 'rx':
+        return multil.get_rx_distance()
+    elif param == 'ry0':
+        return multil.get_ry0_distance()
+    else:
+        raise ValueError('%s is not rx or ry0' % param)
 
 
 def _get_multi_line(dcache, suids):
 
     # Retrieve info from the cache
-    lines = [dcache[key]['tor'] for key in suids]
+    lines = [dcache[key, 'tor'] for key in suids]
 
     # Create the multiline
     multil = MultiLine(lines)
@@ -565,10 +450,10 @@ def _get_multi_line(dcache, suids):
     revert = revert[soidx]
 
     # Load data in cache
-    tupps = [dcache[suids[i]]['t_upp'] for i in soidx]
-    uupps = [dcache[suids[i]]['u_upp'] for i in soidx]
-    weis = [dcache[suids[i]]['wei'] for i in soidx]
-    umax = [dcache[suids[i]]['umax'] for i in soidx]
+    tupps = [dcache[suids[i], 't_upp'] for i in soidx]
+    uupps = [dcache[suids[i], 'u_upp'] for i in soidx]
+    weis = [dcache[suids[i], 'wei'] for i in soidx]
+    umax = [dcache[suids[i], 'umax'] for i in soidx]
 
     # Change sign to the reverted surface traces
     for i, flag in enumerate(revert):

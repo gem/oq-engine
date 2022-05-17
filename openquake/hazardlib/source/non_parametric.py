@@ -72,19 +72,9 @@ class NonParametricSeismicSource(BaseSeismicSource):
             Generator of instances of :class:`openquake.hazardlib.source.
             rupture.NonParametricProbabilisticRupture`.
         """
-        for rup, pmf in self.data:
+        step = kwargs.get('step', 1)
+        for rup, pmf in self.data[::step**2]:
             if rup.mag >= self.min_mag:
-                yield NonParametricProbabilisticRupture(
-                    rup.mag, rup.rake, self.tectonic_region_type,
-                    rup.hypocenter, rup.surface, pmf,
-                    weight=getattr(rup, 'weight', 0.))
-
-    def few_ruptures(self):
-        """
-        Fast version of iter_ruptures used in estimate_weight
-        """
-        for i, (rup, pmf) in enumerate(self.data):
-            if i % 50 == 0 and rup.mag >= self.min_mag:
                 yield NonParametricProbabilisticRupture(
                     rup.mag, rup.rake, self.tectonic_region_type,
                     rup.hypocenter, rup.surface, pmf,
@@ -206,7 +196,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         :returns: the number of points in the underlying meshes (reduced)
         """
         n = 0
-        for rup in self.few_ruptures():
+        for rup in self.iter_ruptures(step=50):  # reduced
             if isinstance(rup.surface, MultiSurface):
                 for sfc in rup.surface.surfaces:
                     n += len(sfc.mesh)
@@ -220,7 +210,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         The convex hull of a few subsurfaces
         """
         lons, lats = [], []
-        for rup in self.few_ruptures():
+        for rup in self.iter_ruptures(step=50):  # reduced
             if isinstance(rup.surface, MultiSurface):
                 for sfc in rup.surface.surfaces:
                     lons.extend(sfc.mesh.lons.flat)

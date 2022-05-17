@@ -225,6 +225,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if ct != self.oqparam.concurrent_tasks:
                 # save the used concurrent_tasks
                 self.oqparam.concurrent_tasks = ct
+            logging.info('Running %s with concurrent_tasks = %d',
+                         self.__class__.__name__, ct)
             self.save_params(**kw)
             try:
                 if pre_execute:
@@ -435,7 +437,8 @@ class HazardCalculator(BaseCalculator):
         if s != 1:
             logging.info('Rupture spinning factor = %s', s)
         if (f * s >= 1.5 and oq.no_pointsource_distance
-                and 'classical' in oq.calculation_mode):
+                and ('classical' in oq.calculation_mode or
+                     'disaggregation' in oq.calculation_mode)):
             logging.info(
                 'You are not using the pointsource_distance approximation:\n'
                 'https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance')

@@ -2003,8 +2003,9 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
 
     def mean(self, rlzs):
         R = len(rlzs)
-        return sum(self.value['_'.join(rlz.sm_lt_path)] * rlz.weight['weight']
-                   for rlz in rlzs) / R
+        paths = ['_'.join(rlz.sm_lt_path) for rlz in rlzs]
+        return sum(self.value[path] * rlz.weight['weight']
+                   for rlz, path in zip(rlzs, paths)) / R
 
     def test_full_path(self):
         path = os.path.join(DATADIR, 'source_specific_uncertainty')
@@ -2032,8 +2033,8 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                    0.163723,  # b1_b24
                    0.100569,  # b1_b25
                    0.044072,  # b1_b26
-                   0.2,       # b2_.1
-                   0.1]       # b3_.1
+                   0.2,       # b2_.
+                   0.1]       # b3_.
         # b1_b21 has weight 0.7 * 0.09284 = 0.064988
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight['weight'] for rlz in rlzs])

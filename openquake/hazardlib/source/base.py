@@ -18,14 +18,12 @@ Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
 import abc
-import math
 import zlib
 import numpy
 from openquake.baselib import general
 from openquake.hazardlib import mfd
-from openquake.hazardlib.geo import Point, geodetic
-from openquake.hazardlib.geo.surface.planar import (
-    PlanarSurface, build_planar_array)
+from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo.surface.planar import build_planar, PlanarSurface
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 
@@ -38,113 +36,6 @@ def get_code2cls():
         if hasattr(cls, 'code'):
             dic[cls.code] = cls
     return dic
-
-
-def _build(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
-    # from the rupture center we can now compute the coordinates of the
-    # four coorners by moving along the diagonals of the plane. This seems
-    # to be better then moving along the perimeter, because in this case
-    # errors are accumulated that induce distorsions in the shape with
-    # consequent raise of exceptions when creating PlanarSurface objects
-    # theta is the angle between the diagonal of the surface projection
-    # and the line passing through the rupture center and parallel to the
-    # top and bottom edges. Theta is zero for vertical ruptures (because
-    # rup_proj_width is zero)
-    array = numpy.zeros((3, 4))
-    half_length, half_width, half_height = dims / 2.
-    rdip = math.radians(dip)
-
-    # precalculated azimuth values for horizontal-only and vertical-only
-    # moves from one point to another on the plane defined by strike
-    # and dip:
-    azimuth_right = strike
-    azimuth_down = (azimuth_right + 90) % 360
-    azimuth_left = (azimuth_down + 90) % 360
-    azimuth_up = (azimuth_left + 90) % 360
-
-    # half height of the vertical component of rupture width
-    # is the vertical distance between the rupture geometrical
-    # center and it's upper and lower borders:
-    # calculate how much shallower the upper border of the rupture
-    # is than the upper seismogenic depth:
-    vshift = usd - cdep + half_height
-    # if it is shallower (vshift > 0) than we need to move the rupture
-    # by that value vertically.
-    if vshift < 0:
-        # the top edge is below upper seismogenic depth. now we need
-        # to check that we do not cross the lower border.
-        vshift = lsd - cdep - half_height
-        if vshift > 0:
-            # the bottom edge of the rupture is above the lower seismo
-            # depth; that means that we don't need to move the rupture
-            # as it fits inside seismogenic layer.
-            vshift = 0
-        # if vshift < 0 than we need to move the rupture up.
-
-    # now we need to find the position of rupture's geometrical center.
-    # in any case the hypocenter point must lie on the surface, however
-    # the rupture center might be off (below or above) along the dip.
-    if vshift != 0:
-        # we need to move the rupture center to make the rupture fit
-        # inside the seismogenic layer.
-        hshift = abs(vshift / math.tan(rdip))
-        clon, clat = geodetic.point_at(
-            clon, clat, azimuth_up if vshift < 0 else azimuth_down,
-            hshift)
-        cdep += vshift
-    theta = math.degrees(math.atan(half_width / half_length))
-    hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
-    azimuths = numpy.array([(strike + 180 + theta) % 360,
-                            (strike - theta) % 360,
-                            (strike + 180 - theta) % 360,
-                            (strike + theta) % 360])
-    array[:2, :4] = geodetic.point_at(clon, clat, azimuths, hor_dist)
-    array[2, 0:2] = cdep - half_height
-    array[2, 2:4] = cdep + half_height
-    return array, [clon, clat, cdep]
-
-
-def build_planar_surfaces(surfin, hypos, shift_hypo=False):
-    """
-    :param surfin:
-        Surface input parameters as an array of shape (M, N)
-    :param hypos:
-        A list of hypocenters with different depths
-    :param shift_hypo:
-        If true, change .hc to the shifted hypocenter
-    :return:
-        an array of PlanarSurfaces of shape (M, N, D)
-    """
-    out = numpy.zeros(surfin.shape + (len(hypos),), object)  # shape (M, N, D)
-    M, N, D = out.shape
-
-    # populating the arrays is fast enough
-    corners = numpy.zeros((4, M, N, D, 3))
-    shifted_hypo = numpy.zeros((M, N, D, 3))
-    for m in range(M):
-        for n in range(N):
-            rec = surfin[m, n]
-            for d, hypo in enumerate(hypos):
-                corn34, shypo = _build(
-                    rec.usd, rec.lsd, rec.mag, rec.dims,
-                    rec.strike, rec.dip, hypo.x, hypo.y, hypo.z)
-                corners[:, m, n, d] = corn34.T
-                shifted_hypo[m, n, d] = shypo
-
-    # building planar_array is slow
-    planar_array = build_planar_array(corners, shifted_hypo)
-    for m in range(M):
-        for n in range(N):
-            rec = surfin[m, n]
-            for d in range(D):
-                surface = PlanarSurface.from_(
-                    planar_array[m, n, d], rec.strike, rec.dip)
-                if shift_hypo:
-                    surface.hc = Point(*shifted_hypo[m, n, d])
-                else:
-                    surface.hc = hypos[d]
-                out[m, n, d] = surface
-    return out
 
 
 class BaseSeismicSource(metaclass=abc.ABCMeta):
@@ -277,6 +168,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                     yield rup, num_occ
             return
         # else (multi)point sources and area sources
+        usd = self.upper_seismogenic_depth
+        lsd = self.lower_seismogenic_depth
         rup_args = []
         rates = []
         for src in self:
@@ -296,11 +189,12 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             if num_occ:
                 _, np_prob, hc_prob, mag, np, lon, lat, hc_depth, src = args
                 hc = Point(lon, lat, hc_depth)
-                [[[surface]]] = build_planar_surfaces(
-                    src.get_surfin([mag], [np]), [hc])
+                planar = build_planar(
+                    src.get_planin([(1., mag)], [(1., np)], [(1., hc.depth)]),
+                    lon, lat, usd, lsd)[0, 0, 0]
                 rup = ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type, hc,
-                    surface, rate, tom)
+                    PlanarSurface.from_(planar), rate, tom)
                 yield rup, num_occ
 
     @abc.abstractmethod
@@ -422,8 +316,8 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         Get a list of pairs "magnitude -- annual occurrence rate".
 
-        The list is taken from assigned MFD object
-        (see :meth:`openquake.hazardlib.mfd.base.BaseMFD.get_annual_occurrence_rates`)
+        The list is taken from assigned MFD object (see :meth:
+        `openquake.hazardlib.mfd.base.BaseMFD.get_annual_occurrence_rates`)
         with simple filtering by rate applied.
 
         :param min_rate:

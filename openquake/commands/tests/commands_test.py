@@ -249,7 +249,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             sap.runline('openquake.commands show sitecol %d' % self.calc_id)
-        self.assertIn('sids | lon | lat | depth | vs30  | vs30measured',
+        self.assertIn('sids | lon     | lat | depth | vs30  | vs30measured',
                       str(p))
 
         with Print.patch() as p:
@@ -369,8 +369,8 @@ class ZipTestCase(unittest.TestCase):
                           'Wcrust_med_rhypo.hdf5',
                           'job.ini',
                           'nbc_asc_logic_tree.xml',
+                          'point_source.xml',
                           'source_model_logic_tree.xml',
-                          'vancouver_area_source.xml',
                           'vancouver_school_sites.csv'], names)
         shutil.rmtree(dtemp)
 
