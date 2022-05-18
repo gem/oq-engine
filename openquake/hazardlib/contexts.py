@@ -735,7 +735,9 @@ class ContextMaker(object):
                 if len(ctxt):
                     ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
                     ctxs.append(ctxt)
-        return ctxs
+        if not ctxs:
+            return []
+        return [numpy.concatenate(ctxs).view(numpy.recarray)]
 
     def _triples(self, src, sitecol, planardict):
         # splitting by magnitude
