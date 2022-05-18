@@ -243,10 +243,15 @@ class PointSource(ParametricSeismicSource):
         rup_length, rup_width, _ = planin.dims
         return math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
 
-    def get_planar(self, shift_hypo=False):
+    def get_planar(self, shift_hypo=False, multi=True):
         """
-        :returns: a planar array of shape (M, N, D)
+        :returns: a planar array of shape (M, N, D, 3) or (M, P, N, D, 3)
         """
+        if isinstance(self, CollapsedPointSource) and multi:
+            array = numpy.array(
+                [src.get_planar(shift_hypo) for src in self.pointsources])
+            return array.transpose(1, 0, 2, 3, 4).view(numpy.recarray)
+
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         npd = self.nodal_plane_distribution.data
         hdd = self.hypocenter_distribution.data
@@ -268,8 +273,8 @@ class PointSource(ParametricSeismicSource):
         hdd = self.hypocenter_distribution.data
         clon, clat = self.location.x, self.location.y
         if step == 1 and not pointmsr:
-            # return full ruptures
-            planar = self.get_planar(shift_hypo)
+            # return full ruptures (one per magnitude)
+            planar = self.get_planar(shift_hypo, multi=False)
             for m, plan in enumerate(planar):
                 _mrate, mag = magd[m]
                 for pla in plan.reshape(-1, 3):
