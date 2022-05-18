@@ -685,6 +685,7 @@ class McVerry2006Chch(McVerry2006AscSC):
     REQUIRES_RUPTURE_PARAMETERS = (
         McVerry2006AscSC.REQUIRES_RUPTURE_PARAMETERS | {"in_cshm"})
 
+    # this is meant for non-point ruptures
     def set_parameters(self, rup):
         """
         Checks if any part of the rupture surface mesh is located within the
