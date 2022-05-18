@@ -363,7 +363,7 @@ class CampbellBozorgnia2014(GMPE):
     def set_parameters(self, ctx):
         """
         Use the ztor formula in equation 4 and 5 of Chiou & Youngs 2014
-        is the attribute .better_ztor is set.
+        if the attribute .better_ztor is set.
         """
         if self.better_ztor:
             ctx.ztor = np.where(
