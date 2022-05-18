@@ -644,6 +644,7 @@ class ContextMaker(object):
         return ctx
 
     def _get_ctx(self, mag, planar, sites, src_id):
+        # computing distances and building contexts
         rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
         if self.fewsites:
             # get the closest points on the surface
@@ -712,18 +713,38 @@ class ContextMaker(object):
         self.ruptparams = (self.REQUIRES_RUPTURE_PARAMETERS |
                            {'occurrence_rate'})
 
-        # iter_ruptures replaced with a fast call to get_planar
         with self.ir_mon:
+            # building planar geometries
             planardict = src.get_planar(self.shift_hypo)
 
-        # splitting ruptures by magnitude and pointsource_distance
+        ctxs = []
+        with self.ctx_mon:
+            # computing distances and building contexts
+            magdist = {mag: self.maximum_distance(mag)
+                       for mag, rate in src.get_annual_occurrence_rates()}
+            for mag, planarlist, sites in self._triples(
+                    src, sitecol, planardict):
+                if not planarlist:
+                    continue
+                elif len(planarlist) > 1:
+                    pla = numpy.concatenate(planarlist).view(numpy.recarray)
+                else:
+                    pla = planarlist[0]
+                ctx = self._get_ctx(mag, pla, sites, src.id)
+                ctxt = ctx[ctx.rrup < magdist[mag]].flatten()
+                if len(ctxt):
+                    ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
+                    ctxs.append(ctxt)
+        return ctxs
+
+    def _triples(self, src, sitecol, planardict):
+        # splitting by magnitude
         triples = []
         if src.count_nphc() == 1:
             # one rupture per magnitude
             for mag, pla in planardict.items():
                 triples.append((mag, pla, sitecol))
         else:
-            # multiple ruptures per magnitude, collapsing makes sense
             cdist = sitecol.get_cdist(src.location)
             for rup in src.iruptures():
                 mag = rup.mag
@@ -745,25 +766,7 @@ class ContextMaker(object):
                     else:  # some sites are far, some are close
                         triples.append((mag, arr, far))
                         triples.append((mag, pla, close))
-
-        # computing distances and building contexts
-        ctxs = []
-        with self.ctx_mon:
-            magdist = {mag: self.maximum_distance(mag)
-                       for mag, rate in src.get_annual_occurrence_rates()}
-            for mag, planarlist, sites in triples:
-                if not planarlist:
-                    continue
-                elif len(planarlist) > 1:
-                    pla = numpy.concatenate(planarlist).view(numpy.recarray)
-                else:
-                    pla = planarlist[0]
-                ctx = self._get_ctx(mag, pla, sites, src.id)
-                ctxt = ctx[ctx.rrup < magdist[mag]].flatten()
-                if len(ctxt):
-                    ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
-                    ctxs.append(ctxt)
-        return ctxs
+        return triples
 
     def get_ctxs(self, src, sitecol, src_id=0, step=1):
         """
