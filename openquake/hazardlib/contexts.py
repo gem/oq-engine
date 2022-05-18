@@ -715,47 +715,52 @@ class ContextMaker(object):
 
         # iter_ruptures replaced with a fast call to get_planar
         with self.ir_mon:
-            allplanar = src.get_planar(self.shift_hypo)
+            planardict = src.get_planar(self.shift_hypo)
 
         # splitting ruptures by magnitude and pointsource_distance
         triples = []
         if src.count_nphc() == 1:
             # one rupture per magnitude
-            for m, pla in enumerate(allplanar):
-                triples.append((m, pla.reshape(-1, 3), sitecol))
+            for mag, pla in planardict.items():
+                triples.append((mag, pla, sitecol))
         else:
             # multiple ruptures per magnitude, collapsing makes sense
             cdist = sitecol.get_cdist(src.location)
-            for m, rup in enumerate(src.iruptures()):
-                arr = rup.surface.array.reshape(-1, 3)
-                pla = allplanar[m].reshape(-1, 3)
+            for rup in src.iruptures():
+                mag = rup.mag
+                arr = [rup.surface.array.reshape(-1, 3)]
+                pla = planardict[mag]
                 psdist = self.pointsource_distance + src.get_radius(rup)
                 close = sitecol.filter(cdist <= psdist)
                 far = sitecol.filter(cdist > psdist)
                 if self.fewsites:
                     if close is None:  # all is far, common for small mag
-                        triples.append((m, arr, sitecol))
+                        triples.append((mag, arr, sitecol))
                     else:  # something is close
-                        triples.append((m, pla, sitecol))
+                        triples.append((mag, pla, sitecol))
                 else:  # many sites
                     if close is None:  # all is far
-                        triples.append((m, arr, far))
+                        triples.append((mag, arr, far))
                     elif far is None:  # all is close
-                        triples.append((m, pla, close))
+                        triples.append((mag, pla, close))
                     else:  # some sites are far, some are close
-                        triples.append((m, arr, far))
-                        triples.append((m, pla, close))
+                        triples.append((mag, arr, far))
+                        triples.append((mag, pla, close))
 
         # computing distances and building contexts
         ctxs = []
         with self.dst_mon:
-            mags, magdist = [], []
-            for mag, rate in src.get_annual_occurrence_rates():
-                mags.append(mag)
-                magdist.append(self.maximum_distance(mag))
-            for m, planar, sites in triples:
-                ctx = self._get_ctx(mags[m], planar, sites, src.id)
-                ctxt = ctx[ctx.rrup < magdist[m]].flatten()
+            magdist = {mag: self.maximum_distance(mag)
+                       for mag, rate in src.get_annual_occurrence_rates()}
+            for mag, planarlist, sites in triples:
+                if not planarlist:
+                    continue
+                elif len(planarlist) > 1:
+                    pla = numpy.concatenate(planarlist).view(numpy.recarray)
+                else:
+                    pla = planarlist[0]
+                ctx = self._get_ctx(mag, pla, sites, src.id)
+                ctxt = ctx[ctx.rrup < magdist[mag]].flatten()
                 if len(ctxt):
                     ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
                     ctxs.append(ctxt)

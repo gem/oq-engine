@@ -245,26 +245,29 @@ class PointSource(ParametricSeismicSource):
 
     def get_planar(self, shift_hypo=False, multi=True):
         """
-        :returns: a planar array of shape (M, N, D, 3) or (M, P, N, D, 3)
+        :returns: a dictionary mag -> list of arrays of shape (U, 3)
         """
-        if isinstance(self, CollapsedPointSource) and multi:
-            array = numpy.array(
-                [src.get_planar(shift_hypo) for src in self.pointsources])
-            return array.transpose(1, 0, 2, 3, 4).view(numpy.recarray)
-
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
+        if isinstance(self, CollapsedPointSource) and multi:
+            out = AccumDict(accum=[])
+            for src in self.pointsources:
+                out += src.get_planar(shift_hypo)
+            return out
+
         npd = self.nodal_plane_distribution.data
         hdd = self.hypocenter_distribution.data
         clon, clat = self.location.x, self.location.y
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
         planin = self.get_planin(magd, npd, hdd)
-        planar = build_planar(planin, clon, clat, usd, lsd)
+        planar = build_planar(planin, clon, clat, usd, lsd)  # (M, N, D, 3)
         if not shift_hypo:  # use the original hypocenter
             planar.hypo[:, :, :, 0] = clon
             planar.hypo[:, :, :, 1] = clat
             planar.hypo[:, :, :, 2] = planin.dep
-        return planar
+        dic = {mag: [pla.reshape(-1, 3)]
+               for (_rate, mag), pla in zip(magd, planar)}
+        return dic
 
     def _gen_ruptures(self, shift_hypo=False, step=1):
         pointmsr = str(self.magnitude_scaling_relationship) == 'PointMSR'
@@ -274,17 +277,16 @@ class PointSource(ParametricSeismicSource):
         clon, clat = self.location.x, self.location.y
         if step == 1 and not pointmsr:
             # return full ruptures (one per magnitude)
-            planar = self.get_planar(shift_hypo, multi=False)
-            for m, plan in enumerate(planar):
-                _mrate, mag = magd[m]
-                for pla in plan.reshape(-1, 3):
-                    surface = PlanarSurface.from_(pla)
-                    strike, dip, rake = pla.sdr
-                    rate = pla.wlr[2]
-                    yield ParametricProbabilisticRupture(
-                        mag, rake, self.tectonic_region_type,
-                        Point(*pla.hypo), surface, rate,
-                        self.temporal_occurrence_model)
+            planardict = self.get_planar(shift_hypo, multi=False)
+            for mag, planarlist in planardict.items():
+                pla = planarlist[0].reshape(3)
+                surface = PlanarSurface.from_(pla)
+                strike, dip, rake = pla.sdr
+                rate = pla.wlr[2]
+                yield ParametricProbabilisticRupture(
+                    mag, rake, self.tectonic_region_type,
+                    Point(*pla.hypo), surface, rate,
+                    self.temporal_occurrence_model)
         else:
             # return point ruptures (fast)
             magd_ = list(enumerate(magd))
