@@ -605,7 +605,7 @@ class ContextMaker(object):
             elif param == 'width':
                 value = rup.surface.get_width()
             elif param == 'in_cshm':  # computed in McVerry2006Chch
-                pass
+                value = False
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
