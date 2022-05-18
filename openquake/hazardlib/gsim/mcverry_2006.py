@@ -682,7 +682,7 @@ class McVerry2006Chch(McVerry2006AscSC):
 
     kind = "chch"
     additional_sigma = 0
-    REQUIRES_COMPUTED_PARAMETERS = {"in_cshm"}
+    REQUIRES_RUPTURE_PARAMETERS = {"in_cshm"}
 
     def set_parameters(self, rup):
         """
