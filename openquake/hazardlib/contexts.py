@@ -456,7 +456,6 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
-        self.dst_mon = monitor('computing distances', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
@@ -749,7 +748,7 @@ class ContextMaker(object):
 
         # computing distances and building contexts
         ctxs = []
-        with self.dst_mon:
+        with self.ctx_mon:
             magdist = {mag: self.maximum_distance(mag)
                        for mag, rate in src.get_annual_occurrence_rates()}
             for mag, planarlist, sites in triples:
@@ -798,21 +797,21 @@ class ContextMaker(object):
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             if len(rups) == 0:  # may happen in case of min_mag/max_mag
                 continue
-            with self.dst_mon:
+            with self.ctx_mon:
                 magdist = self.maximum_distance(rups[0].mag)
                 dists = [get_distances(rup, sites, 'rrup', self.dcache)
                          for rup in rups]
-            for u, rup in enumerate(rups):
-                mask = dists[u] <= magdist
-                if mask.any():
-                    r_sites = sites.filter(mask)
-                    ctx = self.get_ctx(rup, r_sites, dists[u][mask])
-                    ctx.src_id = src_id
-                    ctxs.append(ctx)
-                    if fewsites:
-                        c = rup.surface.get_closest_points(sites.complete)
-                        ctx.clon = c.lons[ctx.sids]
-                        ctx.clat = c.lats[ctx.sids]
+                for u, rup in enumerate(rups):
+                    mask = dists[u] <= magdist
+                    if mask.any():
+                        r_sites = sites.filter(mask)
+                        ctx = self.get_ctx(rup, r_sites, dists[u][mask])
+                        ctx.src_id = src_id
+                        ctxs.append(ctx)
+                        if fewsites:
+                            c = rup.surface.get_closest_points(sites.complete)
+                            ctx.clon = c.lons[ctx.sids]
+                            ctx.clat = c.lats[ctx.sids]
         return [] if not ctxs else [self.recarray(ctxs)]
 
     def max_intensity(self, sitecol1, mags, dists):
@@ -1178,11 +1177,10 @@ class PmapMaker(object):
         return nbytes
 
     def _get_ctxs(self, src, sites):
-        with self.cmaker.ctx_mon:
-            ctxs = self.cmaker.get_ctxs(src, sites)
-            if self.fewsites:  # keep rupdata in memory
-                for ctx in ctxs:
-                    self.rupdata.append(ctx)
+        ctxs = self.cmaker.get_ctxs(src, sites)
+        if self.fewsites:  # keep rupdata in memory
+            for ctx in ctxs:
+                self.rupdata.append(ctx)
         return ctxs
 
     def _make_src_indep(self):
