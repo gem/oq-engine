@@ -269,7 +269,7 @@ class PointSource(ParametricSeismicSource):
                for (_rate, mag), pla in zip(magd, planar)}
         return dic
 
-    def _gen_ruptures(self, shift_hypo=False, step=1):
+    def _gen_ruptures(self, shift_hypo=False, step=1, multi=True):
         pointmsr = str(self.magnitude_scaling_relationship) == 'PointMSR'
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         npd = self.nodal_plane_distribution.data
@@ -277,16 +277,16 @@ class PointSource(ParametricSeismicSource):
         clon, clat = self.location.x, self.location.y
         if step == 1 and not pointmsr:
             # return full ruptures (one per magnitude)
-            planardict = self.get_planar(shift_hypo, multi=False)
-            for mag, planarlist in planardict.items():
-                pla = planarlist[0].reshape(3)
-                surface = PlanarSurface.from_(pla)
-                strike, dip, rake = pla.sdr
-                rate = pla.wlr[2]
-                yield ParametricProbabilisticRupture(
-                    mag, rake, self.tectonic_region_type,
-                    Point(*pla.hypo), surface, rate,
-                    self.temporal_occurrence_model)
+            planardict = self.get_planar(shift_hypo, multi)
+            for mag, [planar] in planardict.items():
+                for pla in planar.reshape(-1, 3):
+                    surface = PlanarSurface.from_(pla)
+                    strike, dip, rake = pla.sdr
+                    rate = pla.wlr[2]
+                    yield ParametricProbabilisticRupture(
+                        mag, rake, self.tectonic_region_type,
+                        Point(*pla.hypo), surface, rate,
+                        self.temporal_occurrence_model)
         else:
             # return point ruptures (fast)
             magd_ = list(enumerate(magd))
@@ -409,7 +409,8 @@ class CollapsedPointSource(PointSource):
         :yields: the underlying ruptures with mean nodal plane and hypocenter
         """
         np = NodalPlane(self.strike, self.dip, self.rake)
-        yield from self.restrict(np, self.location.z)._gen_ruptures()
+        yield from self.restrict(np, self.location.z)._gen_ruptures(
+            multi=False)
 
     def count_ruptures(self):
         """
