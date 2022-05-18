@@ -733,6 +733,8 @@ class ContextMaker(object):
                 ctxt = ctx[ctx.rrup < magdist[mag]].flatten()
                 if len(ctxt):
                     ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
+                    for gsim in self.gsims:
+                        gsim.set_parameters(ctxt)
                     ctxs.append(ctxt)
         if not ctxs:
             return []
