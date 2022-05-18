@@ -331,8 +331,7 @@ class ContextMaker(object):
     NB: the trt can be different from the tectonic region type for which
     the underlying GSIMs are defined. This is intentional.
     """
-    REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS',
-                'COMPUTED_PARAMETERS']
+    REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
     rup_indep = True
     tom = None
 
@@ -419,7 +418,6 @@ class ContextMaker(object):
         REQUIRES_DISTANCES = sorted(self.REQUIRES_DISTANCES) or ['rrup']
         reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
                 sorted(self.REQUIRES_SITES_PARAMETERS | set(extraparams)) +
-                sorted(self.REQUIRES_COMPUTED_PARAMETERS) +
                 REQUIRES_DISTANCES)
         dic = {}
         for req in reqs:
@@ -565,7 +563,6 @@ class ContextMaker(object):
         params = {'occurrence_rate', 'sids', 'src_id',
                   'probs_occur', 'clon', 'clat', 'rrup'}
         params.update(self.REQUIRES_RUPTURE_PARAMETERS)
-        params.update(self.REQUIRES_COMPUTED_PARAMETERS)
         for dparam in self.REQUIRES_DISTANCES:
             params.add(dparam + '_')
         return params
@@ -607,6 +604,8 @@ class ContextMaker(object):
                 value = rup.hypocenter.depth
             elif param == 'width':
                 value = rup.surface.get_width()
+            elif param == 'in_cshm':  # computed in McVerry2006Chch
+                value = False
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))

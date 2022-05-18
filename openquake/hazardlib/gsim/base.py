@@ -249,8 +249,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #: object attributes with same names. Values are in kilometers.
     REQUIRES_DISTANCES = abc.abstractproperty()
 
-    REQUIRES_COMPUTED_PARAMETERS = ()
-
     _toml = ''  # set by valid.gsim
     superseded_by = None
     non_verified = False
