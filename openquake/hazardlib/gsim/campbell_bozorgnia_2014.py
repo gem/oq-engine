@@ -365,10 +365,11 @@ class CampbellBozorgnia2014(GMPE):
         Use the ztor formula in equation 4 and 5 of Chiou & Youngs 2014
         is the attribute .better_ztor is set.
         """
-        ctx.ztor = np.where(
-            (ctx.rake > 30.) & (ctx.rake < 150.),
-            np.maximum(2.704 - 1.226 * np.maximum(ctx.mag - 5.849, 0), 0) ** 2,
-            np.maximum(2.673 - 1.136 * np.maximum(ctx.mag - 4.970, 0), 0) ** 2)
+        if self.better_ztor:
+            ctx.ztor = np.where(
+                (ctx.rake > 30.) & (ctx.rake < 150.),
+                np.maximum(2.704-1.226 * np.maximum(ctx.mag-5.849, 0), 0)**2,
+                np.maximum(2.673-1.136 * np.maximum(ctx.mag-4.970, 0), 0)**2)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
