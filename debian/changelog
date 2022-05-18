@@ -2,7 +2,7 @@
   * Using PointMSR when the reqv approximation is enabled
   * Internal: changed the rupture storage for classical calculations
   * Optimized rupture instantiation for point sources
-  * Optimized distance calculations for point point sources
+  * Optimized distance calculations for point sources
 
   [Tom Son, Claudio Schill]
   * Simple performance improvement of Kuehn et al. 2020 model
