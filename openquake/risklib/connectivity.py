@@ -108,7 +108,7 @@ def analysis(dstore):
     num_ok_nodes = pd.DataFrame(
         {'id': demand_nodes_is_functional.index,
          'number': list(demand_nodes_is_functional)}
-    )
+    ).sort_values('id')
     sum_connectivity_loss = sum(
         1
         - full_damage_df.loc[full_damage_df.supply_or_demand == "demand"]
