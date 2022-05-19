@@ -24,7 +24,7 @@ from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7, case_8, case_9, case_10, case_11, case_12, case_13,
-    case_14)
+    case_14, case_15)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -250,6 +250,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertIn(
             "['CR+PC/LDUAL/HBET:8.19/m', 'CR+PC/LDUAL/HBET:8.19/m ']",
             str(ctx.exception))
+
+    def test_case_15(self):
+        # infrastructure risk
+        self.run_calc(case_15.__file__, 'job.ini')
 
 
 def losses(aid, alt):
