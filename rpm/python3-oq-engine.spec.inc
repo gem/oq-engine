@@ -18,11 +18,13 @@
 
 # Provide a custom prefix for oq
 %define _oqprefix /opt/openquake
-%define _oqbindir %{_oqprefix}/bin
-%define _oqlibdir %{_oqprefix}/lib
+%define _oqpython %{_oqprefix}/bin
+%define _oqvenv %{_oqprefix}/venv
+%define _oqbindir %{_oqvenv}/bin
+%define _oqlibdir %{_oqvenv}/lib
 
 # Make sure that the proper installation of python is used by macros
-%define __python3 %{_oqbindir}/python3
+%define __python3 %{_oqpython}/python3
 %define __python %{__python3}
 
 %define oqstable ##_stable_##
