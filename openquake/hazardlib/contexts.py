@@ -621,32 +621,34 @@ class ContextMaker(object):
         """
         :returns: a RuptureContext (or None if filtered away)
         """
-        ctx = self.make_rctx(rup)
-        # add distances to the context
-        if distances is None:
-            distances = rup.surface.get_min_distance(sites.mesh)
-        ctx.rrup = distances
-        ctx.sites = sites
-        for param in self.REQUIRES_DISTANCES - {'rrup'}:
-            dists = get_distances(rup, sites, param, self.dcache)
-            setattr(ctx, param, dists)
+        with self.ctx_mon:
+            ctx = self.make_rctx(rup)
+            for name in sites.array.dtype.names:
+                setattr(ctx, name, sites[name])
 
-        # Equivalent distances
-        reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
-        if reqv_obj and not rup.surface:  # PointRuptures have no surface
-            reqv = reqv_obj.get(ctx.repi, rup.mag)
-            if 'rjb' in self.REQUIRES_DISTANCES:
-                ctx.rjb = reqv
-            if 'rrup' in self.REQUIRES_DISTANCES:
-                ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
+        with self.dst_mon:
+            if distances is None:
+                distances = rup.surface.get_min_distance(sites.mesh)
+            ctx.rrup = distances
+            ctx.sites = sites
+            for param in self.REQUIRES_DISTANCES - {'rrup'}:
+                dists = get_distances(rup, sites, param, self.dcache)
+                setattr(ctx, param, dists)
 
-        # add site parameters
-        for name in sites.array.dtype.names:
-            setattr(ctx, name, sites[name])
+            # Equivalent distances
+            reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
+            if reqv_obj and not rup.surface:  # PointRuptures have no surface
+                reqv = reqv_obj.get(ctx.repi, rup.mag)
+                if 'rjb' in self.REQUIRES_DISTANCES:
+                    ctx.rjb = reqv
+                if 'rrup' in self.REQUIRES_DISTANCES:
+                    ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
+
         return ctx
 
     def _get_ctx(self, mag, planar, sites, src_id):
-        with self.dst_mon:  # computing distances
+        with self.dst_mon:
+            # computing distances
             rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
             if self.fewsites:
                 # get the closest points on the surface
@@ -659,10 +661,12 @@ class ContextMaker(object):
                 if self.minimum_distance:
                     dst[dst < self.minimum_distance] = self.minimum_distance
 
-        with self.ctx_mon:  # building contexts
+        with self.ctx_mon:
+            # building contexts
             ctx = self.build_ctx((len(planar), len(sites)))
             ctxt = ctx.T  # smart trick taking advantage of numpy magic
             ctxt['src_id'] = src_id
+
             # setting rupture parameters
             for par in self.ruptparams:
                 if par == 'mag':
@@ -803,21 +807,21 @@ class ContextMaker(object):
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             if len(rups) == 0:  # may happen in case of min_mag/max_mag
                 continue
-            with self.ctx_mon:
-                magdist = self.maximum_distance(rups[0].mag)
-                dists = [get_distances(rup, sites, 'rrup', self.dcache)
-                         for rup in rups]
-                for u, rup in enumerate(rups):
-                    mask = dists[u] <= magdist
-                    if mask.any():
-                        r_sites = sites.filter(mask)
-                        ctx = self.get_ctx(rup, r_sites, dists[u][mask])
-                        ctx.src_id = src_id
-                        ctxs.append(ctx)
-                        if self.fewsites:
-                            c = rup.surface.get_closest_points(sites.complete)
-                            ctx.clon = c.lons[ctx.sids]
-                            ctx.clat = c.lats[ctx.sids]
+
+            magdist = self.maximum_distance(rups[0].mag)
+            dists = [get_distances(rup, sites, 'rrup', self.dcache)
+                     for rup in rups]
+            for u, rup in enumerate(rups):
+                mask = dists[u] <= magdist
+                if mask.any():
+                    r_sites = sites.filter(mask)
+                    ctx = self.get_ctx(rup, r_sites, dists[u][mask])
+                    ctx.src_id = src_id
+                    ctxs.append(ctx)
+                    if self.fewsites:
+                        c = rup.surface.get_closest_points(sites.complete)
+                        ctx.clon = c.lons[ctx.sids]
+                        ctx.clat = c.lats[ctx.sids]
         return [] if not ctxs else [self.recarray(ctxs)]
 
     def max_intensity(self, sitecol1, mags, dists):
