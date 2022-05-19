@@ -332,6 +332,7 @@ class ContextMaker(object):
     the underlying GSIMs are defined. This is intentional.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
+    fewsites = False
     rup_indep = True
     tom = None
 
