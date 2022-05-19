@@ -654,6 +654,10 @@ class ContextMaker(object):
             dists = {'rrup': rrup}
             for par in self.REQUIRES_DISTANCES - {'rrup'}:
                 dists[par] = get_distances_planar(planar, sites, par)
+            for par in dists:
+                dst = dists[par]
+                if self.minimum_distance:
+                    dst[dst < self.minimum_distance] = self.minimum_distance
 
         with self.ctx_mon:  # building contexts
             ctx = self.build_ctx((len(planar), len(sites)))
@@ -684,10 +688,7 @@ class ContextMaker(object):
 
             # setting distance parameters
             for par in dists:
-                dst = dists[par]
-                if self.minimum_distance:
-                    dst[dst < self.minimum_distance] = self.minimum_distance
-                ctx[par] = dst
+                ctx[par] = dists[par]
             if self.fewsites:
                 ctx['clon'] = closest[0]
                 ctx['clat'] = closest[1]
