@@ -332,6 +332,7 @@ class ContextMaker(object):
     the underlying GSIMs are defined. This is intentional.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
+    fewsites = False
     rup_indep = True
     tom = None
 
@@ -517,8 +518,9 @@ class ContextMaker(object):
         """
         assert ctxs
         dd = self.defaultdict.copy()
-        dd['clon'] = numpy.float64(0.)
-        dd['clat'] = numpy.float64(0.)
+        if self.fewsites:
+            dd['clon'] = numpy.float64(0.)
+            dd['clat'] = numpy.float64(0.)
         if magi is not None:  # magnitude bin used in disaggregation
             dd['magi'] = numpy.uint8(0)
         if hasattr(ctxs[0], 'weight'):
@@ -700,7 +702,6 @@ class ContextMaker(object):
         :param sitecol: a filtered SiteCollection
         :returns: a list with 0 or 1 context array
         """
-        self.fewsites = len(sitecol) <= self.max_sites_disagg
         dd = self.defaultdict.copy()
         dd['probs_occur'] = numpy.zeros(0)
         if self.fewsites:
@@ -736,9 +737,7 @@ class ContextMaker(object):
                     for gsim in self.gsims:
                         gsim.set_parameters(ctxt)
                     ctxs.append(ctxt)
-        if not ctxs:
-            return []
-        return [numpy.concatenate(ctxs).view(numpy.recarray)]
+        return concat(ctxs)
 
     def _triples(self, src, sitecol, planardict):
         # splitting by magnitude
@@ -784,6 +783,7 @@ class ContextMaker(object):
         :returns:
             fat RuptureContexts sorted by mag
         """
+        self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         ctxs = []
         if getattr(src, 'location', None) and step == 1 and (  # point source
                 str(src.magnitude_scaling_relationship) != 'PointMSR'):
@@ -799,7 +799,6 @@ class ContextMaker(object):
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
-        fewsites = len(sitecol.complete) <= self.max_sites_disagg
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             if len(rups) == 0:  # may happen in case of min_mag/max_mag
                 continue
@@ -814,7 +813,7 @@ class ContextMaker(object):
                         ctx = self.get_ctx(rup, r_sites, dists[u][mask])
                         ctx.src_id = src_id
                         ctxs.append(ctx)
-                        if fewsites:
+                        if self.fewsites:
                             c = rup.surface.get_closest_points(sites.complete)
                             ctx.clon = c.lons[ctx.sids]
                             ctx.clat = c.lats[ctx.sids]
@@ -862,23 +861,6 @@ class ContextMaker(object):
         ctxs = self.from_srcs(srcs, sitecol)
         with patch.object(self.collapser, 'collapse_level', collapse_level):
             return self.get_pmap(ctxs).array(len(sitecol))
-
-    def recarrays(self, ctxs, magi=None):
-        """
-        :returns: a list of one or two recarrays
-        """
-        parametric, nonparametric, out = [], [], []
-        for ctx in ctxs:
-            assert not isinstance(ctx, numpy.recarray), ctx
-            if numpy.isnan(getattr(ctx, 'occurrence_rate', numpy.nan)):
-                nonparametric.append(ctx)
-            else:
-                parametric.append(ctx)
-        if parametric:
-            out.append(self.recarray(parametric, magi))
-        if nonparametric:
-            out.append(self.recarray(nonparametric, magi))
-        return out
 
     def get_pmap(self, ctxs, probmap=None):
         """
@@ -1205,7 +1187,7 @@ class PmapMaker(object):
             # TODO: remove nrupts
             totlen += nsites
             if nsites and totlen > MAXSIZE:
-                cm.get_pmap(allctxs, pmap)
+                cm.get_pmap(concat(allctxs), pmap)
                 allctxs.clear()
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
@@ -1216,7 +1198,7 @@ class PmapMaker(object):
             self.source_data['taskno'].append(cm.task_no)
             timer.save(src, nsites, nsites, dt, cm.task_no)
         if allctxs:
-            cm.get_pmap(allctxs, pmap)
+            cm.get_pmap(concat(allctxs), pmap)
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
