@@ -704,7 +704,6 @@ class ContextMaker(object):
         dd = self.defaultdict.copy()
         dd['probs_occur'] = numpy.zeros(0)
         if self.fewsites:
-            1/0
             dd['clon'] = numpy.float64(0.)
             dd['clat'] = numpy.float64(0.)
         self.build_ctx = RecordBuilder(**dd).zeros
