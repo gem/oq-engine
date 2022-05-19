@@ -62,10 +62,7 @@ Url: http://github.com/gem/oq-engine
 # Source code and patches
 # =======================
 
-Source0: %{url}ftp/python/%{general_version}/Python-%{upstream_version}.tar.xz
-Source1: %{url}ftp/python/%{general_version}/Python-%{upstream_version}.tar.xz.asc
-Source0: %{oqformat}.tar.gz
-
+Source0: %{url}raw.githubusercontent.com/gem/oq-engine/%{oqversion}/install.py
 
 Requires: oq-python3 >= 3.8.0
 Requires: sudo systemd
@@ -81,28 +78,12 @@ compute seismic hazard and seismic risk of earthquakes on a global scale.
 
 Copyright (C) 2010-2022 GEM Foundation
 
-%package master
-Summary: OpenQuake Engine multi-node cluster support (master node)
-Group: Applications/Engineering
-Requires: %{name} = %{version}-%{release} rabbitmq-server
-Obsoletes: python-oq-engine-master
-Provides: python-oq-engine-master
-
-%description master
-OpenQuake Engine multi-node cluster support (master node)
-
-OpenQuake is an open source application that allows users to
-compute seismic hazard and seismic risk of earthquakes on a global scale.
-
-Copyright (C) 2010-2022 GEM Foundation
-
 %prep
 %setup -n %{oqformat}
 
 %build
 
 %pre
-
 
 # ======================================================
 # Installing the built code:
@@ -164,26 +145,6 @@ rm -rf %{buildroot}
 %{_datadir}/pixmaps/openquake.png
 %{_unitdir}/openquake-dbserver.service
 %{_unitdir}/openquake-webui.service
-
-%post master
-(if ! rabbitmqctl status &>/dev/null; then
-    systemctl start rabbitmq-server.service
-    rabbit_started=true
-fi
-if ! rabbitmqctl list_users | grep %{oquser}; then
-    rabbitmqctl add_user %{oquser} %{oquser}
-fi
-if ! rabbitmqctl list_vhosts | grep %{oquser}; then
-    rabbitmqctl add_vhost %{oquser}
-    rabbitmqctl set_permissions -p %{oquser} %{oquser} ".*" ".*" ".*"
-fi
-if $rabbit_started; then
-    systemctl stop rabbitmq-server.service
-fi
-) >/dev/null || true
-
-%files master
-%doc openquake/engine/openquake.cfg.cluster-sample
 
 %changelog
 %if %{oqstable} == 1
