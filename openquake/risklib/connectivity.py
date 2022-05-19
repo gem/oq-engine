@@ -17,16 +17,12 @@ def analysis(dstore):
     assetcol = dstore["assetcol"]
     tagnames = sorted(tn for tn in assetcol.tagnames if tn != "id")
     tags = {t: getattr(assetcol.tagcol, t) for t in tagnames}
-    exposure_df = (
-        dstore.read_df("assetcol/array")  # TODO: use assetcol.to_dframe
-        .replace(
-            {
-                tagname: {i: tag for i, tag in enumerate(tags[tagname])}
-                for tagname in tagnames
-            }
-        )
-        .assign(id=lambda df: df.id.str.decode("utf-8"))
-    ).set_index("id")
+    exposure_df = assetcol.to_dframe().replace(
+        {
+            tagname: {i: tag for i, tag in enumerate(tags[tagname])}
+            for tagname in tagnames
+        }
+    ).assign(id=lambda df: df.id.str.decode("utf-8")).set_index("id")
 
     source_nodes = exposure_df.loc[
         exposure_df.supply_or_demand == "source"].index.to_list()
