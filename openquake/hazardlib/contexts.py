@@ -450,7 +450,8 @@ class ContextMaker(object):
 
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
-        self.ctx_mon = monitor('make_contexts', measuremem=True)
+        self.ctx_mon = monitor('make_contexts', measuremem=False)
+        self.dst_mon = monitor('computing distances', measuremem=False)
         self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
@@ -645,55 +646,56 @@ class ContextMaker(object):
         return ctx
 
     def _get_ctx(self, mag, planar, sites, src_id):
-        # computing distances and building contexts
-        rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
-        if self.fewsites:
-            # get the closest points on the surface
-            closest = project_back(planar, xx, yy)  # (3, U, N)
-        dists = {'rrup': rrup}
-        for par in self.REQUIRES_DISTANCES - {'rrup'}:
-            dists[par] = get_distances_planar(planar, sites, par)
+        with self.dst_mon:  # computing distances
+            rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
+            if self.fewsites:
+                # get the closest points on the surface
+                closest = project_back(planar, xx, yy)  # (3, U, N)
+            dists = {'rrup': rrup}
+            for par in self.REQUIRES_DISTANCES - {'rrup'}:
+                dists[par] = get_distances_planar(planar, sites, par)
 
-        ctx = self.build_ctx((len(planar), len(sites)))
-        ctx['src_id'] = src_id
-        # setting rupture parameters
-        for par in self.ruptparams:
+        with self.ctx_mon:  # building contexts
+            ctx = self.build_ctx((len(planar), len(sites)))
+            ctx['src_id'] = src_id
+            # setting rupture parameters
+            for par in self.ruptparams:
+                for u, rec in enumerate(ctx):
+                    if par == 'mag':
+                        rec[par] = mag
+                    elif par == 'occurrence_rate':
+                        rec[par] = planar.wlr[u, 2]
+                    elif par == 'width':
+                        rec[par] = planar.wlr[u, 0]
+                    elif par == 'strike':
+                        rec[par] = planar.sdr[u, 0]
+                    elif par == 'dip':
+                        rec[par] = planar.sdr[u, 1]
+                    elif par == 'rake':
+                        rec[par] = planar.sdr[u, 2]
+                    elif par == 'ztor':  # top edge depth
+                        rec[par] = planar.corners[u, 2, 0]
+                    elif par == 'hypo_lon':
+                        rec[par] = planar.hypo[u, 0]
+                    elif par == 'hypo_lat':
+                        rec[par] = planar.hypo[u, 1]
+                    elif par == 'hypo_depth':
+                        rec[par] = planar.hypo[u, 2]
+
+            # setting distance parameters
+            for par in dists:
+                dst = dists[par]
+                if self.minimum_distance:
+                    dst[dst < self.minimum_distance] = self.minimum_distance
+                ctx[par] = dst
+            if self.fewsites:
+                ctx['clon'] = closest[0]
+                ctx['clat'] = closest[1]
+
+            # setting site parameters
             for u, rec in enumerate(ctx):
-                if par == 'mag':
-                    rec[par] = mag
-                elif par == 'occurrence_rate':
-                    rec[par] = planar.wlr[u, 2]
-                elif par == 'width':
-                    rec[par] = planar.wlr[u, 0]
-                elif par == 'strike':
-                    rec[par] = planar.sdr[u, 0]
-                elif par == 'dip':
-                    rec[par] = planar.sdr[u, 1]
-                elif par == 'rake':
-                    rec[par] = planar.sdr[u, 2]
-                elif par == 'ztor':  # top edge depth
-                    rec[par] = planar.corners[u, 2, 0]
-                elif par == 'hypo_lon':
-                    rec[par] = planar.hypo[u, 0]
-                elif par == 'hypo_lat':
-                    rec[par] = planar.hypo[u, 1]
-                elif par == 'hypo_depth':
-                    rec[par] = planar.hypo[u, 2]
-
-        # setting distance parameters
-        for par in dists:
-            dst = dists[par]
-            if self.minimum_distance:
-                dst[dst < self.minimum_distance] = self.minimum_distance
-            ctx[par] = dst
-        if self.fewsites:
-            ctx['clon'] = closest[0]
-            ctx['clat'] = closest[1]
-
-        # setting site parameters
-        for u, rec in enumerate(ctx):
-            for par in self.siteparams:
-                rec[par] = sites.array[par]
+                for par in self.siteparams:
+                    rec[par] = sites.array[par]
         return ctx
 
     def get_ctxs_planar(self, src, sitecol):
@@ -717,26 +719,24 @@ class ContextMaker(object):
             # building planar geometries
             planardict = src.get_planar(self.shift_hypo)
 
+        magdist = {mag: self.maximum_distance(mag)
+                   for mag, rate in src.get_annual_occurrence_rates()}
         ctxs = []
-        with self.ctx_mon:
-            # computing distances and building contexts
-            magdist = {mag: self.maximum_distance(mag)
-                       for mag, rate in src.get_annual_occurrence_rates()}
-            for mag, planarlist, sites in self._triples(
-                    src, sitecol, planardict):
-                if not planarlist:
-                    continue
-                elif len(planarlist) > 1:
-                    pla = numpy.concatenate(planarlist).view(numpy.recarray)
-                else:
-                    pla = planarlist[0]
-                ctx = self._get_ctx(mag, pla, sites, src.id)
-                ctxt = ctx[ctx.rrup < magdist[mag]].flatten()
-                if len(ctxt):
-                    ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
-                    for gsim in self.gsims:
-                        gsim.set_parameters(ctxt)
-                    ctxs.append(ctxt)
+        for mag, planarlist, sites in self._triples(
+                src, sitecol, planardict):
+            if not planarlist:
+                continue
+            elif len(planarlist) > 1:
+                pla = numpy.concatenate(planarlist).view(numpy.recarray)
+            else:
+                pla = planarlist[0]
+            ctx = self._get_ctx(mag, pla, sites, src.id)
+            ctxt = ctx[ctx.rrup < magdist[mag]].flatten()
+            if len(ctxt):
+                ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
+                for gsim in self.gsims:
+                    gsim.set_parameters(ctxt)
+                ctxs.append(ctxt)
         return concat(ctxs)
 
     def _triples(self, src, sitecol, planardict):
