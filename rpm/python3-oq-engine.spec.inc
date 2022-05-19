@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: syntax=spec
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -43,21 +43,29 @@ Release: %{oqrelease}
 Release: %{oqtimestamp}_%{oqrelease}
 %endif
 
+# ==========================================
+# Descriptions, and metadata for subpackages
+# ==========================================
+
 Summary: Computes earthquake hazard and risk
 Name: %{oqname}
 Version: %{oqversion}
 License: AGPLv3
 Group: Applications/Engineering
-Source0: %{oqformat}.tar.gz
 BuildRoot: %{_tmppath}/python-%{oqformat}-buildroot
 Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-engine
 
-Patch1: openquake.cfg.patch
+# =======================
+# Source code and patches
+# =======================
 
-Requires(pre): shadow-utils
+Source0: %{url}ftp/python/%{general_version}/Python-%{upstream_version}.tar.xz
+Source1: %{url}ftp/python/%{general_version}/Python-%{upstream_version}.tar.xz.asc
+Source0: %{oqformat}.tar.gz
+
 
 Requires: oq-python3 >= 3.8.0
 Requires: sudo systemd
@@ -95,19 +103,31 @@ Copyright (C) 2010-2022 GEM Foundation
 
 %pre
 
+
+# ======================================================
+# Installing the built code:
+# ======================================================
+
 %install
-sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/baselib/__init__.py
-install -p -m 755 -d %{buildroot}%{_bindir}
-install -p -m 755 -d %{buildroot}%{_oqbindir}
-%{__python3} setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=%{_oqprefix} --install-scripts=%{_oqbindir}
-ln -sf %{_oqbindir}/oq %{buildroot}%{_bindir}/oq
-# create directories where the files will be located
-mkdir -p %{buildroot}%{_localstatedir}/lib/openquake
-mkdir -p %{buildroot}%{_sysconfdir}/openquake
-mkdir -p %{buildroot}%{_datadir}/openquake/engine
-mkdir -p %{buildroot}%{_datadir}/applications
-mkdir -p %{buildroot}%{_datadir}/pixmaps
-mkdir -p %{buildroot}%{_unitdir}
+
+# As in %%build, remember the current directory
+topdir=$(pwd)
+
+# Use a common function to do an install for all our configurations:
+InstallEngine() {
+
+  # Switch to the directory with this configuration's built files
+  ConfDir=build/$ConfName
+  echo STARTING: INSTALL OF OPENQUAKE ENGINE 
+
+  __python install.py server
+
+  popd
+
+  echo FINISHED: INSTALL OF ENGINE
+}
+
+InstallEngine 
 
 %post
 %systemd_post openquake-dbserver.service
