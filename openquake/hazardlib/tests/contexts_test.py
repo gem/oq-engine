@@ -37,6 +37,8 @@ from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.mfd import ArbitraryMFD
 from openquake.hazardlib.scalerel import WC1994
 from openquake.hazardlib.geo.nodalplane import NodalPlane
+from openquake.hazardlib.geo.surface.planar import (
+    get_distances_planar, build_planar)
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
@@ -177,28 +179,6 @@ class EffectTestCase(unittest.TestCase):
         dist = list(effect.dist_by_mag(1.1).values())
         numpy.testing.assert_allclose(dist, [0, 10, 13.225806, 16.666667])
 
-    def test_get_pmap(self):
-        truncation_level = 3
-        imtls = DictArray({'PGA': [0.01]})
-        gsims = [valid.gsim('AkkarBommer2010')]
-        ctxs = []
-        for occ_rate in (.001, .002):
-            ctx = RuptureContext()
-            ctx.mag = 5.5
-            ctx.rake = 90
-            ctx.occurrence_rate = occ_rate
-            ctx.sids = numpy.array([0.])
-            ctx.vs30 = numpy.array([760.])
-            ctx.rrup = numpy.array([100.])
-            ctx.rjb = numpy.array([99.])
-            ctx.weight = 0.
-            ctxs.append(ctx)
-        cmaker = ContextMaker(
-            'TRT', gsims, dict(imtls=imtls, truncation_level=truncation_level))
-        cmaker.tom = PoissonTOM(time_span=50)
-        pmap = cmaker.get_pmap(ctxs)
-        numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)
-
 
 # see also classical/case_24 and classical/case_69
 class CollapseTestCase(unittest.TestCase):
@@ -221,11 +201,11 @@ class CollapseTestCase(unittest.TestCase):
         # the 3 sources within are still more distant than the pointsource
         # distance, so the 4 hypocenters are collapsed to 1 and the number
         # of ruptures is down from 30 x 4 to 30
-        numpy.testing.assert_equal(len(ctxs), 30)  # 3x10 mags
+        numpy.testing.assert_equal(len(ctxs[0]), 60)  # 2sites x 3srcs x 10mags
 
         # compute original curves
         pmap = cmaker.get_pmap(ctxs)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [34, 60])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [33, 60])
 
         # compute collapsed curves
         cmaker.collapser.cfactor = numpy.zeros(2)
@@ -233,7 +213,7 @@ class CollapseTestCase(unittest.TestCase):
         cmap = cmaker.get_pmap(ctxs)
         self.assertLess(rms(pmap[0].array - cmap[0].array), 3E-4)
         self.assertLess(rms(pmap[1].array - cmap[1].array), 3E-4)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [34, 60])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [33, 60])
 
     def test_collapse_big(self):
         smpath = os.path.join(os.path.dirname(__file__),
@@ -252,13 +232,12 @@ class CollapseTestCase(unittest.TestCase):
         [srcs] = inp.groups  # a single area source
         # get the context
         ctxs = cmaker.from_srcs(srcs, inp.sitecol)
-        numpy.testing.assert_equal(len(ctxs), 5808)
         pcurve0 = cmaker.get_pmap(ctxs)[0]
         cmaker.collapser.cfactor = numpy.zeros(2)
         cmaker.collapser.collapse_level = 1
         pcurve1 = cmaker.get_pmap(ctxs)[0]
         self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [218, 11616])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [42, 11616])
 
     def test_collapse_azimuth(self):
         # YuEtAl2013Ms has an azimuth distance causing a lower precision
@@ -449,29 +428,27 @@ class GetCtxs01TestCase(unittest.TestCase):
         param = dict(imtls={'PGA': []})
         cm = ContextMaker('*', [gmm], param)
 
-        # With this we get a list with six RuptureContexts
-        ctxs = cm.get_ctxs(self.src, self.sitec)
+        # extract magnitude 7 context
+        [ctx] = cm.get_ctxs(self.src, self.sitec)
+        self.ctx = ctx[ctx.mag == 7.0]
 
-        # Find index of rupture with three sections
-        for i, ctx in enumerate(ctxs):
-            if ctx.mag == 7.0:
-                idx = i
-        self.ctx = ctxs[idx]
+        # extract magnitude 7 rupture
+        [self.rup] = [rup for rup in self.src.iter_ruptures() if rup.mag == 7.]
 
     def test_rjb_distance(self):
-        rjb = self.ctx.surface.get_joyner_boore_distance(self.sitec.mesh)
+        rjb = self.rup.surface.get_joyner_boore_distance(self.sitec.mesh)
         self.assertAlmostEqual(rjb, self.ctx.rjb, delta=1e-3)
 
     def test_rrup_distance(self):
-        rrup = self.ctx.surface.get_min_distance(self.sitec.mesh)
+        rrup = self.rup.surface.get_min_distance(self.sitec.mesh)
         self.assertAlmostEqual(rrup, self.ctx.rrup, delta=1e-3)
 
     def test_rx_distance(self):
-        rx = self.ctx.surface.get_rx_distance(self.sitec.mesh)
+        rx = self.rup.surface.get_rx_distance(self.sitec.mesh)
         self.assertAlmostEqual(rx, self.ctx.rx, delta=1e-3)
 
     def test_ry0_distance(self):
-        dst = self.ctx.surface.get_ry0_distance(self.sitec.mesh)
+        dst = self.rup.surface.get_ry0_distance(self.sitec.mesh)
         self.assertAlmostEqual(dst, self.ctx.ry0, delta=1e-3)
 
 
@@ -504,27 +481,72 @@ class GetCtxs02TestCase(unittest.TestCase):
         param = dict(imtls={'PGA': []})
         cm = ContextMaker('*', [gmm], param)
 
-        # With this we get a list with six RuptureContexts
-        ctxs = cm.get_ctxs(self.src, self.sitec)
+        # extract magnitude 7 context
+        [ctx] = cm.get_ctxs(self.src, self.sitec)
+        self.ctx = ctx[ctx.mag == 7.0]
 
-        # Find index of rupture with three sections
-        for i, ctx in enumerate(ctxs):
-            if ctx.mag == 7.0:
-                idx = i
-        self.ctx = ctxs[idx]
+        # extract magnitude 7 rupture
+        [self.rup] = [rup for rup in self.src.iter_ruptures() if rup.mag == 7.]
 
     def test_rjb_distance(self):
-        rjb = self.ctx.surface.get_joyner_boore_distance(self.sitec.mesh)
+        rjb = self.rup.surface.get_joyner_boore_distance(self.sitec.mesh)
         self.assertAlmostEqual(rjb, self.ctx.rjb, delta=1e-3)
 
     def test_rrup_distance(self):
-        rrup = self.ctx.surface.get_min_distance(self.sitec.mesh)
+        rrup = self.rup.surface.get_min_distance(self.sitec.mesh)
         self.assertAlmostEqual(rrup, self.ctx.rrup, delta=1e-3)
 
     def test_rx_distance(self):
-        rx = self.ctx.surface.get_rx_distance(self.sitec.mesh)
+        rx = self.rup.surface.get_rx_distance(self.sitec.mesh)
         self.assertAlmostEqual(rx, self.ctx.rx, delta=1e-3)
 
     def test_ry0_distance(self):
-        dst = self.ctx.surface.get_ry0_distance(self.sitec.mesh)
+        dst = self.rup.surface.get_ry0_distance(self.sitec.mesh)
         self.assertAlmostEqual(dst, self.ctx.ry0, delta=1e-3)
+
+
+class PlanarDistancesTestCase(unittest.TestCase):
+    """
+    Test for calculation of planar distances
+    """
+    def test(self):
+        trt = TRT.ACTIVE_SHALLOW_CRUST
+        rms = 2.5
+        msr = WC1994()
+        rar = 1.0
+        tom = PoissonTOM(1.)
+        usd = 0.0
+        lsd = 20.0
+        loc = Point(0.0, 0.0)
+        mfd = ArbitraryMFD([7.0], [1.])
+        npd = PMF([(1.0, NodalPlane(90., 90., 90.))])
+        hdd = PMF([(1.0, 10.)])
+        imtls = DictArray({'PGA': [0.01]})
+        gsims = [valid.gsim('GulerceEtAl2017'),
+                 valid.gsim('Atkinson2015'),
+                 valid.gsim('YuEtAl2013Ms')]
+        src = PointSource(
+            "ps", "pointsource", trt, mfd, rms, msr, rar, tom,
+            usd, lsd, loc, npd, hdd)
+
+        sites = SiteCollection([Site(Point(0.25, 0.0, 0.0)),
+                                Site(Point(0.35, 0.0, 0.0))])
+        cmaker = ContextMaker(
+            trt, gsims, dict(imtls=imtls, truncation_level=3.))
+        cmaker.tom = tom
+        ctx, = cmaker.get_ctxs(src, sites)
+        aac(ctx.rrup, [9.32409196, 20.44343079])
+        aac(ctx.rx, [0., 0.])
+        aac(ctx.ry0, [9.26597563, 20.38546829])
+        aac(ctx.rjb, [9.26597481, 20.3854596])
+        aac(ctx.rhypo, [29.54267222, 40.18243627])
+        aac(ctx.rjb, [9.26597481, 20.3854596])
+        aac(ctx.repi, [27.79873166, 38.91822433])
+        aac(ctx.azimuth, [0., 0.])
+
+        magd = [(r, mag) for mag, r in src.get_annual_occurrence_rates()]
+        planin = src.get_planin(magd, npd.data, hdd.data)
+        planar = build_planar(planin, loc.x, loc.y, usd, lsd)[0, 0]
+        for par in ('rx', 'ry0', 'rjb', 'rhypo', 'repi'):
+            dist = get_distances_planar(planar, sites, par)[0]
+            aac(dist, ctx[par], err_msg=par)

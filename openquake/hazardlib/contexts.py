@@ -20,7 +20,6 @@ import os
 import abc
 import copy
 import time
-import operator
 import warnings
 import itertools
 import collections
@@ -43,7 +42,7 @@ from openquake.hazardlib.calc.filters import (
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface.planar import (
-    PlanarSurface, project, project_back)
+    project, project_back, get_distances_planar)
 
 U32 = numpy.uint32
 F64 = numpy.float64
@@ -55,7 +54,26 @@ STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
+# the following is used in the collapse method
 IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
+
+
+def concat(ctxs):
+    """
+    Concatenate context arrays.
+    :returns: list with 0, 1 or 2 elements
+    """
+    out, parametric, nonparam = [], [], []
+    for ctx in ctxs:
+        if numpy.isnan(ctx.occurrence_rate).all():
+            nonparam.append(ctx)
+        else:
+            parametric.append(ctx)
+    if parametric:
+        out.append(numpy.concatenate(parametric).view(numpy.recarray))
+    if nonparam:
+        out.append(numpy.concatenate(nonparam).view(numpy.recarray))
+    return out
 
 
 def get_maxsize(M, G):
@@ -146,16 +164,16 @@ class Collapser(object):
         self.npartial = 0
         self.nfull = 0
 
-    def calc_mdvbin(self, rup):
+    def calc_mdvbin(self, ctx):
         """
-        :param rup: a RuptureContext
+        :param ctx: a RuptureContext or a context array
         :return: an array of dtype numpy.uint32
         """
-        dist = getattr(rup, self.dist_type)
-        magbin = numpy.searchsorted(self.mag_bins, rup.mag)
+        dist = getattr(ctx, self.dist_type)
+        magbin = numpy.searchsorted(self.mag_bins, ctx.mag)
         distbin = numpy.searchsorted(self.dist_bins, dist)
         if self.has_vs30:
-            vs30bin = numpy.searchsorted(self.vs30_bins, dist)
+            vs30bin = numpy.searchsorted(self.vs30_bins, ctx.vs30)
             return magbin * TWO24 + distbin * TWO16 + vs30bin
         else:  # in test_collapse_area
             return magbin * TWO24 + distbin * TWO16
@@ -313,8 +331,8 @@ class ContextMaker(object):
     NB: the trt can be different from the tectonic region type for which
     the underlying GSIMs are defined. This is intentional.
     """
-    REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS',
-                'COMPUTED_PARAMETERS']
+    REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
+    fewsites = False
     rup_indep = True
     tom = None
 
@@ -349,7 +367,7 @@ class ContextMaker(object):
             self.dcache = {}  # (surface ID, dist_type) for MultiFaultSources
         else:
             self.dcache = None  # disabled
-        self.af = param.get('af', None)
+        self.af = param.get('af')
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
         self.time_per_task = param.get('time_per_task', 60)
@@ -401,7 +419,6 @@ class ContextMaker(object):
         REQUIRES_DISTANCES = sorted(self.REQUIRES_DISTANCES) or ['rrup']
         reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
                 sorted(self.REQUIRES_SITES_PARAMETERS | set(extraparams)) +
-                sorted(self.REQUIRES_COMPUTED_PARAMETERS) +
                 REQUIRES_DISTANCES)
         dic = {}
         for req in reqs:
@@ -413,9 +430,11 @@ class ContextMaker(object):
                     dic[req] = dt(0)
             else:
                 dic[req] = 0.
+        dic['src_id'] = U32(0)
         dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
+        dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
         self.collapser = Collapser(
             self.collapse_level, REQUIRES_DISTANCES[0], 'vs30' in dic)
@@ -431,12 +450,12 @@ class ContextMaker(object):
 
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
-        self.ctx_mon = monitor('make_contexts', measuremem=True)
+        self.ctx_mon = monitor('make_contexts', measuremem=False)
+        self.dst_mon = monitor('computing distances', measuremem=False)
         self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
-        self.dst_mon = monitor('computing rrup', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
@@ -452,31 +471,46 @@ class ContextMaker(object):
             nbytes += arr.nbytes
         return nbytes
 
-    def read_ctxs(self, dstore, slc=None):
+    def read_ctxs(self, dstore, slc=None, magi=None):
         """
         :param dstore: a DataStore instance
         :param slice: a slice of contexts with the same grp_id
-        :returns: a list of contexts plus N lists of contexts for each site
+        :returns: a list with one or two context arrays
         """
-        sitecol = dstore['sitecol'].complete
+        sitecol = dstore['sitecol'].complete.array
         if slc is None:
             slc = dstore['rup/grp_id'][:] == self.grp_id
         params = {n: dstore['rup/' + n][slc] for n in dstore['rup']}
-        ctxs = []
-        for u in range(len(params['mag'])):
-            ctx = RuptureContext()
-            for par, arr in params.items():
-                if par.endswith('_'):
-                    par = par[:-1]
-                elif par == 'probs_occur' and len(arr) == 0:  # poissonian
-                    continue
-                setattr(ctx, par, arr[u])
-            for par in sitecol.array.dtype.names:
-                setattr(ctx, par, sitecol[par][ctx.sids])
-            ctxs.append(ctx)
+        dtlist = []
+        for par, val in params.items():
+            if par == 'probs_occur':
+                item = (par, object)
+            elif par == 'occurrence_rate':
+                item = (par, F64)
+            else:
+                item = (par, val[0].dtype)
+            dtlist.append(item)
+        for par in sitecol.dtype.names:
+            if par != 'sids':
+                dtlist.append((par, sitecol.dtype[par]))
+        if magi is not None:
+            dtlist.append(('magi', numpy.uint8))
+        ctx = numpy.zeros(len(params['grp_id']), dtlist).view(numpy.recarray)
+        for par, val in params.items():
+            ctx[par] = val
+        for par in sitecol.dtype.names:
+            if par != 'sids':
+                ctx[par] = sitecol[par][ctx['sids']]
+        if magi is not None:
+            ctx['magi'] = magi
         # NB: sorting the contexts break the disaggregation! (see case_1)
-        # ctxs.sort(key=operator.attrgetter('mag'))
-        return ctxs
+
+        # split parametric vs nonparametric contexts
+        nans = numpy.isnan(ctx.occurrence_rate)
+        if nans.sum() in (0, len(ctx)):  # no nans or all nans
+            return [ctx]
+        else:
+            return [ctx[nans], ctx[~nans]]
 
     def recarray(self, ctxs, magi=None):
         """
@@ -485,26 +519,23 @@ class ContextMaker(object):
         """
         assert ctxs
         dd = self.defaultdict.copy()
-        if magi is not None:  # magnitude bin used in disaggregation
-            dd['magi'] = numpy.uint8(0)
+        if self.fewsites:
             dd['clon'] = numpy.float64(0.)
             dd['clat'] = numpy.float64(0.)
+        if magi is not None:  # magnitude bin used in disaggregation
+            dd['magi'] = numpy.uint8(0)
         if hasattr(ctxs[0], 'weight'):
             dd['weight'] = numpy.float64(0.)
             noweight = False
         else:
             noweight = True
 
-        if hasattr(ctxs[0], 'occurrence_rate'):
-            dd['occurrence_rate'] = numpy.float64(0)
-            norate = False
-        else:
-            norate = True
+        if not hasattr(ctxs[0], 'probs_occur'):
+            for ctx in ctxs:
+                ctx.probs_occur = []
 
-        if hasattr(ctxs[0], 'probs_occur'):
-            np = max(len(ctx.probs_occur) for ctx in ctxs)
-            if np:  # nonparametric rupture
-                dd['probs_occur'] = numpy.zeros(np)
+        np = max(len(ctx.probs_occur) for ctx in ctxs)
+        dd['probs_occur'] = numpy.zeros(np)
 
         C = sum(len(ctx) for ctx in ctxs)
         ra = RecordBuilder(**dd).zeros(C)
@@ -521,10 +552,8 @@ class ContextMaker(object):
                     val = self.collapser.calc_mdvbin(ctx)
                 elif par == 'weight' and noweight:
                     val = 0.
-                elif par == 'occurrence_rate' and norate:
-                    val = numpy.nan
-                else:  # never missing
-                    val = getattr(ctx, par)
+                else:
+                    val = getattr(ctx, par, numpy.nan)
                 getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
@@ -534,10 +563,9 @@ class ContextMaker(object):
         """
         :returns: the interesting attributes of the context
         """
-        params = {'occurrence_rate', 'sids_', 'src_id',
-                  'probs_occur_', 'clon_', 'clat_', 'rrup_'}
+        params = {'occurrence_rate', 'sids', 'src_id',
+                  'probs_occur', 'clon', 'clat', 'rrup'}
         params.update(self.REQUIRES_RUPTURE_PARAMETERS)
-        params.update(self.REQUIRES_COMPUTED_PARAMETERS)
         for dparam in self.REQUIRES_DISTANCES:
             params.add(dparam + '_')
         return params
@@ -546,14 +574,13 @@ class ContextMaker(object):
         """
         :param srcs: a list of Source objects
         :param sitecol: a SiteCollection instance
-        :returns: a list RuptureContexts
+        :returns: a list of context arrays
         """
-        allctxs = []
+        ctxs = []
         for i, src in enumerate(srcs):
             src.id = i
-            allctxs.extend(self.get_ctxs(src, sitecol))
-        allctxs.sort(key=operator.attrgetter('mag'))
-        return allctxs
+            ctxs.extend(self.get_ctxs(src, sitecol))
+        return concat(ctxs)
 
     def make_rctx(self, rup):
         """
@@ -580,40 +607,175 @@ class ContextMaker(object):
                 value = rup.hypocenter.depth
             elif param == 'width':
                 value = rup.surface.get_width()
+            elif param == 'in_cshm':  # computed in McVerry2006Chch
+                value = False
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
             setattr(ctx, param, value)
+        if not hasattr(ctx, 'occurrence_rate'):
+            ctx.occurrence_rate = numpy.nan
         return ctx
 
-    def get_ctx(self, rup, sites, distances):
+    def get_ctx(self, rup, sites, distances=None):
         """
         :returns: a RuptureContext (or None if filtered away)
         """
-        # add distances to the context
-        ctx = self.make_rctx(rup)
-        ctx.rrup = distances
-        ctx.sites = sites
-        for param in self.REQUIRES_DISTANCES - {'rrup'}:
-            dists = get_distances(rup, sites, param, self.dcache)
-            setattr(ctx, param, dists)
+        with self.ctx_mon:
+            ctx = self.make_rctx(rup)
+            for name in sites.array.dtype.names:
+                setattr(ctx, name, sites[name])
 
-        # Equivalent distances
-        reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
-        if reqv_obj and isinstance(rup.surface, PlanarSurface):
-            reqv = reqv_obj.get(ctx.repi, rup.mag)
-            if 'rjb' in self.REQUIRES_DISTANCES:
-                ctx.rjb = reqv
-            if 'rrup' in self.REQUIRES_DISTANCES:
-                ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
+        with self.dst_mon:
+            if distances is None:
+                distances = rup.surface.get_min_distance(sites.mesh)
+            ctx.rrup = distances
+            ctx.sites = sites
+            for param in self.REQUIRES_DISTANCES - {'rrup'}:
+                dists = get_distances(rup, sites, param, self.dcache)
+                setattr(ctx, param, dists)
 
-        # add site parameters
-        for name in sites.array.dtype.names:
-            setattr(ctx, name, sites[name])
+            # Equivalent distances
+            reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
+            if reqv_obj and not rup.surface:  # PointRuptures have no surface
+                reqv = reqv_obj.get(ctx.repi, rup.mag)
+                if 'rjb' in self.REQUIRES_DISTANCES:
+                    ctx.rjb = reqv
+                if 'rrup' in self.REQUIRES_DISTANCES:
+                    ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
 
         return ctx
 
-    def get_ctxs(self, src, sitecol, src_id=None, step=1):
+    def _get_ctx(self, mag, planar, sites, src_id):
+        with self.dst_mon:
+            # computing distances
+            rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
+            if self.fewsites:
+                # get the closest points on the surface
+                closest = project_back(planar, xx, yy)  # (3, U, N)
+            dists = {'rrup': rrup}
+            for par in self.REQUIRES_DISTANCES - {'rrup'}:
+                dists[par] = get_distances_planar(planar, sites, par)
+            for par in dists:
+                dst = dists[par]
+                if self.minimum_distance:
+                    dst[dst < self.minimum_distance] = self.minimum_distance
+
+        with self.ctx_mon:
+            # building contexts
+            ctx = self.build_ctx((len(planar), len(sites)))
+            ctxt = ctx.T  # smart trick taking advantage of numpy magic
+            ctxt['src_id'] = src_id
+
+            # setting rupture parameters
+            for par in self.ruptparams:
+                if par == 'mag':
+                    ctxt[par] = mag
+                elif par == 'occurrence_rate':
+                    ctxt[par] = planar.wlr[:, 2]  # shape U-> (N, U)
+                elif par == 'width':
+                    ctxt[par] = planar.wlr[:, 0]
+                elif par == 'strike':
+                    ctxt[par] = planar.sdr[:, 0]
+                elif par == 'dip':
+                    ctxt[par] = planar.sdr[:, 1]
+                elif par == 'rake':
+                    ctxt[par] = planar.sdr[:, 2]
+                elif par == 'ztor':  # top edge depth
+                    ctxt[par] = planar.corners[:, 2, 0]
+                elif par == 'hypo_lon':
+                    ctxt[par] = planar.hypo[:, 0]
+                elif par == 'hypo_lat':
+                    ctxt[par] = planar.hypo[:, 1]
+                elif par == 'hypo_depth':
+                    ctxt[par] = planar.hypo[:, 2]
+
+            # setting distance parameters
+            for par in dists:
+                ctx[par] = dists[par]
+            if self.fewsites:
+                ctx['clon'] = closest[0]
+                ctx['clat'] = closest[1]
+
+            # setting site parameters
+            for par in self.siteparams:
+                ctx[par] = sites.array[par]  # shape N-> (U, N)
+
+        return ctx
+
+    def get_ctxs_planar(self, src, sitecol):
+        """
+        :param src: a (Collapsed)PointSource with no PointMSR
+        :param sitecol: a filtered SiteCollection
+        :returns: a list with 0 or 1 context array
+        """
+        dd = self.defaultdict.copy()
+        dd['probs_occur'] = numpy.zeros(0)
+        if self.fewsites:
+            dd['clon'] = numpy.float64(0.)
+            dd['clat'] = numpy.float64(0.)
+        self.build_ctx = RecordBuilder(**dd).zeros
+        self.siteparams = [par for par in sitecol.array.dtype.names
+                           if par in dd]
+        self.ruptparams = (self.REQUIRES_RUPTURE_PARAMETERS |
+                           {'occurrence_rate'})
+
+        with self.ir_mon:
+            # building planar geometries
+            planardict = src.get_planar(self.shift_hypo)
+
+        magdist = {mag: self.maximum_distance(mag)
+                   for mag, rate in src.get_annual_occurrence_rates()}
+        ctxs = []
+        for mag, planarlist, sites in self._triples(
+                src, sitecol, planardict):
+            if not planarlist:
+                continue
+            elif len(planarlist) > 1:
+                pla = numpy.concatenate(planarlist).view(numpy.recarray)
+            else:
+                pla = planarlist[0]
+            ctx = self._get_ctx(mag, pla, sites, src.id)
+            ctxt = ctx[ctx.rrup < magdist[mag]].flatten()
+            if len(ctxt):
+                ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
+                for gsim in self.gsims:
+                    gsim.set_parameters(ctxt)
+                ctxs.append(ctxt)
+        return concat(ctxs)
+
+    def _triples(self, src, sitecol, planardict):
+        # splitting by magnitude
+        triples = []
+        if src.count_nphc() == 1:
+            # one rupture per magnitude
+            for mag, pla in planardict.items():
+                triples.append((mag, pla, sitecol))
+        else:
+            cdist = sitecol.get_cdist(src.location)
+            for rup in src.iruptures():
+                mag = rup.mag
+                arr = [rup.surface.array.reshape(-1, 3)]
+                pla = planardict[mag]
+                psdist = self.pointsource_distance + src.get_radius(rup)
+                close = sitecol.filter(cdist <= psdist)
+                far = sitecol.filter(cdist > psdist)
+                if self.fewsites:
+                    if close is None:  # all is far, common for small mag
+                        triples.append((mag, arr, sitecol))
+                    else:  # something is close
+                        triples.append((mag, pla, sitecol))
+                else:  # many sites
+                    if close is None:  # all is far
+                        triples.append((mag, arr, far))
+                    elif far is None:  # all is close
+                        triples.append((mag, pla, close))
+                    else:  # some sites are far, some are close
+                        triples.append((mag, arr, far))
+                        triples.append((mag, pla, close))
+        return triples
+
+    def get_ctxs(self, src, sitecol, src_id=0, step=1):
         """
         :param src:
             a source object (already split) or a list of ruptures
@@ -626,40 +788,29 @@ class ContextMaker(object):
         :returns:
             fat RuptureContexts sorted by mag
         """
+        self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         ctxs = []
-        if hasattr(src, 'source_id'):  # is a real source
-            ps = getattr(src, 'location', None) and step == 1
+        if getattr(src, 'location', None) and step == 1 and (  # point source
+                str(src.magnitude_scaling_relationship) != 'PointMSR'):
+            return self.get_ctxs_planar(src, sitecol)
+        elif hasattr(src, 'source_id'):  # other source
             with self.ir_mon:
-                if ps:  # point source
-                    rups_sites = list(self._ps_rups_sites(src, sitecol))
-                else:  # just add the ruptures
-                    allrups = numpy.array(list(src.iter_ruptures(
-                        shift_hypo=self.shift_hypo, step=step)))
-                    # sorted by mag by construction
-                    u32mags = U32([rup.mag * 100 for rup in allrups])
-                    rups_sites = [(rups, sitecol)
-                                  for rups in split_array(allrups, u32mags)]
+                allrups = numpy.array(list(src.iter_ruptures(
+                    shift_hypo=self.shift_hypo, step=step)))
+                # sorted by mag by construction
+                u32mags = U32([rup.mag * 100 for rup in allrups])
+                rups_sites = [(rups, sitecol)
+                              for rups in split_array(allrups, u32mags)]
             src_id = src.id
         else:  # in event based we get a list with a single rupture
-            ps = False
             rups_sites = [(src, sitecol)]
-        fewsites = len(sitecol.complete) <= self.max_sites_disagg
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             if len(rups) == 0:  # may happen in case of min_mag/max_mag
                 continue
+
             magdist = self.maximum_distance(rups[0].mag)
-            with self.dst_mon:
-                if ps:  # fast lane
-                    planar = numpy.array(
-                        [rup.surface.array for rup in rups]
-                    ).view(numpy.recarray)  # shape (U, 3)
-                    dists, xx, yy = project(planar, sites.xyz)  # (3, U, N)
-                    if fewsites:
-                        # get the closest points on the surface
-                        closest = project_back(planar, xx, yy)  # (3, U, N)
-                else:  # regular
-                    dists = [get_distances(rup, sites, 'rrup', self.dcache)
-                             for rup in rups]
+            dists = [get_distances(rup, sites, 'rrup', self.dcache)
+                     for rup in rups]
             for u, rup in enumerate(rups):
                 mask = dists[u] <= magdist
                 if mask.any():
@@ -667,15 +818,11 @@ class ContextMaker(object):
                     ctx = self.get_ctx(rup, r_sites, dists[u][mask])
                     ctx.src_id = src_id
                     ctxs.append(ctx)
-                    if fewsites:
-                        if ps:  # reuse already computed coordinates
-                            ctx.clon = closest[0, u, mask]
-                            ctx.clat = closest[1, u, mask]
-                        else:  # slow lane
-                            c = rup.surface.get_closest_points(sites.complete)
-                            ctx.clon = c.lons[ctx.sids]
-                            ctx.clat = c.lats[ctx.sids]
-        return ctxs
+                    if self.fewsites:
+                        c = rup.surface.get_closest_points(sites.complete)
+                        ctx.clon = c.lons[ctx.sids]
+                        ctx.clat = c.lats[ctx.sids]
+        return [] if not ctxs else [self.recarray(ctxs)]
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -708,35 +855,6 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
-    def _ps_rups_sites(self, src, sites):
-        if src.count_nphc() == 1:  # one rupture per magnitude
-            for rup in src.iter_ruptures():
-                yield [rup], sites
-            return
-        fewsites = len(sites) <= self.max_sites_disagg
-        cdist = sites.get_cdist(src.location)
-        allrups = numpy.array(
-            list(src.iter_ruptures(shift_hypo=self.shift_hypo)))
-        m_idx = numpy.array([rup.m for rup in allrups])
-        for rup in src.iruptures():
-            rups = allrups[m_idx == rup.m]
-            psdist = self.pointsource_distance + src.get_radius(rup)
-            close = sites.filter(cdist <= psdist)
-            far = sites.filter(cdist > psdist)
-            if fewsites:
-                if close is None:  # all is far, common for small mag
-                    yield [rup], sites
-                else:  # something is close
-                    yield rups, sites
-            else:  # many sites
-                if close is None:  # all is far
-                    yield [rup], far
-                elif far is None:  # all is close
-                    yield rups, close
-                else:  # some sites are far, some are close
-                    yield [rup], far
-                    yield rups, close
-
     # not used by the engine, is is meant for notebooks
     def get_poes(self, srcs, sitecol, collapse_level=-1):
         """
@@ -749,26 +867,9 @@ class ContextMaker(object):
         with patch.object(self.collapser, 'collapse_level', collapse_level):
             return self.get_pmap(ctxs).array(len(sitecol))
 
-    def recarrays(self, ctxs, magi=None):
-        """
-        :returns: a list of one or two recarrays
-        """
-        parametric, nonparametric, out = [], [], []
-        for ctx in ctxs:
-            assert not isinstance(ctx, numpy.recarray), ctx
-            if numpy.isnan(getattr(ctx, 'occurrence_rate', numpy.nan)):
-                nonparametric.append(ctx)
-            else:
-                parametric.append(ctx)
-        if parametric:
-            out.append(self.recarray(parametric, magi))
-        if nonparametric:
-            out.append(self.recarray(nonparametric, magi))
-        return out
-
     def get_pmap(self, ctxs, probmap=None):
         """
-        :param ctxs: a list of contexts
+        :param ctxs: a list of context arrays
         :param probmap: if not None, update it
         :returns: a new ProbabilityMap if probmap is None
         """
@@ -788,15 +889,14 @@ class ContextMaker(object):
                 value_type=t.float64[:, :])
         else:
             dic = {}  # sid -> array of shape (L, G)
-        for ctx in self.recarrays(ctxs):
+        for ctx in ctxs:
             # allocating pmap in advance
             for sid in numpy.unique(ctx.sids):
                 dic[sid] = pmap.setdefault(sid, self.rup_indep).array
             for poes, ctxt, slcsids in self.gen_poes(ctx):
                 probs_occur = getattr(ctxt, 'probs_occur',
                                       numpy.zeros((len(ctxt), 0)))
-                rates = getattr(ctxt, 'occurrence_rate',
-                                numpy.zeros(len(ctxt)))
+                rates = ctxt.occurrence_rate
                 with self.pne_mon:
                     if isinstance(slcsids, numpy.ndarray):
                         # no collapse: avoiding an inner loop can give a 25%
@@ -862,10 +962,10 @@ class ContextMaker(object):
         return out
 
     # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-    def get_cs_contrib(self, ctxs, imti, imls):
+    def get_cs_contrib(self, ctx, imti, imls):
         """
-        :param ctxs:
-           list of contexts defined on N sites
+        :param ctx:
+           a context array
         :param imti:
             IMT index in the range 0..M-1
         :param imls:
@@ -877,23 +977,26 @@ class ContextMaker(object):
 
         Compute the contributions to the conditional spectra, in a form
         suitable for later composition.
+
+        NB: at the present if works only for poissonian contexts
         """
         assert self.tom
-        N = len(ctxs[0].sids)
-        assert all(len(ctx) == N for ctx in ctxs[1:])
-        C = len(ctxs)
+        sids, counts = numpy.unique(ctx.sids, return_counts=True)
+        assert len(set(counts)) == 1, counts  # must be all equal
+        N = len(sids)
+        U = len(ctx) // N
         G = len(self.gsims)
         M = len(self.imtls)
         P = len(imls)
         out = csdict(M, N, P, self.start, self.start + G)
-        mean_stds = self.get_mean_stds(ctxs)  # (4, G, M, N*C)
+        mean_stds = self.get_mean_stds([ctx])  # (4, G, M, N*C)
         imt_ref = self.imts[imti]
         rho = numpy.array([self.cross_correl.get_correlation(imt_ref, imt)
                            for imt in self.imts])
         m_range = range(len(self.imts))
         # probs = 1 - exp(-occurrence_rates*time_span)
         probs = self.tom.get_probability_one_or_more_occurrences(
-            numpy.array([ctx.occurrence_rate for ctx in ctxs]))  # shape C
+            ctx.occurrence_rate)  # shape N * U
         for n in range(N):
             # NB: to understand the code below, consider the case with
             # N=3 sites and C=2 contexts; then the indices N*C are
@@ -904,17 +1007,17 @@ class ContextMaker(object):
             # 4: second site
             # 5: third site
             # i.e. idxs = [0, 3], [1, 4], [2, 5] for sites 0, 1, 2
-            slc = slice(n, N * C, N)  # C indices
+            slc = slice(n, N * U, N)  # U indices
             for g in range(G):
-                mu = mean_stds[0, g, :, slc]  # shape (M, C)
-                sig = mean_stds[1, g, :, slc]  # shape (M, C)
+                mu = mean_stds[0, g, :, slc]  # shape (M, U)
+                sig = mean_stds[1, g, :, slc]  # shape (M, U)
                 c = out[self.start + g]['_c']
                 s = out[self.start + g]['_s']
                 for p in range(P):
-                    eps = (imls[p] - mu[imti]) / sig[imti]  # shape C
-                    poes = _truncnorm_sf(self.truncation_level, eps)  # shape C
+                    eps = (imls[p] - mu[imti]) / sig[imti]  # shape U
+                    poes = _truncnorm_sf(self.truncation_level, eps)  # shape U
                     ws = -numpy.log(
-                        (1. - probs) ** poes) / self.investigation_time
+                        (1. - probs[slc]) ** poes) / self.investigation_time
                     s[n, p] = ws.sum()  # weights not summing up to 1
                     for m in m_range:
                         c[m, n, 0, p] = ws @ (mu[m] + rho[m] * eps * sig[m])
@@ -1067,11 +1170,10 @@ class PmapMaker(object):
         return nbytes
 
     def _get_ctxs(self, src, sites):
-        with self.cmaker.ctx_mon:
-            ctxs = self.cmaker.get_ctxs(src, sites)
-            if self.fewsites:  # keep rupdata in memory
-                for ctx in ctxs:
-                    self.rupdata.append(ctx)
+        ctxs = self.cmaker.get_ctxs(src, sites)
+        if self.fewsites:  # keep rupdata in memory
+            for ctx in ctxs:
+                self.rupdata.append(ctx)
         return ctxs
 
     def _make_src_indep(self):
@@ -1086,22 +1188,22 @@ class PmapMaker(object):
                 sites = sites.complete
             ctxs = self._get_ctxs(src, sites)
             allctxs.extend(ctxs)
-            nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
+            # TODO: remove nrupts
             totlen += nsites
             if nsites and totlen > MAXSIZE:
-                cm.get_pmap(allctxs, pmap)
+                cm.get_pmap(concat(allctxs), pmap)
                 allctxs.clear()
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(nsites)
-            self.source_data['nrupts'].append(nctxs)
+            self.source_data['nrupts'].append(nsites)
             self.source_data['weight'].append(src.weight)
             self.source_data['ctimes'].append(dt)
             self.source_data['taskno'].append(cm.task_no)
-            timer.save(src, nctxs, nsites, dt, cm.task_no)
+            timer.save(src, nsites, nsites, dt, cm.task_no)
         if allctxs:
-            cm.get_pmap(allctxs, pmap)
+            cm.get_pmap(concat(allctxs), pmap)
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
@@ -1130,25 +1232,6 @@ class PmapMaker(object):
             timer.save(src, nctxs, nsites, dt, cm.task_no)
         return pmap
 
-    def dictarray(self, ctxs):
-        dic = {'src_id': []}  # par -> array
-        if not ctxs:
-            return dic
-        z0 = numpy.zeros(0)
-        for par in self.cmaker.get_ctx_params():
-            pa = par[:-1] if par.endswith('_') else par
-            if par.endswith('_'):
-                if par == 'probs_occur_':
-                    lst = [getattr(ctx, pa, z0) for ctx in ctxs]
-                else:
-                    lst = [getattr(ctx, pa) for ctx in ctxs]
-                dic[par] = numpy.array(lst, dtype=object)
-            else:
-                dic[par] = numpy.array([getattr(ctx, par, numpy.nan)
-                                        for ctx in ctxs])
-        dic['id'] = numpy.arange(len(ctxs)) * TWO32 + self.cmaker.out_no
-        return dic
-
     def make(self):
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
@@ -1158,7 +1241,7 @@ class PmapMaker(object):
             pmap = self._make_src_indep()
         dic = {'pmap': pmap,
                'cfactor': self.cmaker.collapser.cfactor,
-               'rup_data': self.dictarray(self.rupdata),
+               'rup_data': concat(self.rupdata),
                'source_data': self.source_data,
                'task_no': self.task_no,
                'grp_id': self.group[0].grp_id}
@@ -1274,11 +1357,14 @@ def get_dists(ctx):
             if par in KNOWN_DISTANCES}
 
 
+# used to produce a RuptureContext suitable for legacy code, i.e. for calls
+# to .get_mean_and_stddevs, like for instance in the SMTK
 def full_context(sites, rup, dctx=None):
     """
     :returns: a full RuptureContext with all the relevant attributes
     """
     self = RuptureContext()
+    self.src_id = 0
     for par, val in vars(rup).items():
         setattr(self, par, val)
     if not hasattr(self, 'occurrence_rate'):
@@ -1328,9 +1414,10 @@ class RuptureContext(BaseContext):
     """
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
-        'hypo_depth', 'width', 'hypo_loc')
+        'hypo_depth', 'width', 'hypo_loc', 'src_id')
 
     def __init__(self, param_pairs=()):
+        self.src_id = 0
         for param, value in param_pairs:
             setattr(self, param, value)
 

@@ -18,166 +18,13 @@ Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
 import abc
-import math
 import zlib
 import numpy
 from openquake.baselib import general
-from openquake.baselib.performance import compile, numba
 from openquake.hazardlib import mfd
-from openquake.hazardlib.geo import Point, geodetic
-from openquake.hazardlib.geo.surface.planar import (
-    PlanarSurface, build_planar_array)
+from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo.surface.planar import build_planar, PlanarSurface
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-
-F8 = numba.float64
-surfin_dt = numpy.dtype([
-    ('usd', float),
-    ('lsd', float),
-    ('rar', float),
-    ('mag', float),
-    ('area', float),
-    ('strike', float),
-    ('dip', float),
-    ('rake', float),
-    ('lon', float),
-    ('lat', float),
-    ('dep', float),
-    ('dims', (float, 3)),
-])
-
-
-@compile("(f8[:, :], f8, f8, f8, f8[:], f8, f8, f8, f8, f8, f8)")
-def _update(corners, usd, lsd, mag, dims, strike, dip, rake, clon, clat, cdep):
-    # from the rupture center we can now compute the coordinates of the
-    # four coorners by moving along the diagonals of the plane. This seems
-    # to be better then moving along the perimeter, because in this case
-    # errors are accumulated that induce distorsions in the shape with
-    # consequent raise of exceptions when creating PlanarSurface objects
-    # theta is the angle between the diagonal of the surface projection
-    # and the line passing through the rupture center and parallel to the
-    # top and bottom edges. Theta is zero for vertical ruptures (because
-    # rup_proj_width is zero)
-    half_length, half_width, half_height = dims / 2.
-    rdip = math.radians(dip)
-
-    # precalculated azimuth values for horizontal-only and vertical-only
-    # moves from one point to another on the plane defined by strike
-    # and dip:
-    azimuth_right = strike
-    azimuth_down = azimuth_right + 90
-    azimuth_left = azimuth_down + 90
-    azimuth_up = azimuth_left + 90
-
-    # half height of the vertical component of rupture width
-    # is the vertical distance between the rupture geometrical
-    # center and it's upper and lower borders:
-    # calculate how much shallower the upper border of the rupture
-    # is than the upper seismogenic depth:
-    vshift = usd - cdep + half_height
-    # if it is shallower (vshift > 0) than we need to move the rupture
-    # by that value vertically.
-    if vshift < 0:
-        # the top edge is below upper seismogenic depth. now we need
-        # to check that we do not cross the lower border.
-        vshift = lsd - cdep - half_height
-        if vshift > 0:
-            # the bottom edge of the rupture is above the lower seismo
-            # depth; that means that we don't need to move the rupture
-            # as it fits inside seismogenic layer.
-            vshift = 0
-        # if vshift < 0 than we need to move the rupture up.
-
-    # now we need to find the position of rupture's geometrical center.
-    # in any case the hypocenter point must lie on the surface, however
-    # the rupture center might be off (below or above) along the dip.
-    if vshift != 0:
-        # we need to move the rupture center to make the rupture fit
-        # inside the seismogenic layer.
-        hshift = abs(vshift / math.tan(rdip))
-        clon, clat = geodetic.fast_point_at(
-            clon, clat, azimuth_up if vshift < 0 else azimuth_down,
-            hshift)
-        cdep += vshift
-    theta = math.degrees(math.atan(half_width / half_length))
-    hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
-    corners[0, :2] = geodetic.fast_point_at(
-        clon, clat, strike + 180 + theta, hor_dist)
-    corners[1, :2] = geodetic.fast_point_at(
-        clon, clat, strike - theta, hor_dist)
-    corners[2, :2] = geodetic.fast_point_at(
-        clon, clat, strike + 180 - theta, hor_dist)
-    corners[3, :2] = geodetic.fast_point_at(
-        clon, clat, strike + theta, hor_dist)
-    corners[0:2, 2] = cdep - half_height
-    corners[2:4, 2] = cdep + half_height
-    corners[4, 0] = strike
-    corners[4, 1] = dip
-    corners[4, 2] = rake
-    corners[5, 0] = clon
-    corners[5, 1] = clat
-    corners[5, 2] = cdep
-
-
-# numbified below, ultrafast
-def build_corners(usd, lsd, mag, dims, strike, dip, rake, lon, lat, deps):
-    (M, N), D = usd.shape, len(deps)
-    corners = numpy.zeros((6, M, N, D, 3))
-    # 0,1,2,3: tl, tr, bl, br
-    # 4: (strike, dip, rake)
-    # 5: hypo
-    for m in range(M):
-        for n in range(N):
-            for d, dep in enumerate(deps):
-                _update(corners[:, m, n, d], usd[m, n], lsd[m, n], mag[m, n],
-                        dims[m, n], strike[m, n], dip[m, n], rake[m, n],
-                        lon, lat, dep)
-    return corners
-
-
-if numba:
-    build_corners = compile(F8[:, :, :, :, :](
-        F8[:, :],     # usd
-        F8[:, :],     # lsd
-        F8[:, :],     # mag
-        F8[:, :, :],  # dims
-        F8[:, :],     # strike
-        F8[:, :],     # dip
-        F8[:, :],     # rake
-        F8,           # lon
-        F8,           # lat
-        F8[:],        # dep
-    ))(build_corners)
-
-
-def build_planar_surfaces(surfin, lon, lat, deps, shift_hypo=False):
-    """
-    :param surfin:
-        Surface input parameters as an array of shape (M, N)
-    :param lon, lat
-        Longitude and latitude of the hypocenters (scalars)
-    :parameter deps:
-        Depths of the hypocenters (vector)
-    :param shift_hypo:
-        If true, change .hc to the shifted hypocenter
-    :return:
-        an array of PlanarSurfaces of shape (M, N, D)
-    """
-    corners = build_corners(
-        surfin.usd, surfin.lsd, surfin.mag, surfin.dims,
-        surfin.strike, surfin.dip, surfin.rake, lon, lat, numpy.array(deps))
-    planar_array = build_planar_array(corners[:4], corners[4], corners[5])
-    out = numpy.zeros(surfin.shape + (len(deps),), object)  # shape (M, N, D)
-    M, N, D = out.shape
-    for m in range(M):
-        for n in range(N):
-            for d in range(D):
-                surface = PlanarSurface.from_(planar_array[m, n, d])
-                if shift_hypo:
-                    surface.hc = Point(*corners[5, m, n, d])
-                else:
-                    surface.hc = Point(lon, lat, deps[d])
-                out[m, n, d] = surface
-    return out
 
 
 def get_code2cls():
@@ -321,6 +168,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                     yield rup, num_occ
             return
         # else (multi)point sources and area sources
+        usd = self.upper_seismogenic_depth
+        lsd = self.lower_seismogenic_depth
         rup_args = []
         rates = []
         for src in self:
@@ -340,11 +189,12 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             if num_occ:
                 _, np_prob, hc_prob, mag, np, lon, lat, hc_depth, src = args
                 hc = Point(lon, lat, hc_depth)
-                [[[surface]]] = build_planar_surfaces(
-                    src.get_surfin([mag], [np]), lon, lat, [hc.depth])
+                planar = build_planar(
+                    src.get_planin([(1., mag)], [(1., np)], [(1., hc.depth)]),
+                    lon, lat, usd, lsd)[0, 0, 0]
                 rup = ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type, hc,
-                    surface, rate, tom)
+                    PlanarSurface.from_(planar), rate, tom)
                 yield rup, num_occ
 
     @abc.abstractmethod
@@ -466,8 +316,8 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         Get a list of pairs "magnitude -- annual occurrence rate".
 
-        The list is taken from assigned MFD object
-        (see :meth:`openquake.hazardlib.mfd.base.BaseMFD.get_annual_occurrence_rates`)
+        The list is taken from assigned MFD object (see :meth:
+        `openquake.hazardlib.mfd.base.BaseMFD.get_annual_occurrence_rates`)
         with simple filtering by rate applied.
 
         :param min_rate:

@@ -1054,6 +1054,7 @@ class OqParam(valid.ParamSet):
                 self.intensity_measure_types, [0])
             delattr(self, 'intensity_measure_types')
         if ('ps_grid_spacing' in names_vals and
+                float(names_vals['ps_grid_spacing']) and
                 'pointsource_distance' not in names_vals):
             self.pointsource_distance = dict(
                 default=2 * float(names_vals['ps_grid_spacing']))

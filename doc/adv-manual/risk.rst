@@ -114,8 +114,8 @@ GMPE logic tree and then computing the weighted mean of the individual
 branch results. This has become possible through the introduction of 
 `AvgGMPE feature <https://github.com/gem/oq-engine/blob/engine-3.9/openquake/qa_tests_data/classical/case_19/gmpe_logic_tree.xml#L26-L40>`_ in version 3.9.
 
-Using ``collect_rlzs=true``
-----------------------------
+Using ``collect_rlzs=true`` in the risk calculation
+---------------------------------------------------
 
 Since version 3.12 the engine recognizes a flag ``collect_rlzs`` in
 the risk configuration file, which by default is false. When the flag
@@ -135,6 +135,10 @@ Note 2: ``collect_rlzs`` is not the inverse of the ``individual rlsz``
 flag. The two flags are completely independent, one refers to risk
 and the other to hazard calculations.
 
+Note 3: ``collect_rlzs`` is completely ignored in the hazard part of
+the calculation, i.e. it does not affect at all the computation of the GMFs,
+only the computation of the risk curves.
+
 Splitting the calculation into subregions
 -----------------------------------------
 
@@ -143,15 +147,13 @@ models or ground motion models to the hazard or loss estimates,
 collapsing the logic trees into a single branch to reduce
 computational expense is not an option. But before going through the
 effort of trimming the logic trees, there is an interim step that must
-be explored, at least for large regions like the entire continental United States.
-This step is to geographically divide the large region into logical smaller
-subregions, such that the contribution to the hazard or losses in one
-subregion from the other subregions is negligibly small or even zero. 
-The effective realizations in each of the subregions will then be much 
-fewer than when trying to cover the entire large region in a single
-calculation.
-
-NB: ``collect_rlzs`` has no effect at all on the hazard results.
+be explored, at least for large regions like the entire continental
+United States.  This step is to geographically divide the large region
+into logical smaller subregions, such that the contribution to the
+hazard or losses in one subregion from the other subregions is
+negligibly small or even zero.  The effective realizations in each of
+the subregions will then be much fewer than when trying to cover the
+entire large region in a single calculation.
 
 Trimming of the logic-trees or sampling of the branches
 -------------------------------------------------------

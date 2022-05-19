@@ -1,6 +1,16 @@
+  [Ashta Poudel, Anirudh Rao, Michele Simionato]
+  * Added the ability to run connectivity analysis in event_based_damage
+    and scenario_damage calculation with an appropriate exposure
+
+  [Tom Son, Michele Simionato]
+  * Added ztor estimation to Campbell and Bozorgnia (2014)
+
   [Michele Simionato]
+  * Internal: removed REQUIRES_COMPUTED_PARAMETERS
+  * Using PointMSR when the reqv approximation is enabled
+  * Internal: changed the rupture storage for classical calculations
   * Optimized rupture instantiation for point sources
-  * Optimized distance calculations for point point sources
+  * Optimized distance calculations for point sources
 
   [Tom Son, Claudio Schill]
   * Simple performance improvement of Kuehn et al. 2020 model

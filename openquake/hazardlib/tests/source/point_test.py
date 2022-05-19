@@ -163,8 +163,8 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         width_right = surface.top_right.distance(surface.bottom_right)
         self.assertAlmostEqual(width_left, width_right, delta=delta)
         self.assertAlmostEqual(width_right, width, delta=delta)
-        self.assertAlmostEqual(width, surface.array.wld[0], delta=delta)
-        self.assertAlmostEqual(length, surface.array.wld[1], delta=delta)
+        self.assertAlmostEqual(width, surface.array.wlr[0], delta=delta)
+        self.assertAlmostEqual(length, surface.array.wlr[1], delta=delta)
 
     def test_1_rupture_is_inside(self):
         rupture = self._get_rupture(min_mag=5., max_mag=6.,

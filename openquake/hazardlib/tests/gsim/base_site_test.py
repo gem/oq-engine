@@ -84,7 +84,7 @@ class GetPoesSiteTestCase(unittest.TestCase):
 
         # This function is rather slow at the moment
         ctx = unittest.mock.Mock(mag=[self.mag], rrup=self.rrup, sids=[0],
-                                 ampcode=[sitecode])
+                                 ampcode=[sitecode], src_id=0)
         res = get_poes_site(self.meastd, self.cmaker, ctx)
 
         if False:
