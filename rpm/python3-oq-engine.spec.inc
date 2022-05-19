@@ -59,7 +59,7 @@ Patch1: openquake.cfg.patch
 
 Requires(pre): shadow-utils
 
-Requires: oq-python3 python3-oq-libs >= 3.1.0
+Requires: oq-python3 >= 3.8.0
 Requires: sudo systemd
 
 BuildRequires: oq-python3 sed systemd zip
@@ -91,23 +91,11 @@ Copyright (C) 2010-2022 GEM Foundation
 %prep
 %setup -n %{oqformat}
 
-%patch1 -p1
-
 %build
-%{__python3} setup.py build
 
 %pre
-getent group %{oquser} >/dev/null || groupadd -r %{oquser}
-getent passwd %{oquser} >/dev/null || \
-    useradd -r -g %{oquser} -d %{_localstatedir}/lib/%{oquser} -s /bin/bash \
-    -c "The OpenQuake user" %{oquser}
 
 %install
-# Fix shebangs before installation
-for f in $(find . -type f -executable | xargs --no-run-if-empty grep -rlE '^#!/usr/bin/env python3$'); do \
-    sed -i 's@#!.*env \+python[23]\?@#!/opt/openquake/bin/python3@g' $f; \
-done
-# Fix version in python init
 sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/baselib/__init__.py
 install -p -m 755 -d %{buildroot}%{_bindir}
 install -p -m 755 -d %{buildroot}%{_oqbindir}
@@ -120,16 +108,6 @@ mkdir -p %{buildroot}%{_datadir}/openquake/engine
 mkdir -p %{buildroot}%{_datadir}/applications
 mkdir -p %{buildroot}%{_datadir}/pixmaps
 mkdir -p %{buildroot}%{_unitdir}
-install -m 644 openquake/engine/openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
-install -m 644 debian/desktop/oq-engine-webui.desktop %{buildroot}%{_datadir}/applications
-install -m 644 debian/desktop/openquake.png %{buildroot}%{_datadir}/pixmaps
-install -m 644 debian/systemd/openquake-dbserver.service %{buildroot}%{_unitdir}/openquake-dbserver.service
-install -m 644 debian/systemd/openquake-webui.service %{buildroot}%{_unitdir}/openquake-webui.service
-install -m 644 debian/systemd/openquake-celery.service %{buildroot}%{_unitdir}/openquake-celery.service
-cp -R demos %{buildroot}/%{_datadir}/openquake/engine
-# Make a zipped copy of each demo
-helpers/zipdemos.sh %{buildroot}%{_datadir}/openquake/engine/demos
-cp -R utils %{buildroot}/%{_datadir}/openquake/engine
 
 %post
 %systemd_post openquake-dbserver.service
