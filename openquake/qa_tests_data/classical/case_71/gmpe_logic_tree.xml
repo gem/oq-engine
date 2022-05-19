@@ -13,7 +13,7 @@
       <logicTreeBranch branchID="B">
         <uncertaintyModel>
           [CampbellBozorgnia2014]
-          better_ztor = 1
+          better_ztor = true
         </uncertaintyModel>
         <uncertaintyWeight>0.3</uncertaintyWeight>
       </logicTreeBranch>
