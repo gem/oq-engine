@@ -55,10 +55,6 @@ BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-engine
 
-%description
-OpenQuake is an open source application that allows users to
-compute seismic hazard and seismic risk of earthquakes on a global scale.
-Copyright (C) 2010-2022 GEM Foundation
 
 Requires: oq-python3 >= 3.8.0
 Requires: sudo systemd
@@ -73,6 +69,11 @@ Provides: python-oq-hazardlib python-oq-engine
 # =======================
 
 Source0: %{installscript}
+
+%description
+OpenQuake is an open source application that allows users to
+compute seismic hazard and seismic risk of earthquakes on a global scale.
+Copyright (C) 2010-2022 GEM Foundation
 
 %prep
 %setup -n %{oqformat}
