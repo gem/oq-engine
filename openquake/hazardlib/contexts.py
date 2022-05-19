@@ -736,9 +736,7 @@ class ContextMaker(object):
                     for gsim in self.gsims:
                         gsim.set_parameters(ctxt)
                     ctxs.append(ctxt)
-        if not ctxs:
-            return []
-        return [numpy.concatenate(ctxs).view(numpy.recarray)]
+        return concat(ctxs)
 
     def _triples(self, src, sitecol, planardict):
         # splitting by magnitude
@@ -862,23 +860,6 @@ class ContextMaker(object):
         ctxs = self.from_srcs(srcs, sitecol)
         with patch.object(self.collapser, 'collapse_level', collapse_level):
             return self.get_pmap(ctxs).array(len(sitecol))
-
-    def recarrays(self, ctxs, magi=None):
-        """
-        :returns: a list of one or two recarrays
-        """
-        parametric, nonparametric, out = [], [], []
-        for ctx in ctxs:
-            assert not isinstance(ctx, numpy.recarray), ctx
-            if numpy.isnan(getattr(ctx, 'occurrence_rate', numpy.nan)):
-                nonparametric.append(ctx)
-            else:
-                parametric.append(ctx)
-        if parametric:
-            out.append(self.recarray(parametric, magi))
-        if nonparametric:
-            out.append(self.recarray(nonparametric, magi))
-        return out
 
     def get_pmap(self, ctxs, probmap=None):
         """
@@ -1205,7 +1186,7 @@ class PmapMaker(object):
             # TODO: remove nrupts
             totlen += nsites
             if nsites and totlen > MAXSIZE:
-                cm.get_pmap(allctxs, pmap)
+                cm.get_pmap(concat(allctxs), pmap)
                 allctxs.clear()
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
@@ -1216,7 +1197,7 @@ class PmapMaker(object):
             self.source_data['taskno'].append(cm.task_no)
             timer.save(src, nsites, nsites, dt, cm.task_no)
         if allctxs:
-            cm.get_pmap(allctxs, pmap)
+            cm.get_pmap(concat(allctxs), pmap)
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):

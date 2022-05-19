@@ -179,31 +179,6 @@ class EffectTestCase(unittest.TestCase):
         dist = list(effect.dist_by_mag(1.1).values())
         numpy.testing.assert_allclose(dist, [0, 10, 13.225806, 16.666667])
 
-    def test_get_pmap(self):
-        truncation_level = 3
-        imtls = DictArray({'PGA': [0.01]})
-        gsims = [valid.gsim('AkkarBommer2010')]
-        ctxs = []
-        for occ_rate in (.001, .002):
-            ctx = RuptureContext()
-            ctx.mag = 5.5
-            ctx.rake = 90
-            ctx.occurrence_rate = occ_rate
-            ctx.sids = numpy.array([0.])
-            ctx.vs30 = numpy.array([760.])
-            ctx.rrup = numpy.array([100.])
-            ctx.rjb = numpy.array([99.])
-            ctx.src_id = 0
-            ctx.clon = 0.
-            ctx.clat = 0.
-            ctx.weight = 0.
-            ctxs.append(ctx)
-        cmaker = ContextMaker(
-            'TRT', gsims, dict(imtls=imtls, truncation_level=truncation_level))
-        cmaker.tom = PoissonTOM(time_span=50)
-        pmap = cmaker.get_pmap(cmaker.recarrays(ctxs))
-        numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)
-
 
 # see also classical/case_24 and classical/case_69
 class CollapseTestCase(unittest.TestCase):
