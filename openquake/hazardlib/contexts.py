@@ -694,9 +694,9 @@ class ContextMaker(object):
                 ctx['clat'] = closest[1]
 
             # setting site parameters
-            for u, rec in enumerate(ctx):
-                for par in self.siteparams:
-                    rec[par] = sites.array[par]
+            for par in self.siteparams:
+                ctx[par] = sites.array[par]  # shape N-> (U, N)
+
         return ctx
 
     def get_ctxs_planar(self, src, sitecol):
