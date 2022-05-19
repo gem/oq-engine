@@ -661,30 +661,30 @@ class ContextMaker(object):
 
         with self.ctx_mon:  # building contexts
             ctx = self.build_ctx((len(planar), len(sites)))
-            ctx['src_id'] = src_id
+            ctxt = ctx.T  # smart trick taking advantage of numpy magic
+            ctxt['src_id'] = src_id
             # setting rupture parameters
             for par in self.ruptparams:
-                for u, rec in enumerate(ctx):
-                    if par == 'mag':
-                        rec[par] = mag
-                    elif par == 'occurrence_rate':
-                        rec[par] = planar.wlr[u, 2]
-                    elif par == 'width':
-                        rec[par] = planar.wlr[u, 0]
-                    elif par == 'strike':
-                        rec[par] = planar.sdr[u, 0]
-                    elif par == 'dip':
-                        rec[par] = planar.sdr[u, 1]
-                    elif par == 'rake':
-                        rec[par] = planar.sdr[u, 2]
-                    elif par == 'ztor':  # top edge depth
-                        rec[par] = planar.corners[u, 2, 0]
-                    elif par == 'hypo_lon':
-                        rec[par] = planar.hypo[u, 0]
-                    elif par == 'hypo_lat':
-                        rec[par] = planar.hypo[u, 1]
-                    elif par == 'hypo_depth':
-                        rec[par] = planar.hypo[u, 2]
+                if par == 'mag':
+                    ctxt[par] = mag
+                elif par == 'occurrence_rate':
+                    ctxt[par] = planar.wlr[:, 2]  # shape U-> (N, U)
+                elif par == 'width':
+                    ctxt[par] = planar.wlr[:, 0]
+                elif par == 'strike':
+                    ctxt[par] = planar.sdr[:, 0]
+                elif par == 'dip':
+                    ctxt[par] = planar.sdr[:, 1]
+                elif par == 'rake':
+                    ctxt[par] = planar.sdr[:, 2]
+                elif par == 'ztor':  # top edge depth
+                    ctxt[par] = planar.corners[:, 2, 0]
+                elif par == 'hypo_lon':
+                    ctxt[par] = planar.hypo[:, 0]
+                elif par == 'hypo_lat':
+                    ctxt[par] = planar.hypo[:, 1]
+                elif par == 'hypo_depth':
+                    ctxt[par] = planar.hypo[:, 2]
 
             # setting distance parameters
             for par in dists:
