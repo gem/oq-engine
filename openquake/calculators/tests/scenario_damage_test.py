@@ -255,10 +255,11 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # infrastructure risk
         self.run_calc(case_15.__file__, 'job.ini')
         nodes = self.calc.datastore.read_df('functional_demand_nodes')
-        expected_ids = "D1 D10 D11 D12 D2 D3 D4 D5 D6 D7 D8 D9".split()
-        expected_num = [38, 24, 24, 22, 38, 38, 38, 39, 39, 25, 24, 25]
-        self.assertEqual(list(nodes.number), expected_num)
-        self.assertEqual(list(nodes.id), expected_ids)
+        got = dict(zip(nodes.id, nodes.number))
+        expected = {'D1': 38, 'D10': 24, 'D11': 24, 'D12': 22, 'D2': 38,
+                    'D3': 38, 'D4': 38, 'D5': 39, 'D6': 39, 'D7': 25,
+                    'D8': 24, 'D9': 25}
+        self.assertEqual(got, expected)
 
 
 def losses(aid, alt):
