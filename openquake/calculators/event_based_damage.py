@@ -23,7 +23,7 @@ import pandas
 
 from openquake.baselib import hdf5, general, parallel
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.risklib import scientific
+from openquake.risklib import scientific, connectivity
 from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
@@ -257,3 +257,10 @@ class DamageCalculator(EventBasedRiskCalculator):
                        rlz=numpy.arange(self.R),
                        loss_type=oq.loss_types,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
+
+        fields = self.assetcol.array.dtype.names
+        if 'supply_or_demand' in fields:
+            demand_nodes, avg_conn_loss = connectivity.analysis(self.datastore)
+            self.datastore.create_df('functional_demand_nodes', demand_nodes)
+            logging.info('Stored functional_demand_nodes')
+            logging.info('Average connectivity loss: %.4f', avg_conn_loss)

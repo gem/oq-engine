@@ -1,3 +1,7 @@
+  [Ashta Poudel, Anirudh Rao, Michele Simionato]
+  * Added the ability to run connectivity analysis in event_based_damage
+    and scenario_damage calculation with an appropriate exposure
+
   [Tom Son, Michele Simionato]
   * Added ztor estimation to Campbell and Bozorgnia (2014)
 
