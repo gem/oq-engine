@@ -1,3 +1,6 @@
+  [Tom Son, Michele Simionato]
+  * Added ztor estimation to Campbell and Bozorgnia (2014)
+
   [Michele Simionato]
   * Internal: removed REQUIRES_COMPUTED_PARAMETERS
   * Using PointMSR when the reqv approximation is enabled
