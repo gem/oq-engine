@@ -84,21 +84,20 @@ Copyright (C) 2010-2022 GEM Foundation
 # ======================================================
 
 %install
-
-mkdir -p %{buildroot}%{_bindir}
-cp -a %{installscript} %{buildroot}%{_bindir}/
-chmod a+x %{buildroot}%{_bindir}/%{installscript}
+#mkdir -p %{buildroot}%{_bindir}
+mkdir -p %{buildroot}%{_oqprefix}
+cp -a %{installscript} %{buildroot}%{_oqprefix}/
 
 %files
-%{_bindir}/%{installscript}
+%{_oqprefix}/%{installscript}
 
 %post
 echo STARTING: INSTALL OF OPENQUAKE ENGINE
 cd %{_oqprefix}
 %if %{oqstable} == 1
-%{__python3} ./%{installscript} server
+%{__python3} %{_oqprefix}/%{installscript} server
 %else
-%{__python3} ./%{installscript} server --version=master
+%{__python3} %{_oqprefix}/%{installscript} server --version=master
 %endif
 
 %clean
@@ -107,8 +106,8 @@ rm -rf %{buildroot}
 %preun
 cd %{_oqprefix}
 %if %{oqstable} == 1
-%{__python3} ./%{installscript} server --remove
+%{__python3} %{_oqprefix}/%{installscript} server --remove
 %else
-%{__python3} ./%{installscript} server --version=master --remove
+%{__python3} %{_oqprefix}/%{installscript} server --version=master --remove
 %endif
 
