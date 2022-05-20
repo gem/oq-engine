@@ -53,6 +53,9 @@ since there are more calls.
 | computing mean_std         | 103.9    | 0.0       | 4_912   |
 | make_contexts              | 24.9     | 0.0       | 186_265 |
 
+Now "computing distances" and "make_contexts" are really fast and
+"iter_ruptures" becomes the dominating factor.
+
 # oq compare uhs 229 231, still good precision
 +---------+----------+----------+------+
 | poe     | rms-diff | max-diff | site |
@@ -71,6 +74,8 @@ since there are more calls.
 | composing pnes             | 80.0     | 0.0       | 65_328  |
 | computing mean_std         | 71.6     | 0.0       | 3_388   |
 | make_contexts              | 36.5     | 0.0       | 467_358 |
+
+We trade a minor speedup with a twice as worse precision.
 
 # oq compare uhs 229 232, worse precision
 +---------+----------+----------+------+
