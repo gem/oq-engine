@@ -52,7 +52,7 @@ jobs:
       - name: Deploy SPEC file from template
         env:
           repo: oq-engine
-          branch: 'HEAD'
+          branch: HEAD
           stable: ${{ github.event.inputs.lts-ver }}
         run: |
           pwd
