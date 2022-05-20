@@ -436,7 +436,7 @@ def get_rjb(planar, points):
         # distances from all the target points to each of surface's
         # corners' projections (we might not need all of those but it's
         # better to do that calculation once for all).
-        corners = fast_spherical_to_cartesian(clons, clats)
+        corners = fast_spherical_to_cartesian(clons, clats, numpy.zeros(4))
         # shape (4, 3) and (N, 3) -> (4, N) -> N
         dists_to_corners = numpy.array([geo_utils.min_distance(point, corners)
                                         for point in points])
@@ -485,7 +485,7 @@ def get_rx(planar, points):
     """
     :param planar: a planar recarray of shape (U, 3)
     :param points: an array of of shape (N, 3)
-    :returns: (U, N) values
+    :returns: (U, N) distances
     """
     lons, lats, deps = geo_utils.cartesian_to_spherical(points)
     out = numpy.zeros((len(planar), len(points)))
@@ -501,7 +501,7 @@ def get_ry0(planar, points):
     """
     :param planar: a planar recarray of shape (U, 3)
     :param points: an array of of shape (N, 3)
-    :returns: (U, N) values
+    :returns: (U, N) distances
     """
     lons, lats, deps = geo_utils.cartesian_to_spherical(points)
     out = numpy.zeros((len(planar), len(points)))
@@ -519,6 +519,59 @@ def get_ry0(planar, points):
     return out
 
 
+# numbified below
+def get_rhypo(planar, points):
+    """
+    :param planar: a planar recarray of shape (U, 3)
+    :param points: an array of of shape (N, 3)
+    :returns: (U, N) distances
+    """
+    out = numpy.zeros((len(planar), len(points)))
+    lons, lats, deps = geo_utils.cartesian_to_spherical(points)
+    hypo = planar.hypo
+    for u, pla in enumerate(planar):
+        hdist = geodetic.distances(
+            math.radians(hypo[u, 0]), math.radians(hypo[u, 1]),
+            numpy.radians(lons), numpy.radians(lats))
+        vdist = hypo[u, 2] - deps
+        out[u] = numpy.sqrt(hdist ** 2 + vdist ** 2)
+    return out
+
+
+# numbified below
+def get_repi(planar, points):
+    """
+    :param planar: a planar recarray of shape (U, 3)
+    :param points: an array of of shape (N, 3)
+    :returns: (U, N) distances
+    """
+    out = numpy.zeros((len(planar), len(points)))
+    lons, lats, deps = geo_utils.cartesian_to_spherical(points)
+    hypo = planar.hypo
+    for u, pla in enumerate(planar):
+        out[u] = geodetic.distances(
+            math.radians(hypo[u, 0]), math.radians(hypo[u, 1]),
+            numpy.radians(lons), numpy.radians(lats))
+    return out
+
+
+# numbified below
+def get_azimuth(planar, points):
+    """
+    :param planar: a planar recarray of shape (U, 3)
+    :param points: an array of of shape (N, 3)
+    :returns: (U, N) distances
+    """
+    out = numpy.zeros((len(planar), len(points)))
+    lons, lats, deps = geo_utils.cartesian_to_spherical(points)
+    hypo = planar.hypo
+    for u, pla in enumerate(planar):
+        azim = geodetic.fast_azimuth(hypo[u, 0], hypo[u, 1], lons, lats)
+        strike = planar.sdr[u, 0]
+        out[u] = (azim - strike) % 360
+    return out
+
+
 if numba:
     planar_nt = numba.from_dtype(planar_array_dt)
     project = compile(numba.float64[:, :, :](
@@ -530,18 +583,24 @@ if numba:
         numba.float64[:, :],
         numba.float64[:, :]
     ))(project_back)
-    get_rjb = compile(numba.float64[:, :](
-        planar_nt[:, :],
-        numba.float64[:, :],
-    ))(get_rjb)
-    get_rx = compile(numba.float64[:, :](
-        planar_nt[:, :],
-        numba.float64[:, :],
-    ))(get_rx)
-    get_ry0 = compile(numba.float64[:, :](
-        planar_nt[:, :],
-        numba.float64[:, :],
-    ))(get_ry0)
+    comp = compile(numba.float64[:, :](planar_nt[:, :], numba.float64[:, :]))
+    get_rjb = comp(get_rjb)
+    get_rx = comp(get_rx)
+    get_ry0 = comp(get_ry0)
+    get_rhypo = comp(get_rhypo)
+    get_repi = comp(get_repi)
+    get_azimuth = comp(get_azimuth)
+
+
+def get_distances_planar(planar, sites, dist_type):
+    """
+    :param planar: a planar array of shape (U, 3)
+    :param sites: a filtered site collection with N sites
+    :param dist_type: kind of distance to compute
+    :returns: an array of distances of shape (U, N)
+    """
+    getdist = globals()['get_' + dist_type]
+    return getdist(planar, sites.xyz)
 
 
 class PlanarSurface(BaseSurface):
@@ -807,6 +866,20 @@ class PlanarSurface(BaseSurface):
         return Point(self.corner_lons[3], self.corner_lats[3],
                      self.corner_depths[3])
 
+    @property  # used in the SMTK
+    def length(self):
+        """
+        Return length of the rupture
+        """
+        return self.array.wlr[1]
+
+    @property  # used in the SMTK
+    def width(self):
+        """
+        Return length of the rupture
+        """
+        return self.array.wlr[0]
+
     def get_strike(self):
         """
         Return strike value that was provided to the constructor.
@@ -867,7 +940,8 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
-        return get_rjb(self.array.reshape(1, 3), mesh.xyz)[0]
+        rjb = get_rjb(self.array.reshape(1, 3), mesh.xyz)[0]
+        return rjb
 
     def get_rx_distance(self, mesh):
         """

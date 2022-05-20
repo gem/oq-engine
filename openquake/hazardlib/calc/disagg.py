@@ -169,8 +169,9 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
         # Now we split the epsilon into parts (one for each epsilon-bin larger
         # than lvls)
         if epsstar:
-            assert (lvls > min_eps).all()
-            poes[:, idxs-1, m, p, z] = truncnorm.sf(lvls)
+            iii = (lvls >= min(epsilons)) & (lvls < max(epsilons))
+            # The leftmost indexes are ruptures and epsilons
+            poes[iii, idxs[iii]-1, m, p, z] = truncnorm.sf(lvls[iii])
         else:
             poes[:, :, m, p, z] = _disagg_eps(
                 truncnorm.sf(lvls), idxs, eps_bands, cum_bands)

@@ -87,6 +87,22 @@ def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
     return diameter * distance
 
 
+@compile("f8[:](f8, f8, f8[:], f8[:])")
+def fast_azimuth(lon, lat, lons, lats):
+    """
+    Calculate the azimuths of a collection of points with respect to a
+    reference point.
+    """
+    lon, lat = math.radians(lon), math.radians(lat)
+    lons, lats = np.radians(lons), np.radians(lats)
+    cos_lats = np.cos(lats)
+    true_course = np.arctan2(
+        np.sin(lon - lons) * cos_lats,
+        math.cos(lat) * np.sin(lats) -
+        math.sin(lat) * cos_lats * np.cos(lon - lons))
+    return - np.degrees(true_course)
+
+
 def azimuth(lons1, lats1, lons2, lats2):
     """
     Calculate the azimuth between two points or two collections of points.
@@ -246,8 +262,8 @@ def spherical_to_cartesian(lons, lats, depths=None):
     return arr
 
 
-@compile("f8[:, :](f8[:], f8[:])")
-def fast_spherical_to_cartesian(lons, lats):
+@compile("f8[:, :](f8[:], f8[:], f8[:])")
+def fast_spherical_to_cartesian(lons, lats, deps):
     """
     Return the position vectors (in Cartesian coordinates) of list of spherical
     coordinates.
@@ -269,11 +285,12 @@ def fast_spherical_to_cartesian(lons, lats):
     """
     phi = np.radians(lons)
     theta = np.radians(lats)
-    cos_theta_r = EARTH_RADIUS * np.cos(theta)
+    rr = EARTH_RADIUS - deps
+    cos_theta_r = rr * np.cos(theta)
     arr = np.zeros((len(phi), 3))
     arr[:, 0] = cos_theta_r * np.cos(phi)
     arr[:, 1] = cos_theta_r * np.sin(phi)
-    arr[:, 2] = EARTH_RADIUS * np.sin(theta)
+    arr[:, 2] = rr * np.sin(theta)
     return arr
 
 
