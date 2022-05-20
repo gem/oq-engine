@@ -1,0 +1,85 @@
+---
+name: RPM build of engine in Fedora Copr
+on:
+  #
+  push:
+    branch: [ae_rpm_nightly] 
+  workflow_dispatch:
+    inputs:
+      lts-ver:
+        description: Engine LTS release
+        default: 1
+        required: true
+      git-ref:
+        description: Git Ref Branch
+        default: master
+        required: true
+
+jobs:
+
+  build:
+    name: Submit a build from Fedora container
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PULL_REQUEST: ${{ github.event.number }}
+      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+      GITHUB_REF:  ${{ github.ref }}
+      GITHUB_HD_REF:  ${{ github.head_ref }}
+      GITHUB_BS_REF:  ${{ github.base_ref }}
+    strategy:
+      matrix:
+        epel-release: [epel-7-x86_64, rocky+epel-8-x86_64]
+    # Run in Fedora container on Ubuntu VM
+
+    container:
+      image: fedora:36
+      options: --privileged
+    steps:
+      - name: Clone Repository (Latest)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+
+      - name: Install tooling for source RPM build
+        run: |
+          dnf -y install @development-tools @rpm-development-tools \
+          copr-cli mock make gcc openssl-devel bzip2-devel libffi-devel
+
+      - name: Deploy SPEC file from template
+        env:
+          repo: oq-engine
+          branch: 'HEAD'
+          stable: ${{ github.event.inputs.lts-ver }}
+        run: |
+          pwd
+          ls -lrt
+          mkdir -p ~/rpmbuild/{RPMS,SOURCES,SPECS,SRPMS}
+          LIB=$(cut -d "-" -f 2 <<< ${{ repo }})
+          SHA=$(git rev-parse --short ${{ branch }})
+          VER=$(cat openquake/baselib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
+          TIME=$(date +"%s")
+          echo "$LIB - $BRANCH - $SHA - $VER"
+
+      - name: Build RPM from SPEC files
+        env:
+          pyver: ${{ github.event.inputs.oqpython-ver }}
+        run: |
+          spectool -g -R ~/rpmbuild/SPECS/oq-python.spec
+          rpmbuild -bs  ~/rpmbuild/SPECS/oq-python.spec
+          SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
+          mock -r ${{ matrix.epel-release}} $SRPM
+
+          #      - name: Publish Package on COPR
+          #        env:
+          #          API_TOKEN_CONTENT: ${{ secrets.COPR_API_TOKEN }}
+          #          COPR_REPO: openquake
+          #        run: |
+          #          mkdir -p "$HOME/.config"
+          #          echo "$API_TOKEN_CONTENT" > "$HOME/.config/copr"
+          #          echo "COPR REPO: $COPR_REPO"
+          #          SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
+          #          copr-cli build ${COPR_REPO} $SRPM
