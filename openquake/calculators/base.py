@@ -601,7 +601,6 @@ class HazardCalculator(BaseCalculator):
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.from_engine = self.from_engine
-            calc.pre_checks = lambda: self.__class__.pre_checks(calc)
             calc.run(remove=False)
             calc.datastore.close()
             for name in (
@@ -928,7 +927,9 @@ class HazardCalculator(BaseCalculator):
                 keep_trts.add(trt)
         self.datastore['est_rups_by_grp'] = U32(nrups)
         discard_trts = set(self.full_lt.trts) - keep_trts
-        if discard_trts:
+        if discard_trts and self.oqparam.calculation_mode == 'disaggregation':
+            self.oqparam.discard_trts = discard_trts
+        elif discard_trts:
             msg = ('No sources for some TRTs: you should set\n'
                    'discard_trts = %s\nin %s') % (
                        ', '.join(discard_trts), self.oqparam.inputs['job_ini'])
