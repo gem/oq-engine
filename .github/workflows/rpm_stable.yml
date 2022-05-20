@@ -54,17 +54,16 @@ jobs:
           REPO: oq-engine
           BRANCH: HEAD
           STABLE: ${{ github.event.inputs.lts-ver }}
+          SHA: ${{ env.GITHUB_SHA }})
         run: |
           pwd
           ls -lrt
           mkdir -p ~/rpmbuild/{RPMS,SOURCES,SPECS,SRPMS}
           LIB=$(cut -d "-" -f 2 <<< ${{ env.REPO }})
-          #SHA=$(git rev-parse --short ${{ env.BRANCH }})
-          SHA=${{ env.GITHUB_SHA }})
           VER=$(cat openquake/baselib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
           TIME=$(date +"%s")
           echo "$LIB - $SHA - $VER $TIME"
-          echo "${{ env.REPO }}) - ${{ env.BRANCH }}"
+          echo "${{ env.SHA }} ${{ env.REPO }}) - ${{ env.BRANCH }}"
 
       - name: Build RPM from SPEC files
         env:
