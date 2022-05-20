@@ -18,6 +18,7 @@
 
 # Provide a custom prefix for oq
 %define _oqprefix /opt/openquake
+%define _oqvenv %{_oqprefix}/venv
 %define _oqpython %{_oqprefix}/bin
 
 # Make sure that the proper installation of python is used by macros
@@ -57,9 +58,6 @@ Url: http://github.com/gem/oq-engine
 
 
 Requires: oq-python3 >= 3.8.0
-Requires: sudo systemd
-
-BuildRequires: oq-python3 
 
 Obsoletes: python-oq-hazardlib python-oq-engine
 Provides: python-oq-hazardlib python-oq-engine
@@ -97,8 +95,12 @@ chmod a+x %{buildroot}%{_bindir}/%{installscript}
 
 %post
 echo STARTING: INSTALL OF OPENQUAKE ENGINE 
-
-%{__python3} {_bindir}%{installscript} server
+cd %{_oqprefix}
+%if %{oqstable} == 1
+%{__python3} ./%{installscript} server 
+%else
+%{__python3} ./%{installscript} server --version=master
+%endif
 
 %clean
 rm -rf %{buildroot}
