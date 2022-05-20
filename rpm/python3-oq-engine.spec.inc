@@ -105,6 +105,7 @@ cd %{_oqprefix}
 rm -rf %{buildroot}
 
 %preun
+cd %{_oqprefix}
 %if %{oqstable} == 1
 %{__python3} ./%{installscript} server --remove
 %else
