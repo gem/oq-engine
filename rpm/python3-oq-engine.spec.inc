@@ -78,7 +78,6 @@ Copyright (C) 2010-2022 GEM Foundation
 
 %build
 
-%pre
 
 # ======================================================
 # Installing the built code:
@@ -94,13 +93,21 @@ chmod a+x %{buildroot}%{_bindir}/%{installscript}
 %{_bindir}/%{installscript}
 
 %post
-echo STARTING: INSTALL OF OPENQUAKE ENGINE 
+echo STARTING: INSTALL OF OPENQUAKE ENGINE
 cd %{_oqprefix}
 %if %{oqstable} == 1
-%{__python3} ./%{installscript} server 
+%{__python3} ./%{installscript} server
 %else
 %{__python3} ./%{installscript} server --version=master
 %endif
 
 %clean
 rm -rf %{buildroot}
+
+%preun
+%if %{oqstable} == 1
+%{__python3} ./%{installscript} server --remove
+%else
+%{__python3} ./%{installscript} server --version=master --remove
+%endif
+
