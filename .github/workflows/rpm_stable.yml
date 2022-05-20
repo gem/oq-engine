@@ -3,7 +3,7 @@ name: RPM build of engine in Fedora Copr
 on:
   #
   push:
-    branch: [ae_rpm_nightly] 
+    branch: [ae_rpm_nightly]
   workflow_dispatch:
     inputs:
       lts-ver:
@@ -59,7 +59,8 @@ jobs:
           ls -lrt
           mkdir -p ~/rpmbuild/{RPMS,SOURCES,SPECS,SRPMS}
           LIB=$(cut -d "-" -f 2 <<< ${{ env.REPO }})
-          SHA=$(git rev-parse --short ${{ env.BRANCH }})
+          #SHA=$(git rev-parse --short ${{ env.BRANCH }})
+          SHA=${{ env.GITHUB_SHA }})
           VER=$(cat openquake/baselib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
           TIME=$(date +"%s")
           echo "$LIB - $SHA - $VER $TIME"
