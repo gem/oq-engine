@@ -44,6 +44,9 @@ jobs:
         with:
           ref: ${{ github.event.inputs.git-ref }}
 
+      - name: Add SHORT_SHA env property with commit short sha
+        run: echo "SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
+
       - name: Install tooling for source RPM build
         run: |
           dnf -y install @development-tools @rpm-development-tools \
@@ -54,7 +57,6 @@ jobs:
           REPO: oq-engine
           BRANCH: HEAD
           STABLE: ${{ github.event.inputs.lts-ver }}
-          SHA: ${{ env.GITHUB_SHA }})
         run: |
           pwd
           ls -lrt
@@ -62,8 +64,8 @@ jobs:
           LIB=$(cut -d "-" -f 2 <<< ${{ env.REPO }})
           VER=$(cat openquake/baselib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
           TIME=$(date +"%s")
-          echo "$LIB - $SHA - $VER $TIME"
-          echo "${{ env.SHA }} ${{ env.REPO }}) - ${{ env.BRANCH }}"
+          echo "$LIB - ${SHA} - $VER $TIME"
+          echo "${SHA} ${{ env.REPO }} - ${{ env.BRANCH }}"
 
       - name: Build RPM from SPEC files
         env:
