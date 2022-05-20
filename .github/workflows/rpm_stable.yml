@@ -51,15 +51,15 @@ jobs:
 
       - name: Deploy SPEC file from template
         env:
-          repo: oq-engine
-          branch: HEAD
-          stable: ${{ github.event.inputs.lts-ver }}
+          REPO: oq-engine
+          BRANCH: HEAD
+          STABLE: ${{ github.event.inputs.lts-ver }}
         run: |
           pwd
           ls -lrt
           mkdir -p ~/rpmbuild/{RPMS,SOURCES,SPECS,SRPMS}
-          LIB=$(cut -d "-" -f 2 <<< ${{ repo }})
-          SHA=$(git rev-parse --short ${{ branch }})
+          LIB=$(cut -d "-" -f 2 <<< ${{ REPO }})
+          SHA=$(git rev-parse --short ${{ BRANCH }})
           VER=$(cat openquake/baselib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
           TIME=$(date +"%s")
           echo "$LIB - $BRANCH - $SHA - $VER"
