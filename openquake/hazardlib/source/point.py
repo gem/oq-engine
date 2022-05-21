@@ -190,7 +190,7 @@ class PointSource(ParametricSeismicSource):
         new.hypocenter_distribution = PMF([(1., depth)])
         return new
 
-    def get_planin(self, magd, npd, hdd):
+    def get_planin(self, magd, npd):
         """
         :return: array of dtype planin_dt of shape (#mags, #planes, #depths)
         """
@@ -198,17 +198,13 @@ class PointSource(ParametricSeismicSource):
         width = self.lower_seismogenic_depth - self.upper_seismogenic_depth
         rar = self.rupture_aspect_ratio
 
-        planin = numpy.zeros((len(magd), len(npd), len(hdd)), planin_dt).view(
+        planin = numpy.zeros((len(magd), len(npd)), planin_dt).view(
             numpy.recarray)
         mrate, mags = numpy.array(magd).T  # shape (2, M)
-        mrate = mrate[:, None]  # numpy trick for speed
         nrate = numpy.array([nrate for nrate, np in npd])
-        for d, (drate, dep) in enumerate(hdd):
-            arr = planin[:, :, d]
-            arr['dep'] = dep
-            arr['rate'] = drate * mrate * nrate
+        planin.rate[:, :] = mrate[:, None] * nrate
         for n, (nrate, np) in enumerate(npd):
-            arr = planin[:, n].T  # numpy trick for spee
+            arr = planin[:, n]
             areas = msr.get_median_area(mags, np.rake)
             arr['mag'] = mags
             arr['strike'] = np.strike
@@ -229,9 +225,8 @@ class PointSource(ParametricSeismicSource):
             mag, _ = self.get_annual_occurrence_rates()[-1]
         magd = [(1., mag)]
         npd = self.nodal_plane_distribution.data
-        hdd = [(1., self.location.depth)]
         radius = []
-        for planin in self.get_planin(magd, npd, hdd)[0].flat:
+        for planin in self.get_planin(magd, npd)[0].flat:
             rup_length, rup_width, _ = planin.dims
             # the projection radius is half of the rupture diagonal
             radius.append(math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
@@ -244,8 +239,7 @@ class PointSource(ParametricSeismicSource):
         """
         magd = [(1., rup.mag)]
         npd = [(1., NodalPlane(rup.surface.strike, dip, rup.rake))]
-        hdd = [(1., rup.hypocenter.depth)]
-        [[[planin]]] = self.get_planin(magd, npd, hdd)
+        [[planin]] = self.get_planin(magd, npd)
         rup_length, rup_width, _ = planin.dims
         return math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
 
@@ -261,16 +255,17 @@ class PointSource(ParametricSeismicSource):
             return out
 
         npd = self.nodal_plane_distribution.data
-        hdd = self.hypocenter_distribution.data
+        hdd = numpy.array(self.hypocenter_distribution.data)
         clon, clat = self.location.x, self.location.y
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
-        planin = self.get_planin(magd, npd, hdd)
-        planar = build_planar(planin, clon, clat, usd, lsd)  # (M, N, D, 3)
+        planin = self.get_planin(magd, npd)
+        planar = build_planar(planin, hdd, clon, clat, usd, lsd)  # MND3
         if not shift_hypo:  # use the original hypocenter
             planar.hypo[:, :, :, 0] = clon
             planar.hypo[:, :, :, 1] = clat
-            planar.hypo[:, :, :, 2] = planin.dep
+            for d, (drate, dep) in enumerate(hdd):
+                planar.hypo[:, :, d, 2] = dep
         dic = {mag: [pla.reshape(-1, 3)]
                for (_rate, mag), pla in zip(magd, planar)}
         return dic
