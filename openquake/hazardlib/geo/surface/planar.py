@@ -54,7 +54,6 @@ planar_array_dt = numpy.dtype([
 
 planin_dt = numpy.dtype([
     ('mag', float),
-    ('area', float),
     ('strike', float),
     ('dip', float),
     ('rake', float),

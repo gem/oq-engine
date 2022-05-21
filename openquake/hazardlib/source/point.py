@@ -209,7 +209,7 @@ class PointSource(ParametricSeismicSource):
             arr['rate'] = drate * mrate * nrate
         for n, (nrate, np) in enumerate(npd):
             arr = planin[:, n].T  # numpy trick for spee
-            arr['area'] = areas = msr.get_median_area(mags, np.rake)
+            areas = msr.get_median_area(mags, np.rake)
             arr['mag'] = mags
             arr['strike'] = np.strike
             arr['dip'] = np.dip
