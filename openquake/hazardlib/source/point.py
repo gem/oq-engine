@@ -32,12 +32,14 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
 
-def _get_rupdims(areas, dip, width, rar):
+# this is fast
+def get_rupdims(areas, dip, width, rar):
     """
     Calculate and return the rupture length and width
     for given magnitude surface parameters.
+
     :returns:
-        array with rupture length, rupture width, rupture height
+        array of shape (M, 3) with rupture lengths, widths and heights
 
     The rupture area is calculated using method
     :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`
@@ -193,25 +195,26 @@ class PointSource(ParametricSeismicSource):
         :return: array of dtype planin_dt of shape (#mags, #planes, #depths)
         """
         msr = self.magnitude_scaling_relationship
+        width = self.lower_seismogenic_depth - self.upper_seismogenic_depth
+        rar = self.rupture_aspect_ratio
+
         planin = numpy.zeros((len(magd), len(npd), len(hdd)), planin_dt).view(
             numpy.recarray)
         mrate, mags = numpy.array(magd).T  # shape (2, M)
-        mrate = mrate[:, None]
+        mrate = mrate[:, None]  # numpy trick for speed
         nrate = numpy.array([nrate for nrate, np in npd])
         for d, (drate, dep) in enumerate(hdd):
             arr = planin[:, :, d]
             arr['dep'] = dep
             arr['rate'] = drate * mrate * nrate
-        width = self.lower_seismogenic_depth - self.upper_seismogenic_depth
-        rar = self.rupture_aspect_ratio
         for n, (nrate, np) in enumerate(npd):
-            arr = planin[:, n].T
+            arr = planin[:, n].T  # numpy trick for spee
             arr['area'] = areas = msr.get_median_area(mags, np.rake)
             arr['mag'] = mags
             arr['strike'] = np.strike
             arr['dip'] = np.dip
             arr['rake'] = np.rake
-            arr['dims'] = _get_rupdims(areas, np.dip, width, rar)
+            arr['dims'] = get_rupdims(areas, np.dip, width, rar)
         return planin
 
     def _get_max_rupture_projection_radius(self, mag=None):
