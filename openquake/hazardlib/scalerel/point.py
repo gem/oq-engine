@@ -19,6 +19,7 @@
 """
 Module :mod:`openquake.hazardlib.scalerel.point` implements :class:`PointMSR`.
 """
+import numpy
 from openquake.hazardlib.scalerel.base import BaseMSR
 
 
@@ -46,4 +47,4 @@ class PointMSR(BaseMSR):
         >>> 1e-4 == point_msr.get_median_area(9.0, 0)
         True
         """
-        return 1e-4
+        return numpy.full_like(mag, 1e-4)
