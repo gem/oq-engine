@@ -753,11 +753,11 @@ class ContextMaker(object):
                 triples.append((mag, pla, sitecol))
         else:
             cdist = sitecol.get_cdist(src.location)
-            for rup in src.iruptures():
+            for m, rup in enumerate(src.iruptures()):
                 mag = rup.mag
                 arr = [rup.surface.array.reshape(-1, 3)]
                 pla = planardict[mag]
-                psdist = self.pointsource_distance + src.get_radius(rup)
+                psdist = self.pointsource_distance + src.radius[m]
                 close = sitecol.filter(cdist <= psdist)
                 far = sitecol.filter(cdist > psdist)
                 if self.fewsites:

@@ -213,7 +213,7 @@ class PointSource(ParametricSeismicSource):
             arr['dims'] = get_rupdims(areas, np.dip, width, rar)
         return planin
 
-    def _get_max_rupture_projection_radius(self, mag=None):
+    def _get_max_rupture_projection_radius(self):
         """
         Find a maximum radius of a circle on Earth surface enveloping a rupture
         produced by this source.
@@ -221,27 +221,15 @@ class PointSource(ParametricSeismicSource):
         :returns:
             Half of maximum rupture's diagonal surface projection.
         """
-        if mag is None:  # extract the maximum magnitude
-            mag, _ = self.get_annual_occurrence_rates()[-1]
-        magd = [(1., mag)]
+        magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         npd = self.nodal_plane_distribution.data
-        radius = []
-        for planin in self.get_planin(magd, npd)[0].flat:
-            rup_length, rup_width, _ = planin.dims
+        self.radius = []
+        for planin in self.get_planin(magd, npd):
+            rup_length, rup_width, _ = planin.dims.max(axis=0)
             # the projection radius is half of the rupture diagonal
-            radius.append(math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
-        self.radius = max(radius)
-        return self.radius
-
-    def get_radius(self, rup, dip=90.):
-        """
-        :returns: half of maximum rupture's diagonal surface projection
-        """
-        magd = [(1., rup.mag)]
-        npd = [(1., NodalPlane(rup.surface.strike, dip, rup.rake))]
-        [[planin]] = self.get_planin(magd, npd)
-        rup_length, rup_width, _ = planin.dims
-        return math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
+            self.radius.append(
+                math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
+        return self.radius[-1]  # max radius
 
     def get_planar(self, shift_hypo=False, multi=True):
         """

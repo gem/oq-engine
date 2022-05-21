@@ -190,8 +190,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 _, np_prob, hc_prob, mag, np, lon, lat, hc_depth, src = args
                 hc = Point(lon, lat, hc_depth)
                 planar = build_planar(
-                    src.get_planin([(1., mag)], [(1., np)], [(1., hc.depth)]),
-                    lon, lat, usd, lsd)[0, 0, 0]
+                    src.get_planin([(1., mag)], [(1., np)]),
+                    [(1., hc.depth)], lon, lat, usd, lsd)[0, 0, 0]
                 rup = ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type, hc,
                     PlanarSurface.from_(planar), rate, tom)
