@@ -65,10 +65,10 @@ def _get_rupdims(planin, width, rar):
 
 def msr_name(src):
     """
-    :returns: the name of MSR class or "Undefined" if not applicable
+    :returns: string representation of the MSR or "Undefined" if not applicable
     """
     try:
-        return src.magnitude_scaling_relationship.__class__.__name__
+        return str(src.magnitude_scaling_relationship)
     except AttributeError:   # no MSR for nonparametric sources
         return 'Undefined'
 
