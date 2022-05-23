@@ -219,6 +219,7 @@ class DisaggregationCalculator(base.HazardCalculator):
 
     def execute(self):
         """Performs the disaggregation"""
+        self.pre_checks()
         return self.full_disaggregation()
 
     def get_curve(self, sid, rlzs):
