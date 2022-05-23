@@ -106,7 +106,7 @@ jobs:
           rpmbuild -bs  ~/rpmbuild/SPECS/python3-${REPO}.spec
           rpmbuild -bb  ~/rpmbuild/SPECS/python3-${REPO}.spec
           SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
-          # mock -r ${{ matrix.epel-release}} $SRPM
+          mock -r ${{ matrix.epel-release}} $SRPM
 
           #      - name: Publish Package on COPR
           #        env:
