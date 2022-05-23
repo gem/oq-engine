@@ -78,16 +78,17 @@ jobs:
           #
           if [ "$STABLE" == "1" ]; then
               sed "s/##_stable_##/${STABLE}/g;s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_timestamp_##/${TIME}/g" rpm/python3-${REPO}.spec.inc > ~/rpmbuild/SPECS/python3-${REPO}.spec
-              cd oq-engine
-              git archive --format=tar --prefix=${REPO}-${VER}/ $BRANCH | gzip -9 > build-rpm/SOURCES/${REPO}-${VER}.tar.gz
+              tar czf ~/rpmbuild/SOURCES/${REPO}-${VER}.tar.gz . 
+              #git archive --format=tar --prefix=${REPO}-${VER}/ $BRANCH | gzip -9 > build-rpm/SOURCES/${REPO}-${VER}.tar.gz
               sed -i "s/##_release_##/${PKG}/g" ~/rpmbuild/SPECS/python3-${REPO}.spec
+              tar tzvf ~/rpmbuild/SOURCES/${REPO}-${VER}.tar.gz
           else
               STABLE=0 # set to 0 to avoid failure for schedule run
-              echo $STABLE
               sed "s/##_stable_##/${STABLE}/g;s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_timestamp_##/${TIME}/g" rpm/python3-${REPO}.spec.inc > ~/rpmbuild/SPECS/python3-${REPO}.spec
-              cd oq-engine
-              git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | gzip -9 > ~/rpmbuild/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
+              #git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | gzip -9 > ~/rpmbuild/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
+              tar czf ~/rpmbuild/SOURCES/${REPO}-${VER}.tar.gz . 
               sed -i "s/##_release_##/git${SHA}/g" ~/rpmbuild/SPECS/python3-${REPO}.spec
+              tar tzvf ~/rpmbuild/SOURCES/${REPO}-${VER}.tar.gz
           fi
           cat ~/rpmbuild/SPECS/python3-${REPO}.spec
 
