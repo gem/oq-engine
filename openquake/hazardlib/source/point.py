@@ -220,6 +220,8 @@ class PointSource(ParametricSeismicSource):
         :returns:
             Half of maximum rupture's diagonal surface projection.
         """
+        if hasattr(self, 'radius'):
+            return self.radius[-1]  # max radius
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         npd = self.nodal_plane_distribution.data
         self.radius = []
