@@ -66,7 +66,7 @@ Provides: python-oq-hazardlib python-oq-engine
 # Source code and patches
 # =======================
 
-Source0: %{installscript}
+Source0: %{oqformat}.tar.gz
 
 %description
 OpenQuake is an open source application that allows users to
@@ -93,7 +93,6 @@ cp -a %{installscript} %{buildroot}%{_oqprefix}/
 
 %post
 echo STARTING: INSTALL OF OPENQUAKE ENGINE
-cd %{_oqprefix}
 %if %{oqstable} == 1
 %{__python3} %{_oqprefix}/%{installscript} server
 %else
@@ -104,7 +103,6 @@ cd %{_oqprefix}
 rm -rf %{buildroot}
 
 %preun
-cd %{_oqprefix}
 %if %{oqstable} == 1
 %{__python3} %{_oqprefix}/%{installscript} server --remove
 %else
