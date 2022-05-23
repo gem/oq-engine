@@ -124,7 +124,7 @@ jobs:
            SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
            copr-cli build ${COPR_REPO} $SRPM
           else
-           COPR_REPO=openquake
+           COPR_REPO=openquake-staging
            echo "COPR REPO: $COPR_REPO"
            SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
            copr-cli build ${COPR_REPO} $SRPM
