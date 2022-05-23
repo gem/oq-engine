@@ -225,7 +225,7 @@ class PointSource(ParametricSeismicSource):
         npd = self.nodal_plane_distribution.data
         self.radius = []
         for planin in self.get_planin(magd, npd):
-            rup_length, rup_width, _ = planin.dims.max(axis=0)
+            rup_length, rup_width, _ = planin.dims.max(axis=0)  # (N, 3) => 3
             # the projection radius is half of the rupture diagonal
             self.radius.append(
                 math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
