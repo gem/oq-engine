@@ -1090,6 +1090,8 @@ class ContextMaker(object):
         else:
             eff_rups = src.num_ruptures
         weight = eff_rups * (nsites.mean() / N + .02)
+        if hasattr(src, 'planin'):
+            delattr(src, 'planin')  # save memory
         return weight
 
     def set_weight(self, sources, srcfilter, mon=Monitor()):
