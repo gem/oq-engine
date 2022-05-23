@@ -10,6 +10,10 @@ on:
         description: Engine Release (0 for nightly)
         default: 1
         required: true
+      pkg-num:
+        description: Engine PKG number
+        default: 1.0
+        required: true
       git-ref:
         description: Git Ref Branch
         default: master
@@ -57,6 +61,7 @@ jobs:
           REPO: oq-engine
           BRANCH: HEAD
           STABLE: ${{ github.event.inputs.lts-ver }}
+          PKG: ${{ github.event.inputs.pkg-num }}
         run: |
           pwd
           ls -lrt
@@ -70,12 +75,16 @@ jobs:
           echo "$LIB - ${SHA} - $VER $TIME"
           echo "${SHA} ${{ env.REPO }} - ${{ env.BRANCH }}"
           #
-          sed "s/##_stable_##/${STABLE}/g;s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_timestamp_##/${TIME}/g" rpm/python3-${REPO}.spec.inc > ~/rpmbuild/SPECS/python3-${REPO}.spec
           #
           if [ "$STABLE" == "1" ]; then
+              sed "s/##_stable_##/${STABLE}/g;s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_timestamp_##/${TIME}/g" rpm/python3-${REPO}.spec.inc > ~/rpmbuild/SPECS/python3-${REPO}.spec
+              cd oq-engine
               git archive --format=tar --prefix=${REPO}-${VER}/ $BRANCH | gzip -9 > build-rpm/SOURCES/${REPO}-${VER}.tar.gz
               sed -i "s/##_release_##/${PKG}/g" ~/rpmbuild/SPECS/python3-${REPO}.spec
           else
+              STABLE = 0 # set to 0 to avoid failure for schedule run
+              sed "s/##_stable_##/${STABLE}/g;s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_timestamp_##/${TIME}/g" rpm/python3-${REPO}.spec.inc > ~/rpmbuild/SPECS/python3-${REPO}.spec
+              cd oq-engine
               git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | gzip -9 > ~/rpmbuild/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
               sed -i "s/##_release_##/git${SHA}/g" ~/rpmbuild/SPECS/python3-${REPO}.spec
           fi
