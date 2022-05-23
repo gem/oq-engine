@@ -384,12 +384,10 @@ class CampbellBozorgnia2014(GMPE):
             mask = np.absolute(np.sin(np.radians(ctx.dip))) > 0
             ctx.width = np.sqrt(10**((ctx.mag - 4.07) / 0.98))
             ctx.width[mask] = np.minimum(
-                np.sqrt(10 ** ((ctx.mag - 4.07) / 0.98)),
-                (ctx.zbot - ctx.ztor) / np.sin(np.radians(ctx.dip))
+                ctx.width[mask],
+                (ctx.zbot[mask] - ctx.ztor[mask]) / np.sin(np.radians(ctx.dip[mask]))
             )
 
-
-        breakpoint()
         if self.estimate_hypo_depth:
             # Equation 36 of Campbell & Bozorgnia 2014
             fdz_m = np.where(
