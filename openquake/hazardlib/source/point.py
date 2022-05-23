@@ -201,7 +201,7 @@ class PointSource(ParametricSeismicSource):
             numpy.recarray)
         mrate, mags = numpy.array(magd).T  # shape (2, M)
         nrate = numpy.array([nrate for nrate, np in npd])
-        planin.rate[:, :] = mrate[:, None] * nrate
+        planin['rate'] = mrate[:, None] * nrate
         for n, (nrate, np) in enumerate(npd):
             arr = planin[:, n]
             areas = msr.get_median_area(mags, np.rake)
