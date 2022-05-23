@@ -577,9 +577,12 @@ class ContextMaker(object):
         :returns: a list of context arrays
         """
         ctxs = []
+        srcfilter = SourceFilter(sitecol, self.maximum_distance)
         for i, src in enumerate(srcs):
             src.id = i
-            ctxs.extend(self.get_ctxs(src, sitecol))
+            sites = srcfilter.get_close_sites(src)
+            if sites is not None:
+                ctxs.extend(self.get_ctxs(src, sites))
         return concat(ctxs)
 
     def make_rctx(self, rup):
