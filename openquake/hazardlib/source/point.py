@@ -225,8 +225,7 @@ class PointSource(ParametricSeismicSource):
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         npd = self.nodal_plane_distribution.data
         self.radius = numpy.zeros(len(magd))
-        self.planin = self.get_planin(magd, npd)
-        for m, planin in enumerate(self.planin):
+        for m, planin in enumerate(self.get_planin(magd, npd)):
             rup_length, rup_width, _ = planin.dims.max(axis=0)  # (N, 3) => 3
             # the projection radius is half of the rupture diagonal
             self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
@@ -248,9 +247,7 @@ class PointSource(ParametricSeismicSource):
         clon, clat = self.location.x, self.location.y
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
-        planin = getattr(self, 'planin', ())
-        if len(planin) == 0 or iruptures:
-            planin = self.get_planin(magd, npd)
+        planin = self.get_planin(magd, npd)
         planar = build_planar(planin, hdd, clon, clat, usd, lsd)  # MND3
         if not shift_hypo:  # use the original hypocenter
             planar.hypo[:, :, :, 0] = clon
