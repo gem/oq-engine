@@ -120,14 +120,12 @@ jobs:
           mkdir -p "$HOME/.config"
           echo "$API_TOKEN_CONTENT" > "$HOME/.config/copr"
           if [ "$COPR_REPO" != "" ]; then
-           echo "valore nullo"
            echo "COPR REPO: $COPR_REPO"
            SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
-           #copr-cli build ${COPR_REPO} $SRPM
+           copr-cli build ${COPR_REPO} $SRPM
           else
-           echo "valore non nullo"
            COPR_REPO=openquake-staging
            echo "COPR REPO: $COPR_REPO"
            SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
-           #copr-cli build ${COPR_REPO} $SRPM
+           copr-cli build ${COPR_REPO} $SRPM
           fi
