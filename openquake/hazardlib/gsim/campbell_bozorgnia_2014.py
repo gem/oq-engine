@@ -365,7 +365,7 @@ class CampbellBozorgnia2014(GMPE):
     def set_parameters(self, ctx):
         """
         Use the ztor, width and hypo_depth formula to estimate
-        if any of the estimate attributes is set.
+        if estimate attribute is set.
         """
         if self.estimate_ztor:
             # Equation 4 and 5 of Chiou & Youngs 2014
