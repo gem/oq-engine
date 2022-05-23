@@ -577,9 +577,12 @@ class ContextMaker(object):
         :returns: a list of context arrays
         """
         ctxs = []
+        srcfilter = SourceFilter(sitecol, self.maximum_distance)
         for i, src in enumerate(srcs):
             src.id = i
-            ctxs.extend(self.get_ctxs(src, sitecol))
+            sites = srcfilter.get_close_sites(src)
+            if sites is not None:
+                ctxs.extend(self.get_ctxs(src, sites))
         return concat(ctxs)
 
     def make_rctx(self, rup):
@@ -753,11 +756,11 @@ class ContextMaker(object):
                 triples.append((mag, pla, sitecol))
         else:
             cdist = sitecol.get_cdist(src.location)
-            for rup in src.iruptures():
+            for m, rup in enumerate(src.iruptures()):
                 mag = rup.mag
                 arr = [rup.surface.array.reshape(-1, 3)]
                 pla = planardict[mag]
-                psdist = self.pointsource_distance + src.get_radius(rup)
+                psdist = self.pointsource_distance + src.radius[m]
                 close = sitecol.filter(cdist <= psdist)
                 far = sitecol.filter(cdist > psdist)
                 if self.fewsites:
@@ -1169,7 +1172,10 @@ class PmapMaker(object):
             nbytes += 8 * dparams * nsites
         return nbytes
 
-    def _get_ctxs(self, src, sites):
+    def _get_ctxs(self, src):
+        sites = self.srcfilter.get_close_sites(src)
+        if sites is None:
+            return []
         ctxs = self.cmaker.get_ctxs(src, sites)
         if self.fewsites:  # keep rupdata in memory
             for ctx in ctxs:
@@ -1182,11 +1188,9 @@ class PmapMaker(object):
         cm = self.cmaker
         allctxs = []
         totlen = 0
-        for src, sites in self.srcfilter.split(self.group):
+        for src in self.group:
             t0 = time.time()
-            if self.fewsites:
-                sites = sites.complete
-            ctxs = self._get_ctxs(src, sites)
+            ctxs = self._get_ctxs(src)
             allctxs.extend(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             # TODO: remove nrupts
@@ -1209,10 +1213,10 @@ class PmapMaker(object):
     def _make_src_mutex(self):
         pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         cm = self.cmaker
-        for src, sites in self.srcfilter.filter(self.group):
+        for src in self.group:
             t0 = time.time()
             pm = ProbabilityMap(cm.imtls.size, len(cm.gsims))
-            ctxs = self._get_ctxs(src, sites)
+            ctxs = self._get_ctxs(src)
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
