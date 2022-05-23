@@ -1413,7 +1413,7 @@ class RowConverter(SourceConverter):
 
 def multikey(node):
     """
-    :returns: usd, lst, hddist, npdist and magScaleRel from the given node
+    :returns: usd, lsd, hddist, npdist and magScaleRel from the given node
     """
     hd = tuple((node['probability'], node['depth'])
                for node in node.hypoDepthDist)
