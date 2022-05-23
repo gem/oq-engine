@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       lts-ver:
-        description: Engine LTS release
+        description: Engine Release (0 for nightly)
         default: 1
         required: true
       git-ref:
@@ -61,20 +61,37 @@ jobs:
           pwd
           ls -lrt
           mkdir -p ~/rpmbuild/{RPMS,SOURCES,SPECS,SRPMS}
+          id
+          ls -lrt ~/rpmbuild/*
+          #
           LIB=$(cut -d "-" -f 2 <<< ${{ env.REPO }})
           VER=$(cat openquake/baselib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
           TIME=$(date +"%s")
           echo "$LIB - ${SHA} - $VER $TIME"
           echo "${SHA} ${{ env.REPO }} - ${{ env.BRANCH }}"
+          #
+          sed "s/##_stable_##/${STABLE}/g;s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_timestamp_##/${TIME}/g" rpm/python3-${REPO}.spec.inc > ~/rpmbuild/SPECS/python3-${REPO}.spec
+          #
+          if [ "$STABLE" == "1" ]; then
+              git archive --format=tar --prefix=${REPO}-${VER}/ $BRANCH | gzip -9 > build-rpm/SOURCES/${REPO}-${VER}.tar.gz
+              sed -i "s/##_release_##/${PKG}/g" ~/rpmbuild/SPECS/python3-${REPO}.spec
+          else
+              git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | gzip -9 > ~/rpmbuild/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
+              sed -i "s/##_release_##/git${SHA}/g" ~/rpmbuild/SPECS/python3-${REPO}.spec
+          fi
+          cat ~/rpmbuild/SPECS/python3-${REPO}.spec
 
       - name: Build RPM from SPEC files
         env:
-          pyver: ${{ github.event.inputs.oqpython-ver }}
+          REPO: oq-engine
+          BRANCH: HEAD
+          STABLE: ${{ github.event.inputs.lts-ver }}
         run: |
-          spectool -g -R ~/rpmbuild/SPECS/oq-python.spec
-          rpmbuild -bs  ~/rpmbuild/SPECS/oq-python.spec
+          spectool -g -R ~/rpmbuild/SPECS/python3-${REPO}.spec
+          rpmbuild -bs  ~/rpmbuild/SPECS/python3-${REPO}.spec
+          rpmbuild -bb  ~/rpmbuild/SPECS/python3-${REPO}.spec
           SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
-          mock -r ${{ matrix.epel-release}} $SRPM
+          # mock -r ${{ matrix.epel-release}} $SRPM
 
           #      - name: Publish Package on COPR
           #        env:
