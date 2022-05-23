@@ -18,6 +18,10 @@ on:
         description: Git Ref Branch
         default: master
         required: true
+      copr:
+        description: COPR Repository Staging for default
+        default: openquake-staging
+        required: true
 
 jobs:
 
@@ -108,13 +112,21 @@ jobs:
           SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
           mock -r ${{ matrix.epel-release}} $SRPM
 
-          #      - name: Publish Package on COPR
-          #        env:
-          #          API_TOKEN_CONTENT: ${{ secrets.COPR_API_TOKEN }}
-          #          COPR_REPO: openquake
-          #        run: |
-          #          mkdir -p "$HOME/.config"
-          #          echo "$API_TOKEN_CONTENT" > "$HOME/.config/copr"
-          #          echo "COPR REPO: $COPR_REPO"
-          #          SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
-          #          copr-cli build ${COPR_REPO} $SRPM
+      - name: Publish Package on COPR
+        env:
+          API_TOKEN_CONTENT: ${{ secrets.COPR_API_TOKEN }}
+          COPR_REPO: ${{ github.event.inputs.copr }}
+        run: |
+          mkdir -p "$HOME/.config"
+          echo "$API_TOKEN_CONTENT" > "$HOME/.config/copr"
+          if [[ "$COPR" != "" ]] 
+          then
+           echo "COPR REPO: $COPR_REPO"
+           SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
+           #copr-cli build ${COPR_REPO} $SRPM
+          else
+           COPR=openquake-staging
+           echo "COPR REPO: $COPR_REPO"
+           SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
+           #copr-cli build ${COPR_REPO} $SRPM
+          fi
