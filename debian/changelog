@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Automatically discarded irrelevant TRTs in disaggregation calculations
+
   [Ashta Poudel, Anirudh Rao, Michele Simionato]
   * Added the ability to run connectivity analysis in event_based_damage
     and scenario_damage calculation with an appropriate exposure
