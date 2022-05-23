@@ -79,7 +79,7 @@ jobs:
           if [ "$STABLE" == "1" ]; then
               sed "s/##_stable_##/${STABLE}/g;s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_timestamp_##/${TIME}/g" rpm/python3-${REPO}.spec.inc > ~/rpmbuild/SPECS/python3-${REPO}.spec
               cd ..
-              mv oq-engine ${REPO}-${VER}
+              cp -pr oq-engine ${REPO}-${VER}
               tar czf ~/rpmbuild/SOURCES/${REPO}-${VER}.tar.gz ${REPO}-${VER}
               #git archive --format=tar --prefix=${REPO}-${VER}/ $BRANCH | gzip -9 > build-rpm/SOURCES/${REPO}-${VER}.tar.gz
               sed -i "s/##_release_##/${PKG}/g" ~/rpmbuild/SPECS/python3-${REPO}.spec
@@ -88,7 +88,7 @@ jobs:
               sed "s/##_stable_##/${STABLE}/g;s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_timestamp_##/${TIME}/g" rpm/python3-${REPO}.spec.inc > ~/rpmbuild/SPECS/python3-${REPO}.spec
               #git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | gzip -9 > ~/rpmbuild/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
               cd ..
-              mv oq-engine ${REPO}-${VER}-git${SHA}
+              cp -pr oq-engine ${REPO}-${VER}-git${SHA}
               tar czf ~/rpmbuild/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz ${REPO}-${VER}-git${SHA}
               sed -i "s/##_release_##/git${SHA}/g" ~/rpmbuild/SPECS/python3-${REPO}.spec
           fi
