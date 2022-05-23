@@ -26,7 +26,7 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
-    Effect, RuptureContext, ContextMaker, Collapser, get_distances)
+    Effect, ContextMaker, Collapser, get_distances)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.rupture import \
@@ -545,8 +545,9 @@ class PlanarDistancesTestCase(unittest.TestCase):
         aac(ctx.azimuth, [0., 0.])
 
         magd = [(r, mag) for mag, r in src.get_annual_occurrence_rates()]
-        planin = src.get_planin(magd, npd.data, hdd.data)
-        planar = build_planar(planin, loc.x, loc.y, usd, lsd)[0, 0]
+        planin = src.get_planin(magd, npd.data)
+        planar = build_planar(planin, numpy.array(hdd.data),
+                              loc.x, loc.y, usd, lsd)[0, 0]
         for par in ('rx', 'ry0', 'rjb', 'rhypo', 'repi'):
             dist = get_distances_planar(planar, sites, par)[0]
             aac(dist, ctx[par], err_msg=par)

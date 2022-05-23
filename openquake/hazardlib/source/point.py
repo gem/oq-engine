@@ -197,7 +197,6 @@ class PointSource(ParametricSeismicSource):
         msr = self.magnitude_scaling_relationship
         width = self.lower_seismogenic_depth - self.upper_seismogenic_depth
         rar = self.rupture_aspect_ratio
-
         planin = numpy.zeros((len(magd), len(npd)), planin_dt).view(
             numpy.recarray)
         mrate, mags = numpy.array(magd).T  # shape (2, M)
