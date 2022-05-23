@@ -119,7 +119,7 @@ jobs:
         run: |
           mkdir -p "$HOME/.config"
           echo "$API_TOKEN_CONTENT" > "$HOME/.config/copr"
-          if [[ "$COPR" != "" ]] 
+          if [[ "$COPR_REPO" != "" ]] 
           then
            echo "COPR REPO: $COPR_REPO"
            SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
