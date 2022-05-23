@@ -224,13 +224,12 @@ class PointSource(ParametricSeismicSource):
             return self.radius[-1]  # max radius
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         npd = self.nodal_plane_distribution.data
-        self.radius = []
+        self.radius = numpy.zeros(len(magd))
         self.planin = self.get_planin(magd, npd)
-        for planin in self.planin:
+        for m, planin in enumerate(self.planin):
             rup_length, rup_width, _ = planin.dims.max(axis=0)  # (N, 3) => 3
             # the projection radius is half of the rupture diagonal
-            self.radius.append(
-                math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
+            self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius[-1]  # max radius
 
     def get_planar(self, shift_hypo=False, iruptures=False):
