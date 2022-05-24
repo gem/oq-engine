@@ -1,9 +1,6 @@
 ---
 name: RPM build of engine in Fedora Copr
 on:
-  #
-  push:
-    branch: [ae_rpm_nightly]
   workflow_dispatch:
     inputs:
       lts-ver:
@@ -26,7 +23,7 @@ on:
 jobs:
 
   build:
-    name: Submit a build from Fedora container
+    name: Submit and publish from Fedora 36 container
     runs-on: ubuntu-latest
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
