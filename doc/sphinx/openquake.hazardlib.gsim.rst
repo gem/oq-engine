@@ -140,6 +140,14 @@ arroyo_2010
     :undoc-members:
     :show-inheritance:
 
+arteta_2021
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.arteta_2021
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 atkinson_2015
 ---------------------------------------------
 
