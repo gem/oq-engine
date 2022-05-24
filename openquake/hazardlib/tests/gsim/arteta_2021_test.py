@@ -17,7 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.arteta_2021 import (
-    ArtetaEtAl2021Inter, ArtetaEtAl2021Slab)
+    ArtetaEtAl2021InterVs30, ArtetaEtAl2021Inter, ArtetaEtAl2021SlabVs30,
+    ArtetaEtAl2021Slab)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 """
@@ -26,7 +27,27 @@ The test tables were created from a *.xlsx file created by the authors
 """
 
 
-class ArtetaEtAl2021Inter(BaseGSIMTestCase):
+class ArtetaEtAl2021InterVs30Test(BaseGSIMTestCase):
+    """
+    Test the default model, the total standard deviation and the within-event
+    standard deviation. The between events std is implicitly tested
+    """
+
+    GSIM_CLASS = ArtetaEtAl2021InterVs30
+
+    def test_median(self):
+        self.check('arteta_2021/ARTETAETAL2021_Vs30_SINTER_MEAN.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_std(self):
+        pass
+        self.check('arteta_2021/ARTETAETAL2021_Vs30_SINTER_Sigma.csv',
+                   'arteta_2021/ARTETAETAL2021_Vs30_SINTER_Phi.csv',
+                   'arteta_2021/ARTETAETAL2021_Vs30_SINTER_Tau.csv',
+                   max_discrep_percentage=0.1)
+
+
+class ArtetaEtAl2021InterTest(BaseGSIMTestCase):
     """
     Test the default model, the total standard deviation and the within-event
     standard deviation. The between events std is implicitly tested
@@ -38,17 +59,33 @@ class ArtetaEtAl2021Inter(BaseGSIMTestCase):
         self.check('arteta_2021/ARTETAETAL2021_SINTER_MEAN.csv',
                    max_discrep_percentage=0.1)
 
-    """
     def test_std(self):
-        pass
         self.check('arteta_2021/ARTETAETAL2021_SINTER_Sigma.csv',
                    'arteta_2021/ARTETAETAL2021_SINTER_Phi.csv',
                    'arteta_2021/ARTETAETAL2021_SINTER_Tau.csv',
                    max_discrep_percentage=0.1)
+
+
+class ArtetaEtAl2021Slab_Vs30(BaseGSIMTestCase):
+    """
+    Test the default model, the total standard deviation and the within-event
+    standard deviation. The between events std is implicitly tested
     """
 
+    GSIM_CLASS = ArtetaEtAl2021SlabVs30
 
-class ArtetaEtAl2021Slab(BaseGSIMTestCase):
+    def test_median(self):
+        self.check('arteta_2021/ARTETAETAL2021_Vs30_SSLAB_MEAN.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_std(self):
+        self.check('arteta_2021/ARTETAETAL2021_Vs30_SSLAB_Sigma.csv',
+                   'arteta_2021/ARTETAETAL2021_Vs30_SSLAB_Phi.csv',
+                   'arteta_2021/ARTETAETAL2021_Vs30_SSLAB_Tau.csv',
+                   max_discrep_percentage=0.1)
+
+
+class ArtetaEtAl2021SlabTest(BaseGSIMTestCase):
     """
     Test the default model, the total standard deviation and the within-event
     standard deviation. The between events std is implicitly tested
@@ -60,10 +97,8 @@ class ArtetaEtAl2021Slab(BaseGSIMTestCase):
         self.check('arteta_2021/ARTETAETAL2021_SSLAB_MEAN.csv',
                    max_discrep_percentage=0.1)
 
-    """
     def test_std(self):
         self.check('arteta_2021/ARTETAETAL2021_SSLAB_Sigma.csv',
                    'arteta_2021/ARTETAETAL2021_SSLAB_Phi.csv',
                    'arteta_2021/ARTETAETAL2021_SSLAB_Tau.csv',
                    max_discrep_percentage=0.1)
-    """

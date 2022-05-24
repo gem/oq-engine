@@ -140,6 +140,10 @@ site_param_dt = {
     'h800': numpy.float64,
     'geology': (numpy.string_, 20),
     'amplfactor': numpy.float64,
+    'fpeak': numpy.float64,
+    # Fundamental period and and amplitude of HVRSR spectra
+    'THV': numpy.float64,
+    'PHV': numpy.float64,
 
     # parameters for secondary perils
     'friction_mid': numpy.float64,
@@ -160,7 +164,6 @@ site_param_dt = {
     'dwb': numpy.float64,
     'hwater': numpy.float64,
     'precip': numpy.float64,
-    'fpeak': numpy.float64,
 
     # parameters for YoudEtAl2002
     'freeface_ratio': numpy.float64,
