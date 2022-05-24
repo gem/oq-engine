@@ -708,7 +708,7 @@ class ContextMaker(object):
 
     def get_ctxs_planar(self, src, sitecol):
         """
-        :param src: a (Collapsed)PointSource with no PointMSR
+        :param src: a (Collapsed)PointSource
         :param sitecol: a filtered SiteCollection
         :returns: a list with 0 or 1 context array
         """
@@ -793,8 +793,7 @@ class ContextMaker(object):
         """
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         ctxs = []
-        if getattr(src, 'location', None) and step == 1 and (  # point source
-                str(src.magnitude_scaling_relationship) != 'PointMSR'):
+        if getattr(src, 'location', None) and step == 1:
             return self.get_ctxs_planar(src, sitecol)
         elif hasattr(src, 'source_id'):  # other source
             with self.ir_mon:
