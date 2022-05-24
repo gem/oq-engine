@@ -13,7 +13,9 @@
       <logicTreeBranch branchID="B">
         <uncertaintyModel>
           [CampbellBozorgnia2014]
-          better_ztor = true
+          estimate_ztor = true
+          estimate_width = true
+          estimate_hypo_depth = true
         </uncertaintyModel>
         <uncertaintyWeight>0.3</uncertaintyWeight>
       </logicTreeBranch>
