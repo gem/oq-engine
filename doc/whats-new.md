@@ -222,8 +222,8 @@ As usual, many new GMPEs were contributed:
 
 - [Giuseppina Tusa](https://github.com/gtus23) contributed the Tusa-Langer-Azzaro (2019) GMPE.
 
-- Thanks to EDF ve added support for EAS, FAS and DRVT intensity
-  measure types, used the new GMPEs Bora et al. (2019), Bayless &
+- Thanks to EDF we added support for the EAS, FAS and DRVT intensity
+  measure types, used in the new GMPEs Bora et al. (2019) and Bayless &
   Abrahamson (2018).
 
 - We added the GMPEs of Bahrampouri et al. (2021) for the Arias intensity
@@ -256,13 +256,14 @@ A few bugs were also fixed:
 There were a few other changes and new features:
 
 - We changed `hazardlib.valid.gsim` to return a correctly instantiated
-  GSIM or to fail. Before for GMPETable subclasses it was returning a partially
-  initialized GSIM to be post-initialized later on. Thanks to [Bruce
-  Worden](https://github.com/cbworden) for pointing this out.
+  GSIM or to fail. Before - for GMPETable subclasses - it was
+  returning a partially initialized GSIM to be post-initialized later
+  on. Thanks to [Bruce Worden](https://github.com/cbworden) for
+  pointing this out.
 
 - We changed the API of `get_mean_stds`: there is no need to specify the
   standard deviation anymore, since it always returns all three standard
-  deviations (\sig, \tau, \phi) on top of the mean (\mu). Improved its
+  deviations ($\sig, \tau, \phi$) on top of the mean ($\mu$). We improved its
   documentation in the advanced manual.
 
 - We added a warning when the mesh size of MultiFaultSources and
@@ -274,7 +275,7 @@ There were a few other changes and new features:
   even when the initial GMPE only provides the total standard
   deviation. To be used with care.
 
-- We added a check to the geo.Line class to ensure that every Line object
+- We added a check to the `geo.Line class` to ensure that every Line object
   must have at least two points.
 
 - We improved the error message in ShakeMap calculations failing due to the
