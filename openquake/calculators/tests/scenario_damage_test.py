@@ -257,10 +257,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.run_calc(case_15.__file__, 'job.ini')
         nodes = self.calc.datastore.read_df('functional_demand_nodes')
         got = dict(zip(nodes.id, nodes.number))
-        expected = {'D1': 24, 'D10': 38, 'D11': 24, 'D12': 25, 'D2': 25,
-                    'D3': 39, 'D4': 38, 'D5': 38, 'D6': 22, 'D7': 38,
-                    'D8': 39, 'D9': 24}
-        raise unittest.SkipTest('Until we upgrade pandas')
+        expected = {'D1': 38, 'D10': 24, 'D11': 24, 'D12': 22, 'D2': 38,
+                    'D3': 38, 'D4': 38, 'D5': 39, 'D6': 39, 'D7': 25,
+                    'D8': 24, 'D9': 25}
         self.assertEqual(got, expected)
 
 
