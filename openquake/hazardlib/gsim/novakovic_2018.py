@@ -21,13 +21,14 @@ Module exports :class:`NovakovicEtAl2018`
 """
 
 import os
-import re
 import pathlib
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
+from openquake.hazardlib.gsim.yenier_atkinson_2015 import (
+    get_fs_SeyhanStewart2014)
 
 TFP = pathlib.Path(__file__).parent.absolute()
 
@@ -153,9 +154,12 @@ class NovakovicEtAl2018(GMPE):
     #: Required distance measures is Rrup
     REQUIRES_DISTANCES = {'rrup'}
 
-    def __init__(self, d_sigma=None, region_fle=None, **kwargs):
-        super().__init__(d_sigma=d_sigma, region_fle=region_fle, **kwargs)
+    def __init__(self, d_sigma=None, region_fle=None, site_term=True,
+                 **kwargs):
+        super().__init__(d_sigma=d_sigma, region_fle=region_fle,
+                         site_term=site_term, **kwargs)
         self.d_sigma = d_sigma
+        self.site_term = site_term
 
         # Read the file and create the coefficient table for the regional
         # adjustment
@@ -175,7 +179,7 @@ class NovakovicEtAl2018(GMPE):
         imt = PGA()
         C = self.COEFFS[imt]
         CR = self.REA[imt]
-        pga_rock = get_gm_rock(C, ctx, self.d_sigma, CR)
+        pga_rock = np.exp(get_gm_rock(C, ctx, self.d_sigma, CR))
 
         # Compute ground-motion on soil.
         for m, imt in enumerate(imts):
@@ -186,8 +190,15 @@ class NovakovicEtAl2018(GMPE):
             mean[m] = get_gm_rock(C, ctx, self.d_sigma, CR)
 
             # Site term
-            TMP = self.BEA14[imt]
-            #mean[m] += get_fs_SeyhanStewart2014(TMP, imt, pga_rock, ctx.vs30)
+            if self.site_term:
+                TMP = self.BEA14[imt]
+                mean[m] += get_fs_SeyhanStewart2014(TMP, imt, pga_rock,
+                                                    ctx.vs30)
+
+            # Standard deviations
+            tau[m] = np.ones_like(tau[m]) * CR['between_event']
+            phi[m] = np.ones_like(tau[m]) * CR['within_event']
+            sig[m] = (tau[m]**2 + phi[m]**2)**0.5
 
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\

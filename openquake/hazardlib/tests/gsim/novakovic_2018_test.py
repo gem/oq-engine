@@ -28,4 +28,4 @@ class NovakovicEtAl2018Test(BaseGSIMTestCase):
     GSIM_CLASS = NovakovicEtAl2018
 
     def test_mean(self):
-        self.check('NEA18/NEA18_MEAN.csv', max_discrep_percentage=5.0)
+        self.check('NEA18/NEA18_MEAN.csv', max_discrep_percentage=2.0)
