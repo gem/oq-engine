@@ -1,3 +1,6 @@
+  [Julián Santiago Montejo Espitia]
+  * Implemented the Arteta et al. (2021) subduction model for Colombia
+
   [Michele Simionato]
   * Using PointMSR when the reqv approximation is enabled
   * Internal: changed the rupture storage for classical calculations
