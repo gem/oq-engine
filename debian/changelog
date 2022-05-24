@@ -1,3 +1,6 @@
+  [Tom Son]
+  * Added width and hypo_depth estimation to Campbell and Bozorgnia (2014)
+
   [Michele Simionato]
   * Automatically discard irrelevant TRTs in disaggregation calculations
 
