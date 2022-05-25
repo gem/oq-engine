@@ -1,3 +1,6 @@
+  [Yen-Shin Chen]
+  * Modify the site amplification factor in the Si and Midorikawa (1999) GMPE.
+
   [Michele Simionato]
   * Fixed a bug in `upgrade_nrml -m` for point sources with different usd/lsd
   * Automatically discard irrelevant TRTs in disaggregation calculations
