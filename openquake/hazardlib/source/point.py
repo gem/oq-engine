@@ -259,12 +259,11 @@ class PointSource(ParametricSeismicSource):
         return dic
 
     def _gen_ruptures(self, shift_hypo=False, step=1, iruptures=False):
-        pointmsr = str(self.magnitude_scaling_relationship) == 'PointMSR'
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         npd = self.nodal_plane_distribution.data
         hdd = self.hypocenter_distribution.data
         clon, clat = self.location.x, self.location.y
-        if step == 1 and not pointmsr:
+        if step == 1:
             # return full ruptures (one per magnitude)
             planardict = self.get_planar(shift_hypo, iruptures)
             for mag, [planar] in planardict.items():
