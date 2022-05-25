@@ -1413,7 +1413,7 @@ class RowConverter(SourceConverter):
 
 def multikey(node):
     """
-    :returns: usd, lsd, hddist, npdist and magScaleRel from the given node
+    :returns: (usd, lsd, rar, hddist, npdist, magScaleRel) for the given node
     """
     hd = tuple((node['probability'], node['depth'])
                for node in node.hypoDepthDist)
@@ -1422,7 +1422,7 @@ def multikey(node):
         for node in node.nodalPlaneDist)
     geom = node.pointGeometry
     return (round(~geom.upperSeismoDepth, 1), round(~geom.lowerSeismoDepth, 1),
-            hd, npd, str(~node.magScaleRel))
+            ~node.ruptAspectRatio, hd, npd, str(~node.magScaleRel))
 
 
 def collapse(array):
@@ -1467,19 +1467,16 @@ def _pointsources2multipoints(srcs, i):
     # converts pointSources with the same hddist, npdist and msr into a
     # single multiPointSource.
     allsources = []
-    for (usd, lsd, hd, npd, msr), sources in groupby(srcs, multikey).items():
+    for (usd, lsd, rar, hd, npd, msr), sources in groupby(
+            srcs, multikey).items():
         if len(sources) == 1:  # there is a single source
             allsources.extend(sources)
             continue
         mfds = [src[3] for src in sources]
         points = []
-        usd = []
-        lsd = []
-        rar = []
         for src in sources:
             pg = src.pointGeometry
             points.extend(~pg.Point.pos)
-            rar.append(~src.ruptAspectRatio)
         geom = Node('multiPointGeometry')
         geom.append(Node('gml:posList', text=points))
         geom.append(Node('upperSeismoDepth', text=usd))
@@ -1489,7 +1486,7 @@ def _pointsources2multipoints(srcs, i):
             dict(id='mps-%d' % i, name='multiPointSource-%d' % i),
             nodes=[geom])
         node.append(Node("magScaleRel", text=collapse(msr)))
-        node.append(Node("ruptAspectRatio", text=collapse(rar)))
+        node.append(Node("ruptAspectRatio", text=rar))
         node.append(mfds2multimfd(mfds))
         node.append(Node('nodalPlaneDist', nodes=[
             Node('nodalPlane', dict(probability=prob, rake=rake,
