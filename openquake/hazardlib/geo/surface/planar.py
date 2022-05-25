@@ -572,6 +572,16 @@ def get_azimuth(planar, points):
     return out
 
 
+# TODO: fix this
+def get_rvolc(planar, points):
+    """
+    :param planar: a planar recarray of shape (U, 3)
+    :param points: an array of of shape (N, 3)
+    :returns: (U, N) distances
+    """
+    return numpy.zeros((len(planar), len(points)))
+
+
 if numba:
     planar_nt = numba.from_dtype(planar_array_dt)
     project = compile(numba.float64[:, :, :](
@@ -590,6 +600,7 @@ if numba:
     get_rhypo = comp(get_rhypo)
     get_repi = comp(get_repi)
     get_azimuth = comp(get_azimuth)
+    get_rvolc = comp(get_rvolc)
 
 
 def get_distances_planar(planar, sites, dist_type):
