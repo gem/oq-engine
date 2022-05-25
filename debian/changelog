@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug in `upgrade_nrml -m` for point sources with different usd/lsd
   * Automatically discard irrelevant TRTs in disaggregation calculations
 
   [Ashta Poudel, Anirudh Rao, Michele Simionato]

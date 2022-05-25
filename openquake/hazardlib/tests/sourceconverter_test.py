@@ -152,6 +152,204 @@ xmlns:gml="http://www.opengis.net/gml"
 </nrml>
 '''
 
+manymultipoint = '''\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceGroup
+    rup_interdep="indep"
+    src_interdep="indep"
+    tectonicRegion="Subduction IntraSlab"
+    >
+        <multiPointSource
+        id="mps-0"
+        name="multiPointSource-0"
+        >
+            <multiPointGeometry>
+                <gml:posList>
+                    1.5124125E+02 -6.4315600E+00 1.5124125E+02 -6.4315600E+00 1.5055269E+02 -6.7489500E+00
+                </gml:posList>
+                <upperSeismoDepth>
+                    1.0000000E+01
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    4.2300000E+01
+                </lowerSeismoDepth>
+            </multiPointGeometry>
+            <magScaleRel>
+                StrasserIntraslab
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.0000000E+00
+            </ruptAspectRatio>
+            <multiMFD
+            kind="incrementalMFD"
+            size="3"
+            >
+                <min_mag>
+                    5.1000000E+00
+                </min_mag>
+                <bin_width>
+                    2.0000000E-01
+                </bin_width>
+                <occurRates>
+                    9.1484712E-05 5.1416486E-05 2.8897233E-05 1.6240901E-05 9.1277553E-06 5.1300058E-06 2.8831798E-06 1.6204125E-06 9.1070864E-07 5.1183894E-07 2.8766511E-07 1.6167432E-07 9.0864642E-08 5.1067993E-08 1.6403767E-08 3.9207734E-05 2.2035637E-05 1.2384528E-05 6.9603862E-06 3.9118951E-06 2.1985739E-06 1.2356485E-06 6.9446251E-07 3.9030370E-07 2.1935955E-07 1.2328505E-07 6.9288996E-08 3.8941990E-08 2.1886283E-08 7.0301859E-09 9.1484712E-05 5.1416486E-05 2.8897233E-05 1.6240901E-05 9.1277553E-06 5.1300058E-06 2.8831798E-06 1.6204125E-06 9.1070864E-07 5.1183894E-07 2.8766511E-07 1.6167432E-07 9.0864642E-08 5.1067993E-08 1.6403767E-08
+                </occurRates>
+                <lengths>
+                    15
+                </lengths>
+            </multiMFD>
+            <nodalPlaneDist>
+                <nodalPlane dip="3.0600000E+01" probability="7.0000000E-01" rake="9.0000000E+01" strike="2.4720000E+02"/>
+                <nodalPlane dip="3.0600000E+01" probability="3.0000000E-01" rake="-9.0000000E+01" strike="2.4720000E+02"/>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth depth="3.3642197E+01" probability="1.0000000E+00"/>
+            </hypoDepthDist>
+        </multiPointSource>
+        <multiPointSource
+        id="mps-1"
+        name="multiPointSource-1"
+        >
+            <multiPointGeometry>
+                <gml:posList>
+                    1.5124837E+02 -6.3836000E+00 1.5124837E+02 -6.3836000E+00 1.5055982E+02 -6.7009800E+00 1.5055982E+02 -6.7009800E+00
+                </gml:posList>
+                <upperSeismoDepth>
+                    1.0000000E+01
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    4.6000000E+01
+                </lowerSeismoDepth>
+            </multiPointGeometry>
+            <magScaleRel>
+                StrasserIntraslab
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.0000000E+00
+            </ruptAspectRatio>
+            <multiMFD
+            kind="incrementalMFD"
+            size="4"
+            >
+                <min_mag>
+                    5.1000000E+00
+                </min_mag>
+                <bin_width>
+                    2.0000000E-01
+                </bin_width>
+                <occurRates>
+                    9.1484712E-05 5.1416486E-05 2.8897233E-05 1.6240901E-05 9.1277553E-06 5.1300058E-06 2.8831798E-06 1.6204125E-06 9.1070864E-07 5.1183894E-07 2.8766511E-07 1.6167432E-07 9.0864642E-08 5.1067993E-08 1.6403767E-08 3.9207734E-05 2.2035637E-05 1.2384528E-05 6.9603862E-06 3.9118951E-06 2.1985739E-06 1.2356485E-06 6.9446251E-07 3.9030370E-07 2.1935955E-07 1.2328505E-07 6.9288996E-08 3.8941990E-08 2.1886283E-08 7.0301859E-09 9.1484712E-05 5.1416486E-05 2.8897233E-05 1.6240901E-05 9.1277553E-06 5.1300058E-06 2.8831798E-06 1.6204125E-06 9.1070864E-07 5.1183894E-07 2.8766511E-07 1.6167432E-07 9.0864642E-08 5.1067993E-08 1.6403767E-08 3.9207734E-05 2.2035637E-05 1.2384528E-05 6.9603862E-06 3.9118951E-06 2.1985739E-06 1.2356485E-06 6.9446251E-07 3.9030370E-07 2.1935955E-07 1.2328505E-07 6.9288996E-08 3.8941990E-08 2.1886283E-08 7.0301859E-09
+                </occurRates>
+                <lengths>
+                    15
+                </lengths>
+            </multiMFD>
+            <nodalPlaneDist>
+                <nodalPlane dip="3.0600000E+01" probability="7.0000000E-01" rake="9.0000000E+01" strike="2.4720000E+02"/>
+                <nodalPlane dip="3.0600000E+01" probability="3.0000000E-01" rake="-9.0000000E+01" strike="2.4720000E+02"/>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth depth="2.7731648E+01" probability="1.0000000E+00"/>
+            </hypoDepthDist>
+        </multiPointSource>
+        <multiPointSource
+        id="mps-2"
+        name="multiPointSource-2"
+        >
+            <multiPointGeometry>
+                <gml:posList>
+                    1.5057406E+02 -6.6050500E+00 1.5057406E+02 -6.6050500E+00
+                </gml:posList>
+                <upperSeismoDepth>
+                    1.0000000E+01
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.6500000E+01
+                </lowerSeismoDepth>
+            </multiPointGeometry>
+            <magScaleRel>
+                StrasserIntraslab
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.0000000E+00
+            </ruptAspectRatio>
+            <multiMFD
+            kind="incrementalMFD"
+            size="2"
+            >
+                <min_mag>
+                    5.1000000E+00
+                </min_mag>
+                <bin_width>
+                    2.0000000E-01
+                </bin_width>
+                <occurRates>
+                    9.1484712E-05 5.1416486E-05 2.8897233E-05 1.6240901E-05 9.1277553E-06 5.1300058E-06 2.8831798E-06 1.6204125E-06 9.1070864E-07 5.1183894E-07 2.8766511E-07 1.6167432E-07 9.0864642E-08 5.1067993E-08 1.6403767E-08 3.9207734E-05 2.2035637E-05 1.2384528E-05 6.9603862E-06 3.9118951E-06 2.1985739E-06 1.2356485E-06 6.9446251E-07 3.9030370E-07 2.1935955E-07 1.2328505E-07 6.9288996E-08 3.8941990E-08 2.1886283E-08 7.0301859E-09
+                </occurRates>
+                <lengths>
+                    15
+                </lengths>
+            </multiMFD>
+            <nodalPlaneDist>
+                <nodalPlane dip="3.0600000E+01" probability="7.0000000E-01" rake="9.0000000E+01" strike="2.4720000E+02"/>
+                <nodalPlane dip="3.0600000E+01" probability="3.0000000E-01" rake="-9.0000000E+01" strike="2.4720000E+02"/>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth depth="1.5910549E+01" probability="1.0000000E+00"/>
+            </hypoDepthDist>
+        </multiPointSource>
+        <multiPointSource
+        id="mps-3"
+        name="multiPointSource-3"
+        >
+            <multiPointGeometry>
+                <gml:posList>
+                    1.5126260E+02 -6.2876600E+00 1.5126260E+02 -6.2876600E+00
+                </gml:posList>
+                <upperSeismoDepth>
+                    1.0000000E+01
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.7900000E+01
+                </lowerSeismoDepth>
+            </multiPointGeometry>
+            <magScaleRel>
+                StrasserIntraslab
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.0000000E+00
+            </ruptAspectRatio>
+            <multiMFD
+            kind="incrementalMFD"
+            size="2"
+            >
+                <min_mag>
+                    5.1000000E+00
+                </min_mag>
+                <bin_width>
+                    2.0000000E-01
+                </bin_width>
+                <occurRates>
+                    9.1484712E-05 5.1416486E-05 2.8897233E-05 1.6240901E-05 9.1277553E-06 5.1300058E-06 2.8831798E-06 1.6204125E-06 9.1070864E-07 5.1183894E-07 2.8766511E-07 1.6167432E-07 9.0864642E-08 5.1067993E-08 1.6403767E-08 3.9207734E-05 2.2035637E-05 1.2384528E-05 6.9603862E-06 3.9118951E-06 2.1985739E-06 1.2356485E-06 6.9446251E-07 3.9030370E-07 2.1935955E-07 1.2328505E-07 6.9288996E-08 3.8941990E-08 2.1886283E-08 7.0301859E-09
+                </occurRates>
+                <lengths>
+                    15
+                </lengths>
+            </multiMFD>
+            <nodalPlaneDist>
+                <nodalPlane dip="3.0600000E+01" probability="7.0000000E-01" rake="9.0000000E+01" strike="2.4720000E+02"/>
+                <nodalPlane dip="3.0600000E+01" probability="3.0000000E-01" rake="-9.0000000E+01" strike="2.4720000E+02"/>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth depth="1.5910549E+01" probability="1.0000000E+00"/>
+            </hypoDepthDist>
+        </multiPointSource>
+    </sourceGroup>
+</nrml>
+'''
 
 class PointToMultiPointTestCase(unittest.TestCase):
     def test_simple(self):
@@ -173,6 +371,15 @@ class PointToMultiPointTestCase(unittest.TestCase):
             nrml.write(sm, f)
             got = f.getvalue().decode('utf-8')
             self.assertEqual(got, multipoint)
+
+    def test_many_lsd(self):
+        testfile = os.path.join(testdir, 'points.xml')
+        sm = nrml.read(testfile).sourceModel
+        update_source_model(sm, testfile)
+        with io.BytesIO() as f:
+            nrml.write(sm, f)
+            got = f.getvalue().decode('utf-8')
+            self.assertEqual(got, manymultipoint)
 
 
 class SourceConverterTestCase(unittest.TestCase):

@@ -76,8 +76,8 @@ class MultiPointSource(ParametricSeismicSource):
                 self.magnitude_scaling_relationship,
                 get(self.rupture_aspect_ratio, i),
                 self.temporal_occurrence_model,
-                get(self.upper_seismogenic_depth, i),
-                get(self.lower_seismogenic_depth, i),
+                self.upper_seismogenic_depth,
+                self.lower_seismogenic_depth,
                 point,
                 self.nodal_plane_distribution,
                 self.hypocenter_distribution)
