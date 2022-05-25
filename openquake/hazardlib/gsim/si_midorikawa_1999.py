@@ -153,6 +153,11 @@ def _apply_amplification_factor(AMP_F, mean, vs30):
 
     The scaling factor from 600 m/s to 800m/s is valid just for the elastic
     case as no adjustment for kappa was considered.
+
+	The site amplification factor (Vs=400m/s to 800m/s) is 0.5541 taken from
+	the NIED J-SHIS Subsurface Structure Model. 
+	(https://www.j-shis.bosai.go.jp/map/JSHIS2/download.html?lang=en)
+
     """
     assert np.all(vs30 == vs30[0])
     if abs(vs30[0]-600.) < 1e-10:
@@ -160,7 +165,7 @@ def _apply_amplification_factor(AMP_F, mean, vs30):
     elif abs(vs30[0]-400.) < 1e-10:
         return mean * np.log(10) + np.log(AMP_F)
     elif abs(vs30[0]-800.) < 1e-10:
-        return mean * np.log(10) - np.log(1.25)
+        return mean * np.log(10) + np.log(0.5541)
     else:
         raise ValueError(
             'Si and Midorikawa 1999 do not support this Vs30 value')
