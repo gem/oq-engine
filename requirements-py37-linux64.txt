@@ -30,7 +30,7 @@ https://wheelhouse.openquake.org/v3/linux/py/django_pam-2.0.1-py2.py3-none-any.w
 https://wheelhouse.openquake.org/v3/linux/py/python_pam-1.8.4-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/setuptools-56.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/pytz-2019.1-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/networkx-2.8.2-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/networkx-2.6.3-py3-none-any.whl
 
 ### Plotting ###
 # comment the following lines to skip installation
