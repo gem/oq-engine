@@ -1167,12 +1167,14 @@ class PmapMaker(object):
         if allctxs:
             cm.get_pmap(concat(allctxs), pmap)
         dt = time.time() - t0
+        nsrcs = len(self.group)
         for src in self.group:
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(src.nsites)
             self.source_data['nrupts'].append(src.num_ruptures)
             self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(dt * src.nsites / totlen)
+            self.source_data['ctimes'].append(
+                dt * src.nsites / totlen if totlen else dt / nsrcs)
             self.source_data['taskno'].append(cm.task_no)
         return ~pmap if cm.rup_indep else pmap
 
@@ -1199,7 +1201,6 @@ class PmapMaker(object):
             self.source_data['weight'].append(src.weight)
             self.source_data['ctimes'].append(dt)
             self.source_data['taskno'].append(cm.task_no)
-            timer.save(src, nctxs, nsites, dt, cm.task_no)
         return pmap
 
     def make(self):
