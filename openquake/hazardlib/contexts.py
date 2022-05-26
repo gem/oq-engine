@@ -699,8 +699,7 @@ class ContextMaker(object):
         magdist = {mag: self.maximum_distance(mag)
                    for mag, rate in src.get_annual_occurrence_rates()}
         ctxs = []
-        for mag, planarlist, sites in self._triples(
-                src, sitecol, planardict):
+        for mag, planarlist, sites in self._triples(src, sitecol, planardict):
             if not planarlist:
                 continue
             elif len(planarlist) > 1:  # when using ps_grid_spacing
