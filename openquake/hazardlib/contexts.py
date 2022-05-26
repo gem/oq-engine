@@ -56,10 +56,11 @@ KNOWN_DISTANCES = frozenset(
 IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
 
 
-def is_modifiable(gsims):
-    # contains a ModifiableGMPE
-    return any(hasattr(gsim, 'gmpe') and hasattr(gsim, 'params')
-               for gsim in gsims)
+def is_modifiable(gsim):
+    """
+    :returns: True if it is a ModifiableGMPE
+    """
+    return hasattr(gsim, 'gmpe') and hasattr(gsim, 'params')
 
 
 def concat(ctxs):
@@ -351,10 +352,9 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
-        modifiable = is_modifiable(gsims)
         for gsim in gsims:
             if hasattr(gsim, 'set_tables'):
-                if not self.mags and not modifiable:
+                if not self.mags and not is_modifiable(gsim):
                     raise ValueError(
                         'You must supply a list of magnitudes as 2-digit '
                         'strings, like mags=["6.00", "6.10", "6.20"]')
@@ -382,7 +382,7 @@ class ContextMaker(object):
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
                 if self.af and req == 'SITES_PARAMETERS':
                     reqset.add('ampcode')
-                if (modifiable and req == 'SITES_PARAMETERS' and
+                if (is_modifiable(gsim) and req == 'SITES_PARAMETERS' and
                         'apply_swiss_amplification' in gsim.params):
                     reqset.add('amplfactor')
             setattr(self, 'REQUIRES_' + req, reqset)
