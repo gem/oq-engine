@@ -9,7 +9,7 @@ def analysis(dstore):
 
     :returns:  (functional_demand_nodes, avg_connectivity_loss)
     """
-    import networkx as nx  # imported only if used
+    import networkx as nx  # import only if needed
 
     oq = dstore["oqparam"]
     calculation_mode = oq.calculation_mode

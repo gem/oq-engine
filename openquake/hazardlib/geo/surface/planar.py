@@ -201,7 +201,7 @@ def build_planar_array(corners, sdr=None, hypo=None, check=False):
     """
     :param corners: array of shape (4, M, N, D, 3)
     :param hypo: None or array of shape (M, N, D, 3)
-    :returns: a planar_array array of length (M, N, D)
+    :returns: a planar_array array of length (M, N, D, 3)
     """
     shape = corners.shape[:-1]  # (4, M, N, D)
     planar_array = numpy.zeros(corners.shape[1:], planar_array_dt).view(
@@ -572,6 +572,16 @@ def get_azimuth(planar, points):
     return out
 
 
+# TODO: fix this
+def get_rvolc(planar, points):
+    """
+    :param planar: a planar recarray of shape (U, 3)
+    :param points: an array of of shape (N, 3)
+    :returns: (U, N) distances
+    """
+    return numpy.zeros((len(planar), len(points)))
+
+
 if numba:
     planar_nt = numba.from_dtype(planar_array_dt)
     project = compile(numba.float64[:, :, :](
@@ -590,6 +600,7 @@ if numba:
     get_rhypo = comp(get_rhypo)
     get_repi = comp(get_repi)
     get_azimuth = comp(get_azimuth)
+    get_rvolc = comp(get_rvolc)
 
 
 def get_distances_planar(planar, sites, dist_type):

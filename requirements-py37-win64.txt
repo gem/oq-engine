@@ -24,10 +24,11 @@ https://wheelhouse.openquake.org/v3/windows/py/chardet-3.0.4-py2.py3-none-any.wh
 https://wheelhouse.openquake.org/v3/windows/py/idna-2.8-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/urllib3-1.25.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/requests-2.22.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/windows/py/toml-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/Django-3.2.12-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/windows/py/asgiref-3.4.1-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/windows/py/django_pam-2.0.1-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/asgiref-3.4.1-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/django_pam-2.0.1-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/networkx-2.6.3-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/toml-0.10.2-py2.py3-none-any.whl
 
 
 ### Plotting ###

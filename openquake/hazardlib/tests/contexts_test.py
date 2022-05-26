@@ -312,7 +312,7 @@ class CollapseTestCase(unittest.TestCase):
         print('maxdiff =', maxdiff, cmaker.collapser.cfactor)
 
     def test_collapse_area(self):
-        # collapse an area source
+        # collapse an area source using a GMPE with the azimuth distance
         src = '''\
         <areaSource
           id="1"
@@ -364,6 +364,8 @@ class CollapseTestCase(unittest.TestCase):
             reference_vs30_value=600.)
         inp = read_input(params)
         cmaker = inp.cmaker
+        print(cmaker.REQUIRES_DISTANCES)
+
         [grp] = inp.groups
         self.assertEqual(len(grp.sources), 52)  # point sources
         poes = cmaker.get_poes(grp, inp.sitecol)  # no collapse
@@ -382,18 +384,17 @@ class CollapseTestCase(unittest.TestCase):
         maxdiff = (newpoes - poes).max(axis=(1, 2))
         print('maxdiff =', maxdiff)
         # this is a case where the precision on site 1 is perfect, while
-        # on on site 0 if far from perfect
+        # on site 0 if far from perfect
         self.assertLess(maxdiff[0], 3E-3)
         self.assertLess(maxdiff[1], 5E-10)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [63, 312])
 
-        # collapse_level = 4
-        cmaker.collapser = Collapser(4, 'azimuth', False)
+        # with collapse_level = 4 the precision is perfect
+        cmaker.collapser = Collapser(
+            collapse_level=0, dist_type='azimuth', has_vs30=False)
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol, collapse_level=4)
         maxdiff = (newpoes - poes).max(axis=(1, 2))
         print('maxdiff =', maxdiff)
-        # this is a case where the precision on site 0 is perfect, while
-        # on on site 1 if far from perfect
         self.assertLess(maxdiff[0], 1.4E-16)
         self.assertLess(maxdiff[1], 1.4E-16)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [284, 312])
