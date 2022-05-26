@@ -187,6 +187,7 @@ class GMPETable(GMPE):
         super().__init__(**kwargs)
         # populated by the ContextManager once imts and magnitudes are known
         fname = self.kwargs.get('gmpe_table', self.gmpe_table)
+        self.gmpe_table_name = fname
         with h5py.File(fname, "r") as fle:
             self.distance_type = decode(fle["Distances"].attrs["metric"])
             self.REQUIRES_DISTANCES = {self.distance_type}
