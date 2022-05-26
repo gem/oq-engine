@@ -384,4 +384,4 @@ If you get an error like the following::
       raise DifferentFiles('%s %s' % (expected, actual))
   E   openquake.calculators.tests.DifferentFiles: /home/michele/oq-engine/openquake/qa_tests_data/classical/case_1/expected/hazard_curve-PGA.csv /tmp/tmpkdvdhlq5/hazard_curve-mean-PGA_27249.csv
 
-you need to change the expected file, i.e. copy the file /tmp/tmpkdvdhlq5/hazard_curve-mean-PGA_27249.csv over classical/case_1/expected/hazard_curve-PGA.csv
+you need to change the expected file, i.e. copy the file ``/tmp/tmpkdvdhlq5/hazard_curve-mean-PGA_27249.csv`` over ``classical/case_1/expected/hazard_curve-PGA.csv``.
