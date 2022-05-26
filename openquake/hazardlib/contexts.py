@@ -56,6 +56,12 @@ KNOWN_DISTANCES = frozenset(
 IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
 
 
+def is_modifiable(gsims):
+    # contains a ModifiableGMPE
+    return any(hasattr(gsim, 'gmpe') and hasattr(gsim, 'params')
+               for gsim in gsims)
+
+
 def concat(ctxs):
     """
     Concatenate context arrays.
@@ -345,8 +351,13 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
+        modifiable = is_modifiable(gsims)
         for gsim in gsims:
-            if hasattr(gsim, 'set_tables'):
+            if hasattr(gsim, 'set_tables') and not modifiable:
+                if not self.mags:
+                    raise ValueError(
+                        'You must supply a list of magnitudes as 2-digit '
+                        'strings, like mags=["6.00", "6.10", "6.20"]')
                 gsim.set_tables(self.mags, self.imtls)
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
         if 'pointsource_distance' not in param:
@@ -371,11 +382,9 @@ class ContextMaker(object):
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
                 if self.af and req == 'SITES_PARAMETERS':
                     reqset.add('ampcode')
-                if hasattr(gsim, 'gmpe') and hasattr(gsim, 'params'):
-                    # ModifiableGMPE
-                    if (req == 'SITES_PARAMETERS' and
-                            'apply_swiss_amplification' in gsim.params):
-                        reqset.add('amplfactor')
+                if (modifiable and req == 'SITES_PARAMETERS' and
+                        'apply_swiss_amplification' in gsim.params):
+                    reqset.add('amplfactor')
             setattr(self, 'REQUIRES_' + req, reqset)
         try:
             self.min_iml = param['min_iml']
