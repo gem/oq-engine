@@ -148,6 +148,7 @@ class PointSource(ParametricSeismicSource):
     """
     code = b'P'
     MODIFICATIONS = set()
+    ps_grid_spacing = 0  # updated in CollapsedPointSource
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -228,7 +229,8 @@ class PointSource(ParametricSeismicSource):
         for m, planin in enumerate(self.get_planin(magd, npd)):
             rup_length, rup_width, _ = planin.dims.max(axis=0)  # (N, 3) => 3
             # the projection radius is half of the rupture diagonal
-            self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
+            self.radius[m] = (math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
+                              + self.ps_grid_spacing * 0.707)
         return self.radius[-1]  # max radius
 
     def get_planar(self, shift_hypo=False, iruptures=False):
@@ -439,6 +441,7 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
             cps = CollapsedPointSource('cps-%d-%d' % (task_no, i), ps[idxs])
             cps.grp_id = ps[0].grp_id
             cps.trt_smr = ps[0].trt_smr
+            cps.ps_grid_spacing = ps_grid_spacing
             out.append(cps)
         else:  # there is a single source
             out.append(ps[idxs[0]])
