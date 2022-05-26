@@ -353,8 +353,8 @@ class ContextMaker(object):
         self.gsims = gsims
         modifiable = is_modifiable(gsims)
         for gsim in gsims:
-            if hasattr(gsim, 'set_tables') and not modifiable:
-                if not self.mags:
+            if hasattr(gsim, 'set_tables'):
+                if not self.mags and not modifiable:
                     raise ValueError(
                         'You must supply a list of magnitudes as 2-digit '
                         'strings, like mags=["6.00", "6.10", "6.20"]')
