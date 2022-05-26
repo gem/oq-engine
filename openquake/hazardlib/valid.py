@@ -262,7 +262,7 @@ class SimpleId(object):
     :param length: maximum length of the ID
     :param regex: accepted characters
     """
-    def __init__(self, length, regex=r'^[\w_\-:]+$'):
+    def __init__(self, length, regex=r'^[\w_\-:\;]+$'):
         self.length = length
         self.regex = regex
         self.__name__ = 'SimpleId(%d, %s)' % (length, regex)
