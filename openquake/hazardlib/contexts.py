@@ -703,7 +703,7 @@ class ContextMaker(object):
                 src, sitecol, planardict):
             if not planarlist:
                 continue
-            elif len(planarlist) > 1:
+            elif len(planarlist) > 1:  # when using ps_grid_spacing
                 pla = numpy.concatenate(planarlist).view(numpy.recarray)
             else:
                 pla = planarlist[0]
