@@ -366,3 +366,22 @@ compare with the values in the verification table:
 and *phi* to the "INTRA_EVENT_STDDEV". This is how the tests
 in hazardlib are implemented. Interested users should look at the
 code in https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/tests/gsim/utils.py.
+
+Running the engine tests
+----------------------------------
+
+If you are a hazard scientists contributing a bug fix to a GMPE (or any
+other kind of bug fix) you may need to run the engine tests and possibly
+change the expected files if there is a change in the numbers. The way to
+do it is to start the dbserver and then run the tests from the repository root::
+
+  $ oq dbserver start
+  $ pytest -vx openquake/calculators
+
+If you get an error like the following::
+
+  openquake/calculators/tests/__init__.py:218: in assertEqualFiles
+      raise DifferentFiles('%s %s' % (expected, actual))
+  E   openquake.calculators.tests.DifferentFiles: /home/michele/oq-engine/openquake/qa_tests_data/classical/case_1/expected/hazard_curve-PGA.csv /tmp/tmpkdvdhlq5/hazard_curve-mean-PGA_27249.csv
+
+you need to change the expected file, i.e. copy the file /tmp/tmpkdvdhlq5/hazard_curve-mean-PGA_27249.csv over classical/case_1/expected/hazard_curve-PGA.csv
