@@ -1,4 +1,5 @@
 import pandas as pd
+import networkx as nx
 
 
 # function provided by Astha Poudel and Anirudh Rao
@@ -9,8 +10,6 @@ def analysis(dstore):
 
     :returns:  (functional_demand_nodes, avg_connectivity_loss)
     """
-    import networkx as nx  # imported only if used
-
     oq = dstore["oqparam"]
     calculation_mode = oq.calculation_mode
     assert calculation_mode in ("event_based_damage", "scenario_damage")
