@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import abc
 import copy
 import time
@@ -26,7 +25,6 @@ import collections
 from unittest.mock import patch
 
 import numpy
-import pandas
 from scipy.interpolate import interp1d
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
@@ -324,6 +322,9 @@ class ContextMaker(object):
             except KeyError:  # missing TRT but there is only one
                 [(_, self.mags)] = oq.mags_by_trt.items()
         if 'imtls' in param:
+            for imt in param['imtls']:
+                if not isinstance(imt, str):
+                    raise TypeError('Expected string, got %s' % type(imt))
             self.imtls = param['imtls']
         elif 'hazard_imtls' in param:
             self.imtls = DictArray(param['hazard_imtls'])
