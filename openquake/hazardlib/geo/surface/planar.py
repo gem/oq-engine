@@ -201,7 +201,7 @@ def build_planar_array(corners, sdr=None, hypo=None, check=False):
     """
     :param corners: array of shape (4, M, N, D, 3)
     :param hypo: None or array of shape (M, N, D, 3)
-    :returns: a planar_array array of length (M, N, D)
+    :returns: a planar_array array of length (M, N, D, 3)
     """
     shape = corners.shape[:-1]  # (4, M, N, D)
     planar_array = numpy.zeros(corners.shape[1:], planar_array_dt).view(
