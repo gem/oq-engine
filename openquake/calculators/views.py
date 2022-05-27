@@ -182,7 +182,7 @@ def view_worst_sources(token, dstore):
     print('Sources in the slowest task (%d seconds, weight=%d)'
           % (maxtime, data['weight'].sum()))
     data['slow_rate'] = data.ctimes / data.weight
-    df = data.sort_values('slow_rate', ascending=False)
+    df = data.sort_values('ctimes', ascending=False)
     return df[slice(None, None, step)]
 
 
