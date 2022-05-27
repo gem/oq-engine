@@ -95,10 +95,9 @@ It is much better to get a MemoryError and then reduce the size of the job.
 
 Please use the [Universal installation script](universal.md) in
 `server` mode or `devel_server` mode. The installer will save the
-Python code in the folder `/opt/openquake/venv`. By setting the
-`shared_dir` to `/opt/openquake` and by exposing it to the workers via
-NFS there will be no need to install anything on the worker nodes
-except Python.
+Python code in the folder `/opt/openquake/venv`. By exposing it to the
+workers via NFS there will be no need to install anything on the
+worker nodes except Python.
 
 ## OpenQuake Engine 'master' node configuration File
 
