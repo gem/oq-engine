@@ -85,16 +85,20 @@ On large installations we strongly suggest to create separate partition for `/ho
 
 ### Swap partitions
 
-Having swap active on resources dedicated to the OpenQuake Engine is _strongly discouraged_ because of the performance penality when it's being used and because how python allocates memory. In most cases (when memory throughput is relevant) is totally useless and it will just increase by many orders of magnitude the time required to complete the job (making the job actually stuck).
+Having swap active on resources dedicated to the OpenQuake Engine is
+_strongly discouraged_ because of the performance penality when it's
+being used. It will likely increase by many orders of magnitude the
+time required to complete the job, thus making the job actually stuck.
+It is much better to get a MemoryError and then reduce the size of the job.
 
+## Installation
 
-## Initial install
-
-Have read [Universal installation script](universal.md) 
-
-### Master node
-Clone the repository of engine in the shared_dir folder that is shared with the workers.
-On the Master node the method server must be used from the folder /shared_dir/oq-engine
+Please use the [Universal installation script](universal.md) in
+`server` mode or `devel_server` mode. The installer will save the
+Python code in the folder `/opt/openquake/venv`. By setting the
+`shared_dir` to `/opt/openquake` and by exposing it to the workers via
+NFS there will be no need to install anything on the worker nodes
+except Python.
 
 ## OpenQuake Engine 'master' node configuration File
 
@@ -127,23 +131,23 @@ host_cores = < IP address of worker1> -1, < IP address of worker2> -1
 ctrl_port = 1909
 ```
 
-Notice that the -1 in `< IP address of worker1> -1` means that all the cores in
-that worker will be used. You can use a number
-between 0 and the maximum number of available core to limit the
-resource usage. The engine will automatically start and stop zmq
-processes on the worker nodes at each new calculation, *provided the
-user openquake has ssh access to the workers*.
-Please note that you must list explicitly the workers that want to use to perform the calculations.
+Notice that the -1 in `< IP address of worker1> -1` means that all the
+cores in that worker will be used. You can use a number between 0 and
+the maximum number of available core to limit the resource usage. The
+engine will automatically start and stop zmq processes on the worker
+nodes at each new calculation, *provided the user openquake has ssh
+access to the workers*.  Please note that you must list explicitly the
+workers that you want to use.
 
 NB: when using the zmq mechanism you should not touch the parameter
 `serialize_jobs` and keep it at its default value of `true`.
-
 
 ### Configuring daemons
 
 The required systemd services are configured from the universal installer into the folder /etc/systemd/system/
 
 #### Master node
+
 - OpenQuake Engine DbServer - `openquake-dbserver.service`
 - OpenQuake Engine WebUI - `openquake-webui.service` (optional)
 
@@ -163,4 +167,3 @@ two workers 7 cores are running each).
 ## Running calculations
 
 Jobs can be submitted through the master node using the `oq engine` command line interface, the API or the WebUI if active. See the documentation about [how to run a calculation](../running/unix.md) or about how to use the [WebUI](../running/server.md)
-
