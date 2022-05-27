@@ -220,3 +220,150 @@ def get_pnes(rate, probs, poes, time_span):
         for p, prob in enumerate(probs[1:], 1):
             pnes[:] += prob * (1 - poes) ** p
         return pnes.clip(0., 1.)  # avoid numeric issues
+
+
+class NegativeBinomialTOM(BaseTOM):
+    """
+    Negative Binomial temporal occurrence model.
+    """
+    def __init__(self, time_span, occurrence_rate=None, parameters=None):
+        """
+        :param time_span:
+            The time interval of interest, in years.
+        :param occurrence_rate:
+            To initialize super_class (usually overriden by method get_probability_no_exceedance())
+        :param parameters:
+            (list/np.ndarray) Parameters of the negbinom temporal model, in form of mean rate/dispersion (μ / α)
+            Kagan and Jackson, (2010)
+
+
+                                    k
+                   Γ(τ + k)      μ           1
+            f(k) = -------- . -------- . --------
+                     Γ(τ)            k            1/α
+                              (μ + τ)    (1 + μ/τ)
+
+            where τ=1/α
+
+        """
+
+        super().__init__(time_span, occurrence_rate=occurrence_rate)
+        self.parameters = numpy.array(parameters)
+        if numpy.any(self.parameters <= 0):
+            raise ValueError('Mean rate and rate dispersion must be greater than 0')
+        self.time_span = time_span
+
+    def get_probability_one_or_more_occurrences(self, mean_rate=None):
+        """
+
+        :param mean_rate:
+            The mean rate, or mean number of events per year
+        :return:
+            Float value between 0 and 1 inclusive.
+        """
+        if mean_rate is None:
+            mean_rate = self.parameters[0]
+        tau = 1 / self.parameters[1]
+        theta = tau / (tau + (mean_rate * self.time_span))
+
+        return 1 - scipy.stats.nbinom.cdf(1, tau, theta)
+
+    def get_probability_n_occurrences(self, num):
+        """
+        Calculate the probability of occurrence  of ``num`` events in the
+        constructor's ``time_span``.
+
+        :param num:
+            Number of events
+        :return:
+            Probability of occurrence
+        """
+        tau = 1 / self.parameters[1]
+        theta = tau / (tau + (self.parameters[0] * self.time_span))
+
+        return scipy.stats.nbinom.pmf(num, tau, theta)
+
+    def sample_number_of_occurrences(self, mean_rate=None, seed=None):
+        """
+        Draw a random sample from the distribution and return a number
+        of events to occur.
+
+        The method uses the numpy random generator, which needs a seed
+        in order to get reproducible results. If the seed is None, it
+        should be set outside of this method.
+
+        :param mean_rate:
+            The mean rate, or mean number of events per year
+        :param seed:
+            Random number generator seed
+        :return:
+            Sampled integer number of events to occur within model's
+            time span.
+        """
+        if mean_rate is None:
+            mean_rate = self.parameters[0]
+
+        tau = 1 / self.parameters[1]
+        theta = tau / (tau + (mean_rate * self.time_span))
+
+        if isinstance(seed, int):
+            numpy.random.seed(seed)
+
+        return scipy.stats.nbinom.rvs(tau, theta)
+
+    def get_pmf(self, mean_rate, tol=1-1e-14):
+        """
+        :param mean_rate:
+            The average number of events per year.
+        :param tol:
+            Quantile value up to which calculate the pmf
+        :returns:
+            1D numpy array containing the probability mass distribution, up to tolerance level.
+
+        """
+        # Gets dispersion from source object
+        alpha = self.parameters[1]
+        # Recovers NB2 parametrization (tau/theta or n,p in literature)
+        tau = 1 / alpha
+        theta = tau / (tau + mean_rate*self.time_span)
+
+        n_max = scipy.stats.nbinom.ppf(tol, tau, theta)
+        pmf = scipy.stats.nbinom.pmf(numpy.arange(0, n_max), tau, theta)
+
+        return pmf/numpy.sum(pmf)
+
+    def get_probability_no_exceedance(self, mean_rate, poes):
+        """
+        :param mean_rate:
+            The average number of events per year.
+        :param poes:
+            2D numpy array containing conditional probabilities that the
+            rupture occurrence causes a ground shaking value exceeding a
+            ground motion level at a site. First dimension represent sites,
+            second dimension intensity measure levels. ``poes`` can be obtained
+            calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`.
+        :returns:
+            2D numpy array containing probabilities of no exceedance. First
+            dimension represents sites, second dimension intensity measure
+            levels.
+
+        """
+
+        # Gets dispersion from source object
+        alpha = self.parameters[1]
+        # Recovers NB2 parametrization (tau/theta or n,p in literature)
+        tau = 1 / alpha
+        theta = tau / (tau + mean_rate*self.time_span)
+
+        # Defines tol for the max quantile value, up to which the infinite series is calculated.
+        tol = 1 - 1e-14
+
+        n_max = scipy.stats.nbinom.ppf(tol, tau, theta)
+        pdf = scipy.stats.nbinom.pmf(numpy.arange(0, n_max), tau, theta)
+        poes_1 = 1 - poes
+        prob_no_exceed = numpy.zeros(poes.shape)
+        for k, prob in enumerate(pdf):
+            prob_no_exceed += prob * numpy.power(poes_1, k)
+
+        return prob_no_exceed
+

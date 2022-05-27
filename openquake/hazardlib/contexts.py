@@ -33,7 +33,7 @@ from openquake.baselib.performance import Monitor, split_array, compile, numba
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.tom import registry, get_pnes, FatedTOM
+from openquake.hazardlib.tom import registry, get_pnes, FatedTOM, NegativeBinomialTOM
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
@@ -633,6 +633,10 @@ class ContextMaker(object):
             setattr(ctx, param, value)
         if not hasattr(ctx, 'occurrence_rate'):
             ctx.occurrence_rate = numpy.nan
+        if hasattr(ctx, 'temporal_occurrence_model'):
+            if isinstance(ctx.temporal_occurrence_model, NegativeBinomialTOM):
+                ctx.probs_occur = ctx.temporal_occurrence_model.get_pmf(ctx.occurrence_rate)
+
         return ctx
 
     def get_ctx(self, rup, sites, distances=None):
@@ -663,7 +667,7 @@ class ContextMaker(object):
 
         return ctx
 
-    def _get_ctx(self, mag, planar, sites, src_id):
+    def _get_ctx(self, mag, planar, sites, src_id, tom=None):
         with self.ctx_mon:
             # computing distances
             rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
@@ -718,6 +722,10 @@ class ContextMaker(object):
             # setting site parameters
             for par in self.siteparams:
                 ctx[par] = sites.array[par]  # shape N-> (U, N)
+            if tom:
+                pmf = tom.get_pmf(planar.wlr[:, 2])
+                pmf = numpy.pad(pmf, (0, ctx['probs_occur'].shape[2] - len(pmf)), 'constant')
+                ctx['probs_occur'][:len(pmf)] = pmf
 
         return ctx
 
@@ -728,7 +736,14 @@ class ContextMaker(object):
         :returns: a list with 0 or 1 context array
         """
         dd = self.defaultdict.copy()
-        dd['probs_occur'] = numpy.zeros(0)
+        tom = src.temporal_occurrence_model
+
+        if isinstance(tom, NegativeBinomialTOM):
+            p_size = len(tom.get_pmf(max(src.mfd.occurrence_rates)))
+            dd['probs_occur'] = numpy.zeros(p_size)
+        else:
+            dd['probs_occur'] = numpy.zeros(0)
+
         if self.fewsites:
             dd['clon'] = numpy.float64(0.)
             dd['clat'] = numpy.float64(0.)
@@ -760,7 +775,12 @@ class ContextMaker(object):
                 pla = numpy.concatenate(planarlist).view(numpy.recarray)
             else:
                 pla = planarlist[0]
-            ctx = self._get_ctx(mag, pla, sites, src.id).flatten()
+
+            if isinstance(tom, NegativeBinomialTOM):
+                ctx = self._get_ctx(mag, pla, sites, src.id, tom).flatten()
+            else:
+                ctx = self._get_ctx(mag, pla, sites, src.id).flatten()
+
             ctxt = ctx[ctx.rrup < magdist[mag]]
             if len(ctxt):
                 ctxs.append(ctxt)

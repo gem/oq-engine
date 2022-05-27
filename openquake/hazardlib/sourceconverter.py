@@ -749,6 +749,17 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.mfd.EvenlyDiscretizedMFD.` or
                   :class:`openquake.hazardlib.mfd.TruncatedGRMFD` instance
         """
+
+        if node.tag.endswith('pointSource'):        # Check if there a tom specified at the point level
+            nodes = [i for i in node]
+            if numpy.any([i.tag.endswith('tom') for i in nodes]):
+                with context(self.fname, node.tom):
+                    tom_cls = tom.registry[node.tom['name']]
+                    params = ~node.tom.parameters
+                    parameters = [float(i) for i in params.split()]
+                    return tom_cls(time_span=self.investigation_time,
+                                   parameters=parameters)
+
         if 'tom' in node.attrib:
             tom_cls = tom.registry[node['tom']]
         else:
