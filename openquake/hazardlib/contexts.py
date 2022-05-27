@@ -715,8 +715,8 @@ class ContextMaker(object):
                 pla = numpy.concatenate(planarlist).view(numpy.recarray)
             else:
                 pla = planarlist[0]
-            ctx = self._get_ctx(mag, pla, sites, src.id)
-            ctxt = ctx[ctx.rrup < magdist[mag]].flatten()
+            ctx = self._get_ctx(mag, pla, sites, src.id).flatten()
+            ctxt = ctx[ctx.rrup < magdist[mag]]
             if len(ctxt):
                 ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
                 for gsim in self.gsims:
