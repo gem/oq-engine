@@ -612,6 +612,8 @@ class ContextMaker(object):
                 value = rup.surface.get_width()
             elif param == 'in_cshm':  # computed in McVerry2006Chch
                 value = False
+            elif param == 'zbot':  # needed for width estimation in CampbellBozorgnia2014
+                value = rup.zbot
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
@@ -686,6 +688,8 @@ class ContextMaker(object):
                     ctxt[par] = planar.sdr[:, 2]
                 elif par == 'ztor':  # top edge depth
                     ctxt[par] = planar.corners[:, 2, 0]
+                elif par == 'zbot':  # bottom edge depth
+                    ctxt[par] = planar.corners[:, 2, 3]
                 elif par == 'hypo_lon':
                     ctxt[par] = planar.hypo[:, 0]
                 elif par == 'hypo_lat':

@@ -362,6 +362,11 @@ class CampbellBozorgnia2014(GMPE):
         self.estimate_width = int(kwargs.get('estimate_width', 0))
         self.estimate_hypo_depth = int(kwargs.get('estimate_hypo_depth', 0))
 
+        if self.estimate_width:
+            # To estimate a width, the GMPE needs Zbot
+            self.REQUIRES_RUPTURE_PARAMETERS = \
+                self.REQUIRES_RUPTURE_PARAMETERS.union({"zbot", })
+
     def set_parameters(self, ctx):
         """
         Use the ztor, width and hypo_depth formula to estimate
@@ -377,16 +382,24 @@ class CampbellBozorgnia2014(GMPE):
         if self.estimate_width:
             # width estimation requires Zbot
             # where Zbot is the depth to the bottom of the seismogenic crust
+            # breakpoint()
             if not hasattr(ctx, "zbot"):
+                breakpoint()
                 raise KeyError('Zbot is required if width is unknown.')
 
             # Equation 39 of Campbell & Bozorgnia 2014
             mask = np.absolute(np.sin(np.radians(ctx.dip))) > 0
             ctx.width = np.sqrt(10**((ctx.mag - 4.07) / 0.98))
-            ctx.width[mask] = np.minimum(
-                ctx.width[mask],
-                (ctx.zbot[mask] - ctx.ztor[mask]) / np.sin(np.radians(ctx.dip[mask]))
-            )
+
+            if hasattr(mask, "__len__"):
+                ctx.width[mask] = np.minimum(
+                    ctx.width[mask],
+                    (ctx.zbot[mask] - ctx.ztor[mask]) / np.sin(np.radians(ctx.dip[mask]))
+                )
+            else:
+                ctx.width = ctx.width \
+                    if not mask \
+                    else np.minimum(ctx.width, (ctx.zbot - ctx.ztor) / np.sin(np.radians(ctx.dip)))
 
         if self.estimate_hypo_depth:
             # Equation 36 of Campbell & Bozorgnia 2014
