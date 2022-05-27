@@ -382,9 +382,7 @@ class CampbellBozorgnia2014(GMPE):
         if self.estimate_width:
             # width estimation requires Zbot
             # where Zbot is the depth to the bottom of the seismogenic crust
-            # breakpoint()
             if not hasattr(ctx, "zbot"):
-                breakpoint()
                 raise KeyError('Zbot is required if width is unknown.')
 
             # Equation 39 of Campbell & Bozorgnia 2014
