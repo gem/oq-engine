@@ -389,18 +389,20 @@ class CampbellBozorgnia2014(GMPE):
             mask = np.absolute(np.sin(np.radians(ctx.dip))) > 0
             ctx.width = np.sqrt(10**((ctx.mag - 4.07) / 0.98))
 
-            if hasattr(mask, "__len__"):
-                ctx.width[mask] = np.minimum(
-                    ctx.width[mask],
-                    (ctx.zbot[mask] - ctx.ztor[mask]) / np.sin(np.radians(ctx.dip[mask]))
-                )
-            else:
-                ctx.width = ctx.width \
-                    if not mask \
-                    else np.minimum(ctx.width, (ctx.zbot - ctx.ztor) / np.sin(np.radians(ctx.dip)))
+            if not hasattr(mask, "__len__") or mask.ndim == 0:
+                ctx.zbot = np.array([ctx.zbot], dtype=np.float64)
+                ctx.width = np.array([ctx.width], dtype=np.float64)
+                ctx.dip = np.array([ctx.dip], dtype=np.float64)
+
+            ctx.width[mask] = np.minimum(
+                ctx.width[mask],
+                (ctx.zbot[mask] - ctx.ztor[mask]) / np.sin(np.radians(ctx.dip[mask]))
+            )
 
         if self.estimate_hypo_depth:
             # Equation 36 of Campbell & Bozorgnia 2014
+            if not hasattr(ctx.mag, "__len__") or ctx.mag.ndim == 0:
+                ctx.mag = np.array([ctx.mag], dtype=np.float64)
             fdz_m = np.where(
                 ctx.mag < 6.75,
                 -4.317 + 0.984 * ctx.mag,
@@ -408,6 +410,8 @@ class CampbellBozorgnia2014(GMPE):
             )
 
             # Equation 37 of Campbell & Bozorgnia 2014
+            if not hasattr(ctx.dip, "__len__") or ctx.dip.ndim == 0:
+                ctx.dip = np.array([ctx.dip], dtype=np.float64)
             fdz_d = np.where(
                 ctx.dip <= 40,
                 0.0445 * (ctx.dip - 40),
@@ -415,6 +419,8 @@ class CampbellBozorgnia2014(GMPE):
             )
 
             # The depth to the bottom of the rupture plane
+            if not hasattr(ctx.ztor, "__len__") or ctx.ztor.ndim == 0:
+                ctx.ztor = np.array([ctx.ztor], dtype=np.float64)
             zbor = ctx.ztor + ctx.width * np.sin(np.radians(ctx.dip))
 
             # Equation 35 of Campbell & Bozorgnia 2014
