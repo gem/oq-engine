@@ -193,7 +193,7 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.set_weight(srcs, inp.sitecol)
         weights = [src.weight for src in srcs]  # 3 within, 3 outside
         numpy.testing.assert_allclose(
-            weights, [7.8, 7.8, 7.8, 1, 1, 1])
+            weights, [8.01, 8.01, 8.01, 0.01, 0.01, 0.01])
 
         # set different vs30s on the two sites
         inp.sitecol.array['vs30'] = [600., 700.]
