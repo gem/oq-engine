@@ -29,7 +29,7 @@ from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf
 from openquake.hazardlib.source import (
     NonParametricSeismicSource, check_complex_fault)
-from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.tom import PoissonTOM, NegativeBinomialTOM
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
 
@@ -188,6 +188,17 @@ def build_evenly_discretised_mfd(mfd):
     return Node("incrementalMFD",
                 {"binWidth": mfd.bin_width, "minMag": mfd.min_mag},
                 nodes=[occur_rates])
+
+
+@obj_to_node.add('temporalOccurrenceModel')
+def build_temporal_occurrence_model(tom):
+    """
+
+    """
+    parameters = Node("parameters", text=tom.parameters)
+    return Node("temporalOccurrenceModel",
+                {"name": tom.__class__.__name__},
+                nodes=[parameters])
 
 
 @obj_to_node.add('TruncatedGRMFD')
@@ -362,6 +373,11 @@ def get_distributed_seismicity_source_nodes(source):
     # Parse hypocentral depth distribution
     source_nodes.append(
         build_hypo_depth_dist(source.hypocenter_distribution))
+
+    if not isinstance(source.temporal_occurrence_model, PoissonTOM):
+        source_nodes.append(
+            build_temporal_occurrence_model(source.temporal_occurrence_model))
+
     return source_nodes
 
 
@@ -694,6 +710,8 @@ def build_source_group(source_group):
         if isinstance(tom, PoissonTOM) and tom.occurrence_rate:
             attrs['tom'] = 'PoissonTOM'
             attrs['occurrence_rate'] = tom.occurrence_rate
+        else:
+            attrs['tom'] = tom.__class__.__name__
     srcs_weights = [getattr(src, 'mutex_weight', 1) for src in source_group]
     if set(srcs_weights) != {1}:
         attrs['srcs_weights'] = ' '.join(map(str, srcs_weights))
@@ -734,7 +752,7 @@ def extract_ddict(src_groups):
 
 
 def write_source_model(dest, sources_or_groups, name=None,
-                       investigation_time=None):
+                       investigation_time=None, temporal_occurrence_model=None):
     """
     Writes a source model to XML.
 
@@ -759,7 +777,8 @@ def write_source_model(dest, sources_or_groups, name=None,
     else:  # passed a list of sources
         srcs_by_trt = groupby(
             sources_or_groups, operator.attrgetter('tectonic_region_type'))
-        groups = [sourceconverter.SourceGroup(trt, srcs_by_trt[trt])
+        groups = [sourceconverter.SourceGroup(trt, srcs_by_trt[trt],
+                                              temporal_occurrence_model=temporal_occurrence_model)
                   for trt in srcs_by_trt]
         attrs = dict(investigation_time=investigation_time)
     if name or 'name' not in attrs:
