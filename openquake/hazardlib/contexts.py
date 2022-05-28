@@ -775,6 +775,7 @@ class ContextMaker(object):
             with self.ir_mon:
                 allrups = numpy.array(list(src.iter_ruptures(
                     shift_hypo=self.shift_hypo, step=step)))
+                self.num_rups = len(allrups)
                 # sorted by mag by construction
                 u32mags = U32([rup.mag * 100 for rup in allrups])
                 rups_sites = [(rups, sitecol)
@@ -1058,14 +1059,13 @@ class ContextMaker(object):
         ctxs = self.get_ctxs(src, sites, step=10)  # reduced number
         if not ctxs:
             return src.num_ruptures if N == 1 else 0
-        nsites = sum(len(ctx) for ctx in ctxs) / len(ctxs)
+        [ctx] = ctxs
+        esites = len(ctx) * src.num_ruptures / self.num_rups  # set below
         if (hasattr(src, 'location') and src.count_nphc() > 1 and
                 self.pointsource_distance < 1000):
-            eff_rups = src.num_ruptures / 6  # heuristic
-        else:
-            eff_rups = src.num_ruptures
-        weight = eff_rups * (nsites / N + .2)
-        src.esites = nsites * src.num_ruptures
+            esites /= 5  # heuristic
+        weight = esites / N
+        src.esites = int(esites)
         return weight
 
     def set_weight(self, sources, srcfilter, mon=Monitor()):
@@ -1082,11 +1082,11 @@ class ContextMaker(object):
                 src.esites = 0
             elif N <= self.max_sites_disagg and src.code == b'F':  # test_ucerf
                 src.weight = src.num_ruptures * 30
-                src.esites = src.nsites * src.num_ruptures
+                src.esites = int(src.nsites * src.num_ruptures)
             else:
                 with mon:
                     src.esites = 0  # overridden inside estimate_weight
-                    src.weight = .01 + self.estimate_weight(src, srcfilter)
+                    src.weight = .1 + self.estimate_weight(src, srcfilter)
 
 
 # see contexts_tests.py for examples of collapse
