@@ -1065,7 +1065,7 @@ class ContextMaker(object):
             eff_rups = src.num_ruptures / 6  # heuristic
         else:
             eff_rups = src.num_ruptures
-        weight = eff_rups * (nsites.mean() / N + .02)
+        weight = eff_rups * (nsites.mean() / N + .2)
         return weight
 
     def set_weight(self, sources, srcfilter, mon=Monitor()):
@@ -1083,7 +1083,7 @@ class ContextMaker(object):
                 src.weight = src.num_ruptures * 30
             else:
                 with mon:
-                    src.weight = 1. + self.estimate_weight(src, srcfilter)
+                    src.weight = .01 + self.estimate_weight(src, srcfilter)
 
 
 # see contexts_tests.py for examples of collapse
