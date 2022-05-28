@@ -1043,6 +1043,20 @@ class ContextMaker(object):
                             poes[:, :, g] = gsim.get_poes(ms, self, ctxt)
                 yield poes, ctxt, slcsids
 
+    def estimate_sites(self, src, sites):
+        """
+        :returns: how many sites are impacted overall
+        """
+        nphc = src.count_nphc()
+        planardict = src.get_planar(iruptures=True)
+        esites = 0
+        for m, (mag, [planar]) in enumerate(planardict.items()):
+            rrup = project(planar, sites.xyz)[0, 0]  # shape N
+            nclose = (rrup < self.pointsource_distance + src.radius[m]).sum()
+            nfar = len(sites) - nclose
+            esites += nclose * nphc + nfar
+        return esites
+
     # tested in test_collapse_small
     def estimate_weight(self, src, srcfilter):
         """
@@ -1056,14 +1070,14 @@ class ContextMaker(object):
             return 0
         src.nsites = len(sites)
         N = len(srcfilter.sitecol.complete)  # total sites
-        ctxs = self.get_ctxs(src, sites, step=10)  # reduced number
-        if not ctxs:
-            return src.num_ruptures if N == 1 else 0
-        [ctx] = ctxs
-        esites = len(ctx) * src.num_ruptures / self.num_rups  # set below
         if (hasattr(src, 'location') and src.count_nphc() > 1 and
                 self.pointsource_distance < 1000):
-            esites /= 5  # heuristic
+            esites = self.estimate_sites(src, sites)
+        else:
+            ctxs = self.get_ctxs(src, sites, step=10)  # reduced number
+            if not ctxs:
+                return src.num_ruptures if N == 1 else 0
+            esites = len(ctxs[0]) * src.num_ruptures / self.num_rups
         weight = esites / N
         src.esites = int(esites)
         return weight
