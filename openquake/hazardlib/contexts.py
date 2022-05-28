@@ -239,7 +239,6 @@ class Collapser(object):
         return out.view(numpy.recarray), allsids
 
 
-
 class FarAwayRupture(Exception):
     """Raised if the rupture is outside the maximum distance for all sites"""
 
@@ -1059,13 +1058,14 @@ class ContextMaker(object):
         ctxs = self.get_ctxs(src, sites, step=10)  # reduced number
         if not ctxs:
             return src.num_ruptures if N == 1 else 0
-        nsites = numpy.array([len(ctx) for ctx in ctxs])
+        nsites = sum(len(ctx) for ctx in ctxs) / len(ctxs)
         if (hasattr(src, 'location') and src.count_nphc() > 1 and
                 self.pointsource_distance < 1000):
             eff_rups = src.num_ruptures / 6  # heuristic
         else:
             eff_rups = src.num_ruptures
-        weight = eff_rups * (nsites.mean() / N + .2)
+        weight = eff_rups * (nsites / N + .2)
+        src.esites = nsites * src.num_ruptures
         return weight
 
     def set_weight(self, sources, srcfilter, mon=Monitor()):
@@ -1079,10 +1079,13 @@ class ContextMaker(object):
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
+                src.esites = 0
             elif N <= self.max_sites_disagg and src.code == b'F':  # test_ucerf
                 src.weight = src.num_ruptures * 30
+                src.esites = src.nsites * src.num_ruptures
             else:
                 with mon:
+                    src.esites = 0  # overridden inside estimate_weight
                     src.weight = .01 + self.estimate_weight(src, srcfilter)
 
 
@@ -1180,6 +1183,7 @@ class PmapMaker(object):
         for src in self.group:
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(src.nsites)
+            self.source_data['esites'].append(src.esites)
             self.source_data['nrupts'].append(src.num_ruptures)
             self.source_data['weight'].append(src.weight)
             self.source_data['ctimes'].append(
@@ -1206,6 +1210,7 @@ class PmapMaker(object):
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(nsites)
+            self.source_data['esites'].append(src.esites)
             self.source_data['nrupts'].append(nctxs)
             self.source_data['weight'].append(src.weight)
             self.source_data['ctimes'].append(dt)
