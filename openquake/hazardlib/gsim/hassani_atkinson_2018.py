@@ -164,9 +164,11 @@ class HassaniAtkinson2018(GMPE):
     Effects" (doi: 10.1785/0120170333).
 
     :param d_sigma:
+        Stress frop [bar]
     :param kappa0:
+        Kappa_0 [s]
     :param gamma_fle:
-        The name of the file containing the
+        The name of the file containing the anelastic attenuation term.
     """
 
     #: Supported tectonic region type is active shallow crust, see title!
