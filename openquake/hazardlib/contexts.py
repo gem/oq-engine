@@ -1101,8 +1101,8 @@ class ContextMaker(object):
                 with mon:
                     src.esites = 0  # overridden inside estimate_weight
                     src.weight = .1 + self.estimate_weight(src, srcfilter)
-                    if src.code not in b'pP':
-                        src.weight *= 5
+                    if src.code == b'C':
+                        src.weight += 4.9
 
 
 # see contexts_tests.py for examples of collapse
