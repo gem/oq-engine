@@ -20,7 +20,6 @@
 Module exports :class:`HassaniAtkinson2018`
 """
 
-import os
 import re
 import pathlib
 import numpy as np
@@ -48,10 +47,12 @@ def _get_geometrical_attenuation(rrup, r):
     b1 = -1.3
     b2 = -0.5
     z = np.zeros_like(rrup)
+    # Direct wave spreading
     idx = r <= rt
     z[idx] = r[idx]**b1
+    # Surface-wave spreading
     idx = r > rt
-    z[idx] = r[idx]**b1 * (r[idx]/rt)**b2
+    z[idx] = rt**b1 * (r[idx]/rt)**b2
     return z
 
 
@@ -222,7 +223,7 @@ class HassaniAtkinson2018(GMPE):
         gamma = None
         if self.CAE is not None:
             gamma = self.CAE[imt]['gamma']
-        pga_rock = get_gm_rock(C, ctx, self.kappa0, self.d_sigma, gamma)
+        pga_rock = np.exp(get_gm_rock(C, ctx, self.kappa0, self.d_sigma, gamma))
 
         # Compute ground-motion on soil.
         for m, imt in enumerate(imts):
@@ -235,7 +236,7 @@ class HassaniAtkinson2018(GMPE):
 
             # Site term
             TMP = self.BEA14[imt]
-            #mean[m] += get_fs_SeyhanStewart2014(TMP, imt, pga_rock, ctx.vs30)
+            mean[m] += get_fs_SeyhanStewart2014(TMP, imt, pga_rock, ctx.vs30)
 
             # To natural logarithm and [g]
             mean[m] /= np.log10(np.exp(1))

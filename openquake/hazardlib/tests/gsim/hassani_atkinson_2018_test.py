@@ -29,4 +29,4 @@ class HassaniAtkinson2018Test(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('HA18/HA18_MEAN_K_0pt03s_Ds_20bar.csv',
-                   max_discrep_percentage=0.5, kappa0=0.03, d_sigma=20)
+                   max_discrep_percentage=0.1, kappa0=0.03, d_sigma=20)
