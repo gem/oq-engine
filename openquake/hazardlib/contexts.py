@@ -1078,7 +1078,7 @@ class ContextMaker(object):
             if not ctxs:
                 return src.num_ruptures if N == 1 else 0
             esites = len(ctxs[0]) * src.num_ruptures / self.num_rups
-        weight = esites / N
+        weight = esites / N  # the weight is the effective number of ruptures
         src.esites = int(esites)
         return weight
 
@@ -1100,7 +1100,8 @@ class ContextMaker(object):
             else:
                 with mon:
                     src.esites = 0  # overridden inside estimate_weight
-                    src.weight = .1 + self.estimate_weight(src, srcfilter)
+                    src.weight = self.estimate_weight(src, srcfilter)
+                    src.weight += .1 if src.code in b'pP' else 1.
 
 
 # see contexts_tests.py for examples of collapse
