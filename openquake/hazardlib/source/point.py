@@ -149,6 +149,7 @@ class PointSource(ParametricSeismicSource):
     code = b'P'
     MODIFICATIONS = set()
     ps_grid_spacing = 0  # updated in CollapsedPointSource
+    esites = 0  # updated in estimate_weight
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
