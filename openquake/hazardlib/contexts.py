@@ -1139,7 +1139,7 @@ def print_finite_size(rups):
     print(c)
     print('total finite size ruptures = ', sum(c.values()))
 
-    
+
 class PmapMaker(object):
     """
     A class to compute the PoEs from a given source
