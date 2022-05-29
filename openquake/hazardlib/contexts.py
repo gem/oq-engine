@@ -1051,9 +1051,10 @@ class ContextMaker(object):
         planardict = src.get_planar(iruptures=True)
         esites = 0
         for m, (mag, [planar]) in enumerate(planardict.items()):
-            rrup = project(planar, sites.xyz)[0, 0]  # shape N
+            dists = project(planar, sites.xyz)[0, 0]  # shape N
+            rrup = dists[dists < self.maximum_distance(mag)]
             nclose = (rrup < self.pointsource_distance + src.radius[m]).sum()
-            nfar = len(sites) - nclose
+            nfar = len(rrup) - nclose
             esites += nclose * nphc + nfar
         return esites
 
