@@ -175,7 +175,7 @@ def view_worst_sources(token, dstore):
     else:
         step = 1
     data = dstore.read_df('source_data', 'src_id')
-    del data['nsites']
+    del data['impact']
     ser = data.groupby('taskno').ctimes.sum().sort_values().tail(1)
     [[taskno, maxtime]] = ser.to_dict().items()
     data = data[data.taskno == taskno]

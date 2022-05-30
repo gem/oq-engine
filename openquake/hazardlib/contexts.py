@@ -239,7 +239,6 @@ class Collapser(object):
         return out.view(numpy.recarray), allsids
 
 
-
 class FarAwayRupture(Exception):
     """Raised if the rupture is outside the maximum distance for all sites"""
 
@@ -776,6 +775,7 @@ class ContextMaker(object):
             with self.ir_mon:
                 allrups = numpy.array(list(src.iter_ruptures(
                     shift_hypo=self.shift_hypo, step=step)))
+                self.num_rups = len(allrups)
                 # sorted by mag by construction
                 u32mags = U32([rup.mag * 100 for rup in allrups])
                 rups_sites = [(rups, sitecol)
@@ -1043,6 +1043,21 @@ class ContextMaker(object):
                             poes[:, :, g] = gsim.get_poes(ms, self, ctxt)
                 yield poes, ctxt, slcsids
 
+    def estimate_sites(self, src, sites):
+        """
+        :returns: how many sites are impacted overall
+        """
+        nphc = src.count_nphc()
+        planardict = src.get_planar(iruptures=True)
+        esites = 0
+        for m, (mag, [planar]) in enumerate(planardict.items()):
+            dists = project(planar, sites.xyz)[0, 0]  # shape N
+            rrup = dists[dists < self.maximum_distance(mag)]
+            nclose = (rrup < self.pointsource_distance + src.radius[m]).sum()
+            nfar = len(rrup) - nclose
+            esites += nclose * nphc + nfar
+        return esites
+
     # tested in test_collapse_small
     def estimate_weight(self, src, srcfilter):
         """
@@ -1056,16 +1071,16 @@ class ContextMaker(object):
             return 0
         src.nsites = len(sites)
         N = len(srcfilter.sitecol.complete)  # total sites
-        ctxs = self.get_ctxs(src, sites, step=10)  # reduced number
-        if not ctxs:
-            return src.num_ruptures if N == 1 else 0
-        nsites = numpy.array([len(ctx) for ctx in ctxs])
         if (hasattr(src, 'location') and src.count_nphc() > 1 and
                 self.pointsource_distance < 1000):
-            eff_rups = src.num_ruptures / 6  # heuristic
+            esites = self.estimate_sites(src, sites)
         else:
-            eff_rups = src.num_ruptures
-        weight = eff_rups * (nsites.mean() / N + .2)
+            ctxs = self.get_ctxs(src, sites, step=10)  # reduced number
+            if not ctxs:
+                return src.num_ruptures if N == 1 else 0
+            esites = len(ctxs[0]) * src.num_ruptures / self.num_rups
+        weight = esites / N  # the weight is the effective number of ruptures
+        src.esites = int(esites)
         return weight
 
     def set_weight(self, sources, srcfilter, mon=Monitor()):
@@ -1079,11 +1094,16 @@ class ContextMaker(object):
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
+                src.esites = 0
             elif N <= self.max_sites_disagg and src.code == b'F':  # test_ucerf
                 src.weight = src.num_ruptures * 30
+                src.esites = int(src.nsites * src.num_ruptures)
             else:
                 with mon:
-                    src.weight = .01 + self.estimate_weight(src, srcfilter)
+                    src.esites = 0  # overridden inside estimate_weight
+                    src.weight = .1 + self.estimate_weight(src, srcfilter)
+                    if src.code == b'C':
+                        src.weight += 4.9
 
 
 # see contexts_tests.py for examples of collapse
@@ -1120,7 +1140,7 @@ def print_finite_size(rups):
     print(c)
     print('total finite size ruptures = ', sum(c.values()))
 
-    
+
 class PmapMaker(object):
     """
     A class to compute the PoEs from a given source
@@ -1180,6 +1200,7 @@ class PmapMaker(object):
         for src in self.group:
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(src.nsites)
+            self.source_data['esites'].append(src.esites)
             self.source_data['nrupts'].append(src.num_ruptures)
             self.source_data['weight'].append(src.weight)
             self.source_data['ctimes'].append(
@@ -1206,6 +1227,7 @@ class PmapMaker(object):
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(nsites)
+            self.source_data['esites'].append(src.esites)
             self.source_data['nrupts'].append(nctxs)
             self.source_data['weight'].append(src.weight)
             self.source_data['ctimes'].append(dt)

@@ -26,6 +26,7 @@ from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
     build_planar, PlanarSurface, planin_dt)
 from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
@@ -223,6 +224,10 @@ class PointSource(ParametricSeismicSource):
         """
         if hasattr(self, 'radius'):
             return self.radius[-1]  # max radius
+        if isinstance(self.magnitude_scaling_relationship, PointMSR):
+            M = len(self.get_annual_occurrence_rates())
+            self.radius = numpy.full(M, self.ps_grid_spacing * 0.707)
+            return self.radius[-1]
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         npd = self.nodal_plane_distribution.data
         self.radius = numpy.zeros(len(magd))
