@@ -294,7 +294,7 @@ class PointSource(ParametricSeismicSource):
                         yield PointRupture(
                             mag, np.rake, self.tectonic_region_type,
                             Point(clon, clat, cdep), np.strike, np.dip, rate,
-                            self.temporal_occurrence_model)
+                            self.temporal_occurrence_model, self.lower_seismogenic_depth)
 
     def iter_ruptures(self, **kwargs):
         """

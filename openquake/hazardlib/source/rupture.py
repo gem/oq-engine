@@ -607,7 +607,7 @@ class PointRupture(ParametricProbabilisticRupture):
     size effects can be neglected.
     """
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, strike,
-                 dip, occurrence_rate, temporal_occurrence_model):
+                 dip, occurrence_rate, temporal_occurrence_model, zbot):
         self.tectonic_region_type = tectonic_region_type
         self.hypocenter = hypocenter
         self.mag = mag
@@ -617,6 +617,7 @@ class PointRupture(ParametricProbabilisticRupture):
         self.occurrence_rate = occurrence_rate
         self.temporal_occurrence_model = temporal_occurrence_model
         self.surface = PointSurface(hypocenter, strike, dip)
+        self.zbot = zbot
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface,

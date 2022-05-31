@@ -1,3 +1,6 @@
+  [Tom Son]
+  * Added width and hypo_depth estimation to Campbell and Bozorgnia (2014)
+
   [Michele Simionato]
   * Improved the precision of the ps_grid_spacing approximation
   * Added a check for missing mags when using GMPETables

@@ -358,18 +358,82 @@ class CampbellBozorgnia2014(GMPE):
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
-        self.better_ztor = int(kwargs.get('better_ztor', 0))
+        self.estimate_ztor = int(kwargs.get('estimate_ztor', 0))
+        self.estimate_width = int(kwargs.get('estimate_width', 0))
+        self.estimate_hypo_depth = int(kwargs.get('estimate_hypo_depth', 0))
+
+        if self.estimate_width:
+            # To estimate a width, the GMPE needs Zbot
+            self.REQUIRES_RUPTURE_PARAMETERS = \
+                self.REQUIRES_RUPTURE_PARAMETERS.union({"zbot", })
 
     def set_parameters(self, ctx):
         """
-        Use the ztor formula in equation 4 and 5 of Chiou & Youngs 2014
-        if the attribute .better_ztor is set.
+        Use the ztor, width and hypo_depth formula to estimate
+        if the estimate attribute is set.
         """
-        if self.better_ztor:
+        if self.estimate_ztor:
+            # Equation 4 and 5 of Chiou & Youngs 2014
             ctx.ztor = np.where(
                 (ctx.rake > 30.) & (ctx.rake < 150.),
                 np.maximum(2.704-1.226 * np.maximum(ctx.mag-5.849, 0), 0)**2,
                 np.maximum(2.673-1.136 * np.maximum(ctx.mag-4.970, 0), 0)**2)
+
+        if self.estimate_width:
+            # width estimation requires Zbot
+            # where Zbot is the depth to the bottom of the seismogenic crust
+            if not hasattr(ctx, "zbot"):
+                raise KeyError('Zbot is required if width is unknown.')
+
+            # Equation 39 of Campbell & Bozorgnia 2014
+            mask = np.absolute(np.sin(np.radians(ctx.dip))) > 0
+            ctx.width = np.sqrt(10**((ctx.mag - 4.07) / 0.98))
+
+            if not hasattr(mask, "__len__") or mask.ndim == 0:
+                ctx.zbot = np.array([ctx.zbot], dtype=np.float64)
+                ctx.width = np.array([ctx.width], dtype=np.float64)
+                ctx.dip = np.array([ctx.dip], dtype=np.float64)
+
+            ctx.width[mask] = np.minimum(
+                ctx.width[mask],
+                (ctx.zbot[mask] - ctx.ztor[mask]) / np.sin(np.radians(ctx.dip[mask]))
+            )
+
+        if self.estimate_hypo_depth:
+            # Equation 36 of Campbell & Bozorgnia 2014
+            if not hasattr(ctx.mag, "__len__") or ctx.mag.ndim == 0:
+                ctx.mag = np.array([ctx.mag], dtype=np.float64)
+            fdz_m = np.where(
+                ctx.mag < 6.75,
+                -4.317 + 0.984 * ctx.mag,
+                2.325
+            )
+
+            # Equation 37 of Campbell & Bozorgnia 2014
+            if not hasattr(ctx.dip, "__len__") or ctx.dip.ndim == 0:
+                ctx.dip = np.array([ctx.dip], dtype=np.float64)
+            fdz_d = np.where(
+                ctx.dip <= 40,
+                0.0445 * (ctx.dip - 40),
+                0
+            )
+
+            # The depth to the bottom of the rupture plane
+            if not hasattr(ctx.ztor, "__len__") or ctx.ztor.ndim == 0:
+                ctx.ztor = np.array([ctx.ztor], dtype=np.float64)
+            zbor = ctx.ztor + ctx.width * np.sin(np.radians(ctx.dip))
+
+            # Equation 35 of Campbell & Bozorgnia 2014
+            mask = zbor > ctx.ztor
+            dz = np.zeros_like(ctx.ztor)
+            dz[mask] = np.exp(
+                np.minimum(
+                    fdz_m[mask] + fdz_d[mask],
+                    np.log(0.9 * (zbor[mask] - ctx.ztor[mask]))
+                )
+            )
+
+            ctx.hypo_depth = ctx.ztor + dz
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
