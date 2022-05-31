@@ -89,104 +89,6 @@ def preclassical(srcs, sites, cmaker, monitor):
     return dic
 
 
-def run_preclassical(calc):
-    """
-    :param csm: a CompositeSourceModel
-    :param oqparam: the parameters in job.ini file
-    :param h5: a DataStore instance
-    """
-    csm = calc.csm
-    calc.datastore['trt_smrs'] = csm.get_trt_smrs()
-    calc.datastore['toms'] = numpy.array(
-        [sg.tom_name for sg in csm.src_groups], hdf5.vstr)
-    cmakers = read_cmakers(calc.datastore, csm.full_lt)
-    M = len(calc.oqparam.imtls)
-    G = max(len(cm.gsims) for cm in cmakers)
-    N = get_maxsize(M, G)
-    logging.info('NMG = ({:_d}, {:_d}, {:_d}) = {:.1f} MB'.format(
-        N, M, G, N*M*G*8 / 1024**2))
-    h5 = calc.datastore.hdf5
-    calc.sitecol = sites = csm.sitecol if csm.sitecol else None
-    # do nothing for atomic sources except counting the ruptures
-    atomic_sources = []
-    normal_sources = []
-    for sg in csm.src_groups:
-        grp_id = sg.sources[0].grp_id
-        if sg.atomic:
-            cmakers[grp_id].set_weight(sg, sites)
-            atomic_sources.extend(sg)
-        else:
-            normal_sources.extend(sg)
-
-    # run preclassical for non-atomic sources
-    sources_by_grp = groupby(
-        normal_sources, lambda src: (src.grp_id, msr_name(src)))
-    logging.info('Starting preclassical')
-    smap = parallel.Starmap(preclassical, h5=h5)
-    for (grp_id, msr), srcs in sources_by_grp.items():
-        pointsources, pointlike, others = [], [], []
-        for src in srcs:
-            if hasattr(src, 'location'):
-                pointsources.append(src)
-            elif hasattr(src, 'nodal_plane_distribution'):
-                pointlike.append(src)
-            elif src.code in b'FN':  # multifault, nonparametric
-                others.extend(split_source(src) if calc.oqparam.split_sources
-                              else [src])
-            else:
-                others.append(src)
-        if calc.oqparam.ps_grid_spacing:
-            if pointsources or pointlike:
-                smap.submit((pointsources + pointlike, sites, cmakers[grp_id]))
-        else:
-            if pointsources:
-                smap.submit_split(
-                    (pointsources, sites, cmakers[grp_id]), 10, 160)
-            for src in pointlike:  # area, multipoint
-                smap.submit(([src], sites, cmakers[grp_id]))
-        if others:
-            smap.submit_split((others, sites, cmakers[grp_id]), 10, 160)
-    normal = smap.reduce()
-    if atomic_sources:  # case_35
-        n = len(atomic_sources)
-        atomic = AccumDict({'before': n, 'after': n})
-        for grp_id, srcs in groupby(
-                atomic_sources, lambda src: src.grp_id).items():
-            atomic[grp_id] = srcs
-    else:
-        atomic = AccumDict()
-    res = normal + atomic
-    if 'before' in res and 'after' in res and res['before'] != res['after']:
-        logging.info('Reduced the number of point sources from {:_d} -> {:_d}'.
-                     format(res['before'], res['after']))
-    acc = AccumDict(accum=0)
-    code2cls = get_code2cls()
-    for grp_id, srcs in res.items():
-        # NB: grp_id can be the string "before" or "after"
-        if not isinstance(grp_id, str):
-            srcs.sort(key=operator.attrgetter('source_id'))
-        # srcs can be empty if the minimum_magnitude filter is on
-        if srcs and not isinstance(grp_id, str) and grp_id not in atomic:
-            # check if OQ_SAMPLE_SOURCES is set
-            ss = os.environ.get('OQ_SAMPLE_SOURCES')
-            if ss:
-                logging.info('Sampled sources for group #%d', grp_id)
-                srcs = general.random_filter(srcs, float(ss)) or [srcs[0]]
-            newsg = SourceGroup(srcs[0].tectonic_region_type)
-            newsg.sources = srcs
-            csm.src_groups[grp_id] = newsg
-            for src in srcs:
-                assert src.weight
-                assert src.num_ruptures
-                acc[src.code] += int(src.num_ruptures)
-    for val, key in sorted((val, key) for key, val in acc.items()):
-        cls = code2cls[key].__name__
-        logging.info('{} ruptures: {:_d}'.format(cls, val))
-    calc.store_source_info(source_data(csm.get_sources()))
-    h5['full_lt'] = csm.full_lt
-    return res
-
-
 @base.calculators.add('preclassical')
 class PreClassicalCalculator(base.HazardCalculator):
     """
@@ -212,13 +114,109 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
 
+    def populate_csm(self):
+        # and store full_lt and source_info
+        csm = self.csm
+        self.datastore['trt_smrs'] = csm.get_trt_smrs()
+        self.datastore['toms'] = numpy.array(
+            [sg.tom_name for sg in csm.src_groups], hdf5.vstr)
+        cmakers = read_cmakers(self.datastore, csm.full_lt)
+        M = len(self.oqparam.imtls)
+        G = max(len(cm.gsims) for cm in cmakers)
+        N = get_maxsize(M, G)
+        logging.info('NMG = ({:_d}, {:_d}, {:_d}) = {:.1f} MB'.format(
+            N, M, G, N*M*G*8 / 1024**2))
+        h5 = self.datastore.hdf5
+        self.sitecol = sites = csm.sitecol if csm.sitecol else None
+        # do nothing for atomic sources except counting the ruptures
+        atomic_sources = []
+        normal_sources = []
+        for sg in csm.src_groups:
+            grp_id = sg.sources[0].grp_id
+            if sg.atomic:
+                cmakers[grp_id].set_weight(sg, sites)
+                atomic_sources.extend(sg)
+            else:
+                normal_sources.extend(sg)
+
+        # run preclassical for non-atomic sources
+        sources_by_grp = groupby(
+            normal_sources, lambda src: (src.grp_id, msr_name(src)))
+        logging.info('Starting preclassical')
+        smap = parallel.Starmap(preclassical, h5=h5)
+        for (grp_id, msr), srcs in sources_by_grp.items():
+            pointsources, pointlike, others = [], [], []
+            for src in srcs:
+                if hasattr(src, 'location'):
+                    pointsources.append(src)
+                elif hasattr(src, 'nodal_plane_distribution'):
+                    pointlike.append(src)
+                elif src.code in b'FN':  # multifault, nonparametric
+                    others.extend(split_source(src)
+                                  if self.oqparam.split_sources else [src])
+                else:
+                    others.append(src)
+            if self.oqparam.ps_grid_spacing:
+                if pointsources or pointlike:
+                    smap.submit(
+                        (pointsources + pointlike, sites, cmakers[grp_id]))
+            else:
+                if pointsources:
+                    smap.submit_split(
+                        (pointsources, sites, cmakers[grp_id]), 10, 160)
+                for src in pointlike:  # area, multipoint
+                    smap.submit(([src], sites, cmakers[grp_id]))
+            if others:
+                smap.submit_split((others, sites, cmakers[grp_id]), 10, 160)
+        normal = smap.reduce()
+        if atomic_sources:  # case_35
+            n = len(atomic_sources)
+            atomic = AccumDict({'before': n, 'after': n})
+            for grp_id, srcs in groupby(
+                    atomic_sources, lambda src: src.grp_id).items():
+                atomic[grp_id] = srcs
+        else:
+            atomic = AccumDict()
+        res = normal + atomic
+        if ('before' in res and 'after' in res and
+                res['before'] != res['after']):
+            logging.info(
+                'Reduced the number of point sources from {:_d} -> {:_d}'.
+                format(res['before'], res['after']))
+        acc = AccumDict(accum=0)
+        code2cls = get_code2cls()
+        for grp_id, srcs in res.items():
+            # NB: grp_id can be the string "before" or "after"
+            if not isinstance(grp_id, str):
+                srcs.sort(key=operator.attrgetter('source_id'))
+            # srcs can be empty if the minimum_magnitude filter is on
+            if srcs and not isinstance(grp_id, str) and grp_id not in atomic:
+                # check if OQ_SAMPLE_SOURCES is set
+                ss = os.environ.get('OQ_SAMPLE_SOURCES')
+                if ss:
+                    logging.info('Sampled sources for group #%d', grp_id)
+                    srcs = general.random_filter(srcs, float(ss)) or [srcs[0]]
+                newsg = SourceGroup(srcs[0].tectonic_region_type)
+                newsg.sources = srcs
+                csm.src_groups[grp_id] = newsg
+                for src in srcs:
+                    assert src.weight
+                    assert src.num_ruptures
+                    acc[src.code] += int(src.num_ruptures)
+        for val, key in sorted((val, key) for key, val in acc.items()):
+            cls = code2cls[key].__name__
+            logging.info('{} ruptures: {:_d}'.format(cls, val))
+        self.store_source_info(source_data(csm.get_sources()))
+        h5['full_lt'] = csm.full_lt
+        return res
+
     def execute(self):
         """
         Run `preclassical(srcs, srcfilter, params, monitor)` by
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        run_preclassical(self)
+        self.populate_csm()
         self.max_weight = self.csm.get_max_weight(self.oqparam)
         return self.csm
 
