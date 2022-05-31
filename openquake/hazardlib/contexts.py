@@ -1094,6 +1094,7 @@ class ContextMaker(object):
         if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
             srcfilter = SourceFilter(srcfilter, self.maximum_distance)
         N = len(srcfilter.sitecol)
+        G = len(self.gsims)
         for src in sources:
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
@@ -1105,9 +1106,11 @@ class ContextMaker(object):
             else:
                 with mon:
                     src.esites = 0  # overridden inside estimate_weight
-                    src.weight = .1 + self.estimate_weight(src, srcfilter)
-                    if src.code == b'C':
-                        src.weight += 4.9
+                    src.weight = .1 + self.estimate_weight(src, srcfilter) * G
+                    if src.code == b'F':
+                        src.weight += .9
+                    elif src.code == b'C':
+                        src.weight += 9.9
 
 
 # see contexts_tests.py for examples of collapse
