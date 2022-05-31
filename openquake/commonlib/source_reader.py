@@ -474,7 +474,7 @@ class CompositeSourceModel:
         if not heavy:
             maxsrc = max(srcs, key=lambda s: s.weight)
             logging.info('Heaviest: %s', maxsrc)
-        return max_weight / 2 if oq.ps_grid_spacing else max_weight
+        return max_weight
 
     def __toh5__(self):
         data = gzip.compress(pickle.dumps(self, pickle.HIGHEST_PROTOCOL))
