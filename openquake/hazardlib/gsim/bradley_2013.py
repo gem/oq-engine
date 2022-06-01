@@ -53,10 +53,9 @@ cbd_polygon = shapely.geometry.Polygon(
 def _adjust_mean_model(region, in_cshm, in_cbd, imt_per, b13_mean):
     dL2L = dS2S = np.array(np.zeros(np.shape(b13_mean)))
     # If the site is in the CBD polygon, get dL2L and dS2S terms
-    if in_cshm is True:
-        # Only apply the dL2L term only to sites located in the CBD.
-        dL2L[in_cbd == 1] = _get_dL2L(imt_per)
-        dS2S[in_cbd == 1] = _get_dS2S(region, imt_per)
+    # Only apply the dL2L term only to sites located in the CBD.
+    dL2L[in_cbd & in_cshm] = _get_dL2L(imt_per)
+    dS2S[in_cbd & in_cshm] = _get_dS2S(region, imt_per)
     return b13_mean + dL2L + dS2S
 
 
@@ -69,7 +68,7 @@ def _check_in_cbd_polygon(lons, lats):
     """
     points = [shapely.geometry.Point(lons[ind], lats[ind])
               for ind in np.arange(len(lons))]
-    in_cbd = np.asarray([cbd_polygon.contains(point) for point in points])
+    in_cbd = np.array([cbd_polygon.contains(point) for point in points])
     return in_cbd
 
 
@@ -157,11 +156,10 @@ def set_adjusted_stddevs(
         srf_sigma = np.array(np.ones(np.shape(in_cbd)))
         srf_phi = np.array(np.ones(np.shape(in_cbd)))
         srf_tau = np.array(np.ones(np.shape(in_cbd)))
-        if in_cshm == 1:
-            srf_sigma[in_cbd == 1] = _get_SRF_sigma(imt_per)
-            srf_phi[in_cbd == 1] = _get_SRF_phi(imt_per)
-            # The tau reduction term is not used in this implementation
-            # srf_tau[in_cbd == True] = _get_SRF_tau(imt_per)
+        srf_sigma[in_cshm & in_cbd] = _get_SRF_sigma(imt_per)
+        srf_phi[in_cshm & in_cbd] = _get_SRF_phi(imt_per)
+        # The tau reduction term is not used in this implementation
+        # srf_tau[in_cbd == True] = _get_SRF_tau(imt_per)
 
         # Add 'additional sigma' specified in the Canterbury Seismic
         # Hazard Model to total sigma, eq. 21
@@ -821,12 +819,12 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
         Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
         of Christchurch, Earthquake Spectra, 30(1), 17-29.
         """
-        lons = np.ravel(rup.surface.mesh.array[0])
-        lats = np.ravel(rup.surface.mesh.array[1])
+        lons = rup.surface.mesh.lons.flatten()
+        lats = rup.surface.mesh.lats.flatten()
         points_in_polygon = [
             shapely.geometry.Point(lons[i], lats[i]).within(cshm_polygon)
             for i in np.arange(len(lons))]
-        self.in_cshm = any(points_in_polygon)
+        rup.in_cshm = any(points_in_polygon)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -840,8 +838,9 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
         # Check if the sites are located in the CBD polygon
         in_cbd = _check_in_cbd_polygon(ctx.lon, ctx.lat)
         # Fix CBD site terms before dS2S modification.
-        ctx.vs30[in_cbd == 1] = 250
-        ctx.z1pt0[in_cbd == 1] = 330
+        ctx.vs30[in_cbd] = 250
+        ctx.z1pt0[in_cbd] = 330
+        in_cshm = ctx.in_cshm
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             imt_per = imt.period
@@ -858,11 +857,11 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
             b13_mean = _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1)
             # Adjust mean and standard deviation
             mean[m] = _adjust_mean_model(
-                self.region, self.in_cshm, in_cbd, imt_per, b13_mean)
+                self.region, in_cshm, in_cbd, imt_per, b13_mean)
             mean[m] += convert_to_LHC(imt)
             set_adjusted_stddevs(
                 name, self.additional_sigma, ctx, C, ln_y_ref, exp1, exp2,
-                self.in_cshm, in_cbd, imt_per, sig[m], tau[m], phi[m])
+                in_cshm, in_cbd, imt_per, sig[m], tau[m], phi[m])
 
 
 class Bradley2013bChchMapsAdditionalSigma(Bradley2013bChchMaps):
