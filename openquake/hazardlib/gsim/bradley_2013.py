@@ -49,8 +49,8 @@ def _adjust_mean_model(region, in_cshm, in_cbd, imt_per, b13_mean):
     dL2L = dS2S = np.array(np.zeros(np.shape(b13_mean)))
     # If the site is in the CBD polygon, get dL2L and dS2S terms
     # Only apply the dL2L term only to sites located in the CBD.
-    dL2L[in_cbd == 1] = _get_dL2L(imt_per)
-    dS2S[in_cbd == 1] = _get_dS2S(region, imt_per)
+    dL2L[in_cbd & in_cshm] = _get_dL2L(imt_per)
+    dS2S[in_cbd & in_cshm] = _get_dS2S(region, imt_per)
     return b13_mean + dL2L + dS2S
 
 
@@ -63,7 +63,7 @@ def _check_in_cbd_polygon(lons, lats):
     """
     points = [shapely.geometry.Point(lons[ind], lats[ind])
               for ind in np.arange(len(lons))]
-    in_cbd = np.asarray([cbd_polygon.contains(point) for point in points])
+    in_cbd = np.array([cbd_polygon.contains(point) for point in points])
     return in_cbd
 
 
@@ -151,11 +151,10 @@ def set_adjusted_stddevs(
         srf_sigma = np.array(np.ones(np.shape(in_cbd)))
         srf_phi = np.array(np.ones(np.shape(in_cbd)))
         srf_tau = np.array(np.ones(np.shape(in_cbd)))
-        if in_cshm == 1:
-            srf_sigma[in_cbd == 1] = _get_SRF_sigma(imt_per)
-            srf_phi[in_cbd == 1] = _get_SRF_phi(imt_per)
-            # The tau reduction term is not used in this implementation
-            # srf_tau[in_cbd == True] = _get_SRF_tau(imt_per)
+        srf_sigma[in_cshm & in_cbd] = _get_SRF_sigma(imt_per)
+        srf_phi[in_cshm & in_cbd] = _get_SRF_phi(imt_per)
+        # The tau reduction term is not used in this implementation
+        # srf_tau[in_cbd == True] = _get_SRF_tau(imt_per)
 
         # Add 'additional sigma' specified in the Canterbury Seismic
         # Hazard Model to total sigma, eq. 21
@@ -820,8 +819,8 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
         # Check if the sites are located in the CBD polygon
         in_cbd = _check_in_cbd_polygon(ctx.lon, ctx.lat)
         # Fix CBD site terms before dS2S modification.
-        ctx.vs30[in_cbd == 1] = 250
-        ctx.z1pt0[in_cbd == 1] = 330
+        ctx.vs30[in_cbd] = 250
+        ctx.z1pt0[in_cbd] = 330
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             imt_per = imt.period
