@@ -587,8 +587,12 @@ class ContextMaker(object):
                 value = rup.surface.get_width()
             elif param == 'in_cshm':  # computed in McVerry2006Chch
                 value = False
-            elif param == 'zbot':  # needed for width estimation in CampbellBozorgnia2014
-                value = rup.zbot
+            elif param == 'zbot':
+                # needed for width estimation in CampbellBozorgnia2014
+                if rup.surface:
+                    value = rup.surface.mesh.depths.max()
+                else:
+                    value = rup.hypocenter.depth
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))

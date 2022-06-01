@@ -701,7 +701,8 @@ class McVerry2006Chch(McVerry2006AscSC):
         points_in_polygon = [
             shapely.geometry.Point(rec.clon, rec.clat).within(cshm_polygon)
             for rec in ctx]
-        ctx.in_cshm = any(points_in_polygon)
+        ctx.in_cshm = np.array(points_in_polygon)
+        print(ctx.in_cshm)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
