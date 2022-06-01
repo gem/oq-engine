@@ -520,7 +520,8 @@ class ContextMaker(object):
         for ctx in ctxs:
             ctx = ctx.roundup(self.minimum_distance)
             for gsim in self.gsims:
-                gsim.set_parameters(ctx)
+                if getattr(ctx, 'surface', None):  # not in estimate_weight
+                    gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
             for par in dd:
                 if par == 'magi':  # in disaggregation
