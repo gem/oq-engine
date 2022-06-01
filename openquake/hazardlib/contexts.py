@@ -1115,14 +1115,13 @@ class ContextMaker(object):
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
                 src.esites = 0
-            elif N <= self.max_sites_disagg and src.code == b'F':  # test_ucerf
-                src.weight = src.num_ruptures * 30
-                src.esites = int(src.nsites * src.num_ruptures)
             else:
                 with mon:
                     src.esites = 0  # overridden inside estimate_weight
                     src.weight = .1 + self.estimate_weight(src, srcfilter) * G
-                    if src.code == b'F':
+                    if src.code == b'F' and N <= self.max_sites_disagg:
+                        src.weight *= 20  # test ucerf
+                    elif src.code == b'S':
                         src.weight += .9
                     elif src.code == b'C':
                         src.weight += 9.9
