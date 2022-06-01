@@ -424,8 +424,6 @@ class GMPE(GroundShakingIntensityModel):
         """
         Combines the parameters of the GMPE provided at the construction level
         with the ones originally assigned to the backbone modified GMPE.
-
-        :param ctx: if given, a context recarray to be updated
         """
         for key in (ADMITTED_STR_PARAMETERS + ADMITTED_FLOAT_PARAMETERS +
                     ADMITTED_SET_PARAMETERS):
