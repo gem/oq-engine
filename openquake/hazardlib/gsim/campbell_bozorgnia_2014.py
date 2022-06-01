@@ -395,28 +395,21 @@ class CampbellBozorgnia2014(GMPE):
                 ctx.dip = np.array([ctx.dip], dtype=np.float64)
 
             ctx.width[mask] = np.minimum(
-                ctx.width[mask],
-                (ctx.zbot[mask] - ctx.ztor[mask]) / np.sin(np.radians(ctx.dip[mask]))
-            )
+                ctx.width[mask], (ctx.zbot[mask] - ctx.ztor[mask]) /
+                np.sin(np.radians(ctx.dip[mask])))
 
         if self.estimate_hypo_depth:
             # Equation 36 of Campbell & Bozorgnia 2014
             if not hasattr(ctx.mag, "__len__") or ctx.mag.ndim == 0:
                 ctx.mag = np.array([ctx.mag], dtype=np.float64)
             fdz_m = np.where(
-                ctx.mag < 6.75,
-                -4.317 + 0.984 * ctx.mag,
-                2.325
-            )
+                ctx.mag < 6.75, -4.317 + 0.984 * ctx.mag, 2.325)
 
             # Equation 37 of Campbell & Bozorgnia 2014
             if not hasattr(ctx.dip, "__len__") or ctx.dip.ndim == 0:
                 ctx.dip = np.array([ctx.dip], dtype=np.float64)
             fdz_d = np.where(
-                ctx.dip <= 40,
-                0.0445 * (ctx.dip - 40),
-                0
-            )
+                ctx.dip <= 40, 0.0445 * (ctx.dip - 40), 0)
 
             # The depth to the bottom of the rupture plane
             if not hasattr(ctx.ztor, "__len__") or ctx.ztor.ndim == 0:
@@ -429,10 +422,7 @@ class CampbellBozorgnia2014(GMPE):
             dz[mask] = np.exp(
                 np.minimum(
                     fdz_m[mask] + fdz_d[mask],
-                    np.log(0.9 * (zbor[mask] - ctx.ztor[mask]))
-                )
-            )
-
+                    np.log(0.9 * (zbor[mask] - ctx.ztor[mask]))))
             ctx.hypo_depth = ctx.ztor + dz
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
