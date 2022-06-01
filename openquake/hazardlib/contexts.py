@@ -520,7 +520,8 @@ class ContextMaker(object):
         for ctx in ctxs:
             ctx = ctx.roundup(self.minimum_distance)
             for gsim in self.gsims:
-                if getattr(ctx, 'surface', None):  # not in estimate_weight
+                if getattr(ctx, 'surface', None):
+                    # the surface is missing in the GSIM tests
                     gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
             for par in dd:
