@@ -107,7 +107,7 @@ def _get_poes(mean_std, loglevels, truncation_level):
 
 
 OK_METHODS = ('compute', 'get_mean_and_stddevs', 'get_poes',
-              'set_parameters', 'set_tables', 'update_ctx')
+              'set_parameters', 'set_tables')
 
 
 def bad_methods(clsdict):
