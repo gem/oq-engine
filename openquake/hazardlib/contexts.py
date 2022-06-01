@@ -789,7 +789,7 @@ class ContextMaker(object):
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         ctxs = []
         if getattr(src, 'location', None) and step == 1:
-            return self.fix(self.get_ctxs_planar(src, sitecol))
+            return self.update_ctx(self.get_ctxs_planar(src, sitecol))
         elif hasattr(src, 'source_id'):  # other source
             with self.ir_mon:
                 allrups = numpy.array(list(src.iter_ruptures(
@@ -820,15 +820,16 @@ class ContextMaker(object):
                         c = rup.surface.get_closest_points(sites.complete)
                         ctx.clon = c.lons[ctx.sids]
                         ctx.clat = c.lats[ctx.sids]
-        return self.fix([] if not ctxs else [self.recarray(ctxs)])
+        return self.update_ctx([] if not ctxs else [self.recarray(ctxs)])
 
-    def fix(self, ctxs):
+    def update_ctx(self, ctxs):
         """
-        Call gsim.set_parameters and fix the contexts
+        Call gsim.update_ctx and fix the contexts
         """
         for ctx in ctxs:
             for gsim in self.gsims:
-                gsim.set_parameters(ctx)
+                if hasattr(gsim, 'update_ctx'):
+                    gsim.update_ctx(ctx)
         return ctxs
 
     def max_intensity(self, sitecol1, mags, dists):

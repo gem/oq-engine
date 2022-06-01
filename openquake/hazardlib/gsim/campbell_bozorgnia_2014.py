@@ -364,10 +364,9 @@ class CampbellBozorgnia2014(GMPE):
 
         if self.estimate_width:
             # To estimate a width, the GMPE needs Zbot
-            self.REQUIRES_RUPTURE_PARAMETERS = \
-                self.REQUIRES_RUPTURE_PARAMETERS.union({"zbot", })
+            self.REQUIRES_RUPTURE_PARAMETERS |= {"zbot"}
 
-    def set_parameters(self, ctx):
+    def update_ctx(self, ctx):
         """
         Use the ztor, width and hypo_depth formula to estimate
         if the estimate attribute is set.
