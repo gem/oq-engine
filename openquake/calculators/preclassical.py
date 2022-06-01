@@ -21,12 +21,14 @@ import logging
 import operator
 import numpy
 from openquake.baselib import general, parallel, hdf5
+from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.contexts import read_cmakers, get_maxsize
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
+from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -45,6 +47,26 @@ def source_data(sources):
         data['weight'].append(src.weight)
         data['ctimes'].append(0)
     return data
+
+
+def collapse_nphc(src):
+    """
+    Collapse the nodal_plane_distribution and hypocenter_distribution.
+    """
+    if (hasattr(src, 'nodal_plane_distribution') and
+            hasattr(src, 'hypocenter_distribution')):
+        if len(src.nodal_plane_distribution.data) > 1:
+            ws, nps = zip(*src.nodal_plane_distribution.data)
+            strike = numpy.average([np.strike for np in nps], weights=ws)
+            dip = numpy.average([np.dip for np in nps], weights=ws)
+            rake = numpy.average([np.rake for np in nps], weights=ws)
+            val = geo.NodalPlane(strike, dip, rake)
+            src.nodal_plane_distribution = pmf.PMF([(1., val)])
+        if len(src.hypocenter_distribution.data) > 1:
+            ws, vals = zip(*src.hypocenter_distribution.data)
+            val = numpy.average(vals, weights=ws)
+            src.hypocenter_distribution = pmf.PMF([(1., val)])
+        src.magnitude_scaling_relationship = PointMSR()
 
 
 def preclassical(srcs, sites, cmaker, monitor):
@@ -131,7 +153,15 @@ class PreClassicalCalculator(base.HazardCalculator):
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
         normal_sources = []
+        reqv = 'reqv' in self.oqparam.inputs
+        if reqv:
+            logging.warning(
+                'Using equivalent distance approximation and '
+                'collapsing hypocenters and nodal planes')
         for sg in csm.src_groups:
+            if reqv:
+                for src in sg:
+                    collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
             if sg.atomic:
                 cmakers[grp_id].set_weight(sg, sites)
