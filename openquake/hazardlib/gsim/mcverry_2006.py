@@ -31,6 +31,12 @@ from openquake.hazardlib.imt import PGA, SA
 from openquake.baselib.general import CallableDict
 
 
+# These coordinates were provided by M Gerstenberger (personal
+# communication, 10 August 2018)
+cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
+                                         (173.2, -43.9), (171.6, -43.9)])
+
+
 def _compute_f4(C, mag, rrup):
     """
     Abrahamson and Silva 1997 f4 term for hanging wall effects.
@@ -693,14 +699,10 @@ class McVerry2006Chch(McVerry2006AscSC):
         Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
         of Christchurch, Earthquake Spectra, 30(1), 17-29.
         """
-        lats = np.ravel(rup.surface.mesh.array[1])
         lons = np.ravel(rup.surface.mesh.array[0])
-        # These coordinates are provided by M Gerstenberger (personal
-        # communication, 10 August 2018)
-        polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
-                                            (173.2, -43.9), (171.6, -43.9)])
+        lats = np.ravel(rup.surface.mesh.array[1])
         points_in_polygon = [
-            shapely.geometry.Point(lons[i], lats[i]).within(polygon)
+            shapely.geometry.Point(lons[i], lats[i]).within(cshm_polygon)
             for i in np.arange(len(lons))]
         rup.in_cshm = any(points_in_polygon)
 

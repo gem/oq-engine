@@ -38,6 +38,18 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+# These coordinates are provided by M Gerstenberger (personal
+# communication, 10 August 2018)
+cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
+                                         (173.2, -43.9), (171.6, -43.9)])
+
+cbd_polygon = shapely.geometry.Polygon(
+    [(172.6259, -43.5209), (172.6505, -43.5209),
+     (172.6505, -43.5399), (172.6124, -43.5400),
+     (172.6123, -43.5289), (172.6124, -43.5245),
+     (172.6220, -43.5233)])
+
+
 def _adjust_mean_model(region, in_cshm, in_cbd, imt_per, b13_mean):
     dL2L = dS2S = np.array(np.zeros(np.shape(b13_mean)))
     # If the site is in the CBD polygon, get dL2L and dS2S terms
@@ -55,14 +67,9 @@ def _check_in_cbd_polygon(lons, lats):
     in the Christchurch District Plan. See Figure 4.4 of Van Houtte and
     Abbott (2019).
     """
-    polygon = shapely.geometry.Polygon(
-        [(172.6259, -43.5209), (172.6505, -43.5209),
-         (172.6505, -43.5399), (172.6124, -43.5400),
-         (172.6123, -43.5289), (172.6124, -43.5245),
-         (172.6220, -43.5233)])
     points = [shapely.geometry.Point(lons[ind], lats[ind])
               for ind in np.arange(len(lons))]
-    in_cbd = np.asarray([polygon.contains(point) for point in points])
+    in_cbd = np.asarray([cbd_polygon.contains(point) for point in points])
     return in_cbd
 
 
@@ -814,14 +821,10 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
         Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
         of Christchurch, Earthquake Spectra, 30(1), 17-29.
         """
-        lats = np.ravel(rup.surface.mesh.array[1])
         lons = np.ravel(rup.surface.mesh.array[0])
-        # These coordinates are provided by M Gerstenberger (personal
-        # communication, 10 August 2018)
-        polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
-                                            (173.2, -43.9), (171.6, -43.9)])
+        lats = np.ravel(rup.surface.mesh.array[1])
         points_in_polygon = [
-            shapely.geometry.Point(lons[i], lats[i]).within(polygon)
+            shapely.geometry.Point(lons[i], lats[i]).within(cshm_polygon)
             for i in np.arange(len(lons))]
         self.in_cshm = any(points_in_polygon)
 
