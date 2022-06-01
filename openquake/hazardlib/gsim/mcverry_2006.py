@@ -699,8 +699,8 @@ class McVerry2006Chch(McVerry2006AscSC):
         Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
         of Christchurch, Earthquake Spectra, 30(1), 17-29.
         """
-        lons = np.ravel(rup.surface.mesh.array[0])
-        lats = np.ravel(rup.surface.mesh.array[1])
+        lons = rup.surface.mesh.lons.flatten()
+        lats = rup.surface.mesh.lats.flatten()
         points_in_polygon = [
             shapely.geometry.Point(lons[i], lats[i]).within(cshm_polygon)
             for i in np.arange(len(lons))]
