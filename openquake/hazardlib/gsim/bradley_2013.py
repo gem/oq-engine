@@ -38,11 +38,6 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-# These coordinates are provided by M Gerstenberger (personal
-# communication, 10 August 2018)
-cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
-                                         (173.2, -43.9), (171.6, -43.9)])
-
 cbd_polygon = shapely.geometry.Polygon(
     [(172.6259, -43.5209), (172.6505, -43.5209),
      (172.6505, -43.5399), (172.6124, -43.5400),
@@ -812,20 +807,6 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
     #: not have code that can be made available.
     non_verified = True
 
-    def set_parameters(self, rup):
-        """
-        Checks if any part of the rupture surface mesh is located within the
-        intended boundaries of the Canterbury Seismic Hazard Model in
-        Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
-        of Christchurch, Earthquake Spectra, 30(1), 17-29.
-        """
-        lons = rup.surface.mesh.lons.flatten()
-        lats = rup.surface.mesh.lats.flatten()
-        points_in_polygon = [
-            shapely.geometry.Point(lons[i], lats[i]).within(cshm_polygon)
-            for i in np.arange(len(lons))]
-        rup.in_cshm = any(points_in_polygon)
-
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -840,7 +821,6 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
         # Fix CBD site terms before dS2S modification.
         ctx.vs30[in_cbd] = 250
         ctx.z1pt0[in_cbd] = 330
-        in_cshm = ctx.in_cshm
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             imt_per = imt.period
@@ -857,11 +837,11 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
             b13_mean = _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1)
             # Adjust mean and standard deviation
             mean[m] = _adjust_mean_model(
-                self.region, in_cshm, in_cbd, imt_per, b13_mean)
+                self.region, ctx.in_cshm, in_cbd, imt_per, b13_mean)
             mean[m] += convert_to_LHC(imt)
             set_adjusted_stddevs(
                 name, self.additional_sigma, ctx, C, ln_y_ref, exp1, exp2,
-                in_cshm, in_cbd, imt_per, sig[m], tau[m], phi[m])
+                ctx.in_cshm, in_cbd, imt_per, sig[m], tau[m], phi[m])
 
 
 class Bradley2013bChchMapsAdditionalSigma(Bradley2013bChchMaps):

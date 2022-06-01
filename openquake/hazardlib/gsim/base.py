@@ -106,7 +106,8 @@ def _get_poes(mean_std, loglevels, truncation_level):
     return out.T
 
 
-OK_METHODS = 'compute get_mean_and_stddevs get_poes set_parameters set_tables'
+OK_METHODS = ('compute', 'get_mean_and_stddevs', 'get_poes',
+              'set_parameters', 'set_tables', 'update_ctx')
 
 
 def bad_methods(clsdict):
@@ -419,20 +420,19 @@ class GMPE(GroundShakingIntensityModel):
     of actual GMPE implementations is supposed to return the mean
     value as a natural logarithm of intensity.
     """
-    def set_parameters(self, rup=None):
+    def set_parameters(self):
         """
         Combines the parameters of the GMPE provided at the construction level
         with the ones originally assigned to the backbone modified GMPE.
         """
-        if rup is None:   # in gulerce_abrahamson, split_sigma, etc
-            for key in (ADMITTED_STR_PARAMETERS + ADMITTED_FLOAT_PARAMETERS +
-                        ADMITTED_SET_PARAMETERS):
-                try:
-                    val = getattr(self.gmpe, key)
-                except AttributeError:
-                    pass
-                else:
-                    setattr(self, key, val)
+        for key in (ADMITTED_STR_PARAMETERS + ADMITTED_FLOAT_PARAMETERS +
+                    ADMITTED_SET_PARAMETERS):
+            try:
+                val = getattr(self.gmpe, key)
+            except AttributeError:
+                pass
+            else:
+                setattr(self, key, val)
 
     def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
         """

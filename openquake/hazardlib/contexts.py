@@ -23,9 +23,10 @@ import warnings
 import itertools
 import collections
 from unittest.mock import patch
-
 import numpy
+import shapely
 from scipy.interpolate import interp1d
+
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
 from openquake.baselib.performance import Monitor, split_array, compile, numba
@@ -54,6 +55,11 @@ KNOWN_DISTANCES = frozenset(
     .split())
 # the following is used in the collapse method
 IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
+
+# These coordinates were provided by M Gerstenberger (personal
+# communication, 10 August 2018)
+cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
+                                         (173.2, -43.9), (171.6, -43.9)])
 
 
 def is_modifiable(gsim):
@@ -519,10 +525,6 @@ class ContextMaker(object):
         start = 0
         for ctx in ctxs:
             ctx = ctx.roundup(self.minimum_distance)
-            for gsim in self.gsims:
-                if getattr(ctx, 'surface', None):
-                    # the surface is missing in the GSIM tests
-                    gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
             for par in dd:
                 if par == 'magi':  # in disaggregation
@@ -589,10 +591,23 @@ class ContextMaker(object):
                 value = rup.hypocenter.depth
             elif param == 'width':
                 value = rup.surface.get_width()
-            elif param == 'in_cshm':  # computed in McVerry2006Chch
-                value = False
-            elif param == 'zbot':  # needed for width estimation in CampbellBozorgnia2014
-                value = rup.zbot
+            elif param == 'in_cshm':
+                # used in McVerry and Bradley GMPEs
+                if rup.surface:
+                    lons = rup.surface.mesh.lons.flatten()
+                    lats = rup.surface.mesh.lats.flatten()
+                    points_in_polygon = (
+                        shapely.geometry.Point(lon, lat).within(cshm_polygon)
+                        for lon, lat in zip(lons, lats))
+                    value = any(points_in_polygon)
+                else:
+                    value = False
+            elif param == 'zbot':
+                # needed for width estimation in CampbellBozorgnia2014
+                if rup.surface:
+                    value = rup.surface.mesh.depths.max()
+                else:
+                    value = rup.hypocenter.depth
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
@@ -724,8 +739,6 @@ class ContextMaker(object):
             ctxt = ctx[ctx.rrup < magdist[mag]]
             if len(ctxt):
                 ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
-                for gsim in self.gsims:
-                    gsim.set_parameters(ctxt)
                 ctxs.append(ctxt)
         return concat(ctxs)
 
@@ -776,7 +789,7 @@ class ContextMaker(object):
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         ctxs = []
         if getattr(src, 'location', None) and step == 1:
-            return self.get_ctxs_planar(src, sitecol)
+            return self.update_ctx(self.get_ctxs_planar(src, sitecol))
         elif hasattr(src, 'source_id'):  # other source
             with self.ir_mon:
                 allrups = numpy.array(list(src.iter_ruptures(
@@ -807,7 +820,17 @@ class ContextMaker(object):
                         c = rup.surface.get_closest_points(sites.complete)
                         ctx.clon = c.lons[ctx.sids]
                         ctx.clat = c.lats[ctx.sids]
-        return [] if not ctxs else [self.recarray(ctxs)]
+        return self.update_ctx([] if not ctxs else [self.recarray(ctxs)])
+
+    def update_ctx(self, ctxs):
+        """
+        Call gsim.update_ctx and fix the contexts
+        """
+        for ctx in ctxs:
+            for gsim in self.gsims:
+                if hasattr(gsim, 'update_ctx'):
+                    gsim.update_ctx(ctx)
+        return ctxs
 
     def max_intensity(self, sitecol1, mags, dists):
         """
