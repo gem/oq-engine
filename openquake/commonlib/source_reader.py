@@ -110,26 +110,6 @@ def _check_dupl_ids(src_groups):
                 first = False
 
 
-def collapse_nphc(src):
-    """
-    Collapse the nodal_plane_distribution and hypocenter_distribution.
-    """
-    if (hasattr(src, 'nodal_plane_distribution') and
-            hasattr(src, 'hypocenter_distribution')):
-        if len(src.nodal_plane_distribution.data) > 1:
-            ws, nps = zip(*src.nodal_plane_distribution.data)
-            strike = numpy.average([np.strike for np in nps], weights=ws)
-            dip = numpy.average([np.dip for np in nps], weights=ws)
-            rake = numpy.average([np.rake for np in nps], weights=ws)
-            val = geo.NodalPlane(strike, dip, rake)
-            src.nodal_plane_distribution = pmf.PMF([(1., val)])
-        if len(src.hypocenter_distribution.data) > 1:
-            ws, vals = zip(*src.hypocenter_distribution.data)
-            val = numpy.average(vals, weights=ws)
-            src.hypocenter_distribution = pmf.PMF([(1., val)])
-        src.magnitude_scaling_relationship = PointMSR()
-
-
 def get_csm(oq, full_lt, h5=None):
     """
     Build source models from the logic tree and to store
@@ -168,13 +148,6 @@ def get_csm(oq, full_lt, h5=None):
     if changes:
         logging.info('Applied {:_d} changes to the composite source model'.
                      format(changes))
-
-    if 'reqv' in oq.inputs:
-        logging.warning('Using equivalent distance approximation and '
-                        'collapsing finite size parameters in point sources')
-        for group in groups:
-            for src in group:
-                collapse_nphc(src)
     return _get_csm(full_lt, groups)
 
 
