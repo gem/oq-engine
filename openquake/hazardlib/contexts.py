@@ -23,9 +23,10 @@ import warnings
 import itertools
 import collections
 from unittest.mock import patch
-
 import numpy
+import shapely
 from scipy.interpolate import interp1d
+
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
 from openquake.baselib.performance import Monitor, split_array, compile, numba
@@ -54,6 +55,11 @@ KNOWN_DISTANCES = frozenset(
     .split())
 # the following is used in the collapse method
 IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
+
+# These coordinates were provided by M Gerstenberger (personal
+# communication, 10 August 2018)
+cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
+                                         (173.2, -43.9), (171.6, -43.9)])
 
 
 def is_modifiable(gsim):
@@ -585,8 +591,17 @@ class ContextMaker(object):
                 value = rup.hypocenter.depth
             elif param == 'width':
                 value = rup.surface.get_width()
-            elif param == 'in_cshm':  # computed in McVerry2006Chch
-                value = False
+            elif param == 'in_cshm':
+                # used in McVerry and Bradley GMPEs
+                if rup.surface:
+                    lons = rup.surface.mesh.lons.flatten()
+                    lats = rup.surface.mesh.lats.flatten()
+                    points_in_polygon = (
+                        shapely.geometry.Point(lon, lat).within(cshm_polygon)
+                        for lon, lat in zip(lons, lats))
+                    value = any(points_in_polygon)
+                else:
+                    value = False
             elif param == 'zbot':
                 # needed for width estimation in CampbellBozorgnia2014
                 if rup.surface:
