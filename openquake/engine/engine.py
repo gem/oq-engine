@@ -332,6 +332,23 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
     return jobs
 
 
+def cleanup(kind):
+    """
+    Stop or kill the zmq workers if serialize_jobs == 1.
+    """
+    assert kind in ("stop", "kill"), kind
+    if OQ_DISTRIBUTE != 'zmq' or config.distribution.serialize_jobs > 1:
+        return  # do nothing
+    if kind == 'stop':
+        # called in the regular case
+        print('Stopping the workers')
+        parallel.workers_stop()
+    elif kind == 'kill':
+        # called in case of exceptions (including out of memory)
+        print('Killing the workers')
+        parallel.workers_kill()
+
+
 def run_jobs(jobs):
     """
     Run jobs using the specified config file and other options.
@@ -372,13 +389,10 @@ def run_jobs(jobs):
         else:
             for job in jobs:
                 run_calc(job)
-    finally:
-        # for serialize_jobs > 1 there could be something still running:
-        # don't stop the zworkers in that case!
-        if OQ_DISTRIBUTE == 'zmq' and sum(
-                r for h, r, t in parallel.workers_status()) == 0:
-            print('Stopping the workers')
-            parallel.workers_stop()
+        cleanup('stop')
+    except Exception:
+        cleanup('kill')
+        raise
     return jobs
 
 

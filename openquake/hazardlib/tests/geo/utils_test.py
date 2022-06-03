@@ -254,7 +254,6 @@ class SphericalToCartesianAndBackTestCase(unittest.TestCase):
         res_cart = utils.spherical_to_cartesian(lons, lats, depths)
         aac(vectors, res_cart, atol=1E-7)
         res_sphe = utils.cartesian_to_spherical(res_cart)
-        self.assertIsInstance(res_sphe, tuple)
         self.assertEqual(len(res_sphe), 3)
         if depths is None:
             depths = numpy.zeros_like(lons)
@@ -262,24 +261,18 @@ class SphericalToCartesianAndBackTestCase(unittest.TestCase):
                          numpy.array([lons, lats, depths]).shape)
         aac([lons, lats, depths], res_sphe)
 
-    def test_zero_zero_zero(self):
-        self._test((0, 0, 0), (6371, 0, 0))
-        self._test((0, 0, None), (6371, 0, 0))
+    def test_tl_zero(self):
         self._test(([0], [0], [0]), [(6371, 0, 0)])
         self._test(([0], [0], None), [(6371, 0, 0)])
 
     def test_north_pole(self):
-        self._test((0, 90, 0), (0, 0, 6371))
-        self._test((0, 90, None), (0, 0, 6371))
         self._test(([0], [90], [0]), [(0, 0, 6371)])
         self._test(([0], [90], None), [(0, 0, 6371)])
 
     def test_north_pole_10_km_depth(self):
-        self._test((0, 90, 10), (0, 0, 6361))
         self._test(([0], [90], [10]), [(0, 0, 6361)])
 
     def test_topo(self):
-        self._test((0, 0, -10), (6381, 0, 0))
         self._test(([0], [0], [-10]), [(6381, 0, 0)])
 
     def test_arrays(self):

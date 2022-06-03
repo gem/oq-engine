@@ -26,6 +26,7 @@ import numpy
 
 from openquake.baselib import parallel, general, hdf5
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, pmf, geo
+from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
@@ -59,7 +60,7 @@ def create_source_info(csm, h5):
             trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
             code = csm.code.get(srcid, b'P')
             lens.append(len(src.trt_smrs))
-            row = [srcid, src.grp_id, code, 0, 0, 0, trti, 0]
+            row = [srcid, src.grp_id, code, 0, 0, 0, src.weight, trti]
             wkts.append(getattr(src, '_wkt', ''))
             data[srcid] = row
             src.id = len(data) - 1
@@ -109,25 +110,6 @@ def _check_dupl_ids(src_groups):
                 first = False
 
 
-def collapse_nphc(src):
-    """
-    Collapse the nodal_plane_distribution and hypocenter_distribution.
-    """
-    if (hasattr(src, 'nodal_plane_distribution') and
-            hasattr(src, 'hypocenter_distribution')):
-        if len(src.nodal_plane_distribution.data) > 1:
-            ws, nps = zip(*src.nodal_plane_distribution.data)
-            strike = numpy.average([np.strike for np in nps], weights=ws)
-            dip = numpy.average([np.dip for np in nps], weights=ws)
-            rake = numpy.average([np.rake for np in nps], weights=ws)
-            val = geo.NodalPlane(strike, dip, rake)
-            src.nodal_plane_distribution = pmf.PMF([(1., val)])
-        if len(src.hypocenter_distribution.data) > 1:
-            ws, vals = zip(*src.hypocenter_distribution.data)
-            val = numpy.average(vals, weights=ws)
-            src.hypocenter_distribution = pmf.PMF([(1., val)])
-
-
 def get_csm(oq, full_lt, h5=None):
     """
     Build source models from the logic tree and to store
@@ -158,6 +140,7 @@ def get_csm(oq, full_lt, h5=None):
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
     fix_geometry_sections(smdict)
+    logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
 
     # checking the changes
@@ -165,14 +148,6 @@ def get_csm(oq, full_lt, h5=None):
     if changes:
         logging.info('Applied {:_d} changes to the composite source model'.
                      format(changes))
-
-    if 'reqv' in oq.inputs:
-        logging.warning('Using equivalent distance approximation and '
-                        'collapsing finite size parameters in point sources')
-        for group in groups:
-            for src in group:
-                collapse_nphc(src)
-
     return _get_csm(full_lt, groups)
 
 
@@ -202,6 +177,7 @@ def fix_geometry_sections(smdict):
     nrml.check_unique(
         sec_ids, 'section ID in files ' + ' '.join(gfiles))
     sections = {sid: sections[sid] for sid in sorted(sections)}
+    # section_arrays = [sec.geom() for sec in sections.values()]
 
     # fix the MultiFaultSources
     for smod in smodels:
@@ -401,12 +377,6 @@ class CompositeSourceModel:
             for src in sg:
                 if hasattr(src, 'mags'):  # MultiFaultSource
                     srcmags = {magstr(mag) for mag in src.mags}
-                    if hasattr(src, 'source_file'):  # UcerfSource
-                        grid_key = "/".join(["Grid", src.ukey["grid_key"]])
-                        # for instance Grid/FM0_0_MEANFS_MEANMSR_MeanRates
-                        with hdf5.File(src.source_file, "r") as h5:
-                            srcmags.update(magstr(mag) for mag in
-                                           h5[grid_key + "/Magnitude"][:])
                 elif hasattr(src, 'data'):  # nonparametric
                     srcmags = {magstr(item[0].mag) for item in src.data}
                 else:

@@ -74,11 +74,11 @@ jobs:
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
           chmod 600 ./.deploy_rsa
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
-          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${GITHUB_BR}.zip"
-          scp -v -o ConnectTimeout=120 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${GITHUB_BR}.zip
-          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_BR}.zip"
-          scp  -v -o ConnectTimeout=120 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_BR}.zip
-      - name: Make docs and rsync to ci.openquake.org
+          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@docs.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${GITHUB_BR}.zip"
+          scp -v -o ConnectTimeout=120 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@docs.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${GITHUB_BR}.zip
+          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@docs.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_BR}.zip"
+          scp  -v -o ConnectTimeout=120 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@docs.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_BR}.zip
+      - name: Make docs and rsync to docs.openquake.org
         shell: bash
         env:
           DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
@@ -112,22 +112,22 @@ jobs:
           pip install sphinx==4.4.0
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
           cd doc/sphinx && make html && cd ../adv-manual && make html && make latexpdf
-          echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;"
-          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
+          echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@docs.copenquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;"
+          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
           # publish
           if [ "$UPLOAD" == "master" ]
           then
-            echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/${UPLOAD}/"
-            rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/${UPLOAD}/
+            echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/${UPLOAD}/"
+            rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/${UPLOAD}/
           else
             VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
             HTDOCS=/var/www/docs.openquake.org/oq-engine/
             DEST=${HTDOCS}${VER}
             echo " Building docs of oq-engine for version ${BUILD}"
-            echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax  ../sphinx/build/html/ docs@ci.openquake.org:${DEST}"
-            rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax ../sphinx/build/html/ docs@ci.openquake.org:${DEST}
+            echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax  ../sphinx/build/html/ docs@docs.openquake.org:${DEST}"
+            rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax ../sphinx/build/html/ docs@docs.openquake.org:${DEST}
             echo "Create symlink for $BUILD manual"
-            echo "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@ci.openquake.org 'cd ${HTDOCS} ; ln -vs ${VER} ${BUILD}'"
+            echo "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org 'cd ${HTDOCS} ; ln -vs ${VER} ${BUILD}'"
             # unlink before to link to new version of manual
-            ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@ci.openquake.org "bash -cx 'cd ${HTDOCS} && pwd && unlink ${BUILD} && ln -vs ${VER} ${BUILD}'"
+            ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd ${HTDOCS} && pwd && unlink ${BUILD} && ln -vs ${VER} ${BUILD}'"
           fi

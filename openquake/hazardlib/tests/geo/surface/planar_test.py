@@ -83,8 +83,9 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
             self.assertEqual(surface.get_strike(), strike)
             self.assertEqual(surface.dip, dip)
             self.assertEqual(surface.get_dip(), dip)
-            self.assertAlmostEqual(surface.length, tl.distance(tr), delta=0.2)
-            self.assertAlmostEqual(surface.width, tl.distance(bl), delta=0.2)
+            width, length, _ = surface.array.wlr
+            self.assertAlmostEqual(length, tl.distance(tr), delta=0.2)
+            self.assertAlmostEqual(width, tl.distance(bl), delta=0.2)
 
     def test_edges_not_parallel_within_tolerance(self):
         self.assert_successfull_creation(
@@ -168,44 +169,6 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         self.assertEqual(surf.top_right, Point(0.025650, 0.149496, 10.2623))
         self.assertEqual(surf.bottom_left, Point(-0.025650, -0.149496, 29.7377))
         self.assertEqual(surf.bottom_right, Point(0.149496, 0.025650, 29.7377))
-
-
-class PlanarSurfaceProjectTestCase(unittest.TestCase):
-    def test1(self):
-        lons, lats, depths = geo_utils.cartesian_to_spherical(
-            numpy.array([[60, -10, -10], [60, -10, 10],
-                         [60, 10, 10], [60, 10, -10]], float)
-        )
-        surface = PlanarSurface(20, 30, *Mesh(lons, lats, depths))
-        aaae = numpy.testing.assert_array_almost_equal
-
-        xyz = numpy.array([[60, -10, -10], [59, 0, 0], [70, -11, -10]])
-        plons, plats, pdepths = geo_utils.cartesian_to_spherical(xyz)
-
-        dists, xx, yy = surface._project(xyz)
-        aaae(xx, [0, 10, 0])
-        aaae(yy, [0, 10, -1])
-        aaae(dists, [0, 1, -10])
-
-        lons, lats, depths = surface._project_back(dists, xx, yy)
-        aaae(lons, plons)
-        aaae(lats, plats)
-        aaae(depths, pdepths)
-
-    def test2(self):
-        surface = PlanarSurface(
-            20, 30,
-            Point(3.9, 2.2, 10), Point(4.90402718, 3.19634248, 10),
-            Point(5.9, 2.2, 90), Point(4.89746275, 1.20365263, 90))
-        plons, plats, pdepths = [[4., 4.3, 3.1], [1.5, 1.7, 3.5],
-                                 [11., 12., 13.]]
-        xyz = geo_utils.spherical_to_cartesian(plons, plats, pdepths)
-        dists, xx, yy = surface._project(xyz)
-        lons, lats, depths = surface._project_back(dists, xx, yy)
-        aaae = numpy.testing.assert_array_almost_equal
-        aaae(lons, plons)
-        aaae(lats, plats)
-        aaae(depths, pdepths)
 
 
 class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
@@ -313,16 +276,6 @@ class PlanarSurfaceGetJoynerBooreDistanceTestCase(unittest.TestCase):
         ]
         aac(dists, expected_dists, atol=0.5)
 
-    def test_distance_to_2d_mesh(self):
-        corners = [Point(0.0, 1.0), Point(1.0, 1.0),
-                   Point(1.0, 0.114341), Point(0.0, 0.114341)]
-        surface = PlanarSurface(90.0, 10.0, *corners)
-        sites = Mesh(numpy.array([[0.25, 0.75], [0.25, 0.75]]),
-                     numpy.array([[0.75, 0.75], [0.25, 0.25]]),
-                     None)
-        dists = surface.get_joyner_boore_distance(sites)
-        numpy.testing.assert_equal(dists, numpy.zeros((2, 2)))
-
 
 class PlanarSurfaceGetClosestPointsTestCase(unittest.TestCase):
     corners = [Point(-0.1, -0.1, 0), Point(0.1, -0.1, 0),
@@ -381,7 +334,7 @@ class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
     def _test1to7surface(self):
         corners = [Point(0, 0, 8), Point(-0.1, 0, 8),
                    Point(-0.1, 0, 9), Point(0, 0, 9)]
-        surface = PlanarSurface(270, 90, *corners)
+        surface = PlanarSurface(270., 90., *corners)
         return surface
 
     def test1_site_on_the_hangin_wall(self):
@@ -409,7 +362,7 @@ class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
                                        Point(90.33, 0)])
         dists = surface.get_rx_distance(sites)
         expected_dists = [0] * 3
-        aac(dists, expected_dists)
+        aac(dists, expected_dists, atol=1E-11)
 
     def test5_site_opposite_to_strike_direction(self):
         surface = self._test1to7surface()
@@ -417,7 +370,7 @@ class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
                                        Point(-90.33, 0)])
         dists = surface.get_rx_distance(sites)
         expected_dists = [0] * 3
-        aac(dists, expected_dists)
+        aac(dists, expected_dists, atol=1E-11)
 
     def test6_one_degree_distance(self):
         surface = self._test1to7surface()

@@ -175,14 +175,14 @@ def view_worst_sources(token, dstore):
     else:
         step = 1
     data = dstore.read_df('source_data', 'src_id')
-    del data['nsites']
+    del data['impact']
     ser = data.groupby('taskno').ctimes.sum().sort_values().tail(1)
     [[taskno, maxtime]] = ser.to_dict().items()
     data = data[data.taskno == taskno]
     print('Sources in the slowest task (%d seconds, weight=%d)'
           % (maxtime, data['weight'].sum()))
     data['slow_rate'] = data.ctimes / data.weight
-    df = data.sort_values('slow_rate', ascending=False)
+    df = data.sort_values('ctimes', ascending=False)
     return df[slice(None, None, step)]
 
 
@@ -254,6 +254,7 @@ def view_full_lt(token, dstore):
 def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
+    df['slow_factor'] = df.calc_time / df.weight
     del df['grp_id'], df['trti']
     return df
 

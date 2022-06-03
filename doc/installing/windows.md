@@ -4,7 +4,7 @@ The OpenQuake Engine can be installed on Windows with the universal installer.
 For LTS releases we also offer a **self-installable binary distribution**.
 
 - this distribution includes its own distribution of the dependencies needed by the OpenQuake Engine
-    - Python 3.8
+    - Python 3.6
     - Python dependencies (pip, numpy, scipy, h5py, django, shapely, and few more)
 - multiple versions can be installed alongside
 

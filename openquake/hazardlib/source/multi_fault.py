@@ -53,6 +53,16 @@ class FaultSection(object):
         self.sec_id = sec_id
         self.surface = surface
 
+    def geom(self):
+        """
+        :returns:
+            an array of float32 with structure
+            [1., shape_y, shape_z, coords, ...]
+        """
+        shape_y, shape_z = self.surface.mesh.array.shape[1:]
+        coords = F32(self.surface.mesh.array.flat)
+        return np.concatenate([F32([1, shape_y, shape_z]), coords])
+
 
 class MultiFaultSource(BaseSeismicSource):
     """
@@ -134,26 +144,10 @@ class MultiFaultSource(BaseSeismicSource):
             raise RuntimeError('You forgot to call set_sections in %s!' % self)
 
         # iter on the ruptures
+        step = kwargs.get('step', 1)
         untilidx = len(self.mags) if untilidx is None else untilidx
         s = self.sections
-        for i in range(fromidx, untilidx):
-            idxs = self.rupture_idxs[i]
-            if len(idxs) == 1:
-                sfc = self.sections[idxs[0]].surface
-            else:
-                sfc = MultiSurface([s[idx].surface for idx in idxs])
-            rake = self.rakes[i]
-            hypo = self.sections[idxs[0]].surface.get_middle_point()
-            yield NonParametricProbabilisticRupture(
-                self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
-                self.pmfs[i])
-
-    def few_ruptures(self):
-        """
-        Fast version of iter_ruptures used in estimate_weight
-        """
-        s = self.sections  # use one rupture every 500
-        for i in range(0, len(self.mags), BLOCKSIZE // 2):
+        for i in range(fromidx, untilidx, step**2):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
                 sfc = self.sections[idxs[0]].surface

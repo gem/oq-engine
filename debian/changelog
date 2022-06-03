@@ -1,7 +1,48 @@
+  [Michele Simionato]
+  * Changed the definition of `aggrisk` again to ensure consistency with the
+    average losses
+
+  [Tom Son]
+  * Added width and hypo_depth estimation to Campbell and Bozorgnia (2014)
+
+  [Michele Simionato]
+  * Improved the precision of the ps_grid_spacing approximation
+  * Added a check for missing mags when using GMPETables
+  * Fixed a bug in `upgrade_nrml -m` for point sources with different usd/lsd
+  * Automatically discard irrelevant TRTs in disaggregation calculations
+
+  [Ashta Poudel, Anirudh Rao, Michele Simionato]
+  * Added the ability to run connectivity analysis in event_based_damage
+    and scenario_damage calculation with an appropriate exposure
+
+  [Tom Son, Michele Simionato]
+  * Added ztor estimation to Campbell and Bozorgnia (2014)
+
+  [Michele Simionato]
+  * Internal: removed REQUIRES_COMPUTED_PARAMETERS
+  * Using PointMSR when the reqv approximation is enabled
+  * Internal: changed the rupture storage for classical calculations
+  * Optimized rupture instantiation for point sources
+  * Optimized distance calculations for point sources
+
+  [Tom Son, Claudio Schill]
+  * Simple performance improvement of Kuehn et al. 2020 model
+
+  [Michele Simionato]
+  * Changed again the string representation of logic tree paths and added
+    an utility `hazardlib.lt.build` to build trees from literal lists
+  * Fixed the field `source_info.trti` in the datastore to point to the
+    correct tectonic region type index and not to zero
+  * Added a check for inconsistent IDs across different kinds of risk functions
+    (i.e. fragility and consequence)
+  * Fixed a logging statement that could run out of memory in large calculations
+  * Optimized `iter_ruptures` for point sources by vectorizing the generation of
+    planar surfaces by magnitude, nodal plane and hypocenter
+
   [Tom Son]
   * Implemented a missing piece in Chiou & Youngs (2014) model
-  Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
-  when it falls below the predicted PGA
+    Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
+    when it falls below the predicted PGA
 
   [Marco Pagani]
   * Added the possibility of disaggregating in terms of epsilon*

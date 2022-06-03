@@ -68,7 +68,7 @@ install_requires = [
     'django >=3.2',
     'matplotlib',
     'requests >=2.20',
-    'toml',
+    'toml >=0.10.2',
     'pyproj >=1.9',
 ]
 
@@ -85,7 +85,7 @@ extras_require = {
         'flake8 >=3.5',
         'pdbpp',
         'ipython',
-        'silx == 0.10',
+        'silx',
     ]
 }
 

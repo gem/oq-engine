@@ -225,6 +225,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if ct != self.oqparam.concurrent_tasks:
                 # save the used concurrent_tasks
                 self.oqparam.concurrent_tasks = ct
+            if self.precalc is None:
+                logging.info('Running %s with concurrent_tasks = %d',
+                             self.__class__.__name__, ct)
             self.save_params(**kw)
             try:
                 if pre_execute:
@@ -435,7 +438,8 @@ class HazardCalculator(BaseCalculator):
         if s != 1:
             logging.info('Rupture spinning factor = %s', s)
         if (f * s >= 1.5 and oq.no_pointsource_distance
-                and 'classical' in oq.calculation_mode):
+                and ('classical' in oq.calculation_mode or
+                     'disaggregation' in oq.calculation_mode)):
             logging.info(
                 'You are not using the pointsource_distance approximation:\n'
                 'https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance')
@@ -598,7 +602,6 @@ class HazardCalculator(BaseCalculator):
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.from_engine = self.from_engine
-            calc.pre_checks = lambda: self.__class__.pre_checks(calc)
             calc.run(remove=False)
             calc.datastore.close()
             for name in (
@@ -925,7 +928,9 @@ class HazardCalculator(BaseCalculator):
                 keep_trts.add(trt)
         self.datastore['est_rups_by_grp'] = U32(nrups)
         discard_trts = set(self.full_lt.trts) - keep_trts
-        if discard_trts:
+        if discard_trts and self.oqparam.calculation_mode == 'disaggregation':
+            self.oqparam.discard_trts = discard_trts
+        elif discard_trts:
             msg = ('No sources for some TRTs: you should set\n'
                    'discard_trts = %s\nin %s') % (
                        ', '.join(discard_trts), self.oqparam.inputs['job_ini'])

@@ -130,7 +130,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
 
         ctx = gsim.base.RuptureContext()
         ctx.sids = [0]
-        P = imt.AvgSA
+        P = imt.AvgSA()
         S = [const.StdDev.TOTAL]
 
         with open(DATA_FILE, 'r') as f:
@@ -166,7 +166,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
 
         ctx = RuptureContext()
         ctx.sids = [0]
-        P = imt.AvgSA
+        P = imt.AvgSA()
         S = [const.StdDev.TOTAL]
 
         with open(DATA_FILE, 'r') as f:

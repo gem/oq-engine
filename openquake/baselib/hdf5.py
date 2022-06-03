@@ -348,8 +348,8 @@ class File(h5py.File):
             extra attributes to store
         """
         if isinstance(nametypes, pandas.DataFrame):
-            nametypes = {name: nametypes[name].to_numpy()
-                         for name in nametypes.columns}.items()
+            nametypes = [(name, nametypes[name].to_numpy())
+                         for name in nametypes.columns]
         names = []
         for name, value in nametypes:
             is_array = isinstance(value, numpy.ndarray)

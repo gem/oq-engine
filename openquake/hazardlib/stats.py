@@ -38,25 +38,20 @@ except ImportError:
 @compile(["float64[:,:](float64, float64[:,:])",
           "float64[:](float64, float64[:])"])
 def _truncnorm_sf(truncation_level, values):
-    """
-    Survival function for truncated normal distribution.
-
-    Assumes zero mean, standard deviation equal to one and symmetric
-    truncation. It is faster than using scipy.stats.truncnorm.sf
-
-    :param truncation_level:
-        Positive float number representing the truncation on both sides
-        around the mean, in units of sigma, or None, for non-truncation
-    :param values:
-        Numpy array of values as input to a survival function for the given
-        distribution.
-    :returns:
-        Numpy array of survival function results in a range between 0 and 1.
-
-    >>> from scipy.stats import truncnorm
-    >>> truncnorm(-3, 3).sf(0.12345) == _truncnorm_sf(3, 0.12345)
-    True
-    """
+    # Fast survival function for truncated normal distribution.
+    # Assumes zero mean, standard deviation equal to one and symmetric
+    # truncation. It is faster than using scipy.stats.truncnorm.sf:
+    #
+    # _truncnorm_sf(sig, x) == truncnorm(-sig, sig).sf(x)
+    #
+    # :param truncation_level:
+    #     Positive float number representing the truncation on both sides
+    #     around the mean, in units of sigma, or None, for non-truncation
+    # :param values:
+    #     Numpy array of values as input to a survival function for the given
+    #     distribution.
+    # :returns:
+    #     Numpy array of survival function results in a range between 0 and 1.
     if truncation_level == 0.:
         return values
 

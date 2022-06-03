@@ -137,7 +137,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         rate of each of those ruptures is the magnitude occurrence rate
         divided by the number of ruptures that can be placed in a fault.
         """
-        slc = kwargs.get('slc', slice(None))
+        step = kwargs.get('step', 1)
         whole_fault_surface = SimpleFaultSurface.from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
             self.lower_seismogenic_depth, self.dip, self.rupture_mesh_spacing)
@@ -146,15 +146,15 @@ class SimpleFaultSource(ParametricSeismicSource):
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
         fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
 
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+        for mag, mag_occ_rate in self.get_annual_occurrence_rates()[::step]:
             rup_cols, rup_rows = self._get_rupture_dimensions(
                 fault_length, fault_width, mag)
             num_rup_along_length = mesh_cols - rup_cols + 1
             num_rup_along_width = mesh_rows - rup_rows + 1
             num_rup = num_rup_along_length * num_rup_along_width
             occurrence_rate = mag_occ_rate / float(num_rup)
-            for first_row in range(num_rup_along_width)[slc]:
-                for first_col in range(num_rup_along_length)[slc]:
+            for first_row in range(num_rup_along_width)[::step]:
+                for first_col in range(num_rup_along_length)[::step]:
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
                                             first_col: first_col + rup_cols]
 
@@ -183,12 +183,6 @@ class SimpleFaultSource(ParametricSeismicSource):
                                     hypocenter, surface, occurrence_rate_hypo,
                                     self.temporal_occurrence_model,
                                     rupture_slip_direction)
-
-    def few_ruptures(self):
-        """
-        Fast version of iter_ruptures used in estimate_weight
-        """
-        yield from self.iter_ruptures(slc=slice(None, None, 5))
 
     def get_fault_surface_area(self):
         """
