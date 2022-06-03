@@ -183,7 +183,7 @@ def store_agg(dstore, rbe_df, num_events):
     logging.info('Building aggrisk from %s of risk_by_event',
                  general.humansize(size))
     if oq.investigation_time:  # event based
-        tr = oq.time_ratio  # risk_invtime / haz_invtime * num_ses
+        tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
         if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
             tr /= len(dstore['weights'])
     rlz_id = dstore['events']['rlz_id']
