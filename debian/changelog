@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Changed the definition of `aggrisk` again to ensure consistency with the
+    average losses
+
   [Tom Son]
   * Added width and hypo_depth estimation to Campbell and Bozorgnia (2014)
 

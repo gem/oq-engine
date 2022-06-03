@@ -179,11 +179,13 @@ def store_agg(dstore, rbe_df, num_events):
     Build the aggrisk and aggcurves tables from the risk_by_event table
     """
     oq = dstore['oqparam']
-    if oq.investigation_time:
-        T = oq.investigation_time * oq.ses_per_logic_tree_path
     size = dstore.getsize('risk_by_event')
     logging.info('Building aggrisk from %s of risk_by_event',
                  general.humansize(size))
+    if oq.investigation_time:  # event based
+        tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
+        if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
+            tr /= len(dstore['weights'])
     rlz_id = dstore['events']['rlz_id']
     if len(num_events) > 1:
         rbe_df['rlz_id'] = rlz_id[rbe_df.event_id.to_numpy()]
@@ -208,7 +210,7 @@ def store_agg(dstore, rbe_df, num_events):
             aggrisk['dmg_0'].append(aggnumber[agg_id] - ndamaged / ne)
         for col in columns:
             agg = df[col].sum()
-            aggrisk[col].append(agg/T if oq.investigation_time else agg/ne)
+            aggrisk[col].append(agg * tr if oq.investigation_time else agg/ne)
     fix_dtypes(aggrisk)
     aggrisk = pandas.DataFrame(aggrisk)
     dstore.create_df(
@@ -320,7 +322,12 @@ class PostRiskCalculator(base.RiskCalculator):
                 # check on the sum of the average losses
                 avg = avg_losses[ri, li]
                 agg = row.loss
+                if not numpy.allclose(avg, agg, rtol=.1):
+                    # a serious discrepancy is an error
+                    raise ValueError("agg != sum(avg) [%s]: %s %s" %
+                                     (oq.loss_types[li], agg, avg))
                 if not numpy.allclose(avg, agg, rtol=.001):
+                    # a small discrepancy is expected
                     logging.warning(
                         'Due to rounding errors inherent in floating-point '
                         'arithmetic, agg_losses != sum(avg_losses) [%s]: '
