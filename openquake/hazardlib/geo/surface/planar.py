@@ -723,7 +723,8 @@ class PlanarSurface(BaseSurface):
         return self
 
     @classmethod
-    def from_hypocenter(cls, hypoc, msr, mag, aratio, strike, dip, rake):
+    def from_hypocenter(cls, hypoc, msr, mag, aratio, strike, dip, rake,
+                        ztor=None):
         """
         Create and return a planar surface given the hypocenter location
         and other rupture properties.
@@ -743,7 +744,8 @@ class PlanarSurface(BaseSurface):
             The rupture dip
         :param rake:
             The rupture rake
-
+        :param ztor:
+            If not None it doesn't consider the hypocentral depth constraint
         """
         lon = hypoc.longitude
         lat = hypoc.latitude
@@ -753,8 +755,20 @@ class PlanarSurface(BaseSurface):
         width = (area / aratio) ** 0.5
         length = width * aratio
 
+        #
+        #     .....     the dotted line is the width
+        #     \      |
+        #      \     |  this dashed vertical line is the height
+        #       \    |
+        #        \   |
+        # rupture \  |
+        #
         height = width * numpy.sin(numpy.radians(dip))
         hdist = width * numpy.cos(numpy.radians(dip))
+
+        if ztor is not None:
+            depth = ztor + height / 2
+
         # Move hor. 1/2 hdist in direction -90
         mid_top = point_at(lon, lat, strike - 90, hdist / 2)
         # Move hor. 1/2 hdist in direction +90
@@ -769,9 +783,8 @@ class PlanarSurface(BaseSurface):
         # compute corner points in 3D
         pbl = Point(bot_left[0], bot_left[1], depth + height / 2)
         pbr = Point(bot_right[0], bot_right[1], depth + height / 2)
-        hei = depth - height / 2
-        ptl = Point(top_left[0], top_left[1], hei)
-        ptr = Point(top_right[0], top_right[1], hei)
+        ptl = Point(top_left[0], top_left[1], depth - height / 2)
+        ptr = Point(top_right[0], top_right[1], depth - height / 2)
 
         return cls(strike, dip, ptl, ptr, pbr, pbl)
 
