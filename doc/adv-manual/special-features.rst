@@ -8,15 +8,17 @@ They are documented here.
 Sensitivity analysis
 --------------------------
 
-Running a sensitivity analysis study means to run multiple calculations
-by changing a parameter and to study how the results change. For instance,
-it is interesting to study the random seed dependency when running a
-calculation using sampling of the logic tree, or it is interesting to
-study the impact of the truncation level. The engine offers a special
-syntax to run a sensitivity analysis with respect to one (or even more
-than one) parameter; you can find examples in the demos, see for instance
-the MultiPointClassicalPSHA demo or the EventBasedDamage demo.
-It is enough to write in the job.ini a dictionary of lists like the following::
+Running a sensitivity analysis study means to run multiple
+calculations by changing a parameter and to study how the results
+change. For instance, it is interesting to study the random seed
+dependency when running a calculation using sampling of the logic
+tree, or it is interesting to study the impact of the truncation level
+on the PoEs. The engine offers a special syntax to run a sensitivity
+analysis with respect to one (or even more than one) parameter; you
+can find examples in the demos, see for instance the
+MultiPointClassicalPSHA demo or the EventBasedDamage demo.  It is
+enough to write in the job.ini a dictionary of lists like the
+following::
 
  sensitivity_analysis = {"random_seed": [100, 200, 300]}
  sensitivity_analysis = {'truncation_level': [2, 3]}
