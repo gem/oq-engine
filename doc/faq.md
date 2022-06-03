@@ -46,6 +46,19 @@ If you are on a cluster you must edit the section [zworkers] and the parameter
 `host_cores`, replacing the `-1` with the number of cores to be used on
 each machine.
 
+### Help! I am running out of memory!
+
+If you are on a laptop, the first thing to do is to close the browser.
+If that is not enough, then close all other memory consuming
+applications. You can also limit the number of parallel threads as explained
+before (i.e. disable hyperthreading, reduce num_cores) or disable
+parallelism altogether by giving the command
+
+$ oq engine --run job.ini --no-distribute
+
+If you still run out of memorym then you must reduce your calculation or
+upgrade your system.
+
 ******
 
 ### Different installation methods

@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added early check on the minimum available memory
   * Changed the definition of `aggrisk` again to ensure consistency with the
     average losses
 
