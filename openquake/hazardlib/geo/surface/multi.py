@@ -182,9 +182,11 @@ class MultiSurface(BaseSurface):
         lats = np.empty_like(mesh.lats.flatten())
         depths = None if mesh.depths is None else \
             np.empty_like(mesh.depths.flatten())
-        for i, surf in enumerate(self.surfaces):
-            if not idx[i, :].any():
+        for ii, srf in enumerate(self.surfaces):
+            if not idx[ii, :].any():
                 continue
+            else: 
+                surf, i = srf, ii
         cps = surf.get_closest_points(mesh)
         lons[idx[i, :]] = cps.lons.flatten()[idx[i, :]]
         lats[idx[i, :]] = cps.lats.flatten()[idx[i, :]]
