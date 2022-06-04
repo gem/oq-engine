@@ -21,6 +21,7 @@ Module exports :class:`HassaniAtkinson2018`
 """
 
 import re
+import os
 import pathlib
 import numpy as np
 from openquake.hazardlib import const
@@ -207,6 +208,7 @@ class HassaniAtkinson2018(GMPE):
         # Read the file and create the coefficient table for the anelastic
         # attenuation term
         if gamma_fle is not None:
+            gamma_fle = os.path.join(TFP, 'hassani_atkinson_2018', gamma_fle)
             with open(gamma_fle, 'r') as fle:
                 data = fle.read()
                 self.CAE = CoeffsTable(sa_damping=5, table=data)
