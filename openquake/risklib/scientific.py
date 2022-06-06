@@ -1367,20 +1367,19 @@ class InsuredLosses(object):
     def update(self, lt, out, asset_df):
         """
         :param lt: a loss type string
-        :param out: a dictionary of dataframes keyed by loss_type
+        :param out: a DataFrame with index (eid, aid)
         :param asset_df: a DataFrame of assets with index "ordinal"
         """
-        o = out[lt]
-        o['ins_loss'] = numpy.zeros(len(o))
-        if lt in self.policy_dict and len(o):
+        out['ins_loss'] = numpy.zeros(len(out))
+        if lt in self.policy_dict and len(out):
             policy = self.policy_dict[lt]
-            for (eid, aid), df in o.iterrows():
+            for (eid, aid), df in out.iterrows():
                 asset = asset_df.loc[aid]
                 avalue = asset['value-' + lt]
                 policy_idx = asset[self.policy_name]
                 ded, lim = policy[policy_idx]
                 ins = insured_losses(df.loss, ded * avalue, lim * avalue)
-                o.loc[eid, aid]['ins_loss'] = ins
+                out.loc[eid, aid]['ins_loss'] = ins
 
 
 # not used anymore

@@ -433,6 +433,7 @@ class CompositeSourceModel:
         nr = 0
         for src in srcs:
             nr += src.num_ruptures
+            print(nr)
             tot_weight += src.weight
             if src.code == b'C' and src.num_ruptures > 20_000:
                 msg = ('{} is suspiciously large, containing {:_d} '

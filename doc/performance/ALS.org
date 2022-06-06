@@ -105,7 +105,8 @@ long arrays.
 Engine 3.15
 -----------
 
-Changed ps_grid_spacing; better preclassical; ultra-fast make_contexts
+Changed ps_grid_spacing; better preclassical; ultra-fast make_contexts,
+less slow tasks, less memory.
       
 | calc_45055, maxmem=58.2 GB | time_sec | memory_mb | counts    |
 |----------------------------+----------+-----------+-----------|
