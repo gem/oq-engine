@@ -713,16 +713,13 @@ class CompositeRiskModel(collections.abc.Mapping):
                 for sec_loss in sec_losses:
                     sec_loss.update(lt, out, asset_df)
                 outs.append(out)
-            if hasattr(out, 'loss') and len(outs) > 1:
-                # computing the average dataframe for event_based_risk
+            if len(outs) > 1:
+                # computing the average dataframe
                 df = pandas.concat(
                     [out * w for out, w in zip(outs, weights)])
                 dic[lt] = df.groupby(['eid', 'aid']).sum()
-            elif len(weights) > 1:
-                # computing the average dataframe for scenario_damage
-                dic[lt] = numpy.average(outs, weights=weights, axis=0)
             else:
-                # when there is a single output
+                # there is a single output
                 dic[lt] = outs[0]
         return dic
 

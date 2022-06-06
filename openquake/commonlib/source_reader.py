@@ -25,8 +25,7 @@ import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, pmf, geo
-from openquake.hazardlib.scalerel.point import PointMSR
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
@@ -433,7 +432,6 @@ class CompositeSourceModel:
         nr = 0
         for src in srcs:
             nr += src.num_ruptures
-            print(nr)
             tot_weight += src.weight
             if src.code == b'C' and src.num_ruptures > 20_000:
                 msg = ('{} is suspiciously large, containing {:_d} '
