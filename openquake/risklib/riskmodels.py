@@ -495,10 +495,13 @@ class CompositeRiskModel(collections.abc.Mapping):
                         raise NameError(f'The ID {rec[0]} is in {fname}, not '
                                         f'in the other {kind} files')
                 elif ltypes != expected_lts:
+                    others = ltypes - expected_lts
                     lt = expected_lts.pop()
                     fname = inputs[lt + '_' + kind]
-                    raise NameError(f'The ID {rec[0]} is in {fname}, not in '
-                                    f'the other {kind} files')
+                    for other in others:
+                        # TODO: should this be an error?
+                        logging.warning(f'The ID {rec[0]} is in {fname} but '
+                                        f'not in the {other}_{kind} file')
 
     def compute_csq(self, asset, fractions, loss_type):
         """
@@ -721,7 +724,12 @@ class CompositeRiskModel(collections.abc.Mapping):
             outs = []  # list of DataFrames
             rmodels, weights = self.get_rmodels_weights(lt, taxoidx)
             for rm in rmodels:
-                imt = rm.imt_by_lt[lt]
+                if len(rm.imt_by_lt) == 1:
+                    # TODO: if `check_risk_ids` will raise an error then
+                    # this code branch will never run
+                    [(lt, imt)] = rm.imt_by_lt.items()
+                else:
+                    imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
                 if event:
                     out = rm(lt, asset_df, haz, col, rndgen)
