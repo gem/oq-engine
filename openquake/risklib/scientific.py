@@ -1374,7 +1374,7 @@ class InsuredLosses(object):
         if lt in self.policy_dict and len(out):
             policy = self.policy_dict[lt]
             for (eid, aid), df in out.iterrows():
-                asset = asset_df.loc[aid]
+                asset = asset_df.loc[aid]  # aid==ordinal
                 avalue = asset['value-' + lt]
                 policy_idx = asset[self.policy_name]
                 ded, lim = policy[policy_idx]
