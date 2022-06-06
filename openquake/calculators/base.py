@@ -852,6 +852,9 @@ class HazardCalculator(BaseCalculator):
                 raise RuntimeError(
                     'The exposure contains the taxonomy strings '
                     '%s which are not in the risk model' % missing)
+
+            self.crmodel.check_risk_ids(oq.inputs)
+
             if len(self.crmodel.taxonomies) > len(taxonomies):
                 logging.info(
                     'Reducing risk model from %d to %d taxonomy strings',

@@ -434,7 +434,6 @@ class ContextMaker(object):
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
         self.ctx_mon = monitor('make_contexts', measuremem=False)
-        self.dst_mon = monitor('computing distances', measuremem=False)
         self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
@@ -625,7 +624,6 @@ class ContextMaker(object):
             for name in sites.array.dtype.names:
                 setattr(ctx, name, sites[name])
 
-        with self.dst_mon:
             if distances is None:
                 distances = rup.surface.get_min_distance(sites.mesh)
             ctx.rrup = distances
@@ -646,7 +644,7 @@ class ContextMaker(object):
         return ctx
 
     def _get_ctx(self, mag, planar, sites, src_id):
-        with self.dst_mon:
+        with self.ctx_mon:
             # computing distances
             rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
             if self.fewsites:
@@ -660,7 +658,6 @@ class ContextMaker(object):
                 if self.minimum_distance:
                     dst[dst < self.minimum_distance] = self.minimum_distance
 
-        with self.ctx_mon:
             # building contexts
             ctx = self.build_ctx((len(planar), len(sites)))
             ctxt = ctx.T  # smart trick taking advantage of numpy magic

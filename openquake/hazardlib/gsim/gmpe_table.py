@@ -179,6 +179,13 @@ class GMPETable(GMPE):
 
     kind = "base"
 
+    @property
+    def filename(self):
+        """
+        Full pathname of the underlying HDF5 table
+        """
+        return self.kwargs.get('gmpe_table', self.gmpe_table)
+
     def __init__(self, **kwargs):
         """
         Executes the preprocessing steps at the instantiation stage to read in
@@ -186,8 +193,7 @@ class GMPETable(GMPE):
         """
         super().__init__(**kwargs)
         # populated by the ContextManager once imts and magnitudes are known
-        fname = self.kwargs.get('gmpe_table', self.gmpe_table)
-        with h5py.File(fname, "r") as fle:
+        with h5py.File(self.filename, "r") as fle:
             self.distance_type = decode(fle["Distances"].attrs["metric"])
             self.REQUIRES_DISTANCES = {self.distance_type}
             # Load in magnitude

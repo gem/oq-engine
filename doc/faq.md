@@ -24,20 +24,24 @@ and IT expertise, for a cluster setup see the [hardware suggestions](hardware-su
 If you are running the OpenQuake Engine on a multi-node cluster you should also
 have a look at [FAQ related to cluster deployments](faq-cluster.md).
 
-### Help! Should I disable Hyperthreading?
+### Help! Should I disable hyperthreading?
 
-Normally, yes. If you have memory issues, for sure you should disable
-HyperThreading since it will save you a lot of memory.
-If memory is not not a issue, enabling HyperThreading may still be a bad
-idea: depending on the hardware and the software (in particular the patches
-for Spectre/Meltdown) it may slow down your system. The only sure way to assess
-the effect of HyperThreading is to run a (big) calculation with HyperThreading
-and one without, and then compare the runtimes.
+Yes. Disabling hyperthreading will save memory and make the engine
+faster. Suppose for instance that you have a machine with a powerful
+i9 processor and 16 GB of RAM. It seems a lot. In reality it is not.
+The operating system will consume some memory, the browser will consume a
+lot of memory, you may have other applications open and you may end up with
+less than 10 GB of available memory. If hyperthreading is enabled the engine
+will see 10x2 = 20 cores; running parallel computations may easily consume
+0.5 GB per core, i.e. 10 GB, so you will run out of memory. With Hyperthreading
+disabled you will still have 5 GB of available RAM. We recommend to ALWAYS
+disable hyperthreading from the BIOS.
 
 ### Help! I want to limit the number of cores used by the engine
 
-If you are on a single machine, the way to do it is to edit the file
-openquake.cfg and add the lines (if for instance you want to use 8 cores)
+This is another way to save memory. If you are on a single machine,
+the way to do it is to edit the file openquake.cfg and add the lines
+(if for instance you want to use 8 cores)
 
 [distribution]
 num_cores = 8

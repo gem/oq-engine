@@ -25,8 +25,7 @@ import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, pmf, geo
-from openquake.hazardlib.scalerel.point import PointMSR
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
@@ -430,7 +429,9 @@ class CompositeSourceModel:
         """
         srcs = self.get_sources()
         tot_weight = 0
+        nr = 0
         for src in srcs:
+            nr += src.num_ruptures
             tot_weight += src.weight
             if src.code == b'C' and src.num_ruptures > 20_000:
                 msg = ('{} is suspiciously large, containing {:_d} '
@@ -439,6 +440,10 @@ class CompositeSourceModel:
                 logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
+        if nr > 1E9:
+            logging.info('Huge model with {:_d} ruptures: doubling the tasks'
+                         .format(nr))
+            max_weight /= 2
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
         heavy = [src for src in srcs if src.weight > max_weight]
