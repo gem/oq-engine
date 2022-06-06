@@ -89,23 +89,31 @@ We are 3.4x faster, even in preclassical for nonparametric sources.
 | preclassical       | 311    | 4.29168 | 500%   | 0.09909 | 227.9   | 53.1    |
 | read_source_model  | 193    | 1.45736 | 103%   | 0.00532 | 7.44293 | 5.10712 |
 
+cfactor = 7_397_142_691/58_299_801 = 126.9
+Checksum of the inputs: 4181311661 (total size 2.15 GB)
+
 Engine 3.15
 -----------
 
-"composing pnes" is much faster.
+Twice as slow and double memory, caused by the better precision in
+ps_grid_spacing.
 
-| calc_45018, maxmem=87.0 GB | time_sec | memory_mb | counts     |
-|----------------------------+----------+-----------+------------|
-| total classical            | 205_002  | 517.5     | 251        |
-| get_poes                   | 93_964   | 0.0       | 29_591_439 |
-| composing pnes             | 36_441   | 0.0       | 29_591_439 |
-| make_contexts              | 35_485   | 601.3     | 12_619     |
-| computing mean_std         | 33_911   | 0.0       | 1_482_266  |
-| ClassicalCalculator.run    | 2_607    | 4_995     | 1          |
+| calc_45057, maxmem=204.2 GB | time_sec | memory_mb | counts     |
+|-----------------------------+----------+-----------+------------|
+| total classical             | 422_469  | 564.2     | 258        |
+| get_poes                    | 214_359  | 0.0       | 67_633_836 |
+| computing mean_std          | 97_936   | 0.0       | 3_387_537  |
+| composing pnes              | 84_658   | 0.0       | 67_633_836 |
+| make_contexts               | 14_411   | 0.0       | 1_036_887  |
+| ClassicalCalculator.run     | 5_469    | 5_776     | 1          |
+| total preclassical          | 1_055    | 108.3     | 786        |
 
 | operation-duration | counts | mean    | stddev | min     | max     | slowfac |
 |--------------------+--------+---------+--------+---------+---------+---------|
-| classical          | 251    | 816.7   | 22%    | 8.69835 | 1_261   | 1.54397 |
-| postclassical      | 239    | 1.27755 | 48%    | 0.01112 | 2.45342 | 1.92042 |
-| preclassical       | 310    | 4.36270 | 501%   | 0.08910 | 235.3   | 53.9    |
-| read_source_model  | 193    | 1.48584 | 104%   | 0.00556 | 7.68943 | 5.17513 |
+| classical          | 258    | 1_637   | 20%    | 17.7    | 2_327   | 1.42108 |
+| postclassical      | 239    | 1.10608 | 45%    | 0.01021 | 2.02537 | 1.83113 |
+| preclassical       | 299    | 3.52821 | 507%   | 0.08853 | 195.7   | 55.5    |
+| read_source_model  | 193    | 1.50409 | 102%   | 0.00545 | 7.59909 | 5.05227 |
+
+cfactor = 16_906_923_490/1_361_344_918 = 12.4
+Checksum of the inputs: 4181311661 (total size 2.15 GB)
