@@ -25,8 +25,7 @@ import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, pmf, geo
-from openquake.hazardlib.scalerel.point import PointMSR
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
@@ -110,26 +109,6 @@ def _check_dupl_ids(src_groups):
                 first = False
 
 
-def collapse_nphc(src):
-    """
-    Collapse the nodal_plane_distribution and hypocenter_distribution.
-    """
-    if (hasattr(src, 'nodal_plane_distribution') and
-            hasattr(src, 'hypocenter_distribution')):
-        if len(src.nodal_plane_distribution.data) > 1:
-            ws, nps = zip(*src.nodal_plane_distribution.data)
-            strike = numpy.average([np.strike for np in nps], weights=ws)
-            dip = numpy.average([np.dip for np in nps], weights=ws)
-            rake = numpy.average([np.rake for np in nps], weights=ws)
-            val = geo.NodalPlane(strike, dip, rake)
-            src.nodal_plane_distribution = pmf.PMF([(1., val)])
-        if len(src.hypocenter_distribution.data) > 1:
-            ws, vals = zip(*src.hypocenter_distribution.data)
-            val = numpy.average(vals, weights=ws)
-            src.hypocenter_distribution = pmf.PMF([(1., val)])
-        src.magnitude_scaling_relationship = PointMSR()
-
-
 def get_csm(oq, full_lt, h5=None):
     """
     Build source models from the logic tree and to store
@@ -168,13 +147,6 @@ def get_csm(oq, full_lt, h5=None):
     if changes:
         logging.info('Applied {:_d} changes to the composite source model'.
                      format(changes))
-
-    if 'reqv' in oq.inputs:
-        logging.warning('Using equivalent distance approximation and '
-                        'collapsing finite size parameters in point sources')
-        for group in groups:
-            for src in group:
-                collapse_nphc(src)
     return _get_csm(full_lt, groups)
 
 
@@ -457,7 +429,9 @@ class CompositeSourceModel:
         """
         srcs = self.get_sources()
         tot_weight = 0
+        nr = 0
         for src in srcs:
+            nr += src.num_ruptures
             tot_weight += src.weight
             if src.code == b'C' and src.num_ruptures > 20_000:
                 msg = ('{} is suspiciously large, containing {:_d} '
@@ -466,6 +440,10 @@ class CompositeSourceModel:
                 logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
+        if nr > 1E9:
+            logging.info('Huge model with {:_d} ruptures: doubling the tasks'
+                         .format(nr))
+            max_weight /= 2
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
         heavy = [src for src in srcs if src.weight > max_weight]
@@ -474,7 +452,7 @@ class CompositeSourceModel:
         if not heavy:
             maxsrc = max(srcs, key=lambda s: s.weight)
             logging.info('Heaviest: %s', maxsrc)
-        return max_weight / 2 if oq.ps_grid_spacing else max_weight
+        return max_weight
 
     def __toh5__(self):
         data = gzip.compress(pickle.dumps(self, pickle.HIGHEST_PROTOCOL))

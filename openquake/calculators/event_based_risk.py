@@ -193,6 +193,7 @@ def event_based_risk(df, oqparam, monitor):
             if len(gmf_df) == 0:
                 continue
             with mon_risk:
+                adf = adf.set_index('ordinal')
                 out = crmodel.get_output(
                     taxo, adf, gmf_df, oqparam._sec_losses, rng)
             yield out

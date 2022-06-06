@@ -58,6 +58,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     splittable = True
     checksum = 0  # set in source_reader
     weight = 1  # set in contexts
+    esites = 0  # updated in estimate_weight
 
     @abc.abstractproperty
     def MODIFICATIONS(self):

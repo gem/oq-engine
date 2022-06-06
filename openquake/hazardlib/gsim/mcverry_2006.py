@@ -23,8 +23,6 @@ Module exports :class:`McVerry2006Asc`, :class:`McVerry2006SInter`,
 :class:`McVerry2006SSlabSC`, :class:`McVerry2006VolcSC`.
 """
 import numpy as np
-import shapely
-
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -684,25 +682,6 @@ class McVerry2006Chch(McVerry2006AscSC):
     additional_sigma = 0
     REQUIRES_RUPTURE_PARAMETERS = (
         McVerry2006AscSC.REQUIRES_RUPTURE_PARAMETERS | {"in_cshm"})
-
-    # this is meant for non-point ruptures
-    def set_parameters(self, rup):
-        """
-        Checks if any part of the rupture surface mesh is located within the
-        intended boundaries of the Canterbury Seismic Hazard Model in
-        Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
-        of Christchurch, Earthquake Spectra, 30(1), 17-29.
-        """
-        lats = np.ravel(rup.surface.mesh.array[1])
-        lons = np.ravel(rup.surface.mesh.array[0])
-        # These coordinates are provided by M Gerstenberger (personal
-        # communication, 10 August 2018)
-        polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
-                                            (173.2, -43.9), (171.6, -43.9)])
-        points_in_polygon = [
-            shapely.geometry.Point(lons[i], lats[i]).within(polygon)
-            for i in np.arange(len(lons))]
-        rup.in_cshm = any(points_in_polygon)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

@@ -615,8 +615,8 @@ class ClassicalCalculator(base.HazardCalculator):
             return
         N, S, M, P, L1, individual = self._create_hcurves_maps()
         ct = oq.concurrent_tasks or 1
-        if 1 < ct <= 20:  # saving memory on small machines
-            ct = 60
+        if 1 < ct < 80:  # saving memory on small machines
+            ct = 80
         self.weights = ws = [rlz.weight for rlz in self.realizations]
         if '_poes' in set(self.datastore):
             dstore = self.datastore

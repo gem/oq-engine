@@ -90,25 +90,6 @@ class RiskFuncList(list):
     """
     A list of risk functions with attributes .id, .loss_type, .kind
     """
-    def check_misprints_in_risk_ids(self, inputs):
-        """
-        Check that there are no missing risk IDs for some risk functions
-        """
-        ids_by_kind = AccumDict(accum=set())
-        for riskfunc in self:
-            ids_by_kind[riskfunc.kind].add(riskfunc.id)
-        kinds = tuple(ids_by_kind)
-        fnames = [fname for kind, fname in inputs.items()
-                  if kind.endswith(kinds)]
-        if len(ids_by_kind) > 1:
-            k = next(iter(ids_by_kind))
-            base_ids = set(ids_by_kind.pop(k))
-            for kind, ids in ids_by_kind.items():
-                if ids != base_ids:
-                    raise NameError(
-                        'Check in the files %s the IDs %s' %
-                        (fnames, sorted(base_ids.symmetric_difference(ids))))
-
     def groupby_id(self, kind=None):
         """
         :returns: double dictionary id -> loss_type, kind -> risk_function
@@ -481,6 +462,44 @@ class CompositeRiskModel(collections.abc.Mapping):
         self.consdict = consdict or {}  # new style consequences, by anything
         self.init()
 
+    def check_risk_ids(self, inputs):
+        """
+        Check that there are no missing risk IDs for some risk functions
+        """
+        ids_by_kind = AccumDict(accum=set())
+        for riskfunc in self.risklist:
+            ids_by_kind[riskfunc.kind].add(riskfunc.id)
+        kinds = tuple(ids_by_kind)  # vulnerability, fragility, ...
+        fnames = [fname for kind, fname in inputs.items()
+                  if kind.endswith(kinds)]
+        if len(ids_by_kind) > 1:
+            k = next(iter(ids_by_kind))
+            base_ids = set(ids_by_kind.pop(k))
+            for kind, ids in ids_by_kind.items():
+                if ids != base_ids:
+                    raise NameError(
+                        'Check in the files %s the IDs %s' %
+                        (fnames, sorted(base_ids.symmetric_difference(ids))))
+
+        # check imt_by_lt has consistent loss types for all taxonomies
+        if self._riskmodels:
+            records = [[rm.taxonomy] + list(rm.imt_by_lt)
+                       for rm in self._riskmodels.values()]  # [[tax, lt...]]
+            expected_lts = set(records[0][1:])
+            kind = kinds[0]  # vulnerability or fragility
+            for rec in records[1:]:
+                ltypes = set(rec[1:])
+                if not ltypes & expected_lts:
+                    if not self.tmap:
+                        fname = inputs[rec[1] + '_' + kind]
+                        raise NameError(f'The ID {rec[0]} is in {fname}, not '
+                                        f'in the other {kind} files')
+                elif ltypes != expected_lts:
+                    lt = expected_lts.pop()
+                    fname = inputs[lt + '_' + kind]
+                    raise NameError(f'The ID {rec[0]} is in {fname}, not in '
+                                    f'the other {kind} files')
+
     def compute_csq(self, asset, fractions, loss_type):
         """
         :param asset: asset record
@@ -577,7 +596,6 @@ class CompositeRiskModel(collections.abc.Mapping):
                 if kind in 'vulnerability fragility':
                     imt = rm.risk_functions[lt, kind].imt
                     rm.imt_by_lt[lt] = imt
-        self.risklist.check_misprints_in_risk_ids(oq.inputs)
         self.curve_params = self.make_curve_params()
         iml = collections.defaultdict(list)
         # ._riskmodels is empty if read from the hazard calculation
@@ -684,11 +702,11 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
 
-    def get_output(self, taxo, assets, haz, sec_losses=(), rndgen=None,
+    def get_output(self, taxoidx, asset_df, haz, sec_losses=(), rndgen=None,
                    rlz=None):
         """
-        :param taxo: a taxonomy index
-        :param assets: a DataFrame of assets of the given taxonomy
+        :param taxoidx: a taxonomy index
+        :param asset_df: a DataFrame of assets of the given taxonomy
         :param haz: a DataFrame of GMVs on that site
         :param sec_losses: a list of SecondaryLoss instances
         :param rndgen: a MultiEventRNG instance
@@ -697,33 +715,33 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         primary = self.primary_imtls
         alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
-        event = hasattr(haz, 'eid')
+        event = hasattr(haz, 'eid')  # else classical (haz.array)
         dic = {}
         for lt in self.loss_types:
-            outs = []
-            rmodels, weights = self.get_rmodels_weights(lt, taxo)
+            outs = []  # list of DataFrames
+            rmodels, weights = self.get_rmodels_weights(lt, taxoidx)
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
                 if event:
-                    out = rm(lt, assets, haz, col, rndgen)
-                    outs.append(out)
+                    out = rm(lt, asset_df, haz, col, rndgen)
                 else:  # classical
                     hcurve = haz.array[self.imtls(imt), 0]
-                    outs.append(rm(lt, assets, hcurve))
-
-            # average on the risk models (unsupported for classical)
-            dic[lt] = outs[0]
-            for sec_loss in sec_losses:
-                sec_loss.update(lt, dic, assets)
-            if hasattr(dic[lt], 'loss'):  # event_based_risk
-                if len(outs) > 1:
-                    # computing the average dataframe
-                    df = pandas.concat(
-                        [out * w for out, w in zip(outs, weights)])
-                    dic[lt] = df.groupby(['eid', 'aid']).sum()
-            elif len(weights) > 1:  # scenario_damage
+                    out = rm(lt, asset_df, hcurve)
+                for sec_loss in sec_losses:
+                    sec_loss.update(lt, out, asset_df)
+                outs.append(out)
+            if len(outs) > 1 and hasattr(out, 'loss'):
+                # computing the average dataframe
+                df = pandas.concat(
+                    [out * w for out, w in zip(outs, weights)])
+                dic[lt] = df.groupby(['eid', 'aid']).sum()
+            elif len(outs) > 1:
+                # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
                 dic[lt] = numpy.average(outs, weights=weights, axis=0)
+            else:
+                # there is a single output
+                dic[lt] = outs[0]
         return dic
 
     def get_interp_ratios(self, taxo, gmf_df):

@@ -105,21 +105,21 @@ long arrays.
 Engine 3.15
 -----------
 
-"composing pnes" doubled in speed thanks to numba.
-
-| calc_45016, maxmem=51.7 GB | time_sec | memory_mb | counts    |
+Changed ps_grid_spacing; better preclassical; ultra-fast make_contexts,
+less slow tasks, less memory.
+      
+| calc_45055, maxmem=58.2 GB | time_sec | memory_mb | counts    |
 |----------------------------+----------+-----------+-----------|
-| total classical            | 47_493   | 353.6     | 254       |
-| get_poes                   | 22_055   | 0.0       | 5_354_733 |
-| make_contexts              | 9_950    | 298.7     | 3_627     |
-| composing pnes             | 7_996    | 0.0       | 5_354_733 |
-| computing mean_std         | 6_195    | 0.0       | 268_571   |
-| ClassicalCalculator.run    | 661.7    | 1_233     | 1         |
-| total preclassical         | 356.4    | 214.0     | 81        |
+| total classical            | 49_715   | 788.6     | 255       |
+| get_poes                   | 27_202   | 0.0       | 6_902_751 |
+| composing pnes             | 10_204   | 0.0       | 6_902_751 |
+| computing mean_std         | 9_065    | 0.0       | 346_604   |
+| make_contexts              | 1_643    | 0.0       | 200_568   |
+| ClassicalCalculator.run    | 688.0    | 1_095     | 1         |
 
 | operation-duration | counts | mean    | stddev | min     | max     | slowfac |
 |--------------------+--------+---------+--------+---------+---------+---------|
-| classical          | 254    | 187.0   | 44%    | 0.59449 | 305.1   | 1.63184 |
-| postclassical      | 240    | 0.13559 | 23%    | 0.03436 | 0.23074 | 1.70174 |
-| preclassical       | 34     | 10.5    | 121%   | 0.24759 | 54.0    | 5.15240 |
-| read_source_model  | 1      | 46.5    | nan    | 46.5    | 46.5    | 1.00000 |
+| classical          | 255    | 195.0   | 11%    | 2.67335 | 246.8   | 1.26614 |
+| postclassical      | 240    | 0.10548 | 23%    | 0.02777 | 0.24841 | 2.35504 |
+| preclassical       | 33     | 4.67714 | 157%   | 0.15719 | 35.6    | 7.60897 |
+| read_source_model  | 1      | 46.7    | nan    | 46.7    | 46.7    | 1.00000 |

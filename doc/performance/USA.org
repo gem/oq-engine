@@ -88,21 +88,22 @@ We are much faster in spite of the slow tasks.
 Engine 3.15
 -----------
 
-There is a big speedup but even worse slow tasks.
-
-| calc_45022, maxmem=121.1 GB | time_sec | memory_mb | counts     |
+Changed ps_grid_spacing; ultra-fast make_contexts, doubled "composing pnes",
+less slow tasks, less memory.
+ 
+| calc_45056, maxmem=121.4 GB | time_sec | memory_mb | counts     |
 |-----------------------------+----------+-----------+------------|
-| total classical             | 269_148  | 1_412     | 274        |
-| get_poes                    | 126_035  | 0.0       | 22_011_660 |
-| computing mean_std          | 73_468   | 0.0       | 1_050_801  |
-| composing pnes              | 35_064   | 0.0       | 22_011_660 |
-| make_contexts               | 28_280   | 467.4     | 10_228     |
-| ClassicalCalculator.run     | 6_005    | 6_614     | 1          |
-| total postclassical         | 2_982    | 102.9     | 240        |
+| total classical             | 246_689  | 1_349     | 271        |
+| get_poes                    | 117_014  | 0.0       | 21_159_227 |
+| computing mean_std          | 81_489   | 0.0       | 1_012_961  |
+| composing pnes              | 35_797   | 0.0       | 21_159_227 |
+| make_contexts               | 5_495    | 0.0       | 340_953    |
+| ClassicalCalculator.run     | 3_306    | 6_401     | 1          |
+| total postclassical         | 2_876    | 82.1      | 240        |
 
 | operation-duration | counts | mean    | stddev | min     | max   | slowfac |
 |--------------------+--------+---------+--------+---------+-------+---------|
-| classical          | 274    | 982.3   | 75%    | 1.40302 | 4_236 | 4.31274 |
-| postclassical      | 240    | 12.4    | 31%    | 6.73063 | 23.3  | 1.87547 |
-| preclassical       | 290    | 2.78202 | 749%   | 0.14161 | 348.1 | 125.1   |
-| read_source_model  | 13     | 7.35317 | 218%   | 0.04300 | 45.8  | 6.22722 |
+| classical          | 271    | 910.3   | 35%    | 125.2   | 2_032 | 2.23198 |
+| postclassical      | 240    | 12.0    | 29%    | 7.03691 | 20.7  | 1.72864 |
+| preclassical       | 351    | 3.24424 | 600%   | 0.10837 | 335.6 | 103.5   |
+| read_source_model  | 13     | 7.21969 | 219%   | 0.03897 | 45.1  | 6.25216 |

@@ -26,6 +26,7 @@ from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
     build_planar, PlanarSurface, planin_dt)
 from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
@@ -148,6 +149,7 @@ class PointSource(ParametricSeismicSource):
     """
     code = b'P'
     MODIFICATIONS = set()
+    ps_grid_spacing = 0  # updated in CollapsedPointSource
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -222,13 +224,18 @@ class PointSource(ParametricSeismicSource):
         """
         if hasattr(self, 'radius'):
             return self.radius[-1]  # max radius
+        if isinstance(self.magnitude_scaling_relationship, PointMSR):
+            M = len(self.get_annual_occurrence_rates())
+            self.radius = numpy.full(M, self.ps_grid_spacing * 0.707)
+            return self.radius[-1]
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         npd = self.nodal_plane_distribution.data
         self.radius = numpy.zeros(len(magd))
         for m, planin in enumerate(self.get_planin(magd, npd)):
             rup_length, rup_width, _ = planin.dims.max(axis=0)  # (N, 3) => 3
             # the projection radius is half of the rupture diagonal
-            self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
+            self.radius[m] = (math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
+                              + self.ps_grid_spacing * 0.707)
         return self.radius[-1]  # max radius
 
     def get_planar(self, shift_hypo=False, iruptures=False):
@@ -287,7 +294,7 @@ class PointSource(ParametricSeismicSource):
                         yield PointRupture(
                             mag, np.rake, self.tectonic_region_type,
                             Point(clon, clat, cdep), np.strike, np.dip, rate,
-                            self.temporal_occurrence_model)
+                            self.temporal_occurrence_model, self.lower_seismogenic_depth)
 
     def iter_ruptures(self, **kwargs):
         """
@@ -439,6 +446,7 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
             cps = CollapsedPointSource('cps-%d-%d' % (task_no, i), ps[idxs])
             cps.grp_id = ps[0].grp_id
             cps.trt_smr = ps[0].trt_smr
+            cps.ps_grid_spacing = ps_grid_spacing
             out.append(cps)
         else:  # there is a single source
             out.append(ps[idxs[0]])
