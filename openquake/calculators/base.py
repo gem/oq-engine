@@ -457,9 +457,15 @@ class HazardCalculator(BaseCalculator):
         required = .5 * (1 if parallel.oq_distribute() == 'no'
                          else parallel.Starmap.num_cores)
         if avail < required:
-            raise MemoryError('You have %.1f GB available, but at least %.1f '
-                              'GB are required: see https://github.com/gem/oq-engine/blob/master/doc/faq.md'
-                              % (avail, required))
+            msg = ('Entering SLOW MODE. You have %.1f GB available, but the '
+                   'engine would like at least 0.5 GB per core, i.e. %.1f GB: '
+                   'https://github.com/gem/oq-engine/blob/master/doc/faq.md'
+                   ) % (avail, required)
+            if oq.concurrent_tasks:
+                oq.concurrent_tasks = 0
+                logging.warning(msg)
+            else:
+                raise MemoryError('You have only %.1f GB available' % avail)
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
 
