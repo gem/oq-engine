@@ -90,25 +90,6 @@ class RiskFuncList(list):
     """
     A list of risk functions with attributes .id, .loss_type, .kind
     """
-    def check_misprints_in_risk_ids(self, inputs):
-        """
-        Check that there are no missing risk IDs for some risk functions
-        """
-        ids_by_kind = AccumDict(accum=set())
-        for riskfunc in self:
-            ids_by_kind[riskfunc.kind].add(riskfunc.id)
-        kinds = tuple(ids_by_kind)
-        fnames = [fname for kind, fname in inputs.items()
-                  if kind.endswith(kinds)]
-        if len(ids_by_kind) > 1:
-            k = next(iter(ids_by_kind))
-            base_ids = set(ids_by_kind.pop(k))
-            for kind, ids in ids_by_kind.items():
-                if ids != base_ids:
-                    raise NameError(
-                        'Check in the files %s the IDs %s' %
-                        (fnames, sorted(base_ids.symmetric_difference(ids))))
-
     def groupby_id(self, kind=None):
         """
         :returns: double dictionary id -> loss_type, kind -> risk_function
@@ -481,6 +462,44 @@ class CompositeRiskModel(collections.abc.Mapping):
         self.consdict = consdict or {}  # new style consequences, by anything
         self.init()
 
+    def check_risk_ids(self, inputs):
+        """
+        Check that there are no missing risk IDs for some risk functions
+        """
+        ids_by_kind = AccumDict(accum=set())
+        for riskfunc in self.risklist:
+            ids_by_kind[riskfunc.kind].add(riskfunc.id)
+        kinds = tuple(ids_by_kind)  # vulnerability, fragility, ...
+        fnames = [fname for kind, fname in inputs.items()
+                  if kind.endswith(kinds)]
+        if len(ids_by_kind) > 1:
+            k = next(iter(ids_by_kind))
+            base_ids = set(ids_by_kind.pop(k))
+            for kind, ids in ids_by_kind.items():
+                if ids != base_ids:
+                    raise NameError(
+                        'Check in the files %s the IDs %s' %
+                        (fnames, sorted(base_ids.symmetric_difference(ids))))
+
+        # check imt_by_lt has consistent loss types for all taxonomies
+        if self._riskmodels:
+            records = [[rm.taxonomy] + list(rm.imt_by_lt)
+                       for rm in self._riskmodels.values()]  # [[tax, lt...]]
+            expected_lts = set(records[0][1:])
+            kind = kinds[0]  # vulnerability or fragility
+            for rec in records[1:]:
+                ltypes = set(rec[1:])
+                if not ltypes & expected_lts:
+                    if not self.tmap:
+                        fname = inputs[rec[1] + '_' + kind]
+                        raise NameError(f'The ID {rec[0]} is in {fname}, not '
+                                        f'in the other {kind} files')
+                elif ltypes != expected_lts:
+                    lt = expected_lts.pop()
+                    fname = inputs[lt + '_' + kind]
+                    raise NameError(f'The ID {rec[0]} is in {fname}, not in '
+                                    f'the other {kind} files')
+
     def compute_csq(self, asset, fractions, loss_type):
         """
         :param asset: asset record
@@ -577,7 +596,6 @@ class CompositeRiskModel(collections.abc.Mapping):
                 if kind in 'vulnerability fragility':
                     imt = rm.risk_functions[lt, kind].imt
                     rm.imt_by_lt[lt] = imt
-        self.risklist.check_misprints_in_risk_ids(oq.inputs)
         self.curve_params = self.make_curve_params()
         iml = collections.defaultdict(list)
         # ._riskmodels is empty if read from the hazard calculation
