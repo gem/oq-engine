@@ -684,11 +684,11 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
 
-    def get_output(self, taxo, assets, haz, sec_losses=(), rndgen=None,
+    def get_output(self, taxoidx, asset_df, haz, sec_losses=(), rndgen=None,
                    rlz=None):
         """
-        :param taxo: a taxonomy index
-        :param assets: a DataFrame of assets of the given taxonomy
+        :param taxoidx: a taxonomy index
+        :param asset_df: a DataFrame of assets of the given taxonomy
         :param haz: a DataFrame of GMVs on that site
         :param sec_losses: a list of SecondaryLoss instances
         :param rndgen: a MultiEventRNG instance
@@ -697,33 +697,30 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         primary = self.primary_imtls
         alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
-        event = hasattr(haz, 'eid')
+        event = hasattr(haz, 'eid')  # else classical (haz.array)
         dic = {}
         for lt in self.loss_types:
-            outs = []
-            rmodels, weights = self.get_rmodels_weights(lt, taxo)
+            outs = []  # list of DataFrames
+            rmodels, weights = self.get_rmodels_weights(lt, taxoidx)
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
                 if event:
-                    out = rm(lt, assets, haz, col, rndgen)
-                    outs.append(out)
+                    out = rm(lt, asset_df, haz, col, rndgen)
                 else:  # classical
                     hcurve = haz.array[self.imtls(imt), 0]
-                    outs.append(rm(lt, assets, hcurve))
-
-            # average on the risk models (unsupported for classical)
-            dic[lt] = outs[0]
-            for sec_loss in sec_losses:
-                sec_loss.update(lt, dic, assets)
-            if hasattr(dic[lt], 'loss'):  # event_based_risk
-                if len(outs) > 1:
-                    # computing the average dataframe
-                    df = pandas.concat(
-                        [out * w for out, w in zip(outs, weights)])
-                    dic[lt] = df.groupby(['eid', 'aid']).sum()
-            elif len(weights) > 1:  # scenario_damage
-                dic[lt] = numpy.average(outs, weights=weights, axis=0)
+                    out = rm(lt, asset_df, hcurve)
+                for sec_loss in sec_losses:
+                    sec_loss.update(lt, out, asset_df)
+                outs.append(out)
+            if len(outs) > 1:
+                # computing the average dataframe
+                df = pandas.concat(
+                    [out * w for out, w in zip(outs, weights)])
+                dic[lt] = df.groupby(['eid', 'aid']).sum()
+            else:
+                # there is a single output
+                dic[lt] = outs[0]
         return dic
 
     def get_interp_ratios(self, taxo, gmf_df):
