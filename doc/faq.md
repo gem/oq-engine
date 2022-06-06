@@ -48,11 +48,13 @@ each machine.
 
 ### Help! I am running out of memory!
 
-If you are on a laptop, the first thing to do is to close the browser.
-If that is not enough, then close all other memory consuming
-applications. You can also limit the number of parallel threads as explained
+If you are on a laptop, the first thing to do is close all memory consuming
+applications. Remember that running the enigne from the command-line is the
+most memory-efficient way to run calculations (browesers can use significant 
+memory from your laptop).
+You can also limit the number of parallel threads as explained
 before (i.e. disable hyperthreading, reduce num_cores) or disable
-parallelism altogether by giving the command
+parallelism altogether by giving the command:
 
 $ oq engine --run job.ini --no-distribute
 
