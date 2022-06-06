@@ -21,6 +21,7 @@ import json
 import logging
 import shapely
 import numpy
+import pandas
 from scipy.stats import linregress
 from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
@@ -692,6 +693,35 @@ def plot_wkt(wkt_string):
     return plt
 
 
+def plot_csv(fname):
+    """
+    Plot a CSV with columns (operation, time1, time2)
+    """
+    df = pandas.read_csv(fname)
+    operation, col1, col2 = df.columns
+    plt = import_plt()
+
+    vals1 = df[col1].to_numpy()
+    vals2 = df[col2].to_numpy()
+
+    x = numpy.arange(len(df))  # the label locations
+    width = 0.35  # the width of the bars
+
+    fig, ax = plt.subplots()
+    rects1 = ax.bar(x - width/2, vals1, width, label=col1)
+    rects2 = ax.bar(x + width/2, vals2, width, label=col2)
+    ax.bar_label(rects1)
+    ax.bar_label(rects2)
+
+    ax.set_title('Time comparison')
+    ax.set_ylabel('Cumulative seconds')
+    ax.set_xticks(x, df[operation])
+    ax.legend()
+
+    fig.tight_layout()
+    plt.show()
+
+
 def main(what,
          calc_id: int = -1,
          others: int = [],
@@ -700,6 +730,9 @@ def main(what,
     """
     Generic plotter for local and remote calculations.
     """
+    if what.endswith('.csv'):
+        plot_csv(what)
+        return
     if what.startswith('POLYGON'):
         plt = plot_wkt(what)
         plt.show()
