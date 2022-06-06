@@ -499,8 +499,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                     lt = expected_lts.pop()
                     fname = inputs[lt + '_' + kind]
                     for other in others:
-                        logging.warning(f'The ID {rec[0]} is in {fname}, not '
-                                        f'in the {other}_{kind} file')
+                        # TODO: should this be an error?
+                        logging.warning(f'The ID {rec[0]} is in {fname} but '
+                                        f'not in the {other}_{kind} file')
 
     def compute_csq(self, asset, fractions, loss_type):
         """
