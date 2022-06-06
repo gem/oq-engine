@@ -25,6 +25,7 @@ import operator
 import traceback
 from datetime import datetime
 from shapely import wkt
+import psutil
 import h5py
 import numpy
 import pandas
@@ -452,6 +453,13 @@ class HazardCalculator(BaseCalculator):
         Read risk data and sources if any
         """
         oq = self.oqparam
+        avail = psutil.virtual_memory().available / 1024**3
+        required = .5 * (1 if parallel.oq_distribute() == 'no'
+                         else parallel.Starmap.num_cores)
+        if avail < required:
+            raise MemoryError('You have %.1f GB available, but at least %.1f '
+                              'GB are required: see https://github.com/gem/oq-engine/blob/master/doc/faq.md'
+                              % (avail, required))
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
 
@@ -511,8 +519,8 @@ class HazardCalculator(BaseCalculator):
         If yes, read the inputs by retrieving the previous calculation;
         if not, read the inputs directly.
         """
-        self.t0 = time.time()
         oq = self.oqparam
+        self.t0 = time.time()
         if 'gmfs' in oq.inputs or 'multi_peril' in oq.inputs:
             # read hazard from files
             assert not oq.hazard_calculation_id, (
