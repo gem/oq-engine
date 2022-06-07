@@ -695,10 +695,10 @@ def plot_wkt(wkt_string):
 
 def plot_csv(fname):
     """
-    Plot a CSV with columns (operation, time1, time2)
+    Plot a CSV with columns (title, time1, time2)
     """
     df = pandas.read_csv(fname)
-    operation, col1, col2 = df.columns
+    title, col1, col2 = df.columns
     plt = import_plt()
 
     vals1 = df[col1].to_numpy()
@@ -713,9 +713,8 @@ def plot_csv(fname):
     ax.bar_label(rects1)
     ax.bar_label(rects2)
 
-    ax.set_title('Time comparison')
-    ax.set_ylabel('Cumulative seconds')
-    ax.set_xticks(x, df[operation])
+    ax.set_title(title)
+    ax.set_xticks(x, df[title])
     ax.legend()
 
     fig.tight_layout()
