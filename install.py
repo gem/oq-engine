@@ -296,6 +296,7 @@ def fix_version(commit, venv):
     with open(fname, 'w') as f:
         f.write(''.join(lines))
 
+
 def install(inst, version):
     """
     Install the engine in one of the three possible modes
@@ -345,6 +346,7 @@ def install(inst, version):
 
     # install the requirements
     branch = get_branch(version)
+    # TODO: on M1 (platform.machine()) get requirements-py39-macos_arm64.txt
     req = f'https://raw.githubusercontent.com/gem/oq-engine/{branch}/' \
         'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
 
