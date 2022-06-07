@@ -95,25 +95,24 @@ Checksum of the inputs: 4181311661 (total size 2.15 GB)
 Engine 3.15
 -----------
 
-Twice as slow and double memory, caused by the better precision in
-ps_grid_spacing.
+Much faster with ps_grid_spacing=40:
 
-| calc_45057, maxmem=204.2 GB | time_sec | memory_mb | counts     |
-|-----------------------------+----------+-----------+------------|
-| total classical             | 422_469  | 564.2     | 258        |
-| get_poes                    | 214_359  | 0.0       | 67_633_836 |
-| computing mean_std          | 97_936   | 0.0       | 3_387_537  |
-| composing pnes              | 84_658   | 0.0       | 67_633_836 |
-| make_contexts               | 14_411   | 0.0       | 1_036_887  |
-| ClassicalCalculator.run     | 5_469    | 5_776     | 1          |
-| total preclassical          | 1_055    | 108.3     | 786        |
+| calc_45059, maxmem=85.7 GB | time_sec | memory_mb | counts     |
+|----------------------------+----------+-----------+------------|
+| total classical            | 162_513  | 465.3     | 251        |
+| get_poes                   | 81_618   | 0.0       | 27_214_594 |
+| computing mean_std         | 36_113   | 0.0       | 1_367_505  |
+| composing pnes             | 32_602   | 0.0       | 27_214_594 |
+| make_contexts              | 5_393    | 0.0       | 1_126_074  |
+| ClassicalCalculator.run    | 2_463    | 6_183     | 1          |
+| total preclassical         | 1_074    | 112.0     | 786        |
 
 | operation-duration | counts | mean    | stddev | min     | max     | slowfac |
 |--------------------+--------+---------+--------+---------+---------+---------|
-| classical          | 258    | 1_637   | 20%    | 17.7    | 2_327   | 1.42108 |
-| postclassical      | 239    | 1.10608 | 45%    | 0.01021 | 2.02537 | 1.83113 |
-| preclassical       | 299    | 3.52821 | 507%   | 0.08853 | 195.7   | 55.5    |
-| read_source_model  | 193    | 1.50409 | 102%   | 0.00545 | 7.59909 | 5.05227 |
+| classical          | 251    | 647.5   | 24%    | 105.3   | 956.8   | 1.47773 |
+| postclassical      | 239    | 1.10329 | 45%    | 0.01765 | 2.10844 | 1.91104 |
+| preclassical       | 299    | 3.59166 | 501%   | 0.09035 | 195.8   | 54.5    |
+| read_source_model  | 193    | 1.52416 | 101%   | 0.00786 | 7.68956 | 5.04511 |
 
 cfactor = 16_906_923_490/1_361_344_918 = 12.4
 Checksum of the inputs: 4181311661 (total size 2.15 GB)
