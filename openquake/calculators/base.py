@@ -261,9 +261,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.gsim_lt_cache.clear()
 
                 # remove temporary hdf5 file, if any
-                if os.path.exists(self.datastore.tempname):
-                    if sys.platform != 'win32' and remove:
-                        os.remove(self.datastore.tempname)
+                if os.path.exists(self.datastore.tempname) and remove:
+                    os.remove(self.datastore.tempname)
         return getattr(self, 'exported', {})
 
     def core_task(*args):
