@@ -348,11 +348,11 @@ def install(inst, version):
     # install the requirements
     branch = get_branch(version)
     if sys.platform == 'darwin':
-        mac = '_' + platform.machine()  # x86_64 or arm64
+        mac = '_' + platform.machine(),  # x86_64 or arm64
     else:
-        mac = ''
+        mac = '',
     req = f'https://raw.githubusercontent.com/gem/oq-engine/{branch}/' \
-        'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform] + mac)
+        'requirements-py%d%d-%s%s.txt' % (PYVER + PLATFORM[sys.platform] + mac)
 
     subprocess.check_call([pycmd, '-m', 'pip', 'install', '-r', req])
 
