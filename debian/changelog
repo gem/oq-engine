@@ -1,3 +1,6 @@
+  [Paul Henshaw, Sandra Giacomini]
+  * Ported the OpenQuake manual from latex to reStructuredText format
+
   [Michele Simionato]
   * Entered automatically in sequential mode if there is not enough memory
   * Raised an early error for missing risk IDs in the vulnerability files
