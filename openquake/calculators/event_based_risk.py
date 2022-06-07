@@ -181,6 +181,8 @@ def event_based_risk(df, oqparam, dstore, monitor):
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]
+    if dstore.parent:
+        dstore.parent.close()  # essential on Windows with h5py>=3.6
     ARKD = len(assetcol), len(weights), oqparam.K, oqparam.D
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None

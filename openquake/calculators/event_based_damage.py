@@ -81,6 +81,8 @@ def event_based_damage(df, oqparam, dstore, monitor):
         allrlzs = dstore['events']['rlz_id']
     loss_types = crmodel.oqparam.loss_types
     float_dmg_dist = oqparam.float_dmg_dist  # True by default
+    if dstore.parent:
+        dstore.parent.close()  # essential on Windows with h5py>=3.6
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
         for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
