@@ -1,0 +1,34 @@
+Single site optimization
+====================================
+
+Between the years 2021 and 2022 a large project was undertaken to
+speedup single site PSHA calculations, the so-called *vectorization*
+project. The project had with positive effects on all calculations,
+even the ones with multiple sites, but the less sites are involved
+the more the vectorization helps. The key idea was to supplement
+vectorization by site (which was already there, but completely ineffective
+and actually counterproductive when there is a single site) with
+vectorization by rupture. Technically that involved converting the
+context objects (capturing rupture parameters, site parameters
+and rupture-site distances) into numpy arrays and to change the
+GMPE API to consume such arrays. Then two classes of speedups
+were made possible:
+
+1. speedup of the GMPE computations due to the usage of numpy arrays
+   in =computing mean_std=
+2. speedup of the context generation due to the usage numba in =make_contexts=
+   (implemented only for point-like sources)
+
+Here we will quantify the improvements in a few selected calculations
+by comparing engine version 3.11 (the version released just before the
+vectorization project started) and engine version 3.15 (released at
+the end of the vectorization project).
+
+EDF disaggregation
+---------------------------
+
+#+CAPTION: EDF disaggregation
+[[EDF-disagg.png]]
+
+#+CAPTION: The power of numba
+[[EDF-numba.png]]
