@@ -756,10 +756,13 @@ class Starmap(object):
             self.calc_id = None
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)
-        self.monitor = Monitor(task_func.__name__)
+        if task_func is split_task:
+            self.name = task_args[0][1].__name__
+        else:
+            self.name = task_func.__name__
+        self.monitor = Monitor(self.name)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
-        self.name = self.monitor.operation
         self.task_args = task_args
         self.progress = progress
         self.h5 = h5
@@ -843,6 +846,9 @@ class Starmap(object):
         """
         Submit the given arguments to the underlying task
         """
+        # if self.num_cores <= 8:  # do not split, use less memory
+        #     self.submit(args)
+        #    return
         self.monitor.operation = self.task_func.__name__ + '_'
         self.submit(
             (args[0], self.task_func, args[1:], duration, outs_per_task),

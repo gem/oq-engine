@@ -40,4 +40,5 @@ class WC1994ASRTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.asr.get_median_mag(800, -130), 6.8911518)
 
     def test_str(self):
-        self.assertEqual(str(self.asr), "<WC1994>")
+        self.assertEqual(repr(self.asr), "<WC1994>")
+        self.assertEqual(str(self.asr), "WC1994")

@@ -93,7 +93,8 @@ def main(
         param='',
         config_file=None,
         exports='',
-        log_level='info'):
+        log_level='info',
+        sample_sources=False,):
     """
     Run a calculation using the traditional command line API
     """
@@ -111,6 +112,10 @@ def main(
 
     if no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'
+
+    if sample_sources:
+        assert 0 < float(sample_sources) < 1
+        os.environ['OQ_SAMPLE_SOURCES'] = sample_sources
 
     # check if the datadir exists
     datadir = datastore.get_datadir()
@@ -274,3 +279,5 @@ main.exports = ('Comma-separated string specifing the export formats, '
                 'in order of priority')
 main.log_level = dict(help='Defaults to "info"',
                       choices=['debug', 'info', 'warn', 'error', 'critical'])
+main.sample_sources = dict(abbrev='--ss',
+                           help="Sample fraction in the range 0..1")

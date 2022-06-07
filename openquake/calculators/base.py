@@ -19,11 +19,13 @@ import os
 import sys
 import abc
 import pdb
+import time
 import logging
 import operator
 import traceback
 from datetime import datetime
 from shapely import wkt
+import psutil
 import h5py
 import numpy
 import pandas
@@ -184,7 +186,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.oqparam, self.datastore.hdf5)
             logging.info(f'Checksum of the inputs: {check} '
                          f'(total size {general.humansize(size)})')
-        self.datastore.flush()
 
     def check_precalc(self, precalc_mode):
         """
@@ -225,6 +226,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if ct != self.oqparam.concurrent_tasks:
                 # save the used concurrent_tasks
                 self.oqparam.concurrent_tasks = ct
+            if self.precalc is None:
+                logging.info('Running %s with concurrent_tasks = %d',
+                             self.__class__.__name__, ct)
             self.save_params(**kw)
             try:
                 if pre_execute:
@@ -435,7 +439,8 @@ class HazardCalculator(BaseCalculator):
         if s != 1:
             logging.info('Rupture spinning factor = %s', s)
         if (f * s >= 1.5 and oq.no_pointsource_distance
-                and 'classical' in oq.calculation_mode):
+                and ('classical' in oq.calculation_mode or
+                     'disaggregation' in oq.calculation_mode)):
             logging.info(
                 'You are not using the pointsource_distance approximation:\n'
                 'https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance')
@@ -448,6 +453,19 @@ class HazardCalculator(BaseCalculator):
         Read risk data and sources if any
         """
         oq = self.oqparam
+        avail = psutil.virtual_memory().available / 1024**3
+        required = .5 * (1 if parallel.oq_distribute() == 'no'
+                         else parallel.Starmap.num_cores)
+        if avail < required:
+            msg = ('Entering SLOW MODE. You have %.1f GB available, but the '
+                   'engine would like at least 0.5 GB per core, i.e. %.1f GB: '
+                   'https://github.com/gem/oq-engine/blob/master/doc/faq.md'
+                   ) % (avail, required)
+            if oq.concurrent_tasks:
+                oq.concurrent_tasks = 0
+                logging.warning(msg)
+            else:
+                raise MemoryError('You have only %.1f GB available' % avail)
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
 
@@ -470,9 +488,16 @@ class HazardCalculator(BaseCalculator):
                     oq, self.datastore.hdf5)
                 oq.mags_by_trt = csm.get_mags_by_trt()
                 for trt in oq.mags_by_trt:
-                    self.datastore['source_mags/' + trt] = numpy.array(
-                        oq.mags_by_trt[trt])
+                    mags = oq.mags_by_trt[trt]
+                    min_mag, max_mag = float(mags[0]), float(mags[-1])
+                    self.datastore['source_mags/' + trt] = numpy.array(mags)
                     interp = oq.maximum_distance(trt)
+                    if min_mag < interp.x[0]:
+                        logging.warning(
+                            'discarding magnitudes < %.2f', interp.x[0])
+                    if max_mag > interp.x[-1]:
+                        logging.warning(
+                            'discarding magnitudes > %.2f', interp.x[-1])
                     if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (
                             interp.x[0], interp.y[0],
@@ -482,8 +507,7 @@ class HazardCalculator(BaseCalculator):
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
         self.pre_checks()
-
-        if not oq.hazard_calculation_id and not oq.save_disk_space:
+        if oq.calculation_mode == 'multi_risk':
             self.gzip_inputs()
 
         # check DEFINED_FOR_REFERENCE_VELOCITY
@@ -502,6 +526,7 @@ class HazardCalculator(BaseCalculator):
         if not, read the inputs directly.
         """
         oq = self.oqparam
+        self.t0 = time.time()
         if 'gmfs' in oq.inputs or 'multi_peril' in oq.inputs:
             # read hazard from files
             assert not oq.hazard_calculation_id, (
@@ -591,7 +616,6 @@ class HazardCalculator(BaseCalculator):
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.from_engine = self.from_engine
-            calc.pre_checks = lambda: self.__class__.pre_checks(calc)
             calc.run(remove=False)
             calc.datastore.close()
             for name in (
@@ -834,6 +858,9 @@ class HazardCalculator(BaseCalculator):
                 raise RuntimeError(
                     'The exposure contains the taxonomy strings '
                     '%s which are not in the risk model' % missing)
+
+            self.crmodel.check_risk_ids(oq.inputs)
+
             if len(self.crmodel.taxonomies) > len(taxonomies):
                 logging.info(
                     'Reducing risk model from %d to %d taxonomy strings',
@@ -918,7 +945,9 @@ class HazardCalculator(BaseCalculator):
                 keep_trts.add(trt)
         self.datastore['est_rups_by_grp'] = U32(nrups)
         discard_trts = set(self.full_lt.trts) - keep_trts
-        if discard_trts:
+        if discard_trts and self.oqparam.calculation_mode == 'disaggregation':
+            self.oqparam.discard_trts = discard_trts
+        elif discard_trts:
             msg = ('No sources for some TRTs: you should set\n'
                    'discard_trts = %s\nin %s') % (
                        ', '.join(discard_trts), self.oqparam.inputs['job_ini'])

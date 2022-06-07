@@ -23,9 +23,8 @@ import numpy
 from openquake.baselib import general
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo.surface.planar import build_planar, PlanarSurface
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-
-EPS = .01  # used for src.nsites outside the maximum_distance
 
 
 def get_code2cls():
@@ -59,6 +58,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     splittable = True
     checksum = 0  # set in source_reader
     weight = 1  # set in contexts
+    esites = 0  # updated in estimate_weight
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
@@ -169,30 +169,34 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                     yield rup, num_occ
             return
         # else (multi)point sources and area sources
+        usd = self.upper_seismogenic_depth
+        lsd = self.lower_seismogenic_depth
         rup_args = []
         rates = []
         for src in self:
+            lon, lat = src.location.x, src.location.y
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
                 if mag < self.min_mag:
                     continue
                 for np_prob, np in src.nodal_plane_distribution.data:
                     for hc_prob, hc_depth in src.hypocenter_distribution.data:
                         args = (mag_occ_rate, np_prob, hc_prob,
-                                mag, np, hc_depth, src)
+                                mag, np, lon, lat, hc_depth, src)
                         rup_args.append(args)
                         rates.append(mag_occ_rate * np_prob * hc_prob)
         eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
         occurs = numpy.random.poisson(eff_rates)
         for num_occ, args, rate in zip(occurs, rup_args, rates):
             if num_occ:
-                mag_occ_rate, np_prob, hc_prob, mag, np, hc_depth, src = args
-                hc = Point(latitude=src.location.latitude,
-                           longitude=src.location.longitude,
-                           depth=hc_depth)
-                surface, _ = src._get_rupture_surface(mag, np, hc)
+                _, np_prob, hc_prob, mag, np, lon, lat, hc_depth, src = args
+                hc = Point(lon, lat, hc_depth)
+                hdd = numpy.array([(1., hc.depth)])
+                [[[planar]]] = build_planar(
+                    src.get_planin([(1., mag)], [(1., np)]),
+                    hdd, lon, lat, usd, lsd)
                 rup = ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type, hc,
-                    surface, rate, tom)
+                    PlanarSurface.from_(planar), rate, tom)
                 yield rup, num_occ
 
     @abc.abstractmethod
@@ -314,8 +318,8 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         Get a list of pairs "magnitude -- annual occurrence rate".
 
-        The list is taken from assigned MFD object
-        (see :meth:`openquake.hazardlib.mfd.base.BaseMFD.get_annual_occurrence_rates`)
+        The list is taken from assigned MFD object (see :meth:
+        `openquake.hazardlib.mfd.base.BaseMFD.get_annual_occurrence_rates`)
         with simple filtering by rate applied.
 
         :param min_rate:

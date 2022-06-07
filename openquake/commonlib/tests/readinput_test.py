@@ -358,7 +358,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("Invalid ID 'a 1': the only accepted chars are "
-                      "a-zA-Z0-9_-, line 11", str(ctx.exception))
+                      "a-zA-Z0-9_-:, line 11", str(ctx.exception))
 
     def test_no_assets(self):
         oqparam = mock.Mock()
@@ -538,6 +538,6 @@ class LogicTreeTestCase(unittest.TestCase):
         lt = readinput.get_logic_tree(oq)
         # (2+1) x 4 = 12 realizations
         paths = [rlz.lt_path for rlz in lt]
-        self.assertEqual(paths, ['A.AA', 'A.AB', 'A.BA', 'A.BB',
-                                 'BAAA', 'BAAB', 'BABA', 'BABB',
-                                 'BBAA', 'BBAB', 'BBBA', 'BBBB'])
+        expected = ['A.CA', 'A.CB', 'A.DA', 'A.DB', 'BACA', 'BACB',
+                    'BADA', 'BADB', 'BBCA', 'BBCB', 'BBDA', 'BBDB']
+        self.assertEqual(paths, expected)

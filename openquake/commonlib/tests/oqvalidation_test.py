@@ -63,9 +63,8 @@ class OqParamTestCase(unittest.TestCase):
             w.call_args[0][0],
             "The parameter 'not_existing_param' is unknown, ignoring")
 
-    def test_truncation_level_disaggregation(self):
-        # for disaggregation, the truncation level cannot be None
-        with self.assertRaises(InvalidFile):
+    def test_truncation_level_None(self):
+        with self.assertRaises(ValueError):
             OqParam(calculation_mode='disaggregation',
                     hazard_calculation_id=None, hazard_output_id=None,
                     inputs=fakeinputs, maximum_distance='10',

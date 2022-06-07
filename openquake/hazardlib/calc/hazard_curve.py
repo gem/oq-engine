@@ -118,7 +118,7 @@ def classical(group, sitecol, cmaker):
 
 # not used in the engine, only in tests and possibly notebooks
 def calc_hazard_curves(
-        groups, srcfilter, imtls, gsim_by_trt, truncation_level=None,
+        groups, srcfilter, imtls, gsim_by_trt, truncation_level=99.,
         apply=sequential_apply, reqv=None, **kwargs):
     """
     Compute hazard curves on a list of sites, given a set of seismic source

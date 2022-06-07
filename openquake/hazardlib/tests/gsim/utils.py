@@ -135,19 +135,15 @@ def read_cmaker_df(gsim, csvfnames):
     for dist in cmaker.REQUIRES_DISTANCES:
         name = 'dist_' + dist
         df[name] = np.array(df[name].to_numpy(), dtype[dist])
-        logging.info(name, df[name].unique())
     for sitepar in cmaker.REQUIRES_SITES_PARAMETERS:
         name = 'site_' + sitepar
         df[name] = np.array(df[name].to_numpy(), dtype[sitepar])
-        logging.info(name, df[name].unique())
     for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
         name = 'rup_' + par
         if name not in df.columns:  # i.e. missing rake
             df[name] = np.zeros(len(df), dtype[par])
         else:
             df[name] = np.array(df[name].to_numpy(), dtype[par])
-        logging.info(name, df[name].unique())
-    logging.info('result_type', df['result_type'].unique())
     return cmaker, df.rename(columns=cmap)
 
 
@@ -176,6 +172,7 @@ def gen_ctxs(df):
         if len(rrp) == 1:
             rup_params = [rup_params]
         ctx = contexts.RuptureContext()
+        ctx.src_id = 0
         for par, rp in zip(rrp, rup_params):
             setattr(ctx, par[4:], rp)
             del grp[par]
@@ -200,7 +197,7 @@ class BaseGSIMTestCase(unittest.TestCase):
     GSIM_CLASS = None
 
     def check(self, *filenames, max_discrep_percentage,
-              std_discrep_percentage=None, **kwargs):
+              std_discrep_percentage=None, truncation_level=99., **kwargs):
         if std_discrep_percentage is None:
             std_discrep_percentage = max_discrep_percentage
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
@@ -214,6 +211,8 @@ class BaseGSIMTestCase(unittest.TestCase):
             if sdt in gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
                 out_types.append(sdt.upper().replace(' ', '_') + '_STDDEV')
         cmaker, df = read_cmaker_df(gsim, fnames)
+        if truncation_level != 99.:
+            cmaker.truncation_level = truncation_level
         for ctx in gen_ctxs(df):
             ctx.occurrence_rate = 0
             out = cmaker.get_mean_stds([ctx])[:, 0]

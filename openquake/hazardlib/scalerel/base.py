@@ -42,9 +42,15 @@ class BaseASR(metaclass=abc.ABCMeta):
             from -180 to 180.
         """
 
+    def __str__(self):
+        """
+        Returns a TOML representation of the instance
+        """
+        return self.__class__.__name__
+
     def __repr__(self):
         """
-        Returns the name of the class
+        Returns the name of the class in angular brackets
         """
         return "<%s>" % self.__class__.__name__
 
@@ -91,6 +97,12 @@ class BaseMSR(metaclass=abc.ABCMeta):
         Two instances of the same class are considered equal
         """
         return self.__class__ is other.__class__
+
+    def __str__(self):
+        """
+        Returns a TOML representation of the instance
+        """
+        return self.__class__.__name__
 
     def __repr__(self):
         """

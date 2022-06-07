@@ -218,7 +218,6 @@ class SiteCollection(object):
         arr['lat'] = shakemap_array['lat']
         arr['depth'] = numpy.zeros(n)
         arr['vs30'] = shakemap_array['vs30']
-        arr.flags.writeable = False
         return self
 
     @classmethod  # this is the method used by the engine
@@ -379,14 +378,6 @@ class SiteCollection(object):
             arr['depth'][i] = sites[i].location.depth
             for p, dt in extra:
                 arr[p][i] = getattr(sites[i], p)
-
-        # protect arrays from being accidentally changed. it is useful
-        # because we pass these arrays directly to a GMPE through
-        # a SiteContext object and if a GMPE is implemented poorly it could
-        # modify the site values, thereby corrupting site and all the
-        # subsequent calculation. note that this doesn't protect arrays from
-        # being changed by calling itemset()
-        arr.flags.writeable = False
 
         # NB: in test_correlation.py we define a SiteCollection with
         # non-unique sites, so we cannot do an

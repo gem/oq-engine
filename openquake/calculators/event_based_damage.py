@@ -23,7 +23,7 @@ import pandas
 
 from openquake.baselib import hdf5, general, parallel
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.risklib import scientific
+from openquake.risklib import scientific, connectivity
 from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
@@ -46,17 +46,22 @@ def zero_dmgcsq(A, R, crmodel):
     return numpy.zeros((A, R, L, Dc), F32)
 
 
-def event_based_damage(df, oqparam, monitor):
+def event_based_damage(df, oqparam, dstore, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param oqparam: parameters coming from the job.ini
+    :param dstore: a DataStore instance
     :param monitor: a Monitor instance
     :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))
     """
     mon_risk = monitor('computing risk', measuremem=False)
-    dstore = datastore.read(oqparam.hdf5path, parentdir=oqparam.parentdir)
     K = oqparam.K
     with monitor('reading gmf_data'):
+        if oqparam.parentdir:
+            dstore = datastore.read(
+                oqparam.hdf5path, parentdir=oqparam.parentdir)
+        else:
+            dstore.open('r')
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assetcol = dstore['assetcol']
@@ -76,6 +81,8 @@ def event_based_damage(df, oqparam, monitor):
         allrlzs = dstore['events']['rlz_id']
     loss_types = crmodel.oqparam.loss_types
     float_dmg_dist = oqparam.float_dmg_dist  # True by default
+    if dstore.parent:
+        dstore.parent.close()  # essential on Windows with h5py>=3.6
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
         for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
@@ -257,3 +264,10 @@ class DamageCalculator(EventBasedRiskCalculator):
                        rlz=numpy.arange(self.R),
                        loss_type=oq.loss_types,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
+
+        fields = self.assetcol.array.dtype.names
+        if 'supply_or_demand' in fields:
+            demand_nodes, avg_conn_loss = connectivity.analysis(self.datastore)
+            self.datastore.create_df('functional_demand_nodes', demand_nodes)
+            logging.info('Stored functional_demand_nodes')
+            logging.info('Average connectivity loss: %.4f', avg_conn_loss)

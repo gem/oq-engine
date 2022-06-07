@@ -95,11 +95,13 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
     cmon = monitor('computing gmfs', measuremem=False)
     with dstore:
         trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
+        sitecol = dstore['sitecol']
+        extra = sitecol.array.dtype.names
         srcfilter = SourceFilter(
-            dstore['sitecol'], oqparam.maximum_distance(trt))
+            sitecol, oqparam.maximum_distance(trt))
         rupgeoms = dstore['rupgeoms']
         rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
-        cmaker = ContextMaker(trt, rlzs_by_gsim, oqparam)
+        cmaker = ContextMaker(trt, rlzs_by_gsim, oqparam, extraparams=extra)
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         for proxy in proxies:
             t0 = time.time()
@@ -223,14 +225,7 @@ class EventBasedCalculator(base.HazardCalculator):
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         source_data = AccumDict(accum=[])
         allargs = []
-        if self.oqparam.is_ucerf():
-            # manage the filtering in a special way
-            for sg in self.csm.src_groups:
-                for src in sg:
-                    src.src_filter = self.srcfilter
-            srcfilter = nofilter  # otherwise it would be ultra-slow
-        else:
-            srcfilter = self.srcfilter
+        srcfilter = self.srcfilter
         logging.info('Building ruptures')
         for sg in self.csm.src_groups:
             if not sg.sources:

@@ -76,15 +76,15 @@ class GetPoesSiteTestCase(unittest.TestCase):
         self.cmaker.loglevels = ll = DictArray(
             {'PGA': imls_soil, 'SA(1.0)': imls_soil})
         self.cmaker.af = AmplFunction.from_dframe(df)
-        self.cmaker.truncation_level = tl = 3
+        self.cmaker.truncation_level = tl = 3.
 
         # The output in this case will be (1, x, 2) i.e. 1 site, number
         # intensity measure levels times 2 and 2 GMMs
-        tmp = _get_poes(self.meastd, ll, tl)
+        tmp = _get_poes(self.meastd, ll.array, tl)
 
         # This function is rather slow at the moment
         ctx = unittest.mock.Mock(mag=[self.mag], rrup=self.rrup, sids=[0],
-                                 ampcode=[sitecode])
+                                 ampcode=[sitecode], src_id=0)
         res = get_poes_site(self.meastd, self.cmaker, ctx)
 
         if False:

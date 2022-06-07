@@ -48,8 +48,11 @@ U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
-BASE94 = ''.join(chr(i) for i in range(65, 127)) + ''.join(
-    chr(i) for i in range(33, 65))
+BASE183 = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmno"
+           "pqrstuvwxyz{|}!#$%&'()*+-/0123456789:;<=>?@¡¢"
+           "£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑ"
+           "ÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ")
+
 mp = multiprocessing.get_context('spawn')
 
 
@@ -750,29 +753,32 @@ class DictArray(Mapping):
     """
     def __init__(self, imtls):
         levels = imtls[next(iter(imtls))]
+        self.M = len(imtls)
         self.L1 = len(levels)
-        self.size = len(imtls) * self.L1
+        self.size = self.M * self.L1
         self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
                                for imt, imls in sorted(imtls.items())])
-        self.array = numpy.zeros(self.size, F64)
+        self.array = numpy.zeros((self.M, self.L1), F64)
         self.slicedic = {}
         n = 0
-        for imt, imls in sorted(imtls.items()):
+        self.mdic = {}
+        for m, (imt, imls) in enumerate(sorted(imtls.items())):
             if len(imls) != self.L1:
                 raise ValueError('imt=%s has %d levels, expected %d' %
                                  (imt, len(imls), self.L1))
-            self.slicedic[imt] = slc = slice(n, n + self.L1)
-            self.array[slc] = imls
+            self.slicedic[imt] = slice(n, n + self.L1)
+            self.mdic[imt] = m
+            self.array[m] = imls
             n += self.L1
 
     def __call__(self, imt):
         return self.slicedic[imt]
 
     def __getitem__(self, imt):
-        return self.array[self(imt)]
+        return self.array[self.mdic[imt]]
 
     def __setitem__(self, imt, array):
-        self.array[self(imt)] = array
+        self.array[self.mdic[imt]] = array
 
     def __iter__(self):
         for imt in self.dt.names:
@@ -1394,12 +1400,12 @@ def add_columns(a, b, on, cols=None):
 def categorize(values, nchars=2):
     """
     Takes an array with duplicate values and categorize it, i.e. replace
-    the values with codes of length nchars in base64. With nchars=2 4096
+    the values with codes of length nchars in BASE183. With nchars=2 33856
     unique values can be encoded, if there are more nchars must be increased
     otherwise a ValueError will be raised.
 
     :param values: an array of V non-unique values
-    :param nchars: number of characters in base64 for each code
+    :param nchars: number of characters in BASE183 for each code
     :returns: an array of V non-unique codes
 
     >>> categorize([1,2,2,3,4,1,1,2]) # 8 values, 4 unique ones
@@ -1407,11 +1413,11 @@ def categorize(values, nchars=2):
           dtype='|S2')
     """
     uvalues = numpy.unique(values)
-    mvalues = 64 ** nchars  # maximum number of unique values
+    mvalues = 184 ** nchars  # maximum number of unique values
     if len(uvalues) > mvalues:
         raise ValueError(
             f'There are too many unique values ({len(uvalues)} > {mvalues})')
-    prod = itertools.product(*[BASE94] * nchars)
+    prod = itertools.product(*[BASE183] * nchars)
     dic = {uvalue: ''.join(chars) for uvalue, chars in zip(uvalues, prod)}
     return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
 

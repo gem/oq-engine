@@ -17,11 +17,9 @@
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import math
-from copy import deepcopy
 from openquake.hazardlib import geo, mfd
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 
 class AreaSource(ParametricSeismicSource):
@@ -85,54 +83,8 @@ class AreaSource(ParametricSeismicSource):
         The ruptures' occurrence rates are rescaled with respect to number
         of points the polygon discretizes to.
         """
-        polygon_mesh = self.polygon.discretize(self.area_discretization)
-        scaling_rate_factor = 1. / len(polygon_mesh)
-
-        # take the very first point of the polygon mesh
-        [epicenter0] = polygon_mesh[0:1]
-        # generate "reference ruptures" -- all the ruptures that have the same
-        # epicenter location (first point of the polygon's mesh) but different
-        # magnitudes, nodal planes, hypocenters' depths and occurrence rates
-        # NB: all this mumbo-jumbo is done to avoid multiple calls to
-        # PointSource._get_rupture_surface
-        ref_ruptures = []
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
-            for np_prob, np in self.nodal_plane_distribution.data:
-                for hc_prob, hc_depth in self.hypocenter_distribution.data:
-                    hypocenter = geo.Point(latitude=epicenter0.latitude,
-                                           longitude=epicenter0.longitude,
-                                           depth=hc_depth)
-                    occurrence_rate = (mag_occ_rate * np_prob * hc_prob
-                                       * scaling_rate_factor)
-                    surface, nhc = PointSource._get_rupture_surface(
-                        self, mag, np, hypocenter)
-                    if kwargs.get('shift_hypo'):
-                        hc_depth = nhc.depth
-                    ref_ruptures.append((mag, np.rake, hc_depth,
-                                         surface, occurrence_rate))
-
-        # for each of the epicenter positions generate as many ruptures
-        # as we generated "reference" ones: new ruptures differ only
-        # in hypocenter and surface location
-        for epicenter in polygon_mesh:
-            for mag, rake, hc_depth, surface, occ_rate in ref_ruptures:
-                # translate the surface from first epicenter position
-                # to the target one preserving it's geometry
-                surface = surface.translate(epicenter0, epicenter)
-                hypocenter = deepcopy(epicenter)
-                hypocenter.depth = hc_depth
-                rupture = ParametricProbabilisticRupture(
-                    mag, rake, self.tectonic_region_type, hypocenter,
-                    surface, occ_rate, self.temporal_occurrence_model)
-                yield rupture
-
-    def few_ruptures(self):
-        """
-        Fast version of iter_ruptures used in estimate_weight
-        """
-        for i, ps in enumerate(self):
-            if i % 10 == 0:
-                yield from ps.few_ruptures()
+        for src in self:
+            yield from src.iter_ruptures(**kwargs)
 
     def count_ruptures(self):
         """

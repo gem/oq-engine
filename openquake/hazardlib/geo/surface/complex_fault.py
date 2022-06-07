@@ -221,9 +221,9 @@ class ComplexFaultSurface(BaseSurface):
 
         # project surface boundary to reference plane and check for
         # validity.
-        ref_plane = PlanarSurface.from_corner_points(ul, ur, br, bl)
-        _, xx, yy = ref_plane._project(
-            spherical_to_cartesian(lons, lats, depths))
+        ref_plane = PlanarSurface.from_corner_points(ul, ur, br, bl).array
+        mat = spherical_to_cartesian(lons, lats, depths) - ref_plane.xyz[:, 0]
+        xx, yy = mat @ ref_plane.uv1, mat @ ref_plane.uv2
         coords = [(x, y) for x, y in zip(xx, yy)]
         p = shapely.geometry.Polygon(coords)
         if not p.is_valid:

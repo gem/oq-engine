@@ -67,7 +67,6 @@ class FromFile(object):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
     REQUIRES_SITES_PARAMETERS = set()
-    REQUIRES_COMPUTED_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
     DEFINED_FOR_REFERENCE_VELOCITY = None
     kwargs = {}
@@ -263,7 +262,7 @@ class SimpleId(object):
     :param length: maximum length of the ID
     :param regex: accepted characters
     """
-    def __init__(self, length, regex=r'^[\w_\-]+$'):
+    def __init__(self, length, regex=r'^[\w_\-:]+$'):
         self.length = length
         self.regex = regex
         self.__name__ = 'SimpleId(%d, %s)' % (length, regex)
@@ -271,7 +270,7 @@ class SimpleId(object):
     def __call__(self, value):
         if max(map(ord, value)) > 127:
             raise ValueError(
-                'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-'
+                'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-:'
                 % value)
         elif len(value) > self.length:
             raise ValueError("The ID '%s' is longer than %d character" %
@@ -279,7 +278,7 @@ class SimpleId(object):
         elif re.match(self.regex, value):
             return value
         raise ValueError(
-            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-" % value)
+            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-:" % value)
 
 
 MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
@@ -889,15 +888,24 @@ def dictionary(value):
 def mag_scale_rel(value):
     """
     :param value:
-        name of a Magnitude-Scale relationship in hazardlib
+        a Magnitude-Scale relationship in hazardlib
     :returns:
         the corresponding hazardlib object
+
+    Parametric MSR classes are supported with TOML syntax; for instance
+
+    >>> mag_scale_rel("CScalingMSR.C=4.7")
+    <CScalingMSR>
     """
     value = value.strip()
+    if '.' in value or '[' in value:
+        [(value, kwargs)] = toml.loads(value).items()
+    else:
+        kwargs = {}
     if value not in SCALEREL:
         raise ValueError(
             "'%s' is not a recognized magnitude-scale relationship" % value)
-    return value
+    return SCALEREL[value](**kwargs)
 
 
 def pmf(value):

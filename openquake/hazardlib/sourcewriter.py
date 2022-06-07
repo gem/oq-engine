@@ -747,6 +747,8 @@ def write_source_model(dest, sources_or_groups, name=None,
     :returns:
         the list of generated filenames
     """
+    # first a sanity check, only a SourceModel or a sequence are accepted
+    assert isinstance(sources_or_groups, (nrml.SourceModel, list, tuple))
     if isinstance(sources_or_groups, nrml.SourceModel):
         groups = sources_or_groups.src_groups
         attrs = dict(name=sources_or_groups.name,

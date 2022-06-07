@@ -25,7 +25,7 @@ import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, pmf, geo
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
@@ -59,7 +59,7 @@ def create_source_info(csm, h5):
             trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
             code = csm.code.get(srcid, b'P')
             lens.append(len(src.trt_smrs))
-            row = [srcid, src.grp_id, code, 0, 0, 0, trti, 0]
+            row = [srcid, src.grp_id, code, 0, 0, 0, src.weight, trti]
             wkts.append(getattr(src, '_wkt', ''))
             data[srcid] = row
             src.id = len(data) - 1
@@ -109,25 +109,6 @@ def _check_dupl_ids(src_groups):
                 first = False
 
 
-def collapse_nphc(src):
-    """
-    Collapse the nodal_plane_distribution and hypocenter_distribution.
-    """
-    if (hasattr(src, 'nodal_plane_distribution') and
-            hasattr(src, 'hypocenter_distribution')):
-        if len(src.nodal_plane_distribution.data) > 1:
-            ws, nps = zip(*src.nodal_plane_distribution.data)
-            strike = numpy.average([np.strike for np in nps], weights=ws)
-            dip = numpy.average([np.dip for np in nps], weights=ws)
-            rake = numpy.average([np.rake for np in nps], weights=ws)
-            val = geo.NodalPlane(strike, dip, rake)
-            src.nodal_plane_distribution = pmf.PMF([(1., val)])
-        if len(src.hypocenter_distribution.data) > 1:
-            ws, vals = zip(*src.hypocenter_distribution.data)
-            val = numpy.average(vals, weights=ws)
-            src.hypocenter_distribution = pmf.PMF([(1., val)])
-
-
 def get_csm(oq, full_lt, h5=None):
     """
     Build source models from the logic tree and to store
@@ -140,37 +121,9 @@ def get_csm(oq, full_lt, h5=None):
         oq.source_id,
         discard_trts=[s.strip() for s in oq.discard_trts.split(',')],
         floating_x_step=oq.floating_x_step,
-        floating_y_step=oq.floating_y_step)
-    classical = not oq.is_event_based()
+        floating_y_step=oq.floating_y_step,
+        source_nodes=oq.source_nodes)
     full_lt.ses_seed = oq.ses_seed
-    if oq.is_ucerf():
-        [grp] = nrml.to_python(oq.inputs["source_model"], converter)
-        src_groups = []
-        for grp_id, sm_rlz in enumerate(full_lt.sm_rlzs):
-            sg = copy.copy(grp)
-            src_groups.append(sg)
-            src = sg[0].new(sm_rlz.ordinal, sm_rlz.value[0])  # one source
-            src.checksum = src.grp_id = src.trt_smr = grp_id
-            src.samples = sm_rlz.samples
-            src.smweight = sm_rlz.weight
-            logging.info('Reading sections and rupture planes for %s', src)
-            planes = src.get_planes()
-            if classical:
-                src.ruptures_per_block = oq.ruptures_per_block
-                sg.sources = list(src)
-                for s in sg:
-                    s.planes = planes
-                    s.sections = s.get_sections()
-                # add background point sources
-                sg = copy.copy(grp)
-                src_groups.append(sg)
-                sg.sources = src.get_background_sources()
-            else:  # event_based, use one source
-                sg.sources = [src]
-                src.planes = planes
-                src.sections = src.get_sections()
-        return CompositeSourceModel(full_lt, src_groups)
-
     logging.info('Reading the source model(s) in parallel')
 
     # NB: the source models file are often NOT in the shared directory
@@ -186,6 +139,7 @@ def get_csm(oq, full_lt, h5=None):
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
     fix_geometry_sections(smdict)
+    logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
 
     # checking the changes
@@ -193,14 +147,6 @@ def get_csm(oq, full_lt, h5=None):
     if changes:
         logging.info('Applied {:_d} changes to the composite source model'.
                      format(changes))
-
-    if 'reqv' in oq.inputs:
-        logging.warning('Using equivalent distance approximation and '
-                        'collapsing finite size parameters in point sources')
-        for group in groups:
-            for src in group:
-                collapse_nphc(src)
-
     return _get_csm(full_lt, groups)
 
 
@@ -230,6 +176,7 @@ def fix_geometry_sections(smdict):
     nrml.check_unique(
         sec_ids, 'section ID in files ' + ' '.join(gfiles))
     sections = {sid: sections[sid] for sid in sorted(sections)}
+    # section_arrays = [sec.geom() for sec in sections.values()]
 
     # fix the MultiFaultSources
     for smod in smodels:
@@ -429,12 +376,6 @@ class CompositeSourceModel:
             for src in sg:
                 if hasattr(src, 'mags'):  # MultiFaultSource
                     srcmags = {magstr(mag) for mag in src.mags}
-                    if hasattr(src, 'source_file'):  # UcerfSource
-                        grid_key = "/".join(["Grid", src.ukey["grid_key"]])
-                        # for instance Grid/FM0_0_MEANFS_MEANMSR_MeanRates
-                        with hdf5.File(src.source_file, "r") as h5:
-                            srcmags.update(magstr(mag) for mag in
-                                           h5[grid_key + "/Magnitude"][:])
                 elif hasattr(src, 'data'):  # nonparametric
                     srcmags = {magstr(item[0].mag) for item in src.data}
                 else:
@@ -488,7 +429,9 @@ class CompositeSourceModel:
         """
         srcs = self.get_sources()
         tot_weight = 0
+        nr = 0
         for src in srcs:
+            nr += src.num_ruptures
             tot_weight += src.weight
             if src.code == b'C' and src.num_ruptures > 20_000:
                 msg = ('{} is suspiciously large, containing {:_d} '
@@ -497,6 +440,10 @@ class CompositeSourceModel:
                 logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
+        if nr > 1E9:
+            logging.info('Huge model with {:_d} ruptures: doubling the tasks'
+                         .format(nr))
+            max_weight /= 2
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
         heavy = [src for src in srcs if src.weight > max_weight]

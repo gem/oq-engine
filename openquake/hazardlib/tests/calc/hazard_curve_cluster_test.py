@@ -51,7 +51,7 @@ class HazardCurvesClusterTestCase01(unittest.TestCase):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None)
+                                    truncation_level=99.)
         crv = curves[0][0]
         # Expected results computed with a notebook using the original USGS
         # formulation as described in Appendix F of Petersen et al. (2008).

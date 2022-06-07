@@ -675,7 +675,8 @@ class SourceConverter(RuptureConverter):
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},
                  source_id=None, discard_trts=(),
-                 floating_x_step=0, floating_y_step=0):
+                 floating_x_step=0, floating_y_step=0,
+                 source_nodes=()):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
@@ -687,6 +688,7 @@ class SourceConverter(RuptureConverter):
         self.discard_trts = discard_trts
         self.floating_x_step = floating_x_step
         self.floating_y_step = floating_y_step
+        self.source_nodes = source_nodes
 
     def convert_node(self, node):
         """
@@ -698,11 +700,16 @@ class SourceConverter(RuptureConverter):
         trt = node.attrib.get('tectonicRegion')
         if trt and trt in self.discard_trts:
             return
-        obj = getattr(self, 'convert_' + striptag(node.tag))(node)
-        source_id = getattr(obj, 'source_id', '')
-        if self.source_id and source_id and source_id not in self.source_id:
-            # if source_id is set in the job.ini, discard all other sources
-            return
+        name = striptag(node.tag)
+        if name.endswith('Source'):  # source node
+            source_id = node['id']
+            if self.source_id and source_id not in self.source_id:
+                # if source_id is set in the job.ini, discard all other sources
+                return
+            elif self.source_nodes and name not in self.source_nodes:
+                # if source_nodes is set, discard all other source nodes
+                return
+        obj = getattr(self, 'convert_' + name)(node)
         if hasattr(obj, 'mfd') and hasattr(obj.mfd, 'slip_rate'):
             # TruncatedGRMFD with slip rate (for Slovenia)
             m = obj.mfd
@@ -848,7 +855,7 @@ class SourceConverter(RuptureConverter):
         geom = node.areaGeometry
         coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
         polygon = geo.Polygon([geo.Point(*xy) for xy in coords])
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         area_discretization = geom.attrib.get(
             'discretization', self.area_source_discretization)
         if area_discretization is None:
@@ -881,7 +888,7 @@ class SourceConverter(RuptureConverter):
         """
         geom = node.pointGeometry
         lon_lat = ~geom.Point.pos
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         return source.PointSource(
             source_id=node['id'],
             name=node['name'],
@@ -906,7 +913,7 @@ class SourceConverter(RuptureConverter):
         """
         geom = node.multiPointGeometry
         lons, lats = zip(*split_coords_2d(~geom.posList))
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         return source.MultiPointSource(
             source_id=node['id'],
             name=node['name'],
@@ -930,7 +937,7 @@ class SourceConverter(RuptureConverter):
                   instance
         """
         geom = node.simpleFaultGeometry
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         fault_trace = self.geo_line(geom)
         mfd = self.convert_mfdist(node)
         with context(self.fname, node):
@@ -977,7 +984,7 @@ class SourceConverter(RuptureConverter):
             geom = node.kiteSurface
             profiles = self.geo_lines(geom)
 
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         mfd = self.convert_mfdist(node)
 
         # get rupture floating steps
@@ -1031,7 +1038,7 @@ class SourceConverter(RuptureConverter):
         geom = node.complexFaultGeometry
         edges = self.geo_lines(geom)
         mfd = self.convert_mfdist(node)
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         with context(self.fname, node):
             cmplx = source.ComplexFaultSource(
                 source_id=node['id'],
@@ -1283,7 +1290,7 @@ class RowConverter(SourceConverter):
             'A',
             node['tectonicRegion'],
             self.convert_mfdist(node),
-            ~node.magScaleRel,
+            str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
@@ -1299,7 +1306,7 @@ class RowConverter(SourceConverter):
             'P',
             node['tectonicRegion'],
             self.convert_mfdist(node),
-            ~node.magScaleRel,
+            str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
@@ -1316,7 +1323,7 @@ class RowConverter(SourceConverter):
             'M',
             node['tectonicRegion'],
             self.convert_mfdist(node),
-            ~node.magScaleRel,
+            str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
@@ -1332,7 +1339,7 @@ class RowConverter(SourceConverter):
             'S',
             node['tectonicRegion'],
             self.convert_mfdist(node),
-            ~node.magScaleRel,
+            str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
@@ -1351,7 +1358,7 @@ class RowConverter(SourceConverter):
             'C',
             node['tectonicRegion'],
             self.convert_mfdist(node),
-            ~node.magScaleRel,
+            str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             numpy.nan,
             numpy.nan,
@@ -1404,16 +1411,18 @@ class RowConverter(SourceConverter):
 # ################### MultiPointSource conversion ######################## #
 
 
-def dists(node):
+def multikey(node):
     """
-    :returns: hddist, npdist and magScaleRel from the given pointSource node
+    :returns: (usd, lsd, rar, hddist, npdist, magScaleRel) for the given node
     """
     hd = tuple((node['probability'], node['depth'])
                for node in node.hypoDepthDist)
     npd = tuple(
         ((node['probability'], node['rake'], node['strike'], node['dip']))
         for node in node.nodalPlaneDist)
-    return hd, npd, ~node.magScaleRel
+    geom = node.pointGeometry
+    return (round(~geom.upperSeismoDepth, 1), round(~geom.lowerSeismoDepth, 1),
+            ~node.ruptAspectRatio, hd, npd, str(~node.magScaleRel))
 
 
 def collapse(array):
@@ -1458,31 +1467,26 @@ def _pointsources2multipoints(srcs, i):
     # converts pointSources with the same hddist, npdist and msr into a
     # single multiPointSource.
     allsources = []
-    for (hd, npd, msr), sources in groupby(srcs, dists).items():
+    for (usd, lsd, rar, hd, npd, msr), sources in groupby(
+            srcs, multikey).items():
         if len(sources) == 1:  # there is a single source
             allsources.extend(sources)
             continue
         mfds = [src[3] for src in sources]
         points = []
-        usd = []
-        lsd = []
-        rar = []
         for src in sources:
             pg = src.pointGeometry
             points.extend(~pg.Point.pos)
-            usd.append(~pg.upperSeismoDepth)
-            lsd.append(~pg.lowerSeismoDepth)
-            rar.append(~src.ruptAspectRatio)
         geom = Node('multiPointGeometry')
         geom.append(Node('gml:posList', text=points))
-        geom.append(Node('upperSeismoDepth', text=collapse(usd)))
-        geom.append(Node('lowerSeismoDepth', text=collapse(lsd)))
+        geom.append(Node('upperSeismoDepth', text=usd))
+        geom.append(Node('lowerSeismoDepth', text=lsd))
         node = Node(
             'multiPointSource',
             dict(id='mps-%d' % i, name='multiPointSource-%d' % i),
             nodes=[geom])
         node.append(Node("magScaleRel", text=collapse(msr)))
-        node.append(Node("ruptAspectRatio", text=collapse(rar)))
+        node.append(Node("ruptAspectRatio", text=rar))
         node.append(mfds2multimfd(mfds))
         node.append(Node('nodalPlaneDist', nodes=[
             Node('nodalPlane', dict(probability=prob, rake=rake,

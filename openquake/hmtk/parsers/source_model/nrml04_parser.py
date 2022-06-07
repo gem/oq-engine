@@ -55,7 +55,7 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.polygon import Polygon
 from openquake.hazardlib.scalerel import get_available_scalerel
-from openquake.hazardlib import mfd
+from openquake.hazardlib import mfd, valid
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hmtk.sources.source_model import mtkSourceModel
@@ -64,8 +64,6 @@ from openquake.hmtk.sources.area_source import mtkAreaSource
 from openquake.hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from openquake.hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from openquake.hmtk.parsers.source_model.base import BaseSourceModelParser
-
-SCALERELS = get_available_scalerel()
 
 
 def string_(string):
@@ -219,7 +217,7 @@ def node_to_scalerel(node):
     """
     if not node.text:
         return None
-    return SCALERELS[node.text.strip()]()
+    return valid.mag_scale_rel(node.text)
 
 
 def node_to_truncated_gr(node, bin_width=0.1):

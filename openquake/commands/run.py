@@ -93,8 +93,6 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
     # set the logs first of all
     log = logs.init("job", dic, getattr(logging, loglevel.upper()))
 
-    # disable gzip_input
-    base.BaseCalculator.gzip_inputs = lambda self: None
     with log, performance.Monitor('total runtime', measuremem=True) as monitor:
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         if reuse_input:  # enable caching

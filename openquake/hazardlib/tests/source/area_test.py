@@ -43,9 +43,9 @@ def make_area_source(polygon, discretization, **kwargs):
         'temporal_occurrence_model': PoissonTOM(50.)
     }
     default_arguments.update(kwargs)
-    kwargs = default_arguments
-    source = AreaSource(**kwargs)
+    source = AreaSource(**default_arguments)
     return source
+
 
 class AreaSourceIterRupturesTestCase(unittest.TestCase):
 
@@ -62,30 +62,7 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
                                        discretization=66.7,
                                        rupture_mesh_spacing=5)
         ruptures = list(source.iter_ruptures())
-        self.assertEqual(
-            len(ruptures), source.count_ruptures())  # 9 * 2 ruptures
-        # resulting 3x3 mesh has points in these coordinates:
-        lons = [-1.4, -0.8, -0.2]
-        lats = [-0.6, -1.2, -1.8]
-        depths = [4.0, 8.0]
-        ruptures_iter = iter(ruptures)
-        for lat in lats:
-            for lon in lons:
-                r1 = next(ruptures_iter)
-                r2 = next(ruptures_iter)
-                r3 = next(ruptures_iter)
-                r4 = next(ruptures_iter)
-                for iloc, rupture in enumerate([r1, r2]):
-                    self.assertAlmostEqual(rupture.hypocenter.longitude,
-                                           lon, delta=1e-3)
-                    self.assertAlmostEqual(rupture.hypocenter.latitude,
-                                           lat, delta=1e-3)
-                    self.assertAlmostEqual(rupture.hypocenter.depth,
-                                           depths[iloc], delta=1e-3)
-                self.assertEqual(r1.mag, 5.5)
-                self.assertEqual(r2.mag, 5.5)
-                self.assertEqual(r3.mag, 6.5)
-                self.assertEqual(r4.mag, 6.5)
+        self.assertEqual(len(ruptures), source.count_ruptures())
         self.assertEqual(len(ruptures), 9 * 4)
 
     def test_occurrence_rate_rescaling(self):

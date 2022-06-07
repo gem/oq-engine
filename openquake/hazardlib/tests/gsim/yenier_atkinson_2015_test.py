@@ -29,7 +29,9 @@ class YenierAtkinson2015BSSA(BaseGSIMTestCase):
     GSIM_CLASS = YenierAtkinson2015BSSA
 
     def test_mean(self):
-        self.check('YA15/ya15_mean_cena.csv', max_discrep_percentage=0.3)
+        # no error if truncation_level=0
+        self.check('YA15/ya15_mean_cena.csv', max_discrep_percentage=0.3,
+                   truncation_level=0)
 
     def test_error(self):
         dt = [('hypo_depth', '<f8'), ('mag', '<f8'), ('vs30', '<f8'),
@@ -41,9 +43,3 @@ class YenierAtkinson2015BSSA(BaseGSIMTestCase):
 
         with self.assertRaises(ValueError):  # Total StdDev is zero
             get_mean_stds(gsim, ctx, [PGA()], truncation_level=3)
-
-        # no error if truncation_level=0
-        m, s, t, p = get_mean_stds(gsim, ctx, [PGA()], truncation_level=0)
-        np.testing.assert_equal(s, 0)
-        np.testing.assert_equal(t, 0)
-        np.testing.assert_equal(p, 0)

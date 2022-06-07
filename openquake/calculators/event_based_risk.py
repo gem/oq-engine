@@ -160,14 +160,16 @@ def aggreg(outputs, crmodel, ARKD, aggids, rlz_id, monitor):
     return dict(avg=loss_by_AR, alt=df)
 
 
-def event_based_risk(df, oqparam, monitor):
+def event_based_risk(df, oqparam, dstore, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param oqparam: parameters coming from the job.ini
+    :param dstore: a DataStore instance
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    dstore = datastore.read(oqparam.hdf5path, parentdir=oqparam.parentdir)
+    if dstore.parent:
+        dstore.parent.open('r')
     with dstore, monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
@@ -179,6 +181,8 @@ def event_based_risk(df, oqparam, monitor):
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]
+    if dstore.parent:
+        dstore.parent.close()  # essential on Windows with h5py>=3.6
     ARKD = len(assetcol), len(weights), oqparam.K, oqparam.D
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
@@ -193,6 +197,7 @@ def event_based_risk(df, oqparam, monitor):
             if len(gmf_df) == 0:
                 continue
             with mon_risk:
+                adf = adf.set_index('ordinal')
                 out = crmodel.get_output(
                     taxo, adf, gmf_df, oqparam._sec_losses, rng)
             yield out
@@ -212,7 +217,7 @@ def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
     dic = event_based.event_based(proxies, full_lt, oqparam, dstore, monitor)
     if len(dic['gmfdata']) == 0:  # no GMFs
         return {}
-    return event_based_risk(dic['gmfdata'], oqparam, monitor)
+    return event_based_risk(dic['gmfdata'], oqparam, dstore, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -280,7 +285,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                             'minimum_asset_loss')
         base.create_risk_by_event(self)
         self.rlzs = self.datastore['events']['rlz_id']
-        self.num_events = numpy.bincount(self.rlzs)  # events by rlz
+        self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
         if oq.avg_losses:
             self.create_avg_losses()
         alt_nbytes = 4 * self.E * L
@@ -452,8 +457,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             stop += nsites
             weight += nsites
             if weight > maxweight:
-                yield slice(start, stop), self.oqparam
+                yield slice(start, stop), self.oqparam, self.datastore
                 weight = 0
                 start = stop
         if weight:
-            yield slice(start, stop), self.oqparam
+            yield slice(start, stop), self.oqparam, self.datastore

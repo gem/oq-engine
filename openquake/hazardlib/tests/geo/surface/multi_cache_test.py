@@ -29,8 +29,7 @@ from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 
-from openquake.hazardlib.geo.surface.multi import (
-    _get_multi_line, _update_cache, get_distdic)
+from openquake.hazardlib.geo.surface.multi import _get_multi_line
 from openquake.hazardlib.geo.multiline import get_tus
 
 aac = numpy.testing.assert_allclose
@@ -73,39 +72,39 @@ class GetRxRy0FromCacheTestCase(unittest.TestCase):
 
         # Get rupture and top of ruptures
         rup = [r for r in self.src.iter_ruptures()][0]
+        suids = [surf.suid for surf in rup.surface.surfaces]
         tors = rup.surface.tors
         tors._set_coordinate_shift()
         tors.set_tu(self.sitec.mesh)
 
         # Create the contexts
         gmm = AbrahamsonEtAl2014()
-        param = dict(imtls={'PGA': []})
-        cm = ContextMaker('boh', [gmm], param)
-
-        # Get the cache
-        dcache, suids = _update_cache(rup, self.sitec, ['ry0'], {})
+        param = dict(imtls={'PGA': []}, cache_distances=True)
+        cm = ContextMaker('*', [gmm], param)
+        [ctx] = cm.get_ctxs([rup], self.sitec)
 
         # Get the expected ry0 distance
         expected = tors.get_ry0_distance()
+        aae(ctx.ry0, expected, decimal=3)
 
         # Test Ry0
-        cache_save = copy.deepcopy(dcache)
-        dd = get_distdic(rup, self.sitec, ['ry0'], dcache)
-        aae(dd['ry0'], expected, decimal=3)
+        cache_save = copy.deepcopy(cm.dcache)
+        [ctx] = cm.get_ctxs([rup], self.sitec)
+        dcache = cm.dcache
 
         # Get cached distances
-        tupps = [dcache[i]['t_upp'] for i in suids]
-        uupps = [dcache[i]['u_upp'] for i in suids]
-        weis = [dcache[i]['wei'] for i in suids]
-        umax = [dcache[i]['umax'] for i in suids]
-        lines = [dcache[key]['tor'] for key in suids]
+        tupps = [dcache[i, 't_upp'] for i in suids]
+        uupps = [dcache[i, 'u_upp'] for i in suids]
+        weis = [dcache[i, 'wei'] for i in suids]
+        umax = [dcache[i, 'umax'] for i in suids]
+        lines = [dcache[key, 'tor'] for key in suids]
 
         # Expected distances
-        e_tupps = [cache_save[i]['t_upp'] for i in suids]
-        e_uupps = [cache_save[i]['u_upp'] for i in suids]
-        e_weis = [cache_save[i]['wei'] for i in suids]
-        e_umax = [cache_save[i]['umax'] for i in suids]
-        e_lines = [cache_save[key]['tor'] for key in suids]
+        e_tupps = [cache_save[i, 't_upp'] for i in suids]
+        e_uupps = [cache_save[i, 'u_upp'] for i in suids]
+        e_weis = [cache_save[i, 'wei'] for i in suids]
+        e_umax = [cache_save[i, 'umax'] for i in suids]
+        e_lines = [cache_save[key, 'tor'] for key in suids]
 
         # Check that data in the caches is the same
         aae(tupps, e_tupps, decimal=3)
@@ -131,11 +130,10 @@ class GetRxRy0FromCacheTestCase(unittest.TestCase):
         #aae(ml1.tut, ml2.tut, decimal=3)
 
         # Check the recomputed ry0
-        dd = get_distdic(rup, self.sitec, ['ry0'], dcache)
-        aae(dd['ry0'], expected, decimal=3)
+        aae(ctx.ry0, expected, decimal=3)
 
     def test_multi_cache_02(self):
-        """ UCERF3 rupture """
+        # UCERF3 rupture
 
         rup = [r for r in self.src.iter_ruptures()][0]
         tors = rup.surface.tors
@@ -143,12 +141,12 @@ class GetRxRy0FromCacheTestCase(unittest.TestCase):
 
         # Create the contexts
         gmm = AbrahamsonEtAl2014()
-        param = dict(imtls={'PGA': []})
-        cm = ContextMaker('boh', [gmm], param)
+        param = dict(imtls={'PGA': []}, cache_distances=True)
+        cm = ContextMaker('*', [gmm], param)
         ctxs = cm.get_ctxs(self.src, self.sitec)
 
         # Get multiline
-        dcache, suids = _update_cache(rup, self.sitec, ['ry0'], {})
+        dcache = cm.dcache
         ml = _get_multi_line(dcache, self.src.rupture_idxs[0])
 
         # Test shift

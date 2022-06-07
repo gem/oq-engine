@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+	<exposureModel id="ex1" category="buildings" taxonomySource="GEM taxonomy">
+		<description>modeloexporepsal</description>
+		<conversions>
+			<costTypes>
+				<costType name="structural" type="per_asset" unit="USD"/>
+			</costTypes>
+		</conversions>
+		<tagNames>uso</tagNames>
+		<occupancyPeriods></occupancyPeriods>
+		<assets>
+			exp.csv
+		</assets>
+	</exposureModel>
+</nrml>

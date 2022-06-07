@@ -1,4 +1,80 @@
   [Michele Simionato]
+  * Entered automatically in sequential mode if there is not enough memory
+  * Raised an early error for missing risk IDs in the vulnerability files
+  * Changed the definition of `aggrisk` again to ensure consistency with the
+    average losses
+
+  [Tom Son]
+  * Added width and hypo_depth estimation to Campbell and Bozorgnia (2014)
+
+  [Michele Simionato]
+  * Improved the precision of the ps_grid_spacing approximation
+  * Added a check for missing mags when using GMPETables
+  * Fixed a bug in `upgrade_nrml -m` for point sources with different usd/lsd
+  * Automatically discard irrelevant TRTs in disaggregation calculations
+
+  [Ashta Poudel, Anirudh Rao, Michele Simionato]
+  * Added the ability to run connectivity analysis in event_based_damage
+    and scenario_damage calculation with an appropriate exposure
+
+  [Tom Son, Michele Simionato]
+  * Added ztor estimation to Campbell and Bozorgnia (2014)
+
+  [Michele Simionato]
+  * Internal: removed REQUIRES_COMPUTED_PARAMETERS
+  * Using PointMSR when the reqv approximation is enabled
+  * Internal: changed the rupture storage for classical calculations
+  * Optimized rupture instantiation for point sources
+  * Optimized distance calculations for point sources
+
+  [Tom Son, Claudio Schill]
+  * Simple performance improvement of Kuehn et al. 2020 model
+
+  [Michele Simionato]
+  * Changed again the string representation of logic tree paths and added
+    an utility `hazardlib.lt.build` to build trees from literal lists
+  * Fixed the field `source_info.trti` in the datastore to point to the
+    correct tectonic region type index and not to zero
+  * Added a check for inconsistent IDs across different kinds of risk functions
+    (i.e. fragility and consequence)
+  * Fixed a logging statement that could run out of memory in large calculations
+  * Optimized `iter_ruptures` for point sources by vectorizing the generation of
+    planar surfaces by magnitude, nodal plane and hypocenter
+
+  [Tom Son]
+  * Implemented a missing piece in Chiou & Youngs (2014) model
+    Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
+    when it falls below the predicted PGA
+
+  [Marco Pagani]
+  * Added the possibility of disaggregating in terms of epsilon*
+  * Added a method to compute the cross-correlation matrix
+
+  [Michele Simionato]
+  * Fixed disaggregation returning NaNs in some situations with
+    nonParametric/multiFaultSources
+  * Bug fix: not storing far away ruptures coming from multiFaultSources
+  * Implemented CScalingMSR
+  * Optimized context collapsing in classical calculations
+  * Setting `ps_grid_spacing` now sets the `pointsource_distance` too
+  * Saving memory in preclassical calculations on machines with 8 cores or less
+  * Changed the magnitude-dependent `maximum_distance` feature to discard
+    ruptures below `minmag` and above `maxmag`
+  * Added the ability to estimate the runtime of a calculation by using
+    the `--sample-sources` option
+  * Fixed a wrong formula in `modifiable_gmpe.add_between_within_stds`
+  * Reduced the stress on the memory in classical calculations, thus
+    improving the performance
+  * Setting the truncation_level to the empty string is now forbidden;
+    some GMFs calculations not setting truncation_level can now give
+    different results since truncation_level=None is now replaced with
+    truncation_level=99
+
+python3-oq-engine (3.14.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Changed the definition of `aggrisk`: dividing by the effective time
+  * Internal: removed flag `save_disk_space` since now it is always on
   * Slightly changed the collapsing of nodal planes and hypocenters in
     presence of the equivalent distance approximation (`reqv`)
   * Extended `oq reduce_sm` to multiFaultSources
@@ -35,7 +111,7 @@
   * Internal: introduced limited unique rupture IDs in classical calculations
     with few sites
 
-  [Prajacta Jadhav, Dharma Wijewickreme]
+  [Prajakta Jadhav, Dharma Wijewickreme]
   * Added GMPE Youd et al. (2002) and the corresponding site parameters
 
   [Michele Simionato]
@@ -57,6 +133,8 @@
   * Extended `oq postzip` to multiple files and `oq abort` to multiple jobs
   * Internal: changed install.py to install the venv in /opt/openquake/venv
   * Fixed a BOM issue on Windows when reading job.ini files
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 12 Apr 2022 12:27:58 +0000
 
 python3-oq-engine (3.13.0-1~xenial01) xenial; urgency=low
 
