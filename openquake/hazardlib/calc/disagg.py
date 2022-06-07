@@ -152,7 +152,7 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
     # Multi-dimensional iteration
-    min_eps = min(epsilons)
+    min_eps, max_eps = epsilons.min(), epsilons.max()
     for (m, p, z), iml in numpy.ndenumerate(iml3):
         if iml == -numpy.inf:  # zero hazard
             continue
@@ -169,7 +169,7 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
         # Now we split the epsilon into parts (one for each epsilon-bin larger
         # than lvls)
         if epsstar:
-            iii = (lvls >= min(epsilons)) & (lvls < max(epsilons))
+            iii = (lvls >= min_eps) & (lvls < max_eps)
             # The leftmost indexes are ruptures and epsilons
             poes[iii, idxs[iii]-1, m, p, z] = truncnorm.sf(lvls[iii])
         else:
