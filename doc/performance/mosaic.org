@@ -1,0 +1,14 @@
+* Improvements on the mosaic classical PSHA calculations
+
+** The Canada 2015 model
+
+In version 3.14 of the engine the tabular GMPEs were optimized by
+moving the interpolation of IMT and magnitude in the controller node
+and not in the worker nodes, i.e. outside an inner loop.
+That allowed a substantial performance improvement in =computing mean_std=,
+see the plot below.
+
+[[./CAN314.png]]
+
+Other operations became slightly slower having allocated larger memory
+blocks to speedup as much as possible =computing mean_std=.

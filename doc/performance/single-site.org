@@ -46,6 +46,8 @@ The vectorization program gave the following speedups:
 =computing mean_std=: 5_438s -> 17.1 (318x thanks to numpy)
 
 Overall the cumulative time went down from 12 hours to 20 minutes.
+Moreover the memory occupation went down by a factor of 4, from
+21.3 GB to 5.3 GB.
 
 [[./EDF-disagg.png]]
 
