@@ -42,6 +42,7 @@ import getpass
 import zipfile
 import tempfile
 import argparse
+import platform
 import subprocess
 from urllib.request import urlopen
 try:
@@ -346,9 +347,12 @@ def install(inst, version):
 
     # install the requirements
     branch = get_branch(version)
-    # TODO: on M1 (platform.machine()) get requirements-py39-macos_arm64.txt
+    if sys.platform == 'darwin':
+        mac = '_' + platform.machine()  # x86_64 or arm64
+    else:
+        mac = ''
     req = f'https://raw.githubusercontent.com/gem/oq-engine/{branch}/' \
-        'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
+        'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform] + mac)
 
     subprocess.check_call([pycmd, '-m', 'pip', 'install', '-r', req])
 
