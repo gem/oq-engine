@@ -160,14 +160,16 @@ def aggreg(outputs, crmodel, ARKD, aggids, rlz_id, monitor):
     return dict(avg=loss_by_AR, alt=df)
 
 
-def event_based_risk(df, oqparam, monitor):
+def event_based_risk(df, oqparam, dstore, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param oqparam: parameters coming from the job.ini
+    :param dstore: a DataStore instance
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    dstore = datastore.read(oqparam.hdf5path, parentdir=oqparam.parentdir)
+    if dstore.parent:
+        dstore.parent.open('r')
     with dstore, monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
@@ -213,7 +215,7 @@ def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
     dic = event_based.event_based(proxies, full_lt, oqparam, dstore, monitor)
     if len(dic['gmfdata']) == 0:  # no GMFs
         return {}
-    return event_based_risk(dic['gmfdata'], oqparam, monitor)
+    return event_based_risk(dic['gmfdata'], oqparam, dstore, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -453,8 +455,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             stop += nsites
             weight += nsites
             if weight > maxweight:
-                yield slice(start, stop), self.oqparam
+                yield slice(start, stop), self.oqparam, self.datastore
                 weight = 0
                 start = stop
         if weight:
-            yield slice(start, stop), self.oqparam
+            yield slice(start, stop), self.oqparam, self.datastore
