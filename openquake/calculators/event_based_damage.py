@@ -46,17 +46,22 @@ def zero_dmgcsq(A, R, crmodel):
     return numpy.zeros((A, R, L, Dc), F32)
 
 
-def event_based_damage(df, oqparam, monitor):
+def event_based_damage(df, oqparam, dstore, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param oqparam: parameters coming from the job.ini
+    :param dstore: a DataStore instance
     :param monitor: a Monitor instance
     :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))
     """
     mon_risk = monitor('computing risk', measuremem=False)
-    dstore = datastore.read(oqparam.hdf5path, parentdir=oqparam.parentdir)
     K = oqparam.K
     with monitor('reading gmf_data'):
+        if oqparam.parentdir:
+            dstore = datastore.read(
+                oqparam.hdf5path, parentdir=oqparam.parentdir)
+        else:
+            dstore.open('r')
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assetcol = dstore['assetcol']

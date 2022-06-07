@@ -164,12 +164,12 @@ def event_based_risk(df, oqparam, dstore, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param oqparam: parameters coming from the job.ini
+    :param dstore: a DataStore instance
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
     if dstore.parent:
         dstore.parent.open('r')
-    # dstore = datastore.read(oqparam.hdf5path, parentdir=oqparam.parentdir)
     with dstore, monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
