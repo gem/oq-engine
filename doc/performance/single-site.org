@@ -35,7 +35,9 @@ and the =computing mean_std= part were quite slow.
 The vectorization program gave the following speedups:
 
 =make_contexts=: 17_517s -> 440.5s (39.8x thanks to numba)
+
 =compute_disagg=: 7_156s -> 169.2s (42.3x thanks to numpy)
+
 =computing mean_std=: 5_438s -> 17.1 (318x thanks to numpy)
 
 Overall the cumulative time went down from 12 hours to 20 minutes.
