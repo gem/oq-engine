@@ -18,6 +18,11 @@ were made possible:
 2. speedup of the context generation due to the usage numba in =make_contexts=
    (implemented only for point-like sources)
 
+For non-experts, numpy is a C-extension making array calculations
+going at C-speed for Python and numba is a LLVM-based compiler which
+in the best case is able to reach C-speeds for non-vectorized code
+[[https://numba.pydata.org/]].
+
 Here we will quantify the improvements in a few selected calculations
 by comparing engine version 3.11 (the version released just before the
 vectorization project started) and engine version 3.15 (released at
@@ -49,6 +54,12 @@ here was the usage of numba. The plot below shows the difference between
 having numba and not having numba in engine 3.15:
 
 [[./EDF-numba.png]]
+
+Since =compute_disagg= and =computing mean_std= are not using numba,
+there is no difference between the times withing the measuring errors.
+Notice that there would be no point in using numba in =compute_disagg=
+and =computing mean_std=: they are already well vectorized by numpy and
+using numba would not give any significant speedup.
 
 Notice that a calculation involving only fault sources would not see
 any speedup since we optimized only point-like sources.
