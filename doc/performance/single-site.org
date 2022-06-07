@@ -1,4 +1,4 @@
-# Single site optimization
+* Single site optimization
 
 Between the years 2021 and 2022 a large project was undertaken to
 speedup single site PSHA calculations, the so-called *vectorization*
@@ -28,7 +28,7 @@ by comparing engine version 3.11 (the version released just before the
 vectorization project started) and engine version 3.15 (released at
 the end of the vectorization project).
 
-## EDF disaggregation
+** EDF disaggregation
 
 Our user Guillaume Daniel sent us a disaggregation calculation that
 was particularly slow, taking more than 12 hours of cumulative time on
