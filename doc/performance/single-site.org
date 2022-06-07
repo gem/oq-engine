@@ -21,7 +21,7 @@ were made possible:
 For non-experts, numpy is a C-extension making array calculations
 going at C-speed for Python and numba is a LLVM-based compiler which
 in the best case is able to reach C-speeds for non-vectorized code
-[[https://numba.pydata.org/]].
+(see [[https://numba.pydata.org/]]).
 
 Here we will quantify the improvements in a few selected calculations
 by comparing engine version 3.11 (the version released just before the
