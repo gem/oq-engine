@@ -1,6 +1,6 @@
 * Improvements on the mosaic hazard calculations
 
-** Doubled the precision of the ps_grid_spacing approximation
+** Doubled/tripled the precision of the ps_grid_spacing approximation
 
 The /ps_grid_spacing/ approximation ([[https://docs.openquake.org/oq-engine/advanced/point-source-gridding.html][described in the Advanced Manual]])
 is a trick to speed up classical calculations dominated by point
@@ -36,6 +36,10 @@ parts of the calculation:
 The exception is =computing mean_std= which is slower because we chose
 to reduce the size of the arrays with the benefit of using less memory
 than before (from 39.8 GB to 33.7 GB).
+
+Similar results hold for other models. For instance the precision
+in the Canada 2015 model improves by a factor of 3 with a better overall
+performance thanks to the improvements in =make_contexts=.
 
 ** The Canada 2015 model
 
