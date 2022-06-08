@@ -695,23 +695,23 @@ def plot_wkt(wkt_string):
 
 def plot_csv(fname):
     """
-    Plot a CSV with columns (title, time1, time2)
+    Plot a CSV with columns (title, time1, time2, ...)
     """
     df = pandas.read_csv(fname)
-    title, col1, col2 = df.columns
+    title, *cols = df.columns
     plt = import_plt()
 
-    vals1 = df[col1].to_numpy()
-    vals2 = df[col2].to_numpy()
+    vals = [df[col].to_numpy() for col in cols]
 
     x = numpy.arange(len(df))  # the label locations
-    width = 0.35  # the width of the bars
+    width = 0.3  # the width of the bars
 
     fig, ax = plt.subplots()
-    rects1 = ax.bar(x - width/2, vals1, width, label=col1)
-    rects2 = ax.bar(x + width/2, vals2, width, label=col2)
-    ax.bar_label(rects1)
-    ax.bar_label(rects2)
+    delta = -width
+    for col, val in zip(cols, vals):
+        rect = ax.bar(x + delta, val, width, label=col)
+        ax.bar_label(rect)
+        delta += width
 
     ax.set_title(title)
     ax.set_xticks(x, df[title])

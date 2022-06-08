@@ -98,6 +98,7 @@ Faster "composing pnes", slower "computing mean_std", better precision.
 | total postclassical        | 7_664    | 25.9      | 240        |
 | combine pmaps              | 5_533    | 0.0       | 138_284    |
 | ClassicalCalculator.run    | 4_761    | 3_596     | 1          |
+| make_contexts              | 3_865    | 0.0       | 1_944_115  |
 
 | operation-duration | counts | mean    | stddev | min     | max     | slowfac |
 |--------------------+--------+---------+--------+---------+---------+---------|

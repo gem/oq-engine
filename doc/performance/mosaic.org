@@ -48,4 +48,5 @@ see the plot below.
 [[./CAN314.png]]
 
 Other operations became slightly slower having allocated larger memory
-blocks to speedup as much as possible =computing mean_std=.
+blocks to speedup as much as possible =computing mean_std=. This has been
+fixed in version 3.15.
