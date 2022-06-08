@@ -94,8 +94,7 @@ def preclassical(srcs, sites, cmaker, monitor):
     sf = SourceFilter(sites, cmaker.maximum_distance)
     if len(sites) > cmaker.max_sites_disagg:
         multiplier = 5
-        sites = sites.reduce(len(sites) // multiplier)
-        sites.make_complete()
+        sf = sf.reduce(multiplier)
     else:
         multiplier = 1
     with monitor('splitting sources'):
