@@ -1,4 +1,37 @@
-* Improvements on the mosaic classical PSHA calculations
+* Improvements on the mosaic hazard calculations
+
+** Doubled the precision of the ps_grid_spacing approximation
+
+The /ps_grid_spacing/ approximation [[described in the Advanced Manual]
+[https://docs.openquake.org/oq-engine/advanced/point-source-gridding.html]]
+is a trick to speed up classical calculations dominated by point
+sources at the cost of a minor loss in precision.
+
+In engine 3.15 we improved a lot the precision without losing much in
+performance. For instance for the GLD model (chosen since it is the
+smallest model in the mosaic and it can be run easily on a laptop)
+the precision of engine 3.15 is twice the precision of engine 3.14.
+The precision can be determined by comparing the uniform hazard spectra
+between the full calculation and the approximated calculation:
+
+# oq compare uhs -1 -2  # v3.14
++---------+----------+----------+-------+
+| poe     | rms-diff | max-diff | site  |
++---------+----------+----------+-------+
+| 0.00211 | 0.00125  | 0.01944  | 7_302 |
++---------+----------+----------+-------+
+
+# oq compare uhs -1 -3  # v3.15
++---------+-----------+----------+-------+
+| poe     | rms-diff  | max-diff | site  |
++---------+-----------+----------+-------+
+| 0.00211 | 5.113E-04 | 0.01124  | 4_091 |
++---------+-----------+----------+-------+
+
+The =rms-diff= here is the root of the mean square differences between
+hazard spectra on all hazard sites and IMTs, while the =max-diff= is
+the difference between the hazard spectra at the site and IMT of
+maximum discrepancy.
 
 ** The Canada 2015 model
 

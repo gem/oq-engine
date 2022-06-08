@@ -199,6 +199,7 @@ def compare_uhs(calc_ids: int, files=False, *, poe_id: int = 0,
         rms = numpy.sqrt(numpy.mean((arrays[0] - arrays[1])**2))
         delta = numpy.abs(arrays[0] - arrays[1]).max(axis=1)
         amax = delta.argmax()
+        import pdb; pdb.set_trace()
         row = ('%.5f' % c.oq.poes[poe_id], rms, delta[amax], amax)
         print(views.text_table([row], ['poe', 'rms-diff', 'max-diff', 'site']))
 
