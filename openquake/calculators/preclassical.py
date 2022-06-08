@@ -94,7 +94,7 @@ def preclassical(srcs, sites, cmaker, monitor):
     sf = SourceFilter(sites, cmaker.maximum_distance)
     if len(sites) > cmaker.max_sites_disagg:
         multiplier = 5
-        sites.array = sites.array[::multiplier]  # reduce by 5 times
+        sites = sites.reduce(len(sites) // multiplier)
         sites.make_complete()
     else:
         multiplier = 1
