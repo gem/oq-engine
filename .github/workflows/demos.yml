@@ -43,7 +43,7 @@ jobs:
           pip install fiona
       - name: Install oq engine
         run: |
-          pip install -e .
+          pip install -e .[dev]
           python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])"
       - name: Run demos and upload to ci.openquake.org if not workflow_dispatch
         shell: bash
@@ -109,7 +109,6 @@ jobs:
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
           chmod 600 ./.deploy_rsa
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
-          pip install sphinx==4.4.0
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
           cd doc/sphinx && make html && cd ../adv-manual && make html && make latexpdf
           echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@docs.copenquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;"
