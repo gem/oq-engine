@@ -2,15 +2,15 @@
 
 ** Doubled the precision of the ps_grid_spacing approximation
 
-The /ps_grid_spacing/ approximation [[described in the Advanced Manual]
-[https://docs.openquake.org/oq-engine/advanced/point-source-gridding.html]]
+The /ps_grid_spacing/ approximation ([[[[https://docs.openquake.org/oq-engine/advanced/point-source-gridding.html][described in the Advanced Manual]])
 is a trick to speed up classical calculations dominated by point
 sources at the cost of a minor loss in precision.
 
 In engine 3.15 we improved a lot the precision without losing much in
-performance. For instance for the GLD model (chosen since it is the
-smallest model in the mosaic and it can be run easily on a laptop)
+performance. For instance, for the GLD model - chosen since it is the
+smallest model in the mosaic and it can be run easily on a laptop -
 the precision of engine 3.15 is twice the precision of engine 3.14.
+
 The precision can be determined by comparing the uniform hazard spectra
 between the full calculation and the approximated calculation:
 
@@ -32,6 +32,16 @@ The =rms-diff= here is the root of the mean square differences between
 hazard spectra on all hazard sites and IMTs, while the =max-diff= is
 the difference between the hazard spectra at the site and IMT of
 maximum discrepancy.
+
+Thanks to the many performance improvements in engine 3.15, even if the
+precision is a lot better, the performance is better than before in most
+parts of the calculation:
+
+[[./GLD315.png]]
+
+The exception is =computing mean_std= which is slower because we chose
+to reduce the size of the arrays with the benefit of using less memory
+than before (from 39.8 GB to 33.7 GB).
 
 ** The Canada 2015 model
 
