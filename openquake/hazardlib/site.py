@@ -383,15 +383,6 @@ class SiteCollection(object):
         # non-unique sites, so we cannot do an
         # assert len(numpy.unique(self[['lon', 'lat']])) == len(self)
 
-    def copy(self):
-        """
-        :returns: a copy of the SiteCollection
-        """
-        new = object.__new__(self.__class__)
-        new.__dict__.update(self.__dict__)
-        new.array = self.array.copy()
-        return new
-
     def __eq__(self, other):
         return not self.__ne__(other)
 

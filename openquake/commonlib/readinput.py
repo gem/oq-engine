@@ -732,8 +732,6 @@ def _check_csm(csm, oqparam, h5):
     if sitecol is None:
         return
     srcfilter = SourceFilter(sitecol, oqparam.maximum_distance)
-    if len(sitecol) > oqparam.max_sites_disagg:
-        srcfilter = srcfilter.reduce(10)
     logging.info('Checking the sources bounding box')
     lons = []
     lats = []
