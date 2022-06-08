@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * `--exports=csv` was not honored for the realizations output; now it is
+
   [Paul Henshaw, Sandra Giacomini]
   * Ported the OpenQuake manual from latex to reStructuredText format
 
