@@ -344,12 +344,11 @@ class SourceFilter(object):
             self.integration_distance = integration_distance
         self.slc = slice(None)
 
-    # not used right now
-    def reduce(self, factor=100):
+    def reduce(self, multiplier=5):
         """
         Reduce the SourceFilter to a subset of sites
         """
-        idxs = numpy.arange(0, len(self.sitecol), factor)
+        idxs = numpy.arange(0, len(self.sitecol), multiplier)
         sc = object.__new__(site.SiteCollection)
         sc.array = self.sitecol[idxs]
         sc.complete = self.sitecol.complete

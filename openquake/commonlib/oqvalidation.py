@@ -1714,15 +1714,6 @@ class OqParam(valid.ParamSet):
             ('classical', 'disaggregation'))
         return not invalid
 
-    def is_valid_ps_grid_spacing(self):
-        """
-        `ps_grid_spacing` must be smaller than the `pointsource_distance`
-        """
-        if not self.ps_grid_spacing:
-            return True
-        return self.ps_grid_spacing <= calc.filters.getdefault(
-            self.pointsource_distance, 'default')
-
     def is_valid_soil_intensities(self):
         """
         soil_intensities must be defined only in classical calculations

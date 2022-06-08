@@ -92,7 +92,12 @@ def preclassical(srcs, sites, cmaker, monitor):
         return dic
 
     sf = SourceFilter(sites, cmaker.maximum_distance)
-    with monitor('splitting sources'):
+    if len(sites) > cmaker.max_sites_disagg:
+        multiplier = 5
+        sf = sf.reduce(multiplier)
+    else:
+        multiplier = 1
+    with monitor('filtering/splitting'):
         for src in srcs:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
@@ -104,7 +109,7 @@ def preclassical(srcs, sites, cmaker, monitor):
     dic = grid_point_sources(split_sources, spacing, monitor)
     # this is also prefiltering the split sources
     mon = monitor('weighting sources', measuremem=False)
-    cmaker.set_weight(dic[grp_id], sf, mon)
+    cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
     # print(mon.duration, [s.source_id for s in dic[grp_id]])
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])

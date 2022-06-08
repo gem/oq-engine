@@ -1099,7 +1099,7 @@ class ContextMaker(object):
         src.esites = int(esites)
         return weight
 
-    def set_weight(self, sources, srcfilter, mon=Monitor()):
+    def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
         """
         Set the weight attribute on each prefiltered source
         """
@@ -1115,7 +1115,8 @@ class ContextMaker(object):
             else:
                 with mon:
                     src.esites = 0  # overridden inside estimate_weight
-                    src.weight = .1 + self.estimate_weight(src, srcfilter) * G
+                    src.weight = .1 + self.estimate_weight(
+                        src, srcfilter) * G * multiplier
                     if src.code == b'F' and N <= self.max_sites_disagg:
                         src.weight *= 20  # test ucerf
                     elif src.code == b'S':
