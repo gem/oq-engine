@@ -94,7 +94,7 @@ and the ones computed with the approximation on::
 However, this is not enough. We are still too slow to run the full model in
 a reasonable amount of time. Enters the point source gridding. By setting
 
-``ps_grid_space=50``
+``ps_grid_spacing=50``
 
 we can spectacularly reduce the calculation time to 35,974s, down by
 nearly an order of magnitude! This time ``oq compare hcurves``
@@ -142,6 +142,6 @@ By increasing the ``pointsource_distance`` parameter and decreasing the
 precise as wanted, at the expense of a larger runtime.
 
 NB: the fact that the Canada model with 7 cities can be made 26 times
-faster does not mean that the same speedup apply when you consider
-130,000+ sites. A test with ps_grid_spacing=pointsource_distance=50 km
+faster does not mean that the same speedup apply when you consider the full
+130,000+ sites. A test with ``ps_grid_spacing=pointsource_distance=50``
 gives a speedup of 7 times, which is still very significant.
