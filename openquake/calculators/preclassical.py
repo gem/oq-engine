@@ -97,7 +97,7 @@ def preclassical(srcs, sites, cmaker, monitor):
         sf = sf.reduce(multiplier)
     else:
         multiplier = 1
-    with monitor('filtering/splitting sources'):
+    with monitor('filtering/splitting'):
         for src in srcs:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
