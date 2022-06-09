@@ -25,51 +25,48 @@ from shapely.geometry import LineString
 
 # coordinates from the author
 ##Kyushu - VOLCANIC_FRONT
-kyushu = LineString([(127.067,27.250), (128.983,28.800), (130.217,30.433), (130.817,32.767), (131.600,33.567), 
-                    (131.850,34.367)])
+kyushu = LineString([(127.067,27.250), (128.983,28.800), (130.217,30.433), (130.817,32.767), 
+                    (131.600,33.567), (131.850,34.367)])
 ##Honshu - VOLCANIC_FRONT
-honshu = LineString([(148.583, 45.417), (146.917,44.450), (144.717,43.683), (144.017,43.600),(142.683,43.500),
-                    (141.517,43.400), (140.667,42.050), (141.117,41.267), (141.000,40.450), (140.583,39.033),
-                    (140.133,37.733), (138.367,36.600), (138.733,35.383), (139.750,33.133), (140.300, 30.483), 
-                    (140.567,28.317), (141.267,25.417)])
+honshu = LineString([(148.583, 45.417), (146.917,44.450), (144.717,43.683), (144.017,43.600),
+                    (142.683,43.500), (141.517,43.400), (140.667,42.050), (141.117,41.267), 
+                    (141.000,40.450), (140.583,39.033),(140.133,37.733), (138.367,36.600), 
+                    (138.733,35.383), (139.750,33.133), (140.300, 30.483), (140.567,28.317), 
+                    (141.267,25.417)])
 
 
 def _compute_magnitude(ctx, C, trt):
-    
     """
-    Compute the source term described in Eq. 7 for ASC and 9 for subduction:
-    `` a1 + a2 * M + a3 * max(M - a4, 0) + a7 * ln(Ztor + 1)------ASC
-        a1 + a2 * M + a3 * max (M - a4, 0) + a5 * max(M - a6, 0) + a7 * ln(Ztor + 1) + a8 * Finter-------Subduction``
-        
-        Finter = 0 (subduction interslab)
-        Finter = 1 (subduction interface)
+    Compute the source term described in Eq. 7 for ASC and 9 for subduction
     """
-    for m, z in zip(ctx.mag, ctx.ztor):
-        if trt == const.TRT.ACTIVE_SHALLOW_CRUST:
-            fsource = C['a1'] + (C['a2'] * m) + (C['a3'] * max((m- C['a4']),0 )) + (C['a7'] * np.log((z)+1))
-        
-        else:
-            if trt == const.TRT.SUBDUCTION_INTERFACE:
-                Finter = 1
-            elif trt == const.TRT.SUBDUCTION_INTRASLAB:
-                Finter = 0
-            fsource = C['a1'] + (C['a2'] * m) + (C['a3'] * max((m - C['a4']),0 )) +(C['a5'] * max((z - C['a6']),0 ))+ (C['a7'] * np.log((z)+1)) +(C['a8'] * Finter)
+
+    if trt == const.TRT.ACTIVE_SHALLOW_CRUST:
+        fsource = (C['a1'] + C['a2'] * ctx.mag +
+                   C['a3'] * np.maximum((ctx.mag - C['a4']), 0) +
+                   C['a7'] * np.log((ctx.ztor) + 1))
+    else:
+        if trt == const.TRT.SUBDUCTION_INTERFACE:
+            Finter = 1
+        elif trt == const.TRT.SUBDUCTION_INTRASLAB:
+            Finter = 0
+        fsource = (C['a1'] + C['a2'] * ctx.mag +
+                   C['a3'] * np.maximum((ctx.mag - C['a4']), 0) +
+                   C['a5'] * np.maximum((ctx.mag - C['a6']), 0) +
+                   C['a7'] * np.log((ctx.ztor) + 1) + C['a8'] * Finter)
     return fsource
 
-def _get_source_saturation_term (ctx, C):
+def _get_source_saturation_term(ctx, C):
     """
-    compute the near source saturation as described in Eq. 11. This is common for all the TRTs
-    ``h = b5 +b6*(M-b7)..... M<=b7
-    h = b9 + b10*(M - b7)+b11*(M - b7)**2+b12*(M - b7)**3 ...b7< M <= b8
-    h = b13 + b14*(M - b8).....M>b8``
+    Compute the near source saturation as described in Eq. 11
     """
-
-    h = C['b13'] + (C['b14'] * (ctx.mag - C['b8']))
-    above = ctx.mag <= C['b7']
-    h[above] = C['b5'] + C['b6'] * (ctx.mag[above]-C['b7'])
-    below = [(ctx.mag < C['b7']) & (ctx.mag <= C['b8'])]
-    h[below] = C['b9'] + (C['b10']*(ctx.mag[below]-C['b7']))+(C['b11']*(ctx.mag[below]-C['b7'])**2) + (C['b12']*(ctx.mag[below]-C['b7'])**3)
-        
+    h = np.zeros_like(ctx.mag)
+    h = (C['b9'] + C['b10'] * (ctx.mag - C['b7']) +
+         C['b11'] * (ctx.mag - C['b7'])**2 +
+         C['b12'] * (ctx.mag - C['b7'])**3)
+    before = ctx.mag <= C['b7']
+    after = ctx.mag > C['b8']
+    h[before] = C['b5'] + C['b6'] * (ctx.mag[before] - C['b7'])
+    h[after] = C['b13'] + C['b14'] * (ctx.mag[after] - C['b8'])
     return h
 
 
@@ -83,19 +80,22 @@ def _get_site_term(ctx, C):
     return fsite
 
 def _get_stddevs(C):
-    """
-    The authors have provided the values of sigma = np.sqrt(tau**2+phi_ss**2+phi_s2s**2)
-    
-    The within event term (phi) has been calculated by combining the phi_ss and phi_s2s
-    """
+
     sig = C['sig']
     tau = C['tau']
     phi = np.sqrt(C['phi_ss']**2 +C['phi_s2s']**2)
     return sig, tau, phi
 
 def _check_cm_ck(kyushu, honshu, ctx):
-
-    # return np.array([poly.contains(p) for p in array])
+    """
+    To check if the source to site path crosses either of the volcanic regions.
+    - Cm is 1 if the path from the source to the site crosses the volcanic
+        front in Honshu and Hokkaido and 0 otherwise;
+    - CK is 1 if the path from the source to the site crosses the volcanic
+        front in Kyushu and 0 otherwise;
+    - There is a possibility that the path may not cross either of the volcanic 
+        fronts. In such cases, these coefficients are taken as 0.
+    """
     tmp = np.array([kyushu.crosses(LineString([(hypo_lon, hypo_lat), (lon,lat)])) 
           for hypo_lon, hypo_lat,lon,lat in zip(ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)])
     tmp_1 = np.array([honshu.crosses(LineString([(hypo_lon, hypo_lat), (lon,lat)])) 
@@ -106,66 +106,80 @@ def _check_cm_ck(kyushu, honshu, ctx):
 
 def _compute_volcanic_distances(ctx,kyushu, honshu):
     cm, ck = _check_cm_ck(kyushu, honshu, ctx)
+    """
+    the buffer regions have been chosen in such a way that
+    the backarc of Honshu and forearc of Kyushu is calculated. 
+    These buffer regions helps in understanding if a given site
+    belongs to the forearc or backarc of the volcanic front. 
+    These buffer regions were arbitrarily chosen. There is scope 
+    for improvement in the future when more information is made
+    available about the backarc and forearc of the volcanic fronts.
+    """
+
     buffer_region  = honshu.buffer(-3.0, single_sided=True)##backarc
     buffer_region_1 = kyushu.buffer(-3.0, single_sided=True)##forearc
 
     for m, k, lon, lat in zip(cm, ck, ctx.lon, ctx.lat):
-        if m == 1:
+        if m == 1: ## the site is in either the forearc or back arc of Honshu
             dst = honshu.distance(sg.Point(lon, lat))
             rrup_b = np.where(sg.Point(lon, lat).within(buffer_region) , dst, ctx.rrup - dst)
             rrup_f = np.where(sg.Point(lon, lat).within(buffer_region) , ctx.rrup - dst, dst)
-        elif k == 1:
+        elif k == 1: ## the site is in either the forearc or back arc of Kyushu
             dst = kyushu.distance(sg.Point(lon, lat))
             rrup_f = np.where(sg.Point(lon, lat).within(buffer_region_1) , dst, ctx.rrup - dst)
             rrup_b = np.where(sg.Point(lon, lat).within(buffer_region_1) , ctx.rrup - dst, dst)
-        else:
+        else: 
+            ## the source to site path does not cross any volcanic front but the site 
+            ### can still be in the backarc of honshu or forearc of Kyushu volcanic front
             tmp = sg.Point(lon, lat).within(buffer_region)
             tmp_1 = sg.Point(lon, lat).within(buffer_region_1)
-            if tmp:
+            if tmp: ##check if the site is in the backarc region of honshu
                 rrup_b = honshu.distance(sg.Point(lon, lat))
                 rrup_f = ctx.rrup - rrup_b
-            elif tmp_1:
+            elif tmp_1:##check if the site is in the forearcarc region of Kyushu
                 rrup_f = kyushu.distance(sg.Point(lon, lat))
                 rrup_b = ctx.rrup - rrup_f
             else:
+                ## a neutral case wherein the site is not located in the vicinity of 
+                ##either of the volcanic fronts
                 rrup_f = 0
                 rrup_b = 0
     return rrup_f, rrup_b, cm, ck
 
 def _compute_distance(ctx, C, trt):
     """
-    fpath = b1 * ln(sqrt(rrup^2+(10^h)^2)) + b3b * rrupb + b3f * rrupf + b4m * cm + b4k * ck ---ASC
-    fpath = (b1 +b2*Finter)*ln(sqrt(rrup^2+(10^h)^2))+ b3b * rrupb + b3f * rrupf + b4m * cm + b4k * ck ---subduction
     f = forearc
     b = backarc
-    Cm is 1 if the path from the source to the site crosses the volcanic front in Honshu and
-    Hokkaido and 0 otherwise; 
-    CK is 1 if the path from the source to the site crosses the volcanic 
-    front in Kyushu and 0 otherwise;
     """
 
     rrup_b, rrup_f, cm, ck= _compute_volcanic_distances(ctx,kyushu, honshu)
 
+    sst = _get_source_saturation_term(ctx, C)
+    tmp = (10**sst)**2
     if trt == const.TRT.ACTIVE_SHALLOW_CRUST:
-        fpath = C['b1']*(np.log(np.sqrt((ctx.rrup**2) + ((10**_get_source_saturation_term (ctx, C))**2)))) + C['b3b'] * rrup_b + C['b3f'] * rrup_f + C['b4m']*cm + C['b4k']*ck
-
-    else: 
+        fpath = (C['b1']*(np.log(np.sqrt((ctx.rrup**2) + tmp))) +
+                 C['b3b'] * rrup_b + C['b3f'] * rrup_f +
+                 C['b4m']*cm + C['b4k']*ck)
+    else:
         if trt == const.TRT.SUBDUCTION_INTERFACE:
             Finter = 1
         elif trt == const.TRT.SUBDUCTION_INTRASLAB:
             Finter = 0
-
-        fpath = (C['b1'] + C['b2']*Finter) * (np.log(np.sqrt((ctx.rrup**2) + ((10**_get_source_saturation_term (ctx, C))**2)))) + C['b3b'] * rrup_b + C['b3f'] * rrup_f  + C['b4m']*cm + C['b4k']*ck
-    
+        fpath = ((C['b1'] +
+                  C['b2']*Finter) * (np.log(np.sqrt((ctx.rrup**2) + tmp))) +
+                 C['b3b'] * rrup_b + C['b3f'] * rrup_f +
+                 C['b4m']*cm + C['b4k']*ck)
     return fpath
+
 
 def _get_arias_intensity_term(ctx, C, trt):
     """
     Implementing Eq. 6
-    
     """
 
-    ia_l = _compute_magnitude(ctx, C, trt) + _compute_distance (ctx, C, trt) + _get_site_term (ctx, C)
+    ia_l = (_compute_magnitude(ctx, C, trt) +
+            _compute_distance(ctx, C, trt) +
+            _get_site_term(ctx, C))
     return ia_l
 
 def _get_arias_intensity_second_term(ctx, C, trt):
@@ -224,11 +238,12 @@ class BahrampouriEtAl2021Asc(GMPE):
         for spec of input and result values.
         """
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
+
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # Implements mean model (equation 12)
-            mean[m] = _get_arias_intensity_term (ctx, C, trt) + _get_arias_intensity_second_term (ctx, C, trt)
-
+            mean[m] = (_get_arias_intensity_term(ctx, C, trt) +
+                       _get_arias_intensity_second_term(ctx, C, trt))
             sig[m], tau[m], phi[m] = _get_stddevs(C)
 
     #: For Ia, coefficients are taken from table 3
@@ -285,8 +300,8 @@ class BahrampouriEtAl2021SInter(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # Implements mean model (equation 12)
-            mean[m] = _get_arias_intensity_term (ctx, C, trt) + _get_arias_intensity_second_term (ctx, C, trt)
-
+            mean[m] = (_get_arias_intensity_term(ctx, C, trt) +
+                       _get_arias_intensity_second_term(ctx, C, trt))
             sig[m], tau[m], phi[m] = _get_stddevs(C)
 
     #: For Ia, coefficients are taken from table 3
@@ -333,7 +348,7 @@ class BahrampouriEtAl2021SSlab(GMPE):
     REQUIRES_DISTANCES = {'rrup',}
     
     
-    def compute(self, ctx:np.recarray, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -343,8 +358,8 @@ class BahrampouriEtAl2021SSlab(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # Implements mean model (equation 12)
-            mean[m] = _get_arias_intensity_term (ctx, C, trt) + _get_arias_intensity_second_term (ctx, C, trt)
-
+            mean[m] = (_get_arias_intensity_term(ctx, C, trt) +
+                       _get_arias_intensity_second_term(ctx, C, trt))
             sig[m], tau[m], phi[m] = _get_stddevs(C)
 
     #: For Ia, coefficients are taken from table 3
