@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,7 +29,8 @@ from openquake.hazardlib.imt import PGA, SA
 
 
 # TODO: Check whether lower validity bound is 4 or 7 km
-def _compute(self, ctx, imts, mean, sig, tau, phi, mag_conversion_sigma=0.):
+def _compute(self, ctx: np.recarray, imts, mean, sig, tau, phi,
+             mag_conversion_sigma=0.):
     for m, imt in enumerate(imts):
         C = self.COEFFS[imt]
 
@@ -255,7 +256,7 @@ class BergeThierryEtAl2003SIGMA(BergeThierryEtAl2003Ms):
     Carbon, D. et al., 2012, Final preliminary Probabilistic Hazard map for
     France's southeast 1/4, Deliverable D4-18, p.31, SIGMA project.
     """
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         _compute(self, ctx, imts, mean, sig, tau, phi,
                  mag_conversion_sigma=0.2)
 
@@ -266,16 +267,14 @@ class BergeThierryEtAl2003MwW(BergeThierryEtAl2003Ms):
     we use the Weatherill et al. (2016) conversion equation between Ms and Mw
     Bilinear magnitude conversion relation.
     """
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         newctx = copy.copy(ctx)
-        if ctx.mag <= 6.064:
-            newctx.mag = (ctx.mag - 2.369) / 0.616
-            _compute(self, newctx, imts, mean, sig, tau, phi,
-                     mag_conversion_sigma=0.147/0.616)
-        else:
-            newctx.mag = (ctx.mag - 0.100) / 0.994
-            _compute(self, newctx, imts, mean, sig, tau, phi,
-                     mag_conversion_sigma=0.174/0.994)
+        newctx.mag = np.where(ctx.mag <= 6.064,
+                              (ctx.mag - 2.369) / 0.616,
+                              (ctx.mag - 0.100) / 0.994)
+        mcs = np.where(ctx.mag <= 6.064, 0.147/0.616, 0.174/0.994)
+        _compute(self, newctx, imts, mean, sig, tau, phi,
+                 mag_conversion_sigma=mcs)
 
 
 class BergeThierryEtAl2003MwL_MED(BergeThierryEtAl2003Ms):
@@ -286,7 +285,7 @@ class BergeThierryEtAl2003MwL_MED(BergeThierryEtAl2003Ms):
     Exponential model: Mw = exp(a+b*Ms)+c  with slope=b*exp(a+b*Ms)
     Parameters: (a,b,c) = (2.133,0.063,-6.205)
     """
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         newctx = copy.copy(ctx)
         newctx.mag = (np.log(ctx.mag + 6.205) - 2.133) / 0.063
         slope = 0.063 * np.exp(2.133 + 0.063 * newctx.mag)
@@ -302,7 +301,7 @@ class BergeThierryEtAl2003MwL_ITA(BergeThierryEtAl2003Ms):
     Exponential model: Mw = exp(a+b*Ms)+c  with slope=b*exp(a+b*Ms)
     Parameters: (a,b,c) = (1.421,0.108,-1.863)
     """
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         newctx = copy.copy(ctx)
         newctx.mag = (np.log(ctx.mag + 1.863) - 1.421) / 0.108
         slope = 0.108 * np.exp(1.421 + 0.108 * newctx.mag)
@@ -316,20 +315,21 @@ class BergeThierryEtAl2003MwL_GBL(BergeThierryEtAl2003Ms):
     we use the Lolli et al. (2014) conversion equation between Ms and Mw for
     the GBL region (i.e. Global Scale).
     Exponential model:
-    Mw = exp(a+b*Ms)+c  with slope=b*exp(a+b*Ms)
+
+    Mw = exp(a + b * Ms) + c with slope = b * exp(a + b * Ms)
+
     Parameters:
+
     for Ms<=5.5: (a,b,c) = (2.133,0.063,-6.205)
     for Ms>5.5: (a,b,c) = (-0.109,0.229,2.586)
     """
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         newctx = copy.copy(ctx)
-        if ctx.mag < 5.75:
-            newctx.mag = (np.log(ctx.mag + 6.205) - 2.133) / 0.063
-            slope = 0.063 * np.exp(2.133 + 0.063 * newctx.mag)
-            _compute(self, newctx, imts, mean, sig, tau, phi,
-                     mag_conversion_sigma=0.1703/slope)
-        else:
-            newctx.mag = (np.log(ctx.mag - 2.586) + 0.109) / 0.229
-            slope = 0.229 * np.exp(-0.109 + 0.229 * newctx.mag)
-            _compute(self, newctx, imts, mean, sig, tau, phi,
-                     mag_conversion_sigma=0.1462/slope)
+        newctx.mag = np.where(ctx.mag < 5.75,
+                              (np.log(ctx.mag + 6.205) - 2.133) / 0.063,
+                              (np.log(ctx.mag - 2.586) + 0.109) / 0.229)
+        mcs = np.where(ctx.mag < 5.75,
+                       0.1703/(0.063 * np.exp(2.133 + 0.063 * newctx.mag)),
+                       0.1462/(0.229 * np.exp(-0.109 + 0.229 * newctx.mag)))
+        _compute(self, newctx, imts, mean, sig, tau, phi,
+                 mag_conversion_sigma=mcs)

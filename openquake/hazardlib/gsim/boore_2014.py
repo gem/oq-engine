@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -61,12 +61,9 @@ def _get_inter_event_tau(C, mag):
     Returns the inter-event standard deviation (tau), which is dependent
     on magnitude
     """
-    if mag <= 4.5:
-        tau = C["tau1"]
-    elif mag >= 5.5:
-        tau = C["tau2"]
-    else:
-        tau = C["tau1"] + (C["tau2"] - C["tau1"]) * (mag - 4.5)
+    tau = np.full_like(mag, C["tau1"] + (C["tau2"] - C["tau1"]) * (mag - 4.5))
+    tau[mag <= 4.5] = C["tau1"]
+    tau[mag >= 5.5] = C["tau2"]
     return tau
 
 
@@ -74,49 +71,41 @@ _get_intra_event_phi = CallableDict()
 
 
 @_get_intra_event_phi.add("base")
-def _get_intra_event_phi_1(kind, C, mag, rjb, vs30):
+def _get_intra_event_phi_base(kind, C, mag, rjb, vs30):
     """
     Returns the intra-event standard deviation (phi), dependent on
     magnitude, distance and vs30
     """
-    base_vals = np.zeros_like(rjb)
     # Magnitude Dependent phi (Equation 17)
-    if mag <= 4.5:
-        base_vals += C["f1"]
-    elif mag >= 5.5:
-        base_vals += C["f2"]
-    else:
-        base_vals += (C["f1"] + (C["f2"] - C["f1"]) * (mag - 4.5))
+    base_vals = np.full_like(rjb, C["f1"] + (C["f2"] - C["f1"]) * (mag - 4.5))
+    base_vals[mag <= 4.5] = C["f1"]
+    base_vals[mag >= 5.5] = C["f2"]
+
     # Distance dependent phi (Equation 16)
     idx1 = rjb > C["R2"]
     base_vals[idx1] += C["DfR"]
     idx2 = np.logical_and(rjb > C["R1"], rjb <= C["R2"])
-    base_vals[idx2] += (C["DfR"] * (np.log(rjb[idx2] / C["R1"]) /
-                                    np.log(C["R2"] / C["R1"])))
+    base_vals[idx2] += C["DfR"] * (np.log(rjb[idx2] / C["R1"]) /
+                                   np.log(C["R2"] / C["R1"]))
     # Site-dependent phi (Equation 15)
     idx1 = vs30 <= CONSTS["v1"]
     base_vals[idx1] -= C["DfV"]
-    idx2 = np.logical_and(vs30 >= CONSTS["v1"],
-                          vs30 <= CONSTS["v2"])
-    base_vals[idx2] -= (
-        C["DfV"] * (np.log(CONSTS["v2"] / vs30[idx2]) /
-                    np.log(CONSTS["v2"] / CONSTS["v1"])))
+    idx2 = np.logical_and(vs30 >= CONSTS["v1"], vs30 <= CONSTS["v2"])
+    base_vals[idx2] -= C["DfV"] * (np.log(CONSTS["v2"] / vs30[idx2]) /
+                                   np.log(CONSTS["v2"] / CONSTS["v1"]))
     return base_vals
 
 
 @_get_intra_event_phi.add("stewart")
-def _get_intra_event_phi_2(kind, C, mag, rjb, vs30):
+def _get_intra_event_phi_stewart(kind, C, mag, rjb, vs30):
     """
     Returns the intra-event standard deviation (phi)
 
     In SBSA15, the intra-event standard deviation only depends on magnitude
     """
-    if mag <= 4.5:
-        phi = C["phi1"]
-    elif mag >= 5.5:
-        phi = C["phi2"]
-    else:
-        phi = (C["phi1"] + (C["phi2"] - C["phi1"]) * (mag - 4.5))
+    phi = np.full_like(mag, C["phi1"] + (C["phi2"] - C["phi1"]) * (mag - 4.5))
+    phi[mag <= 4.5] = C["phi1"]
+    phi[mag >= 5.5] = C["phi2"]
     return phi
 
 
@@ -133,12 +122,14 @@ def _get_magnitude_scaling_term(sof, C, ctx):
     """
     Returns the magnitude scling term defined in equation (2)
     """
+    mag_term = np.zeros_like(ctx.mag)
+    below = ctx.mag <= C["Mh"]
     dmag = ctx.mag - C["Mh"]
-    if ctx.mag <= C["Mh"]:
-        mag_term = (C["e4"] * dmag) + (C["e5"] * (dmag ** 2.0))
-    else:
-        mag_term = C["e6"] * dmag
-    return _get_style_of_faulting_term(sof, C, ctx) + mag_term
+    mag_term[below] = C["e4"] * dmag[below] + C["e5"] * dmag[below] ** 2.0
+    mag_term[~below] = C["e6"] * dmag[~below]
+    if not sof:  # unspecified style-of-faulting
+        return C["e0"] + mag_term
+    return _get_style_of_faulting_term(C, ctx) + mag_term
 
 
 def _get_nonlinear_site_term(C, vs30, pga_rock):
@@ -148,10 +139,8 @@ def _get_nonlinear_site_term(C, vs30, pga_rock):
     v_s = np.copy(vs30)
     v_s[vs30 > 760.] = 760.
     # Nonlinear controlling parameter (equation 8)
-    f_2 = C["f4"] * (np.exp(C["f5"] * (v_s - 360.)) -
-                     np.exp(C["f5"] * 400.))
-    fnl = CONSTS["f1"] + f_2 * np.log((pga_rock + CONSTS["f3"]) /
-                                      CONSTS["f3"])
+    f_2 = C["f4"] * (np.exp(C["f5"] * (v_s - 360.)) - np.exp(C["f5"] * 400.))
+    fnl = CONSTS["f1"] + f_2 * np.log((pga_rock + CONSTS["f3"]) / CONSTS["f3"])
     return fnl
 
 
@@ -159,23 +148,23 @@ _get_path_scaling = CallableDict()
 
 
 @_get_path_scaling.add("base")
-def _get_path_scaling_1(kind, region, C, ctx, mag):
+def _get_path_scaling_base(kind, region, C, ctx):
     """
     Returns the path scaling term given by equation (3)
     """
-    rval = np.sqrt((ctx.rjb ** 2.0) + (C["h"] ** 2.0))
-    scaling = (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *\
-        np.log(rval / CONSTS["Rref"])
+    rval = np.sqrt(ctx.rjb ** 2.0 + C["h"] ** 2.0)
+    scaling = (C["c1"] + C["c2"] * (ctx.mag - CONSTS["Mref"])) * np.log(
+        rval / CONSTS["Rref"])
     return scaling + ((C["c3"] + C["Dc3"]) * (rval - CONSTS["Rref"]))
 
 
 @_get_path_scaling.add("stewart")
-def _get_path_scaling_2(kind, region, C, ctx, mag):
+def _get_path_scaling_stewart(kind, region, C, ctx):
     """
     Returns the path scaling term defined in Equation 3
     """
     # Calculate R in Equation 4
-    rval = np.sqrt((ctx.rjb ** 2.0) + (C["h"] ** 2.0))
+    rval = np.sqrt(ctx.rjb ** 2.0 + C["h"] ** 2.0)
     if region == "CAL":
         delta_c3 = 0
     elif region == "CHN":
@@ -186,21 +175,22 @@ def _get_path_scaling_2(kind, region, C, ctx, mag):
         raise ValueError("region=%s" % region)
 
     # Calculate geometric spreading component of path scaling term
-    fp_geom = ((C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *
-               np.log(rval / CONSTS["Rref"]))
+    fp_geom = (C["c1"] + C["c2"] * (ctx.mag - CONSTS["Mref"])) * np.log(
+        rval / CONSTS["Rref"])
     # Calculate anelastic attenuation component of path scaling term, with
     # delta c3 accounting for regional effects
     fp_atten = (C["c3"] + delta_c3) * (rval - CONSTS["Rref"])
     return fp_geom + fp_atten
 
 
+# imported by other GMPEs
 def _get_pga_on_rock(kind, region, sof, C, ctx):
     """
     Returns the median PGA on rock, which is a sum of the
     magnitude and distance scaling
     """
     return np.exp(_get_magnitude_scaling_term(sof, C, ctx) +
-                  _get_path_scaling(kind, region, C, ctx, ctx.mag))
+                  _get_path_scaling(kind, region, C, ctx))
 
 
 def _get_site_scaling(kind, region, C, pga_rock, ctx, period, rjb):
@@ -227,7 +217,7 @@ def _get_stddevs(kind, C, ctx):
     return [np.sqrt(tau**2 + phi**2), tau, phi]
 
 
-def _get_style_of_faulting_term(sof, C, ctx):
+def _get_style_of_faulting_term(C, ctx):
     """
     Get fault type dummy variables
     Fault type (Strike-slip, Normal, Thrust/reverse) is
@@ -238,17 +228,14 @@ def _get_style_of_faulting_term(sof, C, ctx):
     Note that the 'Unspecified' case is not considered here as
     rake is always given.
     """
-    if not sof:
-        return C["e0"]  # Unspecified style-of-faulting
-    elif np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
-        # strike-slip
-        return C["e1"]
-    elif ctx.rake > 30.0 and ctx.rake < 150.0:
-        # reverse
-        return C["e3"]
-    else:
-        # normal
-        return C["e2"]
+    # normal
+    res = np.full_like(ctx.rake, C["e2"])
+    # strike-slip
+    res[(np.abs(ctx.rake) <= 30.) |
+        ((180. - np.abs(ctx.rake)) <= 30.)] = C["e1"]
+    # reverse
+    res[(ctx.rake > 30.) & (ctx.rake < 150.)] = C["e3"]
+    return res
 
 
 class BooreEtAl2014(GMPE):
@@ -290,7 +277,7 @@ class BooreEtAl2014(GMPE):
         self.region = region
         self.sof = sof
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -299,14 +286,13 @@ class BooreEtAl2014(GMPE):
         C_PGA = self.COEFFS[PGA()]
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            imt_per = 0 if imt.string == 'PGV' else imt.period
             pga_rock = _get_pga_on_rock(
                 self.kind, self.region, self.sof, C_PGA, ctx)
             mean[m] = (
                 _get_magnitude_scaling_term(self.sof, C, ctx) +
-                _get_path_scaling(self.kind, self.region, C, ctx, ctx.mag) +
+                _get_path_scaling(self.kind, self.region, C, ctx) +
                 _get_site_scaling(self.kind, self.region,
-                                  C, pga_rock, ctx, imt_per, ctx.rjb))
+                                  C, pga_rock, ctx, imt.period, ctx.rjb))
             sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C, ctx)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -665,9 +651,8 @@ def california_basin_model(vs30):
     (equation 11)
     """
     coeff = 570.94 ** 4.0
-    model = (-7.15 / 4.0) * np.log(
-        ((vs30 ** 4.0) + coeff) / ((1360.0 ** 4.0) + coeff)
-        ) - np.log(1000.)
+    model = -7.15 / 4.0 * np.log(
+        (vs30 ** 4.0 + coeff) / (1360.0 ** 4.0 + coeff)) - np.log(1000.)
     return np.exp(model)
 
 
@@ -677,9 +662,8 @@ def japan_basin_model(vs30):
     (equation 12)
     """
     coeff = 412.39 ** 2.0
-    model = (-5.23 / 2.0) * np.log(
-        ((vs30 ** 2.0) + coeff) / ((1360.0 ** 2.0) + coeff)
-        ) - np.log(1000.)
+    model = -5.23 / 2.0 * np.log(
+        ((vs30 ** 2.0) + coeff) / ((1360.0 ** 2.0) + coeff)) - np.log(1000.)
     return np.exp(model)
 
 

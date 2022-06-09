@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,8 +33,8 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import util
+from openquake.hazardlib.gsim.base import ContextMaker, Collapser
+from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import losses_by_period, return_periods
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import get_rupture_getters
@@ -165,6 +165,27 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     return '\n'.join(lines)
 
 
+@view.add('worst_sources')
+def view_worst_sources(token, dstore):
+    """
+    Returns the sources with worst weights
+    """
+    if ':' in token:
+        step = int(token.split(':')[1])
+    else:
+        step = 1
+    data = dstore.read_df('source_data', 'src_id')
+    del data['impact']
+    ser = data.groupby('taskno').ctimes.sum().sort_values().tail(1)
+    [[taskno, maxtime]] = ser.to_dict().items()
+    data = data[data.taskno == taskno]
+    print('Sources in the slowest task (%d seconds, weight=%d)'
+          % (maxtime, data['weight'].sum()))
+    data['slow_rate'] = data.ctimes / data.weight
+    df = data.sort_values('ctimes', ascending=False)
+    return df[slice(None, None, step)]
+
+
 @view.add('slow_sources')
 def view_slow_sources(token, dstore, maxrows=20):
     """
@@ -205,9 +226,18 @@ def view_contents(token, dstore):
     return numpy.array(rows, dt('dataset size'))
 
 
+def short_repr(lst):
+    if len(lst) <= 10:
+        return ' '.join(map(str, lst))
+    return '[%d rlzs]' % len(lst)
+
+
 @view.add('full_lt')
 def view_full_lt(token, dstore):
     full_lt = dstore['full_lt']
+    num_paths = full_lt.get_num_potential_paths()
+    if not full_lt.num_samples and num_paths > 15000:
+        return '<%d realizations>' % num_paths
     try:
         rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['trt_smrs'])
     except KeyError:  # for scenario trt_smrs is missing
@@ -216,16 +246,17 @@ def view_full_lt(token, dstore):
     rows = []
     for grp_id, rbg in enumerate(rlzs_by_gsim_list):
         for gsim, rlzs in rbg.items():
-            rows.append((grp_id, repr(str(gsim)), str(list(rlzs))))
+            rows.append((grp_id, repr(str(gsim)), short_repr(rlzs)))
     return numpy.array(rows, dt(header))
 
 
-@view.add('eff_ruptures')
+@view.add('weight_by_src')
 def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
-    del df['grp_id'], df['trti'], df['task_no']
-    return text_table(df)
+    df['slow_factor'] = df.calc_time / df.weight
+    del df['grp_id'], df['trti']
+    return df
 
 
 @view.add('short_source_info')
@@ -516,12 +547,12 @@ def stats(name, array, *extras):
     Returns statistics from an array of numbers.
 
     :param name: a descriptive string
-    :returns: (name, mean, rel_std, min, max, len)
+    :returns: (name, mean, rel_std, min, max, len) + extras
     """
     avg = numpy.mean(array)
     std = 'nan' if len(array) == 1 else '%d%%' % (numpy.std(array) / avg * 100)
-    return (name, len(array), avg, std,
-            numpy.min(array), numpy.max(array)) + extras
+    max_ = numpy.max(array)
+    return (name, len(array), avg, std, numpy.min(array), max_) + extras
 
 
 @view.add('num_units')
@@ -567,12 +598,12 @@ def view_required_params_per_trt(token, dstore):
     full_lt = dstore['full_lt']
     tbl = []
     for trt in full_lt.trts:
-        gsims = full_lt.gsim_lt.get_gsims(trt)
+        gsims = full_lt.gsim_lt.values[trt]
         maker = ContextMaker(trt, gsims, {'imtls': {}})
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((trt, ' '.join(map(repr, map(repr, gsims))),
+        tbl.append((trt, ' '.join(map(repr, gsims)).replace('\n', '\\n'),
                     distances, siteparams, ruptparams))
     return text_table(
         tbl, header='trt_smr gsims distances siteparams ruptparams'.split(),
@@ -603,11 +634,18 @@ def view_task_info(token, dstore):
     for task, arr in group_array(task_info[()], 'taskname').items():
         val = arr['duration']
         if len(val):
-            data.append(stats(task, val))
+            data.append(stats(task, val, val.max() / val.mean()))
     if not data:
         return 'Not available'
     return numpy.array(
-        data, dt('operation-duration counts mean stddev min max'))
+        data, dt('operation-duration counts mean stddev min max slowfac'))
+
+
+def reduce_srcids(srcids):
+    s = set()
+    for srcid in srcids:
+        s.add(srcid.split(':')[0])
+    return ' '.join(sorted(s))
 
 
 @view.add('task_durations')
@@ -615,11 +653,16 @@ def view_task_durations(token, dstore):
     """
     Display the raw task durations. Here is an example of usage::
 
-      $ oq show task_durations:classical
+      $ oq show task_durations
     """
-    task = token.split(':')[1]  # called as task_duration:task_name
-    array = get_array(dstore['task_info'][()], taskname=task)['duration']
-    return '\n'.join(map(str, array))
+    df = dstore.read_df('source_data')
+    out = []
+    for taskno, rows in df.groupby('taskno'):
+        srcids = reduce_srcids(rows.src_id.to_numpy())
+        out.append((taskno, rows.ctimes.sum(), rows.weight.sum(), srcids))
+    arr = numpy.array(out, dt('taskno duration weight srcids'))
+    arr.sort(order='duration')
+    return arr
 
 
 @view.add('task')
@@ -631,21 +674,39 @@ def view_task_hazard(token, dstore):
      $ oq show task:classical:-1  # the slowest task
     """
     _, name, index = token.split(':')
-    if 'by_task' not in dstore:
-        return 'Missing by_task'
+    if 'source_data' not in dstore:
+        return 'Missing source_data'
     data = get_array(dstore['task_info'][()], taskname=encode(name))
     if len(data) == 0:
         raise RuntimeError('No task_info for %s' % name)
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['task_no']
-    eff_ruptures = dstore['by_task/eff_ruptures'][taskno]
-    eff_sites = dstore['by_task/eff_sites'][taskno]
-    srcids = dstore['by_task/srcids'][taskno]
-    res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
-           'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
-                             srcids))
+    sdata = dstore.read_df('source_data', 'taskno')
+    eff_ruptures = sdata.loc[taskno].nrupts.sum()
+    eff_sites = sdata.loc[taskno].nsites.sum()
+    res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, weight=%d, duration=%d s'
+           % (taskno, eff_ruptures, eff_sites, rec['weight'], rec['duration']))
     return res
+
+
+@view.add('source_data')
+def view_source_data(token, dstore):
+    """
+    Display info about a given task. Here is an example::
+
+     $ oq show source_data:42
+    """
+    if ':' not in token:
+        return dstore.read_df(token, 'src_id')
+    _, taskno = token.split(':')
+    taskno = int(taskno)
+    if 'source_data' not in dstore:
+        return 'Missing source_data'
+    df = dstore.read_df('source_data', 'src_id', sel={'taskno': taskno})
+    del df['taskno']
+    df['slowrate'] = df['ctimes'] / df['weight']
+    return df.sort_values('ctimes')
 
 
 @view.add('task_ebrisk')
@@ -773,7 +834,7 @@ def view_extreme_gmvs(token, dstore):
     err = binning_error(gmvs, eids)
     if err > .05:
         msg += ('Your results are expected to have a large dependency '
-                'from ses_seed')
+                'from the rupture seed: %d%%' % (err * 100))
     if imt0.startswith(('PGA', 'SA(')):
         gmpe = GmpeExtractor(dstore)
         df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
@@ -844,14 +905,14 @@ Source = collections.namedtuple(
     'Source', 'source_id code num_ruptures checksum')
 
 
-@view.add('extreme_groups')
-def view_extreme_groups(token, dstore):
+@view.add('disagg_by_grp')
+def view_disagg_by_grp(token, dstore):
     """
     Show the source groups contributing the most to the highest IML
     """
     data = dstore['disagg_by_grp'][()]
-    data.sort(order='extreme_poe')
-    return text_table(data[::-1])
+    data.sort(order='avg_poe')
+    return data[::-1]
 
 
 @view.add('gmvs_to_hazard')
@@ -972,7 +1033,7 @@ def _get(df, sid):
 @view.add('gsim_for_event')
 def view_gsim_for_event(token, dstore):
     """
-    Display the GSIM used when computing the GMF for the given event
+    Display the GSIM used when computing the GMF for the given event:
 
     $ oq show gsim_for_event:123 -1
     [BooreAtkinson2008]
@@ -1057,25 +1118,62 @@ def view_composite_source_model(token, dstore):
     n = len(dstore['full_lt'].sm_rlzs)
     trt_smrs = dstore['trt_smrs'][:]
     for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
-        srcs = ' '.join(df['source_id'])
         trts, sm_rlzs = numpy.divmod(trt_smrs[grp_id], n)
-        lst.append((str(grp_id), to_str(trts), to_str(sm_rlzs), srcs))
-    return numpy.array(lst, dt('grp_id trt smrs sources'))
+        lst.append((str(grp_id), to_str(trts), to_str(sm_rlzs), len(df)))
+    return numpy.array(lst, dt('grp_id trt smrs num_sources'))
 
 
-@view.add('branch_ids')
-def view_branch_ids(token, dstore):
+@view.add('branches')
+def view_branches(token, dstore):
     """
-    Show the branch IDs
+    Show info about the branches in the logic tree
     """
     full_lt = dstore['full_lt']
+    smlt = full_lt.source_model_lt
+    gslt = full_lt.gsim_lt
     tbl = []
     for k, v in full_lt.source_model_lt.shortener.items():
-        tbl.append((k, v, 'NA'))
-    gsims = sum(full_lt.gsim_lt.values.values(), [])
-    for g, (k, v) in enumerate(full_lt.gsim_lt.shortener.items()):
+        tbl.append((k, v, smlt.branches[k].value))
+    gsims = sum(gslt.values.values(), [])
+    if len(gslt.shortener) < len(gsims):  # possible for engine < 3.13
+        raise ValueError(
+            'There were duplicated branch IDs in the gsim logic tree %s'
+            % gslt.filename)
+    for g, (k, v) in enumerate(gslt.shortener.items()):
         tbl.append((k, v, str(gsims[g]).replace('\n', r'\n')))
-    return numpy.array(tbl, dt('branch_id abbrev gsim'))
+    return numpy.array(tbl, dt('branch_id abbrev uvalue'))
+
+
+@view.add('rlz')
+def view_rlz(token, dstore):
+    """
+    Show info about a given realization in the logic tree
+    Example:
+
+    $ oq show rlz:0 -1
+    """
+    _, rlz_id = token.split(':')
+    full_lt = dstore['full_lt']
+    rlz = full_lt.get_realizations()[int(rlz_id)]
+    smlt = full_lt.source_model_lt
+    gslt = full_lt.gsim_lt
+    tbl = []
+    for bset, brid in zip(smlt.branchsets, rlz.sm_lt_path):
+        tbl.append((bset.uncertainty_type, smlt.branches[brid].value))
+    for trt, value in zip(sorted(gslt.bsetdict), rlz.gsim_rlz.value):
+        tbl.append((trt, value))
+    return numpy.array(tbl, dt('uncertainty_type uvalue'))
+
+
+@view.add('branchsets')
+def view_branchsets(token, dstore):
+    """
+    Show the branchsets in the logic tree
+    """
+    flt = dstore['full_lt']
+    clt = logictree.compose(flt.gsim_lt, flt.source_model_lt)
+    return text_table(enumerate(map(repr, clt.branchsets)),
+                      header=['bsno', 'bset'], ext='org')
 
 
 @view.add('rupture')
@@ -1144,3 +1242,99 @@ def view_agg_id(token, dstore):
     concat = pandas.concat([df, totdf], ignore_index=True)
     concat.index.name = 'agg_id'
     return concat
+
+
+@view.add('mean_perils')
+def view_mean_perils(token, dstore):
+    """
+    For instance `oq show mean_perils`
+    """
+    oq = dstore['oqparam']
+    pdcols = dstore.get_attr('gmf_data', '__pdcolumns__').split()
+    perils = [col for col in pdcols[2:] if not col.startswith('gmv_')]
+    N = len(dstore['sitecol/sids'])
+    sid = dstore['gmf_data/sid'][:]
+    out = numpy.zeros(N, [(per, float) for per in perils])
+    if oq.number_of_logic_tree_samples:
+        E = len(dstore['events'])
+        for peril in perils:
+            out[peril] = fast_agg(sid, dstore['gmf_data/' + peril][:]) / E
+    else:
+        rlz_weights = dstore['weights'][:]
+        ev_weights = rlz_weights[dstore['events']['rlz_id']]
+        totw = ev_weights.sum()  # num_gmfs
+        for peril in perils:
+            data = dstore['gmf_data/' + peril][:]
+            weights = ev_weights[dstore['gmf_data/eid'][:]]
+            out[peril] = fast_agg(sid, data * weights) / totw
+    return out
+
+
+@view.add('src_groups')
+def view_src_groups(token, dstore):
+    """
+    Show the hazard contribution of each source group
+    """
+    disagg = dstore['disagg_by_grp'][:]
+    contrib = disagg['avg_poe'] / disagg['avg_poe'].sum()
+    source_info = dstore['source_info'][:]
+    tbl = []
+    for grp_id, rows in group_array(source_info, 'grp_id').items():
+        srcs = decode(rows['source_id'])
+        if len(srcs) > 2:
+            text = ' '.join(srcs[:2]) + ' ...'
+        else:
+            text = ' '.join(srcs)
+        tbl.append((grp_id, contrib[grp_id], text))
+    tbl.sort(key=operator.itemgetter(1), reverse=True)
+    return text_table(tbl, header=['grp_id', 'contrib', 'sources'],
+                      ext='org')
+
+
+@view.add('rup_stats')
+def view_rup_stats(token, dstore):
+    """
+    Show the statistics of event based ruptures
+    """
+    rups = dstore['ruptures'][:]
+    out = [stats(f, rups[f]) for f in 'mag n_occ'.split()]
+    return numpy.array(out, dt('kind counts mean stddev min max'))
+
+
+@view.add('collapsible')
+def view_collapsible(token, dstore):
+    """
+    Show how much the ruptures are collapsed for each site
+    """
+    def recarray(mag, rrups, vs30s, dtype=dt('mag rrup vs30')):
+        out = [(mag, rrups[sid], vs30) for sid, vs30 in enumerate(vs30s)]
+        return numpy.array(out, dtype).view(numpy.recarray)
+
+    sitecol = dstore['sitecol']
+    rup_arr = dstore['rup/id'][:]
+    mag_arr = dstore['rup/mag'][:]
+    rrup_arr = dstore['rup/rrup_'][:]
+    sids_arr = dstore['rup/sids_'][:]
+    c1 = Collapser(1)
+    dic = dict(rup_id=[], site_id=[], mdvbin=[])
+    for id, mag, rrup, sids in zip(rup_arr, mag_arr, rrup_arr, sids_arr):
+        mdvbin = c1.calc_mdvbin(recarray(mag, rrup, sitecol.vs30[sids]))
+        for sid, mdv in zip(sids, mdvbin):
+            dic['rup_id'].append(id)
+            dic['site_id'].append(sid)
+            dic['mdvbin'].append(mdv)
+    out = []
+    for sid, df in pandas.DataFrame(dic).groupby('site_id'):
+        n, u = len(df), len(df.mdvbin.unique())
+        out.append((sid, u, n, n / u))
+    return numpy.array(out, dt('site_id eff_rups num_rups cfactor'))
+
+
+# tested in oq-risk-tests etna
+@view.add('event_based_mfd')
+def view_event_based_mfd(token, dstore):
+    """
+    Compare n_occ/eff_time with occurrence_rate
+    """
+    aw = extract(dstore, 'event_based_mfd?')
+    return pandas.DataFrame(aw.to_dict()).set_index('mag')

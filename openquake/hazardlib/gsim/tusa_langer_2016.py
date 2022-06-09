@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -42,8 +42,8 @@ def _compute_distance1(kind, ctx, C):
     mref = 3.6
     rref = 1.0
     rval = np.sqrt(ctx.repi ** 2 + C['h'] ** 2)
-    return (C['c1'] + C['c2'] * (ctx.mag - mref)) *\
-        np.log10(rval / rref) + C['c3'] * (rval - rref)
+    return (C['c1'] + C['c2'] * (ctx.mag - mref)) * np.log10(
+        rval / rref) + C['c3'] * (rval - rref)
 
 
 @_compute_distance.add("SP87SE", "SP87DE")
@@ -63,8 +63,8 @@ def _compute_distance3(kind, ctx, C):
     mref = 3.6
     rref = 1.0
     rval = np.sqrt(ctx.rhypo ** 2 + C['h'] ** 2)
-    return (C['c1'] + C['c2'] * (ctx.mag - mref)) *\
-        np.log10(rval / rref) + C['c3'] * (rval - rref)
+    return (C['c1'] + C['c2'] * (ctx.mag - mref)) * np.log10(
+        rval / rref) + C['c3'] * (rval - rref)
 
 
 _compute_magnitude = CallableDict()
@@ -75,7 +75,7 @@ def _compute_magnitude1(kind, ctx, C):
     """
     Compute the magnitude function, equation (9):
     """
-    return C['a'] + (C['b1'] * (ctx.mag)) + (C['b2'] * (ctx.mag) ** 2)
+    return C['a'] + C['b1'] * ctx.mag + C['b2'] * ctx.mag ** 2
 
 
 @_compute_magnitude.add("SP87SE", "SP87DE")
@@ -113,19 +113,14 @@ def _get_site_type_dummy_variables(ctx):
     ssb = np.zeros(len(ctx.vs30))
     ssd = np.zeros(len(ctx.vs30))
     # Class D; Vs30 < 180 m/s.
-    idx = (ctx.vs30 < 180.0)
-    ssd[idx] = 1.0
+    ssd[ctx.vs30 < 180.0] = 1.0
     # Class B; 360 m/s <= Vs30 <= 800 m/s.
-    idx = (ctx.vs30 >= 360.0) & (ctx.vs30 < 800.0)
-    ssb[idx] = 1.0
+    ssb[(ctx.vs30 >= 360.0) & (ctx.vs30 < 800.0)] = 1.0
     # Class A; Vs30 > 800 m/s.
-    idx = (ctx.vs30 >= 800.0)
-    ssa[idx] = 1.0
-
-    for value in ctx.vs30:
-        if 180 <= value < 360:
-            raise Exception(
-                'GMPE does not consider site class C (Vs30 = 180-360 m/s)')
+    ssa[ctx.vs30 >= 800.0] = 1.0
+    if ((ctx.vs30 > 180) & (ctx.vs30 < 360)).any():
+        raise Exception(
+            'GMPE does not consider site class C (Vs30 = 180-360 m/s)')
 
     return ssa, ssb, ssd
 
@@ -182,7 +177,7 @@ class TusaLanger2016RepiBA08SE(GMPE):
     #: Required distance measure is Repi
     REQUIRES_DISTANCES = {'repi'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -244,6 +244,25 @@ def dset2df(dset, indexfield, filterdict):
     return pandas.DataFrame(acc, index or None)
 
 
+def is_ok(value, expected):
+    """
+    :returns: True if the value is expected
+    """
+    if hasattr(expected, '__len__'):
+        return numpy.isin(value, expected)
+    return value == expected
+
+
+def decode_lol(lol):
+    """
+    :returns: a list of lists of decoded values
+    """
+    if len(lol) and len(lol[0]) and isinstance(lol[0][0], bytes):
+        return [decode(lst) for lst in lol]
+    else:
+        return lol
+
+
 def extract_cols(datagrp, sel, slc, columns):
     """
     :param datagrp: something like and HDF5 data group
@@ -260,16 +279,20 @@ def extract_cols(datagrp, sel, slc, columns):
         slcs = [slc]
     acc = general.AccumDict(accum=[])  # col -> arrays
     for slc in slcs:
-        ok = slice(None)
-        dic = {col: datagrp[col][slc] for col in sel}
-        for col in sel:
-            if isinstance(ok, slice):  # first selection
-                ok = dic[col] == sel[col]
-            else:  # other selections
-                ok &= dic[col] == sel[col]
-        for col in columns:
-            acc[col].append(datagrp[col][slc][ok])
-    return {k: numpy.concatenate(vs) for k, vs in acc.items()}
+        if sel:
+            ok = slice(None)
+            dic = {col: datagrp[col][slc] for col in sel}
+            for col in sel:
+                if isinstance(ok, slice):  # first selection
+                    ok = is_ok(dic[col], sel[col])
+                else:  # other selections
+                    ok &= is_ok(dic[col], sel[col])
+            for col in columns:
+                acc[col].append(datagrp[col][slc][ok])
+        else:  # avoid making unneeded copies
+            for col in columns:
+                acc[col].append(datagrp[col][slc])
+    return {k: numpy.concatenate(decode_lol(vs)) for k, vs in acc.items()}
 
 
 class File(h5py.File):
@@ -291,11 +314,11 @@ class File(h5py.File):
         """Raised when reading an empty dataset"""
 
     def __init__(self, name, mode='r', driver=None, libver='latest',
-                 userblock_size=None, swmr=True, rdcc_nslots=None,
+                 userblock_size=None, rdcc_nslots=None,
                  rdcc_nbytes=None, rdcc_w0=None, track_order=None,
                  **kwds):
         super().__init__(name, mode, driver, libver,
-                         userblock_size, swmr, rdcc_nslots,
+                         userblock_size, mode == 'r', rdcc_nslots,
                          rdcc_nbytes, rdcc_w0, track_order, **kwds)
 
     @classmethod
@@ -325,12 +348,12 @@ class File(h5py.File):
             extra attributes to store
         """
         if isinstance(nametypes, pandas.DataFrame):
-            nametypes = {name: nametypes[name].to_numpy()
-                         for name in nametypes.columns}.items()
+            nametypes = [(name, nametypes[name].to_numpy())
+                         for name in nametypes.columns]
         names = []
         for name, value in nametypes:
             is_array = isinstance(value, numpy.ndarray)
-            if is_array and isinstance(value[0], str):
+            if is_array and len(value) and isinstance(value[0], str):
                 dt = vstr
             elif is_array:
                 dt = value.dtype
@@ -512,13 +535,15 @@ def dumps(dic):
     """
     new = {}
     for k, v in dic.items():
-        if k.startswith('_') or v is None:
+        if v is None or isinstance(k, str) and k.startswith('_'):
             pass
         elif isinstance(v, (list, tuple)) and v:
             if isinstance(v[0], INT):
                 new[k] = [int(x) for x in v]
             elif isinstance(v[0], FLOAT):
                 new[k] = [float(x) for x in v]
+            elif isinstance(v[0], numpy.bytes_):
+                new[k] = json.dumps(decode(v))
             else:
                 new[k] = json.dumps(v)
         elif isinstance(v, FLOAT):
@@ -899,15 +924,18 @@ def save_npz(obj, path):
     :param obj: object to serialize
     :param path: an .npz pathname
     """
-    a = {}
-    for key, val in vars(obj).items():
-        if key.startswith('_'):
-            continue
-        elif isinstance(val, str):
-            # without this oq extract would fail
-            a[key] = val.encode('utf-8')
-        else:
-            a[key] = _fix_array(val, key)
+    if isinstance(obj, pandas.DataFrame):
+        a = {col: obj[col].to_numpy() for col in obj.columns}
+    else:
+        a = {}
+        for key, val in vars(obj).items():
+            if key.startswith('_'):
+                continue
+            elif isinstance(val, str):
+                # without this oq extract would fail
+                a[key] = val.encode('utf-8')
+            else:
+                a[key] = _fix_array(val, key)
     # turn into an error https://github.com/numpy/numpy/issues/14142
     with warnings.catch_warnings():
         warnings.filterwarnings("error", category=UserWarning)

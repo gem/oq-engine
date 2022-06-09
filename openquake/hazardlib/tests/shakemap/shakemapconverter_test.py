@@ -1,6 +1,11 @@
 import os.path
 import unittest
 import numpy
+try:
+    import shapefile  # optional dependency
+except ImportError:
+    shapefile = None
+
 from openquake.baselib.general import gettemp
 from openquake.hazardlib.shakemap.parsers import \
     get_shakemap_array, get_array_shapefile
@@ -66,6 +71,7 @@ class ShakemapConverterTestCase(unittest.TestCase):
         array = get_shakemap_array(grid_file, uncertainty_file)
         aae(array['std']['SA(0.3)'], [0.57, 0.55, 0.56, 0.52])
 
+    @unittest.skipUnless(shapefile, 'Missing dependency pyshp')
     def test_shapefile(self):
         dt = sorted((imt[1], F32)
                     for key, imt in FIELDMAP.items() if imt[0] == 'val')

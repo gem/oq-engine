@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,7 +24,6 @@ David M. Boore (Jul, 2014)
 """
 import openquake.hazardlib.gsim.boore_2014 as bssa
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-
 
 # Discrepency percentages to be applied to all tests
 MEAN_DISCREP = 2.0

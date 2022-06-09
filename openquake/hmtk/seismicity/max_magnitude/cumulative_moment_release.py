@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2021 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
+# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public License
@@ -54,7 +54,7 @@ from openquake.hmtk.seismicity.max_magnitude.base import (
     BaseMaximumMagnitude, MAX_MAGNITUDE_METHODS)
 
 
-@MAX_MAGNITUDE_METHODS.add("get_mmax", number_bootstraps=np.int)
+@MAX_MAGNITUDE_METHODS.add("get_mmax", number_bootstraps=int)
 class CumulativeMoment(BaseMaximumMagnitude):
     '''Class to implement the bootstrapped cumulative moment estimator of
     maximum magnitude. Adapted by G. Weatherill from the Cumulative Strain

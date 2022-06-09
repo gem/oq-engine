@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,6 @@
 import unittest
 import collections
 import unittest.mock as mock
-
 import numpy
 
 from openquake.hazardlib import const, valid
@@ -151,26 +150,28 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
                 fake_surface.call_counts['get_width'] += 1
                 return width
 
+            def get_closest_points(fake_surface, sitecol):
+                return sitecol
+
         self.rupture_hypocenter = Point(2, 3, 40)
         self.rupture = BaseRupture(
-            mag=123.45, rake=123.56,
+            mag=4.5, rake=123.56,
             tectonic_region_type=const.TRT.VOLCANIC,
             hypocenter=self.rupture_hypocenter, surface=FakeSurface())
         self.gsim_class.DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
         self.fake_surface = FakeSurface
 
-    def make_contexts(self, site_collection, rupture):
-        param = dict(imtls={})
-        return ContextMaker('faketrt', [self.gsim_class], param).make_contexts(
-            site_collection, rupture)
+    def get_ctx(self, rupture, site_collection):
+        return ContextMaker('*', [self.gsim_class], dict(imtls={})).get_ctxs(
+            [rupture], site_collection, src_id=0)[0]
 
     def test_unknown_distance_error(self):
         self.gsim_class.REQUIRES_DISTANCES = frozenset(
             self.gsim_class.REQUIRES_DISTANCES | {'jump height'})
         err = "Unknown distance measure 'jump height'"
         sites = SiteCollection([self.site1, self.site2])
-        self._assert_value_error(self.make_contexts, err,
-                                 site_collection=sites, rupture=self.rupture)
+        self._assert_value_error(
+            self.get_ctx, err, site_collection=sites, rupture=self.rupture)
 
     def test_all_values(self):
         self.gsim_class.REQUIRES_DISTANCES = frozenset(
@@ -179,31 +180,31 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
             'mag rake strike dip ztor hypo_lon hypo_lat hypo_depth width'.
             split())
         self.gsim_class.REQUIRES_SITES_PARAMETERS = frozenset(
-            'vs30 vs30measured z1pt0 z2pt5 lons lats'.split())
+            'vs30 vs30measured z1pt0 z2pt5 lon lat'.split())
         sites = SiteCollection([self.site1, self.site2])
-        rctx, sctx, dctx = self.make_contexts(sites, self.rupture)
-        self.assertEqual(rctx.mag, 123.45)
-        self.assertEqual(rctx.rake, 123.56)
-        self.assertEqual(rctx.strike, 60.123)
-        self.assertEqual(rctx.dip, 45.4545)
-        self.assertEqual(rctx.ztor, 30)
-        self.assertEqual(rctx.hypo_lon, 2)
-        self.assertEqual(rctx.hypo_lat, 3)
-        self.assertEqual(rctx.hypo_depth, 40)
-        self.assertEqual(rctx.width, 15)
-        aac(sctx.vs30, [456, 1456])
-        aac(sctx.vs30measured, [False, True])
-        aac(sctx.z1pt0, [12.1, 112.1])
-        aac(sctx.z2pt5, [15.1, 115.1])
-        aac(sctx.lons, [1, -2])
-        aac(sctx.lats, [2, -3])
-        aac(dctx.rjb, [6, 7])
-        aac(dctx.rx, [4, 5])
-        aac(dctx.ry0, [8, 9])
-        aac(dctx.rrup, [10, 11])
-        aac(dctx.azimuth, [12, 34])
-        aac(dctx.rhypo, [162.18749272, 802.72247682])
-        aac(dctx.repi, [157.17755181, 801.72524895])
+        ctx = self.get_ctx(self.rupture, sites)
+        aac(ctx.mag, 4.5)
+        aac(ctx.rake, 123.56)
+        aac(ctx.strike, 60.123)
+        aac(ctx.dip, 45.4545)
+        aac(ctx.ztor, 30)
+        aac(ctx.hypo_lon, 2)
+        aac(ctx.hypo_lat, 3)
+        aac(ctx.hypo_depth, 40)
+        aac(ctx.width, 15)
+        aac(ctx.vs30, [456, 1456])
+        aac(ctx.vs30measured, [False, True])
+        aac(ctx.z1pt0, [12.1, 112.1])
+        aac(ctx.z2pt5, [15.1, 115.1])
+        aac(ctx.lon, [1, -2])
+        aac(ctx.lat, [2, -3])
+        aac(ctx.rjb, [6, 7])
+        aac(ctx.rx, [4, 5])
+        aac(ctx.ry0, [8, 9])
+        aac(ctx.rrup, [10, 11])
+        aac(ctx.azimuth, [12, 34])
+        aac(ctx.rhypo, [162.18749272, 802.72247682])
+        aac(ctx.repi, [157.17755181, 801.72524895])
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_top_edge_depth': 1, 'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1, 'get_dip': 1,
@@ -216,16 +217,17 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = \
             set('mag strike rake hypo_lon'.split())
         self.gsim_class.REQUIRES_SITES_PARAMETERS = \
-            set('vs30 z1pt0 lons'.split())
+            set('vs30 z1pt0 lon'.split())
         sites = SiteCollection([self.site1, self.site2])
-        rctx, sctx, dctx = self.make_contexts(sites, self.rupture)
-        self.assertEqual(
-            (rctx.mag, rctx.rake, rctx.strike, rctx.hypo_lon),
-            (123.45, 123.56, 60.123, 2))
-        aac(sctx.vs30, (456, 1456))
-        aac(sctx.z1pt0, (12.1, 112.1))
-        aac(sctx.lons, [1, -2])
-        aac(dctx.rx, (4, 5))
+        ctx = self.get_ctx(self.rupture, sites)
+        aac(ctx.mag, 4.5)
+        aac(ctx.rake, 123.56)
+        aac(ctx.strike, 60.123)
+        aac(ctx.hypo_lon, 2)
+        aac(ctx.vs30, (456, 1456))
+        aac(ctx.z1pt0, (12.1, 112.1))
+        aac(ctx.lon, [1, -2])
+        aac(ctx.rx, (4, 5))
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_min_distance': 1,
                           'get_joyner_boore_distance': 1,
@@ -280,10 +282,12 @@ class ContextTestCase(unittest.TestCase):
         imt = PGA()
         gsim = AbrahamsonGulerce2020SInter()
         ctx = RuptureContext()
+        ctx.src_id = 0
         ctx.mag = 5.
         ctx.sids = [0, 1]
         ctx.vs30 = [760., 760.]
         ctx.rrup = [100., 110.]
+        ctx.occurrence_rate = .000001
         mean, _stddevs = gsim.get_mean_and_stddevs(ctx, ctx, ctx, imt, [])
         numpy.testing.assert_allclose(mean, [-5.81116004, -6.00192455])
 

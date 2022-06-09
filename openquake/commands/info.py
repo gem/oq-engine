@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,17 +19,20 @@ import os
 import sys
 import string
 import inspect
+from pprint import pprint
 import unittest.mock as mock
 import logging
 import operator
 import collections
 import numpy
 from decorator import FunctionMaker
-from openquake.baselib.general import groupby, gen_subclasses
+from openquake.baselib import config
+from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml, imt
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.source.base import BaseSeismicSource
+from openquake.hazardlib.calc.disagg import pmf_map
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logictree
 from openquake.risklib import scientific
@@ -86,7 +89,7 @@ def do_build_reports(directory):
                     logging.error(str(e))
 
 
-choices = ['calculators', 'gsims', 'imts', 'views', 'exports',
+choices = ['calculators', 'gsims', 'imts', 'views', 'exports', 'disagg',
            'extracts', 'parameters', 'sources', 'mfds', 'venv']
 
 
@@ -155,9 +158,16 @@ def main(what, report=False):
             print(cls.__name__)
     elif what == 'venv':
         print(sys.prefix)
+    elif what == 'cfg':
+        print('Looking at the following paths (the last wins)')
+        for path in config.paths:
+            print(path)
     elif what == 'sources':
         for cls in gen_subclasses(BaseSeismicSource):
             print(cls.__name__)
+    elif what == 'disagg':
+        for out in pmf_map:
+            print(out)
     elif what == 'consequences':
         known = scientific.KNOWN_CONSEQUENCES
         print('The following %d consequences are implemented:' % len(known))
@@ -176,7 +186,8 @@ def main(what, report=False):
             bset = node[0][0]
             if bset.tag.endswith("logicTreeBranchingLevel"):
                 bset = bset[0]
-            if bset.attrib['uncertaintyType'] == 'sourceModel':
+            if bset.attrib['uncertaintyType'] in (
+                    'sourceModel', 'extendModel'):
                 sm_nodes = []
                 for smpath in logictree.collect_info(what).smpaths:
                     sm_nodes.append(nrml.read(smpath))
@@ -190,7 +201,14 @@ def main(what, report=False):
             if report:
                 print('Generated', reportwriter.build_report(what))
             else:
-                print(readinput.get_oqparam(what).json())
+                oq = readinput.get_oqparam(what)
+                lt = readinput.get_logic_tree(oq)
+                size = humansize(oq.get_input_size())
+                print('calculation_mode: %s' % oq.calculation_mode)
+                print('description: %s' % oq.description)
+                print('input size: %s' % size)
+                for bset in lt.branchsets:
+                    pprint(bset.to_list())
         if mon.duration > 1:
             print(mon)
     elif what:

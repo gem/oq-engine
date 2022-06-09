@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,14 +33,9 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV, PGA, SA
 from openquake.hazardlib.gsim.edwards_fah_2013a_coeffs import (
-    COEFFS_ALPINE_60Bars,
-    COEFFS_ALPINE_10Bars,
-    COEFFS_ALPINE_20Bars,
-    COEFFS_ALPINE_30Bars,
-    COEFFS_ALPINE_50Bars,
-    COEFFS_ALPINE_75Bars,
-    COEFFS_ALPINE_90Bars,
-    COEFFS_ALPINE_120Bars)
+    COEFFS_ALPINE_60Bars, COEFFS_ALPINE_10Bars, COEFFS_ALPINE_20Bars,
+    COEFFS_ALPINE_30Bars, COEFFS_ALPINE_50Bars, COEFFS_ALPINE_75Bars,
+    COEFFS_ALPINE_90Bars, COEFFS_ALPINE_120Bars)
 from openquake.hazardlib.gsim.utils_swiss_gmpe import (
     _compute_phi_ss, _compute_C1_term)
 
@@ -58,16 +53,11 @@ def _compute_term_d(C, mag, rrup):
     end
     d = log10(max(R,rmin));
     """
-    if mag > M1:
-        rrup_min = 0.55
-    elif mag > M2:
-        rrup_min = -2.067 * mag + 11.92
-    else:
-        rrup_min = -0.291 * mag + 3.48
-
-    R = np.maximum(rrup_min, rrup)
-
-    return np.log10(R)
+    rrup_min = np.where(
+        mag > M1,
+        .55,
+        np.where(mag > M2, -2.067 * mag + 11.92, -0.291 * mag + 3.48))
+    return np.log10(np.maximum(rrup_min, rrup))
 
 
 def _compute_mean(C, mag, term_dist_r):
@@ -86,47 +76,40 @@ def _compute_term_1(C, mag):
     Compute term 1
     a1 + a2.*M + a3.*M.^2 + a4.*M.^3 + a5.*M.^4 + a6.*M.^5 + a7.*M.^6
     """
-    return (
-        C['a1'] + C['a2'] * mag + C['a3'] *
-        np.power(mag, 2) + C['a4'] * np.power(mag, 3)
-        + C['a5'] * np.power(mag, 4) + C['a6'] *
-        np.power(mag, 5) + C['a7'] * np.power(mag, 6))
+    return (C['a1'] + C['a2'] * mag + C['a3'] * mag ** 2 + C['a4'] * mag ** 3
+            + C['a5'] * mag ** 4 + C['a6'] * mag ** 5 + C['a7'] * mag ** 6)
 
 
 def _compute_term_2(C, mag, R):
     """
     (a8 + a9.*M + a10.*M.*M + a11.*M.*M.*M).*d(r)
     """
-    return (
-        (C['a8'] + C['a9'] * mag + C['a10'] * np.power(mag, 2) +
-         C['a11'] * np.power(mag, 3)) * R)
+    return ((C['a8'] + C['a9'] * mag + C['a10'] * mag ** 2 +
+             C['a11'] * mag ** 3) * R)
 
 
 def _compute_term_3(C, mag, R):
     """
     (a12 + a13.*M + a14.*M.*M + a15.*M.*M.*M).*(d(r).^2)
     """
-    return (
-        (C['a12'] + C['a13'] * mag + C['a14'] * np.power(mag, 2) +
-         C['a15'] * np.power(mag, 3)) * np.power(R, 2))
+    return ((C['a12'] + C['a13'] * mag + C['a14'] * mag ** 2 +
+             C['a15'] * mag ** 3) * R ** 2)
 
 
 def _compute_term_4(C, mag, R):
     """
     (a16 + a17.*M + a18.*M.*M + a19.*M.*M.*M).*(d(r).^3)
     """
-    return (
-        (C['a16'] + C['a17'] * mag + C['a18'] * np.power(mag, 2) +
-         C['a19'] * np.power(mag, 3)) * np.power(R, 3))
+    return ((C['a16'] + C['a17'] * mag + C['a18'] * mag ** 2 +
+             C['a19'] * mag ** 3) * R ** 3)
 
 
 def _compute_term_5(C, mag, R):
     """
     (a20 + a21.*M + a22.*M.*M + a23.*M.*M.*M).*(d(r).^4)
     """
-    return (
-        (C['a20'] + C['a21'] * mag + C['a22'] * np.power(mag, 2) +
-         C['a23'] * np.power(mag, 3)) * np.power(R, 4))
+    return ((C['a20'] + C['a21'] * mag + C['a22'] * mag ** 2 +
+             C['a23'] * mag ** 3) * R ** 4)
 
 
 def _compute_term_r(C, mag, rrup):
@@ -134,18 +117,12 @@ def _compute_term_r(C, mag, rrup):
     Compute distance term
     d = log10(max(R,rmin));
     """
-    if mag > M1:
-        rrup_min = 0.55
+    rrup_min = np.where(
+        mag > M1,
+        .55,
+        np.where(mag > M2, -2.80 * mag + 14.55, -0.295 * mag + 2.65))
 
-    elif mag > M2:
-        rrup_min = -2.80 * mag + 14.55
-
-    else:
-        rrup_min = -0.295 * mag + 2.65
-
-    R = np.maximum(rrup, rrup_min)
-
-    return np.log10(R)
+    return np.log10(np.maximum(rrup, rrup_min))
 
 
 def _get_stddevs(C, mag, c1_rrup, log_phi_ss, mean_phi_ss):
@@ -177,8 +154,8 @@ class EdwardsFah2013Alpine10Bars(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV, PGA, SA}
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    #: :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is total,
     #: Carlo Cauzzi - Personal Communication
@@ -198,7 +175,7 @@ class EdwardsFah2013Alpine10Bars(GMPE):
     #: confirmed by the Swiss GMPE group
     DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

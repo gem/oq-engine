@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,6 +26,7 @@ import numpy as np
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim import utils
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -47,12 +48,9 @@ def _compute_between_events_std(C_SIGMA, mag):
         tau = C_SIGMA['tau']
     else:
         # Heteroscedastic model:
-        if mag <= 4.0:
-            tau = C_SIGMA['tau1']
-        elif mag >= 5:
-            tau = C_SIGMA['tau2']
-        else:
-            tau = C_SIGMA['tau1'] + (C_SIGMA['tau2']-C_SIGMA['tau1'])*(mag-4.0)
+        tau = C_SIGMA['tau1'] + (C_SIGMA['tau2'] - C_SIGMA['tau1'])*(mag-4.0)
+        tau[mag <= 4.0] = C_SIGMA['tau1']
+        tau[mag >= 5] = C_SIGMA['tau2']
     return tau
 
 
@@ -67,10 +65,9 @@ def _get_distance_scaling_term(C, rval, mag):
     """
     Returns the distance scaling term of the GMPE described in equation 2
     """
-    r_adj = np.sqrt((rval ** 2.0) + (C["h"] ** 2.0))
-    return (
-        (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *
-        np.log10(r_adj / CONSTS["Rref"]))
+    r_adj = np.sqrt(rval ** 2.0 + C["h"] ** 2.0)
+    return (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) * np.log10(
+        r_adj / CONSTS["Rref"])
 
 
 def _get_magnitude_scaling_term(C, mag):
@@ -79,10 +76,9 @@ def _get_magnitude_scaling_term(C, mag):
     equation 3
     """
     dmag = mag - CONSTS["Mh"]
-    if mag <= CONSTS["Mh"]:
-        return C["b1"] * dmag + C["b2"] * (dmag ** 2.0)
-    else:
-        return C["b3"] * dmag
+    return np.where(mag <= CONSTS["Mh"],
+                    C["b1"] * dmag + C["b2"] * dmag**2,
+                    C["b3"] * dmag)
 
 
 _get_mean = CallableDict()
@@ -97,7 +93,7 @@ def _get_mean_1(kind, stress_drop, C, C_STRESS, ctx):
             _get_distance_scaling_term(C, ctx.rjb, ctx.mag) +
             _get_magnitude_scaling_term(C, ctx.mag) +
             _get_site_amplification_term(C, ctx.vs30) +
-            _get_style_of_faulting_term(C, ctx.rake))
+            _get_style_of_faulting_term(C, ctx))
 
 
 @_get_mean.add("rjb_stress")
@@ -108,7 +104,7 @@ def _get_mean_2(kind, stress_drop, C, C_STRESS, ctx):
     return (C["a"] +
             _get_magnitude_scaling_term(C, ctx.mag) +
             _get_distance_scaling_term(C, ctx.rjb, ctx.mag) +
-            _get_style_of_faulting_term(C, ctx.rake) +
+            _get_style_of_faulting_term(C, ctx) +
             _get_site_amplification_term(C, ctx.vs30) +
             _get_stress_term(C_STRESS, ctx.mag, stress_drop))
 
@@ -121,7 +117,7 @@ def _get_mean_3(kind, stress_drop, C, C_STRESS, ctx):
     return (C["a"] +
             _get_magnitude_scaling_term(C, ctx.mag) +
             _get_distance_scaling_term(C, ctx.repi, ctx.mag) +
-            _get_style_of_faulting_term(C, ctx.rake) +
+            _get_style_of_faulting_term(C, ctx) +
             _get_site_amplification_term(C, ctx.vs30))
 
 
@@ -133,7 +129,7 @@ def _get_mean_4(kind, stress_drop, C, C_STRESS, ctx):
     return (C["a"] +
             _get_magnitude_scaling_term(C, ctx.mag) +
             _get_distance_scaling_term(C, ctx.repi, ctx.mag) +
-            _get_style_of_faulting_term(C, ctx.rake) +
+            _get_style_of_faulting_term(C, ctx) +
             _get_site_amplification_term(C, ctx.vs30) +
             _get_stress_term(C_STRESS, ctx.mag, stress_drop))
 
@@ -183,15 +179,15 @@ def _get_stress_term(C, mag, norm_stress_drop):
     (2015)
     """
     if norm_stress_drop <= 1:
-        e = C['s0'] + C['s1'] * mag + C['s2'] * (mag**2) + \
-            C['s3'] * (mag**3) + C['s4'] * (mag**4)
+        e = C['s0'] + C['s1'] * mag + C['s2'] * mag**2 + \
+            C['s3'] * mag**3 + C['s4'] * mag**4
     else:
-        e = C['s5'] + C['s6'] * mag + C['s7'] * (mag**2) + \
-            C['s8'] * (mag**3) + C['s9'] * (mag**4)
+        e = C['s5'] + C['s6'] * mag + C['s7'] * mag**2 + \
+            C['s8'] * mag**3 + C['s9'] * mag**4
     return e * np.log10(norm_stress_drop)
 
 
-def _get_style_of_faulting_term(C, rake):
+def _get_style_of_faulting_term(C, ctx):
     """
     Returns the style-of-faulting term of the GMPE described in equation 4
     Fault type (Strike-slip, Normal, Thrust/reverse) is
@@ -202,17 +198,8 @@ def _get_style_of_faulting_term(C, rake):
     Note that the 'Unspecified' case is not considered in this class
     as rake is required as an input variable
     """
-    SS, NS, RS = 0.0, 0.0, 0.0
-    if np.abs(rake) <= 30.0 or (180.0 - np.abs(rake)) <= 30.0:
-        # strike-slip
-        SS = 1.0
-    elif rake > 30.0 and rake < 150.0:
-        # reverse
-        RS = 1.0
-    else:
-        # normal
-        NS = 1.0
-    return (C["f1"] * NS) + (C["f2"] * RS) + (C["f3"] * SS)
+    SS, NS, RS = utils.get_fault_type_dummy_variables(ctx)
+    return C["f1"] * NS + C["f2"] * RS + C["f3"] * SS
 
 
 class AmeriEtAl2017Rjb(GMPE):
@@ -237,7 +224,7 @@ class AmeriEtAl2017Rjb(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
@@ -255,13 +242,13 @@ class AmeriEtAl2017Rjb(GMPE):
 
     kind = "rjb"
 
-    def __init__(self, norm_stress_drop=0., adjustment_factor=1.0, **kwargs):
+    def __init__(self, norm_stress_drop=0.1, adjustment_factor=1.0, **kwargs):
         super().__init__(norm_stress_drop=norm_stress_drop,
                          adjustment_factor=adjustment_factor, **kwargs)
         self.norm_stress_drop = norm_stress_drop
         self.adjustment_factor = np.log(adjustment_factor)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -274,7 +261,7 @@ class AmeriEtAl2017Rjb(GMPE):
             imean = _get_mean(self.kind, self.norm_stress_drop,
                               C, C_STRESS, ctx)
             # Convert mean to ln(SA) with SA in units of g:
-            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            mean[m] = np.log(10.0 ** (imean - 2.0) / g)
             mean[m] += self.adjustment_factor
             s, t, p = _get_stddevs(self.kind, C_SIGMA, ctx.mag)
             sig[m] = np.log(10.0 ** s)
@@ -531,7 +518,7 @@ class AmeriEtAl2017RepiStressDrop(AmeriEtAl2017Repi):
 
     REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
-    def __init__(self, norm_stress_drop, adjustment_factor=1.0):
+    def __init__(self, norm_stress_drop=1.1, adjustment_factor=1.0):
         super().__init__(adjustment_factor=adjustment_factor)
         self.norm_stress_drop = norm_stress_drop
 

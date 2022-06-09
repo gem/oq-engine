@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -84,25 +84,30 @@ def _read(calc_id: int, datadir, mode, haz_id=None):
         jid = calc_id
     # look in the db
     job = dbcmd('get_job', jid)
-    if job and datadir is None:
+    if job:
         path = job.ds_calc_dir + '.hdf5'
         hc_id = job.hazard_calculation_id
         if not hc_id and haz_id:
             dbcmd('update_job', jid, {'hazard_calculation_id': haz_id})
             hc_id = haz_id
         if hc_id and hc_id != jid:
-            ppath = dbcmd('get_job', hc_id).ds_calc_dir + '.hdf5'
+            hc = dbcmd('get_job', hc_id)
+            if hc:
+                ppath = hc.ds_calc_dir + '.hdf5'
+            else:
+                ppath = os.path.join(ddir, 'calc_%d.hdf5' % hc_id)
     else:  # when using oq run there is no job in the db
         path = os.path.join(ddir, 'calc_%s.hdf5' % jid)
     return DataStore(path, ppath, mode)
 
 
-def read(calc_id, mode='r', datadir=None, parentdir=None):
+def read(calc_id, mode='r', datadir=None, parentdir=None, read_parent=True):
     """
     :param calc_id: calculation ID or filename
     :param mode: 'r' or 'w'
     :param datadir: the directory where to look
     :param parentdir: the datadir of the parent calculation
+    :param read_parent: read the parent calculation if it is there
     :returns: the corresponding DataStore instance
 
     Read the datastore, if it exists and it is accessible.
@@ -115,11 +120,12 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
         hc_id = dstore['oqparam'].hazard_calculation_id
     except KeyError:  # no oqparam
         hc_id = None
-    if hc_id:
-        # assume the parent datadir is the same of the children datadir
-        pdir = parentdir or os.path.dirname(dstore.filename)
-        dstore.ppath = os.path.join(pdir, 'calc_%d.hdf5' % hc_id)
-        dstore.parent = read(hc_id, datadir=pdir)
+    if read_parent and hc_id and parentdir:
+        dstore.ppath = os.path.join(parentdir, 'calc_%d.hdf5' % hc_id)
+        dstore.parent = DataStore(dstore.ppath, mode='r')
+    elif read_parent and hc_id:
+        dstore.parent = _read(hc_id, datadir, 'r')
+        dstore.ppath = dstore.parent.filename
     return dstore.open(mode)
 
 
@@ -133,11 +139,10 @@ def new(calc_id, oqparam, datadir=None, mode=None):
     :returns:
         a DataStore instance associated to the given calc_id
     """
-    haz_id = None if oqparam is None else oqparam.hazard_calculation_id
-    dstore = _read(calc_id, datadir, mode, haz_id)
-    if isinstance(oqparam.risk_imtls, dict):
-        # always except in case_shakemap
-        dstore['oqparam'] = oqparam
+    dstore = _read(calc_id, mode, datadir)
+    dstore['oqparam'] = oqparam
+    if oqparam.hazard_calculation_id:
+        dstore.ppath = read(calc_id, 'r', datadir).ppath
     return dstore
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,11 +21,11 @@ from numpy.testing import assert_almost_equal as aae
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10, case_11, case_12, case_13, case_14, case_15,
-    case_16, case_17, case_18, case_19)
+    case_16, case_17, case_18, case_19, case_20)
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
-from openquake.calculators.views import text_table
+from openquake.calculators.views import text_table, view
 from openquake.calculators.tests import CalculatorTestCase
 
 
@@ -81,7 +81,7 @@ class ScenarioTestCase(CalculatorTestCase):
         medians_pga = medians_dict['PGA']
         medians_sa = medians_dict['SA(0.1)']
         aae(medians_pga, [0.48155582, 0.21123045, 0.14484586], decimal=2)
-        aae(medians_sa, [0.93913177, 0.40880148, 0.2692668], decimal=2)
+        aae(medians_sa, [0.92, 0.41, 0.27], decimal=2)
 
     def test_case_4(self):
         medians = self.medians(case_4)['PGA']
@@ -149,6 +149,10 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqual(4*(counts_by_eid.sid == 4).sum(), 400)
         self.assertEqual(6*(counts_by_eid.sid == 6).sum(), 600)
 
+        # check the branches
+        tbl = text_table(view('branches', self.calc.datastore))
+        self.assertEqualFiles('expected/branches.org', gettemp(tbl))
+
     def test_case_14(self):
         # new Swiss GMPEs
         self.run_calc(case_14.__file__, 'job.ini')
@@ -177,7 +181,10 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_17(self):
         # CSV exposure in latin1
         self.run_calc(case_17.__file__, 'job.ini')
-        tbl = text_table(self.calc.datastore['agg_keys'][:], ext='org')
+        rows = [row.decode('utf8').split(',')
+                for row in self.calc.datastore['agg_keys'][:]]
+        header = self.calc.oqparam.aggregate_by
+        tbl = text_table(rows, header=header, ext='org')
         self.assertEqualFiles('agg_keys.org', gettemp(tbl))
 
     def test_case_18(self):
@@ -189,3 +196,16 @@ class ScenarioTestCase(CalculatorTestCase):
         # reading CSV ruptures with missing TRTs
         self.run_calc(case_19.__file__, 'job.ini')
         self.assertEqual(len(self.calc.datastore['rupgeoms']), 1)
+
+    def test_case_20(self):
+        # epsilon_tau
+        self.run_calc(case_20.__file__, 'job.ini')
+        old = self.calc.datastore.read_df('gmf_data/sigma_epsilon', 'eid')
+        self.run_calc(case_20.__file__, 'job.ini',
+                      gsim_logic_tree_file='epsilon_tau.xml')
+        aae(old.sig_inter_PGA.unique(), 0.3501)
+        aae(old.eps_inter_PGA.mean(), -0.025970912)
+        # `set_between_epsilon` sets `sig_inter` to zero
+        new = self.calc.datastore.read_df('gmf_data/sigma_epsilon', 'eid')
+        aae(new.sig_inter_PGA.unique(), 0)
+        aae(new.eps_inter_PGA.mean(), -0.025970920)

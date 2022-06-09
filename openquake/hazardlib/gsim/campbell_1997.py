@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,14 +30,10 @@ def get_fault_term(rake):
     """
     Returns coefficient for faulting style (pg 156)
     """
-    rake = rake + 360 if rake < 0 else rake
-
-    if (rake >= 45) & (rake <= 135):
-        f = 1.
-    elif (rake >= 225) & (rake <= 315):
-        f = 0.5
-    else:
-        f = 0.
+    rake = np.where(rake < 0, rake + 360, rake)
+    f = np.zeros_like(rake)
+    f[(rake >= 45) & (rake <= 135)] = 1.
+    f[(rake >= 225) & (rake <= 315)] = .5
     return f
 
 
@@ -70,7 +66,7 @@ class Campbell1997(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA}
 
     #: Supported intensity measure component is the horizontal component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total, see equation 4, pg 164
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -93,7 +89,7 @@ class Campbell1997(GMPE):
     #: (web.stanford.edu/~bakerjw/GMPEs/C_1997_horiz.m), which also has no
     #: verification tables.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

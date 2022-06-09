@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -54,8 +54,11 @@ def _find_turning_points(mesh, tol=1.0):
         Column indices of turning points (as numpy array)
     """
     assert isinstance(mesh, RectangularMesh)
-    azimuths = geodetic.azimuth(mesh.lons[0, :-1], mesh.lats[0, :-1],
-                                mesh.lons[0, 1:], mesh.lats[0, 1:])
+    idx1 = numpy.isfinite(mesh.lons[0, :-1])
+    idx2 = numpy.isfinite(mesh.lons[0, 1:])
+    idx = numpy.where(numpy.logical_and(idx1, idx2))[0]
+    azimuths = geodetic.azimuth(mesh.lons[0, idx], mesh.lats[0, idx],
+                                mesh.lons[0, idx+1], mesh.lats[0, idx+1])
     naz = len(azimuths)
     azim = azimuths[0]
     # Retain initial point
@@ -113,6 +116,7 @@ class BaseSurface:
 
     def __init__(self, mesh=None):
         self.mesh = mesh
+        self.suid = None
 
     def get_min_distance(self, mesh):
         """

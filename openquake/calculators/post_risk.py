@@ -16,14 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import getpass
 import logging
 import itertools
 import numpy
 import pandas
 
 from openquake.baselib import general, parallel, python3compat
-from openquake.commonlib import datastore
-from openquake.risklib import scientific
+from openquake.commonlib import datastore, logs
+from openquake.risklib import asset, scientific
+from openquake.engine import engine
 from openquake.calculators import base, views
 
 U8 = numpy.uint8
@@ -153,6 +156,10 @@ def fix_dtypes(dic):
 
 
 def build_aggcurves(items, builder):
+    """
+    :param items: a list of pairs ((agg_id, rlz_id, loss_id), losses)
+    :param builder: a :class:`LossCurvesMapsBuilder` instance
+    """
     dic = general.AccumDict(accum=[])
     for (agg_id, rlz_id, loss_id), data in items:
         curve = {kind: builder.build_curve(data[kind], rlz_id)
@@ -175,6 +182,10 @@ def store_agg(dstore, rbe_df, num_events):
     size = dstore.getsize('risk_by_event')
     logging.info('Building aggrisk from %s of risk_by_event',
                  general.humansize(size))
+    if oq.investigation_time:  # event based
+        tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
+        if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
+            tr /= len(dstore['weights'])
     rlz_id = dstore['events']['rlz_id']
     if len(num_events) > 1:
         rbe_df['rlz_id'] = rlz_id[rbe_df.event_id.to_numpy()]
@@ -198,10 +209,12 @@ def store_agg(dstore, rbe_df, num_events):
             ndamaged = sum(df[col].sum() for col in dmgs)
             aggrisk['dmg_0'].append(aggnumber[agg_id] - ndamaged / ne)
         for col in columns:
-            aggrisk[col].append(df[col].sum() / ne)
+            agg = df[col].sum()
+            aggrisk[col].append(agg * tr if oq.investigation_time else agg/ne)
     fix_dtypes(aggrisk)
-    dstore.create_df('aggrisk', pandas.DataFrame(aggrisk),
-                     limit_states=' '.join(oq.limit_states))
+    aggrisk = pandas.DataFrame(aggrisk)
+    dstore.create_df(
+        'aggrisk', aggrisk, limit_states=' '.join(oq.limit_states))
 
     loss_kinds = [col for col in columns if not col.startswith('dmg_')]
     if oq.investigation_time and loss_kinds:  # build aggcurves
@@ -220,6 +233,7 @@ def store_agg(dstore, rbe_df, num_events):
                          limit_states=' '.join(oq.limit_states),
                          units=dstore['cost_calculator'].get_units(
                              oq.loss_types))
+    return aggrisk
 
 
 @base.calculators.add('post_risk')
@@ -233,16 +247,15 @@ class PostRiskCalculator(base.RiskCalculator):
         self.reaggreate = False
         if oq.hazard_calculation_id and not ds.parent:
             ds.parent = datastore.read(oq.hazard_calculation_id)
-            self.aggkey = base.save_agg_values(
+            base.save_agg_values(
                 ds, self.assetcol, oq.loss_types, oq.aggregate_by)
             aggby = ds.parent['oqparam'].aggregate_by
-            self.reaggreate = aggby and oq.aggregate_by != aggby
+            self.reaggreate = (
+                aggby and oq.aggregate_by and oq.aggregate_by[0] not in aggby)
             if self.reaggreate:
+                [names] = aggby
                 self.num_tags = dict(
-                    zip(aggby, self.assetcol.tagcol.agg_shape(aggby)))
-        else:
-            assetcol = ds['assetcol']
-            self.aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)
+                    zip(names, self.assetcol.tagcol.agg_shape(names)))
         self.L = len(oq.loss_types)
         if self.R > 1:
             self.num_events = numpy.bincount(
@@ -260,6 +273,7 @@ class PostRiskCalculator(base.RiskCalculator):
                     'eff_time=%s is too small to compute loss curves',
                     eff_time)
                 return
+        logging.info('Aggregating by %s', oq.aggregate_by)
         if 'source_info' in self.datastore and 'risk' in oq.calculation_mode:
             logging.info('Building the src_loss_table')
             with self.monitor('src_loss_table', measuremem=True):
@@ -268,7 +282,7 @@ class PostRiskCalculator(base.RiskCalculator):
                 self.datastore.set_shape_descr('src_loss_table',
                                                source=source_ids,
                                                loss_type=oq.loss_types)
-        K = len(self.aggkey) if oq.aggregate_by else 0
+        K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
         rbe_df = self.datastore.read_df('risk_by_event')
         if self.reaggreate:
             idxs = numpy.concatenate([
@@ -277,7 +291,7 @@ class PostRiskCalculator(base.RiskCalculator):
             rbe_df['agg_id'] = idxs[rbe_df['agg_id'].to_numpy()]
             rbe_df = rbe_df.groupby(
                 ['event_id', 'loss_id', 'agg_id']).sum().reset_index()
-        store_agg(self.datastore, rbe_df, self.num_events)
+        self.aggrisk = store_agg(self.datastore, rbe_df, self.num_events)
         return 1
 
     def post_execute(self, dummy):
@@ -295,37 +309,52 @@ class PostRiskCalculator(base.RiskCalculator):
                         'A big variation in the %s loss curve is expected: try'
                         '\n$ oq show delta_loss:%d %d', ln, li,
                         self.datastore.calc_id)
-        if not self.aggkey:
-            return
-        logging.info('Sanity check on agg_losses')
-        for kind in 'rlzs', 'stats':
-            avg = 'avg_losses-' + kind
-            agg = 'agg_losses-' + kind
-            if agg not in self.datastore:
-                return
-            if kind == 'rlzs':
-                kinds = ['rlz-%d' % rlz for rlz in range(self.R)]
-            else:
-                kinds = self.oqparam.hazard_stats()
-            for li in range(self.L):
-                ln = self.oqparam.loss_types[li]
-                for r, k in enumerate(kinds):
-                    tot_losses = self.datastore[agg][-1, r, li]
-                    agg_losses = self.datastore[agg][:-1, r, li].sum()
-                    if kind == 'rlzs' or k == 'mean':
-                        if not numpy.allclose(
-                                agg_losses, tot_losses, rtol=.001):
-                            logging.warning(
-                                'Inconsistent total losses for %s, %s: '
-                                '%s != %s', ln, k, agg_losses, tot_losses)
-                        try:
-                            avg_losses = self.datastore[avg][:, r, li]
-                        except KeyError:
-                            continue
-                        # check on the sum of the average losses
-                        sum_losses = avg_losses.sum()
-                        if not numpy.allclose(
-                                sum_losses, tot_losses, rtol=.001):
-                            logging.warning(
-                                'Inconsistent sum_losses for %s, %s: '
-                                '%s != %s', ln, k, sum_losses, tot_losses)
+        logging.info('Sanity check on avg_losses and aggrisk')
+        if 'avg_losses-rlzs' in self.datastore:
+            url = ('https://docs.openquake.org/oq-engine/advanced/'
+                   'addition-is-non-associative.html')
+            K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
+            aggrisk = self.aggrisk[self.aggrisk.agg_id == K]
+            avg_losses = self.datastore['avg_losses-rlzs'][:].sum(axis=0)
+            # shape (R, L)
+            for _, row in aggrisk.iterrows():
+                ri, li = int(row.rlz_id), int(row.loss_id)
+                # check on the sum of the average losses
+                avg = avg_losses[ri, li]
+                agg = row.loss
+                if not numpy.allclose(avg, agg, rtol=.1):
+                    # a serious discrepancy is an error
+                    raise ValueError("agg != sum(avg) [%s]: %s %s" %
+                                     (oq.loss_types[li], agg, avg))
+                if not numpy.allclose(avg, agg, rtol=.001):
+                    # a small discrepancy is expected
+                    logging.warning(
+                        'Due to rounding errors inherent in floating-point '
+                        'arithmetic, agg_losses != sum(avg_losses) [%s]: '
+                        '%s != %s\nsee %s', oq.loss_types[li], agg, avg, url)
+
+
+def post_aggregate(calc_id: int, aggregate_by):
+    """
+    Re-run the postprocessing after an event based risk calculation
+    """
+    parent = datastore.read(calc_id)
+    oqp = parent['oqparam']
+    aggby = aggregate_by.split(',')
+    if aggby and aggby[0] not in asset.tagset(oqp.aggregate_by):
+        raise ValueError('%r not in %s' % (aggby, oqp.aggregate_by))
+    dic = dict(
+        calculation_mode='reaggregate',
+        description=oqp.description + '[aggregate_by=%s]' % aggregate_by,
+        user_name=getpass.getuser(), is_running=1, status='executing',
+        pid=os.getpid(), hazard_calculation_id=calc_id)
+    log = logs.init('job', dic, logging.INFO)
+    if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
+        os.environ['OQ_DISTRIBUTE'] = 'processpool'
+    with log:
+        oqp.hazard_calculation_id = parent.calc_id
+        parallel.Starmap.init()
+        prc = PostRiskCalculator(oqp, log.calc_id)
+        prc.assetcol = parent['assetcol']
+        prc.run(aggregate_by=[aggby])
+        engine.expose_outputs(prc.datastore)

@@ -18,6 +18,7 @@ Contents:
    common-mistakes
    hazard
    risk
+   logic-trees
    effective-realizations
    sslt
    sampling
@@ -35,7 +36,11 @@ Contents:
    point-source-gridding
    asset-site-association
    event-based-damage
+   conditional-spectrum
+   correlation
+   shakemaps
    risk-features
+   risk-profiles
    developing
    architecture
    oq-commands

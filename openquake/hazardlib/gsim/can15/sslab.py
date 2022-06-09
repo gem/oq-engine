@@ -43,7 +43,7 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
 
     delta = 0.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

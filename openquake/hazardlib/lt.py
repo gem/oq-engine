@@ -17,11 +17,12 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import copy
+import itertools
 import collections
 import numpy
 
-from openquake.baselib.general import CallableDict
-from openquake.hazardlib import geo, source as ohs
+from openquake.baselib.general import CallableDict, BASE183
+from openquake.hazardlib import geo
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 from openquake.hazardlib import valid
@@ -93,8 +94,7 @@ def trucMFDFromSlip_absolute(utype, node, filename):
 
 @parse_uncertainty.add('setMSRAbsolute')
 def setMSR_absolute(utype, node, filename):
-    tmps = valid.mag_scale_rel(node.text)
-    return valid.SCALEREL[tmps]()
+    return valid.mag_scale_rel(node.text)
 
 
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')
@@ -126,7 +126,7 @@ def complexGeom(utype, node, filename):
 @parse_uncertainty.add('characteristicFaultGeometryAbsolute')
 def charGeom(utype, node, filename):
     surfaces = []
-    for geom_node in node.surface:
+    for i, geom_node in enumerate(node.surface):
         if "simpleFaultGeometry" in geom_node.tag:
             _validate_simple_fault_geometry(utype, geom_node, filename)
             trace, usd, lsd, dip, spacing = parse_uncertainty(
@@ -149,6 +149,7 @@ def charGeom(utype, node, filename):
             top_left, top_right, bottom_right, bottom_left = tuple(nodes)
             surface = geo.PlanarSurface.from_corner_points(
                 top_left, top_right, bottom_right, bottom_left)
+            surface.suid = f'{i}'
             surfaces.append(surface)
         else:
             raise LogicTreeError(
@@ -308,6 +309,11 @@ def _setLSD(utype, source, value):
     source.modify('set_lower_seismogenic_depth', dict(lsd=float(value)))
 
 
+@apply_uncertainty.add('dummy')  # do nothing
+def _dummy(utype, source, value):
+    pass
+
+
 # ######################### apply_uncertainties ########################### #
 
 def apply_uncertainties(bset_values, src_group):
@@ -335,7 +341,7 @@ def apply_uncertainties(bset_values, src_group):
                             'for %s' % src)
                     for br in bset.branches:
                         newsrc = copy.deepcopy(src)
-                        newsrc.scaling_rate = br.weight
+                        newsrc.scaling_rate = br.weight  # used in lt_test.py
                         apply_uncertainty(
                             bset.uncertainty_type, newsrc, br.value)
                         srcs.append(newsrc)
@@ -396,7 +402,7 @@ def _cdf(weighted_objects):
     weights = []
     for obj in weighted_objects:
         w = obj.weight
-        if isinstance(obj.weight, float):
+        if isinstance(obj.weight, (float, int)):
             weights.append(w)
         else:
             weights.append(w['weight'])
@@ -481,6 +487,16 @@ class Branch(object):
         self.value = value
         self.bset = None
 
+    @property
+    def id(self):
+        return self.branch_id if len(self.branch_id) == 1 else self.short_id
+
+    def is_leaf(self):
+        """
+        :returns: True if the branch has no branchset or has a dummy branchset
+        """
+        return self.bset is None or self.bset.uncertainty_type == 'dummy'
+
     def __repr__(self):
         if self.bset:
             return '%s%s' % (self.branch_id, self.bset)
@@ -544,16 +560,14 @@ class BranchSet(object):
             This filter is required for absolute uncertainties (also
             only one source can be used for those). Value should be the list
             of source ids. Can be used only in source model logic tree.
-        applyToSourceType
-            Can be used in the source model logic tree definition. Allows
-            to specify to which source type (area, point, simple fault,
-            complex fault) the uncertainty applies to.
         applyToTectonicRegionType
             Can be used in both the source model and GMPE logic trees. Allows
             to specify to which tectonic region type (Active Shallow Crust,
             Stable Shallow Crust, etc.) the uncertainty applies to. This
             filter is required for all branchsets in GMPE logic tree.
     """
+    applied = None  # to be replaced by a string in commonlib.logictree
+
     def __init__(self, uncertainty_type, ordinal=0, filters=None,
                  collapsed=False):
         self.uncertainty_type = uncertainty_type
@@ -594,11 +608,11 @@ class BranchSet(object):
             branches) and list of path's :class:`Branch` objects. Total sum
             of all paths' weights is 1.0
         """
-        for path in self._enumerate_paths([]):
+        for path_branch in self._enumerate_paths([]):
             flat_path = []
             weight = 1.0
-            while path:
-                path, branch = path
+            while path_branch:
+                path_branch, branch = path_branch
                 weight *= branch.weight
                 flat_path.append(branch)
             yield weight, flat_path[::-1]
@@ -616,15 +630,15 @@ class BranchSet(object):
         else:
             branches = self.branches
         for branch in branches:
-            path = [prefix_path, branch]
-            if branch.bset is not None:
-                yield from branch.bset._enumerate_paths(path)
+            path_branch = [prefix_path, branch]
+            if branch.bset is not None:  # dummies can be branchpoints
+                yield from branch.bset._enumerate_paths(path_branch)
             else:
-                yield path
+                yield path_branch
 
     def __getitem__(self, branch_id):
         """
-        Return :class:`Branch` object belonging to this branch set with id
+        Return :class:`Branch` object belonging to this branchset with id
         equal to ``branch_id``.
         """
         for branch in self.branches:
@@ -633,7 +647,6 @@ class BranchSet(object):
         raise KeyError(branch_id)
 
     def filter_source(self, source):
-        # pylint: disable=R0911,R0912
         """
         Apply filters to ``source`` and return ``True`` if uncertainty should
         be applied to it.
@@ -642,29 +655,11 @@ class BranchSet(object):
             if key == 'applyToTectonicRegionType':
                 if value != source.tectonic_region_type:
                     return False
-            elif key == 'applyToSourceType':
-                if value == 'area':
-                    if not isinstance(source, ohs.AreaSource):
-                        return False
-                elif value == 'point':
-                    # area source extends point source
-                    if (not isinstance(source, ohs.PointSource)
-                            or isinstance(source, ohs.AreaSource)):
-                        return False
-                elif value == 'simpleFault':
-                    if not isinstance(source, ohs.SimpleFaultSource):
-                        return False
-                elif value == 'complexFault':
-                    if not isinstance(source, ohs.ComplexFaultSource):
-                        return False
-                elif value == 'characteristicFault':
-                    if not isinstance(source, ohs.CharacteristicFaultSource):
-                        return False
-                else:
-                    raise AssertionError("unknown source type '%s'" % value)
             elif key == 'applyToSources':
                 if source and source.source_id not in value:
                     return False
+            elif key == 'applyToBranches':
+                pass
             else:
                 raise AssertionError("unknown filter '%s'" % key)
         # All filters pass, return True.
@@ -681,11 +676,23 @@ class BranchSet(object):
         bset = self
         while ltpath:
             brid, ltpath = ltpath[0], ltpath[1:]
-            pairs.append((bset, bset[brid].value))
-            bset = bset[brid].bset
-            if bset is None:
+            br = bset[brid]
+            pairs.append((bset, br.value))
+            if br.is_leaf():
                 break
+            else:
+                bset = br.bset
         return pairs
+
+    def to_list(self):
+        """
+        :returns: a literal list describing the branchset
+        """
+        atb = self.filters.get("applyToBranches", [])
+        lst = [self.uncertainty_type, atb]
+        for br in self.branches:
+            lst.append([br.branch_id, '...', br.weight])
+        return lst
 
     def __len__(self):
         return len(self.branches)
@@ -695,3 +702,149 @@ class BranchSet(object):
 
     def __repr__(self):
         return '<%s(%d)>' % (self.uncertainty_type, len(self))
+
+
+# NB: this function cannot be used with monster logic trees like the one for
+# South Africa (ZAF), since it is too slow; the engine use a trick instead
+def count_paths(branches):
+    """
+    :param branches: a list of branches (endpoints or nodes)
+    :returns: the number of paths in the branchset (slow)
+    """
+    return sum(1 if br.bset is None else count_paths(br.bset.branches)
+               for br in branches)
+
+
+dummy_counter = itertools.count(1)
+
+
+def dummy_branchset():
+    """
+    :returns: a dummy BranchSet with a single branch
+    """
+    bset = BranchSet('dummy')
+    bset.branches = [Branch('dummy%d' % next(dummy_counter), '.', 1, None)]
+    bset.branches[0].short_id = '.'
+    return bset
+
+
+class Realization(object):
+    """
+    Generic Realization object with attributes value, weight, ordinal, lt_path,
+    samples.
+    """
+    def __init__(self, value, weight, ordinal, lt_path, samples=1):
+        self.value = value
+        self.weight = weight
+        self.ordinal = ordinal
+        self.lt_path = lt_path
+        self.samples = samples
+
+    @property
+    def pid(self):
+        return '~'.join(self.lt_path)  # path ID
+
+    def __repr__(self):
+        samples = ', samples=%d' % self.samples if self.samples > 1 else ''
+        return '<%s #%d %s, path=%s, weight=%s%s>' % (
+            self.__class__.__name__, self.ordinal, self.value,
+            '~'.join(self.lt_path), self.weight, samples)
+
+
+def add_path(bset, bsno, brno, num_prev, tot, paths):
+    for br in bset.branches:
+        br.short_id = BASE183[brno]
+        path = ['*'] * tot
+        path[bsno] = br.id
+        paths.append(''.join(path))
+        brno += 1
+    if 'applyToBranches' not in bset.filters or len(
+            bset.filters['applyToBranches']) == num_prev:
+        return 0
+    return brno
+
+
+class CompositeLogicTree(object):
+    """
+    Build a logic tree from a set of branches by automatically
+    setting the branch IDs.
+    """
+    def __init__(self, branchsets):
+        self.branchsets = branchsets
+        self.basepaths = self._attach_to_branches()
+
+    def _attach_to_branches(self):
+        # attach branchsets to branches depending on the applyToBranches
+        # attribute; also attaches dummy branchsets to dummy branches.
+        paths = []
+        nb = len(self.branchsets)
+        brno = add_path(self.branchsets[0], 0, 0, 0, nb, paths)
+        previous_branches = self.branchsets[0].branches
+        branchdic = {br.branch_id: br for br in previous_branches}
+        for i, bset in enumerate(self.branchsets[1:]):
+            for br in bset.branches:
+                if br.branch_id != '.' and br.branch_id in branchdic:
+                    raise NameError('The branch ID %s is duplicated'
+                                    % br.branch_id)
+                branchdic[br.branch_id] = br
+            dummies = []
+            prev_ids = [pb.branch_id for pb in previous_branches]
+            app2brs = list(bset.filters.get('applyToBranches', '')) or prev_ids
+            if app2brs != prev_ids:
+                for branch_id in app2brs:
+                    # NB: if branch_id has already a branchset it is overridden
+                    branchdic[branch_id].bset = bset
+                for brid in prev_ids:
+                    br = branchdic[brid]
+                    if brid not in app2brs:
+                        br.bset = dummy = dummy_branchset()
+                        [dummybranch] = dummy.branches
+                        branchdic[dummybranch.branch_id] = dummybranch
+                        dummies.append(dummybranch)
+            else:  # apply to all previous branches
+                for branch in previous_branches:
+                    branch.bset = bset
+            brno = add_path(bset, i+1, brno, len(previous_branches), nb, paths)
+            previous_branches = bset.branches + dummies
+        return paths
+
+    def __iter__(self):
+        nb = len(self.branchsets)
+        ordinal = 0
+        for weight, branches in self.branchsets[0].enumerate_paths():
+            value = [br.value for br in branches]
+            lt_path = ''.join(branch.id for branch in branches)
+            yield Realization(value, weight, ordinal, lt_path.ljust(nb, '.'))
+            ordinal += 1
+
+    def get_all_paths(self):
+        return [rlz.lt_path for rlz in self]
+
+    def __repr__(self):
+        return '<%s>' % self.branchsets
+
+
+def build(*bslists):
+    """
+    :param bslists: a list of lists describing branchsets
+    :returns: a `CompositeLogicTree` instance
+
+    >>> lt = build(['sourceModel', '',
+    ...              ['A', 'common1', 0.6],
+    ...              ['B', 'common2', 0.4]],
+    ...           ['extendModel', '',
+    ...              ['C', 'extra1', 0.6],
+    ...              ['D', 'extra2', 0.2],
+    ...              ['E', 'extra2', 0.2]])
+    >>> lt.get_all_paths()
+    ['AC', 'AD', 'AE', 'BC', 'BD', 'BE']
+    """
+    bsets = []
+    for i, (utype, applyto, *brlists) in enumerate(bslists):
+        branches = []
+        for brid, value, weight in brlists:
+            branches.append(Branch('bs%02d' % i, brid, weight, value))
+        bset = BranchSet(utype, i, dict(applyToBranches=applyto))
+        bset.branches = branches
+        bsets.append(bset)
+    return CompositeLogicTree(bsets)

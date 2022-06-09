@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,7 @@ import numpy as np
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim import utils
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
@@ -50,11 +51,10 @@ def _compute_magnitude(ctx, C):
     """
     m_h = 6.75
     b_3 = 0.0
-    if ctx.mag <= m_h:
-        return C["e1"] + (C['b1'] * (ctx.mag - m_h)) +\
-            (C['b2'] * (ctx.mag - m_h) ** 2)
-    else:
-        return C["e1"] + (b_3 * (ctx.mag - m_h))
+    return np.where(
+        ctx.mag <= m_h,
+        C["e1"] + C['b1'] * (ctx.mag - m_h) + C['b2'] * (ctx.mag - m_h) ** 2,
+        C["e1"] + b_3 * (ctx.mag - m_h))
 
 
 def _get_delta(coeffs, imt, mag):
@@ -63,36 +63,12 @@ def _get_delta(coeffs, imt, mag):
     return tmp
 
 
-def _get_fault_type_dummy_variables(ctx):
-    """
-    Fault type (Strike-slip, Normal, Thrust/reverse) is
-    derived from rake angle.
-    Rakes angles within 30 of horizontal are strike-slip,
-    angles from 30 to 150 are reverse, and angles from
-    -30 to -150 are normal.
-    Note that the 'Unspecified' case is not considered,
-    because rake is always given.
-    """
-    U, SS, NS, RS = 0, 0, 0, 0
-    if np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
-        # strike-slip
-        SS = 1
-    elif ctx.rake > 30.0 and ctx.rake < 150.0:
-        # reverse
-        RS = 1
-    else:
-        # normal
-        NS = 1
-    return U, SS, NS, RS
-
-
 def _get_mechanism(ctx, C):
     """
     Compute the fifth term of the equation 1 described on paragraph :
     Get fault type dummy variables, see Table 1
     """
-    U, SS, NS, RS = _get_fault_type_dummy_variables(ctx)
-
+    SS, NS, RS = utils.get_fault_type_dummy_variables(ctx)
     return C['f1'] * NS + C['f2'] * RS + C['f3'] * SS
 
 
@@ -107,8 +83,8 @@ def _get_site_amplification(ctx, C):
     """
     ssa, ssb, ssc, ssd, sse = _get_site_type_dummy_variables(ctx)
 
-    return (C['sA'] * ssa) + (C['sB'] * ssb) + (C['sC'] * ssc) + \
-        (C['sD'] * ssd) + (C['sE'] * sse)
+    return (C['sA'] * ssa + C['sB'] * ssb + C['sC'] * ssc +
+            C['sD'] * ssd + C['sE'] * sse)
 
 
 def _get_site_type_dummy_variables(ctx):
@@ -170,7 +146,7 @@ class BindiEtAl2011(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, page 1904
@@ -188,7 +164,7 @@ class BindiEtAl2011(GMPE):
 
     sgn = 0
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -35,11 +35,7 @@ def _get_mean(C, mag, rake, dip, rrup, rjb):
     f3 = _compute_faulting_mechanism(C, rake, dip)
     f4 = _compute_far_source_soil_effect(C)
     f5 = _compute_hanging_wall_effect(C, rjb, rrup, dip, mag)
-
-    mean = (
-        C['c1'] + f1 + C['c4'] * np.log(np.sqrt(f2)) + f3 + f4 + f5)
-
-    return mean
+    return C['c1'] + f1 + C['c4'] * np.log(np.sqrt(f2)) + f3 + f4 + f5
 
 
 def _compute_magnitude_scaling(C, mag):
@@ -58,9 +54,8 @@ def _compute_distance_scaling(C, mag, rrup):
     """
     g = C['c5'] + C['c6'] * 0.5 + C['c7'] * 0.5
 
-    return (
-        rrup ** 2 +
-        (np.exp(C['c8'] * mag + C['c9'] * (8.5 - mag) ** 2) * g) ** 2)
+    return rrup ** 2 + (np.exp(
+        C['c8'] * mag + C['c9'] * (8.5 - mag) ** 2) * g) ** 2
 
 
 def _compute_faulting_mechanism(C, rake, dip):
@@ -74,10 +69,9 @@ def _compute_faulting_mechanism(C, rake, dip):
     (dip <=45) and rake in (22.5, 157.5)
     """
     # flag for reverse faulting
-    frv = float((dip > 45) and (22.5 <= rake <= 157.5))
+    frv = (dip > 45) & (22.5 <= rake) & (rake <= 157.5)
     # flag for thrust faulting
-    fth = float((dip <= 45) and (22.5 <= rake <= 157.5))
-
+    fth = (dip <= 45) & (22.5 <= rake) & (rake <= 157.5)
     return C['c10'] * frv + C['c11'] * fth
 
 
@@ -100,11 +94,10 @@ def _compute_hanging_wall_effect(C, rjb, rrup, dip, mag):
     # manuscript, hw is computed only for rjb < 5). Again the 'firm rock'
     # is considered
     hw = np.zeros_like(rjb)
-    if dip <= 70.:
-        hw = (5. - rjb) / 5.
+    hw[dip <= 70.] = (5. - rjb[dip <= 70.]) / 5.
 
     # eq. 9
-    f_m = 1 if mag > 6.5 else mag - 5.5
+    f_m = np.clip(mag - 5.5, None, 1.)
 
     # eq. 10
     f_rrup = C['c15'] + np.zeros_like(rrup)
@@ -145,7 +138,7 @@ class CampbellBozorgnia2003NSHMP2007(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components (see paragraph 'Strong-Motion Database', page 316)
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is Total (see equations 11, 12 pp. 319
     #: 320)
@@ -164,7 +157,7 @@ class CampbellBozorgnia2003NSHMP2007(GMPE):
     #: page 319).
     REQUIRES_DISTANCES = {'rrup', 'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -174,11 +167,7 @@ class CampbellBozorgnia2003NSHMP2007(GMPE):
             C = self.COEFFS[imt]
             mean[m] = _get_mean(
                 C, ctx.mag, ctx.rake, ctx.dip, ctx.rrup, ctx.rjb)
-            sig[m] = C['c16']
-            if ctx.mag < 7.4:
-                sig[m] -= 0.07 * ctx.mag
-            else:
-                sig[m] -= 0.518
+            sig[m] = C['c16'] - np.where(ctx.mag < 7.4, 0.07 * ctx.mag, 0.518)
 
     #: Coefficient table (table 4, page 321. Coefficients for horizontal
     #: component and for corrected PGA)

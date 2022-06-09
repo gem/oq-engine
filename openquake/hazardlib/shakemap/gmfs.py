@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2021 GEM Foundation
+# Copyright (C) 2018-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,6 @@ import math
 import logging
 import numpy
 from scipy.stats import truncnorm, norm
-from scipy.sparse import diags
 from scipy import interpolate
 
 from openquake.baselib.general import CallableDict
@@ -145,7 +144,11 @@ def cholesky(spatial_cov, cross_corr):
     :returns: a triangular matrix of shape (M * N, M * N)
     """
     M, N = spatial_cov.shape[:2]
-    L = numpy.array([numpy.linalg.cholesky(spatial_cov[i]) for i in range(M)])
+    try:
+        L = numpy.array([numpy.linalg.cholesky(spatial_cov[i])
+                         for i in range(M)])
+    except numpy.linalg.LinAlgError as exc:
+        raise exc.__class__('%s: see https://docs.openquake.org/oq-engine/advanced/shakemaps.html#correlation' % exc)
     LLT = []
     for i in range(M):
         row = [L[i] @ L[j].T * cross_corr[i, j] for j in range(M)]
@@ -241,11 +244,12 @@ def calculate_gmfs_mmi(kind, shakemap, imts, Z, mu):
     return (Z.T * sig).T + mu
 
 
-def to_gmfs(shakemap, gmf_dict, site_effects, trunclevel,
+def to_gmfs(shakemap, gmf_dict, site_effects, truncation_level,
             num_gmfs, seed, imts=None):
     """
     :param shakemap: site coordinates with shakemap values
     :param gmf_dict: dictionary with info about the gmf calculation method
+    :param truncation_level: truncation level (float)
     :param site_effects: whether to apply site effects or not
     :param num_gmfs: E, amount of gmfs to generate
     :param seed: seed for generating numbers
@@ -264,12 +268,8 @@ def to_gmfs(shakemap, gmf_dict, site_effects, trunclevel,
     N = len(shakemap)   # number of sites
 
     # generate standard normal random variables of shape (M*N, E)
-    if trunclevel:
-        Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
-                          size=(M * N, num_gmfs), random_state=seed)
-    else:
-        Z = norm.rvs(loc=0, scale=1, size=(
-            M * N, num_gmfs), random_state=seed)
+    Z = truncnorm.rvs(-truncation_level, truncation_level, loc=0, scale=1,
+                      size=(M * N, num_gmfs), random_state=seed)
 
     # build array of mean values of shape (M*N, E)
     mu = numpy.array([numpy.ones(num_gmfs) * shakemap['val'][str(imt)][j]

@@ -100,8 +100,8 @@ custom site model file tailored to your exposure (see the section
 Collapsing of branches
 ----------------------
 
-When one is not interested so much in the uncertainty around the loss
-estimates, but more interested simply in the mean estimates, all of the
+When one is not interested in the uncertainty around the loss
+estimates and cares more about the mean estimates, all of the
 source model branches can be "collapsed" into one branch. Using the
 collapsed source model should yield the same mean hazard or loss
 estimates as using the full source model logic tree and then computing
@@ -114,6 +114,30 @@ GMPE logic tree and then computing the weighted mean of the individual
 branch results. This has become possible through the introduction of 
 `AvgGMPE feature <https://github.com/gem/oq-engine/blob/engine-3.9/openquake/qa_tests_data/classical/case_19/gmpe_logic_tree.xml#L26-L40>`_ in version 3.9.
 
+Using ``collect_rlzs=true`` in the risk calculation
+---------------------------------------------------
+
+Since version 3.12 the engine recognizes a flag ``collect_rlzs`` in
+the risk configuration file, which by default is false. When the flag
+is set to true, then the hazard realizations are collected together
+when computing the risk results and considered as one. This is
+possible only when the weights of the realizations are all equal,
+otherwise the engine raises an error. Collecting the realizations
+makes the calculation of the losses and loss curves much faster and
+more memory efficient. It is the recommended way to proceed when you
+are interested only in mean results.
+
+Note 1: when using sampling, ``collect_rlzs`` is implicitly set to
+``True``, so if you want to export the individual results per
+realization you must set explictly ``collect_rlzs=false``.
+
+Note 2: ``collect_rlzs`` is not the inverse of the ``individual rlsz``
+flag. The two flags are completely independent, one refers to risk
+and the other to hazard calculations.
+
+Note 3: ``collect_rlzs`` is completely ignored in the hazard part of
+the calculation, i.e. it does not affect at all the computation of the GMFs,
+only the computation of the risk curves.
 
 Splitting the calculation into subregions
 -----------------------------------------
@@ -123,14 +147,13 @@ models or ground motion models to the hazard or loss estimates,
 collapsing the logic trees into a single branch to reduce
 computational expense is not an option. But before going through the
 effort of trimming the logic trees, there is an interim step that must
-be explored, at least for large regions like the entire continental United States.
-This step is to geographically divide the large region into logical smaller
-subregions, such that the contribution to the hazard or losses in one
-subregion from the other subregions is negligibly small or even zero. 
-The effective realizations in each of the subregions will then be much 
-fewer than when trying to cover the entire large region in a single
-calculation.
-
+be explored, at least for large regions like the entire continental
+United States.  This step is to geographically divide the large region
+into logical smaller subregions, such that the contribution to the
+hazard or losses in one subregion from the other subregions is
+negligibly small or even zero.  The effective realizations in each of
+the subregions will then be much fewer than when trying to cover the
+entire large region in a single calculation.
 
 Trimming of the logic-trees or sampling of the branches
 -------------------------------------------------------

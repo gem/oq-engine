@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,10 +37,9 @@ def _compute_mean(C, mag, ztor, rrup):
     ge = 0.554
     gm = 1.414
 
-    mean = (
-        gc0 + ci + ztor * gch + C['gc1'] +
-        gm * mag + C['gc2'] * (10 - mag) ** 3 +
-        C['gc3'] * np.log(rrup + g4 * np.exp(ge * mag)))
+    mean = (gc0 + ci + ztor * gch + C['gc1'] +
+            gm * mag + C['gc2'] * (10 - mag) ** 3 +
+            C['gc3'] * np.log(rrup + g4 * np.exp(ge * mag)))
 
     return mean
 
@@ -67,7 +66,7 @@ class Geomatrix1993SSlabNSHMP2008(GMPE):
 
     #: Supported intensity measure component is the geometric mean of
     #: two horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -85,7 +84,7 @@ class Geomatrix1993SSlabNSHMP2008(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -94,7 +93,7 @@ class Geomatrix1993SSlabNSHMP2008(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = _compute_mean(C, ctx.mag, ctx.ztor, ctx.rrup)
-            sig[m] =  C['gc4'] + C['gc5'] * np.minimum(8., ctx.mag)
+            sig[m] = C['gc4'] + C['gc5'] * np.clip(ctx.mag, None, 8.)
 
     #: Coefficient table obtained from coefficient arrays and variables
     #: defined in subroutine getGeom in hazgridXnga2.f

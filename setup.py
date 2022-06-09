@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -56,38 +56,39 @@ PY_MODULES = ['openquake.commands.__main__']
 
 install_requires = [
     'setuptools',
-    'h5py >=2.10, <3.2',
-    'numpy >=1.18, <1.20',
-    'scipy >=1.3, <1.7',
-    'pandas >=0.25, <1.3',
-    'pyzmq <20.0',
-    'psutil >=2.0, <5.7',
-    'shapely >=1.7, <1.8',
+    'h5py >=2.10',
+    'numpy >=1.20',
+    'scipy >=1.3',
+    'pandas >=0.25',
+    'pyzmq >=19.0',
+    'psutil >=2.0',
+    'shapely >=1.7',
     'docutils >=0.11',
     'decorator >=4.3',
     'django >=3.2',
     'matplotlib',
-    'requests >=2.20, <3.0',
-    'pyshp ==1.2.3',
-    'toml',
+    'requests >=2.20',
+    'toml >=0.10.2',
     'pyproj >=1.9',
 ]
 
 extras_require = {
-    'celery':  ["celery >=4.0, <4.4"],
     'cluster': ["python-pam",
                 "django-pam",
-                "gunicorn",
+                "gunicorn >20.0",
                 "setproctitle"],
     'osgeo':  [
         'GDAL >= 2.4',
     ],
     'dev':  [
         'pytest >=4.5',
-        'flake8 >=3.5, <3.8',
+        'flake8 >=3.5',
         'pdbpp',
         'ipython',
-        'silx == 0.10',
+        'silx',
+        'sphinx==4.4',
+        'sphinx-theme',
+        'pydata-sphinx-theme',
     ]
 }
 

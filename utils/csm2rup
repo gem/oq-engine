@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 An utility to convert source models into ruptures
 """
@@ -6,13 +6,8 @@ import os
 import logging
 import operator
 import numpy
-import pandas
 from openquake.baselib import sap, parallel, general, hdf5
-from openquake.hazardlib.calc.filters import MagDepDistance
-from openquake.hazardlib.source.point import calc_average
-from openquake.hazardlib.source.rupture import PointRupture
-from openquake.hazardlib.geo import Point
-from openquake.commonlib import readinput, datastore, logs
+from openquake.commonlib import logs
 from openquake.calculators import base
 
 MAX_RUPS_PER_SOURCE = 1_000_000_000
@@ -28,19 +23,6 @@ rupfields = dict(
 )
 
 
-def iter_ruptures_fast(src):
-    # for pointlike sources
-    avg = calc_average([src])
-    hc = Point(avg['lon'], avg['lat'], avg['dep'])
-    strike, dip, rake = 0, 0, avg['rake']
-    for mag, mag_occ_rate in src.get_annual_occurrence_rates():
-        occurrence_rate = mag_occ_rate
-        yield PointRupture(
-            mag, src.tectonic_region_type, hc,
-            strike, dip, rake, occurrence_rate,
-            src.temporal_occurrence_model)
-
-
 # NB: this is called after a preclassical calculation, so area sources and
 # multipoint sources are already split
 def build_rupdict(srcs):
@@ -49,10 +31,7 @@ def build_rupdict(srcs):
     """
     dic = {f: [] for f in rupfields}
     for src in srcs:
-        if hasattr(src, 'nodal_plane_distribution'):
-            irups = iter_ruptures_fast(src)
-        else:
-            irups = src.iter_ruptures()
+        irups = src.iter_ruptures(step=5)  # fast
         for rupno, rup in enumerate(irups):
             assert rupno < MAX_RUPS_PER_SOURCE
             dic['mag'].append(rup.mag)
@@ -65,14 +44,13 @@ def build_rupdict(srcs):
     return {k: rupfields[k](v) for k, v in dic.items()}
 
 
-
 def csm2rup(csm, dstore):
     """
     :param csm: CompositeSourceModel instance
     :param dstore: DataStore where to save the ruptures
     """
     def src_weight(src):
-        # make point sources 100x lighter
+        # make point sources 100x lighter, due to iter_ruptures_fast
         return .01 if src.code == b'P' else 1
 
     sources = csm.get_sources()
@@ -87,7 +65,7 @@ def csm2rup(csm, dstore):
     size = general.humansize(os.path.getsize(dstore.filename))
     logging.info('Stored {:_d} ruptures [{}] inside {}'.format(
         nrups, size, dstore.filename))
- 
+
 
 def main(job_ini):
     """
@@ -95,9 +73,8 @@ def main(job_ini):
     """
     with logs.init("job", job_ini) as log:
         oq = log.get_oqparam()
-        # change some parameter to improve the performance of point sources
         oq.calculation_mode = 'preclassical'
-        oq.pointsource_distance = MagDepDistance.new('0')
+        # drop sites and site_model files to work with an empty sitecol
         for k in ('sites', 'site_model'):
             oq.inputs.pop(k, None)
         calc = base.calculators(oq, log.calc_id)

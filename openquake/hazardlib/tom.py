@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,8 +23,10 @@ density functions for earthquake temporal occurrence modeling.
 import abc
 import numpy
 import scipy.stats
+from openquake.baselib.performance import compile
 
 registry = {}
+F64 = numpy.float64
 
 
 class BaseTOM(metaclass=abc.ABCMeta):
@@ -184,3 +186,37 @@ class PoissonTOM(BaseTOM):
         The probability is computed as exp(-occurrence_rate * time_span * poes)
         """
         return numpy.exp(- occurrence_rate * self.time_span * poes)
+
+
+@compile(["(float64, float64[:], float64[:,:], float64)",
+          "(float64, float64[:], float64[:,:,:,:], float64)"])
+def get_pnes(rate, probs, poes, time_span):
+    """
+    :param rate: occurrence rate in case of a poissonian rupture
+    :param probs: probabilities of occurrence in the nonpoissonian case
+    :param poes: array of PoEs of shape 2D or 4D
+    :param time_span: time span in the poissonian case (0. for FatedTOM)
+
+    Fast way to return probabilities of no exceedence given an array
+    of PoEs and some parameter.
+    """
+    if time_span == 0.:  # FatedTOM
+        return 1. - poes
+    elif len(probs) == 0:  # poissonian
+        return numpy.exp(-rate * time_span * poes)
+    else:
+        # Uses the formula
+        #
+        #    ∑ p(k|T) * p(X<x|rup)^k
+        #
+        # where `p(k|T)` is the probability that the rupture occurs k times
+        # in the time span `T`, `p(X<x|rup)` is the probability that a
+        # rupture occurrence does not cause a ground motion exceedance, and
+        # the summation `∑` is done over the number of occurrences `k`.
+        #
+        # `p(k|T)` is given by the attribute probs_occur and
+        # `p(X<x|rup)` is computed as ``1 - poes``.
+        pnes = numpy.full_like(poes, probs[0])
+        for p, prob in enumerate(probs[1:], 1):
+            pnes[:] += prob * (1 - poes) ** p
+        return pnes.clip(0., 1.)  # avoid numeric issues

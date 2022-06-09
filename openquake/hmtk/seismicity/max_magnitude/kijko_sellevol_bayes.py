@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2021 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
+# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can
 # redistribute it and/or modify it under the terms of the GNU Affero General
@@ -90,8 +90,8 @@ def check_config(config, data):
        "input_mmax": lambda cat: cat.data['magnitude'][
            np.argmax(cat.data['magnitude'])],
        "input_mmax_uncertainty": lambda cat: cat.get_observed_mmax_sigma(0.2),
-       "b-value": np.float,
-       "sigma-b": np.float,
+       "b-value": float,
+       "sigma-b": float,
        "maximum_iterations": 1000,
        "tolerance": 1E-5})
 class KijkoSellevolBayes(BaseMaximumMagnitude):

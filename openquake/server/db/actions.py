@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2021 GEM Foundation
+# Copyright (C) 2016-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
-import psutil
 import getpass
 import operator
 from datetime import datetime
@@ -282,9 +281,11 @@ DISPLAY_NAME = {
     'loss_maps-rlzs': 'Asset Loss Maps',
     'loss_maps-stats': 'Asset Loss Maps Statistics',
     'aggrisk': 'Aggregate Risk',
+    'aggrisk-stats': 'Aggregate Risk Statistics',
     'agg_risk': 'Total Risk',
     'agglosses': 'Aggregate Asset Losses',
     'aggcurves': 'Aggregate Risk Curves',
+    'aggcurves-stats': 'Aggregate Risk Curves Statistics',
     'avg_gmf': 'Average Ground Motion Field',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
@@ -682,20 +683,16 @@ def get_executing_jobs(db):
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
     :returns:
-        (id, pid, user_name, start_time) tuples
+        (id, user_name, start_time) tuples
     """
     fields = 'id,pid,user_name,start_time'
     running = List()
     running._fields = fields.split(',')
-
     query = ('''-- executing jobs
-SELECT %s FROM job WHERE status='executing' ORDER BY id desc''' % fields)
-    rows = db(query)
-    for r in rows:
-        # if r.pid is 0 it means that such information
-        # is not available in the database
-        if r.pid and psutil.pid_exists(r.pid):
-            running.append(r)
+SELECT %s FROM job WHERE is_running=1
+AND start_time > datetime('now', '-2 days')
+ORDER BY id desc''' % fields)
+    running.extend(db(query))
     return running
 
 

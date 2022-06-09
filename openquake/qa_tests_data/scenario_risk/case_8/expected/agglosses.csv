@@ -1,4 +1,4 @@
-#,,,"generated_by='OpenQuake engine 3.13.0-git7c68bd3775', start_date='2021-09-27T05:54:39', checksum=3851096432, investigation_time=None, risk_investigation_time=None"
+#,,,"generated_by='OpenQuake engine 3.14.0-git686f90872a', start_date='2022-03-24T18:00:08', checksum=3890278370, investigation_time=None, risk_investigation_time=None"
 loss_type,taxonomy,loss_value,loss_ratio
 structural,LWAL_H1,7.16236E+03,2.24385E-03
 structural,W+WLI_H1,1.65240E+04,5.00000E-04
@@ -28,8 +28,6 @@ structural,ER+ETR_H2,3.14448E+03,6.91094E-02
 structural,MUR_H1,1.09306E+05,6.50630E-02
 structural,ER+ETR_H1,2.63482E+03,7.52806E-02
 occupants,MUR+ADO_H2,1.15369E-03,2.12075E-04
-structural,MUR+ADO_H2,3.15112E+03,6.92555E-02
+structural,MUR+ADO_H2,3.15112E+03,6.92554E-02
 structural,W+WLI_H2,4.21200E+02,5.00000E-04
 structural,MCF_H1_DNO,2.43770E+03,1.16081E-02
-occupants,*total*,7.62176E-02,8.78573E-06
-structural,*total*,1.15933E+06,7.36561E-03

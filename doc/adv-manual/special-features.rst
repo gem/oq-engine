@@ -1,36 +1,88 @@
 Special features of the engine
-============================================
+===============================
 
-There are few rarely used feature of the engine that are not
-documented in the manual, since their usage is quite specific. They are
-documented here.
+There are a few less frequently used features of the engine that are not
+documented in the general user's manual, since their usage is quite specific. 
+They are documented here.
 
-The `minimum_distance` parameter
--------------------------------------------
+Sensitivity analysis
+--------------------------
 
-GMPEs have a range of validity. In particular they may give wrong
-results for points too close to the rupture. To avoid this problem the
-engine recognizes a ``minimum_distance`` parameter: if it is set, then
-for distances below the minimum the GMPEs return the value at the
-minimum distance. This avoids producing huge unphysical values
-of the hazard for small distances. The minimum distance is somewhat
+Running a sensitivity analysis study means to run multiple
+calculations by changing a parameter and to study how the results
+change. For instance, it is interesting to study the random seed
+dependency when running a calculation using sampling of the logic
+tree, or it is interesting to study the impact of the truncation level
+on the PoEs. The engine offers a special syntax to run a sensitivity
+analysis with respect to one (or even more than one) parameter; you
+can find examples in the demos, see for instance the
+MultiPointClassicalPSHA demo or the EventBasedDamage demo.  It is
+enough to write in the job.ini a dictionary of lists like the
+following::
+
+ sensitivity_analysis = {"random_seed": [100, 200, 300]}
+ sensitivity_analysis = {'truncation_level': [2, 3]}
+
+The first example with run 3 calculations, the second 2 calculations.
+The calculations will be sequential unless you specify the ``--many`` flag
+in ``oq engine --run --many job.ini``. The descriptions of the spawned
+calculation will be extended to include the parameter, so you could
+have descriptions as follows::
+
+ Multipoint demo {'truncation_level': 2}
+ Multipoint demo {'truncation_level': 3}
+
+The ``custom_site_id``
+----------------------
+
+Since engine 3.13, it is possible to assign 6-character ASCII strings
+as unique identifiers for the sites. This can be convenient in various
+situations, especially when splitting a calculation in geographic regions.
+The way to enable it is to add a field called ``custom_site_id`` to
+the site model file, which must be unique for each site.
+
+The hazard curve and ground motion field exporters have been modified
+to export the ``custom_site_id`` instead of the ``site_id`` (if present).
+
+We used this feature to split the ESHM20 model in two parts (Northern
+Europe and Southern Europe). Then creating the full hazard map
+was as trivial as joining the generated CSV files. Without the
+``custom_site_id`` the site IDs would overlap, thus making impossible to
+join the outputs.
+
+A geohash string (see https://en.wikipedia.org/wiki/Geohash) makes a good
+``custom_site_id`` since it can enable the unique identification of all
+potential sites across the globe.
+
+
+The ``minimum_distance`` parameter
+----------------------------------
+
+GMPEs often have a prescribed range of validity. In particular they may 
+give unexpected results for points too close to ruptures. 
+To avoid this problem the engine recognizes a ``minimum_distance`` parameter: 
+if it is set, then for distances below the specified minimum distance, 
+the GMPEs return the ground-motion value at the minimum distance. 
+This avoids producing extremely large (and physically unrealistic) 
+ground-motion values at small distances. The minimum distance is somewhat
 heuristic. It may be useful to experiment with different values of the
 ``minimum_distance``, to see how the hazard and risk change.
 
 GMPE logic trees with weighted IMTs
--------------------------------------------
+-----------------------------------
 
-Our Canadian users asked us to implement GMPE logic trees with a
-different weight per each IMT. For instance you could have a GMPE
-applicable to PGA with a certain level of uncertainty, to SA(0.1) with
-another and to SA(1.0) with still another one. The user may want to
-give an higher weight to the IMTs were the GMPE has a small
-uncertainty and a lower weight to the IMTs with a large
-uncertainty. Moreover the GMPE could not be applicable for some
-period, and in that case the user can assign to it a zero weight, to
-ignore it.  This is useful when you have a logic tree with multiple
-GMPEs per branchset, some of which are applicable for some IMTs and
-not for others.  Here is an example:
+In order to support Canada's 6th Generation seismic hazard model, the engine now
+has the ability to manage GMPE logic trees where the weight assigned to each
+GMPE may be different for each IMT. For instance you could have a particular
+GMPE applied to PGA with a certain weight, to SA(0.1) with a different weight,
+and to SA(1.0) with yet another weight. The user may want to assign a higher
+weight to the IMTs where the GMPE has a small uncertainty and a lower weight to
+the IMTs with a large uncertainty. Moreover a particular GMPE may not be
+applicable for some periods, and in that case the user can assign to a zero
+weight for those periods, in which case the engine will ignore it entirely for
+those IMTs. This is useful when you have a logic tree with multiple GMPEs per
+branchset, some of which are applicable for some IMTs and not for others.  Here
+is an example:
 
 .. code-block:: xml
 
@@ -76,7 +128,6 @@ disaggregation calculators: in the event based case only the default
 ``uncertaintyWeight`` (i.e. the first in the list of weights, the one
 without ``imt`` attribute) would be taken for all IMTs.
 
-
 Equivalent Epicenter Distance Approximation
 -------------------------------------------
 
@@ -111,7 +162,6 @@ Notice that the equivalent epicenter distance approximation only
 applies to ruptures coming from
 PointSources/AreaSources/MultiPointSources, fault sources are
 untouched.
-
 
 Ruptures in CSV format
 -------------------------------------------
@@ -213,49 +263,3 @@ rupture information (otherwise it would immediately run out of disk space,
 since typical hazard models have tens of millions of ruptures) and uses
 a much less aggressive strategy to collapse ruptures, which has the advantage
 of requiring less RAM.
-
-extendModel
----------------------------------
-
-Starting from engine 3.9 there is a new feature in the source model
-logic tree: the ability to define new branches by adding sources
-to a base model. An example will explain it all:
-
-.. code-block:: xml
-
-  <?xml version="1.0" encoding="UTF-8"?>
-  <nrml xmlns:gml="http://www.opengis.net/gml"
-        xmlns="http://openquake.org/xmlns/nrml/0.4">
-    <logicTree logicTreeID="lt1">
-      <logicTreeBranchSet uncertaintyType="sourceModel"
-                          branchSetID="bs0">
-        <logicTreeBranch branchID="b01">
-          <uncertaintyModel>common1.xml</uncertaintyModel>
-          <uncertaintyWeight>0.6</uncertaintyWeight>
-        </logicTreeBranch>
-        <logicTreeBranch branchID="b02">
-          <uncertaintyModel>common2.xml</uncertaintyModel>
-          <uncertaintyWeight>0.4</uncertaintyWeight>
-        </logicTreeBranch>
-      </logicTreeBranchSet>
-      <logicTreeBranchSet uncertaintyType="extendModel" applyToBranches="b01"
-                          branchSetID="bs1">
-        <logicTreeBranch branchID="b11">
-          <uncertaintyModel>extra1.xml</uncertaintyModel>
-          <uncertaintyWeight>0.6</uncertaintyWeight>
-        </logicTreeBranch>
-        <logicTreeBranch branchID="b12">
-          <uncertaintyModel>extra2.xml</uncertaintyModel>
-          <uncertaintyWeight>0.4</uncertaintyWeight>
-        </logicTreeBranch>
-      </logicTreeBranchSet>
-    </logicTree>
-  </nrml>
-
-In this example there are two base source models, named ``commom1.xml`` and
-``common2.xml``; the branchset with ``uncertaintyType = "extendModel"`` is
-telling the engine to generate two effective source models by extending
-``common1.xml`` first with ``extra1.xml`` and then with ``extra2.xml``.
-If we removed the constraint ``applyToBranches="b01"`` then two additional
-effective source models would be generated by applying ``extra1.xml`` and
-``extra2.xml`` to ``common2.xml``.

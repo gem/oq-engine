@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -56,11 +56,10 @@ def get_magnitude_scaling_term_asc(trt, C, ctx):
     """
     Returns the magnitude scaling term in equations 1 and 2
     """
-    if ctx.mag <= CONSTANTS["m_c"]:
-        return C["ccr"] * ctx.mag
-    else:
-        return (C["ccr"] * CONSTANTS["m_c"]) +\
-            (C["dcr"] * (ctx.mag - CONSTANTS["m_c"]))
+    return np.where(ctx.mag <= CONSTANTS["m_c"],
+                    C["ccr"] * ctx.mag,
+                    C["ccr"] * CONSTANTS["m_c"] +
+                    C["dcr"] * (ctx.mag - CONSTANTS["m_c"]))
 
 
 @get_magnitude_scaling_term.add(const.TRT.SUBDUCTION_INTERFACE)
@@ -69,17 +68,10 @@ def get_magnitude_scaling_term_SInter(trt, C, ctx):
     Returns magnitude scaling term, which is dependent on top of rupture
     depth - as described in equations 1 and 2
     """
-    if ctx.ztor > 25.0:
-        # Deep interface events
-        c_int = C["cint"]
-    else:
-        c_int = C["cintS"]
-
-    if ctx.mag <= CONSTANTS["m_c"]:
-        return c_int * ctx.mag
-    else:
-        return (c_int * CONSTANTS["m_c"]) +\
-            (C["dint"] * (ctx.mag - CONSTANTS["m_c"]))
+    c_int = np.where(ctx.ztor > 25.0, C["cint"], C["cintS"])
+    return np.where(ctx.mag <= CONSTANTS["m_c"], c_int * ctx.mag,
+                    c_int * CONSTANTS["m_c"] +
+                    C["dint"] * (ctx.mag - CONSTANTS["m_c"]))
 
 
 @get_magnitude_scaling_term.add(const.TRT.SUBDUCTION_INTRASLAB)
@@ -88,13 +80,11 @@ def get_magnitude_scaling_term_sslab(trt, C, ctx):
     Returns the magnitude scaling defined in equation 1
     """
     m_c = CONSTANTS["m_c"]
-    if ctx.mag <= m_c:
-        return C["cSL"] * ctx.mag +\
-            C["cSL2"] * ((ctx.mag - CONSTANTS["m_sc"]) ** 2.)
-    else:
-        return C["cSL"] * m_c +\
-           C["cSL2"] * ((m_c - CONSTANTS["m_sc"]) ** 2.) +\
-           C["dSL"] * (ctx.mag - m_c)
+    return np.where(
+        ctx.mag <= m_c,
+        C["cSL"] * ctx.mag + C["cSL2"] * (ctx.mag - CONSTANTS["m_sc"]) ** 2.,
+        C["cSL"] * m_c + C["cSL2"] * (m_c - CONSTANTS["m_sc"]) ** 2. +
+        C["dSL"] * (ctx.mag - m_c))
 
 
 get_sof_term = CallableDict()
@@ -106,13 +96,11 @@ def get_sof_term_asc(trt, C, ctx):
     Shallow crustal faults have a style-of-faulting dependence as
     normal faulting is found to produce higher ground motion (equation 1)
     """
-    if ctx.rake <= -45.0 and ctx.rake >= -135.0:
-        # Normal faulting
-        return C["FN_CR"]
-    else:
-        # No adjustment for strike-slip or reverse faulting
-        return 0.0
-    pass
+    res = np.zeros_like(ctx.rake)
+    # adjustment for normal faulting
+    res[(ctx.rake <= -45.0) & (ctx.rake >= -135.0)] = C["FN_CR"]
+    return res
+
 
 
 @get_sof_term.add(const.TRT.UPPER_MANTLE)
@@ -121,15 +109,12 @@ def get_sof_term_um(trt, C, ctx):
     In the case of the upper mantle events separate coefficients
     are considered for normal, reverse and strike-slip
     """
-    if ctx.rake <= -45.0 and ctx.rake >= -135.0:
-        # Normal faulting
-        return C["FN_UM"]
-    elif ctx.rake > 45.0 and ctx.rake < 135.0:
-        # Reverse faulting
-        return C["FRV_UM"]
-    else:
-        # No adjustment for strike-slip faulting
-        return 0.0
+    res = np.zeros_like(ctx.rake)
+    # adjustment for normal faulting
+    res[(ctx.rake <= -45.0) & (ctx.rake >= -135.0)] = C["FN_UM"]
+    # adjustment for reverse faulting
+    res[(ctx.rake > 45.0) & (ctx.rake < 135.0)] = C["FRV_UM"]
+    return res
 
 
 @get_sof_term.add(const.TRT.SUBDUCTION_INTERFACE)
@@ -185,10 +170,7 @@ def get_depth_term_sslab(trt, C, ctx):
     Note that there is a ztor cap of 100 km that is introduced in the
     Fortran code but not mentioned in the original paper!
     """
-    if ctx.ztor > 100.0:
-        return C["bSLH"] * 100.0
-    else:
-        return C["bSLH"] * ctx.ztor
+    return np.where(ctx.ztor > 100., C["bSLH"] * 100.0, C["bSLH"] * ctx.ztor)
 
 
 get_distance_term = CallableDict()
@@ -211,7 +193,7 @@ def get_distance_term_asc(trt, C, ctx):
                                       x_ij[idx] + gn_exp)
 
     # equation 5
-    c_m = min(ctx.mag, CONSTANTS["m_c"])
+    c_m = np.minimum(ctx.mag, CONSTANTS["m_c"])
     # equation 4
     r_ij = CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
     return C["gcr"] * np.log(r_ij) + C["gcrL"] * np.log(x_ij + 200.0) +\
@@ -231,11 +213,11 @@ def get_distance_term_um(trt, C, ctx):
     if np.any(idx):
         g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
                                       x_ij[idx] + gn_exp)
-    c_m = min(ctx.mag, CONSTANTS["m_c"])
+    c_m = np.minimum(ctx.mag, CONSTANTS["m_c"])
     r_ij = CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
-    return C["gUM"] * np.log(r_ij) +\
-        C["gcrL"] * np.log(x_ij + 200.0) +\
-        g_n + C["eum"] * x_ij + C["ecrV"] * ctx.rvolc + C["gamma_S"]
+    return (C["gUM"] * np.log(r_ij) +
+            C["gcrL"] * np.log(x_ij + 200.0) +
+            g_n + C["eum"] * x_ij + C["ecrV"] * ctx.rvolc + C["gamma_S"])
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTERFACE)
@@ -246,18 +228,17 @@ def get_distance_term_SInter(trt, C, ctx):
     """
     x_ij = ctx.rrup
     # Get r_ij - distance for geometric spreading (equations 4 & 5)
-    c_m = min(ctx.mag, CONSTANTS["m_c"])
+    c_m = np.minimum(ctx.mag, CONSTANTS["m_c"])
     r_ij = CONSTANTS["xinto"] + x_ij + np.exp(C["alpha"] + C["beta"] * c_m)
     # Get factors common to both shallow and deep
     dterm = C["gint"] * np.log(r_ij) + C["eintV"] * ctx.rvolc + C["gammaint"]
-
-    if ctx.ztor < 25.:
+    dterm += np.where(
+        ctx.ztor < 25.,
         # Shallow events have geometric and anelastic attenuation term
-        dterm += (C["gintLS"] * np.log(x_ij + 200.0) + C["eintS"] * x_ij
-                  + C["gamma_ints"])
-    else:
+        (C["gintLS"] * np.log(x_ij + 200.0) + C["eintS"] * x_ij +
+         C["gamma_ints"]),
         # Deep events do not have an anelastic attenuation term
-        dterm += (C["gintLD"] * np.log(x_ij + 200.0))
+        C["gintLD"] * np.log(x_ij + 200.0))
     return dterm
 
 
@@ -271,15 +252,12 @@ def get_distance_term_sslab(trt, C, ctx):
     """
     x_ij = ctx.rrup
     # Get anelastic scaling term in quation 5
-    if ctx.ztor >= 50.:
-        qslh = C["eSLH"] * (0.02 * ctx.ztor - 1.0)
-    else:
-        qslh = 0.0
+    qslh = np.where(ctx.ztor >= 50., C["eSLH"] * (0.02 * ctx.ztor - 1.0), 0)
     # r_volc = np.copy(ctx.rvolc)
     # r_volc[np.logical_and(r_volc > 0.0, r_volc <= 12.0)] = 12.0
     # r_volc[r_volc >= 80.0] = 80.0
     # Get r_ij - distance for geometric spreading (equations 3 and 4)
-    c_m = min(ctx.mag, CONSTANTS["m_c"])
+    c_m = np.minimum(ctx.mag, CONSTANTS["m_c"])
     r_ij = x_ij + np.exp(C["alpha"] + C["beta"] * c_m)
     return C["gSL"] * np.log(r_ij) + \
         C["gLL"] * np.log(x_ij + 200.) +\
@@ -295,17 +273,18 @@ def _get_ln_sf(trt, C, C_SITE, idx, n_sites, ctx):
     for site classes SCII, SCIII, SCIV
     """
     ln_sf = np.zeros(n_sites)
+    subint = trt == const.TRT.SUBDUCTION_INTERFACE
     for i in range(1, 5):
-        ln_sf_i = (C["lnSC1AM"] - C_SITE["LnAmax1D{:g}".format(i)])
+        ln_sf[idx[i]] += C["lnSC1AM"] - C_SITE["LnAmax1D{:g}".format(i)]
         if i > 1:
-            if trt == const.TRT.SUBDUCTION_INTERFACE and ctx.ztor > 25.0:
-                # For deep events site classes 5, 6, and 7 are used
-                loc = i + 3
-            else:
-                # For shallow events the conventional approach applies
-                loc = i
-            ln_sf_i += C["S{:g}".format(loc)]
-        ln_sf[idx[i]] += ln_sf_i
+            for sid in idx[i].nonzero()[0]:
+                if subint and ctx.ztor[sid] > 25.0:
+                    # For deep events site classes 5, 6, and 7 are used
+                    loc = i + 3
+                else:
+                    # For shallow events the conventional approach applies
+                    loc = i
+                ln_sf[sid] += C["S{:g}".format(loc)]
     return ln_sf
 
 
@@ -317,14 +296,15 @@ def _get_ln_a_n_max(trt, C, n_sites, idx, ctx):
     for site classes SCII, SCIII, SCIV
     """
     ln_a_n_max = C["lnSC1AM"] * np.ones(n_sites)
+    subint = trt == const.TRT.SUBDUCTION_INTERFACE
     for i in [2, 3, 4]:
-        if np.any(idx[i]):
+        for sid in idx[i].nonzero()[0]:
             # For deep events site classes 5, 6 and 7 are used
-            if trt == const.TRT.SUBDUCTION_INTERFACE and ctx.ztor > 25.0:
+            if subint and ctx.ztor[sid] > 25.0:
                 loc = i + 3
             else:
                 loc = i
-            ln_a_n_max[idx[i]] += C["S{:g}".format(loc)]
+            ln_a_n_max[sid] += C["S{:g}".format(loc)]
     return ln_a_n_max
 
 
@@ -447,7 +427,7 @@ class ZhaoEtAl2016Asc(GMPE):
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components :
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
@@ -464,7 +444,7 @@ class ZhaoEtAl2016Asc(GMPE):
     #: Required distance measure is Rrup and Rvolc
     REQUIRES_DISTANCES = {'rrup', 'rvolc'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

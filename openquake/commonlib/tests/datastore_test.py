@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -147,6 +147,10 @@ class DataStoreTestCase(unittest.TestCase):
         self.assertEqual(list(df.index), [2])
         self.assertEqual(list(df.sid), [0])
         self.assertEqual(list(df.val), [.1])
+
+        # testing list selection
+        df = self.dstore.read_df('df', 'eid', sel={'sid': [0, 2]})
+        self.assertEqual(list(df.val), [.1, .3])
 
     def test_pandas_vlen(self):
         self.dstore['test/val'] = [.2, .3]

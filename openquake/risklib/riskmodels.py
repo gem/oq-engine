@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,8 +27,7 @@ import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
-from openquake.baselib.general import (
-    AccumDict, cached_property, groupby, gen_slices)
+from openquake.baselib.general import AccumDict, cached_property, groupby
 from openquake.hazardlib import valid, nrml, stats, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
@@ -93,7 +92,6 @@ class RiskFuncList(list):
     """
     def groupby_id(self, kind=None):
         """
-        :param kind: if not None, filter the risk functions on that kind
         :returns: double dictionary id -> loss_type, kind -> risk_function
         """
         ddic = {}
@@ -244,7 +242,7 @@ class RiskModel(object):
     def __call__(self, loss_type, assets, gmf_df, col=None, rndgen=None):
         meth = getattr(self, self.calcmode)
         res = meth(loss_type, assets, gmf_df, col, rndgen)
-        return res
+        return res  # for event_based_risk this is a DataFrame (eid, aid, loss)
 
     def __toh5__(self):
         return self.risk_functions, {'taxonomy': self.taxonomy}
@@ -410,21 +408,6 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     return RiskModel(oqparam.calculation_mode, taxonomy, **extra)
 
 
-def split_df(df, cond=True, maxsize=1000):
-    """
-    :param df: a large dataframe
-    :param cond: boolean condition for splitting
-    :param maxsize: split dataframes larger than maxsize
-    :yields: dataframes smaller than maxsize
-    """
-    n = len(df)
-    if n <= maxsize or not cond:
-        yield df
-    else:
-        for slc in gen_slices(0, len(df), maxsize):
-            yield df[slc]
-
-
 # ######################## CompositeRiskModel #########################
 
 class ValidationError(Exception):
@@ -478,6 +461,47 @@ class CompositeRiskModel(collections.abc.Mapping):
         self.risklist = risklist  # by taxonomy
         self.consdict = consdict or {}  # new style consequences, by anything
         self.init()
+
+    def check_risk_ids(self, inputs):
+        """
+        Check that there are no missing risk IDs for some risk functions
+        """
+        ids_by_kind = AccumDict(accum=set())
+        for riskfunc in self.risklist:
+            ids_by_kind[riskfunc.kind].add(riskfunc.id)
+        kinds = tuple(ids_by_kind)  # vulnerability, fragility, ...
+        fnames = [fname for kind, fname in inputs.items()
+                  if kind.endswith(kinds)]
+        if len(ids_by_kind) > 1:
+            k = next(iter(ids_by_kind))
+            base_ids = set(ids_by_kind.pop(k))
+            for kind, ids in ids_by_kind.items():
+                if ids != base_ids:
+                    raise NameError(
+                        'Check in the files %s the IDs %s' %
+                        (fnames, sorted(base_ids.symmetric_difference(ids))))
+
+        # check imt_by_lt has consistent loss types for all taxonomies
+        if self._riskmodels:
+            records = [[rm.taxonomy] + list(rm.imt_by_lt)
+                       for rm in self._riskmodels.values()]  # [[tax, lt...]]
+            expected_lts = set(records[0][1:])
+            kind = kinds[0]  # vulnerability or fragility
+            for rec in records[1:]:
+                ltypes = set(rec[1:])
+                if not ltypes & expected_lts:
+                    if not self.tmap:
+                        fname = inputs[rec[1] + '_' + kind]
+                        raise NameError(f'The ID {rec[0]} is in {fname}, not '
+                                        f'in the other {kind} files')
+                elif ltypes != expected_lts:
+                    others = ltypes - expected_lts
+                    lt = expected_lts.pop()
+                    fname = inputs[lt + '_' + kind]
+                    for other in others:
+                        # TODO: should this be an error?
+                        logging.warning(f'The ID {rec[0]} is in {fname} but '
+                                        f'not in the {other}_{kind} file')
 
     def compute_csq(self, asset, fractions, loss_type):
         """
@@ -580,7 +604,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         # ._riskmodels is empty if read from the hazard calculation
         for riskid, rm in self._riskmodels.items():
             for lt, rf in rm.risk_functions.items():
-                if hasattr(rf, 'imt'):
+                if hasattr(rf, 'imt'):  # vulnerability
                     iml[rf.imt].append(rf.imls[0])
         if sum(oq.minimum_intensity.values()) == 0 and iml:
             oq.minimum_intensity = {imt: min(ls) for imt, ls in iml.items()}
@@ -669,7 +693,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         :returns: a 1-dimensional composite array with loss ratios by loss type
         """
-        lst = [('user_provided', numpy.bool)]
+        lst = [('user_provided', bool)]
         for cp in self.curve_params:
             lst.append((cp.loss_type, F32, len(cp.ratios)))
         loss_ratios = numpy.zeros(1, numpy.dtype(lst))
@@ -681,11 +705,11 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
 
-    def get_output(self, taxo, assets, haz, sec_losses=(), rndgen=None,
+    def get_output(self, taxoidx, asset_df, haz, sec_losses=(), rndgen=None,
                    rlz=None):
         """
-        :param taxo: a taxonomy index
-        :param assets: a DataFrame of assets of the given taxonomy
+        :param taxoidx: a taxonomy index
+        :param asset_df: a DataFrame of assets of the given taxonomy
         :param haz: a DataFrame of GMVs on that site
         :param sec_losses: a list of SecondaryLoss instances
         :param rndgen: a MultiEventRNG instance
@@ -694,75 +718,39 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         primary = self.primary_imtls
         alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
-        event = hasattr(haz, 'eid')
+        event = hasattr(haz, 'eid')  # else classical (haz.array)
         dic = {}
         for lt in self.loss_types:
-            outs = []
-            rmodels, weights = self.get_rmodels_weights(lt, taxo)
+            outs = []  # list of DataFrames
+            rmodels, weights = self.get_rmodels_weights(lt, taxoidx)
             for rm in rmodels:
-                imt = rm.imt_by_lt[lt]
+                if len(rm.imt_by_lt) == 1:
+                    # TODO: if `check_risk_ids` will raise an error then
+                    # this code branch will never run
+                    [(lt, imt)] = rm.imt_by_lt.items()
+                else:
+                    imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
                 if event:
-                    out = rm(lt, assets, haz, col, rndgen)
-                    outs.append(out)
+                    out = rm(lt, asset_df, haz, col, rndgen)
                 else:  # classical
                     hcurve = haz.array[self.imtls(imt), 0]
-                    outs.append(rm(lt, assets, hcurve))
-
-            # average on the risk models (unsupported for classical)
-            dic[lt] = outs[0]
-            for sec_loss in sec_losses:
-                sec_loss.update(lt, dic, assets)
-            if hasattr(dic[lt], 'loss'):  # event_based_risk
-                if weights[0] != 1:
-                    dic[lt].loss *= weights[0]
-                for alt, w in zip(outs[1:], weights[1:]):
-                    dic[lt].loss += alt.loss * w
-            elif len(weights) > 1:  # scenario_damage
+                    out = rm(lt, asset_df, hcurve)
+                for sec_loss in sec_losses:
+                    sec_loss.update(lt, out, asset_df)
+                outs.append(out)
+            if len(outs) > 1 and hasattr(out, 'loss'):
+                # computing the average dataframe
+                df = pandas.concat(
+                    [out * w for out, w in zip(outs, weights)])
+                dic[lt] = df.groupby(['eid', 'aid']).sum()
+            elif len(outs) > 1:
+                # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
                 dic[lt] = numpy.average(outs, weights=weights, axis=0)
+            else:
+                # there is a single output
+                dic[lt] = outs[0]
         return dic
-
-    # called by event_based_risk fast, in case_miriam
-    def gen_outputs(self, taxo, asset_df, gmf_df, param):
-        """
-        :param taxo: a taxonomy index
-        :param asset_df: a DataFrame of assets of the given taxonomy
-        :param gmf_df: a DataFrame of GMVs on the sites
-        :param param: a dictionary of extra parameters
-        :yields: dictionaries keyed by the loss type
-        """
-        ratios = self.get_interp_ratios(taxo, gmf_df)  # fast
-        minimum_asset_loss = self.oqparam.minimum_asset_loss
-        for adf in split_df(asset_df):
-            assets_by_sid = adf.groupby('site_id')
-            dic = {}
-            for ln, ratio_df in ratios.items():
-                min_loss = minimum_asset_loss[ln]
-                d = dict(eid=[], aid=[], variance=[], loss=[])
-                n_oks = 0
-                for sid, adf in assets_by_sid:
-                    r = ratio_df[ratio_df.index == sid]
-                    if len(r) == 0:
-                        continue
-                    means = r['mean'].to_numpy()
-                    covs = r['cov'].to_numpy()
-                    eids = r['eid'].to_numpy()
-                    for aid, val in zip(adf.index, adf['value-' + ln]):
-                        losses = val * means
-                        ok = losses > min_loss
-                        n_ok = ok.sum()
-                        if n_ok:
-                            d['eid'].append(eids[ok])
-                            d['aid'].append(numpy.ones(n_ok, U32) * aid)
-                            d['variance'].append((losses[ok] * covs[ok])**2)
-                            d['loss'].append(losses[ok])
-                            n_oks += n_ok
-                if n_oks == 0:
-                    continue
-                for key, vals in d.items():
-                    d[key] = numpy.concatenate(vals)
-                dic[ln] = pandas.DataFrame(d).set_index(['eid', 'aid'])
-            yield dic
 
     def get_interp_ratios(self, taxo, gmf_df):
         """

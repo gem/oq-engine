@@ -3,6 +3,7 @@
 This configuration is supported only by Linux.
 
 ## Overall architecture
+
 The nodes must all be able to communicate with the OpenQuake Engine *DbServer*.
 Both services run on a single "master" node.
 Running OpenQuake on an *MPI cluster* is currently not supported. See the [FAQ](../faq.md#mpi-support) for more information.
@@ -41,7 +42,6 @@ $ chmod 2770 /oq_shared
 
 On the workers the _shared_dir_ should be mounted as the `openquake` user too
 
-
 ```
 [directory]
 shared_dir = /oq_shared
@@ -51,8 +51,10 @@ It is not necessary to configure `openquake.cfg` for `/opt/openquake`
 
 ### Network and security considerations
 
-The worker nodes should be isolated from the external network using either a dedicated internal network or a firewall.
-Additionally, access to the DbServer ports should be limited (again by internal LAN or firewall) so that external traffic is excluded.
+The worker nodes should be isolated from the external network using
+either a dedicated internal network or a firewall.  Additionally,
+access to the DbServer ports should be limited (again by internal LAN
+or firewall) so that external traffic is excluded.
 
 The following ports must be open on the **master node**:
 
@@ -65,36 +67,46 @@ The following port must be open on the **workers node**:
 
 * 1909 for the ZeroMQ workerpools
 
-The **master node** and the **worker nodes** must be able to communicate on the specified ports.
+The **master node** and the **worker nodes** must be able to
+communicate on the specified ports.
 
-Moreover the user `openquake` on the master must be able to access the workers via ssh.
-This means that you have to generate and copy the ssh keys properly, and
-the first time you must connect to the workers manually. Then the engine
-will be able to start and stop zworker processes at each new calculation.
+Moreover the user `openquake` on the master must be able to access the
+workers via ssh. This means that you have to generate and copy the
+ssh keys properly, and the first time you must connect to the workers
+manually. Then the engine will be able to start and stop zworker
+processes at each new calculation.
 
 ### Storage requirements
 
-Storage requirements depend a lot on the type of calculations you want to run. On a worker node you will need just the space for the operating system, the logs and the OpenQuake installation: less than 20GB are usually enough. Workers can be also diskless (using iSCSI or NFS for example).
+Storage requirements depend a lot on the type of calculations you want
+to run. On a worker node you will need just the space for the
+operating system, the logs and the OpenQuake installation: less than
+20GB are usually enough. Workers can be also diskless (using iSCSI or
+NFS for example).
 
 On the master node you will also need space for:
+
 - the **shared_dir** directory (usually located under `/home`): it contains the calculations datastore (`hdf5` files located in the `oqdata` folder)
 - the OpenQuake database (located under `/var/lib/openquake/oqdata/`): it contains only logs and metadata, the expected size is tens of megabyte
 - the temporary folder (`/tmp`). A different temporary folder can be customized via the `openquake.cfg`
 
-On large installations we strongly suggest to create separate partition for `/home` and `/tmp` (or any custom temporary folder set in the `openquake.cfg`.
+On large installations we strongly suggest to create a separate partition for `/home`.
 
 ### Swap partitions
 
-Having swap active on resources dedicated to the OpenQuake Engine is _strongly discouraged_ because of the performance penality when it's being used and because how python allocates memory. In most cases (when memory throughput is relevant) is totally useless and it will just increase by many orders of magnitude the time required to complete the job (making the job actually stuck).
+Having swap active on resources dedicated to the OpenQuake Engine is
+_strongly discouraged_ because of the performance penality when it's
+being used. It will likely increase by many orders of magnitude the
+time required to complete the job, thus making the job actually stuck.
+It is much better to get a MemoryError and then reduce the size of the job.
 
+## Installation
 
-## Initial install
-
-Have read [Universal installation script](universal.md) 
-
-### Master node
-Clone the repository of engine in the shared_dir folder that is shared with the workers.
-On the Master node the method server must be used from the folder /shared_dir/oq-engine
+Please use the [Universal installation script](universal.md) in
+`server` mode or `devel_server` mode. The installer will save the
+Python code in the folder `/opt/openquake/venv`. Since
+`/opt/openquake` is exported to the workers via NFS there will be no
+need to install anything on the worker nodes except Python.
 
 ## OpenQuake Engine 'master' node configuration File
 
@@ -127,23 +139,23 @@ host_cores = < IP address of worker1> -1, < IP address of worker2> -1
 ctrl_port = 1909
 ```
 
-Notice that the -1 in `< IP address of worker1> -1` means that all the cores in
-that worker will be used. You can use a number
-between 0 and the maximum number of available core to limit the
-resource usage. The engine will automatically start and stop zmq
-processes on the worker nodes at each new calculation, *provided the
-user openquake has ssh access to the workers*.
-Please note that you must list explicitly the workers that want to use to perform the calculations.
+Notice that the -1 in `< IP address of worker1> -1` means that all the
+cores in that worker will be used. You can use a number between 0 and
+the maximum number of available core to limit the resource usage. The
+engine will automatically start and stop zmq processes on the worker
+nodes at each new calculation, *provided the user openquake has ssh
+access to the workers*.  Please note that you must list explicitly the
+workers that you want to use.
 
 NB: when using the zmq mechanism you should not touch the parameter
 `serialize_jobs` and keep it at its default value of `true`.
-
 
 ### Configuring daemons
 
 The required systemd services are configured from the universal installer into the folder /etc/systemd/system/
 
 #### Master node
+
 - OpenQuake Engine DbServer - `openquake-dbserver.service`
 - OpenQuake Engine WebUI - `openquake-webui.service` (optional)
 
@@ -163,4 +175,3 @@ two workers 7 cores are running each).
 ## Running calculations
 
 Jobs can be submitted through the master node using the `oq engine` command line interface, the API or the WebUI if active. See the documentation about [how to run a calculation](../running/unix.md) or about how to use the [WebUI](../running/server.md)
-

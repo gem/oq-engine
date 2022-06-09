@@ -23,7 +23,7 @@ import pandas
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib import read_input, valid, contexts
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
-from openquake.hazardlib.calc.filters import MagDepDistance
+from openquake.hazardlib.calc.filters import IntegrationDistance
 
 OVERWRITE_EXPECTED = False
 
@@ -36,7 +36,7 @@ PARAM = dict(source_model_file=SOURCES_XML,
              reference_vs30_value=600,
              reference_depth_to_2pt5km_per_sec=5,
              reference_depth_to_1pt0km_per_sec=100,
-             maximum_distance=MagDepDistance.new('200'),
+             maximum_distance=IntegrationDistance.new('200'),
              rupture_mesh_spacing=5.,
              width_of_mfd_bin=1.,
              investigation_time=1,
@@ -98,42 +98,19 @@ def csdic_to_dframe(csdic, imts, n, p):
 
 class CondSpectraTestCase(unittest.TestCase):
 
-    def test_point(self):
-        # point source with 3 ruptures and 2 sites, checking additivity
-        inp = read_input(
-            PARAM, source_model_file=os.path.join(CWD, 'data', 'point.xml'),
-            gsim_logic_tree_file=os.path.join(CWD, 'data', 'lt01.xml'),
-            sites=[(0, -0.8), (0, -0.4)])
-        [cmaker] = inp.cmakerdict.values()
-        [src_group] = inp.groups
-        ctxs = cmaker.from_srcs(src_group, inp.sitecol)
-        aac([ctx.occurrence_rate for ctx in ctxs], [0.00018, 0.00018, 0.00054])
-        ctxs1 = ctxs[:2]
-        ctxs2 = ctxs[2:]
-
-        # check that the total spectra is a weighted mean of the two
-        # rupture spectra; the weight is the same for all IMTs
-        c1, s1 = cmaker.get_cs_contrib(ctxs1, imti, imls)[0].values()
-        c2, s2 = cmaker.get_cs_contrib(ctxs2, imti, imls)[0].values()
-        c, s = cmaker.get_cs_contrib(ctxs, imti, imls)[0].values()
-        for n in [0, 1]:  # two sites
-            comp_spectra = (c1[:, n] + c2[:, n]) / (s1[n, 0] + s2[n, 0])
-            aac(comp_spectra, c[:, n] / s[n, 0])
-
     def test_1_rlz(self):
         # test with one GMPE, 1 TRT, checking additivity
         inp = read_input(
             PARAM, gsim_logic_tree_file=os.path.join(CWD, 'data', 'lt01.xml'))
         [cmaker] = inp.cmakerdict.values()
         [src_group] = inp.groups
-        ctxs = cmaker.from_srcs(src_group, inp.sitecol)
-        assert len(ctxs) == 100
-        ctxs1 = ctxs[:50]
-        ctxs2 = ctxs[50:]
-
-        dic1 = cmaker.get_cs_contrib(ctxs1, imti, imls)[0]
-        dic2 = cmaker.get_cs_contrib(ctxs2, imti, imls)[0]
-        dic = cmaker.get_cs_contrib(ctxs, imti, imls)[0]
+        [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
+        assert len(ctx) == 100
+        ctx1 = ctx[:50]
+        ctx2 = ctx[50:]
+        dic1 = cmaker.get_cs_contrib(ctx1, imti, imls)[0]
+        dic2 = cmaker.get_cs_contrib(ctx2, imti, imls)[0]
+        dic = cmaker.get_cs_contrib(ctx, imti, imls)[0]
         aac((dic1['_c'] + dic2['_c']) / (dic1['_s'] + dic2['_s']),
             dic['_c'] / dic['_s'])
 
@@ -142,8 +119,8 @@ class CondSpectraTestCase(unittest.TestCase):
         inp = read_input(PARAM)
         [cmaker] = inp.cmakerdict.values()
         [src_group] = inp.groups
-        ctxs = cmaker.from_srcs(src_group, inp.sitecol)
-        csdic = cmaker.get_cs_contrib(ctxs, imti, imls)
+        [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
+        csdic = cmaker.get_cs_contrib(ctx, imti, imls)
         df = csdic_to_dframe(csdic, cmaker.imts, 0, 0)
 
         # check the result
@@ -167,8 +144,8 @@ class CondSpectraTestCase(unittest.TestCase):
         tot = AccumDict()  # g_ -> key -> array
         for src_group in inp.groups:
             cmaker = inp.cmakerdict[src_group.trt]
-            ctxs = cmaker.from_srcs(src_group, inp.sitecol)
-            tot += cmaker.get_cs_contrib(ctxs, imti, imls)
+            [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
+            tot += cmaker.get_cs_contrib(ctx, imti, imls)
 
         # compose the contributions by rlz, 0+2, 0+3, 0+4, 1+2, 1+3, 1+4
         rlzs_by_g = inp.gsim_lt.get_rlzs_by_g()

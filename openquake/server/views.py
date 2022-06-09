@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,9 +18,12 @@
 
 import shutil
 import json
+import string
+import pickle
 import logging
 import os
 import tempfile
+import subprocess
 import multiprocessing
 import traceback
 import signal
@@ -28,6 +31,7 @@ import zlib
 import urllib.parse as urlparse
 import re
 import psutil
+from datetime import datetime
 from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
@@ -39,10 +43,10 @@ from django.shortcuts import render
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles
-from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.commonlib import readinput, oqvalidation, logs, datastore
 from openquake.calculators import base
+from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
@@ -60,7 +64,7 @@ if settings.LOCKDOWN:
 
 Process = multiprocessing.get_context('spawn').Process
 
-
+CWD = os.path.dirname(__file__)
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
 
@@ -82,6 +86,9 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
                   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
                   'Access-Control-Max-Age': 1000,
                   'Access-Control-Allow-Headers': '*'}
+
+KUBECTL = "kubectl apply -f -".split()
+ENGINE = "python -m openquake.engine.engine".split()
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
@@ -117,28 +124,31 @@ def _get_base_url(request):
     return base_url
 
 
-def _prepare_job(request, ini):
+def store(request_files, ini, calc_id):
     """
-    Creates a temporary directory, move uploaded files there and
-    select the job file by looking at the .ini extension.
+    Store the uploaded files in calc_dir and select the job file by looking
+    at the .ini extension.
 
-    :returns: full path of the job_file
+    :returns: full path of the ini file
     """
-    temp_dir = tempfile.mkdtemp()
-    arch = request.FILES.get('archive')
+    tmp = config.directory.custom_tmp or tempfile.mkdtemp()
+    calc_dir = os.path.join(tmp, 'calc_%d' % calc_id)
+    os.mkdir(calc_dir)
+    arch = request_files.get('archive')
     if arch is None:
-        # move each file to a new temp dir, using the upload file names,
-        # not the temporary ones
+        # move each file to calc_dir using the upload file names
         inifiles = []
-        for each_file in request.FILES.values():
-            new_path = os.path.join(temp_dir, each_file.name)
+        # NB: request_files.values() Django objects are not sortable
+        for each_file in request_files.values():
+            new_path = os.path.join(calc_dir, each_file.name)
             shutil.move(each_file.temporary_file_path(), new_path)
             if each_file.name.endswith(ini):
                 inifiles.append(new_path)
-    else:  # extract the files from the archive into temp_dir
-        inifiles = readinput.extract_from_zip(arch, ini)
-    inifiles.sort()
-    return inifiles
+    else:  # extract the files from the archive into calc_dir
+        inifiles = readinput.extract_from_zip(arch, ini, calc_dir)
+    if not inifiles:
+        raise NotFound('There are no %s files in the archive' % ini)
+    return inifiles[0]
 
 
 @csrf_exempt
@@ -216,8 +226,13 @@ def get_ini_defaults(request):
     Return a list of ini attributes with a default value
     """
     ini_defs = {}
-    for name in dir(oqvalidation.OqParam):
-        obj = getattr(oqvalidation.OqParam, name)
+    all_names = dir(oqvalidation.OqParam) + list(oqvalidation.OqParam.ALIASES)
+    for name in all_names:
+        if name in oqvalidation.OqParam.ALIASES:  # old name
+            newname = oqvalidation.OqParam.ALIASES[name]
+        else:
+            newname = name
+        obj = getattr(oqvalidation.OqParam, newname)
         if (isinstance(obj, valid.Param)
                 and obj.default is not valid.Param.NODEFAULT):
             ini_defs[name] = obj.default
@@ -523,27 +538,16 @@ def calc_run(request):
     """
     job_ini = request.POST.get('job_ini')
     hazard_job_id = request.POST.get('hazard_job_id')
-    if hazard_job_id:  # "continue" button
+    if hazard_job_id:  # "continue" button, tested in the QGIS plugin
         ini = job_ini if job_ini else "risk.ini"
     else:
         ini = job_ini if job_ini else ".ini"
-    result = safely_call(_prepare_job, (request, ini))
-    if result.tb_str:
-        return HttpResponse(json.dumps(result.tb_str.splitlines()),
-                            content_type=JSON, status=500)
-    inifiles = result.get()
-    if not inifiles:
-        msg = 'Could not find any file of the form *%s' % ini
-        logging.error(msg)
-        return HttpResponse(content=json.dumps([msg]), content_type=JSON,
-                            status=500)
-
     user = utils.get_user(request)
     try:
-        job_id = submit_job(inifiles[0], user, hazard_job_id)
+        job_id = submit_job(request.FILES, ini, user, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
-        exc_msg = str(exc)
+        exc_msg = traceback.format_exc() + str(exc)
         logging.error(exc_msg)
         response_data = exc_msg.splitlines()
         status = 500
@@ -554,18 +558,66 @@ def calc_run(request):
                         status=status)
 
 
-def submit_job(job_ini, username, hc_id):
+def submit_job(request_files, ini, username, hc_id):
     """
-    Create a job object from the given job.ini file in the job directory
-    and run it in a new process.
+    Create a job object from the given files and run it in a new process.
 
     :returns: a job ID
     """
-    jobs = engine.create_jobs(
-        [job_ini], config.distribution.log_level, None, username, hc_id)
-    proc = Process(target=engine.run_jobs, args=(jobs,))
-    proc.start()
-    return jobs[0].calc_id
+    # build a LogContext object associated to a database job
+    [job] = engine.create_jobs(
+        [dict(calculation_mode='preclassical',
+              description='Calculation waiting to start')],
+        config.distribution.log_level, None, username, hc_id)
+
+    # store the request files and perform some validation
+    try:
+        job_ini = store(request_files, ini, job.calc_id)
+        job.oqparam = oq = readinput.get_oqparam(
+            job_ini, kw={'hazard_calculation_id': hc_id})
+        if oq.sensitivity_analysis:
+            logs.dbcmd('set_status', job.calc_id, 'deleted')  # hide it
+            jobs = engine.create_jobs([job_ini], config.distribution.log_level,
+                                      None, username, hc_id, True)
+        else:
+            dic = dict(calculation_mode=oq.calculation_mode,
+                       description=oq.description, hazard_calculation_id=hc_id)
+            logs.dbcmd('update_job', job.calc_id, dic)
+            jobs = [job]
+    except Exception:
+        tb = traceback.format_exc()
+        logs.dbcmd('log', job.calc_id, datetime.utcnow(), 'CRITICAL',
+                   'before starting', tb)
+        logs.dbcmd('finish', job.calc_id, 'failed')
+        raise
+
+    custom_tmp = os.path.dirname(job_ini)
+    submit_cmd = config.distribution.submit_cmd.split()
+    big_job = oq.get_input_size() > int(config.distribution.min_input_size)
+    if submit_cmd == ENGINE:  # used for debugging
+        for job in jobs:
+            subprocess.Popen(submit_cmd + [save(job, custom_tmp)])
+    elif submit_cmd == KUBECTL and big_job:
+        for job in jobs:
+            with open(os.path.join(CWD, 'job.yaml')) as f:
+                yaml = string.Template(f.read()).substitute(
+                    DATABASE='%(host)s:%(port)d' % config.dbserver,
+                    CALC_PIK=save(job, custom_tmp),
+                    CALC_NAME='calc%d' % job.calc_id)
+            subprocess.run(submit_cmd, input=yaml.encode('ascii'))
+    else:
+        Process(target=engine.run_jobs, args=(jobs,)).start()
+    return job.calc_id
+
+
+def save(job, dirname):
+    """
+    Save a LogContext object in pickled format; returns the path to it
+    """
+    pathpik = os.path.join(dirname, 'calc%d.pik' % job.calc_id)
+    with open(pathpik, 'wb') as f:
+        pickle.dump(job, f)
+    return pathpik
 
 
 @require_http_methods(['GET'])
@@ -756,7 +808,7 @@ def calc_datastore(request, job_id):
         of the requested artifact, if present, else throws a 404
     """
     job = logs.dbcmd('get_job', int(job_id))
-    if job is None:
+    if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name):
         return HttpResponseForbidden()

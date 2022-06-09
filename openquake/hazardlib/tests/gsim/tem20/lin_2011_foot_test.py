@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,5 +33,5 @@ class LinEtAl2011FootWallCase(BaseGSIMTestCase):
 
     def test_all(self):
         self.check(os.path.join(DATA_PATH, 'lin2011_mean_fw.csv'),
-                       os.path.join(DATA_PATH, 'lin2011_std_fw.csv'),
-                       max_discrep_percentage=0.1)
+                   os.path.join(DATA_PATH, 'lin2011_std_fw.csv'),
+                   max_discrep_percentage=0.1)

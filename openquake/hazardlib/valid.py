@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,15 +25,16 @@ import re
 import ast
 import json
 import toml
+import socket
 import logging
 import numpy
 
 from openquake.baselib.general import distinct
-from openquake.baselib import hdf5
+from openquake.baselib import config, hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.calc.filters import MagDepDistance, floatdict  # needed
+from openquake.hazardlib.calc.filters import IntegrationDistance, floatdict  # needed
 
 PRECISION = pmf.PRECISION
 
@@ -134,11 +135,7 @@ def gsim(value, basedir=''):
         gsim_class = registry[gsim_name]
     except KeyError:
         raise ValueError('Unknown GSIM: %s' % gsim_name)
-    if basedir:
-        gs = gsim_class(**kwargs)
-    else:
-        gs = object.__new__(gsim_class)
-        gs.kwargs = kwargs
+    gs = gsim_class(**kwargs)
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     return gs
 
@@ -265,7 +262,7 @@ class SimpleId(object):
     :param length: maximum length of the ID
     :param regex: accepted characters
     """
-    def __init__(self, length, regex=r'^[\w_\-]+$'):
+    def __init__(self, length, regex=r'^[\w_\-:]+$'):
         self.length = length
         self.regex = regex
         self.__name__ = 'SimpleId(%d, %s)' % (length, regex)
@@ -273,7 +270,7 @@ class SimpleId(object):
     def __call__(self, value):
         if max(map(ord, value)) > 127:
             raise ValueError(
-                'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-'
+                'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-:'
                 % value)
         elif len(value) > self.length:
             raise ValueError("The ID '%s' is longer than %d character" %
@@ -281,7 +278,7 @@ class SimpleId(object):
         elif re.match(self.regex, value):
             return value
         raise ValueError(
-            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-" % value)
+            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-:" % value)
 
 
 MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
@@ -374,6 +371,31 @@ def namelist(value):
             raise ValueError('List of names containing an invalid name:'
                              ' %s' % n)
     return names
+
+
+def namelists(value):
+    """
+    :param value: input string
+    :returns: list of lists of identifiers
+
+    >>> namelists('a,b')
+    [['a', 'b']]
+    >>> namelists('a1, b_2; _c')
+    [['a1', 'b_2'], ['_c']]
+
+    >>> namelists('a1; b_2; 1c')
+    [['a1'], ['b_2'], ['1c']]
+    """
+    lists = []
+    for string in value.split(';'):
+        names = string.replace(',', ' ').split()
+        for n in names:
+            try:
+                source_id(n)
+            except ValueError:
+                raise ValueError('Invalid name: %s' % n)
+        lists.append(names)
+    return lists
 
 
 def float_(value):
@@ -866,15 +888,24 @@ def dictionary(value):
 def mag_scale_rel(value):
     """
     :param value:
-        name of a Magnitude-Scale relationship in hazardlib
+        a Magnitude-Scale relationship in hazardlib
     :returns:
         the corresponding hazardlib object
+
+    Parametric MSR classes are supported with TOML syntax; for instance
+
+    >>> mag_scale_rel("CScalingMSR.C=4.7")
+    <CScalingMSR>
     """
     value = value.strip()
+    if '.' in value or '[' in value:
+        [(value, kwargs)] = toml.loads(value).items()
+    else:
+        kwargs = {}
     if value not in SCALEREL:
         raise ValueError(
             "'%s' is not a recognized magnitude-scale relationship" % value)
-    return value
+    return SCALEREL[value](**kwargs)
 
 
 def pmf(value):
@@ -1059,6 +1090,21 @@ def uncertainty_model(value):
     if value.lstrip().startswith('['):  # TOML, do not mess with newlines
         return value.strip()
     return ' '.join(value.split())  # remove newlines too
+
+
+def host_port(value=None):
+    """
+    Returns a pair (host_IP, port_number).
+
+    >>> host_port('localhost:1908')
+    ('127.0.0.1', 1908)
+
+    If value is missing returns the parameters in openquake.cfg
+    """
+    if not value:
+        return (config.dbserver.host, config.dbserver.port)
+    host, port = value.split(':')
+    return socket.gethostbyname(host), int(port)
 
 
 # used for the exposure validation

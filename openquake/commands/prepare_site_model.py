@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2021 GEM Foundation
+# Copyright (C) 2018-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,9 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import gzip
 import logging
 import numpy
-from openquake.baselib import performance, writers
+from openquake.baselib import performance, writers, hdf5
 from openquake.hazardlib import site, valid
 from openquake.hazardlib.geo.utils import assoc
 from openquake.risklib.asset import Exposure
@@ -59,6 +60,13 @@ def calculate_z2pt5_ngaw2(vs30):
     return z2pt5
 
 
+def read(fname):
+    if fname.endswith('.gz'):
+        return gzip.open(fname, 'rt', encoding='utf-8-sig')
+    else:
+        return open(fname, 'rt', encoding='utf-8-sig')
+
+
 def read_vs30(fnames, forbidden):
     """
     :param fnames: a list of CSV files with fields lon,lat,vs30
@@ -68,8 +76,9 @@ def read_vs30(fnames, forbidden):
     data = []
     for fname in fnames:
         check_fname(fname, 'vs30_csv', forbidden)
-        for line in open(fname, encoding='utf-8-sig'):
-            data.append(tuple(line.split(',')))
+        with read(fname) as f:
+            for line in f:
+                data.append(tuple(line.split(',')))
     return numpy.array(data, vs30_dt)
 
 
@@ -80,6 +89,31 @@ def check_fname(fname, kind, forbidden):
     if os.path.basename(fname).lower() == forbidden:
         raise NameError('A file of kind %s cannot be called %r!'
                         % (kind, forbidden))
+
+
+def associate(sitecol, vs30fnames, assoc_distance):
+    if vs30fnames[0].endswith('.hdf5'):
+        geohashes = numpy.unique(sitecol.geohash(2))
+        with hdf5.File(vs30fnames[0]) as f:
+            data = []
+            for gh in geohashes:
+                try:
+                    arr = f[gh][:]
+                except KeyError:
+                    logging.error('Missing data for geohash %s' % gh)
+                else:
+                    data.append(arr)
+            data = numpy.concatenate(data)
+            vs30orig = numpy.zeros(len(data), vs30_dt)
+            vs30orig['lon'] = data[:, 0]
+            vs30orig['lat'] = data[:, 1]
+            vs30orig['vs30'] = data[:, 2]
+    else:
+        vs30orig = read_vs30(vs30fnames, 'site_model.csv')
+    logging.info('Associating {:_d} hazard sites to {:_d} site parameters'.
+                 format(len(sitecol), len(vs30orig)))
+    return sitecol.assoc(vs30orig, assoc_distance,
+                         ignore={'z1pt0', 'z2pt5'})
 
 
 def main(
@@ -141,7 +175,7 @@ def main(
             lons, lats = [], []
             for fname in sites_csv:
                 check_fname(fname, 'sites_csv', output)
-                with open(fname) as csv:
+                with read(fname) as csv:
                     for line in csv:
                         if line.startswith('lon,lat'):  # possible header
                             continue
@@ -157,11 +191,7 @@ def main(
                     grid.lons, grid.lats, req_site_params=req_site_params)
         else:
             raise RuntimeError('Missing exposures or missing sites')
-        vs30orig = read_vs30(vs30_csv, output)
-        logging.info('Associating %d hazard sites to %d site parameters',
-                     len(haz_sitecol), len(vs30orig))
-        vs30 = haz_sitecol.assoc(vs30orig, assoc_distance,
-                                 ignore={'z1pt0', 'z2pt5'})
+        vs30 = associate(haz_sitecol, vs30_csv, assoc_distance)
         if z1pt0:
             haz_sitecol.array['z1pt0'] = calculate_z1pt0(vs30['vs30'])
         if z2pt5:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -76,8 +76,8 @@ def get_magnitude_scaling_term(C, mag):
     Returns the magnitude scaling term (equation 1)
     """
     mval = mag - 3.0
-    return C['b1'] + C['b2'] * mval + C['b3'] * (mval ** 2.0) +\
-        C['b4'] * (mval ** 3.0)
+    return (C['b1'] + C['b2'] * mval + C['b3'] * (mval ** 2.0) +
+            C['b4'] * mval ** 3.0)
 
 
 def get_stddevs(C_SIG):
@@ -155,7 +155,7 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
 
     #: The supported intensity measure component is 'average horizontal', see
     #: section entitiled "Empirical Analysis", paragraph 1
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: The supported standard deviations are total, inter and intra event, see
     #: table 4.a, pages 22-23
@@ -174,7 +174,7 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
     #: Definined for a reference velocity of 1100 m/s (Table 4)
     DEFINED_FOR_REFERENCE_VELOCITY = 1100.0
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

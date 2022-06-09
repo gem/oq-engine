@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2021 GEM Foundation
+# Copyright (C) 2017-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,18 +18,17 @@
 
 import os
 import sys
-import numpy
-import scipy
-import pandas
 import configparser
-
 # disable OpenBLAS threads before the first numpy import
 # see https://github.com/numpy/numpy/issues/11826
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
+import numpy
+import scipy
+import pandas
 from openquake.baselib.general import git_suffix  # noqa: E402
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.13.0'
+__version__ = '3.15.0'
 __version__ += git_suffix(__file__)
 
 version = dict(engine=__version__,
@@ -129,6 +128,7 @@ config.read(limit=int, soft_mem_limit=int, hard_mem_limit=int, port=int,
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
+    os.environ['NUMBA_CACHE_DIR'] = config.directory.custom_tmp
 
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute

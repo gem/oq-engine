@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2021 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -97,7 +97,7 @@ def _get_decimal_from_datetime(time):
     '''
 
     # Get decimal seconds from seconds + microseconds
-    temp_seconds = np.float(time.second) + (np.float(time.microsecond) / 1.0E6)
+    temp_seconds = float(time.second) + (float(time.microsecond) / 1.0E6)
     return decimal_time(np.array([time.year], dtype=int),
                         np.array([time.month], dtype=int),
                         np.array([time.day], dtype=int),

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2021 GEM Foundation
+# Copyright (C) 2010-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,6 +37,20 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
+
+
+class CompositeLtTestCase(unittest.TestCase):
+    def test(self):
+        # logic tree for Canada 2015
+        ssmLT = os.path.join(DATADIR, 'ssmLT.xml')
+        gmmLT = os.path.join(DATADIR, 'gmmLT.xml')
+        smlt = logictree.SourceModelLogicTree(ssmLT, test_mode=True)
+        gslt = logictree.GsimLogicTree(gmmLT)
+        clt = logictree.compose(smlt, gslt)
+        sizes = [len(bset) for bset in clt.branchsets]
+        self.assertEqual(sizes, [6, 3, 3, 3, 3, 3, 3, 3])
+        num_paths = numpy.prod(sizes)  # 13122
+        self.assertEqual(len(clt.get_all_paths()), num_paths)
 
 
 class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
@@ -810,32 +824,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
 
-    def test_filters_on_first_branching_level(self):
-        filters = ('applyToSources="src01"',
-                   'applyToTectonicRegionType="Active Shallow Crust"',
-                   'applyToSourceType="point"')
-        for filter_ in filters:
-            lt = _make_nrml("""\
-                <logicTree logicTreeID="lt1">
-                  <logicTreeBranchingLevel branchingLevelID="bl1">
-                    <logicTreeBranchSet uncertaintyType="sourceModel"
-                                        branchSetID="bs1" %s>
-                      <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>sm.xml</uncertaintyModel>
-                        <uncertaintyWeight>1.0</uncertaintyWeight>
-                      </logicTreeBranch>
-                    </logicTreeBranchSet>
-                  </logicTreeBranchingLevel>
-                </logicTree>
-            """ % filter_)
-            sm = _whatever_sourcemodel()
-            exc = self._assert_logic_tree_error(
-                'lt', {'lt': lt, 'sm.xml': sm}, logictree.LogicTreeError)
-            self.assertEqual(exc.lineno, 4)
-            error = 'filters are not allowed on source model uncertainty'
-            self.assertEqual(exc.message, error,
-                             "wrong exception message: %s" % exc.message)
-
     def test_referencing_nonexistent_source(self):
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
@@ -901,38 +889,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
 
-    def test_referencing_nonexistent_source_type(self):
-        lt = _make_nrml("""\
-            <logicTree logicTreeID="lt1">
-              <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>sm.xml</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-              <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
-                                    branchSetID="bs1"
-                                    applyToSourceType="complexFault">
-                  <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>123</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-            </logicTree>
-        """)
-        sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm},
-                                            logictree.LogicTreeError)
-        self.assertEqual(exc.lineno, 13)
-        error = "source models don't define sources of type 'complexFault'"
-        self.assertEqual(exc.message, error,
-                         "wrong exception message: %s" % exc.message)
-
     def test_more_than_one_filters_on_one_branchset(self):
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
@@ -948,7 +904,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
               <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
                             branchSetID="bs1"
-                            applyToSourceType="simpleFault"
                             applyToTectonicRegionType="Active Shallow Crust"
                             applyToSources="src01">
                   <logicTreeBranch branchID="b2">
@@ -971,8 +926,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         uncertainties_and_values = [('abGRAbsolute', '123 45'),
                                     ('maxMagGRAbsolute', '678')]
         filters = ('applyToSources="src01 src02"',
-                   'applyToTectonicRegionType="Active Shallow Crust"',
-                   'applyToSourceType="simpleFault"')
+                   'applyToTectonicRegionType="Active Shallow Crust"')
         for uncertainty, value in uncertainties_and_values:
             for filter_ in filters:
                 lt = _make_nrml("""\
@@ -1048,11 +1002,10 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         self.assertEqual(branch.branch_id, branch_id)
         self.assertEqual(branch.weight, float(weight_str))
         self.assertEqual(branch.value, value)
-        if bset_args is None:
-            self.assertEqual(branch.bset, None)
+        if bset_args:
+            self.assert_branchset_equal(branch.bset, *bset_args)
         else:
-            self.assert_branchset_equal(branch.bset,
-                                        *bset_args)
+            self.assertTrue(branch.is_leaf())
 
     def assert_branchset_equal(self, branchset, uncertainty_type, filters,
                                branches_args):
@@ -1212,15 +1165,16 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
             lt.root_branchset,
             'sourceModel', {},
             [('sb1', '0.6', 'sm1.xml',
-              ('bGRRelative', {},
+              ('bGRRelative', {'applyToBranches': ['sb1', 'sb3']},
                [('b2', '1.0', +1)]
                )),
              ('sb2', '0.3', 'sm2.xml',
-              ('maxMagGRAbsolute', {'applyToSources': ['src01']},
+              ('maxMagGRAbsolute', {'applyToSources': ['src01'],
+                                    'applyToBranches': ['sb2']},
                [('b3', '1.0', -3)]
                )),
              ('sb3', '0.1', 'sm3.xml',
-              ('bGRRelative', {},
+              ('bGRRelative', {'applyToBranches': ['sb1', 'sb3']},
                [('b2', '1.0', +1)]
                ))
              ]
@@ -1701,42 +1655,6 @@ class BranchSetFilterTestCase(unittest.TestCase):
             None, filters={'applyToSources': [1], 'foo': 'bar'})
         self.assertRaises(AssertionError, bs.filter_source, None)
 
-    def test_source_type(self):
-        bs = logictree.BranchSet(
-            None, filters={'applyToSourceType': 'area'})
-        for src in (self.simple_fault, self.complex_fault, self.point,
-                    self.characteristic_fault):
-            self.assertEqual(bs.filter_source(src), False)
-        self.assertEqual(bs.filter_source(self.area), True)
-
-        bs = logictree.BranchSet(
-            None, filters={'applyToSourceType': 'point'})
-        for source in (self.simple_fault, self.complex_fault, self.area,
-                       self.characteristic_fault):
-            self.assertEqual(bs.filter_source(source), False)
-        self.assertEqual(bs.filter_source(self.point), True)
-
-        bs = logictree.BranchSet(
-            None, filters={'applyToSourceType': 'simpleFault'})
-        for source in (self.complex_fault, self.point, self.area,
-                       self.characteristic_fault):
-            self.assertEqual(bs.filter_source(source), False)
-        self.assertEqual(bs.filter_source(self.simple_fault), True)
-
-        bs = logictree.BranchSet(
-            None, filters={'applyToSourceType': 'complexFault'})
-        for source in (self.simple_fault, self.point, self.area,
-                       self.characteristic_fault):
-            self.assertEqual(bs.filter_source(source), False)
-        self.assertEqual(bs.filter_source(self.complex_fault), True)
-
-        bs = logictree.BranchSet(
-            None, filters={'applyToSourceType': 'characteristicFault'})
-        for source in (self.simple_fault, self.point, self.area,
-                       self.complex_fault):
-            self.assertEqual(bs.filter_source(source), False)
-        self.assertEqual(bs.filter_source(self.characteristic_fault), True)
-
     def test_tectonic_region_type(self):
         test = lambda trt, source: \
             logictree.BranchSet(
@@ -1923,37 +1841,6 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             xml, gsim_lt.InvalidLogicTree,
             "Duplicated branchSetID bs1")
 
-    def test_branch_id_not_unique(self):
-        xml = _make_nrml("""
-<logicTree logicTreeID="lt1">
-    <logicTreeBranchingLevel branchingLevelID="bl4">
-        <logicTreeBranchSet uncertaintyType="gmpeModel"
-                            branchSetID="GrpD"
-                            applyToTectonicRegionType="Subduction Interface">
-
-            <logicTreeBranch branchID="GrpD_Gmpe1">
-                <uncertaintyModel>AbrahamsonEtAl2015SInter</uncertaintyModel>
-                <uncertaintyWeight>0.334</uncertaintyWeight>
-            </logicTreeBranch>
-
-            <logicTreeBranch branchID="GrpD_Gmpe2">
-                <uncertaintyModel>McVerry2006SInter</uncertaintyModel>
-                <uncertaintyWeight>0.333</uncertaintyWeight>
-            </logicTreeBranch>
-
-            <logicTreeBranch branchID="GrpD_Gmpe2">
-                <uncertaintyModel>ZhaoEtAl2016SInter</uncertaintyModel>
-                <uncertaintyWeight>0.333</uncertaintyWeight>
-            </logicTreeBranch>
-
-        </logicTreeBranchSet>
-    </logicTreeBranchingLevel>
-</logicTree>
-        """)
-        self.parse_invalid(
-            xml, gsim_lt.InvalidLogicTree,
-            "There where duplicated branchIDs in")
-
     def test_invalid_gsim(self):
         xml = _make_nrml("""\
         <logicTree logicTreeID="lt1">
@@ -2063,7 +1950,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         for rlz in rlzs:
             counter[rlz.lt_path] += 1
         # the percentages will be close to 40% and 60%
-        self.assertEqual(counter, {('b1',): 421, ('b2',): 579})
+        self.assertEqual(counter, {('gA0',): 421, ('gB0',): 579})
 
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
@@ -2077,7 +1964,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
 
     def test_sample_source_model(self):
         [rlz] = self.source_model_lt
-        self.assertEqual(rlz.value, 'example-source-model.xml')
+        self.assertEqual(rlz.value, ['example-source-model.xml', -0.2, 0.0])
         self.assertEqual(('b1', 'b5', 'b7'), rlz.lt_path)
 
     def test_sample_gmpe(self):
@@ -2085,7 +1972,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         [rlz] = lt.sample(list(self.gmpe_lt), probs, 'early_weights')
         self.assertEqual(rlz.value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
         self.assertEqual(rlz.weight['default'], 0.5)
-        self.assertEqual(('b2', 'b3'), rlz.lt_path)
+        self.assertEqual(('gB0', 'gA1'), rlz.lt_path)
 
 
 class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
@@ -2112,12 +1999,13 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
     """
     value = {'b1_b21': 1, 'b1_b22': 1, 'b1_b23': 1,
              'b1_b24': 1, 'b1_b25': 1, 'b1_b26': 1,
-             'b2': 1.2, 'b3': 1.3}
+             'b2_.': 1.2, 'b3_.': 1.3}
 
     def mean(self, rlzs):
         R = len(rlzs)
-        return sum(self.value['_'.join(rlz.sm_lt_path)] * rlz.weight['weight']
-                   for rlz in rlzs) / R
+        paths = ['_'.join(rlz.sm_lt_path) for rlz in rlzs]
+        return sum(self.value[path] * rlz.weight['weight']
+                   for rlz, path in zip(rlzs, paths)) / R
 
     def test_full_path(self):
         path = os.path.join(DATADIR, 'source_specific_uncertainty')
@@ -2137,7 +2025,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
 
         rlzs = full_lt.get_realizations()  # 6+2 = 8 realizations
         paths = ['b1_b21', 'b1_b22', 'b1_b23', 'b1_b24', 'b1_b25', 'b1_b26',
-                 'b2', 'b3']
+                 'b2_.', 'b3_.']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
         weights = [0.064988,  # b1_b21
                    0.14077,   # b1_b22
@@ -2145,8 +2033,8 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                    0.163723,  # b1_b24
                    0.100569,  # b1_b25
                    0.044072,  # b1_b26
-                   0.2,       # b2
-                   0.1]       # b3
+                   0.2,       # b2_.
+                   0.1]       # b3_.
         # b1_b21 has weight 0.7 * 0.09284 = 0.064988
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight['weight'] for rlz in rlzs])
@@ -2162,7 +2050,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
         paths = ['b1_b22', 'b1_b23', 'b1_b23', 'b1_b24', 'b1_b25', 'b1_b26',
-                 'b1_b26', 'b2', 'b2', 'b2']
+                 'b1_b26', 'b2_.', 'b2_.', 'b2_.']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
 
         # the weights are all equal
@@ -2180,7 +2068,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
         paths = ['b1_b22', 'b1_b23', 'b1_b25', 'b1_b26',
-                 'b2', 'b2', 'b2', 'b3', 'b3', 'b3']
+                 'b2_.', 'b2_.', 'b2_.', 'b3_.', 'b3_.', 'b3_.']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
         weights = [0.04438889044, 0.05861275966, 0.031712341,
                    0.01389718817, 0.18919751558, 0.189197515,
@@ -2293,23 +2181,24 @@ class SerializeSmltTestCase(unittest.TestCase):
 
 class ReduceLtTestCase(unittest.TestCase):
     def test(self):
+        raise unittest.SkipTest('Not used')
         ssmLT = os.path.join(DATADIR, 'ssmLT.xml')
         gmmLT = os.path.join(DATADIR, 'gmmLT.xml')
         smlt = logictree.SourceModelLogicTree(ssmLT, test_mode=True)
         gslt = logictree.GsimLogicTree(gmmLT)
         paths = '''\
-[012345]~[01][345][678][9AB][C][FGH][IJ]
-[012345]~[2][345][678][9AB][E][FGH][K]
-[012345]~[1][345][678][9AB][E][FGH][IJ]
-[012345]~[01][345][678][9AB][D][FGH][IJ]
-[012345]~[2][345][678][9AB][C][FGH][K]
-[012345]~[2][345][678][9AB][C][FGH][IJ]
-[012345]~[01][345][678][9AB][E][FGH][K]
-[012345]~[012][345][678][9AB][D][FGH][K]
-[012345]~[01][345][678][9AB][C][FGH][K]
-[012345]~[0][345][678][9AB][E][FGH][IJ]
-[012345]~[2][345][678][9AB][E][FGH][IJ]
-[012345]~[2][345][678][9AB][D][FGH][IJ]'''.split()
+[ABCDEF]~[AB][DEF][GHI][JKL][M][PQR][ST]
+[ABCDEF]~[C][DEF][GHI][JKL][O][PQR][U]
+[ABCDEF]~[B][DEF][GHI][JKL][O][PQR][ST]
+[ABCDEF]~[AB][DEF][GHI][JKL][N][PQR][ST]
+[ABCDEF]~[C][DEF][GHI][JKL][M][PQR][U]
+[ABCDEF]~[C][DEF][GHI][JKL][M][PQR][ST]
+[ABCDEF]~[AB][DEF][GHI][JKL][O][PQR][U]
+[ABCDEF]~[ABC][DEF][GHI][JKL][N][PQR][U]
+[ABCDEF]~[AB][DEF][GHI][JKL][M][PQR][U]
+[ABCDEF]~[A][DEF][GHI][JKL][O][PQR][ST]
+[ABCDEF]~[C][DEF][GHI][JKL][O][PQR][ST]
+[ABCDEF]~[C][DEF][GHI][JKL][N][PQR][ST]'''.split()
         full_lt = unittest.mock.Mock(source_model_lt=smlt, gsim_lt=gslt)
         dic = logictree.reduce_full(full_lt, paths)
         pprint.pprint(dic)

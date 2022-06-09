@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,11 +29,12 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.tests.classical_test import check_disagg_by_src
 from openquake.qa_tests_data.disagg import (
-    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_master)
+    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
+    case_master)
 
 aae = numpy.testing.assert_almost_equal
 
-POECOL = re.compile(r'poe\d+')
+RLZCOL = re.compile(r'rlz\d+')
 
 
 def compute_mean(fname, *keys):
@@ -41,10 +42,10 @@ def compute_mean(fname, *keys):
     aw = hdf5.read_csv(fname, {'imt': str, 'poe': str, None: float})
     dframe = aw.to_dframe()
     out = []
-    poecols = [col for col in dframe.columns if POECOL.match(col)]
+    rlzcols = [col for col in dframe.columns if RLZCOL.match(col)]
     for key, df in dframe.groupby(keys):
-        poes = [df[col].to_numpy() for col in poecols]
-        [avg] = numpy.average(poes, weights=aw.weights, axis=0)
+        rlzs = [df[col].to_numpy() for col in rlzcols]
+        [avg] = numpy.average(rlzs, weights=aw.weights, axis=0)
         out.append((key, avg))
     return out
 
@@ -63,6 +64,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         return out
 
     def test_case_1(self):
+        # case with split_source=false and collapse_level=2
         self.assert_curves_ok(
             ['Lon_Lat-0.csv', 'Mag-0.csv', 'Mag_Dist-0.csv'], case_1.__file__)
 
@@ -87,7 +89,7 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         # check the custom_site_id
         aw = extract(self.calc.datastore, 'sitecol?field=custom_site_id')
-        self.assertEqual(list(aw), [100, 200])
+        self.assertEqual(list(aw), [b'A', b'B'])
 
         # check the site_model backarc and vs30measured fields
         sitecol = self.calc.datastore['sitecol']
@@ -155,8 +157,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
         self.run_calc(case_7.__file__, 'job.ini')
         cmakers = read_cmakers(self.calc.datastore)
-        ctxs0 = cmakers[0].read_ctxs(self.calc.datastore)
-        ctxs1 = cmakers[1].read_ctxs(self.calc.datastore)
+        [ctxs0] = cmakers[0].read_ctxs(self.calc.datastore)
+        [ctxs1] = cmakers[1].read_ctxs(self.calc.datastore)
         self.assertEqual(len(ctxs0), 7)  # rlz-0, the closest to the mean
         self.assertEqual(len(ctxs1), 2)  # rlz-1, the one to discard
         # checking that the wrong realization is indeed discarded
@@ -166,7 +168,7 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         haz = self.calc.datastore['hmap4'][0, 0, :, 0]  # shape NMPZ
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
-        self.assertEqual(haz[1], 0.18757115242025785)
+        self.assertAlmostEqual(haz[1], 0.1875711524)
 
         # test normal disaggregation
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
@@ -191,3 +193,11 @@ class DisaggregationTestCase(CalculatorTestCase):
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
         check_disagg_by_src(self.calc.datastore)
+
+    def test_case_8(self):
+        # test epsilon star
+        self.run_calc(case_8.__file__, 'job.ini')
+
+        # test mre results
+        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)

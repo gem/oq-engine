@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -243,6 +243,7 @@ class VulnerabilityFunction(object):
         """
         :param asset_df: a DataFrame with A assets
         :param gmf_df: a DataFrame of GMFs for the given assets
+        :param col: GMF column associated to the IMT (i.e. "gmv_0")
         :param rng: a MultiEventRNG or None
         :returns: a DataFrame with columns eid, aid, loss
         """
@@ -535,7 +536,7 @@ class FragilityFunctionContinuous(object):
             imls[imls < self.minIML] = self.minIML
         result = stats.lognorm.cdf(imls, sigma, scale=mu)
         if self.no_damage_limit:
-            result[imls < self.no_damage_limit] = 0
+            result[imls <= self.no_damage_limit] = 0
         return result
 
     def __repr__(self):
@@ -837,6 +838,24 @@ class MultiEventRNG(object):
                 ddd[a, e] = numpy.bincount(states, minlength=D)
         return ddd
 
+    def boolean_dist(self, probs, num_sims):
+        """
+        Convert E probabilities into an array of (E, S)
+        booleans, being S the number of secondary simulations.
+
+        >>> rng = MultiEventRNG(master_seed=42, eids=[0, 1, 2])
+        >>> dist = rng.boolean_dist(probs=[.1, .2, 0.], num_sims=100)
+        >>> dist.sum(axis=1)  # around 10% and 20% respectively
+        array([12., 17.,  0.])
+        """
+        E = len(self.rng)
+        assert len(probs) == E, (len(probs), E)
+        booldist = numpy.zeros((E, num_sims))
+        for e, eid, prob in zip(range(E), self.rng, probs):
+            if prob > 0:
+                booldist[e] = self.rng[eid].random(num_sims) < prob
+        return booldist
+
 
 #
 # Event Based
@@ -877,9 +896,8 @@ def annual_frequency_of_exceedence(poe, t_haz):
     :param t_haz: hazard investigation time
     :returns: array of frequencies (with +inf values where poe=1)
     """
-    arr = 1. - poe
-    arr[arr == 0] = 1E-16  # cutoff to avoid log(0)
-    return - numpy.log(arr) / t_haz
+    assert not (poe == 1).any()  # avoid log(0)
+    return - numpy.log(1-poe) / t_haz
 
 
 def classical_damage(
@@ -985,23 +1003,24 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
       4. if the given probability is greater than the highest PoE
          defined it returns zero.
 
-    :param loss_ratios: an iterable over non-decreasing loss ratio
-                        values (float)
-    :param poes: an iterable over non-increasing probability of
-                 exceedance values (float)
+    :param loss_ratios: non-decreasing loss ratio values (float32)
+    :param poes: non-increasing probabilities of exceedance values (float32)
     :param float probability: the probability value used to
                               interpolate the loss curve
     """
     assert len(loss_ratios) >= 3, loss_ratios
+    probability = numpy.float32(probability)
+    if not isinstance(loss_ratios, numpy.ndarray):
+        loss_ratios = numpy.float32(loss_ratios)
+    if not isinstance(poes, numpy.ndarray):
+        poes = numpy.float32(poes)
     rpoes = poes[::-1]
     if probability > poes[0]:  # max poes
         return 0.0
     elif probability < poes[-1]:  # min PoE
         return loss_ratios[-1]
     if probability in poes:
-        return max([loss
-                    for i, loss in enumerate(loss_ratios)
-                    if probability == poes[i]])
+        return loss_ratios[probability == poes].max()
     else:
         interval_index = bisect.bisect_right(rpoes, probability)
 
@@ -1348,20 +1367,19 @@ class InsuredLosses(object):
     def update(self, lt, out, asset_df):
         """
         :param lt: a loss type string
-        :param out: a dictionary of dataframes keyed by loss_type
+        :param out: a DataFrame with index (eid, aid)
         :param asset_df: a DataFrame of assets with index "ordinal"
         """
-        o = out[lt]
-        o['ins_loss'] = numpy.zeros(len(o))
-        if lt in self.policy_dict and len(o):
+        out['ins_loss'] = numpy.zeros(len(out))
+        if lt in self.policy_dict and len(out):
             policy = self.policy_dict[lt]
-            for (eid, aid), df in o.iterrows():
-                asset = asset_df.loc[aid]
+            for (eid, aid), df in out.iterrows():
+                asset = asset_df.loc[aid]  # aid==ordinal
                 avalue = asset['value-' + lt]
                 policy_idx = asset[self.policy_name]
                 ded, lim = policy[policy_idx]
                 ins = insured_losses(df.loss, ded * avalue, lim * avalue)
-                o.loc[eid, aid]['ins_loss'] = ins
+                out.loc[eid, aid]['ins_loss'] = ins
 
 
 # not used anymore

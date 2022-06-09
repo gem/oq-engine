@@ -1,6 +1,6 @@
 # coding: utf-8
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -73,7 +73,8 @@ rupture_dt = numpy.dtype([
     ('trt_smr', U16),
     ('code', U8),
     ('n_occ', U32),
-    ('mag', F32), ('rake', F32),
+    ('mag', F32),
+    ('rake', F32),
     ('occurrence_rate', F32),
     ('minlon', F32),
     ('minlat', F32),
@@ -122,6 +123,10 @@ def to_csv_array(ruptures):
 
 
 def to_arrays(geom):
+    """
+    :param geom: an array [num_surfaces, shape_y, shape_z ..., coords]
+    :returns: a list of num_surfaces arrays with shape (3, shape_y, shape_z)
+    """
     arrays = []
     num_surfaces = int(geom[0])
     start = num_surfaces * 2 + 1
@@ -283,7 +288,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
         self.hypocenter = hypocenter
         self.surface = surface
         self.rupture_slip_direction = rupture_slip_direction
-        self.weight = weight
+        self.ruid = None
 
     @property
     def code(self):
@@ -349,7 +354,8 @@ class NonParametricProbabilisticRupture(BaseRupture):
             rupture_slip_direction, weight)
         # an array of probabilities with sum 1
         self.probs_occur = numpy.array([prob for (prob, occ) in pmf.data])
-        self.occurrence_rate = numpy.nan
+        if weight is not None:
+            self.weight = weight
 
     def sample_number_of_occurrences(self, n=1):
         """
@@ -561,7 +567,7 @@ class ParametricProbabilisticRupture(BaseRupture):
 class PointSurface:
     """
     A fake surface used in PointRuptures.
-    The parameters `hypocenter`, `strike` and `dip` are determined by
+    The parameters `hypocenter` and `strike` are determined by
     collapsing the corresponding parameters in the original PointSource.
     """
     def __init__(self, hypocenter, strike, dip):
@@ -582,7 +588,14 @@ class PointSurface:
         return 0
 
     def get_closest_points(self, mesh):
-        return mesh
+        """
+        :returns: N times the hypocenter if N is the number of points
+        """
+        N = len(mesh)
+        lons = numpy.full(N, self.hypocenter.x)
+        lats = numpy.full(N, self.hypocenter.y)
+        deps = numpy.full(N, self.hypocenter.z)
+        return Mesh(lons, lats, deps)
 
     def __bool__(self):
         return False
@@ -593,8 +606,8 @@ class PointRupture(ParametricProbabilisticRupture):
     A rupture coming from a far away PointSource, so that the finite
     size effects can be neglected.
     """
-    def __init__(self, mag, tectonic_region_type, hypocenter, strike,
-                 dip, rake, occurrence_rate, temporal_occurrence_model):
+    def __init__(self, mag, rake, tectonic_region_type, hypocenter, strike,
+                 dip, occurrence_rate, temporal_occurrence_model, zbot):
         self.tectonic_region_type = tectonic_region_type
         self.hypocenter = hypocenter
         self.mag = mag
@@ -604,7 +617,7 @@ class PointRupture(ParametricProbabilisticRupture):
         self.occurrence_rate = occurrence_rate
         self.temporal_occurrence_model = temporal_occurrence_model
         self.surface = PointSurface(hypocenter, strike, dip)
-        self.weight = None  # no mutex
+        self.zbot = zbot
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface,
@@ -766,22 +779,10 @@ class RuptureProxy(object):
     A proxy for a rupture record.
 
     :param rec: a record with the rupture parameters
-    :param nsites: approx number of sites affected by the rupture
     """
-    def __init__(self, rec, nsites=None, scenario=False):
+    def __init__(self, rec, scenario=False):
         self.rec = rec
-        self.nsites = nsites
         self.scenario = scenario
-
-    @property
-    def weight(self):
-        """
-        :returns:
-            heuristic weight for the underlying rupture, depending on the
-            number of occurrences and number of presumably affected sites
-        """
-        return self['n_occ'] * (
-            10 if self.nsites is None else max(self.nsites, 10))
 
     def __getitem__(self, name):
         return self.rec[name]
@@ -793,10 +794,14 @@ class RuptureProxy(object):
         """
         # not implemented: rupture_slip_direction
         rupture = _get_rupture(self.rec, self.geom, trt)
-        ebr = EBRupture(rupture, self.rec['source_id'], self.rec['trt_smr'],
-                        self.rec['n_occ'], self.rec['id'], self.rec['e0'],
-                        self.scenario)
+        ebr = EBRupture(rupture, self['source_id'], self['trt_smr'],
+                        self['n_occ'], self['id'], self['e0'], self.scenario)
         return ebr
+
+    def __repr__(self):
+        src = self['source_id'].decode('ascii')
+        return '<%s#%d[%s], w=%d>' % (self.__class__.__name__,
+                                      self['id'], src, self['n_occ'])
 
 
 def get_ruptures(fname_csv):

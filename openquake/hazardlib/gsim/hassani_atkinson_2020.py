@@ -53,10 +53,10 @@ def _dsigma(creg, hypo_depth):
     """
     Hypocentre depth factor.
     """
-    out = creg['cd0']
+    out = np.full_like(hypo_depth, creg['cd0'])
     dp0 = creg['dp0']
-    if hypo_depth > dp0:
-        out += creg['cd1'] * (min(hypo_depth, creg['dp1']) - dp0)
+    idx = hypo_depth > dp0
+    out[idx] += creg['cd1'] * (np.minimum(hypo_depth[idx], creg['dp1']) - dp0)
     return 10 ** out
 
 
@@ -70,8 +70,7 @@ def _fds_ha18(C, mag, dsigma):
                       mag)
     eds0 = -2 * eds1 - 4 * eds2
 
-    return eds0 + eds1 * math.log10(dsigma) \
-        + eds2 * math.log10(dsigma) ** 2
+    return eds0 + eds1 * np.log10(dsigma) + eds2 * np.log10(dsigma) ** 2
 
 
 def _ffpeak(C, imt, fpeak):
@@ -118,15 +117,16 @@ def _fkp_ha18(kappa, C, mag, dsigma):
     """
     Kappa factor for B/C site condition of Japan.
     """
+    n = len(dsigma)
     l10kp = math.log10(kappa)
-
-    p = np.zeros(4)
-    ek0 = np.zeros(4)
-    for i in range(4):
-        for j in range(4):
-            p[j] = np.polyval([C[f'd{i}{j}2'], C[f'd{i}{j}1'],
-                               C[f'd{i}{j}0']], math.log10(dsigma))
-        ek0[i] = np.polyval(p[::-1], math.log10(mag))
+    p = np.zeros((4, n))
+    ek0 = np.zeros((4, n))
+    for k in range(n):
+        for i in range(4):
+            for j in range(4):
+                p[j, k] = np.polyval([C[f'd{i}{j}2'], C[f'd{i}{j}1'],
+                                      C[f'd{i}{j}0']], np.log10(dsigma[k]))
+            ek0[i, k] = np.polyval(p[::-1, k], math.log10(mag))
     return 3 * ek0[0] - 9 * ek0[1] + 27 * ek0[2] - 81 * ek0[3] \
         + ek0[0] * l10kp + ek0[1] * l10kp ** 2 \
         + ek0[2] * l10kp ** 3 + ek0[3] * l10kp ** 4
@@ -224,6 +224,7 @@ class HassaniAtkinson2020SInter(GMPE):
     """
     Hassani Atkinson (2020) for Subduction Interface.
     """
+    gmpe_table = True  # use split_by_mag
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
@@ -232,7 +233,7 @@ class HassaniAtkinson2020SInter(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV, PGA, SA}
 
     #: Supported intensity measure component is the geometric mean component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
@@ -259,34 +260,34 @@ class HassaniAtkinson2020SInter(GMPE):
         self.forearc_ne = forearc_ne
         self.forearc_sw = forearc_sw
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-
+        mag = np.unique(np.round(ctx.mag, 6))
         C_PGA = self.COEFFS[PGA()]
         dsigma = _dsigma(self.CONST_REGION, ctx.hypo_depth)
-        fm_pga = _fm_ha18(C_PGA, ctx.mag)
-        fz_pga = _fz_ha18(self.CONST_REGION['rt'], C_PGA, ctx.mag, ctx.rrup)
-        fdsigma_pga = _fds_ha18(C_PGA, ctx.mag, dsigma)
+        fm_pga = _fm_ha18(C_PGA, mag)
+        fz_pga = _fz_ha18(self.CONST_REGION['rt'], C_PGA, mag, ctx.rrup)
+        fdsigma_pga = _fds_ha18(C_PGA, mag, dsigma)
         fgamma_pga = _fgamma(self.SUFFIX, self.backarc, self.forearc_ne,
                              self.forearc_sw, C_PGA, ctx.rrup)
-        fkappa_pga = _fkp_ha18(self.kappa, C_PGA, ctx.mag, dsigma)
-        clf_pga = _clf(self.SUFFIX, C_PGA, ctx.mag)
+        fkappa_pga = _fkp_ha18(self.kappa, C_PGA, mag, dsigma)
+        clf_pga = _clf(self.SUFFIX, C_PGA, mag)
         pga_rock = 10 ** (fm_pga + fz_pga + fdsigma_pga + fkappa_pga +
                           fgamma_pga + self.CONST_REGION['cc'] +
                           clf_pga + C_PGA['chf'] + C_PGA['amp_cr'])
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            fm = _fm_ha18(C, ctx.mag)
-            fz = _fz_ha18(self.CONST_REGION['rt'], C, ctx.mag, ctx.rrup)
-            fdsigma = _fds_ha18(C, ctx.mag, dsigma)
-            fkappa = _fkp_ha18(self.kappa, C, ctx.mag, dsigma)
+            fm = _fm_ha18(C, mag)
+            fz = _fz_ha18(self.CONST_REGION['rt'], C, mag, ctx.rrup)
+            fdsigma = _fds_ha18(C, mag, dsigma)
+            fkappa = _fkp_ha18(self.kappa, C, mag, dsigma)
             fgamma = _fgamma(self.SUFFIX, self.backarc, self.forearc_ne,
                              self.forearc_sw, C, ctx.rrup)
-            clf = _clf(self.SUFFIX, C, ctx.mag)
+            clf = _clf(self.SUFFIX, C, mag)
             fsnonlin = _fsnonlin_ss14(C, ctx.vs30, pga_rock)
             fvs30 = _fvs30(C, ctx.vs30)
             fz2pt5 = _fz2pt5(C, ctx.z2pt5)

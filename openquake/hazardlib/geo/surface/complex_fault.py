@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -221,9 +221,9 @@ class ComplexFaultSurface(BaseSurface):
 
         # project surface boundary to reference plane and check for
         # validity.
-        ref_plane = PlanarSurface.from_corner_points(ul, ur, br, bl)
-        _, xx, yy = ref_plane._project(
-            spherical_to_cartesian(lons, lats, depths))
+        ref_plane = PlanarSurface.from_corner_points(ul, ur, br, bl).array
+        mat = spherical_to_cartesian(lons, lats, depths) - ref_plane.xyz[:, 0]
+        xx, yy = mat @ ref_plane.uv1, mat @ ref_plane.uv2
         coords = [(x, y) for x, y in zip(xx, yy)]
         p = shapely.geometry.Polygon(coords)
         if not p.is_valid:

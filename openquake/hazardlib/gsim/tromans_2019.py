@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -93,14 +93,10 @@ def get_heteroskedastic_tau(imt, mag):
     :param float mag:
         Magnitude
     """
-
     C = ASK_TAU_COEFFS[imt]
-    if mag < 5:
-        tau = C['s3']
-    elif mag <= 7:
-        tau = C['s3'] + (C['s4'] - C['s3']) / 2. * (mag - 5.)
-    else:
-        tau = C['s4']
+    tau = C['s3'] + (C['s4'] - C['s3']) / 2. * (mag - 5.)
+    tau[mag < 5] = C['s3']
+    tau[mag > 7] = C['s4']
     return tau
 
 
@@ -111,16 +107,11 @@ def get_heteroskedastic_phi(imt, mag):
     single-station phi provided in Table 4 of Rodriguez-Marek et al (2014)
     """
     C = PHI_SS_COEFFS[imt]
-    if mag < 5.0:
-        mag_phi = C["phi1m"]
-    elif mag > 7.0:
-        mag_phi = C["phi2m"]
-    else:
-        mag_phi = C["phi1m"] + (C["phi2m"] - C["phi1m"]) * ((mag - 5.0) / 2.0)
-    if mag_phi > C["const_phiss"]:
-        return mag_phi
-    else:
-        return C["const_phiss"]
+    mag_phi = C["phi1m"] + (C["phi2m"] - C["phi1m"]) * (mag - 5.0) / 2.0
+    mag_phi[mag < 5.0] = C["phi1m"]
+    mag_phi[mag > 7.0] = C["phi2m"]
+    mag_phi[mag_phi <= C["const_phiss"]] = C["const_phiss"]
+    return mag_phi
 
 
 HETEROSKEDASTIC_PHI = {
@@ -139,10 +130,11 @@ HETEROSKEDASTIC_TAU = {
     "central": lambda imt, mag: get_heteroskedastic_tau(imt, mag),
     "lower": lambda imt, mag: get_heteroskedastic_tau(imt, mag) - 0.075}
 
+SIX = np.array([6.0])
 HOMOSKEDASTIC_TAU = {
-    "upper": lambda imt: get_heteroskedastic_tau(imt, 6.0) + 0.075,
-    "central": lambda imt: get_heteroskedastic_tau(imt, 6.0),
-    "lower": lambda imt: get_heteroskedastic_tau(imt, 6.0) - 0.075}
+    "upper": lambda imt: get_heteroskedastic_tau(imt, SIX) + 0.075,
+    "central": lambda imt: get_heteroskedastic_tau(imt, SIX),
+    "lower": lambda imt: get_heteroskedastic_tau(imt, SIX) - 0.075}
 
 
 uppernames = '''
@@ -166,15 +158,11 @@ def get_alatik_youngs_sigma_mu(mag, rake, imt):
     else:
         raise ValueError("Al Atik & Youngs (2014) Model not supported "
                          "for %s" % str(imt))
-    if mag >= 7.0:
-        sigma_mu = 0.056 * (mag - 7.0) + 0.083
-    else:
-        sigma_mu = 0.083
+    sigma_mu = np.where(mag >= 7., 0.056 * (mag - 7.0) + 0.083, 0.083)
     if period >= 1.0:
-        sigma_mu += (0.0171 * np.log(period))
-    if rake >= -135. and rake <= -45.:
-        # Normal faulting case
-        sigma_mu += 0.038
+        sigma_mu += 0.0171 * np.log(period)
+    # Normal faulting case
+    sigma_mu[(rake >= -135.) & (rake <= -45.)] += 0.038
     return sigma_mu
 
 
@@ -292,7 +280,7 @@ class TromansEtAl2019(GMPE):
         self.homoskedastic_sigma = homoskedastic_sigma
         self.phi_ds2s = phi_ds2s
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations applying, where specified,
         scalar adjustment and vs-kappa adjustment to the mean from the

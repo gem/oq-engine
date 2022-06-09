@@ -41,14 +41,14 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 
 # The encoding of source files.
-#source_encoding = 'utf-8-sig'
+source_encoding = 'utf-8-sig'
 
 # The master toctree document.
 master_doc = 'index'
 
 # General information about the project.
 project = u'OpenQuake for Advanced Users'
-copyright = u'2018-2021, Michele Simionato, Anirudh Rao'
+copyright = u'2018-2022, Michele Simionato, Anirudh Rao'
 author = u'Michele Simionato, Anirudh Rao'
 
 # The version info for the project you're documenting, acts as replacement for

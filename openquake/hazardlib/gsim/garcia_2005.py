@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,6 @@
 """
 Module exports :class:'GarciaEtAl2005SSlab',
 :class:'GarciaEtAl2005SSlabVert'
-
 """
 import numpy as np
 from scipy.constants import g
@@ -35,14 +34,11 @@ def _compute_mean(C, g, ctx, imt):
     """
     mag = ctx.mag
     hypo_depth = ctx.hypo_depth
-
     delta = 0.00750 * 10 ** (0.507 * mag)
 
     # computing R for different values of mag
-    if mag < 6.5:
-        R = np.sqrt(ctx.rhypo ** 2 + delta ** 2)
-    else:
-        R = np.sqrt(ctx.rrup ** 2 + delta ** 2)
+    R = np.where(mag < 6.5, np.sqrt(ctx.rhypo ** 2 + delta ** 2),
+                 np.sqrt(ctx.rrup ** 2 + delta ** 2))
 
     mean = (
         # 1st term
@@ -52,8 +48,7 @@ def _compute_mean(C, g, ctx, imt):
         # 3rd term
         C['c4'] * np.log10(R) +
         # 4th term
-        C['c5'] * hypo_depth
-    )
+        C['c5'] * hypo_depth)
     # convert from base 10 to base e
     if imt == PGV():
         mean = np.log(10 ** mean)
@@ -87,8 +82,7 @@ class GarciaEtAl2005SSlab(GMPE):
     last paragraph of Summary in pag. 2272
 
     The GMPE predicted values for Mexican inslab events and NEHRP B site
-    condition
-
+    condition.
     """
 
     #: Supported tectonic region type is subduction intraslab,
@@ -102,9 +96,9 @@ class GarciaEtAl2005SSlab(GMPE):
 
     #: Supported intensity measure component is the geometric average of
     #  the maximum of the two horizontal components
-    #: :attr:`openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: :attr:`openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`,
     #: see Data processing in page 2274.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
@@ -125,7 +119,7 @@ class GarciaEtAl2005SSlab(GMPE):
     #: rest (both in kilometers) as explained in page 2274
     REQUIRES_DISTANCES = {'rrup', 'rhypo'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

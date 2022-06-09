@@ -1,33 +1,16 @@
 # Installing the OpenQuake Engine for development
 
-To develop with the OpenQuake Engine and Hazardlib an installation from sources must be performed.
-
-The official supported distributions are
-
-### Linux
-
-- Ubuntu 18.04 LTS (Bionic)
-- RedHat Enterprise Linux 8 / CentOS 8 / Scientific Linux 8
-- Fedora 29/30/31
-
-This guide may work also on other Linux releases/distributions.
-
-### macOS
-
-- macOS 10.11 (El Capitan)
-- macOS 10.12 (Sierra)
-- macOS 10.13 (High Sierra)
-- macOS 10.14 (Mojave)
-- macOS 10.15 (Catalina)
-
-See also the [FAQ about SSL certificate validation on macOS](../faq.md#ertificate-verification-on-macOS).
+To develop with the OpenQuake Engine and Hazardlib an installation
+from sources must be performed. The easiest way it to use the
+[universal installer](universal.md). The guide here is for people
+wanting to do everything manually.
 
 ## Prerequisites
 
-Knowledge of [Python](https://www.python.org/) (and its [virtual environments](https://docs.python.org/3.6/tutorial/venv.html)), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
+Knowledge of [Python](https://www.python.org/) (and its [virtual environments](https://docs.python.org/3.9/tutorial/venv.html)), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
 
 Some software prerequisites are needed to build the development environment.
-Python 3.6, 3.7 and 3.8 are supported.
+Python 3.7, 3.8 and 3.9 are supported.
 
 ### Ubuntu
 
@@ -115,12 +98,6 @@ If any other installation of the Engine exists on the same machine, like a syste
 port = 1908         >  port = 1985
 authkey = changeme  |  authkey = changeme
 ## cut ##           |  ## cut ##
-```
-
-or the `OQ_DBSERVER_PORT` enviroment variable must be set:
-
-```bash
-export OQ_DBSERVER_PORT=1985
 ```
 
 ## Running the tests

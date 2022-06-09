@@ -40,7 +40,7 @@ must stress an important point::
  THE FULL CALCULATION. Do not trust your performance intuition.
 
 
-Classical PSHA for Europe
+Classical PSHA for Europe (SHARE)
 --------------------------------------------
 
 Suppose you want to run a classical PSHA calculation for the latest
@@ -218,3 +218,46 @@ In short, risk calculations for the mean field UCERF model are routines
 now, in spite of what the naive expectations could be.
 
 .. _common mistakes: common-mistakes.rst
+
+Collapsing the GMPE logic tree
+---------------------------------------
+
+Some hazard models have GMPE logic trees which are insanely large. For instance
+the GMPE logic tree for the latest European model (ESHM20) contains
+961,875 realizations. This causes two issues:
+
+1. it is impossible to run a calculation with full enumeration, so one must
+   use sampling
+2. when one tries to increase the number of samples to study the stability
+   of the mean hazard curves, the calculation runs out of memory
+
+Fortunately, it is possible to compute the *exact mean hazard curves*
+by collapsing the GMPE logic tree. This is a simple as listing the
+name of the branchsets in the GMPE logic tree that one wants to collapse.
+For instance in the case of ESHM20 model there are the following 6
+branchsets:
+
+1. Shallow_Def (19 branches)
+2. CratonModel (15 branches)
+3. BCHydroSubIF (15 branches)
+4. BCHydroSubIS (15 branches)
+5. BCHydroSubVrancea (15 branches)
+6. Volcanic (1 branch)
+
+By setting in the job.ini the following parameters
+
+ ::
+
+  number_of_logic_tree_samples = 0
+  collapse_gsim_logic_tree = Shallow_Def CratonModel BCHydroSubIF BCHydroSubIS BCHydroSubVrancea Volcanic
+
+it is possible to collapse completely the GMPE logic tree, i.e. going
+from 961,875 realizations to 1. Then the memory issues are solved and
+one can assess the correct values of the mean hazard curves. Then
+it is possible to compare with the value produce with sampling and
+assess how much they can be trusted.
+
+NB: the ``collapse_gsim_logic_tree`` feature is rather old but only
+for engine versions >=3.13 it produces the exact mean curves (using
+the ``AvgPoeGMPE``); otherwise it will produce a different kind of collapsing
+(using the ``AvgGMPE``).

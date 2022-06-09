@@ -1,5 +1,5 @@
 The concept of effective realizations
-==============================================
+-------------------------------------
 
 The management of the logic trees is the most complicated thing in the
 OpenQuake engine. It is important to manage the logic trees in an

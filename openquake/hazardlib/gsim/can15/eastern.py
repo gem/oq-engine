@@ -111,41 +111,40 @@ class EasternCan15Mid(GMPE):
              AtkinsonBoore2006Modified2011()]
     sgn = 0
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See documentation for method `GroundShakingIntensityModel` in
         :class:~`openquake.hazardlib.gsim.base.GSIM`
         """
-        mean_stds = []  # 5 arrays of shape (2, M, N)
+        mean_stds = []  # 5 arrays of shape (4, M, N)
         for gsim in self.gsims:
             # add equivalent distances
             if isinstance(gsim, AtkinsonBoore2006Modified2011):
                 c = utils.add_distances_east(ctx, ab06=True)
             else:
                 c = utils.add_distances_east(ctx)
-            mean_stds.extend(
-                contexts.get_mean_stds([gsim], c, imts, StdDev.TOTAL))
+            mean_stds.append(contexts.get_mean_stds(gsim, c, imts))
 
         for m, imt in enumerate(imts):
             cff = self.COEFFS_SITE[imt]
 
             # Pezeshk et al. 2011 - Rrup
-            mean1, stds1 = mean_stds[0][:, m]
+            mean1, stds1 = mean_stds[0][:2, m]
             mean1 = apply_correction_to_BC(cff, mean1, imt, ctx.repi)
 
             # Atkinson 2008 - Rjb
-            mean2, stds2 = mean_stds[1][:, m]
+            mean2, stds2 = mean_stds[1][:2, m]
 
             # Silva single corner
-            mean4, stds4 = mean_stds[2][:, m]
+            mean4, stds4 = mean_stds[2][:2, m]
             mean4 = apply_correction_to_BC(cff, mean4, imt, ctx.repi)
 
             # Silva double corner
-            mean5, stds5 = mean_stds[3][:, m]
+            mean5, stds5 = mean_stds[3][:2, m]
             mean5 = apply_correction_to_BC(cff, mean5, imt, ctx.repi)
 
             # Atkinson and Boore 2006 - Rrup
-            mean3, stds3 = mean_stds[4][:, m]
+            mean3, stds3 = mean_stds[4][:2, m]
 
             # Computing adjusted mean and stds
             mean[m] = mean1*0.2 + mean2*0.2 + mean3*0.2 + mean4*0.2 + mean5*0.2
@@ -153,9 +152,9 @@ class EasternCan15Mid(GMPE):
             # Note that in this case we do not apply a triangular smoothing on
             # distance as explained at page 996 of Atkinson and Adams (2013)
             # for the calculation of the standard deviation
-            stds = np.log(np.exp(stds1)*0.2 + np.exp(stds2)*0.2 +
-                          np.exp(stds3)*0.2 + np.exp(stds4)*0.2 +
-                          np.exp(stds5)*0.2)
+            stds = np.log(np.exp(stds1) * 0.2 + np.exp(stds2) * 0.2 +
+                          np.exp(stds3) * 0.2 + np.exp(stds4) * 0.2 +
+                          np.exp(stds5) * 0.2)
             sig[m] = get_sigma(imt)
             if self.sgn:
                 mean[m] += self.sgn * (stds + _get_delta(stds, ctx.repi))

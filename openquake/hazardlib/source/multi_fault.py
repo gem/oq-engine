@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -20,14 +20,20 @@ defines :class:`MultiFaultSource`.
 
 import numpy as np
 from typing import Union
+
+from openquake.baselib.general import gen_slices
 from openquake.hazardlib.source.rupture import (
     NonParametricProbabilisticRupture)
 from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.multi import MultiSurface
+from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
 
 F32 = np.float32
+BLOCKSIZE = 1000
+# the BLOCKSIZE has to be large to reduce the number of sources and
+# therefore the redundant data transfer in the .sections attribute
 
 
 class FaultSection(object):
@@ -46,6 +52,16 @@ class FaultSection(object):
     def __init__(self, sec_id: str, surface):
         self.sec_id = sec_id
         self.surface = surface
+
+    def geom(self):
+        """
+        :returns:
+            an array of float32 with structure
+            [1., shape_y, shape_z, coords, ...]
+        """
+        shape_y, shape_z = self.surface.mesh.array.shape[1:]
+        coords = F32(self.surface.mesh.array.flat)
+        return np.concatenate([F32([1, shape_y, shape_z]), coords])
 
 
 class MultiFaultSource(BaseSeismicSource):
@@ -98,7 +114,17 @@ class MultiFaultSource(BaseSeismicSource):
 
         Set the attribute .sections to the passed dictionary
         """
+        # Check
         assert sections
+
+        # Assign to the surface the index of the corresponding section
+        for key in sections:
+            sections[key].surface.suid = key
+
+        # `i` is the index of the rupture of the `n` admitted by this source.
+        # In this loop we check that all the IDs of the sections composing one
+        # rupture have a object in the sections dictionary describing their
+        # geometry.
         self.sections = sections
         msg = 'Rupture #{:d}: section "{:s}" does not exist'
         for i in range(len(self.mags)):
@@ -113,14 +139,15 @@ class MultiFaultSource(BaseSeismicSource):
         :param fromidx: start
         :param untilidx: stop
         """
-        # check
+        # Check
         if 'sections' not in self.__dict__:
             raise RuntimeError('You forgot to call set_sections in %s!' % self)
 
         # iter on the ruptures
+        step = kwargs.get('step', 1)
         untilidx = len(self.mags) if untilidx is None else untilidx
         s = self.sections
-        for i in range(fromidx, untilidx):
+        for i in range(fromidx, untilidx, step**2):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
                 sfc = self.sections[idxs[0]].surface
@@ -132,8 +159,23 @@ class MultiFaultSource(BaseSeismicSource):
                 self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
                 self.pmfs[i])
 
-    def __iter__(self):  # not splittable
-        yield self
+    def __iter__(self):
+        if len(self.mags) <= BLOCKSIZE:  # already split
+            yield self
+            return
+        # split in blocks of BLOCKSIZE ruptures each
+        for i, slc in enumerate(gen_slices(0, len(self.mags), BLOCKSIZE)):
+            src = self.__class__(
+                '%s:%d' % (self.source_id, i),
+                self.name,
+                self.tectonic_region_type,
+                self.rupture_idxs[slc],
+                self.pmfs[slc],
+                self.mags[slc],
+                self.rakes[slc])
+            src.set_sections(self.sections)
+            src.num_ruptures = src.count_ruptures()
+            yield src
 
     def count_ruptures(self):
         """
@@ -154,3 +196,20 @@ class MultiFaultSource(BaseSeismicSource):
 
     polygon = NP.polygon
     wkt = NP.wkt
+    mesh_size = NP.mesh_size
+
+    def get_bounding_box(self, maxdist):
+        """
+        Bounding box containing the surfaces, enlarged by the maximum distance
+        """
+        surfaces = []
+        for sec in self.sections.values():
+            if isinstance(sec.surface, MultiSurface):
+                surfaces.extend(sec.surface.surfaces)
+            else:
+                surfaces.append(sec.surface)
+        multi_surf = MultiSurface(surfaces)
+        west, east, north, south = multi_surf.get_bounding_box()
+        a1 = maxdist * KM_TO_DEGREES
+        a2 = angular_distance(maxdist, north, south)
+        return west - a2, south - a1, east + a2, north + a1

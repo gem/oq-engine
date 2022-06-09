@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -217,7 +217,7 @@ class GeneralEquivalenceTestCase(unittest.TestCase):
         GMPE). Then the "low", "average" and "high" cases are run separately
         and the resulting curves summed with their respective weights.
 
-        A small degree of mismatch is found though this typcially takes
+        A small degree of mismatch is found though this typically takes
         place at very low probabilities. Curves are compared in the logarithmic
         domain (ignoring 0 values)
         """
@@ -241,12 +241,6 @@ class GeneralEquivalenceTestCase(unittest.TestCase):
         idx = wmean_curve["PGA"] > 0.0
         np.testing.assert_array_almost_equal(
             np.log(wmean_curve["PGA"][idx]), np.log(curves["PGA"][idx]), ndp)
-
-    def test_nshmp_wus_curves_no_truncation(self):
-        # Test the case without truncation
-        truncation = None
-        for gsim_name in ["ASK", "BSSA", "CB", "CY", "ID"]:
-            self._verify_curves(gsim_name, truncation)
 
     def test_nshmp_wus_curves_normal_truncation(self):
         # Test the case with a conventional truncation value (3.)

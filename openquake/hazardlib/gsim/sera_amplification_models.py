@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -47,7 +47,7 @@ CONSTANTS = {
 
 IMLS = [0., 0.25, 0.5, 0.75, 1., 1.25]
 
-MEAN, INTER, INTRA = 0, 1, 2
+MEAN, SIGMA, INTER, INTRA = 0, 1, 2, 3
 
 get_amplification_factor = CallableDict()
 
@@ -97,8 +97,8 @@ def get_amplification_factor_2(kind, F1, FS, s_s_rp, s_1_rp, sctx, ec8):
     Returns the amplification factors based on the proposed EC8 formulation
     in Table 3.4
     """
-    r_alpha = 1.0 - 2.0E3 * ((s_s_rp * g) / (sctx.vs30 ** 2))
-    r_beta = 1.0 - 2.0E3 * ((s_1_rp * g) / (sctx.vs30 ** 2))
+    r_alpha = 1.0 - 2.0E3 * (s_s_rp * g) / (sctx.vs30 ** 2)
+    r_beta = 1.0 - 2.0E3 * (s_1_rp * g) / (sctx.vs30 ** 2)
     f_s = np.ones(sctx.vs30.shape)
     f_l = np.ones(sctx.vs30.shape)
     vsh_norm = sctx.vs30 / 800.
@@ -174,7 +174,6 @@ def get_ec8_class(vsh, h800):
     Vs30 and h800
     """
     ec8 = np.array([b"A" for i in range(len(vsh))], dtype="|S1")
-
     idx = np.logical_and(vsh >= 400., h800 > 5.)
     ec8[idx] = b"B"
     idx1 = np.logical_and(vsh < 400., vsh >= 250.)
@@ -254,19 +253,19 @@ class PitilakisEtAl2018(GMPE):
         super().__init__(gmpe_name=gmpe_name,
                          reference_velocity=reference_velocity, **kwargs)
         if isinstance(gmpe_name, str):
-            self.gmpe = registry[gmpe_name](**kwargs)
+            self.gsim = registry[gmpe_name](**kwargs)
         else:
             # An instantiated class is passed as an argument
-            self.gmpe = copy.deepcopy(gmpe_name)
+            self.gsim = copy.deepcopy(gmpe_name)
         if reference_velocity:
             self.rock_vs30 = reference_velocity
         else:
             self.rock_vs30 = self.DEFINED_FOR_REFERENCE_VELOCITY
         for name in uppernames:
             setattr(self, name,
-                    frozenset(getattr(self, name) | getattr(self.gmpe, name)))
+                    frozenset(getattr(self, name) | getattr(self.gsim, name)))
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations calling the input GMPE
         for the mean acceleration for PGA and Sa (1.0) on the reference rock,
@@ -278,8 +277,7 @@ class PitilakisEtAl2018(GMPE):
         # Get PGA and Sa (1.0) from GMPE
         ctx_r = copy.copy(ctx)
         ctx_r.vs30 = np.full_like(ctx_r.vs30, self.rock_vs30)
-        [rock] = contexts.get_mean_stds(
-            [self.gmpe], ctx_r, [PGA(),  SA(1.0)], const.StdDev.ALL)
+        rock = contexts.get_mean_stds(self.gsim, ctx_r, [PGA(),  SA(1.0)])
         pga_r = rock[0, 0]
         s_1_rp = rock[0, 1]
         s_s_rp = CONSTANTS["F0"] * np.exp(pga_r)
@@ -295,8 +293,7 @@ class PitilakisEtAl2018(GMPE):
         s_s = f_s * s_s_rp
 
         # NB: this is wasteful since means are computed and then discarded
-        [out] = contexts.get_mean_stds(
-            [self.gmpe], ctx_r, imts, const.StdDev.ALL)
+        out = contexts.get_mean_stds(self.gsim, ctx_r, imts)
         for m, imt in enumerate(imts):
             # Get the mean ground motion using the design code spectrum
             mean[m] = get_amplified_mean(s_s, s_1, s_1_rp, imt)
@@ -404,7 +401,7 @@ class Eurocode8Amplification(PitilakisEtAl2018):
             self.DEFINED_FOR_REFERENCE_VELOCITY
         for name in uppernames:
             setattr(self, name,
-                    frozenset(getattr(self, name) | getattr(self.gmpe, name)))
+                    frozenset(getattr(self, name) | getattr(self.gsim, name)))
 
 
 # Default short period amplification factors defined by Eurocode 8 Table 3.4
@@ -530,23 +527,23 @@ class SandikkayaDinsever2018(GMPE):
                  phi_0=None, **kwargs):
         super().__init__(**kwargs)
         if isinstance(gmpe_name, str):
-            self.gmpe = registry[gmpe_name](**kwargs)
+            self.gsim = registry[gmpe_name](**kwargs)
         else:
             # An instantiated class is passed as an argument
-            self.gmpe = copy.deepcopy(gmpe_name)
+            self.gsim = copy.deepcopy(gmpe_name)
         # Define the reference velocity - set to 760. by default
         self.rock_vs30 = reference_velocity if reference_velocity else\
             self.DEFINED_FOR_REFERENCE_VELOCITY
         for name in uppernames:
             setattr(self, name,
-                    frozenset(getattr(self, name) | getattr(self.gmpe, name)))
+                    frozenset(getattr(self, name) | getattr(self.gsim, name)))
         stddev_check = (const.StdDev.INTER_EVENT in
                         self.DEFINED_FOR_STANDARD_DEVIATION_TYPES) and\
                        (const.StdDev.INTRA_EVENT in
                         self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
         if not stddev_check:
             raise ValueError("Input GMPE %s not defined for inter- and intra-"
-                             "event standard deviation" % str(self.gmpe))
+                             "event standard deviation" % str(self.gsim))
 
         if isinstance(phi_0, dict):
             # Input phi_0 model
@@ -567,14 +564,13 @@ class SandikkayaDinsever2018(GMPE):
         else:
             self.region = region
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """
         ctx_r = copy.copy(ctx)
         ctx_r.vs30 = np.full_like(ctx_r.vs30, self.rock_vs30)
-        [rock] = contexts.get_mean_stds(
-            [self.gmpe], ctx_r, imts, const.StdDev.EVENT)
+        rock = contexts.get_mean_stds(self.gsim, ctx_r, imts)
         for m, imt in enumerate(imts):
             psarock = np.exp(rock[MEAN][m])
             C = self.COEFFS_SITE[imt]

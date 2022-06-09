@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2021 GEM Foundation
+# Copyright (C) 2017-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -159,10 +159,11 @@ class Socket(object):
             raise exc.__class__('%s: %r' % (exc, obj))
         self.num_sent += 1
         if self.socket_type == zmq.REQ:
-            ok = self.zsocket.poll(10000)  # 10 seconds
+            ok = self.zsocket.poll(30000)  # 30 seconds
             if not ok:
                 raise TimeoutError(
-                    'While sending %s; probably the DbServer is off' % obj)
+                    'While sending %s; probably the DbServer is off' %
+                    repr(obj))
             return self.zsocket.recv_pyobj()
 
     def __repr__(self):

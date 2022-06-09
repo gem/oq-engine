@@ -132,6 +132,14 @@ armenia_2016
     :undoc-members:
     :show-inheritance:
 
+arroyo_2010
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.arroyo_2010
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 atkinson_2015
 ---------------------------------------------
 
@@ -193,6 +201,13 @@ baumont_2018
 ------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.baumont_2018
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+bayless_abrahamson_2018
+------------------------------------
+.. automodule:: openquake.hazardlib.gsim.bayless_abrahamson_2018
     :members:
     :undoc-members:
     :show-inheritance:
@@ -314,6 +329,14 @@ boore_atkinson_2011
 ---------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.boore_atkinson_2011
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+bora_2019
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bora_2019
     :members:
     :undoc-members:
     :show-inheritance:
@@ -683,6 +706,14 @@ idriss_2014
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.idriss_2014
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+jaimes_2020
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.jaimes_2020
     :members:
     :undoc-members:
     :show-inheritance:
@@ -1105,6 +1136,14 @@ tusa_langer_2016
     :undoc-members:
     :show-inheritance:
 
+tusa_langer_azzaro_2019
+------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.tusa_langer_azzaro_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 utils
 -------------------------------------
 
@@ -1145,6 +1184,14 @@ yenier_atkinson_2015
     :undoc-members:
     :show-inheritance:
 
+youd_etal_2002
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.youd_etal_2002
+    :members:
+    :undoc-members:
+    :show-inheritance:    
+    
 youngs_1997
 -------------------------------------------
 

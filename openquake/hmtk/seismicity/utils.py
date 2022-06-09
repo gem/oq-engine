@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2021 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -51,47 +51,7 @@ Utility functions for seismicity calculations
 import numpy as np
 from shapely import geometry
 from openquake.hazardlib.pmf import PRECISION
-try:
-    from scipy.stats._continuous_distns import (truncnorm_gen,
-                                                _norm_cdf, _norm_sf,
-                                                _norm_ppf, _norm_isf)
-
-    class hmtk_truncnorm_gen(truncnorm_gen):
-        """
-        At present, the scipy.stats.truncnorm.rvs object does not support
-        vector inputs for the bounds - this piece of duck punching changes that
-        """
-
-        def _argcheck(self, a, b):
-            self.a = a
-            self.b = b
-            self._nb = _norm_cdf(b)
-            self._na = _norm_cdf(a)
-            self._sb = _norm_sf(b)
-            self._sa = _norm_sf(a)
-            self._delta = self._nb - self._na
-            idx = self.a > 0
-            self._delta[idx] = -(self._sb[idx] - self._sa[idx])
-            self._logdelta = np.log(self._delta)
-            return (a != b)
-
-        def _ppf(self, q, a, b):
-            output = np.zeros_like(self.a)
-            idx = self.a > 0
-            if np.any(idx):
-                output[idx] = _norm_isf(q[idx] * self._sb[idx] +
-                                        self._sa[idx] * (-q[idx] + 1.0))
-            idx = np.logical_not(idx)
-            if np.any(idx):
-                output[idx] = _norm_ppf(q[idx] * self._nb[idx] +
-                                        self._na[idx] * (-q[idx] + 1.0))
-            return output
-
-    hmtk_truncnorm = hmtk_truncnorm_gen(name="hmtk_truncnorm")
-except Exception:
-    print("Continuous distributions not available on Scipy version < 0.15\n")
-    print("Bootstrap sampling of the depth distribution will raise an error")
-    hmtk_truncnorm = None
+from scipy.stats import truncnorm
 
 MARKER_NORMAL = np.array([0, 31, 59, 90, 120, 151, 181,
                           212, 243, 273, 304, 334])
@@ -356,7 +316,7 @@ def sample_truncated_gaussian_vector(data, uncertainties, bounds=None):
             upper_bound = (bounds[1] - data) / uncertainties
         else:
             upper_bound = np.inf * np.ones_like(data)
-        sample = hmtk_truncnorm.rvs(lower_bound, upper_bound, size=nvals)
+        sample = truncnorm.rvs(lower_bound, upper_bound, size=nvals)
 
     else:
         sample = np.random.normal(0., 1., nvals)
@@ -434,7 +394,8 @@ def hmtk_histogram_2D(xvalues, yvalues, bins, x_offset=1.0E-10,
 
 def bootstrap_histogram_1D(
         values, intervals, uncertainties=None,
-        normalisation=False, number_bootstraps=None, boundaries=None):
+        normalisation=False, number_bootstraps=None, boundaries=None,
+        random_seed=42):
     '''
     Bootstrap samples a set of vectors
 
@@ -450,20 +411,18 @@ def bootstrap_histogram_1D(
         Number of bootstraps
     :param tuple boundaries:
         (Lower, Upper) bounds on the data
-
+    :param random_seed:
+        Seed used in the random number generator
     :param returns:
         1-D histogram of data
-
     '''
+    np.random.seed(random_seed)
     if not number_bootstraps or np.all(np.fabs(uncertainties < PRECISION)):
         # No bootstraps or all uncertaintes are zero - return ordinary
         # histogram
-        #output = np.histogram(values, intervals)[0]
         output = hmtk_histogram_1D(values, intervals)
         if normalisation:
-            output = output / float(np.sum(output))
-        else:
-            output = output
+            output /= np.sum(output)
         return output
     else:
         temp_hist = np.zeros([len(intervals) - 1, number_bootstraps],
@@ -472,59 +431,49 @@ def bootstrap_histogram_1D(
             sample = sample_truncated_gaussian_vector(values,
                                                       uncertainties,
                                                       boundaries)
-            #output = np.histogram(sample, intervals)[0]
             output = hmtk_histogram_1D(sample, intervals)
             temp_hist[:, iloc] = output
         output = np.sum(temp_hist, axis=1)
         if normalisation:
-            output = output / float(np.sum(output))
-        else:
-            output = output / float(number_bootstraps)
+            output /= np.sum(output)
         return output
 
 
 def bootstrap_histogram_2D(
         xvalues, yvalues, xbins, ybins,
         boundaries=[None, None], xsigma=None, ysigma=None,
-        normalisation=False, number_bootstraps=None):
+        normalisation=False, number_bootstraps=None, random_seed=42):
     '''
     Calculates a 2D histogram of data, allowing for normalisation and
     bootstrap sampling
 
     :param numpy.ndarray xvalues:
         Data values of the first variable
-
     :param numpy.ndarray yvalues:
         Data values of the second variable
-
     :param numpy.ndarray xbins:
         Bin edges for the first variable
-
     :param numpy.ndarray ybins:
         Bin edges for the second variable
-
     :param list boundaries:
         List of (Lower, Upper) tuples corresponding to the bounds of the
         two data sets
-
     :param numpy.ndarray xsigma:
         Error values (standard deviatons) on first variable
-
     :param numpy.ndarray ysigma:
         Error values (standard deviatons) on second variable
-
     :param bool normalisation:
         If True then returns the histogram as a density function
-
     :param int number_bootstraps:
         Number of bootstraps
-
+    :param random_seed:
+        Seed used in the random number generator
     :param returns:
         2-D histogram of data
     '''
-    if (xsigma is None and ysigma is None) or not number_bootstraps:
+    np.random.seed(random_seed)
+    if xsigma is None and ysigma is None or not number_bootstraps:
         # No sampling - return simple 2-D histrogram
-        #output = np.histogram2d(xvalues, yvalues, bins=[xbins, ybins])[0]
         output = hmtk_histogram_2D(xvalues, yvalues, bins=(xbins, ybins))
         if normalisation:
             output = output / float(np.sum(output))
@@ -543,10 +492,6 @@ def bootstrap_histogram_2D(
                                                        boundaries[0])
             ysample = sample_truncated_gaussian_vector(yvalues, ysigma,
                                                        boundaries[0])
-
-            # temp_hist[:, :, iloc] = np.histogram2d(xsample,
-            #                                       ysample,
-            #                                       bins=[xbins, ybins])[0]
             temp_hist[:, :, iloc] = hmtk_histogram_2D(xsample,
                                                       ysample,
                                                       bins=(xbins, ybins))
@@ -569,17 +514,17 @@ WGS84m["e2"] = WGS84m["e"] ** 2.
 def TO_Q(lat): return (
     (1.0 - WGS84["e2"]) * (
         (np.sin(lat) / (1.0 - (WGS84["e2"] * (np.sin(lat) ** 2.))) -
-         ((1. / (2.0 * WGS84["e"])) * np.log((1.0 - WGS84["e"] * np.sin(lat)) /
-                                             (1.0 + WGS84["e"] * np.sin(lat))))))
-)
+         ((1. / (2.0 * WGS84["e"])) *
+          np.log((1.0 - WGS84["e"] * np.sin(lat)) /
+                 (1.0 + WGS84["e"] * np.sin(lat)))))))
 
 
 def TO_Qm(lat): return (
     (1.0 - WGS84m["e2"]) * (
         (np.sin(lat) / (1.0 - (WGS84m["e2"] * (np.sin(lat) ** 2.))) -
-         ((1. / (2.0 * WGS84m["e"])) * np.log((1.0 - WGS84m["e"] * np.sin(lat)) /
-                                              (1.0 + WGS84m["e"] * np.sin(lat))))))
-)
+         ((1. / (2.0 * WGS84m["e"])) *
+          np.log((1.0 - WGS84m["e"] * np.sin(lat)) /
+                 (1.0 + WGS84m["e"] * np.sin(lat)))))))
 
 
 def lonlat_to_laea(lon, lat, lon0, lat0, f_e=0.0, f_n=0.0):
@@ -617,11 +562,12 @@ def lonlat_to_laea(lon, lat, lon0, lat0, f_e=0.0, f_n=0.0):
         np.cos(lat0) / np.sqrt(1.0 - (WGS84["e2"] * (np.sin(lat0) ** 2.))) /
         (r_q * np.cos(beta0)))
     bval = r_q * np.sqrt(
-        2. / (1.0 + (np.sin(beta0) * np.sin(beta)) + (np.cos(beta) *
-                                                      np.cos(beta0) * np.cos(lon - lon0))))
+        2. / (1.0 + (np.sin(beta0) * np.sin(beta)) + (
+            np.cos(beta) * np.cos(beta0) * np.cos(lon - lon0))))
     easting = f_e + ((bval * dval) * (np.cos(beta) * np.sin(lon - lon0)))
-    northing = f_n + (bval / dval) * ((np.cos(beta0) * np.sin(beta)) -
-                                      (np.sin(beta0) * np.cos(beta) * np.cos(lon - lon0)))
+    northing = f_n + (bval / dval) * (
+        (np.cos(beta0) * np.sin(beta)) -
+        (np.sin(beta0) * np.cos(beta) * np.cos(lon - lon0)))
     return easting, northing
 
 

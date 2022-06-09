@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,14 +32,15 @@ from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.commonlib.datastore import read
+from openquake.commonlib.readinput import get_params
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
-from openquake.qa_tests_data.classical import case_1, case_9, case_18
+from openquake.qa_tests_data.event_based_damage import case_15
+from openquake.qa_tests_data.classical import case_1, case_9, case_18, case_56
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
-from openquake.qa_tests_data.event_based import (
-    case_2, case_5, case_16, case_21)
+from openquake.qa_tests_data.event_based import case_5, case_16, case_21
 from openquake.qa_tests_data.event_based_risk import (
     case_master, case_1 as case_eb)
 from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
@@ -64,8 +65,7 @@ class Print(object):
 
     @classmethod
     def patch(cls):
-        bprint = 'builtins.print' if sys.version > '3' else '__builtin__.print'
-        return mock.patch(bprint, cls())
+        return mock.patch('builtins.print', cls())
 
 
 class InfoTestCase(unittest.TestCase):
@@ -74,7 +74,7 @@ class InfoTestCase(unittest.TestCase):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
             sap.runline(f'openquake.commands info {path}')
-        self.assertIn('hazard_imtls', str(p))
+        self.assertIn('input size', str(p))
 
     # poor man tests: checking that the flags produce a few characters
     # (more than 10) and do not break; I am not checking the precise output
@@ -119,6 +119,12 @@ class InfoTestCase(unittest.TestCase):
             sap.runline('openquake.commands info mfds')
         lines = str(p).split()
         self.assertGreaterEqual(len(lines), 5)
+
+    def test_cfg(self):
+        with Print.patch() as p:
+            sap.runline('openquake.commands info cfg')
+        lines = str(p).split('\n')
+        self.assertGreaterEqual(len(lines), 2)
 
     def test_sources(self):
         with Print.patch() as p:
@@ -243,7 +249,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             sap.runline('openquake.commands show sitecol %d' % self.calc_id)
-        self.assertIn('sids | lon | lat | depth | vs30  | vs30measured',
+        self.assertIn('sids | lon     | lat | depth | vs30  | vs30measured',
                       str(p))
 
         with Print.patch() as p:
@@ -363,8 +369,8 @@ class ZipTestCase(unittest.TestCase):
                           'Wcrust_med_rhypo.hdf5',
                           'job.ini',
                           'nbc_asc_logic_tree.xml',
+                          'point_source.xml',
                           'source_model_logic_tree.xml',
-                          'vancouver_area_source.xml',
                           'vancouver_school_sites.csv'], names)
         shutil.rmtree(dtemp)
 
@@ -439,60 +445,6 @@ class ZipTestCase(unittest.TestCase):
         shutil.rmtree(dtemp)
 
 
-class SourceModelShapefileConverterTestCase(unittest.TestCase):
-    """
-    Simple conversion test for the Source Model to shapefile converter
-    - more tests will follow
-    """
-
-    def setUp(self):
-        self.OUTDIR = tempfile.mkdtemp()
-        self.out = os.path.join(self.OUTDIR, 'smc')
-
-    def test_roundtrip_invalid(self):
-        # test the conversion to shapefile and back for an invalid file
-        smc = os.path.join(os.path.dirname(__file__),
-                           "data", "source_model_complete.xml")
-
-        sap.runline(
-            f'openquake.commands to_shapefile {smc} --output={self.out}')
-        shpfiles = ' '.join(os.path.join(self.OUTDIR, f)
-                            for f in os.listdir(self.OUTDIR))
-        sap.runline(
-            f'openquake.commands from_shapefile {shpfiles} -o{self.out}')
-
-        # test invalid file
-        with self.assertRaises(Exception) as ctx:
-            sap.runline(
-                f'openquake.commands to_shapefile -v {smc} -o{self.out}')
-        self.assertIn('Edges points are not in the right order',
-                      str(ctx.exception))
-
-    def test_roundtrip_valid_04(self):
-        # test the conversion to shapefile and back for a valid file NRML 0.4
-        ssm = os.path.join(os.path.dirname(__file__),
-                           "data", "sample_source_model.xml")
-        sap.runline(f'openquake.commands to_shapefile -v {ssm} -o{self.out}')
-        shpfiles = ' '.join(os.path.join(self.OUTDIR, f)
-                            for f in os.listdir(self.OUTDIR))
-        sap.runline(
-            f'openquake.commands from_shapefile -v {shpfiles} -o{self.out}')
-
-    def test_roundtrip_valid_05(self):
-        # test the conversion to shapefile and back for a valid file NRML 0.5
-        ssm = os.path.join(os.path.dirname(__file__),
-                           "data", "sample_source_model_05.xml")
-        sap.runline(f'openquake.commands to_shapefile -v {ssm} -o{self.out}')
-        shpfiles = ' '.join(os.path.join(self.OUTDIR, f)
-                            for f in os.listdir(self.OUTDIR))
-        sap.runline(
-            f'openquake.commands from_shapefile -v {shpfiles} -o{self.out}')
-
-    def tearDown(self):
-        # comment out the line below if you need to debug the test
-        shutil.rmtree(self.OUTDIR)
-
-
 class DbTestCase(unittest.TestCase):
     def test_db(self):
         # the some db commands bypassing the dbserver
@@ -523,14 +475,13 @@ class EngineRunJobTestCase(unittest.TestCase):
             run_jobs(create_jobs([job_ini]))
 
     def test_sensitivity(self):
-        job_ini = gettemp('''[general]
-description = sensitivity test
-calculation_mode = scenario
-sites = 0 0
-intensity_measure_types = PGA
-sensitivity_analysis = {
-  'maximum_distance': [100, 200]}''')
-        run_jobs(create_jobs([job_ini]))
+        # test the sensitivity of the UHS from the area_source_discretization
+        job_ini = os.path.join(os.path.dirname(case_56.__file__), 'job.ini')
+        sap.runline(f'openquake.commands engine --run {job_ini} -c 0')
+        with Print.patch() as p:
+            sap.runline('openquake.commands compare uhs -1 -2')
+        print(p)
+        self.assertIn('rms-diff', str(p))
 
     def test_ebr(self):
         # test a single case of `run_jobs`, but it is the most complex one,
@@ -574,11 +525,13 @@ Source Loss Table'''.splitlines())
 
     def test_oqdata(self):
         # the that the environment variable OQ_DATADIR is honored
-        job_ini = os.path.join(os.path.dirname(case_2.__file__), 'job_2.ini')
+        job_ini = os.path.join(os.path.dirname(case_15.__file__), 'job.ini')
+        dic = get_params(job_ini)
+        dic['calculation_mode'] = 'event_based'
         tempdir = tempfile.mkdtemp()
         dbserver.ensure_on()
         with mock.patch.dict(os.environ, OQ_DATADIR=tempdir):
-            [job] = run_jobs(create_jobs([job_ini], 'error'))
+            [job] = run_jobs(create_jobs([dic], 'error'))
             job = commonlib.logs.dbcmd('get_job', job.calc_id)
             self.assertTrue(job.ds_calc_dir.startswith(tempdir),
                             job.ds_calc_dir)
@@ -586,6 +539,10 @@ Source Loss Table'''.splitlines())
             sap.runline(f'openquake.commands export ruptures {job.id} '
                         f'-e csv --export-dir={tempdir}')
         self.assertIn('Exported', str(p))
+
+        # run the damage part; emulate using a different user for the hazard
+        dic['calculation_mode'] = 'event_based_damage'
+        run_jobs(create_jobs([dic], 'error', hc_id=job.id))
         shutil.rmtree(tempdir)
 
 
@@ -608,7 +565,7 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         output = gettemp(suffix='.csv')
         grid_spacing = 50
         exposure_xml = os.path.join(inputdir, 'exposure.xml')
-        vs30_csv = os.path.join(inputdir, 'vs30.csv')
+        vs30_csv = os.path.join(inputdir, 'vs30.csv.gz')
         sitecol = sap.runline('openquake.commands prepare_site_model '
                               f'-123 {vs30_csv} -e {exposure_xml} '
                               f'-g {grid_spacing} --assoc-distance=5 '

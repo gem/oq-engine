@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="exposure_Cali" category="buildings" taxonomySource="GEM taxonomy">
+    <description>Exposure model at building level for the city of Cali, Colombia</description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" type="aggregated" unit="COP"/>
+      </costTypes>
+    </conversions>
+    <tagNames>COMUNA ID_BARRIO OCCUPANCY_MODE CONSTRUCTION_PERIOD INCOME_LEVEL FLOORS OCCUPANCY_DETAILED</tagNames>
+    <occupancyPeriods>night</occupancyPeriods>
+    <assets>
+      Exposure_Cal_Colombia.csv
+    </assets>
+  </exposureModel>
+</nrml>

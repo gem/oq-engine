@@ -47,7 +47,7 @@ def _get_phi(ergodic, PHI_SS, PHI_S2SS, phi_ss_quantile, phi_model, imt, mag):
     # -> if phi < 0.4 in middle branch and T is below 0.5 s
     # -> preserve separation between high and low phi values
     if imt.period < 0.5 and phi_ss_quantile == 0.5:
-        phi = max(phi, 0.4)
+        phi[:] = np.maximum(phi, 0.4)
 
     elif imt.period < 0.5 and phi_ss_quantile != 0.5:
         # compute phi at quantile 0.5 and take the maximum comp to 0.4
@@ -56,11 +56,11 @@ def _get_phi(ergodic, PHI_SS, PHI_S2SS, phi_ss_quantile, phi_model, imt, mag):
         phi_0p5 = get_phi_ss(imt, mag, PHI_SS_0p5)
 
         # make adjustment if needed
-        phi = 0.4 + phi - phi_0p5 if phi_0p5 < 0.4 else phi
+        phi[:] = np.where(phi_0p5 < 0.4, 0.4 + phi - phi_0p5, phi)
 
     if ergodic:
         C = PHI_S2SS[imt]
-        phi = np.sqrt(phi ** 2. + C["phi_s2ss"] ** 2.)
+        phi[:] = np.sqrt(phi ** 2. + C["phi_s2ss"] ** 2.)
 
     return phi
 
@@ -83,7 +83,7 @@ def extrapolate_in_PSA(gmpe, ctx, imt_high, set_imt, imt):
             c.rrup = np.array([ctx.rrup[d]])
         means_log10 = []
         for im in set_imt:
-            [mean_ln] = contexts.get_mean_stds([gmpe], c, [SA(im)], None)
+            mean_ln = contexts.get_mean_stds(gmpe, c, [SA(im)])[0]
             mean = np.exp(mean_ln[0])
             means_log10.append(np.log10(mean))
         mb = np.polyfit(t_log10, means_log10, 1)
@@ -263,6 +263,7 @@ class AlAtikSigmaModel(GMPE):
         kappa value corresponding to a column header in kappa_file
     """
     adapted = True
+    gmpe_table = True  # use split_by_mag
 
     # Parameters
     REQUIRES_SITES_PARAMETERS = set()
@@ -304,10 +305,11 @@ class AlAtikSigmaModel(GMPE):
                 data = myfile.read().decode('utf-8')
             self.KAPPATAB = CoeffsTable(table=data, sa_damping=5)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        [mag] = np.unique(np.round(ctx.mag, 6))
         for m, imt in enumerate(imts):
 
-            cornerp = get_corner_period(ctx.mag)
+            cornerp = get_corner_period(mag)
             # capping period only compares
             # - highest period with a coefficient
             # - corner period
@@ -317,12 +319,12 @@ class AlAtikSigmaModel(GMPE):
 
             # 1 - if imt.period < cornerp, no changes needed
             if self.extr and imt.period <= cornerp and imt.period <= hp:
-                [mean_] = contexts.get_mean_stds([self.gmpe], ctx, [imt], None)
+                mean_ = contexts.get_mean_stds(self.gmpe, ctx, [imt])[0]
             # if the period is larger than the corner period but the corner
             # period is less than the highest period
             elif self.extr and imt.period >= cornerp and cornerp <= hp:
-                [mean_] = contexts.get_mean_stds(
-                    [self.gmpe], ctx, [SA(cornerp)], None)
+                mean_ = contexts.get_mean_stds(
+                    self.gmpe, ctx, [SA(cornerp)])[0]
                 disp = get_disp_from_acc(mean_, cornerp)
                 mean_ = get_acc_from_disp(disp, imt.period)
             # if the corner period is longer than highest and imt is above
@@ -334,7 +336,7 @@ class AlAtikSigmaModel(GMPE):
                 disp = get_disp_from_acc(mean, cornerp)
                 mean_ = get_acc_from_disp(disp, imt.period)
             else:
-                [mean_] = contexts.get_mean_stds([self.gmpe], ctx, [imt], None)
+                mean_ = contexts.get_mean_stds(self.gmpe, ctx, [imt])[0]
 
             kappa = 1
             if self.kappa_file:

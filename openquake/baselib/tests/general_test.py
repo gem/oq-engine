@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2010-2021 GEM Foundation
+# Copyright (C) 2010-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,15 +19,15 @@
 """
 Test related to code in openquake/utils/general.py
 """
+import time
 import unittest.mock as mock
 import unittest
 import numpy
 from operator import attrgetter
 from collections import namedtuple
 from openquake.baselib.general import (
-    block_splitter, split_in_blocks, assert_close,
-    deprecated, DeprecationWarning, cached_property, start_many,
-    compress, decompress)
+    block_splitter, split_in_blocks, assert_close, kmean, rmsdiff,
+    deprecated, DeprecationWarning, cached_property, compress, decompress)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
@@ -200,13 +200,55 @@ def double(calc_id, val):
     print((calc_id, val * 2))
 
 
-class StartManyTestCase(unittest.TestCase):
-    def test(self):
-        with start_many(double, [(1, 1), (2, 2), (3, 3)]):
-            pass
-
-
 class CompressTestCase(unittest.TestCase):
     def test(self):
         a = dict(a=numpy.array([9999.]))
         self.assertEqual(a, decompress(compress(a)))
+
+
+class KmeanTestCase(unittest.TestCase):
+    def test_small(self):
+        # build a small structured array
+        dtlist = [('mdvbin', numpy.uint32), ('rake', numpy.float64),
+                  ('sids', numpy.uint32)]
+        N = 10
+        arr = numpy.zeros(N, dtlist)
+        rng = numpy.random.default_rng(42)
+        arr['mdvbin'] = rng.integers(50, size=N)
+        arr['rake'] = rng.random(N) * 360
+        arr['sids'] = rng.integers(1000, size=N)
+        sids = []
+        for rec in kmean(arr, 'mdvbin'):
+            sids.append(arr['sids'][arr['mdvbin'] == rec['mdvbin']])
+        expected_sids = [[450, 858, 631], [276], [554, 887], [92],
+                         [827], [227], [63]]
+        numpy.testing.assert_equal(sids, expected_sids)
+
+    def test_big(self):
+        # build a very large structured array
+        dtlist = [('mdvbin', numpy.uint32), ('rake', numpy.float64),
+                  ('sids', numpy.uint32)]
+        N = 10_000_000
+        arr = numpy.zeros(N, dtlist)
+        rng = numpy.random.default_rng(42)
+        arr['mdvbin'] = rng.integers(50, size=N)
+        arr['rake'] = rng.random(N) * 360
+        arr['sids'] = rng.integers(1000, size=N)
+        t0 = time.time()
+        mean = kmean(arr, 'mdvbin')
+        sids = []
+        for mdvbin in mean['mdvbin']:
+            sids.append(arr['sids'][arr['mdvbin'] == mdvbin])
+        print([len(s) for s in sids])
+        dt = time.time() - t0
+        print('Grouped %d elements in %.1f seconds' % (N, dt))
+
+
+class RmsDiffTestCase(unittest.TestCase):
+    def test(self):
+        a = numpy.array([[.1, .2, .3],
+                         [1.1, 1.2, 1.3]])
+        b = numpy.array([[.11, .21, .31],
+                         [1.1, 1.21, 1.31]])
+        rms, index = rmsdiff(a, b)
+        print(rms, index)

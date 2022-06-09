@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,7 @@ import pstats
 
 from openquake.baselib import performance, general
 from openquake.hazardlib import valid
-from openquake.commonlib import oqvalidation, logs, datastore
+from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.server import dbserver
@@ -35,13 +35,10 @@ calc_path = None  # set only when the flag --slowest is given
 PStatData = collections.namedtuple(
     'PStatData', 'ncalls tottime percall cumtime percall2 path')
 
-oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
-    base.calculators)
-
 
 def get_pstats(pstatfile, n):
     """
-    Return profiling information as an RST table.
+    Return profiling information as an ORG table.
 
     :param pstatfile: path to a .pstat file
     :param n: the maximum number of stats to retrieve
@@ -59,6 +56,7 @@ def get_pstats(pstatfile, n):
     for line in lines[i + 2:]:
         columns = line.split()
         if len(columns) == 6:
+            columns[-1] = os.path.basename(columns[-1])
             data.append(PStatData(*columns))
     rows = [(rec.ncalls, rec.cumtime, rec.path) for rec in data]
     # here is an example of the expected output table:
@@ -71,7 +69,8 @@ def get_pstats(pstatfile, n):
     # 1      25.104  baselib.parallel.py:249(apply_reduce)
     # 1      25.099  calculators/classical.py:41(classical)
     # 1      25.099  hazardlib/calc/hazard_curve.py:164(classical)
-    return views.text_table(rows, header='ncalls cumtime path'.split())
+    return views.text_table(
+        rows, header='ncalls cumtime path'.split(), ext='org')
 
 
 # called when profiling
@@ -90,11 +89,10 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
                     'retrieve the %s' % (len(calc_ids), hc_id))
         else:
             params['hazard_calculation_id'] = hc_id
+    dic = readinput.get_params(job_ini, params)
     # set the logs first of all
-    log = logs.init("job", job_ini, getattr(logging, loglevel.upper()))
-    log.params.update(params)
-    # disable gzip_input
-    base.BaseCalculator.gzip_inputs = lambda self: None
+    log = logs.init("job", dic, getattr(logging, loglevel.upper()))
+
     with log, performance.Monitor('total runtime', measuremem=True) as monitor:
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         if reuse_input:  # enable caching
@@ -158,4 +156,3 @@ main.concurrent_tasks = dict(help='hint for the number of tasks to spawn')
 main.exports = dict(help='export formats as a comma-separated string')
 main.loglevel = dict(help='logging level',
                      choices='debug info warn error critical'.split())
-main.calc_id = dict(help='calculation ID (if "calc" infer it)')

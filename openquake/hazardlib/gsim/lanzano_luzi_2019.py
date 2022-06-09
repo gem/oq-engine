@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -112,7 +112,7 @@ class LanzanoLuzi2019shallow(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, page 1904
@@ -128,7 +128,7 @@ class LanzanoLuzi2019shallow(GMPE):
     #: Required distance measure is Rhypo.
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -191,4 +191,50 @@ class LanzanoLuzi2019shallow(GMPE):
 
 
 class LanzanoLuzi2019deep(LanzanoLuzi2019shallow):
+    kind = 'deep'
+
+class LanzanoLuzi2019shallow_scaled(LanzanoLuzi2019shallow):
+    """
+    Implements GMPE developed by Giovanni Lanzano and Lucia Luzi (2019) and
+    submitted as "A ground motion model for volcanic areas in Italy"
+    Bulletin of Earthquake Engineering.
+
+    GMPE derives from earthquakes in the volcanic areas in Italy in the
+    magnitude range 3<ML<5 for hypocentral distances <200 km, and for
+    rock (EC8-A), stiff soil (EC8-B) and soft soil (EC8-C and EC8-D).
+
+    The GMPE distinguishes between shallow volcano-tectonic events related to
+    flank movements (focal depths <5km) and deeper events occurring due to
+    regional tectonics (focal depths >5km), considering two different
+    attenuations with distances.
+
+    Test tables are generated from a spreadsheet provided by the authors, and
+    modified according to OQ format (e.g. conversion from cm/s2 to m/s2).
+    
+    Application of a scaling factor that converts the prediction of
+    LanzanoLuzi2019shallow to the corresponding
+    prediction for the Maximum value.
+    """
+    
+    # Sigma values in log10
+    COEFFS = CoeffsTable(sa_damping=5, table="""
+	IMT		a				b		c1		c2		c3		sB		sC		tau		phiS2S	sigma0	phi		sigma
+	pga		-0.378174621	0.8146	-2.0926	-1.5694	-0.0062	0.088	0.3382	0.1892	0.2624	0.2215	0.3434	0.3921
+	0.05	-0.103901788	0.787	-2.1536	-1.5859	-0.0069	0.0863	0.3323	0.1955	0.2846	0.2284	0.3649	0.414
+	0.1		0.45951946		0.7293	-2.2624	-1.6135	-0.0075	0.0609	0.2997	0.2164	0.324	0.2312	0.398	0.4531
+	0.15	0.326392233		0.7569	-2.2177	-1.5882	-0.0069	0.0714	0.3465	0.2193	0.3204	0.2155	0.3861	0.4441
+	0.2		0.08296289		0.8028	-2.1606	-1.5803	-0.006	0.0716	0.3297	0.22	0.3039	0.2126	0.3709	0.4312
+	0.3		-0.38839902		0.8872	-2.0652	-1.5829	-0.0047	0.0752	0.3468	0.1932	0.2726	0.2053	0.3413	0.3922
+	0.4		-0.9877599		0.9744	-1.9542	-1.5409	-0.0038	0.082	0.3672	0.185	0.2576	0.2034	0.3282	0.3768
+	0.5		-1.299085099	1.0303	-1.9337	-1.5871	-0.0034	0.1033	0.4053	0.1736	0.2461	0.2039	0.3196	0.3637
+	0.75	-2.009414407	1.1181	-1.7968	-1.5618	-0.0029	0.1159	0.4277	0.1581	0.2314	0.195	0.3026	0.3414
+	1		-2.463138493	1.1553	-1.723	-1.5615	-0.0018	0.1201	0.448	0.1496	0.2279	0.1904	0.297	0.3325
+	2		-3.172265876	1.1995	-1.6524	-1.6597	-0.0009	0.144	0.3917	0.1929	0.2187	0.1824	0.2848	0.344
+	3		-3.65485242		1.2118	-1.5741	-1.6063	-0.0012	0.1261	0.3836	0.2356	0.2139	0.1825	0.2812	0.3668
+	4		-3.445025941	1.0943	-1.4949	-1.6025	-0.0012	0.1064	0.3447	0.2442	0.2093	0.1832	0.2782	0.3701
+	pgv		-2.493041253	0.9809	-1.8482	-1.5676	-0.0042	0.0995	0.3747	0.1433	0.2126	0.2099	0.2988	0.3313
+	""")
+
+
+class LanzanoLuzi2019deep_scaled(LanzanoLuzi2019shallow_scaled):
     kind = 'deep'

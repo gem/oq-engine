@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2021 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -524,11 +524,11 @@ SMOOTHED_SEISMICITY_METHODS = CatalogueFunctionRegistry()
 @SMOOTHED_SEISMICITY_METHODS.add(
     "run",
     completeness=True,
-    b_value=np.float,
+    b_value=float,
     use_3d=bool,
     grid_limits=Grid,
-    Length_Limit=np.float,
-    BandWidth=np.float,
+    Length_Limit=float,
+    BandWidth=float,
     increment=bool)
 class IsotropicGaussianMethod(object):
     def run(self, catalogue, config, completeness=None):

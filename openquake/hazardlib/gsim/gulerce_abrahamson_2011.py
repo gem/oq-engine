@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -52,11 +52,10 @@ def _compute_base_term(C, ctx):
                  C['a8'] * ((8.5 - ctx.mag) ** 2) +
                  (C['a2'] + CONSTS['a3'] * (ctx.mag - c1)) *
                  np.log(R))
-
-    if ctx.mag <= c1:
-        return base_term + CONSTS['a4'] * (ctx.mag - c1)
-    else:
-        return base_term + CONSTS['a5'] * (ctx.mag - c1)
+    extra = np.where(ctx.mag <= c1,
+                     CONSTS['a4'] * (ctx.mag - c1),
+                     CONSTS['a5'] * (ctx.mag - c1))
+    return base_term + extra
 
 
 def _compute_faulting_style_term(C, ctx):
@@ -66,8 +65,8 @@ def _compute_faulting_style_term(C, ctx):
     """
     # ranges of rake values for each faulting mechanism are specified in
     # section "Functional Form of the Model", page 1029
-    frv = float(30 < ctx.rake < 150)
-    fnm = float(-120 < ctx.rake < -60)
+    frv = (30 < ctx.rake) & (ctx.rake < 150)
+    fnm = (-120 < ctx.rake) & (ctx.rake < -60)
     return C['a6'] * frv + C['a7'] * fnm
 
 
@@ -108,13 +107,9 @@ def _compute_intra_event_std(C, mag):
     """
     Equation 7, page 1029.
     """
-    if mag < 5:
-        sigma_0 = C['s1']
-    elif 5 <= mag <= 7:
-        sigma_0 = C['s1'] + (C['s2'] - C['s1']) * (mag - 5) / 2
-    else:
-        sigma_0 = C['s2']
-
+    sigma_0 = C['s1'] + (C['s2'] - C['s1']) * (mag - 5) / 2
+    sigma_0[mag < 5] = C['s1']
+    sigma_0[mag > 7] = C['s2']
     return sigma_0
 
 
@@ -122,13 +117,9 @@ def _compute_inter_event_std(C, mag):
     """
     Equation 8, page 1029.
     """
-    if mag < 5:
-        tau_0 = C['s3']
-    elif 5 <= mag <= 7:
-        tau_0 = C['s3'] + (C['s4'] - C['s3']) * (mag - 5) / 2
-    else:
-        tau_0 = C['s4']
-
+    tau_0 = C['s3'] + (C['s4'] - C['s3']) * (mag - 5) / 2
+    tau_0[mag < 5] = C['s3']
+    tau_0[mag > 7] = C['s4']
     return tau_0
 
 
@@ -237,7 +228,7 @@ class GulerceAbrahamson2011(GMPE):
                                         self.gmpe.REQUIRES_RUPTURE_PARAMETERS)
         self.REQUIRES_DISTANCES |= self.gmpe.REQUIRES_DISTANCES
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -245,8 +236,8 @@ class GulerceAbrahamson2011(GMPE):
         """
         ctx_rock = copy.copy(ctx)
         ctx_rock.vs30 = np.full_like(ctx_rock.vs30, 1100.)
-        [mea] = contexts.get_mean_stds([self.gmpe], ctx_rock, [PGA()], None)
-        pga1100 = np.exp(mea[0, 0])  # from shape (G, O, M, N) -> N
+        mea = contexts.get_mean_stds(self.gmpe, ctx_rock, [PGA()])[0]
+        pga1100 = np.exp(mea[0])  # from shape (M, N) -> N
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = (_compute_base_term(C, ctx) +

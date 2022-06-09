@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -42,12 +42,10 @@ def _compute_mean(clsname, sof, adjustment_factor, C, ctx, imt):
     else:
         sof_term = 0.
     if clsname.endswith("Germany"):
-        if ctx.width > 1.0E-3:
-            # Finite rupture source used
-            rrup = np.copy(ctx.rrup)
-        else:
-            # Point source MSR used - convert rhypo to rrup
-            rrup = rhypo_to_rrup(ctx.rhypo, ctx.mag)
+        # Point source MSR used - convert rhypo to rrup
+        rrup = rhypo_to_rrup(ctx.rhypo, ctx.mag)
+        # Finite rupture source used
+        rrup[ctx.width > 1E-3] = ctx.rrup[ctx.width > 1E-3]
     else:
         rrup = ctx.rrup
     mean = (_get_magnitude_scaling_term(C, ctx.mag) +
@@ -79,7 +77,7 @@ def _get_magnitude_scaling_term(C, mag):
     """
     Returns the magnitude term
     """
-    return C["c1"] + (C["m1"] * mag) + (C["m2"] * (mag ** 2.))
+    return C["c1"] + C["m1"] * mag + C["m2"] * (mag ** 2.)
 
 
 _get_site_amplification_term = CallableDict()
@@ -113,7 +111,7 @@ def _get_site_amplification_term_4(clsname, sof, C, vs30):
     site class
     """
     s_b, s_c, s_d = _get_site_dummy_variables(sof, vs30)
-    return (C["sB"] * s_b) + (C["sC"] * s_c) + (C["sD"] * s_d)
+    return C["sB"] * s_b + C["sC"] * s_c + C["sD"] * s_d
 
 
 @_get_site_amplification_term.add("CauzziEtAl2014Eurocode8NoSOF")
@@ -123,7 +121,7 @@ def _get_site_amplification_term_5(clsname, sof, C, vs30):
     site class
     """
     s_b, s_c, s_d = _get_site_dummy_variables(sof, vs30)
-    return (C["sB"] * s_b) + (C["sC"] * s_c) + (C["sD"] * s_d)
+    return C["sB"] * s_b + C["sC"] * s_c + C["sD"] * s_d
 
 
 @_get_site_amplification_term.add("CauzziEtAl2014Eurocode8scaled")
@@ -202,12 +200,10 @@ def _get_style_of_faulting_term(C, rake):
     the plunge of the B-, T- and P-axes. For consistency with existing
     GMPEs the Wells & Coppersmith model is preferred
     """
-    if rake > -150.0 and rake <= -30.0:
-        return C['fN']
-    elif rake > 30.0 and rake <= 150.0:
-        return C['fR']
-    else:
-        return C['fSS']
+    res = np.full_like(rake, C['fSS'])
+    res[(rake > -150.0) & (rake <= -30.0)] = C['fN']
+    res[(rake > 30.0) & (rake <= 150.0)] = C['fR']
+    return res
 
 
 class CauzziEtAl2014(GMPE):
@@ -238,8 +234,8 @@ class CauzziEtAl2014(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    #: :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`,
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event and
     #: total
@@ -266,7 +262,7 @@ class CauzziEtAl2014(GMPE):
         super().__init__(adjustment_factor=adjustment_factor, **kwargs)
         self.adjustment_factor = np.log(adjustment_factor)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns:nrml="http://openquake.org/xmlns/nrml/0.5" xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <logicTree logicTreeID="STA-rocher, 10000 ans, RP4_1300, version 2019 - Ground-motion logic-tree">
+    <logicTreeBranchSet branchSetID="g1" uncertaintyType="gmpeModel" applyToTectonicRegionType="Stable Shallow Crust">
+      <logicTreeBranch branchID="gmpe_1">
+        <uncertaintyModel>CauzziEtAl2014</uncertaintyModel>
+        <uncertaintyWeight>0.2</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="gmpe_2">
+        <uncertaintyModel>AkkarEtAlRjb2014</uncertaintyModel>
+        <uncertaintyWeight>0.2</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="gmpe_3">
+        <uncertaintyModel>BindiEtAl2017Rhypo</uncertaintyModel>
+        <uncertaintyWeight>0.2</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="gmpe_4">
+        <uncertaintyModel>AbrahamsonEtAl2014</uncertaintyModel>
+        <uncertaintyWeight>0.2</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="gmpe_5">
+        <uncertaintyModel>AmeriEtAl2017Rjb</uncertaintyModel>
+        <uncertaintyWeight>0.2</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>

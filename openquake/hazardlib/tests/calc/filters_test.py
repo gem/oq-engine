@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2017-2021 GEM Foundation
+# Copyright (c) 2017-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,7 @@ from openquake.hazardlib import nrml
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.calc.filters import (
-    MagDepDistance, SourceFilter, angular_distance, split_source)
+    IntegrationDistance, SourceFilter, angular_distance, split_source)
 
 
 class AngularDistanceTestCase(unittest.TestCase):
@@ -32,13 +32,17 @@ class AngularDistanceTestCase(unittest.TestCase):
         aae(angular_distance(km=1000, lat=88), 257.68853)
 
 
-class MagDepDistanceTestCase(unittest.TestCase):
+class IntegrationDistanceTestCase(unittest.TestCase):
     def test_bounding_box(self):
-        maxdist = MagDepDistance.new('400')
-
-        aae(maxdist('ANY_TRT'), 400)
+        maxdist = IntegrationDistance.new('400')
         bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT')
         aae(bb, [-3.6527738, 6.40272, 3.6527738, 13.59728])
+
+    def test_maximum_magnitude(self):
+        maxdist = IntegrationDistance.new(
+            '[(4, 200), (7, 200), (7.01, 0), (8, 0)]')
+        interp = maxdist('default')
+        aae(interp([5, 6, 7, 7.2, 8]), [200., 200., 200.,   0.,   0.])
 
 
 class SourceFilterTestCase(unittest.TestCase):
@@ -48,7 +52,7 @@ class SourceFilterTestCase(unittest.TestCase):
         fname = gettemp(characteric_source)
         [[src]] = nrml.to_python(fname)
         os.remove(fname)
-        maxdist = MagDepDistance.new('200')
+        maxdist = IntegrationDistance.new('200')
         sitecol = SiteCollection([
             Site(location=Point(176.919, -39.489),
                  vs30=760, vs30measured=True, z1pt0=100, z2pt5=5)])

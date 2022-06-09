@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2021 GEM Foundation
+# Copyright (C) 2018-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -99,20 +99,12 @@ class AvgGMPE(GMPE):
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = def_for_stddevs[0]
         self.weights = np.array(weights)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Call the underlying GMPEs and return the weighted mean and stddev
         """
-        outs = contexts.get_mean_stds(self.gsims, ctx, imts, const.StdDev.ALL)
-        # shape (G, O, M, N)
-        G = len(outs)
-        M, N = outs[0].shape[1:]
-        data = np.zeros((G, 4, M, N))
-        for i, out in enumerate(outs):
-            data[i, 0] = out[0]
-            for s in range(len(out) - 1):
-                data[i, 1 + s] = out[1 + s] ** 2
-        mean[:] = np.average(data[:, 0], 0, self.weights)
-        sig[:] = np.sqrt(np.average(data[:, 1], 0, self.weights))
-        tau[:] = np.sqrt(np.average(data[:, 2], 0, self.weights))
-        phi[:] = np.sqrt(np.average(data[:, 3], 0, self.weights))
+        mean_, sig_, tau_, phi_ = contexts.get_mean_stds(self.gsims, ctx, imts)
+        mean[:] = np.average(mean_, 0, self.weights)
+        sig[:] = np.sqrt(np.average(sig_**2, 0, self.weights))
+        tau[:] = np.sqrt(np.average(tau_**2, 0, self.weights))
+        phi[:] = np.sqrt(np.average(phi_**2, 0, self.weights))

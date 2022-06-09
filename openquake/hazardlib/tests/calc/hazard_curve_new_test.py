@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2016-2021 GEM Foundation
+# Copyright (C) 2016-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -102,7 +102,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None)
+                                    truncation_level=99.)
         crv = curves[0][0]
         npt.assert_almost_equal([0.30000, 0.2785, 0.0891], crv, decimal=4)
 
@@ -112,7 +112,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None,
+                                    truncation_level=99.,
                                     investigation_time=1)
         crv = list(curves[0][0])
         npt.assert_almost_equal([0.30000, 0.2785, 0.0891],
@@ -127,7 +127,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None,
+                                    truncation_level=99.,
                                     investigation_time=1)
         npt.assert_almost_equal(numpy.array([0.30000, 0.2785, 0.0891]),
                                 curves[0][0], decimal=4)
@@ -177,7 +177,7 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None,
+                                    truncation_level=99.,
                                     investigation_time=1)
         crv = curves[0][0]
         npt.assert_almost_equal(numpy.array([0.40000, 0.36088, 0.07703]),
@@ -189,7 +189,7 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None,
+                                    truncation_level=99.,
                                     investigation_time=1)
         crv = curves[0][0]
         npt.assert_almost_equal(numpy.array([0.58000, 0.5389, 0.1592]),
@@ -204,7 +204,7 @@ class NankaiTestCase(unittest.TestCase):
         groups = nrml.to_python(source_model, SourceConverter(
             investigation_time=50., rupture_mesh_spacing=2.))
         site = Site(Point(135.68, 35.68), 400, z1pt0=100., z2pt5=1.)
-        s_filter = SourceFilter(SiteCollection([site]), {})
+        s_filter = SourceFilter(SiteCollection([site]))
         imtls = DictArray({'PGV': [20, 40, 80]})
         gsim_by_trt = {'Subduction Interface': SiMidorikawa1999SInter()}
         hcurves = calc_hazard_curves(groups, s_filter, imtls, gsim_by_trt)

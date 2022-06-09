@@ -16,13 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
 import logging
 import numpy
 import pandas
 
 from openquake.baselib import hdf5, general, parallel
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.risklib import scientific
+from openquake.risklib import scientific, connectivity
 from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
@@ -45,55 +46,46 @@ def zero_dmgcsq(A, R, crmodel):
     return numpy.zeros((A, R, L, Dc), F32)
 
 
-def run_sec_sims(damages, haz, sec_sims, seed):
-    """
-    :param damages: array of shape (E, D) for a given asset
-    :param haz: dataframe of size E with a probability field
-    :param sec_sims: pair (probability field, number of simulations)
-    :param seed: random seed to use
-
-    Run secondary simulations and update the array damages
-    """
-    [(prob_field, num_sims)] = sec_sims
-    numpy.random.seed(seed)
-    probs = haz[prob_field].to_numpy()   # LiqProb
-    affected = numpy.random.random((num_sims, 1)) < probs  # (N, E)
-    for d, buildings in enumerate(damages.T[1:], 1):
-        # doing the mean on the secondary simulations for each event
-        damages[:, d] = numpy.mean(affected * buildings, axis=0)  # shape E
-
-
-def event_based_damage(df, param, monitor):
+def event_based_damage(df, oqparam, dstore, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
-    :param param: a dictionary of parameters coming from the job.ini
+    :param oqparam: parameters coming from the job.ini
+    :param dstore: a DataStore instance
     :param monitor: a Monitor instance
     :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))
     """
     mon_risk = monitor('computing risk', measuremem=False)
-    dstore = datastore.read(param['hdf5path'])
-    K = param['K']
-    with monitor('reading data'):
+    K = oqparam.K
+    with monitor('reading gmf_data'):
+        if oqparam.parentdir:
+            dstore = datastore.read(
+                oqparam.hdf5path, parentdir=oqparam.parentdir)
+        else:
+            dstore.open('r')
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
-        assets_df = dstore.read_df('assetcol/array', 'ordinal')
-        kids = (dstore['assetcol/kids'][:] if K
-                else numpy.zeros(len(assets_df), U16))
+        assetcol = dstore['assetcol']
+        if K:
+            aggids, _ = assetcol.build_aggids(oqparam.aggregate_by)
+        else:
+            aggids = numpy.zeros(len(assetcol), U16)
         crmodel = monitor.read('crmodel')
-    master_seed = crmodel.oqparam.master_seed
-    sec_sims = crmodel.oqparam.secondary_simulations.items()
+    master_seed = oqparam.master_seed
+    sec_sims = oqparam.secondary_simulations.items()
     dmg_csq = crmodel.get_dmg_csq()
     ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
-    dmgcsq = zero_dmgcsq(len(assets_df), param['R'], crmodel)
+    dmgcsq = zero_dmgcsq(len(assetcol), oqparam.R, crmodel)
     A, R, L, Dc = dmgcsq.shape
     D = len(crmodel.damage_states)
     if R > 1:
         allrlzs = dstore['events']['rlz_id']
     loss_types = crmodel.oqparam.loss_types
-    float_dmg_dist = param['float_dmg_dist']  # True by default
+    float_dmg_dist = oqparam.float_dmg_dist  # True by default
+    if dstore.parent:
+        dstore.parent.close()  # essential on Windows with h5py>=3.6
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
-        for sid, asset_df in assets_df.groupby('site_id'):
+        for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
             # working one site at the time
             gmf_df = df[df.sid == sid]
             if len(gmf_df) == 0:
@@ -101,9 +93,13 @@ def event_based_damage(df, param, monitor):
             eids = gmf_df.eid.to_numpy()
             if R > 1:
                 rlzs = allrlzs[eids]
-            if not float_dmg_dist:
-                rndgen = scientific.MultiEventRNG(
+            if sec_sims or not float_dmg_dist:
+                rng = scientific.MultiEventRNG(
                     master_seed, numpy.unique(eids))
+            for prob_field, num_sims in sec_sims:
+                probs = gmf_df[prob_field].to_numpy()   # LiqProb
+                if not float_dmg_dist:
+                    dprobs = rng.boolean_dist(probs, num_sims).mean(axis=1)
             for taxo, adf in asset_df.groupby('taxonomy'):
                 out = crmodel.get_output(taxo, adf, gmf_df)
                 aids = adf.index.to_numpy()
@@ -116,37 +112,44 @@ def event_based_damage(df, param, monitor):
                     fractions = out[lt]
                     Asid, E, D = fractions.shape
                     assert len(eids) == E
-                    ddd = numpy.zeros((Asid, E, Dc), F32)
+                    d3 = numpy.zeros((Asid, E, Dc), F32)
                     if float_dmg_dist:
-                        ddd[:, :, :D] = fractions
+                        d3[:, :, :D] = fractions
                         for a in range(Asid):
-                            ddd[a] *= number[a]
+                            d3[a] *= number[a]
                     else:
                         # this is a performance distaster; for instance
                         # the Messina test in oq-risk-tests becomes 12x
                         # slower even if it has only 25_736 assets
-                        ddd[:, :, :D] = rndgen.discrete_dmg_dist(
+                        d3[:, :, :D] = rng.discrete_dmg_dist(
                             eids, fractions, number)
 
                     # secondary perils and consequences
                     for a, asset in enumerate(assets):
                         if sec_sims:
-                            seed = master_seed + int(asset.ordinal)
-                            run_sec_sims(ddd[a], gmf_df, sec_sims, seed)
-                        csq = crmodel.compute_csq(asset, fractions[a], lt)
+                            for d in range(1, D):
+                                # doing the mean on the secondary simulations
+                                if float_dmg_dist:
+                                    d3[a, :, d] *= probs
+                                else:
+                                    d3[a, :, d] *= dprobs
+
+                        csq = crmodel.compute_csq(
+                            asset, d3[a, :, :D] / number[a], lt)
                         for name, values in csq.items():
-                            ddd[a, :, ci[name]] = values
+                            d3[a, :, ci[name]] = values
                     if R == 1:
-                        dmgcsq[aids, 0, lti] += ddd.sum(axis=1)
+                        dmgcsq[aids, 0, lti] += d3.sum(axis=1)
                     else:
                         for e, rlz in enumerate(rlzs):
-                            dmgcsq[aids, rlz, lti] += ddd[:, e]
-                    tot = ddd.sum(axis=0)  # sum on the assets
+                            dmgcsq[aids, rlz, lti] += d3[:, e]
+                    tot = d3.sum(axis=0)  # sum on the assets
                     for e, eid in enumerate(eids):
                         dddict[eid, K][lti] += tot[e]
                         if K:
-                            for a, aid in enumerate(aids):
-                                dddict[eid, kids[aid]][lti] += ddd[a, e]
+                            for kids in aggids:
+                                for a, aid in enumerate(aids):
+                                    dddict[eid, kids[aid]][lti] += d3[a, e]
     return to_dframe(dddict, ci, L), dmgcsq
 
 
@@ -174,7 +177,7 @@ class DamageCalculator(EventBasedRiskCalculator):
     accept_precalc = ['scenario', 'event_based',
                       'event_based_risk', 'event_based_damage']
 
-    def save_avg_losses(self):
+    def create_avg_losses(self):
         """
         Do nothing: there are no losses in the DamageCalculator
         """
@@ -190,8 +193,10 @@ class DamageCalculator(EventBasedRiskCalculator):
             raise ValueError(
                 'The exposure contains %d non-integer asset numbers: '
                 'you cannot use dicrete_damage_distribution=true' % num_floats)
-        self.param['R'] = self.R  # 1 if collect_rlzs
-        self.param['float_dmg_dist'] = not oq.discrete_damage_distribution
+        oq.R = self.R  # 1 if collect_rlzs
+        oq.float_dmg_dist = not oq.discrete_damage_distribution
+        if oq.hazard_calculation_id:
+            oq.parentdir = os.path.dirname(self.datastore.ppath)
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore)  # check
         eids = self.datastore['gmf_data/eid'][:]
@@ -200,7 +205,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             event_based_damage, self.gen_args(eids), h5=self.datastore.hdf5)
-        smap.monitor.save('assets', self.assetcol.to_dframe())
+        smap.monitor.save('assets', self.assetcol.to_dframe('id'))
         smap.monitor.save('crmodel', self.crmodel)
         return smap.reduce(self.combine)
 
@@ -259,3 +264,10 @@ class DamageCalculator(EventBasedRiskCalculator):
                        rlz=numpy.arange(self.R),
                        loss_type=oq.loss_types,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
+
+        fields = self.assetcol.array.dtype.names
+        if 'supply_or_demand' in fields:
+            demand_nodes, avg_conn_loss = connectivity.analysis(self.datastore)
+            self.datastore.create_df('functional_demand_nodes', demand_nodes)
+            logging.info('Stored functional_demand_nodes')
+            logging.info('Average connectivity loss: %.4f', avg_conn_loss)

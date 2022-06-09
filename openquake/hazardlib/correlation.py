@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -174,10 +174,9 @@ class HM2018CorrelationModel(BaseCorrelationModel):
 
         See Parent function
         """
-        # stddev_intra is repeated if it is only 1 value for all the residuals
-        if stddev_intra.shape[0] == 1:
-            stddev_intra = numpy.matlib.repmat(
-                stddev_intra, len(sites.complete), 1)
+        # stddev_intra is repeated if there is only one value
+        if len(stddev_intra) == 1:
+            stddev_intra = numpy.full(len(sites.complete), stddev_intra)
         # Reshape 'stddev_intra' if needed
         stddev_intra = stddev_intra.squeeze()
         if not stddev_intra.shape:

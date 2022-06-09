@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #
 # LICENSE
 #
-# Copyright (C) 2010-2021 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -38,9 +37,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -345,8 +344,9 @@ class TestBootstrapHistograms(unittest.TestCase):
 
         # Now with normalisaton
         expected_array = expected_array / np.sum(expected_array)
-        np.testing.assert_array_almost_equal(expected_array,
-                                             utils.bootstrap_histogram_1D(self.x, x_range, normalisation=True))
+        np.testing.assert_array_almost_equal(
+            expected_array,
+            utils.bootstrap_histogram_1D(self.x, x_range, normalisation=True))
 
     def test_1D_bootstrap_with_uncertainty(self):
         """
@@ -361,8 +361,7 @@ class TestBootstrapHistograms(unittest.TestCase):
             uncertainties=self.x_sigma,
             number_bootstraps=1000,
             normalisation=True)
-        np.testing.assert_array_almost_equal(np.round(hist_values, 2),
-                                             expected_array)
+        np.testing.assert_equal(np.round(hist_values, 2), expected_array)
 
     def test_2D_bootstrap_no_uncertainty(self):
         """
@@ -376,13 +375,15 @@ class TestBootstrapHistograms(unittest.TestCase):
                                    [2., 4., 4., 4.],
                                    [2., 4., 4., 4.],
                                    [2., 4., 4., 4.]])
-        np.testing.assert_array_almost_equal(expected_array,
-                                             utils.bootstrap_histogram_2D(self.x, self.y, x_range, y_range))
+        np.testing.assert_array_almost_equal(
+            expected_array,
+            utils.bootstrap_histogram_2D(self.x, self.y, x_range, y_range))
         # With normalisation
         expected_array = expected_array / np.sum(expected_array)
-        np.testing.assert_array_almost_equal(expected_array,
-                                             utils.bootstrap_histogram_2D(self.x, self.y, x_range, y_range,
-                                                                          normalisation=True))
+        np.testing.assert_array_almost_equal(
+            expected_array,
+            utils.bootstrap_histogram_2D(
+                self.x, self.y, x_range, y_range, normalisation=True))
 
     def test_2D_bootstrap_with_uncertainty(self):
         """

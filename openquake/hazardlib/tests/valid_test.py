@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,7 +32,7 @@ class ValidationTestCase(unittest.TestCase):
             valid.simple_id('a x')
         self.assertEqual(
             str(ctx.exception),
-            "Invalid ID 'a x': the only accepted chars are a-zA-Z0-9_-")
+            "Invalid ID 'a x': the only accepted chars are a-zA-Z0-9_-:")
         with self.assertRaises(ValueError):
             valid.simple_id('0|1')
         with self.assertRaises(ValueError):
@@ -134,6 +134,11 @@ class ValidationTestCase(unittest.TestCase):
         validator = valid.NoneOr(valid.positiveint)
         self.assertEqual(validator(''), None)
         self.assertEqual(validator('1'), 1)
+
+    def test_full_instantiation(self):
+        # test for https://github.com/gem/oq-engine/issues/7363
+        abr = valid.gsim("AbrahamsonEtAl2014")
+        self.assertIsNone(abr.region)
 
     def test_gsim(self):
         class FakeGsim(object):

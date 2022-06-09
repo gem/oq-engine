@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -60,7 +60,7 @@ def _compute_distance(ctx, coeffs):
 
     ``b3 * log(sqrt(Rjb ** 2 + b4 ** 2))``
     """
-    return coeffs['b3']*np.log10(np.sqrt(ctx.rjb**2. + coeffs['b4']**2.))
+    return coeffs['b3'] * np.log10(np.sqrt(ctx.rjb**2. + coeffs['b4']**2.))
 
 
 def _get_site_amplification(ctx, coeffs):
@@ -70,7 +70,7 @@ def _get_site_amplification(ctx, coeffs):
     ``b5 * S``
     """
     is_rock = get_site_type_dummy_variables(ctx)
-    return coeffs['b5']*is_rock
+    return coeffs['b5'] * is_rock
 
 
 def _get_mechanism(ctx, coeffs):
@@ -89,7 +89,7 @@ def get_site_type_dummy_variables(ctx):
 
     "``S`` is 1 for a rock site and 0 otherwise" (p. 1201).
     """
-    is_rock = np.array(ctx.vs30 > NEHRP_BC_BOUNDARY)
+    is_rock = ctx.vs30 > NEHRP_BC_BOUNDARY
     return is_rock
 
 
@@ -106,12 +106,10 @@ def get_fault_type_dummy_variables(ctx, warned=[False]):
         for regression included only reverse and stike-slip events.
     """
     # normal faulting
-    is_normal = np.array(
-        RAKE_THRESH < -ctx.rake < (180. - RAKE_THRESH))
+    is_normal = (RAKE_THRESH < -ctx.rake) & (-ctx.rake < (180. - RAKE_THRESH))
 
     # reverse raulting
-    is_reverse = np.array(
-        RAKE_THRESH < ctx.rake < (180. - RAKE_THRESH))
+    is_reverse = (RAKE_THRESH < ctx.rake) & (ctx.rake < (180. - RAKE_THRESH))
 
     if not warned[0] and is_normal.any():
         # make sure that the warning is printed only once to avoid
@@ -165,9 +163,9 @@ class SharmaEtAl2009(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`,
     #: see p. 1200.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Only total standard deviation is supported, see Table 2, p. 1202.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -187,7 +185,7 @@ class SharmaEtAl2009(GMPE):
 
     ALREADY_WARNED = False  # warn the first time only
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

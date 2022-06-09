@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2021 GEM Foundation
+# Copyright (C) 2017-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -87,14 +87,14 @@ class GmfEbRiskTestCase(CalculatorTestCase):
                               delta=1E-5)
 
         # checking aggrisk
-        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-5)
+        for fname in export(('aggrisk', 'csv'), self.calc.datastore):
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
         # checking aggcurves
-        [fname] = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-5)
+        for fname in export(('aggcurves', 'csv'), self.calc.datastore):
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false')

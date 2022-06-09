@@ -1,13 +1,19 @@
-name: Windows Install engine for 3.6, 3.7 and 3.8 
+name: Windows Install engine for 3.7, 3.8 and 3.9
 
 on:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
   schedule:
     - cron: "00 22 * * *"
   push:
-    branches: [ requirements ]
+    branches: [ test_os ]
 
 jobs:
-  install:
+  install_and_test:
     runs-on: windows-latest
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
@@ -15,13 +21,23 @@ jobs:
       GITHUB_REF:  ${{ github.ref }}
       GITHUB_HD_REF:  ${{ github.head_ref }}
       GITHUB_BS_REF:  ${{ github.base_ref }}
+      BRANCH: ${{ github.event.inputs.git-ref }}
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.7, 3.8, 3.9]
 
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
+    # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -29,14 +45,40 @@ jobs:
     # You can test your matrix by printing the current Python version
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
+      - name: Echo env var
+        env:
+          BRANCH: ${{ github.event.inputs.git-ref }}
+        run: |
+          echo "${Env:environment}"
+          Write-Host $Env:GITHUB_REF
+          echo "Branch environment"
+          Write-Host $Env:BRANCH
       - name: Install engine on developer mode
+        env: 
+          BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
           set PIP_DEFAULT_TIMEOUT=100
           python -m pip install pip wheel setuptools --upgrade
-          python install.py devel
-        shell: cmd
+          #echo Branch to test %BRANCH%
+          #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
+          write-Host "Branch to test $Env:BRANCH " 
+          if ($Env:BRANCH)
+          {
+            Write-Host "Install with workflow_dispatch"
+            Write-Host "python install.py devel --version ${env:BRANCH}"
+            python install.py devel --version ${env:BRANCH}
+          }
+          else
+          {
+            Write-Host "Install on scheduled task"
+            Write-Host "python install.py devel "
+            python install.py devel
+          }
       - name: Run demos to test installation
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          #
           oq --version
-          oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          python -m pip install pytest
+          pytest -vs D:\a\oq-engine\oq-engine\openquake\calculators

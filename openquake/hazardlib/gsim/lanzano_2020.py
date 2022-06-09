@@ -42,10 +42,9 @@ def _get_distance_term(C, mag, ctx):
 
 
 def _get_magnitude_term(C, mag):
-    if mag <= CONSTS['Mh']:
-        return C['b1'] * (mag-CONSTS['Mh'])
-    else:
-        return C['b2'] * (mag-CONSTS['Mh'])
+    return np.where(mag <= CONSTS['Mh'],
+                    C['b1'] * (mag-CONSTS['Mh']),
+                    C['b2'] * (mag-CONSTS['Mh']))
 
 
 _get_site_correction = CallableDict()
@@ -166,7 +165,7 @@ class LanzanoEtAl2020_ref(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
@@ -182,7 +181,7 @@ class LanzanoEtAl2020_ref(GMPE):
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np. recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
             # Ergodic coeffs
             C = self.COEFFS[imt]

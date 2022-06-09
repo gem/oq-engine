@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2021 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -71,7 +71,7 @@ def plot_cumulative_moment(year, mag, figure_size=(8, 6),
     # Calculate seismic moment
     m_o = 10. ** (9.05 + 1.5 * mag)
     year_range = np.arange(np.min(year), np.max(year) + 1, 1)
-    nyr = np.int(np.shape(year_range)[0])
+    nyr = int(np.shape(year_range)[0])
     morate = np.zeros(nyr, dtype=float)
     # Get moment release per year
     for loc, tyr in enumerate(year_range):

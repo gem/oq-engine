@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2021 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -37,8 +37,8 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
@@ -46,18 +46,15 @@
 # liability for use of the software.
 
 '''
-Test suite for openquake.hmtk.strain.strain_utils a set of utility functions for the
-strain module
+Test suite for openquake.hmtk.strain.strain_utils a set of utility functions
+for the strain module
 '''
 import os
 import unittest
 import numpy as np
 from math import log, log10
-from openquake.hmtk.strain.strain_utils import (moment_function,
-                                                moment_magnitude_function,
-                                                calculate_taper_function,
-                                                tapered_gutenberg_richter_cdf,
-                                                tapered_gutenberg_richter_pdf)
+from openquake.hmtk.strain.strain_utils import (
+    moment_function, moment_magnitude_function, calculate_taper_function)
 
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'strain_data')

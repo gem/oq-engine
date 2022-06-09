@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -57,7 +57,7 @@ def _compute_magnitude_term(C, mag):
     """
     Returns the magnitude scaling term
     """
-    return C["c0"] + (C["c1"] * mag)
+    return C["c0"] + C["c1"] * mag
 
 
 class AllenEtAl2012(GMPE):
@@ -79,7 +79,7 @@ class AllenEtAl2012(GMPE):
 
     #: Supported intensity measure component is not considered for IPEs, so
     #: we assume equivalent to 'average horizontal'
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types is total.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -93,7 +93,7 @@ class AllenEtAl2012(GMPE):
     #: Required distance measure is rupture distance
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

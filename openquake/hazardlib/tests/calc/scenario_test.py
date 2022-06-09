@@ -18,7 +18,7 @@
 
 import os
 import unittest
-from openquake.hazardlib import read_input, MagDepDistance
+from openquake.hazardlib import read_input, IntegrationDistance
 from openquake.hazardlib.calc import gmf
 
 CWD = os.path.dirname(__file__)
@@ -33,15 +33,15 @@ class ScenarioTestCase(unittest.TestCase):
                      ses_seed=42,
                      sites=[(0, 1), (0, 0)],
                      reference_vs30_value="760",
-                     maximum_distance=MagDepDistance.new('200'),
+                     maximum_distance=IntegrationDistance.new('200'),
                      imtls={'PGA': [0]})
         inp = read_input(param)
         [grp] = inp.groups
         [ebr] = grp
         cmaker = inp.cmakerdict[grp.trt]
         gc = gmf.GmfComputer(ebr, inp.sitecol, cmaker)
-        dic, dt = gc.compute_all()
-        self.assertIn('sid', dic)
-        self.assertIn('eid', dic)
-        self.assertIn('rlz', dic)
-        self.assertIn('gmv_0', dic)
+        gmfdata = gc.compute_all()
+        self.assertIn('sid', gmfdata)
+        self.assertIn('eid', gmfdata)
+        self.assertIn('rlz', gmfdata)
+        self.assertIn('gmv_0', gmfdata)

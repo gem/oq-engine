@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,12 +18,14 @@ Module :mod:`openquake.hazardlib.source.non_parametric` defines
 :class:`NonParametricSeismicSource`
 """
 import numpy
+from openquake.baselib.general import block_splitter
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.source.rupture import \
     NonParametricProbabilisticRupture
-from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
+from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
+                                           get_spherical_bounding_box)
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.pmf import PMF
@@ -70,23 +72,24 @@ class NonParametricSeismicSource(BaseSeismicSource):
             Generator of instances of :class:`openquake.hazardlib.source.
             rupture.NonParametricProbabilisticRupture`.
         """
-        for rup, pmf in self.data:
+        step = kwargs.get('step', 1)
+        for rup, pmf in self.data[::step**2]:
             if rup.mag >= self.min_mag:
                 yield NonParametricProbabilisticRupture(
                     rup.mag, rup.rake, self.tectonic_region_type,
-                    rup.hypocenter, rup.surface, pmf, weight=rup.weight)
+                    rup.hypocenter, rup.surface, pmf,
+                    weight=getattr(rup, 'weight', 0.))
 
     def __iter__(self):
         if len(self.data) == 1:  # there is nothing to split
             yield self
             return
-        for i, rup_pmf in enumerate(self.data):
+        for i, block in enumerate(block_splitter(self.data, 100)):
             source_id = '%s:%d' % (self.source_id, i)
             src = self.__class__(source_id, self.name,
-                                 self.tectonic_region_type, [rup_pmf])
-            src.num_ruptures = 1
+                                 self.tectonic_region_type, block)
+            src.num_ruptures = len(block)
             src.trt_smr = self.trt_smr
-            src.id = self.id
             yield src
 
     def count_ruptures(self):
@@ -107,17 +110,21 @@ class NonParametricSeismicSource(BaseSeismicSource):
 
     def get_bounding_box(self, maxdist):
         """
-        Bounding box containing all surfaces, enlarged by the maximum distance
+        Bounding box containing the surfaces, enlarged by the maximum distance
         """
         surfaces = []
         for rup, _ in self.data:
             if isinstance(rup.surface, MultiSurface):
-                for s in rup.surface.surfaces:
-                    surfaces.append(s)
+                surfaces.extend(rup.surface.surfaces)
             else:
                 surfaces.append(rup.surface)
-        multi_surf = MultiSurface(surfaces)
-        west, east, north, south = multi_surf.get_bounding_box()
+        lons = []
+        lats = []
+        for surf in surfaces:
+            lo1, lo2, la1, la2 = surf.get_bounding_box()
+            lons.extend([lo1, lo2])
+            lats.extend([la1, la2])
+        west, east, north, south = get_spherical_bounding_box(lons, lats)
         a1 = maxdist * KM_TO_DEGREES
         a2 = angular_distance(maxdist, north, south)
         return west - a2, south - a1, east + a2, north + a1
@@ -180,16 +187,30 @@ class NonParametricSeismicSource(BaseSeismicSource):
             i += 1
 
     def __repr__(self):
-        return '<%s gridded=%s>' % (self.__class__.__name__, self.is_gridded())
+        return '<%s %s gridded=%s>' % (
+            self.__class__.__name__, self.source_id, self.is_gridded())
+
+    @property
+    def mesh_size(self):
+        """
+        :returns: the number of points in the underlying meshes (reduced)
+        """
+        n = 0
+        for rup in self.iter_ruptures(step=50):  # reduced
+            if isinstance(rup.surface, MultiSurface):
+                for sfc in rup.surface.surfaces:
+                    n += len(sfc.mesh)
+            else:
+                n += len(rup.surface.mesh)
+        return n
 
     @property
     def polygon(self):
         """
-        The convex hull of the underlying mesh of points
+        The convex hull of a few subsurfaces
         """
         lons, lats = [], []
-        for rup, pmf in self.data:
-
+        for rup in self.iter_ruptures(step=50):  # reduced
             if isinstance(rup.surface, MultiSurface):
                 for sfc in rup.surface.surfaces:
                     lons.extend(sfc.mesh.lons.flat)

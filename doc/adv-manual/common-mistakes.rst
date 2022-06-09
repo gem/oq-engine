@@ -84,18 +84,12 @@ the engine will ignore all sites over the maximum distance ``md(trt, mag)``.
 The precise value is given via linear interpolation of the values listed
 in the job.ini; you can determine the distance as follows:
 
->>> from openquake.hazardlib.calc.filters import MagDepDistance 
->>> md = MagDepDistance.new('[(5, 0), (6, 100), (7, 200), (8, 300)]')
->>> md('TRT', 4.5)
-0.0
->>> md('TRT', 5.5)
-50.0
->>> md('TRT', 6.5)
-150.0
->>> md('TRT', 7.5)
-250.0
->>> md('TRT', 8.5)
-300.0
+>>> from openquake.hazardlib.calc.filters import IntegrationDistance 
+>>> idist = IntegrationDistance.new('[(4, 0), (6, 100), (7, 200), (8.5, 300)]')
+>>> interp = idist('TRT')
+>>> interp([4.5, 5.5, 6.5, 7.5, 8])
+array([ 25.        ,  75.        , 150.        , 233.33333333,
+       266.66666667])
 
 pointsource_distance
 ----------------------------
@@ -122,8 +116,8 @@ parameter: you can set it in the ``job.ini`` as a dictionary (tectonic
 region type -> distance in km) or as a scalar (in that case it is
 converted into a dictionary ``{"default": distance}`` and the same
 distance is used for all TRTs).  For sites that are more distant than
-the `pointsource_distance` from the point source, the engine (starting
-from release 3.11) creates an average rupture by taking weighted means
+the `pointsource_distance` plus the rupture radius from the point
+source, the engine creates an average rupture by taking weighted means
 of the parameters `strike`, `dip`, `rake` and `depth` from the nodal
 plane and hypocenter distributions and by rescaling the occurrence
 rate. For closer points, all the original ruptures are considered.

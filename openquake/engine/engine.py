@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2021 GEM Foundation
+# Copyright (C) 2010-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,6 +24,8 @@ import re
 import sys
 import json
 import time
+import pickle
+import socket
 import signal
 import getpass
 import logging
@@ -72,7 +74,7 @@ def set_concurrent_tasks_default(calc):
     OqParam.concurrent_tasks.default. Abort the calculations if no
     workers are available. Do nothing for trivial distributions.
     """
-    if OQ_DISTRIBUTE in 'no processpool':  # do nothing
+    if OQ_DISTRIBUTE in 'no processpool ipp':  # do nothing
         num_workers = 0 if OQ_DISTRIBUTE == 'no' else parallel.Starmap.CT // 2
         logging.warning('Using %d cores on %s', num_workers, platform.node())
         return
@@ -115,10 +117,15 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if len(rlzs) > 1 and not oq.individual_rlzs and not oq.collect_rlzs:
-        for out in ['avg_losses-rlzs', 'aggrisk']:
-            if out in dskeys:
-                dskeys.remove(out)
+    if len(rlzs) > 1 and not oq.collect_rlzs:
+        if 'aggrisk' in dstore:
+            dskeys.add('aggrisk-stats')
+        if 'aggcurves' in dstore:
+            dskeys.add('aggcurves-stats')
+        if not oq.individual_rlzs:
+            for out in ['avg_losses-rlzs', 'aggrisk', 'aggcurves']:
+                if out in dskeys:
+                    dskeys.remove(out)
     if 'curves-rlzs' in dstore and len(rlzs) == 1:
         dskeys.add('loss_curves-rlzs')
     if 'curves-stats' in dstore and len(rlzs) > 1:
@@ -209,19 +216,15 @@ def poll_queue(job_id, poll_time):
     if offset >= 0:
         first_time = True
         while True:
-            jobs = logs.dbcmd(GET_JOBS)
-            failed = [job.id for job in jobs if not psutil.pid_exists(job.pid)]
-            if failed:
-                for job in failed:
-                    logs.dbcmd('update_job', job,
-                               {'status': 'failed', 'is_running': 0})
-            elif any(j.id < job_id - offset for j in jobs):
+            running = logs.dbcmd(GET_JOBS)
+            previous = [job for job in running if job.id < job_id - offset]
+            if previous:
                 if first_time:
-                    print('Waiting for jobs %s' % [j.id for j in jobs
-                                                   if j.id < job_id - offset])
                     logs.dbcmd('update_job', job_id,
                                {'status': 'submitted', 'pid': _PID})
                     first_time = False
+                    # the logging is not yet initialized, so use a print
+                    print('Waiting for jobs %s' % [p.id for p in previous])
                 time.sleep(poll_time)
             else:
                 break
@@ -237,10 +240,22 @@ def run_calc(log):
     register_signals()
     setproctitle('oq-job-%d' % log.calc_id)
     with log:
+        # check the available memory before starting
+        while True:
+            used_mem = psutil.virtual_memory().percent
+            if used_mem < 80:  # continue if little memory is in use
+                break
+            logging.info('Used memory %d%%, waiting', used_mem)
+            time.sleep(5)
         oqparam = log.get_oqparam()
         calc = base.calculators(oqparam, log.calc_id)
-        logging.info('%s running %s [--hc=%s]',
+        try:
+            hostname = socket.gethostname()
+        except Exception:  # gaierror
+            hostname = 'localhost'
+        logging.info('%s@%s running %s [--hc=%s]',
                      getpass.getuser(),
+                     hostname,
                      calc.oqparam.inputs['job_ini'],
                      calc.oqparam.hazard_calculation_id)
         logging.info('Using engine version %s', __version__)
@@ -256,7 +271,7 @@ def run_calc(log):
             logging.warning('Assuming %d %s workers',
                             parallel.Starmap.num_cores, OQ_DISTRIBUTE)
         t0 = time.time()
-        calc.run()
+        calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
         path = calc.datastore.filename
@@ -300,21 +315,38 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
         if 'sensitivity_analysis' in dic:
             analysis = valid.dictionary(dic['sensitivity_analysis'])
             for values in itertools.product(*analysis.values()):
-                new = logs.init('job', dic.copy(), log_level, None,
-                                user_name, hc_id)
+                jobdic = dic.copy()
                 pars = dict(zip(analysis, values))
                 for param, value in pars.items():
-                    new.params[param] = str(value)
-                new.params['description'] = '%s %s' % (
-                    dic['description'], pars)
+                    jobdic[param] = str(value)
+                jobdic['description'] = '%s %s' % (dic['description'], pars)
+                new = logs.init('job', jobdic, log_level, log_file,
+                                user_name, hc_id)
                 jobs.append(new)
         else:
             jobs.append(
-                logs.init('job', dic, log_level, None, user_name, hc_id))
+                logs.init('job', dic, log_level, log_file, user_name, hc_id))
     if multi:
         for job in jobs:
             job.multi = True
     return jobs
+
+
+def cleanup(kind):
+    """
+    Stop or kill the zmq workers if serialize_jobs == 1.
+    """
+    assert kind in ("stop", "kill"), kind
+    if OQ_DISTRIBUTE != 'zmq' or config.distribution.serialize_jobs > 1:
+        return  # do nothing
+    if kind == 'stop':
+        # called in the regular case
+        print('Stopping the workers')
+        parallel.workers_stop()
+    elif kind == 'kill':
+        # called in case of exceptions (including out of memory)
+        print('Killing the workers')
+        parallel.workers_kill()
 
 
 def run_jobs(jobs):
@@ -338,20 +370,29 @@ def run_jobs(jobs):
             dic = {'status': 'executing', 'pid': _PID}
             logs.dbcmd('update_job', job.calc_id, dic)
     try:
-        if config.zworkers['host_cores'] and parallel.workers_status() == []:
+        if OQ_DISTRIBUTE == 'zmq' and parallel.workers_status() == []:
             print('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the workers
         allargs = [(job,) for job in jobs]
-        if jobarray:
-            with general.start_many(run_calc, allargs):
-                pass
+        if jobarray and OQ_DISTRIBUTE != 'no':
+            procs = []
+            try:
+                for args in allargs:
+                    proc = general.mp.Process(target=run_calc, args=args)
+                    proc.start()
+                    logging.info('Started %s' % str(args))
+                    time.sleep(2)
+                    procs.append(proc)
+            finally:
+                for proc in procs:
+                    proc.join()
         else:
             for job in jobs:
                 run_calc(job)
-    finally:
-        if config.zworkers['host_cores']:
-            print('Stopping the workers')
-            parallel.workers_stop()
+        cleanup('stop')
+    except Exception:
+        cleanup('kill')
+        raise
     return jobs
 
 
@@ -400,3 +441,12 @@ def check_obsolete_version(calculation_mode='WebUI'):
                 'still using version %s' % (tag_name, __version__))
     else:
         return ''
+
+
+if __name__ == '__main__':
+    from openquake.server import dbserver
+    # run a job object stored in a pickle file, called by job.yaml
+    with open(sys.argv[1], 'rb') as f:
+        job = pickle.load(f)
+    dbserver.ensure_on()
+    run_jobs([job])

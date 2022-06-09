@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,8 +18,7 @@ import os
 import numpy
 
 from openquake.hazardlib.gsim.utils import (
-    mblg_to_mw_johnston_96, mblg_to_mw_atkinson_boore_87, clip_mean
-)
+    mblg_to_mw_johnston_96, mblg_to_mw_atkinson_boore_87, clip_mean)
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib import gsim, InvalidFile
 

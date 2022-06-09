@@ -28,7 +28,7 @@ def mean_std(shakemap, site_effects):
     gmf_dict.update({'kind': 'Silva&Horspool',
                      'spatialcorr': 'yes', 'crosscorr': 'yes'})
     _, gmfs = to_gmfs(
-        shakemap, gmf_dict, site_effects, trunclevel=3,
+        shakemap, gmf_dict, site_effects, truncation_level=3,
         num_gmfs=1000, seed=42, imts=['PGA', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)'])
     return gmfs.mean(axis=1), numpy.log(gmfs).std(axis=1)
 
@@ -97,7 +97,7 @@ class ShakemapTestCase(unittest.TestCase):
         gmf_dict.update({'kind': 'Silva&Horspool',
                          'spatialcorr': 'yes', 'crosscorr': 'no'})
         _, gmfs = to_gmfs(
-            shakemap, gmf_dict, site_effects=False, trunclevel=3,
+            shakemap, gmf_dict, site_effects=False, truncation_level=3,
             num_gmfs=2, seed=42)
         # shape (N, E, M)
         aae(gmfs[..., 0].sum(axis=0), [0.4202056, 0.6426098])  # PGA
@@ -105,7 +105,7 @@ class ShakemapTestCase(unittest.TestCase):
         gmf_dict.update({'kind': 'Silva&Horspool',
                          'spatialcorr': 'yes', 'crosscorr': 'yes'})
         _, gmfs = to_gmfs(
-            shakemap, gmf_dict, site_effects=True, trunclevel=3,
+            shakemap, gmf_dict, site_effects=True, truncation_level=3,
             num_gmfs=2, seed=42)
         aae(gmfs[..., 0].sum(axis=0), [0.5809818, 0.8790579])  # PGA
         aae(gmfs[..., 2].sum(axis=0), [0.6053580, 0.8245417])  # SA(1.0)
@@ -115,13 +115,13 @@ class ShakemapTestCase(unittest.TestCase):
                          'spatialcorr': 'no', 'crosscorr': 'no'})
         _, gmfs = to_gmfs(
             shakemap, gmf_dict, site_effects=False,
-            trunclevel=3, num_gmfs=2, seed=42)
+            truncation_level=3, num_gmfs=2, seed=42)
         # shape (N, E, M)
         aae(gmfs[..., 0].sum(axis=0), [0.4202077, 0.6426078])  # PGA
 
         _, gmfs = to_gmfs(
             shakemap, {'kind': 'basic'}, site_effects=False,
-            trunclevel=3, num_gmfs=2, seed=42)
+            truncation_level=3, num_gmfs=2, seed=42)
         # shape (N, E, M)
         aae(gmfs[..., 0].sum(axis=0), [0.4202077, 0.6426078])  # PGA
 
@@ -129,7 +129,7 @@ class ShakemapTestCase(unittest.TestCase):
                          'spatialcorr': 'no', 'crosscorr': 'yes'})
         _, gmfs = to_gmfs(
             shakemap, gmf_dict, site_effects=True,
-            trunclevel=3, num_gmfs=2, seed=42)
+            truncation_level=3, num_gmfs=2, seed=42)
         aae(gmfs[..., 0].sum(axis=0), [0.5809846, 0.8790549])  # PGA
         aae(gmfs[..., 2].sum(axis=0), [0.6053580, 0.8245417])  # SA(1.0)
 
@@ -139,7 +139,7 @@ class ShakemapTestCase(unittest.TestCase):
             gmf_dict.update({'kind': 'Silva&Horspool',
                              'spatialcorr': 'no', 'crosscorr': 'yes'})
             to_gmfs(shakemap, gmf_dict, site_effects=True,
-                    trunclevel=3, num_gmfs=2, seed=42)
+                    truncation_level=3, num_gmfs=2, seed=42)
         self.assertIn('stddev==0 for IMT=PGA', str(ctx.exception))
 
     def test_from_files(self):
@@ -174,7 +174,7 @@ class ShakemapTestCase(unittest.TestCase):
         self.assertEqual(len(sitecol), n)
 
         _, gmfs = to_gmfs(shakemap, {'kind': 'mmi'}, False,
-                          trunclevel=3, num_gmfs=1000, seed=42, imts=['MMI'])
+                          truncation_level=3, num_gmfs=1000, seed=42, imts=['MMI'])
 
         gmf_by_imt = gmfs.mean(axis=1)
         std_by_imt = gmfs.std(axis=1)

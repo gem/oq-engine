@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
+import unittest
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
     case_6a, case_7, case_8, case_10, occupants, case_master,
@@ -64,11 +65,12 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # this is also a case with a single site but an exposure grid,
         # to test a corner case
         [fname] = out['avg_losses-rlzs', 'csv']
-        self.assertEqualFiles('expected/losses_by_asset.csv', fname)
+        self.assertEqualFiles(
+            'expected/losses_by_asset.csv', fname, delta=1E-5)
 
         # test agglosses
         tot = extract(self.calc.datastore, 'agg_losses/occupants')
-        aac(tot.array, [0.03104], atol=1E-5)
+        aac(tot.array, [0.03104], atol=2E-5)
 
         # test agglosses with *
         tbl = extract(self.calc.datastore, 'agg_losses/occupants?taxonomy=*')
@@ -82,7 +84,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
         [fname] = out['aggrisk', 'csv']
-        self.assertEqualFiles('expected/agg_loss.csv', fname)
+        self.assertEqualFiles('expected/agg_loss.csv', fname, delta=5E-6)
 
     def test_case_4(self):
         # this test is sensitive to the ordering of the epsilons
@@ -100,7 +102,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
         [fname] = out['aggrisk', 'csv']
-        self.assertEqualFiles('expected/agg_loss.csv', fname)
+        self.assertEqualFiles('expected/agg_loss.csv', fname, delta=1E-5)
 
     def test_case_5(self):
         # case with site model and 11 sites filled out of 17
@@ -118,16 +120,17 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.run_calc(case_6a.__file__, 'job_haz.ini,job_risk.ini',
                       exports='csv')
         [f] = export(('aggrisk', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggrisk.csv', f)
+        self.assertEqualFiles('expected/aggrisk.csv', f, delta=5E-5)
 
         # testing the totlosses view
         dstore = self.calc.datastore
         fname = gettemp(view('totlosses', dstore))
-        self.assertEqualFiles('expected/totlosses.txt', fname)
+        self.assertEqualFiles('expected/totlosses.txt', fname, delta=5E-5)
 
         # testing portfolio_losses
         fname = gettemp(view('portfolio_losses', dstore))
-        self.assertEqualFiles('expected/portfolio_losses.txt', fname)
+        self.assertEqualFiles('expected/portfolio_losses.txt', fname,
+                              delta=5E-5)
 
         # two equal gsims
         with self.assertRaises(InvalidLogicTree):
@@ -137,7 +140,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_1g(self):
         out = self.run_calc(case_1g.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
-        [fname] = out['aggrisk', 'csv']
+        [_tot, fname] = out['aggrisk', 'csv']
         self.assertEqualFiles('expected/agg-gsimltp_@.csv', fname)
 
     def test_case_1h(self):
@@ -169,11 +172,12 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        aac(obj.array, [[2786.1294]], atol=.001)  # from avg_losses-stats
+        aac(obj.array, [[2764.5]], atol=.02)  # from avg_losses-stats
 
         # check portfolio_loss
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
-        self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
+        # sensitive to shapely version
+        self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-4)
 
     def test_collapse_gsim_logic_tree(self):
         self.run_calc(case_master.__file__, 'job.ini',
@@ -191,14 +195,14 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         aac(tot10, tot20, atol=.0001)  # must be around 230.0107
 
         # check aggregate_by site_id
-        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        [_tot, fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
     def test_case_8(self):
         # a complex scenario_risk from GMFs where the hazard sites are
         # not in the asset locations
         self.run_calc(case_8.__file__, 'job.ini')
-        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        [_tot, fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
         agglosses = extract(self.calc.datastore, 'agg_losses/structural')
@@ -230,6 +234,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/realizations.csv', fname)
 
     def test_case_shapefile(self):
+        try:
+            import shapefile
+        except ImportError:
+            raise unittest.SkipTest('Missing pyshp')
         self.run_calc(case_shapefile.__file__, 'prepare_job.ini')
         pre_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_shapefile.__file__, 'job.ini',

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -282,8 +282,10 @@ class RuptureImporter(object):
         if oq.investigation_time:
             eff_time = (oq.investigation_time * oq.ses_per_logic_tree_path *
                         len(self.datastore['weights']))
+            mag = numpy.average(rup_array['mag'], weights=rup_array['n_occ'])
             logging.info('There are {:_d} events and {:_d} ruptures in {:_d} '
-                         'years'.format(ne, nr, int(eff_time)))
+                         'years (mean mag={:.2f})'.format(
+                             ne, nr, int(eff_time), mag))
 
     def _save_events(self, rup_array, rgetters):
         # this is very fast compared to saving the ruptures
@@ -353,4 +355,3 @@ class RuptureImporter(object):
                 raise ValueError(
                     'The %s calculator is restricted to %d %s, got %d' %
                     (oq.calculation_mode, max_[var], var, num_[var]))
-

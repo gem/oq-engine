@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2021 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -481,8 +481,8 @@ class GCMTCatalogue(Catalogue):
                     cmt_dict['hour'] = tensor.centroid.time.hour
                     cmt_dict['minute'] = tensor.centroid.time.minute
                     cmt_dict['second'] = np.round(
-                        np.float(tensor.centroid.time.second) +
-                        np.float(tensor.centroid.time.microsecond) / 1.0e6, 2)
+                        float(tensor.centroid.time.second) +
+                        float(tensor.centroid.time.microsecond) / 1.0e6, 2)
                     cmt_dict['timeError'] = tensor.centroid.time_error
                     cmt_dict['longitude'] = tensor.centroid.longitude
                     cmt_dict['latitude'] = tensor.centroid.latitude
@@ -496,8 +496,8 @@ class GCMTCatalogue(Catalogue):
                     cmt_dict['hour'] = tensor.hypocentre.time.hour
                     cmt_dict['minute'] = tensor.hypocentre.time.minute
                     cmt_dict['second'] = np.round(
-                        np.float(tensor.hypocentre.time.second) + 
-                        np.float(tensor.hypocentre.time.microsecond) / 1000000., 2)
+                        float(tensor.hypocentre.time.second) + 
+                        float(tensor.hypocentre.time.microsecond) / 1000000., 2)
                     cmt_dict['timeError'] = None
                     cmt_dict['longitude'] = tensor.hypocentre.longitude
                     cmt_dict['latitude'] = tensor.hypocentre.latitude
@@ -524,8 +524,8 @@ class GCMTCatalogue(Catalogue):
                 catalogue[iloc, 4] = float(tensor.centroid.time.hour)
                 catalogue[iloc, 5] = float(tensor.centroid.time.minute)
                 catalogue[iloc, 6] = np.round(
-                    np.float(tensor.centroid.time.second) +
-                    np.float(tensor.centroid.time.microsecond) / 1000000., 2)
+                    float(tensor.centroid.time.second) +
+                    float(tensor.centroid.time.microsecond) / 1000000., 2)
                 catalogue[iloc, 7] = tensor.centroid.longitude
                 catalogue[iloc, 8] = tensor.centroid.latitude
                 catalogue[iloc, 9] = tensor.centroid.depth
@@ -536,8 +536,8 @@ class GCMTCatalogue(Catalogue):
                 catalogue[iloc, 4] = float(tensor.hypocentre.time.hour)
                 catalogue[iloc, 5] = float(tensor.hypocentre.time.minute)
                 catalogue[iloc, 6] = np.round(
-                    np.float(tensor.centroid.time.second) +
-                    np.float(tensor.centroid.time.microsecond) / 1000000., 2)
+                    float(tensor.centroid.time.second) +
+                    float(tensor.centroid.time.microsecond) / 1000000., 2)
                 catalogue[iloc, 7] = tensor.hypocentre.longitude
                 catalogue[iloc, 8] = tensor.hypocentre.latitude
                 catalogue[iloc, 9] = tensor.hypocentre.depth

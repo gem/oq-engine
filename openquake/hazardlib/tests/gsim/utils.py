@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,13 +15,15 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
 import os
 import csv
+import logging
 import unittest
 
 import numpy as np
 import pandas
-from openquake.baselib.general import all_equals
+from openquake.baselib.general import all_equals, RecordBuilder
 from openquake.hazardlib import contexts, imt
 
 NORMALIZE = False
@@ -92,8 +94,8 @@ def read_cmaker_df(gsim, csvfnames):
     num_rows = sum(len(df) for df in dfs)
     if num_rows == 0:
         raise ValueError('The files %s are empty!' % ' '.join(csvfnames))
-    print('\n%s' % gsim)
-    print('num_checks = {:_d}'.format(num_rows))
+    logging.info('\n%s' % gsim)
+    logging.info('num_checks = {:_d}'.format(num_rows))
     if not all_equals([sorted(df.columns) for df in dfs]):
         colset = set.intersection(*[set(df.columns) for df in dfs])
         cols = [col for col in dfs[0].columns if col in colset]
@@ -125,34 +127,38 @@ def read_cmaker_df(gsim, csvfnames):
     assert imts
     imtls = {im: [0] for im in sorted(imts)}
     trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
+    mags = ['%.2f' % mag for mag in df.rup_mag.unique()]
     cmaker = contexts.ContextMaker(
-        trt.value if trt else "*", [gsim], {'imtls': imtls})
+        trt.value if trt else "*", [gsim], {'imtls': imtls, 'mags': mags},
+        extraparams={col[5:] for col in df.columns if col.startswith('site_')})
+    dtype = RecordBuilder(**cmaker.defaultdict).zeros(0).dtype
     for dist in cmaker.REQUIRES_DISTANCES:
         name = 'dist_' + dist
-        df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
-        print(name, df[name].unique())
-    for dist in cmaker.REQUIRES_SITES_PARAMETERS:
-        name = 'site_' + dist
-        df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
-        print(name, df[name].unique())
+        df[name] = np.array(df[name].to_numpy(), dtype[dist])
+    for sitepar in cmaker.REQUIRES_SITES_PARAMETERS:
+        name = 'site_' + sitepar
+        df[name] = np.array(df[name].to_numpy(), dtype[sitepar])
     for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
         name = 'rup_' + par
         if name not in df.columns:  # i.e. missing rake
-            df[name] = np.zeros(len(df), cmaker.dtype[par])
+            df[name] = np.zeros(len(df), dtype[par])
         else:
-            df[name] = np.array(df[name].to_numpy(), cmaker.dtype[par])
-        print(name, df[name].unique())
-    print('result_type', df['result_type'].unique())
+            df[name] = np.array(df[name].to_numpy(), dtype[par])
     return cmaker, df.rename(columns=cmap)
 
 
 def gen_ctxs(df):
     """
     :param df: a DataFrame with a specific structure
-    :yields: RuptureContexts
+    :returns: a list of RuptureContexts
     """
+    ctxs = []
     rrp = [col for col in df.columns if col.startswith('rup_')]
     pars = [col for col in df.columns if col.startswith(('dist_', 'site_'))]
+    if 'dist_rrup' not in pars:
+        dist_type = [p for p in pars if p.startswith('dist_')][0][5:]
+    else:
+        dist_type = 'rrup'
     outs = df.result_type.unique()
     num_outs = len(outs)
     for rup_params, grp in df.groupby(rrp):
@@ -166,6 +172,7 @@ def gen_ctxs(df):
         if len(rrp) == 1:
             rup_params = [rup_params]
         ctx = contexts.RuptureContext()
+        ctx.src_id = 0
         for par, rp in zip(rrp, rup_params):
             setattr(ctx, par[4:], rp)
             del grp[par]
@@ -178,8 +185,11 @@ def gen_ctxs(df):
             value = grp[grp.result_type == outs[0]][par].to_numpy()
             setattr(ctx, par[5:], value)  # dist_, site_ parameters
         ctx.sids = np.arange(len(gr))
+        if dist_type != 'rrup':
+            ctx.rrup = getattr(ctx, dist_type)
         assert len(gr) == len(grp) / num_outs, (len(gr), len(gr) / num_outs)
-        yield ctx
+        ctxs.append(ctx)
+    return ctxs
 
 
 class BaseGSIMTestCase(unittest.TestCase):
@@ -187,7 +197,7 @@ class BaseGSIMTestCase(unittest.TestCase):
     GSIM_CLASS = None
 
     def check(self, *filenames, max_discrep_percentage,
-              std_discrep_percentage=None, **kwargs):
+              std_discrep_percentage=None, truncation_level=99., **kwargs):
         if std_discrep_percentage is None:
             std_discrep_percentage = max_discrep_percentage
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
@@ -200,10 +210,12 @@ class BaseGSIMTestCase(unittest.TestCase):
         for sdt in contexts.STD_TYPES:
             if sdt in gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
                 out_types.append(sdt.upper().replace(' ', '_') + '_STDDEV')
-
         cmaker, df = read_cmaker_df(gsim, fnames)
+        if truncation_level != 99.:
+            cmaker.truncation_level = truncation_level
         for ctx in gen_ctxs(df):
-            [out] = cmaker.get_mean_stds([ctx])
+            ctx.occurrence_rate = 0
+            out = cmaker.get_mean_stds([ctx])[:, 0]
             for o, out_type in enumerate(out_types):
                 if not hasattr(ctx, out_type):
                     # for instance MEAN is missing in zhao_2016_test

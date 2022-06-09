@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -35,7 +35,7 @@ def _compute_distance(ctx, C):
     """
     rref = 1.0
     c31 = -1.7
-    return (c31 * np.log10(ctx.rhypo) + C['c32'] * (ctx.rhypo - rref))
+    return c31 * np.log10(ctx.rhypo) + C['c32'] * (ctx.rhypo - rref)
 
 
 def _compute_magnitude(ctx, C):
@@ -45,7 +45,7 @@ def _compute_magnitude(ctx, C):
     c1 + c2(M-5.5)
     """
     m_h = 5.5
-    return C['c1'] + (C['c2'] * (ctx.mag - m_h))
+    return C['c1'] + C['c2'] * (ctx.mag - m_h)
 
 
 def _get_site_amplification(ctx, C):
@@ -59,8 +59,7 @@ def _get_site_amplification(ctx, C):
     Coefficents for categories A and B are set to zero
     """
     S, SS = _get_site_type_dummy_variables(ctx)
-
-    return (C['c61'] * S) + (C['c62'] * SS)
+    return C['c61'] * S + C['c62'] * SS
 
 
 def _get_site_type_dummy_variables(ctx):
@@ -108,27 +107,21 @@ def _compute_forearc_backarc_term(C, ctx):
     ind4 = (ctx.rhypo >= 240)
     flag4[ind4] = 1.0
 
-    A = flag1 * ((205 - ctx.rhypo)/150) + flag2
-    B = flag3 * ((140 - ctx.rhypo)/100) + flag4
-    if (ctx.hypo_depth < 80):
-        FHR = A
-    else:
-        FHR = B
+    A = flag1 * (205 - ctx.rhypo) / 150 + flag2
+    B = flag3 * (140 - ctx.rhypo) / 100 + flag4
+    FHR = np.where(ctx.hypo_depth < 80, A, B)
 
     H0 = 100
     # Heaviside function
-    if (ctx.hypo_depth >= H0):
-        H = 1
-    else:
-        H = 0
+    H = np.where(ctx.hypo_depth >= H0, 1., 0.)
 
     # ARC = 0 for back-arc - ARC = 1 for forearc
     ARC = np.zeros(len(ctx.backarc))
     idxarc = (ctx.backarc == 1)
     ARC[idxarc] = 1.0
 
-    return ((C['c41'] * (1 - ARC) * H) + (C['c42'] * (1 - ARC) * H * FHR) +
-            (C['c51'] * ARC * H) + (C['c52'] * ARC * H * FHR))
+    return (C['c41'] * (1 - ARC) * H + C['c42'] * (1 - ARC) * H * FHR +
+            C['c51'] * ARC * H + C['c52'] * ARC * H * FHR)
 
 
 class SkarlatoudisEtAlSSlab2013(GMPE):
@@ -170,7 +163,7 @@ class SkarlatoudisEtAlSSlab2013(GMPE):
     #: Required distance measure is Rhypo.
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -211,4 +204,34 @@ class SkarlatoudisEtAlSSlab2013(GMPE):
     1.000    3.952    1.102    -0.00178    -0.199     0.112    0.316    0.442    0.371    0.512    0.305    0.201    0.365
     2.000    3.281    1.260    -0.00106    -0.136     0.055    0.196    0.352    0.408    0.578    0.277    0.203    0.343
     4.000    2.588    1.384    -0.00039    -0.179    -0.046    0.113    0.189    0.264    0.475    0.278    0.176    0.329
+    """)
+
+class SkarlatoudisEtAlSSlab2013_scaled(SkarlatoudisEtAlSSlab2013):
+    """
+    Implements GMPEs developed by A.A.Skarlatoudis, C.B.Papazachos,
+    B.N.Margaris, C.Ventouzi, I.Kalogeras and EGELADOS group published as
+    "Ground-Motion Prediction Equations of Intermediate-Depth Earthquakes in
+    the Hellenic Arc, Southern Aegean Subduction Area“,
+    Bull Seism Soc Am, DOI 10.1785/0120120265
+    
+    Application of a scaling factor that converts the prediction of
+    SkarlatoudisEtAlSSlab2013 to the corresponding
+    prediction for the Maximum value.    
+    """
+    COEFFS = CoeffsTable(sa_damping=5, table="""
+	IMT		c1			c2		c32			c41		c42		c51		c52		c61		c62		sigma	tau		epsilon
+	pga		4.269325379	0.877	-0.00206	-0.481	-0.152	0.425	0.303	0.267	0.491	0.352	0.112	0.369
+	0.05	4.358898212	0.863	-0.00212	-0.483	-0.178	0.410	0.286	0.245	0.475	0.376	0.095	0.388
+	0.1		4.60851946	0.867	-0.00244	-0.515	-0.185	0.452	0.371	0.234	0.442	0.404	0.066	0.410
+	0.15	4.634792233	0.855	-0.00222	-0.556	-0.203	0.424	0.331	0.262	0.456	0.392	0.110	0.410
+	0.2		4.66206289	0.842	-0.00199	-0.596	-0.221	0.396	0.291	0.289	0.469	0.379	0.154	0.409
+	0.3		4.59000098	0.884	-0.00195	-0.512	-0.166	0.428	0.293	0.294	0.493	0.351	0.148	0.380
+	0.4		4.5183401	0.926	-0.00190	-0.427	-0.110	0.459	0.295	0.298	0.516	0.322	0.141	0.351
+	0.5		4.431948234	0.955	-0.00188	-0.389	-0.073	0.435	0.320	0.310	0.515	0.319	0.151	0.353
+	0.75	4.22140226	1.029	-0.00183	-0.294	0.020	0.376	0.381	0.341	0.514	0.312	0.176	0.359
+	1		4.005961507	1.102	-0.00178	-0.199	0.112	0.316	0.442	0.371	0.512	0.305	0.201	0.365
+	2		3.336034124	1.260	-0.00106	-0.136	0.055	0.196	0.352	0.408	0.578	0.277	0.203	0.343
+	3		2.99174758	1.322	-0.00073	-0.158	0.005	0.155	0.271	0.336	0.527	0.278	0.190	0.336
+	4		2.647374059	1.384	-0.00039	-0.179	-0.046	0.113	0.189	0.264	0.475	0.278	0.176	0.329
+	pgv		3.008558747	1.069	-0.00178	-0.264	0.018	0.390	0.333	0.408	0.599	0.315	0.144	0.346
     """)

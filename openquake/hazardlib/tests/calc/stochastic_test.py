@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -41,7 +41,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         cmaker = contexts.ContextMaker('*', [SiMidorikawa1999SInter()], param)
         dic = sum(sample_ruptures(group, cmaker), {})
         self.assertEqual(len(dic['rup_array']), 8)
-        self.assertEqual(len(dic['calc_times']), 15)  # mutex sources
+        self.assertEqual(len(dic['source_data']), 6)  # mutex sources
 
         # test no filtering 1
         ruptures = list(stochastic_event_set(group))

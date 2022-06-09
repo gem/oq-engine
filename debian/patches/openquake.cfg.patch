@@ -22,6 +22,8 @@ Index: oq-engine/openquake/engine/openquake.cfg
 +# with local development installations
 +# https://isc.sans.edu/port.html?port=1907
 +port = 1907
+ # receiver host; if missing use hostname
+ receiver_host = 
  # port range used by workers to send back results
  # to the master node
  receiver_ports = 1912-1920

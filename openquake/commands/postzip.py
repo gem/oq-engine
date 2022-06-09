@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2021 GEM Foundation
+# Copyright (C) 2017-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,23 +26,27 @@ from openquake.calculators.extract import WebAPIError
 
 
 def main(zipfile):
-    """Post a zipfile to the WebUI"""
+    """
+    Post one or more zipfiles to the WebUI
+    """
     sess = requests.Session()
-    if config.webapi.username:
-        login_url = '%s/accounts/ajax_login/' % config.webapi.server
-        logging.info('POST %s', login_url)
-        resp = sess.post(
-            login_url, data=dict(username=config.webapi.username,
-                                 password=config.webapi.password))
-        if resp.status_code != 200:
-            raise WebAPIError(resp.text)
-    if zipfile.endswith('.ini'):  # not a zip file yet
-        archive = zipfile[:-3] + 'zip'
-        oqzip.zip_job(zipfile, archive)
-        zipfile = archive
-    resp = sess.post("%s/v1/calc/run" % config.webapi.server, {},
-                     files=dict(archive=open(zipfile, 'rb')))
-    print(json.loads(resp.text))
+    for fname in zipfile:
+        if config.webapi.username:
+            login_url = '%s/accounts/ajax_login/' % config.webapi.server
+            logging.info('POST %s', login_url)
+            resp = sess.post(
+                login_url, data=dict(username=config.webapi.username,
+                                     password=config.webapi.password))
+            if resp.status_code != 200:
+                raise WebAPIError(resp.text)
+        if fname.endswith('.ini'):  # not a zip file yet
+            archive = fname[:-3] + 'zip'
+            oqzip.zip_job(fname, archive)
+            fname = archive
+        resp = sess.post("%s/v1/calc/run" % config.webapi.server, {},
+                         files=dict(archive=open(fname, 'rb')))
+        print(json.loads(resp.text))
 
 
-main.zipfile = 'archive with the files of the computation'
+main.zipfile = dict(help='archive with the files of the computation',
+                    nargs='+')

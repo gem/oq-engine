@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -92,7 +92,7 @@ def _get_site_coeffs(NEHRP, NEHRP_UPPER, sites, imt):
     a_2[is_rock] = 0.
     sigma[is_rock] = 0.
 
-    return (a_1, a_2, sigma)
+    return a_1, a_2, sigma
 
 
 def get_nehrp_classes(NEHRP_VS30_UPPER_BOUNDS, sites):
@@ -151,9 +151,9 @@ class RaghukanthIyengar2007(GMPE):
     #: This is not clear in the paper, but Figure 7 shows the model
     #: "compared with the average of the response spectrum of
     #: the two horizontal components" of a particular recording.
-    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`,
     #: see p. 211.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Although "the coefficients of [equation (1)] are obtained
     #: from the simulated database of SA by a two-step stratified
@@ -204,7 +204,7 @@ class RaghukanthIyengar2007(GMPE):
     #: not covered.
     non_verified = True
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Implements the following equations:
 

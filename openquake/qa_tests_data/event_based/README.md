@@ -26,6 +26,9 @@
 | case_23 | Test gridding from the exposure model + site model | 
 | case_24 | Test the use of the `shift_hypo` option in the `job.ini` | 
 | case_25 | Test the `extendModel` feature in the logic tree| 
+| case_26 |  |
+| case_27 |  |
+| case_28 | Test the add between and within std in the modifiable GMPE |
 | mutex   | Test the use of a source model with mutually exclusive sources | 
 | spatial_correlation | Test the use spatial_correlation for the calculation of GMFs | 
 | gmep_tables | Test the usage of GMPETable |

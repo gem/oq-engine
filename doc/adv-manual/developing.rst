@@ -20,7 +20,7 @@ contributing is still nontrivial, and it absolutely necessary
 to know git and the tools of Open Source development in
 general, in particular about testing. If this is not the
 case, you should do some study on your own and come back later. There
-is a huge amount of resources in the net about these topics. This
+is a huge amount of resources on the net about these topics. This
 manual will focus solely on the OpenQuake engine and it assume that
 you already know how to use it, i.e. you have read the User Manual
 first.
@@ -71,17 +71,16 @@ following command::
 
  $ oq run demos/hazard/AreaSourceClassicalPSHA/job.ini 
 
-You should notice that we used here the command `oq run` while the engine
-manual recommend the usage of `oq engine --run`. There is no contradiction.
-The command `oq engine --run` is meant for production usage, it will work
-with the WebUI and store the logs of the calculation in the engine database.
-But here we are doing development, so the recommended command is `oq run`
-which will not interact with the database, will be easier to debug and
-accept the essential flag ``--pdb``, which will start the python debugger
+You should notice that we used here the command ``oq run`` while the engine
+manual recommend the usage of ``oq engine --run``. There is no contradiction.
+The command ``oq engine --run`` is meant for production usage, 
+but here we are doing development, so the recommended command is ``oq run``
+which will will be easier to debug thanks to the
+flag ``--pdb``, which will start the python debugger
 should the calculation fail. Since during development is normal to have
-errors and problems in the calculation, so this ability is invaluable.
+errors and problems in the calculation, this ability is invaluable.
 
-Then, if you want to understand what happened during the calculation
+If you want to understand what happened during the calculation
 you should generate the associated .rst report, which can be seen with
 the command
 
@@ -90,7 +89,7 @@ the command
 There you will find a lot of interesting information that it is worth studying
 and we will discuss in detail in the rest of this manual. The most important
 section of the report is probably the last one, titled "Slowest operations".
-For that one can understand the bottlenecks of the calculation and, with
+For that one can understand the bottlenecks of a calculation and, with
 experience, he can understand which part of the engine he needs to optimize.
 Also, it is very useful to play with the parameters of the calculation
 (like the maximum distance, the area discretization, the magnitude binning,
@@ -206,7 +205,7 @@ Then the hazard curve can be computed as follows:
 >>> gsims = readinput.get_gsim_lt(oq).values['*']
 >>> calc_hazard_curve(sitecol, src, gsims, oq)
 <ProbabilityCurve
-[[0.00508693]]>
+[[0.00507997]]>
 
 
 Working with GMPEs directly: the ContextMaker
@@ -226,13 +225,12 @@ a dictionary of parameters:
 ...              investigation_time=oq.investigation_time)
 >>> cmaker = ContextMaker(src.tectonic_region_type, gsims, param)
 
-Then you can use the ``ContextMaker`` to generate context objects
+Then you can use the ``ContextMaker`` to generate context arrays
 from the sources:
 
->>> ctxs = cmaker.from_srcs([src], sitecol)
+>>> [ctx] = cmaker.from_srcs([src], sitecol)
 
-There is a context for each rupture in the source. In our example, there
-are 15 magnitudes
+In our example, there are 15 magnitudes
 
 >>> len(src.get_annual_occurrence_rates())
 15
@@ -244,7 +242,7 @@ and the area source contains 47 point sources
 
 so in total there are 15 x 47 = 705 ruptures:
 
->>> len(ctxs)
+>>> len(ctx)
 705
 
 The ``ContextMaker`` takes care of the maximum_distance filtering, so in
@@ -252,18 +250,15 @@ general the number of contexts is lower than the total number of ruptures,
 since some ruptures are normally discarded, being distant from the sites.
 
 The contexts contains all the rupture, site and distance parameters.
-Consider for instance the first context:
-
->>> ctx = ctxs[0]
 
 Then you have
 
->>> ctx.mag
+>>> ctx.mag[0]
 4.7
->>> ctx.rrup
-array([106.40112646])
->>> ctx.rjb
-array([105.8963247])
+>>> ctx.rrup[0]
+106.4011264574155
+>>> ctx.rjb[0]
+105.89632469731306
 
 In this example, the GMPE ``ToroEtAl2002SHARE`` does not require site
 parameters, so calling ``ctx.vs30`` will raise an ``AttributeError``
@@ -271,49 +266,122 @@ but in general the contexts contains also arrays of site parameters.
 There is also an array of indices telling which are the sites affected
 by the rupture associated to the context:
 
->>> ctx.sids
+>>> import numpy
+>>> numpy.unique(ctx.sids)
 array([0], dtype=uint32)
 
 Once you have the contexts, the ``ContextMaker`` is able to compute
-means and standard deviations from the underlying GMPEs on each context.
-For instance, suppose you are only interested in the total standard
-deviation:
+means and standard deviations from the underlying GMPEs as follows
+(for engine version >= 3.13):
 
->>> from openquake.hazardlib.const import StdDev
+>>> mean, sig, tau, phi = cmaker.get_mean_stds([ctx])
 
-Then you can get a list of arrays containing mean and total standard
-deviation, with an array for each underlying gsim:
+Since in this example there is a single gsim and a single IMT you will get:
 
->>> all_mean_std = cmaker.get_mean_stds(ctxs, StdDev.TOTAL)
-
-Since in this example there is a single gsim you can do the following:
-
->>> mean, std = all_mean_std[0]
 >>> mean.shape
-(1, 705)
->>> std.shape
-(1, 705)
+(1, 1, 705)
+>>> sig.shape
+(1, 1, 705)
 
-The shape of the arrays is (M, C) where M is the number of intensity
-measure types (in this example there is only one, PGA) and C is the
+The shape of the arrays in general is (G, M, N) where G is the number of GSIMs,
+M the number of intensity measure types and N the
 total size of the contexts. Since this is an example with a single
-site, each context has size 1, therefore C = 705 * 1 = 705. In general
-if there are multiple sites a context C is the total number of affected
+site, each context has size 1, therefore N = 705 * 1 = 705. In general
+if there are multiple sites a context M is the total number of affected
 sites. For instance if there are two contexts and the first affect
-1 sites and the second 2 sites then C would be 1 + 2 = 3. This
+1 sites and the second 2 sites then N would be 1 + 2 = 3. This
 example correspond to 1 + 1 + ... + 1 = 705.
 
 From the mean and standard deviation is possible to compute the
 probabilities of exceedence. The ``ContextMaker`` provides a method
 to compute directly the probability map, which internally calls
-``cmaker.get_mean_stds(ctxs, StdDev.TOTAL)``:
+``cmaker.get_mean_stds(ctxs)``:
 
->>> cmaker.get_pmap(ctxs)
+>>> cmaker.get_pmap([ctx])
 {0: <ProbabilityCurve
-[[0.00508693]]>}
+[[0.00507997]]>}
 
 This is exactly the result provided by
 ``calc_hazard_curve(sitecol, src, gsims, oq)`` in the section before.
 
 If you want to know exactly how ``get_pmap`` works you are invited to
 look at the source code in ``openquake.hazardlib.contexts``.
+
+
+Working with verification tables
+---------------------------------------------------
+
+Hazard scientists implementing a new GMPE must provide verification
+tables, i.e. CSV files containing inputs and expected outputs.
+
+For instance, for the Atkinson2015 GMPE (chosen simply because is
+the first GMPE in lexicographic order in hazardlib) the verification
+table has a structure like this::
+
+ rup_mag,dist_rhypo,result_type,pgv,pga,0.03,0.05,0.1,0.2,0.3,0.5
+ 2.0,1.0,MEAN,5.50277734e-02,3.47335058e-03,4.59601700e-03,7.71361460e-03,9.34624779e-03,4.33207607e-03,1.75322233e-03,3.44695521e-04
+ 2.0,5.0,MEAN,6.43850933e-03,3.61047741e-04,4.57949482e-04,7.24558049e-04,9.44495571e-04,5.11252304e-04,2.21076069e-04,4.73435138e-05
+ ...
+
+The columns starting with ``rup_`` contains rupture parameters (the
+magnitude in this example) while the columns starting with ``dist_``
+contains distance parameters. The column ``result_type`` is a string
+in the set {"MEAN", "INTER_EVENT_STDDEV", "INTRA_EVENT_STDDEV",
+"TOTAL_STDDEV"}. The remaining columns are the expected results for
+each intensity measure type; in the the example the IMTs are PGV, PGA,
+SA(0.03), SA(0.05), SA(0.1), SA(0.2), SA(0.3), SA(0.5).
+
+Starting from engine version 3.13, it is possible to instantiate a
+ContextMaker and the associated contexts from a GMPE and its
+verification tables with a few simple steps. First of all one
+must instantiate the GMPE:
+
+>>> from openquake.hazardlib import valid
+>>> gsim = valid.gsim("Atkinson2015")
+
+Second, one can determine the path names to the verification tables
+as follows (they are in a subdirectory of *hazardlib/tests/gsim/data*):
+
+>>> import os
+>>> from openquake.hazardlib.tests.gsim import data
+>>> datadir = os.path.join(data.__path__[0], 'ATKINSON2015')
+>>> fnames = [os.path.join(datadir, f) for f in ["ATKINSON2015_MEAN.csv",
+...           "ATKINSON2015_STD_INTER.csv", "ATKINSON2015_STD_INTRA.csv",
+...           "ATKINSON2015_STD_TOTAL.csv"]]
+
+Then it is possible to instantiate the ContextMaker associated to the GMPE
+and a pandas DataFrame associated to the verification tables in a single step:
+
+>>> from openquake.hazardlib.tests.gsim.utils import read_cmaker_df, gen_ctxs
+>>> cmaker, df = read_cmaker_df(gsim, fnames)
+>>> list(df.columns)
+['rup_mag', 'dist_rhypo', 'result_type', 'damping', 'PGV', 'PGA', 'SA(0.03)', 'SA(0.05)', 'SA(0.1)', 'SA(0.2)', 'SA(0.3)', 'SA(0.5)', 'SA(1.0)', 'SA(2.0)', 'SA(3.0)', 'SA(5.0)']
+
+Then you can immediately compute mean and standard deviations and
+compare with the values in the verification table:
+
+>>> mean, sig, tau, phi = cmaker.get_mean_stds(gen_ctxs(df))
+
+*sig* refers to the "TOTAL_STDDEV", *tau* to the "INTER_EVENT_STDDEV"
+and *phi* to the "INTRA_EVENT_STDDEV". This is how the tests
+in hazardlib are implemented. Interested users should look at the
+code in https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/tests/gsim/utils.py.
+
+Running the engine tests
+----------------------------------
+
+If you are a hazard scientists contributing a bug fix to a GMPE (or any
+other kind of bug fix) you may need to run the engine tests and possibly
+change the expected files if there is a change in the numbers. The way to
+do it is to start the dbserver and then run the tests from the repository root::
+
+  $ oq dbserver start
+  $ pytest -vx openquake/calculators
+
+If you get an error like the following::
+
+  openquake/calculators/tests/__init__.py:218: in assertEqualFiles
+      raise DifferentFiles('%s %s' % (expected, actual))
+  E   openquake.calculators.tests.DifferentFiles: /home/michele/oq-engine/openquake/qa_tests_data/classical/case_1/expected/hazard_curve-PGA.csv /tmp/tmpkdvdhlq5/hazard_curve-mean-PGA_27249.csv
+
+you need to change the expected file, i.e. copy the file ``/tmp/tmpkdvdhlq5/hazard_curve-mean-PGA_27249.csv`` over ``classical/case_1/expected/hazard_curve-PGA.csv``.

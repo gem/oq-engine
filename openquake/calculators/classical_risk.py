@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,21 +24,21 @@ from openquake.calculators import base
 F32 = numpy.float32
 
 
-def classical_risk(riskinputs, param, monitor):
+def classical_risk(riskinputs, oqparam, monitor):
     """
     Compute and return the average losses for each asset.
 
     :param riskinputs:
         :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param param:
-        dictionary of extra parameters
+    :param oqparam:
+        input parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
     crmodel = monitor.read('crmodel')
     result = dict(loss_curves=[], stat_curves=[])
-    weights = [w['default'] for w in param['weights']]
-    statnames, stats = zip(*param['stats'])
+    weights = [w['default'] for w in oqparam._weights]
+    statnames, stats = zip(*oqparam._stats)
     mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
         A = len(ri.asset_df)
@@ -99,7 +99,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         self.realizations = full_lt.get_realizations()
         weights = [rlz.weight for rlz in self.realizations]
         stats = list(oq.hazard_stats().items())
-        self.param = dict(stats=stats, weights=weights)
+        oq._stats = stats
+        oq._weights = weights
         self.riskinputs = self.build_riskinputs()
         self.A = len(self.assetcol)
         self.L = len(self.crmodel.loss_types)

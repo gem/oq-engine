@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel investigation_time="1.0" name="test">
+        <sourceGroup rup_interdep="indep" src_interdep="indep"
+        tectonicRegion="Active Shallow Crust">
+            <multiFaultSource id="ufc3mean_0" name="UCERF3 Mean" >
+
+                <multiPlanesRupture probs_occur="0.98 0.02" >
+                    <magnitude> 7.0 </magnitude>
+                    <sectionIndexes indexes="1,2,3,4,5"/>
+                    <rake>180.0</rake>
+                </multiPlanesRupture>
+
+            </multiFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

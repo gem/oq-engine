@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -81,7 +81,7 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
         # set reasonable default values
         gmpe = self.GSIM_CLASS()
         ctx.mag = np.array([6.5])
-        ctx.rjb = np.array([100.])
+        ctx.rjb = ctx.rrup = np.array([100.])
         ctx.vs30 = np.array([2000.])
         ctx.sids = [0]
         im_type = sorted(gmpe.COEFFS.sa_coeffs)[0]

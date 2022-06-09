@@ -111,7 +111,7 @@ class AmplFunction():
         median = numpy.zeros(len(mags))
         std = numpy.zeros(len(mags))
 
-        # TODO: figure out a way to vectorize this
+        # TODO: figure out a way to do the following better
         for i, (mag, dst) in enumerate(zip(mags, dsts)):
 
             # Filtering magnitude
@@ -262,7 +262,7 @@ class Amplifier(object):
         for gsims in gsims_by_trt.values():
             for gsim in gsims:
                 gsim_ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
-                if gsim_ref and self.vs30_ref > gsim_ref:
+                if gsim_ref and gsim_ref < self.vs30_ref:
                     raise ValueError(
                         '%s.DEFINED_FOR_REFERENCE_VELOCITY=%s < %s'
                         % (gsim.__class__.__name__, gsim_ref, self.vs30_ref))
@@ -413,10 +413,10 @@ def get_poes_site(mean_std, cmaker, ctx):
     # C - Number of contexts
     # L - Number of intensity measure levels
     loglevels = cmaker.loglevels
-    trunclevel = cmaker.trunclevel
+    truncation_level = cmaker.truncation_level
     mean, stddev = mean_std  # shape (C, M)
     C, L = mean.shape[1], loglevels.size
-    assert len(ctx.sids) == 1  # 1 site
+    assert len(numpy.unique(ctx.sids)) == 1  # 1 site
     M = len(loglevels)
     L1 = L // M
 
@@ -430,9 +430,9 @@ def get_poes_site(mean_std, cmaker, ctx):
     # Compute the probability of exceedance for each in intensity
     # measure type IMT
     sigma = cmaker.af.get_max_sigma()
-    mags = [ctx.mag]
+    mags = ctx.mag
     rrups = ctx.rrup
-    ampcode = ctx.sites['ampcode'][0]
+    [ampcode] = numpy.unique(ctx.ampcode)
     for m, imt in enumerate(loglevels):
 
         # Get the values of ground-motion used to compute the probability
@@ -452,7 +452,7 @@ def get_poes_site(mean_std, cmaker, ctx):
 
             # Set the arguments of the truncated normal distribution
             # function
-            if trunclevel == 0:
+            if truncation_level == 0:
                 out_l = iml_l <= mean[m]
                 out_u = iml_u <= mean[m]
             else:
@@ -460,8 +460,8 @@ def get_poes_site(mean_std, cmaker, ctx):
                 out_u = (iml_u - mean[m]) / stddev[m]
 
             # Probability of occurrence on rock
-            pocc_rock = (_truncnorm_sf(trunclevel, out_l) -
-                         _truncnorm_sf(trunclevel, out_u))  # shape C
+            pocc_rock = (_truncnorm_sf(truncation_level, out_l) -
+                         _truncnorm_sf(truncation_level, out_u))  # shape C
 
             # Skipping cases where the pocc on rock is negligible
             if numpy.all(pocc_rock < 1e-10):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2021 GEM Foundation
+# Copyright (c) 2016-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,10 +18,15 @@
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import numba, compile
 import numpy
+import pandas
 
+U16 = numpy.uint16
+U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 BYTES_PER_FLOAT = 8
+poes_dt = {'gid': U16, 'sid': U32, 'lid': U16, 'poe': F64}
+
 
 if numba:
     @compile("void(float64[:, :], float64[:], uint32[:])")
@@ -213,14 +218,17 @@ class ProbabilityMap(dict):
         """The ordered keys of the map as a numpy.uint32 array"""
         return numpy.array(sorted(self), numpy.uint32)
 
-    def array(self, start, stop, g):
+    def array(self, N, g=slice(None)):
         """
-        An array of shape (stop-start, L)
+        An array of shape (N, L, G) or (stop-start, L)
         """
-        arr = numpy.zeros((stop-start, self.shape_y))
-        for i, sid in enumerate(range(start, stop)):
+        if isinstance(g, slice):
+            arr = numpy.zeros((N, self.shape_y, self.shape_z))
+        else:
+            arr = numpy.zeros((N, self.shape_y))
+        for sid in range(N):
             try:
-                arr[i] = self[sid].array[:, g]
+                arr[sid] = self[sid].array[:, g]
             except KeyError:
                 pass
         # Physically, an extremely small intensity measure level can have an
@@ -286,6 +294,22 @@ class ProbabilityMap(dict):
             array = curve.array[:, inner_idx].reshape(-1, 1)
             out[sid] = ProbabilityCurve(array)
         return out
+
+    def to_dframe(self):
+        """
+        :returns: a DataFrame with fields sid, gid, lid, poe
+        """
+        dic = dict(sid=[], gid=[], lid=[], poe=[])
+        for sid in self:
+            for (lid, gid), poe in numpy.ndenumerate(self[sid].array):
+                dic['sid'].append(sid)
+                dic['gid'].append(gid)
+                dic['lid'].append(lid)
+                dic['poe'].append(poe)
+        for key, dt in poes_dt.items():
+            dic[key] = dt(dic[key])
+        dic['poe'][dic['poe'] == 1.] = .9999999999999999  # avoids log(0)
+        return pandas.DataFrame(dic)
 
     def combine(self, pmap, rlz_groups):
         """

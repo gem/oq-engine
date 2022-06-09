@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -161,6 +161,8 @@ class EngineServerTestCase(unittest.TestCase):
         # check eids_by_gsim
         resp = self.c.get(extract_url + 'eids_by_gsim')
         dic = dict(loadnpz(resp.streaming_content))
+        for gsim, eids in dic.items():
+            numpy.testing.assert_equal(eids, numpy.sort(eids)), gsim
         self.assertEqual(len(dic['[AtkinsonBoore2003SInter]']), 7)
 
         # check extract/composite_risk_model.attrs
@@ -219,24 +221,18 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertIn('Could not export XXX in csv', str(ctx.exception))
 
         # check MFD distribution
-        extract_url = '/v1/calc/%s/extract/event_based_mfd?kind=mean' % job_id
+        extract_url = '/v1/calc/%s/extract/event_based_mfd?' % job_id
         got = loadnpz(self.c.get(extract_url))
-        self.assertGreater(len(got['magnitudes']), 1)
-        self.assertGreater(len(got['mean_frequency']), 1)
+        self.assertGreater(len(got['mag']), 1)
+        self.assertGreater(len(got['freq']), 1)
 
         # check rupture_info
         extract_url = '/v1/calc/%s/extract/rupture_info' % job_id
         got = loadnpz(self.c.get(extract_url))
         boundaries = gzip.decompress(got['boundaries']).split(b'\n')
         self.assertEqual(len(boundaries), 37)
-        self.assertEqual(boundaries[0], b'POLYGON((-77.24583 17.99602, -77.25224 17.91156, -77.33583 17.90593, -77.32871 17.99129, -77.24583 17.99602))')
-        self.assertEqual(boundaries[-1], b'POLYGON((-77.10000 18.92000, -77.10575 18.83643, -77.11150 18.75286, -77.11723 18.66929, -77.12297 18.58572, -77.12869 18.50215, -77.13442 18.41858, -77.14014 18.33500, -77.14584 18.25143, -77.15155 18.16786, -77.15725 18.08429, -77.16295 18.00072, -77.16864 17.91714, -77.17432 17.83357, -77.18000 17.75000, -77.26502 17.74263, -77.35004 17.73522, -77.43505 17.72777, -77.52006 17.72029, -77.60506 17.71277, -77.69004 17.70522, -77.77502 17.69763, -77.86000 17.69000, -77.84865 17.78072, -77.83729 17.87144, -77.82591 17.96215, -77.81452 18.05287, -77.80312 18.14359, -77.79172 18.23430, -77.78030 18.32502, -77.76886 18.41573, -77.75742 18.50644, -77.74596 18.59716, -77.73448 18.68787, -77.72300 18.77858, -77.71151 18.86929, -77.70000 18.96000, -77.62498 18.95510, -77.54997 18.95018, -77.47497 18.94523, -77.39996 18.94024, -77.32497 18.93523, -77.24997 18.93018, -77.17499 18.92511, -77.10000 18.92000))')
-
-        # check num_events
-        extract_url = '/v1/calc/%s/extract/num_events' % job_id
-        got = loadnpz(self.c.get(extract_url))
-        self.assertEqual(got['num_events'], 41)
-
+        for b in boundaries:
+            self.assertEqual(b[:12], b'POLYGON((-77')
         # check gmf_data with no data
         extract_url = '/v1/calc/%s/extract/gmf_data?event_id=28' % job_id
         got = loadnpz(self.c.get(extract_url))
@@ -248,14 +244,22 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(list(got), ['wkt_gz', 'src_gz', 'array'])
         self.assertGreater(len(got['array']), 0)
 
+        # check risk_stats
+        extract_url = '/v1/calc/%s/extract/risk_stats/aggrisk' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        self.assertEqual(list(got), ['agg_id', 'loss_type', 'loss', 'stat'])
+
     def test_classical(self):
         job_id = self.postzip('classical.zip')
         self.wait()
-        # check that we get at least the following 6 outputs
-        # fullreport, input, hcurves, hmaps, realizations, events
+        # check that we get at least the following 4 outputs
+        # fullreport, hcurves, hmaps, realizations
         # we can add more outputs in the future
         results = self.get('%s/results' % job_id)
-        self.assertGreaterEqual(len(results), 5)
+        resnames = [res['name'] for res in results]
+        self.assertGreaterEqual(resnames, ['Full Report', 'Hazard Curves',
+                                           'Hazard Maps',  'Input Files',
+                                           'Realizations'])
 
         # check the filename of the hmaps
         hmaps_id = results[2]['id']
@@ -287,9 +291,9 @@ class EngineServerTestCase(unittest.TestCase):
         job_id = self.postzip('archive_err_1.zip')
         self.wait()
 
-        # download the datastore, even if incomplete
+        # there is no datastore since the calculation did not start
         resp = self.c.get('/v1/calc/%s/datastore' % job_id)
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, 404)
 
         tb = self.get('%s/traceback' % job_id)
         if not tb:
@@ -308,7 +312,7 @@ class EngineServerTestCase(unittest.TestCase):
     def test_err_3(self):
         # there is no file job.ini, job_hazard.ini or job_risk.ini
         tb_str = self.postzip('archive_err_3.zip')
-        self.assertIn('Could not find any file of the form', tb_str)
+        self.assertIn('There are no .ini files in the archive', tb_str)
 
     def test_available_gsims(self):
         resp = self.c.get('/v1/available_gsims')
@@ -317,6 +321,8 @@ class EngineServerTestCase(unittest.TestCase):
     def test_ini_defaults(self):
         resp = self.c.get('/v1/ini_defaults')
         self.assertEqual(resp.status_code, 200)
+        # make sure an old name still works
+        self.assertIn(b'individual_curves', resp.content)
 
     def test_validate_zip(self):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -43,8 +43,8 @@ class KiteFaultSource(ParametricSeismicSource):
                  rupture_mesh_spacing, magnitude_scaling_relationship,
                  rupture_aspect_ratio, temporal_occurrence_model,
                  # kite fault specific parameters
-                 profiles, floating_x_step,
-                 floating_y_step, rake, profiles_sampling=None):
+                 profiles, rake, floating_x_step=0,
+                 floating_y_step=0, profiles_sampling=None):
         super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
@@ -55,9 +55,9 @@ class KiteFaultSource(ParametricSeismicSource):
         if profiles_sampling is None:
             self.profiles_sampling = (rupture_mesh_spacing /
                                       rupture_aspect_ratio)
+        self.rake = rake
         self.floating_x_step = floating_x_step
         self.floating_y_step = floating_y_step
-        self.rake = rake
 
         min_mag, max_mag = self.mfd.get_min_max_mag()
 
@@ -80,8 +80,8 @@ class KiteFaultSource(ParametricSeismicSource):
         self = cls(source_id, name, tectonic_region_type, mfd,
                    rupture_mesh_spacing, magnitude_scaling_relationship,
                    rupture_aspect_ratio, temporal_occurrence_model,
-                   profiles, floating_x_step,
-                   floating_y_step, rake)
+                   profiles, rake, floating_x_step,
+                   floating_y_step)
         return self
 
     @property
@@ -133,14 +133,14 @@ class KiteFaultSource(ParametricSeismicSource):
         msr = self.magnitude_scaling_relationship
         tom = self.temporal_occurrence_model
         surface = self.surface
-
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+        step = kwargs.get('step', 1)
+        for mag, mag_occ_rate in self.get_annual_occurrence_rates()[::step]:
 
             # Compute the area, length and width of the ruptures
             area = msr.get_median_area(mag=mag, rake=self.rake)
-            lng, wdt = get_discrete_dimensions(area, self.rupture_mesh_spacing,
-                                               self.rupture_aspect_ratio,
-                                               self.profiles_sampling)
+            lng, wdt = get_discrete_dimensions(
+                area, self.rupture_mesh_spacing,
+                self.rupture_aspect_ratio, self.profiles_sampling)
 
             # Get the number of nodes along the strike and dip. Note that
             # len and wdt should be both multiples of the sampling distances
@@ -148,17 +148,34 @@ class KiteFaultSource(ParametricSeismicSource):
             rup_len = int(np.round(lng/self.rupture_mesh_spacing)) + 1
             rup_wid = int(np.round(wdt/self.profiles_sampling)) + 1
 
+            if self.floating_x_step == 0:
+                fstrike = 1
+            else:
+                # ratio = the amount of overlap between consecutive ruptures
+                fstrike = int(np.floor(rup_len*self.floating_x_step))
+                if fstrike == 0:
+                    fstrike = 1
+
+            if self.floating_x_step == 0:
+                fdip = 1
+            else:
+                # as for strike: ratio indicates percentage overlap
+                fdip = int(np.floor(rup_wid*self.floating_y_step))
+                if fdip == 0:
+                    fdip = 1
+
             # Get the geometry of all the ruptures that the fault surface
             # accommodates
             ruptures = []
-            for rup in self._get_ruptures(surface.mesh, rup_len, rup_wid):
+            for rup in self._get_ruptures(surface.mesh, rup_len, rup_wid,
+                                          f_strike=fstrike, f_dip=fdip):
                 ruptures.append(rup)
             if len(ruptures) < 1:
                 continue
             occurrence_rate = mag_occ_rate / len(ruptures)
 
             # Rupture generator
-            for rup in ruptures:
+            for rup in ruptures[::step]:
                 hypocenter = rup[0].get_center()
                 # Yield an instance of a ParametricProbabilisticRupture
                 yield ppr(mag, self.rake, self.tectonic_region_type,
@@ -200,8 +217,23 @@ class KiteFaultSource(ParametricSeismicSource):
                 f_dip = 1
 
         # Float the rupture on the mesh describing the surface of the fault
-        for i in np.arange(0, omsh.lons.shape[1] - rup_s + 1, f_strike):
-            for j in np.arange(0, omsh.lons.shape[0] - rup_d + 1, f_dip):
+        mesh_x_len = omsh.lons.shape[1] - rup_s + 1
+        mesh_y_len = omsh.lons.shape[0] - rup_d + 1
+        x_nodes = np.arange(0, mesh_x_len, f_strike)
+        y_nodes = np.arange(0, mesh_y_len, f_dip)
+
+        while (len(x_nodes) > 0 and f_strike > 1
+                and x_nodes[-1] != omsh.lons.shape[1] - rup_s):
+            f_strike -= 1
+            x_nodes = np.arange(0, mesh_x_len, f_strike)
+
+        while (len(y_nodes) > 0 and f_dip > 1
+                and y_nodes[-1] != omsh.lons.shape[0] - rup_d):
+            f_dip -= 1
+            y_nodes = np.arange(0, mesh_y_len, f_dip)
+
+        for i in x_nodes:
+            for j in y_nodes:
                 nel = np.size(omsh.lons[j:j + rup_d, i:i + rup_s])
                 nna = np.sum(np.isfinite(omsh.lons[j:j + rup_d, i:i + rup_s]))
                 prc = nna/nel*100.
@@ -213,12 +245,11 @@ class KiteFaultSource(ParametricSeismicSource):
                                omsh.depths[j:j + rup_d, i:i + rup_s])
                     yield (KiteSurface(msh), j, i)
 
-    # TODO
     def get_fault_surface_area(self) -> float:
         """
         Returns the area of the fault surface
         """
-        pass
+        raise NotImplementedError
 
     def __iter__(self):
         """
@@ -266,7 +297,7 @@ def get_discrete_dimensions(area: float, sampling: float, aspr: float,
     :param sampling:
         The sampling distance [km] along the strike
     :param aspr:
-            The rupture aspect ratio [L/W]
+        The rupture aspect ratio [L/W]
     :param sampling_y:
         The sampling distance [km] along the dip
     :returns:
@@ -318,6 +349,9 @@ def get_discrete_dimensions(area: float, sampling: float, aspr: float,
         wdt = None
         lng = None
     elif area_error > 0.25 and lng > 1e-10 and wdt > 1e-10:
-        raise ValueError('Area discrepancy: ', area, lng*wdt, lng, wdt)
-
+        msg = '\nSampling along strike : {:f}\n'.format(sampling)
+        msg += 'Sampling along dip   : {:f}\n'.format(sampling_y)
+        msg += 'Area expected        : {:f}\n'.format(area)
+        msg += 'Area computed        : {:f}\n'.format(lng*wdt)
+        raise ValueError(msg)
     return lng, wdt

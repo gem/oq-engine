@@ -58,7 +58,7 @@ class Lin2011foot(GMPE):
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components, see equation 10 page 226.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types is total, see equation 10 page 226.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -84,7 +84,6 @@ class Lin2011foot(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-
         idx_rock = ctx.vs30 >= self.ROCK_VS30
         idx_soil = ctx.vs30 < self.ROCK_VS30
 

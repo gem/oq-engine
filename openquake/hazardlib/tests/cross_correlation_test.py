@@ -17,8 +17,12 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-from openquake.hazardlib.imt import SA
-from openquake.hazardlib.cross_correlation import BakerJayaram2008
+import numpy
+from numpy.testing import assert_allclose as aac
+from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.cross_correlation import (
+    BakerJayaram2008, GodaAtkinson2009,
+    NoCrossCorrelation, FullCrossCorrelation)
 
 
 class BakerJayaram2008Test(unittest.TestCase):
@@ -59,3 +63,72 @@ class BakerJayaram2008Test(unittest.TestCase):
         imt_to = SA(0.10)
         expected = 0.9421213925
         self._test(imt_from, imt_to, expected)
+
+
+class GodaAtkinson2009Test(unittest.TestCase):
+    """
+    Tests the implementation of the Goda and Atkinson (2009) model.
+    """
+    def setUp(self):
+        self.cm = GodaAtkinson2009()
+        self.imts = [PGA(), SA(0.3), SA(0.6), SA(1.0)]
+
+    def test(self):
+        corma = self.cm._get_correlation_matrix(self.imts)
+        aac(corma,
+            numpy.array([[1.        , 0.71678166, 0.41330149, 0.23046633],
+                         [0.71678166, 1.        , 0.83261724, 0.68322083],
+                         [0.41330149, 0.83261724, 1.        , 0.88167281],
+                         [0.23046633, 0.68322083, 0.88167281, 1.        ]]))
+
+        numpy.random.seed(42)
+        eps = self.cm.get_inter_eps(self.imts, 2)  # a 4x2 matrix
+        aac(eps, numpy.array([[-0.60624845, -0.3066977 ],
+                              [-0.13441677,  0.62122982],
+                              [-0.667341  ,  0.28429873],
+                              [-0.3573499 ,  0.0350888 ]]),
+            rtol=1e-5)
+
+
+class NoCrossCorrelationTest(unittest.TestCase):
+    """
+    Tests the case of uncorrelated epsilons
+    """
+    def test(self):
+        cm = NoCrossCorrelation(truncation_level=3.)
+        imts = [PGA(), SA(0.3), SA(0.6), SA(1.0)]
+        numpy.random.seed(42)
+        eps = cm.get_inter_eps(imts, 2)  # a 4x2 matrix
+        aac(eps, numpy.array([[-0.318959,  1.640001],
+                              [ 0.616954,  0.249188],
+                              [-1.007084, -1.007184],
+                              [-1.560874,  1.103927]]),
+            rtol=1e-5)
+
+
+class FullCrossCorrelationTest(unittest.TestCase):
+    """
+    Tests the case of fully correlated epsilons
+    """
+    def test(self):
+        cm = FullCrossCorrelation(truncation_level=3.)
+        imts = [PGA(), SA(0.3), SA(0.6), SA(1.0)]
+        numpy.random.seed(42)
+        eps = cm.get_inter_eps(imts, 2)  # a 4x2 matrix with same eps per IMT
+        aac(eps, numpy.array([[-0.318959,  1.640001],
+                              [-0.318959,  1.640001],
+                              [-0.318959,  1.640001],
+                              [-0.318959,  1.640001]]),
+            rtol=1e-5)
+
+
+class CrossCorrelationMatrixTest(unittest.TestCase):
+    """
+    Tests the calculation of a cross-correlation mtx
+    """
+    def test_cross_corr_mtx(self):
+        imts = [SA(0.1), SA(0.5)]
+        expected = numpy.array([[1.0, 0.4745240873], [0.4745240873, 1.0]])
+        cm = BakerJayaram2008()
+        computed = cm.get_cross_correlation_mtx(imts)
+        aac(computed, expected)

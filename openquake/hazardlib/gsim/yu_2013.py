@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -41,28 +41,16 @@ def gc(coeff, mag):
     :returns:
         The set of coefficients
     """
-    if mag > 6.5:
-        a1ca = coeff['ua']
-        a1cb = coeff['ub']
-        a1cc = coeff['uc']
-        a1cd = coeff['ud']
-        a1ce = coeff['ue']
-        a2ca = coeff['ia']
-        a2cb = coeff['ib']
-        a2cc = coeff['ic']
-        a2cd = coeff['id']
-        a2ce = coeff['ie']
-    else:
-        a1ca = coeff['a']
-        a1cb = coeff['b']
-        a1cc = coeff['c']
-        a1cd = coeff['d']
-        a1ce = coeff['e']
-        a2ca = coeff['ma']
-        a2cb = coeff['mb']
-        a2cc = coeff['mc']
-        a2cd = coeff['md']
-        a2ce = coeff['me']
+    a1ca = np.where(mag > 6.5, coeff['ua'], coeff['a'])
+    a1cb = np.where(mag > 6.5, coeff['ub'], coeff['b'])
+    a1cc = np.where(mag > 6.5, coeff['uc'], coeff['c'])
+    a1cd = np.where(mag > 6.5, coeff['ud'], coeff['d'])
+    a1ce = np.where(mag > 6.5, coeff['ue'], coeff['e'])
+    a2ca = np.where(mag > 6.5, coeff['ia'], coeff['ma'])
+    a2cb = np.where(mag > 6.5, coeff['ib'], coeff['mb'])
+    a2cc = np.where(mag > 6.5, coeff['ic'], coeff['mc'])
+    a2cd = np.where(mag > 6.5, coeff['id'], coeff['md'])
+    a2ce = np.where(mag > 6.5, coeff['ie'], coeff['me'])
     return a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce
 
 
@@ -163,7 +151,7 @@ class YuEtAl2013Ms(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is geometric mean (supposed)
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types is total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -177,41 +165,36 @@ class YuEtAl2013Ms(GMPE):
     #: Required distance measures are epicentral distance and azimuth
     REQUIRES_DISTANCES = {'repi', 'azimuth'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # Set parameters
-        mag = ctx.mag
-        epi = ctx.repi
-        theta = ctx.azimuth
-
         for m, imt in enumerate(imts):
             coeff = self.COEFFS[imt]
             a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce = gc(
-                coeff, mag)
+                coeff, ctx.mag)
 
             # Get correction coefficients. Here for each site we find the
             # the geometry of the ellipses
             ras = []
-            for epi, theta in zip(ctx.repi, ctx.azimuth):
+            for epi, mag, theta in zip(ctx.repi, ctx.mag, ctx.azimuth):
                 res = get_ras(epi, theta, mag, coeff)
                 ras.append(res)
             ras = np.array(ras)
-            rbs = rbf(ras, coeff, mag)
-            #
+            rbs = rbf(ras, coeff, ctx.mag)
+
             # Compute values of ground motion for the two cases. The value of
             # 225 is hardcoded under the assumption that the hypocentral depth
             # corresponds to 15 km (i.e. 15**2)
             mean1 = (a1ca + a1cb * mag +
-                     a1cc * np.log((ras**2+225)**0.5 +
+                     a1cc * np.log((ras**2 + 225)**0.5 +
                                    a1cd * np.exp(a1ce * mag)))
             mean2 = (a2ca + a2cb * mag +
-                     a2cc * np.log((rbs**2+225)**0.5 +
+                     a2cc * np.log((rbs**2 + 225)**0.5 +
                                    a2cd * np.exp(a2ce * mag)))
-            #
+
             # Get distances
             x = (mean1 * np.sin(np.radians(ctx.azimuth)))**2
             y = (mean2 * np.cos(np.radians(ctx.azimuth)))**2
@@ -275,23 +258,16 @@ class YuEtAl2013Mw(YuEtAl2013Ms):
     propagate the uncertainty related to the magnitude conversion process.
     """
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # Set parameters
-        magn = ctx.mag
-        epi = ctx.repi
-        theta = ctx.azimuth
-
         # Convert Mw into Ms
-        if magn < 6.58:
-            mag = (magn - 0.59) / 0.86
-        else:
-            mag = (magn + 2.42) / 1.28
-
+        mag = np.where(ctx.mag < 6.58,
+                       (ctx.mag - 0.59) / 0.86,
+                       (ctx.mag + 2.42) / 1.28)
         for m, imt in enumerate(imts):
             coeff = self.COEFFS[imt]
             a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce = gc(
@@ -300,8 +276,8 @@ class YuEtAl2013Mw(YuEtAl2013Ms):
             # Get correction coefficients. Here for each site we find the
             # the geometry of the ellipses
             ras = []
-            for epi, theta in zip(ctx.repi, ctx.azimuth):
-                res = get_ras(epi, theta, mag, coeff)
+            for epi, mg, theta in zip(ctx.repi, mag, ctx.azimuth):
+                res = get_ras(epi, theta, mg, coeff)
                 ras.append(res)
             ras = np.array(ras)
             rbs = rbf(ras, coeff, mag)
@@ -310,10 +286,10 @@ class YuEtAl2013Mw(YuEtAl2013Ms):
             # 225 is hardcoded under the assumption that the hypocentral depth
             # corresponds to 15 km (i.e. 15**2)
             mean1 = (a1ca + a1cb * mag +
-                     a1cc * np.log((ras**2+225)**0.5 +
+                     a1cc * np.log((ras**2 + 225)**0.5 +
                                    a1cd * np.exp(a1ce * mag)))
             mean2 = (a2ca + a2cb * mag +
-                     a2cc * np.log((rbs**2+225)**0.5 +
+                     a2cc * np.log((rbs**2 + 225)**0.5 +
                                    a2cd * np.exp(a2ce * mag)))
             #
             # Get distances

@@ -14,11 +14,11 @@ You can see the full list of commands by running `oq --help`::
 
    $ oq --help
    usage: oq [--version]
-             {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,from_shapefile,zip,checksum,to_shapefile,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot}
+             {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,zip,checksum,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot}
              ...
    
    positional arguments:
-     {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,from_shapefile,zip,checksum,to_shapefile,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot}
+     {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,zip,checksum,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot}
                            available subcommands; use oq <subcmd> --help
    
    optional arguments:
@@ -76,11 +76,11 @@ global information about the engine and its libraries. Try, for instance::
   $ oq info exports     # list available exports
   $ oq info parameters  # list all job.ini parameters
 
-The second most important command is `oq export`. It allows customization of
-the exports from the datastore with additional flexibility compared to
-the `oq engine` export commands. In the future the  `oq engine` exports commands 
-might be deprecated and `oq export` might become the official export command, but
-we are not there yet.
+The second most important command is `oq export`. It allows
+customization of the exports from the datastore with additional
+flexibility compared to the `oq engine` export commands. In the future
+the `oq engine` exports commands might be deprecated and `oq export`
+might become the official export command, but we are not there yet.
 
 Here is the usage message::
 
@@ -369,28 +369,58 @@ Comparing hazard results
 
 If you are interested in sensitivity analysis, i.e. in how much the
 results of the engine change by tuning a parameter, the `oq compare`
-command is useful. For the moment it is able to compare hazard curves
-and hazard maps. Here is the help message::
+command is useful. It is able to compare many things, depending on
+the engine version. Here are a few examples::
 
-  $ oq compare --help
-  usage: oq compare [-h] [-f] [-s 100] [-r 0] [-a 0.001] [-t 0.01]
-                    {hcurves,hmaps} imt calc_ids [calc_ids ...]
+  $ oq compare hcurves --help
+  usage: oq compare hcurves [-h] [-f] [-s] [-r 0] [-a 0.001] imt calc_ids [calc_ids ...]
   
-  Compare the hazard curves or maps of two or more calculations
+  Compare the hazard curves of two or more calculations.
   
   positional arguments:
-    {hcurves,hmaps}       hmaps or hcurves
     imt                   intensity measure type to compare
     calc_ids              calculation IDs
   
   optional arguments:
     -h, --help            show this help message and exit
     -f, --files           write the results in multiple files
-    -s 100, --samplesites 100
-                          sites to sample (or fname with site IDs)
+    -s , --samplesites    sites to sample (or fname with site IDs)
     -r 0, --rtol 0        relative tolerance
     -a 0.001, --atol 0.001
                           absolute tolerance
-    -t 0.01, --threshold 0.01
-                          ignore the hazard curves below it
+  
+  $ oq compare hmaps --help
+  usage: oq compare hmaps [-h] [-f] [-s] [-r 0] [-a 0.001] imt calc_ids [calc_ids ...]
+  
+  Compare the hazard maps of two or more calculations.
+  
+  positional arguments:
+    imt                   intensity measure type to compare
+    calc_ids              calculation IDs
+  
+  optional arguments:
+    -h, --help            show this help message and exit
+    -f, --files           write the results in multiple files
+    -s , --samplesites    sites to sample (or fname with site IDs)
+    -r 0, --rtol 0        relative tolerance
+    -a 0.001, --atol 0.001
+                          absolute tolerance
+  
+  $ oq compare uhs --help
+  usage: oq compare uhs [-h] [-f] [-s] [-r 0] [-a 0.001] calc_ids [calc_ids ...]
+  
+  Compare the uniform hazard spectra of two or more calculations.
+  
+  positional arguments:
+    calc_ids              calculation IDs
+  
+  optional arguments:
+    -h, --help            show this help message and exit
+    -f, --files           write the results in multiple files
+    -s , --samplesites    sites to sample (or fname with site IDs)
+    -r 0, --rtol 0        relative tolerance
+    -a 0.001, --atol 0.001
+                          absolute tolerance
 
+Notice the ``compare uhs`` is able to compare all IMTs at once, so it
+is the most convenient to use if there are many IMTs.

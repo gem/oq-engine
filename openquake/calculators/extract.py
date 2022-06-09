@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2021 GEM Foundation
+# Copyright (C) 2017-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,6 @@
 from urllib.parse import parse_qs
 from unittest.mock import Mock
 from functools import lru_cache
-import collections
 import logging
 import json
 import gzip
@@ -38,7 +37,9 @@ from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic, filters
+from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
+from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
 from openquake.calculators import getters
 
@@ -76,7 +77,7 @@ def get_info(dstore):
                 imtls=oq.imtls, investigation_time=oq.investigation_time,
                 poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt(),
                 limit_states=oq.limit_states,
-                tagnames=oq.aggregate_by)
+                tagnames=tagset(oq.aggregate_by))
 
 
 def _normalize(kinds, info):
@@ -190,6 +191,8 @@ class Extract(dict):
             data = self[key](dstore, '')
         else:
             data = extract_(dstore, key)
+        if isinstance(data, pandas.DataFrame):
+            return data
         return ArrayWrapper.from_(data)
 
 
@@ -227,7 +230,7 @@ def extract_realizations(dstore, dummy):
         arr['branch_path'] = ['"%s"' % repr(gsim)[1:-1].replace('"', '""')
                               for gsim in gsims]  # quotes Excel-friendly
     else:
-        arr['branch_path'] = rlzs['branch_path']
+        arr['branch_path'] = encode(rlzs['branch_path'])
     return arr
 
 
@@ -498,6 +501,22 @@ def extract_rups_by_mag_dist(dstore, what):
     return extract_effect(dstore, 'rups_by_mag_dist')
 
 
+@extract.add('source_data')
+def extract_source_data(dstore, what):
+    """
+    Extract performance information about the sources.
+    Use it as /extract/source_data?
+    """
+    qdict = parse(what)
+    if 'taskno' in qdict:
+        sel = {'taskno': int(qdict['taskno'][0])}
+    else:
+        sel = {}
+    df = dstore.read_df('source_data', 'src_id', sel=sel).sort_values('ctimes')
+    dic = {col: df[col].to_numpy() for col in df.columns}
+    return ArrayWrapper(df.index.to_numpy(), dic)
+
+
 @extract.add('sources')
 def extract_sources(dstore, what):
     """
@@ -667,28 +686,26 @@ def extract_agg_curves(dstore, what):
     lt = tagdict.pop('lt')  # loss type string
     [l] = qdic['loss_type']  # loss type index
     tagnames = sorted(tagdict)
-    if set(tagnames) != set(info['tagnames']):
+    if set(tagnames) != info['tagnames']:
         raise ValueError('Expected tagnames=%s, got %s' %
                          (info['tagnames'], tagnames))
     tagvalues = [tagdict[t][0] for t in tagnames]
-    idx = -1
+    agg_id = -1
     if tagnames:
-        for i, tags in enumerate(dstore['agg_keys'][:][tagnames]):
-            if decode([v for v in tags]) == tagvalues:
-                idx = i
-                break
+        lst = decode(dstore['agg_keys'][:])
+        agg_id = lst.index(','.join(tagvalues))
     kinds = list(info['stats'])
     name = 'agg_curves-stats'
     units = dstore.get_attr(name, 'units')
     shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
     units = dstore.get_attr(name, 'units')
     rps = shape_descr['return_period']
-    tup = (idx, k, l)
+    tup = (agg_id, k, l)
     arr = dstore[name][tup].T  # shape P, R
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
-        evalue, = dstore['agg_values'][idx][lt]
+        evalue, = dstore['agg_values'][agg_id][lt]
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
@@ -915,65 +932,23 @@ def extract_damages_npz(dstore, what):
             assets, damages)
 
 
+# tested on oq-risk-tests event_based/etna
 @extract.add('event_based_mfd')
 def extract_mfd(dstore, what):
     """
-    Display num_ruptures by magnitude for event based calculations.
-    Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd?kind=mean
+    Compare n_occ/eff_time with occurrence_rate.
+    Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd?
     """
     oq = dstore['oqparam']
-    qdic = parse(what)
-    kind_mean = 'mean' in qdic.get('kind', [])
-    kind_by_group = 'by_group' in qdic.get('kind', [])
-    full_lt = dstore['full_lt']
-    weights = [sm.weight for sm in full_lt.sm_rlzs]
-    n = len(weights)
-    duration = oq.investigation_time * oq.ses_per_logic_tree_path
-    dic = {'duration': duration}
-    dd = collections.defaultdict(float)
-    rups = dstore['ruptures']['trt_smr', 'mag', 'n_occ']
-    mags = sorted(numpy.unique(rups['mag']))
-    magidx = {mag: idx for idx, mag in enumerate(mags)}
-    num_groups = rups['trt_smr'].max() + 1
-    frequencies = numpy.zeros((len(mags), num_groups), float)
-    for trt_smr, mag, n_occ in rups:
-        if kind_mean:
-            dd[mag] += n_occ * weights[trt_smr % n] / duration
-        if kind_by_group:
-            frequencies[magidx[mag], trt_smr] += n_occ / duration
-    dic['magnitudes'] = numpy.array(mags)
-    if kind_mean:
-        dic['mean_frequency'] = numpy.array([dd[mag] for mag in mags])
-    if kind_by_group:
-        for trt_smr, freqs in enumerate(frequencies.T):
-            dic['grp-%02d_frequency' % trt_smr] = freqs
-    return ArrayWrapper((), dic)
-
-# NB: this is an alternative, slower approach giving exactly the same numbers;
-# it is kept here for sake of comparison in case of dubious MFDs
-# @extract.add('event_based_mfd')
-# def extract_mfd(dstore, what):
-#     oq = dstore['oqparam']
-#     rlzs = dstore['full_lt'].get_realizations()
-#     weights = [rlz.weight['default'] for rlz in rlzs]
-#     duration = oq.investigation_time * oq.ses_per_logic_tree_path
-#     mag = dict(dstore['ruptures']['rup_id', 'mag'])
-#     mags = numpy.unique(dstore['ruptures']['mag'])
-#     mags.sort()
-#     magidx = {mag: idx for idx, mag in enumerate(mags)}
-#     occurrences = numpy.zeros((len(mags), len(weights)), numpy.uint32)
-#     events = dstore['events'][()]
-#     dic = {'duration': duration, 'magnitudes': mags,
-#            'mean_frequencies': numpy.zeros(len(mags))}
-#     for rlz, weight in enumerate(weights):
-#         eids = get_array(events, rlz=rlz)['id']
-#         if len(eids) == 0:
-#             continue
-#         rupids, n_occs = numpy.unique(eids // 2 ** 32, return_counts=True)
-#         for rupid, n_occ in zip(rupids, n_occs):
-#             occurrences[magidx[mag[rupid]], rlz] += n_occ
-#         dic['mean_frequencies'] += occurrences[:, rlz] * weight / duration
-#     return ArrayWrapper(occurrences, dic)
+    R = len(dstore['weights'])
+    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
+    rup_df = dstore.read_df('ruptures', 'id')
+    dic = dict(mag=[], freq=[], occ_rate=[])
+    for mag, df in rup_df.groupby('mag'):
+        dic['mag'].append(round(mag, 2))
+        dic['freq'].append(df.n_occ.sum() / eff_time)
+        dic['occ_rate'].append(df.occurrence_rate.sum())
+    return ArrayWrapper((), {k: numpy.array(v) for k, v in dic.items()})
 
 
 @extract.add('mean_std_curves')
@@ -1016,11 +991,14 @@ def extract_relevant_events(dstore, dummy=None):
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/events
     """
-    events = dstore['events'][:]
+    all_events = dstore['events'][:]
     if 'relevant_events' not in dstore:
-        return events
+        all_events.sort(order='id')
+        return all_events
     rel_events = dstore['relevant_events'][:]
-    return events[rel_events]
+    events = all_events[rel_events]
+    events.sort(order='id')
+    return events
 
 
 @extract.add('event_info')
@@ -1182,7 +1160,7 @@ def extract_disagg_layer(dstore, what):
     """
     qdict = parse(what)
     oq = dstore['oqparam']
-    oq.maximum_distance = filters.MagDepDistance(oq.maximum_distance)
+    oq.maximum_distance = filters.IntegrationDistance(oq.maximum_distance)
     if 'kind' in qdict:
         kinds = qdict['kind']
     else:
@@ -1344,6 +1322,24 @@ def extract_eids_by_gsim(dstore, what):
         yield gsims[r], numpy.array(evs['id'])
 
 
+@extract.add('risk_stats')
+def extract_risk_stats(dstore, what):
+    """
+    Extract the risk statistics from a DataFrame.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/risk_stats/aggcurves
+    """
+    oq = dstore['oqparam']
+    stats = oq.hazard_stats()
+    df = dstore.read_df(what)
+    df['loss_type'] = [oq.loss_types[lid] for lid in df.loss_id]
+    del df['loss_id']
+    kfields = [f for f in df.columns if f in {
+        'agg_id', 'loss_type', 'return_period'}]
+    weights = dstore['weights'][:]
+    return calc_stats(df, kfields, stats, weights)
+
+
 # #####################  extraction from the WebAPI ###################### #
 
 
@@ -1362,8 +1358,8 @@ class Extractor(object):
     NB: instantiating the Extractor opens the datastore.
     """
     def __init__(self, calc_id):
-        self.calc_id = calc_id
         self.dstore = datastore.read(calc_id)
+        self.calc_id = self.dstore.calc_id
         self.oqparam = self.dstore['oqparam']
 
     def get(self, what, asdict=False):

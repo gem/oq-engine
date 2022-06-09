@@ -4,71 +4,77 @@ think a name is missing or a date is incorrect, please let us know. =)
 
 - The OpenQuake Team
 
-
 Code
 ----
-Marco Pagani            July 2010
-Andy Smith              August 2010
-Fabian Euchner          August 2010
-Gaya Moemke             August 2010
-Joshua McKenty          August 2010
-Philip Kaestli          August 2010
-Christopher MacGown     November 2010
-Lars Butler             November 2010
-Roland Siegert          November 2010
-Andrea Cerisara         December 2010
-Marco Milanesi          February 2011
-Muharem Hrnjadovic      February 2011
-Damiano Monelli         May 2011
-Gabriele Favalessa      June 2011
-Mattia Barbon           June 2011
-Giuseppe Vallarelli     July 2011
-Anton Gritsay           August 2011
-Luigi Panzeri           August 2012
-Matteo Nastasi          November 2012
-Michele Simionato       December 2012
-Luis Rodríguez          December 2012
-Daniele Viganò          April 2013
-Graeme Weatherill       September 2013
-Paolo Tormene           October 2013
-Yen-Shin Chen           November 2013
-Julio Garcia            March 2014
-Laurentiu Danciu        August 2014
-Nick Horspool           September 2014
-Anirudh Rao             January 2015
-Robin Gee               September 2015
-Catalina Yepes-Estrada  November 2015
-Silvia Canessa          December 2015
-Nick Ackerley           December 2015
-Trevor Allen            July 2016
-Jonathan Griffin        October 2016
-Özkan Kale              October 2016
-Valerio Poggi           March 2017
-Abhineet Gupta          April 2017
-Armando Scarpati        June 2017
-Kendra Johnson          April 2018
-Pablo Heresi            August 2018
-Chris Van Houtte        October 2018
-Stéphane Drouet         December 2018
-Changlong Li            February 2019
-Rodolfo Puglia          February 2019
-Giovanni Lanzano        March 2019
-Guillaume Daniel        April 2019
-Richard Styron          July 2019
-Kris Vanneste           September 2019
-Alberto Chiusole        November 2019
-‪Iason Grigoratos        April 2020
-Francis Jenner Bernales August 2020
-Athanasios Papadopoulos September 2020
-Thomas Chartier         December 2020
-Claudia Mascandola      December 2020
-Nicolas Schmid          March 2021
-Stanley Sayson          July 2021
-Nico Kuehn              July 2021
-Elena Manea             August 2021
+Marco Pagani             (@mmpagani)            July 2010
+Andy Smith                                      August 2010
+Fabian Euchner                                  August 2010
+Gaya Moemke                                     August 2010
+Joshua McKenty                                  August 2010
+Philip Kaestli                                  August 2010
+Christopher MacGown                             November 2010
+Lars Butler                                     November 2010
+Roland Siegert                                  November 2010
+Andrea Cerisara                                 December 2010
+Marco Milanesi                                  February 2011
+Muharem Hrnjadovic                              February 2011
+Damiano Monelli                                 May 2011
+Gabriele Favalessa                              June 2011
+Mattia Barbon                                   June 2011
+Giuseppe Vallarelli                             July 2011
+Anton Gritsay                                   August 2011
+Luigi Panzeri                                   August 2012
+Matteo Nastasi           (@nastasi-oq)          November 2012
+Michele Simionato        (@micheles)            December 2012
+Luis Rodríguez                                  December 2012
+Daniele Viganò           (@daniviga)            April 2013
+Graeme Weatherill        (@g-weatherill)        September 2013
+Paolo Tormene            (@ptormene)            October 2013
+Yen-Shin Chen            (@vup1120)             November 2013
+Julio Garcia             (@julgp)               March 2014
+Laurentiu Danciu         (@danciul)             August 2014
+Nick Horspool                                   September 2014
+Anirudh Rao              (@raoanirudh)          January 2015
+Robin Gee                (@rcgee)               September 2015
+Catalina Yepes           (@CatalinaYepes)       November 2015
+Silvia Canessa           (@silviacanessa)       December 2015
+Nick Ackerley            (@nackerley)           December 2015
+Trevor Allen             (@treviallen)          July 2016
+Jonathan Griffin         (@griffij)             October 2016
+Özkan Kale                                      October 2016
+Valerio Poggi            (@klunk386)            March 2017
+Abhineet Gupta                                  April 2017
+Armando Scarpati         (@hascar)              June 2017
+Kendra Johnson           (@kejohnso)            April 2018
+Pablo Heresi             (@pheresi)             August 2018
+Chris Van Houtte         (@cvanhoutte)          October 2018
+Stéphane Drouet          (@stephane-on)         December 2018
+Changlong Li             (@mstlgzfdh)           February 2019
+Rodolfo Puglia           (@rodolfopuglia)       February 2019
+Giovanni Lanzano         (@giovannilanzanoINGV) March 2019
+Guillaume Daniel         (@guyomd)              April 2019
+Richard Styron           (@cossatot)            July 2019
+Kris Vanneste            (@krisvanneste)        September 2019
+Alberto Chiusole         (@bebosudo)            November 2019
+Iason Grigoratos         (@jasongrig)           April 2020
+Francis Jenner Bernales                         August 2020
+Athanasios Papadopoulos  (@thpap)               September 2020
+Thomas Chartier          (@tomchartier)         December 2020
+Claudia Mascandola       (@mascandola)          December 2020
+Nicolas Schmid           (@schmidni)            March 2021
+Stanley Sayson           (@stansays)            July 2021
+Nico Kuehn               (@nikuehn)             July 2021
+Elena Manea              (@manea)               August 2021
+Shreyasvi Chandrasekhar  (@Shreyasvi91)         November 2021
+Giuseppina Tusa          (@gtus23)              December 2021
+Miguel Leonardo-Suárez   (@mleonardos)          December 2021
+Manuela Villani          (@mvillani)            January 2022
+Prajakta Jadhav          (@Prajakta-Jadhav-25)  February 2022
+Dharma Wijewickreme      (@Dharma-Wijewickreme) February 2022
+Tom Son                  (@SnowNooDLe)          March 2022
 
 Project management
 ------------------
-Joshua McKenty          August 2010
-John Tarter             November 2010
-Paul Henshaw            February 2012
+Joshua McKenty                                  August 2010
+John Tarter                                     November 2010
+Paul Henshaw             (@pslh)                February 2012

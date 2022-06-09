@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -129,12 +129,11 @@ def _compute_magnitude_term(C, mag):
     Returns the magnitude scaling factor (equation (2), page 144)
     """
     fmag = C['c0'] + C['c1'] * mag
-    if mag <= 5.5:
-        return fmag
-    elif mag > 6.5:
-        return fmag + (C['c2'] * (mag - 5.5)) + (C['c3'] * (mag - 6.5))
-    else:
-        return fmag + (C['c2'] * (mag - 5.5))
+    term = C['c2'] * (mag - 5.5)
+    term[mag <= 5.5] = 0.
+    term[mag > 6.5] = C['c2'] * (mag[mag > 6.5] - 5.5) + (
+        C['c3'] * (mag[mag > 6.5] - 6.5))
+    return fmag + term
 
 
 def _compute_shallow_site_response(C, ctx, pga1100):
@@ -167,16 +166,11 @@ def _compute_style_of_faulting_term(C, ctx):
     and top of rupture depth (equations (4) and (5), pages 145 - 146)
     """
     frv, fnm = _get_fault_type_dummy_variables(ctx.rake)
-
-    if frv > 0.:
-        # Top of rupture depth term only applies to reverse faults
-        if ctx.ztor < 1.:
-            ffltz = ctx.ztor
-        else:
-            ffltz = 1.
-    else:
-        ffltz = 0.
-    return (C['c7'] * frv * ffltz) + (C['c8'] * fnm)
+    ffltz = np.zeros_like(ctx.rake)
+    # Top of rupture depth term only applies to reverse faults
+    ffltz[(frv > 0.) & (ctx.ztor < 1)] = ctx.ztor[(frv > 0.) & (ctx.ztor < 1)]
+    ffltz[(frv > 0.) & (ctx.ztor >= 1)] = 1.
+    return C['c7'] * frv * ffltz + C['c8'] * fnm
 
 
 def _get_fault_type_dummy_variables(rake):
@@ -189,32 +183,24 @@ def _get_fault_type_dummy_variables(rake):
     :returns:
         FRV, FNM
     """
-    if (rake > 30.0) and (rake < 150.):
-        return 1., 0.
-    elif (rake > -150.0) and (rake < -30.0):
-        return 0., 1.
-    else:
-        return 0., 0.
+    frv, fnm = np.zeros_like(rake), np.zeros_like(rake)
+    frv[(rake > 30.0) & (rake < 150.)] = 1.
+    fnm[(rake > -150.) & (rake < -30.)] = 1.
+    return frv, fnm
 
 
 def _get_hanging_wall_depth_term(ztor):
     """
     Returns the hanging wall depth scaling term (equation 9, page 146)
     """
-    if ztor >= 20.0:
-        return 0.
-    else:
-        return (20. - ztor) / 20.0
+    return np.where(ztor >= 20.0, 0., (20. - ztor) / 20.0)
 
 
 def _get_hanging_wall_dip_term(dip):
     """
     Returns the hanging wall dip scaling term (equation 10, page 146)
     """
-    if dip > 70.0:
-        return (90.0 - dip) / 20.0
-    else:
-        return 1.0
+    return np.where(dip > 70.0, (90.0 - dip) / 20.0, 1.0)
 
 
 def _get_hanging_wall_distance_term(ctx):
@@ -222,14 +208,12 @@ def _get_hanging_wall_distance_term(ctx):
     Returns the hanging wall distance scaling term (equation 7, page 146)
     """
     fhngr = np.ones_like(ctx.rjb, dtype=float)
-    idx = ctx.rjb > 0.
-    if ctx.ztor < 1.:
-        temp_rjb = np.sqrt(ctx.rjb[idx] ** 2. + 1.)
-        r_max = np.max(np.column_stack([ctx.rrup[idx], temp_rjb]),
-                       axis=1)
-        fhngr[idx] = (r_max - ctx.rjb[idx]) / r_max
-    else:
-        fhngr[idx] = (ctx.rrup[idx] - ctx.rjb[idx]) / ctx.rrup[idx]
+    idx = (ctx.rjb > 0.) & (ctx.ztor < 1)
+    temp_rjb = np.sqrt(ctx.rjb[idx] ** 2. + 1.)
+    r_max = np.max(np.column_stack([ctx.rrup[idx], temp_rjb]), axis=1)
+    fhngr[idx] = (r_max - ctx.rjb[idx]) / r_max
+    idx = (ctx.rjb > 0.) & (ctx.ztor >= 1)
+    fhngr[idx] = (ctx.rrup[idx] - ctx.rjb[idx]) / ctx.rrup[idx]
     return fhngr
 
 
@@ -237,12 +221,7 @@ def _get_hanging_wall_magnitude_term(mag):
     """
     Returns the hanging wall magnitude scaling term (equation 8, page 146)
     """
-    if mag <= 6.0:
-        return 0.
-    elif mag >= 6.5:
-        return 1.
-    else:
-        return 2. * (mag - 6.0)
+    return np.clip(2. * (mag - 6.0), 0., 1.)
 
 
 def _get_stddevs(kind, C, ctx, pga1100, sigma_pga):
@@ -317,7 +296,7 @@ class CampbellBozorgnia2008(GMPE):
     #: Required distance measures are Rrup and Rjb.
     REQUIRES_DISTANCES = {'rrup', 'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

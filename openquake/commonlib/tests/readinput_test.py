@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,9 +24,10 @@ from io import BytesIO
 
 from openquake.baselib import general
 from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
+from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
-from openquake.commonlib import readinput, logictree, datastore
-from openquake.qa_tests_data.classical import case_2, case_21
+from openquake.commonlib import readinput, datastore
+from openquake.qa_tests_data.classical import case_2, case_15, case_21
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import (
     case_2 as ebr2, case_caracas)
@@ -94,7 +95,7 @@ export_dir = %s
                 'complex_fault_mesh_spacing': 5.0,
                 'truncation_level': 3.0,
                 'random_seed': 5,
-                'maximum_distance': {'default': [(1, 1), (10, 1)]},
+                'maximum_distance': {'default': [(MINMAG, 1), (MAXMAG, 1)]},
                 'inputs': {'job_ini': source,
                            'sites': sites_csv},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
@@ -105,7 +106,8 @@ export_dir = %s
                 'minimum_asset_loss': {},
             }
             params = getparams(readinput.get_oqparam(source))
-            self.assertEqual(expected_params, params)
+            for key in expected_params:
+                self.assertEqual(expected_params[key], params[key])
         finally:
             os.unlink(sites_csv)
 
@@ -356,7 +358,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("Invalid ID 'a 1': the only accepted chars are "
-                      "a-zA-Z0-9_-, line 11", str(ctx.exception))
+                      "a-zA-Z0-9_-:, line 11", str(ctx.exception))
 
     def test_no_assets(self):
         oqparam = mock.Mock()
@@ -527,3 +529,15 @@ class SitecolAssetcolTestCase(unittest.TestCase):
                 oq.inputs['amplification'])
             site_amplification.Amplifier(oq.imtls, df)
         self.assertIn("Found duplicates for (b'F', 0.2)", str(ctx.exception))
+
+
+class LogicTreeTestCase(unittest.TestCase):
+    def test(self):
+        job_ini = os.path.join(os.path.dirname(case_15.__file__), 'job.ini')
+        oq = readinput.get_oqparam(job_ini)
+        lt = readinput.get_logic_tree(oq)
+        # (2+1) x 4 = 12 realizations
+        paths = [rlz.lt_path for rlz in lt]
+        expected = ['A.CA', 'A.CB', 'A.DA', 'A.DB', 'BACA', 'BACB',
+                    'BADA', 'BADB', 'BBCA', 'BBCB', 'BBDA', 'BBDB']
+        self.assertEqual(paths, expected)

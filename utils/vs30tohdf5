@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+import logging
+import numpy
+import rioxarray
+from openquake.baselib import hdf5, sap
+from openquake.baselib.general import AccumDict
+from openquake.baselib.performance import Monitor
+from openquake.baselib.parallel import Starmap
+from openquake.commonlib.datastore import hdf5new
+from openquake.hazardlib.geo.utils import geohash
+
+
+def calc_geohash(lon, lats, vs30):
+    dic = AccumDict(accum=[])
+    for j, lat in enumerate(lats):
+        dic[geohash(lon, lat, 2)].append([lon, lat, vs30[j]])
+    return {h: numpy.float32(dic[h]) for h in dic}
+
+
+def main(vs30world_tif):
+    """
+    Convert a geotiff with the vs30 for the entire world landmass (provided
+    by the USGS) into a file vs30.hdf5 suitable for use with the command
+    `oq prepare_site_model`
+    """
+    usgs = rioxarray.open_rasterio(vs30world_tif)
+    lons = usgs.x.values
+    lats = usgs.y.values
+    vs30s = usgs.values[0].T
+    smap = Starmap(calc_geohash, h5=hdf5new())
+    for i, lon in enumerate(lons):
+        smap.submit((lon, lats, vs30s[i]))
+        if i % 1000 == 0:
+            logging.info('sending %s %.2f', i, lon)
+    with hdf5.File('vs30.hdf5', 'w') as f:
+        for res in smap:
+            for key, data in res.items():
+                try:
+                    dset = f[key]
+                except KeyError:
+                    dset = f.create_dataset(key, (0, 3), numpy.float32,
+                                            maxshape=(None, 3),
+                                            chunks=True, compression='gzip')
+                hdf5.extend(dset, data)
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
+    with Monitor(measuremem=True) as mon:
+        sap.run(main)
+    print(mon)
+    # 2,1G with compression, 1195s
+    # 8,2G without compression, 710s

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,33 +23,10 @@ Module exports :class:`McVerry2006Asc`, :class:`McVerry2006SInter`,
 :class:`McVerry2006SSlabSC`, :class:`McVerry2006VolcSC`.
 """
 import numpy as np
-import shapely
-
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.baselib.general import CallableDict
-
-
-def _check_in_cshm_polygon(rup):
-    """
-    Checks if any part of the rupture surface mesh is located within the
-    intended boundaries of the Canterbury Seismic Hazard Model in
-    Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
-    of Christchurch, Earthquake Spectra, 30(1), 17-29.
-    """
-    lats = np.ravel(rup.surface.mesh.array[1])
-    lons = np.ravel(rup.surface.mesh.array[0])
-    # These coordinates are provided by M Gerstenberger (personal
-    # communication, 10 August 2018)
-    polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
-                                        (173.2, -43.9), (171.6, -43.9)])
-    points_in_polygon = [
-        shapely.geometry.Point(lons[i], lats[i]).within(polygon)
-        for i in np.arange(len(lons))]
-    in_cshm = any(points_in_polygon)
-
-    return in_cshm
 
 
 def _compute_f4(C, mag, rrup):
@@ -58,15 +35,11 @@ def _compute_f4(C, mag, rrup):
     This is in McVerry equation 1 but is not used (Section 6.1 page 27)
     Compute f4 term (eq. 7, 8, and 9, page 106)
     """
-    fhw_m = 0
+    fhw_m = mag - 5.5
     fhw_r = np.zeros_like(rrup)
 
-    if mag <= 5.5:
-        fhw_m = 0
-    elif 5.5 < mag < 6.5:
-        fhw_m = mag - 5.5
-    else:
-        fhw_m = 1
+    fhw_m[mag <= 5.5] = 0
+    fhw_m[mag >= 6.5] = 1
 
     idx = (rrup > 4) & (rrup <= 8)
     fhw_r[idx] = C['ca9'] * (rrup[idx] - 4.) / 4.
@@ -82,7 +55,7 @@ def _compute_f4(C, mag, rrup):
     # Not used in current implementation of McVerry 2006, but keep here
     # for future use (return f4)
 
-    return 0
+    return np.zeros_like(mag)
 
 
 def _compute_mean(kind, C, S, mag, rrup, rvol, hypo_depth, CN, CR, f4HW,
@@ -257,30 +230,20 @@ def _compute_nonlinear_soil_term(C, lnSA_AB, delta_C, delta_D):
     return lnSA_CD
 
 
-_compute_stress_drop_adjustment = CallableDict()
-
-
-@_compute_stress_drop_adjustment.add("chch")
-def _compute_stress_drop_adjustment_1(kind, SC, mag):
-    """
-    No adjustment for base class
-    """
-    return 0
-
-
-@_compute_stress_drop_adjustment.add("drop")
-def _compute_stress_drop_adjustment_2(kind, SC, mag):
+def _compute_stress_drop_adjustment(in_cshm, SC, mag):
     """
     Compute equation (6) p. 2200 from Atkinson and Boore (2006). However,
     the ratio of scale factors is in log space rather than linear space,
     to reflect that log PSA scales linearly with log stress drop. Then
     convert from log10 to natural log (G McVerry, personal communication).
     """
+    adj = np.zeros_like(mag)
     scale_fac = 1.5
-    fac = np.maximum(mag - SC['M1'], 0) / (SC['Mh'] - SC['M1'])
-    return np.log(10 ** ((np.log(scale_fac) / np.log(2)) *
-                         np.minimum(0.05 + SC['delta'],
-                                    0.05 + SC['delta'] * fac)))
+    fac = np.maximum(mag[in_cshm] - SC['M1'], 0) / (SC['Mh'] - SC['M1'])
+    adj[in_cshm] = np.log(10 ** (np.log(scale_fac) / np.log(2) *
+                                 np.minimum(0.05 + SC['delta'],
+                                            0.05 + SC['delta'] * fac)))
+    return adj
 
 
 _get_deltas = CallableDict()
@@ -311,10 +274,10 @@ def _get_deltas_2(kind, ctx):
     delta_D = 1 for site class D, 0 otherwise
     """
     siteclass = ctx.siteclass
-    delta_C = np.zeros_like(siteclass, dtype=np.float)
+    delta_C = np.zeros_like(siteclass, dtype=float)
     delta_C[siteclass == b'C'] = 1
 
-    delta_D = np.zeros_like(siteclass, dtype=np.float)
+    delta_D = np.zeros_like(siteclass, dtype=float)
     delta_D[siteclass == b'D'] = 1
 
     return delta_C, delta_D
@@ -327,20 +290,16 @@ def _get_fault_mechanism_flags(rake):
     CR = 0.5 for reverse-oblique (33<rake<66), 1 for reverse (67<rake<123)
     and 0 otherwise
     """
-
-    CN, CR = 0, 0
+    CN, CR = np.zeros_like(rake), np.zeros_like(rake)
 
     # Pure Normal: rake = -90
-    if rake > -147 and rake < -33:
-        CN = -1
+    CN[(rake > -147) & (rake < -33)] = -1
 
     # Pure Reverse: rake = 90
-    if rake > 67 and rake < 123:
-        CR = 1
+    CR[(rake > 67) & (rake < 123)] = 1
 
     # Pure Oblique Reverse: rake = 45
-    if rake > 33 and rake < 66:
-        CR = 0.5
+    CR[(rake > 33) & (rake < 66)] = 0.5
 
     return CN, CR
 
@@ -369,7 +328,7 @@ def _get_site_class_2(kind, ctx):
     class C or D).
     """
     siteclass = ctx.siteclass
-    S = np.zeros_like(siteclass, dtype=np.float)
+    S = np.zeros_like(siteclass, dtype=float)
     S[(siteclass == b'C') | (siteclass == b'D')] = 1
 
     return S
@@ -388,12 +347,10 @@ def _get_stddevs(kind, C, ctx, additional_sigma=0.):
     tau = sigma_intra + C['tau']
 
     # intraevent std (equations 8a-8c page 29)
-    if mag < 5.0:
-        sigma_intra += C['sigmaM6'] - C['sigSlope']
-    elif 5.0 <= mag < 7.0:
-        sigma_intra += C['sigmaM6'] + C['sigSlope'] * (mag - 6)
-    else:
-        sigma_intra += C['sigmaM6'] + C['sigSlope']
+    delta = C['sigmaM6'] + C['sigSlope'] * (mag - 6)
+    delta[mag < 5.0] = C['sigmaM6'] - C['sigSlope']
+    delta[mag >= 7.] = C['sigmaM6'] + C['sigSlope']
+    sigma_intra += delta
 
     return [np.sqrt(sigma_intra**2 + tau**2), tau, sigma_intra]
 
@@ -462,7 +419,7 @@ class McVerry2006Asc(GMPE):
     # defined as nearest distance to the source.
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -717,14 +674,16 @@ class McVerry2006Chch(McVerry2006AscSC):
     Extends McVerry2006AscSC to implement modifications required for the
     Canterbury Seismic Hazard Model (CSHM).
     """
-    kind = "chch"
-
     #: This implementation is non-verified because the model has not been
     #: published, nor is independent code available.
     non_verified = True
-    additional_sigma = 0
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    kind = "chch"
+    additional_sigma = 0
+    REQUIRES_RUPTURE_PARAMETERS = (
+        McVerry2006AscSC.REQUIRES_RUPTURE_PARAMETERS | {"in_cshm"})
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -758,10 +717,9 @@ class McVerry2006Chch(McVerry2006AscSC):
             # Get Atkinson and Boore (2006) stress drop factors or additional
             # standard deviation adjustment. Only apply these factors to
             # sources located within the boundaries of the CSHM.
-            in_cshm = _check_in_cshm_polygon(ctx)
-            if in_cshm is True:
+            if self.kind == 'drop':
                 stress_drop_factor = _compute_stress_drop_adjustment(
-                    self.kind, SC, ctx.mag)
+                    ctx.in_cshm, SC, ctx.mag)
                 additional_sigma = self.additional_sigma
             else:
                 stress_drop_factor = 0

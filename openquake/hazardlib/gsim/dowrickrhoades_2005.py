@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,8 +21,6 @@ Module exports :class:`DowrickRhoades2005Asc`,:class:`DowrickRhoades2005SInter`
 :class:`DowrickRhoades2005SSlab`, and :class:`DowrickRhoades2005Volc`.
 """
 import numpy as np
-
-from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import MMI
@@ -44,20 +42,11 @@ def _compute_mean(C, mag, rrup, hypo_depth, delta_R, delta_S,
             np.log10(np.power((rrup**3 + C['d']**3), 1.0 / 3.0)) +
             C['A4'] * hypo_depth + C['A5'] * delta_I)
 
-    # Get S site class term
-    S = _get_site_class(vs30, mean)
-
-    # Add S amplification term to mean value
-    mean = mean + S
-
-    return mean
+    # Add site class amplification term to mean value
+    return mean + _get_site_class(vs30, mean)
 
 
-_get_deltas = CallableDict()
-
-
-@_get_deltas.add(const.TRT.ACTIVE_SHALLOW_CRUST)
-def _get_deltas_1(trt, rake):
+def _get_deltas(trt, rake):
     """
     Return the value of deltas (delta_R, delta_S, delta_V, delta_I),
     as defined in "Table 5: Model 1" pag 198
@@ -70,64 +59,25 @@ def _get_deltas_1(trt, rake):
     # delta_I = 1 for interface events, 0 for all other events
 
     # All deltas = 0 for Model 3: Deep Region, pag 198
-
-    delta_R, delta_S = 0, 0
-    delta_V, delta_I = 0, 0
-
-    if rake > 45.0 and rake < 135.0:
-        delta_R = 1
-
-    if (rake >= 0.0 and rake <= 45.0) or \
-       (rake >= 135 and rake <= 180.0) or \
-       (rake >= -180.0 and rake <= -135.0) or \
-       (rake >= -45.0 and rake < 0.0):
-        delta_S = 1
-
-    return delta_R, delta_S, delta_V, delta_I
-
-
-@_get_deltas.add(const.TRT.SUBDUCTION_INTERFACE)
-def _get_deltas_2(trt, rake):
-    """
-    Return the value of deltas (delta_R, delta_S, delta_V, delta_I),
-    as defined in "Table 5: Model 1" pag 198
-    """
-    # delta_I = 1, delta_R = 1 for interface events
-    # delta_S = 0, delta_V = 0
-
-    delta_R, delta_S = 1, 0
-    delta_V, delta_I = 0, 1
-
-    return delta_R, delta_S, delta_V, delta_I
-
-
-@_get_deltas.add(const.TRT.SUBDUCTION_INTRASLAB)
-def _get_deltas_3(trt, rake):
-    """
-    Return the value of deltas (delta_R, delta_S, delta_V, delta_I),
-    as defined in "Table 5: Model 1" pag 198
-    """
-    # All deltas = 0 for DowrickRhoades2005SSlab Model 3: Deep Region,
-    # pag 198
-
-    delta_R, delta_S = 0, 0
-    delta_V, delta_I = 0, 0
-
-    return delta_R, delta_S, delta_V, delta_I
-
-
-@_get_deltas.add(const.TRT.VOLCANIC)
-def _get_deltas_4(trt, rake):
-    """
-    Return the value of deltas (delta_R, delta_S, delta_V, delta_I),
-    as defined in "Table 5: Model 1" pag 198
-    """
-    # delta_V = 1 for TVZ events, 0 for all other events
-    # delta_R =0, delta_S = 0, delta_I = 0
-
-    delta_R, delta_S = 0, 0
-    delta_V, delta_I = 1, 0
-
+    delta_R = np.zeros_like(rake)
+    delta_S = np.zeros_like(rake)
+    delta_V = np.zeros_like(rake)
+    delta_I = np.zeros_like(rake)
+    if trt == const.TRT.ACTIVE_SHALLOW_CRUST:
+        delta_R[(rake > 45.0) & (rake < 135.0)] = 1.
+        delta_S[((rake >= 0.0) & (rake <= 45.0) |
+                 (rake >= 135) & (rake <= 180.0) |
+                 (rake >= -180.0) & (rake <= -135.0) |
+                 (rake >= -45.0) & (rake < 0.0))] = 1.
+    elif trt == const.TRT.SUBDUCTION_INTERFACE:
+        delta_R[:] = 1.
+        delta_I[:] = 1.
+    elif trt == const.TRT.SUBDUCTION_INTRASLAB:
+        pass
+    elif trt == const.TRT.VOLCANIC:
+        delta_V[:] = 1.
+    else:
+        raise ValueError('_get_deltas undefined for %s' % trt)
     return delta_R, delta_S, delta_V, delta_I
 
 
@@ -144,7 +94,6 @@ def _get_site_class(vs30, mmi_mean):
         S = c1 - d *(MMI - 7.0) if 7<MMI<9.5
         S = c2 if MMI >= 9.5
     """
-
     if vs30[0] < 180:
         c1 = 1.0
         c2 = -0.25
@@ -233,7 +182,7 @@ class DowrickRhoades2005Asc(GMPE):
     # defined as nearest distance to the source.
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

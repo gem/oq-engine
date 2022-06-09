@@ -1,5 +1,35 @@
 # FAQ about running hazard calculations
 
+## performance
+
+### Can I estimate the runtime of a classical calculation without running it?
+
+Since engine 3.15 you can. The trick is to run a reduced calculation first, by
+using the command
+
+  $ oq engine --run job.ini --sample-sources=0.01
+
+This will reduce the number of ruptures by ~100 times so that the
+reduced calculation will complete in a reasonable amount of time. Then
+in the log you will see the estimate runtime for the full calculation.
+For instance for the SHARE model on a computer with
+an i7 processor you will see something like this:
+
+[2022-04-19 08:57:05 #4054 INFO] Estimated time 72.3 hours
+
+The estimate is rather rough, so do not take it at the letter. The
+runtime can be reduced by orders of magnitude by tuning parameters
+like the `pointsource_distance` and `ps_grid_spacing`, discussed at
+length in the [advanced manual](https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance).
+
+## logic trees
+
+### How should I interpret the "Realizations" output?
+
+This is explained in the advanced manual:
+
+https://docs.openquake.org/oq-engine/advanced/logic-trees.html
+
 ## classical calculations
 
 ### How do I export the hazard curves/maps/uhs for each realization?
@@ -33,16 +63,6 @@ where `<ID>` must be replaced with the ID of the original calculation.
 Hazard maps and UHS can be regenerated from an existing calculation
 quite efficiently.
 
-### How do I set the pointsource_distance?
-
-In several hazard models (for instance Australia, Canada, etc) it is
-possible to improve significantly the performance by tuning a parameter
-called `pointsource_distance`. The parameter is discussed in the [advanced
-manual](https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance). You can calibrate the value of the `pointsource_distance`
-by taking a few reference sites, computing the hazard map values there, and
-then playing with the parameter until you get good performance without loosing
-too much precision.
-
 ## disaggregation calculations
 
 ### I am getting an error "disaggregation matrix is too large"!
@@ -53,6 +73,27 @@ binning parameters, i.e. on `mag_bin_width`, `distance_bin_width`,
 `coordinate_bin_width` which is quadratic: for instance by changing from
 `coordinate_bin_width=0.1` to `coordinate_bin_width=1.0` the size of your
 disaggregation matrix will be reduced by 100 times.
+
+### How can I compute mean disaggregation outputs?
+
+If a calculation has more than one realization, the user can set in
+the job.ini file the parameter `rlz_index` to specify which subset of
+the realizations should be considered when computing the
+disaggregation outputs (if `rlz_index` is not specified only the
+realization producing the hazard curve closest to the mean curve will
+be considered). The full set of realizations can be specified as
+well. Then, when exporting the outputs in CSV format, there will be a
+column for each realization, with names like `poe0, poe1, ...`  for
+each realization listed in `rlz_index`.  From that the user can
+compute the mean values manually, for instance by reading the CSV with
+pandas. Exporting many realizations together captures the full
+variability of the disaggregation results, that would be lost by
+exporting only the means.
+
+NB: it is very common for hazard models to have
+thousands/millions/billions of realizations; in that case the user is
+expected to *reduce* the logic tree to a manageable number of
+realizations before performing the disaggregation.
 
 ## event based calculations
 

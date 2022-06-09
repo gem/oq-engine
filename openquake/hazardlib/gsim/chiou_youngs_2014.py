@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -65,12 +65,13 @@ def _get_centered_ztor(ctx):
     Get ztor centered on the M- dependent avarage ztor(km)
     by different fault types.
     """
-    if 30 <= ctx.rake <= 150:
-        # Reverse and reverse-oblique faulting
-        mean_ztor = max(2.704 - 1.226 * max(ctx.mag - 5.849, 0.0), 0.) ** 2
-    else:
-        # Strike-slip and normal faulting
-        mean_ztor = max(2.673 - 1.136 * max(ctx.mag - 4.970, 0.0), 0.) ** 2
+    # Strike-slip and normal faulting
+    mean_ztor = np.clip(2.673 - 1.136 * np.clip(ctx.mag - 4.970, 0., None),
+                        0., None) ** 2
+    # Reverse and reverse-oblique faulting
+    rev = (30. <= ctx.rake) & (ctx.rake <= 150.)
+    mean_ztor[rev] = np.clip(2.704 - 1.226 * np.clip(
+        ctx.mag[rev] - 5.849, 0.0, None), 0., None) ** 2
     return ctx.ztor - mean_ztor
 
 
@@ -84,7 +85,7 @@ def _get_ln_y_ref(ctx, C):
     # Normal faulting flag
     Fnm = 1. if -120 <= ctx.rake <= -60 else 0.
     # A part in eq. 11
-    mag_test1 = np.cosh(2. * max(ctx.mag - 4.5, 0))
+    mag_test1 = np.cosh(2. * np.clip(ctx.mag - 4.5, 0., None))
     # Centered DPP
     centered_dpp = 0
     # Centered Ztor
@@ -109,15 +110,16 @@ def _get_ln_y_ref(ctx, C):
         # third part
         + C['c4']
         * np.log(ctx.rrup + C['c5']
-                 * np.cosh(C['c6'] * max(ctx.mag - C['chm'], 0)))
+                 * np.cosh(C['c6'] * np.clip(ctx.mag - C['chm'], 0, None)))
         + (C['c4a'] - C['c4'])
         * np.log(np.sqrt(ctx.rrup ** 2 + C['crb'] ** 2))
         # forth part
-        + (C['cg1'] + C['cg2'] / (np.cosh(max(ctx.mag - C['cg3'], 0))))
+        + (C['cg1'] + C['cg2'] / (
+            np.cosh(np.clip(ctx.mag - C['cg3'], 0, None))))
         * ctx.rrup
         # fifth part
         + C['c8'] * dist_taper
-        * min(max(ctx.mag - 5.5, 0) / 0.8, 1.0)
+        * np.clip((ctx.mag - 5.5, 0) / 0.8, 0., 1.)
         * np.exp(-1 * C['c8a'] * (ctx.mag - C['c8b']) ** 2) * centered_dpp
         # sixth part
         # + C['c9'] * Fhw * np.cos(math.radians(ctx.dip)) *
@@ -172,7 +174,7 @@ def get_directivity(clsname, C, ctx):
         # No directivity term
         return 0.0
     f_dir = np.exp(-C["c8a"] * ((ctx.mag - C["c8b"]) ** 2.)) * cdpp
-    f_dir *= min((max(ctx.mag - 5.5, 0.0) / 0.8), 1.)
+    f_dir *= np.clip((ctx.mag - 5.5) / 0.8, 0., 1.)
     rrup_max = ctx.rrup - 40.
     rrup_max[rrup_max < 0.0] = 0.0
     rrup_max = 1.0 - (rrup_max / 30.)
@@ -193,7 +195,7 @@ def get_far_field_distance_scaling_1(region, C, mag, rrup):
     f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
     # Get the magnitude dependent term
-    f_rm = C["cg1"] + (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0)))
+    f_rm = C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None))
     return f_r + f_rm * rrup
 
 
@@ -208,11 +210,10 @@ def get_far_field_distance_scaling_2(region, C, mag, rrup):
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
 
     # Get the magnitude dependent term
-    f_rm = (C["cg1"] +
-            (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0)))) * rrup
-    if (mag > 6.0) and (mag < 6.9):
-        # Apply adjustment factor for Japan
-        f_rm *= C["gjpit"]
+    f_rm = (C["cg1"] + C["cg2"] /
+            np.cosh(np.clip(mag - C["cg3"], 0.0, None))) * rrup
+    # Apply adjustment factor for Japan
+    f_rm[(mag > 6.0) & (mag < 6.9)] *= C["gjpit"]
     return f_r + f_rm
 
 
@@ -227,11 +228,10 @@ def get_far_field_distance_scaling_3(region, C, mag, rrup):
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
 
     # Get the magnitude dependent term
-    f_rm = (C["cg1"] +
-            (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0)))) * rrup
-    if (mag > 6.0) and (mag < 6.9):
-        # Apply adjustment factor for Italy
-        f_rm *= C["gjpit"]
+    f_rm = (C["cg1"] + C["cg2"] /
+            np.cosh(np.clip(mag - C["cg3"], 0.0, None))) * rrup
+    # Apply adjustment factor for Italy
+    f_rm[(mag > 6.0) & (mag < 6.9)] *= C["gjpit"]
     return f_r + f_rm
 
 
@@ -246,8 +246,8 @@ def get_far_field_distance_scaling_4(region, C, mag, rrup):
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
 
     # Get the magnitude dependent term
-    f_rm = (C["cg1"] +
-            (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0)))) * rrup
+    f_rm = (C["cg1"] + C["cg2"] /
+            np.cosh(np.clip(mag - C["cg3"], 0.0, None))) * rrup
     # Apply adjustment factor for Wenchuan
     return f_r + (f_rm * C["gwn"])
 
@@ -258,7 +258,7 @@ def get_geometric_spreading(C, mag, rrup):
     """
     # Get the near-field magnitude scaling
     return CONSTANTS["c4"] * np.log(
-        rrup + C["c5"] * np.cosh(C["c6"] * max(mag - C["chm"], 0.0)))
+        rrup + C["c5"] * np.cosh(C["c6"] * np.clip(mag - C["chm"], 0.0, None)))
 
 
 def get_hanging_wall_term(C, ctx):
@@ -268,11 +268,10 @@ def get_hanging_wall_term(C, ctx):
     fhw = np.zeros(ctx.rrup.shape)
     idx = ctx.rx >= 0.0
     if np.any(idx):
-        fdist = 1.0 - (np.sqrt(ctx.rjb[idx] ** 2. + ctx.ztor ** 2.) /
+        fdist = 1.0 - (np.sqrt(ctx.rjb[idx] ** 2. + ctx.ztor[idx] ** 2.) /
                        (ctx.rrup[idx] + 1.0))
-        fdist *= (C["c9a"] + (1.0 - C["c9a"]) * np.tanh(ctx.rx[idx] /
-                                                        C["c9b"]))
-        fhw[idx] += (C["c9"] * np.cos(np.radians(ctx.dip)) * fdist)
+        fdist *= C["c9a"] + (1.0 - C["c9a"]) * np.tanh(ctx.rx[idx] / C["c9b"])
+        fhw[idx] += C["c9"] * np.cos(np.radians(ctx.dip[idx])) * fdist
     return fhw
 
 
@@ -341,8 +340,8 @@ def get_phi(C, mag, ctx, nl0):
     phi = C["sig3"] * np.ones(ctx.vs30.shape)
     phi[ctx.vs30measured] = 0.7
     phi = np.sqrt(phi + ((1.0 + nl0) ** 2.))
-    mdep = C["sig1"] + (((C["sig2"] - C["sig1"]) / 1.5) *
-                        (min(max(mag, 5.0), 6.5) - 5.0))
+    mdep = C["sig1"] + (
+        C["sig2"] - C["sig1"]) * np.clip(mag - 5., 0., 1.5) / 1.5
     return mdep * phi
 
 
@@ -351,17 +350,17 @@ def get_source_scaling_terms(C, ctx, delta_ztor):
     Returns additional source scaling parameters related to style of
     faulting, dip and top of rupture depth
     """
-    f_src = 0.0
-    coshm = np.cosh(2.0 * max(ctx.mag - 4.5, 0.0))
+    f_src = np.zeros_like(ctx.mag)
+    coshm = np.cosh(2.0 * np.clip(ctx.mag - 4.5, 0., None))
     # Style of faulting term
-    if 30 <= ctx.rake <= 150:
-        # reverse faulting flag
-        f_src += (C["c1a"] + (C["c1c"] / coshm))
-    elif -120 <= ctx.rake <= -60:
-        # normal faulting flag
-        f_src += (C["c1b"] + (C["c1d"] / coshm))
+    pos = (30 <= ctx.rake) & (ctx.rake <= 150)
+    neg = (-120 <= ctx.rake) & (ctx.rake <= -60)
+    # reverse faulting flag
+    f_src[pos] += C["c1a"] + (C["c1c"] / coshm[pos])
+    # normal faulting flag
+    f_src[neg] += C["c1b"] + (C["c1d"] / coshm[neg])
     # Top of rupture term
-    f_src += ((C["c7"] + (C["c7b"] / coshm)) * delta_ztor)
+    f_src += (C["c7"] + (C["c7b"] / coshm)) * delta_ztor
     # Dip term
     f_src += ((CONSTANTS["c11"] + (C["c11b"] / coshm)) *
               np.cos(np.radians(ctx.dip)) ** 2.0)
@@ -399,8 +398,35 @@ def get_tau(C, mag):
     Returns the between-event variability described in equation 13, line 2
     """
     # eq. 13 to calculate inter-event standard error
-    mag_test = min(max(mag, 5.0), 6.5) - 5.0
-    return C['tau1'] + ((C['tau2'] - C['tau1']) / 1.5) * mag_test
+    mag_test = np.clip(mag - 5.0, 0., 1.5)
+    return C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
+
+
+def get_mean_stddevs(name, C, ctx):
+    """
+    Return mean and standard deviation values
+    """
+    # Get ground motion on reference rock
+    ln_y_ref = get_ln_y_ref(name, C, ctx)
+    y_ref = np.exp(ln_y_ref)
+    # Get the site amplification
+    # Get basin depth
+    dz1pt0 = _get_centered_z1pt0(name, ctx)
+    # for Z1.0 = 0.0 no deep soil correction is applied
+    dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
+    f_z1pt0 = get_basin_depth_term(name, C, dz1pt0)
+    # Get linear amplification term
+    f_lin = get_linear_site_term(name, C, ctx)
+    # Get nonlinear amplification term
+    f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
+
+    # Add on the site amplification
+    mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)
+    # Get standard deviations
+    sig, tau, phi = get_stddevs(
+        name, C, ctx, ctx.mag, y_ref, f_nl_scaling)
+
+    return mean, sig, tau, phi
 
 
 class ChiouYoungs2014(GMPE):
@@ -444,33 +470,30 @@ class ChiouYoungs2014(GMPE):
     #: Reference shear wave velocity
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         name = self.__class__.__name__
+        # reference to page 1144, PSA might need PGA value
+        pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(name, self.COEFFS[PGA()], ctx)
         for m, imt in enumerate(imts):
-            C = self.COEFFS[imt]
-            # Get ground motion on reference rock
-            ln_y_ref = get_ln_y_ref(name, C, ctx)
-            y_ref = np.exp(ln_y_ref)
-            # Get the site amplification
-            # Get basin depth
-            dz1pt0 = _get_centered_z1pt0(name, ctx)
-            # for Z1.0 = 0.0 no deep soil correction is applied
-            dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
-            f_z1pt0 = get_basin_depth_term(name, C, dz1pt0)
-            # Get linear amplification term
-            f_lin = get_linear_site_term(name, C, ctx)
-            # Get nonlinear amplification term
-            f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
-            # Add on the site amplification
-            mean[m] = ln_y_ref + (f_lin + f_nl + f_z1pt0)
-            # Get standard deviations
-            sig[m], tau[m], phi[m] = get_stddevs(
-                name, C, ctx, ctx.mag, y_ref, f_nl_scaling)
+            if repr(imt) == "PGA":
+                mean[m] = pga_mean
+                sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
+            else:
+                imt_mean, imt_sig, imt_tau, imt_phi = \
+                    get_mean_stddevs(name, self.COEFFS[imt], ctx)
+                # reference to page 1144
+                # Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
+                # when it falls below the predicted PGA
+                mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
+                    if repr(imt).startswith("SA") and imt.period <= 0.3 \
+                    else imt_mean
+
+                sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
 
     #: Coefficient tables are constructed from values in tables 1 - 5
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -558,7 +581,7 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
     """
     adapted = True
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2021 GEM Foundation
+# Copyright (c) 2016-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,41 +18,42 @@
 """
 Utilities to compute mean and quantile curves
 """
+import math
 import numpy
 import pandas
 from scipy.stats import norm
-from scipy.special import ndtr
-from openquake.baselib.general import agg_probs
+from openquake.baselib.general import AccumDict, agg_probs
+from openquake.baselib.performance import compile
+try:
+    import numba
+    SQRT05 = math.sqrt(0.5)
+
+    @numba.vectorize("float64(float64)")
+    def ndtr(z):
+        return 0.5 * (1.0 + math.erf(z * SQRT05))
+except ImportError:
+    from scipy.special import ndtr
 
 
+@compile(["float64[:,:](float64, float64[:,:])",
+          "float64[:](float64, float64[:])"])
 def _truncnorm_sf(truncation_level, values):
-    """
-    Survival function for truncated normal distribution.
-
-    Assumes zero mean, standard deviation equal to one and symmetric
-    truncation.
-
-    :param truncation_level:
-        Positive float number representing the truncation on both sides
-        around the mean, in units of sigma, or None, for non-truncation
-    :param values:
-        Numpy array of values as input to a survival function for the given
-        distribution.
-    :returns:
-        Numpy array of survival function results in a range between 0 and 1.
-
-    >>> from scipy.stats import truncnorm
-    >>> truncnorm(-3, 3).sf(0.12345) == _truncnorm_sf(3, 0.12345)
-    True
-    >>> from scipy.stats import norm
-    >>> norm.sf(0.12345) == _truncnorm_sf(None, 0.12345)
-    True
-    """
-    if truncation_level == 0:
+    # Fast survival function for truncated normal distribution.
+    # Assumes zero mean, standard deviation equal to one and symmetric
+    # truncation. It is faster than using scipy.stats.truncnorm.sf:
+    #
+    # _truncnorm_sf(sig, x) == truncnorm(-sig, sig).sf(x)
+    #
+    # :param truncation_level:
+    #     Positive float number representing the truncation on both sides
+    #     around the mean, in units of sigma, or None, for non-truncation
+    # :param values:
+    #     Numpy array of values as input to a survival function for the given
+    #     distribution.
+    # :returns:
+    #     Numpy array of survival function results in a range between 0 and 1.
+    if truncation_level == 0.:
         return values
-
-    if truncation_level is None:
-        return ndtr(- values)
 
     # notation from http://en.wikipedia.org/wiki/Truncated_normal_distribution.
     # given that mu = 0 and sigma = 1, we have alpha = a and beta = b.
@@ -68,7 +69,7 @@ def _truncnorm_sf(truncation_level, values):
 
     # calculate Z as ``Z = CDF(b) - CDF(a)``, here we assume that
     # ``CDF(a) == CDF(- truncation_level) == 1 - CDF(b)``
-    z = phi_b * 2 - 1
+    z = phi_b * 2. - 1.
 
     # calculate the result of survival function of ``values``,
     # and restrict it to the interval where probability is defined --
@@ -78,7 +79,7 @@ def _truncnorm_sf(truncation_level, values):
     # ``SF(x) = (Z - CDF(x) + CDF(a)) / Z``,
     # ``SF(x) = (CDF(b) - CDF(a) - CDF(x) + CDF(a)) / Z``,
     # ``SF(x) = (CDF(b) - CDF(x)) / Z``.
-    return ((phi_b - ndtr(values)) / z).clip(0.0, 1.0)
+    return ((phi_b - ndtr(values)) / z).clip(0., 1.)
 
 
 def norm_cdf(x, a, s):
@@ -265,6 +266,31 @@ def compute_pmap_stats(pmaps, stats, weights, imtls):
             for j, sid in numpy.ndenumerate(sids):
                 out[sid].array[slc, i] = array[j]
     return out
+
+
+def calc_stats(df, kfields, stats, weights):
+    """
+    :param df: a pandas DataFrame with a column rlz_id
+    :param kfields: fields used in the group by
+    :param stats: a dictionary stat_name->stat_func
+    :param weights: an array of weights for each realization
+    :returns: a DataFrame with the statistics
+    """
+    acc = AccumDict(accum=[])
+    vfields = [f for f in df.columns if f not in kfields and f != 'rlz_id']
+    # in aggrisk kfields=['agg_id', 'loss_type']
+    # in aggcurves kfields=['agg_id', 'return_period', 'loss_type']
+    for key, group in df.groupby(kfields):
+        for name, func in stats.items():
+            for k, kf in zip(key, kfields):
+                acc[kf].append(k)
+            for vf in vfields:
+                values = numpy.zeros_like(weights)  # shape R
+                values[group.rlz_id] = getattr(group, vf).to_numpy()
+                v = apply_stat(func, values, weights)
+                acc[vf].append(v)
+            acc['stat'].append(name)
+    return pandas.DataFrame(acc)
 
 
 # NB: this is a function linear in the array argument

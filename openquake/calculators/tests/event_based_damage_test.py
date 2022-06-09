@@ -46,13 +46,13 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         # test with double aggregate_by by Catalina
         self.run_calc(case_11.__file__, 'job.ini')
 
-        # check damages-rlzs
+        # check damages-rlzs, sensitive to shapely version
         [f] = export(('damages-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-3)
 
-        # check aggcurves
-        [f] = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
+        # check aggcurves, sensitive to shapely version
+        [_, f] = export(('aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=2E-3)
 
     def test_case_12a(self):
         # test event_based_damage, no aggregate_by,
@@ -83,7 +83,7 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         # test event_based_damage, no aggregate_by
         self.run_calc(case_13.__file__, 'job_a.ini')
         [f] = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=5E-5)
 
     def test_case_13b(self):
         # test event_based_damage, aggregate_by=taxonomy
@@ -91,7 +91,7 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         self.check_damages('b_damage_table.txt', 'b_damages.txt')
 
         [f] = export(('risk_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=5E-5)
 
     def test_case_13c(self):
         # test event_based_damage, aggregate_by=taxonomy, policy
@@ -106,8 +106,8 @@ class EventBasedDamageTestCase(CalculatorTestCase):
     def test_case_14(self):
         # test event_based_damage, aggregate_by=NAME_1
         self.run_calc(case_14.__file__, 'job.ini')
-        [f] = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
+        [_, f] = export(('aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=5E-5)
 
     def test_case_15(self):
         # test full enumeration with both fatalities and losses
@@ -115,11 +115,11 @@ class EventBasedDamageTestCase(CalculatorTestCase):
 
         # check damages-stats
         [f] = export(('damages-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_risk-mean.csv', f, delta=1E-5)
+        self.assertEqualFiles('expected/avg_risk-mean.csv', f, delta=5E-5)
 
         # check aggcurves
         [f] = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=5E-5)
 
         # check extract
         dic = vars(extract(self.calc.datastore, 'damages-rlzs'))

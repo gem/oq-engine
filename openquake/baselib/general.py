@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,7 +28,6 @@ import pickle
 import socket
 import random
 import atexit
-import pprint
 import zipfile
 import builtins
 import operator
@@ -37,8 +36,8 @@ import tempfile
 import importlib
 import itertools
 import subprocess
+import collections
 import multiprocessing
-from contextlib import contextmanager
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
 from decorator import decorator
@@ -49,15 +48,20 @@ U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
-BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-'
+BASE183 = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmno"
+           "pqrstuvwxyz{|}!#$%&'()*+-/0123456789:;<=>?@¡¢"
+           "£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑ"
+           "ÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ")
+
 mp = multiprocessing.get_context('spawn')
 
 
 def duplicated(items):
     """
-    :returns: True if the items are duplicated, False otherwise
+    :returns: the list of duplicated keys, possibly empty
     """
-    return len(items) > len(set(items))
+    counter = collections.Counter(items)
+    return [key for key, counts in counter.items() if counts > 1]
 
 
 def cached_property(method):
@@ -464,23 +468,6 @@ def run_in_process(code, *args):
         return eval(out, {}, {})
 
 
-@contextmanager
-def start_many(func, allargs, **kw):
-    """
-    Start multiple processes simultaneously
-    """
-    procs = []
-    for args in allargs:
-        proc = mp.Process(target=func, args=args, kwargs=kw)
-        proc.start()
-        procs.append(proc)
-    try:
-        yield
-    finally:
-        for proc in procs:
-            proc.join()
-
-
 class CodeDependencyError(Exception):
     pass
 
@@ -766,29 +753,32 @@ class DictArray(Mapping):
     """
     def __init__(self, imtls):
         levels = imtls[next(iter(imtls))]
+        self.M = len(imtls)
         self.L1 = len(levels)
-        self.size = len(imtls) * self.L1
+        self.size = self.M * self.L1
         self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
                                for imt, imls in sorted(imtls.items())])
-        self.array = numpy.zeros(self.size, F64)
+        self.array = numpy.zeros((self.M, self.L1), F64)
         self.slicedic = {}
         n = 0
-        for imt, imls in sorted(imtls.items()):
+        self.mdic = {}
+        for m, (imt, imls) in enumerate(sorted(imtls.items())):
             if len(imls) != self.L1:
                 raise ValueError('imt=%s has %d levels, expected %d' %
                                  (imt, len(imls), self.L1))
-            self.slicedic[imt] = slc = slice(n, n + self.L1)
-            self.array[slc] = imls
+            self.slicedic[imt] = slice(n, n + self.L1)
+            self.mdic[imt] = m
+            self.array[m] = imls
             n += self.L1
 
     def __call__(self, imt):
         return self.slicedic[imt]
 
     def __getitem__(self, imt):
-        return self.array[self(imt)]
+        return self.array[self.mdic[imt]]
 
     def __setitem__(self, imt, array):
-        self.array[self(imt)] = array
+        self.array[self.mdic[imt]] = array
 
     def __iter__(self):
         for imt in self.dt.names:
@@ -897,12 +887,12 @@ def groupby_grid(xs, ys, deltax, deltay):
     xbins = get_bins(xs, nx, None, xmin, xmax)[0]
     ybins = get_bins(ys, ny, None, ymin, ymax)[0]
     acc = AccumDict(accum=[])
-    for p, ij in enumerate(zip(xbins, ybins)):
-        acc[ij].append(p)
+    for k, ij in enumerate(zip(xbins, ybins)):
+        acc[ij].append(k)
     dic = {}
-    for (i, j), ps in acc.items():
-        idxs = numpy.array(ps)
-        dic[xs[idxs].mean(), ys[idxs].mean()] = idxs
+    for ks in acc.values():
+        ks = numpy.array(ks)
+        dic[xs[ks].mean(), ys[ks].mean()] = ks
     return dic
 
 
@@ -987,7 +977,8 @@ def fast_agg(indices, values=None, axis=0, factor=None, M=None):
     if M is None:
         M = max(indices) + 1
     if not shp:
-        return numpy.bincount(indices, values, M)
+        return numpy.bincount(
+            indices, values if factor is None else values * factor, M)
     lst = list(shp)
     lst.insert(axis, M)
     res = numpy.zeros(lst, values.dtype)
@@ -1017,17 +1008,20 @@ def fast_agg2(tags, values=None, axis=0):
     return uniq, fast_agg(indices, values, axis)
 
 
-def fast_agg3(structured_array, kfield, vfields, factor=None):
+def fast_agg3(structured_array, kfield, vfields=None, factor=None):
     """
     Aggregate a structured array with a key field (the kfield)
-    and some value fields (the vfields).
+    and some value fields (the vfields). If vfields is not passed,
+    use all fields except the kfield.
 
     >>> data = numpy.array([(1, 2.4), (1, 1.6), (2, 2.5)],
     ...                    [('aid', U16), ('val', F32)])
-    >>> fast_agg3(data, 'aid', ['val'])
+    >>> fast_agg3(data, 'aid')
     array([(1, 4. ), (2, 2.5)], dtype=[('aid', '<u2'), ('val', '<f4')])
     """
     allnames = structured_array.dtype.names
+    if vfields is None:
+        vfields = [name for name in allnames if name != kfield]
     assert kfield in allnames, kfield
     for vfield in vfields:
         assert vfield in allnames, vfield
@@ -1040,6 +1034,36 @@ def fast_agg3(structured_array, kfield, vfields, factor=None):
         dtlist.append((name, structured_array.dtype[name]))
     res = numpy.zeros(len(uniq), dtlist)
     res[kfield] = uniq
+    for name in dic:
+        res[name] = dic[name]
+    return res
+
+
+# this is fast
+def kmean(structured_array, kfield, uniq_indices_counts=()):
+    """
+    Given a structured array of N elements with a discrete kfield with
+    K <= N unique values, returns a structured array of K elements
+    obtained by averaging the values associated to the kfield.
+    """
+    allnames = structured_array.dtype.names
+    assert kfield in allnames, kfield
+    if uniq_indices_counts:
+        uniq, indices, counts = uniq_indices_counts
+    else:
+        uniq, indices, counts = numpy.unique(
+            structured_array[kfield], return_inverse=True, return_counts=True)
+    dic = {}
+    dtlist = []
+    for name in allnames:
+        if name == kfield:
+            dic[kfield] = uniq
+        else:
+            values = structured_array[name]
+            dic[name] = fast_agg(indices, values) / (
+                counts if len(values.shape) == 1 else counts.reshape(-1, 1))
+        dtlist.append((name, structured_array.dtype[name]))
+    res = numpy.zeros(len(uniq), dtlist)
     for name in dic:
         res[name] = dic[name]
     return res
@@ -1190,26 +1214,6 @@ def random_histogram(counts, nbins, seed):
         return numpy.array([counts])
     numpy.random.seed(seed)
     return numpy.histogram(numpy.random.random(counts), nbins, (0, 1))[0]
-
-
-def get_indices(integers):
-    """
-    :param integers: a sequence of integers (with repetitions)
-    :returns: a dict integer -> [(start, stop), ...]
-
-    >>> pprint.pprint(get_indices([0, 0, 3, 3, 3, 2, 2, 0]))
-    {0: array([[0, 2],
-           [7, 8]], dtype=uint32),
-     2: array([[5, 7]], dtype=uint32),
-     3: array([[2, 5]], dtype=uint32)}
-    """
-    indices = AccumDict(accum=[])  # idx -> [(start, stop), ...]
-    start = 0
-    for i, vals in itertools.groupby(integers):
-        n = sum(1 for val in vals)
-        indices[i].append((start, start + n))
-        start += n
-    return {i: numpy.uint32(indices[i]) for i in indices}
 
 
 def safeprint(*args, **kwargs):
@@ -1396,12 +1400,12 @@ def add_columns(a, b, on, cols=None):
 def categorize(values, nchars=2):
     """
     Takes an array with duplicate values and categorize it, i.e. replace
-    the values with codes of length nchars in base64. With nchars=2 4096
+    the values with codes of length nchars in BASE183. With nchars=2 33856
     unique values can be encoded, if there are more nchars must be increased
     otherwise a ValueError will be raised.
 
     :param values: an array of V non-unique values
-    :param nchars: number of characters in base64 for each code
+    :param nchars: number of characters in BASE183 for each code
     :returns: an array of V non-unique codes
 
     >>> categorize([1,2,2,3,4,1,1,2]) # 8 values, 4 unique ones
@@ -1409,11 +1413,11 @@ def categorize(values, nchars=2):
           dtype='|S2')
     """
     uvalues = numpy.unique(values)
-    mvalues = 64 ** nchars  # maximum number of unique values
+    mvalues = 184 ** nchars  # maximum number of unique values
     if len(uvalues) > mvalues:
         raise ValueError(
             f'There are too many unique values ({len(uvalues)} > {mvalues})')
-    prod = itertools.product(*[BASE64] * nchars)
+    prod = itertools.product(*[BASE183] * nchars)
     dic = {uvalue: ''.join(chars) for uvalue, chars in zip(uvalues, prod)}
     return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
 
@@ -1476,16 +1480,16 @@ class RecordBuilder(object):
             self.names.append(name)
             self.values.append(value)
             if isinstance(value, (str, bytes)):
-                tp = (numpy.string_, len(value))
+                tp = (numpy.string_, len(value) or 1)
             elif isinstance(value, numpy.ndarray):
-                tp = value.dtype
+                tp = (value.dtype, len(value))
             else:
                 tp = type(value)
             dtypes.append(tp)
         self.dtype = numpy.dtype([(n, d) for n, d in zip(self.names, dtypes)])
 
     def zeros(self, shape):
-        return numpy.zeros(shape, self.dtype)
+        return numpy.zeros(shape, self.dtype).view(numpy.recarray)
 
     def dictarray(self, shape):
         return {n: numpy.ones(shape, self.dtype[n]) for n in self.names}
@@ -1501,6 +1505,18 @@ class RecordBuilder(object):
             except IndexError:
                 rec[name] = self.values[i]
         return rec
+
+
+def rmsdiff(a, b):
+    """
+    :param a: an array of shape (N, ...)
+    :param b: an array with the same shape of a
+    :returns: an array of shape (N,) with the root mean squares of a-b
+    """
+    assert a.shape == b.shape
+    axis = tuple(range(1, len(a.shape)))
+    rms = numpy.sqrt(((a - b)**2).mean(axis=axis))
+    return rms
 
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 

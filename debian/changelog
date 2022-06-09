@@ -1,4 +1,261 @@
   [Michele Simionato]
+  * `--exports=csv` was not honored for the realizations output; now it is
+
+  [Paul Henshaw, Sandra Giacomini]
+  * Ported the OpenQuake manual from latex to reStructuredText format
+
+  [Michele Simionato]
+  * Entered automatically in sequential mode if there is not enough memory
+  * Raised an early error for missing risk IDs in the vulnerability files
+  * Changed the definition of `aggrisk` again to ensure consistency with the
+    average losses
+
+  [Tom Son]
+  * Added width and hypo_depth estimation to Campbell and Bozorgnia (2014)
+
+  [Michele Simionato]
+  * Improved the precision of the ps_grid_spacing approximation
+  * Added a check for missing mags when using GMPETables
+  * Fixed a bug in `upgrade_nrml -m` for point sources with different usd/lsd
+  * Automatically discard irrelevant TRTs in disaggregation calculations
+
+  [Ashta Poudel, Anirudh Rao, Michele Simionato]
+  * Added the ability to run connectivity analysis in event_based_damage
+    and scenario_damage calculation with an appropriate exposure
+
+  [Tom Son, Michele Simionato]
+  * Added ztor estimation to Campbell and Bozorgnia (2014)
+
+  [Michele Simionato]
+  * Internal: removed REQUIRES_COMPUTED_PARAMETERS
+  * Using PointMSR when the reqv approximation is enabled
+  * Internal: changed the rupture storage for classical calculations
+  * Optimized rupture instantiation for point sources
+  * Optimized distance calculations for point sources
+
+  [Tom Son, Claudio Schill]
+  * Simple performance improvement of Kuehn et al. 2020 model
+
+  [Michele Simionato]
+  * Changed again the string representation of logic tree paths and added
+    an utility `hazardlib.lt.build` to build trees from literal lists
+  * Fixed the field `source_info.trti` in the datastore to point to the
+    correct tectonic region type index and not to zero
+  * Added a check for inconsistent IDs across different kinds of risk functions
+    (i.e. fragility and consequence)
+  * Fixed a logging statement that could run out of memory in large calculations
+  * Optimized `iter_ruptures` for point sources by vectorizing the generation of
+    planar surfaces by magnitude, nodal plane and hypocenter
+
+  [Tom Son]
+  * Implemented a missing piece in Chiou & Youngs (2014) model
+    Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
+    when it falls below the predicted PGA
+
+  [Marco Pagani]
+  * Added the possibility of disaggregating in terms of epsilon*
+  * Added a method to compute the cross-correlation matrix
+
+  [Michele Simionato]
+  * Fixed disaggregation returning NaNs in some situations with
+    nonParametric/multiFaultSources
+  * Bug fix: not storing far away ruptures coming from multiFaultSources
+  * Implemented CScalingMSR
+  * Optimized context collapsing in classical calculations
+  * Setting `ps_grid_spacing` now sets the `pointsource_distance` too
+  * Saving memory in preclassical calculations on machines with 8 cores or less
+  * Changed the magnitude-dependent `maximum_distance` feature to discard
+    ruptures below `minmag` and above `maxmag`
+  * Added the ability to estimate the runtime of a calculation by using
+    the `--sample-sources` option
+  * Fixed a wrong formula in `modifiable_gmpe.add_between_within_stds`
+  * Reduced the stress on the memory in classical calculations, thus
+    improving the performance
+  * Setting the truncation_level to the empty string is now forbidden;
+    some GMFs calculations not setting truncation_level can now give
+    different results since truncation_level=None is now replaced with
+    truncation_level=99
+
+python3-oq-engine (3.14.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Changed the definition of `aggrisk`: dividing by the effective time
+  * Internal: removed flag `save_disk_space` since now it is always on
+  * Slightly changed the collapsing of nodal planes and hypocenters in
+    presence of the equivalent distance approximation (`reqv`)
+  * Extended `oq reduce_sm` to multiFaultSources
+  * Fixed the check on unique section IDs for multiFaultSources
+  * Implemented multi-aggregation with a syntax like
+    `aggregate_by=taxonomy,region;taxonomy;region`
+  * Removed the obsolete commands `oq to_shapefile` and `oq from_shapefile`
+    and turned pyshp into an optional dependency
+  * Setting `num_rlzs_disagg=0` is now valid and it means considering
+    all realizations in a disaggregation calculation
+  * Rounded the magnitudes in multiFaultSources to two digits
+
+  [Marco Pagani]
+  * Extended ModifiableGMPE to work with GMPETable and subclasses
+
+  [Michele Simionato]
+  * Upgraded shapely from version 1.7 to version 1.8: this causes slight
+    changes in the results for most calculations
+  * Removed the not used (and not working) functionality `applyToSourceType`
+  * Raised an error when the total standard deviation is zero, unless
+    truncation_level is set to zero
+
+  [Tom Son]
+  * Fixed a typo and a few bugs within Kuehn et al. (2020) model to include
+    Z2.5 when the given region is JAPAN
+
+  [Michele Simionato]
+  * Changed /extract/events to return events sorted by ID
+  * Changed the default amplification method to "convolution"
+  * Fixed a bug with discard_trts sometimes discarding too much
+  * Raised a helpful error message when ensurepip is missing
+  * Fixed parentdir bug in event_based_damage
+  * Fixed sorting bug in the `/v1/calc/run` web API
+  * Internal: introduced limited unique rupture IDs in classical calculations
+    with few sites
+
+  [Prajakta Jadhav, Dharma Wijewickreme]
+  * Added GMPE Youd et al. (2002) and the corresponding site parameters
+
+  [Michele Simionato]
+  * Fixed the exporter `aggrisk-stats` in the case of zero losses
+  * Vectorized all GMPEs and forbidden non-vectorized GMPEs
+  * Raised the limit to 94 GMPEs per tectonic region type
+  * Optimized the NBCC2015_AA13 GMPEs
+  * Optimized the GMPETable and the derived NGAEast GMPEs
+  * Fixed a 32/64 bit bug in `oq export loss_maps-stats`
+
+  [Marco Pagani]
+  * Added a more flexible version of the GC2 implementation
+  * Added caching of distances in multi fault ruptures
+  * Added the NRCan site term to the modifiable GMPE
+
+  [Michele Simionato]
+  * Optimized .get_bounding_box, .polygon and .mesh_size for MultiFaultSources
+  * Fixed bug in presence of mixed vectorized/nonvectorized GMPEs
+  * Extended `oq postzip` to multiple files and `oq abort` to multiple jobs
+  * Internal: changed install.py to install the venv in /opt/openquake/venv
+  * Fixed a BOM issue on Windows when reading job.ini files
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 12 Apr 2022 12:27:58 +0000
+
+python3-oq-engine (3.13.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Improved the precision of the `pointsource_distance` approximation
+  * Added command `oq show rlz:<no>`
+  * Internal: added an environment variable OQ_DATABASE
+
+  [Manuela Villani]
+  * Added a function in the modifiable GMPE to convert ground-motion assuming
+    different representations of the horizontal component.
+
+  [Kendra Johnson]
+  * Implemented possibility of assigning the parameters `floating_x_step` and
+    `floating_y_step` for kite fault sources in the job configuration file
+
+  [Michele Simionato]
+  * The `branchID` is now autogenerated in the gsim logic tree files, thus
+    solving the issue of wrong branch paths for duplicated branchIDs
+  * Added a check for missing gsim information in the job.ini file
+  * Fixed the case of continuous fragility functions with minIML=noDamageLimit
+
+  [Miguel Leonardo-Suárez]
+  * Added GMPE from Jaimes et al. (2020) for Mexican intraslab earthquakes
+
+  [Michele Simionato]
+  * Enforced ps_grid_spacing <= pointsource_distance
+  * Internal: added command `oq plot source_data?`
+  * The engine is now splitting the MultiFaultSources, thus improving the task
+    distribution
+
+  [Claudia Mascandola]
+  * Added a new class to the abrahamson_2015 gmm.
+  * Added a new class to the lanzano_luzi_2019 and skarlatoudis_2013 gmms
+
+  [Marco Pagani, Shreyasvi]
+  * Added GMM from Bora et al. (2019)
+  * Fixed bug in the multifault surface when defined using kite fault surfaces
+
+  [Giuseppina Tusa]
+  * Added a new gsim file tusa_langer_azzaro_2019.py to implement the GMMs
+    from Tusa et al. (2020).
+
+  [Michele Simionato]
+  * Added command `oq compare uhs CALC_1 CALC_2`
+  * `split_sources=false` is now honored in disaggregation calculations
+  * Internal: rup/src_id now refers to the row in the source_info table
+
+  [Miguel Leonardo-Suárez]
+  * Added the GMPE Arroyo et al. (2010) for Mexican subduction interface events
+
+  [Marco Pagani]
+  * Added a new method to the modifiable GMPE with which is possible to
+    compute spatially correlated ground-motion fields even when the initial
+    GMM only provides the total standard deviation.
+  * Fixed a bug in the `modify_recompute_mmax`
+  * Added a `get_coeffs` method to the CoeffTable class
+  * Added support for EAS, FAS, DRVT intensitity measure types
+
+  [Michele Simionato]
+  * Extended the mag-dependent filtering to the event based calculator
+  * The flag discrete_damage_distribution=true was incorrectly ignored when
+    computing the consequences
+  * Implemented `reaggregate_by` feature
+  * Supported the `custom_site_id` in the GMF exporters
+  * Bug fix: the site collection of the child calculation was ignored when
+    using the --hazard-calculation-id option
+  * Supported Python 3.9 and deprecated Python 3.6
+  * Extended `oq prepare_site_model` to support .csv.gz files
+  * Solved the issue of "compute gmfs" slow tasks in event_based and used
+    the same approach in classical calculations too
+  * Made sure `valid.gsim` instantiates the GSIM
+  * ShakeMap calculations failing with a nonpositive definite correlation
+    matrix now point out to the manual for the solution of the problem
+  * Introduced the GodaAtkinson2009 cross correlation between event model
+  * Specifying consequence files without fragility files now raises an error
+  * Fixed a bug in event_based_risk with nontrivial taxonomy mapping producing
+    NaNs in the event loss table
+  * Internal: added kubernetes support from the WebUI
+
+  [Shreyasvi Chandrasekhar]
+  * Added a new GMPE for significant duration proposed by Bahrampouri et al
+    (2021).
+
+  [Claudia Mascandola]
+  * Added the computation of tau and phi stdevs to the sgobba_2020 GMPE
+  * Added a new class to the lanzano_2019 gmm.
+
+  [Michele Simionato]
+  * Changed completely the storage of the PoEs and reduced the memory
+    consumption in classical calculations (plus 4x speedup in "postclassical")
+  * Changed the behavior of `sites_slice`
+  * Changed `custom_site_id` to an ASCII string up to 6 characters
+  * Fixed the error raised in presence of a mag-dep distance for a tectonic
+    region type and a scalar distance for another one
+
+  [Yen-Shin Chen]
+  * Added the Thingbaijam et al. (2017) Magnitude Scaling Law for Strike-slip
+
+  [Michele Simionato]
+  * Changed the API of `ContextMaker.get_mean_stds`
+  * Extended the WebUI to run sensitivity analysis calculations
+  * Changed the string representation of logic tree paths and enforced a
+    maximum of 64 branches per branchset
+  * Added command `oq info disagg`
+  * Accepted site models with missing parameters by using the global site
+    parameters instead
+  * Supported the syntax
+    `source_model_logic_tree_file = ${mosaic}/XXX/in/ssmLT.xml`
+  * Fixed a performance bug with ignore_master_seed=true
+  * Added a command `oq info cfg` to show the configuration file paths
+  * Added a check on the intensity measure levels with `--hc` is used
+  * Bug fix: pointsource_distance = 0 was not honored
+  * Fixed a small bug of `oq zip job_haz.ini -r job_risk.ini`: now it works
+    even if the oqdata directory is empty
   * Optimized the aggregation of losses in event_based_risk and made it possible
     to aggregate by site_id for more than 65,536 sites
   * Fixed the calculation of average insured losses with a nontrivial taxonomy
@@ -34,6 +291,8 @@
   * Added a `conditional_spectrum` calculator
   * Fixed an array<->scalar bug in abrahamson_gulerce_2020
   * Restored the classical tiling calculator
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 25 Jan 2022 08:49:25 +0000
 
 python3-oq-engine (3.12.0-1~xenial01) xenial; urgency=low
 

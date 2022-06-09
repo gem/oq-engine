@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2021 GEM Foundation
+# Copyright (C) 2016-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,7 +22,7 @@ import subprocess
 import webbrowser
 
 from openquake.baselib import config
-from openquake.server import dbserver
+from openquake.server import dbserver, db
 from openquake.server.utils import check_webserver_running
 
 commands = ['start', 'migrate', 'createsuperuser', 'collectstatic']
@@ -58,6 +58,8 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
                  'see the documentation for details')
     if cmd == 'start':
         dbserver.ensure_on()  # start the dbserver in a subprocess
+        # reset any computation left in the 'executing' state
+        db.actions.reset_is_running(dbserver.db)
         rundjango('runserver', hostport, skip_browser)
     elif cmd in commands:
         rundjango(cmd)

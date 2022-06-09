@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021, GEM Foundation
+# Copyright (C) 2012-2022, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,22 +37,19 @@ def hawaii_adjust(mean, ctx, imt):
         freq = 1./imt.period
 
     # Equation 3 of Atkinson (2010)
-    x1 = np.min([-0.18+0.17*np.log10(freq), 0])
+    x1 = np.min([-0.18 + 0.17 * np.log10(freq), 0])
 
     # Equation 4 a-b-c of Atkinson (2010)
-    if ctx.hypo_depth < 20.0:
-        x0 = np.max([0.217 - 0.321 * np.log10(freq), 0])
-    elif ctx.hypo_depth > 35.0:
-        x0 = np.min([0.263 + 0.0924 * np.log10(freq), 0.35])
-    else:
-        x0 = 0.2
+    x0 = np.full_like(ctx.hypo_depth, 0.2)
+    x0[ctx.hypo_depth < 20.0] = np.max([0.217 - 0.321 * np.log10(freq), 0])
+    x0[ctx.hypo_depth > 35.0] = np.min([0.263 + 0.0924 * np.log10(freq), 0.35])
 
     # Limiting calculation distance to 1km
     # (as suggested by C. Bruce Worden)
     rjb = [d if d > 1 else 1 for d in ctx.rjb]
 
     # Equation 2 and 5 of Atkinson (2010)
-    mean += (x0 + x1*np.log10(rjb)) / np.log10(np.e)
+    mean += (x0 + x1 * np.log10(rjb)) / np.log10(np.e)
 
 
 class BooreAtkinson2008(GMPE):
@@ -99,7 +96,7 @@ class BooreAtkinson2008(GMPE):
     kind = 'base'
     sgn = 0
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -136,8 +133,8 @@ class BooreAtkinson2008(GMPE):
             if self.kind in ('2011', 'prime'):
                 # correction factor (see Atkinson and Boore, 2011; equation 5
                 # at page 1126 and nga08_gm_tmr.for line 508
-                corr_fact = 10.0**(np.max([0, 3.888 - 0.674 * ctx.mag]) -
-                                   (np.max([0, 2.933 - 0.510 * ctx.mag]) *
+                corr_fact = 10.0**(np.clip(3.888 - 0.674 * ctx.mag, 0, None) -
+                                   (np.clip(2.933 - 0.510 * ctx.mag, 0, None) *
                                     np.log10(ctx.rjb + 10.)))
                 mean[m] = np.log(np.exp(mean[m]) * corr_fact)
 
@@ -226,7 +223,7 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
 
     #: Supported intensity measure component is geometric mean, see paragraph
     #: 'Response Variables', page 100 and table 8, pag 121.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.VECTORIAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types is total
     #: see equation 2, pag 106.

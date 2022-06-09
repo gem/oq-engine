@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,16 +19,17 @@
 import os
 import unittest
 import numpy
-
 from openquake.hazardlib import InvalidFile
 from openquake.baselib.writers import write_csv
+from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
-    case_6, case_7, case_8, case_9, case_10, case_11)
+    case_6, case_7, case_8, case_9, case_10, case_11, case_12, case_13,
+    case_14, case_15)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
-from openquake.calculators.views import view
+from openquake.calculators.views import view, text_table
 
 aac = numpy.testing.assert_allclose
 
@@ -47,7 +48,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
                           if f.endswith(exports) and 'by_taxon' not in f)
         self.assertEqual(len(got), len(expected))
         for fname, actual in zip(expected, got):
-            self.assertEqualFiles('expected/%s' % fname, actual)
+            self.assertEqualFiles('expected/%s' % fname, actual, delta=1E-5)
 
     def test_case_1(self):
         # test with a single event and a missing tag
@@ -84,7 +85,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
         # check risk_by_event
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-5)
 
         # check agg_damages extraction
         total = extract(self.calc.datastore, 'agg_damages/structural')
@@ -104,25 +106,19 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assert_ok(case_4, 'job_haz.ini,job_risk.ini')
 
     def test_case_4b(self):
+        # sensitive to shapely version
         self.run_calc(case_4b.__file__, 'job_haz.ini,job_risk.ini')
 
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
-
-        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=5E-6)
+                              delta=5E-4)
 
         return  # TODO: fix avg_losses
         fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 2)  # one per realization
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=5E-6)
-
-        #df = view('portfolio_damage_error', self.calc.datastore)
-        #fname = gettemp(text_table(df))
-        #self.assertEqualFiles('expected/portfolio_damage.rst', fname)
+                                  delta=2E-4)
 
     def test_wrong_gsim_lt(self):
         with self.assertRaises(InvalidFile) as ctx:
@@ -142,15 +138,17 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # this is a case with two gsims and one asset
         self.assert_ok(case_5a, 'job_haz.ini,job_risk.ini')
         dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
-        tmpname = write_csv(None, dmg, fmt='%.5E')  # (T, R, D) == (1, 2, 5)
-        self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname)
+        self.assertEqual(dmg.array.shape, (1, 2, 5))  # (T, R, D)
+        aac(dmg.array[0].sum(axis=0),
+            [0.72431, 0.599795, 0.292081, 0.15108, 0.232734], atol=1E-5)
 
     def test_case_6(self):
         # this is a case with 5 assets on the same point
         self.assert_ok(case_6, 'job_h.ini,job_r.ini')
         dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
         tmpname = write_csv(None, dmg, fmt='%.5E')  # (T, R, D) == (5, 1, 5)
-        self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname)
+        self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname,
+                              delta=1E-5)
 
     def test_case_7(self):
         # this is a case with three loss types
@@ -181,20 +179,20 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.run_calc(case_9.__file__, 'job.ini')
 
         [fname] = export(('damages-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/damages.csv', fname)
+        self.assertEqualFiles('expected/damages.csv', fname, delta=2E-5)
 
         # check risk_by_event
         K = self.calc.datastore.get_attr('risk_by_event', 'K')
         df = self.calc.datastore.read_df('risk_by_event', 'event_id',
                                          {'agg_id': K})
         dmg = df.loc[1937]  # damage caused by the event 1937
-        self.assertEqual(dmg.dmg_1.sum(), 51)
-        self.assertEqual(dmg.dmg_2.sum(), 64)
-        self.assertEqual(dmg.dmg_3.sum(), 41)
-        self.assertEqual(dmg.dmg_4.sum(), 20)
+        self.assertEqual(dmg.dmg_1.sum(), 49)
+        self.assertEqual(dmg.dmg_2.sum(), 62)
+        self.assertEqual(dmg.dmg_3.sum(), 42)
+        self.assertEqual(dmg.dmg_4.sum(), 25)
 
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggrisk.csv', fname)
+        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-4)
 
     def test_case_10(self):
         self.run_calc(case_10.__file__, 'job.ini')
@@ -202,17 +200,21 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
     def test_case_11(self):
         # secondary perils without secondary simulations
-        self.run_calc(case_11.__file__, 'job.ini')
+        self.run_calc(case_11.__file__, 'job.ini',
+                      secondary_simulations="{}")
         calc1 = self.calc.datastore
         [fname] = export(('risk_by_event', 'csv'), calc1)
         self.assertEqualFiles('expected/risk_by_event_1.csv', fname)
 
         # secondary perils with secondary simulations
-        self.run_calc(case_11.__file__, 'job.ini',
-                      secondary_simulations="{'LiqProb': 50}")
+        self.run_calc(case_11.__file__, 'job.ini')
         calc2 = self.calc.datastore
         [fname] = export(('risk_by_event', 'csv'), calc2)
         self.assertEqualFiles('expected/risk_by_event_2.csv', fname)
+
+        # check mean_perils
+        fname = gettemp(text_table(view('mean_perils', self.calc.datastore)))
+        self.assertEqualFiles('expected/mean_perils.rst', fname)
 
         # check damages-rlzs
         [fname] = export(('damages-rlzs', 'csv'), calc1)
@@ -220,23 +222,45 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [fname] = export(('damages-rlzs', 'csv'), calc2)
         self.assertEqualFiles('expected/avg_damages2.csv', fname)
 
-    def test_case_11_risk(self):
-        raise unittest.SkipTest('Not implemented yet')
+    def test_case_12(self):
+        # secondary perils from rupture
+        self.run_calc(case_12.__file__, 'job.ini')
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname)
+        hc_id = str(self.calc.datastore.calc_id)
 
-        # losses due to liquefaction
-        self.run_calc(case_11.__file__, 'job_risk.ini')
-        alt = self.calc.datastore.read_df('risk_by_event', 'agg_id')
+        # same with discrete damage distribution
+        self.run_calc(case_12.__file__, 'job.ini',
+                      discrete_damage_distribution='true',
+                      hazard_calculation_id=hc_id)
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk2.csv', fname)
 
-        aac(losses(0, alt), [0, 352, 905, 55, 199, 1999, 598, 798])
-        aac(losses(1, alt), [4581, 0, 288, 2669, 2287, 6068, 3036, 0])
-        aac(losses(2, alt), [4754, 0, 421, 7141, 3644, 0, 0, 0])
+    def test_case_13(self):
+        # 3 realizations and consequences
+        self.run_calc(case_13.__file__, 'job.ini')
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname)
+        [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk-stats.csv', fname)
 
-        self.run_calc(case_11.__file__, 'job_risk.ini',
-                      secondary_simulations='{}')
-        alt = self.calc.datastore.read_df('risk_by_event', 'agg_id')
-        aac(losses(0, alt), [4982, 3524, 3235, 1388, 4988, 4999, 4988, 4993])
-        aac(losses(1, alt), [38175, 3, 903, 11122, 28599, 30341, 18978, 0])
-        aac(losses(2, alt), [26412, 0, 21055, 44631, 36447, 0, 0, 0])
+    def test_case_14(self):
+        # inconsistent IDs between fragility and consequence
+        with self.assertRaises(NameError) as ctx:
+            self.run_calc(case_14.__file__, 'job.ini')
+        self.assertIn(
+            "['CR+PC/LDUAL/HBET:8.19/m', 'CR+PC/LDUAL/HBET:8.19/m ']",
+            str(ctx.exception))
+
+    def test_case_15(self):
+        # infrastructure risk
+        self.run_calc(case_15.__file__, 'job.ini')
+        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        got = dict(zip(nodes.id, nodes.number))
+        expected = {'D1': 38, 'D10': 24, 'D11': 24, 'D12': 22, 'D2': 38,
+                    'D3': 38, 'D4': 38, 'D5': 39, 'D6': 39, 'D7': 25,
+                    'D8': 24, 'D9': 25}
+        self.assertEqual(got, expected)
 
 
 def losses(aid, alt):

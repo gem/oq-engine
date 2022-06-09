@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -55,6 +55,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         ctx = self.ctx(4, vs30=760.)
         ctx.hypo_depth = 10.
         ctx.rrup = np.array([1., 10., 30., 70.])
+        ctx.occurrence_rate = 0.0001
         imtype = PGA()
         stdt = [const.StdDev.TOTAL]
         # Computes results
@@ -73,7 +74,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         self.assertTrue(gmm.__class__.__name__ == 'GenericGmpeAvgSA', msg=msg)
 
         ctx = self.ctx(4, vs30=760.)
-        ctx.repi = np.array([1., 10., 30., 70.])
+        ctx.repi = ctx.rrup = np.array([1., 10., 30., 70.])
         imtype = PGA()
         stdt = [const.StdDev.TOTAL]
         # Computes results
@@ -89,7 +90,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
 
         ctx = self.ctx(4, vs30=500.)
         ctx.hypo_depth = 15.
-        ctx.rjb = np.array([1., 10., 30., 70.])
+        ctx.rjb = ctx.rrup = np.array([1., 10., 30., 70.])
         ctx.vs30measured = np.ones(4, dtype="bool")
         ctx.region = np.zeros(4, dtype=int)
         stdt = [const.StdDev.TOTAL]
@@ -129,7 +130,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
 
         ctx = gsim.base.RuptureContext()
         ctx.sids = [0]
-        P = imt.AvgSA
+        P = imt.AvgSA()
         S = [const.StdDev.TOTAL]
 
         with open(DATA_FILE, 'r') as f:
@@ -143,7 +144,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
 
                 # Setting ground motion attributes
                 ctx.mag = arr[0]
-                ctx.rjb = np.array([arr[1]])
+                ctx.rjb = ctx.rrup = np.array([arr[1]])
                 ctx.rake = arr[2]
                 ctx.hypo_depth = arr[3]
                 ctx.vs30 = np.array([arr[4]])
@@ -165,7 +166,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
 
         ctx = RuptureContext()
         ctx.sids = [0]
-        P = imt.AvgSA
+        P = imt.AvgSA()
         S = [const.StdDev.TOTAL]
 
         with open(DATA_FILE, 'r') as f:
@@ -179,7 +180,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
 
                 # Setting ground motion attributes
                 ctx.mag = arr[0]
-                ctx.rjb = np.array([arr[1]])
+                ctx.rjb = ctx.rrup = np.array([arr[1]])
                 ctx.rake = arr[2]
                 ctx.hypo_depth = arr[3]
                 ctx.vs30 = np.array([arr[4]])

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -93,3 +93,37 @@ class GenerateOneRuptureTestCase(unittest.TestCase):
         src = groups[0].sources[0]
         rup = src.get_one_rupture(ses_seed=0)
         self.assertEqual(rup.mag, 5.2)
+
+
+class RecomputeMmaxTestCase(unittest.TestCase):
+
+    def test_mmax_simple_fault_src(self):
+        """ Test the modify_recompute_mmax method """
+
+        # We test the method used to recompute the maximum magnitude after
+        # a change in the geometry of the surface of the fault. We start from
+        # the simple fault source used in the demos.
+        d = os.path.dirname(os.path.abspath(__file__))
+        fname = 'simple_fault_source_recompute_mmax.xml'
+        source_model = os.path.join(d, 'data', fname)
+        groups = nrml.to_python(source_model, SourceConverter(
+            investigation_time=1., rupture_mesh_spacing=2.,
+            width_of_mfd_bin=0.1))
+        src = groups[0][0]
+
+        # We increase the lower seismogenic depth from 15 to 20 km the area
+        # will increase of 50% from 1623 to about 2433 km2. The magnitude we
+        # get using WC1194 for an area or 2433 km2 is 7.37
+        src.lower_seismogenic_depth = 20.0
+        src.modify_recompute_mmax()
+        area = src.get_fault_surface_area()
+        msg = "The recomputed mmax does not match the expected value"
+        self.assertAlmostEqual(7.377, src.mfd.max_mag, msg=msg, places=2)
+        print(area, src.mfd.max_mag, src.lower_seismogenic_depth)
+
+        # Now we test the case where we recompute mmax with a value of episilon
+        # (i.e., number of standard deviations) different than one
+        src.modify_recompute_mmax(1)
+        self.assertAlmostEqual(7.377+0.25, src.mfd.max_mag, msg=msg, places=2)
+        src.modify_recompute_mmax(-1)
+        self.assertAlmostEqual(7.377-0.25, src.mfd.max_mag, msg=msg, places=2)

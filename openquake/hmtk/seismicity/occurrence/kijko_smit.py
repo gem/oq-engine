@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2021 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -110,7 +110,7 @@ class KijkoSmit(SeismicityOccurrence):
                                          temp_rec_table[:, 1],
                                          dmag, m_c)[0]
             ival += 1
-        total_neq = np.float(np.sum(neq))
+        total_neq = float(np.sum(neq))
         bval = self._harmonic_mean(b_est, neq)
         sigma_b = bval / np.sqrt(total_neq)
         aval = self._calculate_a_value(bval, total_neq, nyr, cmag, ref_mag)

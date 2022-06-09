@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -122,7 +122,7 @@ def export_hcurves_by_imt_csv(
         lst.append(('poe-%.7f' % iml, F32))
     custom = 'custom_site_id' in sitecol.array.dtype.names
     if custom:
-        lst.insert(0, ('custom_site_id', U32))
+        lst.insert(0, ('custom_site_id', 'S6'))
     hcurves = numpy.zeros(nsites, lst)
     if custom:
         for sid, csi, lon, lat, dep in zip(
@@ -409,22 +409,38 @@ def export_hazard_npz(ekey, dstore):
 def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
     imts = list(oq.imtls)
+
+    # exporting sitemesh
+    f = dstore.build_fname('sitemesh', '', 'csv')
+    sitecol = dstore['sitecol']
+    names = sitecol.array.dtype.names
+    arr = sitecol[['lon', 'lat']]
+    if 'custom_site_id' in names:
+        sites = util.compose_arrays(
+            sitecol.custom_site_id, arr, 'custom_site_id')
+    else:
+        sites = util.compose_arrays(sitecol.sids, arr, 'site_id')
+    writers.write_csv(f, sites, comment=dstore.metadata)
+
+    # exporting gmfs
     df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
-    ren = {'sid': 'site_id', 'eid': 'event_id'}
+    if 'custom_site_id' in names:
+        df['csi'] = decode(sitecol.custom_site_id[df.sid])
+        ren = {'csi': 'custom_site_id', 'eid': 'event_id'}
+        del df['sid']
+    else:
+        ren = {'sid': 'site_id', 'eid': 'event_id'}
     for m, imt in enumerate(imts):
         ren[f'gmv_{m}'] = 'gmv_' + imt
     for imt in oq.get_sec_imts():
         ren[imt] = f'sep_{imt}'
     df.rename(columns=ren, inplace=True)
     event_id = dstore['events']['id']
-    f = dstore.build_fname('sitemesh', '', 'csv')
-    arr = dstore['sitecol'][['lon', 'lat']]
-    sids = numpy.arange(len(arr), dtype=U32)
-    sites = util.compose_arrays(sids, arr, 'site_id')
-    writers.write_csv(f, sites, comment=dstore.metadata)
     fname = dstore.build_fname('gmf', 'data', 'csv')
     writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
         df, fname, comment=dstore.metadata)
+
+    # exporting sigma_epsilon
     if 'sigma_epsilon' in dstore['gmf_data']:
         sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
         sig_eps = dstore['gmf_data/sigma_epsilon'][()]
@@ -452,8 +468,13 @@ def export_gmf_data_hdf5(ekey, dstore):
 def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol'].complete
+    if 'custom_site_id' in sitecol.array.dtype.names:
+        dic = dict(custom_site_id=decode(sitecol.custom_site_id))
+    else:
+        dic = dict(site_id=sitecol.sids)
+    dic['lon'] = sitecol.lons
+    dic['lat'] = sitecol.lats
     data = dstore['avg_gmf'][:]  # shape (2, N, M)
-    dic = {'site_id': sitecol.sids, 'lon': sitecol.lons, 'lat': sitecol.lats}
     for m, imt in enumerate(oq.imtls):
         dic['gmv_' + imt] = data[0, :, m]
         dic['gsd_' + imt] = data[1, :, m]
@@ -522,6 +543,7 @@ def export_disagg_csv(ekey, dstore):
         except IndexError:
             pass
     for s in range(N):
+        rlzcols = ['rlz%d' % r for r in best_rlzs[s]]
         lon, lat = sitecol.lons[s], sitecol.lats[s]
         weights = numpy.array([rlzs[r].weight['weight'] for r in best_rlzs[s]])
         weights /= weights.sum()  # normalize to 1
@@ -537,8 +559,7 @@ def export_disagg_csv(ekey, dstore):
                         lon=lon, lat=lat)
         for k in oq.disagg_outputs:
             splits = k.lower().split('_')
-            header = (['imt', 'poe'] + splits +
-                      ['poe%d' % z for z in range(Z)])
+            header = ['imt', 'poe'] + splits + rlzcols
             values = []
             nonzeros = []
             for m, p in iproduct(M, P):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,11 +45,10 @@ def _get_fault_type_hanging_wall(rake):
     (F = 0) if otherwise. Hanging-wall flag is set to 1 if 'reverse',
     and 0 if 'other'.
     """
-    F, HW = 0, 0
-
-    if 45 <= rake <= 135:
-        F, HW = 1, 1
-
+    F, HW = np.zeros_like(rake), np.zeros_like(rake)
+    within = (45 <= rake) & (rake <= 135)
+    F[within] = 1.
+    HW[within] = 1.
     return F, HW
 
 
@@ -69,16 +68,12 @@ def _compute_f1(C, mag, rrup):
     """
     r = np.sqrt(rrup ** 2 + C['c4'] ** 2)
 
-    f1 = (
-        C['a1'] +
-        C['a12'] * (8.5 - mag) ** C['n'] +
-        (C['a3'] + C['a13'] * (mag - C['c1'])) * np.log(r)
-    )
+    f1 = (C['a1'] +
+          C['a12'] * (8.5 - mag) ** C['n'] +
+          (C['a3'] + C['a13'] * (mag - C['c1'])) * np.log(r))
 
-    if mag <= C['c1']:
-        f1 += C['a2'] * (mag - C['c1'])
-    else:
-        f1 += C['a4'] * (mag - C['c1'])
+    f1[mag <= C['c1']] += C['a2'] * (mag[mag <= C['c1']] - C['c1'])
+    f1[mag > C['c1']] += C['a4'] * (mag[mag > C['c1']] - C['c1'])
 
     return f1
 
@@ -91,15 +86,10 @@ def _compute_f3(C, mag):
     the term in the numerator '(mag - 5.8)' is missing, while is
     present in the software used for creating the verification tables
     """
-    if mag <= 5.8:
-        return C['a5']
-    elif 5.8 < mag < C['c1']:
-        return (
-            C['a5'] +
-            (C['a6'] - C['a5']) * (mag - 5.8) / (C['c1'] - 5.8)
-        )
-    else:
-        return C['a6']
+    f3 = C['a5'] + (C['a6'] - C['a5']) * (mag - 5.8) / (C['c1'] - 5.8)
+    f3[mag <= 5.8] = C['a5']
+    f3[mag >= C['c1']] = C['a6']
+    return f3
 
 
 def _compute_f4(C, mag, rrup):
@@ -109,12 +99,7 @@ def _compute_f4(C, mag, rrup):
     fhw_m = 0
     fhw_r = np.zeros_like(rrup)
 
-    if mag <= 5.5:
-        fhw_m = 0
-    elif 5.5 < mag < 6.5:
-        fhw_m = mag - 5.5
-    else:
-        fhw_m = 1
+    fhw_m = np.clip(mag - 5.5, 0., 1.)
 
     idx = (rrup > 4) & (rrup <= 8)
     fhw_r[idx] = C['a9'] * (rrup[idx] - 4.) / 4.
@@ -157,7 +142,7 @@ class AbrahamsonSilva1997(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components (see paragraph 'Regression Model', page 105)
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is Total (see equations 13 pp. 106
     #: and table 4, page 109).
@@ -176,7 +161,7 @@ class AbrahamsonSilva1997(GMPE):
     #: Required distance measure is RRup (eq. 3, page 105).
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -201,12 +186,10 @@ class AbrahamsonSilva1997(GMPE):
 
             C_STD = self.COEFFS_STD[imt]
             # standard deviation as defined in eq.13 page 106.
-            if ctx.mag <= 5:
-                sig[m] += C_STD['b5']
-            elif 5.0 < ctx.mag < 7.0:
-                sig[m] += C_STD['b5'] - C_STD['b6'] * (ctx.mag - 5)
-            else:
-                sig[m] += C_STD['b5'] - 2 * C_STD['b6']
+            sigma = C_STD['b5'] - C_STD['b6'] * (ctx.mag - 5)
+            sigma[ctx.mag <= 5.] = C_STD['b5']
+            sigma[ctx.mag >= 7.] = C_STD['b5'] - 2 * C_STD['b6']
+            sig[m] += sigma
 
     #: Coefficient table (table 3, page 108)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

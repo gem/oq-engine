@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,8 +22,7 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 import numpy
 from scipy.spatial import distance
 from shapely import geometry
-from openquake.baselib.general import (
-    split_in_blocks, not_equal, get_duplicates)
+from openquake.baselib.general import not_equal, get_duplicates
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian)
 from openquake.hazardlib.geo.mesh import Mesh
@@ -124,7 +123,7 @@ site_param_dt = {
     'lat': numpy.float64,
     'depth': numpy.float64,
     'vs30': numpy.float64,
-    'vs30measured': numpy.bool,
+    'vs30measured': bool,
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
     'siteclass': (numpy.string_, 1),
@@ -132,7 +131,7 @@ site_param_dt = {
     'backarc': numpy.uint8,  # 0=forearc,1=backarc,2=alongarc
     'xvf': numpy.float64,
     'soiltype': numpy.uint32,
-    'bas': numpy.bool,
+    'bas': bool,
 
     # Parameters for site amplification
     'ampcode': ampcode_dt,
@@ -163,9 +162,17 @@ site_param_dt = {
     'precip': numpy.float64,
     'fpeak': numpy.float64,
 
+    # parameters for YoudEtAl2002
+    'freeface_ratio': numpy.float64,
+    'T_15': numpy.float64,
+    'D50_15': numpy.float64,
+    'F_15': numpy.float64,
+    'T_eq': numpy.float64,
+
     # other parameters
-    'custom_site_id': numpy.uint32,
-    'region': numpy.uint32
+    'custom_site_id': (numpy.string_, 6),
+    'region': numpy.uint32,
+    'in_cshm': bool  # used in mcverry
 }
 
 
@@ -211,7 +218,6 @@ class SiteCollection(object):
         arr['lat'] = shakemap_array['lat']
         arr['depth'] = numpy.zeros(n)
         arr['vs30'] = shakemap_array['vs30']
-        arr.flags.writeable = False
         return self
 
     @classmethod  # this is the method used by the engine
@@ -304,8 +310,8 @@ class SiteCollection(object):
         :returns: a filtered SiteCollection with around nsites (if nsites<=N)
         """
         N = len(self.complete)
-        n = N // nsites + 1
-        if n == 1:
+        n = N // nsites
+        if n <= 1:
             return self
         sids, = numpy.where(self.complete.sids % n == 0)
         return self.filtered(sids)
@@ -342,7 +348,7 @@ class SiteCollection(object):
             idx = 0
         return self.filtered([self.sids[idx]])
 
-    # used for debugging purposes
+    # used in preclassical
     def get_cdist(self, rec_or_loc):
         """
         :param rec_or_loc: a record with field 'hypo' or a Point instance
@@ -372,14 +378,6 @@ class SiteCollection(object):
             arr['depth'][i] = sites[i].location.depth
             for p, dt in extra:
                 arr[p][i] = getattr(sites[i], p)
-
-        # protect arrays from being accidentally changed. it is useful
-        # because we pass these arrays directly to a GMPE through
-        # a SiteContext object and if a GMPE is implemented poorly it could
-        # modify the site values, thereby corrupting site and all the
-        # subsequent calculation. note that this doesn't protect arrays from
-        # being changed by calling itemset()
-        arr.flags.writeable = False
 
         # NB: in test_correlation.py we define a SiteCollection with
         # non-unique sites, so we cannot do an
@@ -416,17 +414,33 @@ class SiteCollection(object):
         """True if all depths are zero"""
         return (self.depths == 0).all()
 
-    # used in the engine when computing the hazard statistics
-    def split_in_tiles(self, hint):
+    # used in the engine
+    def split_max(self, max_sites):
         """
-        Split a SiteCollection into a set of tiles (SiteCollection instances).
-
-        :param hint: hint for how many tiles to generate
+        Split a SiteCollection into SiteCollection instances
         """
+        N = len(self)
+        if N < max_sites:  # do not split
+            return [self]
+        hint = int(numpy.ceil(N / max_sites))
         tiles = []
-        for seq in split_in_blocks(range(len(self)), hint or 1):
+        for i in range(hint):
             sc = SiteCollection.__new__(SiteCollection)
-            sc.array = self.array[numpy.array(seq, int)]
+            # smart trick to split in "homogenous" tiles
+            sc.array = self.array[self.sids % hint == i]
+            sc.complete = self
+            tiles.append(sc)
+        return tiles
+
+    def split_in_tiles(self, max_sites):
+        """
+        Split a SiteCollection into a set of tiles with contiguous site IDs
+        """
+        hint = int(numpy.ceil(len(self) / max_sites))
+        tiles = []
+        for sids in numpy.array_split(self.sids, hint):
+            sc = SiteCollection.__new__(SiteCollection)
+            sc.array = self.array[sids]
             sc.complete = self
             tiles.append(sc)
         return tiles

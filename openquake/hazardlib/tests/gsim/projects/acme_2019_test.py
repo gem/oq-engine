@@ -3,7 +3,7 @@ import os
 import numpy as np
 import unittest
 
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import SA
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.projects.acme_2019 import AlAtikSigmaModel
@@ -20,14 +20,14 @@ class AlAtikSigmaModelTest(unittest.TestCase):
         gmm = AlAtikSigmaModel(gmpe_name='BindiEtAl2014Rjb',
                                kappa_file=filename,
                                kappa_val='high')
-        sites = Dummy.get_site_collection(4, vs30=760.)
-        rup = Dummy.get_rupture(mag=6.0)
-        rup.rjb = np.array([1., 10., 30., 70.])
-        rup.vs30 = sites.vs30
-        imt = SA(0.1)
-        stdt = [const.StdDev.TOTAL]
-        mean_expected, stds_expected = gmm.get_mean_and_stddevs(
-            sites, rup, rup, imt, stdt)
+        ctx = contexts.RuptureContext()
+        ctx.mag = 6.0
+        ctx.vs30 = np.array([760.] * 4)
+        ctx.rjb = ctx.rrup = np.array([1., 10., 30., 70.])
+        ctx.hypo_depth = np.array([10., 10., 30., 70.])
+        ctx.rake = np.array([30.] * 4)
+        ctx.sids = np.arange(4)
+        contexts.get_mean_stds(gmm, ctx, [SA(0.1)], truncation_level=0)
 
     def test02(self):
         # checks if gmpe is always being evaluated at vs30=760
@@ -36,20 +36,21 @@ class AlAtikSigmaModelTest(unittest.TestCase):
         gmm = AlAtikSigmaModel(gmpe_name='YenierAtkinson2015ACME2019',
                                kappa_file=filename,
                                kappa_val='high')
-        sites = Dummy.get_site_collection(4, vs30=760.)
-        rup = Dummy.get_rupture(mag=6.0)
-        rup.rjb = np.array([1., 10., 30., 70.])
-        rup.rrup = np.array([1., 10., 30., 70.])
-        rup.vs30 = sites.vs30
+        ctx = contexts.RuptureContext()
+        ctx.mag = 6.0
+        ctx.rjb = ctx.rrup = np.array([1., 10., 30., 70.])
+        ctx.hypo_depth = np.array([10., 10., 30., 70.])
+        ctx.rake = 30.
+        ctx.vs30 = np.array([760.] * 4)
+        ctx.sids = np.arange(4)
         imt = SA(0.1)
-        stdt = [const.StdDev.TOTAL]
-        mean_760, _ = gmm.get_mean_and_stddevs(sites, rup, rup, imt, stdt)
+        mean_760 = contexts.get_mean_stds(
+            gmm, ctx, [imt], truncation_level=0)[0]
 
-        sites2 = Dummy.get_site_collection(4, vs30=1500.)
-        rup.vs30 = sites2.vs30
-        mean_1500, _ = gmm.get_mean_and_stddevs(sites2, rup, rup, imt, stdt)
-
-        self.assertAlmostEqual(mean_760[-1], mean_1500[-1], 4)
+        ctx.vs30 = np.array([1500.] * 4)
+        mean_1500 = contexts.get_mean_stds(
+            gmm, ctx, [imt], truncation_level=0)[0]
+        np.testing.assert_allclose(mean_760, mean_1500)
 
 
 class GetSoFTestCase(unittest.TestCase):

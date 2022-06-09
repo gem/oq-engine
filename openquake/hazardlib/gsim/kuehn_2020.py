@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -360,7 +360,7 @@ def get_shallow_site_response_term(C, region, vs30, pga1100):
         Array of Vs30 values (m/s)
 
     :param numpy ndarray pga1100:
-        Peak ground acceletaion on reference rock (Vs30 1100 m/s)
+        Peak ground acceleration on reference rock (Vs30 1100 m/s)
     """
     # c7 is the same for interface or inslab - so just read from interface
     c_7 = C[REGION_TERMS_IF[region]["c7"]]
@@ -421,7 +421,7 @@ def get_basin_response_term(C, region, vs30, z_value):
     return brt
 
 
-def get_mean_values(C, region, trt, m_b, sites, rup, dists, a1100=None):
+def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
     """
     Returns the mean ground values for a specific IMT
 
@@ -431,23 +431,23 @@ def get_mean_values(C, region, trt, m_b, sites, rup, dists, a1100=None):
     if a1100 is None:
         # Refers to the reference rock case - so Vs30 is 1100 and no a1100
         # is defined
-        vs30 = 1100.0 * np.ones(sites.vs30.shape)
+        vs30 = 1100.0 * np.ones(ctx.vs30.shape)
         a1100 = np.zeros(vs30.shape)
         z_values = np.zeros(vs30.shape)
     else:
-        vs30 = sites.vs30.copy()
+        vs30 = ctx.vs30.copy()
         if region in ("JPN", "CAS"):
-            z_values = sites.z2pt5 * 1000.0
+            z_values = ctx.z2pt5 * 1000.0
         elif region in ("NZL", "TWN"):
-            z_values = sites.z1pt0.copy()
+            z_values = ctx.z1pt0.copy()
         else:
             z_values = np.zeros(vs30.shape)
     # Get the mean ground motions
     mean = (get_base_term(C, trt, region) +
-            get_magnitude_scaling_term(C, trt, m_b, rup.mag) +
-            get_geometric_attenuation_term(C, trt, rup.mag, dists.rrup) +
-            get_anelastic_attenuation_term(C, trt, region, dists.rrup) +
-            get_depth_term(C, trt, rup.ztor) +
+            get_magnitude_scaling_term(C, trt, m_b, ctx.mag) +
+            get_geometric_attenuation_term(C, trt, ctx.mag, ctx.rrup) +
+            get_anelastic_attenuation_term(C, trt, region, ctx.rrup) +
+            get_depth_term(C, trt, ctx.ztor) +
             get_shallow_site_response_term(C, region, vs30, a1100))
 
     # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
@@ -489,13 +489,12 @@ def _retrieve_sigma_mu_data(trt, region):
         "periods": fle["T"][:],
         "PGA":  fle["PGA"][:],
         "PGV": fle["PGV"][:],
-        "SA": fle["SA"][:],
-    }
+        "SA": fle["SA"][:]}
     fle.close()
     return sigma_mu
 
 
-def get_sigma_mu_adjustment(model, imt, rup, dists):
+def get_sigma_mu_adjustment(model, imt, mag, rrup):
     """
     Returns the sigma mu adjustment factor for the given scenario set by
     interpolation from the tables
@@ -505,10 +504,10 @@ def get_sigma_mu_adjustment(model, imt, rup, dists):
         (as output from _retrieve_sigma_mu_data)
     :param imt:
         Intensity measure type
-    :param rup:
-        Rupture properties
-    :param dists:
-        Distance properties
+    :param mag:
+        Magnitude
+    :param rrup:
+        Distances
 
     :returns:
         sigma_mu for the scenarios (numpy.ndarray)
@@ -518,26 +517,26 @@ def get_sigma_mu_adjustment(model, imt, rup, dists):
     if imt.string in "PGA PGV":
         # PGA and PGV are 2D arrays of dimension [nmags, ndists]
         sigma_mu = model[imt.string]
-        if rup.mag <= model["M"][0]:
+        if mag <= model["M"][0]:
             sigma_mu_m = sigma_mu[0, :]
-        elif rup.mag >= model["M"][-1]:
+        elif mag >= model["M"][-1]:
             sigma_mu_m = sigma_mu[-1, :]
         else:
             intpl1 = interp1d(model["M"], sigma_mu, axis=0)
-            sigma_mu_m = intpl1(rup.mag)
+            sigma_mu_m = intpl1(mag)
         # Linear interpolation with distance
         intpl2 = interp1d(model["R"], sigma_mu_m, bounds_error=False,
                           fill_value=(sigma_mu_m[0], sigma_mu_m[-1]))
-        return intpl2(dists.rrup)
+        return intpl2(rrup)
     # In the case of SA the array is of dimension [nmags, ndists, nperiods]
     # Get values for given magnitude
-    if rup.mag <= model["M"][0]:
+    if mag <= model["M"][0]:
         sigma_mu_m = model["SA"][0, :, :]
-    elif rup.mag >= model["M"][-1]:
+    elif mag >= model["M"][-1]:
         sigma_mu_m = model["SA"][-1, :, :]
     else:
         intpl1 = interp1d(model["M"], model["SA"], axis=0)
-        sigma_mu_m = intpl1(rup.mag)
+        sigma_mu_m = intpl1(mag)
     # Get values for period - N.B. ln T, linear sigma mu interpolation
     if imt.period <= model["periods"][0]:
         sigma_mu_t = sigma_mu_m[:, 0]
@@ -548,7 +547,7 @@ def get_sigma_mu_adjustment(model, imt, rup, dists):
         sigma_mu_t = intpl2(np.log(imt.period))
     intpl3 = interp1d(model["R"], sigma_mu_t, bounds_error=False,
                       fill_value=(sigma_mu_t[0], sigma_mu_t[-1]))
-    return intpl3(dists.rrup)
+    return intpl3(rrup)
 
 
 class KuehnEtAl2020SInter(GMPE):
@@ -568,7 +567,7 @@ class KuehnEtAl2020SInter(GMPE):
     - Alaska (USA-AK)
     - Cascadia (CAS)
     - Central America & Mexico (CAM)
-    - Japan (JPM)
+    - Japan (JPN)
     - New Zealand (NZL)
     - South America (SAM)
     - Taiwan (TWN)
@@ -639,8 +638,8 @@ class KuehnEtAl2020SInter(GMPE):
         self.region = region
 
         # For some regions a basin depth term is defined
-        if self.region in ("CAS", "JAP"):
-            # If region is CAS or JAP then the GMPE needs Z2.5
+        if self.region in ("CAS", "JPN"):
+            # If region is CAS or JPN then the GMPE needs Z2.5
             self.REQUIRES_SITES_PARAMETERS = \
                  self.REQUIRES_SITES_PARAMETERS.union({"z2pt5", })
         elif self.region in ("NZL", "TWN"):
@@ -654,12 +653,13 @@ class KuehnEtAl2020SInter(GMPE):
         # epsilon for epistemic uncertainty
         self.sigma_mu_epsilon = sigma_mu_epsilon
         if self.sigma_mu_epsilon:
+            self.gmpe_table = True  # enable split by mag
             self.sigma_mu_model = _retrieve_sigma_mu_data(
                 self.DEFINED_FOR_TECTONIC_REGION_TYPE, self.region)
         else:
             self.sigma_mu_model = {}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -677,8 +677,8 @@ class KuehnEtAl2020SInter(GMPE):
         C_PGA = self.COEFFS[PGA()]
 
         # Get PGA on rock
-        pga1100 = np.exp(get_mean_values(C_PGA, self.region, trt, m_b,
-                                         ctx, ctx, ctx, None))
+        pga1100 = np.exp(get_mean_values(
+            C_PGA, self.region, trt, m_b, ctx, None))
         # For PGA and SA ( T <= 0.1 ) we need to define PGA on soil to
         # ensure that SA ( T ) does not fall below PGA on soil
         pga_soil = None
@@ -686,32 +686,33 @@ class KuehnEtAl2020SInter(GMPE):
             if ("PGA" in imt.string) or (("SA" in imt.string) and
                                          (imt.period <= 0.1)):
                 pga_soil = get_mean_values(C_PGA, self.region, trt, m_b,
-                                           ctx, ctx, ctx, pga1100)
+                                           ctx, pga1100)
                 break
 
         for m, imt in enumerate(imts):
-            # Get coefficinets for imt
+            # Get coefficients for imt
             C = self.COEFFS[imt]
-            m_break = m_b + C["dm_b"] if trt == const.TRT.SUBDUCTION_INTERFACE\
-                else m_b
-
+            m_break = m_b + C["dm_b"] if (
+                trt == const.TRT.SUBDUCTION_INTERFACE and
+                self.region in ("JPN", "SAM")) else m_b
             if imt.string == "PGA":
                 mean[m] = pga_soil
-            elif ("SA" in imt.string) and (imt.period <= 0.1):
+            elif "SA" in imt.string and imt.period <= 0.1:
                 # If Sa (T) < PGA for T <= 0.1 then set mean Sa(T) to mean PGA
                 mean[m] = get_mean_values(C, self.region, trt, m_break,
-                                          ctx, ctx, ctx, pga1100)
+                                          ctx, pga1100)
                 idx = mean[m] < pga_soil
                 mean[m][idx] = pga_soil[idx]
             else:
                 # For PGV and Sa (T > 0.1 s)
                 mean[m] = get_mean_values(C, self.region, trt, m_break,
-                                          ctx, ctx, ctx, pga1100)
+                                          ctx, pga1100)
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
-                sigma_mu_adjust = get_sigma_mu_adjustment(self.sigma_mu_model,
-                                                          imt, ctx, ctx)
-                mean[m] += (self.sigma_mu_epsilon * sigma_mu_adjust)
+                [mag] = np.unique(np.round(ctx.mag, 2))
+                sigma_mu_adjust = get_sigma_mu_adjustment(
+                    self.sigma_mu_model, imt, mag, ctx.rrup)
+                mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
             # Get standard deviations
             tau[m] = C["tau"]
             phi[m] = C["phi"]

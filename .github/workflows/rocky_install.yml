@@ -1,0 +1,75 @@
+name: Install OQ engine on RockyLinux OS
+
+on:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
+  schedule:
+    - cron: "0 9 * * *"
+
+jobs:
+
+  install_and_test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PULL_REQUEST: ${{ github.event.number }}
+      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+      GITHUB_REF:  ${{ github.ref }}
+      GITHUB_HD_REF:  ${{ github.head_ref }}
+      GITHUB_BS_REF:  ${{ github.base_ref }}
+        #more $GITHUB_EVENT_PATH
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9]
+        #container: ["rockylinux:8", "ubuntu:focal"]
+        container: ["rockylinux:8"]
+
+    container:
+      image: ${{ matrix.container }}
+
+    steps:
+  # This Checkout use git-ref keyword from dispatch
+    - name: Clone Repository (Master)
+      uses: actions/checkout@v2
+      if: github.event.inputs.git-ref == ''
+    - name: Clone Repository (Custom Ref)
+      uses: actions/checkout@v2
+      if: github.event.inputs.git-ref != ''
+      with:
+        ref: ${{ github.event.inputs.git-ref }}
+    - name: Set up Python  ${{ matrix.python-version }} 
+      run: |
+        pyver=`echo ${{ matrix.python-version }} | tr -d .`
+        dnf update -y
+        dnf install -y python${pyver}
+        #check version of python
+        echo "check version of python"
+        pip3 -V
+        python3 -c "import sys; print(sys.version)"
+        #
+    - name: Install engine with install script
+      env:
+        BRANCH: ${{ github.event.inputs.git-ref }}
+      run: |
+        export PIP_DEFAULT_TIMEOUT=100
+        #
+        pip3 install --default-timeout=100 -U pip wheel setuptools
+        echo "branch to test: ${BRANCH}"
+        if [[ "$BRANCH" != "" ]]
+        then
+          python3 install.py devel_server --version ${BRANCH}
+        else
+          python3 install.py devel_server
+        fi
+    - name: Run tests
+      run: |
+        source /opt/openquake/venv/bin/activate
+        pip install pytest
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
+        export PYTEST_ADDOPTS="--color=yes"
+        # set owner to openquake to run test and create cache for pytest
+        chown -R openquake /__w/oq-engine/
+        runuser -l openquake -c '/opt/openquake/venv/bin/pytest -vsx /__w/oq-engine/oq-engine/openquake/calculators'

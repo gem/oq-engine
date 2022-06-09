@@ -1,10 +1,10 @@
-#,,,"generated_by='OpenQuake engine 3.13.0-git8b4507e4e6', start_date='2021-09-30T07:52:21', checksum=3590982611"
+#,,,"generated_by='OpenQuake engine 3.13.0-gita0a31866cb', start_date='2021-10-07T08:08:28', checksum=3590982611"
 event_id,moderate,complete,loss_type
-0,5.76236E+00,4.74956E+00,structural
-1,4.68805E+00,4.41489E-01,structural
-2,2.60818E+00,9.31064E-01,structural
-3,5.10363E+00,5.37440E+00,structural
-4,1.89634E+00,3.03533E+00,structural
-5,3.00487E+00,7.66755E+00,structural
-6,4.20566E+00,1.74977E+00,structural
-7,4.35956E-03,1.59563E+00,structural
+0,5.27038E+00,3.87978E+00,structural
+1,4.20043E+00,3.97339E-01,structural
+2,3.70981E+00,1.41608E+00,structural
+3,4.18599E+00,5.95369E+00,structural
+4,2.00332E+00,3.22586E+00,structural
+5,2.56320E+00,7.92798E+00,structural
+6,3.00551E+00,1.59122E+00,structural
+7,4.63203E-03,1.69536E+00,structural

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,6 +32,7 @@ import shapely.geometry
 from shapely.strtree import STRtree
 
 from openquake.baselib.hdf5 import vstr
+from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import geodetic
 
 U32 = numpy.uint32
@@ -47,6 +48,42 @@ BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
 
 class BBoxError(ValueError):
     """Bounding box too large"""
+
+
+class PolygonPlotter(object):
+    """
+    Add polygons to a given axis object
+    """
+    def __init__(self, ax):
+        self.ax = ax
+        self.minxs = []
+        self.maxxs = []
+        self.minys = []
+        self.maxys = []
+
+    def add(self, poly, **kw):
+        from openquake.hmtk.plotting.patch import PolygonPatch
+        minx, miny, maxx, maxy = poly.bounds
+        self.minxs.append(minx)
+        self.maxxs.append(maxx)
+        self.minys.append(miny)
+        self.maxys.append(maxy)
+        try:
+            self.ax.add_patch(PolygonPatch(poly, **kw))
+        except ValueError:  # LINESTRING, not POLYGON
+            pass
+
+    def set_lim(self, xs=(), ys=()):
+        if len(xs):
+            self.minxs.append(min(xs))
+            self.maxxs.append(max(xs))
+        if len(ys):
+            self.minys.append(min(ys))
+            self.maxys.append(max(ys))
+        if self.minxs and self.maxxs:
+            self.ax.set_xlim(min(self.minxs), max(self.maxxs))
+        if self.minys and self.maxys:
+            self.ax.set_ylim(min(self.minys), max(self.maxys))
 
 
 def angular_distance(km, lat=0, lat2=None):
@@ -460,6 +497,9 @@ class OrthographicProjection(object):
     """
     @classmethod
     def from_lons_lats(cls, lons, lats):
+        idx = numpy.isfinite(lons)
+        lons = lons[idx]
+        lats = lats[idx]
         return cls(*get_spherical_bounding_box(lons, lats))
 
     def __init__(self, west, east, north, south):
@@ -474,6 +514,7 @@ class OrthographicProjection(object):
         self.sin_pi_over_4 = (2 ** 0.5) / 2
 
     def __call__(self, lons, lats, reverse=False):
+        assert not numpy.isnan(lons).any(), lons
         if not reverse:
             lambdas, phis = numpy.radians(lons), numpy.radians(lats)
             cos_phis = numpy.cos(phis)
@@ -530,25 +571,39 @@ def get_middle_point(lon1, lat1, lon2, lat2):
     return geodetic.point_at(lon1, lat1, azimuth, dist / 2.0)
 
 
-def cartesian_to_spherical(vectors):
+@compile("f8[:,:](f8[:,:])")
+def cartesian_to_spherical(arrayN3):
     """
     Return the spherical coordinates for coordinates in Cartesian space.
 
     This function does an opposite to :func:`spherical_to_cartesian`.
 
-    :param vectors:
-        Array of 3d vectors in Cartesian space of shape (..., 3)
+    :param arrayN3:
+        Array of cartesian coordinates of shape (N, 3)
     :returns:
-        Tuple of three arrays of the same shape as ``vectors`` representing
-        longitude (decimal degrees), latitude (decimal degrees) and depth (km)
-        in specified order.
+        Array of shape (3, N) representing longitude (decimal degrees),
+        latitude (decimal degrees) and depth (km) in specified order.
     """
-    rr = numpy.sqrt(numpy.sum(vectors * vectors, axis=-1))
-    xx, yy, zz = vectors.T
-    lats = numpy.degrees(numpy.arcsin((zz / rr).clip(-1., 1.)))
-    lons = numpy.degrees(numpy.arctan2(yy, xx))
-    depths = EARTH_RADIUS - rr
-    return lons.T, lats.T, depths
+    out = numpy.zeros_like(arrayN3)
+    rr = numpy.sqrt(numpy.sum(arrayN3 * arrayN3, axis=-1))
+    xx, yy, zz = arrayN3.T
+    out[:, 0] = numpy.degrees(numpy.arctan2(yy, xx))
+    out[:, 1] = numpy.degrees(numpy.arcsin(numpy.clip(zz / rr, -1., 1.)))
+    out[:, 2] = EARTH_RADIUS - rr
+    return out.T  # shape (3, N)
+
+
+@compile("f8(f8[:], f8[:, :])")
+def min_distance(xyz, xyzs):
+    """
+    :param xyz: an array of shape (3,)
+    :param xyzs: an array of shape (N, 3)
+    :returns: the minimum euclidean distance between the point and the points
+    """
+    x, y, z = xyz
+    xs, ys, zs = xyzs.T
+    d2 = (xs-x)**2 + (ys-y)**2 + (zs-z)**2
+    return math.sqrt(d2.min())
 
 
 def triangle_area(e1, e2, e3):

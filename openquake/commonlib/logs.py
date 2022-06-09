@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2021 GEM Foundation
+# Copyright (C) 2010-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,12 +20,12 @@ Set up some system-wide loggers
 """
 import os
 import re
-import socket
 import getpass
 import logging
 import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel
+from openquake.hazardlib import valid
 from openquake.commonlib import readinput
 
 LEVELS = {'debug': logging.DEBUG,
@@ -34,7 +34,7 @@ LEVELS = {'debug': logging.DEBUG,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
+DATABASE = os.environ.get('OQ_DATABASE') or '%s:%d' % valid.host_port()
 
 
 def dbcmd(action, *args):
@@ -44,9 +44,7 @@ def dbcmd(action, *args):
     :param string action: database action to perform
     :param tuple args: arguments
     """
-    host = socket.gethostbyname(config.dbserver.host)
-    sock = zeromq.Socket(
-        'tcp://%s:%s' % (host, DBSERVER_PORT), zeromq.zmq.REQ, 'connect')
+    sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect')
     with sock:
         res = sock.send((action,) + args)
         if isinstance(res, parallel.Result):
@@ -64,7 +62,10 @@ def get_datadir():
     if not datadir:
         shared_dir = config.directory.shared_dir
         if shared_dir:
-            datadir = os.path.join(shared_dir, getpass.getuser(), 'oqdata')
+            user = getpass.getuser()
+            # special case for /opt/openquake/openquake -> /opt/openquake
+            datadir = os.path.join(shared_dir, user, 'oqdata').replace(
+                'openquake/openquake', 'openquake')
         else:  # use the home of the user
             datadir = os.path.join(os.path.expanduser('~'), 'oqdata')
     return datadir
@@ -155,19 +156,20 @@ class LogContext:
     Context manager managing the logging functionality
     """
     multi = False
+    oqparam = None
 
-    def __init__(self, job_ini, job=True, log_level='info', log_file=None,
+    def __init__(self, job_ini, calc_id, log_level='info', log_file=None,
                  user_name=None, hc_id=None):
-        self.job = job
         self.log_level = log_level
         self.log_file = log_file
-        self.user_name = user_name
+        self.user_name = user_name or getpass.getuser()
         if isinstance(job_ini, dict):  # dictionary of parameters
             self.params = job_ini
         else:  # path to job.ini file
             self.params = readinput.get_params(job_ini)
-        self.params['hazard_calculation_id'] = hc_id
-        if job:
+        if hc_id:
+            self.params['hazard_calculation_id'] = hc_id
+        if calc_id == 0:
             self.calc_id = dbcmd(
                 'create_job',
                 get_datadir(),
@@ -175,14 +177,19 @@ class LogContext:
                 self.params['description'],
                 user_name,
                 hc_id)
-        else:
+        elif calc_id == -1:
             # only works in single-user situations
             self.calc_id = get_last_calc_id() + 1
+        else:
+            # assume the calc_id was alreay created in the db
+            self.calc_id = calc_id
 
     def get_oqparam(self):
         """
         :returns: a validated OqParam instance
         """
+        if self.oqparam:  # set by submit_job
+            return self.oqparam
         return readinput.get_oqparam(self.params)
 
     def __enter__(self):
@@ -193,9 +200,7 @@ class LogContext:
         for handler in logging.root.handlers:
             fmt = logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S')
             handler.setFormatter(fmt)
-        self.handlers = []
-        if self.job:
-            self.handlers.append(LogDatabaseHandler(self.calc_id))
+        self.handlers = [LogDatabaseHandler(self.calc_id)]
         if self.log_file is None:
             # add a StreamHandler if not already there
             if not any(h for h in logging.root.handlers
@@ -208,21 +213,20 @@ class LogContext:
         return self
 
     def __exit__(self, etype, exc, tb):
-        if self.job:
-            if tb:
-                logging.critical(traceback.format_exc())
-                dbcmd('finish', self.calc_id, 'failed')
-            else:
-                dbcmd('finish', self.calc_id, 'complete')
+        if tb:
+            logging.critical(traceback.format_exc())
+            dbcmd('finish', self.calc_id, 'failed')
+        else:
+            dbcmd('finish', self.calc_id, 'complete')
         for handler in self.handlers:
             logging.root.removeHandler(handler)
         parallel.Starmap.shutdown()
 
     def __getstate__(self):
         # ensure pickleability
-        return dict(calc_id=self.calc_id, job=self.job, params=self.params,
+        return dict(calc_id=self.calc_id, params=self.params,
                     log_level=self.log_level, log_file=self.log_file,
-                    user_name=self.user_name)
+                    user_name=self.user_name, oqparam=self.oqparam)
 
     def __repr__(self):
         hc_id = self.params.get('hazard_calculation_id')
@@ -233,7 +237,7 @@ class LogContext:
 def init(job_or_calc, job_ini, log_level='info', log_file=None,
          user_name=None, hc_id=None):
     """
-    :param job_or_calc: the string "job" or "calc"
+    :param job_or_calc: the string "job" or "calcXXX"
     :param job_ini: path to the job.ini file or dictionary of parameters
     :param log_level: the log level as a string or number
     :param log_file: path to the log file (if any)
@@ -246,6 +250,12 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
     3. create a job in the database if job_or_calc == "job"
     4. return a LogContext instance associated to a calculation ID
     """
-    assert job_or_calc in {"job", "calc"}, job_or_calc
-    return LogContext(job_ini, job_or_calc == "job",
-                      log_level, log_file, user_name, hc_id)
+    if job_or_calc == "job":
+        calc_id = 0
+    elif job_or_calc == "calc":
+        calc_id = -1
+    elif job_or_calc.startswith("calc"):
+        calc_id = int(job_or_calc[4:])
+    else:
+        raise ValueError(job_or_calc)
+    return LogContext(job_ini, calc_id, log_level, log_file, user_name, hc_id)

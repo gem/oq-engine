@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2021 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
+# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can
 # redistribute it and/or modify it under the terms of the GNU Affero General
@@ -100,7 +100,7 @@ def _get_exponential_spaced_values(mmin, mmax, number_samples):
 
 @MAX_MAGNITUDE_METHODS.add(
     "get_mmax",
-    number_earthquakes=np.float,
+    number_earthquakes=float,
     number_samples=51,
     maximum_iterations=100,
     tolerance=0.05)
@@ -145,7 +145,7 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
         if n_evts <= config['number_earthquakes']:
             # Catalogue smaller than number of required events
             mag = np.copy(catalogue.data['magnitude'])
-            neq = np.float(np.shape(mag)[0])
+            neq = float(np.shape(mag)[0])
         else:
             # Select number_eqs largest events
             mag = np.sort(catalogue.data['magnitude'], kind='quicksort')
@@ -188,7 +188,7 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
         :returns:
             Smoothing coefficient (h) (float)
         '''
-        neq = np.float(len(mag))
+        neq = float(len(mag))
 
         # Calculate inter-quartile range
         qtiles = mquantiles(mag, prob=[0.25, 0.75])

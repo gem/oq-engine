@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -747,6 +747,8 @@ def write_source_model(dest, sources_or_groups, name=None,
     :returns:
         the list of generated filenames
     """
+    # first a sanity check, only a SourceModel or a sequence are accepted
+    assert isinstance(sources_or_groups, (nrml.SourceModel, list, tuple))
     if isinstance(sources_or_groups, nrml.SourceModel):
         groups = sources_or_groups.src_groups
         attrs = dict(name=sources_or_groups.name,

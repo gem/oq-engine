@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2021 GEM Foundation
+# Copyright (C) 2018-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -137,7 +137,7 @@ def check_required_imts(required_imts, available_imts):
     if missing:
         msg = ('The IMT %s is required but not in the available set %s, '
                'please change the risk model otherwise you will have '
-               'incorrect zero losses for the associated taxonomies' %
+               'incorrect zero losses for the associated taxonomy strings' %
                (missing.pop(), ', '.join(available_imts)))
         raise RuntimeError(msg)
 
