@@ -60,9 +60,9 @@ jobs:
         echo "branch to test: ${BRANCH}"
         if [[ "$BRANCH" != "" ]] 
         then
-          python install.py devel --version ${BRANCH}
+          sudo -H python install.py devel_server --version ${BRANCH}
         else
-          python install.py devel 
+          sudo -H python install.py devel_server
         fi
     - name: Run tests
       run: |
