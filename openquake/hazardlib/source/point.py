@@ -226,7 +226,7 @@ class PointSource(ParametricSeismicSource):
             return self.radius[-1]  # max radius
         if isinstance(self.magnitude_scaling_relationship, PointMSR):
             M = len(self.get_annual_occurrence_rates())
-            self.radius = numpy.full(M, self.ps_grid_spacing * 0.707)
+            self.radius = numpy.zeros(M)
             return self.radius[-1]
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         npd = self.nodal_plane_distribution.data
@@ -234,8 +234,7 @@ class PointSource(ParametricSeismicSource):
         for m, planin in enumerate(self.get_planin(magd, npd)):
             rup_length, rup_width, _ = planin.dims.max(axis=0)  # (N, 3) => 3
             # the projection radius is half of the rupture diagonal
-            self.radius[m] = (math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
-                              + self.ps_grid_spacing * 0.707)
+            self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius[-1]  # max radius
 
     def get_planar(self, shift_hypo=False, iruptures=False):
@@ -341,7 +340,8 @@ class PointSource(ParametricSeismicSource):
         Bounding box of the point, enlarged by the maximum distance
         """
         radius = self._get_max_rupture_projection_radius()
-        return get_bounding_box([self.location], maxdist + radius)
+        return get_bounding_box([self.location], maxdist + radius +
+                                self.ps_grid_spacing)
 
     def wkt(self):
         """
