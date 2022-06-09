@@ -200,3 +200,11 @@ The lowest weight is 142_564, corresponding to a ``ps_grid_spacing``
 of 40km; since the weight is 13.5 times smaller than the weight for
 the full calculation (1_929_504), this is the maximum speedup that we
 can expect from using the approximation.
+
+Note 1: the weighting algorithm changes at every release, so only relative
+weights at a fixed release are meaningful. You should not expect to get
+the same weight across engine releases.
+
+Note 2: the precision and performance of the ``ps_grid_spacing`` approximation
+change at every release: you should not expect to get the same numbers and
+performance across releases for the same model with the same parameters.
