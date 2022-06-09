@@ -736,7 +736,9 @@ def _check_csm(csm, oqparam, h5):
     lons = []
     lats = []
     for src in srcs:
-        if hasattr(src, 'location'):  # ignoring point sources
+        if hasattr(src, 'location'):
+            lons.append(src.location.x)
+            lats.append(src.location.y)
             continue
         try:
             box = srcfilter.get_enlarged_box(src)
@@ -747,8 +749,6 @@ def _check_csm(csm, oqparam, h5):
         lats.append(box[1])
         lons.append(box[2])
         lats.append(box[3])
-    if not lons:
-        return
     if cross_idl(*(list(sitecol.lons) + lons)):
         lons = numpy.array(lons) % 360
     else:
@@ -758,6 +758,9 @@ def _check_csm(csm, oqparam, h5):
         raise BBoxError(
             'The bounding box of the sources is larger than half '
             'the globe: %d degrees' % (bbox[2] - bbox[0]))
+    sids = sitecol.within_bbox(bbox)
+    if len(sids) == 0:
+        raise RuntimeError('All sources were discarded!?')
 
 
 def get_composite_source_model(oqparam, h5=None, branchID=None):
