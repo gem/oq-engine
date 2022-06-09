@@ -752,7 +752,8 @@ class ContextMaker(object):
                 mag = rup.mag
                 arr = [rup.surface.array.reshape(-1, 3)]
                 pla = planardict[mag]
-                psdist = self.pointsource_distance + src.radius[m]
+                psdist = (self.pointsource_distance + src.ps_grid_spacing +
+                          src.radius[m])
                 close = sitecol.filter(cdist <= psdist)
                 far = sitecol.filter(cdist > psdist)
                 if self.fewsites:
@@ -1069,7 +1070,8 @@ class ContextMaker(object):
         for m, (mag, [planar]) in enumerate(planardict.items()):
             dists = project(planar, sites.xyz)[0, 0]  # shape N
             rrup = dists[dists < self.maximum_distance(mag)]
-            nclose = (rrup < self.pointsource_distance + src.radius[m]).sum()
+            nclose = (rrup < self.pointsource_distance + src.ps_grid_spacing +
+                      src.radius[m]).sum()
             nfar = len(rrup) - nclose
             esites += nclose * nphc + nfar
         return esites

@@ -56,7 +56,7 @@ class Comparator(object):
         for ex in self.extractors:
             time = ex.get('performance_data')['time_sec'].sum()
             data.append((ex.calc_id, time))
-        print(views.text_table(data, ['calc_id', 'time']))
+        print(views.text_table(data, ['calc_id', 'time'], ext='org'))
 
     def getsids(self, samplesites):
         sids = self.sitecol['sids']
@@ -162,10 +162,10 @@ class Comparator(object):
             fdict = {ex.calc_id: open('%s.txt' % ex.calc_id, 'w')
                      for ex in self.extractors}
             for calc_id, f in fdict.items():
-                f.write(views.text_table(rows[calc_id], header))
+                f.write(views.text_table(rows[calc_id], header, ext='org'))
                 print('Generated %s' % f.name)
         else:
-            print(views.text_table(rows['all'], header))
+            print(views.text_table(rows['all'], header, ext='org'))
         return arrays
 
 
@@ -200,7 +200,8 @@ def compare_uhs(calc_ids: int, files=False, *, poe_id: int = 0,
         delta = numpy.abs(arrays[0] - arrays[1]).max(axis=1)
         amax = delta.argmax()
         row = ('%.5f' % c.oq.poes[poe_id], rms, delta[amax], amax)
-        print(views.text_table([row], ['poe', 'rms-diff', 'max-diff', 'site']))
+        print(views.text_table([row], ['poe', 'rms-diff', 'max-diff', 'site'],
+                               ext='org'))
 
 
 def compare_hmaps(imt, calc_ids: int, files=False, *,
@@ -215,7 +216,8 @@ def compare_hmaps(imt, calc_ids: int, files=False, *,
         maxdiff = numpy.abs(arrays[0] - arrays[1]).max(axis=0)  # P
         rows = [(str(poe), rms, md) for poe, rms, md in zip(
             c.oq.poes, numpy.sqrt(ms), maxdiff)]
-        print(views.text_table(rows, ['poe', 'rms-diff', 'max-diff']))
+        print(views.text_table(rows, ['poe', 'rms-diff', 'max-diff'],
+                               ext='org'))
 
 
 def compare_hcurves(imt, calc_ids: int, files=False, *,
