@@ -1,11 +1,5 @@
 #!/usr/bin/env python
 # coding: utf-8
-
-# In[1]:
-
-
-# -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
 # Copyright (C) 2014-2021 GEM Foundation
 #
@@ -38,13 +32,12 @@ MEAN_DISCREP = 0.1
 
 class BahrampouriEtAl2021IAAscTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BahrampouriEtAl2021Asc
-   
-    MEAN_FILE = "BMG20/BMG20_AI_ASC_mean_new.csv"
-    TOTAL_FILE = "BMG20/BMG20_AI_ASC_TOTAL_new.csv"
-    INTRA_FILE = "BMG20/BMG20_AI_ASC_INTRA_new.csv"
+    MEAN_FILE = "BMG20/BMG20_AI_ASC_mean.csv"
+    TOTAL_FILE = "BMG20/BMG20_AI_ASC_TOTAL.csv"
+    INTRA_FILE = "BMG20/BMG20_AI_ASC_INTRA.csv"
 
     def test_all(self):
-        self.check(self.MEAN_FILE,self.TOTAL_FILE,self.INTRA_FILE,   max_discrep_percentage=MEAN_DISCREP) # 
+        self.check( self.MEAN_FILE, self.TOTAL_FILE,self.INTRA_FILE,  max_discrep_percentage=MEAN_DISCREP) # self.TOTAL_FILE,self.INTRA_FILE,
 
 
 # # In[2]:
@@ -60,9 +53,9 @@ MEAN_DISCREP = 0.1
 class BahrampouriEtAl2021IAInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BahrampouriEtAl2021SInter
     
-    MEAN_FILE = "BMG20/BMG20_AI_SInter_mean_new.csv"
-    TOTAL_FILE = "BMG20/BMG20_AI_SInter_TOTAL_new.csv"
-    INTRA_FILE = "BMG20/BMG20_AI_SInter_INTRA_new.csv"
+    MEAN_FILE = "BMG20/BMG20_AI_SInter_mean.csv"
+    TOTAL_FILE = "BMG20/BMG20_AI_SInter_TOTAL.csv"
+    INTRA_FILE = "BMG20/BMG20_AI_SInter_INTRA.csv"
 
     def test_all(self):
         self.check(self.MEAN_FILE, self.TOTAL_FILE, self.INTRA_FILE, max_discrep_percentage=MEAN_DISCREP) # 
@@ -81,9 +74,9 @@ MEAN_DISCREP = 0.1
 class BahrampouriEtAl2021IATestSlabCase(BaseGSIMTestCase):
     GSIM_CLASS = BahrampouriEtAl2021SSlab
  
-    MEAN_FILE = "BMG20/BMG20_AI_SSlab_mean_new.csv"
-    TOTAL_FILE = "BMG20/BMG20_AI_SSlab_TOTAL_new.csv"
-    INTRA_FILE = "BMG20/BMG20_AI_SSlab_INTRA_new.csv"
+    MEAN_FILE = "BMG20/BMG20_AI_SSlab_mean.csv"
+    TOTAL_FILE = "BMG20/BMG20_AI_SSlab_TOTAL.csv"
+    INTRA_FILE = "BMG20/BMG20_AI_SSlab_INTRA.csv"
 
     def test_all(self):
         self.check(self.MEAN_FILE, self.TOTAL_FILE,self.INTRA_FILE,  max_discrep_percentage=MEAN_DISCREP)

@@ -19,21 +19,19 @@ from math import sin, cos, sqrt, atan2, radians
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo import Point
 import pandas as pd
+import shapely.geometry as sg
+from shapely.geometry import LineString
 
 
-# In[3]:
 # coordinates from the author
-##Kyushu - VOLCANIC_FRONT_KI_LATS 
-x2 = np.array([27.250, 28.800, 30.433, 32.767, 33.567, 34.367])
-##VOLCANIC_FRONT_KI_LONS 
-y2 = np.array([127.067, 128.983, 130.217, 130.817, 131.600, 131.850])
-##Honshu - VOLCANIC_FRONT_HHI_LATS 
-x3 = np.array([45.417, 44.450, 43.683, 43.600, 43.500, 43.400, 42.050, 41.267, 40.450, 
-               39.033, 37.733, 36.600, 35.383, 33.133, 30.483, 28.317, 25.417])
-
-##VOLCANIC_FRONT_HHI_LONS 
-y3 = np.array([148.583, 146.917, 144.717, 144.017, 142.683, 141.517, 140.667, 141.117,
-               141.000, 140.583, 140.133, 138.367, 138.733, 139.750, 140.300, 140.567, 141.267])
+##Kyushu - VOLCANIC_FRONT
+kyushu = LineString([(127.067,27.250), (128.983,28.800), (130.217,30.433), (130.817,32.767), (131.600,33.567), 
+                    (131.850,34.367)])
+##Honshu - VOLCANIC_FRONT
+honshu = LineString([(148.583, 45.417), (146.917,44.450), (144.717,43.683), (144.017,43.600),(142.683,43.500),
+                    (141.517,43.400), (140.667,42.050), (141.117,41.267), (141.000,40.450), (140.583,39.033),
+                    (140.133,37.733), (138.367,36.600), (138.733,35.383), (139.750,33.133), (140.300, 30.483), 
+                    (140.567,28.317), (141.267,25.417)])
 
 
 def _compute_magnitude(ctx, C, trt):
@@ -58,10 +56,6 @@ def _compute_magnitude(ctx, C, trt):
             fsource = C['a1'] + (C['a2'] * m) + (C['a3'] * max((m - C['a4']),0 )) +(C['a5'] * max((z - C['a6']),0 ))+ (C['a7'] * np.log((z)+1)) +(C['a8'] * Finter)
     return fsource
 
-
-# In[4]:
-
-
 def _get_source_saturation_term (ctx, C):
     """
     compute the near source saturation as described in Eq. 11. This is common for all the TRTs
@@ -69,17 +63,14 @@ def _get_source_saturation_term (ctx, C):
     h = b9 + b10*(M - b7)+b11*(M - b7)**2+b12*(M - b7)**3 ...b7< M <= b8
     h = b13 + b14*(M - b8).....M>b8``
     """
+
     h = C['b13'] + (C['b14'] * (ctx.mag - C['b8']))
     above = ctx.mag <= C['b7']
-    h[tuple(above)] = C['b5'] + C['b6'] * (ctx.mag[tuple(above)]-C['b7'])
+    h[above] = C['b5'] + C['b6'] * (ctx.mag[above]-C['b7'])
     below = [(ctx.mag < C['b7']) & (ctx.mag <= C['b8'])]
-    h[tuple(below)] = C['b9'] + (C['b10']*(ctx.mag[tuple(below)]-C['b7']))+(C['b11']*(ctx.mag[tuple(below)]-C['b7'])**2) + (C['b12']*(ctx.mag[tuple(below)]-C['b7'])**3)
+    h[below] = C['b9'] + (C['b10']*(ctx.mag[below]-C['b7']))+(C['b11']*(ctx.mag[below]-C['b7'])**2) + (C['b12']*(ctx.mag[below]-C['b7'])**3)
         
     return h
-    
-
-
-# In[5]:
 
 
 def _get_site_term(ctx, C):
@@ -90,10 +81,6 @@ def _get_site_term(ctx, C):
     """
     fsite = C['c1']*np.log(ctx.vs30)
     return fsite
-
-
-# In[6]:
-
 
 def _get_stddevs(C):
     """
@@ -106,103 +93,44 @@ def _get_stddevs(C):
     phi = np.sqrt(C['phi_ss']**2 +C['phi_s2s']**2)
     return sig, tau, phi
 
+def _check_cm_ck(kyushu, honshu, ctx):
 
-# In[1]:
+    # return np.array([poly.contains(p) for p in array])
+    tmp = np.array([kyushu.crosses(LineString([(hypo_lon, hypo_lat), (lon,lat)])) 
+          for hypo_lon, hypo_lat,lon,lat in zip(ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)])
+    tmp_1 = np.array([honshu.crosses(LineString([(hypo_lon, hypo_lat), (lon,lat)])) 
+            for hypo_lon, hypo_lat,lon,lat in zip(ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)])
+    ck = tmp.astype(int)
+    cm = tmp_1.astype(int)
+    return cm, ck
 
-def _compute_forearc_distances(x_values, site_distance, volcano_trace, dist):
-    ## tracing on the volcanic arc from lower lat to higher lat, the sites on the right belong to forearc
-#     
-    under_curve = site_distance < volcano_trace
+def _compute_volcanic_distances(ctx,kyushu, honshu):
+    cm, ck = _check_cm_ck(kyushu, honshu, ctx)
+    buffer_region  = honshu.buffer(-3.0, single_sided=True)##backarc
+    buffer_region_1 = kyushu.buffer(-3.0, single_sided=True)##forearc
 
-    ### to calculate rrup in the forearc region
-    if under_curve.all():
-        lat1 = radians(x_values[under_curve][0])
-        lon1 = radians(site_distance[under_curve][0])
-        lat2 = radians(x_values[under_curve][-1])
-        lon2 = radians(site_distance[under_curve][-1])
-
-        # approximate radius of earth in km
-        R = 6373.0
-        dlon = lon2 - lon1
-        dlat = lat2 - lat1
-
-        a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
-        c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-        r2 = np.round(R * c, 1) ##forearc
-        r1 = np.round(dist - r2, 1)##backarc
-    else:
-        r2 = 0
-        r1 = dist
-    return r1, r2
-
-
-def _interpolation (x1, x2, f1, f2):
-    x_interp = np.linspace(max(x1.min(), x2.min()), min(x1.max(), x2.max()), 100) ## common x values
-    y1_interp = f1(x_interp) ## rupture distance
-    y2_interp = f2(x_interp) ## volcano
-    return x_interp, y1_interp, y2_interp
-
-def _get_intersection(ctx):
-
-    f2 = interp1d(x2, y2, kind = 'linear', bounds_error=False, fill_value='extrapolate')
-    f3 = interp1d(x3, y3, kind = 'linear', bounds_error=False, fill_value='extrapolate')
-
-    
-    rrup_b=np.array([])
-    rrup_f=np.array([])
-    for i, (dist, lo, la) in enumerate(zip(ctx.rrup,ctx.hypo_lon, ctx.hypo_lat)):
-        hypoc = Point(lo, la, 0)  
-
-        y1, x1, deps = npoints_towards(lon=hypoc.longitude, 
-                                   lat=hypoc.latitude, depth=0, 
-                                   azimuth=45, hdist=dist, vdist=0, 
-                                   npoints=dist/5)
-        f1 = interp1d(x1, y1, kind = 'linear', bounds_error=False, fill_value='extrapolate')
-    
-
-        index = np.where(np.logical_and(x1 >= f2.x.min(), x1<= f2.x.max())) ## checking interpolation range
-        index_new = np.where(np.logical_and(x1 >= f3.x.min(), x1<= f3.x.max()))
-        if len(index) & len(index_new) ==0: ## for sites not in the volcanic region
-            idx = 0
-            rrup_b = 0
-            rrup_f = 0
-        if len(index) != 0:
-        ##stage 1 - checking if the site is near Kyushu volcanic arc
-            x_interp, y1_interp, y2_interp = _interpolation(x1, x2, f1, f2)
-            idx = np.argwhere(np.diff(np.sign(y1_interp - y2_interp))).flatten()
-            rrup_b_1, rrup_f_1 = _compute_forearc_distances(x_interp, y1_interp, y2_interp, dist)
-
-            if len(idx) == 0: ## if no intersection with Kyushu volcanic arc
-            ##stage 2 - checking if the site is intersecting with the honshu voclanic arc
-                x_interp, y1_interp, y3_interp = _interpolation(x1, x3, f1, f3)
-                idx_new = np.argwhere(np.diff(np.sign(y1_interp - y3_interp))).flatten()
-                rrup_b_2, rrup_f_2 = _compute_forearc_distances(x_interp, y1_interp, y3_interp, dist)
-                if len(idx_new) ==0: ## no intersection with both the arcs
-                    if rrup_b_1 < rrup_f_2: ## finding the nearest voclanic arc
-                        rrup_b = np.append(rrup_b, rrup_b_1)
-                        rrup_f= np.append(rrup_f, rrup_f_1)
-                    else:
-                        rrup_b = np.append(rrup_b, rrup_b_2)
-                        rrup_f= np.append(rrup_f, rrup_f_2)
-                else:
-                    rrup_b = np.append(rrup_b, rrup_b_2)
-                    rrup_f= np.append(rrup_f, rrup_f_2)
+    for m, k, lon, lat in zip(cm, ck, ctx.lon, ctx.lat):
+        if m == 1:
+            dst = honshu.distance(sg.Point(lon, lat))
+            rrup_b = np.where(sg.Point(lon, lat).within(buffer_region) , dst, ctx.rrup - dst)
+            rrup_f = np.where(sg.Point(lon, lat).within(buffer_region) , ctx.rrup - dst, dst)
+        elif k == 1:
+            dst = kyushu.distance(sg.Point(lon, lat))
+            rrup_f = np.where(sg.Point(lon, lat).within(buffer_region_1) , dst, ctx.rrup - dst)
+            rrup_b = np.where(sg.Point(lon, lat).within(buffer_region_1) , ctx.rrup - dst, dst)
+        else:
+            tmp = sg.Point(lon, lat).within(buffer_region)
+            tmp_1 = sg.Point(lon, lat).within(buffer_region_1)
+            if tmp:
+                rrup_b = honshu.distance(sg.Point(lon, lat))
+                rrup_f = ctx.rrup - rrup_b
+            elif tmp_1:
+                rrup_f = kyushu.distance(sg.Point(lon, lat))
+                rrup_b = ctx.rrup - rrup_f
             else:
-                rrup_b = np.append(rrup_b, rrup_b_1)
-                rrup_f= np.append(rrup_f, rrup_f_1)
-        else: 
-            x_interp, y1_interp, y3_interp = _interpolation(x1, x3, f1, f3)
-            idx_new = np.argwhere(np.diff(np.sign(y1_interp - y3_interp))).flatten()
-            rrup_b_2, rrup_f_2 = _compute_forearc_distances(x_interp, y1_interp, y3_interp, dist)
-            rrup_b = np.append(rrup_b, rrup_b_2)
-            rrup_f= np.append(rrup_f, rrup_f_2)
-        
-    return rrup_b, rrup_f, idx
-
-
-# In[8]:
-
+                rrup_f = 0
+                rrup_b = 0
+    return rrup_f, rrup_b, cm, ck
 
 def _compute_distance(ctx, C, trt):
     """
@@ -215,14 +143,8 @@ def _compute_distance(ctx, C, trt):
     CK is 1 if the path from the source to the site crosses the volcanic 
     front in Kyushu and 0 otherwise;
     """
-    rrup_b, rrup_f, idx = _get_intersection(ctx)
-    if len(idx) == 0:
-        cm = 1 # temporary fix
-        ck = 0 # temporary fix
-    else:
-        cm = 0
-        ck = 1
 
+    rrup_b, rrup_f, cm, ck= _compute_volcanic_distances(ctx,kyushu, honshu)
 
     if trt == const.TRT.ACTIVE_SHALLOW_CRUST:
         fpath = C['b1']*(np.log(np.sqrt((ctx.rrup**2) + ((10**_get_source_saturation_term (ctx, C))**2)))) + C['b3b'] * rrup_b + C['b3f'] * rrup_f + C['b4m']*cm + C['b4k']*ck
@@ -237,10 +159,6 @@ def _compute_distance(ctx, C, trt):
     
     return fpath
 
-
-# In[10]:
-
-
 def _get_arias_intensity_term(ctx, C, trt):
     """
     Implementing Eq. 6
@@ -249,10 +167,6 @@ def _get_arias_intensity_term(ctx, C, trt):
 
     ia_l = _compute_magnitude(ctx, C, trt) + _compute_distance (ctx, C, trt) + _get_site_term (ctx, C)
     return ia_l
-
-
-# In[11]:
-
 
 def _get_arias_intensity_second_term(ctx, C, trt):
     """
@@ -267,10 +181,6 @@ def _get_arias_intensity_second_term(ctx, C, trt):
     t3 = np.log((np.exp(_get_arias_intensity_term(ctx, C, trt))+C['c4'])/C['c4'])
     ia_2 = C['c2'] * (t1 - t2) * t3
     return ia_2
-
-
-# In[41]:
-
 
 class BahrampouriEtAl2021Asc(GMPE):
     """
@@ -296,7 +206,7 @@ class BahrampouriEtAl2021Asc(GMPE):
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are Vs30 and xvf
-    REQUIRES_SITES_PARAMETERS = {'vs30'}
+    REQUIRES_SITES_PARAMETERS = {'lon', 'lat', 'vs30'}
 
     #: Required rupture parameters are magnitude,ztor
    
@@ -304,7 +214,7 @@ class BahrampouriEtAl2021Asc(GMPE):
 
     #: Required distance measures are rrup (see Table 2,
     #: page 1031).
-    REQUIRES_DISTANCES = {'rrup',}
+    REQUIRES_DISTANCES = {'rrup'}
     
     
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
@@ -314,7 +224,6 @@ class BahrampouriEtAl2021Asc(GMPE):
         for spec of input and result values.
         """
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-        
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # Implements mean model (equation 12)
@@ -355,7 +264,7 @@ class BahrampouriEtAl2021SInter(GMPE):
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are Vs30 and xvf
-    REQUIRES_SITES_PARAMETERS = {'vs30'}
+    REQUIRES_SITES_PARAMETERS = {'lon', 'lat', 'vs30'}
 
     #: Required rupture parameters are magnitude,ztor
    
@@ -413,7 +322,7 @@ class BahrampouriEtAl2021SSlab(GMPE):
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are Vs30 and xvf
-    REQUIRES_SITES_PARAMETERS = {'vs30'}
+    REQUIRES_SITES_PARAMETERS = {'lon', 'lat', 'vs30'}
 
     #: Required rupture parameters are magnitude,ztor
    
