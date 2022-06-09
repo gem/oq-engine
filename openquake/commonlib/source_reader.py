@@ -440,7 +440,7 @@ class CompositeSourceModel:
                 logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
-        if nr > 1E9:
+        if nr > 1E8:
             logging.info('Huge model with {:_d} ruptures: doubling the tasks'
                          .format(nr))
             max_weight /= 2
