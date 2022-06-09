@@ -175,3 +175,9 @@ precision. Calculations with plenty of nodal planes and hypocenters
 will benefit from lower values of ``ps_grid_spacing`` while
 calculations with a single nodal plane and hypocenter for each source
 will benefit from higher values of ``ps_grid_spacing``.
+
+If you are interest only in speed and not in precision, you can set
+``calculation_mode=preclassical``, run the sensitivity analysis very
+quickly and then use the ``ps_grid_spacing`` value corresponding to
+the minimum weight of the source model, which can be read from the
+logs.
