@@ -145,3 +145,58 @@ NB: the fact that the Canada model with 7 cities can be made 26 times
 faster does not mean that the same speedup apply when you consider the full
 130,000+ sites. A test with ``ps_grid_spacing=pointsource_distance=50``
 gives a speedup of 7 times, which is still very significant.
+
+How to determine the "right" value for the ``ps_grid_spacing`` parameter
+------------------------------------------------------------------------
+
+The trick is to run a sensitivity analysis on a reduced calculation.
+Set in the job.ini something like this::
+
+ sensitivity_analysis = {'ps_grid_spacing': [0, 20, 40, 60]}
+
+and then run::
+
+ $ OQ_SAMPLE_SITES=.01 oq engine --run job.ini
+
+This will run sequentially 4 calculations with different values of the
+``ps_grid_spacing``. The first calculation, the one with
+``ps_grid_spacing=0``, is the exact calculation, with the approximation
+disabled, to be used as reference.
+
+Notice that setting the environment variable ``OQ_SAMPLE_SITES=.01``
+will reduced by 100x the number of sites: this is essential in order to
+make the calculation times acceptable in large calculations.
+
+After running the 4 calculations you can compare the times by using
+``oq show performance`` and the precision by using ``oq
+compare``. From that you can determine which value of the
+``ps_grid_spacing`` gives a good speedup with a decent
+precision. Calculations with plenty of nodal planes and hypocenters
+will benefit from lower values of ``ps_grid_spacing`` while
+calculations with a single nodal plane and hypocenter for each source
+will benefit from higher values of ``ps_grid_spacing``.
+
+If you are interest only in speed and not in precision, you can set
+``calculation_mode=preclassical``, run the sensitivity analysis in parallel
+very quickly and then use the ``ps_grid_spacing`` value corresponding to
+the minimum weight of the source model, which can be read from the
+logs. Here is the trick to run the calculations in parallel::
+
+ $ oq engine --multi --run job.ini -p calculation_mode=preclassical
+
+And here is how to extract the weight information, in the example of
+Alaska, with job IDs in the range 31692-31695::
+
+ $ oq db get_weight 31692
+ <Row(description=Alaska{'ps_grid_spacing': 0}, message=tot_weight=1_929_504, max_weight=120_594, num_sources=150_254)>
+ $ oq db get_weight 31693
+ <Row(description=Alaska{'ps_grid_spacing': 20}, message=tot_weight=143_748, max_weight=8_984, num_sources=22_727)>
+ $ oq db get_weight 31694
+ <Row(description=Alaska{'ps_grid_spacing': 40}, message=tot_weight=142_564, max_weight=8_910, num_sources=6_245)>
+ $ oq db get_weight 31695
+ <Row(description=Alaska{'ps_grid_spacing': 60}, message=tot_weight=211_542, max_weight=13_221, num_sources=3_103)>
+
+The lowest weight is 142_564, corresponding to a ``ps_grid_spacing``
+of 40km; since the weight is 13.5 times smaller than the weight for
+the full calculation (1_929_504), this is the maximum speedup that we
+can expect from using the approximation.

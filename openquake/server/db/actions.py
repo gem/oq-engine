@@ -199,6 +199,21 @@ def get_calc_id(db, datadir, job_id=None):
     return max(calc_id, job_id)
 
 
+def get_weight(db, job_id):
+    """
+    Return information about the total weight of the source model.
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param job_id: a job ID
+    """
+    rows = db("SELECT description, message FROM log, job "
+              "WHERE job_id=job.id and job.id = ?x "
+              "AND message LIKE '%tot_weight%'", job_id)
+    if not rows:
+        return "There is no job %d" % job_id
+    return rows[0]
+
+
 def list_calculations(db, job_type, user_name):
     """
     Yield a summary of past calculations.
