@@ -340,7 +340,8 @@ class PointSource(ParametricSeismicSource):
         Bounding box of the point, enlarged by the maximum distance
         """
         radius = self._get_max_rupture_projection_radius()
-        return get_bounding_box([self.location], maxdist + radius)
+        return get_bounding_box([self.location], maxdist + radius +
+                                self.ps_grid_spacing)
 
     def wkt(self):
         """
