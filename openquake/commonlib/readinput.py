@@ -758,9 +758,6 @@ def _check_csm(csm, oqparam, h5):
         raise BBoxError(
             'The bounding box of the sources is larger than half '
             'the globe: %d degrees' % (bbox[2] - bbox[0]))
-    sids = sitecol.within_bbox(bbox)
-    if len(sids) == 0:
-        raise RuntimeError('All sources were discarded!?')
 
 
 def get_composite_source_model(oqparam, h5=None, branchID=None):
