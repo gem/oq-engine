@@ -145,3 +145,33 @@ NB: the fact that the Canada model with 7 cities can be made 26 times
 faster does not mean that the same speedup apply when you consider the full
 130,000+ sites. A test with ``ps_grid_spacing=pointsource_distance=50``
 gives a speedup of 7 times, which is still very significant.
+
+How to determine the "right" value for the ``ps_grid_spacing`` parameter
+------------------------------------------------------------------------
+
+The trick is to run a sensitivity analysis on a reduced calculation.
+Set in the job.ini something like this::
+
+ sensitivity_analysis = {'ps_grid_spacing': [0, 30, 40, 50, 60]}
+
+and then run::
+
+ $ OQ_SAMPLE_SITES=.01 oq engine --run job.ini
+
+This will run sequentially 5 calculations with different values of the
+``ps_grid_spacing``. The first calculation, the one with
+``ps_grid_spacing=0``, is the exact calculation, with the approximation
+disabled, to be used as reference.
+
+Notice that setting the environment variable ``OQ_SAMPLE_SITES=.01``
+will reduced by 100x the number of sites: this is essential in order to
+make the calculation times acceptable in large calculations.
+
+After running the 5 calculations you can compare the times by using
+``oq show performance`` and the precision by using ``oq
+compare``. From that you can determine which value of the
+``ps_grid_spacing`` gives a good speedup with a decent
+precision. Calculations with plenty of nodal planes and hypocenters
+will benefit from lower values of ``ps_grid_spacing`` while
+calculations with a single nodal plane and hypocenter for each source
+will benefit from higher values of ``ps_grid_spacing``.
