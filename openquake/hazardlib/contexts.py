@@ -164,9 +164,9 @@ class Collapser(object):
     """
     Class managing the collapsing logic.
     """
-    def __init__(self, collapse_level, dist_type, has_vs30=True):
+    def __init__(self, collapse_level, dist_types, has_vs30=True):
         self.collapse_level = collapse_level
-        self.dist_type = dist_type  # first in REQUIRES_DISTANCES
+        self.dist_types = dist_types
         self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
         self.dist_bins = valid.sqrscale(1, 600, 255)
         self.vs30_bins = numpy.linspace(0, 32767, 65536)
@@ -180,7 +180,7 @@ class Collapser(object):
         :param ctx: a RuptureContext or a context array
         :return: an array of dtype numpy.uint32
         """
-        dist = getattr(ctx, self.dist_type)
+        dist = numpy.mean([getattr(ctx, dt) for dt in self.dist_types], axis=0)
         magbin = numpy.searchsorted(self.mag_bins, ctx.mag)
         distbin = numpy.searchsorted(self.dist_bins, dist)
         if self.has_vs30:
@@ -420,7 +420,7 @@ class ContextMaker(object):
         dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
         self.collapser = Collapser(
-            self.collapse_level, REQUIRES_DISTANCES[0], 'vs30' in dic)
+            self.collapse_level, REQUIRES_DISTANCES, 'vs30' in dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
