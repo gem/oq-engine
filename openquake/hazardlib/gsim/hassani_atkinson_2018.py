@@ -207,8 +207,8 @@ class HassaniAtkinson2018(GMPE):
         # Read the file and create the coefficient table for the anelastic
         # attenuation term
         if gamma_fle is not None:
-            with open(gamma_fle, 'r') as fle:
-                data = fle.read()
+            with open(gamma_fle, 'rb') as fle:
+                data = fle.read().decode('utf-8')
                 self.CAE = CoeffsTable(sa_damping=5, table=data)
         else:
             self.CAE = None

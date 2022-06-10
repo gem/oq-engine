@@ -21,7 +21,7 @@ from openquake.hazardlib.gsim.hassani_atkinson_2018 import (
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Verification tables created using the .xls spreadsheet provided as an
-# elctronic supplement to the BSSA paper
+# electronic supplement to the BSSA paper
 
 
 class HassaniAtkinson2018Test(BaseGSIMTestCase):
