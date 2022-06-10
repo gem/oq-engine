@@ -205,6 +205,7 @@ class Collapser(object):
         :param collapse_level: if None, use .collapse_level
         :returns: the collapsed array and a list of arrays with site IDs
         """
+        ctx['mdvbin'] = self.calc_mdvbin(ctx)
         clevel = (collapse_level if collapse_level is not None
                   else self.collapse_level)
         if not rup_indep or clevel < 0:
@@ -529,7 +530,7 @@ class ContextMaker(object):
                 if par == 'magi':  # in disaggregation
                     val = magi
                 elif par == 'mdvbin':
-                    val = self.collapser.calc_mdvbin(ctx)
+                    val = 0  # overridden later
                 elif par == 'weight' and noweight:
                     val = 0.
                 else:
@@ -735,7 +736,6 @@ class ContextMaker(object):
             ctx = self._get_ctx(mag, pla, sites, src.id).flatten()
             ctxt = ctx[ctx.rrup < magdist[mag]]
             if len(ctxt):
-                ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
                 ctxs.append(ctxt)
         return concat(ctxs)
 
