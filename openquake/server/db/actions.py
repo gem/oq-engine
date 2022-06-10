@@ -87,7 +87,8 @@ def set_status(db, job_id, status):
 
 
 def create_job(db, datadir, calculation_mode='to be set',
-               description='just created', user_name=None, hc_id=None):
+               description='just created', user_name=None,
+               hc_id=None, host=None):
     """
     Create job for the given user, return it.
 
@@ -103,6 +104,8 @@ def create_job(db, datadir, calculation_mode='to be set',
         name of the user running the job
     :param hc_id:
         ID of the parent job (if any)
+    :param host:
+        machine where the calculation is running (master)
     :returns:
         the job ID
     """
@@ -112,7 +115,8 @@ def create_job(db, datadir, calculation_mode='to be set',
                user_name=user_name or getpass.getuser(),
                calculation_mode=calculation_mode,
                hazard_calculation_id=hc_id,
-               ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
+               ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)),
+               host=host)
     return db('INSERT INTO job (?S) VALUES (?X)',
               job.keys(), job.values()).lastrowid
 

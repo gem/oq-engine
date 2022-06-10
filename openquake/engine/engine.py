@@ -57,7 +57,7 @@ _PPID = os.getppid()  # the controlling terminal PID
 
 GET_JOBS = '''--- executing or submitted
 SELECT * FROM job WHERE status IN ('executing', 'submitted')
-AND is_running=1 AND pid > 0 ORDER BY id'''
+AND host=?x AND is_running=1 AND pid > 0 ORDER BY id'''
 
 
 def get_zmq_ports():
@@ -212,11 +212,15 @@ def poll_queue(job_id, poll_time):
     Check the queue of executing/submitted jobs and exit when there is
     a free slot.
     """
+    try:
+        host = socket.gethostname()
+    except Exception:  # gaierror
+        host = None
     offset = config.distribution.serialize_jobs - 1
     if offset >= 0:
         first_time = True
         while True:
-            running = logs.dbcmd(GET_JOBS)
+            running = logs.dbcmd(GET_JOBS, host)
             previous = [job for job in running if job.id < job_id - offset]
             if previous:
                 if first_time:
@@ -296,9 +300,13 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
     :param job_inis: a list of pathnames or a list of dictionaries
     :returns: a list of LogContext objects
     """
+    try:
+        host = socket.gethostname()
+    except Exception:  # gaierror
+        host = None
     if len(job_inis) > 1 and not hc_id and not multi:  # first job as hc
         job = logs.init("job", job_inis[0], log_level, log_file,
-                        user_name, hc_id)
+                        user_name, hc_id, host)
         hc_id = job.calc_id
         jobs = [job]
         job_inis = job_inis[1:]
@@ -321,11 +329,12 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
                     jobdic[param] = str(value)
                 jobdic['description'] = '%s %s' % (dic['description'], pars)
                 new = logs.init('job', jobdic, log_level, log_file,
-                                user_name, hc_id)
+                                user_name, hc_id, host)
                 jobs.append(new)
         else:
             jobs.append(
-                logs.init('job', dic, log_level, log_file, user_name, hc_id))
+                logs.init('job', dic, log_level, log_file,
+                          user_name, hc_id, host))
     if multi:
         for job in jobs:
             job.multi = True
