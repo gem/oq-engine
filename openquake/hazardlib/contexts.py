@@ -164,9 +164,9 @@ class Collapser(object):
     """
     Class managing the collapsing logic.
     """
-    def __init__(self, collapse_level, dist_type, has_vs30=True):
+    def __init__(self, collapse_level, dist_types, has_vs30=False):
         self.collapse_level = collapse_level
-        self.dist_type = dist_type  # first in REQUIRES_DISTANCES
+        self.dist_types = dist_types
         self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
         self.dist_bins = valid.sqrscale(1, 600, 255)
         self.vs30_bins = numpy.linspace(0, 32767, 65536)
@@ -180,7 +180,7 @@ class Collapser(object):
         :param ctx: a RuptureContext or a context array
         :return: an array of dtype numpy.uint32
         """
-        dist = getattr(ctx, self.dist_type)
+        dist = numpy.mean([getattr(ctx, dt) for dt in self.dist_types], axis=0)
         magbin = numpy.searchsorted(self.mag_bins, ctx.mag)
         distbin = numpy.searchsorted(self.dist_bins, dist)
         if self.has_vs30:
@@ -205,6 +205,7 @@ class Collapser(object):
         :param collapse_level: if None, use .collapse_level
         :returns: the collapsed array and a list of arrays with site IDs
         """
+        ctx['mdvbin'] = self.calc_mdvbin(ctx)
         clevel = (collapse_level if collapse_level is not None
                   else self.collapse_level)
         if not rup_indep or clevel < 0:
@@ -399,10 +400,10 @@ class ContextMaker(object):
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
         # NB: REQUIRES_DISTANCES is empty when gsims = [FromFile]
-        REQUIRES_DISTANCES = sorted(self.REQUIRES_DISTANCES) or ['rrup']
+        REQUIRES_DISTANCES = self.REQUIRES_DISTANCES | {'rrup'}
         reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
                 sorted(self.REQUIRES_SITES_PARAMETERS | set(extraparams)) +
-                REQUIRES_DISTANCES)
+                sorted(REQUIRES_DISTANCES))
         dic = {}
         for req in reqs:
             if req in site_param_dt:
@@ -420,7 +421,7 @@ class ContextMaker(object):
         dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
         self.collapser = Collapser(
-            self.collapse_level, REQUIRES_DISTANCES[0], 'vs30' in dic)
+            self.collapse_level, REQUIRES_DISTANCES, 'vs30' in dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
@@ -529,7 +530,7 @@ class ContextMaker(object):
                 if par == 'magi':  # in disaggregation
                     val = magi
                 elif par == 'mdvbin':
-                    val = self.collapser.calc_mdvbin(ctx)
+                    val = 0  # overridden later
                 elif par == 'weight' and noweight:
                     val = 0.
                 else:
@@ -735,7 +736,6 @@ class ContextMaker(object):
             ctx = self._get_ctx(mag, pla, sites, src.id).flatten()
             ctxt = ctx[ctx.rrup < magdist[mag]]
             if len(ctxt):
-                ctxt['mdvbin'] = self.collapser.calc_mdvbin(ctxt)
                 ctxs.append(ctxt)
         return concat(ctxs)
 
