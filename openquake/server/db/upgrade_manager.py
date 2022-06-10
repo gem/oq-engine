@@ -119,6 +119,8 @@ def apply_sql_script(conn, fname):
         for query in sql.split('\n\n'):
             conn.execute(query)
     except Exception:
+        print('sqlite version =', sqlite3.sqlite_version)
+        print(query)
         logging.error('Error executing %s' % fname)
         raise
 

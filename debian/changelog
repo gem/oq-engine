@@ -2,6 +2,7 @@
   * Implemented the Arteta et al. (2021) subduction model for Colombia
 
   [Michele Simionato]
+  * Added `host` field to the `job` table (dbserver restart required)
   * `--exports=csv` was not honored for the realizations output; now it is
 
   [Paul Henshaw, Sandra Giacomini]

@@ -20,7 +20,9 @@ import collections
 import tempfile
 import logging
 import os.path
+import socket
 import cProfile
+import getpass
 import pstats
 
 from openquake.baselib import performance, general
@@ -75,7 +77,7 @@ def get_pstats(pstatfile, n):
 
 # called when profiling
 def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
-         params):
+         params, host=None):
     global calc_path
     if 'hazard_calculation_id' in params:
         hc_id = int(params['hazard_calculation_id'])
@@ -91,7 +93,8 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
             params['hazard_calculation_id'] = hc_id
     dic = readinput.get_params(job_ini, params)
     # set the logs first of all
-    log = logs.init("job", dic, getattr(logging, loglevel.upper()))
+    log = logs.init("job", dic, getattr(logging, loglevel.upper()),
+                    host=host)
 
     with log, performance.Monitor('total runtime', measuremem=True) as monitor:
         calc = base.calculators(log.get_oqparam(), log.calc_id)
@@ -120,6 +123,10 @@ def main(job_ini,
     Run a calculation
     """
     dbserver.ensure_on()
+    try:
+        host = socket.gethostname()
+    except Exception:  # gaierror
+        host = None
     if param:
         params = dict(p.split('=', 1) for p in param.split(','))
     else:
@@ -129,7 +136,7 @@ def main(job_ini,
     if slowest:
         prof = cProfile.Profile()
         prof.runctx('_run(job_ini[0], 0, pdb, reuse_input, loglevel, '
-                    'exports, params)', globals(), locals())
+                    'exports, params, host)', globals(), locals())
         pstat = calc_path + '.pstat'
         prof.dump_stats(pstat)
         print('Saved profiling info in %s' % pstat)
@@ -137,8 +144,9 @@ def main(job_ini,
         return
     if len(job_ini) == 1:
         return _run(job_ini[0], concurrent_tasks, pdb, reuse_input,
-                    loglevel, exports, params)
-    jobs = create_jobs(job_ini, loglevel, hc_id=hc)
+                    loglevel, exports, params, host)
+    jobs = create_jobs(job_ini, loglevel, hc_id=hc,
+                       user_name=getpass.getuser(), host=host)
     for job in jobs:
         job.params.update(params)
         job.params['exports'] = ','.join(exports)
