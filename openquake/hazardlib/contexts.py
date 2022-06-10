@@ -1194,7 +1194,7 @@ class PmapMaker(object):
         if sites is None:
             return []
         ctxs = self.cmaker.get_ctxs(src, sites)
-        if self.fewsites:  # keep rupdata in memory
+        if self.fewsites:  # keep rupdata in memory (before collapse)
             for ctx in ctxs:
                 self.rupdata.append(ctx)
         return ctxs
