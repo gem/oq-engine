@@ -449,7 +449,7 @@ hazard_uhs-std.csv
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'],
                               case_24.__file__, delta=1E-3)
         total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
-        self.assertEqual(total, 780)  # 260 x 3
+        self.assertEqual(total, 780)  # 260 x 3; 2 sites => 1560 contexts
         self.assertEqual(len(self.calc.datastore['rup/mag']), 1560)
         numpy.testing.assert_equal(self.calc.cfactor, [243, 1560])
         # test that the number of ruptures is at max 1/3 of the the total
