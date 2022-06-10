@@ -9,8 +9,7 @@ CREATE TABLE job(
      start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
      stop_time TIMESTAMP,
      relevant BOOL DEFAULT true,
-     ds_calc_dir TEXT NOT NULL,
-     host TEXT);
+     ds_calc_dir TEXT NOT NULL);
 
 CREATE TABLE log(
      id INTEGER PRIMARY KEY AUTOINCREMENT,
