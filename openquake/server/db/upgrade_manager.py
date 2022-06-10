@@ -114,6 +114,7 @@ def apply_sql_script(conn, fname):
     :param fname: full path to the creation script
     """
     sql = open(fname).read()
+    print(sql)
     try:
         # we cannot use conn.executescript which is non transactional
         for query in sql.split('\n\n'):
