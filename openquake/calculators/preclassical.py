@@ -177,7 +177,9 @@ class PreClassicalCalculator(base.HazardCalculator):
         # run preclassical for non-atomic sources
         sources_by_grp = groupby(
             normal_sources, lambda src: (src.grp_id, msr_name(src)))
+        h5['full_lt'] = csm.full_lt
         logging.info('Starting preclassical')
+        self.datastore.swmr_on()
         smap = parallel.Starmap(preclassical, h5=h5)
         for (grp_id, msr), srcs in sources_by_grp.items():
             pointsources, pointlike, others = [], [], []
@@ -242,7 +244,6 @@ class PreClassicalCalculator(base.HazardCalculator):
             cls = code2cls[key].__name__
             logging.info('{} ruptures: {:_d}'.format(cls, val))
         self.store_source_info(source_data(csm.get_sources()))
-        h5['full_lt'] = csm.full_lt
         return res
 
     def execute(self):

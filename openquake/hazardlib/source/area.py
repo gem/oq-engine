@@ -108,7 +108,6 @@ class AreaSource(ParametricSeismicSource):
         mesh = self.polygon.discretize(self.area_discretization)
         num_points = len(mesh)
         area_mfd = self.mfd
-
         if isinstance(area_mfd, mfd.TruncatedGRMFD):
             new_mfd = mfd.TruncatedGRMFD(
                 a_val=area_mfd.a_val - math.log10(num_points),
@@ -133,7 +132,6 @@ class AreaSource(ParametricSeismicSource):
                 area_mfd.char_rate / num_points, area_mfd.bin_width)
         else:
             raise TypeError('Unknown MFD: %s' % area_mfd)
-
         for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
             pt = PointSource(
                 # Generate a new ID and name

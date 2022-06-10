@@ -560,7 +560,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         if 'rup' in self.datastore:
             tot = len(self.datastore['rup/mag'])
-            logging.info('Stored {:_d} ruptures'.format(tot))
+            logging.info('Stored full context (size={:_d})'.format(tot))
 
         if '_poes' in self.datastore:
             self.post_classical()
