@@ -20,6 +20,7 @@ import collections
 import tempfile
 import logging
 import os.path
+import socket
 import cProfile
 import getpass
 import pstats
@@ -139,8 +140,12 @@ def main(job_ini,
     if len(job_ini) == 1:
         return _run(job_ini[0], concurrent_tasks, pdb, reuse_input,
                     loglevel, exports, params)
+    try:
+        host = socket.gethostname()
+    except Exception:  # gaierror
+        host = None
     jobs = create_jobs(job_ini, loglevel, hc_id=hc,
-                       user_name=getpass.getuser())
+                       user_name=getpass.getuser(), host=host)
     for job in jobs:
         job.params.update(params)
         job.params['exports'] = ','.join(exports)
