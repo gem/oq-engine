@@ -385,8 +385,8 @@ class CollapseTestCase(unittest.TestCase):
         maxdiff = (newpoes - poes).max(axis=(1, 2))
         print('maxdiff =', maxdiff)
         self.assertLess(maxdiff[0], 1E-8)
-        self.assertLess(maxdiff[1], 1E-5)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [117, 312])
+        self.assertLess(maxdiff[1], 3E-4)
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [124, 312])
 
         # with collapse_level = 4 the precision is perfect
         cmaker.collapser = Collapser(

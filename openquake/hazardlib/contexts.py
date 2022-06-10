@@ -164,7 +164,7 @@ class Collapser(object):
     """
     Class managing the collapsing logic.
     """
-    def __init__(self, collapse_level, dist_types, has_vs30=True):
+    def __init__(self, collapse_level, dist_types, has_vs30=False):
         self.collapse_level = collapse_level
         self.dist_types = dist_types
         self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
