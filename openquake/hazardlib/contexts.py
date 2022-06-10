@@ -1201,6 +1201,7 @@ class PmapMaker(object):
 
     def _make_src_indep(self):
         # sources with the same ID
+        maxsize = MAXSIZE if self.collapse_level is None else MAXSIZE * 10
         pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         cm = self.cmaker
         allctxs = []
@@ -1211,7 +1212,7 @@ class PmapMaker(object):
             src.nsites = sum(len(ctx) for ctx in ctxs)
             totlen += src.nsites
             allctxs.extend(ctxs)
-            if src.nsites and totlen > MAXSIZE:
+            if src.nsites and totlen > maxsize:
                 cm.get_pmap(concat(allctxs), pmap)
                 allctxs.clear()
         if allctxs:
