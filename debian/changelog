@@ -1,3 +1,6 @@
+  [Julián Santiago Montejo Espitia]
+  * Implemented the Arteta et al. (2021) subduction model for Colombia
+
   [Michele Simionato]
   * `--exports=csv` was not honored for the realizations output; now it is
 
