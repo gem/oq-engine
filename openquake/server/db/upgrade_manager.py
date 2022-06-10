@@ -117,9 +117,9 @@ def apply_sql_script(conn, fname):
     try:
         # we cannot use conn.executescript which is non transactional
         for query in sql.split('\n\n'):
-            print(query)
             conn.execute(query)
     except Exception:
+        print(query)
         logging.error('Error executing %s' % fname)
         raise
 
