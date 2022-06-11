@@ -558,10 +558,6 @@ class ClassicalCalculator(base.HazardCalculator):
             elif slow_tasks:
                 logging.info(msg)
 
-        if 'rup' in self.datastore:
-            tot = len(self.datastore['rup/mag'])
-            logging.info('Stored full context (size={:_d})'.format(tot))
-
         if '_poes' in self.datastore:
             self.post_classical()
 

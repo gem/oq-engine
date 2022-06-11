@@ -93,7 +93,7 @@ def get_maxsize(M, G):
     """
     maxs = 1024**2 // (8*M*G)
     assert maxs > 1, maxs
-    return min(maxs, 5000)
+    return maxs
 
 
 # numbified below

@@ -49,7 +49,7 @@ def oq():
         logging.basicConfig(level=level)
 
     warnings.simplefilter(  # make sure we do not make efficiency errors
-        "error", category=sparse.base.SparseEfficiencyWarning)
+        "error", category=sparse.SparseEfficiencyWarning)
     sap.run(commands, prog='oq')
 
 
