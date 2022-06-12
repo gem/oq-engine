@@ -45,7 +45,7 @@ from openquake.hazardlib.geo.surface.planar import (
 
 U32 = numpy.uint32
 F64 = numpy.float64
-MAXSIZE = 500_000  # used when collapsing
+TWO20 = 2**20  # used when collapsing
 TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
@@ -91,7 +91,7 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fit in the CPU cache
     """
-    maxs = 1024**2 // (8*M*G)
+    maxs = TWO20 // (8*M*G)
     assert maxs > 1, maxs
     return maxs
 
@@ -1201,7 +1201,7 @@ class PmapMaker(object):
 
     def _make_src_indep(self):
         # sources with the same ID
-        maxsize = MAXSIZE if self.collapse_level is None else MAXSIZE * 10
+        maxsize = TWO20 if self.collapse_level is None else TWO20 * 16
         pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         cm = self.cmaker
         allctxs = []
