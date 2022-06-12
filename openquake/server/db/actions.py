@@ -21,7 +21,6 @@ import operator
 from datetime import datetime
 
 from openquake.hazardlib import valid
-from openquake.commonlib import datastore
 from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
@@ -190,6 +189,7 @@ def get_calc_id(db, datadir, job_id=None):
     :param datadir: the directory containing the datastores
     :param job_id: a job ID; if None, returns the latest job ID
     """
+    from openquake.commonlib import datastore  # avoid circular import
     calcs = datastore.get_calc_ids(datadir)
     calc_id = 0 if not calcs else calcs[-1]
     if job_id is None:
