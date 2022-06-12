@@ -21,9 +21,12 @@ import os
 import sys
 import logging
 import warnings
+import operator
 from scipy import sparse
 
-from openquake.baselib import sap
+from openquake.baselib import sap, general
+from openquake.calculators import export
+from openquake.server.db.actions import DISPLAY_NAME
 from openquake import commands
 
 # check for Python version
@@ -38,6 +41,11 @@ elif PY_VER == (3, 6):
 if os.environ['OQ_DISTRIBUTE'] == 'celery' and 'run' in sys.argv:
     print('You are on a cluster and you are using oq run?? '
           'Use oq engine --run instead!')
+
+# sanity check, all display name keys must be exportable
+dic = general.groupby(export.export, operator.itemgetter(0))
+for key in DISPLAY_NAME:
+    assert key in dic, key
 
 
 # global settings, like logging and warnings

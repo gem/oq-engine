@@ -21,9 +21,7 @@ import operator
 from datetime import datetime
 
 from openquake.hazardlib import valid
-from openquake.baselib import general
 from openquake.commonlib import datastore
-from openquake.calculators.export import export
 from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
@@ -319,11 +317,6 @@ DISPLAY_NAME = {
     'fullreport': 'Full Report',
     'input': 'Input Files'
 }
-
-# sanity check, all display name keys must be exportable
-dic = general.groupby(export, operator.itemgetter(0))
-for key in DISPLAY_NAME:
-    assert key in dic, key
 
 
 def create_outputs(db, job_id, keysize, ds_size):
