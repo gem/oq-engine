@@ -186,9 +186,12 @@ Traceback (most recent call last):
 NotFound
 
 """
+import os
 import re
+import sqlite3
 import threading
 import collections
+from openquake.baselib import config
 
 
 class NotFound(Exception):
@@ -419,3 +422,10 @@ class Row(collections.abc.Sequence):
     def __repr__(self):
         items = ['%s=%s' % (f, getattr(self, f)) for f in self._fields]
         return '<Row(%s)>' % ', '.join(items)
+
+
+db = Db(sqlite3.connect, os.path.expanduser(config.dbserver.file),
+        isolation_level=None, detect_types=sqlite3.PARSE_DECLTYPES,
+        timeout=20)
+# NB: I am increasing the timeout from 5 to 20 seconds to see if the random
+# OperationalError: "database is locked" disappear in the WebUI tests
