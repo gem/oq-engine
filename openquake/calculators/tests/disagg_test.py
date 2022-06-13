@@ -56,7 +56,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.run_calc(test_dir, 'job.ini', calculation_mode='classical')
         hc_id = self.calc.datastore.calc_id
         out = self.run_calc(test_dir, 'job.ini', exports=fmt,
-                            hazard_calculation=str(hc_id))
+                            hazard_calculation_id=str(hc_id))
         got = out['disagg', fmt]
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):

@@ -516,7 +516,8 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if h5 and 'sitecol' in h5:
+    ss = oqparam.sites_slice  # can be None or (start, stop)
+    if h5 and 'sitecol' in h5 and not ss:
         return h5['sitecol']
     mesh = get_mesh(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
@@ -539,7 +540,6 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
-    ss = oqparam.sites_slice  # can be None or (start, stop)
     if ss:
         if 'custom_site_id' not in sitecol.array.dtype.names:
             gh = sitecol.geohash(6)
@@ -725,11 +725,11 @@ def _check_csm(csm, oqparam, h5):
 
     # build a smart SourceFilter
     try:
-        sitecol = get_site_collection(oqparam, h5)  # already stored
-    except Exception:  # missing sites.csv in test_case_1_ruptures
-        sitecol = None
+        sitecol = get_site_collection(oqparam, h5)
+    except ValueError:   # already stored (case_66)
+        sitecol = h5['sitecol']
     csm.sitecol = sitecol
-    if sitecol is None:
+    if sitecol is None:  # missing sites.csv (test_case_1_ruptures)
         return
     srcfilter = SourceFilter(sitecol, oqparam.maximum_distance)
     logging.info('Checking the sources bounding box')
