@@ -825,7 +825,7 @@ class HazardCalculator(BaseCalculator):
         else:  # no exposure
             if oq.hazard_calculation_id:  # read the sitecol of the child
                 self.sitecol = readinput.get_site_collection(
-                    oq, self.datastore.parent)
+                    oq, self.datastore)
                 self.datastore['sitecol'] = self.sitecol
             else:
                 self.sitecol = haz_sitecol
