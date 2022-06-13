@@ -390,8 +390,8 @@ class Table(list):
 
 
 # we cannot use a namedtuple here because one would get a PicklingError:
-# Can't pickle <class 'openquake.server.dbapi.Row'>: attribute lookup
-# openquake.server.dbapi.Row failed
+# Can't pickle <class 'openquake.commonlib.dbapi.Row'>: attribute lookup
+# openquake.commonlib.dbapi.Row failed
 class Row(collections.abc.Sequence):
     """
     A pickleable row, working both as a tuple and an object:

@@ -32,7 +32,7 @@ from openquake.hazardlib import valid
 from openquake.commonlib import logs
 from openquake.engine import __version__
 from openquake.server.db import actions
-from openquake.server.dbapi import db
+from openquake.commonlib.dbapi import db
 from openquake.server import __file__ as server_path
 
 

@@ -25,7 +25,7 @@ import zipfile
 import sqlite3
 import requests
 from openquake.baselib.general import safeprint
-from openquake.server.dbapi import Db
+from openquake.commonlib.dbapi import Db
 
 
 def main(archive, oqdata):
