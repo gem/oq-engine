@@ -455,10 +455,10 @@ class HazardCalculator(BaseCalculator):
         Read risk data and sources if any
         """
         oq = self.oqparam
+        dist = parallel.oq_distribute()
         avail = psutil.virtual_memory().available / 1024**3
-        required = .5 * (1 if parallel.oq_distribute() == 'no'
-                         else parallel.Starmap.num_cores)
-        if avail < required:
+        required = .5 * (1 if dist == 'no' else parallel.Starmap.num_cores)
+        if dist == 'processpool' and avail < required:
             msg = ('Entering SLOW MODE. You have %.1f GB available, but the '
                    'engine would like at least 0.5 GB per core, i.e. %.1f GB: '
                    'https://github.com/gem/oq-engine/blob/master/doc/faq.md'
