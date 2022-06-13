@@ -34,7 +34,7 @@ LEVELS = {'debug': logging.DEBUG,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-DATABASE = os.environ.get('OQ_DATABASE') or '%s:%d' % valid.host_port()
+DATABASE = '%s:%d' % valid.host_port()
 
 
 def dbcmd(action, *args):
@@ -46,7 +46,12 @@ def dbcmd(action, *args):
     """
     if os.environ.get('OQ_DATABASE') == 'local':
         from openquake.server.db import actions
-        return getattr(actions, action)(dbapi.db, *args)
+        try:
+            func = getattr(actions, action)
+        except AttributeError:
+            return dbapi.db(action, *args)
+        else:
+            return func(dbapi.db, *args)
     sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect')
     with sock:
         res = sock.send((action,) + args)

@@ -54,6 +54,10 @@ NRML_DIR = os.path.dirname(tests.__file__)
 MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
 
 
+def setup():
+    os.environ['OQ_DATABASE'] = 'local'
+
+
 class Print(object):
     def __init__(self):
         self.lst = []

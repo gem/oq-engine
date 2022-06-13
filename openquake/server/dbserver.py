@@ -19,7 +19,6 @@
 import os
 import sys
 import time
-import sqlite3
 import logging
 import getpass
 import threading
