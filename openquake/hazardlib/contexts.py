@@ -74,14 +74,18 @@ def concat(ctxs):
     Concatenate context arrays.
     :returns: list with 0, 1 or 2 elements
     """
-    out, parametric, nonparam = [], [], []
+    out, parametric, parametric_np, nonparam = [], [], [], []
     for ctx in ctxs:
         if numpy.isnan(ctx.occurrence_rate).all():
             nonparam.append(ctx)
+        elif ctx.probs_occur.any() and ctx.occurrence_rate.any():
+            parametric_np.append(ctx)
         else:
             parametric.append(ctx)
     if parametric:
         out.append(numpy.concatenate(parametric).view(numpy.recarray))
+    if parametric_np:
+        out.extend(parametric_np)
     if nonparam:
         out.append(numpy.concatenate(nonparam).view(numpy.recarray))
     return out
@@ -516,9 +520,9 @@ class ContextMaker(object):
         if not hasattr(ctxs[0], 'probs_occur'):
             for ctx in ctxs:
                 ctx.probs_occur = []
-
-        np = max(len(ctx.probs_occur) for ctx in ctxs)
-        dd['probs_occur'] = numpy.zeros(np)
+        else:
+            np = max(ctx.probs_occur.shape[1] for ctx in ctxs)
+            dd['probs_occur'] = numpy.zeros(np)
 
         C = sum(len(ctx) for ctx in ctxs)
         ra = RecordBuilder(**dd).zeros(C)
@@ -704,9 +708,10 @@ class ContextMaker(object):
             for par in self.siteparams:
                 ctx[par] = sites.array[par]  # shape N-> (U, N)
             if tom:
-                pmf = tom.get_pmf(planar.wlr[:, 2])
-                pmf = numpy.pad(pmf, (0, ctx['probs_occur'].shape[2] - len(pmf)), 'constant')
-                ctx['probs_occur'][:len(pmf)] = pmf
+                # Reads Probability Mass Function from model and reshapes it
+                # into predetermined shape of probs_occur
+                pmf = tom.get_pmf(planar.wlr[:, 2], n_max=ctx['probs_occur'].shape[2])
+                ctx['probs_occur'] = pmf[:, numpy.newaxis, :]
 
         return ctx
 
@@ -720,7 +725,7 @@ class ContextMaker(object):
         tom = src.temporal_occurrence_model
 
         if isinstance(tom, NegativeBinomialTOM):
-            p_size = len(tom.get_pmf(max(src.mfd.occurrence_rates)))
+            p_size = tom.get_pmf(max(src.mfd.occurrence_rates)).shape[1]
             dd['probs_occur'] = numpy.zeros(p_size)
         else:
             dd['probs_occur'] = numpy.zeros(0)
