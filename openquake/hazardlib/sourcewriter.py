@@ -190,13 +190,13 @@ def build_evenly_discretised_mfd(mfd):
                 nodes=[occur_rates])
 
 
-@obj_to_node.add('temporalOccurrenceModel')
+@obj_to_node.add('tom')
 def build_temporal_occurrence_model(tom):
     """
 
     """
     parameters = Node("parameters", text=tom.parameters)
-    return Node("temporalOccurrenceModel",
+    return Node("tom",
                 {"name": tom.__class__.__name__},
                 nodes=[parameters])
 
@@ -698,8 +698,6 @@ def build_source_group(source_group):
         if isinstance(tom, PoissonTOM) and tom.occurrence_rate:
             attrs['tom'] = 'PoissonTOM'
             attrs['occurrence_rate'] = tom.occurrence_rate
-        else:
-            attrs['tom'] = tom.__class__.__name__
     srcs_weights = [getattr(src, 'mutex_weight', 1) for src in source_group]
     if set(srcs_weights) != {1}:
         attrs['srcs_weights'] = ' '.join(map(str, srcs_weights))

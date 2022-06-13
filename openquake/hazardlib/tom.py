@@ -311,7 +311,7 @@ class NegativeBinomialTOM(BaseTOM):
 
         return scipy.stats.nbinom.rvs(tau, theta)
 
-    def get_pmf(self, mean_rate, tol=1-1e-14):
+    def get_pmf(self, mean_rate, tol=1-1e-14, n_max=None):
         """
         :param mean_rate:
             The average number of events per year.
@@ -325,12 +325,12 @@ class NegativeBinomialTOM(BaseTOM):
         alpha = self.parameters[1]
         # Recovers NB2 parametrization (tau/theta or n,p in literature)
         tau = 1 / alpha
-        theta = tau / (tau + mean_rate*self.time_span)
+        theta = tau / (tau + numpy.array(mean_rate).flatten()*self.time_span)
+        if not n_max:
+            n_max = numpy.max(scipy.stats.nbinom.ppf(tol, tau, theta).astype(int))
+        pmf = scipy.stats.nbinom.pmf(numpy.arange(0, n_max), tau, theta[:, None])
 
-        n_max = scipy.stats.nbinom.ppf(tol, tau, theta)
-        pmf = scipy.stats.nbinom.pmf(numpy.arange(0, n_max), tau, theta)
-
-        return pmf/numpy.sum(pmf)
+        return pmf
 
     def get_probability_no_exceedance(self, mean_rate, poes):
         """
