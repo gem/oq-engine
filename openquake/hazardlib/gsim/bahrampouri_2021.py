@@ -36,6 +36,7 @@ import shapely.geometry as sg
 from shapely.geometry import LineString
 
 
+
 # coordinates from the author
 # Kyushu - VOLCANIC_FRONT
 kyushu = LineString([(127.067, 27.250), (128.983, 28.800), (130.217, 30.433),
