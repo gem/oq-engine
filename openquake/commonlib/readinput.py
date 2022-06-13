@@ -725,11 +725,11 @@ def _check_csm(csm, oqparam, h5):
 
     # build a smart SourceFilter
     try:
-        sitecol = get_site_collection(oqparam, h5)  # already stored
-    except Exception:  # missing sites.csv in test_case_1_ruptures
-        sitecol = None
+        sitecol = get_site_collection(oqparam, h5)
+    except ValueError:   # already stored (case_66)
+        sitecol = h5['sitecol']
     csm.sitecol = sitecol
-    if sitecol is None:
+    if sitecol is None:  # missing sites.csv (test_case_1_ruptures)
         return
     srcfilter = SourceFilter(sitecol, oqparam.maximum_distance)
     logging.info('Checking the sources bounding box')
