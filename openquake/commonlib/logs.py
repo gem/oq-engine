@@ -26,7 +26,7 @@ import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, dbapi
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -44,6 +44,9 @@ def dbcmd(action, *args):
     :param string action: database action to perform
     :param tuple args: arguments
     """
+    if os.environ.get('OQ_DATABASE') == 'local':
+        from openquake.server.db import actions
+        return getattr(actions, action)(dbapi.db, *args)
     sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect')
     with sock:
         res = sock.send((action,) + args)

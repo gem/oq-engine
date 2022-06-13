@@ -44,7 +44,7 @@ from django.shortcuts import render
 from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.hazardlib import nrml, gsim, valid
-from openquake.commonlib import readinput, oqvalidation, logs, datastore
+from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
@@ -53,7 +53,7 @@ from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine
 from openquake.engine.export.core import DataStoreExportError
-from openquake.server import utils, dbapi
+from openquake.server import utils
 
 from django.conf import settings
 from django.http import FileResponse
