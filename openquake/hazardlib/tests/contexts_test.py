@@ -382,7 +382,7 @@ class CollapseTestCase(unittest.TestCase):
             plt.plot(imls, newpoes[1, :, 0], '-', label='1-new')
             plt.legend()
             plt.show()
-        maxdiff = numpy.abs(newpoes - poes).max(axis=(1, 2))
+        maxdiff = numpy.abs(newpoes - poes).max(axis=(1, 2))  # shape NLG => N
         print('maxdiff =', maxdiff)
         self.assertLess(maxdiff[0], 5E-2)
         self.assertLess(maxdiff[1], 7E-3)
@@ -390,7 +390,7 @@ class CollapseTestCase(unittest.TestCase):
 
         # with collapse_level = 4 the precision is worse!?
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol, collapse_level=4)
-        maxdiff = numpy.abs(newpoes - poes).max(axis=(1, 2))
+        maxdiff = numpy.abs(newpoes - poes).max(axis=(1, 2))  # shape NLG => N
         print('maxdiff =', maxdiff)
         self.assertLess(maxdiff[0], .77)
         self.assertLess(maxdiff[1], .75)
