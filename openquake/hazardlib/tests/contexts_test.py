@@ -389,15 +389,12 @@ class CollapseTestCase(unittest.TestCase):
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [124, 312])
 
         # with collapse_level = 4 the precision is worse!?
-        cmaker.collapser = Collapser(
-            collapse_level=0, dist_types=cmaker.REQUIRES_DISTANCES,
-            has_vs30=False)
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol, collapse_level=4)
         maxdiff = numpy.abs(newpoes - poes).max(axis=(1, 2))
         print('maxdiff =', maxdiff)
         self.assertLess(maxdiff[0], .77)
         self.assertLess(maxdiff[1], .75)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [283, 312])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [282, 312])
 
 
 class GetCtxs01TestCase(unittest.TestCase):
