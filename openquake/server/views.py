@@ -396,7 +396,7 @@ def calc_list(request, id=None):
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
          parent_id, size_mb, host) in calc_data:
         if host:
-            owner += '@' + host
+            owner += '@' + host.split('.')[0]
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         abortable = False
         if is_running:
