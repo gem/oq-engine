@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Logging a warning when starting from an old hazard calculation
   * The extra fields of the site collection were lost when using --hc
   * Internal: implemented direct database access with OQ_DATABASE=local
 
