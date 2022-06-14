@@ -388,7 +388,7 @@ class CollapseTestCase(unittest.TestCase):
         self.assertLess(maxdiff[1], 7E-3)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [124, 312])
 
-        # with collapse_level = 4 the precision is perfect
+        # with collapse_level = 4 the precision is worse!?
         cmaker.collapser = Collapser(
             collapse_level=0, dist_types=cmaker.REQUIRES_DISTANCES,
             has_vs30=False)
