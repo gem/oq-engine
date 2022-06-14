@@ -537,7 +537,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         if given, extract only the specified calculation
     :returns:
         list of tuples (job_id, user_name, job_status, calculation_mode,
-                        job_is_running, job_description)
+                        job_is_running, job_description, host)
     """
     # helper to get job+calculation data from the oq-engine database
     filterdict = {}
@@ -574,7 +574,8 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
-             job.hazard_calculation_id, job.size_mb) for job in jobs]
+             job.hazard_calculation_id, job.size_mb, job.host)
+            for job in jobs]
 
 
 def update_job(db, job_id, dic):
