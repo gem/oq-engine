@@ -555,6 +555,4 @@ agg_id
 
     def test_scenario_from_ruptures(self):
         # same files as in test_recompute, but performing a scenario
-        with mock.patch('logging.warning') as warn:
-            self.run_calc(recompute.__file__, 'job_scenario.ini')
-        self.assertIsNone(warn.call_args)  # no inconsistent sums
+        self.run_calc(recompute.__file__, 'job_scenario.ini')
