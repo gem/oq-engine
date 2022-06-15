@@ -1099,6 +1099,8 @@ class ContextMaker(object):
             esites = len(ctxs[0]) * src.num_ruptures / self.num_rups
         weight = esites / N  # the weight is the effective number of ruptures
         src.esites = int(esites)
+        if src.source_id == 'U2NhbGVkSW52ZXJzaW9uU29sdXRpb246MTA3ODU2:0':
+            import pdb; pdb.set_trace()
         return weight
 
     def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
