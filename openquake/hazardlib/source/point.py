@@ -437,6 +437,10 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
         coords[p, 0] = psource.location.x
         coords[p, 1] = psource.location.y
         coords[p, 2] = psource.location.z
+    if (len(numpy.unique(coords[:, 0])) == 1 or
+            len(numpy.unique(coords[:, 1])) == 1):
+        # degenerated rectangle, there is no grid, do not collapse
+        return {grp_id: out + list(ps)}
     deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
     deltay = angular_distance(ps_grid_spacing)
     grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
