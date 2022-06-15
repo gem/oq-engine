@@ -64,6 +64,8 @@
   [Marco Pagani]
   * Added the possibility of disaggregating in terms of epsilon*
   * Added a method to compute the cross-correlation matrix
+  * Added Hassani & Atkinson (2018)
+  * Added Hassani & Atkinson (2020)
 
   [Michele Simionato]
   * Fixed disaggregation returning NaNs in some situations with
