@@ -112,6 +112,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     :returns:
         a dictionary sid, imti -> 6D-array
     """
+    breakpoint()
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         ctxs = cmaker.read_ctxs(dstore, slc, magidx)
@@ -195,6 +196,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             raise ValueError(
                 'The number of sites is to disaggregate is %d, but you have '
                 'max_sites_disagg=%d' % (self.N, few))
+
+        """
         if hasattr(self, 'csm'):
             for sg in self.csm.src_groups:
                 if sg.atomic:
@@ -203,6 +206,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         elif self.datastore['source_info'].attrs['atomic']:
             raise NotImplementedError(
                 'Atomic groups are not supported yet')
+        """
+
         all_edges, shapedic = disagg.get_edges_shapedic(
             self.oqparam, self.sitecol, self.datastore['source_mags'])
         *b, trts = all_edges

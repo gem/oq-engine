@@ -115,8 +115,11 @@ DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
 
 # this is inside an inner loop
 def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
-                 epsstar=False):
+                 epsstar=False, mutex=False):
     """
+    This function creates a disaggregation matrix for a recarray. The ruptures
+    considered can be either independent (default) or mutually exclusive.
+
     :param ctx: a recarray of size U for a single site and magnitude bin
     :param cmaker: a ContextMaker instance
     :param g_by_z: an array of gsim indices
@@ -150,7 +153,14 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
     # G - Number of gsims
     mean_std = cmaker.get_mean_stds([ctx])[:2]  # (2, G, M, U)
     poes = numpy.zeros((U, E, M, P, Z))
-    pnes = numpy.ones((U, E, M, P, Z))
+
+    # Create the matrix we will use to collect the probabilities of
+    # non-exceedance
+    if mutex:
+        pnes = numpy.ones((U, E, M, P, Z))
+    else:
+        pnes = numpy.ones((U, E, M, P, Z))
+
     # Multi-dimensional iteration
     min_eps, max_eps = epsilons.min(), epsilons.max()
     for (m, p, z), iml in numpy.ndenumerate(iml3):
@@ -178,9 +188,14 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
     z0 = numpy.zeros(0)
     time_span = cmaker.tom.time_span
     for u, rec in enumerate(ctx):
-        pnes[u] *= get_pnes(rec.occurrence_rate,
-                            getattr(rec, 'probs_occur', z0),
-                            poes[u], time_span)
+        if not mutex:
+            pnes[u] *= get_pnes(rec.occurrence_rate,
+                                getattr(rec, 'probs_occur', z0),
+                                poes[u], time_span)
+        else:
+            pnes[u] += get_pnes(rec.occurrence_rate,
+                                getattr(rec, 'probs_occur', z0),
+                                poes[u], time_span)
     bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
     if not bin_edges:
         return bindata
@@ -287,7 +302,8 @@ def _digitize_lons(lons, lon_bins):
 def disaggregation(
         sources, site, imt, iml, gsim_by_trt, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
-        source_filter=filters.nofilter, epsstar=False, **kwargs):
+        source_filter=filters.nofilter, epsstar=False, mutex_src=False,
+        mutex_rup=False, **kwargs):
     """
     Compute "Disaggregation" matrix representing conditional probability of an
     intensity measure type ``imt`` exceeding, at least once, an intensity
@@ -342,6 +358,12 @@ def disaggregation(
     :param source_filter:
         Optional source-site filter function. See
         :mod:`openquake.hazardlib.calc.filters`.
+    :param epsstar:
+        A boolean. When true the results are in terms of epsilon* rather than
+        epsilon
+    :param mutex:
+        A boolean. When true the aggregation of probabilities is done assuming
+        that ruptures
 
     :returns:
         A tuple of two items. First is itself a tuple of bin edges information
@@ -353,35 +375,58 @@ def disaggregation(
         of the result tuple. The matrix can be used directly by pmf-extractor
         functions.
     """
-    trts = sorted(set(src.tectonic_region_type for src in sources))
+
+    from openquake.hazardlib.sourceconverter import SourceGroup
+
+    if type(sources[0]).__name__ == 'SourceGroup':
+
+        # Groups: In this case we check if the source groups are homogenous
+        trts = sorted(set(grp.trt for grp in sources))
+        by_grp = sources
+    else:
+
+        # Sources: In this case we must aggregate the sources into groups
+        trts = sorted(set(src.tectonic_region_type for src in sources))
+        tmp = groupby(sources, operator.attrgetter('tectonic_region_type'))
+        by_grp = []
+        for key in tmp:
+            by_grp.append(SourceGroup(key, sources=tmp[key]))
+
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
-    by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
-    bdata = {}  # by trt, magi
+
+    # Site and intensity measure levels
     sitecol = SiteCollection([site])
     iml2 = numpy.array([[iml]])
     eps3 = _eps3(truncation_level, n_epsilons)
 
+    # Context makers by group
     rups = AccumDict(accum=[])
-    cmaker = {}  # trt -> cmaker
-    for trt, srcs in by_trt.items():
-        cmaker[trt] = cm = ContextMaker(
+    cmaker = {}  # grp -> cmaker
+    mags = []
+    for i, grp in enumerate(by_grp):
+        trt = grp.trt
+        srcs = grp.sources
+        cmaker[i] = cm = ContextMaker(
             trt, rlzs_by_gsim,
             {'truncation_level': truncation_level,
              'maximum_distance': source_filter.integration_distance(trt),
              'imtls': {str(imt): [iml]}})
         cm.tom = srcs[0].temporal_occurrence_model
-        rups[trt].extend(cm.from_srcs(srcs, sitecol))
-    mags = numpy.array([r.mag for rs in rups.values() for r in rs])
+        rups[i] = cm.from_srcs(srcs, sitecol)
+        mags.extend(rups[i][0]['mag'])
+    mags = numpy.array(mags)
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(mags.min() / mag_bin_width)),
         int(numpy.ceil(mags.max() / mag_bin_width) + 1))
 
-    for trt, cm in cmaker.items():
-        [ctx] = rups[trt]
+    bdata = {}  # by grp, magi
+    for i, cm in cmaker.items():
+        trt = cm.trt
+        [ctx] = rups[i]
         ctx.magi = numpy.searchsorted(mag_bins, ctx.mag) - 1
         for magi in numpy.unique(ctx.magi):
-            bdata[trt, magi] = disaggregate(
+            bdata[i, magi] = disaggregate(
                 ctx[ctx.magi == magi], cm, [0],
                 {imt: iml2}, eps3, epsstar=epsstar)
 
@@ -404,8 +449,9 @@ def disaggregation(
     matrix = numpy.zeros((len(mag_bins) - 1, len(dist_bins) - 1,
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))  # 6D
-    for trt, magi in bdata:
-        mat7 = _build_disagg_matrix(bdata[trt, magi], bin_edges[1:])
+    for i, magi in bdata:
+        trt = by_grp[i].trt
+        mat7 = _build_disagg_matrix(bdata[i, magi], bin_edges[1:])
         matrix[magi, ..., trt_num[trt]] = mat7[..., 0, 0, 0]
     return bin_edges + (trts,), matrix
 

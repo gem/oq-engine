@@ -22,6 +22,7 @@ from openquake.hazardlib.calc import disagg
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.gsim.campbell_2003 import Campbell2003
+from openquake.hazardlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.site import Site
@@ -81,6 +82,29 @@ class DigitizeLonsTestCase(unittest.TestCase):
         numpy.testing.assert_equal(idx, expected)
 
 
+class DisaggregateMutexTestCase(unittest.TestCase):
+
+    def setUp(self):
+        d = os.path.dirname(__file__)
+        source_model = os.path.join(d, 'data/ssm_mutex.xml')
+        self.sources = nrml.to_python(source_model, SourceConverter(
+            investigation_time=1., rupture_mesh_spacing=2.))
+        self.site = Site(Point(0.1, 0.1), 800, z1pt0=100., z2pt5=1.)
+        self.imt = PGA()
+        self.iml = 0.1
+        self.truncation_level = 1
+        self.trt = 'TRTA'
+        gsim = ChiouYoungs2008()
+        self.gsims = {self.trt: gsim}
+
+    def test_mutex01(self):
+        bin_edges, matrix = disagg.disaggregation(
+            self.sources, self.site, self.imt, self.iml, self.gsims,
+            self.truncation_level, n_epsilons=3,
+            mag_bin_width=3, dist_bin_width=4, coord_bin_width=2.4)
+        mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
+
+
 class DisaggregateTestCase(unittest.TestCase):
     def setUp(self):
         d = os.path.dirname(os.path.dirname(__file__))
@@ -95,7 +119,7 @@ class DisaggregateTestCase(unittest.TestCase):
         gsim = Campbell2003()
         self.gsims = {self.trt: gsim}
 
-    def test(self):
+    def test_disaggr(self):
         # a test sensitive to gsim.minimum_distance
         bin_edges, matrix = disagg.disaggregation(
             self.sources, self.site, self.imt, self.iml, self.gsims,
