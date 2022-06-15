@@ -391,6 +391,9 @@ def install(inst, version):
     else:
         oqreal = '%s/bin/oq' % inst.VENV
 
+    if inst in (user, devel):  # create the db in the default location
+        subprocess.check_call([oqreal, 'dbserver', 'createdb'])
+
     if (inst is server and not os.path.exists(inst.OQ) or
        inst is devel_server and not os.path.exists(inst.OQ)):
         os.symlink(oqreal, inst.OQ)
@@ -402,7 +405,6 @@ def install(inst, version):
             print(f'Please add an alias oq={oqreal} in your .bashrc or equiv')
     elif inst is devel:
         if sys.platform == 'win32':
-            subprocess.check_call([oqreal, 'dbserver', 'createdb'])
             print(f'Please activate the virtualenv with {inst.VENV}'
                   '\\Scripts\\activate.bat')
         else:
