@@ -391,6 +391,9 @@ def install(inst, version):
     else:
         oqreal = '%s/bin/oq' % inst.VENV
 
+    if inst in (user, devel):  # create the db in the default location
+        subprocess.check_call([oqreal, 'dbserver', 'createdb'])
+
     if (inst is server and not os.path.exists(inst.OQ) or
        inst is devel_server and not os.path.exists(inst.OQ)):
         os.symlink(oqreal, inst.OQ)
