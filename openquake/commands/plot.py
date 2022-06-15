@@ -431,7 +431,7 @@ def make_figure_sources(extractors, what):
     ax.plot(sitecol['lon'], sitecol['lat'], '.')
     ax.plot(lons, lats, 'o')
     pp.set_lim(ss_lons, ss_lats)
-    ax.set_title('%d/%d sources' % (n, tot))
+    ax.set_title('calc#%d, %d/%d sources' % (ex.calc_id, n, tot))
     return plt
 
 
