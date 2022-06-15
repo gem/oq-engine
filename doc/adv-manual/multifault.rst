@@ -11,10 +11,10 @@ each one with an ID. MultiFaultSources are lists of nonparametric ruptures
 with values mag, rake, probs_occur and IDs (called *sectionIndexes*)
 taken from the geometryModel.
 
-In order to understand MultiFaultSources, The example to study is in
+In order to understand MultiFaultSources, we provided a simple example in
 the directory ``qa_tests_data/classical/case_65`` in the engine
 repository. In this example the geometryModel (the file sections.xml)
-contains two kiteSurfaces with IDs ``s1`` and ``s2`` respectively;
+contains two kiteSurfaces with IDs ``1`` and ``2`` respectively;
 there is a single MultiFaultSource with the following content:
 
 .. code-block:: xml
@@ -22,17 +22,17 @@ there is a single MultiFaultSource with the following content:
       <multiFaultSource id="1" name="Test1">
 	<multiPlanesRupture probs_occur="0.8 0.2">
 	  <magnitude>5.0</magnitude>
-	  <sectionIndexes indexes="s1"/>
+	  <sectionIndexes indexes="1"/>
 	  <rake>90</rake>
 	</multiPlanesRupture>
 	<multiPlanesRupture probs_occur="0.7 0.3">
 	  <magnitude>6.0</magnitude>
-	  <sectionIndexes indexes="s1,s2"/>
+	  <sectionIndexes indexes="1,2"/>
 	  <rake>90</rake>
 	</multiPlanesRupture>
 	<multiPlanesRupture probs_occur="0.9 0.1">
 	  <magnitude>5.2</magnitude>
-	  <sectionIndexes indexes="s2"/>
+	  <sectionIndexes indexes="2"/>
 	  <rake>90</rake>
 	</multiPlanesRupture>
       </multiFaultSource>
@@ -61,7 +61,7 @@ surface will be the surface in the geometryModel; if the ruptures contains
 multiple section indexes the surface will be a MultiSurface built from
 the corresponding surfaces in the geometryModel.
 
-In our example the first rupture will be associated to the KiteSurface ``s1``,
-the third rupture to the KiteSurface ``s2`` and the second rupture will
-be associated to the MultiSurface obtained from the KiteSurfaces ``s1`` and
-``s2``.
+In our example the first rupture will be associated to the KiteSurface ``1``,
+the third rupture to the KiteSurface ``2`` and the second rupture will
+be associated to the MultiSurface obtained from the KiteSurfaces ``1`` and
+``2``.
