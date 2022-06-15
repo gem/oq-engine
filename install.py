@@ -402,6 +402,7 @@ def install(inst, version):
             print(f'Please add an alias oq={oqreal} in your .bashrc or equiv')
     elif inst is devel:
         if sys.platform == 'win32':
+            subprocess.check_call([oqreal, 'dbserver', 'createdb'])
             print(f'Please activate the virtualenv with {inst.VENV}'
                   '\\Scripts\\activate.bat')
         else:
