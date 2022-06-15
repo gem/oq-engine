@@ -52,15 +52,15 @@ def main(cmd,
             dbserver.run_server(dbhostport, loglevel, foreground)
         else:
             print('dbserver already running')
-    elif cmd == 'createdb':
+    elif cmd == 'upgrade':
         dbapi.db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
         db.actions.upgrade_db(dbapi.db)
         dbapi.db.close()
-        print('Created %s' % dbapi.db.args)
+        print('Created/upgraded %s' % dbapi.db.args)
 
 
 main.cmd = dict(help='dbserver command',
-                choices='start stop status createdb'.split())
+                choices='start stop status upgrade'.split())
 main.dbhostport = 'dbhost:port'
 main.foreground = 'stay in foreground'
 main.loglevel = 'DEBUG|INFO|WARN'
