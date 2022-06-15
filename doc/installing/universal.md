@@ -39,7 +39,7 @@ on Windows:
 ```
 C:\>git clone https://github.com/gem/oq-engine.git
 C:\>cd oq-engine 
-C:\>python install.py devel
+C:\>python.exe install.py devel
 ```
 
 This installation method will create a Python virtual environment in `$HOME/openquake` and will install the engine
@@ -70,7 +70,7 @@ $ /usr/bin/python3 install.py user
 on Windows:
 ```
 C:\>curl.exe -LO https://raw.githubusercontent.com/gem/oq-engine/master/install.py
-C:\>python install.py user
+C:\>python.exe install.py user
 ```
 
 This installation method will create a Python virtual environment in `$HOME/openquake` and will install the engine on it.
