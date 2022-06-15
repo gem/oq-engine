@@ -512,7 +512,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     # else:
                     smap.submit(trip)
                     self.n_outs[grp_id] += 1
-        logging.info('grp_id->n_outs: %s', list(self.n_outs.values()))
         return smap
 
     def collect_hazard(self, acc, pmap_by_kind):

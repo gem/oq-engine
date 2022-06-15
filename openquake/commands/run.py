@@ -77,7 +77,7 @@ def get_pstats(pstatfile, n):
 
 # called when profiling
 def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
-         params, host=None):
+         params, user_name, host=None):
     global calc_path
     if 'hazard_calculation_id' in params:
         hc_id = int(params['hazard_calculation_id'])
@@ -94,7 +94,7 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
     dic = readinput.get_params(job_ini, params)
     # set the logs first of all
     log = logs.init("job", dic, getattr(logging, loglevel.upper()),
-                    host=host)
+                    user_name=user_name, host=host)
 
     with log, performance.Monitor('total runtime', measuremem=True) as monitor:
         calc = base.calculators(log.get_oqparam(), log.calc_id)
@@ -123,6 +123,7 @@ def main(job_ini,
     Run a calculation
     """
     dbserver.ensure_on()
+    user_name = getpass.getuser()
     try:
         host = socket.gethostname()
     except Exception:  # gaierror
@@ -144,9 +145,9 @@ def main(job_ini,
         return
     if len(job_ini) == 1:
         return _run(job_ini[0], concurrent_tasks, pdb, reuse_input,
-                    loglevel, exports, params, host)
+                    loglevel, exports, params, user_name, host)
     jobs = create_jobs(job_ini, loglevel, hc_id=hc,
-                       user_name=getpass.getuser(), host=host)
+                       user_name=user_name, host=host)
     for job in jobs:
         job.params.update(params)
         job.params['exports'] = ','.join(exports)

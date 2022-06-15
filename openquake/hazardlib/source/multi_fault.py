@@ -132,12 +132,9 @@ class MultiFaultSource(BaseSeismicSource):
                 if idx not in sections:
                     raise ValueError(msg.format(i, idx))
 
-    def iter_ruptures(self, fromidx=0, untilidx=None, **kwargs):
+    def iter_ruptures(self, **kwargs):
         """
         An iterator for the ruptures.
-
-        :param fromidx: start
-        :param untilidx: stop
         """
         # Check
         if 'sections' not in self.__dict__:
@@ -145,9 +142,8 @@ class MultiFaultSource(BaseSeismicSource):
 
         # iter on the ruptures
         step = kwargs.get('step', 1)
-        untilidx = len(self.mags) if untilidx is None else untilidx
         s = self.sections
-        for i in range(fromidx, untilidx, step**2):
+        for i in range(0, len(self.mags), step):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
                 sfc = self.sections[idxs[0]].surface
