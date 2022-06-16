@@ -180,9 +180,10 @@ def view_worst_sources(token, dstore):
     ser = data.groupby('taskno').ctimes.sum().sort_values().tail(1)
     [[taskno, maxtime]] = ser.to_dict().items()
     data = data[data.taskno == taskno]
-    print('Sources in the slowest task (%d seconds, weight=%d)'
-          % (maxtime, data['weight'].sum()))
+    print('Sources in the slowest task (%d seconds, weight=%d, taskno=%d)'
+          % (maxtime, data['weight'].sum(), taskno))
     data['slow_rate'] = data.ctimes / data.weight
+    del data['taskno']
     df = data.sort_values('ctimes', ascending=False)
     return df[slice(None, None, step)]
 
