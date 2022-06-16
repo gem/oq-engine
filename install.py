@@ -392,7 +392,8 @@ def install(inst, version):
         oqreal = '%s/bin/oq' % inst.VENV
 
     if inst in (user, devel):  # create/upgrade the db in the default location
-        subprocess.check_call([oqreal, 'dbserver', 'upgrade'])
+        # do not stop if `oq dbserver upgrade` is missing (versions < 3.15)
+        subprocess.run([oqreal, 'dbserver', 'upgrade'])
 
     if (inst is server and not os.path.exists(inst.OQ) or
        inst is devel_server and not os.path.exists(inst.OQ)):
