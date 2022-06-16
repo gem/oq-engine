@@ -731,6 +731,8 @@ class ContextMaker(object):
         cdist = sitecol.get_cdist(src.location)
         mask = cdist <= magdist[maxmag] + max_radius
         sitecol = sitecol.filter(mask)
+        if sitecol is None:
+            return []
         for mag, planarlist, sites in self._triples(
                 src, sitecol, cdist[mask], planardict):
             if not planarlist:
