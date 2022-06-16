@@ -15,7 +15,7 @@ The *point source gridding approximation* is a smart way
 of raising the grid spacing without losing too much precision and
 without losing too much performance.
 
-The idea is two use two kind of point sources: the original ones and a
+The idea is two use two kinds of point sources: the original ones and a
 set of "effective" ones (instances of the class
 ``CollapsedPointSource``) that essentially are the original sources averaged
 on a larger grid, determined by the parameter ``ps_grid_spacing``.
@@ -38,7 +38,9 @@ If the ``maximum_distance`` has a value of 500 km and the
 ``pointsource_distance`` a value of 50 km, then (50/500)^2 = 1%
 of the sites will be close and 99% of the sites will be far.
 Therefore you will able to use the collapsed sources for
-99% percent of the sites and a huge speedup is to big expected.
+99% percent of the sites and a huge speedup is to big expected
+(in reality things are a bit more complicated, since the engine also consider
+the fact that ruptures have a finite size, but you get the idea).
 
 Application: making the Canada model 26x faster
 ------------------------------------------------
@@ -176,7 +178,7 @@ will benefit from lower values of ``ps_grid_spacing`` while
 calculations with a single nodal plane and hypocenter for each source
 will benefit from higher values of ``ps_grid_spacing``.
 
-If you are interest only in speed and not in precision, you can set
+If you are interested only in speed and not in precision, you can set
 ``calculation_mode=preclassical``, run the sensitivity analysis in parallel
 very quickly and then use the ``ps_grid_spacing`` value corresponding to
 the minimum weight of the source model, which can be read from the
@@ -202,9 +204,10 @@ the full calculation (1_929_504), this is the maximum speedup that we
 can expect from using the approximation.
 
 Note 1: the weighting algorithm changes at every release, so only relative
-weights at a fixed release are meaningful. You should not expect to get
-the same weight across engine releases.
+weights at a fixed release are meaningful and it does not make sense to
+compare weights across engine releases.
 
 Note 2: the precision and performance of the ``ps_grid_spacing`` approximation
 change at every release: you should not expect to get the same numbers and
-performance across releases for the same model with the same parameters.
+performance across releases even if the model is the same and the parameters
+are the same.
