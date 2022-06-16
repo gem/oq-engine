@@ -725,8 +725,14 @@ class ContextMaker(object):
 
         magdist = {mag: self.maximum_distance(mag)
                    for mag, rate in src.get_annual_occurrence_rates()}
+        maxmag = max(magdist)
         ctxs = []
-        for mag, planarlist, sites in self._triples(src, sitecol, planardict):
+        max_radius = src.max_radius()
+        cdist = sitecol.get_cdist(src.location)
+        mask = cdist <= magdist[maxmag] + max_radius
+        sitecol = sitecol.filter(mask)
+        for mag, planarlist, sites in self._triples(
+                src, sitecol, cdist[mask], planardict):
             if not planarlist:
                 continue
             elif len(planarlist) > 1:  # when using ps_grid_spacing
@@ -739,7 +745,7 @@ class ContextMaker(object):
                 ctxs.append(ctxt)
         return concat(ctxs)
 
-    def _triples(self, src, sitecol, planardict):
+    def _triples(self, src, sitecol, cdist, planardict):
         # splitting by magnitude
         triples = []
         if src.count_nphc() == 1:
@@ -747,7 +753,6 @@ class ContextMaker(object):
             for mag, pla in planardict.items():
                 triples.append((mag, pla, sitecol))
         else:
-            cdist = sitecol.get_cdist(src.location)
             for m, rup in enumerate(src.iruptures()):
                 mag = rup.mag
                 arr = [rup.surface.array.reshape(-1, 3)]
@@ -1065,11 +1070,12 @@ class ContextMaker(object):
         :returns: how many sites are impacted overall
         """
         nphc = src.count_nphc()
+        dists = sites.get_cdist(src.location)
         planardict = src.get_planar(iruptures=True)
         esites = 0
+        max_radius = src.max_radius()
         for m, (mag, [planar]) in enumerate(planardict.items()):
-            dists = project(planar, sites.xyz)[0, 0]  # shape N
-            rrup = dists[dists < self.maximum_distance(mag)]
+            rrup = dists[dists < self.maximum_distance(mag) + max_radius]
             nclose = (rrup < self.pointsource_distance + src.ps_grid_spacing +
                       src.radius[m]).sum()
             nfar = len(rrup) - nclose
