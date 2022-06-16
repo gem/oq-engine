@@ -23,7 +23,7 @@ jobs:
         #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
-        python-version: [3.8, 3.9]
+        python-version: [3.8, 3.9, 3.10]
         #container: ["rockylinux:8", "ubuntu:focal"]
         container: ["rockylinux:8"]
 
@@ -40,7 +40,7 @@ jobs:
       if: github.event.inputs.git-ref != ''
       with:
         ref: ${{ github.event.inputs.git-ref }}
-    - name: Set up Python  ${{ matrix.python-version }} 
+    - name: Set up Python  ${{ matrix.python-version }}
       run: |
         pyver=`echo ${{ matrix.python-version }} | tr -d .`
         dnf update -y
@@ -72,4 +72,4 @@ jobs:
         export PYTEST_ADDOPTS="--color=yes"
         # set owner to openquake to run test and create cache for pytest
         chown -R openquake /__w/oq-engine/
-        runuser -l openquake -c '/opt/openquake/venv/bin/pytest -vsx /__w/oq-engine/oq-engine/openquake/calculators'
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/risk_test.zip '
