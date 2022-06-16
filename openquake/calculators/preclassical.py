@@ -150,7 +150,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         N = get_maxsize(M, G)
         logging.info('NMG = ({:_d}, {:_d}, {:_d}) = {:.1f} MB'.format(
             N, M, G, N*M*G*8 / 1024**2))
-        h5 = self.datastore.hdf5
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
@@ -174,10 +173,10 @@ class PreClassicalCalculator(base.HazardCalculator):
         # run preclassical for non-atomic sources
         sources_by_grp = groupby(
             normal_sources, lambda src: (src.grp_id, msr_name(src)))
-        h5['full_lt'] = csm.full_lt
+        self.datastore.hdf5['full_lt'] = csm.full_lt
         logging.info('Starting preclassical')
         self.datastore.swmr_on()
-        smap = parallel.Starmap(preclassical, h5=h5)
+        smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for (grp_id, msr), srcs in sources_by_grp.items():
             pointsources, pointlike, others = [], [], []
             for src in srcs:

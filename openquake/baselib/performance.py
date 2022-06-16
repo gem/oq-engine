@@ -227,6 +227,7 @@ class Monitor(object):
         """
         t = (name, self.task_no, self.weight, self.duration, len(res.pik),
              mem_gb)
+        print(t)
         data = numpy.array([t], task_info_dt)
         hdf5.extend(h5['task_info'], data)
         h5['task_info'].flush()  # notify the reader
