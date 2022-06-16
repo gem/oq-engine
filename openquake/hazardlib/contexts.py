@@ -91,7 +91,7 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fit in the CPU cache
     """
-    maxs = TWO20 // (8*M*G)
+    maxs = TWO20 // (16*M*G)
     assert maxs > 1, maxs
     return maxs
 
@@ -1077,7 +1077,7 @@ class ContextMaker(object):
         return esites
 
     # tested in test_collapse_small
-    def estimate_weight(self, src, srcfilter):
+    def estimate_weight(self, src, srcfilter, multiplier=1):
         """
         :param src: a source object
         :param srcfilter: a SourceFilter instance
@@ -1091,12 +1091,13 @@ class ContextMaker(object):
         N = len(srcfilter.sitecol.complete)  # total sites
         if (hasattr(src, 'location') and src.count_nphc() > 1 and
                 self.pointsource_distance < 1000):
-            esites = self.estimate_sites(src, sites)
+            esites = self.estimate_sites(src, sites) * multiplier
         else:
             ctxs = self.get_ctxs(src, sites, step=10)  # reduced number
             if not ctxs:
                 return src.num_ruptures if N == 1 else 0
-            esites = len(ctxs[0]) * src.num_ruptures / self.num_rups
+            esites = (len(ctxs[0]) * src.num_ruptures /
+                      self.num_rups * multiplier)
         weight = esites / N  # the weight is the effective number of ruptures
         src.esites = int(esites)
         return weight
@@ -1118,7 +1119,7 @@ class ContextMaker(object):
                 with mon:
                     src.esites = 0  # overridden inside estimate_weight
                     src.weight = .1 + self.estimate_weight(
-                        src, srcfilter) * G * multiplier
+                        src, srcfilter, multiplier) * G
                     if src.code == b'F' and N <= self.max_sites_disagg:
                         src.weight *= 20  # test ucerf
                     elif src.code == b'S':
