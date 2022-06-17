@@ -1104,20 +1104,22 @@ class SourceConverter(RuptureConverter):
         idxs = []
         num_probs = None
         for i, rupnode in enumerate(node):
-            prb = pmf.PMF(valid.pmf(rupnode['probs_occur']))
-            if num_probs is None:  # first time
-                num_probs = len(prb.data)
-            elif len(prb.data) != num_probs:
-                # probs_occur must have uniform length for all ruptures
-                with context(self.fname, rupnode):
-                    raise ValueError(
-                        'prob_occurs=%s has %d elements, expected %s'
-                        % (rupnode['probs_occur'], len(prb.data), num_probs))
-            pmfs.append(prb)
-            mags.append(~rupnode.magnitude)
-            rakes.append(~rupnode.rake)
-            indexes = rupnode.sectionIndexes['indexes']
-            idxs.append(tuple(map(int, indexes.split(','))))
+            with context(self.fname, rupnode):
+                prb = pmf.PMF(valid.pmf(rupnode['probs_occur']))
+                if num_probs is None:  # first time
+                    num_probs = len(prb.data)
+                elif len(prb.data) != num_probs:
+                    # probs_occur must have uniform length for all ruptures
+                    with context(self.fname, rupnode):
+                        raise ValueError(
+                            'prob_occurs=%s has %d elements, expected %s'
+                            % (rupnode['probs_occur'], len(prb.data),
+                               num_probs))
+                pmfs.append(prb)
+                mags.append(~rupnode.magnitude)
+                rakes.append(~rupnode.rake)
+                indexes = rupnode.sectionIndexes['indexes']
+                idxs.append(tuple(map(int, indexes.split(','))))
         with context(self.fname, node):
             mags = rounded_unique(mags, idxs)
         rakes = numpy.array(rakes)

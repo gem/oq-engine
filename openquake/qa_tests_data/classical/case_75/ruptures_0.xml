@@ -10,31 +10,31 @@ xmlns:gml="http://www.opengis.net/gml"
 
                 <multiPlanesRupture probs_occur="0.98 0.02" >
                     <magnitude> 7.0 </magnitude>
-                    <sectionIndexes indexes="1,2,3"/>
+                    <sectionIndexes indexes="0,1,2"/>
                     <rake>180.0</rake>
                 </multiPlanesRupture>
 
                 <multiPlanesRupture probs_occur="0.96 0.04" >
                     <magnitude> 6.0 </magnitude>
-                    <sectionIndexes indexes="1"/>
+                    <sectionIndexes indexes="0"/>
                     <rake>180.0</rake>
                 </multiPlanesRupture>
 
                 <multiPlanesRupture probs_occur="0.95 0.05" >
                     <magnitude> 6.0 </magnitude>
-                    <sectionIndexes indexes="2" />
+                    <sectionIndexes indexes="1" />
                     <rake>180.0</rake>
                 </multiPlanesRupture>
 
                 <multiPlanesRupture probs_occur="0.96 0.04" >
                     <magnitude> 6.0 </magnitude>
-                    <sectionIndexes indexes="3" />
+                    <sectionIndexes indexes="2" />
                     <rake>180.0</rake>
                 </multiPlanesRupture>
 
                 <multiPlanesRupture probs_occur="0.97 0.03" >
                     <magnitude> 6.0 </magnitude>
-                    <sectionIndexes indexes="2,3" />
+                    <sectionIndexes indexes="1,2" />
                     <rake>180.0</rake>
                 </multiPlanesRupture>
 
