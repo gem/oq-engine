@@ -179,6 +179,10 @@ def compare_rups(calc_1: int, calc_2: int, site_id: int = 0):
         df2 = ds2.read_df('rup', sel={'sids': site_id})
     del df1['probs_occur']
     del df2['probs_occur']
+    lens = len(df1), len(df2)
+    if lens[0] != lens[1]:
+        print('%d != %d ruptures' % lens)
+        return
     print(df1.compare(df2))
 
 
