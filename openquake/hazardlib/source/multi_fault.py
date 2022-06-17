@@ -83,21 +83,15 @@ class MultiFaultSource(BaseSeismicSource):
 
         Set the attribute .sections
         """
-        # Check
         assert sections
-
-        # Assign to the surface the index of the corresponding section
-        for sec_id, surface in enumerate(sections):
-            surface.suid = sec_id
-
         # `i` is the index of the rupture of the `n` admitted by this source.
         # In this loop we check that all the IDs of the sections composing one
         # rupture have a object in the sections dictionary describing their
         # geometry.
-        self.sections = sections
         for i in range(len(self.mags)):
             for idx in self.rupture_idxs[i]:
                 sections[idx]
+        self.sections = sections
 
     def iter_ruptures(self, **kwargs):
         """
