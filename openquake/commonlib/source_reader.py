@@ -175,8 +175,8 @@ def fix_geometry_sections(smdict):
         sections.update(gmod.sections)
     nrml.check_unique(
         sec_ids, 'section ID in files ' + ' '.join(gfiles))
-    sections = {sid: sections[sid] for sid in sorted(sections)}
-    # section_arrays = [sec.geom() for sec in sections.values()]
+    sections = [sections[suid] for suid in sorted(sections)]
+    # section_arrays = [geom(surf) for surf in sections]
 
     # fix the MultiFaultSources
     for smod in smodels:

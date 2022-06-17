@@ -34,7 +34,6 @@ from openquake.baselib.node import context, striptag, Node, node_to_dict
 from openquake.hazardlib import geo, mfd, pmf, source, tom, valid, InvalidFile
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source import NonParametricSeismicSource
-from openquake.hazardlib.source.multi_fault import FaultSection
 
 
 U32 = numpy.uint32
@@ -730,7 +729,7 @@ class SourceConverter(RuptureConverter):
     def convert_section(self, node):
         """
         :param node: a section node
-        :returns: a FaultSection instance
+        :returns: a list of surfaces
         """
         with context(self.fname, node):
             if hasattr(node, 'planarSurface'):
@@ -740,8 +739,7 @@ class SourceConverter(RuptureConverter):
             else:
                 raise ValueError('Only planarSurfaces or kiteSurfaces ' +
                                  'supported')
-            surfs = self.convert_surfaces(surfaces, node['id'])
-        return FaultSection(node['id'], surfs)
+            return self.convert_surfaces(surfaces, node['id'])
 
     def get_tom(self, node):
         """
@@ -1119,7 +1117,7 @@ class SourceConverter(RuptureConverter):
             mags.append(~rupnode.magnitude)
             rakes.append(~rupnode.rake)
             indexes = rupnode.sectionIndexes['indexes']
-            idxs.append(tuple(indexes.split(',')))
+            idxs.append(tuple(map(int, indexes.split(','))))
         with context(self.fname, node):
             mags = rounded_unique(mags, idxs)
         rakes = numpy.array(rakes)

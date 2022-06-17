@@ -661,20 +661,6 @@ def build_multi_fault_source_node(multi_fault_source):
                 nodes=rup_nodes)
 
 
-@obj_to_node.add('FaultSection')
-def build_section(section):
-    """
-    Parses a FaultSection instance to a Node class
-
-    :param section:
-        A FaultSection instance
-    :returns:
-        Instance of :class:`openquake.baselib.node.Node`
-    """
-    nodes = [obj_to_node(section.surface)]
-    return Node("section", {'id': section.sec_id}, nodes=nodes)
-
-
 @obj_to_node.add('SourceGroup')
 def build_source_group(source_group):
     source_nodes = [obj_to_node(src) for src in source_group.sources]
