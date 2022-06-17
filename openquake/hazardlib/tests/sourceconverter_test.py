@@ -498,8 +498,8 @@ class MultiFaultSourceModelTestCase(unittest.TestCase):
         sec = nrml.to_python(sec_xml, conv).sections  # s1 and s2
         expected = [Point(11, 45, 0), Point(11, 45.5, 10)]
         # Check geometry info
-        self.assertEqual(expected[0], sec['s2'].surface.profiles[0].points[0])
-        self.assertEqual(expected[1], sec['s2'].surface.profiles[0].points[1])
+        self.assertEqual(expected[0], sec['s2'].profiles[0].points[0])
+        self.assertEqual(expected[1], sec['s2'].profiles[0].points[1])
         ssm = nrml.to_python(src_xml, conv)
         self.assertIsInstance(ssm, nrml.SourceModel)
         ssm[0][0].set_sections(sec)   # fix sections
