@@ -150,7 +150,7 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
         if fname == geometry:
             for srcnode in root.geometryModel:
                 sec = converter.convert_node(srcnode)
-                sections[sec.sec_id] = sec
+                sections[srcnode['id']] = sec
             sections = {sid: sections[sid] for sid in sections}
         elif 'nrml/0.4' in root['xmlns']:
             for srcnode in root.sourceModel:
