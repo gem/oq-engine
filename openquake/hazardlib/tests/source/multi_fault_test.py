@@ -16,8 +16,7 @@
 
 import os
 import unittest
-from openquake.hazardlib.source.multi_fault import (
-    MultiFaultSource, FaultSection)
+from openquake.hazardlib.source.multi_fault import MultiFaultSource
 from openquake.hazardlib.geo.surface import KiteSurface
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
