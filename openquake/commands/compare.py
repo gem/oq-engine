@@ -177,6 +177,8 @@ def compare_rups(calc_1: int, calc_2: int, site_id: int = 0):
     with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
         df1 = ds1.read_df('rup', sel={'sids': site_id})
         df2 = ds2.read_df('rup', sel={'sids': site_id})
+    del df1['probs_occur']
+    del df2['probs_occur']
     print(df1.compare(df2))
 
 
