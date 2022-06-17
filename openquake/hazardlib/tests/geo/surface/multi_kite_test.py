@@ -368,13 +368,13 @@ class NZLTestCase(unittest.TestCase):
         # Create the surface
         sfcs = []
         for sec in gmodel.sections:
-            sfcs.append(gmodel.sections[sec].surface)
+            sfcs.append(gmodel.sections[sec])
         self.msrf = MultiSurface(sfcs)
 
         # Create second surface
         keys = list(gmodel.sections)
         self.sec_id = keys[1]
-        sfcs2 = [gmodel.sections[self.sec_id].surface]
+        sfcs2 = [gmodel.sections[self.sec_id]]
         self.msrf2 = MultiSurface(sfcs2)
 
     def test_nzl_tors(self):

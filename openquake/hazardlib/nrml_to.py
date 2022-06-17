@@ -97,8 +97,10 @@ def to_wkt(geom, coords):
 
 
 # https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
-def appendrow(row, rows, chatty, sections=()):
+def appendrow(row, rows, chatty, sections=(), s2i={}):
     if row.code == 'F':  # row.coords is a multiFaultSource
+        row.coords.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
+                                   for idxs in row.coords.rupture_idxs]
         row.coords.set_sections(sections)
         row.coords = [row.coords.polygon.coords]
     row.wkt = wkt = to_wkt(row.geom, row.coords)
@@ -140,7 +142,8 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
     t0 = time.time()
     if geometry:
         fnames = [geometry] + fnames
-    sections = {}
+    sections = []
+    i, s2i = 0, {}
     for fname in fnames:
         logging.info('Reading %s', fname)
         converter.fname = fname
@@ -150,19 +153,20 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
         if fname == geometry:
             for srcnode in root.geometryModel:
                 sec = converter.convert_node(srcnode)
-                sections[srcnode['id']] = sec
-            sections = {sid: sections[sid] for sid in sections}
+                sections.append(sec)
+                s2i[srcnode['id']] = i
+                i += 1
         elif 'nrml/0.4' in root['xmlns']:
             for srcnode in root.sourceModel:
                 appendrow(converter.convert_node(srcnode),
-                          srcs, chatty, sections)
+                          srcs, chatty, sections, s2i)
         else:  # nrml/0.5
             for srcgroup in root.sourceModel:
                 trt = srcgroup['tectonicRegion']
                 for srcnode in srcgroup:
                     srcnode['tectonicRegion'] = trt
                     appendrow(converter.convert_node(srcnode),
-                              srcs, chatty, sections)
+                              srcs, chatty, sections, s2i)
         if fmt == 'csv':
             for kind, rows in srcs.items():
                 dest = os.path.join(outdir, '%s_%s.csv' % (name, kind))
