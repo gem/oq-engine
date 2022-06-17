@@ -84,6 +84,9 @@ class MultiFaultSource(BaseSeismicSource):
         Set the attribute .sections
         """
         assert sections
+        # this is fundamental for the distance cache
+        for idx, sec in enumerate(sections):
+            sec.suid = idx
         # `i` is the index of the rupture of the `n` admitted by this source.
         # In this loop we check that all the IDs of the sections composing one
         # rupture have a object in the sections dictionary describing their
