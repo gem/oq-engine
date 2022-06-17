@@ -1129,8 +1129,6 @@ class ContextMaker(object):
                         src, srcfilter, multiplier) * G
                     if src.code == b'F' and N <= self.max_sites_disagg:
                         src.weight *= 20  # test ucerf
-                    elif src.code == b'F':
-                        src.weight += (src.esites / N) * 10
                     elif src.code == b'S':
                         src.weight += .9
                     elif src.code == b'C':
