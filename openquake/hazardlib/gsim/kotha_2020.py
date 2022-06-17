@@ -481,7 +481,7 @@ class KothaEtAl2020Site(KothaEtAl2020):
     a polynomial site amplification function dependent on Vs30 (m/s)
     """
     #: Required site parameter is not set
-    REQUIRES_SITES_PARAMETERS = set(("vs30",))
+    REQUIRES_SITES_PARAMETERS = {"vs30"}
 
     kind = "site"
 
