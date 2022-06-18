@@ -21,11 +21,13 @@ defines :class:`MultiFaultSource`.
 import numpy as np
 from typing import Union
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import gen_slices
 from openquake.hazardlib.source.rupture import (
     NonParametricProbabilisticRupture)
 from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
+from openquake.hazardlib.geo.surface.kite_fault import geom_to_kite
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
@@ -108,15 +110,22 @@ class MultiFaultSource(BaseSeismicSource):
 
         # iter on the ruptures
         step = kwargs.get('step', 1)
-        s = self.sections
-        for i in range(0, len(self.mags), step):
+        n = len(self.mags)
+        if self.hdf5path:
+            with hdf5.File(self.hdf5path, 'r') as f:
+                geoms = f['multi_fault_sections'][self.offset:self.offset + n]
+            s = [geom_to_kite(geom) for geom in geoms]
+        else:
+            s = self.sections
+        for i in range(0, n, step):
             idxs = self.rupture_idxs[i]
+            import pdb; pdb.set_trace()
             if len(idxs) == 1:
-                sfc = self.sections[idxs[0]]
+                sfc = s[idxs[0] - self.offset]
             else:
-                sfc = MultiSurface([s[idx] for idx in idxs])
+                sfc = MultiSurface([s[idx - self.offset] for idx in idxs])
             rake = self.rakes[i]
-            hypo = self.sections[idxs[0]].get_middle_point()
+            hypo = s[idxs[0]].get_middle_point()
             yield NonParametricProbabilisticRupture(
                 self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
                 self.pmfs[i])
@@ -136,6 +145,7 @@ class MultiFaultSource(BaseSeismicSource):
                 self.mags[slc],
                 self.rakes[slc])
             src.offset = i * BLOCKSIZE
+            src.hdf5path = self.hdf5path
             src.set_sections(self.sections)
             src.num_ruptures = src.count_ruptures()
             yield src

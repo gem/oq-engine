@@ -189,6 +189,8 @@ def fix_geometry_sections(smdict, h5):
                 if hasattr(src, 'set_sections'):
                     if not sections:
                         raise RuntimeError('Missing geometryModel files!')
+                    if h5:
+                        src.hdf5path = h5.filename
                     src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
                                         for idxs in src.rupture_idxs]
                     src.set_sections(sections)
