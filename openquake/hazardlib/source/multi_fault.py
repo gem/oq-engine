@@ -68,7 +68,6 @@ class MultiFaultSource(BaseSeismicSource):
     code = b'F'
     MODIFICATIONS = {}
     hdf5path = ''
-    offset = 0
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
                  rupture_idxs: list, occurrence_probs: Union[list, np.ndarray],
@@ -94,7 +93,7 @@ class MultiFaultSource(BaseSeismicSource):
         # rupture have a object in the section list describing their geometry.
         for i in range(len(self.mags)):
             for idx in self.rupture_idxs[i]:
-                sections[idx - self.offset]
+                sections[idx]
         self.sections = sections
 
     def iter_ruptures(self, **kwargs):
@@ -110,16 +109,16 @@ class MultiFaultSource(BaseSeismicSource):
         n = len(self.mags)
         if self.hdf5path:
             with hdf5.File(self.hdf5path, 'r') as f:
-                geoms = f['multi_fault_sections'][self.offset:self.offset + n]
+                geoms = f['multi_fault_sections'][:]
             s = [geom_to_kite(geom) for geom in geoms]
         else:
             s = self.sections
         for i in range(0, n, step):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
-                sfc = s[idxs[0] - self.offset]
+                sfc = s[idxs[0]]
             else:
-                sfc = MultiSurface([s[idx - self.offset] for idx in idxs])
+                sfc = MultiSurface([s[idx] for idx in idxs])
             rake = self.rakes[i]
             hypo = s[idxs[0]].get_middle_point()
             yield NonParametricProbabilisticRupture(
@@ -140,9 +139,7 @@ class MultiFaultSource(BaseSeismicSource):
                 self.pmfs[slc],
                 self.mags[slc],
                 self.rakes[slc])
-            src.offset = i * BLOCKSIZE
             src.hdf5path = self.hdf5path
-            src.set_sections(self.sections)
             src.num_ruptures = src.count_ruptures()
             yield src
 
@@ -173,8 +170,7 @@ class MultiFaultSource(BaseSeismicSource):
         """
         if self.hdf5path:
             with hdf5.File(self.hdf5path, 'r') as f:
-                mfs = f['multi_fault_sections']
-                geoms = mfs[self.offset:self.offset + len(self.mags)]
+                geoms = f['multi_fault_sections'][:]
             s = [geom_to_kite(geom) for geom in geoms]
         else:
             s = self.sections
