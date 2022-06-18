@@ -65,6 +65,8 @@ class MultiFaultSource(BaseSeismicSource):
     """
     code = b'F'
     MODIFICATIONS = {}
+    hdf5path = ''
+    offset = 0
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
                  rupture_idxs: list, occurrence_probs: Union[list, np.ndarray],
@@ -133,6 +135,7 @@ class MultiFaultSource(BaseSeismicSource):
                 self.pmfs[slc],
                 self.mags[slc],
                 self.rakes[slc])
+            src.offset = i * BLOCKSIZE
             src.set_sections(self.sections)
             src.num_ruptures = src.count_ruptures()
             yield src
