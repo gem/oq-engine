@@ -87,7 +87,7 @@ class MultiFaultTestCase(unittest.TestCase):
         rup_idxs = [[0], [1], [3], [0], [1], [3], [0]]
         mfs = MultiFaultSource("01", "test", "Moon Crust", rup_idxs,
                                self.pmfs, self.mags, self.rakes)
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(IndexError) as ctx:
             mfs.set_sections(self.sections)
-        expected = 'Rupture #2: section 3 does not exist'
+        expected = 'list index out of range'
         self.assertEqual(expected, str(ctx.exception))
