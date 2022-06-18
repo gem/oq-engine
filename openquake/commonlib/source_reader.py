@@ -180,7 +180,7 @@ def fix_geometry_sections(smdict, h5):
     sections = [sections[suid] for suid in sorted(sections)]
     for idx, sec in enumerate(sections):
         sec.suid = idx
-    if h5:
+    if h5 and sections:
         h5.save_vlen('multi_fault_sections',
                      [kite_to_geom(sec) for sec in sections])
 
