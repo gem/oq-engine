@@ -21,11 +21,13 @@ defines :class:`MultiFaultSource`.
 import numpy as np
 from typing import Union
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import gen_slices
 from openquake.hazardlib.source.rupture import (
     NonParametricProbabilisticRupture)
 from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
+from openquake.hazardlib.geo.surface.kite_fault import geom_to_kite
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
@@ -65,6 +67,7 @@ class MultiFaultSource(BaseSeismicSource):
     """
     code = b'F'
     MODIFICATIONS = {}
+    hdf5path = ''
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
                  rupture_idxs: list, occurrence_probs: Union[list, np.ndarray],
@@ -80,8 +83,6 @@ class MultiFaultSource(BaseSeismicSource):
     def set_sections(self, sections):
         """
         :param sections: a list of N surfaces
-
-        Set the attribute .sections
         """
         assert sections
         # this is fundamental for the distance cache
@@ -89,8 +90,7 @@ class MultiFaultSource(BaseSeismicSource):
             sec.suid = idx
         # `i` is the index of the rupture of the `n` admitted by this source.
         # In this loop we check that all the IDs of the sections composing one
-        # rupture have a object in the sections dictionary describing their
-        # geometry.
+        # rupture have a object in the section list describing their geometry.
         for i in range(len(self.mags)):
             for idx in self.rupture_idxs[i]:
                 sections[idx]
@@ -101,20 +101,26 @@ class MultiFaultSource(BaseSeismicSource):
         An iterator for the ruptures.
         """
         # Check
-        if 'sections' not in self.__dict__:
+        if not self.hdf5path and 'sections' not in self.__dict__:
             raise RuntimeError('You forgot to call set_sections in %s!' % self)
 
         # iter on the ruptures
         step = kwargs.get('step', 1)
-        s = self.sections
-        for i in range(0, len(self.mags), step):
+        n = len(self.mags)
+        if self.hdf5path:
+            with hdf5.File(self.hdf5path, 'r') as f:
+                geoms = f['multi_fault_sections'][:]
+            s = [geom_to_kite(geom) for geom in geoms]
+        else:
+            s = self.sections
+        for i in range(0, n, step):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
-                sfc = self.sections[idxs[0]]
+                sfc = s[idxs[0]]
             else:
                 sfc = MultiSurface([s[idx] for idx in idxs])
             rake = self.rakes[i]
-            hypo = self.sections[idxs[0]].get_middle_point()
+            hypo = s[idxs[0]].get_middle_point()
             yield NonParametricProbabilisticRupture(
                 self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
                 self.pmfs[i])
@@ -133,7 +139,7 @@ class MultiFaultSource(BaseSeismicSource):
                 self.pmfs[slc],
                 self.mags[slc],
                 self.rakes[slc])
-            src.set_sections(self.sections)
+            src.hdf5path = self.hdf5path
             src.num_ruptures = src.count_ruptures()
             yield src
 
@@ -162,8 +168,14 @@ class MultiFaultSource(BaseSeismicSource):
         """
         Bounding box containing the surfaces, enlarged by the maximum distance
         """
+        if self.hdf5path:
+            with hdf5.File(self.hdf5path, 'r') as f:
+                geoms = f['multi_fault_sections'][:]
+            s = [geom_to_kite(geom) for geom in geoms]
+        else:
+            s = self.sections
         surfaces = []
-        for sec in self.sections:
+        for sec in s:
             if isinstance(sec, MultiSurface):
                 surfaces.extend(sec.surfaces)
             else:

@@ -162,7 +162,7 @@ def _get_rupture(rec, geom=None, trt=None):
                 geo.PlanarSurface.from_array(array[:, 0, :])
                 for array in arrays])
         else:
-            # assume KyteSurfaces
+            # assume KiteSurfaces
             surface.__init__([geo.KiteSurface(RectangularMesh(*array))
                               for array in arrays])
 

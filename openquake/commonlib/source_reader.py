@@ -29,6 +29,7 @@ from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
+from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
 TWO16 = 2 ** 16  # 65,536
 by_id = operator.attrgetter('source_id')
@@ -138,7 +139,7 @@ def get_csm(oq, full_lt, h5=None):
                               h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
-    fix_geometry_sections(smdict)
+    fix_geometry_sections(smdict, h5)
     logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
 
@@ -150,7 +151,7 @@ def get_csm(oq, full_lt, h5=None):
     return _get_csm(full_lt, groups)
 
 
-def fix_geometry_sections(smdict):
+def fix_geometry_sections(smdict, h5):
     """
     If there are MultiFaultSources, fix the sections according to the
     GeometryModels (if any).
@@ -177,7 +178,11 @@ def fix_geometry_sections(smdict):
         sec_ids, 'section ID in files ' + ' '.join(gfiles))
     s2i = {suid: i for i, suid in enumerate(sorted(sections))}
     sections = [sections[suid] for suid in sorted(sections)]
-    # section_arrays = [geom(surf) for surf in sections]
+    for idx, sec in enumerate(sections):
+        sec.suid = idx
+    if h5 and sections:
+        h5.save_vlen('multi_fault_sections',
+                     [kite_to_geom(sec) for sec in sections])
 
     # fix the MultiFaultSources
     for smod in smodels:
@@ -186,9 +191,10 @@ def fix_geometry_sections(smdict):
                 if hasattr(src, 'set_sections'):
                     if not sections:
                         raise RuntimeError('Missing geometryModel files!')
+                    if h5:
+                        src.hdf5path = h5.filename
                     src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
                                         for idxs in src.rupture_idxs]
-                    src.set_sections(sections)
 
 
 def _groups_ids(smlt_dir, smdict, fnames):
