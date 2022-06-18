@@ -175,8 +175,9 @@ def fix_geometry_sections(smdict):
         sections.update(gmod.sections)
     nrml.check_unique(
         sec_ids, 'section ID in files ' + ' '.join(gfiles))
-    sections = {sid: sections[sid] for sid in sorted(sections)}
-    # section_arrays = [sec.geom() for sec in sections.values()]
+    s2i = {suid: i for i, suid in enumerate(sorted(sections))}
+    sections = [sections[suid] for suid in sorted(sections)]
+    # section_arrays = [geom(surf) for surf in sections]
 
     # fix the MultiFaultSources
     for smod in smodels:
@@ -185,6 +186,8 @@ def fix_geometry_sections(smdict):
                 if hasattr(src, 'set_sections'):
                     if not sections:
                         raise RuntimeError('Missing geometryModel files!')
+                    src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
+                                        for idxs in src.rupture_idxs]
                     src.set_sections(sections)
 
 

@@ -34,7 +34,6 @@ from openquake.baselib.node import context, striptag, Node, node_to_dict
 from openquake.hazardlib import geo, mfd, pmf, source, tom, valid, InvalidFile
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source import NonParametricSeismicSource
-from openquake.hazardlib.source.multi_fault import FaultSection
 
 
 U32 = numpy.uint32
@@ -730,7 +729,7 @@ class SourceConverter(RuptureConverter):
     def convert_section(self, node):
         """
         :param node: a section node
-        :returns: a FaultSection instance
+        :returns: a list of surfaces
         """
         with context(self.fname, node):
             if hasattr(node, 'planarSurface'):
@@ -740,8 +739,7 @@ class SourceConverter(RuptureConverter):
             else:
                 raise ValueError('Only planarSurfaces or kiteSurfaces ' +
                                  'supported')
-            surfs = self.convert_surfaces(surfaces, node['id'])
-        return FaultSection(node['id'], surfs)
+            return self.convert_surfaces(surfaces, node['id'])
 
     def get_tom(self, node):
         """
@@ -1106,20 +1104,22 @@ class SourceConverter(RuptureConverter):
         idxs = []
         num_probs = None
         for i, rupnode in enumerate(node):
-            prb = pmf.PMF(valid.pmf(rupnode['probs_occur']))
-            if num_probs is None:  # first time
-                num_probs = len(prb.data)
-            elif len(prb.data) != num_probs:
-                # probs_occur must have uniform length for all ruptures
-                with context(self.fname, rupnode):
-                    raise ValueError(
-                        'prob_occurs=%s has %d elements, expected %s'
-                        % (rupnode['probs_occur'], len(prb.data), num_probs))
-            pmfs.append(prb)
-            mags.append(~rupnode.magnitude)
-            rakes.append(~rupnode.rake)
-            indexes = rupnode.sectionIndexes['indexes']
-            idxs.append(tuple(indexes.split(',')))
+            with context(self.fname, rupnode):
+                prb = pmf.PMF(valid.pmf(rupnode['probs_occur']))
+                if num_probs is None:  # first time
+                    num_probs = len(prb.data)
+                elif len(prb.data) != num_probs:
+                    # probs_occur must have uniform length for all ruptures
+                    with context(self.fname, rupnode):
+                        raise ValueError(
+                            'prob_occurs=%s has %d elements, expected %s'
+                            % (rupnode['probs_occur'], len(prb.data),
+                               num_probs))
+                pmfs.append(prb)
+                mags.append(~rupnode.magnitude)
+                rakes.append(~rupnode.rake)
+                indexes = rupnode.sectionIndexes['indexes']
+                idxs.append(tuple(indexes.split(',')))
         with context(self.fname, node):
             mags = rounded_unique(mags, idxs)
         rakes = numpy.array(rakes)

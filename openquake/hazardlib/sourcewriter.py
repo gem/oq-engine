@@ -632,6 +632,7 @@ def build_kite_fault_source_node(fault_source):
                 nodes=source_nodes)
 
 
+# tested in case_65
 @obj_to_node.add('MultiFaultSource')
 def build_multi_fault_source_node(multi_fault_source):
     """
@@ -651,7 +652,8 @@ def build_multi_fault_source_node(multi_fault_source):
             multi_fault_source.rakes):
         probs = ' '.join(map(str, [pair[0] for pair in pmf_.data]))
         nodes = [Node('magnitude', text=str(mag)),
-                 Node('sectionIndexes', {'indexes': ','.join(rup_idxs)}),
+                 Node('sectionIndexes',
+                      {'indexes': ','.join(map(str, rup_idxs))}),
                  Node('rake', text=str(rake))]
         rup_node = Node('multiPlanesRupture', {'probs_occur': probs},
                         nodes=nodes)
@@ -659,20 +661,6 @@ def build_multi_fault_source_node(multi_fault_source):
     return Node("multiFaultSource",
                 get_source_attributes(multi_fault_source),
                 nodes=rup_nodes)
-
-
-@obj_to_node.add('FaultSection')
-def build_section(section):
-    """
-    Parses a FaultSection instance to a Node class
-
-    :param section:
-        A FaultSection instance
-    :returns:
-        Instance of :class:`openquake.baselib.node.Node`
-    """
-    nodes = [obj_to_node(section.surface)]
-    return Node("section", {'id': section.sec_id}, nodes=nodes)
 
 
 @obj_to_node.add('SourceGroup')
@@ -791,17 +779,16 @@ def write_source_model(dest, sources_or_groups, name=None,
         out.append(dest5)
 
     # produce a geometryModel if there are MultiFaultSources
-    sections = {}
+    sections = []
     for group in groups:
         for src in group:
             if hasattr(src, 'sections'):
-                sections.update(src.sections)
-    sections = {sid: sections[sid] for sid in sections}
+                sections.extend(src.sections)
     smodel = Node("sourceModel", attrs, nodes=nodes)
     with open(dest, 'wb') as f:
         nrml.write([smodel], f, '%s')
     if sections:
-        secnodes = [obj_to_node(sec) for sec in sections.values()]
+        secnodes = [obj_to_node(sec) for sec in sections]
         gmodel = Node("geometryModel", attrs, nodes=secnodes)
         with open(dest[:-4] + '_sections.xml', 'wb') as f:
             nrml.write([gmodel], f, '%s')
