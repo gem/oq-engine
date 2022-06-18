@@ -84,8 +84,6 @@ class MultiFaultSource(BaseSeismicSource):
     def set_sections(self, sections):
         """
         :param sections: a list of N surfaces
-
-        Set the attribute .sections
         """
         assert sections
         # this is fundamental for the distance cache
@@ -93,11 +91,10 @@ class MultiFaultSource(BaseSeismicSource):
             sec.suid = idx
         # `i` is the index of the rupture of the `n` admitted by this source.
         # In this loop we check that all the IDs of the sections composing one
-        # rupture have a object in the sections dictionary describing their
-        # geometry.
+        # rupture have a object in the section list describing their geometry.
         for i in range(len(self.mags)):
             for idx in self.rupture_idxs[i]:
-                sections[idx]
+                sections[idx - self.offset]
         self.sections = sections
 
     def iter_ruptures(self, **kwargs):
@@ -105,7 +102,7 @@ class MultiFaultSource(BaseSeismicSource):
         An iterator for the ruptures.
         """
         # Check
-        if 'sections' not in self.__dict__:
+        if not self.hdf5path and 'sections' not in self.__dict__:
             raise RuntimeError('You forgot to call set_sections in %s!' % self)
 
         # iter on the ruptures
@@ -119,7 +116,6 @@ class MultiFaultSource(BaseSeismicSource):
             s = self.sections
         for i in range(0, n, step):
             idxs = self.rupture_idxs[i]
-            import pdb; pdb.set_trace()
             if len(idxs) == 1:
                 sfc = s[idxs[0] - self.offset]
             else:
@@ -175,8 +171,15 @@ class MultiFaultSource(BaseSeismicSource):
         """
         Bounding box containing the surfaces, enlarged by the maximum distance
         """
+        if self.hdf5path:
+            with hdf5.File(self.hdf5path, 'r') as f:
+                mfs = f['multi_fault_sections']
+                geoms = mfs[self.offset:self.offset + len(self.mags)]
+            s = [geom_to_kite(geom) for geom in geoms]
+        else:
+            s = self.sections
         surfaces = []
-        for sec in self.sections:
+        for sec in s:
             if isinstance(sec, MultiSurface):
                 surfaces.extend(sec.surfaces)
             else:

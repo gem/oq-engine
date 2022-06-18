@@ -178,6 +178,8 @@ def fix_geometry_sections(smdict, h5):
         sec_ids, 'section ID in files ' + ' '.join(gfiles))
     s2i = {suid: i for i, suid in enumerate(sorted(sections))}
     sections = [sections[suid] for suid in sorted(sections)]
+    for idx, sec in enumerate(sections):
+        sec.suid = idx
     if h5:
         h5.save_vlen('multi_fault_sections',
                      [kite_to_geom(sec) for sec in sections])
@@ -193,7 +195,6 @@ def fix_geometry_sections(smdict, h5):
                         src.hdf5path = h5.filename
                     src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
                                         for idxs in src.rupture_idxs]
-                    src.set_sections(sections)
 
 
 def _groups_ids(smlt_dir, smdict, fnames):

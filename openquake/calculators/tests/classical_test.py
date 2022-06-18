@@ -907,19 +907,18 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurve-mean.csv', f)
 
     def test_case_65(self):
-        # reading/writing a multiFaultSource
-        oq = readinput.get_oqparam('job.ini', pkg=case_65)
-        csm = readinput.get_composite_source_model(oq)
-        tmpname = general.gettemp()
-        out = write_source_model(tmpname, csm.src_groups)
-        self.assertEqual(out[0], tmpname)
-        self.assertEqual(out[1], tmpname[:-4] + '_sections.xml')
-
         # running the calculation
         self.run_calc(case_65.__file__, 'job.ini')
 
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
+
+        # reading/writing a multiFaultSource
+        csm = self.calc.datastore['_csm']
+        tmpname = general.gettemp()
+        out = write_source_model(tmpname, csm.src_groups)
+        self.assertEqual(out[0], tmpname)
+        # self.assertEqual(out[1], tmpname[:-4] + '_sections.xml')
 
         # make sure we are not breaking event_based
         self.run_calc(case_65.__file__, 'job_eb.ini')
