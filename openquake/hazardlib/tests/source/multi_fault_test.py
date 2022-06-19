@@ -18,7 +18,6 @@ import os
 import unittest
 from openquake.hazardlib.source.multi_fault import MultiFaultSource
 from openquake.hazardlib.geo.surface import KiteSurface
-from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
@@ -60,14 +59,13 @@ class MultiFaultTestCase(unittest.TestCase):
         rakes = [90.0, 90.0, 90.0, 90.0, 90.0, 90.0, 90.0]
 
         # Occurrence probabilities of occurrence
-        pmfs = [PMF([[0.90, 0], [0.10, 1]]),
-                PMF([[0.90, 0], [0.10, 1]]),
-                PMF([[0.90, 0], [0.10, 1]]),
-                PMF([[0.90, 0], [0.10, 1]]),
-                PMF([[0.90, 0], [0.10, 1]]),
-                PMF([[0.90, 0], [0.10, 1]]),
-                PMF([[0.90, 0], [0.10, 1]])]
-
+        pmfs = [[0.90, 0.10],
+                [0.90, 0.10],
+                [0.90, 0.10],
+                [0.90, 0.10],
+                [0.90, 0.10],
+                [0.90, 0.10],
+                [0.90, 0.10]]
         self.sections = sections
         self.rup_idxs = rup_idxs
         self.pmfs = pmfs
