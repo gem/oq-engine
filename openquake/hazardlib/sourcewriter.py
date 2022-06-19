@@ -645,12 +645,12 @@ def build_multi_fault_source_node(multi_fault_source):
         Instance of :class:`openquake.baselib.node.Node`
     """
     rup_nodes = []  # multiPlanesRupture
-    for rup_idxs, pmf_, mag, rake in zip(
+    for rup_idxs, prbs, mag, rake in zip(
             multi_fault_source.rupture_idxs,
-            multi_fault_source.pmfs,
+            multi_fault_source.probs_occur,
             multi_fault_source.mags,
             multi_fault_source.rakes):
-        probs = ' '.join(map(str, [pair[0] for pair in pmf_.data]))
+        probs = ' '.join(map(str, prbs))
         nodes = [Node('magnitude', text=str(mag)),
                  Node('sectionIndexes',
                       {'indexes': ','.join(map(str, rup_idxs))}),
