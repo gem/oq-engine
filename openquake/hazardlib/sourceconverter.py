@@ -105,7 +105,7 @@ def rounded_unique(mags, idxs):
     mag_idxs = [(mag, ' '.join(idx)) for mag, idx in zip(mags, idxs)]
     dupl = extract_dupl(mag_idxs)
     if dupl:
-        logging.error('the pair (mag, idxs) %s is duplicated' % str(dupl[0]))
+        logging.error('the pair (mag=%s, idxs=%s) is duplicated' % dupl[0])
     return mags
 
 
