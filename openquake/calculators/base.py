@@ -731,7 +731,6 @@ class HazardCalculator(BaseCalculator):
         Save the loss ratios (if any) in the datastore.
         """
         oq = self.oqparam
-        logging.info('Reading the risk model if present')
         self.crmodel = readinput.get_crmodel(oq)
         if not self.crmodel:
             parent = self.datastore.parent
