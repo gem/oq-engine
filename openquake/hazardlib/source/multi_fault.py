@@ -23,6 +23,7 @@ from typing import Union
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import gen_slices
+from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.rupture import (
     NonParametricProbabilisticRupture)
 from openquake.hazardlib.source.non_parametric import (
@@ -54,10 +55,8 @@ class MultiFaultSource(BaseSeismicSource):
         A list of lists. Each element contains the IDs of the sections
         participating to a rupture. The cardinality of this list is N.
     :param occurrence_probs:
-        A list with cardinality N with instances of the class
-        :class:`openquake.hazardlib.pmf.PMF`. Each element specifies the
-        occurrence of 0, 1 ... occurrences of a rupture in the investigation
-        time.
+        A list of N probabilities. Each element specifies the probability
+        of 0, 1 ... occurrences of a rupture in the investigation time
     :param magnitudes:
         An iterable with cardinality N containing the magnitudes of the
         ruptures
@@ -75,7 +74,7 @@ class MultiFaultSource(BaseSeismicSource):
         nrups = len(rupture_idxs)
         assert len(occurrence_probs) == len(magnitudes) == len(rakes) == nrups
         self.rupture_idxs = rupture_idxs
-        self.pmfs = occurrence_probs
+        self.probs_occur = occurrence_probs
         self.mags = magnitudes
         self.rakes = rakes
         super().__init__(source_id, name, tectonic_region_type)
@@ -136,9 +135,10 @@ class MultiFaultSource(BaseSeismicSource):
                 sfc = MultiSurface([s[idx] for idx in idxs])
             rake = self.rakes[i]
             hypo = s[idxs[0]].get_middle_point()
+            data = [(p, o) for o, p in enumerate(self.probs_occur[i])]
             yield NonParametricProbabilisticRupture(
                 self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
-                self.pmfs[i])
+                PMF(data))
 
     def __iter__(self):
         if len(self.mags) <= BLOCKSIZE:  # already split
@@ -151,7 +151,7 @@ class MultiFaultSource(BaseSeismicSource):
                 self.name,
                 self.tectonic_region_type,
                 self.rupture_idxs[slc],
-                self.pmfs[slc],
+                self.probs_occur[slc],
                 self.mags[slc],
                 self.rakes[slc])
             src.hdf5path = self.hdf5path
@@ -173,7 +173,7 @@ class MultiFaultSource(BaseSeismicSource):
     @property
     def data(self):  # compatibility with NonParametricSeismicSource
         for i, rup in enumerate(self.iter_ruptures()):
-            yield rup, self.pmfs[i]
+            yield rup, self.probs_occur[i]
 
     polygon = NP.polygon
     wkt = NP.wkt

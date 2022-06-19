@@ -1110,26 +1110,25 @@ class SourceConverter(RuptureConverter):
             # NB: the sections will be fixed later on, in source_reader
             mfs = MultiFaultSource(sid, name, trt, idxs, dic['probs_occur'],
                                    dic['mag'], dic['rake'])
-            import pdb; pdb.set_trace()
             return mfs
-        pmfs = []
+        probs = []
         mags = []
         rakes = []
         idxs = []
         num_probs = None
         for i, rupnode in enumerate(node):
             with context(self.fname, rupnode):
-                prb = pmf.PMF(valid.pmf(rupnode['probs_occur']))
+                prb = valid.probabilities(rupnode['probs_occur'])
                 if num_probs is None:  # first time
-                    num_probs = len(prb.data)
-                elif len(prb.data) != num_probs:
+                    num_probs = len(prb)
+                elif len(prb) != num_probs:
                     # probs_occur must have uniform length for all ruptures
                     with context(self.fname, rupnode):
                         raise ValueError(
                             'prob_occurs=%s has %d elements, expected %s'
-                            % (rupnode['probs_occur'], len(prb.data),
+                            % (rupnode['probs_occur'], len(prb),
                                num_probs))
-                pmfs.append(prb)
+                probs.append(prb)
                 mags.append(~rupnode.magnitude)
                 rakes.append(~rupnode.rake)
                 indexes = rupnode.sectionIndexes['indexes']
@@ -1138,7 +1137,7 @@ class SourceConverter(RuptureConverter):
             mags = rounded_unique(mags, idxs)
         rakes = numpy.array(rakes)
         # NB: the sections will be fixed later on, in source_reader
-        mfs = MultiFaultSource(sid, name, trt, idxs, pmfs, mags, rakes)
+        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes)
         return mfs
 
     def convert_sourceModel(self, node):
@@ -1418,13 +1417,6 @@ class RowConverter(SourceConverter):
             'Polygon', [nps.polygon.coords], '')
 
     def convert_multiFaultSource(self, node):
-        path = os.path.splitext(self.fname)[0] + '.hdf5'
-        hdf5_fname = path if os.path.exists(path) else None
-        if hdf5_fname and node.text is None:
-            # read the rupture data from the HDF5 file
-            with hdf5.File(hdf5_fname, 'r') as h:
-                dic = {k: d[:] for k, d in h[node['id']].items()}
-            import pdb; pdb.set_trace()
         mfs = super().convert_multiFaultSource(node)
         return NPRow(node['id'], node['name'], 'F',
                      node['tectonicRegion'], 'Polygon', mfs, '')
