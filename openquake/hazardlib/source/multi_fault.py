@@ -127,7 +127,7 @@ class MultiFaultSource(BaseSeismicSource):
             s = [geom_to_kite(geom) for geom in geoms]
         else:
             s = self.sections
-        for i in range(0, n, step):
+        for i in range(0, n, step**2):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
                 sfc = s[idxs[0]]
