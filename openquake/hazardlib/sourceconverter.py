@@ -1098,6 +1098,20 @@ class SourceConverter(RuptureConverter):
         sid = node.get('id')
         name = node.get('name')
         trt = node.get('tectonicRegion')
+        path = os.path.splitext(self.fname)[0] + '.hdf5'
+        hdf5_fname = path if os.path.exists(path) else None
+        if hdf5_fname and node.text is None:
+            # read the rupture data from the HDF5 file
+            with hdf5.File(hdf5_fname, 'r') as h:
+                dic = {k: d[:] for k, d in h[node['id']].items()}
+            with context(self.fname, node):
+                idxs = [x.decode('utf8').split() for x in dic['rupture_idxs']]
+                mags = rounded_unique(dic['mag'], idxs)
+            # NB: the sections will be fixed later on, in source_reader
+            mfs = MultiFaultSource(sid, name, trt, idxs, dic['probs_occur'],
+                                   dic['mag'], dic['rake'])
+            import pdb; pdb.set_trace()
+            return mfs
         pmfs = []
         mags = []
         rakes = []
@@ -1404,6 +1418,13 @@ class RowConverter(SourceConverter):
             'Polygon', [nps.polygon.coords], '')
 
     def convert_multiFaultSource(self, node):
+        path = os.path.splitext(self.fname)[0] + '.hdf5'
+        hdf5_fname = path if os.path.exists(path) else None
+        if hdf5_fname and node.text is None:
+            # read the rupture data from the HDF5 file
+            with hdf5.File(hdf5_fname, 'r') as h:
+                dic = {k: d[:] for k, d in h[node['id']].items()}
+            import pdb; pdb.set_trace()
         mfs = super().convert_multiFaultSource(node)
         return NPRow(node['id'], node['name'], 'F',
                      node['tectonicRegion'], 'Polygon', mfs, '')
