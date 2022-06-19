@@ -144,7 +144,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             for mag, rate in self.get_annual_occurrence_rates():
                 mags.add(mag)
         elif hasattr(self, 'source_file'):
-            # unbound UCERFSource
+            1/0  # never here
             mags.add(numpy.nan)
         elif hasattr(self, 'mags'):  # MultiFaultSource
             mags.update(mag for mag in self.mags if mag >= self.min_mag)

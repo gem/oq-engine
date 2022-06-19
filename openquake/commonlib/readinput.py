@@ -1190,11 +1190,6 @@ def get_input_files(oqparam):
         if key == 'gsim_logic_tree':
             fnames.update(gsim_lt.collect_files(fname))
             fnames.add(fname)
-        elif key == 'source_model':  # UCERF
-            f = oqparam.inputs['source_model']
-            fnames.add(f)
-            fname = nrml.read(f).sourceModel.UCERFSource['filename']
-            fnames.add(os.path.join(os.path.dirname(f), fname))
         elif key == 'exposure':  # fname is a list
             for exp in asset.Exposure.read_headers(fname):
                 fnames.update(exp.datafiles)
