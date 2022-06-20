@@ -125,6 +125,8 @@ class MultiFaultSource(BaseSeismicSource):
             with hdf5.File(self.hdf5path, 'r') as f:
                 geoms = f['multi_fault_sections'][:]
             s = [geom_to_kite(geom) for geom in geoms]
+            for idx, sec in enumerate(s):
+                sec.suid = idx
         else:
             s = self.sections
         for i in range(0, n, step**2):
