@@ -160,16 +160,35 @@ def expand_mdvbin(mdvbin):
     return magbin, distbin, vs30bin
 
 
+def sqrscale(x_min, x_max, n):
+    """
+    :param x_min: minumum value
+    :param x_max: maximum value
+    :param n: number of steps
+    :returns: an array of n values from x_min to x_max in a quadratic scale
+    """
+    if not (isinstance(n, int) and n > 0):
+        raise ValueError('n must be a positive integer, got %s' % n)
+    if x_min < 0:
+        raise ValueError('x_min must be positive, got %s' % x_min)
+    if x_max <= x_min:
+        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
+                         (x_max, x_min))
+    delta = numpy.sqrt(x_max - x_min) / (n - 1)
+    return x_min + (delta * numpy.arange(n))**2
+
+
 class Collapser(object):
     """
     Class managing the collapsing logic.
     """
+    mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
+    dist_bins = sqrscale(1, 600, 255)
+    vs30_bins = numpy.linspace(0, 32767, 65536)
+
     def __init__(self, collapse_level, dist_types, has_vs30=False):
         self.collapse_level = collapse_level
         self.dist_types = dist_types
-        self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
-        self.dist_bins = valid.sqrscale(1, 600, 255)
-        self.vs30_bins = numpy.linspace(0, 32767, 65536)
         self.has_vs30 = has_vs30
         self.cfactor = numpy.zeros(2)
         self.npartial = 0
