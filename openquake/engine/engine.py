@@ -355,8 +355,8 @@ def cleanup(kind):
         parallel.workers_stop()
     elif kind == 'kill':
         # called in case of exceptions (including out of memory)
-        print('Killing the workers')
-        parallel.workers_kill()
+        print('Asking the DbServer to kill the workers')
+        logs.dbcmd('workers_kill')
 
 
 def run_jobs(jobs):
