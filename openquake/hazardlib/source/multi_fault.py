@@ -79,6 +79,20 @@ class MultiFaultSource(BaseSeismicSource):
         self.rakes = rakes
         super().__init__(source_id, name, tectonic_region_type)
 
+    def is_gridded(self):
+        return True  # convertible to HDF5
+
+    def todict(self):
+        """
+        :returns: dictionary of array, called when converting to HDF5
+        """
+        ridxs = []
+        for rupture_idxs in self.rupture_idxs:
+            ridxs.append(' '.join(rupture_idxs))
+        # each pmf has the form [(prob0, 0), (prob1, 1), ...]
+        return dict(mag=self.mags, rake=self.rakes,
+                    probs_occur=self.probs_occur, rupture_idxs=ridxs)
+
     def set_sections(self, sections):
         """
         :param sections: a list of N surfaces
@@ -110,9 +124,11 @@ class MultiFaultSource(BaseSeismicSource):
             with hdf5.File(self.hdf5path, 'r') as f:
                 geoms = f['multi_fault_sections'][:]
             s = [geom_to_kite(geom) for geom in geoms]
+            for idx, sec in enumerate(s):
+                sec.suid = idx
         else:
             s = self.sections
-        for i in range(0, n, step):
+        for i in range(0, n, step**2):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
                 sfc = s[idxs[0]]

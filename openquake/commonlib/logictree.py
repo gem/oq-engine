@@ -160,7 +160,7 @@ def collect_info(smltpath, branchID=None):
                         for fname in fnames:
                             hdf5file = os.path.splitext(fname)[0] + '.hdf5'
                             if os.path.exists(hdf5file):
-                                h5paths.add(hdf5file)
+                                h5paths.add(os.path.abspath(hdf5file))
     return Info(sorted(paths), sorted(h5paths), applytosources)
 
 
