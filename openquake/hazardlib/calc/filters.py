@@ -68,16 +68,13 @@ def _distances_from_dcache(rup, sites, param, dcache):
     suids = []  # surface IDs
     for srf in rup.surface.surfaces:
         suids.append(srf.suid)
-        if srf.suid not in dcache:
+        if (srf.suid, param) not in dcache:
             # This function returns the distances that will be added to the
             # cache. In case of Rx and Ry0, the information cache will
             # include the ToR of each surface as well as the GC2 t and u
             # coordinates for each section.
-            distdic = _multi_distances(srf, sites, param)
-            # Save information into the cache for the current surfac.
-            for key in distdic:
-                dcache[srf.suid, key] = distdic[key]
-
+            for key, val in _multi_distances(srf, sites, param).items():
+                dcache[srf.suid, key] = val
     # Computing distances using the cache
     if param in ['rjb', 'rrup']:
         distances = dcache[suids[0], param]
