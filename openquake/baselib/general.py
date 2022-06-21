@@ -415,13 +415,13 @@ def removetmp():
                 pass
 
 
-def git_suffix(fname):
+def git_suffix():
     """
     :returns: `<short git hash>` if Git repository found
     """
     # we assume that the .git folder is two levels above any package
     # i.e. openquake/engine/../../.git
-    git_path = os.path.join(os.path.dirname(fname), '..', '..', '.git')
+    git_path = os.path.join(os.path.dirname(__file__), '..', '..', '.git')
 
     # macOS complains if we try to execute git and it's not available.
     # Code will run, but a pop-up offering to install bloatware (Xcode)
