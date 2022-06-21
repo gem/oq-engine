@@ -31,7 +31,7 @@ from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
 from openquake.baselib.performance import Monitor, split_array, compile, numba
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import valid, imt as imt_module
+from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry, get_pnes, FatedTOM
 from openquake.hazardlib.site import site_param_dt
@@ -1257,7 +1257,8 @@ class PmapMaker(object):
             self.source_data['ctimes'].append(
                 dt * src.nsites / totlen if totlen else dt / nsrcs)
             self.source_data['taskno'].append(cm.task_no)
-        print('===========', self.dcache.hit)
+        if self.dcache:
+            print('===========', self.dcache.hit)
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
