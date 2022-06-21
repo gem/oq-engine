@@ -374,7 +374,7 @@ def get_distributed_seismicity_source_nodes(source):
     source_nodes.append(
         build_hypo_depth_dist(source.hypocenter_distribution))
 
-    if not isinstance(source.temporal_occurrence_model, PoissonTOM):
+    if isinstance(source.temporal_occurrence_model, NegativeBinomialTOM):
         source_nodes.append(
             build_temporal_occurrence_model(source.temporal_occurrence_model))
 
