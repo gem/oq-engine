@@ -30,8 +30,7 @@ import h5py
 import numpy
 import pandas
 
-from openquake.baselib import (
-    general, hdf5, __version__ as engine_version)
+from openquake.baselib import general, hdf5
 from openquake.baselib import performance, parallel, python3compat
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import InvalidFile, site, stats
@@ -42,7 +41,8 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, datastore, source_reader
+from openquake.commonlib import (
+    readinput, logictree, datastore, source_reader, logs)
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 
@@ -178,7 +178,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             # always except in case_shakemap
             self.datastore['oqparam'] = self.oqparam
         attrs = self.datastore['/'].attrs
-        attrs['engine_version'] = engine_version
+        attrs['engine_version'] = logs.dbcmd('engine_version')
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
             attrs['input_size'] = size = self.oqparam.get_input_size()
