@@ -541,10 +541,11 @@ class ContextMaker(object):
         if not hasattr(ctxs[0], 'probs_occur'):
             for ctx in ctxs:
                 ctx.probs_occur = numpy.zeros(0)
+            np = 0
         else:
             shps = [ctx.probs_occur.shape for ctx in ctxs]
-            nprobs = max(i[1] if len(i) > 1 else i[0] for i in shps)
-            dd['probs_occur'] = numpy.zeros(nprobs)
+            np = max(i[1] if len(i) > 1 else i[0] for i in shps)
+        dd['probs_occur'] = numpy.zeros(np)
 
         C = sum(len(ctx) for ctx in ctxs)
         ra = RecordBuilder(**dd).zeros(C)
