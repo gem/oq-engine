@@ -22,24 +22,6 @@ import configparser
 # disable OpenBLAS threads before the first numpy import
 # see https://github.com/numpy/numpy/issues/11826
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
-import numpy
-import scipy
-import pandas
-from openquake.baselib.general import git_suffix  # noqa: E402
-
-# the version is managed by packager.sh with a sed
-__version__ = '3.15.0'
-__version__ += git_suffix(__file__)
-
-version = dict(engine=__version__,
-               python='%d.%d' % sys.version_info[:2],
-               numpy=numpy.__version__,
-               scipy=scipy.__version__,
-               pandas=pandas.__version__)
-
-
-class InvalidFile(Exception):
-    """Raised from custom file validators"""
 
 
 class DotDict(dict):
@@ -141,3 +123,21 @@ else:  # linux
     import pwd
     install_user = pwd.getpwuid(os.stat(__file__).st_uid).pw_name
     config.multi_user = install_user == 'root'
+
+import numpy
+import scipy
+import pandas
+from openquake.baselib.general import git_suffix  # noqa: E402
+
+# the version is managed by packager.sh with a sed
+__version__ = '3.15.0'
+__version__ += git_suffix(__file__)
+
+version = dict(python='%d.%d' % sys.version_info[:2],
+               numpy=numpy.__version__,
+               scipy=scipy.__version__,
+               pandas=pandas.__version__)
+
+
+class InvalidFile(Exception):
+    """Raised from custom file validators"""
