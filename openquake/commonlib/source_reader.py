@@ -197,7 +197,8 @@ def fix_geometry_sections(smdict, h5):
                         src.hdf5path = h5.filename
                     src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
                                         for idxs in src.rupture_idxs]
-                    section_idxs.extend(src.rupture_idxs)
+                    for idxs in src.rupture_idxs:
+                        section_idxs.extend(idxs)
     cnt = collections.Counter(section_idxs)
     if cnt:
         mean_counts = numpy.mean(list(cnt.values()))
