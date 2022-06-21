@@ -365,7 +365,9 @@ class ContextMaker(object):
 
         self.cache_distances = param.get('cache_distances', False)
         if self.cache_distances:
-            self.dcache = {}  # (surface ID, dist_type) for MultiFaultSources
+            # use a cache (surface ID, dist_type) for MultiFaultSources
+            self.dcache = AccumDict()
+            self.dcache.hit = 0
         else:
             self.dcache = None  # disabled
         self.af = param.get('af')
@@ -1255,6 +1257,7 @@ class PmapMaker(object):
             self.source_data['ctimes'].append(
                 dt * src.nsites / totlen if totlen else dt / nsrcs)
             self.source_data['taskno'].append(cm.task_no)
+        print('===========', self.dcache.hit)
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
