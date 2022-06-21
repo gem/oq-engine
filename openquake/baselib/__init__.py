@@ -110,7 +110,8 @@ config.read(limit=int, soft_mem_limit=int, hard_mem_limit=int, port=int,
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
-    os.environ['NUMBA_CACHE_DIR'] = config.directory.custom_tmp
+    # NUMBA_CACHE_DIR is useless since numba is saving on .cache/numba anyway
+    # os.environ['NUMBA_CACHE_DIR'] = config.directory.custom_tmp
 
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
