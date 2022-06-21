@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Internal: added command `oq db git_suffix`
+  * Internal: added command `oq db engine_version`
   * Added a check for required site parameters not passed correctly
   * Fixed `ps_grid_spacing` approximation when the grid is degenerate
   * Logging a warning when starting from an old hazard calculation
