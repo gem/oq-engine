@@ -481,11 +481,11 @@ def get_dbpath(db):
     return rows[0].file
 
 
-def git_suffix(db):
+def engine_version(db):
     """
     :returns: git version as seen by the db
     """
-    return general.git_suffix()
+    return general.engine_version()
 
 
 # ########################## upgrade operations ########################## #

@@ -41,6 +41,7 @@ import multiprocessing
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
 from decorator import decorator
+from openquake.baselib import __version__
 from openquake.baselib.python3compat import decode
 
 U8 = numpy.uint8
@@ -415,9 +416,9 @@ def removetmp():
                 pass
 
 
-def git_suffix():
+def engine_version():
     """
-    :returns: `<short git hash>` if Git repository found
+    :returns: __version__ + `<short git hash>` if Git repository found
     """
     # we assume that the .git folder is two levels above any package
     # i.e. openquake/engine/../../.git
@@ -434,13 +435,12 @@ def git_suffix():
                 stderr=open(os.devnull, 'w'),
                 cwd=os.path.dirname(git_path)).strip()
             gh = "-git" + decode(gh) if gh else ''
-            return gh
         except Exception:
             # trapping everything on purpose; git may not be installed or it
             # may not work properly
-            pass
+            gh = ''
 
-    return ''
+    return __version__ + gh
 
 
 def run_in_process(code, *args):
