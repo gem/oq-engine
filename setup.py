@@ -25,7 +25,7 @@ if sys.version_info < (3, 6):
     sys.exit('Sorry, Python < 3.6 is not supported')
 
 
-def engine_version():
+def get_version():
     version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
     version = None
 
@@ -47,7 +47,7 @@ def get_readme():
         return readme.read()
 
 
-version = engine_version()
+version = get_version()
 readme = get_readme()
 
 url = "https://github.com/gem/oq-engine"
