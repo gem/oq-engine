@@ -472,7 +472,8 @@ class ContextMaker(object):
             return 0
         nbytes = 0
         for arr in self.dcache.values():
-            nbytes += arr.nbytes
+            if isinstance(arr, numpy.ndarray):
+                nbytes += arr.nbytes
         return nbytes
 
     def read_ctxs(self, dstore, slc=None, magi=None):
@@ -1257,8 +1258,6 @@ class PmapMaker(object):
             self.source_data['ctimes'].append(
                 dt * src.nsites / totlen if totlen else dt / nsrcs)
             self.source_data['taskno'].append(cm.task_no)
-        if self.dcache:
-            print('===========', self.dcache.hit)
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
