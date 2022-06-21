@@ -20,6 +20,7 @@ import getpass
 import operator
 from datetime import datetime
 
+from openquake.baselib import general
 from openquake.hazardlib import valid
 from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
@@ -478,6 +479,13 @@ def get_dbpath(db):
     rows = db('PRAGMA database_list')
     # return a row with fields (id, dbname, dbpath)
     return rows[0].file
+
+
+def engine_version(db):
+    """
+    :returns: git version as seen by the db
+    """
+    return general.engine_version()
 
 
 # ########################## upgrade operations ########################## #
