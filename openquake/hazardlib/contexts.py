@@ -78,14 +78,16 @@ def concat(ctxs):
     for ctx in ctxs:
         if numpy.isnan(ctx.occurrence_rate).all():
             nonparam.append(ctx)
-        elif ctx.probs_occur.any() and ctx.occurrence_rate.any():
+        elif hasattr(ctx, 'probs_occur') and ctx.probs_occur.shape[1] >= 1:
             parametric_np.append(ctx)
         else:
             parametric.append(ctx)
     if parametric:
         out.append(numpy.concatenate(parametric).view(numpy.recarray))
     if parametric_np:
-        out.extend(parametric_np)
+        for shp in set(ctx.probs_occur.shape[1] for ctx in parametric_np):
+            p_array = [p for p in parametric_np if p.probs_occur.shape[1] == shp]
+            out.append(numpy.concatenate(p_array).view(numpy.recarray))
     if nonparam:
         out.append(numpy.concatenate(nonparam).view(numpy.recarray))
     return out
@@ -538,10 +540,11 @@ class ContextMaker(object):
 
         if not hasattr(ctxs[0], 'probs_occur'):
             for ctx in ctxs:
-                ctx.probs_occur = []
+                ctx.probs_occur = numpy.zeros(0)
         else:
-            np = max(ctx.probs_occur.shape[1] for ctx in ctxs)
-            dd['probs_occur'] = numpy.zeros(np)
+            shps = [ctx.probs_occur.shape for ctx in ctxs]
+            nprobs = max(i[1] if len(i) > 1 else i[0] for i in shps)
+            dd['probs_occur'] = numpy.zeros(nprobs)
 
         C = sum(len(ctx) for ctx in ctxs)
         ra = RecordBuilder(**dd).zeros(C)
