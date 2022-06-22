@@ -20,6 +20,7 @@ import os.path
 import pickle
 import operator
 import logging
+import collections
 import gzip
 import zlib
 import numpy
@@ -185,6 +186,7 @@ def fix_geometry_sections(smdict, h5):
                      [kite_to_geom(sec) for sec in sections])
 
     # fix the MultiFaultSources
+    section_idxs = []
     for smod in smodels:
         for sg in smod.src_groups:
             for src in sg:
@@ -195,6 +197,12 @@ def fix_geometry_sections(smdict, h5):
                         src.hdf5path = h5.filename
                     src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
                                         for idxs in src.rupture_idxs]
+                    for idxs in src.rupture_idxs:
+                        section_idxs.extend(idxs)
+    cnt = collections.Counter(section_idxs)
+    if cnt:
+        mean_counts = numpy.mean(list(cnt.values()))
+        logging.info('Section multiplicity = %.1f', mean_counts)
 
 
 def _groups_ids(smlt_dir, smdict, fnames):
