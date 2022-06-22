@@ -16,14 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import collections
-import tempfile
 import logging
 import os.path
 import socket
 import cProfile
 import getpass
-import pstats
 
 from openquake.baselib import performance, general
 from openquake.hazardlib import valid
@@ -33,46 +30,6 @@ from openquake.engine.engine import create_jobs, run_jobs
 from openquake.server import dbserver
 
 calc_path = None  # set only when the flag --slowest is given
-
-PStatData = collections.namedtuple(
-    'PStatData', 'ncalls tottime percall cumtime percall2 path')
-
-
-def get_pstats(pstatfile, n):
-    """
-    Return profiling information as an ORG table.
-
-    :param pstatfile: path to a .pstat file
-    :param n: the maximum number of stats to retrieve
-    """
-    with tempfile.TemporaryFile(mode='w+') as stream:
-        ps = pstats.Stats(pstatfile, stream=stream)
-        ps.sort_stats('cumtime')
-        ps.print_stats(n)
-        stream.seek(0)
-        lines = list(stream)
-    for i, line in enumerate(lines):
-        if line.startswith('   ncalls'):
-            break
-    data = []
-    for line in lines[i + 2:]:
-        columns = line.split()
-        if len(columns) == 6:
-            columns[-1] = os.path.basename(columns[-1])
-            data.append(PStatData(*columns))
-    rows = [(rec.ncalls, rec.cumtime, rec.path) for rec in data]
-    # here is an example of the expected output table:
-    # ====== ======= ========================================================
-    # ncalls cumtime path
-    # ====== ======= ========================================================
-    # 1      33.502  commands/run.py:77(_run)
-    # 1      33.483  calculators/base.py:110(run)
-    # 1      25.166  calculators/classical.py:115(execute)
-    # 1      25.104  baselib.parallel.py:249(apply_reduce)
-    # 1      25.099  calculators/classical.py:41(classical)
-    # 1      25.099  hazardlib/calc/hazard_curve.py:164(classical)
-    return views.text_table(
-        rows, header='ncalls cumtime path'.split(), ext='org')
 
 
 # called when profiling
