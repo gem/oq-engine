@@ -77,6 +77,7 @@ def _distances_from_dcache(rup, sites, param, dcache):
                 dcache[srf.suid, key] = val
     # Computing distances using the cache
     if param in ['rjb', 'rrup']:
+        dcache.hit += 1
         distances = dcache[suids[0], param]
         # This is looping over all the surface IDs composing the rupture
         for suid in suids[1:]:

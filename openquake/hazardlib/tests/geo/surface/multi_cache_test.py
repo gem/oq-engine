@@ -95,6 +95,7 @@ class GetRxRy0FromCacheTestCase(unittest.TestCase):
         cache_save = copy.deepcopy(cm.dcache)
         [ctx] = cm.get_ctxs([rup], self.sitec)
         dcache = cm.dcache
+        print('dcache.hit =', dcache.hit)
 
         # Get cached distances
         tupps = [dcache[i, 't_upp'] for i in suids]

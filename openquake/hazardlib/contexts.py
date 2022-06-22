@@ -31,7 +31,7 @@ from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
 from openquake.baselib.performance import Monitor, split_array, compile, numba
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import valid, imt as imt_module
+from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry, get_pnes, FatedTOM
 from openquake.hazardlib.site import site_param_dt
@@ -365,7 +365,9 @@ class ContextMaker(object):
 
         self.cache_distances = param.get('cache_distances', False)
         if self.cache_distances:
-            self.dcache = {}  # (surface ID, dist_type) for MultiFaultSources
+            # use a cache (surface ID, dist_type) for MultiFaultSources
+            self.dcache = AccumDict()
+            self.dcache.hit = 0
         else:
             self.dcache = None  # disabled
         self.af = param.get('af')
@@ -470,7 +472,8 @@ class ContextMaker(object):
             return 0
         nbytes = 0
         for arr in self.dcache.values():
-            nbytes += arr.nbytes
+            if isinstance(arr, numpy.ndarray):
+                nbytes += arr.nbytes
         return nbytes
 
     def read_ctxs(self, dstore, slc=None, magi=None):

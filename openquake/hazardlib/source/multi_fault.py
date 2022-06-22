@@ -34,7 +34,7 @@ from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
 
 F32 = np.float32
-BLOCKSIZE = 100
+BLOCKSIZE = 200
 # the BLOCKSIZE has to be large to reduce the number of sources and
 # therefore the redundant data transfer in the .sections attribute
 
