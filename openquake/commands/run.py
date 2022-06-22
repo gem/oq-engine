@@ -141,7 +141,9 @@ def main(job_ini,
         pstat = calc_path + '.pstat'
         prof.dump_stats(pstat)
         print('Saved profiling info in %s' % pstat)
-        print(get_pstats(pstat, slowest))
+        data = performance.get_pstats(pstat, slowest)
+        print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
+                               ext='org'))
         return
     if len(job_ini) == 1:
         return _run(job_ini[0], concurrent_tasks, pdb, reuse_input,
