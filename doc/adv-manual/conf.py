@@ -115,7 +115,72 @@ html_theme = 'pydata_sphinx_theme'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+html_theme_options = {
+    "icon_links": [
+
+        {
+            # Label for this link
+            "name": "OpenQuake",
+            # URL where the link will redirect
+            "url": "https://www.globalquakemodel.org/openquake",  # required
+            # Icon class (if "type": "fontawesome"), or path to local image (if "type": "local")
+            "icon": "_static/oq_logo.png",
+            # Whether icon should be a FontAwesome class, or a local file
+            "type": "local",  # Default is fontawesome
+        },
+        {
+            # Label for this link
+            "name": "GitHub",
+            # URL where the link will redirect
+            "url": "https://github.com/gem/oq-engine",  # required
+            # Icon class (if "type": "fontawesome"), or path to local image (if "type": "local")
+            "icon": "fab fa-github-square",
+            # Whether icon should be a FontAwesome class, or a local file
+            "type": "fontawesome",  # Default is fontawesome
+        },
+        {
+            # Label for this link
+            "name": "Twitter",
+            # URL where the link will redirect
+            "url": "https://twitter.com/GEMwrld",  # required
+            # Icon class (if "type": "fontawesome"), or path to local image (if "type": "local")
+            "icon": "fab fa-twitter-square",
+            # Whether icon should be a FontAwesome class, or a local file
+            "type": "fontawesome",  # Default is fontawesome
+        },
+        {
+            # Label for this link
+            "name": "YouTube",
+            # URL where the link will redirect
+            "url": "https://www.youtube.com/channel/UCfvGcHtZYk_kQ_mqz3AYQYQ",  # required
+            # Icon class (if "type": "fontawesome"), or path to local image (if "type": "local")
+            "icon": "fab fa-youtube-square",
+            # Whether icon should be a FontAwesome class, or a local file
+            "type": "fontawesome",  # Default is fontawesome
+        },
+        {
+            # Label for this link
+            "name": "Facebook",
+            # URL where the link will redirect
+            "url": "https://www.facebook.com/GEMwrld/",  # required
+            # Icon class (if "type": "fontawesome"), or path to local image (if "type": "local")
+            "icon": "fab fa-facebook-square",
+            # Whether icon should be a FontAwesome class, or a local file
+            "type": "fontawesome",  # Default is fontawesome
+        },
+        {
+            # Label for this link
+            "name": "LinkedIn",
+            # URL where the link will redirect
+            "url": "https://it.linkedin.com/company/gem-foundation",  # required
+            # Icon class (if "type": "fontawesome"), or path to local image (if "type": "local")
+            "icon": "fab fa-linkedin",
+            # Whether icon should be a FontAwesome class, or a local file
+            "type": "fontawesome",  # Default is fontawesome
+        }
+
+   ]
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
