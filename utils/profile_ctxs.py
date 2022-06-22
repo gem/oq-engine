@@ -41,11 +41,13 @@ def main(job_ini, redfactor: int):
     """
     Profile building the contexts. Use it as
 
-    $ python profile_ctxs.py /path/to/job.ini reduction_factor
+    $ python profile_ctxs.py /path/to/job.ini redfactor
 
     A good value for the reduction factor could be 100, i.e. take one
     source (after split) every 100 sources. For large models increase
-    the reduction factor to make the profiling reasonably fast.
+    the reduction factor to make the profiling reasonably fast. This is
+    meant to be used on single site models. If you have many sites set
+    something like OQ_SAMPLE_SITES=.0001.
     """
     logging.basicConfig(level=logging.INFO)
     with datastore.hdf5new() as h5:
