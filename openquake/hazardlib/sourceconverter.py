@@ -19,6 +19,7 @@ import os
 import operator
 import collections
 import pickle
+import toml
 import copy
 import logging
 try:
@@ -289,6 +290,16 @@ class SourceGroup(collections.abc.Sequence):
             sg.sources = block
             out.append(sg)
         return out
+
+    def get_tom_toml(self, time_span):
+        """
+        :returns: the TOM as a json string {'PoissonTOM': {'time_span': 50}}
+        """
+        tom = self.temporal_occurrence_model
+        if tom is None:
+            return '[PoissonTOM]\ntime_span=%s' % time_span
+        dic = {tom.__class__.__name__: vars(tom)}
+        return toml.dumps(dic)
 
     def __repr__(self):
         return '<%s %s, %d source(s)>' % (

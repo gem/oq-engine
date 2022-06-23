@@ -20,6 +20,7 @@
 Module :mod:`openquake.hazardlib.tom` contains implementations of probability
 density functions for earthquake temporal occurrence modeling.
 """
+import toml
 import numpy
 import scipy.stats
 from openquake.baselib.performance import compile
@@ -81,6 +82,9 @@ class BaseTOM(object):
         given in the constructor.
         """
         raise NotImplementedError
+
+    def __str__(self):
+        return toml.dumps({self.__class__.__name__: self.__dict__})
 
 
 class FatedTOM(BaseTOM):
@@ -184,7 +188,7 @@ class PoissonTOM(BaseTOM):
         return numpy.exp(- occurrence_rate * self.time_span * poes)
 
 
-class ClusterPoissonTOM(BaseTOM):
+class ClusterPoissonTOM(PoissonTOM):
     """
     Poissonian temporal occurrence model with an occurrence rate
     """

@@ -143,7 +143,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         csm = self.csm
         self.datastore['trt_smrs'] = csm.get_trt_smrs()
         self.datastore['toms'] = numpy.array(
-            [sg.tom_name for sg in csm.src_groups], hdf5.vstr)
+            [sg.get_tom_toml(self.oqparam.investigation_time)
+             for sg in csm.src_groups], hdf5.vstr)
         cmakers = read_cmakers(self.datastore, csm.full_lt)
         M = len(self.oqparam.imtls)
         G = max(len(cm.gsims) for cm in cmakers)
