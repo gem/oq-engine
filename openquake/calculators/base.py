@@ -144,13 +144,19 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     is_stochastic = False  # True for scenario and event based calculators
 
     def __init__(self, oqparam, calc_id):
+        self.oqparam = oqparam
         self.datastore = datastore.new(calc_id, oqparam)
+        if parallel.oq_distribute() == 'zmq':
+            # save the version in the monitor, to be used in the version
+            # check in the workers
+            version = logs.dbcmd('engine_version')
+        else:
+            version = None
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
-            h5=self.datastore, version=logs.dbcmd('engine_version'))
+            h5=self.datastore, version=version)
         # NB: using h5=self.datastore.hdf5 would mean losing the performance
         # info about Calculator.run since the file will be closed later on
-        self.oqparam = oqparam
 
     def pre_checks(self):
         """
