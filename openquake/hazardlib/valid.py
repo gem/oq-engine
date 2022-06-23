@@ -31,7 +31,7 @@ import numpy
 
 from openquake.baselib.general import distinct
 from openquake.baselib import config, hdf5
-from openquake.hazardlib import imt, scalerel, gsim, pmf, site
+from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance, floatdict  # needed
@@ -138,6 +138,19 @@ def gsim(value, basedir=''):
     gs = gsim_class(**kwargs)
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     return gs
+
+
+def occurrence_model(value):
+    """
+    Converts a TOML string into a TOM instance
+
+    >>> print(occurrence_model('[PoissonTOM]\\ntime_span=50.0'))
+    [PoissonTOM]
+    time_span = 50.0
+    <BLANKLINE>
+    """
+    [(clsname, dic)] = toml.loads(value).items()
+    return tom.registry[clsname](**dic)
 
 
 def logic_tree_path(value):

@@ -65,8 +65,6 @@ def _cluster(imtls, tom, gsims, pmap):
     # Number of occurrences for the cluster
     first = True
     for nocc in range(0, 50):
-        # TODO fix this once the occurrence rate will be used just as
-        # an object attribute
         ocr = tom.occurrence_rate
         prob_n_occ = tom.get_probability_n_occurrences(ocr, nocc)
         if first:

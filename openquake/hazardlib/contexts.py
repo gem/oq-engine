@@ -31,7 +31,7 @@ from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
 from openquake.baselib.performance import Monitor, split_array, compile, numba
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry, get_pnes, FatedTOM
 from openquake.hazardlib.site import site_param_dt
@@ -1590,7 +1590,7 @@ def read_cmakers(dstore, full_lt=None):
     oq = dstore['oqparam']
     full_lt = full_lt or dstore['full_lt']
     trt_smrs = dstore['trt_smrs'][:]
-    toms = dstore['toms'][:]
+    toms = decode(dstore['toms'][:])
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
@@ -1607,7 +1607,7 @@ def read_cmakers(dstore, full_lt=None):
         oq.mags_by_trt = {k: decode(v[:])
                           for k, v in dstore['source_mags'].items()}
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
-        cmaker.tom = registry[decode(toms[grp_id])](oq.investigation_time)
+        cmaker.tom = valid.occurrence_model(toms[grp_id])
         cmaker.trti = trti
         cmaker.start = start
         cmaker.grp_id = grp_id
