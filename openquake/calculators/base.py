@@ -147,7 +147,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         self.datastore = datastore.new(calc_id, oqparam)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
-            h5=self.datastore)
+            h5=self.datastore, version=logs.dbcmd('engine_version'))
         # NB: using h5=self.datastore.hdf5 would mean losing the performance
         # info about Calculator.run since the file will be closed later on
         self.oqparam = oqparam
@@ -178,7 +178,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             # always except in case_shakemap
             self.datastore['oqparam'] = self.oqparam
         attrs = self.datastore['/'].attrs
-        attrs['engine_version'] = logs.dbcmd('engine_version')
+        attrs['engine_version'] = self._monitor.version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
             attrs['input_size'] = size = self.oqparam.get_input_size()

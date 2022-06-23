@@ -263,7 +263,6 @@ def run_calc(log):
                      hostname,
                      calc.oqparam.inputs['job_ini'],
                      calc.oqparam.hazard_calculation_id)
-        logging.info('Using engine version %s', logs.dbcmd('engine_version'))
         msg = check_obsolete_version(oqparam.calculation_mode)
         # NB: disabling the warning should be done only for users with
         # an updated LTS version, but we are doing it for all users
@@ -440,11 +439,12 @@ def check_obsolete_version(calculation_mode='WebUI'):
         - the empty string if the engine is updated
         - None if the check could not be performed (i.e. github is down)
     """
-    if os.environ.get('JENKINS_URL') or os.environ.get('TRAVIS'):
+    if os.environ.get('JENKINS_URL') or os.environ.get('CI'):
         # avoid flooding our API server with requests from CI systems
         return
 
     version = logs.dbcmd('engine_version')
+    logging.info('Using engine version %s', version)
     headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s;%s' %
                (version, calculation_mode, platform.platform(),
                 config.distribution.oq_distribute)}
