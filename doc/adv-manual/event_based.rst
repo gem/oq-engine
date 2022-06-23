@@ -905,14 +905,14 @@ distribution:
 0.13664978061122787
 
 All these properties are broken when the ground motion values
-are truncated below the ``minimum_intensity``:
+are truncated below the ``minimum_intensity``::
 
->>> gmvs[gmvs < .05] = .05
->>> numpy.log(gmvs).mean()
+>> gmvs[gmvs < .05] = .05
+>> numpy.log(gmvs).mean()
 -1.9876078473466177
->>> numpy.log(gmvs).std()
+>> numpy.log(gmvs).std()
 0.48280630467779523
->>> numpy.exp(numpy.log(gmvs).mean())
+>> numpy.exp(numpy.log(gmvs).mean())
 0.13702281319482504
 
 In this case the difference is minor, but if the number of simulations

@@ -5,7 +5,7 @@
 # 
 https://wheelhouse.openquake.org/v3/macos/py/setuptools-56.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/macos/arm64/pytz-2022.1-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/macos/arm64/h5py-3.6.0-cp39-cp39-macosx_12_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/h5py-3.7.0-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/numba-0.55.2-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/numpy-1.22.3-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/scipy-1.8.0-cp39-cp39-macosx_12_0_arm64.whl
