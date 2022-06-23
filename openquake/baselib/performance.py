@@ -181,11 +181,12 @@ class Monitor(object):
     calc_id = None
 
     def __init__(self, operation='', measuremem=False, inner_loop=False,
-                 h5=None):
+                 h5=None, version=None):
         self.operation = operation
         self.measuremem = measuremem
         self.inner_loop = inner_loop
         self.h5 = h5
+        self.version = version
         self.mem = 0
         self.duration = 0
         self._start_time = self._stop_time = time.time()

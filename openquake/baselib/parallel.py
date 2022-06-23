@@ -205,14 +205,14 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import config, hdf5, workerpool, version
+from openquake.baselib import config, hdf5, workerpool
 from openquake.baselib.python3compat import decode
 from openquake.baselib.zeromq import zmq, Socket, TimeoutError
 from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp)
+    gettemp, engine_version)
 
 sys.setrecursionlimit(1200)  # raised a bit to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
@@ -414,11 +414,11 @@ class Result(object):
         :returns: a new Result instance
         """
         try:
-            if mon.version != version:
+            if mon.version and mon.version != engine_version():
                 raise RuntimeError(
                     'The master is at version %s while the worker %s is at '
                     'version %s' % (mon.version, socket.gethostname(),
-                                    version))
+                                    engine_version()))
             if mon.config.dbserver.host != config.dbserver.host:
                 raise RuntimeError(
                     'The master has dbserver.host=%s while the worker has %s'
@@ -454,7 +454,6 @@ def check_mem_usage(soft_percent=None, hard_percent=None):
 
 
 dummy_mon = Monitor()
-dummy_mon.version = version
 dummy_mon.config = config
 dummy_mon.backurl = None
 
@@ -819,7 +818,6 @@ class Starmap(object):
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
                 self.return_ip, self.socket.port)
-            self.monitor.version = version
             self.monitor.config = config
         OQ_TASK_NO = os.environ.get('OQ_TASK_NO')
         if OQ_TASK_NO is not None and self.task_no != int(OQ_TASK_NO):
