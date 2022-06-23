@@ -70,25 +70,24 @@ class PoissonTOMTestCase(unittest.TestCase):
 class NegativeBinomialTOMTestCase(unittest.TestCase):
 
     def test_non_positive_parameters(self):
-        self.assertRaises(ValueError, NegativeBinomialTOM, 1, None, [-1, 0])
-        self.assertRaises(ValueError, NegativeBinomialTOM, 1, None, [-1, -1])
-        self.assertRaises(ValueError, NegativeBinomialTOM, 1, None, [0, -1])
+        self.assertRaises(ValueError, NegativeBinomialTOM, 1, -1, 0)
+        self.assertRaises(ValueError, NegativeBinomialTOM, 1, -1, -1)
+        self.assertRaises(ValueError, NegativeBinomialTOM, 1, 0, -1)
 
     def test_get_probability_one_or_more_occurrences(self):
-        mu = 100
-        alpha = 0.01
-        pdf = NegativeBinomialTOM(time_span=50, parameters=[mu, alpha])
+
+        pdf = NegativeBinomialTOM(50, 100, 0.01)
         self.assertEqual(pdf.get_probability_one_or_more_occurrences(), 1)
         aae = self.assertAlmostEqual
-        pdf = NegativeBinomialTOM(time_span=50, parameters=[1, 0.1])
+        pdf = NegativeBinomialTOM(50, 1, 0.1)
         aae(pdf.get_probability_one_or_more_occurrences(), 0.9999998)
-        pdf = NegativeBinomialTOM(time_span=50, parameters=[0.1, 1])
+        pdf = NegativeBinomialTOM(50, 0.1, 1)
         aae(pdf.get_probability_one_or_more_occurrences(), 0.6944444)
 
     def test_get_probability_one_occurrence(self):
         mu = 1
         alpha = 0.1
-        pdf = NegativeBinomialTOM(time_span=1, parameters=[mu, alpha])
+        pdf = NegativeBinomialTOM(1, mu, alpha)
         aae = self.assertAlmostEqual
         aae(pdf.get_probability_n_occurrences(0), 0.38554328)
         aae(pdf.get_probability_n_occurrences(1), 0.35049389)
@@ -98,7 +97,7 @@ class NegativeBinomialTOMTestCase(unittest.TestCase):
         time_span = 40
         mu = 1
         alpha = 0.01
-        tom = NegativeBinomialTOM(time_span=time_span, parameters=[mu, alpha])
+        tom = NegativeBinomialTOM(time_span, mu, alpha)
         numpy.random.seed(31)
         self.assertEqual(tom.sample_number_of_occurrences(), 27)
 
@@ -107,7 +106,7 @@ class NegativeBinomialTOMTestCase(unittest.TestCase):
         mu = 0.01
         alpha = 0.1
         poes = numpy.array([[0.9, 0.8, 0.7], [0.6, 0.5, 0.4]])
-        tom = NegativeBinomialTOM(time_span, parameters=[mu, alpha])
+        tom = NegativeBinomialTOM(time_span, mu, alpha)
         pne = tom.get_probability_no_exceedance(mu, poes)
         numpy.testing.assert_allclose(pne,
                                       numpy.array([[0.99104439, 0.99203509, 0.99302687],
