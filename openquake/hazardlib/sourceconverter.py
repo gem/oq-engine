@@ -745,14 +745,18 @@ class SourceConverter(RuptureConverter):
         """
         Convert the given node into a Temporal Occurrence Model object.
 
-        :param node: a node of kind poissonTOM or brownianTOM
+        :param node: a node of kind poissonTOM or similar
         :returns: a :class:`openquake.hazardlib.tom.BaseTOM` instance
         """
         if 'tom' in node.attrib:
             tom_cls = tom.registry[node['tom']]
         else:
             tom_cls = tom.registry['PoissonTOM']
-        return tom_cls(time_span=self.investigation_time)
+        instance = tom_cls(time_span=self.investigation_time)
+        # the occurrence_rate is not None only for clusters of sources,
+        # the ones implemented in calc.hazard_curve, see test case_35
+        instance.occurrence_rate = node.get('occurrence_rate')
+        return instance
 
     def convert_mfdist(self, node):
         """
