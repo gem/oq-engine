@@ -42,11 +42,10 @@ class BaseTOM(metaclass=abc.ABCMeta):
     def __init_subclass__(cls):
         registry[cls.__name__] = cls
 
-    def __init__(self, time_span, occurrence_rate=None):
+    def __init__(self, time_span):
         if time_span <= 0:
             raise ValueError('time_span must be positive')
         self.time_span = time_span
-        self.occurrence_rate = occurrence_rate
 
     @abc.abstractmethod
     def get_probability_one_or_more_occurrences(self):
@@ -88,9 +87,8 @@ class BaseTOM(metaclass=abc.ABCMeta):
 
 class FatedTOM(BaseTOM):
 
-    def __init__(self, time_span, occurrence_rate=None):
+    def __init__(self, time_span):
         self.time_span = time_span
-        self.occurrence_rate = occurrence_rate
 
     def get_probability_one_or_more_occurrences(self, occurrence_rate):
         return 1
