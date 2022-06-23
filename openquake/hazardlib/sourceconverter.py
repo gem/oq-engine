@@ -748,15 +748,17 @@ class SourceConverter(RuptureConverter):
         :param node: a node of kind poissonTOM or similar
         :returns: a :class:`openquake.hazardlib.tom.BaseTOM` instance
         """
+        occurrence_rate = node.get('occurrence_rate')
+        # the occurrence_rate is not None only for clusters of sources,
+        # the ones implemented in calc.hazard_curve, see test case_35
+        if occurrence_rate:
+            tom_cls = tom.registry['ClusterPoissonTOM']
+            return tom_cls(self.investigation_time, occurrence_rate)
         if 'tom' in node.attrib:
             tom_cls = tom.registry[node['tom']]
         else:
             tom_cls = tom.registry['PoissonTOM']
-        instance = tom_cls(time_span=self.investigation_time)
-        # the occurrence_rate is not None only for clusters of sources,
-        # the ones implemented in calc.hazard_curve, see test case_35
-        instance.occurrence_rate = node.get('occurrence_rate')
-        return instance
+        return tom_cls(self.investigation_time)
 
     def convert_mfdist(self, node):
         """
