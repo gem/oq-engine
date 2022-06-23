@@ -15,6 +15,9 @@ xmlns:gml="http://www.opengis.net/gml"
             <pointSource
             id="00000"
             name="point00000"
+            tom="NegativeBinomialTOM"
+            mu="0.1"
+            alpha="0.1"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -50,14 +53,6 @@ xmlns:gml="http://www.opengis.net/gml"
                 <hypoDepthDist>
                     <hypoDepth depth="15" probability="1.0"/>
                 </hypoDepthDist>
-                <tom
-                name="NegativeBinomialTOM"
-                >
-                    <!--Simple Negbinom model, consisting of mean rate=0.1 and dispersion=2, for all events greater than m_min (m_min=5.0 in this case)-->
-                    <parameters>
-                        0.1 2.0
-                    </parameters>
-                </tom>
             </pointSource>
         </sourceGroup>
     </sourceModel>

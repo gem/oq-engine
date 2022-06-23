@@ -235,7 +235,7 @@ class NegativeBinomialTOM(BaseTOM):
     """
     Negative Binomial temporal occurrence model.
     """
-    def __init__(self, time_span, occurrence_rate=None, parameters=None):
+    def __init__(self, time_span, mu, alpha):
         """
         :param time_span:
             The time interval of interest, in years.
@@ -256,9 +256,10 @@ class NegativeBinomialTOM(BaseTOM):
 
         """
 
-        super().__init__(time_span, occurrence_rate=occurrence_rate)
-        self.parameters = numpy.array(parameters)
-        if numpy.any(self.parameters <= 0):
+        super().__init__(time_span)
+        self.mu = mu
+        self.alpha = alpha
+        if numpy.any(self.mu <= 0) or numpy.any(self.alpha <= 0):
             raise ValueError('Mean rate and rate dispersion must be greater than 0')
         self.time_span = time_span
 
@@ -271,8 +272,8 @@ class NegativeBinomialTOM(BaseTOM):
             Float value between 0 and 1 inclusive.
         """
         if mean_rate is None:
-            mean_rate = self.parameters[0]
-        tau = 1 / self.parameters[1]
+            mean_rate = self.mu
+        tau = 1 / self.alpha
         theta = tau / (tau + (mean_rate * self.time_span))
 
         return 1 - scipy.stats.nbinom.cdf(1, tau, theta)
@@ -287,8 +288,8 @@ class NegativeBinomialTOM(BaseTOM):
         :return:
             Probability of occurrence
         """
-        tau = 1 / self.parameters[1]
-        theta = tau / (tau + (self.parameters[0] * self.time_span))
+        tau = 1 / self.alpha
+        theta = tau / (tau + (self.mu * self.time_span))
 
         return scipy.stats.nbinom.pmf(num, tau, theta)
 
@@ -310,9 +311,9 @@ class NegativeBinomialTOM(BaseTOM):
             time span.
         """
         if mean_rate is None:
-            mean_rate = self.parameters[0]
+            mean_rate = self.mu
 
-        tau = 1 / self.parameters[1]
+        tau = 1 / self.alpha
         theta = tau / (tau + (mean_rate * self.time_span))
 
         if isinstance(seed, int):
@@ -331,14 +332,13 @@ class NegativeBinomialTOM(BaseTOM):
 
         """
         # Gets dispersion from source object
-        alpha = self.parameters[1]
+        alpha = self.alpha
         # Recovers NB2 parametrization (tau/theta or n,p in literature)
         tau = 1 / alpha
         theta = tau / (tau + numpy.array(mean_rate).flatten()*self.time_span)
         if not n_max:
             n_max = numpy.max(scipy.stats.nbinom.ppf(tol, tau, theta).astype(int))
         pmf = scipy.stats.nbinom.pmf(numpy.arange(0, n_max), tau, theta[:, None])
-
         return pmf
 
     def get_probability_no_exceedance(self, mean_rate, poes):
@@ -359,7 +359,7 @@ class NegativeBinomialTOM(BaseTOM):
         """
 
         # Gets dispersion from source object
-        alpha = self.parameters[1]
+        alpha = self.alpha
         # Recovers NB2 parametrization (tau/theta or n,p in literature)
         tau = 1 / alpha
         theta = tau / (tau + mean_rate*self.time_span)
