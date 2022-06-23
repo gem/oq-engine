@@ -1,4 +1,4 @@
-name: MacOS Install engine for 3.7, 3.8 and 3.9
+name: MacOS Install engine with python 3.9
 'on':
   workflow_dispatch:
     inputs:
@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-11, macos-12]
-        python-version: [3.8, 3.9]
+        python-version: [3.9]
     steps:
     # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
@@ -41,6 +41,9 @@ jobs:
           #echo $PY_VER
           #pip3 install -r requirements-$PY_VER-macos.txt
           #pip3 install -e .\[osgeo\]
+          echo "sqlite3 version"
+          which sqlite3
+          sqlite3 --version
           export PIP_DEFAULT_TIMEOUT=100
           pip3 install -U pip wheel setuptools
           #
