@@ -146,15 +146,13 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     def __init__(self, oqparam, calc_id):
         self.oqparam = oqparam
         self.datastore = datastore.new(calc_id, oqparam)
-        if parallel.oq_distribute() == 'zmq':
-            # save the version in the monitor, to be used in the version
-            # check in the workers
-            version = logs.dbcmd('engine_version')
-        else:
-            version = None
+        self.engine_version = logs.dbcmd('engine_version')
+        # save the version in the monitor, to be used in the version
+        # check in the workers
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
-            h5=self.datastore, version=version)
+            h5=self.datastore, version=self.engine_version
+            if parallel.oq_distribute() == 'zmq' else None)
         # NB: using h5=self.datastore.hdf5 would mean losing the performance
         # info about Calculator.run since the file will be closed later on
 
@@ -184,7 +182,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             # always except in case_shakemap
             self.datastore['oqparam'] = self.oqparam
         attrs = self.datastore['/'].attrs
-        attrs['engine_version'] = self._monitor.version
+        attrs['engine_version'] = self.engine_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
             attrs['input_size'] = size = self.oqparam.get_input_size()
