@@ -190,6 +190,7 @@ def run_server(dbhostport=None, loglevel='WARN', foreground=False):
         os.makedirs(dirname)
 
     # create and upgrade the db if needed
+    db('PRAGMA trusted_schema = ON')
     db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
     actions.upgrade_db(db)
     # the line below is needed to work around a very subtle bug of sqlite;
