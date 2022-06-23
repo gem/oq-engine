@@ -15,7 +15,7 @@ geographic portion of the region interested, of by increasing the grid
 spacing. Once the calculation has been reduced, you can run
 it and determine what are the factors dominating the run time.
 
-As we discussed in section `common mistakes`_, you may want to tweak
+As we discussed in section about common mistakes, you may want to tweak
 the quadratic parameters (``maximum_distance``,
 ``area_source_discretization``, ``rupture_mesh_spacing``,
 ``complex_fault_mesh_spacing``). Also, you may want to choose different
@@ -216,8 +216,6 @@ a good estimate for the total loss.
 
 In short, risk calculations for the mean field UCERF model are routines
 now, in spite of what the naive expectations could be.
-
-.. _common mistakes: common-mistakes.rst
 
 Collapsing the GMPE logic tree
 ---------------------------------------

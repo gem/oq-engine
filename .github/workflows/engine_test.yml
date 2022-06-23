@@ -29,7 +29,7 @@ jobs:
     - name: Test with pytest
       run: |
         oq dbserver start
-        pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/common-mistakes.rst doc/adv-manual/risk.rst doc/adv-manual/developing.rst doc/adv-manual/rupture-sampling.rst
+        pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
 
   hazardlib:
     runs-on: ${{ matrix.os }}
