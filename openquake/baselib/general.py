@@ -428,6 +428,7 @@ def engine_version():
     # Code will run, but a pop-up offering to install bloatware (Xcode)
     # is raised. This is annoying in end-users installations, so we check
     # if .git exists before trying to execute the git executable
+    gh = ''
     if os.path.isdir(git_path):
         try:
             gh = subprocess.check_output(
@@ -436,9 +437,9 @@ def engine_version():
                 cwd=os.path.dirname(git_path)).strip()
             gh = "-git" + decode(gh) if gh else ''
         except Exception:
+            pass
             # trapping everything on purpose; git may not be installed or it
             # may not work properly
-            gh = ''
 
     return __version__ + gh
 

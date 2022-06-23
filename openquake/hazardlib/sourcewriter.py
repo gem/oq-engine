@@ -695,8 +695,8 @@ def build_source_group(source_group):
         attrs['cluster'] = 'true'
     if source_group.temporal_occurrence_model is not None:
         tom = source_group.temporal_occurrence_model
-        if isinstance(tom, PoissonTOM) and tom.occurrence_rate:
-            attrs['tom'] = 'PoissonTOM'
+        if hasattr(tom, 'occurrence_rate'):
+            attrs['tom'] = 'ClusterPoissonTOM'
             attrs['occurrence_rate'] = tom.occurrence_rate
     srcs_weights = [getattr(src, 'mutex_weight', 1) for src in source_group]
     if set(srcs_weights) != {1}:

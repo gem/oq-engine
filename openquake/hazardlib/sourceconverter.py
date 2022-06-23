@@ -19,6 +19,7 @@ import os
 import operator
 import collections
 import pickle
+import toml
 import copy
 import logging
 try:
@@ -289,6 +290,16 @@ class SourceGroup(collections.abc.Sequence):
             sg.sources = block
             out.append(sg)
         return out
+
+    def get_tom_toml(self, time_span):
+        """
+        :returns: the TOM as a json string {'PoissonTOM': {'time_span': 50}}
+        """
+        tom = self.temporal_occurrence_model
+        if tom is None:
+            return '[PoissonTOM]\ntime_span=%s' % time_span
+        dic = {tom.__class__.__name__: vars(tom)}
+        return toml.dumps(dic)
 
     def __repr__(self):
         return '<%s %s, %d source(s)>' % (
@@ -745,27 +756,20 @@ class SourceConverter(RuptureConverter):
         """
         Convert the given node into a Temporal Occurrence Model object.
 
-        :param node: a node of kind poissonTOM or brownianTOM
-        :returns: a :class:`openquake.hazardlib.mfd.EvenlyDiscretizedMFD.` or
-                  :class:`openquake.hazardlib.mfd.TruncatedGRMFD` instance
+        :param node: a node of kind poissonTOM or similar
+        :returns: a :class:`openquake.hazardlib.tom.BaseTOM` instance
         """
-
-        if node.tag.endswith('pointSource'):        # Check if there a tom specified at the point level
-            nodes = [i for i in node]
-            if numpy.any([i.tag.endswith('tom') for i in nodes]):
-                with context(self.fname, node.tom):
-                    tom_cls = tom.registry[node.tom['name']]
-                    params = ~node.tom.parameters
-                    parameters = [float(i) for i in params.split()]
-                    return tom_cls(time_span=self.investigation_time,
-                                   parameters=parameters)
-
+        occurrence_rate = node.get('occurrence_rate')
+        # the occurrence_rate is not None only for clusters of sources,
+        # the ones implemented in calc.hazard_curve, see test case_35
+        if occurrence_rate:
+            tom_cls = tom.registry['ClusterPoissonTOM']
+            return tom_cls(self.investigation_time, occurrence_rate)
         if 'tom' in node.attrib:
             tom_cls = tom.registry[node['tom']]
         else:
             tom_cls = tom.registry['PoissonTOM']
-        return tom_cls(time_span=self.investigation_time,
-                       occurrence_rate=node.get('occurrence_rate'))
+        return tom_cls(self.investigation_time)
 
     def convert_mfdist(self, node):
         """

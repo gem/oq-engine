@@ -376,7 +376,9 @@ class ContextMaker(object):
 
         self.cache_distances = param.get('cache_distances', False)
         if self.cache_distances:
-            self.dcache = {}  # (surface ID, dist_type) for MultiFaultSources
+            # use a cache (surface ID, dist_type) for MultiFaultSources
+            self.dcache = AccumDict()
+            self.dcache.hit = 0
         else:
             self.dcache = None  # disabled
         self.af = param.get('af')
@@ -481,7 +483,8 @@ class ContextMaker(object):
             return 0
         nbytes = 0
         for arr in self.dcache.values():
-            nbytes += arr.nbytes
+            if isinstance(arr, numpy.ndarray):
+                nbytes += arr.nbytes
         return nbytes
 
     def read_ctxs(self, dstore, slc=None, magi=None):
@@ -1621,7 +1624,7 @@ def read_cmakers(dstore, full_lt=None):
     oq = dstore['oqparam']
     full_lt = full_lt or dstore['full_lt']
     trt_smrs = dstore['trt_smrs'][:]
-    toms = dstore['toms'][:]
+    toms = decode(dstore['toms'][:])
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
@@ -1638,7 +1641,7 @@ def read_cmakers(dstore, full_lt=None):
         oq.mags_by_trt = {k: decode(v[:])
                           for k, v in dstore['source_mags'].items()}
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
-        cmaker.tom = registry[decode(toms[grp_id])](oq.investigation_time)
+        cmaker.tom = valid.occurrence_model(toms[grp_id])
         cmaker.trti = trti
         cmaker.start = start
         cmaker.grp_id = grp_id
