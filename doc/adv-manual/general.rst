@@ -1076,13 +1076,15 @@ datastore.
 
 Here is an example of usage of the ``Extractor`` to retrieve mean hazard curves:
 
->>> from openquake.calculators.extract import Extractor
->>> calc_id = 42  # for example
->>> extractor = Extractor(calc_id)
->>> obj = extractor.get('hcurves?kind=mean&imt=PGA')  # returns an ArrayWrapper
->>> obj.array.shape  # an example with 10,000 sites and 20 levels per PGA
-(10000, 20)
->>> extractor.close()
+.. code-block::
+
+ >> from openquake.calculators.extract import Extractor
+ >> calc_id = 42  # for example
+ >> extractor = Extractor(calc_id)
+ >> obj = extractor.get('hcurves?kind=mean&imt=PGA')  # returns an ArrayWrapper
+ >> obj.array.shape  # an example with 10,000 sites and 20 levels per PGA
+ (10000, 20)
+ >> extractor.close()
 
 Here is an example of using the `WebExtractor` to retrieve hazard maps.
 Here we assumes that there is available in a remote machine where there is
@@ -1110,17 +1112,19 @@ installation, put it in your virtualenv directory.
 
 The usage then is the same as the regular extractor:
 
->>> from openquake.calculators.extract import WebExtractor
->>> extractor = WebExtractor(calc_id)
->>> obj = extractor.get('hmaps?kind=mean&imt=PGA')  # returns an ArrayWrapper
->>> obj.array.shape  # an example with 10,000 sites and 4 PoEs
-(10000, 4)
->>> extractor.close()
+.. code-block::
+
+ >> from openquake.calculators.extract import WebExtractor
+ >> extractor = WebExtractor(calc_id)
+ >> obj = extractor.get('hmaps?kind=mean&imt=PGA')  # returns an ArrayWrapper
+ >> obj.array.shape  # an example with 10,000 sites and 4 PoEs
+ (10000, 4)
+ >> extractor.close()
 
 If you do not want to put your credentials in the ``openquake.cfg`` file,
-you can do so, but then you need to pass them explicitly to the WebExtractor:
+you can do so, but then you need to pass them explicitly to the WebExtractor::
 
->>> extractor = WebExtractor(calc_id, server, username, password)
+ >> extractor = WebExtractor(calc_id, server, username, password)
 
 Plotting
 --------------
@@ -1201,10 +1205,10 @@ then you can process the hazard curves as follows:
 
 .. code-block:: python
 
-  >>> from openquake.commonlib.datastore import read
-  >>> dstore = read(42)
-  >>> df = dstore.read_df('hcurves-stats', index='lvl',
-  ...                     sel=dict(imt='PGA', stat='mean', site_id=0))
+  >> from openquake.commonlib.datastore import read
+  >> dstore = read(42)
+  >> df = dstore.read_df('hcurves-stats', index='lvl',
+  ..                     sel=dict(imt='PGA', stat='mean', site_id=0))
        site_id stat     imt     value
   lvl                                
   0      0  b'mean'  b'PGA'  0.999982
@@ -1224,8 +1228,8 @@ you can get a slice of hazard curves by using the ``.sel`` method:
 
 .. code-block:: python
 
-  >>> arr = dstore.sel('hcurves-stats', imt='PGA', stat='mean', site_id=0)
-  >>> arr.shape  # (num_sites, num_stats, num_imts, num_levels)
+  >> arr = dstore.sel('hcurves-stats', imt='PGA', stat='mean', site_id=0)
+  >> arr.shape  # (num_sites, num_stats, num_imts, num_levels)
   (1, 1, 1, 45)
 
 Notice that the `.sel` method does not reduce the number of dimensions
@@ -1265,10 +1269,10 @@ the ``gmf_data`` table indexed by event ID, i.e. the ``eid`` field:
 
 .. code-block:: python
 
-   >>> eid = 20  # consider event with ID 20
-   >>> gmf_data = dstore.read_df('gmf_data', index='eid') # engine>3.11
-   >>> gmf_data.loc[eid]
-         sid     gmv_0
+   >> eid = 20  # consider event with ID 20
+   >> gmf_data = dstore.read_df('gmf_data', index='eid') # engine>3.11
+   >> gmf_data.loc[eid]
+        sid     gmv_0
    eid               
    20    93   0.113241
    20   102   0.114756
@@ -1283,13 +1287,15 @@ As a following step, you can compute the hazard curves at each site
 from the ground motion values by using the function `gmvs_to_poes`,
 available since engine 3.10:
 
-   >>> from openquake.commonlib.calc import gmvs_to_poes
-   >>> gmf_data = dstore.read_df('gmf_data', index='sid')
-   >>> df = gmf_data.loc[0]  # first site
-   >>> gmvs = [df[col].to_numpy() for col in df.columns
-   ...         if col.startswith('gmv_')]  # list of M arrays
-   >>> oq = dstore['oqparam']  # calculation parameters
-   >>> poes = gmvs_to_poes(gmvs, oq.imtls, oq.ses_per_logic_tree_path)
+.. code-block::
+   
+   >> from openquake.commonlib.calc import gmvs_to_poes
+   >> gmf_data = dstore.read_df('gmf_data', index='sid')
+   >> df = gmf_data.loc[0]  # first site
+   >> gmvs = [df[col].to_numpy() for col in df.columns
+   ..         if col.startswith('gmv_')]  # list of M arrays
+   >> oq = dstore['oqparam']  # calculation parameters
+   >> poes = gmvs_to_poes(gmvs, oq.imtls, oq.ses_per_logic_tree_path)
 
 This will return an array of shape (M, L) where M is the number of
 intensity measure types and L the number of levels per IMT. This works
@@ -1315,7 +1321,7 @@ Limitations of Floating-point Arithmetic
 Most practitioners of numeric calculations are aware that addition 
 of floating-point numbers is non-associative; for instance
 
->>>  (.1 + .2) + .3                                                          
+>>> (.1 + .2) + .3                                                          
 0.6000000000000001
 
 is not identical to

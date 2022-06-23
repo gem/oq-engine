@@ -783,6 +783,8 @@ samples much closer to the expected weights even with few samples.
 Here in an example with two branchsets with weights [.4, .6] and
 [.2, .3, .5] respectively.
 
+    >>> import collections
+    >>> from openquake.hazardlib.lt import random_sample
     >>> bsets = [[('X', .4), ('Y', .6)], [('A', .2), ('B', .3), ('C', .5)]]
 
 With 100 samples one would expect to get the path XA 8 times, XB 12
