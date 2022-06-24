@@ -770,8 +770,8 @@ class SourceConverter(RuptureConverter):
             tom_cls = tom.registry[node['tom']]
             # if tom is negbinom, sets mu and alpha attr to tom_class
             if node['tom'] == 'NegativeBinomialTOM':
-                kwargs = {'alpha': eval(node['alpha']),
-                          'mu': eval(node['mu'])}
+                kwargs = {'alpha': float(node['alpha']),
+                          'mu': float(node['mu'])}
         else:
             tom_cls = tom.registry['PoissonTOM']
         return tom_cls(time_span=self.investigation_time, **kwargs)
