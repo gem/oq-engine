@@ -1237,13 +1237,13 @@ def view_agg_id(token, dstore):
     """
     Show the available aggregations
     """
-    dfa = dstore.read_df('agg_keys')
-    keys = [col for col in dfa.columns if not col.endswith('_')]
-    df = dfa[keys]
-    totdf = pandas.DataFrame({key: ['*total*'] for key in keys})
-    concat = pandas.concat([df, totdf], ignore_index=True)
-    concat.index.name = 'agg_id'
-    return concat
+    [aggby] = dstore['oqparam'].aggregate_by
+    keys = [key.decode('utf8').split(',') for key in dstore['agg_keys'][:]]
+    keys = numpy.array(keys)  # shape (N, A)
+    dic = {aggkey: keys[:, a] for a, aggkey in enumerate(aggby)}
+    df = pandas.DataFrame(dic)
+    df.index.name = 'agg_id'
+    return df
 
 
 @view.add('mean_perils')
