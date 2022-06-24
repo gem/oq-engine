@@ -2,7 +2,7 @@
 # !! must update pip first! so wheels will be used !!
 
 # GEM Mirror
-# 
+#
 https://wheelhouse.openquake.org/v3/macos/py/setuptools-56.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/macos/arm64/pytz-2022.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/docutils-0.14-py3-none-any.whl
