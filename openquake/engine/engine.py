@@ -369,9 +369,7 @@ def run_jobs(jobs):
     if hc_id:
         job = logs.dbcmd('get_job', hc_id)
         ppath = job.ds_calc_dir + '.hdf5'
-        if not os.path.exists(ppath):
-            logging.error('The parent %s does not exist', ppath)
-        else:
+        if os.path.exists(ppath):
             version = logs.dbcmd('engine_version')
             with h5py.File(ppath, 'r') as f:
                 prev_version = f.attrs['engine_version']
