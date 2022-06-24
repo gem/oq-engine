@@ -28,7 +28,7 @@ https://wheelhouse.openquake.org/v3/macos/py/cycler-0.10.0-py2.py3-none-any.whl
 # download from pypip or compile
 h5py==3.7.0
 numba==0.55.2
-numpy==1.23
+numpy==1.22.4
 scipy==1.8.1
 pandas==1.4.2
 pyzmq==23.2.0
