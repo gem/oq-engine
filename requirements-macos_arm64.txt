@@ -26,6 +26,8 @@ https://wheelhouse.openquake.org/v3/macos/py/cycler-0.10.0-py2.py3-none-any.whl
 # Suggested versions for development
 # !! must update pip first! so wheels will be used !!
 # download from pypip or compile
+python_dateutil==2.8.1
+toml==0.10.2
 h5py==3.7.0
 numba==0.55.2
 numpy==1.22.4
