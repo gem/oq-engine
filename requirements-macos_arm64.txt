@@ -2,17 +2,9 @@
 # !! must update pip first! so wheels will be used !!
 
 # GEM Mirror
-#
+# 
 https://wheelhouse.openquake.org/v3/macos/py/setuptools-56.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/macos/arm64/pytz-2022.1-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/macos/arm64/h5py-3.7.0-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/numba-0.55.2-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/numpy-1.22.3-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/scipy-1.8.0-cp39-cp39-macosx_12_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/pandas-1.4.2-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/pyzmq-22.3.0-cp39-cp39-macosx_10_15_universal2.whl
-https://wheelhouse.openquake.org/macos/arm64/psutil-5.9.0-cp39-cp39-macosx_12_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/Shapely-1.8.1.post1-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/v3/macos/py/docutils-0.14-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/decorator-4.4.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/pbr-5.2.0-py2.py3-none-any.whl
@@ -28,17 +20,23 @@ https://wheelhouse.openquake.org/v3/py/Django-3.2.12-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/asgiref-3.4.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_pam-2.0.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/python_pam-1.8.4-py2.py3-none-any.whl
-
-
-### Plotting ###
-# comment the following lines to skip installation
-# of the plotting libraries (optional feature)
 https://wheelhouse.openquake.org/v3/macos/py/python_dateutil-2.8.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/pyparsing-2.4.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/cycler-0.10.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/macos/arm64/kiwisolver-1.4.2-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/matplotlib-3.5.1-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/pyproj-3.3.0-cp39-cp39-macosx_12_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/tornado-6.1-cp39-cp39-macosx_12_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/GDAL-3.4.2-cp39-cp39-macosx_12_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/Pillow-9.1.0-cp39-cp39-macosx_11_0_arm64.whl
+# Suggested versions for development
+# !! must update pip first! so wheels will be used !!
+# download from pypip or compile
+h5py
+numba
+numpy
+scipy
+pandas
+pyzmq
+psutil
+Shapely
+GDAL
+Pillow
+pyproj
+kiwisolver
+matplotlib
+tornado
