@@ -40,3 +40,4 @@ pyproj==3.3.1
 kiwisolver==1.4.3
 matplotlib==3.5.2
 tornado==6.1
+Fiona==1.8.21
