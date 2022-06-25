@@ -12,7 +12,7 @@ https://wheelhouse.openquake.org/macos/arm64/scipy-1.8.0-cp39-cp39-macosx_12_0_a
 https://wheelhouse.openquake.org/macos/arm64/pandas-1.4.2-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/pyzmq-23.2.0-cp39-cp39-macosx_10_15_universal2.whl
 https://wheelhouse.openquake.org/macos/arm64/psutil-5.9.1-cp39-cp39-macosx_10_9_universal2.whl
-https://wheelhouse.openquake.org/macos/arm64/Shapely-1.8.2-cp310-cp310-macosx_10_9_universal2.whl
+https://wheelhouse.openquake.org/macos/arm64/Shapely-1.8.2-cp39-cp39-macosx_10_9_universal2.whl
 https://wheelhouse.openquake.org/v3/macos/py/docutils-0.14-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/decorator-4.4.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/pbr-5.2.0-py2.py3-none-any.whl
