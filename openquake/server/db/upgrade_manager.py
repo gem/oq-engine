@@ -345,7 +345,7 @@ def upgrade_db(conn, pkg_name='openquake.server.db.schema.upgrades',
     # run the upgrade scripts
     try:
         versions_applied = upgrader.upgrade(conn, skip_versions)
-    except:
+    except Exception:
         conn.rollback()
         raise
     else:

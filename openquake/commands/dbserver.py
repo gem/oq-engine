@@ -53,11 +53,13 @@ def main(cmd,
         else:
             print('dbserver already running')
     elif cmd == 'upgrade':
-        dbapi.db('PRAGMA trusted_schema = ON')
         dbapi.db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
-        db.actions.upgrade_db(dbapi.db)
+        applied = db.actions.upgrade_db(dbapi.db)
+        if applied:
+            print('Applied upgrades', applied)
+        else:
+            print('Already upgraded')
         dbapi.db.close()
-        print('Created/upgraded %s' % dbapi.db.args)
 
 
 main.cmd = dict(help='dbserver command',
