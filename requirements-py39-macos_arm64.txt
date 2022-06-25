@@ -33,7 +33,7 @@ https://wheelhouse.openquake.org/v3/py/python_pam-1.8.4-py2.py3-none-any.whl
 ### Plotting ###
 # comment the following lines to skip installation
 # of the plotting libraries (optional feature)
-https://wheelhouse.openquake.org/v3/macos/py/python_dateutil-2.8.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/pyparsing-2.4.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/cycler-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/macos/arm64/kiwisolver-1.4.3-cp39-cp39-macosx_11_0_arm64.whl
