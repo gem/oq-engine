@@ -20,7 +20,7 @@
 Module :mod:`openquake.hazardlib.tom` contains implementations of probability
 density functions for earthquake temporal occurrence modeling.
 """
-import abc
+import toml
 import numpy
 import scipy.stats
 from openquake.baselib.performance import compile
@@ -29,7 +29,7 @@ registry = {}
 F64 = numpy.float64
 
 
-class BaseTOM(metaclass=abc.ABCMeta):
+class BaseTOM(object):
     """
     Base class for temporal occurrence model.
 
@@ -42,28 +42,26 @@ class BaseTOM(metaclass=abc.ABCMeta):
     def __init_subclass__(cls):
         registry[cls.__name__] = cls
 
-    def __init__(self, time_span, occurrence_rate=None):
+    def __init__(self, time_span):
         if time_span <= 0:
             raise ValueError('time_span must be positive')
         self.time_span = time_span
-        self.occurrence_rate = occurrence_rate
 
-    @abc.abstractmethod
     def get_probability_one_or_more_occurrences(self):
         """
         Calculate and return the probability of event to happen one or more
         times within the time range defined by constructor's ``time_span``
         parameter value.
         """
+        raise NotImplementedError
 
-    @abc.abstractmethod
     def get_probability_n_occurrences(self):
         """
         Calculate the probability of occurrence of a number of events in the
         constructor's ``time_span``.
         """
+        raise NotImplementedError
 
-    @abc.abstractmethod
     def sample_number_of_occurrences(self, seeds=None):
         """
         Draw a random sample from the distribution and return a number
@@ -74,7 +72,6 @@ class BaseTOM(metaclass=abc.ABCMeta):
         should be set outside of this method.
         """
 
-    @abc.abstractmethod
     def get_probability_no_exceedance(self):
         """
         Compute and return, for a number of ground motion levels and sites,
@@ -84,13 +81,16 @@ class BaseTOM(metaclass=abc.ABCMeta):
         exceedance in the time window specified by the ``time_span`` parameter
         given in the constructor.
         """
+        raise NotImplementedError
+
+    def __str__(self):
+        return toml.dumps({self.__class__.__name__: self.__dict__})
 
 
 class FatedTOM(BaseTOM):
 
-    def __init__(self, time_span, occurrence_rate=None):
+    def __init__(self, time_span):
         self.time_span = time_span
-        self.occurrence_rate = occurrence_rate
 
     def get_probability_one_or_more_occurrences(self, occurrence_rate):
         return 1
@@ -186,6 +186,15 @@ class PoissonTOM(BaseTOM):
         The probability is computed as exp(-occurrence_rate * time_span * poes)
         """
         return numpy.exp(- occurrence_rate * self.time_span * poes)
+
+
+class ClusterPoissonTOM(PoissonTOM):
+    """
+    Poissonian temporal occurrence model with an occurrence rate
+    """
+    def __init__(self, time_span, occurrence_rate):
+        self.time_span = time_span
+        self.occurrence_rate = occurrence_rate
 
 
 @compile(["(float64, float64[:], float64[:,:], float64)",

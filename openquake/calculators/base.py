@@ -30,8 +30,7 @@ import h5py
 import numpy
 import pandas
 
-from openquake.baselib import (
-    general, hdf5, __version__ as engine_version)
+from openquake.baselib import general, hdf5
 from openquake.baselib import performance, parallel, python3compat
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import InvalidFile, site, stats
@@ -42,7 +41,8 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, datastore, source_reader
+from openquake.commonlib import (
+    readinput, logictree, datastore, source_reader, logs)
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 
@@ -144,13 +144,17 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     is_stochastic = False  # True for scenario and event based calculators
 
     def __init__(self, oqparam, calc_id):
+        self.oqparam = oqparam
         self.datastore = datastore.new(calc_id, oqparam)
+        self.engine_version = logs.dbcmd('engine_version')
+        # save the version in the monitor, to be used in the version
+        # check in the workers
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
-            h5=self.datastore)
+            h5=self.datastore, version=self.engine_version
+            if parallel.oq_distribute() == 'zmq' else None)
         # NB: using h5=self.datastore.hdf5 would mean losing the performance
         # info about Calculator.run since the file will be closed later on
-        self.oqparam = oqparam
 
     def pre_checks(self):
         """
@@ -178,7 +182,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             # always except in case_shakemap
             self.datastore['oqparam'] = self.oqparam
         attrs = self.datastore['/'].attrs
-        attrs['engine_version'] = engine_version
+        attrs['engine_version'] = self.engine_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
             attrs['input_size'] = size = self.oqparam.get_input_size()
@@ -445,7 +449,8 @@ class HazardCalculator(BaseCalculator):
                      'disaggregation' in oq.calculation_mode)):
             logging.info(
                 'You are not using the pointsource_distance approximation:\n'
-                'https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance')
+                'https://docs.openquake.org/oq-engine/advanced/general.html#'
+                'pointsource-distance')
         elif 'classical' in oq.calculation_mode:
             logging.info('Using pointsource_distance=%s',
                          oq.pointsource_distance)
@@ -731,7 +736,6 @@ class HazardCalculator(BaseCalculator):
         Save the loss ratios (if any) in the datastore.
         """
         oq = self.oqparam
-        logging.info('Reading the risk model if present')
         self.crmodel = readinput.get_crmodel(oq)
         if not self.crmodel:
             parent = self.datastore.parent
@@ -968,8 +972,6 @@ class HazardCalculator(BaseCalculator):
             recs, source_reader.source_info_dt)
         if 'trt_smrs' not in self.datastore:
             self.datastore['trt_smrs'] = self.csm.get_trt_smrs()
-            self.datastore['toms'] = numpy.array(
-                [sg.tom_name for sg in self.csm.src_groups], hdf5.vstr)
 
     def post_process(self):
         """For compatibility with the engine"""

@@ -170,13 +170,19 @@ class Comparator(object):
 
 
 # works only locally for the moment
-def compare_rups(calc_1: int, calc_2: int):
+def compare_rups(calc_1: int, calc_2: int, site_id: int = 0):
     """
-    Compare the ruptures of two calculations as pandas DataFrames
+    Compare the ruptures affecting the given site ID as pandas DataFrames
     """
     with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
-        df1 = ds1.read_df('rup')
-        df2 = ds2.read_df('rup')
+        df1 = ds1.read_df('rup', sel={'sids': site_id})
+        df2 = ds2.read_df('rup', sel={'sids': site_id})
+    del df1['probs_occur']
+    del df2['probs_occur']
+    lens = len(df1), len(df2)
+    if lens[0] != lens[1]:
+        print('%d != %d ruptures' % lens)
+        return
     print(df1.compare(df2))
 
 

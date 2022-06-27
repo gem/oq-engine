@@ -270,8 +270,8 @@ class RuptureImporter(object):
         seeds, counts = numpy.unique(rup_array['seed'], return_counts=True)
         if len(seeds) != nr:
             dupl = seeds[counts > 1]
-            logging.info('The following %d rupture seeds are duplicated: %s',
-                         len(dupl), dupl)
+            logging.debug('The following %d rupture seeds are duplicated: %s',
+                          len(dupl), dupl)
         rup_array['geom_id'] = rup_array['id']
         rup_array['id'] = numpy.arange(nr)
         self.datastore['ruptures'] = rup_array

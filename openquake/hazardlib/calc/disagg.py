@@ -157,7 +157,7 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
     # Create the matrix we will use to collect the probabilities of
     # non-exceedance
     if mutex:
-        pnes = numpy.ones((U, E, M, P, Z))
+        pnes = numpy.zeros((U, E, M, P, Z))
     else:
         pnes = numpy.ones((U, E, M, P, Z))
 

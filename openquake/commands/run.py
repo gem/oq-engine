@@ -16,14 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import collections
-import tempfile
 import logging
 import os.path
 import socket
 import cProfile
 import getpass
-import pstats
 
 from openquake.baselib import performance, general
 from openquake.hazardlib import valid
@@ -34,50 +31,10 @@ from openquake.server import dbserver
 
 calc_path = None  # set only when the flag --slowest is given
 
-PStatData = collections.namedtuple(
-    'PStatData', 'ncalls tottime percall cumtime percall2 path')
-
-
-def get_pstats(pstatfile, n):
-    """
-    Return profiling information as an ORG table.
-
-    :param pstatfile: path to a .pstat file
-    :param n: the maximum number of stats to retrieve
-    """
-    with tempfile.TemporaryFile(mode='w+') as stream:
-        ps = pstats.Stats(pstatfile, stream=stream)
-        ps.sort_stats('cumtime')
-        ps.print_stats(n)
-        stream.seek(0)
-        lines = list(stream)
-    for i, line in enumerate(lines):
-        if line.startswith('   ncalls'):
-            break
-    data = []
-    for line in lines[i + 2:]:
-        columns = line.split()
-        if len(columns) == 6:
-            columns[-1] = os.path.basename(columns[-1])
-            data.append(PStatData(*columns))
-    rows = [(rec.ncalls, rec.cumtime, rec.path) for rec in data]
-    # here is an example of the expected output table:
-    # ====== ======= ========================================================
-    # ncalls cumtime path
-    # ====== ======= ========================================================
-    # 1      33.502  commands/run.py:77(_run)
-    # 1      33.483  calculators/base.py:110(run)
-    # 1      25.166  calculators/classical.py:115(execute)
-    # 1      25.104  baselib.parallel.py:249(apply_reduce)
-    # 1      25.099  calculators/classical.py:41(classical)
-    # 1      25.099  hazardlib/calc/hazard_curve.py:164(classical)
-    return views.text_table(
-        rows, header='ncalls cumtime path'.split(), ext='org')
-
 
 # called when profiling
 def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
-         params, host=None):
+         params, user_name, host=None):
     global calc_path
     if 'hazard_calculation_id' in params:
         hc_id = int(params['hazard_calculation_id'])
@@ -94,7 +51,7 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
     dic = readinput.get_params(job_ini, params)
     # set the logs first of all
     log = logs.init("job", dic, getattr(logging, loglevel.upper()),
-                    host=host)
+                    user_name=user_name, host=host)
 
     with log, performance.Monitor('total runtime', measuremem=True) as monitor:
         calc = base.calculators(log.get_oqparam(), log.calc_id)
@@ -123,6 +80,7 @@ def main(job_ini,
     Run a calculation
     """
     dbserver.ensure_on()
+    user_name = getpass.getuser()
     try:
         host = socket.gethostname()
     except Exception:  # gaierror
@@ -140,13 +98,15 @@ def main(job_ini,
         pstat = calc_path + '.pstat'
         prof.dump_stats(pstat)
         print('Saved profiling info in %s' % pstat)
-        print(get_pstats(pstat, slowest))
+        data = performance.get_pstats(pstat, slowest)
+        print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
+                               ext='org'))
         return
     if len(job_ini) == 1:
         return _run(job_ini[0], concurrent_tasks, pdb, reuse_input,
-                    loglevel, exports, params, host)
+                    loglevel, exports, params, user_name, host)
     jobs = create_jobs(job_ini, loglevel, hc_id=hc,
-                       user_name=getpass.getuser(), host=host)
+                       user_name=user_name, host=host)
     for job in jobs:
         job.params.update(params)
         job.params['exports'] = ','.join(exports)

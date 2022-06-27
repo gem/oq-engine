@@ -214,6 +214,13 @@ class PointSource(ParametricSeismicSource):
             arr['dims'] = get_rupdims(areas, np.dip, width, rar)
         return planin
 
+    def max_radius(self):
+        """
+        :returns: max radius + ps_grid_spacing * sqrt(2)/2
+        """
+        max_rp_radius = self._get_max_rupture_projection_radius()
+        return self.ps_grid_spacing * .707 + max_rp_radius
+
     def _get_max_rupture_projection_radius(self):
         """
         Find a maximum radius of a circle on Earth surface enveloping a rupture
@@ -293,7 +300,8 @@ class PointSource(ParametricSeismicSource):
                         yield PointRupture(
                             mag, np.rake, self.tectonic_region_type,
                             Point(clon, clat, cdep), np.strike, np.dip, rate,
-                            self.temporal_occurrence_model, self.lower_seismogenic_depth)
+                            self.temporal_occurrence_model,
+                            self.lower_seismogenic_depth)
 
     def iter_ruptures(self, **kwargs):
         """
@@ -339,9 +347,7 @@ class PointSource(ParametricSeismicSource):
         """
         Bounding box of the point, enlarged by the maximum distance
         """
-        radius = self._get_max_rupture_projection_radius()
-        return get_bounding_box([self.location], maxdist + radius +
-                                self.ps_grid_spacing)
+        return get_bounding_box([self.location], maxdist + self.max_radius())
 
     def wkt(self):
         """
@@ -437,6 +443,10 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
         coords[p, 0] = psource.location.x
         coords[p, 1] = psource.location.y
         coords[p, 2] = psource.location.z
+    if (len(numpy.unique(coords[:, 0])) == 1 or
+            len(numpy.unique(coords[:, 1])) == 1):
+        # degenerated rectangle, there is no grid, do not collapse
+        return {grp_id: out + list(ps)}
     deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
     deltay = angular_distance(ps_grid_spacing)
     grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)

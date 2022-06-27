@@ -42,7 +42,7 @@ except ImportError:
         "Do nothing"
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
-from openquake.baselib import parallel, general, config, __version__
+from openquake.baselib import parallel, general, config
 from openquake.hazardlib import valid
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
@@ -263,7 +263,6 @@ def run_calc(log):
                      hostname,
                      calc.oqparam.inputs['job_ini'],
                      calc.oqparam.hazard_calculation_id)
-        logging.info('Using engine version %s', __version__)
         msg = check_obsolete_version(oqparam.calculation_mode)
         # NB: disabling the warning should be done only for users with
         # an updated LTS version, but we are doing it for all users
@@ -355,8 +354,8 @@ def cleanup(kind):
         parallel.workers_stop()
     elif kind == 'kill':
         # called in case of exceptions (including out of memory)
-        print('Killing the workers')
-        parallel.workers_kill()
+        print('Asking the DbServer to kill the workers')
+        logs.dbcmd('workers_kill')
 
 
 def run_jobs(jobs):
@@ -370,15 +369,14 @@ def run_jobs(jobs):
     if hc_id:
         job = logs.dbcmd('get_job', hc_id)
         ppath = job.ds_calc_dir + '.hdf5'
-        if not os.path.exists(ppath):
-            logging.error('The parent %s does not exist', ppath)
-        else:
+        if os.path.exists(ppath):
+            version = logs.dbcmd('engine_version')
             with h5py.File(ppath, 'r') as f:
                 prev_version = f.attrs['engine_version']
-                if prev_version != __version__:
+                if prev_version != version:
                     logging.warning('Starting from a hazard (%d) computed with'
                                     ' an obsolete version of the engine: %s',
-                                    hc_id, __version__)
+                                    hc_id, version)
     jobarray = len(jobs) > 1 and jobs[0].multi
     try:
         poll_queue(jobs[0].calc_id, poll_time=15)
@@ -439,19 +437,21 @@ def check_obsolete_version(calculation_mode='WebUI'):
         - the empty string if the engine is updated
         - None if the check could not be performed (i.e. github is down)
     """
-    if os.environ.get('JENKINS_URL') or os.environ.get('TRAVIS'):
+    if os.environ.get('JENKINS_URL') or os.environ.get('CI'):
         # avoid flooding our API server with requests from CI systems
         return
 
+    version = logs.dbcmd('engine_version')
+    logging.info('Using engine version %s', version)
     headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s;%s' %
-               (__version__, calculation_mode, platform.platform(),
+               (version, calculation_mode, platform.platform(),
                 config.distribution.oq_distribute)}
     try:
         req = Request(OQ_API + '/engine/latest', headers=headers)
         # NB: a timeout < 1 does not work
         data = urlopen(req, timeout=1).read()  # bytes
         tag_name = json.loads(decode(data))['tag_name']
-        current = version_triple(__version__)
+        current = version_triple(version)
         latest = version_triple(tag_name)
     except Exception:  # page not available or wrong version tag
         msg = ('An error occurred while calling %s/engine/latest to check'
@@ -461,7 +461,7 @@ def check_obsolete_version(calculation_mode='WebUI'):
         return
     if current < latest:
         return ('Version %s of the engine is available, but you are '
-                'still using version %s' % (tag_name, __version__))
+                'still using version %s' % (tag_name, version))
     else:
         return ''
 

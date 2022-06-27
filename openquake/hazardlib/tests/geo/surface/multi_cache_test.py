@@ -64,8 +64,12 @@ class GetRxRy0FromCacheTestCase(unittest.TestCase):
         sc = SourceConverter(investigation_time=1, rupture_mesh_spacing=2.5)
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
+        sections = list(geom.sections.values())
         self.src = ssm[0][0]
-        self.src.set_sections(geom.sections)
+        s2i = {suid: i for i, suid in enumerate(geom.sections)}
+        self.src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
+                                 for idxs in self.src.rupture_idxs]
+        self.src.set_sections(sections)
 
     def test_multi_cache_01(self):
         """ Tests results remain stable after multiple calls """
@@ -91,6 +95,7 @@ class GetRxRy0FromCacheTestCase(unittest.TestCase):
         cache_save = copy.deepcopy(cm.dcache)
         [ctx] = cm.get_ctxs([rup], self.sitec)
         dcache = cm.dcache
+        print('dcache.hit =', dcache.hit)
 
         # Get cached distances
         tupps = [dcache[i, 't_upp'] for i in suids]

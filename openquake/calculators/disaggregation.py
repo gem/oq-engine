@@ -98,7 +98,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     :param dstore:
         a DataStore instance
     :param slc:
-        a slice of ruptures
+        a slice of contexts
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param hmap4:
@@ -128,6 +128,9 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     imts = [from_string(im) for im in cmaker.imtls]
     for magi in numpy.unique(magidx):
         for ctxt in ctxs:
+            mutex_weight = numpy.unique(ctxt.weight)
+            if len(mutex_weight) == 1:
+                pass  # TODO: use the mutex_weight
             ctx = ctxt[ctxt.magi == magi]
             res = {'trti': cmaker.trti, 'magi': magi}
             # disaggregate by site, IMT
@@ -195,18 +198,6 @@ class DisaggregationCalculator(base.HazardCalculator):
             raise ValueError(
                 'The number of sites is to disaggregate is %d, but you have '
                 'max_sites_disagg=%d' % (self.N, few))
-
-        """
-        if hasattr(self, 'csm'):
-            for sg in self.csm.src_groups:
-                if sg.atomic:
-                    raise NotImplementedError(
-                        'Atomic groups are not supported yet')
-        elif self.datastore['source_info'].attrs['atomic']:
-            raise NotImplementedError(
-                'Atomic groups are not supported yet')
-        """
-
         all_edges, shapedic = disagg.get_edges_shapedic(
             self.oqparam, self.sitecol, self.datastore['source_mags'])
         *b, trts = all_edges

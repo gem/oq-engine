@@ -2,7 +2,7 @@
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.5">
   <geometryModel name="fault_sections">
-    <section name="central" id="1">
+    <section name="central" id="0">
       <kiteSurface>
 	<profile>
 	  <gml:LineString><gml:posList>
@@ -16,7 +16,7 @@
 	</profile>
       </kiteSurface>
     </section>
-    <section name="west" id="2">
+    <section name="west" id="1">
       <kiteSurface>
 	<profile>
 	  <gml:LineString><gml:posList>

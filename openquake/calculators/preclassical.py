@@ -92,11 +92,8 @@ def preclassical(srcs, sites, cmaker, monitor):
         return dic
 
     sf = SourceFilter(sites, cmaker.maximum_distance)
-    if len(sites) > cmaker.max_sites_disagg:
-        multiplier = 5
-        sf = sf.reduce(multiplier)
-    else:
-        multiplier = 1
+    multiplier = 1 + len(sites) // 10_000
+    sf = sf.reduce(multiplier)
     with monitor('filtering/splitting'):
         for src in srcs:
             # NB: this is approximate, since the sites are sampled
@@ -146,14 +143,14 @@ class PreClassicalCalculator(base.HazardCalculator):
         csm = self.csm
         self.datastore['trt_smrs'] = csm.get_trt_smrs()
         self.datastore['toms'] = numpy.array(
-            [sg.tom_name for sg in csm.src_groups], hdf5.vstr)
+            [sg.get_tom_toml(self.oqparam.investigation_time)
+             for sg in csm.src_groups], hdf5.vstr)
         cmakers = read_cmakers(self.datastore, csm.full_lt)
         M = len(self.oqparam.imtls)
         G = max(len(cm.gsims) for cm in cmakers)
         N = get_maxsize(M, G)
         logging.info('NMG = ({:_d}, {:_d}, {:_d}) = {:.1f} MB'.format(
             N, M, G, N*M*G*8 / 1024**2))
-        h5 = self.datastore.hdf5
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
@@ -177,10 +174,10 @@ class PreClassicalCalculator(base.HazardCalculator):
         # run preclassical for non-atomic sources
         sources_by_grp = groupby(
             normal_sources, lambda src: (src.grp_id, msr_name(src)))
-        h5['full_lt'] = csm.full_lt
+        self.datastore.hdf5['full_lt'] = csm.full_lt
         logging.info('Starting preclassical')
         self.datastore.swmr_on()
-        smap = parallel.Starmap(preclassical, h5=h5)
+        smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for (grp_id, msr), srcs in sources_by_grp.items():
             pointsources, pointlike, others = [], [], []
             for src in srcs:

@@ -312,7 +312,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         self.init_poes()
         params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
-                  'probs_occur', 'sids', 'src_id'}
+                  'probs_occur', 'sids', 'src_id', 'weight'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
 
         for trt, gsims in gsims_by_trt.items():
@@ -512,7 +512,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     # else:
                     smap.submit(trip)
                     self.n_outs[grp_id] += 1
-        logging.info('grp_id->n_outs: %s', list(self.n_outs.values()))
         return smap
 
     def collect_hazard(self, acc, pmap_by_kind):

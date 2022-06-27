@@ -20,15 +20,17 @@ import os.path
 import pickle
 import operator
 import logging
+import collections
 import gzip
 import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile
-from openquake.hazardlib.contexts import basename
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile, tom
+from openquake.hazardlib.contexts import ContextMaker, basename
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
+from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
 TWO16 = 2 ** 16  # 65,536
 by_id = operator.attrgetter('source_id')
@@ -42,8 +44,19 @@ source_info_dt = numpy.dtype([
     ('num_sites', numpy.uint32),       # 4
     ('eff_ruptures', numpy.uint32),    # 5
     ('weight', numpy.float32),         # 6
-    ('trti', numpy.uint8),             # 7
+    ('mutex_weight', numpy.float64),   # 7
+    ('trti', numpy.uint8),             # 8
 ])
+
+
+def mutex_by_grp(src_groups):
+    """
+    :returns: a composite array with boolean fields src_mutex, rup_mutex
+    """
+    lst = []
+    for sg in src_groups:
+        lst.append((sg.src_interdep == 'mutex', sg.rup_interdep == 'mutex'))
+    return numpy.array(lst, [('src_mutex', bool), ('rup_mutex', bool)])
 
 
 def create_source_info(csm, h5):
@@ -55,11 +68,12 @@ def create_source_info(csm, h5):
     lens = []
     for sg in csm.src_groups:
         for src in sg:
+            mutex = getattr(src, 'mutex_weight', 0)
             srcid = basename(src)
             trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
             code = csm.code.get(srcid, b'P')
             lens.append(len(src.trt_smrs))
-            row = [srcid, src.grp_id, code, 0, 0, 0, src.weight, trti]
+            row = [srcid, src.grp_id, code, 0, 0, 0, src.weight, mutex, trti]
             wkts.append(getattr(src, '_wkt', ''))
             data[srcid] = row
             src.id = len(data) - 1
@@ -71,8 +85,7 @@ def create_source_info(csm, h5):
     num_srcs = len(csm.source_info)
     # avoid hdf5 damned bug by creating source_info in advance
     h5.create_dataset('source_info',  (num_srcs,), source_info_dt)
-    h5['source_info'].attrs['atomic'] = any(
-        grp.atomic for grp in csm.src_groups)
+    h5['mutex_by_grp'] = mutex_by_grp(csm.src_groups)
     h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
 
 
@@ -138,7 +151,7 @@ def get_csm(oq, full_lt, h5=None):
                               h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
-    fix_geometry_sections(smdict)
+    fix_geometry_sections(smdict, h5)
     logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
 
@@ -150,7 +163,7 @@ def get_csm(oq, full_lt, h5=None):
     return _get_csm(full_lt, groups)
 
 
-def fix_geometry_sections(smdict):
+def fix_geometry_sections(smdict, h5):
     """
     If there are MultiFaultSources, fix the sections according to the
     GeometryModels (if any).
@@ -175,17 +188,32 @@ def fix_geometry_sections(smdict):
         sections.update(gmod.sections)
     nrml.check_unique(
         sec_ids, 'section ID in files ' + ' '.join(gfiles))
-    sections = {sid: sections[sid] for sid in sorted(sections)}
-    # section_arrays = [sec.geom() for sec in sections.values()]
+    s2i = {suid: i for i, suid in enumerate(sorted(sections))}
+    sections = [sections[suid] for suid in sorted(sections)]
+    for idx, sec in enumerate(sections):
+        sec.suid = idx
+    if h5 and sections:
+        h5.save_vlen('multi_fault_sections',
+                     [kite_to_geom(sec) for sec in sections])
 
     # fix the MultiFaultSources
+    section_idxs = []
     for smod in smodels:
         for sg in smod.src_groups:
             for src in sg:
                 if hasattr(src, 'set_sections'):
                     if not sections:
                         raise RuntimeError('Missing geometryModel files!')
-                    src.set_sections(sections)
+                    if h5:
+                        src.hdf5path = h5.filename
+                    src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
+                                        for idxs in src.rupture_idxs]
+                    for idxs in src.rupture_idxs:
+                        section_idxs.extend(idxs)
+    cnt = collections.Counter(section_idxs)
+    if cnt:
+        mean_counts = numpy.mean(list(cnt.values()))
+        logging.info('Section multiplicity = %.1f', mean_counts)
 
 
 def _groups_ids(smlt_dir, smdict, fnames):
@@ -327,6 +355,25 @@ class CompositeSourceModel:
                 src.grp_id = grp_id
                 if src.code != b'P':
                     self.code[src.source_id] = src.code
+
+    # used for debugging; assume PoissonTOM; use read_cmakers instead
+    def _get_cmakers(self, oq):
+        cmakers = []
+        trt_smrs = self.get_trt_smrs()
+        rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
+        trts = list(self.full_lt.gsim_lt.values)
+        num_eff_rlzs = len(self.full_lt.sm_rlzs)
+        start = 0
+        for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
+            trti = trt_smrs[grp_id][0] // num_eff_rlzs
+            cmaker = ContextMaker(trts[trti], rlzs_by_gsim, oq)
+            cmaker.tom = tom.PoissonTOM(oq.investigation_time)
+            cmaker.trti = trti
+            cmaker.start = start
+            cmaker.grp_id = grp_id
+            start += len(rlzs_by_gsim)
+            cmakers.append(cmaker)
+        return cmakers
 
     def get_trt_smrs(self):
         """

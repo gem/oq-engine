@@ -14,19 +14,24 @@ OpenQuake-engine Instruction Manual
 
 | **Authors**
 | Marco Pagani\ :math:`^1`, Vitor Silva\ :math:`^1`, Anirudh
-  Rao\ :math:`^1`, Michele Simionato\ :math:`^1`, Robin Gee\ :math:`^1`,
+  Rao\ :math:`^1`, Michele Simionato\ :math:`^1`,
   Kendra Johnson\ :math:`^1`
 | **Authors on previous versions**
-| Helen Crowley\ :math:`^2`, Damiano Monelli, Graeme
-  Weatherill\ :math:`^3`
+| Helen Crowley\ :math:`^2`, Damiano Monelli\ :math:`^3`, Graeme
+  Weatherill\ :math:`^4`, Robin Gee\ :math:`^5`
 
 
 
 +----------------------+----------------------+----------------------+
-| :math:`^1` GEM       | :math:`^2` EUCENTRE  | :math:`^3` GFZ       |
-| Foundation via       | via Ferrata, 1 Pavia | Helmholtzstraße 6/7  |
-| Ferrata, 1 Pavia     | Italy                | Potsdam Germany      |
-| Italy                |                      |                      |
+| :math:`^1` GEM       | :math:`^2` EUCENTRE, | :math:`^3` RenRe,    |
+| Foundation, via      | via Ferrata 1,       | Beethovenstrasse 33, |
+| Ferrata 1, 27100     | 27100 Pavia,         | CH-8002 Zürich,      |
+| Pavia, Italy         | Italy                | Switzerland          |
++----------------------+----------------------+----------------------+
+| :math:`^4` GFZ,      | :math:`^5` PartnerRe,|                      |
+| Helmholtzstraße 6/7, | Hardstrasse 301,     |                      |
+| 14473 Potsdam,       | CH-8002 Zürich,      |                      |
+| Germany              | Switzerland          |                      |
 +----------------------+----------------------+----------------------+
 
 | Email address for all current authors:

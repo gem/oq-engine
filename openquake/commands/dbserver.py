@@ -20,8 +20,8 @@ import sys
 import signal
 import getpass
 from openquake.baselib import config
-from openquake.commonlib import logs
-from openquake.server import dbserver as dbs
+from openquake.commonlib import logs, dbapi
+from openquake.server import dbserver, db
 
 
 def main(cmd,
@@ -38,7 +38,7 @@ def main(cmd,
             sys.exit('Only user openquake can start the dbserver but you are '
                      + user)
 
-    status = dbs.get_status()
+    status = dbserver.get_status()
     if cmd == 'status':
         print('dbserver ' + status)
     elif cmd == 'stop':
@@ -49,12 +49,21 @@ def main(cmd,
             print('dbserver already stopped')
     elif cmd == 'start':
         if status == 'not-running':
-            dbs.run_server(dbhostport, loglevel, foreground)
+            dbserver.run_server(dbhostport, loglevel, foreground)
         else:
             print('dbserver already running')
+    elif cmd == 'upgrade':
+        dbapi.db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
+        applied = db.actions.upgrade_db(dbapi.db)
+        if applied:
+            print('Applied upgrades', applied)
+        else:
+            print('Already upgraded')
+        dbapi.db.close()
 
 
-main.cmd = dict(help='dbserver command', choices='start stop status'.split())
+main.cmd = dict(help='dbserver command',
+                choices='start stop status upgrade'.split())
 main.dbhostport = 'dbhost:port'
 main.foreground = 'stay in foreground'
 main.loglevel = 'DEBUG|INFO|WARN'

@@ -24,7 +24,6 @@ from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile, contexts, nrml
 from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.hazardlib.sourcewriter import write_source_model
-from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -471,7 +470,7 @@ hazard_uhs-std.csv
         self.assertEqual(tot_probs_occur, 28)  # 14 x 2
 
         # make sure there is an error when trying to disaggregate
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(IndexError):
             hc_id = str(self.calc.datastore.calc_id)
             self.run_calc(case_27.__file__, 'job.ini',
                           hazard_calculation_id=hc_id,
@@ -907,19 +906,20 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurve-mean.csv', f)
 
     def test_case_65(self):
-        # reading/writing a multiFaultSource
-        oq = readinput.get_oqparam('job.ini', pkg=case_65)
-        csm = readinput.get_composite_source_model(oq)
-        tmpname = general.gettemp()
-        out = write_source_model(tmpname, csm.src_groups)
-        self.assertEqual(out[0], tmpname)
-        self.assertEqual(out[1], tmpname[:-4] + '_sections.xml')
-
         # running the calculation
         self.run_calc(case_65.__file__, 'job.ini')
 
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
+
+        # reading/writing a multiFaultSource
+        csm = self.calc.datastore['_csm']
+        tmpname = general.gettemp()
+        [src] = csm.src_groups[0].sources
+        src.rupture_idxs = [tuple(map(str, idxs)) for idxs in src.rupture_idxs]
+        out = write_source_model(tmpname, csm.src_groups)
+        self.assertEqual(out[0], tmpname)
+        # self.assertEqual(out[1], tmpname[:-4] + '_sections.xml')
 
         # make sure we are not breaking event_based
         self.run_calc(case_65.__file__, 'job_eb.ini')

@@ -24,7 +24,8 @@ from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.geodetic import distance
-from openquake.hazardlib.geo.surface import KiteSurface
+from openquake.hazardlib.geo.surface.kite_fault import (
+    KiteSurface, kite_to_geom, geom_to_kite)
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.sourceconverter import SourceConverter
 
@@ -184,6 +185,14 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
         tlo, tla = self.ksfc.get_tor()
         aae(lons, tlo)
         aae(lats, tla)
+
+    def test_geom(self):
+        geom = kite_to_geom(self.ksfc)
+        ksfc = geom_to_kite(geom)
+        for par in ('lons', 'lats', 'depths'):
+            orig = getattr(self.ksfc.mesh, par)
+            copy = getattr(ksfc.mesh, par)
+            np.testing.assert_almost_equal(orig, copy)  # 32/64 bit mismatch
 
 
 class KiteSurfaceWithNaNs(unittest.TestCase):

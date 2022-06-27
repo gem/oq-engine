@@ -91,7 +91,7 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fit in the CPU cache
     """
-    maxs = TWO20 // (8*M*G)
+    maxs = TWO20 // (16*M*G)
     assert maxs > 1, maxs
     return maxs
 
@@ -160,16 +160,35 @@ def expand_mdvbin(mdvbin):
     return magbin, distbin, vs30bin
 
 
+def sqrscale(x_min, x_max, n):
+    """
+    :param x_min: minumum value
+    :param x_max: maximum value
+    :param n: number of steps
+    :returns: an array of n values from x_min to x_max in a quadratic scale
+    """
+    if not (isinstance(n, int) and n > 0):
+        raise ValueError('n must be a positive integer, got %s' % n)
+    if x_min < 0:
+        raise ValueError('x_min must be positive, got %s' % x_min)
+    if x_max <= x_min:
+        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
+                         (x_max, x_min))
+    delta = numpy.sqrt(x_max - x_min) / (n - 1)
+    return x_min + (delta * numpy.arange(n))**2
+
+
 class Collapser(object):
     """
     Class managing the collapsing logic.
     """
+    mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
+    dist_bins = sqrscale(1, 600, 255)
+    vs30_bins = numpy.linspace(0, 32767, 65536)
+
     def __init__(self, collapse_level, dist_types, has_vs30=False):
         self.collapse_level = collapse_level
         self.dist_types = dist_types
-        self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
-        self.dist_bins = valid.sqrscale(1, 600, 255)
-        self.vs30_bins = numpy.linspace(0, 32767, 65536)
         self.has_vs30 = has_vs30
         self.cfactor = numpy.zeros(2)
         self.npartial = 0
@@ -346,7 +365,9 @@ class ContextMaker(object):
 
         self.cache_distances = param.get('cache_distances', False)
         if self.cache_distances:
-            self.dcache = {}  # (surface ID, dist_type) for MultiFaultSources
+            # use a cache (surface ID, dist_type) for MultiFaultSources
+            self.dcache = AccumDict()
+            self.dcache.hit = 0
         else:
             self.dcache = None  # disabled
         self.af = param.get('af')
@@ -418,6 +439,7 @@ class ContextMaker(object):
         dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
+        dic['weight'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
         self.collapser = Collapser(
@@ -451,15 +473,17 @@ class ContextMaker(object):
             return 0
         nbytes = 0
         for arr in self.dcache.values():
-            nbytes += arr.nbytes
+            if isinstance(arr, numpy.ndarray):
+                nbytes += arr.nbytes
         return nbytes
 
     def read_ctxs(self, dstore, slc=None, magi=None):
         """
         :param dstore: a DataStore instance
         :param slice: a slice of contexts with the same grp_id
-        :returns: a list with one or two context arrays
+        :returns: a list of contexts
         """
+        src_mutex, rup_mutex = dstore['mutex_by_grp'][self.grp_id]
         sitecol = dstore['sitecol'].complete.array
         if slc is None:
             slc = dstore['rup/grp_id'][:] == self.grp_id
@@ -491,9 +515,15 @@ class ContextMaker(object):
         # split parametric vs nonparametric contexts
         nans = numpy.isnan(ctx.occurrence_rate)
         if nans.sum() in (0, len(ctx)):  # no nans or all nans
-            return [ctx]
+            ctxs = [ctx]
         else:
-            return [ctx[nans], ctx[~nans]]
+            ctxs = [ctx[nans], ctx[~nans]]
+        if src_mutex:
+            out = []
+            for ctx in ctxs:
+                out.extend(split_array(ctx, ctx.src_id))
+            return out
+        return ctxs
 
     def recarray(self, ctxs, magi=None):
         """
@@ -507,11 +537,6 @@ class ContextMaker(object):
             dd['clat'] = numpy.float64(0.)
         if magi is not None:  # magnitude bin used in disaggregation
             dd['magi'] = numpy.uint8(0)
-        if hasattr(ctxs[0], 'weight'):
-            dd['weight'] = numpy.float64(0.)
-            noweight = False
-        else:
-            noweight = True
 
         if not hasattr(ctxs[0], 'probs_occur'):
             for ctx in ctxs:
@@ -531,8 +556,6 @@ class ContextMaker(object):
                     val = magi
                 elif par == 'mdvbin':
                     val = 0  # overridden later
-                elif par == 'weight' and noweight:
-                    val = 0.
                 else:
                     val = getattr(ctx, par, numpy.nan)
                 getattr(ra, par)[slc] = val
@@ -725,8 +748,16 @@ class ContextMaker(object):
 
         magdist = {mag: self.maximum_distance(mag)
                    for mag, rate in src.get_annual_occurrence_rates()}
+        maxmag = max(magdist)
         ctxs = []
-        for mag, planarlist, sites in self._triples(src, sitecol, planardict):
+        max_radius = src.max_radius()
+        cdist = sitecol.get_cdist(src.location)
+        mask = cdist <= magdist[maxmag] + max_radius
+        sitecol = sitecol.filter(mask)
+        if sitecol is None:
+            return []
+        for mag, planarlist, sites in self._triples(
+                src, sitecol, cdist[mask], planardict):
             if not planarlist:
                 continue
             elif len(planarlist) > 1:  # when using ps_grid_spacing
@@ -739,7 +770,7 @@ class ContextMaker(object):
                 ctxs.append(ctxt)
         return concat(ctxs)
 
-    def _triples(self, src, sitecol, planardict):
+    def _triples(self, src, sitecol, cdist, planardict):
         # splitting by magnitude
         triples = []
         if src.count_nphc() == 1:
@@ -747,7 +778,6 @@ class ContextMaker(object):
             for mag, pla in planardict.items():
                 triples.append((mag, pla, sitecol))
         else:
-            cdist = sitecol.get_cdist(src.location)
             for m, rup in enumerate(src.iruptures()):
                 mag = rup.mag
                 arr = [rup.surface.array.reshape(-1, 3)]
@@ -1065,11 +1095,11 @@ class ContextMaker(object):
         :returns: how many sites are impacted overall
         """
         nphc = src.count_nphc()
+        dists = sites.get_cdist(src.location)
         planardict = src.get_planar(iruptures=True)
         esites = 0
         for m, (mag, [planar]) in enumerate(planardict.items()):
-            dists = project(planar, sites.xyz)[0, 0]  # shape N
-            rrup = dists[dists < self.maximum_distance(mag)]
+            rrup = dists[dists < self.maximum_distance(mag) + src.radius[m]]
             nclose = (rrup < self.pointsource_distance + src.ps_grid_spacing +
                       src.radius[m]).sum()
             nfar = len(rrup) - nclose
@@ -1077,7 +1107,7 @@ class ContextMaker(object):
         return esites
 
     # tested in test_collapse_small
-    def estimate_weight(self, src, srcfilter):
+    def estimate_weight(self, src, srcfilter, multiplier=1):
         """
         :param src: a source object
         :param srcfilter: a SourceFilter instance
@@ -1091,12 +1121,13 @@ class ContextMaker(object):
         N = len(srcfilter.sitecol.complete)  # total sites
         if (hasattr(src, 'location') and src.count_nphc() > 1 and
                 self.pointsource_distance < 1000):
-            esites = self.estimate_sites(src, sites)
+            esites = self.estimate_sites(src, sites) * multiplier
         else:
             ctxs = self.get_ctxs(src, sites, step=10)  # reduced number
             if not ctxs:
                 return src.num_ruptures if N == 1 else 0
-            esites = len(ctxs[0]) * src.num_ruptures / self.num_rups
+            esites = (len(ctxs[0]) * src.num_ruptures /
+                      self.num_rups * multiplier)
         weight = esites / N  # the weight is the effective number of ruptures
         src.esites = int(esites)
         return weight
@@ -1118,7 +1149,7 @@ class ContextMaker(object):
                 with mon:
                     src.esites = 0  # overridden inside estimate_weight
                     src.weight = .1 + self.estimate_weight(
-                        src, srcfilter) * G * multiplier
+                        src, srcfilter, multiplier) * G
                     if src.code == b'F' and N <= self.max_sites_disagg:
                         src.weight *= 20  # test ucerf
                     elif src.code == b'S':
@@ -1194,6 +1225,12 @@ class PmapMaker(object):
         if sites is None:
             return []
         ctxs = self.cmaker.get_ctxs(src, sites)
+        if hasattr(src, 'mutex_weight'):
+            for ctx in ctxs:
+                if ctx.weight.any():
+                    ctx['weight'] *= src.mutex_weight
+                else:
+                    ctx['weight'] = src.mutex_weight
         if self.fewsites:  # keep rupdata in memory (before collapse)
             for ctx in ctxs:
                 self.rupdata.append(ctx)
@@ -1241,10 +1278,7 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
                 cm.get_pmap(ctxs, pm)
-            p = pm
-            if cm.rup_indep:
-                p = ~p
-            p *= src.mutex_weight
+            p = (~pm if cm.rup_indep else pm) * src.mutex_weight
             pmap += p
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
@@ -1560,7 +1594,7 @@ def read_cmakers(dstore, full_lt=None):
     oq = dstore['oqparam']
     full_lt = full_lt or dstore['full_lt']
     trt_smrs = dstore['trt_smrs'][:]
-    toms = dstore['toms'][:]
+    toms = decode(dstore['toms'][:])
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
@@ -1577,7 +1611,7 @@ def read_cmakers(dstore, full_lt=None):
         oq.mags_by_trt = {k: decode(v[:])
                           for k, v in dstore['source_mags'].items()}
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
-        cmaker.tom = registry[decode(toms[grp_id])](oq.investigation_time)
+        cmaker.tom = valid.occurrence_model(toms[grp_id])
         cmaker.trti = trti
         cmaker.start = start
         cmaker.grp_id = grp_id

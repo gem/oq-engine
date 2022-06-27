@@ -413,7 +413,11 @@ class GetCtxs01TestCase(unittest.TestCase):
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
         src = ssm[0][0]
-        src.set_sections(geom.sections)
+        sections = list(geom.sections.values())
+        s2i = {suid: i for i, suid in enumerate(geom.sections)}
+        src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
+                            for idxs in src.rupture_idxs]
+        src.set_sections(sections)
         self.src = src
 
         # Create site-collection
@@ -466,7 +470,11 @@ class GetCtxs02TestCase(unittest.TestCase):
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
         src = ssm[0][0]
-        src.set_sections(geom.sections)
+        sections = list(geom.sections.values())
+        s2i = {suid: i for i, suid in enumerate(geom.sections)}
+        src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
+                            for idxs in src.rupture_idxs]
+        src.set_sections(sections)
         self.src = src
 
         # Create site-collection
