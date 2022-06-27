@@ -152,6 +152,8 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
                         mat6 = matrix[..., m, :, :]
                         if mat6.any():
                             res[s, m] = output(mat6)
+            # Returns a dictionary with keys indexes for site and imt
+            print(ctxt.grp_id)
             yield res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
@@ -371,6 +373,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         with self.monitor('aggregating disagg matrices'):
             trti = result.pop('trti')
             magi = result.pop('magi')
+            print(trti, magi)
             for (s, m), out in result.items():
                 for k in (0, 1):
                     x = acc[s, m, k].get((trti, magi), 0)

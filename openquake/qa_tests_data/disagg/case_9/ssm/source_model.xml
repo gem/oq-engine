@@ -62,7 +62,6 @@
                         <lowerSeismoDepth>15.0</lowerSeismoDepth>
                     </simpleFaultGeometry>
                 </simpleFaultRupture>
-
             </nonParametricSeismicSource>
         </sourceGroup>
 
@@ -72,24 +71,23 @@
             rup_interdep="indep"
             src_interdep="indep">
 
-            <simpleFaultSource id="s4" name="IV Source" tectonicRegion="TRTA">
-                <simpleFaultGeometry>
-                    <gml:LineString>
-                        <gml:posList>
-                            -0.3 0.0 -0.3 0.3
-                        </gml:posList>
-                    </gml:LineString>
-                    <dip> 90.0 </dip>
-                    <upperSeismoDepth>0.0</upperSeismoDepth>
-                    <lowerSeismoDepth>15.0</lowerSeismoDepth>
-                </simpleFaultGeometry>
-                <magScaleRel> WC1994 </magScaleRel>
-                <ruptAspectRatio> 2.0 </ruptAspectRatio>
-                <incrementalMFD minMag="6.65" binWidth="0.1">                   
-                    <occurRates>0.0015</occurRates>
-                </incrementalMFD>
-                <rake>90.0</rake>
-            </simpleFaultSource>
+            <nonParametricSeismicSource id="s4" name="IV source">
+                <simpleFaultRupture probs_occur="0.05 0.95">
+                    <magnitude> 5.9 </magnitude>
+                    <rake>90.0</rake>
+                    <hypocenter depth="7.5" lon="-0.3" lat="0.15"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -0.3 0.0 -0.3 0.3
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip> 90.0 </dip>
+                        <upperSeismoDepth>0.0</upperSeismoDepth>
+                        <lowerSeismoDepth>15.0</lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
         </sourceGroup>
 
     </sourceModel>
