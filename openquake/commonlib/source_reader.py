@@ -44,7 +44,8 @@ source_info_dt = numpy.dtype([
     ('num_sites', numpy.uint32),       # 4
     ('eff_ruptures', numpy.uint32),    # 5
     ('weight', numpy.float32),         # 6
-    ('trti', numpy.uint8),             # 7
+    ('mutex_weight', numpy.float64),   # 7
+    ('trti', numpy.uint8),             # 8
 ])
 
 
@@ -67,11 +68,12 @@ def create_source_info(csm, h5):
     lens = []
     for sg in csm.src_groups:
         for src in sg:
+            mutex = getattr(src, 'mutex_weight', 0)
             srcid = basename(src)
             trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
             code = csm.code.get(srcid, b'P')
             lens.append(len(src.trt_smrs))
-            row = [srcid, src.grp_id, code, 0, 0, 0, src.weight, trti]
+            row = [srcid, src.grp_id, code, 0, 0, 0, src.weight, mutex, trti]
             wkts.append(getattr(src, '_wkt', ''))
             data[srcid] = row
             src.id = len(data) - 1

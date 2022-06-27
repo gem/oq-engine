@@ -114,8 +114,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     """
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        ctxs, src_mutex, rup_mutex = cmaker.read_ctxs(dstore, slc, magidx)
-        assert not src_mutex and not rup_mutex, (src_mutex, rup_mutex)
+        ctxs = cmaker.read_ctxs(dstore, slc, magidx)
     # Set epsstar boolean variable
     epsstar = dstore['oqparam'].epsilon_star
     dis_mon = monitor('disaggregate', measuremem=False)

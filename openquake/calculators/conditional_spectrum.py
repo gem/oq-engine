@@ -118,9 +118,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         out = general.AccumDict()  # grp_id => dict
         for gid, start, stop in performance._idx_start_stop(rdata['grp_id']):
             cmaker = self.cmakers[gid]
-            ctxs, src_mutex, rup_mutex = cmaker.read_ctxs(
-                dstore, slice(start, stop))
-            assert not src_mutex and not rup_mutex, (src_mutex, rup_mutex)
+            ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
             for ctx in ctxs:
                 out += cmaker.get_cs_contrib(ctx, imti, self.imls)
         return out

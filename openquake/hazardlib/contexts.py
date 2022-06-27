@@ -514,9 +514,15 @@ class ContextMaker(object):
         # split parametric vs nonparametric contexts
         nans = numpy.isnan(ctx.occurrence_rate)
         if nans.sum() in (0, len(ctx)):  # no nans or all nans
-            return [ctx], src_mutex, rup_mutex
+            ctxs = [ctx]
         else:
-            return [ctx[nans], ctx[~nans]], src_mutex, rup_mutex
+            ctxs = [ctx[nans], ctx[~nans]]
+        if src_mutex:
+            out = []
+            for ctx in ctxs:
+                out.extend(split_array(ctx, ctx.src_id))
+            return out
+        return ctxs
 
     def recarray(self, ctxs, magi=None):
         """
@@ -1225,6 +1231,9 @@ class PmapMaker(object):
         if sites is None:
             return []
         ctxs = self.cmaker.get_ctxs(src, sites)
+        if hasattr(src, 'mutex_weight'):
+            for ctx in ctxs:
+                ctx['weight'] = src.mutex_weight
         if self.fewsites:  # keep rupdata in memory (before collapse)
             for ctx in ctxs:
                 self.rupdata.append(ctx)
@@ -1272,9 +1281,10 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
                 cm.get_pmap(ctxs, pm)
-            p = pm
             if cm.rup_indep:
-                p = ~p
+                p = ~pm
+            else:
+                p = pm
             p *= src.mutex_weight
             pmap += p
             dt = time.time() - t0
