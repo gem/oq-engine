@@ -99,10 +99,6 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
         a DataStore instance
     :param slc:
         a slice of contexts
-    :param src_mutex:
-        True if the underlying sources were mutually exclusive
-    :param rup_mutex:
-        True if the underlying ruptures were mutually exclusive
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param hmap4:
