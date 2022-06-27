@@ -128,6 +128,9 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     imts = [from_string(im) for im in cmaker.imtls]
     for magi in numpy.unique(magidx):
         for ctxt in ctxs:
+            mutex_weight = numpy.unique(ctxt.weight)
+            if len(mutex_weight) == 1:
+                pass  # TODO: use the mutex_weight
             ctx = ctxt[ctxt.magi == magi]
             res = {'trti': cmaker.trti, 'magi': magi}
             # disaggregate by site, IMT
