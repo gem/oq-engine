@@ -1275,11 +1275,7 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
                 cm.get_pmap(ctxs, pm)
-            if cm.rup_indep:
-                p = ~pm
-            else:
-                p = pm
-            p *= src.mutex_weight
+            p = (~pm if cm.rup_indep else pm) * src.mutex_weight
             pmap += p
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
