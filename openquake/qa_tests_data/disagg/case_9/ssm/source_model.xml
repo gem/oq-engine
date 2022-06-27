@@ -2,98 +2,68 @@
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
     xmlns:gml="http://www.opengis.net/gml"
 >
-    <sourceModel name="Model 1">
-
+    <sourceModel name="Model 1" investigation_time="1.0">
         <sourceGroup
             name="MUTEX ruptures"
-            rup_interdep="mutex"
-            src_interdep="indep"
-            tectonicRegion="TRTA">
-
-            <simpleFaultSource id="s1" name="I Source">
-                <simpleFaultGeometry>
-                    <gml:LineString>
-                        <gml:posList>
-                            -0.6 0.1 -0.3 0.1
-                        </gml:posList>
-                    </gml:LineString>
-                    <dip> 90.0 </dip>
-                    <upperSeismoDepth>0.0</upperSeismoDepth>
-                    <lowerSeismoDepth>15.0</lowerSeismoDepth>
-                </simpleFaultGeometry>
-                <magScaleRel> WC1994 </magScaleRel>
-                <ruptAspectRatio> 2.0 </ruptAspectRatio>
-                <incrementalMFD minMag="6.55" binWidth="0.1">                   
-                    <occurRates>0.002 0.001</occurRates>
-                </incrementalMFD>
-                <rake>90.0</rake>
-            </simpleFaultSource>
-        </sourceGroup>
-
-        <sourceGroup
-            name="MUTEX sources"
             rup_interdep="indep"
             src_interdep="mutex"
-            srcs_weights="0.1 0.3 0.6"
+            srcs_weights="0.33 0.33 0.34"
             tectonicRegion="TRTA">
 
-            <simpleFaultSource id="s1" name="I Source">
-                <simpleFaultGeometry>
-                    <gml:LineString>
-                        <gml:posList>
-                            -0.6 0.0 -0.3 0.0 
-                        </gml:posList>
-                    </gml:LineString>
-                    <dip> 90.0 </dip>
-                    <upperSeismoDepth>0.0</upperSeismoDepth>
-                    <lowerSeismoDepth>15.0</lowerSeismoDepth>
-                </simpleFaultGeometry>
-                <magScaleRel> WC1994 </magScaleRel>
-                <ruptAspectRatio> 2.0 </ruptAspectRatio>
-                <incrementalMFD minMag="6.55" binWidth="0.1">                   
-                    <occurRates>0.002</occurRates>
-                </incrementalMFD>
-                <rake>90.0</rake>
-            </simpleFaultSource>
+            <nonParametricSeismicSource id="s1" name="I source">
+                <simpleFaultRupture probs_occur="0.01 0.99">
+                    <magnitude> 7.0 </magnitude>
+                    <rake>90.0</rake>
+                    <hypocenter depth="7.5" lon="-4.5" lat="0.0"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -0.6 0.0 -0.3 0.0 
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip> 90.0 </dip>
+                        <upperSeismoDepth>0.0</upperSeismoDepth>
+                        <lowerSeismoDepth>15.0</lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
 
-            <simpleFaultSource id="s2" name="II Source">
-                <simpleFaultGeometry>
-                    <gml:LineString>
-                        <gml:posList>
-                            -0.3 0.0 0.0 0.0
-                        </gml:posList>
-                    </gml:LineString>
-                    <dip> 90.0 </dip>
-                    <upperSeismoDepth>0.0</upperSeismoDepth>
-                    <lowerSeismoDepth>15.0</lowerSeismoDepth>
-                </simpleFaultGeometry>
-                <magScaleRel> WC1994 </magScaleRel>
-                <ruptAspectRatio> 2.0 </ruptAspectRatio>
-                <incrementalMFD minMag="6.65" binWidth="0.1">                   
-                    <occurRates>0.0015</occurRates>
-                </incrementalMFD>
-                <rake>90.0</rake>
-            </simpleFaultSource>
+            <nonParametricSeismicSource id="s2" name="II source">
+                <simpleFaultRupture probs_occur="0.03 0.97">
+                    <magnitude> 6.6 </magnitude>
+                    <rake>90.0</rake>
+                    <hypocenter depth="7.5" lon="-1.5" lat="0.0"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -0.3 0.0 0.0 0.0
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip> 90.0 </dip>
+                        <upperSeismoDepth>0.0</upperSeismoDepth>
+                        <lowerSeismoDepth>15.0</lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
 
-            <simpleFaultSource id="s3" name="III Source">
-                <simpleFaultGeometry>
-                    <gml:LineString>
-                        <gml:posList>
-                            0.0 0.0 0.3 0.0
-                        </gml:posList>
-                    </gml:LineString>
-                    <dip> 90.0 </dip>
-                    <upperSeismoDepth>0.0</upperSeismoDepth>
-                    <lowerSeismoDepth>15.0</lowerSeismoDepth>
-                </simpleFaultGeometry>
-                <magScaleRel> WC1994 </magScaleRel>
-                <ruptAspectRatio> 2.0 </ruptAspectRatio>
-                <incrementalMFD minMag="6.75" binWidth="0.1">                   
-                    <occurRates>0.001</occurRates>
-                </incrementalMFD>
-                <rake>90.0</rake>
-            </simpleFaultSource>            
+            <nonParametricSeismicSource id="s3" name="III source">
+                <simpleFaultRupture probs_occur="0.05 0.95">
+                    <magnitude> 6.1 </magnitude>
+                    <rake>90.0</rake>
+                    <hypocenter depth="7.5" lon="1.5" lat="0.0"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                0.0 0.0 0.3 0.0
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip> 90.0 </dip>
+                        <upperSeismoDepth>0.0</upperSeismoDepth>
+                        <lowerSeismoDepth>15.0</lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
 
+            </nonParametricSeismicSource>
         </sourceGroup>
 
         <sourceGroup
@@ -120,8 +90,6 @@
                 </incrementalMFD>
                 <rake>90.0</rake>
             </simpleFaultSource>
-
-
         </sourceGroup>
 
     </sourceModel>

@@ -112,7 +112,6 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     :returns:
         a dictionary sid, imti -> 6D-array
     """
-    breakpoint()
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         ctxs = cmaker.read_ctxs(dstore, slc, magidx)
