@@ -439,6 +439,7 @@ class ContextMaker(object):
         dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
+        dic['weight'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
         self.collapser = Collapser(
@@ -480,8 +481,9 @@ class ContextMaker(object):
         """
         :param dstore: a DataStore instance
         :param slice: a slice of contexts with the same grp_id
-        :returns: a list with one or two context arrays
+        :returns: a list of contexts
         """
+        src_mutex, rup_mutex = dstore['mutex_by_grp'][self.grp_id]
         sitecol = dstore['sitecol'].complete.array
         if slc is None:
             slc = dstore['rup/grp_id'][:] == self.grp_id
@@ -513,9 +515,15 @@ class ContextMaker(object):
         # split parametric vs nonparametric contexts
         nans = numpy.isnan(ctx.occurrence_rate)
         if nans.sum() in (0, len(ctx)):  # no nans or all nans
-            return [ctx]
+            ctxs = [ctx]
         else:
-            return [ctx[nans], ctx[~nans]]
+            ctxs = [ctx[nans], ctx[~nans]]
+        if src_mutex:
+            out = []
+            for ctx in ctxs:
+                out.extend(split_array(ctx, ctx.src_id))
+            return out
+        return ctxs
 
     def recarray(self, ctxs, magi=None):
         """
@@ -529,11 +537,6 @@ class ContextMaker(object):
             dd['clat'] = numpy.float64(0.)
         if magi is not None:  # magnitude bin used in disaggregation
             dd['magi'] = numpy.uint8(0)
-        if hasattr(ctxs[0], 'weight'):
-            dd['weight'] = numpy.float64(0.)
-            noweight = False
-        else:
-            noweight = True
 
         if not hasattr(ctxs[0], 'probs_occur'):
             for ctx in ctxs:
@@ -553,8 +556,6 @@ class ContextMaker(object):
                     val = magi
                 elif par == 'mdvbin':
                     val = 0  # overridden later
-                elif par == 'weight' and noweight:
-                    val = 0.
                 else:
                     val = getattr(ctx, par, numpy.nan)
                 getattr(ra, par)[slc] = val
@@ -1224,6 +1225,12 @@ class PmapMaker(object):
         if sites is None:
             return []
         ctxs = self.cmaker.get_ctxs(src, sites)
+        if hasattr(src, 'mutex_weight'):
+            for ctx in ctxs:
+                if ctx.weight.any():
+                    ctx['weight'] *= src.mutex_weight
+                else:
+                    ctx['weight'] = src.mutex_weight
         if self.fewsites:  # keep rupdata in memory (before collapse)
             for ctx in ctxs:
                 self.rupdata.append(ctx)
@@ -1271,10 +1278,7 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
                 cm.get_pmap(ctxs, pm)
-            p = pm
-            if cm.rup_indep:
-                p = ~p
-            p *= src.mutex_weight
+            p = (~pm if cm.rup_indep else pm) * src.mutex_weight
             pmap += p
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)

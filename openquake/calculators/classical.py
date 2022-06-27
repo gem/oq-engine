@@ -312,7 +312,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         self.init_poes()
         params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
-                  'probs_occur', 'sids', 'src_id'}
+                  'probs_occur', 'sids', 'src_id', 'weight'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
 
         for trt, gsims in gsims_by_trt.items():

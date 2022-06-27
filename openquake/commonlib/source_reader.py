@@ -44,8 +44,19 @@ source_info_dt = numpy.dtype([
     ('num_sites', numpy.uint32),       # 4
     ('eff_ruptures', numpy.uint32),    # 5
     ('weight', numpy.float32),         # 6
-    ('trti', numpy.uint8),             # 7
+    ('mutex_weight', numpy.float64),   # 7
+    ('trti', numpy.uint8),             # 8
 ])
+
+
+def mutex_by_grp(src_groups):
+    """
+    :returns: a composite array with boolean fields src_mutex, rup_mutex
+    """
+    lst = []
+    for sg in src_groups:
+        lst.append((sg.src_interdep == 'mutex', sg.rup_interdep == 'mutex'))
+    return numpy.array(lst, [('src_mutex', bool), ('rup_mutex', bool)])
 
 
 def create_source_info(csm, h5):
@@ -57,11 +68,12 @@ def create_source_info(csm, h5):
     lens = []
     for sg in csm.src_groups:
         for src in sg:
+            mutex = getattr(src, 'mutex_weight', 0)
             srcid = basename(src)
             trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
             code = csm.code.get(srcid, b'P')
             lens.append(len(src.trt_smrs))
-            row = [srcid, src.grp_id, code, 0, 0, 0, src.weight, trti]
+            row = [srcid, src.grp_id, code, 0, 0, 0, src.weight, mutex, trti]
             wkts.append(getattr(src, '_wkt', ''))
             data[srcid] = row
             src.id = len(data) - 1
@@ -73,8 +85,7 @@ def create_source_info(csm, h5):
     num_srcs = len(csm.source_info)
     # avoid hdf5 damned bug by creating source_info in advance
     h5.create_dataset('source_info',  (num_srcs,), source_info_dt)
-    h5['source_info'].attrs['atomic'] = any(
-        grp.atomic for grp in csm.src_groups)
+    h5['mutex_by_grp'] = mutex_by_grp(csm.src_groups)
     h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
 
 

@@ -470,7 +470,7 @@ hazard_uhs-std.csv
         self.assertEqual(tot_probs_occur, 28)  # 14 x 2
 
         # make sure there is an error when trying to disaggregate
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(IndexError):
             hc_id = str(self.calc.datastore.calc_id)
             self.run_calc(case_27.__file__, 'job.ini',
                           hazard_calculation_id=hc_id,
