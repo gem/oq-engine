@@ -1227,7 +1227,7 @@ class PmapMaker(object):
         ctxs = self.cmaker.get_ctxs(src, sites)
         if hasattr(src, 'mutex_weight'):
             for ctx in ctxs:
-                ctx['weight'] = src.mutex_weight
+                ctx['weight'] *= src.mutex_weight
         if self.fewsites:  # keep rupdata in memory (before collapse)
             for ctx in ctxs:
                 self.rupdata.append(ctx)
