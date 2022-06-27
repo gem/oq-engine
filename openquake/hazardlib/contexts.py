@@ -439,6 +439,7 @@ class ContextMaker(object):
         dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
+        dic['weight'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
         self.collapser = Collapser(
@@ -536,11 +537,6 @@ class ContextMaker(object):
             dd['clat'] = numpy.float64(0.)
         if magi is not None:  # magnitude bin used in disaggregation
             dd['magi'] = numpy.uint8(0)
-        if hasattr(ctxs[0], 'weight'):
-            dd['weight'] = numpy.float64(0.)
-            noweight = False
-        else:
-            noweight = True
 
         if not hasattr(ctxs[0], 'probs_occur'):
             for ctx in ctxs:
@@ -560,8 +556,6 @@ class ContextMaker(object):
                     val = magi
                 elif par == 'mdvbin':
                     val = 0  # overridden later
-                elif par == 'weight' and noweight:
-                    val = 0.
                 else:
                     val = getattr(ctx, par, numpy.nan)
                 getattr(ra, par)[slc] = val
