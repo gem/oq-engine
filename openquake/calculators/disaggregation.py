@@ -98,7 +98,11 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     :param dstore:
         a DataStore instance
     :param slc:
-        a slice of ruptures
+        a slice of contexts
+    :param src_mutex:
+        True if the underlying sources were mutually exclusive
+    :param rup_mutex:
+        True if the underlying ruptures were mutually exclusive
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param hmap4:
@@ -114,7 +118,8 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     """
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        ctxs = cmaker.read_ctxs(dstore, slc, magidx)
+        ctxs, src_mutex, rup_mutex = cmaker.read_ctxs(dstore, slc, magidx)
+        assert not src_mutex and not rup_mutex, (src_mutex, rup_mutex)
     # Set epsstar boolean variable
     epsstar = dstore['oqparam'].epsilon_star
     dis_mon = monitor('disaggregate', measuremem=False)
@@ -195,14 +200,6 @@ class DisaggregationCalculator(base.HazardCalculator):
             raise ValueError(
                 'The number of sites is to disaggregate is %d, but you have '
                 'max_sites_disagg=%d' % (self.N, few))
-        if hasattr(self, 'csm'):
-            for sg in self.csm.src_groups:
-                if sg.atomic:
-                    raise NotImplementedError(
-                        'Atomic groups are not supported yet')
-        elif self.datastore['source_info'].attrs['atomic']:
-            raise NotImplementedError(
-                'Atomic groups are not supported yet')
         all_edges, shapedic = disagg.get_edges_shapedic(
             self.oqparam, self.sitecol, self.datastore['source_mags'])
         *b, trts = all_edges

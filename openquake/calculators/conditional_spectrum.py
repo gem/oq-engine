@@ -65,14 +65,6 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         """
         assert self.N <= self.oqparam.max_sites_disagg, (
             self.N, self.oqparam.max_sites_disagg)
-        if hasattr(self, 'csm'):
-            for sg in self.csm.src_groups:
-                if sg.atomic:
-                    raise NotImplementedError(
-                        'Atomic groups are not supported yet')
-        elif self.datastore['source_info'].attrs['atomic']:
-            raise NotImplementedError(
-                'Atomic groups are not supported yet')
 
     def execute(self):
         """
@@ -126,7 +118,10 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         out = general.AccumDict()  # grp_id => dict
         for gid, start, stop in performance._idx_start_stop(rdata['grp_id']):
             cmaker = self.cmakers[gid]
-            for ctx in cmaker.read_ctxs(dstore, slice(start, stop)):
+            ctxs, src_mutex, rup_mutex = cmaker.read_ctxs(
+                dstore, slice(start, stop))
+            assert not src_mutex and not rup_mutex, (src_mutex, rup_mutex)
+            for ctx in ctxs:
                 out += cmaker.get_cs_contrib(ctx, imti, self.imls)
         return out
 

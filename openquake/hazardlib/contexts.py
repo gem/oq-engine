@@ -480,8 +480,9 @@ class ContextMaker(object):
         """
         :param dstore: a DataStore instance
         :param slice: a slice of contexts with the same grp_id
-        :returns: a list with one or two context arrays
+        :returns: (ctxs, src_mutex, rup_mutex)
         """
+        src_mutex, rup_mutex = dstore['mutex_by_grp'][self.grp_id]
         sitecol = dstore['sitecol'].complete.array
         if slc is None:
             slc = dstore['rup/grp_id'][:] == self.grp_id
@@ -513,9 +514,9 @@ class ContextMaker(object):
         # split parametric vs nonparametric contexts
         nans = numpy.isnan(ctx.occurrence_rate)
         if nans.sum() in (0, len(ctx)):  # no nans or all nans
-            return [ctx]
+            return [ctx], src_mutex, rup_mutex
         else:
-            return [ctx[nans], ctx[~nans]]
+            return [ctx[nans], ctx[~nans]], src_mutex, rup_mutex
 
     def recarray(self, ctxs, magi=None):
         """
