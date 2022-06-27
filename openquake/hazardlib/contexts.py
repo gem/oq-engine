@@ -481,7 +481,7 @@ class ContextMaker(object):
         """
         :param dstore: a DataStore instance
         :param slice: a slice of contexts with the same grp_id
-        :returns: (ctxs, src_mutex, rup_mutex)
+        :returns: a list of contexts
         """
         src_mutex, rup_mutex = dstore['mutex_by_grp'][self.grp_id]
         sitecol = dstore['sitecol'].complete.array
