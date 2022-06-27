@@ -153,7 +153,6 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
                         if mat6.any():
                             res[s, m] = output(mat6)
             # Returns a dictionary with keys indexes for site and imt
-            print(ctxt.grp_id)
             yield res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
