@@ -169,7 +169,7 @@ def weighted_disagg(close, cmaker, g_by_z, iml2, eps3, s, bins, epsstar):
         mats = [disagg.disaggregate(ctx, cmaker, g_by_z,
                                     iml2, eps3, s, bins, epsstar=epsstar)
                 for ctx in ctxs]
-        return numpy.average(mats, weights=weights)
+        return numpy.average(mats, weights=weights, axis=0)
     else:
         return disagg.disaggregate(close, cmaker, g_by_z,
                                    iml2, eps3, s, bins, epsstar=epsstar)
