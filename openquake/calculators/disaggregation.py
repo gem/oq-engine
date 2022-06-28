@@ -328,7 +328,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         magi[magi == -1] = 0  # when the magnitude is on the edge
         totrups = len(magi)
         logging.info('Reading {:_d} ruptures'.format(totrups))
-        rdt = [('grp_id', U16), ('magi', U8), ('nsites', U16), ('idx', U32)]
+        rdt = [('grp_id', U32), ('magi', U8), ('nsites', U16), ('idx', U32)]
         rdata = numpy.zeros(totrups, rdt)
         rdata['magi'] = magi
         rdata['idx'] = numpy.arange(totrups)
@@ -350,15 +350,27 @@ class DisaggregationCalculator(base.HazardCalculator):
         # that would break the ordering of the indices causing an incredibly
         # worse performance, but visible only in extra-large calculations!
         cmakers = read_cmakers(self.datastore)
-        for block in block_splitter(rdata, maxweight,
-                                    key=operator.itemgetter('grp_id')):
-            grp_id = block[0]['grp_id']
+        rdata_by_grp = performance.split_array(rdata, rdata['grp_id'])
+        mutex_by_grp = self.datastore['mutex_by_grp'][:]
+        for rdata in rdata_by_grp:
+            grp_id = rdata[0]['grp_id']
             cmaker = cmakers[grp_id]
-            U = max(U, block.weight)
-            slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
-            smap.submit((dstore, slc, cmaker, self.hmap4,
-                         magi[slc], self.bin_edges))
-            task_inputs.append((cmaker.trti, slc.stop-slc.start))
+            src_mutex, rup_mutex = mutex_by_grp[grp_id]
+            if src_mutex:  # do not split rdata
+                U = max(U, len(rdata))
+                slc = slice(rdata[0]['idx'], rdata[-1]['idx'] + 1)
+                smap.submit((dstore, slc, cmaker, self.hmap4,
+                             magi[slc], self.bin_edges))
+                task_inputs.append((cmaker.trti, slc.stop-slc.start))
+            else:
+                blocks = block_splitter(rdata, maxweight,
+                                        key=operator.itemgetter('grp_id'))
+                for block in blocks:
+                    U = max(U, block.weight)
+                    slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
+                    smap.submit((dstore, slc, cmaker, self.hmap4,
+                                 magi[slc], self.bin_edges))
+                    task_inputs.append((cmaker.trti, slc.stop-slc.start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
