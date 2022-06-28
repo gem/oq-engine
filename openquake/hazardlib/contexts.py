@@ -517,6 +517,7 @@ class ContextMaker(object):
         if nans.sum() in (0, len(ctx)):  # no nans or all nans
             ctxs = [ctx]
         else:
+            # happens in the oq-risk-tests for NZ
             ctxs = [ctx[nans], ctx[~nans]]
         if src_mutex:
             out = []
