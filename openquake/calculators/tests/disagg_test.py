@@ -206,4 +206,4 @@ class DisaggregationTestCase(CalculatorTestCase):
         # test single magnitude
         self.run_calc(case_8.__file__, 'job.ini')
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
+        self.assertEqualFiles('expected/Mag-0.csv', fname)
