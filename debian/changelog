@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed error message when trying to compute disagg_by_src with too many
+    sources: in some cases, it contained a misleading reference to point sources
   * Fixed disaggregation when a tectonic region type contains a single
     magnitude, thus breaking the magnitude binning formula
   * Reorganized the Advanced Manual; changed the theme to be consistent with
