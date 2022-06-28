@@ -161,6 +161,9 @@ def weighted_disagg(close, cmaker, g_by_z, iml2, eps3, s, bins, epsstar):
     :returns: a 7D disaggregation matrix, weighted if src_mutex is True
     """
     if cmaker.src_mutex:
+        # getting a context array and a weight for each source
+        # NB: relies on ctx.weight having all equal weights, being
+        # built as ctx['weight'] = src.mutex_weight in contexts.py
         ctxs = performance.split_array(close, close.src_id)
         weights = [ctx.weight[0] for ctx in ctxs]
         mats = [disagg.disaggregate(ctx, cmaker, g_by_z,
