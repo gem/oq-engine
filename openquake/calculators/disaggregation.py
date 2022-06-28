@@ -23,7 +23,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import parallel, hdf5, performance
 from openquake.baselib.general import (
     AccumDict, get_nbytes_msg, humansize, pprod, agg_probs, block_splitter)
 from openquake.baselib.python3compat import encode
@@ -128,9 +128,6 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     imts = [from_string(im) for im in cmaker.imtls]
     for magi in numpy.unique(magidx):
         for ctxt in ctxs:
-            mutex_weight = numpy.unique(ctxt.weight)
-            if len(mutex_weight) == 1:
-                pass  # TODO: use the mutex_weight
             ctx = ctxt[ctxt.magi == magi]
             res = {'trti': cmaker.trti, 'magi': magi}
             # disaggregate by site, IMT
@@ -145,9 +142,8 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
                 iml2 = dict(zip(imts, iml3))
                 with dis_mon:
                     # 7D-matrix #disbins, #lonbins, #latbins, #epsbins, M, P, Z
-                    matrix = disagg.disaggregate(close, cmaker, g_by_z[s],
-                                                 iml2, eps3, s, bins,
-                                                 epsstar=epsstar)  # 7D-matrix
+                    matrix = weighted_disagg(close, cmaker, g_by_z[s],
+                                             iml2, eps3, s, bins, epsstar)
                     for m in range(M):
                         mat6 = matrix[..., m, :, :]
                         if mat6.any():
@@ -155,6 +151,22 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
             yield res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
+
+
+def weighted_disagg(close, cmaker, g_by_z, iml2, eps3, s, bins, epsstar):
+    """
+    :returns: a 7D disaggregation matrix, weighted if src_mutex is True
+    """
+    if cmaker.src_mutex:
+        ctxs = performance.split_array(close, close.src_id)
+        weights = [ctx.weight[0] for ctx in ctxs]
+        mats = [disagg.disaggregate(ctx, cmaker, g_by_z,
+                                    iml2, eps3, s, bins, epsstar=epsstar)
+                for ctx in ctxs]
+        return numpy.average(mats, weights=weights)
+    else:
+        return disagg.disaggregate(close, cmaker, g_by_z,
+                                   iml2, eps3, s, bins, epsstar=epsstar)
 
 
 def get_outputs_size(shapedic, disagg_outputs):

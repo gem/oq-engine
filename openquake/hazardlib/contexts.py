@@ -481,9 +481,9 @@ class ContextMaker(object):
         """
         :param dstore: a DataStore instance
         :param slice: a slice of contexts with the same grp_id
-        :returns: a list of contexts
+        :returns: a list of contexts and a flag src_mutex
         """
-        src_mutex, rup_mutex = dstore['mutex_by_grp'][self.grp_id]
+        self.src_mutex, rup_mutex = dstore['mutex_by_grp'][self.grp_id]
         sitecol = dstore['sitecol'].complete.array
         if slc is None:
             slc = dstore['rup/grp_id'][:] == self.grp_id
@@ -519,11 +519,6 @@ class ContextMaker(object):
         else:
             # happens in the oq-risk-tests for NZ
             ctxs = [ctx[nans], ctx[~nans]]
-        if src_mutex:
-            out = []
-            for ctx in ctxs:
-                out.extend(split_array(ctx, ctx.src_id))
-            return out
         return ctxs
 
     def recarray(self, ctxs, magi=None):
