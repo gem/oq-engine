@@ -71,7 +71,10 @@ def create_source_info(csm, h5):
             mutex = getattr(src, 'mutex_weight', 0)
             srcid = basename(src)
             trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
-            code = csm.code.get(srcid, b'P')
+            if src.code == b'p':
+                code = b'p'
+            else:
+                code = csm.code.get(srcid, b'P')
             lens.append(len(src.trt_smrs))
             row = [srcid, src.grp_id, code, 0, 0, 0, src.weight, mutex, trti]
             wkts.append(getattr(src, '_wkt', ''))
@@ -354,7 +357,8 @@ class CompositeSourceModel:
             for src in sg:
                 src.grp_id = grp_id
                 if src.code != b'P':
-                    self.code[src.source_id] = src.code
+                    source_id = src.source_id.split(':')[0]
+                    self.code[source_id] = src.code
 
     # used for debugging; assume PoissonTOM; use read_cmakers instead
     def _get_cmakers(self, oq):
