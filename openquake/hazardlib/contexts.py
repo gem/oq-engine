@@ -483,7 +483,7 @@ class ContextMaker(object):
         :param slice: a slice of contexts with the same grp_id
         :returns: a list of contexts
         """
-        self.src_mutex, rup_mutex = dstore['mutex_by_grp'][self.grp_id]
+        self.src_mutex, self.rup_mutex = dstore['mutex_by_grp'][self.grp_id]
         sitecol = dstore['sitecol'].complete.array
         if slc is None:
             slc = dstore['rup/grp_id'][:] == self.grp_id
