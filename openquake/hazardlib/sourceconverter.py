@@ -1194,6 +1194,7 @@ class SourceConverter(RuptureConverter):
             msg += ' occurrence model'
             assert 'tom' in node.attrib, msg
             if isinstance(tom, PoissonTOM):
+                # hack in place of a ClusterPoissonTOM
                 assert hasattr(sg, 'occurrence_rate')
 
         for src_node in node:
