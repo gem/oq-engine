@@ -1,3 +1,6 @@
+  [Marco Pagani, Michele Simionato]
+  * Added support for disaggregation in case of mutually exclusive sources
+
   [Michele Simionato]
   * Fixed error message when trying to compute disagg_by_src with too many
     sources: in some cases, it contained a misleading reference to point sources
@@ -11,7 +14,6 @@
   * Logging a warning when starting from an old hazard calculation
   * The extra fields of the site collection were lost when using --hc
   * Internal: implemented direct database access with OQ_DATABASE=local
-  * Added support for disaggregation in case of Mutex sources 
 
   [Julián Santiago Montejo Espitia]
   * Implemented the Arteta et al. (2021) subduction model for Colombia
