@@ -1,3 +1,6 @@
+  [Pablo Iturrieta]
+  * Added support for negative binomial temporal occurrence models
+
   [Marco Pagani, Michele Simionato]
   * Added support for disaggregation in case of mutually exclusive sources
 
