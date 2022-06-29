@@ -1589,6 +1589,14 @@ class OqParam(valid.ParamSet):
         return (self.calculation_mode in
                 'event_based_risk ebrisk event_based_damage')
 
+    def is_valid_disagg_by_src(self):
+        """
+        disagg_by_src can be set only if ps_grid_spacing = 0
+        """
+        if self.disagg_by_src:
+            return self.ps_grid_spacing == 0
+        return True
+
     def is_valid_shakemap(self):
         """
         hazard_calculation_id must be set if shakemap_id is set
