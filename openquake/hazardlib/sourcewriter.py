@@ -28,8 +28,8 @@ from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf
 from openquake.hazardlib.source import (
-    NonParametricSeismicSource, check_complex_fault)
-from openquake.hazardlib.tom import PoissonTOM
+    NonParametricSeismicSource, check_complex_fault, PointSource)
+from openquake.hazardlib.tom import PoissonTOM, NegativeBinomialTOM
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
 
@@ -442,6 +442,12 @@ def get_source_attributes(source):
             for data in source.data:
                 weights.append(data[0].weight)
             attrs['rup_weights'] = numpy.array(weights)
+    elif isinstance(source, PointSource):
+        tom = source.temporal_occurrence_model
+        if isinstance(tom, NegativeBinomialTOM):
+            attrs['tom'] = 'NegativeBinomialTOM'
+            attrs['mu'] = tom.mu
+            attrs['alpha'] = tom.alpha
     return attrs
 
 
