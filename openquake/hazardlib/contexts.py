@@ -565,6 +565,8 @@ class ContextMaker(object):
                     val = magi
                 elif par == 'mdvbin':
                     val = 0  # overridden later
+                elif par == 'weight':
+                    val = getattr(ctx, par, 0.)
                 else:
                     val = getattr(ctx, par, numpy.nan)
                 getattr(ra, par)[slc] = val

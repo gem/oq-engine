@@ -11,6 +11,7 @@
   * Logging a warning when starting from an old hazard calculation
   * The extra fields of the site collection were lost when using --hc
   * Internal: implemented direct database access with OQ_DATABASE=local
+  * Added support for disaggregation in case of Mutex sources 
 
   [Julián Santiago Montejo Espitia]
   * Implemented the Arteta et al. (2021) subduction model for Colombia
