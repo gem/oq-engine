@@ -627,7 +627,7 @@ class HazardCalculator(BaseCalculator):
             calc.datastore.close()
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_weight '
-                'amplifier policy_name policy_dict full_lt exported'
+                'amplifier policy_name policy_df full_lt exported'
             ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -706,26 +706,30 @@ class HazardCalculator(BaseCalculator):
 
     def load_insurance_data(self, ins_types, ins_files):
         """
-        Read the insurance files and populate the policy_dict
+        Read the insurance files and populate the policy_df
         """
+        policy_df = general.AccumDict(accum=[])
         for loss_type, fname in zip(ins_types, ins_files):
             array = hdf5.read_csv(
                 fname, {'insurance_limit': float, 'deductible': float,
                         None: object}).array
             policy_name = array.dtype.names[0]
             policy_idx = getattr(self.assetcol.tagcol, policy_name + '_idx')
-            insurance = numpy.zeros((len(policy_idx), 2))
             for pol, ded, lim in array[
                     [policy_name, 'deductible', 'insurance_limit']]:
-                insurance[policy_idx[pol]] = ded, lim
-            self.policy_dict[loss_type] = insurance
+                policy_df['deductible'].append(ded)
+                policy_df['insurance_limit'].append(lim)
+                policy_df['policy'].append(policy_idx[pol])
+                policy_df['loss_type'].append(loss_type)
             if self.policy_name and policy_name != self.policy_name:
                 raise ValueError(
                     'The file %s contains %s as policy field, but we were '
                     'expecting %s' % (fname, policy_name, self.policy_name))
             else:
                 self.policy_name = policy_name
-        self.datastore['policy_dict'] = self.policy_dict
+        assert policy_df
+        self.policy_df = pandas.DataFrame(policy_df)
+        self.datastore.create_df('policy_df', self.policy_df)
 
     def load_crmodel(self):
         # to be called before read_exposure
@@ -795,7 +799,6 @@ class HazardCalculator(BaseCalculator):
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         self.policy_name = ''
-        self.policy_dict = {}
         if 'exposure' in oq.inputs:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
@@ -1315,7 +1318,7 @@ def create_risk_by_event(calc):
     crmodel = calc.crmodel
     if 'risk' in oq.calculation_mode:
         fields = [('loss', F32)]
-        if calc.policy_dict:
+        if hasattr(calc, 'policy_df'):
             fields.append(('ins_loss', F32))
         descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
                  ('variance', F32)] + fields
