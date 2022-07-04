@@ -1359,9 +1359,9 @@ class InsuredLosses(object):
     """
     There is an insured loss for each loss type in the policy dictionary.
     """
-    def __init__(self, policy_name, policy_dict):
+    def __init__(self, policy_name, policy_df):
         self.policy_name = policy_name
-        self.policy_dict = policy_dict
+        self.policy_df = policy_df
         self.sec_names = ['ins_loss']
 
     def update(self, lt, out, asset_df):
@@ -1370,14 +1370,18 @@ class InsuredLosses(object):
         :param out: a DataFrame with index (eid, aid)
         :param asset_df: a DataFrame of assets with index "ordinal"
         """
+        if len(out) == 0:
+            return
         out['ins_loss'] = numpy.zeros(len(out))
-        if lt in self.policy_dict and len(out):
-            policy = self.policy_dict[lt]
+        policy_df = self.policy_df[
+            self.policy_df.loss_type == lt].set_index('policy')
+        if len(policy_df):
             for (eid, aid), df in out.iterrows():
                 asset = asset_df.loc[aid]  # aid==ordinal
                 avalue = asset['value-' + lt]
                 policy_idx = asset[self.policy_name]
-                ded, lim = policy[policy_idx]
+                ded = policy_df.loc[policy_idx].deductible
+                lim = policy_df.loc[policy_idx].insurance_limit
                 ins = insured_losses(df.loss, ded * avalue, lim * avalue)
                 out.loc[eid, aid]['ins_loss'] = ins
 
