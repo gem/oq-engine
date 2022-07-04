@@ -272,7 +272,7 @@ multi-tag). For instance, the tag ``occupancy`` has the three values
 
 ``aggregate_by = occupancy``
 
-the engine will store a pandas DataFrame called ``risk_by_event` with a
+the engine will store a pandas DataFrame called ``risk_by_event`` with a
 field ``agg_id`` with 4 possible value: 0 for "Residential", 1 for
 "Industrial", 2 for "Commercial" and 3 for the full aggregation.
 
