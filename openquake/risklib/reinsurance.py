@@ -18,16 +18,19 @@
 
 import pandas as pd
 import numpy as np
+KNOWN_LOSS_TYPES = {
+    'structural', 'nonstructural', 'contents',
+    'value-structural', 'value-nonstructural', 'value-contents'}
 
 
-def reinsured_losses(exposure, losses, policy, treaty):
+def reinsurance_losses(exposure, losses, policy, treaty):
     '''
     Parameters
     ----------
     exposure : DataFrame
-        Exposure in OQ format (asset_id, taxonomy, ...)
+        Exposure in OQ format (id, taxonomy, ...)
     losses : DataFrame
-        Average annual losses per asset (asset_id, structural, ...)
+        Average annual losses per asset (id, structural, ...)
     policy : DataFrame
         Description of policy characteristics in OQ format.
     treaty : DataFrame
@@ -194,6 +197,14 @@ def surplus(row):
     return row
 
 
+def sum_loss_types(df):
+    losses = np.zeros(len(df))
+    for col in df.columns:
+        if col in KNOWN_LOSS_TYPES:
+            losses += df[col]
+    return losses
+
+
 def tot_cost_losses(exposure, losses):
     """
     Estimate total exposed value and total loss considering all loss types
@@ -207,13 +218,10 @@ def tot_cost_losses(exposure, losses):
     assets:
         DataFrame with total exposure and losses
     """
-    exposure['total_cost'] = exposure.structural
-    # + exposure.nonstructural + exposure.contents
-    losses['losses'] = losses.structural
-    # + losses.nonstructural + losses.contents
-    assets = exposure.merge(losses[['asset_id', 'losses']],
-                            how='left',
-                            on='asset_id').fillna(0)
+    exposure['total_cost'] = sum_loss_types(exposure)
+    losses['losses'] = sum_loss_types(losses)
+    assets = exposure.merge(losses[['id', 'losses']],
+                            how='inner', on='id')
     assert assets.losses.sum() != 0, 'No losses in exposure model'
 
     return assets
@@ -225,7 +233,7 @@ def process_insurance(assets, df_policy):
     """
 
     # Create policy dataframe where all values are applicable per "policy_unit"
-    cols = ['asset_id', 'policy', 'total_cost', 'losses']
+    cols = ['id', 'policy', 'total_cost', 'losses']
 
     # -  for policies at "asset" level:
     p_asset = df_policy.policy[df_policy.policy_unit == 'asset']
@@ -274,14 +282,13 @@ def compute_reinsurance(data, reinsurance):
     Returns a DataFrame with the losses for the reinsurance company
     """
     # Identify layers of treaties applicable for each policy
-    data['layers'] = data.treaty.str.split(',')
+    data['layers'] = data.treaty
     mask = ~data.treaty.isna()
-    data['n_layers'] = data[mask].treaty.str.split(',').apply(len)
+    data['n_layers'] = data[mask].treaty.str.count(' ')
 
     # Estimate reinsurance values for first layer
-    print('  estimating reinsurance layer 1')
     df = data.copy()
-    df['treaty'] = data.treaty.str.split(',', expand=True)[0].str.strip()
+    df['treaty'] = data.treaty.str.split(' ', expand=True)[0].str.strip()
     df_ins = df.merge(reinsurance, on='treaty', how='left')
     df_ins = df_ins.apply(apply_treaty, args=[0], axis=1).apply(pd.Series)
 
@@ -291,7 +298,7 @@ def compute_reinsurance(data, reinsurance):
     # ----------
     # 1. UPPER layer retention limit == treaty_limit UNDERLYING layer
 
-    cols = ['asset_id', 'policy', 'retention', 'cession', 'remainder']
+    cols = ['id', 'policy', 'retention', 'cession', 'remainder']
     max_layers = data.n_layers.max().astype(int)
     if max_layers >= 2:
         for n in range(1, max_layers):
@@ -308,7 +315,7 @@ def compute_reinsurance(data, reinsurance):
             # Currently only SURPLUS upper layers are supported
             # The upper layer reinsurance is applied to the remainder
             df_ins = df.copy()
-            df_ins['treaty'] = data.treaty.str.split(',', expand=True)[
+            df_ins['treaty'] = data.treaty.str.split(' ', expand=True)[
                 n].str.strip()
             df_ins = df_ins.merge(reinsurance, on='treaty', how='left')
             assert df_ins['treaty_type'].isin(['surplus', np.nan]).all(), \
@@ -333,4 +340,5 @@ def compute_reinsurance(data, reinsurance):
     else:
         df = df_ins
 
+    df['id'] = df.id.fillna('*')
     return df

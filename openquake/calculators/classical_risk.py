@@ -116,7 +116,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                      for cp in self.crmodel.curve_params
                      if cp.user_provided}
         self.loss_curve_dt = scientific.build_loss_curve_dt(
-            curve_res, insured_losses=False)
+            curve_res, insurance_losses=False)
         ltypes = self.crmodel.loss_types
 
         # loss curves stats are generated always

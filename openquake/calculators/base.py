@@ -720,19 +720,16 @@ class HazardCalculator(BaseCalculator):
         """
         policy_df = general.AccumDict(accum=[])
         for loss_type, fname in zip(ins_types, ins_files):
-            array = hdf5.read_csv(
-                fname, {'insurance_limit': float, 'deductible': float,
-                        None: object}).array
-            policy_name = array.dtype.names[0]
+            df = pandas.read_csv(fname)
+            policy_name = df.columns[0]
             policy_idx = getattr(self.assetcol.tagcol, policy_name + '_idx')
-            treaty = 'treaty' in array.dtype.names
-            for rec in array:
-                policy_df['deductible'].append(rec['deductible'])
-                policy_df['insurance_limit'].append(rec['insurance_limit'])
-                policy_df['policy'].append(policy_idx[rec[policy_name]])
-                policy_df['loss_type'].append(loss_type)
-                if treaty:
-                    policy_df['treaty'].append(rec['treaty'])
+            for col in df.columns:
+                if col == 'policy':
+                    policy_df[col].extend([policy_idx[policy_name]
+                                           for policy_name in df[col]])
+                else:
+                    policy_df[col].extend(df[col])
+            policy_df['loss_type'].extend([loss_type] * len(df))
             if self.policy_name and policy_name != self.policy_name:
                 raise ValueError(
                     'The file %s contains %s as policy field, but we were '
