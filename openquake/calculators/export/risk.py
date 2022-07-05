@@ -620,3 +620,12 @@ def export_aggcurves_csv(ekey, dstore):
         writer.save(pandas.DataFrame(edic), fname, comment=md)
         fnames.append(fname)
     return fnames
+
+
+@export.add(('reinsurance_losses', 'csv'))
+def export_reinsurance(ekey, dstore):
+    dest = dstore.export_path('%s.%s' % ekey)
+    df = dstore.read_df('reinsurance_losses')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    writer.save(df, dest, comment=dstore.metadata)
+    return [dest]
