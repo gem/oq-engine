@@ -702,6 +702,14 @@ class HazardCalculator(BaseCalculator):
         if oq.inputs.get('insurance'):
             k, v = zip(*oq.inputs['insurance'].items())
             self.load_insurance_data(k, v)
+        if oq.inputs.get('reinsurance'):
+            self.treaty_df = pandas.read_csv(oq.inputs['reinsurance'])
+            treaties = set(self.treaty_df.treaty)
+            assert len(treaties) == len(self.treaty_df), 'Not unique treaties'
+            for string in self.policy_df.treaty:
+                for policy in string.split():
+                    assert policy in treaties, policy
+            self.datastore.create_df('treaty_df', self.treaty_df)
         return readinput.exposure
 
     def load_insurance_data(self, ins_types, ins_files):
@@ -715,12 +723,14 @@ class HazardCalculator(BaseCalculator):
                         None: object}).array
             policy_name = array.dtype.names[0]
             policy_idx = getattr(self.assetcol.tagcol, policy_name + '_idx')
-            for pol, ded, lim in array[
-                    [policy_name, 'deductible', 'insurance_limit']]:
-                policy_df['deductible'].append(ded)
-                policy_df['insurance_limit'].append(lim)
-                policy_df['policy'].append(policy_idx[pol])
+            treaty = 'treaty' in array.dtype.names
+            for rec in array:
+                policy_df['deductible'].append(rec['deductible'])
+                policy_df['insurance_limit'].append(rec['insurance_limit'])
+                policy_df['policy'].append(policy_idx[rec[policy_name]])
                 policy_df['loss_type'].append(loss_type)
+                if treaty:
+                    policy_df['treaty'].append(rec['treaty'])
             if self.policy_name and policy_name != self.policy_name:
                 raise ValueError(
                     'The file %s contains %s as policy field, but we were '
