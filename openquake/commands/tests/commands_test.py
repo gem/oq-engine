@@ -401,7 +401,7 @@ class ZipTestCase(unittest.TestCase):
         self.assertEqual(
             ['exposure.csv', 'exposure1.xml', 'gmpe_logic_tree.xml',
              'job_eb.ini', 'policy.csv', 'source_model.xml',
-             'source_model_logic_tree.xml',
+             'source_model_logic_tree.xml', 'treaty.csv',
              'vulnerability_model_nonstco.xml',
              'vulnerability_model_stco.xml'],
             names)
