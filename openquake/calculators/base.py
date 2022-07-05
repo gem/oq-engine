@@ -710,8 +710,8 @@ class HazardCalculator(BaseCalculator):
                 for policy in string.split():
                     assert policy in treaties, policy
             self.datastore.create_df('treaty_df', self.treaty_df)
-        if oq.inputs.get('ground_loss'):  # used in the ReinsuranceCalculator
-            self.ground_loss_df = pandas.read_csv(oq.inputs['ground_loss'])
+        if oq.inputs.get('ins_loss'):  # used in the ReinsuranceCalculator
+            self.ins_loss_df = pandas.read_csv(oq.inputs['ins_loss'])
         return readinput.exposure
 
     def load_insurance_data(self, ins_types, ins_files):
@@ -778,7 +778,7 @@ class HazardCalculator(BaseCalculator):
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_crmodel()  # must be called first
-        if (not oq.imtls and 'shakemap' not in oq.inputs and 'ground_loss'
+        if (not oq.imtls and 'shakemap' not in oq.inputs and 'ins_loss'
                 not in oq.inputs and oq.ground_motion_fields):
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
