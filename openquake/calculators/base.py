@@ -702,6 +702,9 @@ class HazardCalculator(BaseCalculator):
         if oq.inputs.get('insurance'):
             k, v = zip(*oq.inputs['insurance'].items())
             self.load_insurance_data(k, v)
+        if oq.inputs.get('reinsurance'):
+            self.treaty_df = pandas.read_csv(oq.inputs['reinsurance'])
+            self.datastore.create_df('treaty_df', self.treaty_df)
         return readinput.exposure
 
     def load_insurance_data(self, ins_types, ins_files):
