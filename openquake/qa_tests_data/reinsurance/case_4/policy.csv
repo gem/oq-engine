@@ -1,0 +1,7 @@
+﻿policy,policy_unit,liability,deductible,min_deductible,treaty
+V,policy,5400000,0,0,surplus_1 surplus_2
+W,asset,4500000,0,0,surplus_1 surplus_2
+X,asset,3300000,0,0,surplus_1 surplus_2
+Y,asset,0.5,0,0,surplus_1 surplus_2
+Z,asset,200000,0,0,surplus_1 surplus_2
+Additional_P,policy,5000000,125000,0,surplus_1

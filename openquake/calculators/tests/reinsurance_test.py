@@ -26,13 +26,13 @@ class ReinsuranceTestCase(CalculatorTestCase):
         self.run_calc(case_1.__file__, 'job.ini')
 
     def test_case_2(self):
-        pass
+        self.run_calc(case_2.__file__, 'job.ini')
 
     def test_case_3(self):
-        pass
+        self.run_calc(case_3.__file__, 'job.ini')
 
     def test_case_4(self):
-        pass
+        self.run_calc(case_4.__file__, 'job.ini')
 
     def test_case_5(self):
-        pass
+        self.run_calc(case_5.__file__, 'job.ini')
