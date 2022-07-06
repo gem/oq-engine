@@ -1,6 +1,6 @@
 .. Adding a real title here messes with the Heading numbers
 
-OpenQuake-engine Instruction Manual
+OpenQuake-engine Manual |VERSION|
 ===================================
 
 .. section-numbering::
@@ -40,8 +40,8 @@ OpenQuake-engine Instruction Manual
 | **Citation**
 | Please cite this document as:
 | GEM (2022). The OpenQuake-engine User Manual. *Global Earthquake Model
-  (GEM) OpenQuake Manual for Engine version 3.14.0.
-  doi: 10.13117/GEM.OPENQUAKE.MAN.ENGINE.3.14.0*
+  (GEM) OpenQuake Manual for Engine version |VERSION|.
+  doi: 10.13117/GEM.OPENQUAKE.MAN.ENGINE.|VERSION|*
 
 | **Disclaimer**
 | The OpenQuake-engine User Manual is distributed in the hope that it
