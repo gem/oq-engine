@@ -700,10 +700,11 @@ class HazardCalculator(BaseCalculator):
                         ' show them and `oq plot_assets` to plot them' %
                         len(discarded))
         if oq.inputs.get('insurance'):
-            k, v = zip(*oq.inputs['insurance'].items())
-            self.load_insurance_data(k, v)
-        if oq.inputs.get('reinsurance'):
-            self.treaty_df = pandas.read_csv(oq.inputs['reinsurance'])
+            self.load_insurance_data(oq.inputs['insurance'].items())
+        rdic = oq.inputs.get('reinsurance')
+        if rdic:
+            self.treaty_df = pandas.read_csv(rdic.pop('treaty'))
+            self.load_insurance_data(rdic.items())
             treaties = set(self.treaty_df.treaty)
             assert len(treaties) == len(self.treaty_df), 'Not unique treaties'
             for string in self.policy_df.treaty:
@@ -714,12 +715,12 @@ class HazardCalculator(BaseCalculator):
             self.ins_loss_df = pandas.read_csv(oq.inputs['ins_loss'])
         return readinput.exposure
 
-    def load_insurance_data(self, ins_types, ins_files):
+    def load_insurance_data(self, lt_fnames):
         """
         Read the insurance files and populate the policy_df
         """
         policy_df = general.AccumDict(accum=[])
-        for loss_type, fname in zip(ins_types, ins_files):
+        for loss_type, fname in lt_fnames:
             df = pandas.read_csv(fname)
             policy_name = df.columns[0]
             policy_idx = getattr(self.assetcol.tagcol, policy_name + '_idx')

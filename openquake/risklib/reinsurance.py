@@ -73,7 +73,6 @@ def reinsurance_losses(exposure, losses, policy, treaty):
 
     # Estimate absolute liability and deductible at policy_unit
     df = process_insurance(assets, policy)
-
     # Apply reinsurance treaties
     return compute_reinsurance(df, treaty)
 
