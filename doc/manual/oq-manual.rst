@@ -39,9 +39,9 @@ OpenQuake-engine Manual |VERSION|
 
 | **Citation**
 | Please cite this document as:
-| GEM (2022). The OpenQuake-engine User Manual. *Global Earthquake Model
+  GEM (2022). The OpenQuake-engine User Manual. Global Earthquake Model
   (GEM) OpenQuake Manual for Engine version |VERSION|.
-  doi: 10.13117/GEM.OPENQUAKE.MAN.ENGINE.|VERSION|*
+  doi: 10.13117/GEM.OPENQUAKE.MAN.ENGINE. |VERSION|
 
 | **Disclaimer**
 | The OpenQuake-engine User Manual is distributed in the hope that it
