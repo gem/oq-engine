@@ -3047,7 +3047,7 @@ latitude and longitude coordinates.
 
 .. container::
 
-   .. table:: Example of a ground motion fields csv output file for a scenario (`Download example <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/hazard/verbatim/output_scenario_gmfs.csv>`__)
+   .. table:: Example of a ground motion fields csv output file for a scenario (`Download example <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/output_scenario_gmfs.csv>`__)
       :name: output:gmf_scenario
 
       ======== ======= ======= =========== =============== ===============
@@ -3074,7 +3074,7 @@ intensity measure types specified in the job configuration file.
 
 .. container::
 
-   .. table:: Example of a sites csv output file for a scenario (`Download example <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/hazard/verbatim/output_scenario_sites.csv>`__)
+   .. table:: Example of a sites csv output file for a scenario (`Download example <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/output_scenario_sites.csv>`__)
       :name: output:sitemesh
 
       =========== ========== ========
@@ -5286,7 +5286,7 @@ and first few lines of the file Washington.csv in
 .. FIXME table too wide and :width: attribute is not recognised
 
 .. csv-table:: Example exposure csv file
-   :file: oqum/risk/verbatim/input_exposure_wa.csv
+   :file: input_exposure_wa.csv
    :name: input:exposure_csv_wa
    :header-rows: 1
 
@@ -6460,13 +6460,13 @@ coordinates.
    file in the csv format. This file must define Ground Motion Fields for all of the
    intensity measure types used in the *Fragility Model*. (`Download an
    example file
-   here <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/input_scenario_gmfs.csv>`__).
+   here <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/input_scenario_gmfs.csv>`__).
 
 -  ``sites_csv``: a parameter used to define the path to the sites file
    in the csv format. This file must define site id, longitude, and
    latitude for all of the sites for the Ground Motion Fields file provided using
    the ``gmfs_csv`` parameter. (`Download an example file
-   here <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/input_scenario_sites.csv>`__).
+   here <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/input_scenario_sites.csv>`__).
 
 The above calculation(s) can be run using the command line:
 
