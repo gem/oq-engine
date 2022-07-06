@@ -624,9 +624,11 @@ def export_aggcurves_csv(ekey, dstore):
 
 @export.add(('reinsurance_losses', 'csv'))
 def export_reinsurance(ekey, dstore):
+    policy = dstore['assetcol/tagcol'].policy
     dest = dstore.export_path('%s.%s' % ekey)
     fields = 'id policy retention cession remainder'.split()
     df = dstore.read_df('reinsurance_losses')
+    df['policy'] = [policy[idx] for idx in df.policy]
     if 'no_insured' in df.columns:
         fields.append('no_insured')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)

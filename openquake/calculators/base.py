@@ -627,7 +627,7 @@ class HazardCalculator(BaseCalculator):
             calc.datastore.close()
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_weight '
-                'amplifier policy_name policy_df full_lt exported'
+                'amplifier policy_df full_lt exported'
             ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -722,24 +722,16 @@ class HazardCalculator(BaseCalculator):
         policy_df = general.AccumDict(accum=[])
         for loss_type, fname in lt_fnames:
             df = pandas.read_csv(fname)
-            policy_name = df.columns[0]
-            policy_idx = getattr(self.assetcol.tagcol, policy_name + '_idx')
+            policy_idx = getattr(self.assetcol.tagcol, 'policy_idx')
             for col in df.columns:
                 if col == 'policy':
-                    policy_df[col].extend([policy_idx[policy_name]
-                                           for policy_name in df[col]])
+                    policy_df[col].extend([policy_idx[x] for x in df[col]])
                 else:
                     policy_df[col].extend(df[col])
             policy_df['loss_type'].extend([loss_type] * len(df))
-            if self.policy_name and policy_name != self.policy_name:
-                raise ValueError(
-                    'The file %s contains %s as policy field, but we were '
-                    'expecting %s' % (fname, policy_name, self.policy_name))
-            else:
-                self.policy_name = policy_name
         assert policy_df
         self.policy_df = pandas.DataFrame(policy_df)
-        self.datastore.create_df('policy_df', self.policy_df)
+        self.datastore.create_df('policy', self.policy_df)
 
     def load_crmodel(self):
         # to be called before read_exposure
@@ -808,7 +800,6 @@ class HazardCalculator(BaseCalculator):
 
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
-        self.policy_name = ''
         if 'exposure' in oq.inputs:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol

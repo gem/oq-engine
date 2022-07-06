@@ -1359,8 +1359,7 @@ class InsuredLosses(object):
     """
     There is an insured loss for each loss type in the policy dictionary.
     """
-    def __init__(self, policy_name, policy_df):
-        self.policy_name = policy_name
+    def __init__(self, policy_df):
         self.policy_df = policy_df
         self.sec_names = ['ins_loss']
 
@@ -1379,7 +1378,7 @@ class InsuredLosses(object):
             for (eid, aid), df in out.iterrows():
                 asset = asset_df.loc[aid]  # aid==ordinal
                 avalue = asset['value-' + lt]
-                policy_idx = asset[self.policy_name]
+                policy_idx = asset['policy']
                 ded = policy_df.loc[policy_idx].deductible
                 lim = policy_df.loc[policy_idx].insurance_limit
                 ins = insurance_losses(df.loss, ded * avalue, lim * avalue)

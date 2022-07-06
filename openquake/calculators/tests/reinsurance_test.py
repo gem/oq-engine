@@ -22,17 +22,11 @@ from openquake.qa_tests_data.reinsurance import (
 
 class ReinsuranceTestCase(CalculatorTestCase):
 
-    def test_case_1(self):
-        self.run_calc(case_1.__file__, 'job.ini')
-
-    def test_case_2(self):
-        self.run_calc(case_2.__file__, 'job.ini')
-
-    def test_case_3(self):
-        self.run_calc(case_3.__file__, 'job.ini')
-
-    def test_case_4(self):
-        self.run_calc(case_4.__file__, 'job.ini')
-
-    def test_case_5(self):
-        self.run_calc(case_5.__file__, 'job.ini')
+    def test(self):
+        for case in [case_1, case_2, case_3, case_4, case_5]:
+            with self.subTest(case.__name__):
+                out = self.run_calc(case.__file__, 'job.ini',
+                                    exports='csv')
+                [fname] = out['reinsurance_losses', 'csv']
+                self.assertEqualFiles(
+                    'expected/%s' % strip_calc_id(fname), fname)
