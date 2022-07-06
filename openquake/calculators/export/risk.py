@@ -620,3 +620,17 @@ def export_aggcurves_csv(ekey, dstore):
         writer.save(pandas.DataFrame(edic), fname, comment=md)
         fnames.append(fname)
     return fnames
+
+
+@export.add(('reinsurance_losses', 'csv'))
+def export_reinsurance(ekey, dstore):
+    policy = dstore['assetcol/tagcol'].policy
+    dest = dstore.export_path('%s.%s' % ekey)
+    fields = 'id policy retention cession remainder'.split()
+    df = dstore.read_df('reinsurance_losses').sort_values('id')
+    df['policy'] = [policy[idx] for idx in df.policy]
+    if 'no_insured' in df.columns:
+        fields.append('no_insured')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    writer.save(df[fields], dest, comment=dstore.metadata)
+    return [dest]

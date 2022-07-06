@@ -627,7 +627,7 @@ class HazardCalculator(BaseCalculator):
             calc.datastore.close()
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_weight '
-                'amplifier policy_name policy_df full_lt exported'
+                'amplifier policy_df full_lt exported'
             ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -700,10 +700,11 @@ class HazardCalculator(BaseCalculator):
                         ' show them and `oq plot_assets` to plot them' %
                         len(discarded))
         if oq.inputs.get('insurance'):
-            k, v = zip(*oq.inputs['insurance'].items())
-            self.load_insurance_data(k, v)
-        if oq.inputs.get('reinsurance'):
-            self.treaty_df = pandas.read_csv(oq.inputs['reinsurance'])
+            self.load_insurance_data(oq.inputs['insurance'].items())
+        rdic = oq.inputs.get('reinsurance')
+        if rdic:
+            self.treaty_df = pandas.read_csv(rdic.pop('treaty'))
+            self.load_insurance_data(rdic.items())
             treaties = set(self.treaty_df.treaty)
             assert len(treaties) == len(self.treaty_df), 'Not unique treaties'
             for string in self.policy_df.treaty:
@@ -714,31 +715,23 @@ class HazardCalculator(BaseCalculator):
             self.ins_loss_df = pandas.read_csv(oq.inputs['ins_loss'])
         return readinput.exposure
 
-    def load_insurance_data(self, ins_types, ins_files):
+    def load_insurance_data(self, lt_fnames):
         """
         Read the insurance files and populate the policy_df
         """
         policy_df = general.AccumDict(accum=[])
-        for loss_type, fname in zip(ins_types, ins_files):
+        for loss_type, fname in lt_fnames:
             df = pandas.read_csv(fname)
-            policy_name = df.columns[0]
-            policy_idx = getattr(self.assetcol.tagcol, policy_name + '_idx')
+            policy_idx = getattr(self.assetcol.tagcol, 'policy_idx')
             for col in df.columns:
                 if col == 'policy':
-                    policy_df[col].extend([policy_idx[policy_name]
-                                           for policy_name in df[col]])
+                    policy_df[col].extend([policy_idx[x] for x in df[col]])
                 else:
                     policy_df[col].extend(df[col])
             policy_df['loss_type'].extend([loss_type] * len(df))
-            if self.policy_name and policy_name != self.policy_name:
-                raise ValueError(
-                    'The file %s contains %s as policy field, but we were '
-                    'expecting %s' % (fname, policy_name, self.policy_name))
-            else:
-                self.policy_name = policy_name
         assert policy_df
         self.policy_df = pandas.DataFrame(policy_df)
-        self.datastore.create_df('policy_df', self.policy_df)
+        self.datastore.create_df('policy', self.policy_df)
 
     def load_crmodel(self):
         # to be called before read_exposure
@@ -807,7 +800,6 @@ class HazardCalculator(BaseCalculator):
 
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
-        self.policy_name = ''
         if 'exposure' in oq.inputs:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol

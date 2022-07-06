@@ -267,8 +267,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         sec_losses = []  # one insured loss for each loss type with a policy
         oq.D = 2
         if hasattr(self, 'policy_df'):
-            sec_losses.append(
-                InsuredLosses(self.policy_name, self.policy_df))
+            sec_losses.append(InsuredLosses(self.policy_df))
             self.oqparam.D = 3
         oq._sec_losses = sec_losses
         oq.M = len(oq.all_imts())
