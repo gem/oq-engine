@@ -33,7 +33,7 @@ from openquake.baselib.performance import Monitor, split_array, compile, numba
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.tom import registry, get_pnes, FatedTOM
+from openquake.hazardlib.tom import registry, get_pnes, FatedTOM, NegativeBinomialTOM
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
@@ -74,14 +74,25 @@ def concat(ctxs):
     Concatenate context arrays.
     :returns: list with 0, 1 or 2 elements
     """
-    out, parametric, nonparam = [], [], []
+    out, poisson, nonpoisson, nonparam = [], [], [], []
     for ctx in ctxs:
         if numpy.isnan(ctx.occurrence_rate).all():
             nonparam.append(ctx)
+
+        # If ctx has probs_occur and occur_rate is parametric non-poisson
+        elif hasattr(ctx, 'probs_occur') and ctx.probs_occur.shape[1] >= 1:
+            nonpoisson.append(ctx)
         else:
-            parametric.append(ctx)
-    if parametric:
-        out.append(numpy.concatenate(parametric).view(numpy.recarray))
+            poisson.append(ctx)
+    if poisson:
+        out.append(numpy.concatenate(poisson).view(numpy.recarray))
+    if nonpoisson:
+        # Ctxs with the same shape of prob_occur are concatenated
+        # and different shape sets are appended separately
+        for shp in set(ctx.probs_occur.shape[1] for ctx in nonpoisson):
+            p_array = [p for p in nonpoisson
+                       if p.probs_occur.shape[1] == shp]
+            out.append(numpy.concatenate(p_array).view(numpy.recarray))
     if nonparam:
         out.append(numpy.concatenate(nonparam).view(numpy.recarray))
     return out
@@ -439,6 +450,7 @@ class ContextMaker(object):
         dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
+        dic['weight'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
         self.collapser = Collapser(
@@ -480,8 +492,9 @@ class ContextMaker(object):
         """
         :param dstore: a DataStore instance
         :param slice: a slice of contexts with the same grp_id
-        :returns: a list with one or two context arrays
+        :returns: a list of contexts
         """
+        self.src_mutex, self.rup_mutex = dstore['mutex_by_grp'][self.grp_id]
         sitecol = dstore['sitecol'].complete.array
         if slc is None:
             slc = dstore['rup/grp_id'][:] == self.grp_id
@@ -513,9 +526,11 @@ class ContextMaker(object):
         # split parametric vs nonparametric contexts
         nans = numpy.isnan(ctx.occurrence_rate)
         if nans.sum() in (0, len(ctx)):  # no nans or all nans
-            return [ctx]
+            ctxs = [ctx]
         else:
-            return [ctx[nans], ctx[~nans]]
+            # happens in the oq-risk-tests for NZ
+            ctxs = [ctx[nans], ctx[~nans]]
+        return ctxs
 
     def recarray(self, ctxs, magi=None):
         """
@@ -529,17 +544,14 @@ class ContextMaker(object):
             dd['clat'] = numpy.float64(0.)
         if magi is not None:  # magnitude bin used in disaggregation
             dd['magi'] = numpy.uint8(0)
-        if hasattr(ctxs[0], 'weight'):
-            dd['weight'] = numpy.float64(0.)
-            noweight = False
-        else:
-            noweight = True
 
         if not hasattr(ctxs[0], 'probs_occur'):
             for ctx in ctxs:
-                ctx.probs_occur = []
-
-        np = max(len(ctx.probs_occur) for ctx in ctxs)
+                ctx.probs_occur = numpy.zeros(0)
+            np = 0
+        else:
+            shps = [ctx.probs_occur.shape for ctx in ctxs]
+            np = max(i[1] if len(i) > 1 else i[0] for i in shps)
         dd['probs_occur'] = numpy.zeros(np)
 
         C = sum(len(ctx) for ctx in ctxs)
@@ -553,8 +565,8 @@ class ContextMaker(object):
                     val = magi
                 elif par == 'mdvbin':
                     val = 0  # overridden later
-                elif par == 'weight' and noweight:
-                    val = 0.
+                elif par == 'weight':
+                    val = getattr(ctx, par, 0.)
                 else:
                     val = getattr(ctx, par, numpy.nan)
                 getattr(ra, par)[slc] = val
@@ -636,6 +648,10 @@ class ContextMaker(object):
             setattr(ctx, param, value)
         if not hasattr(ctx, 'occurrence_rate'):
             ctx.occurrence_rate = numpy.nan
+        if hasattr(ctx, 'temporal_occurrence_model'):
+            if isinstance(ctx.temporal_occurrence_model, NegativeBinomialTOM):
+                ctx.probs_occur = ctx.temporal_occurrence_model.get_pmf(ctx.occurrence_rate)
+
         return ctx
 
     def get_ctx(self, rup, sites, distances=None):
@@ -666,7 +682,7 @@ class ContextMaker(object):
 
         return ctx
 
-    def _get_ctx(self, mag, planar, sites, src_id):
+    def _get_ctx(self, mag, planar, sites, src_id, tom=None):
         with self.ctx_mon:
             # computing distances
             rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
@@ -721,6 +737,11 @@ class ContextMaker(object):
             # setting site parameters
             for par in self.siteparams:
                 ctx[par] = sites.array[par]  # shape N-> (U, N)
+            if tom:
+                # Reads Probability Mass Function from model and reshapes it
+                # into predetermined shape of probs_occur
+                pmf = tom.get_pmf(planar.wlr[:, 2], n_max=ctx['probs_occur'].shape[2])
+                ctx['probs_occur'] = pmf[:, numpy.newaxis, :]
 
         return ctx
 
@@ -731,7 +752,14 @@ class ContextMaker(object):
         :returns: a list with 0 or 1 context array
         """
         dd = self.defaultdict.copy()
-        dd['probs_occur'] = numpy.zeros(0)
+        tom = src.temporal_occurrence_model
+
+        if isinstance(tom, NegativeBinomialTOM):
+            p_size = tom.get_pmf(max(src.mfd.occurrence_rates)).shape[1]
+            dd['probs_occur'] = numpy.zeros(p_size)
+        else:
+            dd['probs_occur'] = numpy.zeros(0)
+
         if self.fewsites:
             dd['clon'] = numpy.float64(0.)
             dd['clat'] = numpy.float64(0.)
@@ -763,7 +791,12 @@ class ContextMaker(object):
                 pla = numpy.concatenate(planarlist).view(numpy.recarray)
             else:
                 pla = planarlist[0]
-            ctx = self._get_ctx(mag, pla, sites, src.id).flatten()
+
+            if isinstance(tom, NegativeBinomialTOM):
+                ctx = self._get_ctx(mag, pla, sites, src.id, tom).flatten()
+            else:
+                ctx = self._get_ctx(mag, pla, sites, src.id).flatten()
+
             ctxt = ctx[ctx.rrup < magdist[mag]]
             if len(ctxt):
                 ctxs.append(ctxt)
@@ -1224,6 +1257,12 @@ class PmapMaker(object):
         if sites is None:
             return []
         ctxs = self.cmaker.get_ctxs(src, sites)
+        if hasattr(src, 'mutex_weight'):
+            for ctx in ctxs:
+                if ctx.weight.any():
+                    ctx['weight'] *= src.mutex_weight
+                else:
+                    ctx['weight'] = src.mutex_weight
         if self.fewsites:  # keep rupdata in memory (before collapse)
             for ctx in ctxs:
                 self.rupdata.append(ctx)
@@ -1271,10 +1310,7 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
                 cm.get_pmap(ctxs, pm)
-            p = pm
-            if cm.rup_indep:
-                p = ~p
-            p *= src.mutex_weight
+            p = (~pm if cm.rup_indep else pm) * src.mutex_weight
             pmap += p
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)

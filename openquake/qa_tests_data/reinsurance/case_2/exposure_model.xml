@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel category="buildings" id="case_1">
+        <description>
+            Exposure case_1
+        </description>
+        <conversions>
+            <costTypes>
+                <costType name="structural" type="per_asset" unit="EUR"/>
+            </costTypes>
+        </conversions>
+        <occupancyPeriods/>
+        <tagNames>policy</tagNames>
+        <assets>
+            exposure_model.csv
+        </assets>
+    </exposureModel>
+</nrml>

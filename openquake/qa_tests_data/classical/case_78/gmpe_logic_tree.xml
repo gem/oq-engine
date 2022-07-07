@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="GMPE"
+    >
+        <logicTreeBranchingLevel
+        branchingLevelID="GMPE_BL"
+        >
+            <logicTreeBranchSet
+            branchSetID="GMPE_BS"
+            applyToTectonicRegionType="Active Shallow Crust"
+            uncertaintyType="gmpeModel"
+            >
+                <logicTreeBranch
+                branchID="AbrahamsonEtAl2014"
+                >
+                    <uncertaintyModel>
+                        AbrahamsonEtAl2014
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        1.0
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                    
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>

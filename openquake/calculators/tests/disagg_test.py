@@ -29,8 +29,8 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.tests.classical_test import check_disagg_by_src
 from openquake.qa_tests_data.disagg import (
-    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
-    case_master)
+    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
+    case_10, case_master)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -201,3 +201,16 @@ class DisaggregationTestCase(CalculatorTestCase):
         # test mre results
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
+
+    def test_case_9(self):
+        # test mutex disaggregation. Results checked against hand-computed
+        # values (mp - 2022.06.28)
+        self.run_calc(case_9.__file__, 'job.ini')
+        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
+
+    def test_case_10(self):
+        # test single magnitude
+        self.run_calc(case_10.__file__, 'job.ini')
+        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/Mag-0.csv', fname)

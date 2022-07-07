@@ -39,7 +39,7 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
     case_66, case_67, case_68, case_69, case_70, case_71, case_72, case_73,
-    case_74, case_75, case_76, case_77)
+    case_74, case_75, case_76, case_77, case_78)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -470,7 +470,7 @@ hazard_uhs-std.csv
         self.assertEqual(tot_probs_occur, 28)  # 14 x 2
 
         # make sure there is an error when trying to disaggregate
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(IndexError):
             hc_id = str(self.calc.datastore.calc_id)
             self.run_calc(case_27.__file__, 'job.ini',
                           hazard_calculation_id=hc_id,
@@ -1065,3 +1065,10 @@ hazard_uhs-std.csv
         self.run_calc(case_77.__file__, 'job.ini')
         [f1] = export(('uhs/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/uhs-mean.csv', f1)
+
+    def test_case_78(self):
+        # test calculation for modifiable GMPE with original tabular GMM
+        self.run_calc(case_78.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA_NegBinomTest.csv', f1)
+

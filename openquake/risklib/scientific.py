@@ -1040,7 +1040,7 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
 # Insured Losses
 #
 
-def insured_losses(losses, deductible, insured_limit):
+def insurance_losses(losses, deductible, insured_limit):
     """
     :param losses: an array of ground-up loss ratios
     :param float deductible: the deductible limit in fraction form
@@ -1049,7 +1049,7 @@ def insured_losses(losses, deductible, insured_limit):
     Compute insured losses for the given asset and losses, from the point
     of view of the insurance company. For instance:
 
-    >>> insured_losses(numpy.array([3, 20, 101]), 5, 100)
+    >>> insurance_losses(numpy.array([3, 20, 101]), 5, 100)
     array([ 0, 15, 95])
 
     - if the loss is 3 (< 5) the company does not pay anything
@@ -1062,7 +1062,7 @@ def insured_losses(losses, deductible, insured_limit):
         [0, insured_limit - deductible, lambda x: x - deductible])
 
 
-def insured_loss_curve(curve, deductible, insured_limit):
+def insurance_loss_curve(curve, deductible, insured_limit):
     """
     Compute an insured loss ratio curve given a loss ratio curve
 
@@ -1072,7 +1072,7 @@ def insured_loss_curve(curve, deductible, insured_limit):
 
     >>> losses = numpy.array([3, 20, 101])
     >>> poes = numpy.array([0.9, 0.5, 0.1])
-    >>> insured_loss_curve(numpy.array([losses, poes]), 5, 100)
+    >>> insurance_loss_curve(numpy.array([losses, poes]), 5, 100)
     array([[ 3.        , 20.        ],
            [ 0.85294118,  0.5       ]])
     """
@@ -1206,11 +1206,11 @@ def normalize_curves_eb(curves):
     return loss_ratios, numpy.array(curves_poes)
 
 
-def build_loss_curve_dt(curve_resolution, insured_losses=False):
+def build_loss_curve_dt(curve_resolution, insurance_losses=False):
     """
     :param curve_resolution:
         dictionary loss_type -> curve_resolution
-    :param insured_losses:
+    :param insurance_losses:
         configuration parameter
     :returns:
        loss_curve_dt
@@ -1221,7 +1221,7 @@ def build_loss_curve_dt(curve_resolution, insured_losses=False):
         pairs = [('losses', (F32, C)), ('poes', (F32, C))]
         lc_dt = numpy.dtype(pairs)
         lc_list.append((str(lt), lc_dt))
-    if insured_losses:
+    if insurance_losses:
         for lt in sorted(curve_resolution):
             C = curve_resolution[lt]
             pairs = [('losses', (F32, C)), ('poes', (F32, C))]
@@ -1359,9 +1359,8 @@ class InsuredLosses(object):
     """
     There is an insured loss for each loss type in the policy dictionary.
     """
-    def __init__(self, policy_name, policy_dict):
-        self.policy_name = policy_name
-        self.policy_dict = policy_dict
+    def __init__(self, policy_df):
+        self.policy_df = policy_df
         self.sec_names = ['ins_loss']
 
     def update(self, lt, out, asset_df):
@@ -1370,15 +1369,19 @@ class InsuredLosses(object):
         :param out: a DataFrame with index (eid, aid)
         :param asset_df: a DataFrame of assets with index "ordinal"
         """
+        if len(out) == 0:
+            return
         out['ins_loss'] = numpy.zeros(len(out))
-        if lt in self.policy_dict and len(out):
-            policy = self.policy_dict[lt]
+        policy_df = self.policy_df[
+            self.policy_df.loss_type == lt].set_index('policy')
+        if len(policy_df):
             for (eid, aid), df in out.iterrows():
                 asset = asset_df.loc[aid]  # aid==ordinal
                 avalue = asset['value-' + lt]
-                policy_idx = asset[self.policy_name]
-                ded, lim = policy[policy_idx]
-                ins = insured_losses(df.loss, ded * avalue, lim * avalue)
+                policy_idx = asset['policy']
+                ded = policy_df.loc[policy_idx].deductible
+                lim = policy_df.loc[policy_idx].insurance_limit
+                ins = insurance_losses(df.loss, ded * avalue, lim * avalue)
                 out.loc[eid, aid]['ins_loss'] = ins
 
 

@@ -627,7 +627,7 @@ class HazardCalculator(BaseCalculator):
             calc.datastore.close()
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_weight '
-                'amplifier policy_name policy_dict full_lt exported'
+                'amplifier policy_df full_lt exported'
             ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -700,32 +700,38 @@ class HazardCalculator(BaseCalculator):
                         ' show them and `oq plot_assets` to plot them' %
                         len(discarded))
         if oq.inputs.get('insurance'):
-            k, v = zip(*oq.inputs['insurance'].items())
-            self.load_insurance_data(k, v)
+            self.load_insurance_data(oq.inputs['insurance'].items())
+        rdic = oq.inputs.get('reinsurance')
+        if rdic:
+            self.treaty_df = pandas.read_csv(rdic.pop('treaty'))
+            self.load_insurance_data(rdic.items())
+            treaties = set(self.treaty_df.treaty)
+            assert len(treaties) == len(self.treaty_df), 'Not unique treaties'
+            for string in self.policy_df.treaty:
+                for policy in string.split():
+                    assert policy in treaties, policy
+            self.datastore.create_df('treaty_df', self.treaty_df)
+        if oq.inputs.get('ins_loss'):  # used in the ReinsuranceCalculator
+            self.ins_loss_df = pandas.read_csv(oq.inputs['ins_loss'])
         return readinput.exposure
 
-    def load_insurance_data(self, ins_types, ins_files):
+    def load_insurance_data(self, lt_fnames):
         """
-        Read the insurance files and populate the policy_dict
+        Read the insurance files and populate the policy_df
         """
-        for loss_type, fname in zip(ins_types, ins_files):
-            array = hdf5.read_csv(
-                fname, {'insurance_limit': float, 'deductible': float,
-                        None: object}).array
-            policy_name = array.dtype.names[0]
-            policy_idx = getattr(self.assetcol.tagcol, policy_name + '_idx')
-            insurance = numpy.zeros((len(policy_idx), 2))
-            for pol, ded, lim in array[
-                    [policy_name, 'deductible', 'insurance_limit']]:
-                insurance[policy_idx[pol]] = ded, lim
-            self.policy_dict[loss_type] = insurance
-            if self.policy_name and policy_name != self.policy_name:
-                raise ValueError(
-                    'The file %s contains %s as policy field, but we were '
-                    'expecting %s' % (fname, policy_name, self.policy_name))
-            else:
-                self.policy_name = policy_name
-        self.datastore['policy_dict'] = self.policy_dict
+        policy_df = general.AccumDict(accum=[])
+        for loss_type, fname in lt_fnames:
+            df = pandas.read_csv(fname)
+            policy_idx = getattr(self.assetcol.tagcol, 'policy_idx')
+            for col in df.columns:
+                if col == 'policy':
+                    policy_df[col].extend([policy_idx[x] for x in df[col]])
+                else:
+                    policy_df[col].extend(df[col])
+            policy_df['loss_type'].extend([loss_type] * len(df))
+        assert policy_df
+        self.policy_df = pandas.DataFrame(policy_df)
+        self.datastore.create_df('policy', self.policy_df)
 
     def load_crmodel(self):
         # to be called before read_exposure
@@ -762,8 +768,8 @@ class HazardCalculator(BaseCalculator):
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_crmodel()  # must be called first
-        if (not oq.imtls and 'shakemap' not in oq.inputs
-                and oq.ground_motion_fields):
+        if (not oq.imtls and 'shakemap' not in oq.inputs and 'ins_loss'
+                not in oq.inputs and oq.ground_motion_fields):
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
         elif oq.hazard_calculation_id:
@@ -794,8 +800,6 @@ class HazardCalculator(BaseCalculator):
 
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
-        self.policy_name = ''
-        self.policy_dict = {}
         if 'exposure' in oq.inputs:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
@@ -1315,7 +1319,7 @@ def create_risk_by_event(calc):
     crmodel = calc.crmodel
     if 'risk' in oq.calculation_mode:
         fields = [('loss', F32)]
-        if calc.policy_dict:
+        if hasattr(calc, 'policy_df'):
             fields.append(('ins_loss', F32))
         descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
                  ('variance', F32)] + fields

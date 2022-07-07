@@ -763,7 +763,8 @@ ALL_CALCULATORS = ['classical_risk',
                    'preclassical',
                    'conditional_spectrum',
                    'event_based_damage',
-                   'scenario_damage']
+                   'scenario_damage',
+                   'reinsurance_risk']
 
 
 def check_same_levels(imtls):
@@ -794,7 +795,8 @@ class OqParam(valid.ParamSet):
     _input_files = ()  # set in get_oqparam
     KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
                     'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
-                    'source_model_logic_tree', 'hazard_curves', 'insurance',
+                    'source_model_logic_tree', 'hazard_curves',
+                    'insurance', 'reinsurance', 'ins_loss',
                     'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
                     'fragility', 'consequence', 'reqv', 'input_zip',
                     'amplification',
@@ -1589,6 +1591,14 @@ class OqParam(valid.ParamSet):
         return (self.calculation_mode in
                 'event_based_risk ebrisk event_based_damage')
 
+    def is_valid_disagg_by_src(self):
+        """
+        disagg_by_src can be set only if ps_grid_spacing = 0
+        """
+        if self.disagg_by_src:
+            return self.ps_grid_spacing == 0
+        return True
+
     def is_valid_shakemap(self):
         """
         hazard_calculation_id must be set if shakemap_id is set
@@ -1822,7 +1832,8 @@ class OqParam(valid.ParamSet):
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
                 'multi_peril' in self.inputs or 'rupture_model' in self.inputs
-                or 'scenario' in self.calculation_mode):
+                or 'scenario' in self.calculation_mode
+                or 'ins_loss' in self.inputs):
             return
         if ('source_model_logic_tree' not in self.inputs and
                 self.inputs['job_ini'] != '<in-memory>' and
