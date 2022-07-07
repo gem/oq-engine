@@ -372,12 +372,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
         E = len(numpy.unique(eids))
         K = self.oqparam.K
-        names = {'loss', 'variance'}
-        for sec_loss in self.oqparam._sec_losses:
-            names.update(sec_loss.sec_names)
-        D = len(names)
-        logging.info('Risk parameters (rel_E={:_d}, K={:_d}, L={}, D={})'.
-                     format(E, K, self.L, D))
+        logging.info('Risk parameters (rel_E={:_d}, K={:_d}, L={})'.
+                     format(E, K, self.L))
 
     def agg_dicts(self, dummy, dic):
         """
