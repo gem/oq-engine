@@ -197,6 +197,9 @@ def surplus(row):
 
 
 def sum_loss_types(df):
+    """
+    :returns: structural (+ nonstructural) (+ contents)
+    """
     losses = np.zeros(len(df))
     for col in df.columns:
         if col in KNOWN_LOSS_TYPES:
@@ -218,9 +221,9 @@ def tot_cost_losses(exposure, losses):
         DataFrame with total exposure and losses
     """
     exposure['total_cost'] = sum_loss_types(exposure)
-    losses['losses'] = sum_loss_types(losses)
-    assets = exposure.merge(losses[['id', 'losses']],
-                            how='inner', on='id')
+    sum_losses = pd.DataFrame(
+        dict(id=losses.id.to_numpy(), losses=sum_loss_types(losses)))
+    assets = exposure.merge(sum_losses, how='inner', on='id')
     assert assets.losses.sum() != 0, 'No losses in exposure model'
 
     return assets
@@ -230,6 +233,7 @@ def process_insurance(assets, df_policy):
     """
     Estimate effective values for the specified "policy_units"
     """
+    del df_policy['loss_type']  # TODO: multiple loss_types are wrong
 
     # Create policy dataframe where all values are applicable per "policy_unit"
     cols = ['id', 'policy', 'total_cost', 'losses']
@@ -255,14 +259,13 @@ def process_insurance(assets, df_policy):
 
     # Effective deductible
     df.deductible = df[['deductible', 'min_deductible']].max(axis=1)
-    df.deductible.fillna(0, inplace=True)
     df.drop(columns={'min_deductible'}, inplace=True)
 
     # When losses > liability, only cover up to the liability value
     # Include column for no_insured losses when applicable
     no_insured = df['losses'] - df['liability']
     no_insured[no_insured <= 0] = 0  # Minimum no_insured = 0
-    if any(no_insured > 0):
+    if any(no_insured):
         df['no_insured'] = no_insured
 
     # Estimate claim
@@ -301,7 +304,6 @@ def compute_reinsurance(data, reinsurance):
     max_layers = data.n_layers.max().astype(int)
     if max_layers >= 2:
         for n in range(1, max_layers):
-            print(f'  estimating reinsurance layer {n + 1}')
 
             # Get previous layer estimates
             layer_n = df_ins.loc[:, cols]
@@ -339,5 +341,5 @@ def compute_reinsurance(data, reinsurance):
     else:
         df = df_ins
 
-    df['id'] = df.id.fillna('*')
+    df.id.fillna('*', inplace=True)  # aggregate results
     return df
