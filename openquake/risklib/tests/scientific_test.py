@@ -398,40 +398,40 @@ class InsuredLossesTestCase(unittest.TestCase):
     def test_below_deductible(self):
         numpy.testing.assert_allclose(
             [0],
-            scientific.insurance_losses(numpy.array([0.05]), 0.1, 1))
+            scientific.insured_losses(numpy.array([0.05]), 0.1, 1))
         numpy.testing.assert_allclose(
             [0, 0],
-            scientific.insurance_losses(numpy.array([0.05, 0.1]), 0.1, 1))
+            scientific.insured_losses(numpy.array([0.05, 0.1]), 0.1, 1))
 
     def test_above_limit(self):
         numpy.testing.assert_allclose(
             [0.4],
-            scientific.insurance_losses(numpy.array([0.6]), 0.1, 0.5))
+            scientific.insured_losses(numpy.array([0.6]), 0.1, 0.5))
         numpy.testing.assert_allclose(
             [0.4, 0.4],
-            scientific.insurance_losses(numpy.array([0.6, 0.7]), 0.1, 0.5))
+            scientific.insured_losses(numpy.array([0.6, 0.7]), 0.1, 0.5))
 
     def test_in_range(self):
         numpy.testing.assert_allclose(
             [0.2],
-            scientific.insurance_losses(numpy.array([0.3]), 0.1, 0.5))
+            scientific.insured_losses(numpy.array([0.3]), 0.1, 0.5))
         numpy.testing.assert_allclose(
             [0.2, 0.3],
-            scientific.insurance_losses(numpy.array([0.3, 0.4]), 0.1, 0.5))
+            scientific.insured_losses(numpy.array([0.3, 0.4]), 0.1, 0.5))
 
     def test_mixed(self):
         numpy.testing.assert_allclose(
             [0, 0.1, 0.4],
-            scientific.insurance_losses(numpy.array([0.05, 0.2, 0.6]), 0.1, 0.5))
+            scientific.insured_losses(numpy.array([0.05, 0.2, 0.6]), 0.1, 0.5))
 
     def test_mean(self):
         losses1 = numpy.array([0.05, 0.2, 0.6])
         losses2 = numpy.array([0.01, 0.1, 0.3, 0.55])
         l1 = len(losses1)
         l2 = len(losses2)
-        m1 = scientific.insurance_losses(losses1, 0.1, 0.5).mean()
-        m2 = scientific.insurance_losses(losses2, 0.1, 0.5).mean()
-        m = scientific.insurance_losses(numpy.concatenate([losses1, losses2]),
+        m1 = scientific.insured_losses(losses1, 0.1, 0.5).mean()
+        m2 = scientific.insured_losses(losses2, 0.1, 0.5).mean()
+        m = scientific.insured_losses(numpy.concatenate([losses1, losses2]),
                                       0.1, 0.5).mean()
         numpy.testing.assert_allclose((m1 * l1 + m2 * l2) / (l1 + l2), m)
 

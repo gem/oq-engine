@@ -20,6 +20,7 @@ import os.path
 import logging
 import operator
 import itertools
+from functools import partial
 import numpy
 import pandas
 from scipy import sparse
@@ -27,7 +28,7 @@ from scipy import sparse
 from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
-from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
+from openquake.risklib.scientific import insurance_losses, MultiEventRNG
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
     PostRiskCalculator, post_aggregate, fix_dtypes)
@@ -267,7 +268,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         sec_losses = []  # one insured loss for each loss type with a policy
         oq.D = 2
         if hasattr(self, 'policy_df'):
-            sec_losses.append(InsuredLosses(self.policy_df))
+            sec_losses.append(
+                partial(insurance_losses, policy_df=self.policy_df))
             self.oqparam.D = 3
         oq._sec_losses = sec_losses
         oq.M = len(oq.all_imts())
