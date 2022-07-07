@@ -25,23 +25,17 @@ KNOWN_LOSS_TYPES = {
 
 def reinsurance_losses(exposure, losses, policy, treaty):
     '''
-    Parameters
-    ----------
-    exposure : DataFrame
+    :param DataFrame exposure:
         Exposure in OQ format (id, taxonomy, ...)
-    losses : DataFrame
+    :param DataFrame losses:
         Average annual losses per asset (id, structural, ...)
-    policy : DataFrame
+    :param DataFrame policy:
         Description of policy characteristics in OQ format.
-    treaty : DataFrame
+    :param DataFrame treaty:
         Description of reinsurance characteristics in OQ format.
-
-    Returns
-    -------
-
-    Complete DataFrame with calculation details.
+    :returns:
+        Complete DataFrame with calculation details.
     '''
-
     # Input validation (to be implemented):
     # ------------------------------------------------------------------------
     #  EXPOSURE MODEL
