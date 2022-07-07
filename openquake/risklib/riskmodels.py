@@ -720,9 +720,11 @@ class CompositeRiskModel(collections.abc.Mapping):
         alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
         event = hasattr(haz, 'eid')  # else classical (haz.array)
         dic = {}
+        rdic, wdic = self.get_rwdics(taxoidx)
         for lt in self.loss_types:
             outs = []  # list of DataFrames
-            rmodels, weights = self.get_rmodels_weights(lt, taxoidx)
+            rmodels = [rdic[k] for k in rdic if k[1] == lt]  # k =(key, lt)
+            weights = [wdic[k] for k in rdic if k[1] == lt]  # k =(key, lt)
             for rm in rmodels:
                 if len(rm.imt_by_lt) == 1:
                     # TODO: if `check_risk_ids` will raise an error then
@@ -752,15 +754,16 @@ class CompositeRiskModel(collections.abc.Mapping):
                 dic[lt] = outs[0]
         return dic
 
-    def get_rmodels_weights(self, loss_type, taxidx):
+    def get_rwdics(self, taxidx):
         """
-        :returns: a list of weighted risk models for the given taxonomy index
+        :returns: (rdic, wdic)
         """
-        rmodels, weights = [], []
-        for key, weight in self.tmap[loss_type][taxidx]:
-            rmodels.append(self._riskmodels[key])
-            weights.append(weight)
-        return rmodels, weights
+        rdic, wdic = {}, {}
+        for lt in self.loss_types:
+            for key, weight in self.tmap[lt][taxidx]:
+                rdic[key, lt] = self._riskmodels[key]
+                wdic[key, lt] = weight
+        return rdic, wdic
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))
