@@ -28,7 +28,7 @@ import pandas
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
 from openquake.baselib.general import AccumDict, cached_property, groupby
-from openquake.hazardlib import valid, nrml, stats, InvalidFile
+from openquake.hazardlib import valid, nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
 
