@@ -752,28 +752,6 @@ class CompositeRiskModel(collections.abc.Mapping):
                 dic[lt] = outs[0]
         return dic
 
-    def get_interp_ratios(self, taxo, gmf_df):
-        """
-        :returns: a dictionary loss_type -> loss ratios DataFrame
-        """
-        alias = {imt: 'gmv_%d' % i for i, imt in enumerate(self.primary_imtls)}
-        dic = {}  # lt -> ratio_df
-        for lt in self.loss_types:
-            rmodels, weights = self.get_rmodels_weights(lt, taxo)
-            outs = []
-            for rm in rmodels:
-                imt = rm.imt_by_lt[lt]
-                rf = rm.risk_functions[lt, 'vulnerability']
-                out = rf.interpolate(gmf_df, alias.get(imt, imt))
-                outs.append(out)
-            if len(outs) > 1:
-                dic[lt] = stats.average_df(outs, weights)
-                # ARGHH! doing the average on the eid field produces floats!
-                dic[lt].eid = U32(numpy.round(dic[lt].eid))
-            else:
-                dic[lt] = outs[0]
-        return dic
-
     def get_rmodels_weights(self, loss_type, taxidx):
         """
         :returns: a list of weighted risk models for the given taxonomy index
