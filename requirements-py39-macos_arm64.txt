@@ -3,7 +3,7 @@
 
 # GEM Mirror
 #
-https://wheelhouse.openquake.org/v3/macos/py/setuptools-62.6.0-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/setuptools-63.1.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/wheel-0.37.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/docutils-0.14-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/decorator-4.4.2-py2.py3-none-any.whl
