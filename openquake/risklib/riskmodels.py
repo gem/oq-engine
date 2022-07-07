@@ -719,32 +719,30 @@ class CompositeRiskModel(collections.abc.Mapping):
         primary = self.primary_imtls
         alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
         event = hasattr(haz, 'eid')  # else classical (haz.array)
-        dic = {}
-        rdic, wdic = self.get_rwdics(taxoidx)
+        dic = {}  # lt -> df
+        out = {}  # (key, lt) -> df
+        rdic, wdic = self._rwdics(taxoidx)
+        for key, lt in rdic:
+            rm = rdic[key, lt]
+            if len(rm.imt_by_lt) == 1:
+                # TODO: if `check_risk_ids` will raise an error then
+                # this code branch will never run
+                [(lt, imt)] = rm.imt_by_lt.items()
+            else:
+                imt = rm.imt_by_lt[lt]
+            col = alias.get(imt, imt)
+            if event:
+                out[key, lt] = rm(lt, asset_df, haz, col, rndgen)
+            else:  # classical
+                out[key, lt] = rm(lt, asset_df, haz.array[self.imtls(imt), 0])
+            for sec_loss in sec_losses:
+                sec_loss.update(lt, out[key, lt], asset_df)
         for lt in self.loss_types:
-            outs = []  # list of DataFrames
-            rmodels = [rdic[k] for k in rdic if k[1] == lt]  # k =(key, lt)
-            weights = [wdic[k] for k in rdic if k[1] == lt]  # k =(key, lt)
-            for rm in rmodels:
-                if len(rm.imt_by_lt) == 1:
-                    # TODO: if `check_risk_ids` will raise an error then
-                    # this code branch will never run
-                    [(lt, imt)] = rm.imt_by_lt.items()
-                else:
-                    imt = rm.imt_by_lt[lt]
-                col = alias.get(imt, imt)
-                if event:
-                    out = rm(lt, asset_df, haz, col, rndgen)
-                else:  # classical
-                    hcurve = haz.array[self.imtls(imt), 0]
-                    out = rm(lt, asset_df, hcurve)
-                for sec_loss in sec_losses:
-                    sec_loss.update(lt, out, asset_df)
-                outs.append(out)
-            if len(outs) > 1 and hasattr(out, 'loss'):
+            outs = [out[k] for k in out if k[1] == lt]
+            weights = [wdic[k] for k in wdic if k[1] == lt]
+            if len(outs) > 1 and hasattr(out[key, lt], 'loss'):
                 # computing the average dataframe
-                df = pandas.concat(
-                    [out * w for out, w in zip(outs, weights)])
+                df = pandas.concat([o * w for o, w in zip(outs, weights)])
                 dic[lt] = df.groupby(['eid', 'aid']).sum()
             elif len(outs) > 1:
                 # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
@@ -754,10 +752,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 dic[lt] = outs[0]
         return dic
 
-    def get_rwdics(self, taxidx):
-        """
-        :returns: (rdic, wdic)
-        """
+    def _rwdics(self, taxidx):
         rdic, wdic = {}, {}
         for lt in self.loss_types:
             for key, weight in self.tmap[lt][taxidx]:
