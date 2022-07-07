@@ -22,6 +22,8 @@ https://wheelhouse.openquake.org/v3/macos/py/pyparsing-2.4.0-py2.py3-none-any.wh
 https://wheelhouse.openquake.org/v3/macos/py/cycler-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/toml-0.10.2-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/pyparsing-2.4.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/cycler-0.10.0-py2.py3-none-any.whl
 # 
 # 
 https://wheelhouse.openquake.org/macos/arm64/six-1.16.0-py2.py3-none-any.whl
@@ -40,7 +42,4 @@ https://wheelhouse.openquake.org/macos/arm64/Pillow-9.1.1-cp39-cp39-macosx_11_0_
 https://wheelhouse.openquake.org/macos/arm64/tornado-6.1-cp39-cp39-macosx_12_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/GDAL-3.5.0.3-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/pyproj-3.3.2.dev0-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/v3/macos/py/python_dateutil-2.8.0-py2.py3-none-any.whl
 #
-https://wheelhouse.openquake.org/v3/macos/py/pyparsing-2.4.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/macos/py/cycler-0.10.0-py2.py3-none-any.whl
