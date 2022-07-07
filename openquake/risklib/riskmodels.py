@@ -721,7 +721,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         event = hasattr(haz, 'eid')  # else classical (haz.array)
         dic = {}  # lt -> df
         out = {}  # (key, lt) -> df
-        rdic, wdic = self._rwdics(taxoidx)
+        rdic, wdic = self.get_rwdics(taxoidx)
         for key, lt in rdic:
             rm = rdic[key, lt]
             if len(rm.imt_by_lt) == 1:
@@ -752,7 +752,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 dic[lt] = outs[0]
         return dic
 
-    def _rwdics(self, taxidx):
+    def get_rwdics(self, taxidx):
         rdic, wdic = {}, {}
         for lt in self.loss_types:
             for key, weight in self.tmap[lt][taxidx]:

@@ -48,7 +48,7 @@ def get_dmg_csq(crm, assets_by_site, gmf):
         df = pandas.DataFrame(dict(peril=[gmv]))
         group = general.group_array(assets, 'taxonomy')
         for taxonomy, assets in group.items():
-            rdic, wdic = crm._rwdics(taxonomy)
+            rdic = crm.get_rwdics(taxonomy)[0]
             for li, loss_type in enumerate(crm.loss_types):
                 # NB: risk logic trees are not yet supported in multi_risk
                 [rm] = [rdic[k] for k in rdic if k[1] == loss_type]
