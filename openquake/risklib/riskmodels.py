@@ -735,9 +735,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                 out[key, lt] = rm(lt, asset_df, haz, col, rndgen)
             else:  # classical
                 out[key, lt] = rm(lt, asset_df, haz.array[self.imtls(imt), 0])
-        for sec_loss in sec_losses:
-            for key, lt in rdic:
-                sec_loss.update(lt, out[key, lt], asset_df)
+
+        for update_losses in sec_losses:
+            update_losses(asset_df, out)
         for lt in self.loss_types:
             outs = [out[k] for k in out if k[1] == lt]
             weights = [wdic[k] for k in wdic if k[1] == lt]

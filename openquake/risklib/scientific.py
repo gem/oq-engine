@@ -1040,7 +1040,7 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
 # Insured Losses
 #
 
-def insurance_losses(losses, deductible, insured_limit):
+def insured_losses(losses, deductible, insured_limit):
     """
     :param losses: an array of ground-up loss ratios
     :param float deductible: the deductible limit in fraction form
@@ -1049,7 +1049,7 @@ def insurance_losses(losses, deductible, insured_limit):
     Compute insured losses for the given asset and losses, from the point
     of view of the insurance company. For instance:
 
-    >>> insurance_losses(numpy.array([3, 20, 101]), 5, 100)
+    >>> insured_losses(numpy.array([3, 20, 101]), 5, 100)
     array([ 0, 15, 95])
 
     - if the loss is 3 (< 5) the company does not pay anything
@@ -1355,33 +1355,25 @@ class LossCurvesMapsBuilder(object):
             losses, self.return_periods, self.num_events[rlzi], self.eff_time)
 
 
-class InsuredLosses(object):
+def insurance_losses(asset_df, losses_by_rl, policy_df):
     """
-    There is an insured loss for each loss type in the policy dictionary.
+    :param asset_df: DataFrame of assets
+    :param losses_by_rl: riskid, lt -> DataFrame[eid, aid]
+    :param asset_df: a DataFrame of assets with index "ordinal"
     """
-    def __init__(self, policy_df):
-        self.policy_df = policy_df
-        self.sec_names = ['ins_loss']
-
-    def update(self, lt, out, asset_df):
-        """
-        :param lt: a loss type string
-        :param out: a DataFrame with index (eid, aid)
-        :param asset_df: a DataFrame of assets with index "ordinal"
-        """
+    for (riskid, lt), out in losses_by_rl.items():
         if len(out) == 0:
-            return
+            continue
         out['ins_loss'] = numpy.zeros(len(out))
-        policy_df = self.policy_df[
-            self.policy_df.loss_type == lt].set_index('policy')
-        if len(policy_df):
+        policy = policy_df[policy_df.loss_type == lt].set_index('policy')
+        if len(policy):
             for (eid, aid), df in out.iterrows():
                 asset = asset_df.loc[aid]  # aid==ordinal
                 avalue = asset['value-' + lt]
                 policy_idx = asset['policy']
-                ded = policy_df.loc[policy_idx].deductible
-                lim = policy_df.loc[policy_idx].insurance_limit
-                ins = insurance_losses(df.loss, ded * avalue, lim * avalue)
+                ded = policy.loc[policy_idx].deductible
+                lim = policy.loc[policy_idx].insurance_limit
+                ins = insured_losses(df.loss, ded * avalue, lim * avalue)
                 out.loc[eid, aid]['ins_loss'] = ins
 
 
