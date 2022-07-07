@@ -754,6 +754,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         return dic
 
     def get_rwdics(self, taxidx):
+        """
+        :param taxidx: taxonomy index
+        :returns: (rdic, wdic) dictionaries (riskid, lt) -> riskmodel or weight
+        """
         rdic, wdic = {}, {}
         for lt in self.loss_types:
             for key, weight in self.tmap[lt][taxidx]:
