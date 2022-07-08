@@ -35,7 +35,7 @@ from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, read_cmakers
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
@@ -515,6 +515,25 @@ def extract_rup_ids(dstore, what):
     data['rup_id'] = dstore['rup/rup_id'][:]
     data = numpy.unique(data)
     return data
+
+
+# for debugging classical calculations with few sites
+@extract.add('mean_by_rup')
+def extract_mean_by_rup(dstore, what):
+    """
+    Extract src_id, rup_id, mean from the stored contexts
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/mean_by_rup
+    """
+    N = len(dstore['sitecol'])
+    assert N == 1
+    out = []
+    for cmaker in read_cmakers(dstore):
+        for ctx in cmaker.read_ctxs(dstore):
+            # shape (4, G, M, U) => U
+            means = cmaker.get_mean_stds([ctx])[0].mean(axis=(0, 1))
+            out.extend(zip(ctx.src_id, ctx.rup_id, means))
+    return numpy.array(out, [('src_id', U32), ('rup_id', U32), ('mean', F64)])
 
 
 @extract.add('source_data')
