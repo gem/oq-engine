@@ -86,7 +86,8 @@ def create_source_info(csm, h5):
             else:
                 code = csm.code.get(srcid, b'P')
             lens.append(len(src.trt_smrs))
-            row = [srcid, src.grp_id, code, 0, 0, 0, src.weight, mutex, trti]
+            row = [srcid, src.grp_id, code, 0, 0,
+                   src.num_ruptures, src.weight, mutex, trti]
             wkts.append(getattr(src, '_wkt', ''))
             data[srcid] = row
             src.id = len(data) - 1
@@ -465,14 +466,12 @@ class CompositeSourceModel:
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         assert len(source_data) < TWO32, len(source_data)
-        for src_id, nsites, nrupts, weight, ctimes in zip(
+        for src_id, nsites, weight, ctimes in zip(
                 source_data['src_id'], source_data['nsites'],
-                source_data['nrupts'], source_data['weight'],
-                source_data['ctimes']):
+                source_data['weight'], source_data['ctimes']):
             row = self.source_info[src_id.split(':')[0]]
             row[CALC_TIME] += ctimes
             row[WEIGHT] += weight
-            row[NUM_RUPTURES] += nrupts
             row[NUM_SITES] += nsites
 
     def count_ruptures(self):
