@@ -51,14 +51,6 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def short_id(src):
-    """
-    :returns:
-        short version of the source ID (the part before the colon) or full ID
-    """
-    return src.source_id.split(':')[0]
-
-
 def mutex_by_grp(src_groups):
     """
     :returns: a composite array with boolean fields src_mutex, rup_mutex
@@ -76,21 +68,23 @@ def create_source_info(csm, h5):
     data = {}  # src_id -> row
     wkts = []
     lens = []
-    for sg in csm.src_groups:
-        for src in sg:
-            mutex = getattr(src, 'mutex_weight', 0)
-            srcid = basename(src)
-            trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
-            if src.code == b'p':
-                code = b'p'
-            else:
-                code = csm.code.get(srcid, b'P')
-            lens.append(len(src.trt_smrs))
-            row = [srcid, src.grp_id, code, 0, 0,
-                   src.num_ruptures, src.weight, mutex, trti]
-            wkts.append(getattr(src, '_wkt', ''))
-            data[srcid] = row
-            src.id = len(data) - 1
+    for srcid, srcs in general.groupby(csm.get_sources(), basename).items():
+        src = srcs[0]
+        num_ruptures = sum(src.num_ruptures for src in srcs)
+        mutex = getattr(src, 'mutex_weight', 0)
+        trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
+        if src.code == b'p':
+            code = b'p'
+        else:
+            code = csm.code.get(srcid, b'P')
+        lens.append(len(src.trt_smrs))
+        row = [srcid, src.grp_id, code, 0, 0, num_ruptures,
+               src.weight, mutex, trti]
+        wkts.append(getattr(src, '_wkt', ''))
+        data[srcid] = row
+        srcid = len(data) - 1
+        for src in srcs:
+            src.id = srcid
 
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
@@ -368,7 +362,7 @@ class CompositeSourceModel:
             for src in sg:
                 src.grp_id = grp_id
                 if src.code != b'P':
-                    source_id = short_id(src)
+                    source_id = basename(src)
                     self.code[source_id] = src.code
 
     # used for debugging; assume PoissonTOM; use read_cmakers instead
@@ -487,7 +481,7 @@ class CompositeSourceModel:
         """
         Set the src.offset field for each source
         """
-        for srcs in general.groupby(self.get_sources(), short_id).values():
+        for srcs in general.groupby(self.get_sources(), basename).values():
             offset = 0
             for src in srcs:
                 src.offset = offset
