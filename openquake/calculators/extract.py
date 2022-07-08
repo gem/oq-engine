@@ -501,6 +501,22 @@ def extract_rups_by_mag_dist(dstore, what):
     return extract_effect(dstore, 'rups_by_mag_dist')
 
 
+# for debugging classical calculations with few sites
+@extract.add('rup_ids')
+def extract_rup_ids(dstore, what):
+    """
+    Extract src_id, rup_id from the stored contexts
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/rup_ids
+    """
+    n = len(dstore['rup/grp_id'])
+    data = numpy.zeros(n, [('src_id', U32), ('rup_id', U32)])
+    data['src_id'] = dstore['rup/src_id'][:]
+    data['rup_id'] = dstore['rup/rup_id'][:]
+    data = numpy.unique(data)
+    return data
+
+
 @extract.add('source_data')
 def extract_source_data(dstore, what):
     """
