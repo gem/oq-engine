@@ -685,7 +685,7 @@ class ContextMaker(object):
 
         return ctx
 
-    def _get_ctx_planar(self, mag, planar, sites, src_id, rup_ids, tom):
+    def _get_ctx_planar(self, mag, planar, sites, src_id, start_stop, tom):
         with self.ctx_mon:
             # computing distances
             rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
@@ -704,7 +704,7 @@ class ContextMaker(object):
             ctx = self.build_ctx((len(planar), len(sites)))
             ctxt = ctx.T  # smart trick taking advantage of numpy magic
             ctxt['src_id'] = src_id
-            for u, rup_id in enumerate(rup_ids):
+            for u, rup_id in enumerate(range(*start_stop)):
                 ctx[u]['rup_id'] = rup_id
 
             # setting rupture parameters
@@ -801,9 +801,9 @@ class ContextMaker(object):
                 pla = planarlist[0]
 
             offset = src.offset + magi * len(pla)
-            rup_ids = numpy.arange(offset, offset + len(pla))
+            start_stop = offset, offset + len(pla)
             ctx = self._get_ctx_planar(
-                mag, pla, sites, src.id, rup_ids, tom).flatten()
+                mag, pla, sites, src.id, start_stop, tom).flatten()
             ctxt = ctx[ctx.rrup < magdist[mag]]
             if len(ctxt):
                 ctxs.append(ctxt)
