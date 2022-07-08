@@ -35,7 +35,7 @@ from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 TWO16 = 2 ** 16  # 65,536
 by_id = operator.attrgetter('source_id')
 
-CALC_TIME, NUM_SITES, EFF_RUPTURES, WEIGHT = 3, 4, 5, 6
+CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT = 3, 4, 5, 6
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -43,7 +43,7 @@ source_info_dt = numpy.dtype([
     ('code', (numpy.string_, 1)),      # 2
     ('calc_time', numpy.float32),      # 3
     ('num_sites', numpy.uint32),       # 4
-    ('eff_ruptures', numpy.uint32),    # 5
+    ('num_ruptures', numpy.uint32),    # 5
     ('weight', numpy.float32),         # 6
     ('mutex_weight', numpy.float64),   # 7
     ('trti', numpy.uint8),             # 8
@@ -467,10 +467,10 @@ class CompositeSourceModel:
                 source_data['src_id'], source_data['nsites'],
                 source_data['nrupts'], source_data['weight'],
                 source_data['ctimes']):
-            row = self.source_info[short_id(src_id)]
+            row = self.source_info[src_id.split(':')[0]]
             row[CALC_TIME] += ctimes
             row[WEIGHT] += weight
-            row[EFF_RUPTURES] += nrupts
+            row[NUM_RUPTURES] += nrupts
             row[NUM_SITES] += nsites
 
     def count_ruptures(self):

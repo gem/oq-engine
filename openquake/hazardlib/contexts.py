@@ -651,7 +651,8 @@ class ContextMaker(object):
             ctx.occurrence_rate = numpy.nan
         if hasattr(ctx, 'temporal_occurrence_model'):
             if isinstance(ctx.temporal_occurrence_model, NegativeBinomialTOM):
-                ctx.probs_occur = ctx.temporal_occurrence_model.get_pmf(ctx.occurrence_rate)
+                ctx.probs_occur = ctx.temporal_occurrence_model.get_pmf(
+                    ctx.occurrence_rate)
 
         return ctx
 
@@ -683,7 +684,7 @@ class ContextMaker(object):
 
         return ctx
 
-    def _get_ctx(self, mag, planar, sites, src_id, tom=None):
+    def _get_ctx_planar(self, mag, planar, sites, src_id, tom=None):
         with self.ctx_mon:
             # computing distances
             rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
@@ -738,10 +739,11 @@ class ContextMaker(object):
             # setting site parameters
             for par in self.siteparams:
                 ctx[par] = sites.array[par]  # shape N-> (U, N)
-            if tom:
-                # Reads Probability Mass Function from model and reshapes it
+            if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
+                # read Probability Mass Function from model and reshape it
                 # into predetermined shape of probs_occur
-                pmf = tom.get_pmf(planar.wlr[:, 2], n_max=ctx['probs_occur'].shape[2])
+                pmf = tom.get_pmf(planar.wlr[:, 2],
+                                  n_max=ctx['probs_occur'].shape[2])
                 ctx['probs_occur'] = pmf[:, numpy.newaxis, :]
 
         return ctx
@@ -764,11 +766,12 @@ class ContextMaker(object):
         if self.fewsites:
             dd['clon'] = numpy.float64(0.)
             dd['clat'] = numpy.float64(0.)
+
         self.build_ctx = RecordBuilder(**dd).zeros
         self.siteparams = [par for par in sitecol.array.dtype.names
                            if par in dd]
-        self.ruptparams = (self.REQUIRES_RUPTURE_PARAMETERS |
-                           {'occurrence_rate'})
+        self.ruptparams = (
+            self.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'})
 
         with self.ir_mon:
             # building planar geometries
@@ -793,11 +796,7 @@ class ContextMaker(object):
             else:
                 pla = planarlist[0]
 
-            if isinstance(tom, NegativeBinomialTOM):
-                ctx = self._get_ctx(mag, pla, sites, src.id, tom).flatten()
-            else:
-                ctx = self._get_ctx(mag, pla, sites, src.id).flatten()
-
+            ctx = self._get_ctx_planar(mag, pla, sites, src.id, tom).flatten()
             ctxt = ctx[ctx.rrup < magdist[mag]]
             if len(ctxt):
                 ctxs.append(ctxt)
@@ -855,6 +854,8 @@ class ContextMaker(object):
             with self.ir_mon:
                 allrups = numpy.array(list(src.iter_ruptures(
                     shift_hypo=self.shift_hypo, step=step)))
+                for i, rup in enumerate(allrups):
+                    rup.rup_id = src.offset + i
                 self.num_rups = len(allrups)
                 # sorted by mag by construction
                 u32mags = U32([rup.mag * 100 for rup in allrups])
