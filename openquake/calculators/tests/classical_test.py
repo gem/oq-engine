@@ -81,11 +81,11 @@ class ClassicalTestCase(CalculatorTestCase):
                                   delta=delta)
         return got
 
-    def tearDown(self):
-        dstore = self.calc.datastore
-        if 'rup' in dstore:
-            mean_by_rup = extract(dstore, 'mean_by_rup?')
-            print(mean_by_rup.array)
+    #def tearDown(self):
+    #    dstore = self.calc.datastore
+    #    if 'rup' in dstore:
+    #        mean_by_rup = extract(dstore, 'mean_by_rup?')
+    #        print(mean_by_rup.array)
 
     def test_case_1(self):
         self.assert_curves_ok(
