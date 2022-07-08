@@ -33,7 +33,8 @@ from openquake.baselib.performance import Monitor, split_array, compile, numba
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.tom import registry, get_pnes, FatedTOM, NegativeBinomialTOM
+from openquake.hazardlib.tom import (
+    registry, get_pnes, FatedTOM, NegativeBinomialTOM)
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
