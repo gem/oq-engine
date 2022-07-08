@@ -964,6 +964,7 @@ class HazardCalculator(BaseCalculator):
                        ', '.join(discard_trts), self.oqparam.inputs['job_ini'])
             logging.warning(msg)
 
+    # to be called after csm.fix_src_offset()
     def store_source_info(self, source_data):
         """
         Save (eff_ruptures, num_sites, calc_time) inside the source_info

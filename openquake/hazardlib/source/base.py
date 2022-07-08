@@ -59,6 +59,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     checksum = 0  # set in source_reader
     weight = 1  # set in contexts
     esites = 0  # updated in estimate_weight
+    offset = 0  # set in fix_src_offset
 
     @abc.abstractproperty
     def MODIFICATIONS(self):

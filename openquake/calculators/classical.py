@@ -312,7 +312,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         self.init_poes()
         params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
-                  'probs_occur', 'sids', 'src_id', 'weight'}
+                  'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
 
         for trt, gsims in gsims_by_trt.items():
@@ -327,7 +327,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = U16  # storing only for few sites
                 elif param == 'probs_occur':
                     dt = hdf5.vfloat64
-                elif param == 'src_id':
+                elif param in ('src_id', 'rup_id'):
                     dt = U32
                 elif param == 'grp_id':
                     dt = U16
