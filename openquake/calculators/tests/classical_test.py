@@ -319,7 +319,7 @@ hazard_uhs-std.csv
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
             case_17.__file__)
         ids = decode(self.calc.datastore['source_info']['source_id'])
-        numpy.testing.assert_equal(ids, ['A;0', 'B', 'A;1'])
+        numpy.testing.assert_equal(ids, ['A;0', 'A;1', 'B'])
 
     def test_case_18(self):  # GMPEtable, PointMSR, 3 hypodepths
         self.assert_curves_ok(
