@@ -82,7 +82,9 @@ def create_source_info(csm, h5):
                src.weight, mutex, trti]
         wkts.append(getattr(src, '_wkt', ''))
         data[srcid] = row
-        src.id = len(data) - 1
+        srcid = len(data) - 1
+        for src in srcs:
+            src.id = srcid
 
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),

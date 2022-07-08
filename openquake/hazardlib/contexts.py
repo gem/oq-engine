@@ -534,7 +534,7 @@ class ContextMaker(object):
             ctxs = [ctx[nans], ctx[~nans]]
         return ctxs
 
-    def recarray(self, ctxs, magi=None):
+    def recarray(self, ctxs, srcid, magi=None):
         """
         :params ctxs: a non-empty list of homogeneous contexts
         :returns: a recarray, possibly collapsed
@@ -563,9 +563,13 @@ class ContextMaker(object):
             ctx = ctx.roundup(self.minimum_distance)
             slc = slice(start, start + len(ctx))
             for par in dd:
-                if par == 'magi':  # in disaggregation
+                if par == 'src_id':
+                    val = srcid
+                elif par == 'rup_id':
+                    val = getattr(ctx, par)
+                elif par == 'magi':  # in disaggregation
                     val = magi
-                elif par in ('rup_id', 'mdvbin'):
+                elif par == 'mdvbin':
                     val = 0  # overridden later
                 elif par == 'weight':
                     val = getattr(ctx, par, 0.)
@@ -873,6 +877,7 @@ class ContextMaker(object):
                               for rups in split_array(allrups, u32mags)]
             src_id = src.id
         else:  # in event based we get a list with a single rupture
+            src_id = 0
             rups_sites = [(src, sitecol)]
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             if len(rups) == 0:  # may happen in case of min_mag/max_mag
@@ -893,7 +898,7 @@ class ContextMaker(object):
                         c = rup.surface.get_closest_points(sites.complete)
                         ctx.clon = c.lons[ctx.sids]
                         ctx.clat = c.lats[ctx.sids]
-        return [] if not ctxs else [self.recarray(ctxs)]
+        return [] if not ctxs else [self.recarray(ctxs, src_id)]
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -1007,11 +1012,7 @@ class ContextMaker(object):
         M = len(self.imtls)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
-        if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
-            # contexts already vectorized
-            recarrays = ctxs
-        else:  # vectorize the contexts
-            recarrays = [self.recarray(ctxs)]
+        recarrays = ctxs
         if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
             assert len(recarrays) == 1, len(recarrays)
             recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
