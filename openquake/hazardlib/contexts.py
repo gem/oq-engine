@@ -1514,7 +1514,7 @@ class RuptureContext(BaseContext):
     """
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
-        'hypo_depth', 'width', 'hypo_loc', 'src_id')
+        'hypo_depth', 'width', 'hypo_loc', 'src_id', 'rup_id')
 
     def __init__(self, param_pairs=()):
         self.src_id = 0

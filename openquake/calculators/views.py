@@ -194,8 +194,7 @@ def view_slow_sources(token, dstore, maxrows=20):
     Returns the slowest sources
     """
     info = dstore['source_info']['source_id', 'code',
-                                 'calc_time', 'num_sites', 'eff_ruptures']
-    info = info[info['eff_ruptures'] > 0]
+                                 'calc_time', 'num_sites', 'num_ruptures']
     info.sort(order='calc_time')
     data = numpy.zeros(len(info), dt(info.dtype.names))
     for name in info.dtype.names:
