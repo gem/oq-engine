@@ -565,7 +565,7 @@ class ContextMaker(object):
             for par in dd:
                 if par == 'magi':  # in disaggregation
                     val = magi
-                elif par == 'mdvbin':
+                elif par in ('rup_id', 'mdvbin'):
                     val = 0  # overridden later
                 elif par == 'weight':
                     val = getattr(ctx, par, 0.)
