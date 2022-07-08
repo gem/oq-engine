@@ -819,8 +819,8 @@ class ContextMaker(object):
         quartets = []
         if src.count_nphc() == 1:
             # one rupture per magnitude
-            for mag, pla in planardict.items():
-                quartets.append((0, mag, pla, sitecol))
+            for m, (mag, pla) in enumerate(planardict.items()):
+                quartets.append((m, mag, pla, sitecol))
         else:
             for m, rup in enumerate(src.iruptures()):
                 mag = rup.mag
