@@ -563,9 +563,11 @@ class ContextMaker(object):
             ctx = ctx.roundup(self.minimum_distance)
             slc = slice(start, start + len(ctx))
             for par in dd:
-                if par == 'magi':  # in disaggregation
+                if par == 'rup_id':
+                    val = getattr(ctx, par)
+                elif par == 'magi':  # in disaggregation
                     val = magi
-                elif par in ('rup_id', 'mdvbin'):
+                elif par == 'mdvbin':
                     val = 0  # overridden later
                 elif par == 'weight':
                     val = getattr(ctx, par, 0.)
