@@ -49,10 +49,7 @@ def main(calc_id: int):
     bad_dupl = bad_ids & get_dupl(python3compat.decode(src_ids))
     if bad_dupl:
         logging.info('Duplicates %s not removed' % bad_dupl)
-    ok = info['eff_ruptures'] > 0
-    if ok.sum() == 0:
-        raise RuntimeError('All sources were filtered away!')
-    ok_ids = general.group_array(info[ok][['source_id', 'code']], 'source_id')
+    ok_ids = general.group_array(info[['source_id', 'code']], 'source_id')
     with performance.Monitor() as mon:
         good, total = readinput.reduce_source_model(
             oqparam.inputs['source_model_logic_tree'], ok_ids)

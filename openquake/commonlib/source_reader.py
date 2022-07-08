@@ -54,7 +54,7 @@ source_info_dt = numpy.dtype([
 def short_id(src):
     """
     :returns:
-        short version of the source ID (the part before the colon) of full ID
+        short version of the source ID (the part before the colon) or full ID
     """
     return src.source_id.split(':')[0]
 

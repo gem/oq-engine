@@ -704,8 +704,11 @@ class ContextMaker(object):
             ctx = self.build_ctx((len(planar), len(sites)))
             ctxt = ctx.T  # smart trick taking advantage of numpy magic
             ctxt['src_id'] = src_id
-            for u, rup_id in enumerate(range(*start_stop)):
-                ctx[u]['rup_id'] = rup_id
+
+            if self.fewsites:
+                # the loop below is a bit slow
+                for u, rup_id in enumerate(range(*start_stop)):
+                    ctx[u]['rup_id'] = rup_id
 
             # setting rupture parameters
             for par in self.ruptparams:
