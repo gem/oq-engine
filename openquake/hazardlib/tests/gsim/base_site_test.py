@@ -55,6 +55,7 @@ class GetPoesSiteTestCase(unittest.TestCase):
         self.mag = 5.5
         rup = Dummy.get_rupture(mag=self.mag)
         ctx = full_context(sites, rup)
+        ctx.rup_id = 0
         ctx.rjb = numpy.array(dsts)
         ctx.rrup = numpy.array(dsts)
         self.rrup = ctx.rrup

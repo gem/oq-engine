@@ -876,6 +876,7 @@ class ContextMaker(object):
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
+            src_id = 0
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             if len(rups) == 0:  # may happen in case of min_mag/max_mag
                 continue
@@ -1517,12 +1518,13 @@ class RuptureContext(BaseContext):
     Only those required parameters are made available in a result context
     object.
     """
+    src_id = 0
+    rup_id = 0
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
         'hypo_depth', 'width', 'hypo_loc', 'src_id', 'rup_id')
 
     def __init__(self, param_pairs=()):
-        self.src_id = 0
         for param, value in param_pairs:
             setattr(self, param, value)
 
