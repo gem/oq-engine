@@ -448,6 +448,7 @@ class ContextMaker(object):
             else:
                 dic[req] = 0.
         dic['src_id'] = U32(0)
+        dic['rup_id'] = U32(0)
         dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
@@ -684,7 +685,7 @@ class ContextMaker(object):
 
         return ctx
 
-    def _get_ctx_planar(self, mag, planar, sites, src_id, tom=None):
+    def _get_ctx_planar(self, mag, planar, sites, src_id, rup_ids, tom):
         with self.ctx_mon:
             # computing distances
             rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
@@ -699,10 +700,12 @@ class ContextMaker(object):
                 if self.minimum_distance:
                     dst[dst < self.minimum_distance] = self.minimum_distance
 
-            # building contexts
+            # building contexts; ctx has shape (U, N), ctxt (N, U)
             ctx = self.build_ctx((len(planar), len(sites)))
             ctxt = ctx.T  # smart trick taking advantage of numpy magic
             ctxt['src_id'] = src_id
+            for u, rup_id in enumerate(rup_ids):
+                ctx[u]['rup_id'] = rup_id
 
             # setting rupture parameters
             for par in self.ruptparams:
@@ -787,7 +790,8 @@ class ContextMaker(object):
         sitecol = sitecol.filter(mask)
         if sitecol is None:
             return []
-        for mag, planarlist, sites in self._triples(
+
+        for magi, mag, planarlist, sites in self._quartets(
                 src, sitecol, cdist[mask], planardict):
             if not planarlist:
                 continue
@@ -796,19 +800,22 @@ class ContextMaker(object):
             else:
                 pla = planarlist[0]
 
-            ctx = self._get_ctx_planar(mag, pla, sites, src.id, tom).flatten()
+            offset = src.offset + magi * len(pla)
+            rup_ids = numpy.arange(offset, offset + len(pla))
+            ctx = self._get_ctx_planar(
+                mag, pla, sites, src.id, rup_ids, tom).flatten()
             ctxt = ctx[ctx.rrup < magdist[mag]]
             if len(ctxt):
                 ctxs.append(ctxt)
         return concat(ctxs)
 
-    def _triples(self, src, sitecol, cdist, planardict):
+    def _quartets(self, src, sitecol, cdist, planardict):
         # splitting by magnitude
-        triples = []
+        quartets = []
         if src.count_nphc() == 1:
             # one rupture per magnitude
             for mag, pla in planardict.items():
-                triples.append((mag, pla, sitecol))
+                quartets.append((0, mag, pla, sitecol))
         else:
             for m, rup in enumerate(src.iruptures()):
                 mag = rup.mag
@@ -820,18 +827,18 @@ class ContextMaker(object):
                 far = sitecol.filter(cdist > psdist)
                 if self.fewsites:
                     if close is None:  # all is far, common for small mag
-                        triples.append((mag, arr, sitecol))
+                        quartets.append((m, mag, arr, sitecol))
                     else:  # something is close
-                        triples.append((mag, pla, sitecol))
+                        quartets.append((m, mag, pla, sitecol))
                 else:  # many sites
                     if close is None:  # all is far
-                        triples.append((mag, arr, far))
+                        quartets.append((m, mag, arr, far))
                     elif far is None:  # all is close
-                        triples.append((mag, pla, close))
+                        quartets.append((m, mag, pla, close))
                     else:  # some sites are far, some are close
-                        triples.append((mag, arr, far))
-                        triples.append((mag, pla, close))
-        return triples
+                        quartets.append((m, mag, arr, far))
+                        quartets.append((m, mag, pla, close))
+        return quartets
 
     def get_ctxs(self, src, sitecol, src_id=0, step=1):
         """
@@ -877,6 +884,7 @@ class ContextMaker(object):
                     r_sites = sites.filter(mask)
                     ctx = self.get_ctx(rup, r_sites, dists[u][mask])
                     ctx.src_id = src_id
+                    ctx.rup_id = rup.rup_id
                     ctxs.append(ctx)
                     if self.fewsites:
                         c = rup.surface.get_closest_points(sites.complete)

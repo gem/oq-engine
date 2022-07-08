@@ -33,6 +33,7 @@ from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
 TWO16 = 2 ** 16  # 65,536
+TWO32 = 2 ** 32  # 4,294,967,296
 by_id = operator.attrgetter('source_id')
 
 CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT = 3, 4, 5, 6
@@ -463,6 +464,7 @@ class CompositeSourceModel:
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
+        assert len(source_data) < TWO32, len(source_data)
         for src_id, nsites, nrupts, weight, ctimes in zip(
                 source_data['src_id'], source_data['nsites'],
                 source_data['nrupts'], source_data['weight'],
@@ -491,6 +493,9 @@ class CompositeSourceModel:
             for src in srcs:
                 src.offset = offset
                 offset += src.num_ruptures
+                if src.num_ruptures >= TWO32:
+                    raise ValueError(
+                        '%s contains more than 2**32 ruptures' % src)
                 # print(src, src.offset, offset)
 
     def get_max_weight(self, oq):  # used in preclassical
