@@ -34,6 +34,7 @@ from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
 TWO16 = 2 ** 16  # 65,536
 by_id = operator.attrgetter('source_id')
+
 CALC_TIME, NUM_SITES, EFF_RUPTURES, WEIGHT = 3, 4, 5, 6
 
 source_info_dt = numpy.dtype([
@@ -47,6 +48,14 @@ source_info_dt = numpy.dtype([
     ('mutex_weight', numpy.float64),   # 7
     ('trti', numpy.uint8),             # 8
 ])
+
+
+def short_id(src):
+    """
+    :returns:
+        short version of the source ID (the part before the colon) of full ID
+    """
+    return src.source_id.split(':')[0]
 
 
 def mutex_by_grp(src_groups):
@@ -357,7 +366,7 @@ class CompositeSourceModel:
             for src in sg:
                 src.grp_id = grp_id
                 if src.code != b'P':
-                    source_id = src.source_id.split(':')[0]
+                    source_id = short_id(src)
                     self.code[source_id] = src.code
 
     # used for debugging; assume PoissonTOM; use read_cmakers instead
@@ -458,7 +467,7 @@ class CompositeSourceModel:
                 source_data['src_id'], source_data['nsites'],
                 source_data['nrupts'], source_data['weight'],
                 source_data['ctimes']):
-            row = self.source_info[src_id.split(':')[0]]
+            row = self.source_info[short_id(src_id)]
             row[CALC_TIME] += ctimes
             row[WEIGHT] += weight
             row[EFF_RUPTURES] += nrupts
@@ -472,6 +481,17 @@ class CompositeSourceModel:
         for src in self.get_sources():
             n += src.count_ruptures()
         return n
+
+    def fix_src_offset(self):
+        """
+        Set the src.offset field for each source
+        """
+        for srcs in general.groupby(self.get_sources(), short_id).values():
+            offset = 0
+            for src in srcs:
+                src.offset = offset
+                offset += src.num_ruptures
+                # print(src, src.offset, offset)
 
     def get_max_weight(self, oq):  # used in preclassical
         """

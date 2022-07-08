@@ -237,6 +237,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                     assert src.weight
                     assert src.num_ruptures
                     acc[src.code] += int(src.num_ruptures)
+        csm.fix_src_offset()
         for val, key in sorted((val, key) for key, val in acc.items()):
             cls = code2cls[key].__name__
             logging.info('{} ruptures: {:_d}'.format(cls, val))
