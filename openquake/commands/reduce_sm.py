@@ -42,11 +42,7 @@ def main(calc_id: int):
         info = dstore['source_info'][()]
     src_ids = info['source_id']
     num_ids = len(src_ids)
-    bad_ids = info[info['eff_ruptures'] == 0]['source_id']
-    logging.info('Found %d far away sources', len(bad_ids))
-    bad_ids = set(src_id.split(';')[0]
-                  for src_id in python3compat.decode(bad_ids))
-    bad_dupl = bad_ids & get_dupl(python3compat.decode(src_ids))
+    bad_dupl = get_dupl(python3compat.decode(src_ids))
     if bad_dupl:
         logging.info('Duplicates %s not removed' % bad_dupl)
     ok_ids = general.group_array(info[['source_id', 'code']], 'source_id')
