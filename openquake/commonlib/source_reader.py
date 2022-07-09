@@ -483,7 +483,7 @@ class CompositeSourceModel:
         """
         for srcs in general.groupby(self.get_sources(), basename).values():
             offset = 0
-            if len(srcs) > 1:  # keep the ordering by split number
+            if len(srcs) > 1:  # order by split number
                 srcs.sort(key=lambda src: int(src.source_id.split(':')[1]))
             for src in srcs:
                 src.offset = offset
