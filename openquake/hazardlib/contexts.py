@@ -503,7 +503,9 @@ class ContextMaker(object):
         params = {n: dstore['rup/' + n][slc] for n in dstore['rup']}
         dtlist = []
         for par, val in params.items():
-            if par == 'probs_occur':
+            if len(val) == 0:
+                return []
+            elif par == 'probs_occur':
                 item = (par, object)
             elif par == 'occurrence_rate':
                 item = (par, F64)

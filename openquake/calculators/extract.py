@@ -18,6 +18,7 @@
 from urllib.parse import parse_qs
 from unittest.mock import Mock
 from functools import lru_cache
+import operator
 import logging
 import json
 import gzip
@@ -533,6 +534,7 @@ def extract_mean_by_rup(dstore, what):
             # shape (4, G, M, U) => U
             means = cmaker.get_mean_stds([ctx])[0].mean(axis=(0, 1))
             out.extend(zip(ctx.src_id, ctx.rup_id, means))
+    out.sort(key=operator.itemgetter(0, 1))
     return numpy.array(out, [('src_id', U32), ('rup_id', U32), ('mean', F64)])
 
 
