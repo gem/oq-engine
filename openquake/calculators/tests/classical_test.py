@@ -81,15 +81,6 @@ class ClassicalTestCase(CalculatorTestCase):
                                   delta=delta)
         return got
 
-    def tearDown(self):
-        # sanity check on mean_by_rup on single-site tests
-        dstore = self.calc.datastore
-        if len(dstore['sitecol']) == 1:
-            mean_by_rup = extract(dstore, 'mean_by_rup?')
-            n = len(mean_by_rup.array)
-            uniq = numpy.unique(mean_by_rup.array[['src_id', 'rup_id']])
-            self.assertEqual(n, len(uniq))
-
     def test_case_1(self):
         self.assert_curves_ok(
             ['hazard_curve-PGA.csv', 'hazard_curve-SA(0.1).csv'],
