@@ -725,7 +725,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         for key, lt in rdic:
             rm = rdic[key, lt]
             if len(rm.imt_by_lt) == 1:
-                # TODO: if `check_risk_ids` will raise an error then
+                # NB: if `check_risk_ids` raise an error then
                 # this code branch will never run
                 [(lt, imt)] = rm.imt_by_lt.items()
             else:
