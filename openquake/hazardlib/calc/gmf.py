@@ -271,7 +271,7 @@ class GmfComputer(object):
 # this is not used in the engine; it is still useful for usage in IPython
 # when demonstrating hazardlib capabilities
 def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
-                         realizations, correlation_model=None, seed=None):
+                         realizations, correlation_model=None, seed=0):
     """
     Given an earthquake rupture, the ground motion field calculator computes
     ground shaking over a set of sites, by randomly sampling a ground shaking

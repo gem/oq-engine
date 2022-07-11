@@ -33,8 +33,10 @@ from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
 TWO16 = 2 ** 16  # 65,536
+TWO32 = 2 ** 32  # 4,294,967,296
 by_id = operator.attrgetter('source_id')
-CALC_TIME, NUM_SITES, EFF_RUPTURES, WEIGHT = 3, 4, 5, 6
+
+CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT = 3, 4, 5, 6
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -42,7 +44,7 @@ source_info_dt = numpy.dtype([
     ('code', (numpy.string_, 1)),      # 2
     ('calc_time', numpy.float32),      # 3
     ('num_sites', numpy.uint32),       # 4
-    ('eff_ruptures', numpy.uint32),    # 5
+    ('num_ruptures', numpy.uint32),    # 5
     ('weight', numpy.float32),         # 6
     ('mutex_weight', numpy.float64),   # 7
     ('trti', numpy.uint8),             # 8
@@ -66,20 +68,23 @@ def create_source_info(csm, h5):
     data = {}  # src_id -> row
     wkts = []
     lens = []
-    for sg in csm.src_groups:
-        for src in sg:
-            mutex = getattr(src, 'mutex_weight', 0)
-            srcid = basename(src)
-            trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
-            if src.code == b'p':
-                code = b'p'
-            else:
-                code = csm.code.get(srcid, b'P')
-            lens.append(len(src.trt_smrs))
-            row = [srcid, src.grp_id, code, 0, 0, 0, src.weight, mutex, trti]
-            wkts.append(getattr(src, '_wkt', ''))
-            data[srcid] = row
-            src.id = len(data) - 1
+    for srcid, srcs in general.groupby(csm.get_sources(), basename).items():
+        src = srcs[0]
+        num_ruptures = sum(src.num_ruptures for src in srcs)
+        mutex = getattr(src, 'mutex_weight', 0)
+        trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
+        if src.code == b'p':
+            code = b'p'
+        else:
+            code = csm.code.get(srcid, b'P')
+        lens.append(len(src.trt_smrs))
+        row = [srcid, src.grp_id, code, 0, 0, num_ruptures,
+               src.weight, mutex, trti]
+        wkts.append(getattr(src, '_wkt', ''))
+        data[srcid] = row
+        srcid = len(data) - 1
+        for src in srcs:
+            src.id = srcid
 
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
@@ -357,7 +362,7 @@ class CompositeSourceModel:
             for src in sg:
                 src.grp_id = grp_id
                 if src.code != b'P':
-                    source_id = src.source_id.split(':')[0]
+                    source_id = basename(src)
                     self.code[source_id] = src.code
 
     # used for debugging; assume PoissonTOM; use read_cmakers instead
@@ -454,14 +459,13 @@ class CompositeSourceModel:
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        for src_id, nsites, nrupts, weight, ctimes in zip(
+        assert len(source_data) < TWO32, len(source_data)
+        for src_id, nsites, weight, ctimes in zip(
                 source_data['src_id'], source_data['nsites'],
-                source_data['nrupts'], source_data['weight'],
-                source_data['ctimes']):
+                source_data['weight'], source_data['ctimes']):
             row = self.source_info[src_id.split(':')[0]]
             row[CALC_TIME] += ctimes
             row[WEIGHT] += weight
-            row[EFF_RUPTURES] += nrupts
             row[NUM_SITES] += nsites
 
     def count_ruptures(self):
@@ -472,6 +476,22 @@ class CompositeSourceModel:
         for src in self.get_sources():
             n += src.count_ruptures()
         return n
+
+    def fix_src_offset(self):
+        """
+        Set the src.offset field for each source
+        """
+        for srcs in general.groupby(self.get_sources(), basename).values():
+            offset = 0
+            if len(srcs) > 1:  # order by split number
+                srcs.sort(key=lambda src: int(src.source_id.split(':')[1]))
+            for src in srcs:
+                src.offset = offset
+                offset += src.num_ruptures
+                if src.num_ruptures >= TWO32:
+                    raise ValueError(
+                        '%s contains more than 2**32 ruptures' % src)
+                # print(src, src.offset, offset)
 
     def get_max_weight(self, oq):  # used in preclassical
         """

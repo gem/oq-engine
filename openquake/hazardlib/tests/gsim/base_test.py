@@ -283,6 +283,7 @@ class ContextTestCase(unittest.TestCase):
         gsim = AbrahamsonGulerce2020SInter()
         ctx = RuptureContext()
         ctx.src_id = 0
+        ctx.rup_id = 0
         ctx.mag = 5.
         ctx.sids = [0, 1]
         ctx.vs30 = [760., 760.]

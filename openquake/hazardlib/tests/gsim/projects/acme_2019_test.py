@@ -3,9 +3,8 @@ import os
 import numpy as np
 import unittest
 
-from openquake.hazardlib import const, contexts
+from openquake.hazardlib import contexts
 from openquake.hazardlib.imt import SA
-from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.projects.acme_2019 import AlAtikSigmaModel
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import get_sof_adjustment
 
@@ -21,6 +20,7 @@ class AlAtikSigmaModelTest(unittest.TestCase):
                                kappa_file=filename,
                                kappa_val='high')
         ctx = contexts.RuptureContext()
+        ctx.rup_id = 0
         ctx.mag = 6.0
         ctx.vs30 = np.array([760.] * 4)
         ctx.rjb = ctx.rrup = np.array([1., 10., 30., 70.])
@@ -37,6 +37,7 @@ class AlAtikSigmaModelTest(unittest.TestCase):
                                kappa_file=filename,
                                kappa_val='high')
         ctx = contexts.RuptureContext()
+        ctx.rup_id = 0
         ctx.mag = 6.0
         ctx.rjb = ctx.rrup = np.array([1., 10., 30., 70.])
         ctx.hypo_depth = np.array([10., 10., 30., 70.])
