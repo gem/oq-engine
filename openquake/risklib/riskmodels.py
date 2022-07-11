@@ -719,11 +719,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         primary = self.primary_imtls
         alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
         event = hasattr(haz, 'eid')  # else classical (haz.array)
-        dic = {}  # lt -> df
         out = {}  # (key, lt) -> df
-        rdic, wdic = self.get_rwdics(taxoidx)
-        for key, lt in rdic:
-            rm = rdic[key, lt]
+        avgrm = scientific.AvgRiskModel(self, taxoidx)
+        for key, lt in avgrm:
+            rm = avgrm[key, lt]
             if len(rm.imt_by_lt) == 1:
                 # NB: if `check_risk_ids` raise an error then
                 # this code branch will never run
@@ -738,32 +737,7 @@ class CompositeRiskModel(collections.abc.Mapping):
 
         for update_losses in sec_losses:
             update_losses(asset_df, out)
-        for lt in self.loss_types:
-            outs = [out[k] for k in out if k[1] == lt]
-            weights = [wdic[k] for k in wdic if k[1] == lt]
-            if len(outs) > 1 and hasattr(out[key, lt], 'loss'):
-                # computing the average dataframe for event_based_risk
-                df = pandas.concat([o * w for o, w in zip(outs, weights)])
-                dic[lt] = df.groupby(['eid', 'aid']).sum()
-            elif len(outs) > 1:
-                # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
-                dic[lt] = numpy.average(outs, weights=weights, axis=0)
-            else:
-                # there is a single output
-                dic[lt] = outs[0]
-        return dic
-
-    def get_rwdics(self, taxidx):
-        """
-        :param taxidx: taxonomy index
-        :returns: (rdic, wdic) dictionaries (riskid, lt) -> riskmodel or weight
-        """
-        rdic, wdic = {}, {}
-        for lt in self.loss_types:
-            for key, weight in self.tmap[lt][taxidx]:
-                rdic[key, lt] = self._riskmodels[key]
-                wdic[key, lt] = weight
-        return rdic, wdic
+        return avgrm(out)
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))

@@ -1444,6 +1444,16 @@ class OqParam(valid.ParamSet):
             names.append(lt)
         return names
 
+    @property
+    def ext_loss_types(self):
+        """
+        :returns: list of loss types + secondary loss types
+        """
+        etypes = self.loss_types
+        if 'insurance' in self.inputs:
+            etypes = self.loss_types + [lt + '_ins' for lt in self.loss_types]
+        return etypes
+
     def loss_dt(self, dtype=F64):
         """
         :returns: a composite dtype based on the loss types including occupants
