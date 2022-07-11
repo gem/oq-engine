@@ -414,38 +414,6 @@ class ValidationError(Exception):
     pass
 
 
-class AvgRiskModel(dict):
-    """
-    A dictionary of risk models associated to a taxonomy mapping
-    """
-    def __init__(self, crm, taxidx):
-        self.loss_types = crm.loss_types
-        self.wdic = {}
-        for lt in crm.loss_types:
-            for key, weight in crm.tmap[lt][taxidx]:
-                self[key, lt] = crm._riskmodels[key]
-                self.wdic[key, lt] = weight
-
-    def __call__(self, dic):
-        """
-        Compute averages by using the taxonomy mapping
-        """
-        out = {}
-        for lt in self.loss_types:
-            outs = [dic[k] for k in dic if k[1] == lt]
-            weights = [self.wdic[k] for k in self.wdic if k[1] == lt]
-            if len(outs) > 1 and hasattr(outs[0], 'loss'):
-                # computing the average dataframe for event_based_risk
-                df = pandas.concat([o * w for o, w in zip(outs, weights)])
-                out[lt] = df.groupby(['eid', 'aid']).sum()
-            elif len(outs) > 1:
-                # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
-                out[lt] = numpy.average(outs, weights=weights, axis=0)
-            else:
-                out[lt] = outs[0]
-        return out
-
-
 class CompositeRiskModel(collections.abc.Mapping):
     """
     A container (riskid, kind) -> riskmodel
@@ -752,7 +720,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
         event = hasattr(haz, 'eid')  # else classical (haz.array)
         out = {}  # (key, lt) -> df
-        avgrm = AvgRiskModel(self, taxoidx)
+        avgrm = scientific.AvgRiskModel(self, taxoidx)
         for key, lt in avgrm:
             rm = avgrm[key, lt]
             if len(rm.imt_by_lt) == 1:

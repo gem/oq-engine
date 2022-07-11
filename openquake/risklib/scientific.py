@@ -1355,6 +1355,38 @@ class LossCurvesMapsBuilder(object):
             losses, self.return_periods, self.num_events[rlzi], self.eff_time)
 
 
+class AvgRiskModel(dict):
+    """
+    A dictionary of risk models associated to a taxonomy mapping
+    """
+    def __init__(self, crm, taxidx):
+        self.loss_types = crm.loss_types
+        self.wdic = {}
+        for lt in crm.loss_types:
+            for key, weight in crm.tmap[lt][taxidx]:
+                self[key, lt] = crm._riskmodels[key]
+                self.wdic[key, lt] = weight
+
+    def __call__(self, dic):
+        """
+        Compute averages by using the taxonomy mapping
+        """
+        out = {}
+        for lt in self.loss_types:
+            outs = [dic[k] for k in dic if k[1] == lt]
+            weights = [self.wdic[k] for k in self.wdic if k[1] == lt]
+            if len(outs) > 1 and hasattr(outs[0], 'loss'):
+                # computing the average dataframe for event_based_risk
+                df = pandas.concat([o * w for o, w in zip(outs, weights)])
+                out[lt] = df.groupby(['eid', 'aid']).sum()
+            elif len(outs) > 1:
+                # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
+                out[lt] = numpy.average(outs, weights=weights, axis=0)
+            else:
+                out[lt] = outs[0]
+        return out
+
+
 def insurance_losses(asset_df, losses_by_rl, policy_df):
     """
     :param asset_df: DataFrame of assets
