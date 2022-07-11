@@ -40,7 +40,5 @@ https://wheelhouse.openquake.org/macos/arm64/Shapely-1.8.2-cp39-cp39-macosx_11_0
 https://wheelhouse.openquake.org/macos/arm64/Pillow-9.1.1-cp39-cp39-macosx_11_0_arm64.whl
 #
 https://wheelhouse.openquake.org/macos/arm64/tornado-6.1-cp39-cp39-macosx_12_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/GDAL-3.5.0.3-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/pyproj-3.3.2.dev0-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/psutil-5.9.1-cp39-cp39-macosx_11_0_arm64.whl
 #
