@@ -69,9 +69,9 @@ def collapse_nphc(src):
         src.magnitude_scaling_relationship = PointMSR()
 
 
-# group together consistent point sources (same group, same msr, same tom)
+# group together consistent point sources (same group, same msr)
 def same_key(src):
-    return (src.grp_id, msr_name(src), str(src.temporal_occurrence_model))
+    return (src.grp_id, msr_name(src))
 
 
 def preclassical(srcs, sites, cmaker, monitor):
@@ -182,7 +182,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         logging.info('Starting preclassical')
         self.datastore.swmr_on()
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
-        for (grp_id, msr, tom), srcs in sources_by_key.items():
+        for (grp_id, msr), srcs in sources_by_key.items():
             pointsources, pointlike, others = [], [], []
             for src in srcs:
                 if hasattr(src, 'location'):
