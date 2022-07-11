@@ -30,7 +30,7 @@ https://wheelhouse.openquake.org/macos/arm64/six-1.16.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/macos/arm64/pytz-2022.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/macos/arm64/h5py-3.7.0-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/numba-0.55.2-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/numpy-1.22.4-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/numpy-1.23.1-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/scipy-1.8.1-cp39-cp39-macosx_12_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/pandas-1.4.2-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/pyzmq-23.2.0-cp39-cp39-macosx_10_15_universal2.whl
