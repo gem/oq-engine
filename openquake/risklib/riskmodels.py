@@ -742,7 +742,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             outs = [out[k] for k in out if k[1] == lt]
             weights = [wdic[k] for k in wdic if k[1] == lt]
             if len(outs) > 1 and hasattr(out[key, lt], 'loss'):
-                # computing the average dataframe
+                # computing the average dataframe for event_based_risk
                 df = pandas.concat([o * w for o, w in zip(outs, weights)])
                 dic[lt] = df.groupby(['eid', 'aid']).sum()
             elif len(outs) > 1:
