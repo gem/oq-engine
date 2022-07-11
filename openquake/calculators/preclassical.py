@@ -69,6 +69,11 @@ def collapse_nphc(src):
         src.magnitude_scaling_relationship = PointMSR()
 
 
+# group together consistent point sources (same group, same msr, same tom)
+def same_key(src):
+    return (src.grp_id, msr_name(src), str(src.temporal_occurrence_model))
+
+
 def preclassical(srcs, sites, cmaker, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
@@ -172,13 +177,12 @@ class PreClassicalCalculator(base.HazardCalculator):
                 normal_sources.extend(sg)
 
         # run preclassical for non-atomic sources
-        sources_by_grp = groupby(
-            normal_sources, lambda src: (src.grp_id, msr_name(src)))
+        sources_by_key = groupby(normal_sources, same_key)
         self.datastore.hdf5['full_lt'] = csm.full_lt
         logging.info('Starting preclassical')
         self.datastore.swmr_on()
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
-        for (grp_id, msr), srcs in sources_by_grp.items():
+        for (grp_id, msr, tom), srcs in sources_by_key.items():
             pointsources, pointlike, others = [], [], []
             for src in srcs:
                 if hasattr(src, 'location'):

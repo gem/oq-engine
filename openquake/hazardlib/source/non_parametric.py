@@ -32,6 +32,7 @@ from openquake.hazardlib.pmf import PMF
 
 F32 = numpy.float32
 U32 = numpy.uint32
+BLOCKSIZE = 100
 
 
 class NonParametricSeismicSource(BaseSeismicSource):
@@ -84,7 +85,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         if len(self.data) == 1:  # there is nothing to split
             yield self
             return
-        for i, block in enumerate(block_splitter(self.data, 100)):
+        for i, block in enumerate(block_splitter(self.data, BLOCKSIZE)):
             source_id = '%s:%d' % (self.source_id, i)
             src = self.__class__(source_id, self.name,
                                  self.tectonic_region_type, block)

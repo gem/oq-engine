@@ -768,7 +768,12 @@ class ContextMaker(object):
         tom = src.temporal_occurrence_model
 
         if isinstance(tom, NegativeBinomialTOM):
-            p_size = tom.get_pmf(max(src.mfd.occurrence_rates)).shape[1]
+            if hasattr(src, 'pointsources'):  # CollapsedPointSource
+                maxrate = max(max(ps.mfd.occurrence_rates)
+                              for ps in src.pointsources)
+            else:  # regular source
+                maxrate = max(src.mfd.occurrence_rates)
+            p_size = tom.get_pmf(maxrate).shape[1]
             dd['probs_occur'] = numpy.zeros(p_size)
         else:
             dd['probs_occur'] = numpy.zeros(0)
