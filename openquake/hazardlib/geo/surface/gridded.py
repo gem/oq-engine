@@ -131,71 +131,35 @@ class GriddedSurface(BaseSurface):
         """
         return self.mesh.depths.min()
 
-    def get_nproj(self):
-        """
-        params:
-        p, n = points on the plane and perpendicular to the plane
-        returns:
-        n_proj = projection of the vector 'n' on XY plane 
-        """
-        # import pdb; pdb.set_trace()
-        lat = self.mesh.lats.flatten()
-        lon = self.mesh.lons.flatten()
-        depth = self.mesh.depths.flatten()
-        p, n = plane_fit(spherical_to_cartesian(lon, lat, depth))
-        nproj = np.zeros(shape=(3,))
-        if n[2] < 0:##check if z component is positive so that dip angle lies between 0 and 90
-            nproj[0] = -n[0]
-            nproj[1] = -n[1]
-            nproj[2] = -n[2]
-        else:
-            nproj = n
-        
-        return nproj
-
- 
+     
     def get_strike(self):
         """
-        params:
-            n = unit vector normal to the plane; 3X1 matrix with x, y and z components
-            n_proj = projection of the vector 'n' on XY plane 
-        returns:    
-            the function calculates the strike for gridded surface
+        Compute surface's strike as decimal degrees in a range ``[0, 360)``.
+        The actual definition of the strike might depend on surface geometry.
+        :returns:
+            numpy.nan, not available for this kind of surface (yet)
         """
-        nproj = self.get_nproj()   
+        return np.nan
 
-        (x, y, z) = (nproj[0], nproj[1], nproj[2])
-        if ((x>=0) and (y>0)):
-            a = arctan(abs(x)/abs(y))
-            strike_deg = 360-np.rad2deg(a)
-        elif ((x<0) and (y>=0)):
-            a = 3*np.pi*0.5+arctan(abs(y)/abs(x))
-            strike_deg = np.rad2deg(a)-90
-        elif ((x<=0) and (y<0)):
-            a = np.pi+arctan(abs(x)/abs(y))
-            strike_deg = np.rad2deg(a)-90
-        else:
-            a = np.pi*0.5+arctan(abs(y)/abs(x))
-            strike_deg = np.rad2deg(a)-90
-        return strike_deg
 
         
     def get_dip(self):
         """
         params:
-            n = unit vector normal to the plane; 3X1 matrix with x, y and z components
-            n_proj = projection of the vector 'n' on XY plane 
+            n = unit vector normal to the plane; 3X1 matrix with x, y 
+            and z components
+        
+        The angle between the normal vector and the XY plane must be 
+        calculated. hence, a normal vector to the XY plane = [0,0,1]
+        is considered and a dot product is applied to find the angle
+        between n and [0, 0, 1].
+
         returns:    
             the function calculates the dip angle for gridded surface
         """
-
-        nproj = self.get_nproj()     
-
-        (x, y, z) = (nproj[0], nproj[1], nproj[2])
-        dip_r = (np.pi*0.5)-arcsin(z)
-        dip_deg = np.rad2deg(dip_r)
-
-        return dip_deg
+        p, n = plane_fit(self.mesh.xyz)
+        dip = np.rad2deg(np.arccos(np.dot(n, [0, 0, 1])))
+        return dip
 
     def get_width(self):
         """
