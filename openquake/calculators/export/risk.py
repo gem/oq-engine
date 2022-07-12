@@ -222,10 +222,11 @@ def export_src_loss_table(ekey, dstore):
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time or
                    oq.investigation_time))
-    aw = hdf5.ArrayWrapper.from_(dstore['src_loss_table'], 'loss_value')
-    dest = dstore.build_fname('src_loss_table', '', 'csv')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    writer.save(aw.to_dframe(), dest, comment=md)
+    for lt in dstore['src_loss_table']:
+        aw = hdf5.ArrayWrapper.from_(dstore['src_loss_table/' + lt])
+        dest = dstore.build_fname('src_loss_' + lt, '', 'csv')
+        writer.save(aw.to_dframe(), dest, comment=md)
     return writer.getsaved()
 
 
