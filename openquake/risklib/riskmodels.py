@@ -39,9 +39,9 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 LOSSTYPE = numpy.array('''\
-+structural nonstructural contents business_interruption
-+occupants occupants_day occupants_night occupants_transit
-+total insurance reinsurance'''.split())
+structural nonstructural contents business_interruption
+occupants occupants_day occupants_night occupants_transit
+total insurance reinsurance'''.split())
 LTI = {lt: i for i, lt in enumerate(LOSSTYPE)}
 COST_TYPE_REGEX = '|'.join(valid.cost_type.choices)
 RISK_TYPE_REGEX = re.compile(
