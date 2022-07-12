@@ -118,7 +118,8 @@ def get_src_loss_table(dstore, loss_id):
         (source_ids, array of losses of shape Ns)
     """
     K = dstore['risk_by_event'].attrs.get('K', 0)
-    alt = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
+    alt = dstore.read_df('risk_by_event', 'agg_id',
+                         dict(agg_id=K, loss_id=loss_id))
     eids = alt.event_id.to_numpy()
     evs = dstore['events'][:][eids]
     rlz_ids = evs['rlz_id']
@@ -126,9 +127,8 @@ def get_src_loss_table(dstore, loss_id):
     source_id = python3compat.decode(dstore['ruptures']['source_id'][rup_ids])
     w = dstore['weights'][:]
     acc = general.AccumDict(accum=0)
-    losses = alt[alt.loss_id == loss_id].loss.to_numpy()
-    for source_id, rlz_id, loss in zip(source_id, rlz_ids, losses):
-        acc[source_id] += loss * w[rlz_id]
+    for src, rlz_id, loss in zip(source_id, rlz_ids, alt.loss.to_numpy()):
+        acc[src] += loss * w[rlz_id]
     return zip(*sorted(acc.items()))
 
 
