@@ -25,7 +25,8 @@ from openquake.baselib import hdf5, writers, general
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
-    extract, build_damage_dt, build_csq_dt, build_damage_array, sanitize)
+    extract, build_damage_dt, build_csq_dt, build_damage_array, sanitize,
+    avglosses)
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
 from openquake.commonlib.util import get_assets, compose_arrays
@@ -163,20 +164,20 @@ def export_aggrisk_stats(ekey, dstore):
     return fnames
 
 
-def _get_data(dstore, dskey, stats):
+def _get_data(dstore, dskey, loss_types, stats):
     name, kind = dskey.split('-')  # i.e. ('avg_losses', 'stats')
     if kind == 'stats':
         weights = dstore['weights'][()]
         if dskey in set(dstore):  # precomputed
             rlzs_or_stats = list(stats)
             statfuncs = [stats[ros] for ros in stats]
-            value = dstore[dskey][()]  # shape (A, S, LI)
+            value = avglosses(dstore, loss_types, 'stats')  # shape (A, S, L)
         else:  # compute on the fly
             rlzs_or_stats, statfuncs = zip(*stats.items())
             value = compute_stats2(
-                dstore[name + '-rlzs'][()], statfuncs, weights)
+                avglosses(dstore, loss_types, 'rlzs'), statfuncs, weights)
     else:  # rlzs
-        value = dstore[dskey][()]  # shape (A, R, LI)
+        value = avglosses(dstore, loss_types, kind)  # shape (A, R, L)
         R = value.shape[1]
         rlzs_or_stats = ['rlz-%03d' % r for r in range(R)]
     return name, value, rlzs_or_stats
@@ -192,7 +193,8 @@ def export_avg_losses(ekey, dstore):
     dskey = ekey[0]
     oq = dstore['oqparam']
     dt = [(ln, F32) for ln in oq.loss_types]
-    name, value, rlzs_or_stats = _get_data(dstore, dskey, oq.hazard_stats())
+    name, value, rlzs_or_stats = _get_data(
+        dstore, dskey, oq.loss_types, oq.hazard_stats())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assets = get_assets(dstore)
     md = dstore.metadata
@@ -220,10 +222,11 @@ def export_src_loss_table(ekey, dstore):
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time or
                    oq.investigation_time))
-    aw = hdf5.ArrayWrapper.from_(dstore['src_loss_table'], 'loss_value')
-    dest = dstore.build_fname('src_loss_table', '', 'csv')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    writer.save(aw.to_dframe(), dest, comment=md)
+    for lt in dstore['src_loss_table']:
+        aw = hdf5.ArrayWrapper.from_(dstore['src_loss_table/' + lt])
+        dest = dstore.build_fname('src_loss_' + lt, '', 'csv')
+        writer.save(aw.to_dframe(), dest, comment=md)
     return writer.getsaved()
 
 

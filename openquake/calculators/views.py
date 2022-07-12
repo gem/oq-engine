@@ -364,7 +364,7 @@ def view_totlosses(token, dstore):
     sanity check for the correctness of the implementation.
     """
     oq = dstore['oqparam']
-    tot_losses = dstore['avg_losses-rlzs'][()].sum(axis=0)
+    tot_losses = dstore['avg_losses-rlzs/structural'][()].sum(axis=0)
     return text_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
 
 

@@ -75,9 +75,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                   delta=1E-5)
 
         # test the src_loss_table extractor
-        [fname] = export(('src_loss_table', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
-                              delta=1E-5)
+        fnames = export(('src_loss_table', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
     def test_case_1_eb(self):
         # this is a case with insured losses and tags
@@ -182,8 +183,8 @@ agg_id
                               delta=1E-5)
         self.assertEqual(len(self.calc.datastore['events']), 22)
 
-        losses0 = self.calc.datastore['avg_losses-stats'][:, 0, 0]  # shape ARL
-        losses1 = self.calc.datastore['avg_losses-stats'][:, 0, 0]  # shape ARL
+        losses0 = self.calc.datastore['avg_losses-stats/structural'][:, 0]
+        losses1 = self.calc.datastore['avg_losses-stats/structural'][:, 0]
         avg = (losses0 + losses1).sum() / 2
 
         # agg_losses
@@ -202,7 +203,7 @@ agg_id
         [fname] = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
-        tot = self.calc.datastore['avg_losses-rlzs'][:, 0, 0].sum()  # A1L
+        tot = self.calc.datastore['avg_losses-rlzs/structural'][:, 0].sum()
         aac(avg, tot, rtol=1E-6)
 
         # aggrisk
