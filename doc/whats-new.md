@@ -191,7 +191,7 @@ using sampling can produce slightly different averages since different
 realizations may be chosen internally. This is akin to a change of
 random seed, i.e. it is not a physically significant change.
 
-There is also a limit on the number of branches per branchset in the
+There is now a limit on the number of branches per branchset in the
 logic tree (94 branches).
 
 We changed the experimental feature `collapse_gsim_logic_tree` to use 
