@@ -182,8 +182,8 @@ agg_id
                               delta=1E-5)
         self.assertEqual(len(self.calc.datastore['events']), 22)
 
-        losses0 = self.calc.datastore['avg_losses-stats'][:, 0, 0]  # shape ARL
-        losses1 = self.calc.datastore['avg_losses-stats'][:, 0, 0]  # shape ARL
+        losses0 = self.calc.datastore['avg_losses-stats/structural'][:, 0]
+        losses1 = self.calc.datastore['avg_losses-stats/structural'][:, 0]
         avg = (losses0 + losses1).sum() / 2
 
         # agg_losses
@@ -202,7 +202,7 @@ agg_id
         [fname] = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
-        tot = self.calc.datastore['avg_losses-rlzs'][:, 0, 0].sum()  # A1L
+        tot = self.calc.datastore['avg_losses-rlzs/structural'][:, 0].sum()
         aac(avg, tot, rtol=1E-6)
 
         # aggrisk

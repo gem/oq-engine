@@ -308,10 +308,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             else:  # scenario
                 self.avg_ratio = 1. / self.num_events
         self.avg_losses = numpy.zeros((self.A, R, self.L), F32)
-        self.datastore.create_dset('avg_losses-rlzs', F32, (self.A, R, self.L))
-        self.datastore.set_shape_descr(
-            'avg_losses-rlzs', asset_id=self.assetcol['id'], rlz=R,
-            loss_type=oq.loss_types)
+        for lt in oq.loss_types:
+            self.datastore.create_dset(
+                'avg_losses-rlzs/' + lt, F32, (self.A, R))
+            self.datastore.set_shape_descr(
+                'avg_losses-rlzs/' + lt, asset_id=self.assetcol['id'], rlz=R)
 
     def execute(self):
         """
@@ -417,10 +418,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if oq.avg_losses:
             for r in range(self.R):
                 self.avg_losses[:, r] *= self.avg_ratio[r]
-            self.datastore['avg_losses-rlzs'] = self.avg_losses
-            stats.set_rlzs_stats(self.datastore, 'avg_losses',
-                                 asset_id=self.assetcol['id'],
-                                 loss_type=oq.loss_types)
+            for li, lt in enumerate(oq.loss_types):
+                name = 'avg_losses-rlzs/' + lt
+                self.datastore[name][:] = self.avg_losses[:, :, li]
+                stats.set_rlzs_stats(self.datastore, name,
+                                     asset_id=self.assetcol['id'])
 
         self.build_aggcurves()
         if oq.reaggregate_by:

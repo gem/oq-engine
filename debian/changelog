@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: changed the avg_losses storage to support secondary losses
   * Internal: we have now repeatable rupture IDs in classical PSHA
 
   [Pablo Iturrieta]

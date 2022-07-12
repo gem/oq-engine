@@ -259,7 +259,7 @@ class DamageCalculator(EventBasedRiskCalculator):
             self.dmgcsq[:, r] /= ne
         self.datastore['damages-rlzs'] = self.dmgcsq
         set_rlzs_stats(self.datastore,
-                       'damages',
+                       'damages-rlzs',
                        asset_id=self.assetcol['id'],
                        rlz=numpy.arange(self.R),
                        loss_type=oq.loss_types,

@@ -129,10 +129,11 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 avg_losses[a, s, li] = statloss[s]
                 base.set_array(stat_curves_lt['poes'][a, s], statpoes[s])
                 base.set_array(stat_curves_lt['losses'][a, s], losses)
-        self.datastore['avg_losses-stats'] = avg_losses
-        self.datastore.set_shape_descr(
-            'avg_losses-stats', asset_id=self.assetcol['id'],
-            stat=stats, loss_type=self.oqparam.loss_types)
+        for li, lt in enumerate(ltypes):
+            self.datastore['avg_losses-stats/' + lt] = avg_losses[:, :, li]
+            self.datastore.set_shape_descr(
+                'avg_losses-stats/' + lt,
+                asset_id=self.assetcol['id'], stat=stats)
         self.datastore['loss_curves-stats'] = stat_curves
         self.datastore.set_attrs('loss_curves-stats', stat=stats)
 

@@ -152,6 +152,17 @@ def barray(iterlines):
     return arr
 
 
+def avglosses(dstore, loss_types, kind):
+    """
+    :returns: an array of average losses of shape (A, R, L)
+    """
+    lst = []
+    for loss_type in loss_types:
+        lst.append(dstore['avg_losses-%s/%s' % (kind, loss_type)][()])
+    # shape L, A, R -> A, R, L
+    return numpy.array(lst).transpose(1, 2, 0)
+
+
 def extract_(dstore, dspath):
     """
     Extracts an HDF5 path object from the datastore, for instance
@@ -772,13 +783,12 @@ def extract_agg_losses(dstore, what):
     loss_type, tags = get_loss_type_tags(what)
     if not loss_type:
         raise ValueError('loss_type not passed in agg_losses/<loss_type>')
-    L = dstore['oqparam'].lti[loss_type]
-    if 'avg_losses-stats' in dstore:
+    if 'avg_losses-stats/' + loss_type in dstore:
         stats = list(dstore['oqparam'].hazard_stats())
-        losses = dstore['avg_losses-stats'][:, :, L]
-    elif 'avg_losses-rlzs' in dstore:
+        losses = dstore['avg_losses-stats/' + loss_type][:]
+    elif 'avg_losses-rlzs/' + loss_type in dstore:
         stats = ['mean']
-        losses = dstore['avg_losses-rlzs'][:, :, L]
+        losses = dstore['avg_losses-rlzs/' + loss_type][:]
     else:
         raise KeyError('No losses found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], losses, tags, stats)
@@ -819,14 +829,15 @@ def extract_aggregate(dstore, what):
     tagnames = qdic.get('tag', [])
     assetcol = dstore['assetcol']
     loss_types = info['loss_types']
-    ltypes = qdic.get('loss_type', [])  # list of indices
-    if ltypes:
-        lti = ltypes[0]
-        lt = [lt for lt, i in loss_types.items() if i == lti]
-        array = dstore[name + suffix][:, qdic['k'][0], lti]
-        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {}, lt)
+    ridx = qdic['k'][0]
+    lis = qdic.get('loss_type', [])  # list of indices
+    if lis:
+        li = lis[0]
+        lts = [lt for lt, i in loss_types.items() if i == li]
+        array = dstore['avg_losses%s/%s' % (suffix, lts[0])][:, ridx]
+        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {}, lts)
     else:
-        array = dstore[name + suffix][:, qdic['k'][0]]
+        array = avglosses(dstore, loss_types, suffix[1:])[:, ridx]
         aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {},
                           loss_types)
     for tagname in tagnames:
@@ -837,8 +848,10 @@ def extract_aggregate(dstore, what):
 
 @extract.add('losses_by_asset')
 def extract_losses_by_asset(dstore, what):
-    loss_dt = dstore['oqparam'].loss_dt(F32)
+    oq = dstore['oqparam']
+    loss_dt = oq.loss_dt(F32)
     rlzs = dstore['full_lt'].get_realizations()
+    stats = oq.hazard_stats()  # statname -> statfunc
     assets = util.get_assets(dstore)
     if 'losses_by_asset' in dstore:
         losses_by_asset = dstore['losses_by_asset'][()]
@@ -848,13 +861,13 @@ def extract_losses_by_asset(dstore, what):
             data = util.compose_arrays(assets, losses)
             yield 'rlz-%03d' % rlz.ordinal, data
     elif 'avg_losses-stats' in dstore:
-        aw = hdf5.ArrayWrapper.from_(dstore['avg_losses-stats'])
-        for s, stat in enumerate(aw.stat):
-            losses = cast(aw[:, s], loss_dt)
+        avg_losses = avglosses(dstore, loss_dt.names, 'stats')  # shape ASL
+        for s, stat in enumerate(stats):
+            losses = cast(avglosses[:, s], loss_dt)
             data = util.compose_arrays(assets, losses)
             yield stat, data
     elif 'avg_losses-rlzs' in dstore:  # there is only one realization
-        avg_losses = dstore['avg_losses-rlzs'][()]
+        avg_losses = avglosses(dstore, loss_dt.names, 'rlzs')
         losses = cast(avg_losses, loss_dt)
         data = util.compose_arrays(assets, losses)
         yield 'rlz-000', data
