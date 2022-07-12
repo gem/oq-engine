@@ -848,8 +848,10 @@ def extract_aggregate(dstore, what):
 
 @extract.add('losses_by_asset')
 def extract_losses_by_asset(dstore, what):
-    loss_dt = dstore['oqparam'].loss_dt(F32)
+    oq = dstore['oqparam']
+    loss_dt = oq.loss_dt(F32)
     rlzs = dstore['full_lt'].get_realizations()
+    stats = oq.hazard_stats()  # statname -> statfunc
     assets = util.get_assets(dstore)
     if 'losses_by_asset' in dstore:
         losses_by_asset = dstore['losses_by_asset'][()]
@@ -859,13 +861,13 @@ def extract_losses_by_asset(dstore, what):
             data = util.compose_arrays(assets, losses)
             yield 'rlz-%03d' % rlz.ordinal, data
     elif 'avg_losses-stats' in dstore:
-        aw = hdf5.ArrayWrapper.from_(dstore['avg_losses-stats'])
-        for s, stat in enumerate(aw.stat):
-            losses = cast(aw[:, s], loss_dt)
+        avg_losses = avglosses(dstore, loss_dt.names, 'stats')  # shape ASL
+        for s, stat in enumerate(stats):
+            losses = cast(avglosses[:, s], loss_dt)
             data = util.compose_arrays(assets, losses)
             yield stat, data
     elif 'avg_losses-rlzs' in dstore:  # there is only one realization
-        avg_losses = dstore['avg_losses-rlzs'][()]
+        avg_losses = avglosses(dstore, loss_dt.names, 'rlzs')
         losses = cast(avg_losses, loss_dt)
         data = util.compose_arrays(assets, losses)
         yield 'rlz-000', data
