@@ -191,6 +191,9 @@ using sampling can produce slightly different averages since different
 realizations may be chosen internally. This is akin to a change of
 random seed, i.e. it is not a physically significant change.
 
+There is also a limit on the number of branches per branchset in the
+logic tree (94 branches).
+
 We changed the experimental feature `collapse_gsim_logic_tree` to use 
 the class `AvgPoeGMPE` instead of `AvgGMPE`: in this way it is possible to
 compute exactly the average mean curves in the case of full enumeration,
@@ -349,9 +352,6 @@ Consequence models in XML format have been deprecated: you should use
 solely the CSV format.
 
 # Other fixed and changes
-
-There is now a limit on the number of branches per branchset in the
-logic tree (94 branches).
 
 We renamed the parameter `individual_curves` into `individual_rlzs`
 since it now applies not only to hazard curves but to all kinds of outputs.
