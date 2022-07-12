@@ -277,9 +277,8 @@ class PostRiskCalculator(base.RiskCalculator):
         if 'source_info' in self.datastore and 'risk' in oq.calculation_mode:
             logging.info('Building the src_loss_table')
             with self.monitor('src_loss_table', measuremem=True):
-                for loss_type in oq.loss_types:
-                    source_ids, losses = get_src_loss_table(
-                        self.datastore, riskmodels.LTI[loss_type])
+                for li, loss_type in enumerate(oq.loss_types):
+                    source_ids, losses = get_src_loss_table(self.datastore, li)
                     self.datastore['src_loss_table/' + loss_type] = losses
                     self.datastore.set_shape_descr(
                         'src_loss_table/' + loss_type, source=source_ids)
