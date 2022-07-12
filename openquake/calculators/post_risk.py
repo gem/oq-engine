@@ -27,7 +27,7 @@ from openquake.baselib import general, parallel, python3compat
 from openquake.commonlib import datastore, logs
 from openquake.risklib import asset, scientific
 from openquake.engine import engine
-from openquake.calculators import base, views
+from openquake.calculators import base, views, extract
 
 U8 = numpy.uint8
 F32 = numpy.float32
@@ -315,7 +315,8 @@ class PostRiskCalculator(base.RiskCalculator):
                    'addition-is-non-associative.html')
             K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
             aggrisk = self.aggrisk[self.aggrisk.agg_id == K]
-            avg_losses = self.datastore['avg_losses-rlzs'][:].sum(axis=0)
+            avg_losses = extract.avglosses(
+                self.datastore, oq.loss_types, 'rlzs').sum(axis=0)
             # shape (R, L)
             for _, row in aggrisk.iterrows():
                 ri, li = int(row.rlz_id), int(row.loss_id)
