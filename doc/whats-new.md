@@ -350,6 +350,9 @@ solely the CSV format.
 
 # Other fixed and changes
 
+There is now a limit on the number of branches per branchset in the
+logic tree (94 branches).
+
 We renamed the parameter `individual_curves` into `individual_rlzs`
 since it now applies not only to hazard curves but to all kinds of outputs.
 The old name is still valid as an alias.
