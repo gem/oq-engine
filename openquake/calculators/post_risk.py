@@ -277,8 +277,9 @@ class PostRiskCalculator(base.RiskCalculator):
         if 'source_info' in self.datastore and 'risk' in oq.calculation_mode:
             logging.info('Building the src_loss_table')
             with self.monitor('src_loss_table', measuremem=True):
-                for li, loss_type in enumerate(oq.loss_types):
-                    source_ids, losses = get_src_loss_table(self.datastore, li)
+                for loss_type in oq.loss_types:
+                    source_ids, losses = get_src_loss_table(
+                        self.datastore, riskmodels.LTI[loss_type])
                     self.datastore['src_loss_table/' + loss_type] = losses
                     self.datastore.set_shape_descr(
                         'src_loss_table/' + loss_type, source=source_ids)
@@ -315,24 +316,26 @@ class PostRiskCalculator(base.RiskCalculator):
                    'addition-is-non-associative.html')
             K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
             aggrisk = self.aggrisk[self.aggrisk.agg_id == K]
-            avg_losses = extract.avglosses(
-                self.datastore, oq.loss_types, 'rlzs').sum(axis=0)
+            avg_losses = {
+                lt: self.datastore['avg_losses-rlzs/' + lt][:].sum(axis=0)
+                for lt in oq.loss_types}
             # shape (R, L)
             for _, row in aggrisk.iterrows():
                 ri, li = int(row.rlz_id), int(row.loss_id)
+                lt = riskmodels.LOSSTYPE[li]
                 # check on the sum of the average losses
-                avg = avg_losses[ri, li]
+                avg = avg_losses[lt][ri]
                 agg = row.loss
                 if not numpy.allclose(avg, agg, rtol=.1):
                     # a serious discrepancy is an error
                     raise ValueError("agg != sum(avg) [%s]: %s %s" %
-                                     (oq.loss_types[li], agg, avg))
+                                     (lt, agg, avg))
                 if not numpy.allclose(avg, agg, rtol=.001):
                     # a small discrepancy is expected
                     logging.warning(
                         'Due to rounding errors inherent in floating-point '
                         'arithmetic, agg_losses != sum(avg_losses) [%s]: '
-                        '%s != %s\nsee %s', oq.loss_types[li], agg, avg, url)
+                        '%s != %s\nsee %s', lt, agg, avg, url)
 
 
 def post_aggregate(calc_id: int, aggregate_by):
