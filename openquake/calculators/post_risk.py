@@ -25,7 +25,7 @@ import pandas
 
 from openquake.baselib import general, parallel, python3compat
 from openquake.commonlib import datastore, logs
-from openquake.risklib import asset, scientific
+from openquake.risklib import asset, scientific, riskmodels
 from openquake.engine import engine
 from openquake.calculators import base, views, extract
 
@@ -112,10 +112,10 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None,
         eff_time, oq.risk_investigation_time or oq.investigation_time)
 
 
-def get_src_loss_table(dstore, L):
+def get_src_loss_table(dstore, loss_id):
     """
     :returns:
-        (source_ids, array of losses of shape (Ns, L))
+        (source_ids, array of losses of shape Ns)
     """
     K = dstore['risk_by_event'].attrs.get('K', 0)
     alt = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
@@ -125,10 +125,10 @@ def get_src_loss_table(dstore, L):
     rup_ids = evs['rup_id']
     source_id = python3compat.decode(dstore['ruptures']['source_id'][rup_ids])
     w = dstore['weights'][:]
-    acc = general.AccumDict(accum=numpy.zeros(L, F32))
-    for source_id, rlz_id, loss_id, loss in zip(
-            source_id, rlz_ids, alt.loss_id.to_numpy(), alt.loss.to_numpy()):
-        acc[source_id][loss_id] += loss * w[rlz_id]
+    acc = general.AccumDict(accum=0)
+    losses = alt[alt.loss_id == loss_id].loss.to_numpy()
+    for source_id, rlz_id, loss in zip(source_id, rlz_ids, losses):
+        acc[source_id] += loss * w[rlz_id]
     return zip(*sorted(acc.items()))
 
 
@@ -277,11 +277,12 @@ class PostRiskCalculator(base.RiskCalculator):
         if 'source_info' in self.datastore and 'risk' in oq.calculation_mode:
             logging.info('Building the src_loss_table')
             with self.monitor('src_loss_table', measuremem=True):
-                source_ids, losses = get_src_loss_table(self.datastore, self.L)
-                self.datastore['src_loss_table'] = losses
-                self.datastore.set_shape_descr('src_loss_table',
-                                               source=source_ids,
-                                               loss_type=oq.loss_types)
+                for loss_type in oq.loss_types:
+                    source_ids, losses = get_src_loss_table(
+                        self.datastore, riskmodels.LTI[loss_type])
+                    self.datastore['src_loss_table/' + loss_type] = losses
+                    self.datastore.set_shape_descr(
+                        'src_loss_table/' + loss_type, source=source_ids)
         K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
         rbe_df = self.datastore.read_df('risk_by_event')
         if self.reaggreate:
