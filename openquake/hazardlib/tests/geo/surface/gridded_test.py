@@ -36,6 +36,7 @@ class GriddedSurfaceTestCase(unittest.TestCase):
         self.surf = GriddedSurface.from_points_list(POINTS)
         self.mesh = Mesh(np.array([1.]), np.array([2.]), np.array([3.]))
         self.surf2 = GriddedSurface.from_points_list(POINTS2)
+        self.surf3 = GriddedSurface.from_points_list(POINTSIDL)
 
     def test_get_min_distance(self):
         dists = self.surf.get_min_distance(self.mesh)
@@ -68,14 +69,15 @@ class GriddedSurfaceTestCase(unittest.TestCase):
     def test_get_ry0_distance(self):
         self.assertRaises(NotImplementedError, self.surf.get_ry0_distance,
                           self.mesh)
-    
-    # def test_get_nproj(self):
-    #     expected  = np.array([0.99992365, 0.00917586, 0.00827658])
-    #     np.testing.assert_allclose(expected, self.surf.get_nproj(), rtol=1e-5, atol=0)
 
-    # def test_get_strike(self):
-    #     strike = self.surf.get_strike()
-    #     self.assertEqual(strike, 270.5257632176095)
+    def test_get_strike(self):
+        strike = self.surf.get_strike()
+        strike_2 = self.surf2.get_strike()
+        strike_3 = self.surf3.get_strike()
+        self.assertEqual(strike, 0.707115755836035)
+        self.assertEqual(strike_2, 0.7070046277015921)
+        self.assertEqual(strike_3, 179.49997899960738)
+
 
     def test_dip(self):   
         dip = self.surf.get_dip()

@@ -29,7 +29,6 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
 from numpy import (array, dot, arccos, arctan, arcsin, clip)
 from numpy.linalg import norm
-from openquake.hazardlib.geo.geodetic import spherical_to_cartesian
 from openquake.hazardlib.geo.utils import plane_fit
 
 
@@ -139,7 +138,10 @@ class GriddedSurface(BaseSurface):
         :returns:
             numpy.nan, not available for this kind of surface (yet)
         """
-        return np.nan
+        p, n = plane_fit(self.mesh.xyz)
+        p = p / np.sum(p**2)**0.5
+        strike = np.rad2deg(np.arccos(np.dot(p, [1, 0, 0])))
+        return strike
 
 
         
