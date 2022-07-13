@@ -192,7 +192,7 @@ C:\>python install.py user --remove
 ```
 $ python3 install.py devel --remove
 $ python3 install.py user --remove
-$ sudo -H /usr/bin/python3 install.py server --remove
+$ sudo -H python3 install.py server --remove
 ```
 
 The calculation data (in the `$HOME/oqdata` directory) WILL NOT be removed.
