@@ -28,7 +28,7 @@ from scipy import sparse
 from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
-from openquake.risklib.riskmodels import LOSSTYPE, LTI
+from openquake.risklib.riskmodels import LTI
 from openquake.risklib.scientific import insurance_losses, MultiEventRNG
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
@@ -407,10 +407,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             prc.exported = self.exported
         with prc.datastore:
             prc.run(exports='')
-
-        # save agg_curves-stats
-        if self.R > 1 and 'aggcurves' in self.datastore:
-            save_curve_stats(self.datastore)
 
     def gen_args(self, eids):
         """

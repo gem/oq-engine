@@ -48,26 +48,27 @@ def save_curve_stats(dstore):
         K = 0
     stats = oq.hazard_stats()
     S = len(stats)
-    L = len(oq.lti)
     weights = dstore['weights'][:]
     aggcurves_df = dstore.read_df('aggcurves')
     periods = aggcurves_df.return_period.unique()
     P = len(periods)
-    out = numpy.zeros((K + 1, S, L, P))
-    for (agg_id, loss_id), df in aggcurves_df.groupby(["agg_id", "loss_id"]):
-        for s, stat in enumerate(stats.values()):
-            for p in range(P):
-                dfp = df[df.return_period == periods[p]]
-                ws = weights[dfp.rlz_id.to_numpy()]
-                ws /= ws.sum()
-                out[agg_id, s, loss_id, p] = stat(dfp.loss.to_numpy(), ws)
-    for li, lt in enumerate(oq.loss_types):
+    for lt in oq.ext_loss_types:
+        loss_id = riskmodels.LTI[lt]
+        out = numpy.zeros((K + 1, S, P))
+        aggdf = aggcurves_df[aggcurves_df.loss_id == loss_id]
+        for agg_id, df in aggdf.groupby("agg_id"):
+            for s, stat in enumerate(stats.values()):
+                for p in range(P):
+                    dfp = df[df.return_period == periods[p]]
+                    ws = weights[dfp.rlz_id.to_numpy()]
+                    ws /= ws.sum()
+                    out[agg_id, s, p] = stat(dfp.loss.to_numpy(), ws)
         stat = 'agg_curves-stats/' + lt
         dstore.create_dset(stat, F64, (K + 1, S, P))
         dstore.set_shape_descr(stat, agg_id=K+1, stat=list(stats),
                                return_period=periods)
         dstore.set_attrs(stat, units=units)
-        dstore[stat][:] = out[:, :, li]
+        dstore[stat][:] = out
 
 
 def reagg_idxs(num_tags, tagnames):
