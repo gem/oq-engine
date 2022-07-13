@@ -40,6 +40,7 @@ from openquake.hazardlib.gsim.base import ContextMaker, read_cmakers
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
+from openquake.risklib.riskmodels import LOSSTYPE
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
 from openquake.calculators import getters
@@ -1381,7 +1382,7 @@ def extract_risk_stats(dstore, what):
     oq = dstore['oqparam']
     stats = oq.hazard_stats()
     df = dstore.read_df(what)
-    df['loss_type'] = [oq.loss_types[lid] for lid in df.loss_id]
+    df['loss_type'] = [LOSSTYPE[lid] for lid in df.loss_id]
     del df['loss_id']
     kfields = [f for f in df.columns if f in {
         'agg_id', 'loss_type', 'return_period'}]

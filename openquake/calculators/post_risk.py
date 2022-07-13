@@ -27,7 +27,7 @@ from openquake.baselib import general, parallel, python3compat
 from openquake.commonlib import datastore, logs
 from openquake.risklib import asset, scientific, riskmodels
 from openquake.engine import engine
-from openquake.calculators import base, views, extract
+from openquake.calculators import base, views
 
 U8 = numpy.uint8
 F32 = numpy.float32
@@ -48,26 +48,27 @@ def save_curve_stats(dstore):
         K = 0
     stats = oq.hazard_stats()
     S = len(stats)
-    L = len(oq.lti)
     weights = dstore['weights'][:]
     aggcurves_df = dstore.read_df('aggcurves')
     periods = aggcurves_df.return_period.unique()
     P = len(periods)
-    out = numpy.zeros((K + 1, S, L, P))
-    for (agg_id, loss_id), df in aggcurves_df.groupby(["agg_id", "loss_id"]):
-        for s, stat in enumerate(stats.values()):
-            for p in range(P):
-                dfp = df[df.return_period == periods[p]]
-                ws = weights[dfp.rlz_id.to_numpy()]
-                ws /= ws.sum()
-                out[agg_id, s, loss_id, p] = stat(dfp.loss.to_numpy(), ws)
-    for li, lt in enumerate(oq.loss_types):
+    for lt in oq.ext_loss_types:
+        loss_id = riskmodels.LTI[lt]
+        out = numpy.zeros((K + 1, S, P))
+        aggdf = aggcurves_df[aggcurves_df.loss_id == loss_id]
+        for agg_id, df in aggdf.groupby("agg_id"):
+            for s, stat in enumerate(stats.values()):
+                for p in range(P):
+                    dfp = df[df.return_period == periods[p]]
+                    ws = weights[dfp.rlz_id.to_numpy()]
+                    ws /= ws.sum()
+                    out[agg_id, s, p] = stat(dfp.loss.to_numpy(), ws)
         stat = 'agg_curves-stats/' + lt
         dstore.create_dset(stat, F64, (K + 1, S, P))
         dstore.set_shape_descr(stat, agg_id=K+1, stat=list(stats),
                                return_period=periods)
         dstore.set_attrs(stat, units=units)
-        dstore[stat][:] = out[:, :, li]
+        dstore[stat][:] = out
 
 
 def reagg_idxs(num_tags, tagnames):
@@ -314,8 +315,9 @@ class PostRiskCalculator(base.RiskCalculator):
         if 'source_info' in self.datastore and 'risk' in oq.calculation_mode:
             logging.info('Building the src_loss_table')
             with self.monitor('src_loss_table', measuremem=True):
-                for li, loss_type in enumerate(oq.loss_types):
-                    source_ids, losses = get_src_loss_table(self.datastore, li)
+                for loss_type in oq.loss_types:
+                    source_ids, losses = get_src_loss_table(
+                        self.datastore, riskmodels.LTI[loss_type])
                     self.datastore['src_loss_table/' + loss_type] = losses
                     self.datastore.set_shape_descr(
                         'src_loss_table/' + loss_type, source=source_ids)
@@ -339,7 +341,8 @@ class PostRiskCalculator(base.RiskCalculator):
         # logging.info('Total portfolio loss\n' +
         #              views.view('portfolio_loss', self.datastore))
         if oq.investigation_time and 'risk' in oq.calculation_mode:
-            for li, ln in enumerate(self.oqparam.loss_types):
+            for ln in self.oqparam.loss_types:
+                li = riskmodels.LTI[ln]
                 dloss = views.view('delta_loss:%d' % li, self.datastore)
                 if dloss['delta'].mean() > .1:  # more than 10% variation
                     logging.warning(
@@ -352,24 +355,28 @@ class PostRiskCalculator(base.RiskCalculator):
                    'addition-is-non-associative.html')
             K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
             aggrisk = self.aggrisk[self.aggrisk.agg_id == K]
-            avg_losses = extract.avglosses(
-                self.datastore, oq.loss_types, 'rlzs').sum(axis=0)
+            avg_losses = {
+                lt: self.datastore['avg_losses-rlzs/' + lt][:].sum(axis=0)
+                for lt in oq.loss_types}
             # shape (R, L)
             for _, row in aggrisk.iterrows():
                 ri, li = int(row.rlz_id), int(row.loss_id)
+                lt = riskmodels.LOSSTYPE[li]
+                if lt not in avg_losses:
+                    continue
                 # check on the sum of the average losses
-                avg = avg_losses[ri, li]
+                avg = avg_losses[lt][ri]
                 agg = row.loss
                 if not numpy.allclose(avg, agg, rtol=.1):
                     # a serious discrepancy is an error
                     raise ValueError("agg != sum(avg) [%s]: %s %s" %
-                                     (oq.loss_types[li], agg, avg))
+                                     (lt, agg, avg))
                 if not numpy.allclose(avg, agg, rtol=.001):
                     # a small discrepancy is expected
                     logging.warning(
                         'Due to rounding errors inherent in floating-point '
                         'arithmetic, agg_losses != sum(avg_losses) [%s]: '
-                        '%s != %s\nsee %s', oq.loss_types[li], agg, avg, url)
+                        '%s != %s\nsee %s', lt, agg, avg, url)
 
         # save agg_curves-stats
         if (self.R > 1 and 'aggcurves' in self.datastore and

@@ -1430,7 +1430,7 @@ class OqParam(valid.ParamSet):
         """
         Dictionary extended_loss_type -> extended_loss_type index
         """
-        return {lt: i for i, (lt, dt) in enumerate(self.loss_dt_list())}
+        return {lt: i for i, lt in enumerate(self.ext_loss_types)}
 
     @property
     def loss_types(self):

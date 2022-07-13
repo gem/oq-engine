@@ -28,6 +28,7 @@ from scipy import sparse
 from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
+from openquake.risklib.riskmodels import LTI
 from openquake.risklib.scientific import insurance_losses, MultiEventRNG
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
@@ -88,12 +89,13 @@ def aggreg(outputs, crmodel, ARKD, aggids, rlz_id, monitor):
     mon_avg = monitor('averaging losses', measuremem=False)
     mon_df = monitor('building dataframe', measuremem=True)
     oq = crmodel.oqparam
-    loss_by_AR = {ln: [] for ln in oq.loss_types}
+    xtypes = oq.ext_loss_types
+    loss_by_AR = {ln: [] for ln in xtypes}
     correl = int(oq.asset_correlation)
-    (A, R, K, D), L = ARKD, len(oq.loss_types)
+    (A, R, K, D), L = ARKD, len(xtypes)
     acc = general.AccumDict(accum=numpy.zeros((L, D)))  # u8idx->array
     for out in outputs:
-        for li, ln in enumerate(oq.loss_types):
+        for li, ln in enumerate(oq.ext_loss_types):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln].reset_index()
@@ -121,7 +123,7 @@ def aggreg(outputs, crmodel, ARKD, aggids, rlz_id, monitor):
                 if arr[li].any():
                     dic['event_id'].append(eid)
                     dic['agg_id'].append(kid)
-                    dic['loss_id'].append(li)
+                    dic['loss_id'].append(LTI[xtypes[li]])
                     for c, col in enumerate(value_cols):
                         dic[col].append(arr[li, c])
         fix_dtypes(dic)
@@ -236,10 +238,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.datastore.swmr_on()
         sec_losses = []  # one insured loss for each loss type with a policy
         oq.D = 2
-        #if hasattr(self, 'policy_df'):
-        #    sec_losses.append(
-        #        partial(insurance_losses, policy_df=self.policy_df))
-        #    self.oqparam.D = 3
+        if hasattr(self, 'policy_df'):
+            sec_losses.append(
+                partial(insurance_losses, policy_df=self.policy_df))
         oq._sec_losses = sec_losses
         oq.M = len(oq.all_imts())
         oq.N = self.N
@@ -264,6 +265,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
     def create_avg_losses(self):
         oq = self.oqparam
+        L = len(oq.ext_loss_types)
         ws = self.datastore['weights']
         R = 1 if oq.collect_rlzs else len(ws)
         if oq.collect_rlzs:
@@ -276,8 +278,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 self.avg_ratio = numpy.array([oq.time_ratio] * len(ws))
             else:  # scenario
                 self.avg_ratio = 1. / self.num_events
-        self.avg_losses = numpy.zeros((self.A, R, self.L), F32)
-        for lt in oq.loss_types:
+        self.avg_losses = numpy.zeros((self.A, R, L), F32)
+        for lt in oq.ext_loss_types:
             self.datastore.create_dset(
                 'avg_losses-rlzs/' + lt, F32, (self.A, R))
             self.datastore.set_shape_descr(
