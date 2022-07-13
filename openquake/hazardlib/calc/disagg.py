@@ -72,10 +72,10 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     min_mag = mags[0]
     max_mag = mags[-1]
     n1 = int(numpy.floor(min_mag / oq.mag_bin_width))
-    n2 = int(numpy.ceil(max_mag / oq.mag_bin_width) + 1)
-    if n2 == n1 + 1:  # happens when there is a single magnitude
-        n2 = n1 + 2
-    mag_edges = oq.mag_bin_width * numpy.arange(n1, n2)
+    n2 = int(numpy.ceil(max_mag / oq.mag_bin_width))
+    if n2 == n1 or max_mag >= oq.mag_bin_width * n2:
+        n2 += 1
+    mag_edges = oq.mag_bin_width * numpy.arange(n1, n2+1)
 
     # build dist_edges
     maxdist = max(oq.maximum_distance.max().values())
