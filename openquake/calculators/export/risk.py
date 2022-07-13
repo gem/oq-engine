@@ -555,8 +555,7 @@ def export_aggcurves_csv(ekey, dstore):
     K = len(dstore['agg_values']) - 1
     dataf = dstore.read_df('aggcurves')
     consequences = [col for col in dataf.columns
-                    if col in scientific.KNOWN_CONSEQUENCES
-                    and col in agg_values.dtype.names]
+                    if col in scientific.KNOWN_CONSEQUENCES]
     dest = dstore.export_path('%s-{}.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     md = dstore.metadata

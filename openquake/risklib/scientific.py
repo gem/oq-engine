@@ -1468,11 +1468,7 @@ def get_agg_value(consequence, agg_values, agg_id, loss_type):
         sum of the values corresponding to agg_id for the given consequence
     """
     aval = agg_values[agg_id]
-    if consequence not in KNOWN_CONSEQUENCES:
-        raise NotImplementedError(consequence)
-    elif consequence in ('loss', 'ins_loss', 'losses'):
-        return aval[loss_type]
-    elif consequence == 'collapsed':
+    if consequence == 'collapsed':
         return aval['number']
     elif consequence == 'injured':
         return aval['occupants_night']
@@ -1480,6 +1476,12 @@ def get_agg_value(consequence, agg_values, agg_id, loss_type):
         return aval['occupants_night']
     elif consequence == 'homeless':
         return aval['occupants_night']
+    elif consequence in ('loss', 'losses'):
+        if loss_type.endswith('_ins'):
+            loss_type = loss_type[:-4]
+        return aval[loss_type]
+    else:
+        raise NotImplementedError(consequence)
 
 
 if __name__ == '__main__':
