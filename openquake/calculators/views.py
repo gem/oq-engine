@@ -36,6 +36,7 @@ from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util, logictree
+from openquake.risklib.riskmodels import LTI
 from openquake.risklib.scientific import losses_by_period, return_periods
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import get_rupture_getters
@@ -377,10 +378,10 @@ def alt_to_many_columns(alt, loss_types):
         dic[ln] = []
     for (eid, kid), df in alt.groupby(['event_id', 'agg_id']):
         dic['event_id'].append(eid)
-        arr = numpy.zeros(len(loss_types))
-        arr[df.loss_id.to_numpy()] = df.loss.to_numpy()
-        for li, ln in enumerate(loss_types):
-            dic[ln].append(arr[li])
+        for ln in loss_types:
+            arr = df[df.loss_id == LTI[ln]].loss.to_numpy()
+            loss = 0 if len(arr) == 0 else arr[0]  # arr has size 0 or 1
+            dic[ln].append(loss)
     return pandas.DataFrame(dic)
 
 

@@ -121,7 +121,6 @@ agg_id
         # extract agg_curves with tags
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
                      'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
-        import pdb; pdb.set_trace()
         tmp = gettemp(text_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves5.csv', tmp)
 
