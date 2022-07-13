@@ -372,7 +372,8 @@ class PostRiskCalculator(base.RiskCalculator):
                         '%s != %s\nsee %s', oq.loss_types[li], agg, avg, url)
 
         # save agg_curves-stats
-        if self.R > 1 and 'aggcurves' in self.datastore:
+        if (self.R > 1 and 'aggcurves' in self.datastore and
+                'risk' in oq.calculation_mode):
             save_curve_stats(self.datastore)
 
 
