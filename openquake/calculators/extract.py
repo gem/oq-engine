@@ -723,7 +723,7 @@ def extract_agg_curves(dstore, what):
 
     /extract/agg_curves?kind=stats,absolute=1&loss_type=occupants&occupancy=RES
 
-    Returns an array of shape (P, S, 1...)
+    Returns an array of shape (P, S, ...)
     """
     info = get_info(dstore)
     qdic = parse(what, info)
@@ -731,7 +731,7 @@ def extract_agg_curves(dstore, what):
     for a in ('k', 'rlzs', 'kind', 'loss_type', 'absolute'):
         del tagdict[a]
     k = qdic['k']  # rlz or stat index
-    lt = tagdict.pop('lt')  # loss type string
+    lts = tagdict.pop('lt')  # loss type string
     [l] = qdic['loss_type']  # loss type index
     tagnames = sorted(tagdict)
     if set(tagnames) != info['tagnames']:
@@ -743,17 +743,16 @@ def extract_agg_curves(dstore, what):
         lst = decode(dstore['agg_keys'][:])
         agg_id = lst.index(','.join(tagvalues))
     kinds = list(info['stats'])
-    name = 'agg_curves-stats'
+    name = 'agg_curves-stats/' + lts[0]
     units = dstore.get_attr(name, 'units')
     shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
     units = dstore.get_attr(name, 'units')
     rps = shape_descr['return_period']
-    tup = (agg_id, k, l)
-    arr = dstore[name][tup].T  # shape P, R
+    arr = dstore[name][agg_id, k].T  # shape P, R
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
-        evalue, = dstore['agg_values'][agg_id][lt]
+        evalue, = dstore['agg_values'][agg_id][lts]
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)

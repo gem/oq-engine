@@ -61,11 +61,13 @@ def save_curve_stats(dstore):
                 ws = weights[dfp.rlz_id.to_numpy()]
                 ws /= ws.sum()
                 out[agg_id, s, loss_id, p] = stat(dfp.loss.to_numpy(), ws)
-    dstore.create_dset('agg_curves-stats', F64, (K + 1, S, L, P))
-    dstore.set_shape_descr('agg_curves-stats', agg_id=K+1, stat=list(stats),
-                           lti=L, return_period=periods)
-    dstore.set_attrs('agg_curves-stats', units=units)
-    dstore['agg_curves-stats'][:] = out
+    for li, lt in enumerate(oq.loss_types):
+        stat = 'agg_curves-stats/' + lt
+        dstore.create_dset(stat, F64, (K + 1, S, P))
+        dstore.set_shape_descr(stat, agg_id=K+1, stat=list(stats),
+                               return_period=periods)
+        dstore.set_attrs(stat, units=units)
+        dstore[stat][:] = out[:, :, li]
 
 
 def reagg_idxs(num_tags, tagnames):
