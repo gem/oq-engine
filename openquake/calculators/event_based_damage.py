@@ -23,7 +23,7 @@ import pandas
 
 from openquake.baselib import hdf5, general, parallel
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.risklib import scientific, connectivity
+from openquake.risklib import scientific, riskmodels, connectivity
 from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
@@ -80,6 +80,7 @@ def event_based_damage(df, oqparam, dstore, monitor):
     if R > 1:
         allrlzs = dstore['events']['rlz_id']
     loss_types = crmodel.oqparam.loss_types
+    assert len(loss_types) == L
     float_dmg_dist = oqparam.float_dmg_dist  # True by default
     if dstore.parent:
         dstore.parent.close()  # essential on Windows with h5py>=3.6
@@ -150,18 +151,19 @@ def event_based_damage(df, oqparam, dstore, monitor):
                             for kids in aggids:
                                 for a, aid in enumerate(aids):
                                     dddict[eid, kids[aid]][lti] += d3[a, e]
-    return to_dframe(dddict, ci, L), dmgcsq
+    return _dframe(dddict, ci, loss_types), dmgcsq
 
 
-def to_dframe(adic, ci, L):
+def _dframe(adic, ci, loss_types):
+    # convert {eid, kid: dd} into a DataFrame (agg_id, event_id, loss_id)
     dic = general.AccumDict(accum=[])
     for (eid, kid), dd in sorted(adic.items()):
-        for lti in range(L):
-            dic['event_id'].append(eid)
+        for li, lt in enumerate(loss_types):
             dic['agg_id'].append(kid)
-            dic['loss_id'].append(lti)
+            dic['event_id'].append(eid)
+            dic['loss_id'].append(riskmodels.LTI[lt])
             for sname, si in ci.items():
-                dic[sname].append(dd[lti, si])
+                dic[sname].append(dd[li, si])
     fix_dtypes(dic)
     return pandas.DataFrame(dic)
 

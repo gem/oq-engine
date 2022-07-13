@@ -95,7 +95,7 @@ def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
             if manyrlzs:
                 out['rlz_id'].extend(df.rlz_id)
             for col in cols:
-                if col in csqs:
+                if col in csqs:  # normally csqs = ['loss']
                     aval = scientific.get_agg_value(
                         col, agg_values, agg_id, loss_type)
                     out[col + '_value'].extend(df[col])
