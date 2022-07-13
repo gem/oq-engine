@@ -133,10 +133,13 @@ class GriddedSurface(BaseSurface):
      
     def get_strike(self):
         """
-        Compute surface's strike as decimal degrees in a range ``[0, 360)``.
-        The actual definition of the strike might depend on surface geometry.
+        params:
+            p = point on the plane derived from plane_fit function.
+            the point is normalised and the angle between the 
+            normalised vector and the YZ plane is calculated.  
+        
         :returns:
-            numpy.nan, not available for this kind of surface (yet)
+            the function calculates strike value for a gridded surface
         """
         p, n = plane_fit(self.mesh.xyz)
         p = p / np.sum(p**2)**0.5
@@ -160,7 +163,7 @@ class GriddedSurface(BaseSurface):
             the function calculates the dip angle for gridded surface
         """
         p, n = plane_fit(self.mesh.xyz)
-        dip = np.rad2deg(np.arccos(np.dot(n, [0, 0, 1])))
+        dip = 90 - np.rad2deg(np.arcsin(np.dot(n, [0, 0, 1])))
         return dip
 
     def get_width(self):
