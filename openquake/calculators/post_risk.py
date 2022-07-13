@@ -31,8 +31,41 @@ from openquake.calculators import base, views, extract
 
 U8 = numpy.uint8
 F32 = numpy.float32
+F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
+
+
+def save_curve_stats(dstore):
+    """
+    Save agg_curves-stats
+    """
+    oq = dstore['oqparam']
+    units = dstore['cost_calculator'].get_units(oq.loss_types)
+    try:
+        K = len(dstore['agg_keys'])
+    except KeyError:
+        K = 0
+    stats = oq.hazard_stats()
+    S = len(stats)
+    L = len(oq.lti)
+    weights = dstore['weights'][:]
+    aggcurves_df = dstore.read_df('aggcurves')
+    periods = aggcurves_df.return_period.unique()
+    P = len(periods)
+    out = numpy.zeros((K + 1, S, L, P))
+    for (agg_id, loss_id), df in aggcurves_df.groupby(["agg_id", "loss_id"]):
+        for s, stat in enumerate(stats.values()):
+            for p in range(P):
+                dfp = df[df.return_period == periods[p]]
+                ws = weights[dfp.rlz_id.to_numpy()]
+                ws /= ws.sum()
+                out[agg_id, s, loss_id, p] = stat(dfp.loss.to_numpy(), ws)
+    dstore.create_dset('agg_curves-stats', F64, (K + 1, S, L, P))
+    dstore.set_shape_descr('agg_curves-stats', agg_id=K+1, stat=list(stats),
+                           lti=L, return_period=periods)
+    dstore.set_attrs('agg_curves-stats', units=units)
+    dstore['agg_curves-stats'][:] = out
 
 
 def reagg_idxs(num_tags, tagnames):
@@ -298,7 +331,7 @@ class PostRiskCalculator(base.RiskCalculator):
 
     def post_execute(self, dummy):
         """
-        Sanity checks
+        Sanity checks and save agg_curves-stats
         """
         oq = self.oqparam
         # logging.info('Total portfolio loss\n' +
@@ -335,6 +368,10 @@ class PostRiskCalculator(base.RiskCalculator):
                         'Due to rounding errors inherent in floating-point '
                         'arithmetic, agg_losses != sum(avg_losses) [%s]: '
                         '%s != %s\nsee %s', oq.loss_types[li], agg, avg, url)
+
+        # save agg_curves-stats
+        if self.R > 1 and 'aggcurves' in self.datastore:
+            save_curve_stats(self.datastore)
 
 
 def post_aggregate(calc_id: int, aggregate_by):
