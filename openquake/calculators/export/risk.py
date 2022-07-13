@@ -100,7 +100,7 @@ def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
                         col, agg_values, agg_id, loss_type)
                     out[col + '_value'].extend(df[col])
                     out[col + '_ratio'].extend(df[col] / aval)
-                else:
+                else:  # in ScenarioDamageTestCase:test_case_12
                     out[col].extend(df[col])
         dsdic = {'dmg_0': 'no_damage'}
         for s, ls in enumerate(oq.limit_states, 1):
