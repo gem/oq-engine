@@ -1416,6 +1416,25 @@ def insurance_losses(asset_df, losses_by_rl, policy_df):
             losses_by_rl[riskid, lt + '_ins'] = new
 
 
+def total_losses(asset_df, losses_by_rl, kind):
+    """
+    :param asset_df: DataFrame of assets
+    :param losses_by_rl: riskid, lt -> DataFrame[eid, aid]
+    :param kind: kind of total loss (i.e. "structural+nonstructural")
+    """
+    if kind in ('structural+nonstructural',
+                'structural+nonstructural+contents'):
+        ltypes = kind.split('+')
+    else:
+        raise ValueError(kind)
+    for (riskid, lt), out in list(losses_by_rl.items()):
+        losses_by_rl[riskid, kind] = 0.
+    for ltype in ltypes:
+        for (riskid, lt), out in list(losses_by_rl.items()):
+            if lt == ltype:
+                losses_by_rl[riskid, kind] += out
+
+
 # not used anymore
 def make_epsilons(matrix, seed, correlation):
     """
