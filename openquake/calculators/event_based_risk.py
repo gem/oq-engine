@@ -45,39 +45,6 @@ TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
 
 
-def save_curve_stats(dstore):
-    """
-    Save agg_curves-stats
-    """
-    oq = dstore['oqparam']
-    units = dstore['cost_calculator'].get_units(oq.loss_types)
-    try:
-        K = len(dstore['agg_keys'])
-    except KeyError:
-        K = 0
-    stats = oq.hazard_stats()
-    S = len(stats)
-    weights = dstore['weights'][:]
-    aggcurves_df = dstore.read_df('aggcurves')
-    periods = aggcurves_df.return_period.unique()
-    P = len(periods)
-    out = {lt: numpy.zeros((K + 1, S, P)) for lt in oq.ext_loss_types}
-    for (agg_id, loss_id), df in aggcurves_df.groupby(["agg_id", "loss_id"]):
-        lt = LOSSTYPE[loss_id]
-        for s, stat in enumerate(stats.values()):
-            for p in range(P):
-                dfp = df[df.return_period == periods[p]]
-                ws = weights[dfp.rlz_id.to_numpy()]
-                ws /= ws.sum()
-                out[lt][agg_id, s, p] = stat(dfp.loss.to_numpy(), ws)
-    for lt in out:
-        dstore['agg_curves-stats/' + lt] = out[lt]
-        dstore.set_shape_descr(
-            'agg_curves-stats/' + lt, agg_id=K+1, stat=list(stats),
-            return_period=periods)
-        dstore.set_attrs('agg_curves-stats/' + lt, units=units)
-
-
 def fast_agg(keys, values, correl, li, acc):
     """
     :param keys: an array of N uint64 numbers encoding (event_id, agg_id)
