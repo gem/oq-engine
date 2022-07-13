@@ -27,7 +27,7 @@ from openquake.baselib import general, parallel, python3compat
 from openquake.commonlib import datastore, logs
 from openquake.risklib import asset, scientific, riskmodels
 from openquake.engine import engine
-from openquake.calculators import base, views, extract
+from openquake.calculators import base, views
 
 U8 = numpy.uint8
 F32 = numpy.float32
@@ -303,7 +303,8 @@ class PostRiskCalculator(base.RiskCalculator):
         # logging.info('Total portfolio loss\n' +
         #              views.view('portfolio_loss', self.datastore))
         if oq.investigation_time and 'risk' in oq.calculation_mode:
-            for li, ln in enumerate(self.oqparam.loss_types):
+            for ln in self.oqparam.loss_types:
+                li = riskmodels.LTI[ln]
                 dloss = views.view('delta_loss:%d' % li, self.datastore)
                 if dloss['delta'].mean() > .1:  # more than 10% variation
                     logging.warning(
@@ -323,6 +324,8 @@ class PostRiskCalculator(base.RiskCalculator):
             for _, row in aggrisk.iterrows():
                 ri, li = int(row.rlz_id), int(row.loss_id)
                 lt = riskmodels.LOSSTYPE[li]
+                if lt not in avg_losses:
+                    continue
                 # check on the sum of the average losses
                 avg = avg_losses[lt][ri]
                 agg = row.loss

@@ -23,7 +23,7 @@ import pandas
 
 from openquake.baselib import hdf5, writers, general
 from openquake.hazardlib.stats import compute_stats2
-from openquake.risklib import scientific
+from openquake.risklib import scientific, riskmodels
 from openquake.calculators.extract import (
     extract, build_damage_dt, build_csq_dt, build_damage_array, sanitize,
     avglosses)
@@ -87,7 +87,7 @@ def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
         out = general.AccumDict(accum=[])
         for (agg_id, lid), df in aggrisk[ok].groupby(['agg_id', 'loss_id']):
             n = len(df)
-            loss_type = oq.loss_types[lid]
+            loss_type = riskmodels.LOSSTYPE[lid]
             out['loss_type'].extend([loss_type] * n)
             if tagnames:
                 for tagname, tag in zip(tagnames, aggtags[agg_id]):
@@ -95,7 +95,7 @@ def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
             if manyrlzs:
                 out['rlz_id'].extend(df.rlz_id)
             for col in cols:
-                if col in csqs:  # normally csqs = ['loss']
+                if col in agg_values.dtype.names:
                     aval = scientific.get_agg_value(
                         col, agg_values, agg_id, loss_type)
                     out[col + '_value'].extend(df[col])
@@ -252,9 +252,8 @@ def export_event_loss_table(ekey, dstore):
         lstates = dstore.get_attr('risk_by_event', 'limit_states').split()
     except KeyError:  # ebrisk, no limit states
         lstates = []
-    lnames = numpy.array(oq.loss_types)
     df = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
-    df['loss_type'] = lnames[df.loss_id.to_numpy()]
+    df['loss_type'] = riskmodels.LOSSTYPE[df.loss_id.to_numpy()]
     del df['loss_id']
     if 'variance' in df.columns:
         del df['variance']
@@ -579,10 +578,10 @@ def export_aggcurves_csv(ekey, dstore):
     E = len(dstore['events'])
     R = len(dstore['weights'])
     K = len(dstore['agg_values']) - 1
-    lossnames = numpy.array(oq.loss_types)
     dataf = dstore.read_df('aggcurves')
     consequences = [col for col in dataf.columns
-                    if col in scientific.KNOWN_CONSEQUENCES]
+                    if col in scientific.KNOWN_CONSEQUENCES
+                    and col in agg_values.dtype.names]
     dest = dstore.export_path('%s-{}.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     md = dstore.metadata
@@ -602,6 +601,7 @@ def export_aggcurves_csv(ekey, dstore):
     pairs = [([], dataf.agg_id == K)]  # full aggregation
     for tagnames, agg_ids in zip(oq.aggregate_by, aggids):
         pairs.append((tagnames, numpy.isin(dataf.agg_id, agg_ids)))
+    LT = riskmodels.LOSSTYPE
     for tagnames, ok in pairs:
         edic = general.AccumDict(accum=[])
         for (agg_id, rlz_id, loss_id), d in dataf[ok].groupby(
@@ -611,13 +611,13 @@ def export_aggcurves_csv(ekey, dstore):
                     edic[tagname].extend([tag] * len(d))
             for col in cols:
                 edic[col].extend(d[col])
-            edic['loss_type'].extend([lossnames[loss_id]] * len(d))
+            edic['loss_type'].extend([LT[loss_id]] * len(d))
             if manyrlzs:
                 edic['rlz_id'].extend([rlz_id] * len(d))
             for cons in consequences:
                 edic[cons + '_value'].extend(d[cons])
                 aval = scientific.get_agg_value(
-                    cons, agg_values, agg_id, lossnames[loss_id])
+                    cons, agg_values, agg_id, LT[loss_id])
                 edic[cons + '_ratio'].extend(d[cons] / aval)
         fname = dest.format('-'.join(tagnames))
         writer.save(pandas.DataFrame(edic), fname, comment=md)

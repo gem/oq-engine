@@ -28,7 +28,7 @@ from scipy import sparse
 from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
-from openquake.risklib.riskmodels import LTI
+from openquake.risklib.riskmodels import LOSSTYPE, LTI
 from openquake.risklib.scientific import insurance_losses, MultiEventRNG
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
@@ -57,23 +57,25 @@ def save_curve_stats(dstore):
         K = 0
     stats = oq.hazard_stats()
     S = len(stats)
-    L = len(oq.lti)
     weights = dstore['weights'][:]
     aggcurves_df = dstore.read_df('aggcurves')
     periods = aggcurves_df.return_period.unique()
     P = len(periods)
-    out = numpy.zeros((K + 1, S, L, P))
+    out = {lt: numpy.zeros((K + 1, S, P)) for lt in oq.ext_loss_types}
     for (agg_id, loss_id), df in aggcurves_df.groupby(["agg_id", "loss_id"]):
+        lt = LOSSTYPE[loss_id]
         for s, stat in enumerate(stats.values()):
             for p in range(P):
                 dfp = df[df.return_period == periods[p]]
                 ws = weights[dfp.rlz_id.to_numpy()]
                 ws /= ws.sum()
-                out[agg_id, s, loss_id, p] = stat(dfp.loss.to_numpy(), ws)
-    dstore['agg_curves-stats'] = out
-    dstore.set_shape_descr('agg_curves-stats', agg_id=K+1, stat=list(stats),
-                           lti=L, return_period=periods)
-    dstore.set_attrs('agg_curves-stats', units=units)
+                out[lt][agg_id, s, p] = stat(dfp.loss.to_numpy(), ws)
+    for lt in out:
+        dstore['agg_curves-stats/' + lt] = out[lt]
+        dstore.set_shape_descr(
+            'agg_curves-stats/' + lt, agg_id=K+1, stat=list(stats),
+            return_period=periods)
+        dstore.set_attrs('agg_curves-stats/' + lt, units=units)
 
 
 def fast_agg(keys, values, correl, li, acc):
@@ -88,10 +90,7 @@ def fast_agg(keys, values, correl, li, acc):
     if correl:  # restore the variances
         avalues[:, 0] = avalues[:, 0] ** 2
     for ukey, avalue in zip(ukeys, avalues):
-        try:
-            acc[ukey][li] += avalue
-        except:
-            import pdb; pdb.set_trace()
+        acc[ukey][li] += avalue
 
 
 def average_losses(ln, alt, rlz_id, AR, collect_rlzs):

@@ -733,6 +733,7 @@ def extract_agg_curves(dstore, what):
     k = qdic['k']  # rlz or stat index
     lt = tagdict.pop('lt')  # loss type string
     [l] = qdic['loss_type']  # loss type index
+    import pdb; pdb.set_trace()
     tagnames = sorted(tagdict)
     if set(tagnames) != info['tagnames']:
         raise ValueError('Expected tagnames=%s, got %s' %
@@ -743,7 +744,7 @@ def extract_agg_curves(dstore, what):
         lst = decode(dstore['agg_keys'][:])
         agg_id = lst.index(','.join(tagvalues))
     kinds = list(info['stats'])
-    name = 'agg_curves-stats'
+    name = 'agg_curves-stats/' + lt[0]
     units = dstore.get_attr(name, 'units')
     shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
     units = dstore.get_attr(name, 'units')
@@ -1381,6 +1382,7 @@ def extract_risk_stats(dstore, what):
     """
     oq = dstore['oqparam']
     stats = oq.hazard_stats()
+    import pdb; pdb.set_trace()
     df = dstore.read_df(what)
     df['loss_type'] = [oq.loss_types[lid] for lid in df.loss_id]
     del df['loss_id']
