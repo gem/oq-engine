@@ -436,31 +436,6 @@ def get_loss_maps(dstore, kind):
     raise KeyError('loss_maps/loss_curves missing in %s' % dstore)
 
 
-agg_dt = numpy.dtype([('unit', (bytes, 6)), ('mean', F32), ('stddev', F32)])
-
-
-# this is used by scenario_risk
-@export.add(('agglosses', 'csv'))
-def export_agglosses(ekey, dstore):
-    oq = dstore['oqparam']
-    loss_dt = oq.loss_dt()
-    cc = dstore['cost_calculator']
-    unit_by_lt = cc.units
-    unit_by_lt['occupants'] = 'people'
-    agglosses = dstore[ekey[0]]
-    losses = []
-    header = ['rlz_id', 'loss_type', 'unit', 'mean', 'stddev']
-    for r in range(len(agglosses)):
-        for li, lt in enumerate(loss_dt.names):
-            unit = unit_by_lt[lt]
-            mean = agglosses[r, li]['mean']
-            stddev = agglosses[r, li]['stddev']
-            losses.append((r, lt, unit, mean, stddev))
-    dest = dstore.build_fname('agglosses', '', 'csv')
-    writers.write_csv(dest, losses, header=header, comment=dstore.metadata)
-    return [dest]
-
-
 def get_paths(rlz):
     """
     :param rlz:
