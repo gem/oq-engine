@@ -431,8 +431,8 @@ def view_portfolio_loss(token, dstore):
     E = len(rlzs)
     ws = weights[rlzs]
     avgs = []
-    for li, ln in enumerate(oq.loss_types):
-        df = alt_df[alt_df.loss_id == li]
+    for ln in oq.loss_types:
+        df = alt_df[alt_df.loss_id == LTI[ln]]
         eids = df.pop('event_id').to_numpy()
         avgs.append(ws[eids] @ df.loss.to_numpy() / ws.sum() * E / R)
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
