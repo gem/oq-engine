@@ -44,37 +44,6 @@ TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
 
 
-def save_curve_stats(dstore):
-    """
-    Save agg_curves-stats
-    """
-    oq = dstore['oqparam']
-    units = dstore['cost_calculator'].get_units(oq.loss_types)
-    try:
-        K = len(dstore['agg_keys'])
-    except KeyError:
-        K = 0
-    stats = oq.hazard_stats()
-    S = len(stats)
-    L = len(oq.lti)
-    weights = dstore['weights'][:]
-    aggcurves_df = dstore.read_df('aggcurves')
-    periods = aggcurves_df.return_period.unique()
-    P = len(periods)
-    out = numpy.zeros((K + 1, S, L, P))
-    for (agg_id, loss_id), df in aggcurves_df.groupby(["agg_id", "loss_id"]):
-        for s, stat in enumerate(stats.values()):
-            for p in range(P):
-                dfp = df[df.return_period == periods[p]]
-                ws = weights[dfp.rlz_id.to_numpy()]
-                ws /= ws.sum()
-                out[agg_id, s, loss_id, p] = stat(dfp.loss.to_numpy(), ws)
-    dstore['agg_curves-stats'] = out
-    dstore.set_shape_descr('agg_curves-stats', agg_id=K+1, stat=list(stats),
-                           lti=L, return_period=periods)
-    dstore.set_attrs('agg_curves-stats', units=units)
-
-
 def fast_agg(keys, values, correl, li, acc):
     """
     :param keys: an array of N uint64 numbers encoding (event_id, agg_id)
@@ -436,10 +405,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             prc.exported = self.exported
         with prc.datastore:
             prc.run(exports='')
-
-        # save agg_curves-stats
-        if self.R > 1 and 'aggcurves' in self.datastore:
-            save_curve_stats(self.datastore)
 
     def gen_args(self, eids):
         """
