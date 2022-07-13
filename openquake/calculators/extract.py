@@ -861,9 +861,10 @@ def extract_losses_by_asset(dstore, what):
             data = util.compose_arrays(assets, losses)
             yield 'rlz-%03d' % rlz.ordinal, data
     elif 'avg_losses-stats' in dstore:
+        # only QGIS is testing this
         avg_losses = avglosses(dstore, loss_dt.names, 'stats')  # shape ASL
         for s, stat in enumerate(stats):
-            losses = cast(avglosses[:, s], loss_dt)
+            losses = cast(avg_losses[:, s], loss_dt)
             data = util.compose_arrays(assets, losses)
             yield stat, data
     elif 'avg_losses-rlzs' in dstore:  # there is only one realization
