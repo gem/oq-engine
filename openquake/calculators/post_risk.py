@@ -120,6 +120,8 @@ def get_src_loss_table(dstore, loss_id):
     K = dstore['risk_by_event'].attrs.get('K', 0)
     alt = dstore.read_df('risk_by_event', 'agg_id',
                          dict(agg_id=K, loss_id=loss_id))
+    if len(alt) == 0:  # no losses for this loss type
+        return [], ()
     eids = alt.event_id.to_numpy()
     evs = dstore['events'][:][eids]
     rlz_ids = evs['rlz_id']
