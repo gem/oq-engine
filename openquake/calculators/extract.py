@@ -40,6 +40,7 @@ from openquake.hazardlib.gsim.base import ContextMaker, read_cmakers
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
+from openquake.risklib.riskmodels import LOSSTYPE
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
 from openquake.calculators import getters
@@ -723,7 +724,7 @@ def extract_agg_curves(dstore, what):
 
     /extract/agg_curves?kind=stats,absolute=1&loss_type=occupants&occupancy=RES
 
-    Returns an array of shape (P, S, 1...)
+    Returns an array of shape (P, S, ...)
     """
     info = get_info(dstore)
     qdic = parse(what, info)
@@ -731,7 +732,7 @@ def extract_agg_curves(dstore, what):
     for a in ('k', 'rlzs', 'kind', 'loss_type', 'absolute'):
         del tagdict[a]
     k = qdic['k']  # rlz or stat index
-    lt = tagdict.pop('lt')  # loss type string
+    lts = tagdict.pop('lt')  # loss type string
     [l] = qdic['loss_type']  # loss type index
     tagnames = sorted(tagdict)
     if set(tagnames) != info['tagnames']:
@@ -743,17 +744,16 @@ def extract_agg_curves(dstore, what):
         lst = decode(dstore['agg_keys'][:])
         agg_id = lst.index(','.join(tagvalues))
     kinds = list(info['stats'])
-    name = 'agg_curves-stats'
+    name = 'agg_curves-stats/' + lts[0]
     units = dstore.get_attr(name, 'units')
     shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
     units = dstore.get_attr(name, 'units')
     rps = shape_descr['return_period']
-    tup = (agg_id, k, l)
-    arr = dstore[name][tup].T  # shape P, R
+    arr = dstore[name][agg_id, k].T  # shape P, R
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
-        evalue, = dstore['agg_values'][agg_id][lt]
+        evalue, = dstore['agg_values'][agg_id][lts]
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
@@ -861,9 +861,10 @@ def extract_losses_by_asset(dstore, what):
             data = util.compose_arrays(assets, losses)
             yield 'rlz-%03d' % rlz.ordinal, data
     elif 'avg_losses-stats' in dstore:
+        # only QGIS is testing this
         avg_losses = avglosses(dstore, loss_dt.names, 'stats')  # shape ASL
         for s, stat in enumerate(stats):
-            losses = cast(avglosses[:, s], loss_dt)
+            losses = cast(avg_losses[:, s], loss_dt)
             data = util.compose_arrays(assets, losses)
             yield stat, data
     elif 'avg_losses-rlzs' in dstore:  # there is only one realization
@@ -1382,7 +1383,7 @@ def extract_risk_stats(dstore, what):
     oq = dstore['oqparam']
     stats = oq.hazard_stats()
     df = dstore.read_df(what)
-    df['loss_type'] = [oq.loss_types[lid] for lid in df.loss_id]
+    df['loss_type'] = [LOSSTYPE[lid] for lid in df.loss_id]
     del df['loss_id']
     kfields = [f for f in df.columns if f in {
         'agg_id', 'loss_type', 'return_period'}]

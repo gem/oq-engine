@@ -1320,8 +1320,8 @@ def create_risk_by_event(calc):
     crmodel = calc.crmodel
     if 'risk' in oq.calculation_mode:
         fields = [('loss', F32)]
-        if hasattr(calc, 'policy_df'):
-            fields.append(('ins_loss', F32))
+        #if hasattr(calc, 'policy_df'):
+        #    fields.append(('ins_loss', F32))
         descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
                  ('variance', F32)] + fields
         dstore.create_df('risk_by_event', descr, K=K, L=len(oq.loss_types))

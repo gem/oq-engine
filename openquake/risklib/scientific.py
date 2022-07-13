@@ -1360,12 +1360,15 @@ class AvgRiskModel(dict):
     A dictionary of risk models associated to a taxonomy mapping
     """
     def __init__(self, crm, taxidx):
-        self.loss_types = crm.loss_types
+        self.loss_types = crm.oqparam.ext_loss_types
         self.wdic = {}
         for lt in crm.loss_types:
             for key, weight in crm.tmap[lt][taxidx]:
                 self[key, lt] = crm._riskmodels[key]
                 self.wdic[key, lt] = weight
+        for lt in self.loss_types:
+            if lt.endswith('_ins'):
+                self.wdic[key, lt] = self.wdic[key, lt[:-4]]
 
     def __call__(self, dic):
         """
@@ -1375,7 +1378,9 @@ class AvgRiskModel(dict):
         for lt in self.loss_types:
             outs = [dic[k] for k in dic if k[1] == lt]
             weights = [self.wdic[k] for k in self.wdic if k[1] == lt]
-            if len(outs) > 1 and hasattr(outs[0], 'loss'):
+            if len(outs) == 0:  # can happen for nonstructural_ins
+                continue
+            elif len(outs) > 1 and hasattr(outs[0], 'loss'):
                 # computing the average dataframe for event_based_risk
                 df = pandas.concat([o * w for o, w in zip(outs, weights)])
                 out[lt] = df.groupby(['eid', 'aid']).sum()
@@ -1393,12 +1398,13 @@ def insurance_losses(asset_df, losses_by_rl, policy_df):
     :param losses_by_rl: riskid, lt -> DataFrame[eid, aid]
     :param asset_df: a DataFrame of assets with index "ordinal"
     """
-    for (riskid, lt), out in losses_by_rl.items():
+    for (riskid, lt), out in list(losses_by_rl.items()):
         if len(out) == 0:
             continue
-        out['ins_loss'] = numpy.zeros(len(out))
         policy = policy_df[policy_df.loss_type == lt].set_index('policy')
         if len(policy):
+            new = out.copy()
+            new['variance'] = 0.
             for (eid, aid), df in out.iterrows():
                 asset = asset_df.loc[aid]  # aid==ordinal
                 avalue = asset['value-' + lt]
@@ -1406,7 +1412,8 @@ def insurance_losses(asset_df, losses_by_rl, policy_df):
                 ded = policy.loc[policy_idx].deductible
                 lim = policy.loc[policy_idx].insurance_limit
                 ins = insured_losses(df.loss, ded * avalue, lim * avalue)
-                out.loc[eid, aid]['ins_loss'] = ins
+                new.loc[eid, aid]['loss'] = ins
+            losses_by_rl[riskid, lt + '_ins'] = new
 
 
 # not used anymore
@@ -1461,11 +1468,7 @@ def get_agg_value(consequence, agg_values, agg_id, loss_type):
         sum of the values corresponding to agg_id for the given consequence
     """
     aval = agg_values[agg_id]
-    if consequence not in KNOWN_CONSEQUENCES:
-        raise NotImplementedError(consequence)
-    elif consequence in ('loss', 'ins_loss', 'losses'):
-        return aval[loss_type]
-    elif consequence == 'collapsed':
+    if consequence == 'collapsed':
         return aval['number']
     elif consequence == 'injured':
         return aval['occupants_night']
@@ -1473,6 +1476,12 @@ def get_agg_value(consequence, agg_values, agg_id, loss_type):
         return aval['occupants_night']
     elif consequence == 'homeless':
         return aval['occupants_night']
+    elif consequence in ('loss', 'losses'):
+        if loss_type.endswith('_ins'):
+            loss_type = loss_type[:-4]
+        return aval[loss_type]
+    else:
+        raise NotImplementedError(consequence)
 
 
 if __name__ == '__main__':
