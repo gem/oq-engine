@@ -41,7 +41,9 @@ KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
-total structural_ins nonstructural_ins reinsurance'''.split())
+structural+nonstructural structural+contents nonstructural+contents
+structural+nonstructural+contents
+structural_ins nonstructural_ins reinsurance'''.split())
 LTI = {lt: i for i, lt in enumerate(LOSSTYPE)}
 
 
@@ -1102,6 +1104,26 @@ def insurance_losses(asset_df, losses_by_rl, policy_df):
         losses_by_rl[riskid, lt + '_ins'] = new
 
 
+def total_losses(asset_df, losses_by_rl, kind):
+    """
+    :param asset_df: DataFrame of assets
+    :param losses_by_rl: riskid, lt -> DataFrame[eid, aid]
+    :param kind: kind of total loss (i.e. "structural+nonstructural")
+    """
+    if kind in ('structural+nonstructural',
+                'structural+nonstructural+contents'):
+        ltypes = kind.split('+')
+    else:
+        raise ValueError(kind)
+    acc = {riskid: [] for riskid, lt in losses_by_rl}
+    for ltype in ltypes:
+        for (riskid, lt), out in list(losses_by_rl.items()):
+            if lt == ltype:
+                acc[riskid].append(out)
+    for riskid, outs in acc.items():
+        losses_by_rl[riskid, kind] = _agg(outs)
+
+
 def insurance_loss_curve(curve, deductible, insured_limit):
     """
     Compute an insured loss ratio curve given a loss ratio curve
@@ -1395,11 +1417,12 @@ class LossCurvesMapsBuilder(object):
             losses, self.return_periods, self.num_events[rlzi], self.eff_time)
 
 
-def _avg(loss_dfs, weights):
+def _agg(loss_dfs, weights=None):
     # average loss DataFrames with fields (eid, aid, variance, loss)
-    for loss_df, w in zip(loss_dfs, weights):
-        loss_df['variance'] *= w
-        loss_df['loss'] *= w
+    if weights is not None:
+        for loss_df, w in zip(loss_dfs, weights):
+            loss_df['variance'] *= w
+            loss_df['loss'] *= w
     return pandas.concat(loss_dfs).groupby(['eid', 'aid']).sum().reset_index()
 
 
@@ -1430,13 +1453,34 @@ class AvgRiskModel(dict):
                 continue
             elif len(outs) > 1 and hasattr(outs[0], 'loss'):
                 # computing the average dataframe for event_based_risk
-                out[lt] = _avg(outs, weights)
+                out[lt] = _agg(outs, weights)
             elif len(outs) > 1:
                 # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
                 out[lt] = numpy.average(outs, weights=weights, axis=0)
             else:
                 out[lt] = outs[0]
         return out
+
+
+# not used anymore
+def make_epsilons(matrix, seed, correlation):
+    """
+    Given a matrix of shape (A, E) returns a matrix of the same shape
+    obtained by applying the multivariate_normal distribution to
+    A points and E samples, by starting from the given seed and
+    correlation.
+    """
+    if seed is not None:
+        numpy.random.seed(seed)
+    A = len(matrix)
+    E = len(matrix[0])
+    if not correlation:  # avoid building the covariance matrix
+        return numpy.random.normal(size=(E, A)).transpose()
+    means_vector = numpy.zeros(A)
+    covariance_matrix = (numpy.ones((A, A)) * correlation +
+                         numpy.diag(numpy.ones(A)) * (1 - correlation))
+    return numpy.random.multivariate_normal(
+        means_vector, covariance_matrix, E).transpose()
 
 
 # ####################### Consequences ##################################### #
@@ -1464,7 +1508,7 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
         return dmgdist @ coeffs * asset['occupants_night']
 
 
-def get_agg_value(consequence, agg_values, agg_id, loss_type):
+def get_agg_value(consequence, agg_values, agg_id, xltype):
     """
     :returns:
         sum of the values corresponding to agg_id for the given consequence
@@ -1479,9 +1523,11 @@ def get_agg_value(consequence, agg_values, agg_id, loss_type):
     elif consequence == 'homeless':
         return aval['occupants_night']
     elif consequence in ('loss', 'losses'):
-        if loss_type.endswith('_ins'):
-            loss_type = loss_type[:-4]
-        return aval[loss_type]
+        if '+' in xltype:  # total loss type
+            return sum(aval[lt] for lt in xltype.split('+'))
+        elif xltype.endswith('_ins'):
+            xltype = xltype[:-4]
+        return aval[xltype]
     else:
         raise NotImplementedError(consequence)
 

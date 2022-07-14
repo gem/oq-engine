@@ -715,6 +715,14 @@ time_per_task:
   Example: *time_per_task=600*
   Default: 2000
 
+total_losses:
+  Used in event based risk calculations to compute total losses and
+  and total curves by summing across different loss types. Possible values
+  are "structural+nonstructural", "structural+contents",
+  "nonstructural+contents", "structural+nonstructural+contents".
+  Example: *total_losses = structural+nonstructural*
+  Default: None
+
 truncation_level:
   Truncation level used in the GMPEs.
   Example: *truncation_level = 0* to compute median GMFs.
@@ -959,6 +967,11 @@ class OqParam(valid.ParamSet):
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, None)
     time_per_task = valid.Param(valid.positivefloat, 2000)
+    total_losses = valid.Param(
+        valid.Choice('structural+nonstructural',
+                     'structural+contents',
+                     'nonstructural+contents',
+                     'structural+nonstructural+contents'), None)
     truncation_level = valid.Param(valid.positivefloat, 99.)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
@@ -1451,6 +1464,8 @@ class OqParam(valid.ParamSet):
         :returns: list of loss types + secondary loss types
         """
         etypes = self.loss_types
+        if self.total_losses:
+            etypes = self.loss_types + [self.total_losses]
         if 'insurance' in self.inputs:
             etypes = self.loss_types + [lt + '_ins' for lt in self.loss_types]
         return etypes
