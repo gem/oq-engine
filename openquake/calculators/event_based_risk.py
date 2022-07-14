@@ -109,8 +109,10 @@ def aggreg(outputs, crmodel, ARKD, aggids, rlz_id, monitor):
                     alt['variance'] = numpy.sqrt(alt.variance)
                 eids = alt.eid.to_numpy() * TWO32  # U64
                 values = numpy.array([alt[col] for col in value_cols]).T
+                # aggregate all assets
                 fast_agg(eids + U64(K), values, correl, li, acc)
                 if len(aggids):
+                    # aggregate assets for each tag combination
                     aids = alt.aid.to_numpy()
                     for kids in aggids[:, aids]:
                         fast_agg(eids + U64(kids), values, correl, li, acc)
