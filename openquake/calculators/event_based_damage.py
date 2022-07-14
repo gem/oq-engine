@@ -23,7 +23,7 @@ import pandas
 
 from openquake.baselib import hdf5, general, parallel
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.risklib import scientific, riskmodels, connectivity
+from openquake.risklib import scientific, connectivity
 from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
@@ -161,7 +161,7 @@ def _dframe(adic, ci, loss_types):
         for li, lt in enumerate(loss_types):
             dic['agg_id'].append(kid)
             dic['event_id'].append(eid)
-            dic['loss_id'].append(riskmodels.LTI[lt])
+            dic['loss_id'].append(scientific.LTI[lt])
             for sname, si in ci.items():
                 dic[sname].append(dd[li, si])
     fix_dtypes(dic)

@@ -38,11 +38,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 
-LOSSTYPE = numpy.array('''\
-business_interruption contents nonstructural structural
-occupants occupants_day occupants_night occupants_transit
-total structural_ins nonstructural_ins reinsurance'''.split())
-LTI = {lt: i for i, lt in enumerate(LOSSTYPE)}
 COST_TYPE_REGEX = '|'.join(valid.cost_type.choices)
 RISK_TYPE_REGEX = re.compile(
     r'(%s|occupants|fragility)_([\w_]+)' % COST_TYPE_REGEX)

@@ -28,8 +28,7 @@ from scipy import sparse
 from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
-from openquake.risklib.riskmodels import LTI
-from openquake.risklib.scientific import insurance_losses, MultiEventRNG
+from openquake.risklib.scientific import insurance_losses, MultiEventRNG, LTI
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
     PostRiskCalculator, post_aggregate, fix_dtypes)
