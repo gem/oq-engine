@@ -41,7 +41,8 @@ KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
-structural+nonstructural structural+nonstructural+contents
+structural+nonstructural structural+contents nonstructural+contents
+structural+nonstructural+contents
 structural_ins nonstructural_ins reinsurance'''.split())
 LTI = {lt: i for i, lt in enumerate(LOSSTYPE)}
 

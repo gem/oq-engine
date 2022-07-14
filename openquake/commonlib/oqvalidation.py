@@ -715,6 +715,14 @@ time_per_task:
   Example: *time_per_task=600*
   Default: 2000
 
+total_losses:
+  Used in event based risk calculations to compute total losses and
+  and total curves by summing across different loss types. Possible values
+  are "structural+nonstructural", "structural+contents",
+  "nonstructural+contents", "structural+nonstructural+contents".
+  Example: *total_losses = structural+nonstructural*
+  Default: None
+
 truncation_level:
   Truncation level used in the GMPEs.
   Example: *truncation_level = 0* to compute median GMFs.
@@ -961,6 +969,8 @@ class OqParam(valid.ParamSet):
     time_per_task = valid.Param(valid.positivefloat, 2000)
     total_losses = valid.Param(
         valid.Choice('structural+nonstructural',
+                     'structural+contents',
+                     'nonstructural+contents',
                      'structural+nonstructural+contents'), None)
     truncation_level = valid.Param(valid.positivefloat, 99.)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
