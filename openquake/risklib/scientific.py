@@ -1072,6 +1072,31 @@ def insured_losses(losses, deductible, insured_limit):
     return out
 
 
+def insurance_losses(asset_df, losses_by_rl, policy_df):
+    """
+    :param asset_df: DataFrame of assets
+    :param losses_by_rl: riskid, lt -> DataFrame[eid, aid]
+    :param asset_df: a DataFrame of assets with index "ordinal"
+    """
+    asset_policy_df = asset_df.join(
+        policy_df.set_index('policy'), on='policy', how='inner')
+    for (riskid, lt), out in list(losses_by_rl.items()):
+        if len(out) == 0:
+            continue
+        adf = asset_policy_df[asset_policy_df.loss_type == lt]
+        new = out[numpy.isin(out.aid, adf.index)]
+        if len(new) == 0:
+            continue
+        new['variance'] = 0.
+        j = new.join(adf, on='aid', how='inner')
+        values = j['value-' + lt].to_numpy()
+        losses = j.loss.to_numpy()
+        deds = j.deductible.to_numpy() * values
+        lims = j.insurance_limit.to_numpy() * values
+        new['loss'] = insured_losses(losses, deds, lims)
+        losses_by_rl[riskid, lt + '_ins'] = new
+
+
 def insurance_loss_curve(curve, deductible, insured_limit):
     """
     Compute an insured loss ratio curve given a loss ratio curve
@@ -1407,52 +1432,6 @@ class AvgRiskModel(dict):
             else:
                 out[lt] = outs[0]
         return out
-
-
-def insurance_losses(asset_df, losses_by_rl, policy_df):
-    """
-    :param asset_df: DataFrame of assets
-    :param losses_by_rl: riskid, lt -> DataFrame[eid, aid]
-    :param asset_df: a DataFrame of assets with index "ordinal"
-    """
-    asset_policy_df = asset_df.join(
-        policy_df.set_index('policy'), on='policy', how='inner')
-    for (riskid, lt), out in list(losses_by_rl.items()):
-        if len(out) == 0:
-            continue
-        adf = asset_policy_df[asset_policy_df.loss_type == lt]
-        new = out[numpy.isin(out.aid, adf.index)]
-        if len(new) == 0:
-            continue
-        new['variance'] = 0.
-        j = new.join(adf, on='aid', how='inner')
-        values = j['value-' + lt].to_numpy()
-        losses = j.loss.to_numpy()
-        deds = j.deductible.to_numpy() * values
-        lims = j.insurance_limit.to_numpy() * values
-        new['loss'] = insured_losses(losses, deds, lims)
-        losses_by_rl[riskid, lt + '_ins'] = new
-
-
-# not used anymore
-def make_epsilons(matrix, seed, correlation):
-    """
-    Given a matrix of shape (A, E) returns a matrix of the same shape
-    obtained by applying the multivariate_normal distribution to
-    A points and E samples, by starting from the given seed and
-    correlation.
-    """
-    if seed is not None:
-        numpy.random.seed(seed)
-    A = len(matrix)
-    E = len(matrix[0])
-    if not correlation:  # avoid building the covariance matrix
-        return numpy.random.normal(size=(E, A)).transpose()
-    means_vector = numpy.zeros(A)
-    covariance_matrix = (numpy.ones((A, A)) * correlation +
-                         numpy.diag(numpy.ones(A)) * (1 - correlation))
-    return numpy.random.multivariate_normal(
-        means_vector, covariance_matrix, E).transpose()
 
 
 # ####################### Consequences ##################################### #
