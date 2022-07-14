@@ -181,26 +181,22 @@ obtained from a full-enumeration of these branches is nearly the same
 as the distribution of the hazard or loss results obtained from a
 full-enumeration of the entire logic-tree.
 
-Disabling the computation of the epsilon matrix
+ignore_covs vs ignore_master_seed
 ----------------------------------------------------------------
 
 The vulnerability functions using continuous distributions (lognormal/beta)
 to characterize the uncertainty in the loss ratio, specify the mean loss
 ratios and the corresponding coefficients of variation for a set of intensity
-levels. They are used to build the so called epsilon matrix within the engine,
-governing how loss ratios are sampled from the distribution for each asset.
+levels.
 
 There is clearly a performance/memory penalty associated with the propagation
-of uncertainty in the vulnerability to losses. The epsilon matrix has 
-to be computed and its size is huge (for instance with 1 million events
-and 1 million assets the epsilon matrix require 8 TB of RAM) so in large
-calculation it is impossible to generate it. In the past the only solution
-was setting
+of uncertainty in the vulnerability to losses. You can completely remove it by
+setting
 
 ``ignore_covs = true``
 
 in the `job.ini` file. Then the engine would compute just the mean loss
-ratios by ignoring the uncertainty.
+ratios by ignoring the uncertainty i.e. the coefficients of variation.
 Since engine 3.12 there is a better solution: setting
 
 ``ignore_master_seed = true``
