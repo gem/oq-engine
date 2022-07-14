@@ -94,12 +94,12 @@ def aggreg(outputs, crmodel, ARKD, aggids, rlz_id, monitor):
     correl = int(oq.asset_correlation)
     (A, R, K, D), L = ARKD, len(xtypes)
     acc = general.AccumDict(accum=numpy.zeros((L, D)))  # u8idx->array
+    value_cols = ['variance', 'loss']
     for out in outputs:
         for li, ln in enumerate(oq.ext_loss_types):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln].reset_index()
-            value_cols = alt.columns[2:]  # strip eid, aid
             if oq.avg_losses:
                 with mon_avg:
                     coo = average_losses(
