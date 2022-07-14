@@ -73,7 +73,7 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     max_mag = mags[-1]
     n1 = int(numpy.floor(min_mag / oq.mag_bin_width))
     n2 = int(numpy.ceil(max_mag / oq.mag_bin_width))
-    if n2 == n1 or max_mag >= oq.mag_bin_width * n2:
+    if n2 == n1 or max_mag >= round((oq.mag_bin_width * n2), 3):
         n2 += 1
     mag_edges = oq.mag_bin_width * numpy.arange(n1, n2+1)
 
