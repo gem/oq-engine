@@ -1044,24 +1044,32 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
 
 def insured_losses(losses, deductible, insured_limit):
     """
-    :param losses: an array of ground-up loss ratios
-    :param float deductible: the deductible limit in fraction form
-    :param float insured_limit: the insured limit in fraction form
+    :param losses: array of ground-up losses
+    :param deductible: array of deductible values
+    :param insured_limit: array of insurance limit values
 
     Compute insured losses for the given asset and losses, from the point
     of view of the insurance company. For instance:
 
-    >>> insured_losses(numpy.array([3, 20, 101]), 5, 100)
+    >>> insured_losses(numpy.array([3, 20, 101]),
+    ...                numpy.array([5, 5, 5]), numpy.array([100, 100, 100]))
     array([ 0, 15, 95])
 
     - if the loss is 3 (< 5) the company does not pay anything
     - if the loss is 20 the company pays 20 - 5 = 15
     - if the loss is 101 the company pays 100 - 5 = 95
     """
-    return numpy.piecewise(
-        losses,
-        [losses < deductible, losses > insured_limit],
-        [0, insured_limit - deductible, lambda x: x - deductible])
+    assert isinstance(losses, numpy.ndarray), losses
+    if not isinstance(deductible, numpy.ndarray):
+        deductible = numpy.full_like(losses, deductible)
+    if not isinstance(insured_limit, numpy.ndarray):
+        insured_limit = numpy.full_like(losses, insured_limit)
+    small = losses < deductible
+    big = losses > insured_limit
+    out = losses - deductible
+    out[small] = 0.
+    out[big] = insured_limit[big] - deductible[big]
+    return out
 
 
 def insurance_loss_curve(curve, deductible, insured_limit):
@@ -1417,14 +1425,12 @@ def insurance_losses(asset_df, losses_by_rl, policy_df):
         if len(new) == 0:
             continue
         new['variance'] = 0.
-        ins = numpy.zeros(len(out))
-        for i, (eid, aid, loss) in enumerate(zip(new.eid, new.aid, new.loss)):
-            a = adf.loc[aid]
-            avalue = a['value-' + lt]
-            ded = a['deductible']
-            lim = a['insurance_limit']
-            ins[i] = insured_losses(loss, ded * avalue, lim * avalue)
-        new['loss'] = ins
+        j = new.join(adf, on='aid', how='inner')
+        values = j['value-' + lt].to_numpy()
+        losses = j.loss.to_numpy()
+        deds = j.deductible.to_numpy() * values
+        lims = j.insurance_limit.to_numpy() * values
+        new['loss'] = insured_losses(losses, deds, lims)
         losses_by_rl[riskid, lt + '_ins'] = new
 
 
