@@ -41,7 +41,8 @@ KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
-total structural_ins nonstructural_ins reinsurance'''.split())
+structural+nonstructural structural+nonstructural+contents
+structural_ins nonstructural_ins reinsurance'''.split())
 LTI = {lt: i for i, lt in enumerate(LOSSTYPE)}
 
 
@@ -1506,7 +1507,7 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
         return dmgdist @ coeffs * asset['occupants_night']
 
 
-def get_agg_value(consequence, agg_values, agg_id, loss_type):
+def get_agg_value(consequence, agg_values, agg_id, xltype):
     """
     :returns:
         sum of the values corresponding to agg_id for the given consequence
@@ -1521,9 +1522,11 @@ def get_agg_value(consequence, agg_values, agg_id, loss_type):
     elif consequence == 'homeless':
         return aval['occupants_night']
     elif consequence in ('loss', 'losses'):
-        if loss_type.endswith('_ins'):
-            loss_type = loss_type[:-4]
-        return aval[loss_type]
+        if '+' in xltype:  # total loss type
+            return sum(aval[lt] for lt in xltype.split('+'))
+        elif xltype.endswith('_ins'):
+            xltype = xltype[:-4]
+        return aval[xltype]
     else:
         raise NotImplementedError(consequence)
 

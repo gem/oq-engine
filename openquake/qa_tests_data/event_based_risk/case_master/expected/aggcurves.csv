@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.15.0-git8bbbdf5666', start_date='2022-07-13T07:11:38', checksum=3095828164, risk_investigation_time=50.0, num_events=48, effective_time=80.0, limit_states=''"
+#,,,,"generated_by='OpenQuake engine 3.15.0-gite51e6f00c0', start_date='2022-07-14T09:32:50', checksum=2926815784, risk_investigation_time=50.0, num_events=48, effective_time=80.0, limit_states=''"
 return_period,loss_type,rlz_id,loss_value,loss_ratio
 1,business_interruption,0,0.00000E+00,0.00000E+00
 2,business_interruption,0,1.98132E+02,1.41523E-02
@@ -20,6 +20,10 @@ return_period,loss_type,rlz_id,loss_value,loss_ratio
 2,occupants,0,3.82229E-03,1.36510E-04
 5,occupants,0,4.88834E-03,1.74583E-04
 10,occupants,0,5.38666E-03,1.92381E-04
+1,structural+nonstructural+contents,0,0.00000E+00,0.00000E+00
+2,structural+nonstructural+contents,0,3.34243E+03,1.59163E-02
+5,structural+nonstructural+contents,0,4.62776E+03,2.20370E-02
+10,structural+nonstructural+contents,0,5.13306E+03,2.44432E-02
 1,business_interruption,1,0.00000E+00,0.00000E+00
 2,business_interruption,1,1.39593E+02,9.97094E-03
 5,business_interruption,1,2.19248E+02,1.56605E-02
@@ -40,6 +44,10 @@ return_period,loss_type,rlz_id,loss_value,loss_ratio
 2,occupants,1,2.82915E-03,1.01041E-04
 5,occupants,1,4.44922E-03,1.58901E-04
 10,occupants,1,5.56133E-03,1.98619E-04
+1,structural+nonstructural+contents,1,0.00000E+00,0.00000E+00
+2,structural+nonstructural+contents,1,2.91748E+03,1.38928E-02
+5,structural+nonstructural+contents,1,5.09074E+03,2.42416E-02
+10,structural+nonstructural+contents,1,7.50911E+03,3.57577E-02
 1,business_interruption,2,2.15529E+02,1.53949E-02
 2,business_interruption,2,2.35565E+02,1.68261E-02
 5,business_interruption,2,2.51921E+02,1.79943E-02
@@ -60,6 +68,10 @@ return_period,loss_type,rlz_id,loss_value,loss_ratio
 2,occupants,2,4.82735E-03,1.72405E-04
 5,occupants,2,4.97180E-03,1.77564E-04
 10,occupants,2,5.84514E-03,2.08755E-04
+1,structural+nonstructural+contents,2,3.37876E+03,1.60893E-02
+2,structural+nonstructural+contents,2,3.88928E+03,1.85204E-02
+5,structural+nonstructural+contents,2,6.35229E+03,3.02490E-02
+10,structural+nonstructural+contents,2,7.38638E+03,3.51732E-02
 1,business_interruption,3,1.20869E+02,8.63347E-03
 2,business_interruption,3,1.78332E+02,1.27380E-02
 5,business_interruption,3,2.21998E+02,1.58570E-02
@@ -80,6 +92,10 @@ return_period,loss_type,rlz_id,loss_value,loss_ratio
 2,occupants,3,3.67688E-03,1.31317E-04
 5,occupants,3,4.01205E-03,1.43287E-04
 10,occupants,3,4.66870E-03,1.66739E-04
+1,structural+nonstructural+contents,3,2.17699E+03,1.03666E-02
+2,structural+nonstructural+contents,3,3.01663E+03,1.43649E-02
+5,structural+nonstructural+contents,3,3.76659E+03,1.79361E-02
+10,structural+nonstructural+contents,3,4.27517E+03,2.03579E-02
 1,business_interruption,5,0.00000E+00,0.00000E+00
 2,business_interruption,5,0.00000E+00,0.00000E+00
 5,business_interruption,5,0.00000E+00,0.00000E+00
@@ -100,6 +116,10 @@ return_period,loss_type,rlz_id,loss_value,loss_ratio
 2,occupants,5,0.00000E+00,0.00000E+00
 5,occupants,5,0.00000E+00,0.00000E+00
 10,occupants,5,5.93358E-03,2.11914E-04
+1,structural+nonstructural+contents,5,0.00000E+00,0.00000E+00
+2,structural+nonstructural+contents,5,0.00000E+00,0.00000E+00
+5,structural+nonstructural+contents,5,0.00000E+00,0.00000E+00
+10,structural+nonstructural+contents,5,6.65234E+03,3.16778E-02
 1,business_interruption,7,0.00000E+00,0.00000E+00
 2,business_interruption,7,0.00000E+00,0.00000E+00
 5,business_interruption,7,1.07254E+03,7.66097E-02
@@ -120,3 +140,7 @@ return_period,loss_type,rlz_id,loss_value,loss_ratio
 2,occupants,7,0.00000E+00,0.00000E+00
 5,occupants,7,3.12431E-02,1.11583E-03
 10,occupants,7,8.82490E-02,3.15175E-03
+1,structural+nonstructural+contents,7,0.00000E+00,0.00000E+00
+2,structural+nonstructural+contents,7,0.00000E+00,0.00000E+00
+5,structural+nonstructural+contents,7,2.93571E+04,1.39796E-01
+10,structural+nonstructural+contents,7,7.01116E+04,3.33865E-01

@@ -1453,6 +1453,8 @@ class OqParam(valid.ParamSet):
         :returns: list of loss types + secondary loss types
         """
         etypes = self.loss_types
+        if self.total_losses:
+            etypes = self.loss_types + [self.total_losses]
         if 'insurance' in self.inputs:
             etypes = self.loss_types + [lt + '_ins' for lt in self.loss_types]
         return etypes
