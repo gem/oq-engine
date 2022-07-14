@@ -133,10 +133,9 @@ class GriddedSurface(BaseSurface):
      
     def get_strike(self):
         """
-        params:
-            p = point on the plane derived from plane_fit function.
-            the point is normalised and the angle between the 
-            normalised vector and the YZ plane is calculated.  
+        p = point on the plane derived from plane_fit function.
+        the point is normalised and the angle between the 
+        normalised vector and the YZ plane is calculated.  
         
         :returns:
             the function calculates strike value for a gridded surface
@@ -150,9 +149,6 @@ class GriddedSurface(BaseSurface):
         
     def get_dip(self):
         """
-        params:
-            n = unit vector normal to the plane; 3X1 matrix with x, y 
-            and z components
         
         The angle between the normal vector and the XY plane must be 
         calculated. hence, a normal vector to the XY plane = [0,0,1]
