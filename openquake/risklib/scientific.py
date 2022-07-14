@@ -1406,24 +1406,25 @@ def insurance_losses(asset_df, losses_by_rl, policy_df):
     :param losses_by_rl: riskid, lt -> DataFrame[eid, aid]
     :param asset_df: a DataFrame of assets with index "ordinal"
     """
+    asset_policy_df = asset_df.join(
+        policy_df.set_index('policy'), on='policy', how='inner')
     for (riskid, lt), out in list(losses_by_rl.items()):
         if len(out) == 0:
             continue
-        policy = policy_df[policy_df.loss_type == lt].set_index('policy')
-        if len(policy):
-            new = out.copy()
-            new['variance'] = 0.
-            ins = numpy.zeros(len(out))
-            for i, (eid, aid, loss) in enumerate(
-                    zip(out.eid, out.aid, out.loss)):
-                asset = asset_df.loc[aid]  # aid==ordinal
-                avalue = asset['value-' + lt]
-                policy_idx = asset['policy']
-                ded = policy.loc[policy_idx].deductible
-                lim = policy.loc[policy_idx].insurance_limit
-                ins[i] = insured_losses(loss, ded * avalue, lim * avalue)
-            new['loss'] = ins
-            losses_by_rl[riskid, lt + '_ins'] = new
+        adf = asset_policy_df[asset_policy_df.loss_type == lt]
+        new = out[numpy.isin(out.aid, adf.index)]
+        if len(new) == 0:
+            continue
+        new['variance'] = 0.
+        ins = numpy.zeros(len(out))
+        for i, (eid, aid, loss) in enumerate(zip(new.eid, new.aid, new.loss)):
+            a = adf.loc[aid]
+            avalue = a['value-' + lt]
+            ded = a['deductible']
+            lim = a['insurance_limit']
+            ins[i] = insured_losses(loss, ded * avalue, lim * avalue)
+        new['loss'] = ins
+        losses_by_rl[riskid, lt + '_ins'] = new
 
 
 # not used anymore
