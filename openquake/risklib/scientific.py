@@ -1113,12 +1113,13 @@ def total_losses(asset_df, losses_by_rl, kind):
         ltypes = kind.split('+')
     else:
         raise ValueError(kind)
-    for (riskid, lt), out in list(losses_by_rl.items()):
-        losses_by_rl[riskid, kind] = 0.
+    acc = {riskid: [] for riskid, lt in losses_by_rl}
     for ltype in ltypes:
         for (riskid, lt), out in list(losses_by_rl.items()):
             if lt == ltype:
-                losses_by_rl[riskid, kind] += out
+                acc[riskid].append(out)
+    for riskid, outs in acc.items():
+        losses_by_rl[riskid, kind] = _agg(outs)
 
 
 def insurance_loss_curve(curve, deductible, insured_limit):
@@ -1414,11 +1415,12 @@ class LossCurvesMapsBuilder(object):
             losses, self.return_periods, self.num_events[rlzi], self.eff_time)
 
 
-def _avg(loss_dfs, weights):
+def _agg(loss_dfs, weights=None):
     # average loss DataFrames with fields (eid, aid, variance, loss)
-    for loss_df, w in zip(loss_dfs, weights):
-        loss_df['variance'] *= w
-        loss_df['loss'] *= w
+    if weights is not None:
+        for loss_df, w in zip(loss_dfs, weights):
+            loss_df['variance'] *= w
+            loss_df['loss'] *= w
     return pandas.concat(loss_dfs).groupby(['eid', 'aid']).sum().reset_index()
 
 
@@ -1449,7 +1451,7 @@ class AvgRiskModel(dict):
                 continue
             elif len(outs) > 1 and hasattr(outs[0], 'loss'):
                 # computing the average dataframe for event_based_risk
-                out[lt] = _avg(outs, weights)
+                out[lt] = _agg(outs, weights)
             elif len(outs) > 1:
                 # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
                 out[lt] = numpy.average(outs, weights=weights, axis=0)
