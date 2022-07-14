@@ -123,7 +123,7 @@ output in CSV will give the following results::
  ...
 
 The field ``gmv_PGA`` is the exponential of the mean ground motion in
-log space (i.e. the geometric mean) and the field ``gmv_PGA`` is the
+log space (i.e. the geometric mean) and the field ``gsd_PGA`` is the
 exponential of the standard deviation in log space (called the
 geometric standard deviation). In practice for site 0 the geometric
 mean of the ground motion is 0.202698 g with a huge gsd of
@@ -211,7 +211,7 @@ and the associated GMPE you can use the command
 
 ::
    
- $ oq show branch_ids
+ $ oq show branches
  | branch_id | abbrev | gsim                          |
  |-----------+--------+-------------------------------|
  | b0        | 0      | [AbrahamsonEtAl2015SInter]    |

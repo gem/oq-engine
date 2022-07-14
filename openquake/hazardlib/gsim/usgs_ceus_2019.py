@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,6 @@ Module exports :class:`NGAEastUSGSGMPE`
 """
 import os
 import numpy as np
-from scipy.interpolate import interp1d
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib.gsim.nga_east import (
@@ -150,40 +149,37 @@ def get_stewart_2019_phis2s(imt, vs30):
 
 
 @_get_mean.add("usgs")
-def _get_mean(kind, distance_type, data, dctx, ctx):
+def _get_mean(kind, data, dists, table_dists):
     """
     Returns the mean intensity measure level from the tables applying
     log-log interpolation of the IML with distance (contrast with the
     linear interpolation applied in usual GMPE tables)
+
     :param data:
         The intensity measure level vector for the given magnitude and IMT
-    :param key:
-        The distance type
-    :param distances:
-        The distance vector for the given magnitude and IMT
+    :param dists:
+        The distances for the given magnitude and IMT
+    :param table_dists:
+        The distance table for the given magnitude and IMT
     """
-    # For values outside of the interpolation range use -999. to ensure
-    # value is identifiable and outside of potential real values
     # For extremely short distance (rrup = 0) use an arbitrarily small
     # distance measure (1.0E-5 used by US NSHMP code)
-    ctx[ctx < 1.0E-5] = 1.0E-5
-    interpolator_mean = interp1d(np.log10(ctx), np.log(data),
-                                 bounds_error=False,
-                                 fill_value=-999.)
-    mean = np.exp(interpolator_mean(np.log10(getattr(dctx, distance_type))))
+    table_dists[table_dists < 1.0E-5] = 1.0E-5
+    mean = np.exp(
+        np.interp(np.log10(dists), np.log10(table_dists), np.log(data)))
     # For those distances less than or equal to the shortest distance
     # extrapolate the shortest distance value
-    mean[getattr(dctx, distance_type) <= ctx[0]] = data[0]
+    mean[dists <= table_dists[0]] = data[0]
     # For those distances significantly greater than the furthest distance
     # set to 1E-20.
-    mean[getattr(dctx, distance_type) > (ctx[-1] + 1.0E-3)] = 1E-20
+    mean[dists > (table_dists[-1] + 1.0E-3)] = 1E-20
     # If any distance is between the final distance and a margin of 0.001
     # km then assign to smallest distance
     mean[mean < -1.] = data[-1]
     return mean
 
 
-def _get_stddevs(sigma_model, ctx, imt):
+def _get_stddevs(sigma_model, mag, ctx, imt):
     """
     Returns the standard deviations according to the choice of aleatory
     uncertainty model. Note that for compatibility with the US NSHMP
@@ -192,10 +188,10 @@ def _get_stddevs(sigma_model, ctx, imt):
     """
     if sigma_model in ("EPRI", "COLLAPSED"):
         # EPRI recommended aleatory uncertainty model
-        tau_epri, phi_epri = get_epri_tau_phi(imt, ctx.mag)
+        tau_epri, phi_epri = get_epri_tau_phi(imt, mag)
     if sigma_model in ("PANEL", "COLLAPSED"):
         # Panel recommended model
-        tau_panel, phi0_panel = get_panel_tau_phi(imt, ctx.mag)
+        tau_panel, phi0_panel = get_panel_tau_phi(imt, mag)
         phis2s = get_stewart_2019_phis2s(imt, ctx.vs30)
         phi_panel = np.sqrt(phi0_panel ** 2. + phis2s ** 2.)
     if sigma_model == "EPRI":
@@ -221,9 +217,8 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
     subdirectory fixed to the path of the present file. The GMPE table option
     is therefore no longer needed
     """
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,
-                                                const.StdDev.INTER_EVENT,
-                                                const.StdDev.INTRA_EVENT))
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
     gmpe_table = ""
     PATH = os.path.join(os.path.dirname(__file__), "usgs_nga_east_tables")
     kind = "usgs"
@@ -237,16 +232,16 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         if self.sigma_model == "COLLAPSED":
             # In the case of the collapsed model only the total standard
             # deviation can be defined
-            self.DEFINED_FOR_STANDARD_DEVIATION_TYPES =\
-                set((const.StdDev.TOTAL,))
+            self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
         super().__init__(**kwargs)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """
+        [mag] = np.unique(np.round(ctx.mag, 6))
         for m, imt in enumerate(imts):
-            imean, site_amp, pga_r = get_mean_amp(self, ctx, imt)
+            imean, site_amp, pga_r = get_mean_amp(self, mag, ctx, imt)
 
             # Get the coefficients for the IMT
             C_LIN = self.COEFFS_LINEAR[imt]
@@ -260,7 +255,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
                 site_amp_sigma = get_site_amplification_sigma(
                     self, ctx, f_rk, C_LIN, C_F760, C_NL)
                 mean[m] = np.log(
-                    0.185 * (np.exp(imean - site_amp_sigma)) +
+                    0.185 * np.exp(imean - site_amp_sigma) +
                     0.63 * np.exp(imean) +
                     0.185 * np.exp(imean + site_amp_sigma))
             else:
@@ -268,7 +263,8 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
 
             # Get standard deviation model
             sig[m], tau[m], phi[m] = _get_stddevs(
-                self.sigma_model, ctx, imt)
+                self.sigma_model, mag, ctx, imt)
+
 
 lines = '''\
 NGAEastUSGSSeedSP15 SP15

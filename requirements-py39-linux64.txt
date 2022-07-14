@@ -3,16 +3,16 @@
 
 # GEM Mirror
 # 
-https://wheelhouse.openquake.org/v3/linux/py/setuptools-56.0.0-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/linux/py/pytz-2019.1-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py39/numba-0.55.1-1-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py39/llvmlite-0.38.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/h5py-3.1.0-cp39-cp39-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/setproctitle-1.2.2-cp39-cp39-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/numpy-1.20.0-cp39-cp39-manylinux2010_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/scipy-1.7.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py39/pandas-1.1.5-cp39-cp39-manylinux1_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py39/pandas-1.3.5-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/pyzmq-19.0.2-cp39-cp39-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/psutil-5.8.0-cp39-cp39-manylinux2010_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py39/Shapely-1.7.1-cp39-cp39-manylinux1_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py39/Shapely-1.8.0-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py/docutils-0.14-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/decorator-4.4.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/pbr-5.2.0-py2.py3-none-any.whl
@@ -23,12 +23,14 @@ https://wheelhouse.openquake.org/v3/linux/py/chardet-3.0.4-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/idna-2.8-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/urllib3-1.25.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/requests-2.22.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/linux/py/pyshp-1.2.3-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/linux/py/toml-0.10.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/linux/py/Django-3.2.6-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/toml-0.10.2-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py/Django-3.2.12-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/asgiref-3.4.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/django_pam-2.0.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/python_pam-1.8.4-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/setuptools-63.1.0-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py/pytz-2019.1-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/networkx-2.8.2-py3-none-any.whl
 
 ### Plotting ###
 # comment the following lines to skip installation
@@ -38,6 +40,7 @@ https://wheelhouse.openquake.org/v3/linux/py/pyparsing-2.4.0-py2.py3-none-any.wh
 https://wheelhouse.openquake.org/v3/linux/py/cycler-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py39/kiwisolver-1.3.1-cp39-cp39-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/matplotlib-3.3.4-cp39-cp39-manylinux1_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py39/Pillow-8.1.2-cp39-cp39-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/pyproj-3.0.1-cp39-cp39-manylinux2010_x86_64.whl
 #
 https://wheelhouse.openquake.org/v3/linux/py39/GDAL-3.3.3-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.whl

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -81,7 +81,7 @@ class GmfComputer(object):
 
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
-        distribution, or ``None``.
+        distribution
 
     :param correlation_model:
         Instance of correlation model object. See
@@ -122,10 +122,10 @@ class GmfComputer(object):
         else:  # in the hazardlib tests
             self.source_id = '?'
         self.seed = rupture.rup_id
-        ctxs = cmaker.get_ctxs([rupture], sitecol, self.source_id)
+        ctxs = cmaker.get_ctxs([rupture], sitecol)
         if not ctxs:
             raise FarAwayRupture
-        self.ctx = ctxs[0]
+        [self.ctx] = ctxs
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.ctx.sids)
         self.cross_correl = cross_correl or NoCrossCorrelation(
@@ -271,7 +271,7 @@ class GmfComputer(object):
 # this is not used in the engine; it is still useful for usage in IPython
 # when demonstrating hazardlib capabilities
 def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
-                         realizations, correlation_model=None, seed=None):
+                         realizations, correlation_model=None, seed=0):
     """
     Given an earthquake rupture, the ground motion field calculator computes
     ground shaking over a set of sites, by randomly sampling a ground shaking
@@ -297,7 +297,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         :class:`~openquake.hazardlib.gsim.base.IPE`.
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
-        distribution, or ``None``.
+        distribution
     :param realizations:
         Integer number of GMF realizations to compute.
     :param correlation_model:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -90,11 +90,12 @@ class ClassicalDamageTestCase(CalculatorTestCase):
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         fnames = export(('damages-rlzs', 'csv'), self.calc.datastore)
         if len(fnames) == 1:
-            self.assertEqualFiles('expected/damages.csv', fnames[0])
+            self.assertEqualFiles(
+                'expected/damages.csv', fnames[0], delta=1E-5)
         else:
             for fname in fnames:
                 self.assertEqualFiles(
-                    'expected/%s' % strip_calc_id(fname), fname)
+                    'expected/%s' % strip_calc_id(fname), fname, delta=1E-5)
 
     def test_case_1a(self):
         self.check(case_1a)
@@ -144,9 +145,9 @@ class ClassicalDamageTestCase(CalculatorTestCase):
         self.check(case_7c)
 
     def test_case_master(self):
-        if NOT_DARWIN:  # skip on macOS
-            self.check(case_master)
-            fnames = export(('hcurves', 'xml'), self.calc.datastore)
-            for fname in fnames:
-                self.assertEqualFiles(
-                    'expected/%s' % strip_calc_id(fname), fname)
+        self.check(case_master)
+        fnames = export(('hcurves', 'xml'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles(
+                'expected/%s' % strip_calc_id(fname), fname,
+                delta=1E-4)

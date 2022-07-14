@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,10 +18,13 @@
 
 import os
 import time
+import pstats
 import pickle
 import getpass
+import tempfile
 import operator
 import itertools
+import collections
 from datetime import datetime
 from decorator import decorator
 import psutil
@@ -47,6 +50,35 @@ task_info_dt = numpy.dtype(
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
 
 I64 = numpy.int64
+
+PStatData = collections.namedtuple(
+    'PStatData', 'ncalls tottime percall cumtime percall2 path')
+
+
+def get_pstats(pstatfile, n):
+    """
+    Return profiling information as a list [(ncalls, cumtime, path), ...]
+
+    :param pstatfile: path to a .pstat file
+    :param n: the maximum number of stats to retrieve
+    """
+    with tempfile.TemporaryFile(mode='w+') as stream:
+        ps = pstats.Stats(pstatfile, stream=stream)
+        ps.sort_stats('cumtime')
+        ps.print_stats(n)
+        stream.seek(0)
+        lines = list(stream)
+    for i, line in enumerate(lines):
+        if line.startswith('   ncalls'):
+            break
+    data = []
+    for line in lines[i + 2:]:
+        columns = line.split()
+        if len(columns) == 6:
+            columns[-1] = os.path.basename(columns[-1])
+            data.append(PStatData(*columns))
+    rows = [(rec.ncalls, rec.cumtime, rec.path) for rec in data]
+    return rows
 
 
 def init_performance(hdf5file, swmr=False):
@@ -149,11 +181,12 @@ class Monitor(object):
     calc_id = None
 
     def __init__(self, operation='', measuremem=False, inner_loop=False,
-                 h5=None):
+                 h5=None, version=None):
         self.operation = operation
         self.measuremem = measuremem
         self.inner_loop = inner_loop
         self.h5 = h5
+        self.version = version
         self.mem = 0
         self.duration = 0
         self._start_time = self._stop_time = time.time()
@@ -363,7 +396,9 @@ else:
         return lambda func: func
 
 
-@compile("int64[:, :](uint32[:])")
+@compile(["int64[:, :](uint8[:])",
+          "int64[:, :](uint32[:])",
+          "int64[:, :](int64[:])"])
 def _idx_start_stop(integers):
     # given an array of integers returns an array of shape (n, 3)
     out = []
@@ -396,3 +431,39 @@ def get_slices(uint32s):
             indices[idx] = []
         indices[idx].append((start, stop))
     return indices
+
+
+# this is used in split_array and it may dominate the performance
+# of classical calculations, so it has to be fast
+@compile("uint32[:](uint32[:], int64[:], int64[:], int64[:])")
+def _split(uint32s, indices, counts, cumcounts):
+    n = len(uint32s)
+    assert len(indices) == n
+    assert len(counts) <= n
+    out = numpy.zeros(n, numpy.uint32)
+    for idx, val in zip(indices, uint32s):
+        cumcounts[idx] -= 1
+        out[cumcounts[idx]] = val
+    return out
+
+
+# 3-argument version tested in SplitArrayTestCase
+def split_array(arr, indices, counts=None):
+    """
+    :param arr: an array with N elements
+    :param indices: a set of integers with repetitions
+    :param counts: if None the indices MUST be ordered
+    :returns: a list of K arrays, split on the integers
+
+    >>> arr = numpy.array([.1, .2, .3, .4, .5])
+    >>> idx = numpy.array([1, 1, 2, 2, 3])
+    >>> split_array(arr, idx)
+    [array([0.1, 0.2]), array([0.3, 0.4]), array([0.5])]
+    """
+    if counts is None:  # ordered indices
+        return [arr[s1:s2] for i, s1, s2 in _idx_start_stop(indices)]
+    # indices and counts coming from numpy.unique(arr)
+    # this part can be slow, but it is still 10x faster than pandas for EUR!
+    cumcounts = counts.cumsum()
+    out = _split(arr, indices, counts, cumcounts)
+    return [out[s1:s2] for s1, s2 in zip(cumcounts, cumcounts + counts)]

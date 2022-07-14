@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,14 +44,14 @@ def _compute_mean(C, mag, rjb):
     idx = rjb < 50.
     mean[idx] += (
         C['a3'] * np.log(d[idx]) +
-        C['a4'] * (mag - 6.4) * np.log(d[idx]) +
+        C['a4'] * (mag[idx] - 6.4) * np.log(d[idx]) +
         C['a5'] * rjb[idx]
     )
 
     idx = rjb >= 50.
     mean[idx] += (
         C['a3'] * np.log(d1) +
-        C['a4'] * (mag - 6.4) * np.log(d[idx]) +
+        C['a4'] * (mag[idx] - 6.4) * np.log(d[idx]) +
         C['a5'] * rjb[idx] + C['a6'] * (np.log(d[idx]) - np.log(d1))
     )
 
@@ -88,8 +88,8 @@ class SomervilleEtAl2001NSHMP2008(GMPE):
 
     #: Supported intensity measure component is the geometric mean of
     #: two : horizontal components
-    #: attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    #: attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`,
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -106,7 +106,7 @@ class SomervilleEtAl2001NSHMP2008(GMPE):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -115,7 +115,7 @@ class SomervilleEtAl2001NSHMP2008(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = clip_mean(imt, _compute_mean(C, ctx.mag, ctx.rjb))
-            sig[m] = C['sigma']        
+            sig[m] = C['sigma']
 
     #: Coefficient table obtained from coefficient arrays (a1, a2, a3, a4,
     #: a5, a6, a7, sig0) defined in subroutine getSomer in hazgridXnga2.f

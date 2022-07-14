@@ -84,7 +84,7 @@ def _get_cluster_correction(dat, C, ctx, imt):
             pnts = [Point(lo, la) for lo, la in zip(coo[:, 0], coo[:, 1])]
             poly = Polygon(pnts)
             within = poly.intersects(mesh)
-            if all(within):
+            if within.all():
                 cluster = int(key)
                 break
     # if OUT clusters do not apply corrections
@@ -126,7 +126,7 @@ def _get_distance_term(C, mag, ctx):
     term1 = C['c1'] * (mag - C['mref']) + C['c2']
     tmp = np.sqrt(ctx.rjb**2 + CONSTS['PseudoDepth']**2)
     term2 = np.log10(tmp / CONSTS['Rref'])
-    term3 = C['c3']*(tmp - CONSTS['Rref'])
+    term3 = C['c3'] * (tmp - CONSTS['Rref'])
     return term1 * term2 + term3
 
 
@@ -134,10 +134,9 @@ def _get_magnitude_term(C, mag):
     """
     Eq.2 - page 3
     """
-    if mag <= CONSTS['Mh']:
-        return C['b1'] * (mag - CONSTS['Mh'])
-    else:
-        return C['b2'] * (mag - CONSTS['Mh'])
+    return np.where(mag <= CONSTS['Mh'],
+                    C['b1'] * (mag - CONSTS['Mh']),
+                    C['b2'] * (mag - CONSTS['Mh']))
 
 
 def _get_site_correction(data, shape, imt):
@@ -203,7 +202,7 @@ class SgobbaEtAl2020(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
@@ -253,7 +252,7 @@ class SgobbaEtAl2020(GMPE):
         fname = os.path.join(DATA_FOLDER, "beta_dS2S.csv")
         self.betaS2S = np.loadtxt(fname, delimiter=",", skiprows=1)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Eq.1 - page 2
         """

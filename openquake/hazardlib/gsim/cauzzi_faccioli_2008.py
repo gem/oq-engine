@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -140,9 +140,9 @@ class CauzziFaccioli2008(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`,
     #: see paragraph 'On functional forms', page 462.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total, see paragraph 'On
     #: functional forms', page 462.

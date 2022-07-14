@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -67,7 +67,7 @@ class AtkinsonBoore1995GSCBest(GMPE):
     #: see page 18 in Atkinson and Boore's manuscript
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -83,9 +83,8 @@ class AtkinsonBoore1995GSCBest(GMPE):
             rhypo[rhypo < 10] = 10
 
             # convert magnitude from Mblg to Mw
-            mag = ctx.mag * 0.98 - 0.39 if ctx.mag <= 5.5 else \
-                2.715 - 0.277 * ctx.mag + 0.127 * ctx.mag * ctx.mag
-
+            mag = np.where(ctx.mag <= 5.5, ctx.mag * 0.98 - 0.39,
+                           2.715 - 0.277 * ctx.mag + 0.127 * ctx.mag * ctx.mag)
             # functional form as explained in 'Youngs_fit_to_AB95lookup.doc'
             f1 = np.minimum(np.log(rhypo), np.log(70.))
             f2 = np.maximum(np.log(rhypo / 130.), 0)

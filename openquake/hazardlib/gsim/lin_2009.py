@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation, Chung-Han Chan
+# Copyright (C) 2013-2022 GEM Foundation, Chung-Han Chan
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,8 +30,8 @@ def _get_distance_term(C, mag, rrup):
     """
     Returns the distance scaling term
     """
-    return (C['C4'] + C['C5'] * (mag - 6.3)) *\
-        np.log(np.sqrt(rrup ** 2. + np.exp(C['H']) ** 2.))
+    return (C['C4'] + C['C5'] * (mag - 6.3)) * np.log(
+        np.sqrt(rrup ** 2. + np.exp(C['H']) ** 2.))
 
 
 def _get_fault_type_dummy_variables(rake):
@@ -40,13 +40,9 @@ def _get_fault_type_dummy_variables(rake):
     reverse faulting (f_r) from rake. Classification based on that
     found in the original fortran code of Lin (2009)
     """
-    f_n, f_r = 0, 0
-    if rake >= -120 and rake <= -60:
-        # normal
-        f_n = 1
-    elif rake >= 30 and rake <= 150:
-        # reverse
-        f_r = 1
+    f_n, f_r = np.zeros_like(rake), np.zeros_like(rake)
+    f_n[(rake >= -120) & (rake <= -60)] = 1.  # normal
+    f_r[(rake >= 30) & (rake <= 150)] = 1.  # reverse
     return f_n, f_r
 
 
@@ -54,11 +50,10 @@ def _get_magnitude_term(C, mag):
     """
     Returns the magnitude scaling term.
     """
-    lny = C['C1'] + (C['C3'] * ((8.5 - mag) ** 2.))
-    if mag > 6.3:
-        return lny + (-C['H'] * C['C5']) * (mag - 6.3)
-    else:
-        return lny + C['C2'] * (mag - 6.3)
+    lny = C['C1'] + C['C3'] * (8.5 - mag) ** 2.
+    return np.where(mag > 6.3,
+                    lny - C['H'] * C['C5'] * (mag - 6.3),
+                    lny + C['C2'] * (mag - 6.3))
 
 
 def _get_site_response_term(C, vs30):
@@ -93,7 +88,7 @@ class Lin2009(GMPE):
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components, see equation 4.1 page 46.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types is total, see equation 4.1 page 46.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -109,7 +104,7 @@ class Lin2009(GMPE):
     #: page 46.
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

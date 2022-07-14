@@ -20,19 +20,23 @@ import os.path
 import pickle
 import operator
 import logging
+import collections
 import gzip
 import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile
-from openquake.hazardlib.contexts import basename
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile, tom
+from openquake.hazardlib.contexts import ContextMaker, basename
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
+from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
 TWO16 = 2 ** 16  # 65,536
+TWO32 = 2 ** 32  # 4,294,967,296
 by_id = operator.attrgetter('source_id')
-CALC_TIME, NUM_SITES, EFF_RUPTURES, WEIGHT = 3, 4, 5, 6
+
+CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT = 3, 4, 5, 6
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -40,28 +44,47 @@ source_info_dt = numpy.dtype([
     ('code', (numpy.string_, 1)),      # 2
     ('calc_time', numpy.float32),      # 3
     ('num_sites', numpy.uint32),       # 4
-    ('eff_ruptures', numpy.uint32),    # 5
+    ('num_ruptures', numpy.uint32),    # 5
     ('weight', numpy.float32),         # 6
-    ('trti', numpy.uint8),             # 7
+    ('mutex_weight', numpy.float64),   # 7
+    ('trti', numpy.uint8),             # 8
 ])
 
 
-def create_source_info(csm, source_data, h5):
+def mutex_by_grp(src_groups):
+    """
+    :returns: a composite array with boolean fields src_mutex, rup_mutex
+    """
+    lst = []
+    for sg in src_groups:
+        lst.append((sg.src_interdep == 'mutex', sg.rup_interdep == 'mutex'))
+    return numpy.array(lst, [('src_mutex', bool), ('rup_mutex', bool)])
+
+
+def create_source_info(csm, h5):
     """
     Creates source_info, source_wkt, trt_smrs, toms
     """
     data = {}  # src_id -> row
     wkts = []
     lens = []
-    for sg in csm.src_groups:
-        for src in sg:
-            srcid = basename(src)
-            trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
-            lens.append(len(src.trt_smrs))
-            row = [srcid, src.grp_id, src.code, 0, 0, 0, trti, 0]
-            wkts.append(getattr(src, '_wkt', ''))
-            data[srcid] = row
-            src.id = len(data) - 1
+    for srcid, srcs in general.groupby(csm.get_sources(), basename).items():
+        src = srcs[0]
+        num_ruptures = sum(src.num_ruptures for src in srcs)
+        mutex = getattr(src, 'mutex_weight', 0)
+        trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
+        if src.code == b'p':
+            code = b'p'
+        else:
+            code = csm.code.get(srcid, b'P')
+        lens.append(len(src.trt_smrs))
+        row = [srcid, src.grp_id, code, 0, 0, num_ruptures,
+               src.weight, mutex, trti]
+        wkts.append(getattr(src, '_wkt', ''))
+        data[srcid] = row
+        srcid = len(data) - 1
+        for src in srcs:
+            src.id = srcid
 
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
@@ -70,8 +93,7 @@ def create_source_info(csm, source_data, h5):
     num_srcs = len(csm.source_info)
     # avoid hdf5 damned bug by creating source_info in advance
     h5.create_dataset('source_info',  (num_srcs,), source_info_dt)
-    h5['source_info'].attrs['atomic'] = any(
-        grp.atomic for grp in csm.src_groups)
+    h5['mutex_by_grp'] = mutex_by_grp(csm.src_groups)
     h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
 
 
@@ -117,38 +139,12 @@ def get_csm(oq, full_lt, h5=None):
         oq.investigation_time, oq.rupture_mesh_spacing,
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
-        oq.source_id, discard_trts=oq.discard_trts,
+        oq.source_id,
+        discard_trts=[s.strip() for s in oq.discard_trts.split(',')],
         floating_x_step=oq.floating_x_step,
-        floating_y_step=oq.floating_y_step)
-    classical = not oq.is_event_based()
+        floating_y_step=oq.floating_y_step,
+        source_nodes=oq.source_nodes)
     full_lt.ses_seed = oq.ses_seed
-    if oq.is_ucerf():
-        [grp] = nrml.to_python(oq.inputs["source_model"], converter)
-        src_groups = []
-        for grp_id, sm_rlz in enumerate(full_lt.sm_rlzs):
-            sg = copy.copy(grp)
-            src_groups.append(sg)
-            src = sg[0].new(sm_rlz.ordinal, sm_rlz.value[0])  # one source
-            src.checksum = src.grp_id = src.trt_smr = grp_id
-            src.samples = sm_rlz.samples
-            logging.info('Reading sections and rupture planes for %s', src)
-            planes = src.get_planes()
-            if classical:
-                src.ruptures_per_block = oq.ruptures_per_block
-                sg.sources = list(src)
-                for s in sg:
-                    s.planes = planes
-                    s.sections = s.get_sections()
-                # add background point sources
-                sg = copy.copy(grp)
-                src_groups.append(sg)
-                sg.sources = src.get_background_sources()
-            else:  # event_based, use one source
-                sg.sources = [src]
-                src.planes = planes
-                src.sections = src.get_sections()
-        return CompositeSourceModel(full_lt, src_groups)
-
     logging.info('Reading the source model(s) in parallel')
 
     # NB: the source models file are often NOT in the shared directory
@@ -163,7 +159,8 @@ def get_csm(oq, full_lt, h5=None):
                               h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
-    fix_geometry_sections(smdict)
+    fix_geometry_sections(smdict, h5)
+    logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
 
     # checking the changes
@@ -174,36 +171,57 @@ def get_csm(oq, full_lt, h5=None):
     return _get_csm(full_lt, groups)
 
 
-def fix_geometry_sections(smdict):
+def fix_geometry_sections(smdict, h5):
     """
     If there are MultiFaultSources, fix the sections according to the
     GeometryModels (if any).
     """
     gmodels = []
     smodels = []
+    gfiles = []
     for fname, mod in smdict.items():
         if isinstance(mod, nrml.GeometryModel):
             gmodels.append(mod)
+            gfiles.append(fname)
         elif isinstance(mod, nrml.SourceModel):
             smodels.append(mod)
         else:
             raise RuntimeError('Unknown model %s' % mod)
 
     # merge and reorder the sections
+    sec_ids = []
     sections = {}
     for gmod in gmodels:
+        sec_ids.extend(gmod.sections)
         sections.update(gmod.sections)
-    sections = {sid: sections[sid] for sid in sorted(sections)}
-    nrml.check_unique(sections)
+    nrml.check_unique(
+        sec_ids, 'section ID in files ' + ' '.join(gfiles))
+    s2i = {suid: i for i, suid in enumerate(sorted(sections))}
+    sections = [sections[suid] for suid in sorted(sections)]
+    for idx, sec in enumerate(sections):
+        sec.suid = idx
+    if h5 and sections:
+        h5.save_vlen('multi_fault_sections',
+                     [kite_to_geom(sec) for sec in sections])
 
     # fix the MultiFaultSources
+    section_idxs = []
     for smod in smodels:
         for sg in smod.src_groups:
             for src in sg:
                 if hasattr(src, 'set_sections'):
                     if not sections:
                         raise RuntimeError('Missing geometryModel files!')
-                    src.set_sections(sections)
+                    if h5:
+                        src.hdf5path = h5.filename
+                    src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
+                                        for idxs in src.rupture_idxs]
+                    for idxs in src.rupture_idxs:
+                        section_idxs.extend(idxs)
+    cnt = collections.Counter(section_idxs)
+    if cnt:
+        mean_counts = numpy.mean(list(cnt.values()))
+        logging.info('Section multiplicity = %.1f', mean_counts)
 
 
 def _groups_ids(smlt_dir, smdict, fnames):
@@ -220,6 +238,7 @@ def _build_groups(full_lt, smdict):
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
     groups = []
+    frac = 1. / len(full_lt.sm_rlzs)
     for rlz in full_lt.sm_rlzs:
         src_groups, source_ids = _groups_ids(
             smlt_dir, smdict, rlz.value[0].split())
@@ -238,6 +257,9 @@ def _build_groups(full_lt, smdict):
             sg = apply_uncertainties(bset_values, src_group)
             for src in sg:
                 src.trt_smr = trt_smr
+                # the smweight is used in event based sampling:
+                # see oq-risk-tests etna
+                src.smweight = rlz.weight if full_lt.num_samples else frac
                 if rlz.samples > 1:
                     src.samples = rlz.samples
             groups.append(sg)
@@ -263,7 +285,7 @@ def reduce_sources(sources_with_same_id):
     out = []
     for src in sources_with_same_id:
         dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id trt_smr samples'}
+               if k not in 'source_id trt_smr smweight samples'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():
@@ -334,10 +356,33 @@ class CompositeSourceModel:
         self.sm_rlzs = full_lt.sm_rlzs
         self.full_lt = full_lt
         self.src_groups = src_groups
+        self.code = {}  # srcid -> code
         for grp_id, sg in enumerate(src_groups):
             assert len(sg)  # sanity check
             for src in sg:
                 src.grp_id = grp_id
+                if src.code != b'P':
+                    source_id = basename(src)
+                    self.code[source_id] = src.code
+
+    # used for debugging; assume PoissonTOM; use read_cmakers instead
+    def _get_cmakers(self, oq):
+        cmakers = []
+        trt_smrs = self.get_trt_smrs()
+        rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
+        trts = list(self.full_lt.gsim_lt.values)
+        num_eff_rlzs = len(self.full_lt.sm_rlzs)
+        start = 0
+        for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
+            trti = trt_smrs[grp_id][0] // num_eff_rlzs
+            cmaker = ContextMaker(trts[trti], rlzs_by_gsim, oq)
+            cmaker.tom = tom.PoissonTOM(oq.investigation_time)
+            cmaker.trti = trti
+            cmaker.start = start
+            cmaker.grp_id = grp_id
+            start += len(rlzs_by_gsim)
+            cmakers.append(cmaker)
+        return cmakers
 
     def get_trt_smrs(self):
         """
@@ -387,12 +432,6 @@ class CompositeSourceModel:
             for src in sg:
                 if hasattr(src, 'mags'):  # MultiFaultSource
                     srcmags = {magstr(mag) for mag in src.mags}
-                    if hasattr(src, 'source_file'):  # UcerfSource
-                        grid_key = "/".join(["Grid", src.ukey["grid_key"]])
-                        # for instance Grid/FM0_0_MEANFS_MEANMSR_MeanRates
-                        with hdf5.File(src.source_file, "r") as h5:
-                            srcmags.update(magstr(mag) for mag in
-                                           h5[grid_key + "/Magnitude"][:])
                 elif hasattr(src, 'data'):  # nonparametric
                     srcmags = {magstr(item[0].mag) for item in src.data}
                 else:
@@ -420,14 +459,13 @@ class CompositeSourceModel:
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        for src_id, nsites, nrupts, weight, ctimes in zip(
+        assert len(source_data) < TWO32, len(source_data)
+        for src_id, nsites, weight, ctimes in zip(
                 source_data['src_id'], source_data['nsites'],
-                source_data['nrupts'], source_data['weight'],
-                source_data['ctimes']):
+                source_data['weight'], source_data['ctimes']):
             row = self.source_info[src_id.split(':')[0]]
             row[CALC_TIME] += ctimes
             row[WEIGHT] += weight
-            row[EFF_RUPTURES] += nrupts
             row[NUM_SITES] += nsites
 
     def count_ruptures(self):
@@ -439,6 +477,22 @@ class CompositeSourceModel:
             n += src.count_ruptures()
         return n
 
+    def fix_src_offset(self):
+        """
+        Set the src.offset field for each source
+        """
+        for srcs in general.groupby(self.get_sources(), basename).values():
+            offset = 0
+            if len(srcs) > 1:  # order by split number
+                srcs.sort(key=lambda src: int(src.source_id.split(':')[1]))
+            for src in srcs:
+                src.offset = offset
+                offset += src.num_ruptures
+                if src.num_ruptures >= TWO32:
+                    raise ValueError(
+                        '%s contains more than 2**32 ruptures' % src)
+                # print(src, src.offset, offset)
+
     def get_max_weight(self, oq):  # used in preclassical
         """
         :param oq: an OqParam instance
@@ -446,7 +500,9 @@ class CompositeSourceModel:
         """
         srcs = self.get_sources()
         tot_weight = 0
+        nr = 0
         for src in srcs:
+            nr += src.num_ruptures
             tot_weight += src.weight
             if src.code == b'C' and src.num_ruptures > 20_000:
                 msg = ('{} is suspiciously large, containing {:_d} '
@@ -455,8 +511,6 @@ class CompositeSourceModel:
                 logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
-        if parallel.Starmap.num_cores > 64:  # if many cores less tasks
-            max_weight *= 1.5
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
         heavy = [src for src in srcs if src.weight > max_weight]

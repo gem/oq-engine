@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2020-2021 GEM Foundation
+# Copyright (C) 2020-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,9 +26,9 @@ Three installation methods are supported:
 3. "devel" installation on $HOME/openquake from the engine repository
 
 To disinstall use the --remove flag, which remove the services and the
-directories /opt/openquake or $HOME/openquake.
+directories /opt/openquake/venv or $HOME/openquake.
 The calculations will NOT be removed since they live in
-/var/lib/openquake/oqdata or $HOME/oqdata.
+/opt/openquake/oqdata or $HOME/oqdata.
 You have to remove the data directories manually, if you so wish.
 """
 import os
@@ -42,8 +42,14 @@ import getpass
 import zipfile
 import tempfile
 import argparse
+import platform
 import subprocess
 from urllib.request import urlopen
+try:
+    import ensurepip
+except ImportError:
+    sys.exit("ensurepip is missing; on Ubuntu the solution is to install "
+             "python3-venv with apt")
 try:
     import venv
 except ImportError:
@@ -64,23 +70,24 @@ class server:
     """
     Parameters for a server installation (with root permissions)
     """
-    VENV = '/opt/openquake'
+    VENV = '/opt/openquake/venv'
     CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = '/usr/bin/oq'
     OQL = ['sudo', '-H', '-u', 'openquake', OQ]
-    OQDATA = '/var/lib/openquake/oqdata'
+    OQDATA = '/opt/openquake/oqdata'
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
     file = %s
-    shared_dir = /var/lib
+    [directory]
+    shared_dir = /opt/openquake
     ''' % (DBPORT, DBPATH)
 
     @classmethod
     def exit(cls):
         return f'''There is a DbServer running on port {cls.DBPORT} from a
-previous installation. 
+previous installation.
 On linux please stop the server with the command
 `sudo systemctl stop openquake-dbserver` or `fuser -k {cls.DBPORT}/tcp`
 On Windows please use Task Manager to stop the process
@@ -91,17 +98,18 @@ class devel_server:
     """
     Parameters for a development on server installation (with root permissions)
     """
-    VENV = '/opt/openquake'
+    VENV = '/opt/openquake/venv'
     CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = '/usr/bin/oq'
     OQL = ['sudo', '-H', '-u', 'openquake', OQ]
-    OQDATA = '/var/lib/openquake/oqdata'
+    OQDATA = '/opt/openquake/oqdata'
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
     file = %s
-    shared_dir = /var/lib
+    [directory]
+    shared_dir = /opt/openquake
     ''' % (DBPORT, DBPATH)
     exit = server.exit
 
@@ -159,7 +167,7 @@ User=openquake
 Group=openquake
 Environment=
 WorkingDirectory={OQDATA}
-ExecStart=/opt/openquake/bin/oq {service} start
+ExecStart=/opt/openquake/venv/bin/oq {command}
 Restart=always
 RestartSec=30
 KillMode=control-group
@@ -339,8 +347,12 @@ def install(inst, version):
 
     # install the requirements
     branch = get_branch(version)
+    if sys.platform == 'darwin':
+        mac = '_' + platform.machine(),  # x86_64 or arm64
+    else:
+        mac = '',
     req = f'https://raw.githubusercontent.com/gem/oq-engine/{branch}/' \
-        'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
+        'requirements-py%d%d-%s%s.txt' % (PYVER + PLATFORM[sys.platform] + mac)
 
     subprocess.check_call([pycmd, '-m', 'pip', 'install', '-r', req])
 
@@ -379,6 +391,10 @@ def install(inst, version):
     else:
         oqreal = '%s/bin/oq' % inst.VENV
 
+    if inst in (user, devel):  # create/upgrade the db in the default location
+        # do not stop if `oq dbserver upgrade` is missing (versions < 3.15)
+        subprocess.run([oqreal, 'dbserver', 'upgrade'])
+
     if (inst is server and not os.path.exists(inst.OQ) or
        inst is devel_server and not os.path.exists(inst.OQ)):
         os.symlink(oqreal, inst.OQ)
@@ -403,34 +419,38 @@ def install(inst, version):
             service_name = 'openquake-%s.service' % service
             service_path = '/etc/systemd/system/' + service_name
             afterservice = 'network.target'
+            command = service + ' start -f'
             if 'webui' in service:
-                afterservice = 'network.target openquake-dbserver'
+                afterservice = 'network.target openquake-dbserver.service'
+                command = service + ' -s start'
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
                     srv = SERVICE.format(service=service, OQDATA=inst.OQDATA,
-                                         afterservice=afterservice)
+                                         afterservice=afterservice,
+                                         command=command)
                     f.write(srv)
             subprocess.check_call(
                 ['systemctl', 'enable', '--now', service_name])
             subprocess.check_call(['systemctl', 'start', service_name])
 
-    # download and unzip the demos
-    try:
-        with urlopen(DEMOS) as f:
-            data = f.read()
-    except OSError:
-        msg = 'However, we could not download the demos from %s' % DEMOS
-    else:
-        th, tmp = tempfile.mkstemp(suffix='.zip')
-        with os.fdopen(th, 'wb') as t:
-            t.write(data)
-        zipfile.ZipFile(tmp).extractall(inst.VENV)
-        os.remove(tmp)
-        path = os.path.join(inst.VENV, 'demos', 'hazard',
-                            'AreaSourceClassicalPSHA', 'job.ini')
-        msg = ('You can run a test calculation with the command\n'
-               f'{oqreal} engine --run {path}')
-    print('The engine was installed successfully.\n' + msg)
+    if inst in (user, server):
+        # download and unzip the demos
+        try:
+            with urlopen(DEMOS) as f:
+                data = f.read()
+        except OSError:
+            msg = 'However, we could not download the demos from %s' % DEMOS
+        else:
+            th, tmp = tempfile.mkstemp(suffix='.zip')
+            with os.fdopen(th, 'wb') as t:
+                t.write(data)
+            zipfile.ZipFile(tmp).extractall(inst.VENV)
+            os.remove(tmp)
+            path = os.path.join(inst.VENV, 'demos', 'hazard',
+                                'AreaSourceClassicalPSHA', 'job.ini')
+            msg = ('You can run a test calculation with the command\n'
+                   f'{oqreal} engine --run {path}')
+            print('The engine was installed successfully.\n' + msg)
 
 
 def remove(inst):

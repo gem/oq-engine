@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,22 +19,16 @@
 """
 Module :mod:`openquake.hazardlib.gsim.gmpe_table` defines the
 :class:`openquake.hazardlib.gsim.gmpe_table.GMPETable` for defining GMPEs
-in the form of binary tables, and
-:class:`openquake.hazardlib.gsim.gmpe_table.AmplificationTable` for defining
-the corresponding amplification of the IMLs
+in the form of binary tables
 """
-from copy import deepcopy
-
 import h5py
 from scipy.interpolate import interp1d
-import numpy
+import numpy as np
 
 from openquake.baselib.general import CallableDict
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.const import TRT, StdDev
-from openquake.hazardlib import site
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.baselib.python3compat import round
 
@@ -43,35 +37,33 @@ _get_mean = CallableDict()
 
 
 @_get_mean.add("base", "nga_east")
-def _get_mean_base(kind, distance_type, data, dctx, dists):
+def _get_mean_(kind, data, dists, table_dists):
     """
-    Returns the mean intensity measure level from the tables
+    :param kind:
+        The string "base" or "nga_east"
     :param data:
-        The intensity measure level vector for the given magnitude and IMT
-    :param key:
-        The distance type
-    :param distances:
-        The distance vector for the given magnitude and IMT
+        The intensity measure level table for the given magnitude and IMT
+    :param dists:
+        The distances for the given magnitude and IMT
+    :param table_dists:
+        The distance table for the given magnitude and IMT
+    :return:
+        The mean intensity measure level from the tables.
     """
-    dist = getattr(dctx, distance_type)
-    # For values outside of the interpolation range use -999. to ensure
-    # value is identifiable and outside of potential real values
-    interpolator_mean = interp1d(
-        dists, data, bounds_error=False, fill_value=-999.)
-    mean = interpolator_mean(dist)
+    mean = np.interp(dists, table_dists, data)
     # For those distances less than or equal to the shortest distance
     # extrapolate the shortest distance value
-    mean[dist < (dists[0] + 1.0E-3)] = data[0]
+    mean[dists < (table_dists[0] + 1.0E-3)] = data[0]
     # For those distances significantly greater than the furthest distance
     # set to 1E-20.
-    mean[dist > (dists[-1] + 1.0E-3)] = 1E-20
+    mean[dists > (table_dists[-1] + 1.0E-3)] = 1E-20
     # If any distance is between the final distance and a margin of 0.001
     # km then assign to smallest distance
     mean[mean < -1.] = data[-1]
     return mean
 
 
-def hdf_arrays_to_dict(hdfgroup):
+def todict(hdfgroup):
     """
     Convert an hdf5 group contains only data sets to a dictionary of
     data sets
@@ -85,264 +77,31 @@ def hdf_arrays_to_dict(hdfgroup):
     return {key: hdfgroup[key][:] for key in hdfgroup}
 
 
-class AmplificationTable(object):
-    """
-    Class to apply amplification from the GMPE tables.
-
-    :attr shape:
-        Shape of the amplification arrays as a tuple of (Number Distances,
-        Number IMTs, Number Magnitudes, Number Amplification Levels)
-    :attr periods:
-        Spectral periods defined in table
-    :attr mean:
-        Amplification factors for the mean ground motion
-    :attr sigma:
-        List of modification factors for the standard deviation of ground
-        motion
-    :attr magnitudes:
-        Magnitude values for the tables
-    :attr distances:
-        Distance values for the tables
-    :attr parameter:
-        Parameter to which the amplification applies. There is a check
-        on the parameter name.
-    :attr values:
-        Array of values to which each amplification table corresponds
-    :attr element:
-        Indicates if the amplification corresponds to a rupture attribute or
-        a site attribute
-    """
-    def __init__(self, amplification_group, magnitudes, distances):
-        """
-        Setup the amplification factors.
-
-        :param amplification_group:
-            Amplification model as instance of :class:`h5py.Group`
-        :param magnitudes:
-            Array of magnitudes
-        :param distances:
-            Array of distances
-        """
-        self.shape = None
-        self.periods = None
-        self.mean = None
-        self.sigma = None
-        self.magnitudes = magnitudes
-        self.distances = distances
-        self.parameter = decode(amplification_group.attrs["apply_to"])
-        self.values = numpy.array([float(key) for key in amplification_group])
-        self.argrp_id = numpy.argsort(self.values)
-        self.values = self.values[self.argrp_id]
-        if self.parameter in RuptureContext._slots_:
-            self.element = "Rupture"
-        elif self.parameter in site.site_param_dt:
-            self.element = "Sites"
-        else:
-            raise ValueError("Amplification parameter %s not recognised!"
-                             % self.parameter)
-        self._build_data(amplification_group)
-
-    def _build_data(self, amplification_group):
-        """
-        Creates the numpy array tables from the hdf5 tables
-        """
-        # Determine shape of the tables
-        n_levels = len(amplification_group)
-        # Checks the first group in the amplification group and returns the
-        # shape of the SA array - implicitly assumes the SA array in all
-        # amplification groups is the same shape
-        level = next(iter(amplification_group))
-        n_d, n_p, n_m = amplification_group[level]["IMLs/SA"].shape
-        assert n_d == len(self.distances), (n_d, len(self.distances))
-        assert n_m == len(self.magnitudes), (n_m, len(self.magnitudes))
-        # Instantiate the arrays with ones
-        self.mean = {"SA": numpy.ones([n_d, n_p, n_m, n_levels]),
-                     "PGA": numpy.ones([n_d, 1, n_m, n_levels]),
-                     "PGV": numpy.ones([n_d, 1, n_m, n_levels])}
-        self.sigma = {}
-        for stddev_type in [StdDev.TOTAL, StdDev.INTER_EVENT,
-                            StdDev.INTRA_EVENT]:
-            level = next(iter(amplification_group))
-            if stddev_type in amplification_group[level]:
-                self.sigma[stddev_type] = deepcopy(self.mean)
-
-        for iloc, (level, amp_model) in enumerate(amplification_group.items()):
-            if "SA" in amp_model["IMLs"]:
-                if iloc == 0:
-                    self.periods = amp_model["IMLs/T"][:]
-                else:
-                    assert numpy.allclose(self.periods, amp_model["IMLs/T"][:])
-            for imt in ["SA", "PGA", "PGV"]:
-                if imt in amp_model["IMLs"]:
-                    self.mean[imt][:, :, :, self.argrp_id[iloc]] = \
-                        amp_model["IMLs/" + imt][:]
-                    for stddev_type in self.sigma:
-                        self.sigma[stddev_type][imt][
-                            :, :, :, self.argrp_id[iloc]] = \
-                            amp_model["/".join([stddev_type, imt])][:]
-        self.shape = (n_d, n_p, n_m, n_levels)
-
-    def get_set(self):
-        """
-        Return the parameter as an instance a Python set
-        """
-        return {self.parameter}
-
-    def get_amplification_factors(self, imt, ctx, dists, stddev_types):
-        """
-        Returns the amplification factors for the given rupture and site
-        conditions.
-
-        :param imt:
-            Intensity measure type as an instance of the :class:
-            `openquake.hazardlib.imt`
-        :param ctx:
-            RuptureContext
-        :param dists:
-            Source to site distances (km)
-        :param stddev_types:
-            List of required standard deviation types
-        :returns:
-            * mean_amp - Amplification factors applied to the median ground
-                         motion
-            * sigma_amps - List of modification factors applied to the
-                         standard deviations of ground motion
-        """
-        dist_level_table = self.get_mean_table(imt, ctx)
-        sigma_tables = self.get_sigma_tables(imt, ctx, stddev_types)
-        mean_interpolator = interp1d(self.values,
-                                     numpy.log10(dist_level_table),
-                                     axis=1)
-        sigma_interpolators = [interp1d(self.values, sigma_table, axis=1)
-                               for sigma_table in sigma_tables]
-        if self.element == "Rupture":
-            mean_amp = 10.0 ** mean_interpolator(
-                getattr(ctx, self.parameter))[0] * numpy.ones_like(dists)
-            sigma_amps = []
-            for sig_interpolator in sigma_interpolators:
-                sigma_amps.append(sig_interpolator(
-                    getattr(ctx, self.parameter))[0] * numpy.ones_like(dists))
-        else:
-            mean_amp = 10.0 ** mean_interpolator(
-                getattr(ctx, self.parameter))[0, :]
-            sigma_amps = []
-            for sig_interpolator in sigma_interpolators:
-                sigma_amps.append(sig_interpolator(
-                    getattr(ctx, self.parameter))[0, :] *
-                    numpy.ones_like(dists))
-        return mean_amp, sigma_amps
-
-    def get_mean_table(self, imt, rctx):
-        """
-        Returns amplification factors for the mean, given the rupture and
-        intensity measure type.
-
-        :returns:
-            amplification table as an array of [Number Distances,
-            Number Levels]
-        """
-        # Levels by Distances
-        if imt.string in 'PGA PGV':
-            interpolator = interp1d(self.magnitudes,
-                                    numpy.log10(self.mean[imt.string]), axis=2)
-            output_table = 10.0 ** (
-                interpolator(rctx.mag).reshape(self.shape[0], self.shape[3]))
-        else:
-            # For spectral accelerations - need two step process
-            # Interpolate period - log-log space
-            interpolator = interp1d(numpy.log10(self.periods),
-                                    numpy.log10(self.mean["SA"]),
-                                    axis=1)
-            period_table = interpolator(numpy.log10(imt.period))
-            # Interpolate magnitude - linear-log space
-            mag_interpolator = interp1d(self.magnitudes, period_table, axis=1)
-            output_table = 10.0 ** mag_interpolator(rctx.mag)
-        return output_table
-
-    def get_sigma_tables(self, imt, rctx, stddev_types):
-        """
-        Returns modification factors for the standard deviations, given the
-        rupture and intensity measure type.
-
-        :returns:
-            List of standard deviation modification tables, each as an array
-            of [Number Distances, Number Levels]
-
-        """
-        output_tables = []
-        for stddev_type in stddev_types:
-            # For PGA and PGV only needs to apply magnitude interpolation
-            if imt.string in 'PGA PGV':
-                interpolator = interp1d(self.magnitudes,
-                                        self.sigma[stddev_type][imt.string],
-                                        axis=2)
-                output_tables.append(
-                    interpolator(rctx.mag).reshape(self.shape[0],
-                                                   self.shape[3]))
-
-            else:
-                # For spectral accelerations - need two step process
-                # Interpolate period
-                interpolator = interp1d(numpy.log10(self.periods),
-                                        self.sigma[stddev_type]["SA"],
-                                        axis=1)
-                period_table = interpolator(numpy.log10(imt.period))
-                mag_interpolator = interp1d(self.magnitudes,
-                                            period_table,
-                                            axis=1)
-                output_tables.append(mag_interpolator(rctx.mag))
-        return output_tables
-
-
-def _setup_amplification(self, fle):
-    """
-    If amplification data is specified then reads into memory and updates
-    the required rupture and site parameters
-    """
-    self.amplification = AmplificationTable(fle["Amplification"],
-                                            self.m_w,
-                                            self.distances)
-    if self.amplification.element == "Sites":
-        self.REQUIRES_SITES_PARAMETERS = set(
-            [self.amplification.parameter])
-    elif self.amplification.element == "Rupture":
-        # set the site and rupture parameters on the instance
-        self.REQUIRES_SITES_PARAMETERS = set()
-        self.REQUIRES_RUPTURE_PARAMETERS = (
-            self.REQUIRES_RUPTURE_PARAMETERS |
-            {self.amplification.parameter})
-
-
-def _return_tables(self, mag, imt, std_idx):
+def _return_tables(self, mag, imt, which):
     """
     Returns the vector of ground motions or standard deviations
     corresponding to the specific magnitude and intensity measure type.
 
-    :param std_idx:
-       the string "IMLs" or an integer 0, 1, 2 for total, inter, intra
+    :param which:
+       the string "IMLs" or "Total"
     """
+    assert which in "IMLs Total", which
     if imt.string in 'PGA PGV':
         # Get scalar imt
-        if std_idx == "IMLs":
+        if which == "IMLs":
             iml_table = self.imls[imt.string][:]
         else:
-            stds = self.stddevs[std_idx]
-            if stds is None:
-                raise KeyError("Unsupported StdDev#%d" % std_idx)
-            iml_table = stds[imt.string][:]
+            iml_table = self.stddev[imt.string][:]
 
         n_d, n_s, n_m = iml_table.shape
         iml_table = iml_table.reshape([n_d, n_m])
     else:
-        if std_idx == "IMLs":
+        if which == "IMLs":
             periods = self.imls["T"][:]
             iml_table = self.imls["SA"][:]
         else:
-            stds = self.stddevs[std_idx]
-            if stds is None:
-                raise KeyError("Unsupported StdDev#%d" % std_idx)
-            periods = stds["T"][:]
-            iml_table = stds["SA"][:]
+            periods = self.stddev["T"][:]
+            iml_table = self.stddev["SA"][:]
 
         low_period = round(periods[0], 7)
         high_period = round(periods[-1], 7)
@@ -352,52 +111,32 @@ def _return_tables(self, mag, imt, std_idx):
                              "(%.3f to %.3f)" % (imt.period, periods[0],
                                                  periods[-1]))
         # Apply log-log interpolation for spectral period
-        interpolator = interp1d(numpy.log10(periods),
-                                numpy.log10(iml_table),
-                                axis=1)
-        iml_table = 10. ** interpolator(numpy.log10(imt.period))
-    return apply_magnitude_interpolation(self, mag, iml_table)
+        interpolator = interp1d(
+            np.log10(periods), np.log10(iml_table), axis=1)
+        iml_table = 10. ** interpolator(np.log10(imt.period))
 
-
-def apply_magnitude_interpolation(self, mag, iml_table):
-    """
-    Interpolates the tables to the required magnitude level
-
-    :param float mag:
-        Magnitude
-    :param iml_table:
-        Intensity measure level table
-    """
     # do not allow "mag" to exceed maximum table magnitude
-    if mag > self.m_w[-1]:
-        mag = self.m_w[-1]
+    mag = np.clip(mag, None, self.m_w[-1])
 
     # Get magnitude values
-    if mag < self.m_w[0] or mag > self.m_w[-1]:
+    if (mag < self.m_w[0]).any() or (mag > self.m_w[-1]).any():
         raise ValueError("Magnitude %.2f outside of supported range "
-                         "(%.2f to %.2f)" % (mag,
-                                             self.m_w[0],
-                                             self.m_w[-1]))
+                         "(%.2f to %.2f)" % (mag, self.m_w[0], self.m_w[-1]))
     # It is assumed that log10 of the spectral acceleration scales
     # linearly (or approximately linearly) with magnitude
-    m_interpolator = interp1d(self.m_w, numpy.log10(iml_table), axis=1)
+    m_interpolator = interp1d(self.m_w, np.log10(iml_table), axis=1)
     return 10.0 ** m_interpolator(mag)
 
 
-def _get_stddevs(self, dists, ctx, imt, stdis):
+def _get_stddev(sigma, dists, table_dists, imt):
     """
     Returns the total standard deviation of the intensity measure level
     from the tables.
     """
-    stddevs = []
-    dst = getattr(ctx, self.distance_type)
-    for stdi in stdis:
-        sigma = _return_tables(self, ctx.mag, imt, stdi)
-        stddev = numpy.interp(dst, dists, sigma)
-        stddev[dst < dists[0]] = sigma[0]
-        stddev[dst > dists[-1]] = sigma[-1]
-        stddevs.append(stddev)
-    return stddevs
+    stddev = np.interp(dists, table_dists, sigma)
+    stddev[dists < table_dists[0]] = sigma[0]
+    stddev[dists > table_dists[-1]] = sigma[-1]
+    return stddev
 
 
 class GMPETable(GMPE):
@@ -438,9 +177,14 @@ class GMPETable(GMPE):
 
     gmpe_table = None  # see subclasses like NBCC2015_AA13_activecrustFRjb_low
 
-    amplification = None
-
     kind = "base"
+
+    @property
+    def filename(self):
+        """
+        Full pathname of the underlying HDF5 table
+        """
+        return self.kwargs.get('gmpe_table', self.gmpe_table)
 
     def __init__(self, **kwargs):
         """
@@ -448,75 +192,63 @@ class GMPETable(GMPE):
         the tables from hdf5 and hold them in memory.
         """
         super().__init__(**kwargs)
-        fname = self.kwargs.get('gmpe_table', self.gmpe_table)
-        with h5py.File(fname, "r") as fle:
+        # populated by the ContextManager once imts and magnitudes are known
+        with h5py.File(self.filename, "r") as fle:
             self.distance_type = decode(fle["Distances"].attrs["metric"])
-            self.REQUIRES_DISTANCES = set([self.distance_type])
+            self.REQUIRES_DISTANCES = {self.distance_type}
             # Load in magnitude
             self.m_w = fle["Mw"][:]
             # Load in distances
             self.distances = fle["Distances"][:]
             # Load intensity measure types and levels
-            self.imls = hdf_arrays_to_dict(fle["IMLs"])
+            self.imls = todict(fle["IMLs"])
             # Update the list of supported IMTs from the tables
-            imt_list = []  # this is a list of factories, like PGA, SA, etc
-            for key in self.imls:
-                if "SA" in key:
-                    imt_list.append(imt_module.SA)
-                elif key == "T":
-                    continue
-                else:
-                    try:
-                        factory = getattr(imt_module, key)
-                    except Exception:
-                        continue
-                    imt_list.append(factory)
-            self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = set(imt_list)
+            self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
+                getattr(imt_module, key)
+                for key in self.imls if key in imt_module.__dict__}
             if "SA" in self.imls and "T" not in self.imls:
                 raise ValueError("Spectral Acceleration must be accompanied by"
                                  " periods")
 
             # Load in standard deviations
-            self.stddevs = [None] * 3
             if self.kind in "nga_east usgs":
                 # there are no stddevs in the hdf5 file
+                self.stddev = None
                 return
-            self.stddevs[0] = hdf_arrays_to_dict(fle["Total"])
-            self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = set(
-                self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
-            for stddev_type in [StdDev.INTER_EVENT,
-                                StdDev.INTRA_EVENT]:
-                if stddev_type in fle:
-                    self.stddevs[StdDev.idx[stddev_type]] = hdf_arrays_to_dict(
-                        fle[stddev_type])
-                    self.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(stddev_type)
+            self.stddev = todict(fle["Total"])
 
-            if "Amplification" in fle:
-                _setup_amplification(self, fle)
-
-    def compute(self, ctx, imts, mean, sig, tau, phi):
-        stds = [sig, tau, phi]
-        stdis = [StdDev.idx[sdt] for sdt in
-                 self.DEFINED_FOR_STANDARD_DEVIATION_TYPES]
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        [mag] = np.unique(np.round(ctx.mag, 6))  # constructed unique
+        idx = np.searchsorted(self.m_w, mag)
+        table_dists = self.distances[:, 0, idx - 1]
+        dists = getattr(ctx, self.distance_type)
         for m, imt in enumerate(imts):
-            # Return Distance Tables
-            imls = _return_tables(self, ctx.mag, imt, "IMLs")
-            # Get distance vector for the given magnitude
-            idx = numpy.searchsorted(self.m_w, ctx.mag)
-            dists = self.distances[:, 0, idx - 1]
-            # Get mean and standard deviations
-            mean_ = _get_mean(self.kind, self.distance_type, imls, ctx, dists)
-            stddevs = _get_stddevs(self, dists, ctx, imt, stdis)
-            if self.amplification:
-                # Apply amplification
-                mean_amp, sigma_amp = (
-                    self.amplification.get_amplification_factors(
-                        imt, ctx, getattr(ctx, self.distance_type),
-                        self.DEFINED_FOR_STANDARD_DEVIATION_TYPES))
-                mean[m] = numpy.log(mean_) + numpy.log(mean_amp)
-                for i, amp in zip(stdis, sigma_amp):
-                    stds[i][m] = stddevs[i] * amp
-            else:
-                mean[m] = numpy.log(mean_)
-                for i in stdis:
-                    stds[i][m] = stddevs[i]
+            key = ('%.2f' % mag, imt.string)
+            imls = self.mean_table[key]
+            mean[m] = np.log(_get_mean(self.kind, imls, dists, table_dists))
+            sig[m] = _get_stddev(self.sig_table[key], dists, table_dists, imt)
+
+    # called by the ContextMaker
+    def set_tables(self, mags, imts):
+        """
+        :param mags: a list of magnitudes as strings
+        :param imts: a list of IMTs as strings
+
+        Set the .mean_table and .sig_table attributes
+        """
+        self.mean_table = {}  # dictionary mag_str, imt_str -> array
+        self.sig_table = {}  # dictionary mag_str, imt_str -> array
+        if 'PGA' in self.imls and 'PGA' not in imts:
+            # add PGA since it will be needed in get_mean_amp
+            imts = sorted(set(imts) | {'PGA'})
+        if 'SA(0.2)' not in imts:
+            # add SA(0.2) since it will be needed in get_mean_amp
+            imts = sorted(set(imts) | {'SA(0.2)'})
+        for imt in imts:
+            imt_obj = imt_module.from_string(imt)
+            for mag in mags:
+                self.mean_table[mag, imt] = _return_tables(
+                    self, float(mag), imt_obj, 'IMLs')
+                if self.stddev is not None:
+                    self.sig_table[mag, imt] = _return_tables(
+                        self, float(mag), imt_obj, 'Total')

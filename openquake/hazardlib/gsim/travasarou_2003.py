@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,23 +31,19 @@ def _get_stddevs(ctx, arias):
     Return standard deviations as defined in table 1, p. 200.
     """
     # Magnitude dependent inter-event term (Eq. 13)
-    if ctx.mag < 4.7:
-        tau = 0.611
-    elif ctx.mag > 7.6:
-        tau = 0.475
-    else:
-        tau = 0.611 - 0.047 * (ctx.mag - 4.7)
+    tau = 0.611 - 0.047 * (ctx.mag - 4.7)
+    tau[ctx.mag < 4.7] = 0.611
+    tau[ctx.mag > 7.6] = 0.475
 
     # Retrieve site-class dependent sigma
     sigma1, sigma2 = _get_intra_event_sigmas(ctx)
     sigma = np.copy(sigma1)
+
     # Implements the nonlinear intra-event sigma (Eq. 14)
     idx = arias >= 0.125
     sigma[idx] = sigma2[idx]
     idx = np.logical_and(arias > 0.013, arias < 0.125)
-    sigma[idx] = sigma1[idx] - 0.106 * (np.log(arias[idx]) -
-                                        np.log(0.0132))
-
+    sigma[idx] = sigma1[idx] - 0.106 * np.log(arias[idx] / 0.0132)
     sigma_total = np.sqrt(tau ** 2. + sigma ** 2.)
     return [sigma_total, tau, sigma]
 
@@ -76,8 +72,8 @@ def _compute_magnitude(ctx, C):
 
     ``c1 + c2 * (M - 6) + c3 * log(M / 6)``
     """
-    return C['c1'] + C['c2'] * (ctx.mag - 6.0) +\
-        (C['c3'] * np.log(ctx.mag / 6.0))
+    return C['c1'] + C['c2'] * (ctx.mag - 6.0) + (
+        C['c3'] * np.log(ctx.mag / 6.0))
 
 
 def _compute_distance(ctx, C):
@@ -108,10 +104,9 @@ def _get_site_type_dummy_variables(ctx):
     Sc = np.zeros_like(ctx.vs30)
     Sd = np.zeros_like(ctx.vs30)
     # Soft soil; Vs30 < 360 m/s. Page 199.
-    Sd[ctx.vs30 < 360.0] = 1
+    Sd[ctx.vs30 < 360.0] = 1.
     # Stiff soil 360 <= Vs30 < 760
-    Sc[np.logical_and(ctx.vs30 >= 360.0, ctx.vs30 < 760.0)] = 1
-
+    Sc[np.logical_and(ctx.vs30 >= 360.0, ctx.vs30 < 760.0)] = 1.
     return Sc, Sd
 
 
@@ -130,14 +125,10 @@ def _get_fault_type_dummy_variables(ctx):
     The original classification considers four style of faulting categories
     (normal, strike-slip, reverse-oblique and reverse).
     """
-
-    Fn, Fr = 0, 0
-    if ctx.rake >= -112.5 and ctx.rake <= -67.5:
-        # normal
-        Fn = 1
-    elif ctx.rake >= 22.5 and ctx.rake <= 157.5:
-        # Joins both the reverse and reverse-oblique categories
-        Fr = 1
+    Fn, Fr = np.zeros_like(ctx.rake), np.zeros_like(ctx.rake)
+    Fn[(ctx.rake >= -112.5) & (ctx.rake <= -67.5)] = 1.  # normal
+    Fr[(ctx.rake >= 22.5) & (ctx.rake <= 157.5)] = 1.
+    # joins both the reverse and reverse-oblique categories
     return Fn, Fr
 
 
@@ -162,8 +153,8 @@ class TravasarouEtAl2003(GMPE):
 
     #: Supported intensity measure component is actually the arithmetic mean of
     #: two horizontal components - we find this to be equivalent to
-    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    #: :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see equations 13 - 15
@@ -183,7 +174,7 @@ class TravasarouEtAl2003(GMPE):
     #: No independent tests - verification against paper
     non_verified = True
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

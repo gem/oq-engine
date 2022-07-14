@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -72,7 +72,7 @@ def _get_mechanism(ctx, imt, C):
     ``b9 * Fn + b10 * Fr``
     """
     Fn, Fr = _get_fault_type_dummy_variables(ctx, imt)
-    return (C['b9'] * Fn) + (C['b10'] * Fr)
+    return C['b9'] * Fn + C['b10'] * Fr
 
 
 def _get_site_amplification(ctx, imt, C):
@@ -132,8 +132,8 @@ class AkkarBommer2010(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see page 196.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    #: :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`, see page 196.
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see equation 2, page 199.

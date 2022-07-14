@@ -1,9 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
 import numpy as np
 import pandas
 from itertools import product
 from openquake.hazardlib import imt, valid, contexts
+
+RES_INDEX = dict(MEAN=0, TOTAL_STDDEV=1,
+                 INTER_EVENT_STDDEV=2, INTRA_EVENT_STDDEV=3)
 
 # change the lists below manually
 # imts = ['PGA', '0.1', '1.0', '2.0']
@@ -13,6 +16,7 @@ RAKE = [-90, 0, 90]
 HYPO_DEPTH = [10, 20]
 RRUP = [10, 20, 50, 100, 200, 300]
 RHYPO = [300, 400, 500]
+REPI = [100, 200, 300, 400]
 AZIMUTH = [30, 45, 60, 90]
 RJB = [20, 50, 75, 100]
 VS30 = [200, 250, 400, 600, 760]
@@ -71,16 +75,17 @@ def main(gsim_str):
         if len(names) == 1:
             values = [values]
         ctx = get_ctx(names, values, grp)
-        [out] = cmaker.get_mean_stds([ctx])
-        for o, rtype in enumerate(result_types):
+        out = cmaker.get_mean_stds([ctx])
+        for rtype in result_types:
+            [res] = out[RES_INDEX[rtype]]  # shape (M, N)
             n = 0
             for _, row in grp.iterrows():
                 row['result_type'] = rtype
                 for m, col in enumerate(imts):
                     if rtype == 'MEAN' and col != 'MMI':
-                        row[col] = np.exp(out[o, m, n])
+                        row[col] = np.exp(res[m, n])
                     else:
-                        row[col] = out[o, m, n]
+                        row[col] = res[m, n]
                 recs.append(tuple(row))
                 n += 1
     newdf = pandas.DataFrame.from_records(recs, columns=df.columns)

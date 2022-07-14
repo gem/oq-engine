@@ -98,7 +98,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
 
     #: Supported intensity measure component is orientation-independent
     #: measure :attr:`~openquake.hazardlib.const.IMC.RotD50`
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see equation 2, pag 106.

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -57,19 +57,17 @@ def _get_distance_term(kind, C, rjb, mag):
     c_3 = _get_anelastic_coeff(kind, C)
     rval = np.sqrt(rjb ** 2. + C["h"] ** 2.)
     return (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *\
-        np.log(rval / CONSTS["Rref"]) +\
-        c_3 * (rval - CONSTS["Rref"])
+        np.log(rval / CONSTS["Rref"]) + c_3 * (rval - CONSTS["Rref"])
 
 
 def _get_magnitude_term(C, mag):
     """
     Returns the magnitude scaling term - equation 3
     """
-    if mag >= CONSTS["Mh"]:
-        return C["e1"] + C["b3"] * (mag - CONSTS["Mh"])
-    else:
-        return C["e1"] + (C["b1"] * (mag - CONSTS["Mh"])) +\
-            (C["b2"] * (mag - CONSTS["Mh"]) ** 2.)
+    return np.where(mag >= CONSTS["Mh"],
+                    C["e1"] + C["b3"] * (mag - CONSTS["Mh"]),
+                    C["e1"] + C["b1"] * (mag - CONSTS["Mh"]) +
+                    C["b2"] * (mag - CONSTS["Mh"]) ** 2.)
 
 
 def _get_regional_site_term(kind, C):
@@ -111,7 +109,7 @@ class KothaEtAl2016(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
@@ -129,7 +127,7 @@ class KothaEtAl2016(GMPE):
 
     kind = "base"
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

@@ -24,20 +24,24 @@ and IT expertise, for a cluster setup see the [hardware suggestions](hardware-su
 If you are running the OpenQuake Engine on a multi-node cluster you should also
 have a look at [FAQ related to cluster deployments](faq-cluster.md).
 
-### Help! Should I disable Hyperthreading?
+### Help! Should I disable hyperthreading?
 
-Normally, yes. If you have memory issues, for sure you should disable
-HyperThreading since it will save you a lot of memory.
-If memory is not not a issue, enabling HyperThreading may still be a bad
-idea: depending on the hardware and the software (in particular the patches
-for Spectre/Meltdown) it may slow down your system. The only sure way to assess
-the effect of HyperThreading is to run a (big) calculation with HyperThreading
-and one without, and then compare the runtimes.
+Yes. Disabling hyperthreading will save memory and will make the engine
+faster. Suppose for instance that you have a machine with a powerful
+i9 processor and 16 GB of RAM. It seems a lot. In reality it is not.
+The operating system will consume some memory, the browser will consume a
+lot of memory, you may have other applications open and you may end up with
+less than 10 GB of available memory. If hyperthreading is enabled the engine
+will see 10x2 = 20 cores; running parallel computations may easily consume
+0.5 GB per core, i.e. 10 GB, so you will run out of memory. With hyperthreading
+disabled you will still have 5 GB of available RAM. We recommend to ALWAYS
+disable hyperthreading from the BIOS.
 
 ### Help! I want to limit the number of cores used by the engine
 
-If you are on a single machine, the way to do it is to edit the file
-openquake.cfg and add the lines (if for instance you want to use 8 cores)
+This is another way to save memory. If you are on a single machine,
+the way to do it is to edit the file openquake.cfg and add the lines
+(if for instance you want to use 8 cores)
 
 [distribution]
 num_cores = 8
@@ -45,6 +49,22 @@ num_cores = 8
 If you are on a cluster you must edit the section [zworkers] and the parameter
 `host_cores`, replacing the `-1` with the number of cores to be used on
 each machine.
+
+### Help! I am running out of memory!
+
+If you are on a laptop, the first thing to do is close all memory consuming
+applications. Remember that running the enigne from the command-line is the
+most memory-efficient way to run calculations (browesers can use significant 
+memory from your laptop).
+You can also limit the number of parallel threads as explained
+before (i.e. disable hyperthreading, reduce num_cores) or disable
+parallelism altogether by giving the command
+
+$ oq engine --run job.ini --no-distribute
+
+or by setting `concurrent_tasks = 0` in the job.ini file.
+If you still run out of memory, then you must reduce your calculation or
+upgrade your system.
 
 ******
 
@@ -223,25 +243,25 @@ Traceback (most recent call last):
     array = download_array(array_or_id)
   File "/Users/openquake/openquake/oq-engine/openquake/hazardlib/shakemap.py", line 74, in download_array
     contents = json.loads(urlopen(url).read())[
-  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 223, in urlopen
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 223, in urlopen
     return opener.open(url, data, timeout)
-  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 526, in open
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 526, in open
     response = self._open(req, data)
-  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 544, in _open
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 544, in _open
     '_open', req)
-  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 504, in _call_chain
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 504, in _call_chain
     result = func(*args)
-  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 1361, in https_open
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 1361, in https_open
     context=self._context, check_hostname=self._check_hostname)
-  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 1320, in do_open
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 1320, in do_open
     raise URLError(err)
 urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:852)>
 ```
 
-Please have a look at `/Applications/Python 3.6/ReadMe.rtf` for possible solutions. If unsure run from a terminal the following command:
+Please have a look at `/Applications/Python 3.8/ReadMe.rtf` for possible solutions. If unsure run from a terminal the following command:
 
 ```bash
-sudo /Applications/Python\ 3.6/install_certificates.command  # NB: use the appropriate Python version!
+sudo /Applications/Python\ 3.8/install_certificates.command  # NB: use the appropriate Python version!
 ```
 
 ******

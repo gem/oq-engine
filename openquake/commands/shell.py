@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2021 GEM Foundation
+# Copyright (C) 2018-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,6 @@ from functools import partial
 import numpy
 from openquake.hazardlib import nrml
 from openquake.hazardlib.geo.geodetic import geodetic_distance
-from openquake.hazardlib.contexts import Timer
 from openquake.commonlib import readinput, calc, logs, datastore
 from openquake.calculators.base import calculators
 from openquake.calculators.extract import extract, WebExtractor
@@ -50,7 +49,6 @@ class OpenQuake(object):
         self.get_exposure = readinput.get_exposure
         self.make_hmap = calc.make_hmap
         self.geodetic_distance = geodetic_distance
-        self.Timer = Timer
         # TODO: more utilities will be added when deemed useful
 
     def get_calc(self, job_ini):

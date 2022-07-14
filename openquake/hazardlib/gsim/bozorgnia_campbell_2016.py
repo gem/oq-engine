@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -122,24 +122,14 @@ def _get_style_of_faulting_term(C, ctx):
     Returns the style-of-faulting scaling term, f_flt, defined in
     equations 4 to 6
     """
-    if (ctx.rake > 30.0) and (ctx.rake < 150.):
-        frv = 1.0
-        fnm = 0.0
-    elif (ctx.rake > -150.0) and (ctx.rake < -30.0):
-        fnm = 1.0
-        frv = 0.0
-    else:
-        fnm = 0.0
-        frv = 0.0
+    frv = np.zeros_like(ctx.rake)
+    fnm = np.zeros_like(ctx.rake)
+    frv[(ctx.rake > 30.) & (ctx.rake < 150.)] = 1.
+    fnm[(ctx.rake > -150.) & (ctx.rake < -30.0)] = 1.
     # Re-defined this method to replace c8, which is now
     # IMT-dependent in BC15
-    fflt_f = (C["c8"] * frv) + (C["c9"] * fnm)
-    if ctx.mag <= 4.5:
-        fflt_m = 0.0
-    elif ctx.mag > 5.5:
-        fflt_m = 1.0
-    else:
-        fflt_m = ctx.mag - 4.5
+    fflt_f = C["c8"] * frv + C["c9"] * fnm
+    fflt_m = np.clip(ctx.mag - 4.5, 0., 1.)
     return fflt_f * fflt_m
 
 
@@ -223,7 +213,7 @@ class BozorgniaCampbell2016(GMPE):
         self.SJ = SJ
         self.sgn = sgn
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2021 GEM Foundation
+# Copyright (C) 2016-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,6 @@
 import os
 import sys
 import time
-import sqlite3
 import logging
 import getpass
 import threading
@@ -28,21 +27,12 @@ import subprocess
 from openquake.baselib import (
     config, zeromq as z, workerpool as w, parallel as p)
 from openquake.baselib.general import socket_ready, detach_process
+from openquake.hazardlib import valid
 from openquake.commonlib import logs
 from openquake.engine import __version__
 from openquake.server.db import actions
-from openquake.server import dbapi
+from openquake.commonlib.dbapi import db
 from openquake.server import __file__ as server_path
-
-
-db = dbapi.Db(sqlite3.connect, os.path.expanduser(config.dbserver.file),
-              isolation_level=None, detect_types=sqlite3.PARSE_DECLTYPES,
-              timeout=20)
-db.cmd = lambda action, *args: getattr(actions, action)(db, *args)
-# NB: I am increasing the timeout from 5 to 20 seconds to see if the random
-# OperationalError: "database is locked" disappear in the WebUI tests
-
-DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
 
 
 class DbServer(object):
@@ -138,7 +128,7 @@ def get_status(address=None):
     :param address: pair (hostname, port)
     :returns: 'running' or 'not-running'
     """
-    address = address or (config.dbserver.listen, DBSERVER_PORT)
+    address = address or valid.host_port()
     return 'running' if socket_ready(address) else 'not-running'
 
 
@@ -146,7 +136,7 @@ def check_foreign():
     """
     Check if we the DbServer is the right one
     """
-    if not config.multi_user:
+    if not config.multi_user and not os.environ.get('OQ_DATABASE'):
         remote_server_path = logs.dbcmd('get_path')
         if different_paths(server_path, remote_server_path):
             return('You are trying to contact a DbServer from another'
@@ -192,7 +182,7 @@ def run_server(dbhostport=None, loglevel='WARN', foreground=False):
         dbhost, port = dbhostport.split(':')
         addr = (dbhost, int(port))
     else:
-        addr = (config.dbserver.listen, DBSERVER_PORT)
+        addr = (config.dbserver.listen, config.dbserver.port)
 
     # create the db directory if needed
     dirname = os.path.dirname(os.path.expanduser(config.dbserver.file))

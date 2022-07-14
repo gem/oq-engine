@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -66,7 +66,7 @@ class WesternCan15Mid(BooreAtkinson2011):
 
     delta_mag = 0.  # overridden in Oceanic subclass
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         # first fix the magnitude for the Oceanic subclass
         if self.delta_mag:
             ctx = copy.copy(ctx)
@@ -89,6 +89,7 @@ class WesternCan15Mid(BooreAtkinson2011):
                 delta = np.log(10. ** np.amin(tmp, axis=0))
                 mean[m] += self.sgn * delta
             sig[m] = get_sigma(imt)
+
 
 # IMPORTANT! we must use subclasses and not aliases here because we would
 # break classical/case_59 that use the NRCanSiteTerm with the subclasses

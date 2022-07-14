@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -102,4 +102,4 @@ class WC1994MSRTestCase(BaseMSRTestCase):
         self.assertEqual(self.msr.get_std_dev_area(None, -130), 0.22)
 
     def test_string(self):
-        self.assertEqual(str(self.msr), "<WC1994>")
+        self.assertEqual(str(self.msr), "WC1994")

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,9 +39,8 @@ def _compute_faulting_style_term(C, rake):
     Compute and return fifth and sixth terms in equations (1a)
     and (1b), pages 2981 and 2982, respectively.
     """
-    Fn = float(rake > -135.0 and rake < -45.0)
-    Fr = float(rake > 45.0 and rake < 135.0)
-
+    Fn = (rake > -135.0) & (rake < -45.0)
+    Fr = (rake > 45.0) & (rake < 135.0)
     return C['a8'] * Fn + C['a9'] * Fr
 
 
@@ -50,12 +49,7 @@ def _compute_linear_magnitude_term(C, mag):
     Compute and return second term in equations (1a)
     and (1b), pages 2981 and 2982, respectively.
     """
-    if mag <= c1:
-        # this is the second term in eq. (1a), p. 2981
-        return C['a2'] * (mag - c1)
-    else:
-        # this is the second term in eq. (1b), p. 2982
-        return C['a3'] * (mag - c1)
+    return np.where(mag <= c1, C['a2'] * (mag - c1), C['a3'] * (mag - c1))
 
 
 def _compute_logarithmic_distance_term(C, mag, rjb):
@@ -63,8 +57,8 @@ def _compute_logarithmic_distance_term(C, mag, rjb):
     Compute and return fourth term in equations (1a)
     and (1b), pages 2981 and 2982, respectively.
     """
-    return ((C['a5'] + C['a6'] * (mag - c1)) *
-            np.log(np.sqrt(rjb ** 2 + C['a7'] ** 2)))
+    return (C['a5'] + C['a6'] * (mag - c1)) * np.log(
+        np.sqrt(rjb ** 2 + C['a7'] ** 2))
 
 
 def _compute_mean(C, mag, rjb, rake):
@@ -117,9 +111,9 @@ class AkkarCagnan2010(GMPE):
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components :
-    #: attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see paragraph
+    #: attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`, see paragraph
     #: 'Functional Form', p. 2981.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see Table 3, p. 2985.
@@ -138,7 +132,7 @@ class AkkarCagnan2010(GMPE):
     #: See paragraph 'Functional Form', p. 2981.
     REQUIRES_DISTANCES = {'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

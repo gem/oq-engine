@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2021 GEM Foundation
+# Copyright (C) 2010-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,12 +25,15 @@ import sys
 import json
 import time
 import pickle
+import socket
 import signal
 import getpass
 import logging
 import itertools
 import platform
 from os.path import getsize
+import psutil
+import h5py
 import numpy
 try:
     from setproctitle import setproctitle
@@ -39,7 +42,7 @@ except ImportError:
         "Do nothing"
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
-from openquake.baselib import parallel, general, config, __version__
+from openquake.baselib import parallel, general, config
 from openquake.hazardlib import valid
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
@@ -55,7 +58,7 @@ _PPID = os.getppid()  # the controlling terminal PID
 
 GET_JOBS = '''--- executing or submitted
 SELECT * FROM job WHERE status IN ('executing', 'submitted')
-AND is_running=1 AND pid > 0 ORDER BY id'''
+AND host=?x AND is_running=1 AND pid > 0 ORDER BY id'''
 
 
 def get_zmq_ports():
@@ -115,10 +118,15 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if len(rlzs) > 1 and not oq.individual_rlzs and not oq.collect_rlzs:
-        for out in ['avg_losses-rlzs', 'aggrisk']:
-            if out in dskeys:
-                dskeys.remove(out)
+    if len(rlzs) > 1 and not oq.collect_rlzs:
+        if 'aggrisk' in dstore:
+            dskeys.add('aggrisk-stats')
+        if 'aggcurves' in dstore:
+            dskeys.add('aggcurves-stats')
+        if not oq.individual_rlzs:
+            for out in ['avg_losses-rlzs', 'aggrisk', 'aggcurves']:
+                if out in dskeys:
+                    dskeys.remove(out)
     if 'curves-rlzs' in dstore and len(rlzs) == 1:
         dskeys.add('loss_curves-rlzs')
     if 'curves-stats' in dstore and len(rlzs) > 1:
@@ -205,11 +213,15 @@ def poll_queue(job_id, poll_time):
     Check the queue of executing/submitted jobs and exit when there is
     a free slot.
     """
+    try:
+        host = socket.gethostname()
+    except Exception:  # gaierror
+        host = None
     offset = config.distribution.serialize_jobs - 1
     if offset >= 0:
         first_time = True
         while True:
-            running = logs.dbcmd(GET_JOBS)
+            running = logs.dbcmd(GET_JOBS, host)
             previous = [job for job in running if job.id < job_id - offset]
             if previous:
                 if first_time:
@@ -233,13 +245,24 @@ def run_calc(log):
     register_signals()
     setproctitle('oq-job-%d' % log.calc_id)
     with log:
+        # check the available memory before starting
+        while True:
+            used_mem = psutil.virtual_memory().percent
+            if used_mem < 80:  # continue if little memory is in use
+                break
+            logging.info('Used memory %d%%, waiting', used_mem)
+            time.sleep(5)
         oqparam = log.get_oqparam()
         calc = base.calculators(oqparam, log.calc_id)
-        logging.info('%s running %s [--hc=%s]',
+        try:
+            hostname = socket.gethostname()
+        except Exception:  # gaierror
+            hostname = 'localhost'
+        logging.info('%s@%s running %s [--hc=%s]',
                      getpass.getuser(),
+                     hostname,
                      calc.oqparam.inputs['job_ini'],
                      calc.oqparam.hazard_calculation_id)
-        logging.info('Using engine version %s', __version__)
         msg = check_obsolete_version(oqparam.calculation_mode)
         # NB: disabling the warning should be done only for users with
         # an updated LTS version, but we are doing it for all users
@@ -252,7 +275,7 @@ def run_calc(log):
             logging.warning('Assuming %d %s workers',
                             parallel.Starmap.num_cores, OQ_DISTRIBUTE)
         t0 = time.time()
-        calc.run()
+        calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
         path = calc.datastore.filename
@@ -270,16 +293,20 @@ def run_calc(log):
 
 
 def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
-                user_name=None, hc_id=None, multi=False):
+                user_name=None, hc_id=None, multi=False, host=None):
     """
     Create job records on the database.
 
     :param job_inis: a list of pathnames or a list of dictionaries
     :returns: a list of LogContext objects
     """
+    try:
+        host = socket.gethostname()
+    except Exception:  # gaierror
+        host = None
     if len(job_inis) > 1 and not hc_id and not multi:  # first job as hc
         job = logs.init("job", job_inis[0], log_level, log_file,
-                        user_name, hc_id)
+                        user_name, hc_id, host)
         hc_id = job.calc_id
         jobs = [job]
         job_inis = job_inis[1:]
@@ -302,15 +329,33 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
                     jobdic[param] = str(value)
                 jobdic['description'] = '%s %s' % (dic['description'], pars)
                 new = logs.init('job', jobdic, log_level, log_file,
-                                user_name, hc_id)
+                                user_name, hc_id, host)
                 jobs.append(new)
         else:
             jobs.append(
-                logs.init('job', dic, log_level, log_file, user_name, hc_id))
+                logs.init('job', dic, log_level, log_file,
+                          user_name, hc_id, host))
     if multi:
         for job in jobs:
             job.multi = True
     return jobs
+
+
+def cleanup(kind):
+    """
+    Stop or kill the zmq workers if serialize_jobs == 1.
+    """
+    assert kind in ("stop", "kill"), kind
+    if OQ_DISTRIBUTE != 'zmq' or config.distribution.serialize_jobs > 1:
+        return  # do nothing
+    if kind == 'stop':
+        # called in the regular case
+        print('Stopping the workers')
+        parallel.workers_stop()
+    elif kind == 'kill':
+        # called in case of exceptions (including out of memory)
+        print('Asking the DbServer to kill the workers')
+        logs.dbcmd('workers_kill')
 
 
 def run_jobs(jobs):
@@ -320,6 +365,18 @@ def run_jobs(jobs):
     :param jobs:
         List of LogContexts
     """
+    hc_id = jobs[-1].params['hazard_calculation_id']
+    if hc_id:
+        job = logs.dbcmd('get_job', hc_id)
+        ppath = job.ds_calc_dir + '.hdf5'
+        if os.path.exists(ppath):
+            version = logs.dbcmd('engine_version')
+            with h5py.File(ppath, 'r') as f:
+                prev_version = f.attrs['engine_version']
+                if prev_version != version:
+                    logging.warning('Starting from a hazard (%d) computed with'
+                                    ' an obsolete version of the engine: %s',
+                                    hc_id, version)
     jobarray = len(jobs) > 1 and jobs[0].multi
     try:
         poll_queue(jobs[0].calc_id, poll_time=15)
@@ -338,19 +395,25 @@ def run_jobs(jobs):
             print('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the workers
         allargs = [(job,) for job in jobs]
-        if jobarray:
-            with general.start_many(run_calc, allargs):
-                pass
+        if jobarray and OQ_DISTRIBUTE != 'no':
+            procs = []
+            try:
+                for args in allargs:
+                    proc = general.mp.Process(target=run_calc, args=args)
+                    proc.start()
+                    logging.info('Started %s' % str(args))
+                    time.sleep(2)
+                    procs.append(proc)
+            finally:
+                for proc in procs:
+                    proc.join()
         else:
             for job in jobs:
                 run_calc(job)
-    finally:
-        # for serialize_jobs > 1 there could be something still running:
-        # don't stop the zworkers in that case!
-        if OQ_DISTRIBUTE == 'zmq' and sum(
-                r for h, r, t in parallel.workers_status()) == 0:
-            print('Stopping the workers')
-            parallel.workers_stop()
+        cleanup('stop')
+    except Exception:
+        cleanup('kill')
+        raise
     return jobs
 
 
@@ -374,19 +437,21 @@ def check_obsolete_version(calculation_mode='WebUI'):
         - the empty string if the engine is updated
         - None if the check could not be performed (i.e. github is down)
     """
-    if os.environ.get('JENKINS_URL') or os.environ.get('TRAVIS'):
+    if os.environ.get('JENKINS_URL') or os.environ.get('CI'):
         # avoid flooding our API server with requests from CI systems
         return
 
+    version = logs.dbcmd('engine_version')
+    logging.info('Using engine version %s', version)
     headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s;%s' %
-               (__version__, calculation_mode, platform.platform(),
+               (version, calculation_mode, platform.platform(),
                 config.distribution.oq_distribute)}
     try:
         req = Request(OQ_API + '/engine/latest', headers=headers)
         # NB: a timeout < 1 does not work
         data = urlopen(req, timeout=1).read()  # bytes
         tag_name = json.loads(decode(data))['tag_name']
-        current = version_triple(__version__)
+        current = version_triple(version)
         latest = version_triple(tag_name)
     except Exception:  # page not available or wrong version tag
         msg = ('An error occurred while calling %s/engine/latest to check'
@@ -396,7 +461,7 @@ def check_obsolete_version(calculation_mode='WebUI'):
         return
     if current < latest:
         return ('Version %s of the engine is available, but you are '
-                'still using version %s' % (tag_name, __version__))
+                'still using version %s' % (tag_name, version))
     else:
         return ''
 

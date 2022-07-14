@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,7 +29,8 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.tests.classical_test import check_disagg_by_src
 from openquake.qa_tests_data.disagg import (
-    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_master)
+    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
+    case_10, case_master)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -55,7 +56,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.run_calc(test_dir, 'job.ini', calculation_mode='classical')
         hc_id = self.calc.datastore.calc_id
         out = self.run_calc(test_dir, 'job.ini', exports=fmt,
-                            hazard_calculation=str(hc_id))
+                            hazard_calculation_id=str(hc_id))
         got = out['disagg', fmt]
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
@@ -156,8 +157,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
         self.run_calc(case_7.__file__, 'job.ini')
         cmakers = read_cmakers(self.calc.datastore)
-        ctxs0 = cmakers[0].read_ctxs(self.calc.datastore)
-        ctxs1 = cmakers[1].read_ctxs(self.calc.datastore)
+        [ctxs0] = cmakers[0].read_ctxs(self.calc.datastore)
+        [ctxs1] = cmakers[1].read_ctxs(self.calc.datastore)
         self.assertEqual(len(ctxs0), 7)  # rlz-0, the closest to the mean
         self.assertEqual(len(ctxs1), 2)  # rlz-1, the one to discard
         # checking that the wrong realization is indeed discarded
@@ -192,3 +193,24 @@ class DisaggregationTestCase(CalculatorTestCase):
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
         check_disagg_by_src(self.calc.datastore)
+
+    def test_case_8(self):
+        # test epsilon star
+        self.run_calc(case_8.__file__, 'job.ini')
+
+        # test mre results
+        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
+
+    def test_case_9(self):
+        # test mutex disaggregation. Results checked against hand-computed
+        # values (mp - 2022.06.28)
+        self.run_calc(case_9.__file__, 'job.ini')
+        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
+
+    def test_case_10(self):
+        # test single magnitude
+        self.run_calc(case_10.__file__, 'job.ini')
+        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/Mag-0.csv', fname)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -51,33 +51,30 @@ def _get_basic_term(C, ctx):
     # the c4m function is shifted to M6.0.
     # The equation for c4m for M4.0-6.0 is different from GKAS16 EQS paper,
     # but used the supplementary material instead after code verification.
-    if ctx.mag > 6.:
-        c4m = C['c4']
-    elif ctx.mag > 4.:
-        c4m = C['c4'] - ((C['c4'] - 1.) * (6. - ctx.mag) / (6. - 4.))
-    else:
-        c4m = 1.
+    c4m = C['c4'] - (C['c4'] - 1.) * (6. - ctx.mag) / 2.
+    c4m[ctx.mag > 6.] = C['c4']
+    c4m[ctx.mag < 4.] = 1.
     # Equation 12
     R = np.sqrt(ctx.rrup**2. + c4m**2.)
     # basic form, Equation 11
     base_term = C['a1'] * np.ones_like(ctx.rrup) + C['a17'] * ctx.rrup
-
-    if ctx.mag >= CONSTS['m1']:
-        base_term += (C['a5'] * (ctx.mag - CONSTS['m1']) +
-                      C['a8'] * (8.5 - ctx.mag)**2. +
-                      (C['a2'] + C['a3'] * (ctx.mag - CONSTS['m1'])) *
-                      np.log(R))
-    elif ctx.mag >= CONSTS['m2']:
-        base_term += (C['a4'] * (ctx.mag - CONSTS['m1']) +
-                      C['a8'] * (8.5 - ctx.mag)**2. +
-                      (C['a2'] + C['a3'] * (ctx.mag - CONSTS['m1'])) *
-                      np.log(R))
-    else:
-        base_term += (C['a4'] * (CONSTS['m2'] - CONSTS['m1']) +
-                      C['a8'] * (8.5 - CONSTS['m2'])**2. +
-                      C['a6'] * (ctx.mag - CONSTS['m2']) +
-                      (C['a2'] + C['a3'] * (
-                          CONSTS['m2'] - CONSTS['m1'])) * np.log(R))
+    # NB: m1 > m2
+    after = ctx.mag >= CONSTS['m1']
+    within = (ctx.mag < CONSTS['m1']) & (ctx.mag >= CONSTS['m2'])
+    before = ctx.mag < CONSTS['m2']
+    base_term[after] += (C['a5'] * (ctx.mag - CONSTS['m1']) +
+                         C['a8'] * (8.5 - ctx.mag)**2. +
+                         (C['a2'] + C['a3'] * (ctx.mag - CONSTS['m1'])) *
+                         np.log(R))[after]
+    base_term[within] += (C['a4'] * (ctx.mag - CONSTS['m1']) +
+                          C['a8'] * (8.5 - ctx.mag)**2. +
+                          (C['a2'] + C['a3'] * (ctx.mag - CONSTS['m1'])) *
+                          np.log(R))[within]
+    base_term[before] += (C['a4'] * (CONSTS['m2'] - CONSTS['m1']) +
+                          C['a8'] * (8.5 - CONSTS['m2']) ** 2. +
+                          C['a6'] * (ctx.mag - CONSTS['m2']) +
+                          (C['a2'] + C['a3'] * (CONSTS['m2'] - CONSTS['m1'])
+                          ) * np.log(R))[before]
     return base_term
 
 
@@ -89,18 +86,13 @@ def _get_faulting_style_term(C, ctx):
     # this implements Equations 3 and 4;
     # f7 is the term for reverse fault mechanisms;
     # f8 is the term for normal fault mechanisms.
-    if ctx.mag > 5.:
-        f7 = C['a11']
-        f8 = C['a12']
-    elif ctx.mag >= 4.:
-        f7 = C['a11'] * (ctx.mag - 4.)
-        f8 = C['a12'] * (ctx.mag - 4.)
-    else:
-        f7 = 0.0
-        f8 = 0.0
+    f7 = np.where(ctx.mag > 5., C['a11'],
+                  np.where(ctx.mag >= 4.,  C['a11'] * (ctx.mag - 4.), 0.))
+    f8 = np.where(ctx.mag > 5., C['a12'],
+                  np.where(ctx.mag >= 4., C['a12'] * (ctx.mag - 4.), 0.))
     # ranges of rake values for each faulting mechanism are same with ASK14
-    return (f7 * float(ctx.rake > 30 and ctx.rake < 150) +
-            f8 * float(ctx.rake > -150 and ctx.rake < -30))
+    return (f7 * ((ctx.rake > 30) & (ctx.rake < 150)) +
+            f8 * ((ctx.rake > -150) & (ctx.rake < -30)))
 
 
 def _get_hanging_wall_term(C, ctx):
@@ -108,54 +100,51 @@ def _get_hanging_wall_term(C, ctx):
     Compute and return hanging wall model term, see section on
     "Hanging Wall Effects".
     """
-    if ctx.dip == 90.0:
-        return np.zeros_like(ctx.rx)
-    else:
-        Fhw = np.zeros_like(ctx.rx)
-        Fhw[ctx.rx > 0] = 1.
-        # Compute dip taper t1, Equation 6
-        T1 = np.ones_like(ctx.rx)
-        T1 *= 60./45. if ctx.dip <= 30. else (90.-ctx.dip)/45.0
-        # Compute magnitude taper t2, Equation 7, with a2hw set to 0.2.
-        T2 = np.zeros_like(ctx.rx)
-        a2hw = 0.2
-        if ctx.mag >= 6.5:
-            T2 += (1. + a2hw * (ctx.mag - 6.5))
-        elif ctx.mag > 5.5:
-            T2 += (1. + a2hw * (ctx.mag - 6.5) - (1. - a2hw) *
-                   (ctx.mag - 6.5)**2)
-        else:
-            T2 *= 0.
-        # Compute distance taper t3, Equation 8
-        T3 = np.zeros_like(ctx.rx)
-        r1 = ctx.width * np.cos(np.radians(ctx.dip))
-        # The r2 term is different here from ASK14 where r2 = 3*r1.
-        r2 = 4. * r1
-        #
-        idx = ctx.rx < r1
-        T3[idx] = (np.ones_like(ctx.rx)[idx] * CONSTS['h1'] +
-                   CONSTS['h2'] * (ctx.rx[idx] / r1) +
-                   CONSTS['h3'] * (ctx.rx[idx] / r1)**2)
-        #
-        idx = ((ctx.rx >= r1) & (ctx.rx <= r2))
-        T3[idx] = 1. - (ctx.rx[idx] - r1) / (r2 - r1)
-        # Compute depth taper t4, Equation 9
-        T4 = np.zeros_like(ctx.rx)
-        #
-        if ctx.ztor <= 10.:
-            T4 += (1. - ctx.ztor**2. / 100.)
-        # Compute off-edge distance taper T5, Equation 10
-        # ry1 computed same as in ASK14
-        T5 = np.zeros_like(ctx.rx)
-        ry1 = ctx.rx * np.tan(np.radians(20.))
-        #
-        idx = (ctx.ry0 - ry1) <= 0.0
-        T5[idx] = 1.
-        #
-        idx = (((ctx.ry0 - ry1) > 0.0) & ((ctx.ry0 - ry1) < 5.0))
-        T5[idx] = 1. - (ctx.ry0[idx] - ry1[idx]) / 5.0
-        # Finally, compute the hanging wall term, Equation 5
-        return Fhw*C['a13']*T1*T2*T3*T4*T5
+    Fhw = np.zeros_like(ctx.rx)
+    Fhw[ctx.rx > 0] = 1.
+    # Compute dip taper t1, Equation 6
+    T1 = np.ones_like(ctx.rx)
+    T1 *= np.where(ctx.dip <= 30, 60/45, (90.-ctx.dip) / 45)
+    # Compute magnitude taper t2, Equation 7, with a2hw set to 0.2.
+    T2 = np.zeros_like(ctx.rx)
+    a2hw = 0.2
+    after = ctx.mag >= 6.5
+    within = (ctx.mag > 5.5) & (ctx.mag < 6.5)
+    before = ctx.mag <= 5.5
+    T2[after] += (1. + a2hw * (ctx.mag[after] - 6.5))
+    T2[within] += (1. + a2hw * (ctx.mag[within] - 6.5) - (1. - a2hw) *
+                   (ctx.mag[within] - 6.5)**2)
+    T2[before] = 0.
+    # Compute distance taper t3, Equation 8
+    T3 = np.zeros_like(ctx.rx)
+    r1 = ctx.width * np.cos(np.radians(ctx.dip))
+    # The r2 term is different here from ASK14 where r2 = 3*r1.
+    r2 = 4. * r1
+    #
+    idx = ctx.rx < r1
+    T3[idx] = (np.ones_like(ctx.rx)[idx] * CONSTS['h1'] +
+               CONSTS['h2'] * (ctx.rx[idx] / r1[idx]) +
+               CONSTS['h3'] * (ctx.rx[idx] / r1[idx])**2)
+    #
+    idx = (ctx.rx >= r1) & (ctx.rx <= r2)
+    T3[idx] = 1. - (ctx.rx[idx] - r1[idx]) / (r2[idx] - r1[idx])
+    # Compute depth taper t4, Equation 9
+    T4 = np.zeros_like(ctx.rx)
+    #
+    T4[ctx.ztor <= 10.] += (1. - ctx.ztor[ctx.ztor <= 10.]**2. / 100.)
+    # Compute off-edge distance taper T5, Equation 10
+    # ry1 computed same as in ASK14
+    T5 = np.zeros_like(ctx.rx)
+    ry1 = ctx.rx * np.tan(np.radians(20.))
+    #
+    idx = (ctx.ry0 - ry1) <= 0.0
+    T5[idx] = 1.
+    #
+    idx = (((ctx.ry0 - ry1) > 0.0) & ((ctx.ry0 - ry1) < 5.0))
+    T5[idx] = 1. - (ctx.ry0[idx] - ry1[idx]) / 5.0
+    # Finally, compute the hanging wall term, Equation 5
+    Fhw[ctx.dip == 90.0] = 0.
+    return Fhw*C['a13']*T1*T2*T3*T4*T5
 
 
 def _get_inter_event_std(region, C, mag):
@@ -185,13 +174,10 @@ def _get_phi_regional_1(region, C, mag):
     """
     Returns regional (default) intra-event standard deviation
     """
-    if mag < 4:
-        phi_reg = C['s1']
-    elif mag <= 6:
-        phi_reg = C['s1'] + (C['s2_noJP'] - C['s1']) / 2. * (mag - 4.)
-    else:
-        phi_reg = C['s2_noJP']
-    return phi_reg
+    phi = C['s1'] + (C['s2_noJP'] - C['s1']) / 2. * (mag - 4.)
+    phi[mag < 4] = C['s1']
+    phi[mag > 6] = C['s2_noJP']
+    return phi
 
 
 @_get_phi_regional.add("JPN")
@@ -199,13 +185,10 @@ def _get_phi_regional_2(region, C, mag):
     """
     Returns regional intra-event standard deviation (Phi) for Japan
     """
-    if mag < 4:
-        phi_reg = C['s1']
-    elif mag <= 6:
-        phi_reg = C['s1'] + (C['s2_all'] - C['s1']) / 2. * (mag - 4.)
-    else:
-        phi_reg = C['s2_all']
-    return phi_reg
+    phi = C['s1'] + (C['s2_all'] - C['s1']) / 2. * (mag - 4.)
+    phi[mag < 4] = C['s1']
+    phi[mag > 6] = C['s2_all']
+    return phi
 
 
 _get_regional_term = CallableDict()
@@ -303,13 +286,10 @@ def _get_tau_regional_CAL(region, C, mag):
     """
     Returns regional (default) inter-event standard deviation
     """
-    if mag < 5:
-        tau_reg = C['s3']
-    elif mag <= 7:
-        tau_reg = C['s3'] + (C['s4_noJP'] - C['s3']) / 2. * (mag - 5.)
-    else:
-        tau_reg = C['s4_noJP']
-    return tau_reg
+    tau = C['s3'] + (C['s4_noJP'] - C['s3']) / 2. * (mag - 5.)
+    tau[mag < 5] = C['s3']
+    tau[mag > 7] = C['s4_noJP']
+    return tau
 
 
 @_get_tau_regional.add("JPN")
@@ -317,13 +297,10 @@ def _get_tau_regional_JPN(region, C, mag):
     """
     Returns regional inter-event standard deviation (Tau) for Japan
     """
-    if mag < 5:
-        tau_reg = C['s3']
-    elif mag <= 7:
-        tau_reg = C['s3'] + (C['s4_all'] - C['s3']) / 2. * (mag - 5.)
-    else:
-        tau_reg = C['s4_all']
-    return tau_reg
+    tau = C['s3'] + (C['s4_all'] - C['s3']) / 2. * (mag - 5.)
+    tau[mag < 5] = C['s3']
+    tau[mag > 7] = C['s4_all']
+    return tau
 
 
 def _get_top_of_rupture_depth_term(C, imt, ctx):
@@ -331,10 +308,7 @@ def _get_top_of_rupture_depth_term(C, imt, ctx):
     Compute and return top-of-rupture depth term, see section
     "Deph Scaling Effects".
     """
-    if ctx.ztor >= 20.0:
-        return C['a15']
-    else:
-        return C['a15'] * ctx.ztor / 20.0
+    return np.where(ctx.ztor >= 20., C['a15'], C['a15'] * ctx.ztor / 20.)
 
 
 def _get_vs30star(vs30, imt):
@@ -407,7 +381,7 @@ class GulerceEtAl2017(GMPE):
     #: see the section for "Functional Form of the Model".
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx', 'ry0'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         for spec of input and result values.

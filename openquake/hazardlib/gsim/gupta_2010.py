@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -82,7 +82,7 @@ class Gupta2010SSlab(AtkinsonBoore2003SSlab):
     #: Unlike Atkinson & Boore (2003), "rather than the random horizontal
     #: component, the geometric mean of both the horizontal components has
     #: been used in the modified attenuation relations." (p. 376)
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.MEDIAN_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Since the database is small only the total standard deviation is
     #: reported.

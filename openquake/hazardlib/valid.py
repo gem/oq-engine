@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,12 +25,13 @@ import re
 import ast
 import json
 import toml
+import socket
 import logging
 import numpy
 
 from openquake.baselib.general import distinct
-from openquake.baselib import hdf5
-from openquake.hazardlib import imt, scalerel, gsim, pmf, site
+from openquake.baselib import config, hdf5
+from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance, floatdict  # needed
@@ -137,6 +138,19 @@ def gsim(value, basedir=''):
     gs = gsim_class(**kwargs)
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     return gs
+
+
+def occurrence_model(value):
+    """
+    Converts a TOML string into a TOM instance
+
+    >>> print(occurrence_model('[PoissonTOM]\\ntime_span=50.0'))
+    [PoissonTOM]
+    time_span = 50.0
+    <BLANKLINE>
+    """
+    [(clsname, dic)] = toml.loads(value).items()
+    return tom.registry[clsname](**dic)
 
 
 def logic_tree_path(value):
@@ -261,7 +275,7 @@ class SimpleId(object):
     :param length: maximum length of the ID
     :param regex: accepted characters
     """
-    def __init__(self, length, regex=r'^[\w_\-]+$'):
+    def __init__(self, length, regex=r'^[\w_\-:]+$'):
         self.length = length
         self.regex = regex
         self.__name__ = 'SimpleId(%d, %s)' % (length, regex)
@@ -269,7 +283,7 @@ class SimpleId(object):
     def __call__(self, value):
         if max(map(ord, value)) > 127:
             raise ValueError(
-                'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-'
+                'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-:'
                 % value)
         elif len(value) > self.length:
             raise ValueError("The ID '%s' is longer than %d character" %
@@ -277,7 +291,7 @@ class SimpleId(object):
         elif re.match(self.regex, value):
             return value
         raise ValueError(
-            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-" % value)
+            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-:" % value)
 
 
 MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
@@ -370,6 +384,31 @@ def namelist(value):
             raise ValueError('List of names containing an invalid name:'
                              ' %s' % n)
     return names
+
+
+def namelists(value):
+    """
+    :param value: input string
+    :returns: list of lists of identifiers
+
+    >>> namelists('a,b')
+    [['a', 'b']]
+    >>> namelists('a1, b_2; _c')
+    [['a1', 'b_2'], ['_c']]
+
+    >>> namelists('a1; b_2; 1c')
+    [['a1'], ['b_2'], ['1c']]
+    """
+    lists = []
+    for string in value.split(';'):
+        names = string.replace(',', ' ').split()
+        for n in names:
+            try:
+                source_id(n)
+            except ValueError:
+                raise ValueError('Invalid name: %s' % n)
+        lists.append(names)
+    return lists
 
 
 def float_(value):
@@ -802,24 +841,6 @@ def logscale(x_min, x_max, n):
     return numpy.exp(delta * numpy.arange(n) / (n - 1)) * x_min
 
 
-def sqrscale(x_min, x_max, n):
-    """
-    :param x_min: minumum value
-    :param x_max: maximum value
-    :param n: number of steps
-    :returns: an array of n values from x_min to x_max in a quadratic scale
-    """
-    if not (isinstance(n, int) and n > 0):
-        raise ValueError('n must be a positive integer, got %s' % n)
-    if x_min < 0:
-        raise ValueError('x_min must be positive, got %s' % x_min)
-    if x_max <= x_min:
-        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
-                         (x_max, x_min))
-    delta = numpy.sqrt(x_max - x_min) / (n - 1)
-    return x_min + (delta * numpy.arange(n))**2
-
-
 def dictionary(value):
     """
     :param value:
@@ -862,15 +883,24 @@ def dictionary(value):
 def mag_scale_rel(value):
     """
     :param value:
-        name of a Magnitude-Scale relationship in hazardlib
+        a Magnitude-Scale relationship in hazardlib
     :returns:
         the corresponding hazardlib object
+
+    Parametric MSR classes are supported with TOML syntax; for instance
+
+    >>> mag_scale_rel("CScalingMSR.C=4.7")
+    <CScalingMSR>
     """
     value = value.strip()
+    if '.' in value or '[' in value:
+        [(value, kwargs)] = toml.loads(value).items()
+    else:
+        kwargs = {}
     if value not in SCALEREL:
         raise ValueError(
             "'%s' is not a recognized magnitude-scale relationship" % value)
-    return value
+    return SCALEREL[value](**kwargs)
 
 
 def pmf(value):
@@ -1055,6 +1085,21 @@ def uncertainty_model(value):
     if value.lstrip().startswith('['):  # TOML, do not mess with newlines
         return value.strip()
     return ' '.join(value.split())  # remove newlines too
+
+
+def host_port(value=None):
+    """
+    Returns a pair (host_IP, port_number).
+
+    >>> host_port('localhost:1908')
+    ('127.0.0.1', 1908)
+
+    If value is missing returns the parameters in openquake.cfg
+    """
+    if not value:
+        return (config.dbserver.host, config.dbserver.port)
+    host, port = value.split(':')
+    return socket.gethostbyname(host), int(port)
 
 
 # used for the exposure validation

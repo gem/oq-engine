@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -139,9 +139,10 @@ def new(calc_id, oqparam, datadir=None, mode=None):
     :returns:
         a DataStore instance associated to the given calc_id
     """
-    haz_id = None if oqparam is None else oqparam.hazard_calculation_id
-    dstore = _read(calc_id, datadir, mode, haz_id)
+    dstore = _read(calc_id, mode, datadir)
     dstore['oqparam'] = oqparam
+    if oqparam.hazard_calculation_id:
+        dstore.ppath = read(calc_id, 'r', datadir).ppath
     return dstore
 
 

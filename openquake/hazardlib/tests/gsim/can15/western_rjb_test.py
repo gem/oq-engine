@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,8 @@ import numpy as np
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.can15.western import (
-    get_sigma, WesternCan15RjbMid, WesternCan15RjbLow, WesternCan15RjbUpp)
+    get_sigma, WesternCan15RjbMid, WesternCan15RjbLow, WesternCan15RjbUpp,
+    OceanicCan15Mid, OceanicCan15Low, OceanicCan15Upp)
 
 
 class GetSigmaTestCase(unittest.TestCase):
@@ -58,7 +59,7 @@ class WesternCan15RjbHighTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('CAN15/GMPEt_Wcrust_high.csv',
-                       max_discrep_percentage=80.)
+                   max_discrep_percentage=80.)
 
 
 class WesternCan15RjbMidTestCase(BaseGSIMTestCase):
@@ -66,7 +67,7 @@ class WesternCan15RjbMidTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('CAN15/GMPEt_Wcrust_med.csv',
-                       max_discrep_percentage=80.)
+                   max_discrep_percentage=80.)
 
 
 class WesternCan15RjbLowTestCase(BaseGSIMTestCase):
@@ -74,4 +75,28 @@ class WesternCan15RjbLowTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('CAN15/GMPEt_Wcrust_low.csv',
-                       max_discrep_percentage=80.)
+                   max_discrep_percentage=80.)
+
+
+class OceanicCan15MidTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = OceanicCan15Mid
+
+    def test_mean(self):
+        self.check('CAN15/OceanicCan15Mid.csv',
+                   max_discrep_percentage=100.)
+
+
+class OceanicCan15HighTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = OceanicCan15Upp
+
+    def test_mean(self):
+        self.check('CAN15/OceanicCan15Upp.csv',
+                   max_discrep_percentage=120.)
+
+
+class OceanicCan15LowTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = OceanicCan15Low
+
+    def test_mean(self):
+        self.check('CAN15/OceanicCan15Low.csv',
+                   max_discrep_percentage=120.)

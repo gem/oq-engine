@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,8 +21,9 @@ import json
 import logging
 import shapely
 import numpy
+import pandas
 from scipy.stats import linregress
-from openquake.hazardlib.geo.utils import cross_idl
+from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import Extractor, WebExtractor, clusterize
@@ -384,42 +385,6 @@ def make_figure_memory(extractors, what):
     return plt
 
 
-class PolygonPlotter():
-    """
-    Add polygons to a given axis object
-    """
-    def __init__(self, ax):
-        self.ax = ax
-        self.minxs = []
-        self.maxxs = []
-        self.minys = []
-        self.maxys = []
-
-    def add(self, poly, **kw):
-        from openquake.hmtk.plotting.patch import PolygonPatch
-        minx, miny, maxx, maxy = poly.bounds
-        self.minxs.append(minx)
-        self.maxxs.append(maxx)
-        self.minys.append(miny)
-        self.maxys.append(maxy)
-        try:
-            self.ax.add_patch(PolygonPatch(poly, **kw))
-        except ValueError:  # LINESTRING, not POLYGON
-            pass
-
-    def set_lim(self, xs=(), ys=()):
-        if len(xs):
-            self.minxs.append(min(xs))
-            self.maxxs.append(max(xs))
-        if len(ys):
-            self.minys.append(min(ys))
-            self.maxys.append(max(ys))
-        if self.minxs and self.maxxs:
-            self.ax.set_xlim(min(self.minxs), max(self.maxxs))
-        if self.minys and self.maxys:
-            self.ax.set_ylim(min(self.minys), max(self.maxys))
-
-
 def make_figure_sources(extractors, what):
     """
     $ oq plot "sources?limit=100"
@@ -466,7 +431,7 @@ def make_figure_sources(extractors, what):
     ax.plot(sitecol['lon'], sitecol['lat'], '.')
     ax.plot(lons, lats, 'o')
     pp.set_lim(ss_lons, ss_lats)
-    ax.set_title('%d/%d sources' % (n, tot))
+    ax.set_title('calc#%d, %d/%d sources' % (ex.calc_id, n, tot))
     return plt
 
 
@@ -728,6 +693,34 @@ def plot_wkt(wkt_string):
     return plt
 
 
+def plot_csv(fname):
+    """
+    Plot a CSV with columns (title, time1, time2, ...)
+    """
+    df = pandas.read_csv(fname)
+    title, *cols = df.columns
+    plt = import_plt()
+
+    vals = [df[col].to_numpy() for col in cols]
+
+    x = numpy.arange(len(df))  # the label locations
+    width = 0.3  # the width of the bars
+
+    fig, ax = plt.subplots()
+    delta = -width
+    for col, val in zip(cols, vals):
+        rect = ax.bar(x + delta, val, width, label=col)
+        ax.bar_label(rect)
+        delta += width
+
+    ax.set_title(title)
+    ax.set_xticks(x, df[title])
+    ax.legend()
+
+    fig.tight_layout()
+    plt.show()
+
+
 def main(what,
          calc_id: int = -1,
          others: int = [],
@@ -736,6 +729,9 @@ def main(what,
     """
     Generic plotter for local and remote calculations.
     """
+    if what.endswith('.csv'):
+        plot_csv(what)
+        return
     if what.startswith('POLYGON'):
         plt = plot_wkt(what)
         plt.show()

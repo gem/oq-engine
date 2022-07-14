@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2021 GEM Foundation
+# Copyright (C) 2017-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,7 +28,7 @@ def main(what, archive_zip='', jobs=False, *, risk_file=''):
         if jobs:
             oqzip.zip_all_jobs(what)
         else:
-            oqzip.zip_all(what)
+            oqzip.zip_all(what, 'job_vs30.ini')
     elif what.endswith('.xml') and '<logicTree' in open(what).read(512):
         # hack to see if the NRML file is of kind logicTree
         oqzip.zip_source_model(what, archive_zip)

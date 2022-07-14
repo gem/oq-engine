@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,6 +29,7 @@ from scipy.constants import g
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim import utils
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
@@ -43,10 +44,8 @@ def _get_distance_scaling_term(C, rval, mag):
     Returns the distance scaling term of the GMPE described in equation 2
     """
     r_adj = np.sqrt(rval ** 2.0 + C["h"] ** 2.0)
-    return (
-        (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *
-        np.log10(r_adj / CONSTS["Rref"]) -
-        (C["c3"] * (r_adj - CONSTS["Rref"])))
+    return (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) * np.log10(
+        r_adj / CONSTS["Rref"]) - C["c3"] * (r_adj - CONSTS["Rref"])
 
 
 def _get_magnitude_scaling_term(C, mag):
@@ -55,10 +54,9 @@ def _get_magnitude_scaling_term(C, mag):
     equation 3
     """
     dmag = mag - CONSTS["Mh"]
-    if mag < CONSTS["Mh"]:
-        return C["e1"] + (C["b1"] * dmag) + (C["b2"] * (dmag ** 2.0))
-    else:
-        return C["e1"] + (C["b3"] * dmag)
+    return np.where(mag < CONSTS["Mh"],
+                    C["e1"] + C["b1"] * dmag + C["b2"] * dmag ** 2.0,
+                    C["e1"] + (C["b3"] * dmag))
 
 
 def _get_mean(kind, sof, C, ctx, dists):
@@ -109,20 +107,11 @@ def _get_style_of_faulting_term(C, ctx):
     Rakes angles within 30 of horizontal are strike-slip,
     angles from 30 to 150 are reverse, and angles from
     -30 to -150 are normal.
-    Note that the 'Unspecified' case is not considered in this class
-    as rake is required as an input variable
+    Note that the 'Unspecified' case is not considered,
+    because rake is always given.
     """
-    SS, NS, RS = 0.0, 0.0, 0.0
-    if np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
-        # strike-slip
-        SS = 1.0
-    elif ctx.rake > 30.0 and ctx.rake < 150.0:
-        # reverse
-        RS = 1.0
-    else:
-        # normal
-        NS = 1.0
-    return (C["sofN"] * NS) + (C["sofR"] * RS) + (C["sofS"] * SS)
+    SS, NS, RS = utils.get_fault_type_dummy_variables(ctx)
+    return C["sofN"] * NS + C["sofR"] * RS + C["sofS"] * SS
 
 
 class BindiEtAl2014Rjb(GMPE):
@@ -158,7 +147,7 @@ class BindiEtAl2014Rjb(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
@@ -181,7 +170,7 @@ class BindiEtAl2014Rjb(GMPE):
         self.adjustment_factor = np.log(adjustment_factor)
         [self.dist_type] = self.REQUIRES_DISTANCES
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

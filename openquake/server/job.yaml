@@ -7,30 +7,32 @@ spec:
  #activeDeadlineSeconds: 60 
  template: 
    metadata: 
-     name: master 
+     name: worker 
    spec: 
      securityContext: 
        runAsUser: 1000 
        runAsGroup: 1000 
        fsGroup: 1000 
      containers: 
-       - name: master 
-         image: openquake/engine:latest 
+       - name: worker 
+         image: openquake/engine:nightly
          imagePullPolicy: Always 
-         resources: 
-          limits: 
-            memory: "8Gi" 
-            cpu: "8" 
+         #resources: 
+         #  limits: 
+         #   memory: "8Gi" 
+         #   cpu: "8" 
          #  requests: 
          #    memory: "24Gi" 
          #    cpu: "6" 
          env: 
          - name: OQ_CONFIG_FILE 
-           value: /opt/openquake/engine/openquake.cfg 
+           value: /opt/openquake/venv/openquake.cfg 
+         #- name: HDF5_USE_FILE_LOCKING
+         #   value: "FALSE"
          - name: HOME 
            value: /opt/openquake 
          - name: PATH 
-           value: /opt/openquake/engine/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin 
+           value: /opt/openquake/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin 
          - name: OQ_WORKER_NAME 
            valueFrom: 
              fieldRef: 
@@ -43,12 +45,19 @@ spec:
          - containerPort: 1909 
          command: ["/bin/sh"] 
          args: ["-c", "python -m openquake.engine.engine ${CALC_PIK}"]
-         volumeMounts: 
-         - mountPath: /opt/openquake 
-           name: data 
+         volumeMounts:
+         - mountPath: "/opt/openquake"
+           name: azure
            readOnly: false 
      volumes: 
-       - name: data #name of volume 
+       - name: azure 
          persistentVolumeClaim: 
-           claimName: datacalc 
+           claimName: nfsdata
      restartPolicy: Never
+     nodeSelector:
+       vCpu: AMD
+     tolerations:
+     - key: "kubernetes.azure.com/scalesetpriority"
+       operator: "Equal"
+       value: "spot"
+       effect: "NoSchedule"

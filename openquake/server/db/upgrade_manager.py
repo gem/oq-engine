@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2021 GEM Foundation
+# Copyright (C) 2016-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -119,6 +119,8 @@ def apply_sql_script(conn, fname):
         for query in sql.split('\n\n'):
             conn.execute(query)
     except Exception:
+        print('sqlite version =', sqlite3.sqlite_version)
+        print(query)
         logging.error('Error executing %s' % fname)
         raise
 
@@ -343,7 +345,7 @@ def upgrade_db(conn, pkg_name='openquake.server.db.schema.upgrades',
     # run the upgrade scripts
     try:
         versions_applied = upgrader.upgrade(conn, skip_versions)
-    except:
+    except Exception:
         conn.rollback()
         raise
     else:

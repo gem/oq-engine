@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -307,22 +307,25 @@ class TagCollection(object):
         return {tagname: getattr(self, tagname)[tagidx]
                 for tagidx, tagname in zip(tagidxs, self.tagnames)}
 
-    def get_aggkey(self, tagnames):
+    def get_aggkey(self, alltagnames):
         """
+        :param alltagnames: array of (Ag, T) tag names
         :returns: a dictionary tuple of indices -> tagvalues
         """
         aggkey = {}
-        if not tagnames:
+        if not alltagnames:
             return aggkey
-        alltags = [getattr(self, tagname) for tagname in tagnames]
-        ranges = [range(1, len(tags)) for tags in alltags]
-        for i, idxs in enumerate(itertools.product(*ranges)):
-            aggkey[idxs] = tuple(tags[idx] for idx, tags in zip(idxs, alltags))
-        if len(aggkey) >= TWO16 and 'site_id' not in self.tagnames:
-            # forbid too many aggregations (they are usual an user mistake)
-            # except for aggregate_by=site_id which is legitimate
-            raise ValueError('Too many aggregation tags: %d >= %d' %
-                             (len(aggkey), TWO16))
+        for ag, tagnames in enumerate(alltagnames):
+            alltags = [getattr(self, tagname) for tagname in tagnames]
+            ranges = [range(1, len(tags)) for tags in alltags]
+            for idxs in itertools.product(*ranges):
+                aggkey[ag, idxs] = tuple(
+                    tags[idx] for idx, tags in zip(idxs, alltags))
+            if len(aggkey) >= TWO16 and 'site_id' not in self.tagnames:
+                # forbid too many aggregations (they are usual an user mistake)
+                # except for aggregate_by=site_id which is legitimate
+                raise ValueError('Too many aggregation tags: %d >= %d' %
+                                 (len(aggkey), TWO16))
         return aggkey
 
     def gen_tags(self, tagname):
@@ -370,20 +373,24 @@ class TagCollection(object):
         return sum(len(getattr(self, tagname)) for tagname in self.tagnames)
 
 
+def tagset(aggregate_by):
+    """
+    :returns: set of unique tags in aggregate_by
+    """
+    s = set()
+    for aggby in aggregate_by:
+        s.update(aggby)
+    return s
+
+
 class AssetCollection(object):
     def __init__(self, exposure, assets_by_site, time_event, aggregate_by):
         self.tagcol = exposure.tagcol
-        if 'site_id' in aggregate_by:
-            self.tagcol.add_tagname('site_id')
-            self.tagcol.site_id.extend(range(len(assets_by_site)))
         self.time_event = time_event
-        self.aggregate_by = aggregate_by
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
             assets_by_site, exposure.tagcol.tagnames, time_event)
-        if 'id' in aggregate_by:
-            self.tagcol.add_tagname('id')
-            self.tagcol.id.extend(self['id'])
+        self.update_tagcol(aggregate_by)
         exp_periods = exposure.occupancy_periods
         if self.occupancy_periods and not exp_periods:
             logging.warning('Missing <occupancyPeriods>%s</occupancyPeriods> '
@@ -395,6 +402,18 @@ class AssetCollection(object):
                        if f.startswith('value-')]
         self.occfields = [f for f in self.array.dtype.names
                           if f.startswith('occupants')]
+
+    def update_tagcol(self, aggregate_by):
+        """
+        """
+        self.aggregate_by = aggregate_by
+        ts = tagset(aggregate_by)
+        if 'id' in ts and not hasattr(self.tagcol, 'id'):
+            self.tagcol.add_tagname('id')
+            self.tagcol.id.extend(self['id'])
+        if 'site_id' in ts and not hasattr(self.tagcol, 'site_id'):
+            self.tagcol.add_tagname('site_id')
+            self.tagcol.site_id.extend(range(self.tot_sites))
 
     @property
     def tagnames(self):
@@ -445,7 +464,7 @@ class AssetCollection(object):
         assets_by_site = [[] for sid in range(self.tot_sites)]
         for i, ass in enumerate(self.array):
             assets_by_site[ass['site_id']].append(self[i])
-        return numpy.array(assets_by_site)
+        return numpy.array(assets_by_site, dtype=object)
 
     # used in the extract API
     def aggregateby(self, tagnames, array):
@@ -499,26 +518,28 @@ class AssetCollection(object):
         """
         return [f for f in self.array.dtype.names if f.startswith('value-')]
 
-    def get_agg_values(self, tagnames):
+    def get_agg_values(self, aggregate_by):
         """
-        :param tagnames:
-            tagnames
+        :param aggregate_by:
+            a list of Ag lists of tag names
         :returns:
             a structured array of length K+1 with the value fields
         """
+        allnames = tagset(aggregate_by)
         aggkey = {key: k for k, key in enumerate(
-            self.tagcol.get_aggkey(tagnames))}
+            self.tagcol.get_aggkey(aggregate_by))}
         K = len(aggkey)
-        dic = {tagname: self[tagname] for tagname in tagnames}
+        dic = {tagname: self[tagname] for tagname in allnames}
         for field in self.fields:
             dic[field] = self['value-' + field]
         for field in self.occfields:
             dic[field] = self[field]
-        value_dt = [(f, float) for f in self.fields + self.occfields]
+        vfields = self.fields + self.occfields
+        value_dt = [(f, float) for f in vfields]
         agg_values = numpy.zeros(K+1, value_dt)
-        df = pandas.DataFrame(dic)
-        if tagnames:
-            df = df.set_index(list(tagnames))
+        dataf = pandas.DataFrame(dic)
+        for ag, tagnames in enumerate(aggregate_by):
+            df = dataf.set_index(tagnames)
             if tagnames == ['id']:
                 df.index = self['ordinal'] + 1
             elif tagnames == ['site_id']:
@@ -526,10 +547,27 @@ class AssetCollection(object):
             for key, grp in df.groupby(df.index):
                 if isinstance(key, int):
                     key = key,  # turn it into a 1-value tuple
-                agg_values[aggkey[key]] = tuple(grp.sum())
+                agg_values[aggkey[ag, key]] = tuple(grp[vfields].sum())
         if self.fields:  # missing in scenario_damage case_8
-            agg_values[K] = tuple(df.sum())
+            agg_values[K] = tuple(dataf[vfields].sum())
         return agg_values
+
+    def build_aggids(self, aggregate_by):
+        """
+        :param aggregate_by: list of Ag lists of strings
+        :returns: (array of (Ag, A) integers, list of K strings)
+        """
+        aggkey = self.tagcol.get_aggkey(aggregate_by)
+        aggids = numpy.zeros((len(aggregate_by), len(self)), U32)
+        key2i = {key: i for i, key in enumerate(aggkey)}
+        for ag, aggby in enumerate(aggregate_by):
+            if aggby == ['id']:
+                aggids[ag] = self['ordinal']
+            elif aggby == ['site_id']:
+                aggids[ag] = self['site_id']
+            else:
+                aggids[ag] = [key2i[ag, tuple(t)] for t in self[aggby]]
+        return aggids, [decode(vals) for vals in aggkey.values()]
 
     def reduce(self, sitecol):
         """
@@ -565,7 +603,7 @@ class AssetCollection(object):
             self.tot_sites = len(sitecol)
         sitecol.make_complete()
 
-    def to_dframe(self, indexfield='id'):
+    def to_dframe(self, indexfield='ordinal'):
         """
         :returns: the associated DataFrame
         """

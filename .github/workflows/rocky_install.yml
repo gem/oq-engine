@@ -8,7 +8,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "0 9 * * *"
 
 jobs:
 
@@ -40,7 +40,7 @@ jobs:
       if: github.event.inputs.git-ref != ''
       with:
         ref: ${{ github.event.inputs.git-ref }}
-    - name: Set up Python  ${{ matrix.python-version }} 
+    - name: Set up Python  ${{ matrix.python-version }}
       run: |
         pyver=`echo ${{ matrix.python-version }} | tr -d .`
         dnf update -y
@@ -66,9 +66,10 @@ jobs:
         fi
     - name: Run tests
       run: |
-        source /opt/openquake/bin/activate
+        source /opt/openquake/venv/bin/activate
         pip install pytest
-        runuser -l openquake -c '/opt/openquake/bin/oq dbserver start &'
-        mkdir ~/oqdata
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
         export PYTEST_ADDOPTS="--color=yes"
-        pytest -vsx /__w/oq-engine/oq-engine/openquake/calculators
+        # set owner to openquake to run test and create cache for pytest
+        chown -R openquake /__w/oq-engine/
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/risk_test.zip '

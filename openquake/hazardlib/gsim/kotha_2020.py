@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -83,12 +83,10 @@ def _get_h(C, hypo_depth):
     """
     Returns the depth-specific coefficient
     """
-    if hypo_depth <= 10.0:
-        return CONSTANTS["h_D10"]
-    elif hypo_depth > 20.0:
-        return CONSTANTS["h_D20"]
-    else:
-        return CONSTANTS["h_10D20"]
+    return np.where(
+        hypo_depth <= 10.,
+        CONSTANTS["h_D10"],
+        np.where(hypo_depth > 20., CONSTANTS["h_D20"], CONSTANTS["h_10D20"]))
 
 
 get_distance_coefficients = CallableDict()
@@ -159,10 +157,9 @@ def get_magnitude_scaling(C, mag):
     Returns the magnitude scaling term
     """
     d_m = mag - CONSTANTS["Mh"]
-    if mag <= CONSTANTS["Mh"]:
-        return C["e1"] + C["b1"] * d_m + C["b2"] * (d_m ** 2.0)
-    else:
-        return C["e1"] + C["b3"] * d_m
+    return np.where(mag <= CONSTANTS["Mh"],
+                    C["e1"] + C["b1"] * d_m + C["b2"] * d_m ** 2.0,
+                    C["e1"] + C["b3"] * d_m)
 
 
 def get_sigma_mu_adjustment(C, imt, ctx):
@@ -174,24 +171,21 @@ def get_sigma_mu_adjustment(C, imt, ctx):
     so we interpolate between the two values and cap sigma statistical
     at M 8.0
     """
-    if ctx.mag < 7.4:
-        # Below M 7.4 tau_L2L is always larger than sigma mu
-        return C["tau_l2l"]
-
     C_SIG_MU = SIGMA_MU_COEFFS[imt]
-    if ctx.hypo_depth < 10.0:
-        uf, lf = C_SIG_MU["sigma_mu_m8_shallow"],\
-            C_SIG_MU["sigma_mu_m7p4_shallow"]
-    elif ctx.hypo_depth >= 20.0:
-        uf, lf = C_SIG_MU["sigma_mu_m8_deep"],\
-            C_SIG_MU["sigma_mu_m7p4_deep"]
-    else:
-        uf, lf = C_SIG_MU["sigma_mu_m8_intermediate"],\
-            C_SIG_MU["sigma_mu_m7p4_intermediate"]
-    if ctx.mag >= 8.0:
-        # Cap the sigma mu as the value for M 8.0
-        return max(C["tau_l2l"], uf)
-    return max(C["tau_l2l"], ITPL(ctx.mag, uf, lf, 7.4, 0.6))
+    uf = np.full_like(ctx.mag, C_SIG_MU["sigma_mu_m8_intermediate"])
+    lf = np.full_like(ctx.mag, C_SIG_MU["sigma_mu_m7p4_intermediate"])
+    idx = ctx.hypo_depth < 10.0
+    uf[idx] = C_SIG_MU["sigma_mu_m8_shallow"]
+    lf[idx] = C_SIG_MU["sigma_mu_m7p4_shallow"]
+    idx = ctx.hypo_depth >= 20.0
+    uf[idx] = C_SIG_MU["sigma_mu_m8_deep"]
+    lf[idx] = C_SIG_MU["sigma_mu_m7p4_deep"]
+    adj = np.maximum(C["tau_l2l"], ITPL(ctx.mag, uf, lf, 7.4, 0.6))
+    # Below M 7.4 tau_L2L is always larger than sigma mu
+    adj[ctx.mag < 7.4] = C["tau_l2l"]
+    # Cap the sigma mu as the value for M 8.0
+    adj[ctx.mag >= 8.0] = np.maximum(C["tau_l2l"], uf[ctx.mag >= 8.0])
+    return adj
 
 
 def get_site_amplification(kind, extra, C, ctx, imt):
@@ -216,7 +210,7 @@ def get_site_amplification(kind, extra, C, ctx, imt):
         ampl = np.zeros(vs30.shape)
         # For observed vs30 ctx
         ampl[ctx.vs30measured] = (C["d0_obs"] + C["d1_obs"] *
-                                    np.log(vs30[ctx.vs30measured]))
+                                  np.log(vs30[ctx.vs30measured]))
         # For inferred Vs30 ctx
         idx = np.logical_not(ctx.vs30measured)
         ampl[idx] = (C["d0_inf"] + C["d1_inf"] * np.log(vs30[idx]))
@@ -398,7 +392,7 @@ class KothaEtAl2020(GMPE):
         else:
             self.c3 = None
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -487,7 +481,7 @@ class KothaEtAl2020Site(KothaEtAl2020):
     a polynomial site amplification function dependent on Vs30 (m/s)
     """
     #: Required site parameter is not set
-    REQUIRES_SITES_PARAMETERS = set(("vs30",))
+    REQUIRES_SITES_PARAMETERS = {"vs30"}
 
     kind = "site"
 
@@ -605,12 +599,9 @@ def get_phi_ss(imt, mag):
     GMPE
     """
     C = HETERO_PHI0[imt]
-    if mag <= 5.0:
-        phi = C["a"]
-    elif mag > 6.5:
-        phi = C["b"]
-    else:
-        phi = C["a"] + (mag - 5.0) * ((C["b"] - C["a"]) / 1.5)
+    phi = C["a"] + (mag - 5.0) * ((C["b"] - C["a"]) / 1.5)
+    phi[mag <= 5.0] = C["a"]
+    phi[mag > 6.5] = C["b"]
     return phi
 
 
@@ -708,7 +699,7 @@ class KothaEtAl2020ESHM20SlopeGeology(KothaEtAl2020ESHM20):
     kind = "geology"
 
     #: Required site parameter is not set
-    REQUIRES_SITES_PARAMETERS = set(("region", "slope", "geology"))
+    REQUIRES_SITES_PARAMETERS = {"region", "slope", "geology"}
 
     #: Geological Units
     GEOLOGICAL_UNITS = [b"CENOZOIC", b"HOLOCENE", b"JURASSIC-TRIASSIC",

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -114,17 +114,13 @@ def _apply_subduction_trench_correction(mean, x_tr, H, rrup, imt):
     Hazard Maps for Japan"
     """
     if imt.string == 'PGV':
-        V1 = 10 ** ((-4.021e-5 * x_tr + 9.905e-3) * (H - 30))
-        V2 = np.maximum(1., (10 ** (-0.012)) * ((rrup / 300.) ** 2.064))
-        corr = V2
-        if H > 30:
-            corr *= V1
+        corr = np.maximum(1., 10 ** -0.012 * (rrup / 300.) ** 2.064)
+        corr[H > 30] *= 10 ** ((-4.021E-5 * x_tr[H > 30] + 9.905e-3) *
+                               (H[H > 30] - 30))
     else:
-        V2 = np.maximum(1., (10 ** (+0.13)) * ((rrup / 300.) ** 3.2))
-        corr = V2
-        if H > 30:
-            V1 = 10 ** ((-8.1e-5 * x_tr + 2.0e-2) * (H - 30))
-            corr *= V1
+        corr = np.maximum(1., 10 ** 0.13 * (rrup / 300.) ** 3.2)
+        corr[H > 30] *= 10 ** ((-8.1E-5 * x_tr[H > 30] + 2.0e-2) *
+                               (H[H > 30] - 30))
     return np.log(np.exp(mean) * corr)
 
 
@@ -137,17 +133,15 @@ def _apply_volcanic_front_correction(mean, x_vf, H, imt):
     V1 = np.zeros_like(x_vf)
     if imt.string == 'PGV':
         idx = x_vf <= 75
-        V1[idx] = 4.28e-5 * x_vf[idx] * (H - 30)
+        V1[idx] = 4.28e-5 * x_vf[idx] * (H[idx] - 30)
         idx = x_vf > 75
-        V1[idx] = 3.21e-3 * (H - 30)
-        V1 = 10 ** V1
+        V1[idx] = 3.21e-3 * (H[idx] - 30)
     else:
         idx = x_vf <= 75
-        V1[idx] = 7.06e-5 * x_vf[idx] * (H - 30)
+        V1[idx] = 7.06e-5 * x_vf[idx] * (H[idx] - 30)
         idx = x_vf > 75
-        V1[idx] = 5.30e-3 * (H - 30)
-        V1 = 10 ** V1
-    return np.log(np.exp(mean) * V1)
+        V1[idx] = 5.30e-3 * (H[idx] - 30)
+    return np.log(np.exp(mean) * 10 ** V1)
 
 
 def _apply_amplification_factor(AMP_F, mean, vs30):
@@ -266,7 +260,7 @@ class SiMidorikawa1999Asc(GMPE):
     #: see equation 3.5.1-1 page 148
     AMP_F = 1.41
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
         3.5.5-2 page 151 for total standard deviation.
@@ -295,7 +289,7 @@ class SiMidorikawa1999SInter(SiMidorikawa1999Asc):
     #: Supported tectonic region type is subduction interface
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
         3.5.5-1 page 151 for total standard deviation.
@@ -321,9 +315,9 @@ class SiMidorikawa1999SInterNorthEastCorrection(SiMidorikawa1999SInter):
     Extend :class:`SiMidorikawa1999SInter` and takes into account
     correction for northeast Japan (i.e. proximity to subduction trench)
     """
-    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat', 'vs30'))
+    REQUIRES_SITES_PARAMETERS = {'lon', 'lat', 'vs30'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
         3.5.5-1 page 151 for total standard deviation.
@@ -344,9 +338,9 @@ class SiMidorikawa1999SInterSouthWestCorrection(SiMidorikawa1999SInter):
     Extend :class:`SiMidorikawa1999SInter` and takes into account
     correction for southwest Japan (i.e. proximity with volcanic front)
     """
-    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat', 'vs30'))
+    REQUIRES_SITES_PARAMETERS = {'lon', 'lat', 'vs30'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
         3.5.5-1 page 151 for total standard deviation.
@@ -374,7 +368,7 @@ class SiMidorikawa1999SSlab(SiMidorikawa1999SInter):
     #: Supported tectonic region type is subduction intraslab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
         3.5.5-1 page 151 for total standard deviation.
@@ -400,9 +394,9 @@ class SiMidorikawa1999SSlabNorthEastCorrection(SiMidorikawa1999SSlab):
     Extend :class:`SiMidorikawa1999SSlab` and takes into account
     correction for northeast Japan (i.e. proximity to subduction trench)
     """
-    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat', 'vs30'))
+    REQUIRES_SITES_PARAMETERS = {'lon', 'lat', 'vs30'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
         3.5.5-1 page 151 for total standard deviation.
@@ -423,9 +417,9 @@ class SiMidorikawa1999SSlabSouthWestCorrection(SiMidorikawa1999SSlab):
     Extend :class:`SiMidorikawa1999SSlab` and takes into account
     correction for southwest Japan (i.e. proximity to volcanic front)
     """
-    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat', 'vs30'))
+    REQUIRES_SITES_PARAMETERS = {'lon', 'lat', 'vs30'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
         3.5.5-1 page 151 for total standard deviation.

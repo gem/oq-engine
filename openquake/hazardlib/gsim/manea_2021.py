@@ -34,8 +34,8 @@ def _compute_magnitude_term(C, mag):
     """
     Compute magnitude term
     """
-    term01 = (mag - 5.7)
-    mag_term = C['phi0'] + C['phi1'] * term01 + C['phi2']*term01**2
+    term01 = mag - 5.7
+    mag_term = C['phi0'] + C['phi1'] * term01 + C['phi2'] * term01**2
     return mag_term
 
 
@@ -43,8 +43,8 @@ def _compute_distance_term(C, rhypo, backarc):
     """
     Compute distance term and regional term
     """
-    term = (C['phi3'] * np.log(rhypo) +
-            +_compute_arc_regional_term(C, backarc) * rhypo)
+    term = C['phi3'] * np.log(rhypo) + _compute_arc_regional_term(
+        C, backarc) * rhypo
     return term
 
 
@@ -117,7 +117,7 @@ def _compute_site_amplif(C, sites):
 def get_mean_values(C, ctx):
     """
     Returns the mean values for a specific IMT
-    """    
+    """
     mean = (_compute_magnitude_term(C, ctx.mag) +
             _compute_distance_term(C, ctx.rhypo, ctx.backarc) +
             _compute_depth_term(C, ctx.hypo_depth) +
@@ -135,7 +135,7 @@ class ManeaEtAl2021(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
     #: Supported intensity measure component is the geometric mean component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
@@ -147,18 +147,16 @@ class ManeaEtAl2021(GMPE):
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
     #: Required distance measure is hypocentral distance
     REQUIRES_DISTANCES = {'rhypo'}
-    
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
-                C = self.COEFFS[imt]
-                # compute mean and convert from cm/s**2 to g
-                mean[m] = np.log(np.exp(
-                    get_mean_values(C, ctx)) * 1e-2 / g)
-                # Get standard deviations
-                tau[m] = C["tau"]
-                phi[m] = C["phi"]
-                sig[m] = C['sigma']
+            C = self.COEFFS[imt]
+            # compute mean and convert from cm/s**2 to g
+            mean[m] = np.log(np.exp(get_mean_values(C, ctx)) * 1e-2 / g)
+            # Get standard deviations
+            tau[m] = C["tau"]
+            phi[m] = C["phi"]
+            sig[m] = C['sigma']
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
    imt     phi0        phi1        phi2        phi3        phi4        phi5        phi6        phi7        phi8        phi9        phi10       phi11       phi      tau        sigma

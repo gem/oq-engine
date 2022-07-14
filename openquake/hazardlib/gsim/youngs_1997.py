@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -87,9 +87,9 @@ class YoungsEtAl1997SInter(GMPE):
 
     #: Supported intensity measure component is the average horizontal
     #: component
-    #: attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see
+    #: attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`, see
     #: paragraph: 'Analysis of peak horizontal accelerations', p. 59.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types is total, table 2, page 67.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}

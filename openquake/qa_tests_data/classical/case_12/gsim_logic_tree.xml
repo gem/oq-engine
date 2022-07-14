@@ -21,8 +21,10 @@
 
                 <logicTreeBranch branchID="b2">
                   <uncertaintyModel>
-                    [NRCan15SiteTerm]
-                    gmpe_name = "BooreAtkinson2008"
+                    [ModifiableGMPE]
+                    gmpe.BooreAtkinson2008 = {}
+                    nrcan15_site_term = {}
+                    nrcan15_site_term.kind = 'base'
                   </uncertaintyModel>
                   <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>

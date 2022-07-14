@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,7 +32,7 @@ def _compute_magnitude(ctx, C):
 
     "c1 + (c2 * M) + (c3 * M**2) "
     """
-    return C['c1'] + (C['c2'] * ctx.mag) + (C['c3'] * (ctx.mag ** 2))
+    return C['c1'] + C['c2'] * ctx.mag + C['c3'] * ctx.mag ** 2
 
 
 def _compute_attenuation(ctx, imt, C):
@@ -85,10 +85,9 @@ def _compute_standard_dev(ctx, imt, C):
         psi = -6.898E-3
     else:
         psi = -3.054E-5
-    if ctx.mag <= 6.5:
-        sigma_mean = (C['c12'] * ctx.mag) + C['c13']
-    elif ctx.mag > 6.5:
-        sigma_mean = (psi * ctx.mag) + C['c14']
+    sigma_mean = np.where(ctx.mag <= 6.5,
+                          (C['c12'] * ctx.mag) + C['c13'],
+                          (psi * ctx.mag) + C['c14'])
     return sigma_mean
 
 
@@ -109,7 +108,7 @@ class ShahjoueiPezeshk2016(GMPE):
     #: and peak ground acceleration. See Table 7 on page 743
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
-    #: An orientation-independent alternative to :attr:`AVERAGE_HORIZONTAL`.
+    #: An orientation-independent alternative to :attr:`GEOMETRIC_MEAN`.
     #: Defined at Boore et al. (2006, Bull. Seism. Soc. Am. 96, 1502-1511)
     #: and is used for all the NGA GMPEs. See page 742.
     #: :attr:'~openquake.hazardlib.const.IMC.RotD50'.
@@ -137,7 +136,7 @@ class ShahjoueiPezeshk2016(GMPE):
     #: not verified warning
     non_verified = True
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

@@ -23,7 +23,7 @@
 | case_21 | | 
 | case_22 | | 
 | case_23 | | 
-| case_24 | |
+| case_24 | Test collapsing rjb-independent GMPE |
 | case_25 | |
 | case_26 | |
 | case_27 | |
@@ -68,9 +68,12 @@
 | case_66 | |
 | case_67 | |
 | case_68 | |
-| case_69 | |
+| case_69 | Collapse area source, 1 site|
 | case_70 | |
 | case_71 | |
-| [case_72](https://github.com/gem/oq-engine/tree/master/openquake/qa_tests_data/classical/case_72) | Test calculation with a subset of the 2014 US model | 
-| [case_73](https://github.com/gem/oq-engine/tree/master/openquake/qa_tests_data/classical/case_73) | Tests some epistemic uncertainties in a source-specific LT | 
-| [case_74](https://github.com/gem/oq-engine/tree/master/openquake/qa_tests_data/classical/case_74) | Tests EAS-based calculation |
+| case_72 | Test calculation with a subset of the 2014 US model | 
+| case_73 | Tests some epistemic uncertainties in a source-specific LT | 
+| case_74 | Tests EAS-based calculation |
+| case_75 | Tests calculation with multi-fault source |
+| case_76 | Tests for Canada SHM6 |
+| case_77 | Tests Modifiable GMPE with Tabular GMM |

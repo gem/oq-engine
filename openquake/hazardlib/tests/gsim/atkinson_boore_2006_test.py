@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -50,6 +50,8 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
         ctx.sids = [0, 1]
         ctx.vs30 = numpy.array([500.0, 2500.0])
         ctx.mag = 5.0
+        ctx.src_id = 0
+        ctx.rup_id = 0
         ctx.rrup = numpy.array([0.0, 0.2])
         mean_0, stds_0 = self.GSIM_CLASS().get_mean_and_stddevs(
             ctx, ctx, ctx, PGA(), [StdDev.TOTAL])

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -42,9 +42,8 @@ def _compute_faulting_style_term(C, rake):
     Compute and return style-of-faulting term in equation 4,
     page 970.
     """
-    Fn = float(rake > -135.0 and rake < -45.0)
-    Fr = float(rake > 45.0 and rake < 135.0)
-
+    Fn = (rake > -135.) & (rake < -45.)
+    Fr = (rake > 45.0) & (rake < 135.0)
     return C['b8'] * Fn + C['b9'] * Fr
 
 
@@ -53,9 +52,8 @@ def _compute_geometric_decay_term(c1, C, mag, ctx):
     Compute and return geometric decay term in equation 3,
     page 970.
     """
-    return (
-        (C['b4'] + C['b5'] * (mag - c1)) *
-        np.log(np.sqrt(ctx.rjb ** 2.0 + C['b6'] ** 2.0)))
+    return (C['b4'] + C['b5'] * (mag - c1)) * np.log(
+        np.sqrt(ctx.rjb ** 2.0 + C['b6'] ** 2.0))
 
 
 def _compute_magnitude_scaling_term(c1, C, mag):
@@ -63,10 +61,10 @@ def _compute_magnitude_scaling_term(c1, C, mag):
     Compute and return magnitude scaling term in equation 2,
     page 970.
     """
-    if mag <= c1:
-        return C['b1'] + C['b2'] * (mag - c1) + C['b3'] * (8.5 - mag) ** 2
-    else:
-        return C['b1'] + C['b7'] * (mag - c1) + C['b3'] * (8.5 - mag) ** 2
+    return np.where(
+        mag <= c1,
+        C['b1'] + C['b2'] * (mag - c1) + C['b3'] * (8.5 - mag) ** 2,
+        C['b1'] + C['b7'] * (mag - c1) + C['b3'] * (8.5 - mag) ** 2)
 
 
 def _compute_mean(CONSTS, C, mag, ctx, rake):
@@ -115,12 +113,10 @@ def _compute_weight_std(C, mag):
     """
     Common part of equations 8 and 9, page 971.
     """
-    if mag < 6.0:
-        return C['a1']
-    elif mag >= 6.0 and mag < 6.5:
-        return C['a1'] + (C['a2'] - C['a1']) * ((mag - 6.0) / 0.5)
-    else:
-        return C['a2']
+    res = C['a1'] + (C['a2'] - C['a1']) * ((mag - 6.0) / 0.5)
+    res[mag < 6.0] = C['a1']
+    res[mag >= 6.5] = C['a2']
+    return res
 
 
 class KaleEtAl2015Turkey(GMPE):
@@ -144,7 +140,7 @@ class KaleEtAl2015Turkey(GMPE):
 
     #: The supported intensity measure component is 'geometric mean', see
     #: section 'Functional Form of the GMPEs and Regression Analyses', page 970
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: The supported standard deviations are total, inter and intra event, see
     #: table 3 and equations 8 & 9, pages 972 and 971
@@ -162,7 +158,7 @@ class KaleEtAl2015Turkey(GMPE):
     #: equation 3, page 970.
     REQUIRES_DISTANCES = {'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

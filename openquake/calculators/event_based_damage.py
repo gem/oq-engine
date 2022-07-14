@@ -16,13 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
 import logging
 import numpy
 import pandas
 
 from openquake.baselib import hdf5, general, parallel
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.risklib import scientific
+from openquake.risklib import scientific, connectivity
 from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
@@ -45,37 +46,47 @@ def zero_dmgcsq(A, R, crmodel):
     return numpy.zeros((A, R, L, Dc), F32)
 
 
-def event_based_damage(df, oqparam, monitor):
+def event_based_damage(df, oqparam, dstore, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param oqparam: parameters coming from the job.ini
+    :param dstore: a DataStore instance
     :param monitor: a Monitor instance
     :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))
     """
     mon_risk = monitor('computing risk', measuremem=False)
-    dstore = datastore.read(oqparam.hdf5path)
     K = oqparam.K
     with monitor('reading gmf_data'):
+        if oqparam.parentdir:
+            dstore = datastore.read(
+                oqparam.hdf5path, parentdir=oqparam.parentdir)
+        else:
+            dstore.open('r')
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
-        assets_df = dstore.read_df('assetcol/array', 'ordinal')
-        kids = (dstore['assetcol/kids'][:] if K
-                else numpy.zeros(len(assets_df), U16))
+        assetcol = dstore['assetcol']
+        if K:
+            aggids, _ = assetcol.build_aggids(oqparam.aggregate_by)
+        else:
+            aggids = numpy.zeros(len(assetcol), U16)
         crmodel = monitor.read('crmodel')
     master_seed = oqparam.master_seed
     sec_sims = oqparam.secondary_simulations.items()
     dmg_csq = crmodel.get_dmg_csq()
     ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
-    dmgcsq = zero_dmgcsq(len(assets_df), oqparam.R, crmodel)
+    dmgcsq = zero_dmgcsq(len(assetcol), oqparam.R, crmodel)
     A, R, L, Dc = dmgcsq.shape
     D = len(crmodel.damage_states)
     if R > 1:
         allrlzs = dstore['events']['rlz_id']
     loss_types = crmodel.oqparam.loss_types
+    assert len(loss_types) == L
     float_dmg_dist = oqparam.float_dmg_dist  # True by default
+    if dstore.parent:
+        dstore.parent.close()  # essential on Windows with h5py>=3.6
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
-        for sid, asset_df in assets_df.groupby('site_id'):
+        for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
             # working one site at the time
             gmf_df = df[df.sid == sid]
             if len(gmf_df) == 0:
@@ -137,20 +148,22 @@ def event_based_damage(df, oqparam, monitor):
                     for e, eid in enumerate(eids):
                         dddict[eid, K][lti] += tot[e]
                         if K:
-                            for a, aid in enumerate(aids):
-                                dddict[eid, kids[aid]][lti] += d3[a, e]
-    return to_dframe(dddict, ci, L), dmgcsq
+                            for kids in aggids:
+                                for a, aid in enumerate(aids):
+                                    dddict[eid, kids[aid]][lti] += d3[a, e]
+    return _dframe(dddict, ci, loss_types), dmgcsq
 
 
-def to_dframe(adic, ci, L):
+def _dframe(adic, ci, loss_types):
+    # convert {eid, kid: dd} into a DataFrame (agg_id, event_id, loss_id)
     dic = general.AccumDict(accum=[])
     for (eid, kid), dd in sorted(adic.items()):
-        for lti in range(L):
-            dic['event_id'].append(eid)
+        for li, lt in enumerate(loss_types):
             dic['agg_id'].append(kid)
-            dic['loss_id'].append(lti)
+            dic['event_id'].append(eid)
+            dic['loss_id'].append(scientific.LTI[lt])
             for sname, si in ci.items():
-                dic[sname].append(dd[lti, si])
+                dic[sname].append(dd[li, si])
     fix_dtypes(dic)
     return pandas.DataFrame(dic)
 
@@ -184,6 +197,8 @@ class DamageCalculator(EventBasedRiskCalculator):
                 'you cannot use dicrete_damage_distribution=true' % num_floats)
         oq.R = self.R  # 1 if collect_rlzs
         oq.float_dmg_dist = not oq.discrete_damage_distribution
+        if oq.hazard_calculation_id:
+            oq.parentdir = os.path.dirname(self.datastore.ppath)
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore)  # check
         eids = self.datastore['gmf_data/eid'][:]
@@ -192,7 +207,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             event_based_damage, self.gen_args(eids), h5=self.datastore.hdf5)
-        smap.monitor.save('assets', self.assetcol.to_dframe())
+        smap.monitor.save('assets', self.assetcol.to_dframe('id'))
         smap.monitor.save('crmodel', self.crmodel)
         return smap.reduce(self.combine)
 
@@ -246,8 +261,15 @@ class DamageCalculator(EventBasedRiskCalculator):
             self.dmgcsq[:, r] /= ne
         self.datastore['damages-rlzs'] = self.dmgcsq
         set_rlzs_stats(self.datastore,
-                       'damages',
+                       'damages-rlzs',
                        asset_id=self.assetcol['id'],
                        rlz=numpy.arange(self.R),
                        loss_type=oq.loss_types,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
+
+        fields = self.assetcol.array.dtype.names
+        if 'supply_or_demand' in fields:
+            demand_nodes, avg_conn_loss = connectivity.analysis(self.datastore)
+            self.datastore.create_df('functional_demand_nodes', demand_nodes)
+            logging.info('Stored functional_demand_nodes')
+            logging.info('Average connectivity loss: %.4f', avg_conn_loss)

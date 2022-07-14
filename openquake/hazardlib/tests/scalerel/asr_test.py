@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -40,4 +40,5 @@ class WC1994ASRTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.asr.get_median_mag(800, -130), 6.8911518)
 
     def test_str(self):
-        self.assertEqual(str(self.asr), "<WC1994>")
+        self.assertEqual(repr(self.asr), "<WC1994>")
+        self.assertEqual(str(self.asr), "WC1994")

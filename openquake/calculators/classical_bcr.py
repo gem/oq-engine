@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -82,4 +82,5 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
             bcr_data[aid]['annual_loss_retro'] = data[:, 1]
             bcr_data[aid]['bcr'] = data[:, 2]
         self.datastore['bcr-rlzs'] = bcr_data
-        stats.set_rlzs_stats(self.datastore, 'bcr', assets=self.assetcol['id'])
+        stats.set_rlzs_stats(
+            self.datastore, 'bcr-rlzs', assets=self.assetcol['id'])

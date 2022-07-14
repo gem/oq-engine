@@ -3,7 +3,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2021 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -72,8 +72,8 @@ SOURCE_ATTRIBUTES = ['fault_edges', 'mfd', 'name', 'geometry', 'rake',
 
 class TestComplexFaultSource(unittest.TestCase):
     '''
-    Test module for the openquake.hmtk.sources.complex_fault_source.mtkComplexFaultSource
-    class
+    Test module for the openquake.hmtk.sources.complex_fault_source.
+    mtkComplexFaultSource class
     '''
 
     def setUp(self):
@@ -143,29 +143,6 @@ class TestComplexFaultSource(unittest.TestCase):
         self.assertIsInstance(fault2.geometry, ComplexFaultSurface)
         # Compare it to the first
         self.assertAlmostEqual(self.fault_source.dip, fault2.dip)
-
-        # If less than two edges are input ensure error is raised
-        bad_traces = [line.Line([point.Point(1.0, 0.0, 3.0),
-                                 point.Point(1.0, 0.0, 3.0)])]
-
-        self.fault_source = mtkComplexFaultSource('101', 'A complex fault')
-        with self.assertRaises(ValueError) as ver:
-            self.fault_source.create_geometry(bad_traces)
-        self.assertEqual(str(ver.exception), 'Complex fault geometry '
-                         'incorrectly defined')
-
-        # If an edge is not defined from either a nhlib.geo.line.Line instance
-        # or numpy.ndarray then ensure error is raised
-
-        bad_traces = [line.Line([point.Point(1.0, 0.0, 3.0),
-                                 point.Point(1.0, 0.0, 3.0)])]
-        bad_traces.append('a bad input')
-
-        self.fault_source = mtkComplexFaultSource('101', 'A complex fault')
-        with self.assertRaises(ValueError) as ver:
-            self.fault_source.create_geometry(bad_traces)
-        self.assertEqual(str(ver.exception), 'Unrecognised or unsupported '
-                         'geometry definition')
 
     def test_select_within_distance(self):
         '''

@@ -86,7 +86,7 @@ def _fh(trt, SBCR, MC, C4, C, mag, rrup):
     if trt == const.TRT.ACTIVE_SHALLOW_CRUST:
         c19 = mag
     else:
-        c19 = min(mag, MC)
+        c19 = np.minimum(mag, MC)
     return hf * C['c17' + SBCR] + hf * C['c19' + SBCR] * (c19 - s['mag_ref'])
 
 
@@ -106,15 +106,10 @@ def _ftype_2(trt, suffix, C, ctx):
     """
     Factor based on the type of fault.
     """
-    # use fault.rake to determine fault type
-    if 30 <= ctx.rake <= 150:
-        # reverse
-        return C['c1']
-    if -150 <= ctx.rake <= -30:
-        # normal
-        return C['c3']
-    # strike-slip
-    return C['c2']
+    res = np.full_like(ctx.rake, C['c2'])  # strike-slip
+    res[(30 <= ctx.rake) & (ctx.rake <= 150)] = C['c1']  # reverse
+    res[(-150 <= ctx.rake) & (ctx.rake <= -30)] = C['c3']  # normal
+    return res
 
 
 def _fvs30(geology, C, ctx):
@@ -150,12 +145,12 @@ def get_stddevs(f, C, mag):
     phis2s: between site stddev in ln(g)
     phiss: single station stddev in ln(g)
     """
-    f_mag = 0.5 * (min(6.5, max(4.5, mag)) - 4.5)
+    f_mag = 0.5 * (np.minimum(6.5, np.maximum(4.5, mag)) - 4.5)
     tau = C[f'tau1{f}'] + (C[f'tau2{f}'] - C[f'tau1{f}']) * f_mag
     phiss = C[f'phiss1{f}'] + (C[f'phiss2{f}'] - C[f'phiss1{f}']) * f_mag
     phis2s = C['phis2s']
-    phi = math.sqrt(phis2s ** 2 + phiss ** 2)
-    return [math.sqrt(tau ** 2 + phi ** 2), tau, phi]
+    phi = np.sqrt(phis2s ** 2 + phiss ** 2)
+    return [np.sqrt(tau ** 2 + phi ** 2), tau, phi]
 
 
 class ChaoEtAl2020SInter(GMPE):
@@ -165,7 +160,7 @@ class ChaoEtAl2020SInter(GMPE):
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGD, PGV, SA}
 
@@ -197,7 +192,7 @@ class ChaoEtAl2020SInter(GMPE):
         # only used for inferred vs30, otherwise use vs30measured
         self.geology = geology
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

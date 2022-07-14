@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2016-2021 GEM Foundation
+# Copyright (C) 2016-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -51,7 +51,7 @@ class HazardCurvesClusterTestCase01(unittest.TestCase):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None)
+                                    truncation_level=99.)
         crv = curves[0][0]
         # Expected results computed with a notebook using the original USGS
         # formulation as described in Appendix F of Petersen et al. (2008).

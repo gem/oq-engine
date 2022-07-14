@@ -120,3 +120,15 @@ class FullCrossCorrelationTest(unittest.TestCase):
                               [-0.318959,  1.640001],
                               [-0.318959,  1.640001]]),
             rtol=1e-5)
+
+
+class CrossCorrelationMatrixTest(unittest.TestCase):
+    """
+    Tests the calculation of a cross-correlation mtx
+    """
+    def test_cross_corr_mtx(self):
+        imts = [SA(0.1), SA(0.5)]
+        expected = numpy.array([[1.0, 0.4745240873], [0.4745240873, 1.0]])
+        cm = BakerJayaram2008()
+        computed = cm.get_cross_correlation_mtx(imts)
+        aac(computed, expected)

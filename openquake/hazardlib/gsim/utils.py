@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,6 +20,7 @@
 Module :mod:`openquake.hazardlib.gsim.utils` contains functions that are common
 to several GMPEs.
 """
+import numpy as np
 
 
 def mblg_to_mw_johnston_96(mag):
@@ -54,3 +55,24 @@ def clip_mean(imt, mean):
         mean[mean > 1.099] = 1.099
 
     return mean
+
+
+def get_fault_type_dummy_variables(ctx):
+    """
+    Get fault type dummy variables, see Table 2, pag 107.
+    Fault type (Strike-slip, Normal, Thrust/reverse) is
+    derived from rake angle.
+    Rakes angles within 30 of horizontal are strike-slip,
+    angles from 30 to 150 are reverse, and angles from
+    -30 to -150 are normal. See paragraph 'Predictor Variables'
+    pag 103.
+    Note that the 'Unspecified' case is not considered,
+    because rake is always given.
+    """
+    SS = np.zeros_like(ctx.rake)  # strike-slip
+    NS = np.zeros_like(ctx.rake)  # normal
+    RS = np.zeros_like(ctx.rake)  # reverse
+    SS[(np.abs(ctx.rake) <= 30.) | (180. - np.abs(ctx.rake) <= 30.)] = 1.
+    RS[(ctx.rake > 30.) & (ctx.rake < 150.)] = 1.
+    NS[(ctx.rake > -150.) & (ctx.rake < -30)] = 1.
+    return SS, NS, RS

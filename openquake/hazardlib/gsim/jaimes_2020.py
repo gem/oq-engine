@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,41 +34,28 @@ def _compute_mean(C, g, ctx, imt, imc):
     Return the mean value based on the selected intensity measure component
     """
     mag = ctx.mag
-    dis = ctx.rrup if mag > 6.5 else ctx.rhypo
-    
+    dis = np.where(mag > 6.5, ctx.rrup, ctx.rhypo)
     # near-source saturation term
     delta = 0.0075 * 10 ** (0.507 * mag)
-    
     # depth scaling
-    H = min(ctx.hypo_depth, 75) - 50      
-
+    H = np.minimum(ctx.hypo_depth, 75) - 50
     # average distance to the fault surface
-    R = np.sqrt(dis ** 2 + delta ** 2)     
-    
+    R = np.sqrt(dis ** 2 + delta ** 2)
     if imc == const.IMC.VERTICAL_TO_HORIZONTAL_RATIO:
         # Computes the mean for the 'V/H ratio' according to equation 4,
         # page 1306. The equation predicts the mean value for PGA, PGV,
         # and SA in terms of the natural logarithm.
-        mean = (
-            C['c1'] + 
-            C['c2'] * mag + 
-            C['c3'] * R)
-
+        mean = C['c1'] + C['c2'] * mag + C['c3'] * R
     else:
         # Computes the mean for the 'horizontal or vertical component'
         # according to equation 1, page 1304. The equation
         # predicts the mean value for PGA, PGV, and SA in terms of
         # the natural logarithm.
-        mean = (
-            C['c1'] + 
-            C['c2'] * mag + 
-            C['c3'] * np.log(R) + 
-            C['c4'] * R + 
-            C['c5'] * H)
-
+        mean = (C['c1'] + C['c2'] * mag + C['c3'] * np.log(R) +
+                C['c4'] * R + C['c5'] * H)
         # For PGA and SA, the values are convert from cm/s**2 to 'g'
         if imt != PGV():
-            mean = np.log(np.exp(mean) * 1e-2 / g) 
+            mean = np.log(np.exp(mean) * 1e-2 / g)
 
     return mean
 
@@ -136,7 +123,7 @@ class JaimesEtAl2020SSlab(GMPE):
 
     #: Supported intensity measure component is the average of
     #  the two horizontal components.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total. See Table 2, page 1306.
@@ -157,22 +144,19 @@ class JaimesEtAl2020SSlab(GMPE):
     #: both in kilometers, as explained in page 1304
     REQUIRES_DISTANCES = {'rrup', 'rhypo'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-
         # Type of intensity measure component
         imc = self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
-        
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = _compute_mean(C, g, ctx, imt, imc)
             sig[m], tau[m], phi[m] = _get_stddevs(C, imc)
 
-        
     #: Regression coefficients for geometric average of the maximum of the two
     #: horizontal components, as described in Table 2, page 1306.
     COEFFS = CoeffsTable(sa_damping=5, table="""\

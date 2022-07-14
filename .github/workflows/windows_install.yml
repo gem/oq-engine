@@ -21,6 +21,7 @@ jobs:
       GITHUB_REF:  ${{ github.ref }}
       GITHUB_HD_REF:  ${{ github.head_ref }}
       GITHUB_BS_REF:  ${{ github.base_ref }}
+      BRANCH: ${{ github.event.inputs.git-ref }}
     strategy:
       matrix:
         python-version: [3.7, 3.8, 3.9]
@@ -44,6 +45,14 @@ jobs:
     # You can test your matrix by printing the current Python version
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
+      - name: Echo env var
+        env:
+          BRANCH: ${{ github.event.inputs.git-ref }}
+        run: |
+          echo "${Env:environment}"
+          Write-Host $Env:GITHUB_REF
+          echo "Branch environment"
+          Write-Host $Env:BRANCH
       - name: Install engine on developer mode
         env: 
           BRANCH: ${{ github.event.inputs.git-ref }}
@@ -52,14 +61,18 @@ jobs:
           python -m pip install pip wheel setuptools --upgrade
           #echo Branch to test %BRANCH%
           #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
-          write-Host "Branch to test ${env:BRANCH} " ${env:BRANCH}
-          if ( ${env:BRANCH} -eq $null)
+          write-Host "Branch to test $Env:BRANCH " 
+          if ($Env:BRANCH)
           {
-            python install.py devel
+            Write-Host "Install with workflow_dispatch"
+            Write-Host "python install.py devel --version ${env:BRANCH}"
+            python install.py devel --version ${env:BRANCH}
           }
           else
           {
-            python install.py devel --version ${env:BRANCH}
+            Write-Host "Install on scheduled task"
+            Write-Host "python install.py devel "
+            python install.py devel
           }
       - name: Run demos to test installation
         run: |

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,34 +21,22 @@ defines :class:`MultiFaultSource`.
 import numpy as np
 from typing import Union
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import gen_slices
+from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.rupture import (
     NonParametricProbabilisticRupture)
 from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
+from openquake.hazardlib.geo.surface.kite_fault import geom_to_kite
 from openquake.hazardlib.geo.surface.multi import MultiSurface
+from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
 
 F32 = np.float32
-BLOCKSIZE = 500
-
-
-class FaultSection(object):
-    """
-    A class to define a fault section, that is the geometry definition of a
-    portion of a fault.
-
-    :param sec_id:
-        A unique identifier
-    :param surface:
-        An instance of
-        :class:`openquake.hazardlib.geo.surface.base.BaseSurface` which
-        describes the 3D geometry of a part of a fault system.
-    """
-
-    def __init__(self, sec_id: str, surface):
-        self.sec_id = sec_id
-        self.surface = surface
+BLOCKSIZE = 200
+# the BLOCKSIZE has to be large to reduce the number of sources and
+# therefore the redundant data transfer in the .sections attribute
 
 
 class MultiFaultSource(BaseSeismicSource):
@@ -63,17 +51,12 @@ class MultiFaultSource(BaseSeismicSource):
         The name of the fault
     :param tectonic_region_type:
         A string that defines the TRT of the fault source
-    :param sections:
-        A list of :class:`openquake.hazardlib.source.multi_fault.FaultSection`
-        instances. The cardinality of this list is N.
     :param rupture_idxs:
         A list of lists. Each element contains the IDs of the sections
         participating to a rupture. The cardinality of this list is N.
     :param occurrence_probs:
-        A list with cardinality N with instances of the class
-        :class:`openquake.hazardlib.pmf.PMF`. Each element specifies the
-        occurrence of 0, 1 ... occurrences of a rupture in the investigation
-        time.
+        A list of N probabilities. Each element specifies the probability
+        of 0, 1 ... occurrences of a rupture in the investigation time
     :param magnitudes:
         An iterable with cardinality N containing the magnitudes of the
         ruptures
@@ -83,6 +66,7 @@ class MultiFaultSource(BaseSeismicSource):
     """
     code = b'F'
     MODIFICATIONS = {}
+    hdf5path = ''
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
                  rupture_idxs: list, occurrence_probs: Union[list, np.ndarray],
@@ -90,67 +74,72 @@ class MultiFaultSource(BaseSeismicSource):
         nrups = len(rupture_idxs)
         assert len(occurrence_probs) == len(magnitudes) == len(rakes) == nrups
         self.rupture_idxs = rupture_idxs
-        self.pmfs = occurrence_probs
+        self.probs_occur = occurrence_probs
         self.mags = magnitudes
         self.rakes = rakes
         super().__init__(source_id, name, tectonic_region_type)
 
+    def is_gridded(self):
+        return True  # convertible to HDF5
+
+    def todict(self):
+        """
+        :returns: dictionary of array, called when converting to HDF5
+        """
+        ridxs = []
+        for rupture_idxs in self.rupture_idxs:
+            ridxs.append(' '.join(rupture_idxs))
+        # each pmf has the form [(prob0, 0), (prob1, 1), ...]
+        return dict(mag=self.mags, rake=self.rakes,
+                    probs_occur=self.probs_occur, rupture_idxs=ridxs)
+
     def set_sections(self, sections):
         """
-        :param sections: a dictionary sec_id -> FaultSection
-
-        Set the attribute .sections to the passed dictionary
+        :param sections: a list of N surfaces
         """
         assert sections
-        self.sections = sections
-        msg = 'Rupture #{:d}: section "{:s}" does not exist'
+        # this is fundamental for the distance cache
+        for idx, sec in enumerate(sections):
+            sec.suid = idx
+        # `i` is the index of the rupture of the `n` admitted by this source.
+        # In this loop we check that all the IDs of the sections composing one
+        # rupture have a object in the section list describing their geometry.
         for i in range(len(self.mags)):
             for idx in self.rupture_idxs[i]:
-                if idx not in sections:
-                    raise ValueError(msg.format(i, idx))
+                sections[idx]
+        self.sections = sections
 
-    def iter_ruptures(self, fromidx=0, untilidx=None, **kwargs):
+    def iter_ruptures(self, **kwargs):
         """
         An iterator for the ruptures.
-
-        :param fromidx: start
-        :param untilidx: stop
         """
-        # check
-        if 'sections' not in self.__dict__:
+        # Check
+        if not self.hdf5path and 'sections' not in self.__dict__:
             raise RuntimeError('You forgot to call set_sections in %s!' % self)
 
         # iter on the ruptures
-        untilidx = len(self.mags) if untilidx is None else untilidx
-        s = self.sections
-        for i in range(fromidx, untilidx):
+        step = kwargs.get('step', 1)
+        n = len(self.mags)
+        if self.hdf5path:
+            with hdf5.File(self.hdf5path, 'r') as f:
+                geoms = f['multi_fault_sections'][:]
+            s = [geom_to_kite(geom) for geom in geoms]
+            for idx, sec in enumerate(s):
+                sec.suid = idx
+        else:
+            s = self.sections
+        for i in range(0, n, step**2):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
-                sfc = self.sections[idxs[0]].surface
+                sfc = s[idxs[0]]
             else:
-                sfc = MultiSurface([s[idx].surface for idx in idxs])
+                sfc = MultiSurface([s[idx] for idx in idxs])
             rake = self.rakes[i]
-            hypo = self.sections[idxs[0]].surface.get_middle_point()
+            hypo = s[idxs[0]].get_middle_point()
+            data = [(p, o) for o, p in enumerate(self.probs_occur[i])]
             yield NonParametricProbabilisticRupture(
                 self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
-                self.pmfs[i])
-
-    def few_ruptures(self):
-        """
-        Fast version of iter_ruptures used in estimate_weight
-        """
-        s = self.sections
-        for i in range(0, len(self.mags), BLOCKSIZE // 5):
-            idxs = self.rupture_idxs[i]
-            if len(idxs) == 1:
-                sfc = self.sections[idxs[0]].surface
-            else:
-                sfc = MultiSurface([s[idx].surface for idx in idxs])
-            rake = self.rakes[i]
-            hypo = self.sections[idxs[0]].surface.get_middle_point()
-            yield NonParametricProbabilisticRupture(
-                self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
-                self.pmfs[i])
+                PMF(data))
 
     def __iter__(self):
         if len(self.mags) <= BLOCKSIZE:  # already split
@@ -163,10 +152,10 @@ class MultiFaultSource(BaseSeismicSource):
                 self.name,
                 self.tectonic_region_type,
                 self.rupture_idxs[slc],
-                self.pmfs[slc],
+                self.probs_occur[slc],
                 self.mags[slc],
                 self.rakes[slc])
-            src.set_sections(self.sections)
+            src.hdf5path = self.hdf5path
             src.num_ruptures = src.count_ruptures()
             yield src
 
@@ -185,9 +174,30 @@ class MultiFaultSource(BaseSeismicSource):
     @property
     def data(self):  # compatibility with NonParametricSeismicSource
         for i, rup in enumerate(self.iter_ruptures()):
-            yield rup, self.pmfs[i]
+            yield rup, self.probs_occur[i]
 
     polygon = NP.polygon
     wkt = NP.wkt
-    get_bounding_box = NP.get_bounding_box
     mesh_size = NP.mesh_size
+
+    def get_bounding_box(self, maxdist):
+        """
+        Bounding box containing the surfaces, enlarged by the maximum distance
+        """
+        if self.hdf5path:
+            with hdf5.File(self.hdf5path, 'r') as f:
+                geoms = f['multi_fault_sections'][:]
+            s = [geom_to_kite(geom) for geom in geoms]
+        else:
+            s = self.sections
+        surfaces = []
+        for sec in s:
+            if isinstance(sec, MultiSurface):
+                surfaces.extend(sec.surfaces)
+            else:
+                surfaces.append(sec)
+        multi_surf = MultiSurface(surfaces)
+        west, east, north, south = multi_surf.get_bounding_box()
+        a1 = maxdist * KM_TO_DEGREES
+        a2 = angular_distance(maxdist, north, south)
+        return west - a2, south - a1, east + a2, north + a1

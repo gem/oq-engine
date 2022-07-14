@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,6 +19,7 @@ import os
 import operator
 import collections
 import pickle
+import toml
 import copy
 import logging
 try:
@@ -34,7 +35,6 @@ from openquake.baselib.node import context, striptag, Node, node_to_dict
 from openquake.hazardlib import geo, mfd, pmf, source, tom, valid, InvalidFile
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source import NonParametricSeismicSource
-from openquake.hazardlib.source.multi_fault import FaultSection
 
 
 U32 = numpy.uint32
@@ -93,6 +93,21 @@ def fix_dupl(dist, fname=None, lineno=None):
             # run hazardlib/tests/data/context/job.ini to check this;
             # you will get [(0.2, 6.0), (0.2, 8.0), (0.2, 10.0), (0.4, 2.0)]
             dist[:] = newdist
+
+
+def rounded_unique(mags, idxs):
+    """
+    :param mags: a list of magnitudes
+    :param idxs: a list of tuples of section indices
+    :returns: an array of magnitudes rounded to 2 digits
+    :raises: ValueError if the rounded magnitudes contain duplicates
+    """
+    mags = numpy.round(mags, 2)
+    mag_idxs = [(mag, ' '.join(idx)) for mag, idx in zip(mags, idxs)]
+    dupl = extract_dupl(mag_idxs)
+    if dupl:
+        logging.error('the pair (mag=%s, idxs=%s) is duplicated' % dupl[0])
+    return mags
 
 
 class SourceGroup(collections.abc.Sequence):
@@ -276,6 +291,16 @@ class SourceGroup(collections.abc.Sequence):
             out.append(sg)
         return out
 
+    def get_tom_toml(self, time_span):
+        """
+        :returns: the TOM as a json string {'PoissonTOM': {'time_span': 50}}
+        """
+        tom = self.temporal_occurrence_model
+        if tom is None:
+            return '[PoissonTOM]\ntime_span=%s' % time_span
+        dic = {tom.__class__.__name__: vars(tom)}
+        return toml.dumps(dic)
+
     def __repr__(self):
         return '<%s %s, %d source(s)>' % (
             self.__class__.__name__, self.trt, len(self.sources))
@@ -379,30 +404,31 @@ def convert_nonParametricSeismicSource(fname, node, rup_spacing=5.0):
     nps = source.NonParametricSeismicSource(
         node['id'], node['name'], trt, [], [])
     nps.splittable = 'rup_weights' not in node.attrib
-    path = os.path.splitext(fname)[0] + '.hdf5'
-    hdf5_fname = path if os.path.exists(path) else None
-    if hdf5_fname and node.text is None:
-        # gridded source, read the rupture data from the HDF5 file
-        with hdf5.File(hdf5_fname, 'r') as h:
-            dic = {k: d[:] for k, d in h[node['id']].items()}
-            nps.fromdict(dic, rups_weights)
-    else:
-        # read the rupture data from the XML nodes
-        num_probs = None
-        for i, rupnode in enumerate(node):
-            po = rupnode['probs_occur']
-            probs = pmf.PMF(valid.pmf(po))
-            if num_probs is None:  # first time
-                num_probs = len(probs.data)
-            elif len(probs.data) != num_probs:
-                # probs_occur must have uniform length for all ruptures
-                raise ValueError(
-                    'prob_occurs=%s has %d elements, expected %s'
-                    % (po, len(probs.data), num_probs))
-            rup = RuptureConverter(rup_spacing).convert_node(rupnode)
-            rup.tectonic_region_type = trt
-            rup.weight = None if rups_weights is None else rups_weights[i]
-            nps.data.append((rup, probs))
+    if fname:
+        path = os.path.splitext(fname)[0] + '.hdf5'
+        hdf5_fname = path if os.path.exists(path) else None
+        if hdf5_fname and node.text is None:
+            # gridded source, read the rupture data from the HDF5 file
+            with hdf5.File(hdf5_fname, 'r') as h:
+                dic = {k: d[:] for k, d in h[node['id']].items()}
+                nps.fromdict(dic, rups_weights)
+                return nps
+    # read the rupture data from the XML nodes
+    num_probs = None
+    for i, rupnode in enumerate(node):
+        po = rupnode['probs_occur']
+        probs = pmf.PMF(valid.pmf(po))
+        if num_probs is None:  # first time
+            num_probs = len(probs.data)
+        elif len(probs.data) != num_probs:
+            # probs_occur must have uniform length for all ruptures
+            raise ValueError(
+                'prob_occurs=%s has %d elements, expected %s'
+                % (po, len(probs.data), num_probs))
+        rup = RuptureConverter(rup_spacing).convert_node(rupnode)
+        rup.tectonic_region_type = trt
+        rup.weight = None if rups_weights is None else rups_weights[i]
+        nps.data.append((rup, probs))
     return nps
 
 
@@ -585,7 +611,7 @@ class RuptureConverter(object):
             surface=self.convert_surfaces(surfaces))
         return rupt
 
-    # used in scenario only (?)
+    # used in scenarios or nonparametric sources
     def convert_multiPlanesRupture(self, node):
         """
         Convert a multiPlanesRupture node.
@@ -658,8 +684,9 @@ class SourceConverter(RuptureConverter):
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},
-                 source_id=None, discard_trts='',
-                 floating_x_step=0, floating_y_step=0):
+                 source_id=None, discard_trts=(),
+                 floating_x_step=0, floating_y_step=0,
+                 source_nodes=()):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
@@ -671,6 +698,7 @@ class SourceConverter(RuptureConverter):
         self.discard_trts = discard_trts
         self.floating_x_step = floating_x_step
         self.floating_y_step = floating_y_step
+        self.source_nodes = source_nodes
 
     def convert_node(self, node):
         """
@@ -682,11 +710,16 @@ class SourceConverter(RuptureConverter):
         trt = node.attrib.get('tectonicRegion')
         if trt and trt in self.discard_trts:
             return
-        obj = getattr(self, 'convert_' + striptag(node.tag))(node)
-        source_id = getattr(obj, 'source_id', '')
-        if self.source_id and source_id and source_id not in self.source_id:
-            # if source_id is set in the job.ini, discard all other sources
-            return
+        name = striptag(node.tag)
+        if name.endswith('Source'):  # source node
+            source_id = node['id']
+            if self.source_id and source_id not in self.source_id:
+                # if source_id is set in the job.ini, discard all other sources
+                return
+            elif self.source_nodes and name not in self.source_nodes:
+                # if source_nodes is set, discard all other source nodes
+                return
+        obj = getattr(self, 'convert_' + name)(node)
         if hasattr(obj, 'mfd') and hasattr(obj.mfd, 'slip_rate'):
             # TruncatedGRMFD with slip rate (for Slovenia)
             m = obj.mfd
@@ -707,7 +740,7 @@ class SourceConverter(RuptureConverter):
     def convert_section(self, node):
         """
         :param node: a section node
-        :returns: a FaultSection instance
+        :returns: a list of surfaces
         """
         with context(self.fname, node):
             if hasattr(node, 'planarSurface'):
@@ -717,23 +750,31 @@ class SourceConverter(RuptureConverter):
             else:
                 raise ValueError('Only planarSurfaces or kiteSurfaces ' +
                                  'supported')
-            surfs = self.convert_surfaces(surfaces, node['id'])
-        return FaultSection(node['id'], surfs)
+            return self.convert_surfaces(surfaces, node['id'])
 
     def get_tom(self, node):
         """
         Convert the given node into a Temporal Occurrence Model object.
 
-        :param node: a node of kind poissonTOM or brownianTOM
-        :returns: a :class:`openquake.hazardlib.mfd.EvenlyDiscretizedMFD.` or
-                  :class:`openquake.hazardlib.mfd.TruncatedGRMFD` instance
+        :param node: a node of kind poissonTOM or similar
+        :returns: a :class:`openquake.hazardlib.tom.BaseTOM` instance
         """
+        occurrence_rate = node.get('occurrence_rate')
+        kwargs = {}
+        # the occurrence_rate is not None only for clusters of sources,
+        # the ones implemented in calc.hazard_curve, see test case_35
+        if occurrence_rate:
+            tom_cls = tom.registry['ClusterPoissonTOM']
+            return tom_cls(self.investigation_time, occurrence_rate)
         if 'tom' in node.attrib:
             tom_cls = tom.registry[node['tom']]
+            # if tom is negbinom, sets mu and alpha attr to tom_class
+            if node['tom'] == 'NegativeBinomialTOM':
+                kwargs = {'alpha': float(node['alpha']),
+                          'mu': float(node['mu'])}
         else:
             tom_cls = tom.registry['PoissonTOM']
-        return tom_cls(time_span=self.investigation_time,
-                       occurrence_rate=node.get('occurrence_rate'))
+        return tom_cls(time_span=self.investigation_time, **kwargs)
 
     def convert_mfdist(self, node):
         """
@@ -832,7 +873,7 @@ class SourceConverter(RuptureConverter):
         geom = node.areaGeometry
         coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
         polygon = geo.Polygon([geo.Point(*xy) for xy in coords])
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         area_discretization = geom.attrib.get(
             'discretization', self.area_source_discretization)
         if area_discretization is None:
@@ -865,7 +906,7 @@ class SourceConverter(RuptureConverter):
         """
         geom = node.pointGeometry
         lon_lat = ~geom.Point.pos
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         return source.PointSource(
             source_id=node['id'],
             name=node['name'],
@@ -890,7 +931,7 @@ class SourceConverter(RuptureConverter):
         """
         geom = node.multiPointGeometry
         lons, lats = zip(*split_coords_2d(~geom.posList))
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         return source.MultiPointSource(
             source_id=node['id'],
             name=node['name'],
@@ -914,7 +955,7 @@ class SourceConverter(RuptureConverter):
                   instance
         """
         geom = node.simpleFaultGeometry
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         fault_trace = self.geo_line(geom)
         mfd = self.convert_mfdist(node)
         with context(self.fname, node):
@@ -961,7 +1002,7 @@ class SourceConverter(RuptureConverter):
             geom = node.kiteSurface
             profiles = self.geo_lines(geom)
 
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         mfd = self.convert_mfdist(node)
 
         # get rupture floating steps
@@ -1015,7 +1056,7 @@ class SourceConverter(RuptureConverter):
         geom = node.complexFaultGeometry
         edges = self.geo_lines(geom)
         mfd = self.convert_mfdist(node)
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         with context(self.fname, node):
             cmplx = source.ComplexFaultSource(
                 source_id=node['id'],
@@ -1063,6 +1104,7 @@ class SourceConverter(RuptureConverter):
         return convert_nonParametricSeismicSource(
             self.fname, node, self.rupture_mesh_spacing)
 
+    # used in UCERF
     def convert_multiFaultSource(self, node):
         """
         Convert the given node into a multi fault source object.
@@ -1076,28 +1118,46 @@ class SourceConverter(RuptureConverter):
         sid = node.get('id')
         name = node.get('name')
         trt = node.get('tectonicRegion')
-        pmfs = []
+        path = os.path.splitext(self.fname)[0] + '.hdf5'
+        hdf5_fname = path if os.path.exists(path) else None
+        if hdf5_fname and node.text is None:
+            # read the rupture data from the HDF5 file
+            with hdf5.File(hdf5_fname, 'r') as h:
+                dic = {k: d[:] for k, d in h[node['id']].items()}
+            with context(self.fname, node):
+                idxs = [x.decode('utf8').split() for x in dic['rupture_idxs']]
+                mags = rounded_unique(dic['mag'], idxs)
+            # NB: the sections will be fixed later on, in source_reader
+            mfs = MultiFaultSource(sid, name, trt, idxs, dic['probs_occur'],
+                                   dic['mag'], dic['rake'])
+            return mfs
+        probs = []
         mags = []
         rakes = []
         idxs = []
         num_probs = None
         for i, rupnode in enumerate(node):
-            prb = pmf.PMF(valid.pmf(rupnode['probs_occur']))
-            if num_probs is None:  # first time
-                num_probs = len(prb.data)
-            elif len(prb.data) != num_probs:
-                # probs_occur must have uniform length for all ruptures
-                raise ValueError(
-                    'prob_occurs=%s has %d elements, expected %s'
-                    % (rupnode['probs_occur'], len(prb.data), num_probs))
-            pmfs.append(prb)
-            mags.append(~rupnode.magnitude)
-            rakes.append(~rupnode.rake)
-            idxs.append(rupnode.sectionIndexes.get('indexes').split(','))
-        mags = numpy.array(mags)
+            with context(self.fname, rupnode):
+                prb = valid.probabilities(rupnode['probs_occur'])
+                if num_probs is None:  # first time
+                    num_probs = len(prb)
+                elif len(prb) != num_probs:
+                    # probs_occur must have uniform length for all ruptures
+                    with context(self.fname, rupnode):
+                        raise ValueError(
+                            'prob_occurs=%s has %d elements, expected %s'
+                            % (rupnode['probs_occur'], len(prb),
+                               num_probs))
+                probs.append(prb)
+                mags.append(~rupnode.magnitude)
+                rakes.append(~rupnode.rake)
+                indexes = rupnode.sectionIndexes['indexes']
+                idxs.append(tuple(indexes.split(',')))
+        with context(self.fname, node):
+            mags = rounded_unique(mags, idxs)
         rakes = numpy.array(rakes)
         # NB: the sections will be fixed later on, in source_reader
-        mfs = MultiFaultSource(sid, name, trt, idxs, pmfs, mags, rakes)
+        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes)
         return mfs
 
     def convert_sourceModel(self, node):
@@ -1134,6 +1194,7 @@ class SourceConverter(RuptureConverter):
             msg += ' occurrence model'
             assert 'tom' in node.attrib, msg
             if isinstance(tom, PoissonTOM):
+                # hack in place of a ClusterPoissonTOM
                 assert hasattr(sg, 'occurrence_rate')
 
         for src_node in node:
@@ -1241,7 +1302,7 @@ class RowConverter(SourceConverter):
     def convert_npdist(self, node):
         lst = []
         for w, np in super().convert_npdist(node).data:
-            dic = {'weight': w, 'dip': np.dip, 'rake': np.rake,
+            dic = {'probability': w, 'dip': np.dip, 'rake': np.rake,
                    'strike': np.strike}
             lst.append(dic)
         return str(lst)
@@ -1249,7 +1310,7 @@ class RowConverter(SourceConverter):
     def convert_hddist(self, node):
         lst = []
         for w, hd in super().convert_hddist(node).data:
-            lst.append(dict(weight=w, hypodepth=hd))
+            lst.append(dict(probability=w, hypodepth=hd))
         return str(lst)
 
     def convert_areaSource(self, node):
@@ -1263,7 +1324,7 @@ class RowConverter(SourceConverter):
             'A',
             node['tectonicRegion'],
             self.convert_mfdist(node),
-            ~node.magScaleRel,
+            str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
@@ -1279,7 +1340,7 @@ class RowConverter(SourceConverter):
             'P',
             node['tectonicRegion'],
             self.convert_mfdist(node),
-            ~node.magScaleRel,
+            str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
@@ -1296,7 +1357,7 @@ class RowConverter(SourceConverter):
             'M',
             node['tectonicRegion'],
             self.convert_mfdist(node),
-            ~node.magScaleRel,
+            str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
@@ -1312,7 +1373,7 @@ class RowConverter(SourceConverter):
             'S',
             node['tectonicRegion'],
             self.convert_mfdist(node),
-            ~node.magScaleRel,
+            str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
@@ -1331,7 +1392,7 @@ class RowConverter(SourceConverter):
             'C',
             node['tectonicRegion'],
             self.convert_mfdist(node),
-            ~node.magScaleRel,
+            str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             numpy.nan,
             numpy.nan,
@@ -1384,16 +1445,18 @@ class RowConverter(SourceConverter):
 # ################### MultiPointSource conversion ######################## #
 
 
-def dists(node):
+def multikey(node):
     """
-    :returns: hddist, npdist and magScaleRel from the given pointSource node
+    :returns: (usd, lsd, rar, hddist, npdist, magScaleRel) for the given node
     """
     hd = tuple((node['probability'], node['depth'])
                for node in node.hypoDepthDist)
     npd = tuple(
         ((node['probability'], node['rake'], node['strike'], node['dip']))
         for node in node.nodalPlaneDist)
-    return hd, npd, ~node.magScaleRel
+    geom = node.pointGeometry
+    return (round(~geom.upperSeismoDepth, 1), round(~geom.lowerSeismoDepth, 1),
+            ~node.ruptAspectRatio, hd, npd, str(~node.magScaleRel))
 
 
 def collapse(array):
@@ -1438,31 +1501,26 @@ def _pointsources2multipoints(srcs, i):
     # converts pointSources with the same hddist, npdist and msr into a
     # single multiPointSource.
     allsources = []
-    for (hd, npd, msr), sources in groupby(srcs, dists).items():
+    for (usd, lsd, rar, hd, npd, msr), sources in groupby(
+            srcs, multikey).items():
         if len(sources) == 1:  # there is a single source
             allsources.extend(sources)
             continue
         mfds = [src[3] for src in sources]
         points = []
-        usd = []
-        lsd = []
-        rar = []
         for src in sources:
             pg = src.pointGeometry
             points.extend(~pg.Point.pos)
-            usd.append(~pg.upperSeismoDepth)
-            lsd.append(~pg.lowerSeismoDepth)
-            rar.append(~src.ruptAspectRatio)
         geom = Node('multiPointGeometry')
         geom.append(Node('gml:posList', text=points))
-        geom.append(Node('upperSeismoDepth', text=collapse(usd)))
-        geom.append(Node('lowerSeismoDepth', text=collapse(lsd)))
+        geom.append(Node('upperSeismoDepth', text=usd))
+        geom.append(Node('lowerSeismoDepth', text=lsd))
         node = Node(
             'multiPointSource',
             dict(id='mps-%d' % i, name='multiPointSource-%d' % i),
             nodes=[geom])
         node.append(Node("magScaleRel", text=collapse(msr)))
-        node.append(Node("ruptAspectRatio", text=collapse(rar)))
+        node.append(Node("ruptAspectRatio", text=rar))
         node.append(mfds2multimfd(mfds))
         node.append(Node('nodalPlaneDist', nodes=[
             Node('nodalPlane', dict(probability=prob, rake=rake,

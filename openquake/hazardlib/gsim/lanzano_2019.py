@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,7 @@ import numpy as np
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim import utils
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
@@ -32,7 +33,8 @@ def _get_stddevs(C):
     Return standard deviations as defined in table 1.
     """
     return [np.sqrt(C['tau'] ** 2 + C['phi_S2S'] ** 2 + C['phi_0'] ** 2),
-            C['tau'], np.sqrt(C['phi_S2S'] ** 2 + C['phi_0'] ** 2)]
+            C['tau'],
+            np.sqrt(C['phi_S2S'] ** 2 + C['phi_0'] ** 2)]
 
 
 def _compute_distance(ctx, dist_type, C):
@@ -54,11 +56,8 @@ def _compute_magnitude(ctx, C):
     b2 * (Mw-Mh) otherwise
     """
     dmag = ctx.mag - C["Mh"]
-    if ctx.mag <= C["Mh"]:
-        mag_term = C['a'] + C['b1'] * dmag
-    else:
-        mag_term = C['a'] + C['b2'] * dmag
-    return mag_term
+    return np.where(
+        ctx.mag <= C["Mh"], C['a'] + C['b1'] * dmag, C['a'] + C['b2'] * dmag)
 
 
 def _site_amplification(ctx, C):
@@ -78,29 +77,8 @@ def _get_mechanism(ctx, C):
     Compute the part of the second term of the equation 1 (FM(SoF)):
     Get fault type dummy variables
     """
-    SS, TF, NF = _get_fault_type_dummy_variables(ctx)
+    SS, NF, TF = utils.get_fault_type_dummy_variables(ctx)
     return C['f1'] * SS + C['f2'] * TF
-
-
-def _get_fault_type_dummy_variables(ctx):
-    """
-    Fault type (Strike-slip, Normal, Thrust/reverse) is
-    derived from rake angle.
-    Rakes angles within 30 of horizontal are strike-slip,
-    angles from 30 to 150 are reverse, and angles from
-    -30 to -150 are normal.
-    """
-    SS, TF, NF = 0, 0, 0
-    if np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
-        # strike-slip
-        SS = 1
-    elif ctx.rake > 30.0 and ctx.rake < 150.0:
-        # reverse
-        TF = 1
-    else:
-        # normal
-        NF = 1
-    return SS, TF, NF
 
 
 class LanzanoEtAl2019_RJB_OMO(GMPE):
@@ -143,7 +121,7 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
     #: Required distance measure is R Joyner-Boore distance (eq. 1).
     REQUIRES_DISTANCES = {'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2021 GEM Foundation
+# Copyright (C) 2018-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -38,19 +38,11 @@ def get_diff_idxs(array, rtol, atol):
     return numpy.fromiter(diff_idxs, int)
 
 
-def _print_diff(a1, a2, idx1, idx2, col):
-    if col.endswith('_'):
-        for i, (v1, v2) in enumerate(zip(a1, a2)):
-            idx = numpy.where(numpy.abs(v1-v2) > 1e-5)
-            if len(idx[0]):
-                print(col, idx1[i], v1[idx])
-                print(col, idx2[i], v2[idx])
-                break
-    else:
-        i, = numpy.where(numpy.abs(a1-a2) > 1e-5)
-        if len(i):
-            print(col, idx1[i], a1[i])
-            print(col, idx2[i], a2[i])
+def get_mean(extractor, what, sids, imtls, p):
+    mean = extractor.get(what).mean[sids, :, p]  # shape (N, M)
+    mu = numpy.array([mean[:, m] for m, imt in enumerate(imtls)
+                      if imt.startswith(('PGA', 'SA'))]).T  # (N, M')
+    return mu.reshape(len(sids), -1)  # shape N * M'
 
 
 class Comparator(object):
@@ -64,7 +56,7 @@ class Comparator(object):
         for ex in self.extractors:
             time = ex.get('performance_data')['time_sec'].sum()
             data.append((ex.calc_id, time))
-        print(views.text_table(data, ['calc_id', 'time']))
+        print(views.text_table(data, ['calc_id', 'time'], ext='org'))
 
     def getsids(self, samplesites):
         sids = self.sitecol['sids']
@@ -108,17 +100,13 @@ class Comparator(object):
         oq0 = self.oq
         extractor = self.extractors[0]
         what = 'hmaps?kind=mean'  # shape (N, M, P)
-        midx = numpy.array([m for m, imt in enumerate(oq0.imtls)
-                            if imt.startswith(('PGA', 'SA'))])
-        shp = (len(sids), -1)
-        arrays = [extractor.get(what).mean[sids, midx, p].reshape(shp)]
+        arrays = [get_mean(extractor, what, sids, oq0.imtls, p)]
         extractor.close()
         for extractor in self.extractors[1:]:
             oq = extractor.oqparam
             numpy.testing.assert_array_equal(oq.imtls.array, oq0.imtls.array)
             numpy.testing.assert_array_equal(oq.poes, oq0.poes)
-            arrays.append(
-                extractor.get(what).mean[sids, midx, p].reshape(shp))
+            arrays.append(get_mean(extractor, what, sids, oq0.imtls, p))
             extractor.close()
         return numpy.array(arrays)  # shape (C, N, M*P)
 
@@ -174,28 +162,28 @@ class Comparator(object):
             fdict = {ex.calc_id: open('%s.txt' % ex.calc_id, 'w')
                      for ex in self.extractors}
             for calc_id, f in fdict.items():
-                f.write(views.text_table(rows[calc_id], header))
+                f.write(views.text_table(rows[calc_id], header, ext='org'))
                 print('Generated %s' % f.name)
         else:
-            print(views.text_table(rows['all'], header))
+            print(views.text_table(rows['all'], header, ext='org'))
         return arrays
 
 
 # works only locally for the moment
-def compare_rups(calc_1: int, calc_2: int):
+def compare_rups(calc_1: int, calc_2: int, site_id: int = 0):
     """
-    Compare the ruptures of two calculations as pandas DataFrames
+    Compare the ruptures affecting the given site ID as pandas DataFrames
     """
     with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
-        df1 = ds1.read_df('rup').sort_values(['src_id', 'mag'])
-        df2 = ds2.read_df('rup').sort_values(['src_id', 'mag'])
-    cols = [col for col in df1.columns if col not in
-            {'probs_occur_', 'clon_', 'clat_'}]
-    for col in cols:
-        a1 = df1[col].to_numpy()
-        a2 = df2[col].to_numpy()
-        assert len(a1) == len(a2), (len(a1), len(a2))
-        _print_diff(a1, a2, df1.index, df2.index, col)
+        df1 = ds1.read_df('rup', sel={'sids': site_id})
+        df2 = ds2.read_df('rup', sel={'sids': site_id})
+    del df1['probs_occur']
+    del df2['probs_occur']
+    lens = len(df1), len(df2)
+    if lens[0] != lens[1]:
+        print('%d != %d ruptures' % lens)
+        return
+    print(df1.compare(df2))
 
 
 def compare_cumtime(calc1: int, calc2: int):
@@ -214,10 +202,12 @@ def compare_uhs(calc_ids: int, files=False, *, poe_id: int = 0,
     arrays = c.compare('uhs', poe_id, files, samplesites, atol, rtol)
     if len(arrays) and len(calc_ids) == 2:
         # each array has shape (N, M)
-        ms = numpy.mean((arrays[0] - arrays[1])**2)
-        maxdiff = numpy.abs(arrays[0] - arrays[1]).max()
-        row = ('%.5f' % c.oq.poes[poe_id], numpy.sqrt(ms), maxdiff)
-        print(views.text_table([row], ['poe', 'rms-diff', 'max-diff']))
+        rms = numpy.sqrt(numpy.mean((arrays[0] - arrays[1])**2))
+        delta = numpy.abs(arrays[0] - arrays[1]).max(axis=1)
+        amax = delta.argmax()
+        row = ('%.5f' % c.oq.poes[poe_id], rms, delta[amax], amax)
+        print(views.text_table([row], ['poe', 'rms-diff', 'max-diff', 'site'],
+                               ext='org'))
 
 
 def compare_hmaps(imt, calc_ids: int, files=False, *,
@@ -232,7 +222,8 @@ def compare_hmaps(imt, calc_ids: int, files=False, *,
         maxdiff = numpy.abs(arrays[0] - arrays[1]).max(axis=0)  # P
         rows = [(str(poe), rms, md) for poe, rms, md in zip(
             c.oq.poes, numpy.sqrt(ms), maxdiff)]
-        print(views.text_table(rows, ['poe', 'rms-diff', 'max-diff']))
+        print(views.text_table(rows, ['poe', 'rms-diff', 'max-diff'],
+                               ext='org'))
 
 
 def compare_hcurves(imt, calc_ids: int, files=False, *,

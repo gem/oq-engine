@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,18 +27,13 @@ Module exports
 :class:`EdwardsFah2013Foreland90Bars`,
 :class:`EdwardsFah2013Foreland120Bars`
 """
-import numpy as np
+
 from openquake.hazardlib.gsim.edwards_fah_2013a import (
     EdwardsFah2013Alpine10Bars)
 from openquake.hazardlib.gsim.edwards_fah_2013f_coeffs import (
-    COEFFS_FORELAND_10Bars,
-    COEFFS_FORELAND_20Bars,
-    COEFFS_FORELAND_30Bars,
-    COEFFS_FORELAND_50Bars,
-    COEFFS_FORELAND_60Bars,
-    COEFFS_FORELAND_75Bars,
-    COEFFS_FORELAND_90Bars,
-    COEFFS_FORELAND_120Bars)
+    COEFFS_FORELAND_10Bars, COEFFS_FORELAND_20Bars, COEFFS_FORELAND_30Bars,
+    COEFFS_FORELAND_50Bars, COEFFS_FORELAND_60Bars, COEFFS_FORELAND_75Bars,
+    COEFFS_FORELAND_90Bars, COEFFS_FORELAND_120Bars)
 
 
 class EdwardsFah2013Foreland10Bars(EdwardsFah2013Alpine10Bars):

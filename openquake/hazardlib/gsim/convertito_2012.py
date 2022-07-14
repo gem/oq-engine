@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,7 +32,7 @@ def _compute_magnitude_scaling(C, mag):
     """
     Returns the magnitude scaling term
     """
-    return C["a"] + (C["b"] * mag)
+    return C["a"] + C["b"] * mag
 
 
 def _compute_distance_scaling(C, rhypo):
@@ -40,8 +40,8 @@ def _compute_distance_scaling(C, rhypo):
     Returns the distance scaling term accounting for geometric and
     anelastic attenuation
     """
-    return C["c"] * np.log10(np.sqrt((rhypo ** 2.) + (C["h"] ** 2.))) +\
-        (C["d"] * rhypo)
+    return C["c"] * np.log10(np.sqrt(rhypo ** 2 + C["h"] ** 2)) + (
+        C["d"] * rhypo)
 
 
 def _compute_site_scaling(C, vs30):
@@ -93,7 +93,7 @@ class ConvertitoEtAl2012Geysers(GMPE):
     #: not verified warning
     non_verified = True
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

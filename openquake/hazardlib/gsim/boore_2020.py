@@ -38,13 +38,11 @@ def _get_inter_event_tau(C, mag):
     Returns the inter-event standard deviation (tau), which is dependent
     on magnitude
     """
-    if mag <= C["Mtau1"]:
-        return C["tau1"]
-    elif mag > C["Mtau1"] and mag < C["Mtau2"]:
-        magncof = (mag - C["Mtau1"]) / (C["Mtau2"] - C["Mtau1"])
-        return C["tau1"] + (C["tau2"] - C["tau1"]) * magncof
-    else:
-        return C["tau2"]
+    magncof = (mag - C["Mtau1"]) / (C["Mtau2"] - C["Mtau1"])
+    tau = C["tau1"] + (C["tau2"] - C["tau1"]) * magncof
+    tau[mag <= C["Mtau1"]] = C["tau1"]
+    tau[mag >= C["Mtau2"]] = C["tau2"]
+    return tau
 
 
 def _get_linear_site_term(C, vs30):
@@ -65,10 +63,9 @@ def _get_magnitude_scaling_term(C, rup):
     it is the same as Boore 2014
     """
     dmag = rup.mag - C["Mh"]
-    if rup.mag <= C["Mh"]:
-        mag_term = (C["e4"] * dmag) + (C["e5"] * dmag**2)
-    else:
-        mag_term = C["e6"] * dmag
+    mag_term = np.where(rup.mag <= C["Mh"],
+                        C["e4"] * dmag + C["e5"] * dmag**2,
+                        C["e6"] * dmag)
     return _get_style_of_faulting_term(C, rup) + mag_term
 
 
@@ -123,15 +120,10 @@ def _get_style_of_faulting_term(C, rup):
     rake is always given.
     what about bias (B) ??? it should be taken care here
     """
-    if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
-        # strike-slip
-        return C["e1"]
-    elif rup.rake > 30.0 and rup.rake < 150.0:
-        # reverse
-        return C["e3"]
-    else:
-        # normal
-        return C["e2"]
+    res = np.full_like(rup.rake, C["e2"])
+    res[(np.abs(rup.rake) <= 30) | ((180 - np.abs(rup.rake)) <= 30)] = C["e1"]
+    res[(rup.rake > 30.0) & (rup.rake < 150)] = C["e3"]
+    return res
 
 
 class BooreEtAl2020(GMPE):
@@ -168,7 +160,7 @@ class BooreEtAl2020(GMPE):
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         C_PGA = self.COEFFS[PGA()]
         pga_rock = _get_pga_on_rock(C_PGA, ctx, ctx)
         for m, imt in enumerate(imts):

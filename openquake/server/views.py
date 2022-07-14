@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,7 +44,7 @@ from django.shortcuts import render
 from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.hazardlib import nrml, gsim, valid
-from openquake.commonlib import readinput, oqvalidation, logs, datastore
+from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
@@ -53,7 +53,7 @@ from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine
 from openquake.engine.export.core import DataStoreExportError
-from openquake.server import utils, dbapi
+from openquake.server import utils
 
 from django.conf import settings
 from django.http import FileResponse
@@ -138,7 +138,8 @@ def store(request_files, ini, calc_id):
     if arch is None:
         # move each file to calc_dir using the upload file names
         inifiles = []
-        for each_file in sorted(request_files.values()):
+        # NB: request_files.values() Django objects are not sortable
+        for each_file in request_files.values():
             new_path = os.path.join(calc_dir, each_file.name)
             shutil.move(each_file.temporary_file_path(), new_path)
             if each_file.name.endswith(ini):
@@ -225,8 +226,13 @@ def get_ini_defaults(request):
     Return a list of ini attributes with a default value
     """
     ini_defs = {}
-    for name in dir(oqvalidation.OqParam):
-        obj = getattr(oqvalidation.OqParam, name)
+    all_names = dir(oqvalidation.OqParam) + list(oqvalidation.OqParam.ALIASES)
+    for name in all_names:
+        if name in oqvalidation.OqParam.ALIASES:  # old name
+            newname = oqvalidation.OqParam.ALIASES[name]
+        else:
+            newname = name
+        obj = getattr(oqvalidation.OqParam, newname)
         if (isinstance(obj, valid.Param)
                 and obj.default is not valid.Param.NODEFAULT):
             ini_defs[name] = obj.default
@@ -388,7 +394,9 @@ def calc_list(request, id=None):
     response_data = []
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
-         parent_id, size_mb) in calc_data:
+         parent_id, size_mb, host) in calc_data:
+        if host:
+            owner += '@' + host.split('.')[0]
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         abortable = False
         if is_running:
@@ -595,6 +603,7 @@ def submit_job(request_files, ini, username, hc_id):
         for job in jobs:
             with open(os.path.join(CWD, 'job.yaml')) as f:
                 yaml = string.Template(f.read()).substitute(
+                    DATABASE='%(host)s:%(port)d' % config.dbserver,
                     CALC_PIK=save(job, custom_tmp),
                     CALC_NAME='calc%d' % job.calc_id)
             subprocess.run(submit_cmd, input=yaml.encode('ascii'))

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -163,13 +163,14 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         width_right = surface.top_right.distance(surface.bottom_right)
         self.assertAlmostEqual(width_left, width_right, delta=delta)
         self.assertAlmostEqual(width_right, width, delta=delta)
-        self.assertAlmostEqual(width, surface.width, delta=delta)
-        self.assertAlmostEqual(length, surface.length, delta=delta)
+        self.assertAlmostEqual(width, surface.array.wlr[0], delta=delta)
+        self.assertAlmostEqual(length, surface.array.wlr[1], delta=delta)
 
     def test_1_rupture_is_inside(self):
-        rupture = self._get_rupture(min_mag=5, max_mag=6, hypocenter_depth=8,
-                                    aspect_ratio=1, dip=30,
-                                    rupture_mesh_spacing=1)
+        rupture = self._get_rupture(min_mag=5., max_mag=6.,
+                                    hypocenter_depth=8.,
+                                    aspect_ratio=1., dip=30.,
+                                    rupture_mesh_spacing=1.)
         self.assertEqual(rupture.mag, 5.5)
         self.assertEqual(rupture.hypocenter, Point(0, 0, 8))
         self.assertAlmostEqual(rupture.occurrence_rate, 0.0009)
@@ -190,9 +191,10 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         )), places=5)
 
     def test_2_rupture_shallower_than_upper_seismogenic_depth(self):
-        rupture = self._get_rupture(min_mag=5, max_mag=6, hypocenter_depth=3,
-                                    aspect_ratio=1, dip=30,
-                                    rupture_mesh_spacing=10)
+        rupture = self._get_rupture(min_mag=5., max_mag=6.,
+                                    hypocenter_depth=3.,
+                                    aspect_ratio=1., dip=30.,
+                                    rupture_mesh_spacing=10.)
         self.assertEqual(rupture.mag, 5.5)
         self.assertEqual(rupture.hypocenter, Point(0, 0, 3))
         self.assertAlmostEqual(rupture.occurrence_rate, 0.0009)
@@ -213,9 +215,10 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         )), places=5)
 
     def test_3_rupture_deeper_than_lower_seismogenic_depth(self):
-        rupture = self._get_rupture(min_mag=5, max_mag=6, hypocenter_depth=15,
-                                    aspect_ratio=1, dip=30,
-                                    rupture_mesh_spacing=10)
+        rupture = self._get_rupture(min_mag=5., max_mag=6.,
+                                    hypocenter_depth=15.,
+                                    aspect_ratio=1., dip=30.,
+                                    rupture_mesh_spacing=10.)
         self.assertEqual(rupture.hypocenter, Point(0, 0, 15))
 
         surface = rupture.surface
@@ -234,9 +237,10 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         )), places=5)
 
     def test_4_rupture_wider_than_seismogenic_layer(self):
-        rupture = self._get_rupture(min_mag=7, max_mag=8, hypocenter_depth=9,
-                                    aspect_ratio=1, dip=30,
-                                    rupture_mesh_spacing=10)
+        rupture = self._get_rupture(min_mag=7., max_mag=8.,
+                                    hypocenter_depth=9.,
+                                    aspect_ratio=1., dip=30.,
+                                    rupture_mesh_spacing=10.)
         self.assertEqual(rupture.mag, 7.5)
         self.assertEqual(rupture.hypocenter, Point(0, 0, 9))
 
@@ -259,9 +263,10 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         )), delta=0.003)  # 23 cm
 
     def test_5_vertical_rupture(self):
-        rupture = self._get_rupture(min_mag=5, max_mag=6, hypocenter_depth=9,
-                                    aspect_ratio=2, dip=90,
-                                    rupture_mesh_spacing=4)
+        rupture = self._get_rupture(min_mag=5., max_mag=6.,
+                                    hypocenter_depth=9.,
+                                    aspect_ratio=2., dip=90.,
+                                    rupture_mesh_spacing=4.)
         self.assertEqual(rupture.hypocenter, Point(0, 0, 9))
 
         surface = rupture.surface
@@ -380,15 +385,17 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
                          [9.2, 9.2])  # weighted mean between 9 and 10
 
     def test_high_magnitude(self):
-        rupture = self._get_rupture(min_mag=9, max_mag=10, hypocenter_depth=8,
-                                    aspect_ratio=1, dip=90,
-                                    rupture_mesh_spacing=1)
+        rupture = self._get_rupture(min_mag=9., max_mag=10.,
+                                    hypocenter_depth=8.,
+                                    aspect_ratio=1., dip=90.,
+                                    rupture_mesh_spacing=1.)
         self.assertEqual(rupture.mag, 9.5)
-        rupture = self._get_rupture(min_mag=9, max_mag=10, hypocenter_depth=40,
-                                    aspect_ratio=1, dip=90,
-                                    rupture_mesh_spacing=1,
-                                    upper_seismogenic_depth=0,
-                                    lower_seismogenic_depth=150)
+        rupture = self._get_rupture(min_mag=9., max_mag=10.,
+                                    hypocenter_depth=40.,
+                                    aspect_ratio=1., dip=90.,
+                                    rupture_mesh_spacing=1.,
+                                    upper_seismogenic_depth=0.,
+                                    lower_seismogenic_depth=150.)
         self.assertEqual(rupture.mag, 9.5)
 
     def test_rupture_close_to_south_pole(self):

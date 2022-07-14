@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -77,7 +77,7 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         for a in result:
             damages[a] = result[a]
         self.datastore['damages-rlzs'] = damages
-        stats.set_rlzs_stats(self.datastore, 'damages',
+        stats.set_rlzs_stats(self.datastore, 'damages-rlzs',
                              assets=self.assetcol['id'],
                              loss_type=self.oqparam.loss_types,
                              dmg_state=self.crmodel.damage_states)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,6 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
-from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.calc.filters import nofilter, SourceFilter
 from openquake.hazardlib.source.rupture import (
     BaseRupture, EBRupture, rupture_dt)
@@ -105,6 +104,8 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
     for ebrupture in ebruptures:
         rup = ebrupture.rupture
         arrays = surface_to_arrays(rup.surface)  # one array per surface
+        lons = []
+        lats = []
         points = []
         shapes = []
         for array in arrays:
@@ -114,18 +115,16 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
             assert s2 < TWO16, 'The rupture mesh spacing is too small'
             shapes.append(s1)
             shapes.append(s2)
-            points.extend(array.flat)
-            # example of points: [25.0, 25.1, 25.1, 25.0,
-            #                     -24.0, -24.0, -24.1, -24.1,
-            #                      5.0, 5.0, 5.0, 5.0]
-        points = F32(points)
+            lons.append(array[0].flat)
+            lats.append(array[1].flat)
+            points.append(array.flat)
+        lons = numpy.concatenate(lons)
+        lats = numpy.concatenate(lats)
+        points = F32(numpy.concatenate(points))
         shapes = U32(shapes)
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rec = numpy.zeros(1, rupture_dt)[0]
         rec['seed'] = rup.rup_id
-        n = len(points) // 3
-        lons = points[0:n]
-        lats = points[n:2*n]
         rec['minlon'] = minlon = numpy.nanmin(lons)  # NaNs are in KiteSurfaces
         rec['minlat'] = minlat = numpy.nanmin(lats)
         rec['maxlon'] = maxlon = numpy.nanmax(lons)
@@ -144,7 +143,12 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         # the first element is the number of surfaces, then there are
         # 2 * num_surfaces integers describing the first and second
         # dimension of each surface, and then the lons, lats and deps of
-        # the underlying meshes of points.
+        # the underlying meshes of points; in event_based/case_1 there
+        # is a point source, i.e. planar surfaces, with shapes = [1, 4]
+        # and points.reshape(3, 4) containing lons, lats and depths;
+        # in classical/case_29 there is a non parametric source containing
+        # 2 KiteSurfaces with shapes=[8, 5, 8, 5] and 240 = 3*2*8*5 coordinates
+        # NB: the geometries are read by source.rupture.to_arrays
         geom = numpy.concatenate([[len(shapes) // 2], shapes, points])
         geoms.append(geom)
     if not rups:
@@ -263,8 +267,9 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
 
         # Yield ruptures
         er = sum(src.num_ruptures for src, _ in srcfilter.filter(sources))
-        yield AccumDict(dict(rup_array=get_rup_array(eb_ruptures, srcfilter),
-                             source_data=source_data, eff_ruptures={grp_id: er}))
+        dic = dict(rup_array=get_rup_array(eb_ruptures, srcfilter),
+                   source_data=source_data, eff_ruptures={grp_id: er})
+        yield AccumDict(dic)
     else:
         eb_ruptures = []
         eff_ruptures = 0

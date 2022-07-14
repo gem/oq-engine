@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -67,7 +67,7 @@ def from_string(imt, _damping=5.0):
         Intensity Measure Type.
     """
     m = re.match(FREQUENCY_PATTERN, imt)
-    if m:
+    if m:  # passed float interpreted as frequency
         if m.group(1) == 'EAS':
             im = EAS(float(m.group(2)))
         elif m.group(1) == 'FAS':
@@ -75,7 +75,7 @@ def from_string(imt, _damping=5.0):
         elif m.group(1) == 'DRVT':
             im = DRVT(float(m.group(2)))
         return im
-    elif re.match(r'[ \+\d\.]+', imt):
+    elif re.match(r'[ \+\d\.]+', imt):  # passed float interpreted as period
         return SA(float(imt))
     return IMT(*imt2tup(imt))
 
@@ -123,7 +123,7 @@ def EAS(frequency):
     Effective Amplitude Spectrum in terms of a frequency (in Hz).
     """
     period = 1. / frequency
-    return IMT('EAS(%s)' % period, period, 5.0)
+    return IMT('EAS(%.6f)' % frequency, period, 5.0)
 
 
 def FAS(frequency):
@@ -131,7 +131,7 @@ def FAS(frequency):
     Fourier Amplitude Spectrum in terms of a frequency (in Hz).
     """
     period = 1. / frequency
-    return IMT('FAS(%s)' % period, period, 5.0)
+    return IMT('FAS(%.6f)' % frequency, period, 5.0)
 
 
 def DRVT(frequency):
@@ -139,7 +139,7 @@ def DRVT(frequency):
     Duration as defined in Bora et al. (2019)
     """
     period = 1. / frequency
-    return IMT('DRVT(%s)' % period, period, 5.0)
+    return IMT('DRVT(%.6f)' % frequency, period, 5.0)
 
 
 def SA(period, damping=5.0):

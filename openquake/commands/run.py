@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,67 +16,25 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import collections
-import tempfile
 import logging
 import os.path
+import socket
 import cProfile
-import pstats
+import getpass
 
 from openquake.baselib import performance, general
 from openquake.hazardlib import valid
-from openquake.commonlib import oqvalidation, logs, datastore, readinput
+from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.server import dbserver
 
 calc_path = None  # set only when the flag --slowest is given
 
-PStatData = collections.namedtuple(
-    'PStatData', 'ncalls tottime percall cumtime percall2 path')
-
-oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
-    base.calculators)
-
-
-def get_pstats(pstatfile, n):
-    """
-    Return profiling information as an RST table.
-
-    :param pstatfile: path to a .pstat file
-    :param n: the maximum number of stats to retrieve
-    """
-    with tempfile.TemporaryFile(mode='w+') as stream:
-        ps = pstats.Stats(pstatfile, stream=stream)
-        ps.sort_stats('cumtime')
-        ps.print_stats(n)
-        stream.seek(0)
-        lines = list(stream)
-    for i, line in enumerate(lines):
-        if line.startswith('   ncalls'):
-            break
-    data = []
-    for line in lines[i + 2:]:
-        columns = line.split()
-        if len(columns) == 6:
-            data.append(PStatData(*columns))
-    rows = [(rec.ncalls, rec.cumtime, rec.path) for rec in data]
-    # here is an example of the expected output table:
-    # ====== ======= ========================================================
-    # ncalls cumtime path
-    # ====== ======= ========================================================
-    # 1      33.502  commands/run.py:77(_run)
-    # 1      33.483  calculators/base.py:110(run)
-    # 1      25.166  calculators/classical.py:115(execute)
-    # 1      25.104  baselib.parallel.py:249(apply_reduce)
-    # 1      25.099  calculators/classical.py:41(classical)
-    # 1      25.099  hazardlib/calc/hazard_curve.py:164(classical)
-    return views.text_table(rows, header='ncalls cumtime path'.split())
-
 
 # called when profiling
 def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
-         params):
+         params, user_name, host=None):
     global calc_path
     if 'hazard_calculation_id' in params:
         hc_id = int(params['hazard_calculation_id'])
@@ -92,10 +50,9 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
             params['hazard_calculation_id'] = hc_id
     dic = readinput.get_params(job_ini, params)
     # set the logs first of all
-    log = logs.init("job", dic, getattr(logging, loglevel.upper()))
+    log = logs.init("job", dic, getattr(logging, loglevel.upper()),
+                    user_name=user_name, host=host)
 
-    # disable gzip_input
-    base.BaseCalculator.gzip_inputs = lambda self: None
     with log, performance.Monitor('total runtime', measuremem=True) as monitor:
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         if reuse_input:  # enable caching
@@ -123,6 +80,11 @@ def main(job_ini,
     Run a calculation
     """
     dbserver.ensure_on()
+    user_name = getpass.getuser()
+    try:
+        host = socket.gethostname()
+    except Exception:  # gaierror
+        host = None
     if param:
         params = dict(p.split('=', 1) for p in param.split(','))
     else:
@@ -132,16 +94,19 @@ def main(job_ini,
     if slowest:
         prof = cProfile.Profile()
         prof.runctx('_run(job_ini[0], 0, pdb, reuse_input, loglevel, '
-                    'exports, params)', globals(), locals())
+                    'exports, params, host)', globals(), locals())
         pstat = calc_path + '.pstat'
         prof.dump_stats(pstat)
         print('Saved profiling info in %s' % pstat)
-        print(get_pstats(pstat, slowest))
+        data = performance.get_pstats(pstat, slowest)
+        print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
+                               ext='org'))
         return
     if len(job_ini) == 1:
         return _run(job_ini[0], concurrent_tasks, pdb, reuse_input,
-                    loglevel, exports, params)
-    jobs = create_jobs(job_ini, loglevel, hc_id=hc)
+                    loglevel, exports, params, user_name, host)
+    jobs = create_jobs(job_ini, loglevel, hc_id=hc,
+                       user_name=user_name, host=host)
     for job in jobs:
         job.params.update(params)
         job.params['exports'] = ','.join(exports)

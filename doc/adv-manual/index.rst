@@ -12,33 +12,9 @@ https://docs.openquake.org/oq-engine/advanced/OpenQuakeforAdvancedUsers.pdf
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   introduction
-   common-mistakes
-   hazard
-   risk
-   effective-realizations
-   sslt
-   sampling
-   rupture-sampling
-   event-based-with-large-logic-tree
-   mean-ground-motion-field
-   site-specific
-   extract-api
-   pandas
-   parametric-gmpes
-   multipoint
-   multifault
-   parallelization
-   special-features
-   point-source-gridding
-   asset-site-association
-   event-based-damage
-   correlation
-   risk-features
-   risk-profiles
-   developing
-   architecture
-   oq-commands
-   addition-is-non-associative
+   general
+   logic_trees
+   classical_PSHA
+   event_based

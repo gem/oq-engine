@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,17 +19,18 @@ import os
 import sys
 import abc
 import pdb
+import time
 import logging
 import operator
 import traceback
 from datetime import datetime
 from shapely import wkt
+import psutil
 import h5py
 import numpy
 import pandas
 
-from openquake.baselib import (
-    general, hdf5, __version__ as engine_version)
+from openquake.baselib import general, hdf5
 from openquake.baselib import performance, parallel, python3compat
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import InvalidFile, site, stats
@@ -40,7 +41,8 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, datastore, source_reader
+from openquake.commonlib import (
+    readinput, logictree, datastore, source_reader, logs)
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 
@@ -142,13 +144,17 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     is_stochastic = False  # True for scenario and event based calculators
 
     def __init__(self, oqparam, calc_id):
+        self.oqparam = oqparam
         self.datastore = datastore.new(calc_id, oqparam)
+        self.engine_version = logs.dbcmd('engine_version')
+        # save the version in the monitor, to be used in the version
+        # check in the workers
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
-            h5=self.datastore)
+            h5=self.datastore, version=self.engine_version
+            if parallel.oq_distribute() == 'zmq' else None)
         # NB: using h5=self.datastore.hdf5 would mean losing the performance
         # info about Calculator.run since the file will be closed later on
-        self.oqparam = oqparam
 
     def pre_checks(self):
         """
@@ -176,7 +182,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             # always except in case_shakemap
             self.datastore['oqparam'] = self.oqparam
         attrs = self.datastore['/'].attrs
-        attrs['engine_version'] = engine_version
+        attrs['engine_version'] = self.engine_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
             attrs['input_size'] = size = self.oqparam.get_input_size()
@@ -184,7 +190,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.oqparam, self.datastore.hdf5)
             logging.info(f'Checksum of the inputs: {check} '
                          f'(total size {general.humansize(size)})')
-        self.datastore.flush()
 
     def check_precalc(self, precalc_mode):
         """
@@ -225,6 +230,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if ct != self.oqparam.concurrent_tasks:
                 # save the used concurrent_tasks
                 self.oqparam.concurrent_tasks = ct
+            if self.precalc is None:
+                logging.info('Running %s with concurrent_tasks = %d',
+                             self.__class__.__name__, ct)
             self.save_params(**kw)
             try:
                 if pre_execute:
@@ -318,6 +326,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         for fmt in fmts:
             if not fmt:
                 continue
+            if fmt == 'csv' and self.R > 1:
+                self._export(('realizations', fmt))
             for key in sorted(keys):  # top level keys
                 if 'rlzs' in key and self.R > 1:
                     if (key[:-4] + 'stats') in self.datastore:
@@ -428,22 +438,41 @@ class HazardCalculator(BaseCalculator):
         """Overridden in event based"""
 
     def check_floating_spinning(self):
+        oq = self.oqparam
         f, s = self.csm.get_floating_spinning_factors()
         if f != 1:
             logging.info('Rupture floating factor = %s', f)
         if s != 1:
             logging.info('Rupture spinning factor = %s', s)
-        if (f * s >= 1.5 and self.oqparam.no_pointsource_distance
-                and 'classical' in self.oqparam.calculation_mode):
+        if (f * s >= 1.5 and oq.no_pointsource_distance
+                and ('classical' in oq.calculation_mode or
+                     'disaggregation' in oq.calculation_mode)):
             logging.info(
                 'You are not using the pointsource_distance approximation:\n'
-                'https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance')
+                'https://docs.openquake.org/oq-engine/advanced/general.html#'
+                'pointsource-distance')
+        elif 'classical' in oq.calculation_mode:
+            logging.info('Using pointsource_distance=%s',
+                         oq.pointsource_distance)
 
     def read_inputs(self):
         """
         Read risk data and sources if any
         """
         oq = self.oqparam
+        dist = parallel.oq_distribute()
+        avail = psutil.virtual_memory().available / 1024**3
+        required = .5 * (1 if dist == 'no' else parallel.Starmap.num_cores)
+        if dist == 'processpool' and avail < required:
+            msg = ('Entering SLOW MODE. You have %.1f GB available, but the '
+                   'engine would like at least 0.5 GB per core, i.e. %.1f GB: '
+                   'https://github.com/gem/oq-engine/blob/master/doc/faq.md'
+                   ) % (avail, required)
+            if oq.concurrent_tasks:
+                oq.concurrent_tasks = 0
+                logging.warning(msg)
+            else:
+                raise MemoryError('You have only %.1f GB available' % avail)
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
 
@@ -464,11 +493,18 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
-                mags_by_trt = csm.get_mags_by_trt()
-                for trt in mags_by_trt:
-                    self.datastore['source_mags/' + trt] = numpy.array(
-                        mags_by_trt[trt])
+                oq.mags_by_trt = csm.get_mags_by_trt()
+                for trt in oq.mags_by_trt:
+                    mags = oq.mags_by_trt[trt]
+                    min_mag, max_mag = float(mags[0]), float(mags[-1])
+                    self.datastore['source_mags/' + trt] = numpy.array(mags)
                     interp = oq.maximum_distance(trt)
+                    if min_mag < interp.x[0]:
+                        logging.warning(
+                            'discarding magnitudes < %.2f', interp.x[0])
+                    if max_mag > interp.x[-1]:
+                        logging.warning(
+                            'discarding magnitudes > %.2f', interp.x[-1])
                     if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (
                             interp.x[0], interp.y[0],
@@ -478,10 +514,7 @@ class HazardCalculator(BaseCalculator):
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
         self.pre_checks()
-
-        if (not oq.hazard_calculation_id
-                and oq.calculation_mode != 'preclassical'
-                and not oq.save_disk_space):
+        if oq.calculation_mode == 'multi_risk':
             self.gzip_inputs()
 
         # check DEFINED_FOR_REFERENCE_VELOCITY
@@ -500,6 +533,7 @@ class HazardCalculator(BaseCalculator):
         if not, read the inputs directly.
         """
         oq = self.oqparam
+        self.t0 = time.time()
         if 'gmfs' in oq.inputs or 'multi_peril' in oq.inputs:
             # read hazard from files
             assert not oq.hazard_calculation_id, (
@@ -589,12 +623,11 @@ class HazardCalculator(BaseCalculator):
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.from_engine = self.from_engine
-            calc.pre_checks = lambda: self.__class__.pre_checks(calc)
             calc.run(remove=False)
             calc.datastore.close()
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_weight '
-                'amplifier policy_name policy_dict full_lt exported'
+                'amplifier policy_df full_lt exported'
             ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -667,32 +700,38 @@ class HazardCalculator(BaseCalculator):
                         ' show them and `oq plot_assets` to plot them' %
                         len(discarded))
         if oq.inputs.get('insurance'):
-            k, v = zip(*oq.inputs['insurance'].items())
-            self.load_insurance_data(k, v)
+            self.load_insurance_data(oq.inputs['insurance'].items())
+        rdic = oq.inputs.get('reinsurance')
+        if rdic:
+            self.treaty_df = pandas.read_csv(rdic.pop('treaty'))
+            self.load_insurance_data(rdic.items())
+            treaties = set(self.treaty_df.treaty)
+            assert len(treaties) == len(self.treaty_df), 'Not unique treaties'
+            for string in self.policy_df.treaty:
+                for policy in string.split():
+                    assert policy in treaties, policy
+            self.datastore.create_df('treaty_df', self.treaty_df)
+        if oq.inputs.get('ins_loss'):  # used in the ReinsuranceCalculator
+            self.ins_loss_df = pandas.read_csv(oq.inputs['ins_loss'])
         return readinput.exposure
 
-    def load_insurance_data(self, ins_types, ins_files):
+    def load_insurance_data(self, lt_fnames):
         """
-        Read the insurance files and populate the policy_dict
+        Read the insurance files and populate the policy_df
         """
-        for loss_type, fname in zip(ins_types, ins_files):
-            array = hdf5.read_csv(
-                fname, {'insurance_limit': float, 'deductible': float,
-                        None: object}).array
-            policy_name = array.dtype.names[0]
-            policy_idx = getattr(self.assetcol.tagcol, policy_name + '_idx')
-            insurance = numpy.zeros((len(policy_idx), 2))
-            for pol, ded, lim in array[
-                    [policy_name, 'deductible', 'insurance_limit']]:
-                insurance[policy_idx[pol]] = ded, lim
-            self.policy_dict[loss_type] = insurance
-            if self.policy_name and policy_name != self.policy_name:
-                raise ValueError(
-                    'The file %s contains %s as policy field, but we were '
-                    'expecting %s' % (fname, policy_name, self.policy_name))
-            else:
-                self.policy_name = policy_name
-        self.datastore['policy_dict'] = self.policy_dict
+        policy_df = general.AccumDict(accum=[])
+        for loss_type, fname in lt_fnames:
+            df = pandas.read_csv(fname)
+            policy_idx = getattr(self.assetcol.tagcol, 'policy_idx')
+            for col in df.columns:
+                if col == 'policy':
+                    policy_df[col].extend([policy_idx[x] for x in df[col]])
+                else:
+                    policy_df[col].extend(df[col])
+            policy_df['loss_type'].extend([loss_type] * len(df))
+        assert policy_df
+        self.policy_df = pandas.DataFrame(policy_df)
+        self.datastore.create_df('policy', self.policy_df)
 
     def load_crmodel(self):
         # to be called before read_exposure
@@ -703,7 +742,6 @@ class HazardCalculator(BaseCalculator):
         Save the loss ratios (if any) in the datastore.
         """
         oq = self.oqparam
-        logging.info('Reading the risk model if present')
         self.crmodel = readinput.get_crmodel(oq)
         if not self.crmodel:
             parent = self.datastore.parent
@@ -730,11 +768,8 @@ class HazardCalculator(BaseCalculator):
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_crmodel()  # must be called first
-        if (oq.calculation_mode == 'preclassical' and
-                'exposure' not in oq.inputs):
-            return
-        elif (not oq.imtls and 'shakemap' not in oq.inputs
-                and oq.ground_motion_fields):
+        if (not oq.imtls and 'shakemap' not in oq.inputs and 'ins_loss'
+                not in oq.inputs and oq.ground_motion_fields):
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
         elif oq.hazard_calculation_id:
@@ -765,8 +800,6 @@ class HazardCalculator(BaseCalculator):
 
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
-        self.policy_name = ''
-        self.policy_dict = {}
         if 'exposure' in oq.inputs:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
@@ -776,6 +809,7 @@ class HazardCalculator(BaseCalculator):
                     exposure.exposures, hdf5.vstr)
         elif 'assetcol' in self.datastore.parent:
             assetcol = self.datastore.parent['assetcol']
+            assetcol.update_tagcol(oq.aggregate_by)
             if oq.region:
                 region = wkt.loads(oq.region)
                 self.sitecol = haz_sitecol.within(region)
@@ -798,7 +832,8 @@ class HazardCalculator(BaseCalculator):
                     assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
             if oq.hazard_calculation_id:  # read the sitecol of the child
-                self.sitecol = readinput.get_site_collection(oq)
+                self.sitecol = readinput.get_site_collection(
+                    oq, self.datastore)
                 self.datastore['sitecol'] = self.sitecol
             else:
                 self.sitecol = haz_sitecol
@@ -828,14 +863,19 @@ class HazardCalculator(BaseCalculator):
                     for taxo, weight in items:
                         if taxo != '?':
                             taxonomies.add(taxo)
-            # check that we are covering all the taxonomy strings in the exposure
+            # check that we are covering all the taxonomies in the exposure
             missing = taxonomies - set(self.crmodel.taxonomies)
             if self.crmodel and missing:
-                raise RuntimeError('The exposure contains the taxonomy strings %s '
-                                   'which are not in the risk model' % missing)
+                raise RuntimeError(
+                    'The exposure contains the taxonomy strings '
+                    '%s which are not in the risk model' % missing)
+
+            self.crmodel.check_risk_ids(oq.inputs)
+
             if len(self.crmodel.taxonomies) > len(taxonomies):
-                logging.info('Reducing risk model from %d to %d taxonomy strings',
-                             len(self.crmodel.taxonomies), len(taxonomies))
+                logging.info(
+                    'Reducing risk model from %d to %d taxonomy strings',
+                    len(self.crmodel.taxonomies), len(taxonomies))
                 self.crmodel = self.crmodel.reduce(taxonomies)
                 self.crmodel.tmap = tmap
 
@@ -916,27 +956,27 @@ class HazardCalculator(BaseCalculator):
                 keep_trts.add(trt)
         self.datastore['est_rups_by_grp'] = U32(nrups)
         discard_trts = set(self.full_lt.trts) - keep_trts
-        if discard_trts:
+        if discard_trts and self.oqparam.calculation_mode == 'disaggregation':
+            self.oqparam.discard_trts = discard_trts
+        elif discard_trts:
             msg = ('No sources for some TRTs: you should set\n'
                    'discard_trts = %s\nin %s') % (
                        ', '.join(discard_trts), self.oqparam.inputs['job_ini'])
             logging.warning(msg)
 
+    # to be called after csm.fix_src_offset()
     def store_source_info(self, source_data):
         """
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         if 'source_info' not in self.datastore:
-            source_reader.create_source_info(
-                self.csm, source_data, self.datastore.hdf5)
+            source_reader.create_source_info(self.csm, self.datastore.hdf5)
         self.csm.update_source_info(source_data)
         recs = [tuple(row) for row in self.csm.source_info.values()]
         self.datastore['source_info'][:] = numpy.array(
             recs, source_reader.source_info_dt)
         if 'trt_smrs' not in self.datastore:
             self.datastore['trt_smrs'] = self.csm.get_trt_smrs()
-            self.datastore['toms'] = numpy.array(
-                [sg.tom_name for sg in self.csm.src_groups], hdf5.vstr)
 
     def post_process(self):
         """For compatibility with the engine"""
@@ -1176,35 +1216,15 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     Store agg_keys, agg_values.
     :returns: the aggkey dictionary key -> tags
     """
-    lst = []
-    aggkey = assetcol.tagcol.get_aggkey(aggby)
     if aggby:
-        logging.info('Storing %d aggregation keys', len(aggkey))
-        dt = [(name + '_', U16) for name in aggby] + [
-            (name, hdf5.vstr) for name in aggby]
-        kvs = []
-        for key, val in aggkey.items():
-            val = tuple(python3compat.decode(val))
-            kvs.append(key + val)
-            lst.append(' '.join(val))
-        dstore['agg_keys'] = numpy.array(kvs, dt)
-        if aggby == ['id']:
-            kids = assetcol['ordinal']
-        elif aggby == ['site_id']:
-            kids = assetcol['site_id']
-        else:
-            key2i = {key: i for i, key in enumerate(aggkey)}
-            kids = [key2i[tuple(t)] for t in assetcol[aggby]]
+        aggids, aggtags = assetcol.build_aggids(aggby)
+        logging.info('Storing %d aggregation keys', len(aggids))
+        agg_keys = [','.join(tags) for tags in aggtags]
+        dstore['agg_keys'] = numpy.array(agg_keys, hdf5.vstr)
         if 'assetcol' not in set(dstore):
             dstore['assetcol'] = assetcol
-        grp = dstore.getitem('assetcol')
-        if 'kids' not in grp:
-            grp['kids'] = U16(kids)
-    lst.append('*total*')
     if assetcol.get_value_fields():
         dstore['agg_values'] = assetcol.get_agg_values(aggby)
-        dstore.set_shape_descr('agg_values', aggregation=lst)
-    return aggkey if aggby else {}
 
 
 def read_shakemap(calc, haz_sitecol, assetcol):
@@ -1293,19 +1313,21 @@ def create_risk_by_event(calc):
     """
     oq = calc.oqparam
     dstore = calc.datastore
-    aggkey = getattr(calc, 'aggkey', {})  # empty if not aggregate_by
+    try:
+        K = len(dstore['agg_keys'])
+    except KeyError:
+        K = 0
     crmodel = calc.crmodel
     if 'risk' in oq.calculation_mode:
         fields = [('loss', F32)]
-        if calc.policy_dict:
-            fields.append(('ins_loss', F32))
+        #if hasattr(calc, 'policy_df'):
+        #    fields.append(('ins_loss', F32))
         descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
                  ('variance', F32)] + fields
-        dstore.create_df('risk_by_event', descr, K=len(aggkey),
-                         L=len(oq.loss_types))
+        dstore.create_df('risk_by_event', descr, K=K, L=len(oq.loss_types))
     else:  # damage + consequences
         dmgs = ' '.join(crmodel.damage_states[1:])
         descr = ([('event_id', U32), ('agg_id', U32), ('loss_id', U8)] +
                  [(dc, F32) for dc in crmodel.get_dmg_csq()])
-        dstore.create_df('risk_by_event', descr, K=len(aggkey),
+        dstore.create_df('risk_by_event', descr, K=K,
                          L=len(oq.loss_types), limit_states=dmgs)

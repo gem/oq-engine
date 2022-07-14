@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -270,8 +270,8 @@ class RuptureImporter(object):
         seeds, counts = numpy.unique(rup_array['seed'], return_counts=True)
         if len(seeds) != nr:
             dupl = seeds[counts > 1]
-            logging.info('The following %d rupture seeds are duplicated: %s',
-                         len(dupl), dupl)
+            logging.debug('The following %d rupture seeds are duplicated: %s',
+                          len(dupl), dupl)
         rup_array['geom_id'] = rup_array['id']
         rup_array['id'] = numpy.arange(nr)
         self.datastore['ruptures'] = rup_array
@@ -355,4 +355,3 @@ class RuptureImporter(object):
                 raise ValueError(
                     'The %s calculator is restricted to %d %s, got %d' %
                     (oq.calculation_mode, max_[var], var, num_[var]))
-

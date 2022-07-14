@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,7 +22,7 @@ from openquake.hazardlib.mfd.multi_mfd import MultiMFD
 from openquake.hazardlib.geo import utils, NodalPlane
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.pmf import PMF
-from openquake.hazardlib.valid import SCALEREL
+from openquake.hazardlib.valid import mag_scale_rel
 from openquake.hazardlib.source.point import PointSource
 
 F32 = numpy.float32
@@ -76,8 +76,8 @@ class MultiPointSource(ParametricSeismicSource):
                 self.magnitude_scaling_relationship,
                 get(self.rupture_aspect_ratio, i),
                 self.temporal_occurrence_model,
-                get(self.upper_seismogenic_depth, i),
-                get(self.lower_seismogenic_depth, i),
+                self.upper_seismogenic_depth,
+                self.lower_seismogenic_depth,
                 point,
                 self.nodal_plane_distribution,
                 self.hypocenter_distribution)
@@ -92,17 +92,10 @@ class MultiPointSource(ParametricSeismicSource):
         """
         Yield the ruptures of the underlying point sources
         """
-        for ps in self:
+        step = kwargs.get('step', 1)
+        for ps in list(self)[::step]:
             for rupture in ps.iter_ruptures(**kwargs):
                 yield rupture
-
-    def few_ruptures(self):
-        """
-        Fast version of iter_ruptures used in estimate_weight
-        """
-        for i, ps in enumerate(self):
-            if i % 10 == 0:
-                yield from ps.few_ruptures()
 
     def count_ruptures(self):
         """
@@ -149,7 +142,7 @@ class MultiPointSource(ParametricSeismicSource):
         attrs = {'source_id': self.source_id,
                  'name': self.name,
                  'magnitude_scaling_relationship':
-                 self.magnitude_scaling_relationship.__class__.__name__,
+                 str(self.magnitude_scaling_relationship),
                  'tectonic_region_type': self.tectonic_region_type}
         return dic, attrs
 
@@ -157,8 +150,8 @@ class MultiPointSource(ParametricSeismicSource):
         self.source_id = attrs['source_id']
         self.name = attrs['name']
         self.tectonic_region_type = attrs['tectonic_region_type']
-        self.magnitude_scaling_relationship = SCALEREL[
-            attrs['magnitude_scaling_relationship']]
+        self.magnitude_scaling_relationship = mag_scale_rel(
+            attrs['magnitude_scaling_relationship'])
         npd = dic.pop('nodal_plane_distribution')[:]
         hdd = dic.pop('hypocenter_distribution')[:]
         mesh = dic.pop('mesh')[:]

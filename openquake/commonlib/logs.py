@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2021 GEM Foundation
+# Copyright (C) 2010-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,14 +20,13 @@ Set up some system-wide loggers
 """
 import os
 import re
-import socket
 import getpass
-import sqlite3
 import logging
 import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel
-from openquake.commonlib import readinput
+from openquake.hazardlib import valid
+from openquake.commonlib import readinput, dbapi
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -35,7 +34,7 @@ LEVELS = {'debug': logging.DEBUG,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
+DATABASE = '%s:%d' % valid.host_port()
 
 
 def dbcmd(action, *args):
@@ -45,9 +44,15 @@ def dbcmd(action, *args):
     :param string action: database action to perform
     :param tuple args: arguments
     """
-    host = socket.gethostbyname(config.dbserver.host)
-    sock = zeromq.Socket(
-        'tcp://%s:%s' % (host, DBSERVER_PORT), zeromq.zmq.REQ, 'connect')
+    if os.environ.get('OQ_DATABASE') == 'local':
+        from openquake.server.db import actions
+        try:
+            func = getattr(actions, action)
+        except AttributeError:
+            return dbapi.db(action, *args)
+        else:
+            return func(dbapi.db, *args)
+    sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect')
     with sock:
         res = sock.send((action,) + args)
         if isinstance(res, parallel.Result):
@@ -65,7 +70,10 @@ def get_datadir():
     if not datadir:
         shared_dir = config.directory.shared_dir
         if shared_dir:
-            datadir = os.path.join(shared_dir, getpass.getuser(), 'oqdata')
+            user = getpass.getuser()
+            # special case for /opt/openquake/openquake -> /opt/openquake
+            datadir = os.path.join(shared_dir, user, 'oqdata').replace(
+                'openquake/openquake', 'openquake')
         else:  # use the home of the user
             datadir = os.path.join(os.path.expanduser('~'), 'oqdata')
     return datadir
@@ -159,7 +167,7 @@ class LogContext:
     oqparam = None
 
     def __init__(self, job_ini, calc_id, log_level='info', log_file=None,
-                 user_name=None, hc_id=None):
+                 user_name=None, hc_id=None, host=None):
         self.log_level = log_level
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()
@@ -176,7 +184,8 @@ class LogContext:
                 self.params['calculation_mode'],
                 self.params['description'],
                 user_name,
-                hc_id)
+                hc_id,
+                host)
         elif calc_id == -1:
             # only works in single-user situations
             self.calc_id = get_last_calc_id() + 1
@@ -235,7 +244,7 @@ class LogContext:
 
 
 def init(job_or_calc, job_ini, log_level='info', log_file=None,
-         user_name=None, hc_id=None):
+         user_name=None, hc_id=None, host=None):
     """
     :param job_or_calc: the string "job" or "calcXXX"
     :param job_ini: path to the job.ini file or dictionary of parameters
@@ -243,6 +252,7 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
     :param log_file: path to the log file (if any)
     :param user_name: user running the job (None means current user)
     :param hc_id: parent calculation ID (default None)
+    :param host: machine where the calculation is running (default None)
     :returns: a LogContext instance
 
     1. initialize the root logger (if not already initialized)
@@ -258,4 +268,5 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
         calc_id = int(job_or_calc[4:])
     else:
         raise ValueError(job_or_calc)
-    return LogContext(job_ini, calc_id, log_level, log_file, user_name, hc_id)
+    return LogContext(job_ini, calc_id, log_level, log_file,
+                      user_name, hc_id, host)

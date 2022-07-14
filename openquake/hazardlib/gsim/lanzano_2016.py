@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,7 @@ import numpy as np
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim import utils
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.baselib.general import CallableDict
@@ -102,33 +103,12 @@ def _get_basin_effect_term(ctx, C):
     return C['dbas'] * delta
 
 
-def _get_fault_type_dummy_variables(ctx):
-    """
-    Fault type (Strike-slip, Normal, Thrust/reverse) is
-    derived from rake angle.
-    Rakes angles within 30 of horizontal are strike-slip,
-    angles from 30 to 150 are reverse, and angles from
-    -30 to -150 are normal.
-    """
-    UN, TF, NF = 0, 0, 0
-    if ctx.rake < -30 and ctx.rake > -150:
-        # normal
-        NF = 1
-    elif ctx.rake > 30.0 and ctx.rake < 150.0:
-        # reverse
-        TF = 1
-    else:
-        UN = 1
-
-    return UN, TF, NF
-
-
 def _get_mechanism(ctx, C):
     """
     Compute the part of the second term of the equation 1 (FM(SoF)):
     Get fault type dummy variables
     """
-    UN, TF, NF = _get_fault_type_dummy_variables(ctx)
+    UN, NF, TF = utils.get_fault_type_dummy_variables(ctx)
     return C['fNF'] * NF + C['fTF'] * TF + C['fUN'] * UN
 
 
@@ -142,7 +122,6 @@ def _get_site_amplification(ctx, C):
     site classes
     """
     ssa, ssb, ssc = _get_site_type_dummy_variables(ctx)
-
     return (C['sA'] * ssa) + (C['sB'] * ssb) + (C['sC'] * ssc)
 
 
@@ -195,7 +174,7 @@ class LanzanoEtAl2016_RJB(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
@@ -211,7 +190,7 @@ class LanzanoEtAl2016_RJB(GMPE):
     #: Required distance measure is R Joyner-Boore distance (eq. 1).
     REQUIRES_DISTANCES = {'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

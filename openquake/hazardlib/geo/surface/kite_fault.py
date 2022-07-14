@@ -38,6 +38,8 @@ from openquake.hazardlib.geo.geodetic import (
     npoints_towards, distance, azimuth)
 
 TOL = 0.4
+VERY_SMALL = 1e-20
+ALMOST_RIGHT_ANGLE = 89.9
 
 
 def profile_node(points):
@@ -80,8 +82,7 @@ class KiteSurface(BaseSurface):
         # Clean the mesh
         success = self._clean()
         if not success:
-            print('Profiles', profiles)
-            msg = f'Error while initialising section (id: {sec_id})'
+            msg = f"Error while initialising section (id: {sec_id})"
             raise ValueError(msg)
 
         # Save profiles
@@ -156,6 +157,23 @@ class KiteSurface(BaseSurface):
         iro = iro[iro <= 1]
         return self.mesh.lons[iro, ico], self.mesh.lats[iro, ico]
 
+    def is_vertical(self):
+        """ True if all the profiles, and hence the surface, are vertical """
+        mgd = geodetic.min_geodetic_distance
+        check = []
+        for icol in range(self.mesh.lons.shape[1]):
+            idx = np.isfinite(self.mesh.lons[:, icol])
+            lons = self.mesh.lons[idx, icol]
+            lats = self.mesh.lats[idx, icol]
+            deps = self.mesh.depths[idx, icol]
+            dve = deps[1:] - deps[:-1]
+            dho = mgd((lons[:-1], lats[:-1]), (lons[1:], lats[1:]))
+            tmp = np.ones_like(dve) * 90.0
+            idx = dho > VERY_SMALL
+            tmp[idx] = np.degrees(np.arctan(dve[idx] / dho[idx]))
+            check.append(np.all(tmp > ALMOST_RIGHT_ANGLE))
+        return np.all(check)
+
     def _get_external_boundary(self):
         """
         Provides the surface projection of the external boundary of the
@@ -165,12 +183,42 @@ class KiteSurface(BaseSurface):
             Two :class:`numpy.ndarray` instances containing longitudes and
             latitudes, respectively
         """
-        idxs = self._get_external_boundary_indexes()
-        lo = []
-        la = []
-        for i in idxs:
-            lo.append(self.mesh.lons[i[0], i[1]])
-            la.append(self.mesh.lats[i[0], i[1]])
+        if self.is_vertical():
+
+            lo = []
+            la = []
+            idx = np.min(np.where(np.isfinite(self.mesh.lons[:, 0])))
+            slo = self.mesh.lons[idx, 0]
+            sla = self.mesh.lats[idx, 0]
+            idx = np.min(np.where(np.isfinite(self.mesh.lons[:, -1])))
+            elo = self.mesh.lons[idx, -1]
+            ela = self.mesh.lats[idx, -1]
+            strike = azimuth(slo, sla, elo, ela)
+
+            npt = npoints_towards
+            dlt = 0.1
+            tmp = npt(slo, sla, 0.0, strike-90, dlt, 0, 2)
+            lo.append(tmp[0][1])
+            la.append(tmp[1][1])
+            tmp = npt(slo, sla, 0.0, strike+90, dlt, 0, 2)
+            lo.append(tmp[0][1])
+            la.append(tmp[1][1])
+            tmp = npt(elo, ela, 0.0, strike+90, dlt, 0, 2)
+            lo.append(tmp[0][1])
+            la.append(tmp[1][1])
+            tmp = npt(elo, ela, 0.0, strike-90, dlt, 0, 2)
+            lo.append(tmp[0][1])
+            la.append(tmp[1][1])
+
+        else:
+
+            idxs = self._get_external_boundary_indexes()
+            lo = []
+            la = []
+            for i in idxs:
+                lo.append(self.mesh.lons[i[0], i[1]])
+                la.append(self.mesh.lats[i[0], i[1]])
+
         return np.array(lo), np.array(la)
 
     def _get_external_boundary_indexes(self):
@@ -265,14 +313,14 @@ class KiteSurface(BaseSurface):
         if found:
             azi_strike = azimuth(self.mesh.lons[irow, icol],
                                  self.mesh.lats[irow, icol],
-                                 self.mesh.lons[irow+1, icol],
-                                 self.mesh.lats[irow+1, icol])
+                                 self.mesh.lons[irow, icol+1],
+                                 self.mesh.lats[irow, icol+1])
             azi_dip = azimuth(self.mesh.lons[irow, icol],
                               self.mesh.lats[irow, icol],
-                              self.mesh.lons[irow, icol+1],
-                              self.mesh.lats[irow, icol+1])
+                              self.mesh.lons[irow+1, icol],
+                              self.mesh.lats[irow+1, icol])
 
-            if abs((azi_strike + 90) % 360 - azi_dip) < 10:
+            if abs((azi_strike - 90) % 360 - azi_dip) < 40:
                 tlo = np.fliplr(self.mesh.lons)
                 tla = np.fliplr(self.mesh.lats)
                 tde = np.fliplr(self.mesh.depths)
@@ -345,7 +393,10 @@ class KiteSurface(BaseSurface):
                 hdists = hdists[ok]
                 vdists = vdists[ok]
                 if len(vdists) > 0:
-                    dips.append(np.mean(np.degrees(np.arctan(vdists/hdists))))
+                    tmp = np.ones_like(vdists) * 90.
+                    idx = hdists > VERY_SMALL
+                    tmp[idx] = np.degrees(np.arctan(vdists[idx]/hdists[idx]))
+                    dips.append(np.mean(tmp))
                     lens.append(np.sum((hdists**2 + vdists**2)**0.5))
             lens = np.array(lens)
             self.dip = np.sum(np.array(dips) * lens/np.sum(lens))
@@ -383,7 +434,6 @@ class KiteSurface(BaseSurface):
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,
                       align=False, sec_id=''):
-        # TODO split this function into smaller components.
         """
         This method creates a quadrilateral mesh from a set of profiles. The
         construction of the mesh is done trying to get quadrilaterals as much
@@ -415,84 +465,13 @@ class KiteSurface(BaseSurface):
             Lower edge  |____________________|
 
         """
-        # Resample profiles using the resampling distance provided
-        rprofiles = []
-        for prf in profiles:
-            rprofiles.append(_resample_profile(prf, profile_sd))
 
-        # Set the reference profile i.e. the longest one
-        ref_idx = None
-        max_length = -1e10
-        for idx, prf in enumerate(rprofiles):
-            length = prf.get_length()
-            if length > max_length:
-                max_length = length
-                ref_idx = idx
+        # Fix profiles
+        rprof, ref_idx = _fix_profiles(profiles, profile_sd, align, idl)
 
-        # Check that in each profile the points are equally spaced
-        for pro in rprofiles:
-            pnts = [(p.longitude, p.latitude, p.depth) for p in pro.points]
-            pnts = np.array(pnts)
+        # Create mesh
+        msh = _create_mesh(rprof, ref_idx, edge_sd, idl)
 
-            # Check that the profile is not crossing the IDL and compute the
-            # distance between consecutive points along the profile
-            assert np.all(pnts[:, 0] <= 180) & np.all(pnts[:, 0] >= -180)
-            dst = distance(pnts[:-1, 0], pnts[:-1, 1], pnts[:-1, 2],
-                           pnts[1:, 0], pnts[1:, 1], pnts[1:, 2])
-
-            # Check that all the distances are within a tolerance
-            np.testing.assert_allclose(dst, profile_sd, rtol=1.)
-
-        # Find the delta needed to align profiles if requested
-        shift = np.zeros(len(rprofiles)-1)
-        if align is True:
-            for i in range(0, len(rprofiles)-1):
-                shift[i] = profiles_depth_alignment(rprofiles[i],
-                                                    rprofiles[i+1])
-        shift = np.array([0] + list(shift))
-
-        # Find the maximum back-shift
-        ccsum = [shift[0]]
-        for i in range(1, len(shift)):
-            ccsum.append(shift[i] + ccsum[i-1])
-        add = ccsum - min(ccsum)
-
-        # Create resampled profiles. Now the profiles should be all aligned
-        # from the top (if align option is True)
-        rprof = []
-        maxnum = 0
-        for i, pro in enumerate(rprofiles):
-            j = int(add[i])
-            coo = get_coords(pro, idl)
-            tmp = [[np.nan, np.nan, np.nan] for a in range(0, j)]
-            if len(tmp) > 0:
-                points = tmp + coo
-            else:
-                points = coo
-            rprof.append(points)
-            maxnum = max(maxnum, len(rprof[-1]))
-
-        # Now profiles will have the same number of samples (some of them can
-        # be nan). This is needed to have an array to store the surface.
-        for i, pro in enumerate(rprof):
-            while len(pro) < maxnum:
-                pro.append([np.nan, np.nan, np.nan])
-            rprof[i] = np.array(pro)
-
-        # Create mesh the in the forward direction
-        prfr = get_mesh(rprof, ref_idx, edge_sd, idl)
-
-        # Create the mesh in the backward direction
-        if ref_idx > 0:
-            prfl = get_mesh_back(rprof, ref_idx, edge_sd, idl)
-        else:
-            prfl = []
-        prf = prfl + prfr
-        msh = np.array(prf)
-
-        # Convert from profiles to edges
-        msh = msh.swapaxes(0, 1)
-        msh = fix_mesh(msh)
         return cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]),
                    profiles, sec_id)
 
@@ -586,6 +565,139 @@ class KiteSurface(BaseSurface):
         # each cell the centroid as 3d vector in a Cartesian space, the length
         # width (size along column of points) in km and the area in km2.
         return None, None, None, area
+
+
+def _create_mesh(rprof, ref_idx, edge_sd, idl):
+    """
+    Create the mesh in the forward and backward direction (from the reference
+    profile)
+
+    :param rprof:
+        A list of profiles
+    :param ref_idx:
+        Index indicating the reference profile
+    :param edge_sd:
+        A float defining the sampling distance [km] for the edges
+    :param idl:
+        A boolean. When true the profiles cross the international date li
+    :returns:
+        An instance of  :class:`openquake.hazardlib.geo.Mesh`
+    """
+
+    # Create the mesh in the forward direction
+    prfr = []
+    if ref_idx < len(rprof)-1:
+        prfr = get_mesh(rprof, ref_idx, edge_sd, idl)
+
+    # Create the mesh in the backward direction
+    prfl = []
+    last = False if ref_idx < len(rprof) - 1 else True
+    if ref_idx > 0:
+        prfl = get_mesh_back(rprof, ref_idx, edge_sd, idl, last)
+    prf = prfl + prfr
+
+    # Create the whole mesh
+    if len(prf) > 1:
+
+        msh = np.array(prf)
+
+    else:
+
+        # Check the profiles have the same number of samples
+        chk1 = np.all(np.array([len(p) for p in rprof]) == len(rprof[0]))
+        top_depths = np.array([p[0, 0] for p in rprof])
+
+        # Check profiles have the same top depth
+        chk2 = np.all(np.abs(top_depths - rprof[0][0, 0]) < 0.1*edge_sd)
+
+        if chk1 and chk2:
+            msh = np.array(rprof)
+        else:
+            raise ValueError('Cannot build the mesh')
+
+    # Convert from profiles to edges
+    msh = msh.swapaxes(0, 1)
+    msh = fix_mesh(msh)
+
+    return msh
+
+
+def _fix_profiles(profiles, profile_sd, align, idl):
+    """
+    Resample and align profiles
+
+    :param profiles:
+        A list of :class:`openquake.hazardlib.geo.Line` instances
+    :param profile_sd:
+        A float [km] defining the sampling distance for profiles
+    :param align:
+        A boolean controlling the alignment of profiles
+    :param idl:
+        A boolean. When true the profiles cross the international date line
+    """
+
+    # Resample profiles using the resampling distance provided
+    rprofiles = []
+    for prf in profiles:
+        rprofiles.append(_resample_profile(prf, profile_sd))
+
+    # Set the reference profile i.e. the longest one
+    ref_idx = 0
+    lengths = np.array([prf.get_length() for prf in rprofiles])
+    if np.max(lengths) - np.min(lengths) > profile_sd*0.1:
+        ref_idx = np.argmax(lengths)
+
+    # Check that in each profile the points are equally spaced
+    for pro in rprofiles:
+        pnts = [(p.longitude, p.latitude, p.depth) for p in pro.points]
+        pnts = np.array(pnts)
+
+        # Check that the profile is not crossing the IDL and compute the
+        # distance between consecutive points along the profile
+        assert np.all(pnts[:, 0] <= 180) & np.all(pnts[:, 0] >= -180)
+        dst = distance(pnts[:-1, 0], pnts[:-1, 1], pnts[:-1, 2],
+                       pnts[1:, 0], pnts[1:, 1], pnts[1:, 2])
+
+        # Check that all the distances are within a given tolerance
+        np.testing.assert_allclose(dst, profile_sd, rtol=1.)
+
+    # Find the delta needed to align profiles if requested
+    shift = np.zeros(len(rprofiles)-1)
+    if align is True:
+        for i in range(0, len(rprofiles)-1):
+            shift[i] = profiles_depth_alignment(rprofiles[i],
+                                                rprofiles[i+1])
+    shift = np.array([0] + list(shift))
+
+    # Find the maximum back-shift
+    ccsum = [shift[0]]
+    for i in range(1, len(shift)):
+        ccsum.append(shift[i] + ccsum[i-1])
+    add = ccsum - min(ccsum)
+
+    # Create resampled profiles. Now the profiles should be all aligned
+    # from the top (if align option is True)
+    rprof = []
+    maxnum = 0
+    for i, pro in enumerate(rprofiles):
+        j = int(add[i])
+        coo = get_coords(pro, idl)
+        tmp = [[np.nan, np.nan, np.nan] for a in range(0, j)]
+        if len(tmp) > 0:
+            points = tmp + coo
+        else:
+            points = coo
+        rprof.append(points)
+        maxnum = max(maxnum, len(rprof[-1]))
+
+    # Now profiles will have the same number of samples (some of them can
+    # be nan). This is needed to have an array to store the surface.
+    for i, pro in enumerate(rprof):
+        while len(pro) < maxnum:
+            pro.append([np.nan, np.nan, np.nan])
+        rprof[i] = np.array(pro)
+
+    return rprof, ref_idx
 
 
 def get_profiles_from_simple_fault_data(
@@ -711,11 +823,21 @@ def _resample_profile(line, sampling_dist):
                 segment_slope = 90.
 
             # Horizontal and vertical length of delta
-            delta_v = delta * np.sin(segment_slope)
-            delta_h = delta * np.cos(segment_slope)
+            if segment_slope > ALMOST_RIGHT_ANGLE:
+                delta_v = delta
+                delta_h = 0.0
+            else:
+                delta_v = delta * np.sin(segment_slope)
+                delta_h = delta * np.cos(segment_slope)
 
             # Add a new point to the cross section
-            pnts = npoints_towards(slo, sla, sde, azim, delta_h, delta_v, 2)
+            if segment_slope > ALMOST_RIGHT_ANGLE:
+                pnts = [np.array([slo, slo]),
+                        np.array([sla, sla]),
+                        np.array([sde, sde+delta_v])]
+            else:
+                pnts = npoints_towards(slo, sla, sde,
+                                       azim, delta_h, delta_v, 2)
 
             # Update the starting point
             slo = pnts[0][-1]
@@ -870,8 +992,8 @@ def get_mesh(pfs, rfi, sd, idl):
 
         # Fixing IDL case
         if idl:
-            for ii in range(0, len(pl)):
-                ptmp = pl[ii][0]
+            for vpl, ii in enumerate(pl):
+                ptmp = vpl[0]
                 ptmp = ptmp+360 if ptmp < 0 else ptmp
                 pl[ii][0] = ptmp
 
@@ -1049,7 +1171,7 @@ def update_rdist(rdist, az12, angle, sd):
     return rdist_new
 
 
-def get_mesh_back(pfs, rfi, sd, idl):
+def get_mesh_back(pfs, rfi, sd, idl, last):
     """
     Compute resampled profiles in the backward direction from the reference
     profile and creates the portion of the mesh 'before' the reference profile.
@@ -1135,18 +1257,16 @@ def get_mesh_back(pfs, rfi, sd, idl):
                 new_rdist = update_rdist(rdist[k], az12, angle[k], sd)
 
             # Calculate the number of cells
-            #ndists = int(np.floor((tdist+rdist[k])/sd))
             ndists = int(np.floor((tdist+new_rdist)/sd))
 
             # Adding new points along edge with index k
             for j, _ in enumerate(range(ndists)):
-                #
+
                 # add new profile
                 if len(npr)-1 < laidx[k]+1:
                     npr = add_empty_profile(npr)
-                #
+
                 # fix distance
-                #tmp = (j+1)*sd - rdist[k]
                 tmp = (j+1)*sd - new_rdist
                 lo, la, _ = g.fwd(pl[k, 0], pl[k, 1], az12,
                                   tmp*hdist/tdist*1e3)
@@ -1188,7 +1308,8 @@ def get_mesh_back(pfs, rfi, sd, idl):
             assert rdist[k] < sd
 
     tmp = []
-    for i in range(len(npr)-1, 0, -1):
+    to_idx = -1 if last else 0
+    for i in range(len(npr)-1, to_idx, -1):
         tmp.append(npr[i])
 
     return tmp
@@ -1247,3 +1368,21 @@ def fix_mesh(msh):
             if not (check_row and check_col):
                 msh[i, j, :] = np.nan
     return msh
+
+
+def kite_to_geom(surface):
+    """
+    :returns: the geometry array describing the KiteSurface
+    """
+    shape_y, shape_z = surface.mesh.array.shape[1:]
+    coords = np.float32(surface.mesh.array.flat)
+    return np.concatenate([np.float32([1, shape_y, shape_z]), coords])
+
+
+def geom_to_kite(geom):
+    """
+    :returns: KiteSurface described by the given geometry array
+    """
+    shape_y, shape_z = int(geom[1]), int(geom[2])
+    array = geom[3:].astype(np.float64).reshape(3, shape_y, shape_z)
+    return KiteSurface(RectangularMesh(*array))
