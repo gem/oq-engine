@@ -469,18 +469,17 @@ hazard_uhs-std.csv
         tot_probs_occur = sum(len(po) for po in probs_occur)
         self.assertEqual(tot_probs_occur, 28)  # 14 x 2
 
-        # make sure there is an error when trying to disaggregate
-        with self.assertRaises(IndexError):
-            hc_id = str(self.calc.datastore.calc_id)
-            self.run_calc(case_27.__file__, 'job.ini',
-                          hazard_calculation_id=hc_id,
-                          calculation_mode='disaggregation',
-                          truncation_level="3",
-                          poes_disagg="0.02",
-                          mag_bin_width="0.1",
-                          distance_bin_width="10.0",
-                          coordinate_bin_width="1.0",
-                          num_epsilon_bins="6")
+        # make sure the disaggregation works
+        hc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(case_27.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id,
+                      calculation_mode='disaggregation',
+                      truncation_level="3",
+                      poes_disagg="0.02",
+                      mag_bin_width="0.1",
+                      distance_bin_width="10.0",
+                      coordinate_bin_width="1.0",
+                      num_epsilon_bins="6")
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree

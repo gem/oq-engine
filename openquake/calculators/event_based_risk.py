@@ -28,9 +28,7 @@ from scipy import sparse
 from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
-from openquake.risklib.riskmodels import LTI
-from openquake.risklib.scientific import (
-    insurance_losses, total_losses, MultiEventRNG)
+from openquake.risklib.scientific import insurance_losses, MultiEventRNG, LTI
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
     PostRiskCalculator, post_aggregate, fix_dtypes)
@@ -82,7 +80,7 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
-def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
+def aggreg(outputs, crmodel, ARKD, aggids, rlz_id, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
     """
@@ -93,14 +91,14 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
     xtypes = oq.ext_loss_types
     loss_by_AR = {ln: [] for ln in xtypes}
     correl = int(oq.asset_correlation)
-    (A, R, K), L = ARK, len(xtypes)
-    acc = general.AccumDict(accum=numpy.zeros((L, 2)))  # u8idx->array
+    (A, R, K, D), L = ARKD, len(xtypes)
+    acc = general.AccumDict(accum=numpy.zeros((L, D)))  # u8idx->array
+    value_cols = ['variance', 'loss']
     for out in outputs:
         for li, ln in enumerate(oq.ext_loss_types):
             if ln not in out or len(out[ln]) == 0:
                 continue
-            alt = out[ln].reset_index()
-            value_cols = alt.columns[2:]  # strip eid, aid
+            alt = out[ln]
             if oq.avg_losses:
                 with mon_avg:
                     coo = average_losses(
@@ -155,7 +153,7 @@ def event_based_risk(df, oqparam, dstore, monitor):
         weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]
     if dstore.parent:
         dstore.parent.close()  # essential on Windows with h5py>=3.6
-    ARK = len(assetcol), len(weights), oqparam.K
+    ARKD = len(assetcol), len(weights), oqparam.K, oqparam.D
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
     else:
@@ -174,7 +172,7 @@ def event_based_risk(df, oqparam, dstore, monitor):
                     taxo, adf, gmf_df, oqparam._sec_losses, rng)
             yield out
 
-    return aggreg(outputs(), crmodel, ARK, aggids, rlz_id, monitor)
+    return aggreg(outputs(), crmodel, ARKD, aggids, rlz_id, monitor)
 
 
 def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
@@ -238,12 +236,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             K = 0
         self.datastore.swmr_on()
         sec_losses = []  # one insured loss for each loss type with a policy
+        oq.D = 2
         if hasattr(self, 'policy_df'):
             sec_losses.append(
                 partial(insurance_losses, policy_df=self.policy_df))
-        if oq.total_losses:
-            sec_losses.append(
-                partial(total_losses, kind=oq.total_losses))
         oq._sec_losses = sec_losses
         oq.M = len(oq.all_imts())
         oq.N = self.N

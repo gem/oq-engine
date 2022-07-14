@@ -32,10 +32,17 @@ from scipy import interpolate, stats
 F64 = numpy.float64
 F32 = numpy.float32
 U32 = numpy.uint32
+U64 = numpy.uint64
 U16 = numpy.uint16
 U8 = numpy.uint8
-KNOWN_CONSEQUENCES = ['loss', 'ins_loss', 'losses', 'collapsed', 'injured',
+TWO32 = 2 ** 32
+KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
                       'fatalities', 'homeless']
+LOSSTYPE = numpy.array('''\
+business_interruption contents nonstructural structural
+occupants occupants_day occupants_night occupants_transit
+total structural_ins nonstructural_ins reinsurance'''.split())
+LTI = {lt: i for i, lt in enumerate(LOSSTYPE)}
 
 
 def pairwise(iterable):
@@ -1042,24 +1049,76 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
 
 def insured_losses(losses, deductible, insured_limit):
     """
-    :param losses: an array of ground-up loss ratios
-    :param float deductible: the deductible limit in fraction form
-    :param float insured_limit: the insured limit in fraction form
+    :param losses: array of ground-up losses
+    :param deductible: array of deductible values
+    :param insured_limit: array of insurance limit values
 
     Compute insured losses for the given asset and losses, from the point
     of view of the insurance company. For instance:
 
-    >>> insured_losses(numpy.array([3, 20, 101]), 5, 100)
+    >>> insured_losses(numpy.array([3, 20, 101]),
+    ...                numpy.array([5, 5, 5]), numpy.array([100, 100, 100]))
     array([ 0, 15, 95])
 
     - if the loss is 3 (< 5) the company does not pay anything
     - if the loss is 20 the company pays 20 - 5 = 15
     - if the loss is 101 the company pays 100 - 5 = 95
     """
-    return numpy.piecewise(
-        losses,
-        [losses < deductible, losses > insured_limit],
-        [0, insured_limit - deductible, lambda x: x - deductible])
+    assert isinstance(losses, numpy.ndarray), losses
+    if not isinstance(deductible, numpy.ndarray):
+        deductible = numpy.full_like(losses, deductible)
+    if not isinstance(insured_limit, numpy.ndarray):
+        insured_limit = numpy.full_like(losses, insured_limit)
+    small = losses < deductible
+    big = losses > insured_limit
+    out = losses - deductible
+    out[small] = 0.
+    out[big] = insured_limit[big] - deductible[big]
+    return out
+
+
+def insurance_losses(asset_df, losses_by_rl, policy_df):
+    """
+    :param asset_df: DataFrame of assets
+    :param losses_by_rl: riskid, lt -> DataFrame[eid, aid]
+    :param asset_df: a DataFrame of assets with index "ordinal"
+    """
+    asset_policy_df = asset_df.join(
+        policy_df.set_index('policy'), on='policy', how='inner')
+    for (riskid, lt), out in list(losses_by_rl.items()):
+        if len(out) == 0:
+            continue
+        adf = asset_policy_df[asset_policy_df.loss_type == lt]
+        new = out[numpy.isin(out.aid, adf.index)]
+        if len(new) == 0:
+            continue
+        new['variance'] = 0.
+        j = new.join(adf, on='aid', how='inner')
+        values = j['value-' + lt].to_numpy()
+        losses = j.loss.to_numpy()
+        deds = j.deductible.to_numpy() * values
+        lims = j.insurance_limit.to_numpy() * values
+        new['loss'] = insured_losses(losses, deds, lims)
+        losses_by_rl[riskid, lt + '_ins'] = new
+
+
+def total_losses(asset_df, losses_by_rl, kind):
+    """
+    :param asset_df: DataFrame of assets
+    :param losses_by_rl: riskid, lt -> DataFrame[eid, aid]
+    :param kind: kind of total loss (i.e. "structural+nonstructural")
+    """
+    if kind in ('structural+nonstructural',
+                'structural+nonstructural+contents'):
+        ltypes = kind.split('+')
+    else:
+        raise ValueError(kind)
+    for (riskid, lt), out in list(losses_by_rl.items()):
+        losses_by_rl[riskid, kind] = 0.
+    for ltype in ltypes:
+        for (riskid, lt), out in list(losses_by_rl.items()):
+            if lt == ltype:
+                losses_by_rl[riskid, kind] += out
 
 
 def insurance_loss_curve(curve, deductible, insured_limit):
@@ -1355,6 +1414,14 @@ class LossCurvesMapsBuilder(object):
             losses, self.return_periods, self.num_events[rlzi], self.eff_time)
 
 
+def _avg(loss_dfs, weights):
+    # average loss DataFrames with fields (eid, aid, variance, loss)
+    for loss_df, w in zip(loss_dfs, weights):
+        loss_df['variance'] *= w
+        loss_df['loss'] *= w
+    return pandas.concat(loss_dfs).groupby(['eid', 'aid']).sum().reset_index()
+
+
 class AvgRiskModel(dict):
     """
     A dictionary of risk models associated to a taxonomy mapping
@@ -1382,57 +1449,13 @@ class AvgRiskModel(dict):
                 continue
             elif len(outs) > 1 and hasattr(outs[0], 'loss'):
                 # computing the average dataframe for event_based_risk
-                df = pandas.concat([o * w for o, w in zip(outs, weights)])
-                out[lt] = df.groupby(['eid', 'aid']).sum()
+                out[lt] = _avg(outs, weights)
             elif len(outs) > 1:
                 # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
                 out[lt] = numpy.average(outs, weights=weights, axis=0)
             else:
                 out[lt] = outs[0]
         return out
-
-
-def insurance_losses(asset_df, losses_by_rl, policy_df):
-    """
-    :param asset_df: DataFrame of assets
-    :param losses_by_rl: riskid, lt -> DataFrame[eid, aid]
-    :param asset_df: a DataFrame of assets with index "ordinal"
-    """
-    for (riskid, lt), out in list(losses_by_rl.items()):
-        if len(out) == 0:
-            continue
-        policy = policy_df[policy_df.loss_type == lt].set_index('policy')
-        if len(policy):
-            new = out.copy()
-            new['variance'] = 0.
-            for (eid, aid), df in out.iterrows():
-                asset = asset_df.loc[aid]  # aid==ordinal
-                avalue = asset['value-' + lt]
-                policy_idx = asset['policy']
-                ded = policy.loc[policy_idx].deductible
-                lim = policy.loc[policy_idx].insurance_limit
-                ins = insured_losses(df.loss, ded * avalue, lim * avalue)
-                new.loc[eid, aid]['loss'] = ins
-            losses_by_rl[riskid, lt + '_ins'] = new
-
-
-def total_losses(asset_df, losses_by_rl, kind):
-    """
-    :param asset_df: DataFrame of assets
-    :param losses_by_rl: riskid, lt -> DataFrame[eid, aid]
-    :param kind: kind of total loss (i.e. "structural+nonstructural")
-    """
-    if kind in ('structural+nonstructural',
-                'structural+nonstructural+contents'):
-        ltypes = kind.split('+')
-    else:
-        raise ValueError(kind)
-    for (riskid, lt), out in list(losses_by_rl.items()):
-        losses_by_rl[riskid, kind] = 0.
-    for ltype in ltypes:
-        for (riskid, lt), out in list(losses_by_rl.items()):
-            if lt == ltype:
-                losses_by_rl[riskid, kind] += out
 
 
 # not used anymore
@@ -1501,6 +1524,30 @@ def get_agg_value(consequence, agg_values, agg_id, loss_type):
         return aval[loss_type]
     else:
         raise NotImplementedError(consequence)
+
+
+# ########################### u64_to_eal ################################# #
+
+def u64_to_eal(u64):
+    """
+    Convert an unit64 into a triple (eid, aid, lid)
+
+    >>> u64_to_eal(42949673216001)
+    (10000, 1000, 1)
+    """
+    eid, x = divmod(u64, TWO32)
+    aid, lid = divmod(x, 256)
+    return eid, aid, lid
+
+
+def eal_to_u64(eid, aid, lid):
+    """
+    Convert a triple (eid, aid, lid) into an uint64:
+
+    >>> eal_to_u64(10000, 1000, 1)
+    42949673216001
+    """
+    return U64(eid * TWO32) + U64(aid * 256) + U64(lid)
 
 
 if __name__ == '__main__':

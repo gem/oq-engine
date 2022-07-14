@@ -36,8 +36,7 @@ from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util, logictree
-from openquake.risklib.riskmodels import LTI
-from openquake.risklib.scientific import losses_by_period, return_periods
+from openquake.risklib.scientific import losses_by_period, return_periods, LTI
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract

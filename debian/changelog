@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Changed the magnitude binning formula, thus fixing some disaggregation
+    calculations (for instance when there is a single magnitude for a TRT)
+  * Changed the aggrisk/aggcurves exporters in presence of insurance losses
   * Internal: changed how avg_losses, src_loss_table and agg_curves-stats are
     stored to simplify the management of secondary losses
   * Internal: we have now repeatable rupture IDs in classical PSHA
@@ -12,8 +15,6 @@
   [Michele Simionato]
   * Fixed error message when trying to compute disagg_by_src with too many
     sources: in some cases, it contained a misleading reference to point sources
-  * Fixed disaggregation when a tectonic region type contains a single
-    magnitude, thus breaking the magnitude binning formula
   * Reorganized the Advanced Manual; changed the theme to be consistent with
     the OpenQuake manual
   * Internal: added command `oq db engine_version`

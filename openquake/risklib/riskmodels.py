@@ -38,11 +38,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 
-LOSSTYPE = numpy.array('''\
-business_interruption contents nonstructural structural
-occupants occupants_day occupants_night occupants_transit
-total structural_ins nonstructural_ins reinsurance'''.split())
-LTI = {lt: i for i, lt in enumerate(LOSSTYPE)}
 COST_TYPE_REGEX = '|'.join(valid.cost_type.choices)
 RISK_TYPE_REGEX = re.compile(
     r'(%s|occupants|fragility)_([\w_]+)' % COST_TYPE_REGEX)
@@ -359,7 +354,7 @@ class RiskModel(object):
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[loss_type, 'vulnerability']
         return vf(asset_df, gmf_df, col, rndgen,
-                  self.minimum_asset_loss[loss_type]).set_index(['eid', 'aid'])
+                  self.minimum_asset_loss[loss_type])
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
