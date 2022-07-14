@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Optimized a bit the event_based_risk calculator
+  * Optimized "computing risk" in the event_based_risk calculator (~30% faster)
   * Changed the magnitude binning formula, thus fixing some disaggregation
     calculations (for instance when there is a single magnitude for a TRT)
   * Changed the aggrisk/aggcurves exporters in presence of insurance losses
