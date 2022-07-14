@@ -1,4 +1,4 @@
 #,,,,,,,,,"generated_by='OpenQuake engine 3.13.0-gitbbe3e7d5bd', start_date='2021-11-15T17:21:37', checksum=2148057655, investigation_time=50.0, ses_per_logic_tree_path=1"
 rup_id,multiplicity,mag,centroid_lon,centroid_lat,centroid_depth,trt,strike,dip,rake
-0,1,5.40E+00,145.904,43.397,5.20E+01,Subduction Interface - North East Correction,242.702,34.41956,9.00E+01
+0,1,5.40E+00,145.904,43.397,5.20E+01,Subduction Interface - North East Correction,2.39E+02,3.57E+01,9.00E+01
 1,1,7.90E+00,146.025,42.89,2.58E+01,Subduction Interface - North East Correction,127.408,31.74882,9.00E+01
