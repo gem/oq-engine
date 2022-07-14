@@ -1357,11 +1357,12 @@ class LossCurvesMapsBuilder(object):
             losses, self.return_periods, self.num_events[rlzi], self.eff_time)
 
 
-def avg(loss_dfs, weights):
+def _avg(loss_dfs, weights):
+    # average loss DataFrames with fields (eid, aid, variance, loss)
     for loss_df, w in zip(loss_dfs, weights):
         loss_df['variance'] *= w
         loss_df['loss'] *= w
-    return pandas.concat(loss_dfs).groupby(['eid', 'aid']).sum()
+    return pandas.concat(loss_dfs).groupby(['eid', 'aid']).sum().reset_index()
 
 
 class AvgRiskModel(dict):
@@ -1391,7 +1392,7 @@ class AvgRiskModel(dict):
                 continue
             elif len(outs) > 1 and hasattr(outs[0], 'loss'):
                 # computing the average dataframe for event_based_risk
-                out[lt] = avg(outs, weights).reset_index()
+                out[lt] = _avg(outs, weights)
             elif len(outs) > 1:
                 # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
                 out[lt] = numpy.average(outs, weights=weights, axis=0)
