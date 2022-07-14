@@ -36,8 +36,13 @@ U64 = numpy.uint64
 U16 = numpy.uint16
 U8 = numpy.uint8
 TWO32 = 2 ** 32
-KNOWN_CONSEQUENCES = ['loss', 'ins_loss', 'losses', 'collapsed', 'injured',
+KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
                       'fatalities', 'homeless']
+LOSSTYPE = numpy.array('''\
+business_interruption contents nonstructural structural
+occupants occupants_day occupants_night occupants_transit
+total structural_ins nonstructural_ins reinsurance'''.split())
+LTI = {lt: i for i, lt in enumerate(LOSSTYPE)}
 
 
 def pairwise(iterable):

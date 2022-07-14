@@ -23,7 +23,7 @@ import pandas
 
 from openquake.baselib import hdf5, writers, general
 from openquake.hazardlib.stats import compute_stats2
-from openquake.risklib import scientific, riskmodels
+from openquake.risklib import scientific
 from openquake.calculators.extract import (
     extract, build_damage_dt, build_csq_dt, build_damage_array, sanitize,
     avglosses)
@@ -87,7 +87,7 @@ def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
         out = general.AccumDict(accum=[])
         for (agg_id, lid), df in aggrisk[ok].groupby(['agg_id', 'loss_id']):
             n = len(df)
-            loss_type = riskmodels.LOSSTYPE[lid]
+            loss_type = scientific.LOSSTYPE[lid]
             out['loss_type'].extend([loss_type] * n)
             if tagnames:
                 for tagname, tag in zip(tagnames, aggtags[agg_id]):
@@ -253,7 +253,7 @@ def export_event_loss_table(ekey, dstore):
     except KeyError:  # ebrisk, no limit states
         lstates = []
     df = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
-    df['loss_type'] = riskmodels.LOSSTYPE[df.loss_id.to_numpy()]
+    df['loss_type'] = scientific.LOSSTYPE[df.loss_id.to_numpy()]
     del df['loss_id']
     if 'variance' in df.columns:
         del df['variance']
@@ -575,7 +575,7 @@ def export_aggcurves_csv(ekey, dstore):
     pairs = [([], dataf.agg_id == K)]  # full aggregation
     for tagnames, agg_ids in zip(oq.aggregate_by, aggids):
         pairs.append((tagnames, numpy.isin(dataf.agg_id, agg_ids)))
-    LT = riskmodels.LOSSTYPE
+    LT = scientific.LOSSTYPE
     for tagnames, ok in pairs:
         edic = general.AccumDict(accum=[])
         for (agg_id, rlz_id, loss_id), d in dataf[ok].groupby(

@@ -25,7 +25,7 @@ import pandas
 
 from openquake.baselib import general, parallel, python3compat
 from openquake.commonlib import datastore, logs
-from openquake.risklib import asset, scientific, riskmodels
+from openquake.risklib import asset, scientific
 from openquake.engine import engine
 from openquake.calculators import base, views
 
@@ -53,7 +53,7 @@ def save_curve_stats(dstore):
     periods = aggcurves_df.return_period.unique()
     P = len(periods)
     for lt in oq.ext_loss_types:
-        loss_id = riskmodels.LTI[lt]
+        loss_id = scientific.LTI[lt]
         out = numpy.zeros((K + 1, S, P))
         aggdf = aggcurves_df[aggcurves_df.loss_id == loss_id]
         for agg_id, df in aggdf.groupby("agg_id"):
@@ -317,7 +317,7 @@ class PostRiskCalculator(base.RiskCalculator):
             with self.monitor('src_loss_table', measuremem=True):
                 for loss_type in oq.loss_types:
                     source_ids, losses = get_src_loss_table(
-                        self.datastore, riskmodels.LTI[loss_type])
+                        self.datastore, scientific.LTI[loss_type])
                     self.datastore['src_loss_table/' + loss_type] = losses
                     self.datastore.set_shape_descr(
                         'src_loss_table/' + loss_type, source=source_ids)
@@ -342,7 +342,7 @@ class PostRiskCalculator(base.RiskCalculator):
         #              views.view('portfolio_loss', self.datastore))
         if oq.investigation_time and 'risk' in oq.calculation_mode:
             for ln in self.oqparam.loss_types:
-                li = riskmodels.LTI[ln]
+                li = scientific.LTI[ln]
                 dloss = views.view('delta_loss:%d' % li, self.datastore)
                 if dloss['delta'].mean() > .1:  # more than 10% variation
                     logging.warning(
@@ -361,7 +361,7 @@ class PostRiskCalculator(base.RiskCalculator):
             # shape (R, L)
             for _, row in aggrisk.iterrows():
                 ri, li = int(row.rlz_id), int(row.loss_id)
-                lt = riskmodels.LOSSTYPE[li]
+                lt = scientific.LOSSTYPE[li]
                 if lt not in avg_losses:
                     continue
                 # check on the sum of the average losses

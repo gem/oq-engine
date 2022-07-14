@@ -40,7 +40,7 @@ from openquake.hazardlib.gsim.base import ContextMaker, read_cmakers
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
-from openquake.risklib.riskmodels import LOSSTYPE
+from openquake.risklib.scientific import LOSSTYPE
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
 from openquake.calculators import getters
