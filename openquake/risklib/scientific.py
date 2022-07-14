@@ -1413,14 +1413,16 @@ def insurance_losses(asset_df, losses_by_rl, policy_df):
         if len(policy):
             new = out.copy()
             new['variance'] = 0.
-            for (eid, aid), ser in out.iterrows():
+            ins = numpy.zeros(len(out))
+            for i, (eid, aid, loss) in enumerate(
+                    zip(out.eid, out.aid, out.loss)):
                 asset = asset_df.loc[aid]  # aid==ordinal
                 avalue = asset['value-' + lt]
                 policy_idx = asset['policy']
                 ded = policy.loc[policy_idx].deductible
                 lim = policy.loc[policy_idx].insurance_limit
-                ins = insured_losses(ser.loss, ded * avalue, lim * avalue)
-                new.loc[eid, aid]['loss'] = ins
+                ins[i] = insured_losses(loss, ded * avalue, lim * avalue)
+            new['loss'] = ins
             losses_by_rl[riskid, lt + '_ins'] = new
 
 

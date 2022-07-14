@@ -99,7 +99,7 @@ def aggreg(outputs, crmodel, ARKD, aggids, rlz_id, monitor):
         for li, ln in enumerate(oq.ext_loss_types):
             if ln not in out or len(out[ln]) == 0:
                 continue
-            alt = out[ln].reset_index()
+            alt = out[ln]
             if oq.avg_losses:
                 with mon_avg:
                     coo = average_losses(
@@ -128,6 +128,9 @@ def aggreg(outputs, crmodel, ARKD, aggids, rlz_id, monitor):
                         dic[col].append(arr[li, c])
         fix_dtypes(dic)
         df = pandas.DataFrame(dic)
+        red = df[(df.loss_id == 9) & (df.agg_id == 0)]
+        if len(red):
+            print(red)
     return dict(avg=loss_by_AR, alt=df)
 
 
