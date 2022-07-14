@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -38,13 +38,19 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+cbd_polygon = shapely.geometry.Polygon(
+    [(172.6259, -43.5209), (172.6505, -43.5209),
+     (172.6505, -43.5399), (172.6124, -43.5400),
+     (172.6123, -43.5289), (172.6124, -43.5245),
+     (172.6220, -43.5233)])
+
+
 def _adjust_mean_model(region, in_cshm, in_cbd, imt_per, b13_mean):
     dL2L = dS2S = np.array(np.zeros(np.shape(b13_mean)))
     # If the site is in the CBD polygon, get dL2L and dS2S terms
-    if in_cshm is True:
-        # Only apply the dL2L term only to sites located in the CBD.
-        dL2L[in_cbd == 1] = _get_dL2L(imt_per)
-        dS2S[in_cbd == 1] = _get_dS2S(region, imt_per)
+    # Only apply the dL2L term only to sites located in the CBD.
+    dL2L[in_cbd & in_cshm] = _get_dL2L(imt_per)
+    dS2S[in_cbd & in_cshm] = _get_dS2S(region, imt_per)
     return b13_mean + dL2L + dS2S
 
 
@@ -55,38 +61,10 @@ def _check_in_cbd_polygon(lons, lats):
     in the Christchurch District Plan. See Figure 4.4 of Van Houtte and
     Abbott (2019).
     """
-    polygon = shapely.geometry.Polygon(
-        [(172.6259, -43.5209), (172.6505, -43.5209),
-         (172.6505, -43.5399), (172.6124, -43.5400),
-         (172.6123, -43.5289), (172.6124, -43.5245),
-         (172.6220, -43.5233)])
     points = [shapely.geometry.Point(lons[ind], lats[ind])
               for ind in np.arange(len(lons))]
-    in_cbd = np.asarray([polygon.contains(point)
-                         for point in points])
-
+    in_cbd = np.array([cbd_polygon.contains(point) for point in points])
     return in_cbd
-
-
-def _check_in_cshm_polygon(rup):
-    """
-    Checks if any part of the rupture surface mesh is located within the
-    intended boundaries of the Canterbury Seismic Hazard Model in
-    Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
-    of Christchurch, Earthquake Spectra, 30(1), 17-29.
-    """
-    lats = np.ravel(rup.surface.mesh.array[1])
-    lons = np.ravel(rup.surface.mesh.array[0])
-    # These coordinates are provided by M Gerstenberger (personal
-    # communication, 10 August 2018)
-    polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
-                                        (173.2, -43.9), (171.6, -43.9)])
-    points_in_polygon = [
-        shapely.geometry.Point(lons[i], lats[i]).within(polygon)
-        for i in np.arange(len(lons))]
-    in_cshm = any(points_in_polygon)
-
-    return in_cshm
 
 
 def _get_SRF_phi(imt_per):
@@ -152,7 +130,7 @@ def set_adjusted_stddevs(
     Finferred = ~ctx.vs30measured
 
     # eq. 19 to calculate inter-event standard error
-    mag_test = min(max(ctx.mag, 5.0), 7.0) - 5.0
+    mag_test = np.clip(ctx.mag - 5., 0., 2.)
     t = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
 
     # b and c coeffs from eq. 10
@@ -173,11 +151,10 @@ def set_adjusted_stddevs(
         srf_sigma = np.array(np.ones(np.shape(in_cbd)))
         srf_phi = np.array(np.ones(np.shape(in_cbd)))
         srf_tau = np.array(np.ones(np.shape(in_cbd)))
-        if in_cshm == 1:
-            srf_sigma[in_cbd == 1] = _get_SRF_sigma(imt_per)
-            srf_phi[in_cbd == 1] = _get_SRF_phi(imt_per)
-            # The tau reduction term is not used in this implementation
-            # srf_tau[in_cbd == True] = _get_SRF_tau(imt_per)
+        srf_sigma[in_cshm & in_cbd] = _get_SRF_sigma(imt_per)
+        srf_phi[in_cshm & in_cbd] = _get_SRF_phi(imt_per)
+        # The tau reduction term is not used in this implementation
+        # srf_tau[in_cbd == True] = _get_SRF_tau(imt_per)
 
         # Add 'additional sigma' specified in the Canterbury Seismic
         # Hazard Model to total sigma, eq. 21
@@ -328,11 +305,13 @@ def _get_ln_y_ref(trt, ctx, C):
     rtvz = ctx.rrup if trt == const.TRT.VOLCANIC else 0.
 
     # reverse faulting flag
-    Frv = 1 if 30 <= ctx.rake <= 150 else 0
+    Frv = np.zeros_like(ctx.rake)
+    Frv[(30 <= ctx.rake) & (ctx.rake <= 150)] = 1.
     # normal faulting flag
-    Fnm = 1 if -120 <= ctx.rake <= -60 else 0
+    Fnm = np.zeros_like(ctx.rake)
+    Fnm[(-120 <= ctx.rake) & (ctx.rake <= -60)] = 1.
     # hanging wall flag
-    Fhw = (ctx.rx >= 0)
+    Fhw = ctx.rx >= 0
     # aftershock flag. always zero since we only consider main shock
     AS = 0
 
@@ -352,12 +331,12 @@ def _get_ln_y_ref(trt, ctx, C):
         + C['c4']
         * np.log(ctx.rrup
                  + C['c5']
-                 * np.cosh(C['c6'] * max(ctx.mag - C['chm'], 0)))
+                 * np.cosh(C['c6'] * np.maximum(ctx.mag - C['chm'], 0)))
         # fourth line
         + (C['c4a'] - C['c4'])
         * np.log(np.sqrt(ctx.rrup ** 2 + C['crb'] ** 2))
         # fifth line
-        + (C['cg1'] + C['cg2'] / (np.cosh(max(ctx.mag - C['cg3'], 0))))
+        + (C['cg1'] + C['cg2'] / (np.cosh(np.maximum(ctx.mag - C['cg3'], 0))))
         # sixth line
         * ((1 + C['ctvz'] * (rtvz / ctx.rrup)) * ctx.rrup)
         # seventh line
@@ -411,7 +390,7 @@ def set_stddevs(additional_sigma, ctx, C,
     Finferred = 1 - ctx.vs30measured
 
     # eq. 19 to calculate inter-event standard error
-    mag_test = min(max(ctx.mag, 5.0), 7.0) - 5.0
+    mag_test = np.clip(ctx.mag - 5., 0., 2.)
     t = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
 
     # b and c coeffs from eq. 10
@@ -490,9 +469,9 @@ class Bradley2013(GMPE):
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components
-    #: attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`,
     #: see abstract page 1801.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see chapter "Variance model".
@@ -512,7 +491,7 @@ class Bradley2013(GMPE):
 
     additional_sigma = 0.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -603,7 +582,7 @@ class Bradley2013LHC(Bradley2013):
     #: model has not been published, nor is independent code available.
     non_verified = True
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -644,10 +623,10 @@ def convert_to_LHC(imt):
     R4 = 1.241
     R5 = 1.241
 
-    Ratio = max(R1,
-                max(min(R1+(R2-R1)/np.log(T2/T1)*np.log(t/T1),
-                        R2+(R3-R2)/np.log(T3/T2)*np.log(t/T2)),
-                    min(R3+(R4-R3)/np.log(T4/T3)*np.log(t/T3), R5)))
+    min1 = min(R1 + (R2 - R1) / np.log(T2 / T1) * np.log(t / T1),
+               R2 + (R3 - R2) / np.log(T3 / T2) * np.log(t / T2))
+    min2 = min(R3 + (R4 - R3) / np.log(T4 / T3) * np.log(t / T3), R5)
+    Ratio = max(R1, max(min1, min2))
     SF = np.log(Ratio)
 
     return SF
@@ -681,7 +660,7 @@ class Bradley2013bChchCBD(Bradley2013LHC):
     region = "CBD"
     non_verified = True
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -828,7 +807,7 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
     #: not have code that can be made available.
     non_verified = True
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -837,13 +816,11 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
         ctx = copy.copy(ctx)
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         name = self.__class__.__name__
-        # Check if any part of source is located within CSHM region
-        in_cshm = _check_in_cshm_polygon(ctx)
-        # Check if site is located in the CBD polygon
+        # Check if the sites are located in the CBD polygon
         in_cbd = _check_in_cbd_polygon(ctx.lon, ctx.lat)
         # Fix CBD site terms before dS2S modification.
-        ctx.vs30[in_cbd == 1] = 250
-        ctx.z1pt0[in_cbd == 1] = 330
+        ctx.vs30[in_cbd] = 250
+        ctx.z1pt0[in_cbd] = 330
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             imt_per = imt.period
@@ -860,11 +837,11 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
             b13_mean = _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1)
             # Adjust mean and standard deviation
             mean[m] = _adjust_mean_model(
-                self.region, in_cshm, in_cbd, imt_per, b13_mean)
+                self.region, ctx.in_cshm, in_cbd, imt_per, b13_mean)
             mean[m] += convert_to_LHC(imt)
             set_adjusted_stddevs(
                 name, self.additional_sigma, ctx, C, ln_y_ref, exp1, exp2,
-                in_cshm, in_cbd, imt_per, sig[m], tau[m], phi[m])
+                ctx.in_cshm, in_cbd, imt_per, sig[m], tau[m], phi[m])
 
 
 class Bradley2013bChchMapsAdditionalSigma(Bradley2013bChchMaps):

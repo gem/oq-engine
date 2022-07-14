@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -68,8 +68,7 @@ install_requires = [
     'django >=3.2',
     'matplotlib',
     'requests >=2.20',
-    'pyshp ==1.2.3',
-    'toml',
+    'toml >=0.10.2',
     'pyproj >=1.9',
 ]
 
@@ -86,7 +85,10 @@ extras_require = {
         'flake8 >=3.5',
         'pdbpp',
         'ipython',
-        'silx == 0.10',
+        'silx',
+        'sphinx==4.4',
+        'sphinx-theme',
+        'pydata-sphinx-theme',
     ]
 }
 

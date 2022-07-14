@@ -52,7 +52,7 @@ def _get_equivalent_distances_east(wid, lng, mag, repi, focal_depth=10.,
     if ab06:
         ztor_ab06 = 21-2.5*mag
         dtop = np.max([ztor_ab06, dtop])
-    ztor = max(0, dtop)
+    ztor = np.clip(dtop, 0, None)
     # find the average distance to the fault projection
     dsurf = np.max([repi-0.3*lng, 0.1*np.ones_like(repi)], axis=0)
     # rrup

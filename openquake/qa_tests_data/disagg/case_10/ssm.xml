@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="SSM for source {src.source_id}"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <characteristicFaultSource
+            id="ASC-CFS-21595"
+            name="OhariuS"
+            >
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="7.4"
+                >
+                    <occurRates>
+                        0.00047619048 
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    0.0
+                </rake>
+                <surface>
+                    <complexFaultGeometry>
+                        <faultTopEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    174.84 -41.13 0.0 174.763 -41.218 0.0 174.682 -41.295 0.0 174.625 -41.372 0.0 174.557 -41.415 0.0 174.418 -41.46 0.0
+                                </gml:posList>
+                            </gml:LineString>
+                        </faultTopEdge>
+                        <faultBottomEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    174.784 -41.08 20.0 174.707 -41.168 20.0 174.626 -41.245 20.0 174.569 -41.322 20.0 174.501 -41.365 20.0 174.362 -41.41 20.0
+                                </gml:posList>
+                            </gml:LineString>
+                        </faultBottomEdge>
+                    </complexFaultGeometry>
+                </surface>
+            </characteristicFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

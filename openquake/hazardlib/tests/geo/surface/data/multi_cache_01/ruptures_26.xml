@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    investigation_time="1.0"
+    name="UCERF3 Mean"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <multiFaultSource
+            id="ufc3mean_26"
+            name="UCERF3 Mean"
+            >
+                <multiPlanesRupture
+                probs_occur="0.999999940442636 5.955736404050782e-08"
+                >
+                    <magnitude>
+                        7.2838010207360275
+                    </magnitude>
+                    <sectionIndexes indexes="2093,2094,2095,2096,2097,2098,2099,2100,2101,2102,2103,2104,2105,2106,2107,2108,2109,2110,2111,636,635,634,633,632,631"/>
+                    <rake>
+                        162.41749657649237
+                    </rake>
+                </multiPlanesRupture>
+            </multiFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

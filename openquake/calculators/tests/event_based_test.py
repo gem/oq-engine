@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -298,11 +298,10 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures_full.csv', tmp, delta=1E-6)
 
         # check MFD
-        aw = extract(self.calc.datastore, 'event_based_mfd?kind=mean')
-        self.assertEqual(aw.duration, 30)  # 30 years
-        aac(aw.magnitudes, [4.6, 4.7, 4.9, 5.1, 5.3, 5.7], atol=1E-6)
-        aac(aw.mean_frequency, [0.02, 0.013333, 0.03, 0.016667, 0.006667,
-                                0.006667], atol=1E-4)
+        aw = extract(self.calc.datastore, 'event_based_mfd?')
+        aac(aw.mag, [4.6, 4.7, 4.9, 5.1, 5.3, 5.7], atol=1E-6)
+        aac(aw.freq, [0.004444, 0.004444, 0.006667, 0.002222,
+                      0.002222, 0.002222], atol=1E-4)
 
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights

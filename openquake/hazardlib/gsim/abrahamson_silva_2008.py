@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -52,11 +52,10 @@ def _compute_base_term(C, ctx):
                  C['a8'] * ((8.5 - ctx.mag) ** 2) +
                  (C['a2'] + CONSTS['a3'] * (ctx.mag - c1)) *
                  np.log(R))
-
-    if ctx.mag <= c1:
-        return base_term + CONSTS['a4'] * (ctx.mag - c1)
-    else:
-        return base_term + CONSTS['a5'] * (ctx.mag - c1)
+    extra_term = np.where(ctx.mag <= c1,
+                          CONSTS['a4'] * (ctx.mag - c1),
+                          CONSTS['a5'] * (ctx.mag - c1))
+    return base_term + extra_term
 
 
 def _compute_faulting_style_term(C, ctx):
@@ -66,8 +65,8 @@ def _compute_faulting_style_term(C, ctx):
     """
     # ranges of rake values for each faulting mechanism are specified in
     # table 2, page 75
-    return (C['a12'] * float(ctx.rake > 30 and ctx.rake < 150) +
-            C['a13'] * float(ctx.rake > -120 and ctx.rake < -60))
+    return (C['a12'] * ((ctx.rake > 30) & (ctx.rake < 150)) +
+            C['a13'] * ((ctx.rake > -120) & (ctx.rake < -60)))
 
 
 def _compute_site_response_term(C, imt, ctx, pga1100):
@@ -99,45 +98,35 @@ def _compute_hanging_wall_term(C, ctx):
     equation 1, page 74. The calculation of this term is explained in
     paragraph 'Hanging-Wall Model', page 77.
     """
-    if ctx.dip == 90.0:
-        return np.zeros_like(ctx.rx)
-    else:
-        idx = ctx.rx > 0
-        Fhw = np.zeros_like(ctx.rx)
-        Fhw[idx] = 1
+    idx = (ctx.rx > 0) & (ctx.dip != 90.0)
+    Fhw = np.zeros_like(ctx.rx)
+    Fhw[idx] = 1
 
-        # equation 8, page 77
-        T1 = np.zeros_like(ctx.rx)
-        idx1 = (ctx.rjb < 30.0) & (idx)
-        T1[idx1] = 1.0 - ctx.rjb[idx1] / 30.0
+    # equation 8, page 77
+    T1 = np.zeros_like(ctx.rx)
+    idx1 = (ctx.rjb < 30.0) & idx
+    T1[idx1] = 1.0 - ctx.rjb[idx1] / 30.0
 
-        # equation 9, page 77
-        T2 = np.ones_like(ctx.rx)
-        idx2 = ((ctx.rx <= ctx.width * np.cos(np.radians(ctx.dip))) &
-                (idx))
-        T2[idx2] = (0.5 + ctx.rx[idx2] /
-                    (2 * ctx.width * np.cos(np.radians(ctx.dip))))
+    # equation 9, page 77
+    T2 = np.ones_like(ctx.rx)
+    idx2 = (ctx.rx <= ctx.width * np.cos(np.radians(ctx.dip))) & idx
+    T2[idx2] = 0.5 + ctx.rx[idx2] / (
+        2 * ctx.width[idx2] * np.cos(np.radians(ctx.dip[idx2])))
 
-        # equation 10, page 78
-        T3 = np.ones_like(ctx.rx)
-        idx3 = (ctx.rx < ctx.ztor) & (idx)
-        T3[idx3] = ctx.rx[idx3] / ctx.ztor
+    # equation 10, page 78
+    T3 = np.ones_like(ctx.rx)
+    idx3 = (ctx.rx < ctx.ztor) & idx
+    T3[idx3] = ctx.rx[idx3] / ctx.ztor[idx3]
 
-        # equation 11, page 78
-        if ctx.mag <= 6.0:
-            T4 = 0.0
-        elif ctx.mag > 6 and ctx.mag < 7:
-            T4 = ctx.mag - 6
-        else:
-            T4 = 1.0
+    # equation 11, page 78
+    T4 = ctx.mag - 6
+    T4[ctx.mag <= 6.] = 0.
+    T4[ctx.mag >= 7.] = 1.0
 
-        # equation 5, in AS08_NGA_errata.pdf
-        if ctx.dip >= 30:
-            T5 = 1.0 - (ctx.dip - 30.0) / 60.0
-        else:
-            T5 = 1.0
+    # equation 5, in AS08_NGA_errata.pdf
+    T5 = np.where(ctx.dip >= 30, 1.0 - (ctx.dip - 30.0) / 60.0, 1.0)
 
-        return Fhw * C['a14'] * T1 * T2 * T3 * T4 * T5
+    return Fhw * C['a14'] * T1 * T2 * T3 * T4 * T5
 
 
 def _compute_top_of_rupture_depth_term(C, ctx):
@@ -146,10 +135,7 @@ def _compute_top_of_rupture_depth_term(C, ctx):
     in equation 1, page 74. The calculation of this term is explained in
     paragraph 'Depth-to-Top of Rupture Model', page 78.
     """
-    if ctx.ztor >= 10.0:
-        return C['a16']
-    else:
-        return C['a16'] * ctx.ztor / 10.0
+    return np.where(ctx.ztor >= 10, C['a16'], C['a16'] * ctx.ztor / 10.0)
 
 
 def _compute_large_distance_term(C, ctx):
@@ -159,17 +145,14 @@ def _compute_large_distance_term(C, ctx):
     paragraph 'Large Distance Model', page 78.
     """
     # equation 15, page 79
-    if ctx.mag < 5.5:
-        T6 = 1.0
-    elif ctx.mag >= 5.5 and ctx.mag <= 6.5:
-        T6 = 0.5 * (6.5 - ctx.mag) + 0.5
-    else:
-        T6 = 0.5
+    T6 = 0.5 * (6.5 - ctx.mag) + 0.5
+    T6[ctx.mag < 5.5] = 1.0
+    T6[ctx.mag >= 6.5] = 0.5
 
     # equation 14, page 79
     large_distance_term = np.zeros_like(ctx.rrup)
     idx = ctx.rrup >= 100.0
-    large_distance_term[idx] = C['a18'] * (ctx.rrup[idx] - 100.0) * T6
+    large_distance_term[idx] = C['a18'] * (ctx.rrup[idx] - 100.0) * T6[idx]
 
     return large_distance_term
 
@@ -288,12 +271,10 @@ def _compute_std_0(c1, c2, mag):
     """
     Common part of equations 27 and 28, pag 82.
     """
-    if mag < 5:
-        return c1
-    elif mag >= 5 and mag <= 7:
-        return c1 + (c2 - c1) * (mag - 5) / 2
-    else:
-        return c2
+    res = c1 + (c2 - c1) * (mag - 5) / 2
+    res[mag < 5] = c1[mag < 5] if isinstance(c1, np.ndarray) else c1
+    res[mag > 7] = c2[mag > 7] if isinstance(c2, np.ndarray) else c2
+    return res
 
 
 def _compute_partial_derivative_site_amp(C, pga1100, vs30):
@@ -450,11 +431,7 @@ class AbrahamsonSilva2008(GMPE):
     #: Supported intensity measure types are spectral acceleration, peak
     #: ground velocity and peak ground acceleration, see tables 5a and 5b
     #: pages 84, 85, respectively.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
     #: average horizontal :attr:`~openquake.hazardlib.const.IMC.GMRotI50`,
@@ -463,11 +440,8 @@ class AbrahamsonSilva2008(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see paragraph "Equations for standard deviations", page 81.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are Vs30, Vs30 type (measured or inferred),
     #: and Z1.0, see paragraph 'Soil Depth Model', page 79, and table 6,
@@ -481,7 +455,7 @@ class AbrahamsonSilva2008(GMPE):
     #: Required distance measures are Rrup, Rjb and Rx (see Table 2, page 75).
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

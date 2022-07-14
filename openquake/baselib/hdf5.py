@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -348,12 +348,12 @@ class File(h5py.File):
             extra attributes to store
         """
         if isinstance(nametypes, pandas.DataFrame):
-            nametypes = {name: nametypes[name].to_numpy()
-                         for name in nametypes.columns}.items()
+            nametypes = [(name, nametypes[name].to_numpy())
+                         for name in nametypes.columns]
         names = []
         for name, value in nametypes:
             is_array = isinstance(value, numpy.ndarray)
-            if is_array and isinstance(value[0], str):
+            if is_array and len(value) and isinstance(value[0], str):
                 dt = vstr
             elif is_array:
                 dt = value.dtype
@@ -535,13 +535,15 @@ def dumps(dic):
     """
     new = {}
     for k, v in dic.items():
-        if k.startswith('_') or v is None:
+        if v is None or isinstance(k, str) and k.startswith('_'):
             pass
         elif isinstance(v, (list, tuple)) and v:
             if isinstance(v[0], INT):
                 new[k] = [int(x) for x in v]
             elif isinstance(v[0], FLOAT):
                 new[k] = [float(x) for x in v]
+            elif isinstance(v[0], numpy.bytes_):
+                new[k] = json.dumps(decode(v))
             else:
                 new[k] = json.dumps(v)
         elif isinstance(v, FLOAT):
@@ -922,15 +924,18 @@ def save_npz(obj, path):
     :param obj: object to serialize
     :param path: an .npz pathname
     """
-    a = {}
-    for key, val in vars(obj).items():
-        if key.startswith('_'):
-            continue
-        elif isinstance(val, str):
-            # without this oq extract would fail
-            a[key] = val.encode('utf-8')
-        else:
-            a[key] = _fix_array(val, key)
+    if isinstance(obj, pandas.DataFrame):
+        a = {col: obj[col].to_numpy() for col in obj.columns}
+    else:
+        a = {}
+        for key, val in vars(obj).items():
+            if key.startswith('_'):
+                continue
+            elif isinstance(val, str):
+                # without this oq extract would fail
+                a[key] = val.encode('utf-8')
+            else:
+                a[key] = _fix_array(val, key)
     # turn into an error https://github.com/numpy/numpy/issues/14142
     with warnings.catch_warnings():
         warnings.filterwarnings("error", category=UserWarning)

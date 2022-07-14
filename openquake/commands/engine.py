@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -58,7 +58,7 @@ def del_calculation(job_id, confirmed=False):
             'Are you sure you want to (abort and) delete this calculation and '
             'all associated outputs?\nThis action cannot be undone. (y/n): '):
         try:
-            abort(job.id)
+            abort([job.id])
             resp = logs.dbcmd('del_calc', job.id, getpass.getuser())
         except RuntimeError as err:
             safeprint(err)
@@ -93,7 +93,8 @@ def main(
         param='',
         config_file=None,
         exports='',
-        log_level='info'):
+        log_level='info',
+        sample_sources=False,):
     """
     Run a calculation using the traditional command line API
     """
@@ -112,16 +113,22 @@ def main(
     if no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'
 
+    if sample_sources:
+        assert 0 < float(sample_sources) < 1
+        os.environ['OQ_SAMPLE_SOURCES'] = sample_sources
+
     # check if the datadir exists
     datadir = datastore.get_datadir()
     if not os.path.exists(datadir):
         os.makedirs(datadir)
 
-    dbserver.ensure_on()
-    # check if we are talking to the right server
-    err = dbserver.check_foreign()
-    if err:
-        sys.exit(err)
+    if not os.environ.get('OQ_DATABASE'):
+        # start the dbserver locally if needed
+        dbserver.ensure_on()
+        # check that we are talking to the right server
+        err = dbserver.check_foreign()
+        if err:
+            sys.exit(err)
 
     if upgrade_db:
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')
@@ -272,3 +279,5 @@ main.exports = ('Comma-separated string specifing the export formats, '
                 'in order of priority')
 main.log_level = dict(help='Defaults to "info"',
                       choices=['debug', 'info', 'warn', 'error', 'critical'])
+main.sample_sources = dict(abbrev='--ss',
+                           help="Sample fraction in the range 0..1")

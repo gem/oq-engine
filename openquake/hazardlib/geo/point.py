@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -64,9 +64,9 @@ class Point(object):
         if not -90.0 <= latitude <= 90.0:
             raise ValueError("latitude %.6f outside range" % latitude)
 
-        self.depth = depth
-        self.latitude = latitude
-        self.longitude = longitude
+        self.depth = float(depth)
+        self.latitude = float(latitude)
+        self.longitude = float(longitude)
 
     @property
     def x(self):

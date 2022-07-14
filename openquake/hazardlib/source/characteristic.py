@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -95,16 +95,6 @@ class CharacteristicFaultSource(ParametricSeismicSource):
             yield ParametricProbabilisticRupture(
                 mag, self.rake, self.tectonic_region_type, hypocenter,
                 self.surface, occurrence_rate, self.temporal_occurrence_model)
-
-    def few_ruptures(self):
-        """
-        Fast version of iter_ruptures used in estimate_weight
-        """
-        hypocenter = self.surface.get_middle_point()
-        mag, rate = list(self.get_annual_occurrence_rates())[-1]
-        yield ParametricProbabilisticRupture(
-            mag, self.rake, self.tectonic_region_type, hypocenter,
-            self.surface, rate, self.temporal_occurrence_model)
 
     def count_ruptures(self):
         """

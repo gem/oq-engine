@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -49,8 +49,10 @@ def get_dmg_csq(crm, assets_by_site, gmf):
         group = general.group_array(assets, 'taxonomy')
         for taxonomy, assets in group.items():
             for li, loss_type in enumerate(crm.loss_types):
+                # NB: assuming trivial taxonomy mapping for multi_risk
+                [rm] = [crm._riskmodels[k]
+                        for k, w in crm.tmap[loss_type][taxonomy]]
                 # NB: risk logic trees are not yet supported in multi_risk
-                [rm], [w] = crm.get_rmodels_weights(loss_type, taxonomy)
                 fracs = rm.scenario_damage(loss_type, assets, df, 'peril')
                 for asset, frac in zip(assets, fracs):
                     dmg = asset['value-number'] * frac  # shape (1, D)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,10 +33,10 @@ from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
+from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import (
-    ContextMaker, get_probability_no_exceedance)
+from openquake.hazardlib.contexts import ContextMaker
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
@@ -55,9 +55,10 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     """
     :returns: (mag dist lon lat eps trt) edges and shape dictionary
     """
+    assert mags_by_trt
     tl = oq.truncation_level
     if oq.rlz_index is None:
-        Z = oq.num_rlzs_disagg or 1
+        Z = oq.num_rlzs_disagg
     else:
         Z = len(oq.rlz_index)
 
@@ -68,9 +69,13 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
         mags.update(float(mag) for mag in _mags)
         trts.append(trt)
     mags = sorted(mags)
-    mag_edges = oq.mag_bin_width * numpy.arange(
-        int(numpy.floor(min(mags) / oq.mag_bin_width)),
-        int(numpy.ceil(max(mags) / oq.mag_bin_width) + 1))
+    min_mag = mags[0]
+    max_mag = mags[-1]
+    n1 = int(numpy.floor(min_mag / oq.mag_bin_width))
+    n2 = int(numpy.ceil(max_mag / oq.mag_bin_width))
+    if n2 == n1 or max_mag >= oq.mag_bin_width * n2:
+        n2 += 1
+    mag_edges = oq.mag_bin_width * numpy.arange(n1, n2+1)
 
     # build dist_edges
     maxdist = max(oq.maximum_distance.max().values())
@@ -114,21 +119,27 @@ DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
 
 
 # this is inside an inner loop
-def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
+def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
+                 epsstar=False):
     """
-    :param ctxs: a list of U RuptureContexts
-    :param tom: a temporal occurrence model
+    :param ctx: a recarray of size U for a single site and magnitude bin
+    :param cmaker: a ContextMaker instance
     :param g_by_z: an array of gsim indices
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
+    :param sid: the site ID
+    :param bin_edges:
+    :param epsstar: a boolean. When True, disaggregation contains eps* results
     """
     # disaggregate (separate) PoE in different contributions
-    U, E, M = len(ctxs), len(eps3[2]), len(iml2dict)
+    # U - Number of contexts (i.e. ruptures)
+    # E - Number of epsilon bins between lower and upper truncation
+    # M - Number of IMTs
+    # P - Number of PoEs in poes_disagg
+    # Z - Number of realizations to consider
+    U, E, M = len(ctx), len(eps3[2]), len(iml2dict)
     iml2 = next(iter(iml2dict.values()))
     P, Z = iml2.shape
-    dists = numpy.zeros(U)
-    lons = numpy.zeros(U)
-    lats = numpy.zeros(U)
 
     # switch to logarithmic intensities
     iml3 = numpy.zeros((M, P, Z))
@@ -138,19 +149,15 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
 
     truncnorm, epsilons, eps_bands = eps3
     cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
-    G = ctxs[0].mean_std.shape[1]
-    mean_std = numpy.zeros((2, U, M, G), numpy.float32)
-    for u, ctx in enumerate(ctxs):
-        # search the index associated to the site ID; for instance
-        # searchsorted([2, 4, 6], 4) => 1
-        idx = numpy.searchsorted(ctx.sids, sid)
-        dists[u] = ctx.rrup[idx]  # distance to the site
-        lons[u] = ctx.clon[idx]  # closest point of the rupture lon
-        lats[u] = ctx.clat[idx]  # closest point of the rupture lat
-        for g in range(G):
-            mean_std[:, u, :, g] = ctx.mean_std[:, g, :, idx]  # (2, M)
+    # Array with mean and total std values. Shape of this is:
+    # U - Number of contexts (i.e. ruptures if there is a single site)
+    # M - Number of IMTs
+    # G - Number of gsims
+    mean_std = cmaker.get_mean_stds([ctx])[:2]  # (2, G, M, U)
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
+    # Multi-dimensional iteration
+    min_eps, max_eps = epsilons.min(), epsilons.max()
     for (m, p, z), iml in numpy.ndenumerate(iml3):
         if iml == -numpy.inf:  # zero hazard
             continue
@@ -160,22 +167,29 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
             g = g_by_z[z]
         except KeyError:
             continue
-        lvls = (iml - mean_std[0, :, m, g]) / mean_std[1, :, m, g]
+        lvls = (iml - mean_std[0, g, m]) / mean_std[1, g, m]
+        # Find the index in the epsilons-bins vector where lvls (which are
+        # epsilons) should be included.
         idxs = numpy.searchsorted(epsilons, lvls)
-        poes[:, :, m, p, z] = _disagg_eps(
-            truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
-    for u, ctx in enumerate(ctxs):
-        pnes[u] *= get_probability_no_exceedance(ctx, poes[u], tom)  # slow
-    bindata = BinData(dists, lons, lats, pnes)
-    DEBUG[idx].append(pnes.mean())
+        # Now we split the epsilon into parts (one for each epsilon-bin larger
+        # than lvls)
+        if epsstar:
+            iii = (lvls >= min_eps) & (lvls < max_eps)
+            # The leftmost indexes are ruptures and epsilons
+            poes[iii, idxs[iii]-1, m, p, z] = truncnorm.sf(lvls[iii])
+        else:
+            poes[:, :, m, p, z] = _disagg_eps(
+                truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
+    z0 = numpy.zeros(0)
+    time_span = cmaker.tom.time_span
+    for u, rec in enumerate(ctx):
+        pnes[u] *= get_pnes(rec.occurrence_rate,
+                            getattr(rec, 'probs_occur', z0),
+                            poes[u], time_span)
+    bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
     if not bin_edges:
         return bindata
     return _build_disagg_matrix(bindata, bin_edges)
-
-
-def set_mean_std(ctxs, cmaker):
-    for u, ctx in enumerate(ctxs):
-        ctx.mean_std = cmaker.get_mean_stds([ctx])[:2]
 
 
 def _disagg_eps(survival, bins, eps_bands, cum_bands):
@@ -274,23 +288,14 @@ def _digitize_lons(lons, lon_bins):
         return numpy.digitize(lons, lon_bins) - 1
 
 
-def _magbin_groups(rups, mag_bins):
-    # returns lists of ruptures, one list per each magnitude bin
-    groups = [[] for _ in mag_bins[1:]]
-    for rup in rups:
-        magi = numpy.searchsorted(mag_bins, rup.mag) - 1
-        groups[magi].append(rup)
-    return groups
-
-
 # this is used in the hazardlib tests, not in the engine
 def disaggregation(
         sources, site, imt, iml, gsim_by_trt, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
-        source_filter=filters.nofilter, **kwargs):
+        source_filter=filters.nofilter, epsstar=False, **kwargs):
     """
     Compute "Disaggregation" matrix representing conditional probability of an
-    intensity mesaure type ``imt`` exceeding, at least once, an intensity
+    intensity measure type ``imt`` exceeding, at least once, an intensity
     measure level ``iml`` at a geographical location ``site``, given rupture
     scenarios classified in terms of:
 
@@ -365,23 +370,25 @@ def disaggregation(
     rups = AccumDict(accum=[])
     cmaker = {}  # trt -> cmaker
     for trt, srcs in by_trt.items():
-        tom = srcs[0].temporal_occurrence_model
-        cmaker[trt] = ContextMaker(
+        cmaker[trt] = cm = ContextMaker(
             trt, rlzs_by_gsim,
             {'truncation_level': truncation_level,
              'maximum_distance': source_filter.integration_distance(trt),
              'imtls': {str(imt): [iml]}})
-        rups[trt].extend(cmaker[trt].from_srcs(srcs, sitecol))
-    min_mag = min(r.mag for rs in rups.values() for r in rs)
-    max_mag = max(r.mag for rs in rups.values() for r in rs)
+        cm.tom = srcs[0].temporal_occurrence_model
+        rups[trt].extend(cm.from_srcs(srcs, sitecol))
+    mags = numpy.array([r.mag for rs in rups.values() for r in rs])
     mag_bins = mag_bin_width * numpy.arange(
-        int(numpy.floor(min_mag / mag_bin_width)),
-        int(numpy.ceil(max_mag / mag_bin_width) + 1))
+        int(numpy.floor(mags.min() / mag_bin_width)),
+        int(numpy.ceil(mags.max() / mag_bin_width) + 1))
 
-    for trt in cmaker:
-        for magi, ctxs in enumerate(_magbin_groups(rups[trt], mag_bins)):
-            set_mean_std(ctxs, cmaker[trt])
-            bdata[trt, magi] = disaggregate(ctxs, tom, [0], {imt: iml2}, eps3)
+    for trt, cm in cmaker.items():
+        [ctx] = rups[trt]
+        ctx.magi = numpy.searchsorted(mag_bins, ctx.mag) - 1
+        for magi in numpy.unique(ctx.magi):
+            bdata[trt, magi] = disaggregate(
+                ctx[ctx.magi == magi], cm, [0],
+                {imt: iml2}, eps3, epsstar=epsstar)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(

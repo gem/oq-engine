@@ -5,10 +5,10 @@ CREATE TABLE job(
      calculation_mode TEXT NOT NULL,
      hazard_calculation_id INTEGER REFERENCES job (id) ON DELETE CASCADE,
      status TEXT NOT NULL DEFAULT 'created',
-     is_running BOOL NOT NULL DEFAULT false,
+     is_running BOOL NOT NULL DEFAULT 1,
      start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
      stop_time TIMESTAMP,
-     relevant BOOL DEFAULT true,
+     relevant BOOL NOT NULL DEFAULT 1,
      ds_calc_dir TEXT NOT NULL);
 
 CREATE TABLE log(

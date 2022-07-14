@@ -31,9 +31,6 @@ sudo yum copr enable gem/openquake-stable
 ```bash
 curl -sL https://copr.fedoraproject.org/coprs/gem/openquake-stable/repo/epel-7/gem-openquake-stable-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-stable-epel-7.repo
 ```
-
-If you want to install a **nightly build** please read the guide about installing the **[nightly build packages on RHEL/CentOS](rhel-nightly.md)**.
-
 ## Install packages from the OpenQuake repository
 
 If you want to upgrade an existing installation see **[upgrading](../upgrading/rhel.md)**.

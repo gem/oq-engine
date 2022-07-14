@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,22 +37,20 @@ def _get_distance_scaling(dist_type, C, ctx, mag):
     term h is required
     """
     r_h = _get_rh(dist_type, C, ctx)
-    return (C["c1"] + C["c2"] * (mag - CONSTANTS["mref"])) *\
-        np.log(r_h / CONSTANTS["rref"]) +\
-        C["c3"] * (r_h - CONSTANTS["rref"])
+    return (C["c1"] + C["c2"] * (mag - CONSTANTS["mref"])) * np.log(
+        r_h / CONSTANTS["rref"]) + C["c3"] * (r_h - CONSTANTS["rref"])
 
 
 def _get_magnitude_scaling(C, mag):
     """
     Implements the magnitude scaling function F(M) presented in equation 4
     """
-    if mag < CONSTANTS["mh"]:
-        return C["e1"] + C["b1"] * (mag - CONSTANTS["mref"]) +\
-            C["b2"] * ((mag - CONSTANTS["mref"]) ** 2.)
-    else:
-        d_m = CONSTANTS["mh"] - CONSTANTS["mref"]
-        return C["e1"] + C["b3"] * (mag - CONSTANTS["mh"]) +\
-            (C["b1"] * d_m) + C["b2"] * (d_m ** 2.)
+    d_m = CONSTANTS["mh"] - CONSTANTS["mref"]
+    return np.where(mag < CONSTANTS["mh"],
+                    C["e1"] + C["b1"] * (mag - CONSTANTS["mref"]) +
+                    C["b2"] * (mag - CONSTANTS["mref"]) ** 2.,
+                    C["e1"] + C["b3"] * (mag - CONSTANTS["mh"]) +
+                    C["b1"] * d_m + C["b2"] * d_m ** 2.)
 
 
 _get_rh = CallableDict()
@@ -102,7 +100,7 @@ class BindiEtAl2017Rjb(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
@@ -122,7 +120,7 @@ class BindiEtAl2017Rjb(GMPE):
         super().__init__(adjustment_factor=adjustment_factor, **kwargs)
         self.adjustment_factor = np.log(float(adjustment_factor))
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

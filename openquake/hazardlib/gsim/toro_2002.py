@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,10 +31,7 @@ def _compute_mean(C, mag, rjb):
     """
     Compute mean value according to equation 3, page 46.
     """
-    mean = (C['c1'] +
-            _compute_term1(C, mag) +
-            _compute_term2(C, mag, rjb))
-    return mean
+    return C['c1'] + _compute_term1(C, mag) + _compute_term2(C, mag, rjb)
 
 
 def _compute_term1(C, mag):
@@ -43,7 +40,6 @@ def _compute_term1(C, mag):
     page 46.
     """
     mag_diff = mag - 6
-
     return C['c2'] * mag_diff + C['c3'] * mag_diff ** 2
 
 
@@ -56,8 +52,7 @@ def _compute_term2(C, mag, rjb):
     RM = np.sqrt(rjb ** 2 + (C['c7'] ** 2) *
                  np.exp(-1.25 + 0.227 * mag) ** 2)
 
-    return (-C['c4'] * np.log(RM) -
-            (C['c5'] - C['c4']) *
+    return (-C['c4'] * np.log(RM) - (C['c5'] - C['c4']) *
             np.maximum(np.log(RM / 100), 0) - C['c6'] * RM)
 
 
@@ -87,8 +82,8 @@ class ToroEtAl2002(GMPE):
 
     #: Supported intensity measure component is the geometric mean of
     #: two : horizontal components
-    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    #: :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`,
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -65,8 +65,6 @@ def _cluster(imtls, tom, gsims, pmap):
     # Number of occurrences for the cluster
     first = True
     for nocc in range(0, 50):
-        # TODO fix this once the occurrence rate will be used just as
-        # an object attribute
         ocr = tom.occurrence_rate
         prob_n_occ = tom.get_probability_n_occurrences(ocr, nocc)
         if first:
@@ -118,7 +116,7 @@ def classical(group, sitecol, cmaker):
 
 # not used in the engine, only in tests and possibly notebooks
 def calc_hazard_curves(
-        groups, srcfilter, imtls, gsim_by_trt, truncation_level=None,
+        groups, srcfilter, imtls, gsim_by_trt, truncation_level=99.,
         apply=sequential_apply, reqv=None, **kwargs):
     """
     Compute hazard curves on a list of sites, given a set of seismic source

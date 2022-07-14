@@ -40,7 +40,7 @@ if [ -n "$GEM_SET_DEBUG" -a "$GEM_SET_DEBUG" != "false" ]; then
 fi
 set -e
 env | grep -q "^GEM_MASTER_BRANCH=" || export GEM_MASTER_BRANCH="master"
-GEM_GIT_REPO="git://github.com/gem"
+GEM_GIT_REPO="git@github.com:gem"
 GEM_GIT_PACKAGE="oq-engine"
 GEM_DEPENDS="oq-python-deb|oq-python3.8|deb oq-libs|python3-oq-libs|deb oq-libs-extra|python3-oq-libs-extra|sub"
 GEM_DEB_PACKAGE="python3-${GEM_GIT_PACKAGE}"
@@ -137,7 +137,7 @@ repo_id_get () {
     fi
 
     if echo "$repo_line" | grep -q '[0-9a-z_\.-]\+@[a-z0-9_\.-]\+:'; then
-        repo_id="$(echo "$repo_line" | sed "s/^[^ ${TB}]\+[ ${TB}]\+[^ ${TB}@]\+@//g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g;s@:@/@g")"
+        repo_id="$(echo "$repo_line" | sed "s/^[^ ${TB}]\+[ ${TB}]\+//g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
     else
         repo_id="$(echo "$repo_line" | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
     fi
@@ -290,7 +290,7 @@ build_dependencies_file () {
     if [ -e ${je_deps_base}_jenkins_deps_info ]; then
         return
     fi
-    
+
     if [ ! -d ${je_deps_base}_jenkins_deps ]; then
         pwd
         mkdir ${je_deps_base}_jenkins_deps
@@ -306,7 +306,7 @@ build_dependencies_file () {
     #
     repo_id="$(repo_id_get)"
     if [ "$repo_id" != "$GEM_GIT_REPO" ]; then
-        repos="git://${repo_id} ${GEM_GIT_REPO}"
+        repos="${repo_id} ${GEM_GIT_REPO}"
     else
         repos="${GEM_GIT_REPO}"
     fi
@@ -577,7 +577,7 @@ EOF
     if [ "$BUILD_REPOSITORY" -eq 1 -a -d "${GEM_DEB_REPO}" ]; then
         if [ "$branch" != "" ]; then
             repo_id="$(repo_id_get)"
-            if [ "git://$repo_id" != "$GEM_GIT_REPO" -o "$branch" != "$GEM_MASTER_BRANCH" ]; then
+            if [ "$repo_id" != "$GEM_GIT_REPO" -o "$branch" != "$GEM_MASTER_BRANCH" ]; then
                 CUSTOM_SERIE="devel/$(echo "$repo_id" | sed "s@/@__@g;s/\./-/g")__${branch}"
                 if [ "$CUSTOM_SERIE" != "" ]; then
                     GEM_DEB_SERIE="$CUSTOM_SERIE"
@@ -589,7 +589,7 @@ EOF
 
         # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
         if [ -d "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary" ]; then
-            if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch" == "$GEM_MASTER_BRANCH" ]; then
+            if [ "$repo_id" == "$GEM_GIT_REPO" -a "$branch" == "$GEM_MASTER_BRANCH" ]; then
                 ls ${GEM_BUILD_ROOT}
 
                 cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb \
@@ -1102,7 +1102,7 @@ devtest_run () {
     #
     repo_id="$(repo_id_get)"
     if [ "$repo_id" != "$GEM_GIT_REPO" ]; then
-        repos="git://${repo_id} ${GEM_GIT_REPO}"
+        repos="${repo_id} ${GEM_GIT_REPO}"
     else
         repos="${GEM_GIT_REPO}"
     fi
@@ -1211,7 +1211,7 @@ builddoc_run () {
     #
     repo_id="$(repo_id_get)"
     if [ "$repo_id" != "$GEM_GIT_REPO" ]; then
-        repos="git://${repo_id} ${GEM_GIT_REPO}"
+        repos="${repo_id} ${GEM_GIT_REPO}"
     else
         repos="${GEM_GIT_REPO}"
     fi

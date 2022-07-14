@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2021 GEM Foundation
+# Copyright (C) 2010-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,12 +45,11 @@ from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
-    Branch, BranchSet, Realization, CompositeLogicTree, dummy_branchset,
-    LogicTreeError, parse_uncertainty, random, attach_to_branches)
+    Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
+    dummy_branchset, LogicTreeError, parse_uncertainty, random)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
-ID_REGEX = re.compile(r'id="([^"]+?)"')
-SOURCE_TYPE_REGEX = re.compile(r'<(\w+Source)\b')
+ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -80,6 +79,16 @@ src_group_dt = numpy.dtype(
 
 branch_dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
              ('utype', hdf5.vstr), ('uvalue', hdf5.vstr), ('weight', float)]
+
+
+def prod(iterator):
+    """
+    Replacement of math.prod for Python < 3.8
+    """
+    res = 1
+    for el in iterator:
+        res *= el
+    return res
 
 
 def unique(objects, key=None):
@@ -151,7 +160,7 @@ def collect_info(smltpath, branchID=None):
                         for fname in fnames:
                             hdf5file = os.path.splitext(fname)[0] + '.hdf5'
                             if os.path.exists(hdf5file):
-                                h5paths.add(hdf5file)
+                                h5paths.add(os.path.abspath(hdf5file))
     return Info(sorted(paths), sorted(h5paths), applytosources)
 
 
@@ -254,7 +263,7 @@ def reduce_full(full_lt, rlz_clusters):
     f2, *p2 = reducible(full_lt.gsim_lt, gsrlz_clusters)
     before = (full_lt.source_model_lt.get_num_paths() *
               full_lt.gsim_lt.get_num_paths())
-    after = before / numpy.prod([len(p[1]) for p in p1 + p2])
+    after = before / prod(len(p[1]) for p in p1 + p2)
     return {f1: dict(p1), f2: dict(p2), 'size_before_after': (before, after)}
 
 
@@ -272,8 +281,7 @@ class SourceModelLogicTree(object):
 
     FILTERS = ('applyToTectonicRegionType',
                'applyToSources',
-               'applyToBranches',
-               'applyToSourceType')
+               'applyToBranches')
 
     ABSOLUTE_UNCERTAINTIES = ('abGRAbsolute', 'bGRAbsolute',
                               'maxMagGRAbsolute',
@@ -312,7 +320,6 @@ class SourceModelLogicTree(object):
         self.bsetdict = {}
         self.previous_branches = []
         self.tectonic_region_types = set()
-        self.source_types = set()
         self.root_branchset = None
         root = nrml.read(filename)
         try:
@@ -328,20 +335,29 @@ class SourceModelLogicTree(object):
         dicts = list(self.bsetdict.values())[1:]
         if not dicts:
             self.is_source_specific = False
+            self.num_paths = count_paths(self.root_branchset.branches)
             return
         src_ids = set()
         for dic in dicts:
             ats = dic.get('applyToSources')
             if not ats:
                 self.is_source_specific = False
+                self.num_paths = count_paths(self.root_branchset.branches)
                 return
             elif len(ats.split()) != 1:
                 self.is_source_specific = False
+                self.num_paths = count_paths(self.root_branchset.branches)
                 return
             src_ids.add(ats)
         # to be source-specific applyToBranches must be trivial
         self.is_source_specific = all(
             bset.applied is None for bset in self.branchsets)
+        if self.is_source_specific:
+            # fast algorithm, otherwise models like ZAF would hang
+            self.num_paths = prod(
+                sslt.num_paths for sslt in self.decompose().values())
+        else:  # slow algorithm
+            self.num_paths = count_paths(self.root_branchset.branches)
 
     def parse_tree(self, tree_node):
         """
@@ -392,7 +408,6 @@ class SourceModelLogicTree(object):
         self.parse_branches(branchset_node, branchset)
         dummies = []  # dummy branches in case of applyToBranches
         if self.root_branchset is None:  # not set yet
-            self.num_paths = 1
             self.root_branchset = branchset
         else:
             prev_ids = ' '.join(pb.branch_id for pb in self.previous_branches)
@@ -410,7 +425,6 @@ class SourceModelLogicTree(object):
                 for branch in self.previous_branches:
                     branch.bset = branchset
         self.previous_branches = branchset.branches + dummies
-        self.num_paths *= len(branchset)
         self.branchsets.append(branchset)
 
     def get_num_paths(self):
@@ -473,7 +487,7 @@ class SourceModelLogicTree(object):
             raise LogicTreeError(
                 branchset_node, self.filename,
                 "branchset weights don't sum up to 1.0")
-        if len(set(values)) < len(values):
+        if ''.join(values) and len(set(values)) < len(values):
             raise LogicTreeError(
                 branchset_node, self.filename,
                 "there are duplicate values in uncertaintyModel: " +
@@ -535,8 +549,6 @@ class SourceModelLogicTree(object):
           exist in source models.
         * Filter "applyToTectonicRegionType" must mention only tectonic
           region types that exist in source models.
-        * Filter "applyToSourceType" must mention only source types
-          that exist in source models.
         """
         f = filters.copy()
 
@@ -570,20 +582,11 @@ class SourceModelLogicTree(object):
                     "with only one source id" % uncertainty_type)
         if uncertainty_type in ('simpleFaultDipRelative',
                                 'simpleFaultDipAbsolute'):
-            if not f or (not ('applyToSources' in f) and
-                         'applyToSourceType' not in f):
+            if not f or 'applyToSources' not in f:
                 raise LogicTreeError(
                     branchset_node, self.filename,
-                    "uncertainty of type '%s' must define either"
-                    "'applyToSources' or 'applyToSourceType'"
+                    "uncertainty of type '%s' must define 'applyToSources'"
                     % uncertainty_type)
-
-        if 'applyToSourceType' in f:
-            if not f['applyToSourceType'] in self.source_types:
-                raise LogicTreeError(
-                    branchset_node, self.filename,
-                    "source models don't define sources of type '%s'" %
-                    f['applyToSourceType'])
 
         if 'applyToSources' in f:
             for source_id in f['applyToSources'].split():
@@ -672,7 +675,6 @@ class SourceModelLogicTree(object):
         self.tectonic_region_types.update(TRT_REGEX.findall(xml))
         for src_id in ID_REGEX.findall(xml):
             self.source_ids[src_id].append(branch_id)
-        self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
 
     def collapse(self, branchset_ids):
         """
@@ -769,7 +771,7 @@ class SourceModelLogicTree(object):
                     br.branch_id, ordinal, no, attrs['filename'])
                 bset.branches.append(br)
             bsets.append(bset)
-        attach_to_branches(bsets)
+        CompositeLogicTree(bsets)  # perform attach_to_branches
         self.branchsets = bsets
         # bsets [<b11>, <b21 b22>, <b31 b32>]
         self.root_branchset = bsets[0]

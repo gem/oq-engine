@@ -20,15 +20,27 @@ import glob
 import unittest
 import numpy as np
 import matplotlib.pyplot as plt
+from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.geodetic import distance
-from openquake.hazardlib.geo.surface import KiteSurface
+from openquake.hazardlib.geo.surface.kite_fault import (
+    KiteSurface, kite_to_geom, geom_to_kite)
+from openquake.hazardlib.nrml import to_python
+from openquake.hazardlib.sourceconverter import SourceConverter
 
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 PLOTTING = False
 aae = np.testing.assert_almost_equal
+
+
+def plot_prf_2d(ax, prfs):
+    for i, prf in enumerate(prfs):
+        coo = np.array([(p.longitude, p.latitude) for p in prf.points])
+        ax.plot(coo[:, 0], coo[:, 1], 'c--', lw=2)
+        ax.text(coo[0, 0], coo[0, 1], f'{i}')
+
 
 def plot_mesh_2d(ax, smsh):
     """
@@ -38,6 +50,19 @@ def plot_mesh_2d(ax, smsh):
         ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :], '-r', lw=0.5)
     for i in range(smsh.mesh.lons.shape[1]):
         ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i], '-r', lw=0.5)
+    ax.plot(smsh.mesh.lons[0, :], smsh.mesh.lats[0, :], '-g', lw=1.0)
+
+
+def plot_mesh_3d(ax, smsh, zfa):
+    """
+    Plots the mesh
+    """
+    for i in range(smsh.mesh.lons.shape[0]):
+        ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :],
+                smsh.mesh.depths[i, :]/zfa, '-r', lw=0.5)
+    for i in range(smsh.mesh.lons.shape[1]):
+        ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i],
+                smsh.mesh.depths[:, i]/zfa, '-r', lw=0.5)
 
 
 def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
@@ -161,6 +186,14 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
         aae(lons, tlo)
         aae(lats, tla)
 
+    def test_geom(self):
+        geom = kite_to_geom(self.ksfc)
+        ksfc = geom_to_kite(geom)
+        for par in ('lons', 'lats', 'depths'):
+            orig = getattr(self.ksfc.mesh, par)
+            copy = getattr(ksfc.mesh, par)
+            np.testing.assert_almost_equal(orig, copy)  # 32/64 bit mismatch
+
 
 class KiteSurfaceWithNaNs(unittest.TestCase):
     """
@@ -205,15 +238,16 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
                         10.09853744, 10.14926874, 10.2])
         ela = np.array([44.99160022, 45.00003185,
                         45.00004377, 45.00003315, 45.])
-        aae(elo, tlo)
-        aae(ela, tla)
 
         if PLOTTING:
             _, ax = plt.subplots(1, 1)
             plot_mesh_2d(ax, self.srfc)
+            plot_prf_2d(ax, self.prf)
             ax.plot(tlo, tla, '-g', lw=4)
             plt.show()
 
+        aae(elo, tlo)
+        aae(ela, tla)
 
     def test_rjb_calculation(self):
         # Test the calculation of the Rjb distance
@@ -668,6 +702,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                          idl, alg)
         lons, lats = srfc.surface_projection
+        # TODO
 
     def test_get_width(self):
         # Test the calculation of the width
@@ -743,6 +778,87 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         if PLOTTING:
             title = 'Top of the slab'
             ppp(self.profiles, smsh, title)
+
+
+class VerticalProfilesTest(unittest.TestCase):
+
+    def test_vertical_01(self):
+
+        fname = os.path.join(BASE_DATA_PATH, 'poly_problem.xml')
+        sconv = SourceConverter(1.0, 2.5)
+        ssm = to_python(fname, sconv)
+        src = ssm[0][0]
+        profiles = src.surface.profiles
+
+        # Create the surface from the profiles
+        sfc = KiteSurface.from_profiles(profiles, 2., 2.)
+
+        if PLOTTING:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            zfa = 50.
+            ax.plot(sfc.mesh.lons.flatten(), sfc.mesh.lats.flatten(),
+                    sfc.mesh.depths.flatten()/zfa, '.')
+            plot_mesh_3d(ax, sfc, zfa)
+            for pr in profiles:
+                coo = np.array([[p.longitude, p.latitude, p.depth/zfa]
+                                for p in pr])
+                ax.plot(coo[:, 0], coo[:, 1], coo[:, 2])
+            lo, la = sfc._get_external_boundary()
+            ax.plot(lo, la, np.zeros_like(lo))
+            ax.invert_zaxis()
+            # ax.set_box_aspect([1, 1, 1])
+            plt.show()
+
+        # Testing that the mesh is vertical
+        expected = [-75.03541, 19.85003, -75.03541, 19.85003]
+        computed = [sfc.mesh.lons[0, 0], sfc.mesh.lats[0, 0],
+                    sfc.mesh.lons[-1, 0], sfc.mesh.lats[-1, 0]]
+        np.testing.assert_allclose(expected, computed)
+
+        # Testing the calculation of the polygon
+        eblo, ebla = sfc._get_external_boundary()
+        mgd = geodetic.min_geodetic_distance
+        idx = np.min(np.where(np.isfinite(sfc.mesh.lons[:, 0])))
+        dst = mgd((sfc.mesh.lons[idx, 0], sfc.mesh.lats[idx, 0]),
+                  (eblo[:2], ebla[:2]))
+        self.assertTrue(np.all(dst < 0.1+0.01))
+
+
+class TestNarrowSurface(unittest.TestCase):
+
+    def test_narrow_01(self):
+
+        # The profiles are aligned at the top and the bottom. Their horizontal
+        # distance is lower than the sampling distance
+        self.profiles = []
+        tmp = [Point(0.0, 0.000, 0.0),
+               Point(0.0, 0.001, 15.0)]
+        self.profiles.append(Line(tmp))
+        tmp = [Point(0.01, 0.000, 0.0),
+               Point(0.01, 0.001, 15.0)]
+        self.profiles.append(Line(tmp))
+
+        # Computing the mesh
+        idl = False
+        alg = False
+        v_sampl = 5.0
+        h_sampl = 5.0
+        smsh = KiteSurface.from_profiles(
+            self.profiles, v_sampl, h_sampl, idl, alg)
+
+        # Testing
+        expected_lons = np.array([[0.01, 0.], [0.01, 0.], [0.01, 0.],
+                                  [0.01, 0.]])
+        expected_lats = np.array([[0., 0.], [0.00029411, 0.00029411],
+                                  [0.00058822, 0.00058822],
+                                  [0.00088233, 0.00088233]])
+        expected_deps = np.array([[0., 0.], [4.99989305, 4.99989305],
+                                  [9.99978609, 9.99978609],
+                                  [14.99967914, 14.99967914]])
+        aae(smsh.mesh.lons, expected_lons)
+        aae(smsh.mesh.lats, expected_lats)
+        aae(smsh.mesh.depths, expected_deps)
 
 
 def _read_profiles(path: str, prefix: str = 'cs') -> (list, list):

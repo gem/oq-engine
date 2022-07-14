@@ -20,10 +20,9 @@
 Conditional spectrum calculator, inspired by the disaggregation calculator
 """
 import logging
-import operator
 import numpy
 
-from openquake.baselib import parallel, general
+from openquake.baselib import general, performance
 from openquake.commonlib.calc import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.contexts import read_cmakers, csdict
@@ -52,30 +51,6 @@ def to_spectra(csdic, n, p):
     return out
 
 
-# the core task to be run in parallel
-def conditional_spectrum(dstore, slc, cmaker, imti, imls, monitor):
-    """
-    :param dstore:
-        a DataStore instance
-    :param slc:
-        a slice of contexts
-    :param cmaker:
-        a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
-    :param imti:
-        IMT index in the range 0..M-1
-    :param imls:
-        intensity measure levels associated to the IMT index
-    :param monitor:
-        monitor of the currently running job
-    :returns:
-        dictionary key -> gidx -> conditional spectrum contribution
-    """
-    with monitor('reading contexts', measuremem=True):
-        dstore.open('r')
-        ctxs = cmaker.read_ctxs(dstore, slc)
-    return cmaker.get_cs_contrib(ctxs, imti, imls)
-
-
 @base.calculators.add('conditional_spectrum')
 class ConditionalSpectrumCalculator(base.HazardCalculator):
     """
@@ -90,18 +65,13 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         """
         assert self.N <= self.oqparam.max_sites_disagg, (
             self.N, self.oqparam.max_sites_disagg)
-        if hasattr(self, 'csm'):
-            for sg in self.csm.src_groups:
-                if sg.atomic:
-                    raise NotImplementedError(
-                        'Atomic groups are not supported yet')
-        elif self.datastore['source_info'].attrs['atomic']:
-            raise NotImplementedError(
-                'Atomic groups are not supported yet')
 
     def execute(self):
         """
-        Compute the conditional spectrum
+        Compute the conditional spectrum in a sequential way.
+        NB: since conditional spectra are meant to be computed only for few
+        sites, there is no point in parallelizing: the computation is dominated
+        by the time spent reading the contexts, not by the CPU.
         """
         oq = self.oqparam
         self.full_lt = self.datastore['full_lt']
@@ -113,12 +83,10 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
                   else self.datastore)
         totrups = len(dstore['rup/mag'])
         logging.info('Reading {:_d} ruptures'.format(totrups))
-        rdt = [('grp_id', U16), ('nsites', U16), ('idx', U32)]
+        rdt = [('grp_id', U32), ('idx', U32)]
         rdata = numpy.zeros(totrups, rdt)
         rdata['idx'] = numpy.arange(totrups)
         rdata['grp_id'] = dstore['rup/grp_id'][:]
-        rdata['nsites'] = [len(sids) for sids in dstore['rup/sids_']]
-        totweight = rdata['nsites'].sum()
         trt_smrs = dstore['trt_smrs'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
         _G = sum(len(rbg) for rbg in rlzs_by_gsim)
@@ -142,29 +110,18 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
             cs=['spec', 'std'], poe_id=P)
         self.datastore.create_dset('_c', float, (_G, M, self.N, 2, P))
         self.datastore.create_dset('_s', float, (_G, self.N, P))
-        G = max(len(rbg) for rbg in rlzs_by_gsim)
-        maxw = 2 * 1024**3 / (16 * G * self.M)  # at max 2 GB
-        maxweight = min(
-            numpy.ceil(totweight / (oq.concurrent_tasks or 1)), maxw)
-        U = 0
-        Ta = 0
         self.cmakers = read_cmakers(self.datastore)
-        self.datastore.swmr_on()
-        smap = parallel.Starmap(conditional_spectrum, h5=self.datastore.hdf5)
+        # self.datastore.swmr_on()
         # IMPORTANT!! we rely on the fact that the classical part
         # of the calculation stores the ruptures in chunks of constant
         # grp_id, therefore it is possible to build (start, stop) slices
-        for block in general.block_splitter(rdata, maxweight,
-                                            operator.itemgetter('nsites'),
-                                            operator.itemgetter('grp_id')):
-            Ta += 1
-            grp_id = block[0]['grp_id']
-            G = len(rlzs_by_gsim[grp_id])
-            cmaker = self.cmakers[grp_id]
-            U = max(U, block.weight)
-            slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
-            smap.submit((dstore, slc, cmaker, imti, self.imls))
-        return smap.reduce()
+        out = general.AccumDict()  # grp_id => dict
+        for gid, start, stop in performance._idx_start_stop(rdata['grp_id']):
+            cmaker = self.cmakers[gid]
+            ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
+            for ctx in ctxs:
+                out += cmaker.get_cs_contrib(ctx, imti, self.imls)
+        return out
 
     def save(self, dsetname, csdic):
         """

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,10 +21,8 @@ Module exports :class:`DerrasEtAl2014`
 """
 import numpy as np
 from scipy.constants import g
-
-from openquake.baselib.general import CallableDict
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 # Constants used to normalise the input parameters
@@ -46,7 +44,7 @@ def rhypo_to_rjb(rhypo, mag):
     Converts hypocentral distance to an equivalent Joyner-Boore distance
     dependent on the magnitude
     """
-    epsilon = rhypo - (4.853 + 1.347E-6 * (mag ** 8.163))
+    epsilon = rhypo - (4.853 + 1.347E-6 * mag ** 8.163)
     rjb = np.zeros_like(rhypo)
     idx = epsilon >= 3.
     rjb[idx] = np.sqrt((epsilon[idx] ** 2.) - 9.0)
@@ -61,7 +59,7 @@ def _get_normalised_term(pval, pmax, pmin):
     N.B. This is given as 0.5 * (...) - 1 in the paper, but the Electronic
     Supplement implements it as 2.0 * (...) - 1
     """
-    return 2.0 * ((pval - pmin) / (pmax - pmin)) - 1
+    return 2.0 * (pval - pmin) / (pmax - pmin) - 1
 
 
 def _get_sof_dummy_variable(rake):
@@ -69,89 +67,38 @@ def _get_sof_dummy_variable(rake):
     Authors use a style of faulting dummy variable of 1 for normal
     faulting, 2 for reverse faulting and 3 for strike-slip
     """
-    if (rake > 45.0) and (rake < 135.0):
-        # Reverse faulting
-        return 3.0
-    elif (rake < -45.0) and (rake > -135.0):
-        # Normal faulting
-        return 1.0
-    else:
-        # Strike slip
-        return 4.0
+    res = np.full_like(rake, 4.0)  # strike slip
+    res[(rake > 45.0) & (rake < 135.0)] = 3.0  # reverse
+    res[(rake < -45.) & (rake > -135.)] = 1.0  # normal
+    return res
 
 
-get_pn = CallableDict()  # overridden in germany_2008
-
-
-@get_pn.add("base")
-def get_pn_base(region, ctx, sof):
+def get_pn(region, ctx, sof):
     """
     Normalise the input parameters within their upper and lower
-    defined range
+    defined range.
+
+    :returns: an array of shape (N, 5) with rjb, magn, vs30, depth, sof
     """
-    # List must be in following order
-    p_n = []
-    # Rjb
-    # Note that Rjb must be clipped at 0.1 km
+    p_n = np.zeros((len(ctx), 5))
     rjb = np.copy(ctx.rjb)
-    rjb[rjb < 0.1] = 0.1
-    p_n.append(_get_normalised_term(np.log10(rjb),
-                                    CONSTANTS["logMaxR"],
-                                    CONSTANTS["logMinR"]))
-    # Magnitude
-    p_n.append(_get_normalised_term(ctx.mag,
-                                    CONSTANTS["maxMw"],
-                                    CONSTANTS["minMw"]))
-    # Vs30
-    p_n.append(_get_normalised_term(np.log10(ctx.vs30),
-                                    CONSTANTS["logMaxVs30"],
-                                    CONSTANTS["logMinVs30"]))
-    # Depth
-    p_n.append(_get_normalised_term(ctx.hypo_depth,
-                                    CONSTANTS["maxD"],
-                                    CONSTANTS["minD"]))
-    # Style of Faulting
-    p_n.append(_get_normalised_term(sof,
-                                    CONSTANTS["maxFM"],
-                                    CONSTANTS["minFM"]))
-    return p_n
+    if region == 'germany':
+        rjb[ctx.width <= 1E-3] = rhypo_to_rjb(
+            ctx.rhypo, ctx.mag)[ctx.width <= 1E-3]
+    rjb[rjb < 0.1] = 0.1  # must be clipped at 0.1 km
 
+    p_n[:, 0] = _get_normalised_term(
+        np.log10(rjb), CONSTANTS["logMaxR"], CONSTANTS["logMinR"])
+    p_n[:, 1] = _get_normalised_term(
+        ctx.mag, CONSTANTS["maxMw"], CONSTANTS["minMw"])
+    p_n[:, 2] = _get_normalised_term(
+        np.log10(ctx.vs30), CONSTANTS["logMaxVs30"], CONSTANTS["logMinVs30"])
+    p_n[:, 3] = _get_normalised_term(
+        ctx.hypo_depth, CONSTANTS["maxD"], CONSTANTS["minD"])
+    p_n[:, 4] = _get_normalised_term(
+        sof, CONSTANTS["maxFM"], CONSTANTS["minFM"])
 
-@get_pn.add("germany")
-def get_pn_germany(region, ctx, sof):
-    """
-    Normalise the input parameters within their upper and lower
-    defined range
-    """
-    # List must be in following order
-    p_n = []
-    # Rjb
-    # Note that Rjb must be clipped at 0.1 km
-    if ctx.width > 1.0E-3:
-        rjb = np.copy(ctx.rjb)
-    else:
-        rjb = rhypo_to_rjb(ctx.rhypo, ctx.mag)
-    rjb[rjb < 0.1] = 0.1
-    p_n.append(_get_normalised_term(np.log10(rjb),
-                                    CONSTANTS["logMaxR"],
-                                    CONSTANTS["logMinR"]))
-    # Magnitude
-    p_n.append(_get_normalised_term(ctx.mag,
-                                    CONSTANTS["maxMw"],
-                                    CONSTANTS["minMw"]))
-    # Vs30
-    p_n.append(_get_normalised_term(np.log10(ctx.vs30),
-                                    CONSTANTS["logMaxVs30"],
-                                    CONSTANTS["logMinVs30"]))
-    # Depth
-    p_n.append(_get_normalised_term(ctx.hypo_depth,
-                                    CONSTANTS["maxD"],
-                                    CONSTANTS["minD"]))
-    # Style of Faulting
-    p_n.append(_get_normalised_term(sof,
-                                    CONSTANTS["maxFM"],
-                                    CONSTANTS["minFM"]))
-    return p_n
+    return p_n  # must be clipped at 0.1 km
 
 
 def get_mean(region, W_1, B_1, C, ctx):
@@ -159,23 +106,12 @@ def get_mean(region, W_1, B_1, C, ctx):
     Returns the mean ground motion in terms of log10 m/s/s, implementing
     equation 2 (page 502)
     """
-    # W2 needs to be a 1 by 5 matrix (not a vector
-    w_2 = np.array([
-        [C["W_21"], C["W_22"], C["W_23"], C["W_24"], C["W_25"]]])
-    # Gets the style of faulting dummy variable
-    sof = _get_sof_dummy_variable(ctx.rake)
-    # Get the normalised coefficients
-    p_n = get_pn(region,  ctx, sof)
+    w_2 = np.array([C["W_21"], C["W_22"], C["W_23"], C["W_24"], C["W_25"]])
+    p_n = get_pn(region, ctx, _get_sof_dummy_variable(ctx.rake))
     mean = np.zeros_like(ctx.rhypo if region == "germany" else ctx.rjb)
-    # Need to loop over ctx - maybe this can be improved in future?
-    # ndenumerate is used to allow for application to 2-D arrays
-    for idx, rval in np.ndenumerate(p_n[0]):
-        # Place normalised coefficients into a single array
-        p_n_i = np.array([rval, p_n[1], p_n[2][idx], p_n[3], p_n[4]])
-        # Executes the main ANN model
-        mean_i = np.dot(w_2, np.tanh(np.dot(W_1, p_n_i) + B_1))
-        mean[idx] = (0.5 * (mean_i + C["B_2"] + 1.0) *
-                     (C["tmax"] - C["tmin"])) + C["tmin"]
+    for i, p_n_i in enumerate(p_n):
+        mean[i] = (w_2 @ np.tanh(W_1 @ p_n_i + B_1) + C["B_2"] + 1.0) * (
+            C["tmax"] - C["tmin"]) / 2 + C["tmin"]
     return mean
 
 
@@ -205,7 +141,7 @@ class DerrasEtAl2014(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: The supported intensity measure component is 'average horizontal',
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: The supported standard deviations are total, inter and intra event
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
@@ -222,7 +158,7 @@ class DerrasEtAl2014(GMPE):
 
     adjustment_factor = 0.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

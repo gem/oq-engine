@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,8 +33,8 @@ def _compute_faulting_style_term(C, rake):
     Compute and return fifth and sixth terms in equations (2a)
     and (2b), pages 20.
     """
-    Fn = float(rake > -135.0 and rake < -45.0)
-    Fr = float(rake > 45.0 and rake < 135.0)
+    Fn = (rake > -135.0) & (rake < -45.0)
+    Fr = (rake > 45.0) & (rake < 135.0)
 
     return C['a8'] * Fn + C['a9'] * Fr
 
@@ -44,12 +44,7 @@ def _compute_linear_magnitude_term(C, c1, mag):
     Compute and return second term in equations (2a)
     and (2b), page 20.
     """
-    if mag <= c1:
-        # this is the second term in eq. (2a), p. 20
-        return C['a2'] * (mag - c1)
-    else:
-        # this is the second term in eq. (2b), p. 20
-        return C['a7'] * (mag - c1)
+    return np.where(mag <= c1, C['a2'] * (mag - c1), C['a7'] * (mag - c1))
 
 
 _compute_logarithmic_distance_term = CallableDict()
@@ -61,8 +56,8 @@ def _compute_logarithmic_distance_term_1(kind, C, c1, ctx):
     Compute and return fourth term in equations (2a)
     and (2b), page 20.
     """
-    return ((C['a4'] + C['a5'] * (ctx.mag - c1)) *
-            np.log(np.sqrt(ctx.rjb ** 2 + C['a6'] ** 2)))
+    return (C['a4'] + C['a5'] * (ctx.mag - c1)) * np.log(
+        np.sqrt(ctx.rjb ** 2 + C['a6'] ** 2))
 
 
 @_compute_logarithmic_distance_term.add("repi")
@@ -71,8 +66,8 @@ def _compute_logarithmic_distance_term_2(kind, C, c1, ctx):
     Compute and return fourth term in equations (2a)
     and (2b), page 20.
     """
-    return ((C['a4'] + C['a5'] * (ctx.mag - c1)) *
-            np.log(np.sqrt(ctx.repi ** 2 + C['a6'] ** 2)))
+    return (C['a4'] + C['a5'] * (ctx.mag - c1)) * np.log(
+        np.sqrt(ctx.repi ** 2 + C['a6'] ** 2))
 
 
 @_compute_logarithmic_distance_term.add("rhypo")
@@ -81,8 +76,8 @@ def _compute_logarithmic_distance_term_3(kind, C, c1, ctx):
     Compute and return fourth term in equations (2a)
     and (2b), page 20.
     """
-    return ((C['a4'] + C['a5'] * (ctx.mag - c1)) *
-            np.log(np.sqrt(ctx.rhypo ** 2 + C['a6'] ** 2)))
+    return (C['a4'] + C['a5'] * (ctx.mag - c1)) * np.log(
+        np.sqrt(ctx.rhypo ** 2 + C['a6'] ** 2))
 
 
 def _compute_mean(kind, C, c1, ctx):
@@ -117,11 +112,11 @@ def _compute_non_linear_term(C, pga_only, ctx):
 
     # equation (3b)
     idx = (ctx.vs30 >= Vref) & (ctx.vs30 <= Vcon)
-    lnS[idx] = C['b1'] * np.log(ctx.vs30[idx]/Vref)
+    lnS[idx] = C['b1'] * np.log(ctx.vs30[idx] / Vref)
 
     # equation (3c)
     idx = ctx.vs30 > Vcon
-    lnS[idx] = C['b1'] * np.log(Vcon/Vref)
+    lnS[idx] = C['b1'] * np.log(Vcon / Vref)
 
     return lnS
 
@@ -155,7 +150,7 @@ class AkkarEtAlRjb2014(GMPE):
 
     #: The supported intensity measure component is 'average horizontal', see
     #: section 'A New Generation of European Ground-Motion Models', page 8
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: The supported standard deviations are total, inter and intra event, see
     #: table 4.a, pages 22-23
@@ -180,7 +175,7 @@ class AkkarEtAlRjb2014(GMPE):
         [self.kind] = self.REQUIRES_DISTANCES
         self.adjustment_factor = np.log(adjustment_factor)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

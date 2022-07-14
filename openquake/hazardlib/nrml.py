@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -97,14 +97,14 @@ class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
-def check_unique(ids):
+def check_unique(ids, msg=''):
     """
     Raise a DuplicatedID exception if there are duplicated IDs
     """
     unique, counts = numpy.unique(ids, return_counts=True)
     for u, c in zip(unique, counts):
         if c > 1:
-            raise DuplicatedID(u)
+            raise DuplicatedID('%s %s' % (u, msg))
 
 
 class SourceModel(collections.abc.Sequence):

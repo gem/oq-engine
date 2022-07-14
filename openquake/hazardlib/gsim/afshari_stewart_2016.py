@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -61,27 +61,27 @@ def _get_phi(C, mag):
     Returns the magnitude dependent intra-event standard deviation (phi)
     (equation 15)
     """
-    if mag < 5.5:
-        return C["phi1"]
-    elif mag < 5.75:
-        return C["phi1"] + (C["phi2"] - C["phi1"]) * ((mag - 5.5) / 0.25)
-    else:
-        return C["phi2"]
-
+    phi = C["phi1"] + (C["phi2"] - C["phi1"]) * ((mag - 5.5) / 0.25)
+    phi[mag < 5.5] = C["phi1"]
+    phi[mag >= 5.75] = C["phi2"]
+    return phi
 
 def _get_sof_terms(C, rake):
     """
     Returns the style-of-faulting scaling parameters
     """
-    if rake >= 45.0 and rake <= 135.0:
-        # Reverse faulting
-        return C["b0R"], C["b1R"]
-    elif rake <= -45. and rake >= -135.0:
-        # Normal faulting
-        return C["b0N"], C["b1N"]
-    else:
-        # Strike slip
-        return C["b0SS"], C["b1SS"]
+    # Strike-slip faulting
+    b0 = np.full_like(rake, C["b0SS"])
+    b1 = np.full_like(rake, C["b1SS"])
+    # Reverse faulting
+    rev = (rake >= 45.) & (rake <= 135.)
+    b0[rev] = C["b0R"]
+    b1[rev] = C["b1R"]
+    # Normal faulting
+    nor = (rake <= -45.) & (rake >= -135.)
+    b0[nor] = C["b0N"]
+    b1[nor] = C["b1N"]
+    return b0, b1
 
 
 def _get_tau(C, mag):
@@ -89,12 +89,10 @@ def _get_tau(C, mag):
     Returns magnitude dependent inter-event standard deviation (tau)
     (equation 14)
     """
-    if mag < 6.5:
-        return C["tau1"]
-    elif mag < 7.:
-        return C["tau1"] + (C["tau2"] - C["tau1"]) * ((mag - 6.5) / 0.5)
-    else:
-        return C["tau2"]
+    tau = C["tau1"] + (C["tau2"] - C["tau1"]) * ((mag - 6.5) / 0.5)
+    tau[mag < 6.5] = C["tau1"]
+    tau[mag >= 7.] = C["tau2"]
+    return tau
 
 
 def get_distance_term(C, rrup):
@@ -117,22 +115,21 @@ def get_magnitude_term(C, ctx):
     """
     Returns the magnitude scaling term in equation 3
     """
-    b0, stress_drop = _get_sof_terms(C, ctx.rake)
-    if ctx.mag <= C["m1"]:
-        return b0
-    else:
-        # Calculate moment (equation 5)
-        m_0 = 10.0 ** (1.5 * ctx.mag + 16.05)
-        # Get stress-drop scaling (equation 6)
-        if ctx.mag > C["m2"]:
-            stress_drop += (C["b2"] * (C["m2"] - CONSTANTS["mstar"]) +
-                            (C["b3"] * (ctx.mag - C["m2"])))
-        else:
-            stress_drop += (C["b2"] * (ctx.mag - CONSTANTS["mstar"]))
-        stress_drop = np.exp(stress_drop)
-        # Get corner frequency (equation 4)
-        f0 = 4.9 * 1.0E6 * 3.2 * ((stress_drop / m_0) ** (1. / 3.))
-        return 1. / f0
+    b0, b1 = _get_sof_terms(C, ctx.rake)
+    # Calculate moment (equation 5)
+    m_0 = 10.0 ** (1.5 * ctx.mag + 16.05)
+    # Get stress-drop scaling (equation 6)
+    idx1 = ctx.mag > C["m2"]
+    b1[idx1] += (C["b2"] * (C["m2"] - CONSTANTS["mstar"]) +
+                 (C["b3"] * (ctx.mag[idx1] - C["m2"])))
+    idx2 = ctx.mag <= C["m2"]
+    b1[idx2] += C["b2"] * (ctx.mag[idx2] - CONSTANTS["mstar"])
+    stress_drop = np.exp(b1)
+    # Get corner frequency (equation 4)
+    f0 = 4.9 * 1.0E6 * 3.2 * (stress_drop / m_0) ** (1. / 3.)
+    term = 1. / f0
+    term[ctx.mag <= C["m1"]] = b0[ctx.mag <= C["m1"]]
+    return term
 
 
 def get_site_amplification(region, C, ctx):
@@ -180,7 +177,7 @@ class AfshariStewart2016(GMPE):
 
     #: Supported intensity measure component is the geometric mean horizontal
     #: component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total, see table 7, page 35
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
@@ -195,7 +192,7 @@ class AfshariStewart2016(GMPE):
     #: Required distance measure is closest distance to rupture
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

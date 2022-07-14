@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -52,7 +52,7 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
         # same mean as rupture with Mw = 4.4 (Mblg=4.8927897867183798) at
         # rhypo = 10
         ctx.mag = 2.9434938048208452
-        ctx.rhypo = numpy.array([1])
+        ctx.rhypo = ctx.rrup = numpy.array([1])
         ctx.sids = [0]
         mean_mw3_d1, _ = self.GSIM_CLASS().get_mean_and_stddevs(
             ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
@@ -68,7 +68,7 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
         # must give same mean as rupture with Mw = 8.2
         # (Mblg = 7.752253535347597) at rhypo = 1000
         ctx.mag = 8.2093636421088814
-        ctx.rhypo = numpy.array([1500.])
+        ctx.rhypo = ctx.rrup = numpy.array([1500.])
         mean_mw9_d1500, _ = self.GSIM_CLASS().get_mean_and_stddevs(
             ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
 
@@ -83,7 +83,7 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
         ctx = RuptureContext()
         ctx.mag = 5.
         ctx.sids = [0, 1]
-        ctx.rhypo = numpy.array([150, 100])
+        ctx.rhypo = ctx.rrup = numpy.array([150, 100])
         mean_150_100, _ = self.GSIM_CLASS().get_mean_and_stddevs(
             ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # 
-# Copyright (C) 2014-2021, GEM Foundation
+# Copyright (C) 2014-2022, GEM Foundation
 # 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -47,7 +47,7 @@ class AtkinsonMacias2009NSHMP2014(AtkinsonMacias2009):
     #: not verified warning
     non_verified = True
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -70,9 +70,9 @@ class SInterCan15Mid(GMPE):
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components :
-    #: attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see paragraph
+    #: attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`, see paragraph
     #: 'Development of Base Model', p. 901.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Required site parameters is Vs30.
     #: See table 2, p. 901.
@@ -116,7 +116,7 @@ class SInterCan15Mid(GMPE):
              AbrahamsonEtAl2015SInter(), GhofraniAtkinson2014()]
     sgn = 0
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`

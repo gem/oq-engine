@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -95,11 +95,13 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
     cmon = monitor('computing gmfs', measuremem=False)
     with dstore:
         trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
+        sitecol = dstore['sitecol']
+        extra = sitecol.array.dtype.names
         srcfilter = SourceFilter(
-            dstore['sitecol'], oqparam.maximum_distance(trt))
+            sitecol, oqparam.maximum_distance(trt))
         rupgeoms = dstore['rupgeoms']
         rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
-        cmaker = ContextMaker(trt, rlzs_by_gsim, oqparam)
+        cmaker = ContextMaker(trt, rlzs_by_gsim, oqparam, extraparams=extra)
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         for proxy in proxies:
             t0 = time.time()
@@ -205,9 +207,6 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
-        params = dict(imtls=oq.imtls,
-                      ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
-                      ses_seed=oq.ses_seed)
         gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
         sources = self.csm.get_sources()
         # weighting the heavy sources
@@ -226,14 +225,7 @@ class EventBasedCalculator(base.HazardCalculator):
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         source_data = AccumDict(accum=[])
         allargs = []
-        if self.oqparam.is_ucerf():
-            # manage the filtering in a special way
-            for sg in self.csm.src_groups:
-                for src in sg:
-                    src.src_filter = self.srcfilter
-            srcfilter = nofilter  # otherwise it would be ultra-slow
-        else:
-            srcfilter = self.srcfilter
+        srcfilter = self.srcfilter
         logging.info('Building ruptures')
         for sg in self.csm.src_groups:
             if not sg.sources:
@@ -331,8 +323,9 @@ class EventBasedCalculator(base.HazardCalculator):
                     '%s for a scenario calculation must contain a single '
                     'branchset, found %d!' % (oq.inputs['job_ini'], bsets))
             [(trt, rlzs_by_gsim)] = gsim_lt.get_rlzs_by_gsim_trt().items()
-            self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
             rup = readinput.get_rupture(oq)
+            oq.mags_by_trt = {trt: ['%.2f' % rup.mag]}
+            self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
                                   'NA', 0, G, e0=i * G, scenario=True)

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -27,6 +27,8 @@ from openquake.hazardlib.tests import assert_angles_equal
 from openquake.hazardlib.tests.geo import _mesh_test_data
 
 aac = numpy.testing.assert_allclose
+
+# the tests here require shapely >= 1.8
 
 
 class MeshCreationTestCase(unittest.TestCase):
@@ -407,8 +409,7 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         depths = depths.transpose()
         mesh = RectangularMesh(lons, lats, depths)
         distance = mesh.get_joyner_boore_distance(
-            Mesh.from_points_list([Point(*site)])
-        )[0]
+            Mesh.from_points_list([Point(*site)]))[0]
         self.assertAlmostEqual(distance, expected_distance, delta=0.02)
 
     def test3(self):
@@ -738,7 +739,7 @@ class RectangularMeshGetCellDimensionsTestCase(unittest.TestCase):
     def test_unequal_triangle_areas_topo(self):
         self._test(
             points=[[(10, 0, 0), (11, 0, 0)],
-                   [(10, 0, -1), (11, 0, -2)]],
+                    [(10, 0, -1), (11, 0, -2)]],
             centroids=[(((10 + 1/3.) * 0.5 + (10 + 2/3.) * 1) / 1.5, 0,
                         ((-1/3.) * 0.5 + (-1) * 1) / 1.5)],
             lengths=[(1 * 0.5 + math.sqrt(2) * 1) / (0.5 + 1)],
@@ -797,8 +798,9 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
         proj, polygon = mesh._get_proj_enclosing_polygon()
         self.assertTrue(polygon.is_valid)
         self.assertEqual(list(polygon.interiors), [])
-        coords = numpy.array(proj(*numpy.array(polygon.exterior).transpose(),
-                                  reverse=True)).transpose()
+        ext_array = numpy.array(polygon.exterior.coords)
+        coords = numpy.array(proj(*ext_array.T, reverse=True)).T
+        print(numpy.round(coords, 2).tolist())
         numpy.testing.assert_almost_equal(coords, expected_coords, decimal=4)
         return polygon
 
@@ -809,15 +811,16 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
                             [0.1, 0.1]])
         depths = numpy.array([[2., 3.],
                               [8., 9.]])
-        expected_coords = [(-0.1, -0.1), (-0.1, 0.1), (0.1, 0.1), (0.1, -0.1),
-                           (-0.1, -0.1)]
+        expected_coords = [[0.1, -0.1], [-0.1, -0.1], [-0.1, 0.1], [0.1, 0.1],
+                           [0.1, -0.1]]
         polygon = self._test(lons, lats, depths, expected_coords)
 
         coords2d = numpy.array(polygon.exterior.coords)
-        expected_coords2d = [(-11.12, -11.12), (-11.12, 11.12), (11.12, 11.12),
-                             (11.12, -11.12), (-11.12, -11.12)]
+        expected_coords2d = [[11.12, -11.12], [-11.12, -11.12],
+                             [-11.12, 11.12], [11.12, 11.12], [11.12, -11.12]]
         numpy.testing.assert_almost_equal(coords2d, expected_coords2d,
                                           decimal=2)
+
     def test_idl(self):
         lons = numpy.array([[179.9, -179.9],
                             [179.9, -179.9]])
@@ -825,13 +828,13 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
                             [0.1, 0.1]])
         depths = numpy.array([[2., 3.],
                               [8., 9.]])
-        expected_coords = [(179.9, -0.1), (179.9, 0.1), (-179.9, 0.1), 
-                           (-179.9, -0.1), (179.9, -0.1)]
+        expected_coords = [[-179.9, -0.1], [179.9, -0.1], [179.9, 0.1],
+                           [-179.9, 0.1], [-179.9, -0.1]]
         polygon = self._test(lons, lats, depths, expected_coords)
 
         coords2d = numpy.array(polygon.exterior.coords)
-        expected_coords2d = [(-11.12, -11.12), (-11.12, 11.12), (11.12, 11.12),
-                             (11.12, -11.12), (-11.12, -11.12)]
+        expected_coords2d = [[11.12, -11.12], [-11.12, -11.12],
+                             [-11.12, 11.12], [11.12, 11.12], [11.12, -11.12]]
         numpy.testing.assert_almost_equal(coords2d, expected_coords2d,
                                           decimal=2)
 
@@ -839,8 +842,11 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
         lons, lats = numpy.meshgrid(numpy.arange(-2, 3) / 10.,
                                     numpy.arange(-2, 3) / 10.)
         depths = None
-        expected_coords = [(-0.2, -0.2), (-0.2, 0.2), (0.2, 0.2),
-                           (0.2, -0.2), (-0.2, -0.2)]
+        # NB: the expected_coords can be different with different
+        # versions of shapely, however the polygon is the same
+        # (checked by plotting, it is a square)
+        expected_coords = [(0.2, -0.2), (-0.2, -0.2), (-0.2, 0.2),
+                           (0.2, 0.2), (0.2, -0.2)]
         self._test(lons, lats, depths, expected_coords)
 
     def test_vertical_mesh(self):
@@ -872,16 +878,18 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
         lons = numpy.array([[0., 0.05, 0.], [0.1, 0.05, 0.1]])
         lats = numpy.array([[0., 0.1, 0.2]] * 2)
         depths = numpy.array([[1., 1., 1.], [2., 2., 2.]])
-        expected_coords = [(-0, 0.2), (0.1, 0.2), (0.05, 0.1), (0.1, -0),
-                           (-0, -0), (0.05, 0.1), (-0, 0.2)]
+        expected_coords = [[-0., 0.2], [0.1, 0.2],
+                           [0.05, 0.1], [0.1, -0.],
+                           [-0., -0.], [0.05, 0.1],
+                           [-0., 0.2], [-0., 0.2]]
         self._test(lons, lats, depths, expected_coords)
 
     def test_reversing_dip(self):
         lons = numpy.array([[0., 0., 0.], [0.1, 0.1, 0.1], [0., 0., 0.]])
         lats = numpy.array([[0., 0.1, 0.2]] * 3)
         depths = numpy.array([[1., 1., 1.], [2., 2., 2.], [3., 3., 3.]])
-        expected_coords = [(-0, 0.2), (0.1, 0.2), (0.1, -0), (-0, -0),
-                           (-0, 0.2)]
+        expected_coords = [[0.1, 0.2], [0.1, -0.0], [-0.0, -0.0],
+                           [-0.0, 0.2], [0.1, 0.2]]
         self._test(lons, lats, depths, expected_coords)
 
 

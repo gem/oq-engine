@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,11 +45,7 @@ def _compute_mean(C, mag, rjb):
     mean[less_r1] += C['c3'] * np.log(R[less_r1])
     mean[ge_r1] += (C['c3'] * np.log(R1) +
                     C['c6'] * (np.log(R[ge_r1]) - np.log(R1)))
-
-    if mag < m1:
-        mean += C['c2'] * (mag - m1)
-    else:
-        mean += C['c7'] * (mag - m1)
+    mean += np.where(mag < m1, C['c2'] * (mag - m1), C['c7'] * (mag - m1))
 
     return mean
 
@@ -71,7 +67,7 @@ class SomervilleEtAl2009NonCratonic(GMPE):
 
     #: The supported intensity measure component is set to 'average
     #: horizontal', however the original paper does not report this information
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: The supported standard deviations is total, see tables 3
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -87,7 +83,7 @@ class SomervilleEtAl2009NonCratonic(GMPE):
     #: The required distance parameter is 'Joyner-Boore' distance, see table 2
     REQUIRES_DISTANCES = {'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt1">
+    <logicTreeBranchingLevel branchingLevelID="bl1">
+      <logicTreeBranchSet branchSetID="bs1" uncertaintyType="sourceModel">
+        <logicTreeBranch branchID="source_0">
+          <uncertaintyModel>
+			source_negbinom.xml
+</uncertaintyModel>
+          <uncertaintyWeight>
+			1.0
+</uncertaintyWeight>
+        </logicTreeBranch>
+      </logicTreeBranchSet>
+    </logicTreeBranchingLevel>
+  </logicTree>
+</nrml>

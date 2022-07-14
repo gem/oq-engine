@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -116,7 +116,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                      for cp in self.crmodel.curve_params
                      if cp.user_provided}
         self.loss_curve_dt = scientific.build_loss_curve_dt(
-            curve_res, insured_losses=False)
+            curve_res, insurance_losses=False)
         ltypes = self.crmodel.loss_types
 
         # loss curves stats are generated always
@@ -129,10 +129,11 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 avg_losses[a, s, li] = statloss[s]
                 base.set_array(stat_curves_lt['poes'][a, s], statpoes[s])
                 base.set_array(stat_curves_lt['losses'][a, s], losses)
-        self.datastore['avg_losses-stats'] = avg_losses
-        self.datastore.set_shape_descr(
-            'avg_losses-stats', asset_id=self.assetcol['id'],
-            stat=stats, loss_type=self.oqparam.loss_types)
+        for li, lt in enumerate(ltypes):
+            self.datastore['avg_losses-stats/' + lt] = avg_losses[:, :, li]
+            self.datastore.set_shape_descr(
+                'avg_losses-stats/' + lt,
+                asset_id=self.assetcol['id'], stat=stats)
         self.datastore['loss_curves-stats'] = stat_curves
         self.datastore.set_attrs('loss_curves-stats', stat=stats)
 

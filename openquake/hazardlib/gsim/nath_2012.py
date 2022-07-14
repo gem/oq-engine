@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -113,7 +113,7 @@ class NathEtAl2012Lower(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
     DEFINED_FOR_REFERENCE_VELOCITY = 800.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         # pylint: disable=too-many-arguments
         """
         See :meth:`superclass method

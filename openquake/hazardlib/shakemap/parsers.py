@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2021 GEM Foundation
+# Copyright (C) 2018-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,10 +31,7 @@ import pathlib
 import logging
 import json
 import zipfile
-
 from shapely.geometry import Polygon
-import shapefile
-
 import numpy
 from openquake.baselib.general import CallableDict
 from openquake.baselib.node import node_from_xml
@@ -110,6 +107,7 @@ def get_array_shapefile(kind, fname):
     either a zip or the location of one of the files,
     *.shp and *.dbf are necessary, *.prj and *.shx optional
     """
+    import shapefile  # optional dependency
     fname = path2url(fname)
 
     extensions = ['shp', 'dbf', 'prj', 'shx']

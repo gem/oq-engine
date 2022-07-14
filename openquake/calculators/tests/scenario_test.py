@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,7 @@ from openquake.qa_tests_data.scenario import (
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
-from openquake.calculators.views import text_table
+from openquake.calculators.views import text_table, view
 from openquake.calculators.tests import CalculatorTestCase
 
 
@@ -149,6 +149,10 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqual(4*(counts_by_eid.sid == 4).sum(), 400)
         self.assertEqual(6*(counts_by_eid.sid == 6).sum(), 600)
 
+        # check the branches
+        tbl = text_table(view('branches', self.calc.datastore))
+        self.assertEqualFiles('expected/branches.org', gettemp(tbl))
+
     def test_case_14(self):
         # new Swiss GMPEs
         self.run_calc(case_14.__file__, 'job.ini')
@@ -177,7 +181,10 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_17(self):
         # CSV exposure in latin1
         self.run_calc(case_17.__file__, 'job.ini')
-        tbl = text_table(self.calc.datastore['agg_keys'][:], ext='org')
+        rows = [row.decode('utf8').split(',')
+                for row in self.calc.datastore['agg_keys'][:]]
+        header = self.calc.oqparam.aggregate_by
+        tbl = text_table(rows, header=header, ext='org')
         self.assertEqualFiles('agg_keys.org', gettemp(tbl))
 
     def test_case_18(self):

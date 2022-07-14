@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,8 +33,25 @@ from openquake.hazardlib.source.rupture import (
     EBRupture, get_ruptures, _get_rupture)
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
+
+@property
+def cmaker(self):
+    if len(self.cmakerdict) == 1:
+        return list(self.cmakerdict.values())[0]
+    raise TypeError('There are multiple cmakers inside %s' % self.cmakerdict)
+
+
+@property
+def group(self):
+    if len(self.groups) == 1:
+        return self.groups[0]
+    raise TypeError('There are multiple groups inside %s' % self.groups)
+
+
 bytrt = operator.attrgetter('tectonic_region_type')
 Input = collections.namedtuple('Input', 'groups sitecol gsim_lt cmakerdict')
+Input.cmaker = cmaker
+Input.group = group
 
 
 def _get_site_model(fname, req_site_params):
@@ -137,14 +154,14 @@ def read_hparams(job_ini):
 
 def read_input(hparams, **extra):
     """
-    :param hparams: a dictionary of hazard parameters
+    :param hparams: path to a job.ini file or dictionary of hazard parameters
     :returns: an Input namedtuple (groups, sitecol, gsim_lt, cmakerdict)
 
-    The dictionary must contain the keys
+    The dictionary hparams must contain the keys
 
     - "maximum_distance"
     - "imtls"
-    - "source_model_file" or "rupture_model_file"
+    - "source_model_file" or "rupture_model_file" or "source_string"
     - "sites" or "site_model_file"
     - "gsim" or "gsim_logic_tree_file"
 
@@ -174,6 +191,7 @@ def read_input(hparams, **extra):
     assert 'imts' in hparams or 'imtls' in hparams
     assert isinstance(hparams['maximum_distance'], IntegrationDistance)
     smfname = hparams.get('source_model_file')
+    srcstring = hparams.get('source_string')
     if smfname:  # nonscenario
         itime = hparams['investigation_time']
     else:
@@ -182,7 +200,7 @@ def read_input(hparams, **extra):
     if rmfname:
         ngmfs = hparams["number_of_ground_motion_fields"]
         ses_seed = hparams["ses_seed"]
-    converter = sourceconverter.SourceConverter(
+    converter = c = sourceconverter.SourceConverter(
         itime,
         hparams.get('rupture_mesh_spacing', 5.),
         hparams.get('complex_fault_mesh_spacing'),
@@ -197,6 +215,12 @@ def read_input(hparams, **extra):
     elif rmfname:
         ebrs = _get_ebruptures(rmfname, converter, ses_seed)
         groups = _rupture_groups(ebrs)
+    elif srcstring:
+        src = nrml.get(srcstring, c.investigation_time, c.rupture_mesh_spacing,
+                       c.width_of_mfd_bin, c.area_source_discretization)
+        grp = sourceconverter.SourceGroup(src.tectonic_region_type)
+        grp.sources = list(src)
+        groups = [grp]
     else:
         raise KeyError('Missing source_model_file or rupture_file')
     trts = set(grp.trt for grp in groups)
@@ -208,9 +232,12 @@ def read_input(hparams, **extra):
     # fix source attributes
     idx = 0
     num_rlzs = gslt.get_num_paths()
+    mags_by_trt = general.AccumDict(accum=set())
     for grp_id, sg in enumerate(groups):
         assert len(sg)  # sanity check
         for src in sg:
+            if hasattr(src, 'rupture'):
+                mags_by_trt[sg.trt].add('%.2f' % src.rupture.mag)
             src.id = idx
             src.grp_id = grp_id
             src.trt_smr = grp_id
@@ -222,11 +249,12 @@ def read_input(hparams, **extra):
     n = hparams.get('number_of_logic_tree_samples', 0)
     s = hparams.get('random_seed', 42)
     for trt, rlzs_by_gsim in gslt.get_rlzs_by_gsim_trt(n, s).items():
+        hparams['mags'] = sorted(mags_by_trt[trt] or mags_by_trt['*'])
         cmakerdict[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, hparams)
         cmakerdict[trt].start = start
         start += len(rlzs_by_gsim)
     if rmfname:
-        # for instance for 2 TRTs with 5x2 GSIMs and ngmfs=10, then the
+        # for instance, for 2 TRTs with 5x2 GSIMs and ngmfs=10, the
         # number of occupation is 100 for each rupture, for a total
         # of 200 events, see scenario/case_13
         nrlzs = gslt.get_num_paths()

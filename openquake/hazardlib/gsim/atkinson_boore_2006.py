@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,8 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils import (
-    mblg_to_mw_atkinson_boore_87, mblg_to_mw_johnston_96, clip_mean)
+    mblg_to_mw_atkinson_boore_87, mblg_to_mw_johnston_96, clip_mean,
+    get_fault_type_dummy_variables)
 
 #: IMT-independent coefficients. std_total is the total standard deviation,
 #: see Table 6, pag 2192 and Table 9, pag 2202. R0, R1, R2 are coefficients
@@ -56,7 +57,6 @@ def _clip_distances(rrup):
     """
     rrup = rrup.copy()
     rrup[rrup < 1] = 1
-
     return rrup
 
 
@@ -112,6 +112,9 @@ def _compute_mean(C, f0, f1, f2, SC, mag, rrup, idxs, mean,
     Compute mean value (for a set of indexes) without site amplification
     terms. This is equation (5), p. 2191, without S term.
     """
+    if idxs.sum() == 0:  # no effect
+        return
+    mag = mag[idxs]
     mean[idxs] = (C['c1'] +
                   C['c2'] * mag +
                   C['c3'] * (mag ** 2) +
@@ -123,14 +126,14 @@ def _compute_mean(C, f0, f1, f2, SC, mag, rrup, idxs, mean,
 
 
 def _compute_ms(ctx, C):
-    U, SS, NS, RS = _get_fault_type_dummy_variables(ctx)
-    if ctx.mag <= C['Mh']:
-        return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
-            C['e5'] * (ctx.mag - C['Mh']) + \
-            C['e6'] * (ctx.mag - C['Mh']) ** 2
-    else:
-        return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
-            C['e7'] * (ctx.mag - C['Mh'])
+    SS, NS, RS = get_fault_type_dummy_variables(ctx)
+    res = C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + C['e7'] * (
+        ctx.mag - C['Mh'])
+    less = ctx.mag <= C['Mh']
+    res[less] = (C['e2'] * SS[less] + C['e3'] * NS[less] + C['e4'] * RS[less] +
+                 C['e5'] * (ctx.mag[less] - C['Mh']) + C['e6'] *
+                 (ctx.mag[less] - C['Mh']) ** 2)
+    return res
 
 
 def _compute_non_linear_slope(vs30, C):
@@ -212,10 +215,10 @@ def _compute_stress_drop_adjustment(SC, mag, scale_fac):
     """
     Compute equation (6) p. 2200
     """
-    return scale_fac * np.minimum(
-        SC['delta'] + 0.05,
-        0.05 + SC['delta'] * (
-            np.maximum(mag - SC['M1'], 0) / (SC['Mh'] - SC['M1'])))
+    clipped_mag = np.clip(mag - SC['M1'], 0, None)
+    return scale_fac * np.clip(
+        0.05 + SC['delta'] * clipped_mag / (SC['Mh'] - SC['M1']),
+        None, SC['delta'] + 0.05)
 
 
 def _convert_magnitude(mag_eq, mag):
@@ -242,34 +245,6 @@ def _extract_coeffs(self, imt):
     SC = self.COEFFS_STRESS[imt]
 
     return C_HR, C_BC, C_SR, SC
-
-
-def _get_fault_type_dummy_variables(ctx):
-    """
-    Get fault type dummy variables, see Table 2, pag 107.
-    Fault type (Strike-slip, Normal, Thrust/reverse) is
-    derived from rake angle.
-    Rakes angles within 30 of horizontal are strike-slip,
-    angles from 30 to 150 are reverse, and angles from
-    -30 to -150 are normal. See paragraph 'Predictor Variables'
-    pag 103.
-    Note that the 'Unspecified' case is not considered,
-    because rake is always given.
-    """
-    U, SS, NS, RS = 0, 0, 0, 0
-    if ctx.rake == 'undefined':
-        U = 1
-    elif np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
-        # strike-slip
-        SS = 1
-    elif ctx.rake > 30.0 and ctx.rake < 150.0:
-        # reverse
-        RS = 1
-    else:
-        # normal
-        NS = 1
-
-    return U, SS, NS, RS
 
 
 def _get_mean(self, vs30, mag, rrup, imt, scale_fac):
@@ -380,9 +355,8 @@ def _get_stress_drop_scaling_factor(magnitude):
     """
     stress_drop = 10.0 ** (3.45 - 0.2 * magnitude)
     cap = 10.0 ** (3.45 - 0.2 * 5.0)
-    if stress_drop > cap:
-        stress_drop = cap
-    return log10(stress_drop / 140.0) / log10(2.0)
+    stress_drop[stress_drop > cap] = cap
+    return np.log10(stress_drop / 140.0) / log10(2.0)
 
 
 class AtkinsonBoore2006(GMPE):
@@ -411,9 +385,9 @@ class AtkinsonBoore2006(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is horizontal
-    #: :attr:`~openquake.hazardlib.const.IMC.HORIZONTAL`,
-    #: see paragraph 'Results', pag 2190, and caption to table 6, p. 2192
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
+    #: :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`,
+    #: personal communication with Gail Atkinson
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is total, see table 6
     #: and 9, p. 2192 and 2202, respectively.
@@ -444,7 +418,7 @@ class AtkinsonBoore2006(GMPE):
         self.scale_fac = scale_fac
 
     # used in the "Modified" version
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

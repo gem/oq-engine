@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2021 GEM Foundation
+# Copyright (C) 2010-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -205,14 +205,14 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import config, hdf5, workerpool, version
+from openquake.baselib import config, hdf5, workerpool
 from openquake.baselib.python3compat import decode
 from openquake.baselib.zeromq import zmq, Socket, TimeoutError
 from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp)
+    gettemp, engine_version)
 
 sys.setrecursionlimit(1200)  # raised a bit to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
@@ -414,11 +414,11 @@ class Result(object):
         :returns: a new Result instance
         """
         try:
-            if mon.version != version:
+            if mon.version and mon.version != engine_version():
                 raise RuntimeError(
                     'The master is at version %s while the worker %s is at '
                     'version %s' % (mon.version, socket.gethostname(),
-                                    version))
+                                    engine_version()))
             if mon.config.dbserver.host != config.dbserver.host:
                 raise RuntimeError(
                     'The master has dbserver.host=%s while the worker has %s'
@@ -454,7 +454,6 @@ def check_mem_usage(soft_percent=None, hard_percent=None):
 
 
 dummy_mon = Monitor()
-dummy_mon.version = version
 dummy_mon.config = config
 dummy_mon.backurl = None
 
@@ -756,10 +755,13 @@ class Starmap(object):
             self.calc_id = None
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)
-        self.monitor = Monitor(task_func.__name__)
+        if task_func is split_task:
+            self.name = task_args[0][1].__name__
+        else:
+            self.name = task_func.__name__
+        self.monitor = Monitor(self.name)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
-        self.name = self.monitor.operation
         self.task_args = task_args
         self.progress = progress
         self.h5 = h5
@@ -772,8 +774,12 @@ class Starmap(object):
         self.sent = AccumDict(accum=AccumDict())  # fname -> argname -> nbytes
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
-        self.receiver = 'tcp://%s:%s' % (
-            config.dbserver.listen, config.dbserver.receiver_ports)
+        self.receiver = 'tcp://0.0.0.0:%s' % config.dbserver.receiver_ports
+        if self.distribute in ('no', 'processpool'):
+            self.return_ip = '127.0.0.1'  # zmq returns data to localhost
+        else:  # zmq returns data to the receiver_host
+            self.return_ip = socket.gethostbyname(
+                config.dbserver.receiver_host or socket.gethostname())
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
@@ -811,8 +817,7 @@ class Starmap(object):
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
-                config.dbserver.host, self.socket.port)
-            self.monitor.version = version
+                self.return_ip, self.socket.port)
             self.monitor.config = config
         OQ_TASK_NO = os.environ.get('OQ_TASK_NO')
         if OQ_TASK_NO is not None and self.task_no != int(OQ_TASK_NO):
@@ -839,9 +844,13 @@ class Starmap(object):
         """
         Submit the given arguments to the underlying task
         """
+        # if self.num_cores <= 8:  # do not split, use less memory
+        #     self.submit(args)
+        #    return
         self.monitor.operation = self.task_func.__name__ + '_'
-        self.submit((args[0], self.task_func, args[1:], duration, outs_per_task),
-                    split_task)
+        self.submit(
+            (args[0], self.task_func, args[1:], duration, outs_per_task),
+            split_task)
 
     def submit_all(self):
         """
@@ -966,11 +975,12 @@ def split_task(elements, func, args, duration, outs_per_task, monitor):
     # see how long it takes to run the first slice
     t0 = time.time()
     for i, elems in enumerate(split_elems):
+        monitor.out_no = monitor.task_no + i * 65536
         res = func(elems, *args, monitor=monitor)
         dt = time.time() - t0
         yield res
         if dt > duration:
-            # spawn subtasks for the rest and exit
+            # spawn subtasks for the rest and exit, used in classical/case_14
             for els in split_elems[i + 1:]:
                 ls = List(els)
                 ls.weight = sum(getattr(el, 'weight', 1.) for el in els)

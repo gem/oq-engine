@@ -1,22 +1,61 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: engine
+  name: master
   labels:
-    app: engine 
+    app: master 
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      app: engine
+      app: master
   template:
     metadata:
       labels:
-        app: engine
+        app: master
     spec:
+      securityContext: 
+        runAsUser: 1000 
+        runAsGroup: 1000 
+        fsGroup: 1000 
       containers:
-      - name: engine
+      - name: master
         image: openquake/engine:nightly
-        ports:
-        - name: webui
-          containerPort: 8800
+        imagePullPolicy: Always 
+        #resources: 
+        #  limits: 
+        #   memory: "8Gi" 
+        #   cpu: "8" 
+        #  requests: 
+        #    memory: "24Gi" 
+        #    cpu: "6" 
+        env: 
+        - name: OQ_CONFIG_FILE 
+          value: /opt/openquake/venv/openquake.cfg 
+        - name: HOME 
+          value: /opt/openquake 
+        - name: PATH 
+          value: /opt/openquake/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin 
+        - name: OQ_WORKER_NAME 
+          valueFrom: 
+            fieldRef: 
+              fieldPath: metadata.name 
+        - name: OQ_WORKER_IP 
+          valueFrom: 
+            fieldRef: 
+              fieldPath: status.podIP 
+        volumeMounts:
+        - mountPath: "/opt/openquake"
+          name: azure
+          readOnly: false 
+      volumes: 
+        - name: azure 
+          persistentVolumeClaim: 
+            claimName: nfsdata
+      nodeSelector:
+        vCpu: AMD
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"

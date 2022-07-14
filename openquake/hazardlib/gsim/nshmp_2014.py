@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,7 +24,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim import base
 
 
-def nga_west2_epistemic_adjustment(magnitude, distance):
+def nga_west2_epistemic_adjustment(mag, dist):
     """
     Applies the "average" adjustment factor for epistemic uncertainty
     as defined in Table 17 of Petersen et al., (2014)::
@@ -35,16 +35,13 @@ def nga_west2_epistemic_adjustment(magnitude, distance):
      6 <= M <7.0 |   0.25    |      0.23         |       0.23
        M >= 7.0  |   0.40    |      0.36         |       0.33
     """
-    if magnitude < 6.0:
-        adjustment = 0.22 * np.ones_like(distance)
-        adjustment[distance < 10.0] = 0.37
-    elif magnitude >= 7.0:
-        adjustment = 0.36 * np.ones_like(distance)
-        adjustment[distance < 10.0] = 0.40
-        adjustment[distance >= 30.0] = 0.33
-    else:
-        adjustment = 0.23 * np.ones_like(distance)
-        adjustment[distance < 10.0] = 0.25
+    adjustment = 0.23 * np.ones_like(dist)
+    adjustment[(mag < 6.) & (dist < 10.)] = .37
+    adjustment[(mag < 6.) & (dist >= 10.)] = .22
+    adjustment[(mag >= 6.) & (mag < 7.) & (dist < 10.)] = .25
+    adjustment[(mag >= 7.) & (dist < 10.)] = .40
+    adjustment[(mag >= 7.) & (dist >= 10.) & (dist < 30.)] = .36
+    adjustment[(mag >= 7.) & (dist >= 30.)] = .33
     return adjustment
 
 
@@ -79,16 +76,14 @@ class NSHMP2014(base.GMPE):
         self.gsim = cls()  # underlying gsim
         super().__init__(**kwargs)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.compute>`
-        for spec of input and result values.
+        Compute mean, sig, tau, phi and returns the so called adjustment
         """
         self.gsim.compute(ctx, imts, mean, sig, tau, phi)
-        ctx.adjustment = nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)
-        mean[:] += self.sgn * ctx.adjustment
-
+        adjustment = nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)
+        mean[:] += self.sgn * adjustment
+        return adjustment
 
 # populate gsim_aliases
 # for instance "AbrahamsonEtAl2014NSHMPMean" is associated to the TOML string

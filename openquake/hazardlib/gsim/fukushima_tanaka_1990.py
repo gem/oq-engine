@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -72,8 +72,8 @@ class FukushimaTanaka1990(GMPE):
 
     #: Supported intensity measure component is the average horizontal
     #: component
-    #: :attr:`openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    #: :attr:`openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`,
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types is total.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -92,7 +92,7 @@ class FukushimaTanaka1990(GMPE):
     #: Required distance measure is rupture distance
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

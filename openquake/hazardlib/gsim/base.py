@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,8 +28,8 @@ import warnings
 import functools
 import numpy
 
-from openquake.baselib.general import DeprecationWarning, gen_slices
-from openquake.baselib.performance import compile, numba
+from openquake.baselib.general import DeprecationWarning
+from openquake.baselib.performance import compile
 from openquake.hazardlib import const
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
@@ -48,7 +48,7 @@ ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
                            'REQUIRES_SITES_PARAMETERS',
                            'REQUIRES_RUPTURE_PARAMETERS']
 
-ONE_MB = 1024 ** 2
+F64 = numpy.float64
 registry = {}  # GSIM name -> GSIM class
 gsim_aliases = {}  # GSIM alias -> TOML representation
 
@@ -87,42 +87,27 @@ class AdaptedWarning(UserWarning):
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then _compute_delta will be called less times
-if numba:
-
-    @compile("void(float64[:, :], float64[:], float64[:, :])")
-    def _compute_delta(mean_std, levels, out):
-        # compute (iml - mean) / std for each level with numba
-        N, L = out.shape
-        for li in range(L):
-            iml = levels[li]
-            for si in range(N):
-                out[si, li] = (iml - mean_std[0, si]) / mean_std[1, si]
-else:
-
-    def _compute_delta(mean_std, levels, out):
-        # compute (iml - mean) / std for each level with numpy
-        for li, iml in enumerate(levels):
-            out[:, li] = (iml - mean_std[0]) / mean_std[1]
-
-
+@compile("float64[:, :](float64[:,:,:], float64[:,:], float64)")
 def _get_poes(mean_std, loglevels, truncation_level):
     # returns a matrix of shape (N, L)
     N = mean_std.shape[2]  # shape (2, M, N)
-    out = numpy.zeros((N, loglevels.size))  # shape (N, L)
-    L1 = loglevels.L1
-    for m, imt in enumerate(loglevels):
-        # loop needed to work on smaller matrices fitting the CPU cache
-        slc = loglevels(imt)
-        levels = loglevels.array[slc]
-        if truncation_level == 0:
-            for li, iml in enumerate(levels):
-                out[:, m * L1 + li] = iml <= mean_std[0, m]
+    L1 = loglevels.size // len(loglevels)
+    out = numpy.zeros((loglevels.size, N))  # shape (L, N)
+    for m, levels in enumerate(loglevels):
+        mL1 = m * L1
+        iml = numpy.zeros((L1, 1))  # trick to vectorize better
+        iml[:, 0] = levels  # numba is not happy with reshape
+        mea, sig = mean_std[:, m]  # shape N
+        if truncation_level == 0.:
+            out[mL1:mL1 + L1] = (iml <= mea)  # shape (L1, N)
         else:
-            _compute_delta(mean_std[:, m], levels, out[:, slc])
-    return _truncnorm_sf(truncation_level, out)
+            out[mL1:mL1 + L1] = _truncnorm_sf(  # shape (L1, N)
+                truncation_level, (iml - mea) / sig)
+    return out.T
 
 
-OK_METHODS = 'compute get_mean_and_stddevs get_poes set_parameters'
+OK_METHODS = ('compute', 'get_mean_and_stddevs', 'get_poes',
+              'set_parameters', 'set_tables')
 
 
 def bad_methods(clsdict):
@@ -156,7 +141,10 @@ class MetaGSIM(abc.ABCMeta):
             print('%s cannot contain the methods %s' % (name, bad),
                   file=sys.stderr)
         for k, v in dic.items():
-            if isinstance(v, set):
+            if (k == 'compute' and v.__annotations__.get("ctx")
+                    is not numpy.recarray):
+                raise TypeError('%s.compute is not vectorized' % name)
+            elif isinstance(v, set):
                 dic[k] = frozenset(v)
                 if k == 'REQUIRES_DISTANCES':
                     missing = v - KNOWN_DISTANCES
@@ -369,8 +357,9 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         else:
             ctx = rup  # rup is already a good object
         if self.compute.__annotations__.get("ctx") is numpy.recarray:
-            cmaker = ContextMaker('*', [self], {'imtls': {imt: [0]}})
-            ctx = cmaker.recarray([ctx])
+            cmaker = ContextMaker('*', [self], {'imtls': {imt.string: [0]}})
+            if not isinstance(ctx, numpy.ndarray):
+                ctx = cmaker.recarray([ctx])
         self.compute(ctx, [imt], mean, sig, tau, phi)
         stddevs = []
         for stddev_type in stddev_types:
@@ -445,7 +434,7 @@ class GMPE(GroundShakingIntensityModel):
             else:
                 setattr(self, key, val)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
         """
         :param ctx: a RuptureContext object or a numpy recarray of size N
         :param imts: a list of M Intensity Measure Types
@@ -459,7 +448,6 @@ class GMPE(GroundShakingIntensityModel):
         """
         raise NotImplementedError
 
-    # the ctxs are used in avg_poe_gmpe
     def get_poes(self, mean_std, cmaker, ctx):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
@@ -470,9 +458,9 @@ class GMPE(GroundShakingIntensityModel):
             An array of shape (2, M, N) with mean and standard deviations
             for the sites and intensity measure types
         :param cmaker:
-            A ContextMaker instance
-        :param ctxs:
-            Context objects used to compute mean_std
+            A ContextMaker instance, used only in nhsm_2014
+        :param ctx:
+            A recarray used only in  avg_poe_gmpe
         :returns:
             array of PoEs of shape (N, L)
         :raises ValueError:
@@ -480,22 +468,21 @@ class GMPE(GroundShakingIntensityModel):
             float number, and if ``imts`` dictionary contain wrong or
             unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         """
-        loglevels = cmaker.loglevels
+        loglevels = cmaker.loglevels.array
         truncation_level = cmaker.truncation_level
         N = mean_std.shape[2]  # 2, M, N
-        L = loglevels.size
-        maxsize = int(numpy.ceil(ONE_MB / L / 8))
-        arr = numpy.zeros((N, L))
+        M, L1 = loglevels.shape
+        arr = numpy.zeros((N, M*L1))
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
-        if hasattr(self, 'weights_signs'):
+        if hasattr(self, 'weights_signs'):  # for nshmp_2014, case_72
             outs = []
             weights, signs = zip(*self.weights_signs)
             for s in signs:
                 ms = numpy.array(mean_std)  # make a copy
                 for m in range(len(loglevels)):
-                    ms[0, m] += s * ctx.adjustment
+                    ms[0, m] += s * cmaker.adj[self][cmaker.slc]
                 outs.append(_get_poes(ms, loglevels, truncation_level))
             arr[:] = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):
@@ -505,13 +492,12 @@ class GMPE(GroundShakingIntensityModel):
                 mean_stdi[1] *= f  # multiply stddev by factor
                 arr[:] += w * _get_poes(mean_stdi, loglevels, truncation_level)
         else:  # regular case
-            # split large arrays in slices < 1 MB to fit inside the CPU cache
-            for sl in gen_slices(0, N, maxsize):
-                arr[sl] = _get_poes(mean_std[:, :, sl], loglevels, truncation_level)
+            arr[:] = _get_poes(mean_std, loglevels, truncation_level)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
-        for imt in loglevels:
+        for m, imt in enumerate(cmaker.imtls):
+            mL1 = m * L1
             if imtweight and imtweight.dic.get(imt) == 0:
                 # set by the engine when parsing the gsim logictree
                 # when 0 ignore the contribution: see _build_trts_branches
-                arr[:, loglevels(imt)] = 0
+                arr[:, mL1:mL1 + L1] = 0
         return arr

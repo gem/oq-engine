@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2021 GEM Foundation
+# Copyright (C) 2018-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -50,10 +50,7 @@ def _compute_mean(C, mag, r):
     """
     Compute mean value according to equation 30, page 1021.
     """
-    mean = (C['c1'] +
-            _compute_term1(C, mag) +
-            _compute_term2(C, mag, r))
-    return mean
+    return C['c1'] + _compute_term1(C, mag) + _compute_term2(C, mag, r)
 
 
 def _compute_term1(C, mag):
@@ -92,8 +89,8 @@ class DrouetAlpes2015Rjb(GMPE):
 
     #: Supported intensity measure component is the geometric mean of
     #: two : horizontal components
-    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    #: :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`,
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total, see equation 35, page
     #: 1021
@@ -113,7 +110,7 @@ class DrouetAlpes2015Rjb(GMPE):
     #: 30 page 1021.
     REQUIRES_DISTANCES = {'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

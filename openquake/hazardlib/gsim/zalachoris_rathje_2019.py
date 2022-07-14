@@ -61,12 +61,12 @@ def _get_ZR19_magnitude_term(C_ZR19, mag):
     Returns the magnitude scaling term
     """
     Mb_ = C_ZR19["Mb"]
-    if mag < Mb_:
-        FM = C_ZR19["b0"] + C_ZR19["Cadj"]
-    elif mag > Mb_ and mag < 5.8:
-        FM = C_ZR19["b0"] + C_ZR19["b1"] * (mag - Mb_) + C_ZR19["Cadj"]
-    else:
-        FM = C_ZR19["b0"] + C_ZR19["b1"] * (5.8 - Mb_) + C_ZR19["Cadj"]
+    FM = np.full_like(
+        mag, C_ZR19["b0"] + C_ZR19["b1"] * (5.8 - Mb_) + C_ZR19["Cadj"])
+    FM[mag < Mb_] = C_ZR19["b0"] + C_ZR19["Cadj"]
+    between = (mag > Mb_) & (mag < 5.8)
+    FM[between] = (C_ZR19["b0"] + C_ZR19["b1"] * (mag[between] - Mb_) +
+                   C_ZR19["Cadj"])
     return FM
 
 
@@ -76,8 +76,7 @@ def _get_ZR19_site_term(C_ZR19, ctx):
     """
     Vc_ = C_ZR19["Vc"]
     FS = np.zeros_like(ctx.vs30)
-    FS[ctx.vs30 < Vc_] = (
-        C_ZR19["c"] * np.log(ctx.vs30[ctx.vs30 < Vc_]/Vc_))
+    FS[ctx.vs30 < Vc_] = C_ZR19["c"] * np.log(ctx.vs30[ctx.vs30 < Vc_]/Vc_)
     return FS
 
 
@@ -152,7 +151,7 @@ class ZalachorisRathje2019(GMPE):
     kind = "base"
     sof = True
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -169,7 +168,7 @@ class ZalachorisRathje2019(GMPE):
 
             mean_BSSA14 = (
                 _get_magnitude_scaling_term(self.sof, C, ctx) +
-                _get_path_scaling(self.kind, self.region, C, ctx, ctx.mag) +
+                _get_path_scaling(self.kind, self.region, C, ctx) +
                 _get_site_scaling(self.kind, self.region, C, pga_rock, ctx,
                                   imt_per, ctx.rjb))
 

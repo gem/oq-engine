@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -43,11 +43,6 @@ GST = {'gsim_logic_tree': gettemp('''\
        "job_ini": "job.ini",
        "source_model_logic_tree": "fake"}
 
-# hard-coded to avoid a dependency from openquake.calculators
-OqParam.calculation_mode.validator.choices = (
-    'classical', 'disaggregation', 'scenario', 'scenario_damage',
-    'event_based', 'event_based_risk', 'classical_risk')
-
 fakeinputs = {"job_ini": "job.ini", "source_model_logic_tree": "fake"}
 
 
@@ -68,9 +63,8 @@ class OqParamTestCase(unittest.TestCase):
             w.call_args[0][0],
             "The parameter 'not_existing_param' is unknown, ignoring")
 
-    def test_truncation_level_disaggregation(self):
-        # for disaggregation, the truncation level cannot be None
-        with self.assertRaises(InvalidFile):
+    def test_truncation_level_None(self):
+        with self.assertRaises(ValueError):
             OqParam(calculation_mode='disaggregation',
                     hazard_calculation_id=None, hazard_output_id=None,
                     inputs=fakeinputs, maximum_distance='10',

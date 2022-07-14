@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -141,6 +141,6 @@ class KuehnEtAl2020RegionTestCase(BaseGSIMTestCase):
             for region, files in self.FILES.items():
                 mean_file, *std_files = [f.format(trt) for f in files]
                 self.check(mean_file,
-                           max_discrep_percentage=0.1, region=region)
+                           max_discrep_percentage=0.03, region=region)
                 self.check(*std_files,
                            max_discrep_percentage=0.1, region=region)

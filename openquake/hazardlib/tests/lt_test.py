@@ -109,28 +109,28 @@ class CollapseTestCase(unittest.TestCase):
     # this tests also the collapsing of the ruptures happening in contexts.py
     def test_point_source_full_enum(self):
         # compute the mean curve
-        mean, srcs, effrups, weights = self.full_enum()
+        mean, srcs, effctxs, weights = self.full_enum()
         assert weights == [.2, .2, .6]
         assert scaling_rates(srcs) == [1, 1, 1]
-        self.assertEqual(effrups, 22)  # less then 8 x 3 = 24
+        self.assertEqual(effctxs, 28)
 
         # compute the partially collapsed curve
         self.bs1.collapsed = True
-        coll1, srcs, effrups, weights = self.full_enum()
+        coll1, srcs, effctxs, weights = self.full_enum()
         assert weights == [.4, .6]  # two rlzs
         # self.plot(mean, coll1)
         assert scaling_rates(srcs) == [1.0, 0.5, 0.5, 1.0]
-        self.assertEqual(effrups, 28)  # less then 8 x 4 = 32
+        self.assertEqual(effctxs, 36)
         numpy.testing.assert_allclose(mean, coll1, atol=.1)
 
         # compute the fully collapsed curve
         self.bs0.collapsed = True
         self.bs1.collapsed = True
-        coll2, srcs, effrups, weights = self.full_enum()
+        coll2, srcs, effctxs, weights = self.full_enum()
         assert weights == [1]  # one rlz
         # self.plot(mean, coll2)
         assert scaling_rates(srcs) == [0.4, 0.6, 0.5, 0.5]
-        self.assertEqual(effrups, 28)  # much less then 8 x 4 = 32
+        self.assertEqual(effctxs, 36)
         numpy.testing.assert_allclose(mean, coll2, atol=.21)  # big diff
 
     def plot(self, mean, coll):
@@ -145,10 +145,10 @@ class CollapseTestCase(unittest.TestCase):
 class CompositeLogicTreeTestCase(unittest.TestCase):
     def test(self):
         # simple logic tree with 5 realizations
-        #        __/ AAA
-        #    bs1/  \ AAB
-        #   /   \__/ ABA
-        # bs0      \ ABB
+        #        _C/ E
+        #    _A_/  \ F
+        #   /   \_D/ E
+        #          \ F
         #   \_______
         #            B..
         bs0 = lt.BranchSet('abGRAbsolute')
@@ -157,17 +157,64 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
 
         bs1 = lt.BranchSet('maxMagGRAbsolute',
                            filters={'applyToBranches': 'A'})
-        bs1.branches = [lt.Branch('bs1', 'A', .5, 7.0),
-                        lt.Branch('bs1', 'B', .5, 7.6)]
+        bs1.branches = [lt.Branch('bs1', 'C', .5, 7.0),
+                        lt.Branch('bs1', 'D', .5, 7.6)]
 
         bs2 = lt.BranchSet('applyToTRT',
-                           filters={'applyToBranches': 'A B'})
-        bs2.branches = [lt.Branch('bs2', 'A', .3, 'A'),
-                        lt.Branch('bs2', 'B', .7, 'B')]
+                           filters={'applyToBranches': 'CD'})
+        bs2.branches = [lt.Branch('bs2', 'E', .3, 'A'),
+                        lt.Branch('bs2', 'F', .7, 'B')]
         for branch in bs1.branches:
             branch.bset = bs2
         clt = lt.CompositeLogicTree([bs0, bs1, bs2])
+        self.assertEqual(lt.count_paths(bs0.branches), 5)
         self.assertEqual(clt.get_all_paths(),
-                         ['AAA', 'AAB', 'ABA', 'ABB', 'B..'])
+                         ['ACE', 'ACF', 'ADE', 'ADF', 'B..'])
         self.assertEqual(clt.basepaths,
-                         ['A**', 'B**', '*A*', '*B*', '**A', '**B'])
+                         ['A**', 'B**', '*C*', '*D*', '**E', '**F'])
+
+    def test_build(self):
+        clt = lt.build(['sourceModel', '',
+                        ['A', 'common1', 0.6],
+                        ['B', 'common2', 0.4]],
+                       ['extendModel', 'A',
+                        ['C', 'extra1', 0.4],
+                        ['D', 'extra2', 0.2],
+                        ['E', 'extra3', 0.2],
+                        ['F', 'extra4', 0.2]],
+                       ['extendModel', 'B',
+                        ['G', 'extra5', 0.4],
+                        ['H', 'extra6', 0.2],
+                        ['I', 'extra7', 0.2],
+                        ['J', 'extra8', 0.2]])
+        self.assertEqual(clt.get_all_paths(),  # 4 + 4 rlzs
+                         ['AC.', 'AD.', 'AE.', 'AF..',
+                          'BG.', 'BH.', 'BI.', 'BJ.'])
+
+        clt = lt.build(['sourceModel', '',
+                        ['A', 'common1', 0.6],
+                        ['B', 'common2', 0.4]],
+                       ['extendModel', 'A',
+                        ['C', 'extra1', 0.6],
+                        ['D', 'extra2', 0.2],
+                        ['E', 'extra3', 0.2]])
+        self.assertEqual(clt.get_all_paths(), ['AC', 'AD', 'AE', 'B.'])
+
+        clt = lt.build(['sourceModel', '',
+                        ['A', 'common1', 0.6],
+                        ['B', 'common2', 0.4]],
+                       ['extendModel', 'B',
+                        ['C', 'extra1', 0.6],
+                        ['D', 'extra2', 0.2],
+                        ['E', 'extra3', 0.2]])
+        self.assertEqual(clt.get_all_paths(), ['A.', 'BC', 'BD', 'BE'])
+
+        clt = lt.build(['sourceModel', '',
+                        ['A', 'common1', 0.6],
+                        ['B', 'common2', 0.4]],
+                       ['extendModel', 'AB',
+                        ['C', 'extra1', 0.6],
+                        ['D', 'extra2', 0.2],
+                        ['E', 'extra3', 0.2]])
+        self.assertEqual(clt.get_all_paths(),
+                         ['AC', 'AD', 'AE', 'BC', 'BD', 'BE'])

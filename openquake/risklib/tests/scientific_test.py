@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -444,7 +444,7 @@ class InsuredLossCurveTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.array([[0., 0.1, 0.2, 0.3, 0.4, 0.5],
                          [0.8, 0.8, 0.8, 0.7, 0.6, 0.5]]),
-            scientific.insured_loss_curve(curve, 0.2, 0.5))
+            scientific.insurance_loss_curve(curve, 0.2, 0.5))
 
     def test_trivial_curve(self):
         curve = numpy.array(
@@ -453,7 +453,7 @@ class InsuredLossCurveTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             [[0, 0.1, 0.2, 0.3, 0.4, 0.5],
              [0, 0, 0, 0, 0, 0]],
-            scientific.insured_loss_curve(curve, 0.1, 0.5))
+            scientific.insurance_loss_curve(curve, 0.1, 0.5))
 
 
 class ClassicalDamageTestCase(unittest.TestCase):

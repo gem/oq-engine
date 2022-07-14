@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -331,7 +331,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
-        oqparam.insured_losses = False
+        oqparam.insurance_losses = False
         oqparam.inputs = {'exposure': [self.exposure0]}
         oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
@@ -358,7 +358,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("Invalid ID 'a 1': the only accepted chars are "
-                      "a-zA-Z0-9_-, line 11", str(ctx.exception))
+                      "a-zA-Z0-9_-:, line 11", str(ctx.exception))
 
     def test_no_assets(self):
         oqparam = mock.Mock()
@@ -366,7 +366,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
-        oqparam.insured_losses = True
+        oqparam.insurance_losses = True
         oqparam.inputs = {'exposure': [self.exposure],
                           'structural_vulnerability': None}
         oqparam.region = '''\
@@ -407,7 +407,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
-        oqparam.insured_losses = False
+        oqparam.insurance_losses = False
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
         with self.assertRaises(ValueError) as ctx:
@@ -538,6 +538,6 @@ class LogicTreeTestCase(unittest.TestCase):
         lt = readinput.get_logic_tree(oq)
         # (2+1) x 4 = 12 realizations
         paths = [rlz.lt_path for rlz in lt]
-        self.assertEqual(paths, ['A.AA', 'A.AB', 'A.BA', 'A.BB',
-                                 'BAAA', 'BAAB', 'BABA', 'BABB',
-                                 'BBAA', 'BBAB', 'BBBA', 'BBBB'])
+        expected = ['A.CA', 'A.CB', 'A.DA', 'A.DB', 'BACA', 'BACB',
+                    'BADA', 'BADB', 'BBCA', 'BBCB', 'BBDA', 'BBDB']
+        self.assertEqual(paths, expected)

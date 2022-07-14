@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -42,13 +42,14 @@ class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
         # method should return values equal to the ones obtained by clipping
         # distances at 15 km.
         ctx = RuptureContext()
+        ctx.rup_id = 0
         ctx.sids = [0, 1, 2]
         ctx.vs30 = numpy.array([800.0, 800.0, 800.0])
         ctx.mag = 5.0
         ctx.rake = 0
         ctx.occurrence_rate = .0001
         ctx.rhypo = numpy.array([0.0, 10.0, 16.0])
-        ctx.rhypo.flags.writeable = False
+        ctx.rrup = numpy.array([0.0, 10.0, 17.0])
         mean_0, stds_0 = self.GSIM_CLASS().get_mean_and_stddevs(
             ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
         mean_15, stds_15 = self.GSIM_CLASS().get_mean_and_stddevs(

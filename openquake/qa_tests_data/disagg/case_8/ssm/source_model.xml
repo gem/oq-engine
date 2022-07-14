@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    investigation_time="1"
+    name="source_model"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <nonParametricSeismicSource
+            id="t"
+            name="t"
+            >
+                <simpleFaultRupture
+                probs_occur="0.95 0.05"
+                >
+                    <magnitude>
+                        6.5
+                    </magnitude>
+                    <rake>
+                        90
+                    </rake>
+                    <hypocenter depth="5.000000018478429" lat="0.09999984409495588" lon="0.1011738346740601"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                0 0.1 0.19698387959549282 0.09999940900364405
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            90
+                        </dip>
+                        <upperSeismoDepth>
+                            0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            10.951787340474363
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.98 0.02"
+                >
+                    <magnitude>
+                        6.7
+                    </magnitude>
+                    <rake>
+                        90
+                    </rake>
+                    <hypocenter depth="6.249999979757634" lat="0.04999988355250864" lon="0.12365676794868954"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                0 0.05 0.24684832834363574 0.049999535961266627
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            90
+                        </dip>
+                        <upperSeismoDepth>
+                            0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            13.724135655550564
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.99 0.01"
+                >
+                    <magnitude>
+                        7.0
+                    </magnitude>
+                    <rake>
+                        90
+                    </rake>
+                    <hypocenter depth="9.999999990065518" lat="0.299998700781346" lon="0.168625112400215"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                0 0.3 0.3462868327944276 0.29999452090675666
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            90
+                        </dip>
+                        <upperSeismoDepth>
+                            0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            19.252405580873734
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.99 0.01"
+                >
+                    <magnitude>
+                        5.8
+                    </magnitude>
+                    <rake>
+                        90
+                    </rake>
+                    <hypocenter depth="9.999999990065518" lat="0.299998700781346" lon="0.168625112400215"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                0 0.3 0.3462868327944276 0.29999452090675666
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            90
+                        </dip>
+                        <upperSeismoDepth>
+                            0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            19.252405580873734
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -43,7 +43,7 @@ def _compute_magnitude_scaling(mag, C):
     Compute magnitude-scaling term (Page 141, Eq 1)
     """
     dmag = mag - 6.
-    return (C['B2'] * dmag) + (C['B3'] * (dmag ** 2.))
+    return C['B2'] * dmag + C['B3'] * dmag ** 2.
 
 
 def _compute_site_term(vs30, C):
@@ -67,16 +67,12 @@ def _compute_style_of_faulting_term(sof, ctx, C):
     """
     if sof is None:  # unspecified
         return C['B1all']
-    elif np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
-        # strike-slip
-        return C['B1ss']
-    elif ctx.rake > 30.0 and ctx.rake < 150.0:
-        # reverse
-        return C['B1rv']
-    else:
-        # unspecified (also includes Normal faulting!)
-        return C['B1all']
-
+    res = np.zeros_like(ctx.rake)
+    res[(np.abs(ctx.rake) <= 30.) |
+        (180.0 - np.abs(ctx.rake) <= 30.)] = C['B1ss']
+    res[(ctx.rake > 30.) & (ctx.rake < 150.)] = C['B1rv']
+    res[(ctx.rake > -150.) & (ctx.rake < -30.)] = C['B1all']
+    return res
 
 def _get_stddevs(horizontal, C):
     """
@@ -106,7 +102,7 @@ class BooreEtAl1997GeometricMean(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is geometric mean
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
@@ -125,7 +121,7 @@ class BooreEtAl1997GeometricMean(GMPE):
     sof = True
     horizontal = False
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

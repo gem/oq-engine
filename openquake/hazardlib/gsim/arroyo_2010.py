@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,6 +27,7 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
+
 def _compute_mean(C, g, ctx):
     """
     Compute mean according to equation 8a, page 773.
@@ -43,10 +44,11 @@ def _compute_mean(C, g, ctx):
 
     # computing the mean
     mean = C['c1'] + C['c2'] * mag + C['c3'] * np.log(trm4)
-        
+
     # convert from cm/s**2 to 'g'
     mean = np.log(np.exp(mean) * 1e-2 / g)
     return mean
+
 
 def _get_stddevs(C):
     """
@@ -58,16 +60,16 @@ def _get_stddevs(C):
 
 class ArroyoEtAl2010SInter(GMPE):
     """
-    Implements GMPE developed by Arroyo et al. (2010) for Mexican 
+    Implements GMPE developed by Arroyo et al. (2010) for Mexican
     subduction interface events and published as:
 
-    Arroyo D., García D., Ordaz M., Mora M. A., and Singh S. K. (2010) 
-    "Strong ground-motion relations for Mexican interplate earhquakes", 
+    Arroyo D., García D., Ordaz M., Mora M. A., and Singh S. K. (2010)
+    "Strong ground-motion relations for Mexican interplate earhquakes",
     J. Seismol., 14:769-785.
 
     The original formulation predict peak ground acceleration (PGA), in
-    cm/s**2, and 5% damped pseudo-acceleration response spectra (PSA) in 
-    cm/s**2 for the geometric average of the maximum component of the two 
+    cm/s**2, and 5% damped pseudo-acceleration response spectra (PSA) in
+    cm/s**2 for the geometric average of the maximum component of the two
     horizontal component of ground motion.
 
     The GMPE predicted values for Mexican interplate events at rock sites
@@ -78,14 +80,14 @@ class ArroyoEtAl2010SInter(GMPE):
     #: given that the equations have been derived using Mexican interface
     #: events.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
-    
+
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration. See Table 2 in page 776.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric average of
     #  the maximum of the two horizontal components.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total. See Table 2, page 776.
@@ -103,8 +105,7 @@ class ArroyoEtAl2010SInter(GMPE):
     #: Required distance measure is Rrup (closest distance to fault surface)
     REQUIRES_DISTANCES = {'rrup'}
 
-
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -115,7 +116,6 @@ class ArroyoEtAl2010SInter(GMPE):
             mean[m] = _compute_mean(C, g, ctx)
             sig[m], tau[m], phi[m] = _get_stddevs(C)
 
-        
     #: Equation coefficients for geometric average of the maximum of the two
     #: horizontal components, as described in Table 2 on page 776.
     COEFFS = CoeffsTable(sa_damping=5, table="""\

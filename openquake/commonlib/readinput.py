@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -38,7 +38,7 @@ import requests
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.general import (
     random_filter, countby, group_array, get_duplicates, gettemp)
-from openquake.baselib.python3compat import zip
+from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -210,9 +210,6 @@ def _update(params, items, base_path):
         else:
             params[key] = value
 
-    if 'reqv' in params['inputs']:
-        params['pointsource_distance'] = '0'
-
 
 # NB: this function must NOT log, since it is called when the logging
 # is not configured yet
@@ -252,7 +249,7 @@ def get_params(job_ini, kw={}):
     base_path = os.path.dirname(job_ini)
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     cp = configparser.ConfigParser()
-    cp.read([job_ini], encoding='utf8')
+    cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
     for sect in cp.sections():
         _update(params, cp.items(sect), base_path)
 
@@ -263,7 +260,7 @@ def get_params(job_ini, kw={}):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
+def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
@@ -272,9 +269,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
         dictionary of parameters with a key "calculation_mode"
     :param pkg:
         Python package where to find the configuration file (optional)
-    :param calculators:
-        Sequence of calculator names (optional) used to restrict the
-        valid choices for `calculation_mode`
     :param kw:
         Dictionary of strings to override the job parameters
     :returns:
@@ -284,11 +278,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
         absolute paths to all of the files referenced in the job.ini, keyed by
         the parameter name.
     """
-    # UGLY: this is here to avoid circular imports
-    from openquake.calculators import base
-
-    OqParam.calculation_mode.validator.choices = tuple(
-        calculators or base.calculators)
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params(os.path.join(basedir, job_ini), kw)
@@ -298,7 +287,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
         # reduce the logic tree to one random realization
         # reduce the sites by a factor of `re`
         # reduce the ses by a factor of `re`
-        # set save_disk_space = true
         os.environ['OQ_SAMPLE_SITES'] = re
         job_ini['number_of_logic_tree_samples'] = '1'
         ses = job_ini.get('ses_per_logic_tree_path')
@@ -311,7 +299,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
             imt = next(iter(imtls))
             job_ini['intensity_measure_types_and_levels'] = repr(
                 {imt: imtls[imt]})
-        job_ini['save_disk_space'] = 'true'
     oqparam = OqParam(**job_ini)
     oqparam._input_files = get_input_files(oqparam)
     if validate:  # always true except from oqzip
@@ -508,14 +495,17 @@ def get_site_model(oqparam):
     return numpy.concatenate(arrays)
 
 
-def count_no_vect(gsim_lt):
-    # count the number of nonvectorized GMPEs
-    no = 0
+def get_no_vect(gsim_lt):
+    """
+    :returns: the names of the non-vectorized GMPEs
+    """
+    names = set()
     for gsims in gsim_lt.values.values():
         for gsim in gsims:
             compute = getattr(gsim.__class__, 'compute')
-            no += 'ctx' not in compute.__annotations__
-    return no
+            if 'ctx' not in compute.__annotations__:
+                names.add(gsim.__class__.__name__)
+    return names
 
 
 def get_site_collection(oqparam, h5=None):
@@ -526,7 +516,8 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if h5 and 'sitecol' in h5:
+    ss = oqparam.sites_slice  # can be None or (start, stop)
+    if h5 and 'sitecol' in h5 and not ss:
         return h5['sitecol']
     mesh = get_mesh(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
@@ -536,7 +527,11 @@ def get_site_collection(oqparam, h5=None):
         # a None sitecol is okay when computing the ruptures only
         return
     else:  # use the default site params
-        req_site_params = get_gsim_lt(oqparam).req_site_params
+        if ('gmfs' in oqparam.inputs or 'hazard_curves' in oqparam.inputs
+                or 'shakemap' in oqparam.inputs):
+            req_site_params = set()   # no parameters are required
+        else:
+            req_site_params = get_gsim_lt(oqparam).req_site_params
         if 'amplification' in oqparam.inputs:
             req_site_params.add('ampcode')
         if h5 and 'site_model' in h5:  # comes from a site_model.csv
@@ -545,7 +540,6 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
-    ss = oqparam.sites_slice  # can be None or (start, stop)
     if ss:
         if 'custom_site_id' not in sitecol.array.dtype.names:
             gh = sitecol.geohash(6)
@@ -564,6 +558,16 @@ def get_site_collection(oqparam, h5=None):
         sitecol.make_complete()
     if h5:
         h5['sitecol'] = sitecol
+    if ('vs30' in sitecol.array.dtype.names and
+            not numpy.isnan(sitecol.vs30).any()):
+        assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
+
+    # sanity check on the site parameters
+    for param in req_site_params:
+        dt = site.site_param_dt[param]
+        if dt is F64 and (sitecol.array[param] == 0.).all():
+            raise ValueError('The site parameter %s is always zero: please '
+                             'check the site nodel' % param)
     return sitecol
 
 
@@ -615,9 +619,9 @@ def get_gsim_lt(oqparam, trts=('*',)):
         gsim_lt = gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
     gsim_lt_cache[key] = gsim_lt
     if trts != ('*',):  # not in get_input_files
-        no_vect = count_no_vect(gsim_lt)
+        no_vect = get_no_vect(gsim_lt)
         if no_vect:
-            logging.info('There are %d not vectorized GMPEs', no_vect)
+            logging.info('The following GMPEs are not vectorized: %s', no_vect)
     return gsim_lt
 
 
@@ -650,12 +654,10 @@ def get_source_model_lt(oqparam, branchID=None):
     args = (fname, oqparam.random_seed, oqparam.number_of_logic_tree_samples,
             oqparam.sampling_method, False, branchID)
     smlt = logictree.SourceModelLogicTree(*args)
-    if oqparam.discard_trts:
-        trts = set(trt.strip() for trt in oqparam.discard_trts.split(','))
+    discard_trts = set(s.strip() for s in oqparam.discard_trts.split(','))
+    if discard_trts:
         # smlt.tectonic_region_types comes from applyToTectonicRegionType
-        smlt.tectonic_region_types = smlt.tectonic_region_types - trts
-    if oqparam.is_ucerf():
-        smlt.tectonic_region_types = {'Active Shallow Crust'}
+        smlt.tectonic_region_types = smlt.tectonic_region_types - discard_trts
     return smlt
 
 
@@ -674,7 +676,7 @@ def get_full_lt(oqparam, branchID=None):
     trts_lower = {trt.lower() for trt in trts}
     reqv = oqparam.inputs.get('reqv', {})
     for trt in reqv:
-        if trt in oqparam.discard_trts:
+        if trt in oqparam.discard_trts.split(','):
             continue
         elif trt.lower() not in trts_lower:
             raise ValueError('Unknown TRT=%s in %s [reqv]' %
@@ -730,17 +732,21 @@ def _check_csm(csm, oqparam, h5):
 
     # build a smart SourceFilter
     try:
-        sitecol = get_site_collection(oqparam, h5)  # already stored
-    except Exception:  # missing sites.csv in test_case_1_ruptures
-        sitecol = None
+        sitecol = get_site_collection(oqparam, h5)
+    except ValueError:   # already stored (case_66)
+        sitecol = h5['sitecol']
     csm.sitecol = sitecol
-    if sitecol is None:
+    if sitecol is None:  # missing sites.csv (test_case_1_ruptures)
         return
     srcfilter = SourceFilter(sitecol, oqparam.maximum_distance)
     logging.info('Checking the sources bounding box')
     lons = []
     lats = []
     for src in srcs:
+        if hasattr(src, 'location'):
+            lons.append(src.location.x)
+            lats.append(src.location.y)
+            continue
         try:
             box = srcfilter.get_enlarged_box(src)
         except BBoxError as exc:
@@ -759,9 +765,6 @@ def _check_csm(csm, oqparam, h5):
         raise BBoxError(
             'The bounding box of the sources is larger than half '
             'the globe: %d degrees' % (bbox[2] - bbox[0]))
-    sids = sitecol.within_bbox(bbox)
-    if len(sids) == 0:
-        raise RuntimeError('All sources were discarded!?')
 
 
 def get_composite_source_model(oqparam, h5=None, branchID=None):
@@ -779,7 +782,7 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
     # then read the composite source model from the cache if possible
     if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
         os.makedirs(oqparam.cachedir)
-    if oqparam.cachedir and not oqparam.is_ucerf():
+    if oqparam.cachedir:
         # for UCERF pickling the csm is slower
         checksum = get_checksum32(oqparam, h5)
         fname = os.path.join(oqparam.cachedir, 'csm_%s.pik' % checksum)
@@ -793,7 +796,7 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
 
     # read and process the composite source model from the input files
     csm = get_csm(oqparam, full_lt, h5)
-    if oqparam.cachedir and not oqparam.is_ucerf():
+    if oqparam.cachedir:
         logging.info('Saving %s', fname)
         with open(fname, 'wb') as f:
             pickle.dump(csm, f)
@@ -890,7 +893,7 @@ def get_exposure(oqparam):
     exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs,
-        by_country='country' in oqparam.aggregate_by,
+        by_country='country' in asset.tagset(oqparam.aggregate_by),
         errors='ignore' if oqparam.ignore_encoding_errors else None)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
     if oqparam.cachedir:
@@ -931,15 +934,16 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         for sid, assets in zip(sitecol.sids, assets_by):
             assets_by_site[sid] = assets
             num_assets += len(assets)
-        logging.info('Associated {:_d} assets to {:_d} sites'.format(
-            num_assets, len(sitecol)))
+        logging.info('Associated {:_d} assets to {:_d} sites'.
+                     format(num_assets, len(sitecol)))
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
         assets_by_site = exposure.assets_by_site
         discarded = []
-        logging.info('Read %d sites and %d assets from the exposure',
-                     len(sitecol), sum(len(a) for a in assets_by_site))
+        logging.info('Read {:_d} sites and {:_d} assets from the exposure'.
+                     format(len(sitecol), sum(len(a) for a in assets_by_site)))
+
     assetcol = asset.AssetCollection(
         exposure, assets_by_site, oqparam.time_event, oqparam.aggregate_by)
     if assetcol.occupancy_periods:
@@ -1045,13 +1049,14 @@ def get_pmap_from_csv(oqparam, fnames):
     return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
 
 
-tag2code = {'ar': b'A',
-            'mu': b'M',
-            'po': b'P',
-            'si': b'S',
-            'co': b'C',
-            'ch': b'X',
-            'no': b'N'}
+tag2code = {'multiFaultSource': b'F',
+            'areaSource': b'A',
+            'multiPointSource': b'M',
+            'pointSource': b'P',
+            'simpleFaultSource': b'S',
+            'complexFaultSource': b'C',
+            'characteristicSource': b'X',
+            'nonParametricSource': b'N'}
 
 
 # tested in commands_test
@@ -1065,7 +1070,9 @@ def reduce_sm(paths, source_ids):
     """
     if isinstance(source_ids, dict):  # in oq reduce_sm
         def ok(src_node):
-            code = tag2code[re.search(r'\}(\w\w)', src_node.tag).group(1)]
+            if src_node.tag.endswith('Surface'):  # in geometrySections
+                return True
+            code = tag2code[re.search(r'\}(\w+)', src_node.tag).group(1)]
             arr = source_ids.get(src_node['id'])
             if arr is None:
                 return False
@@ -1123,6 +1130,8 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     total = good = 0
     to_remove = set()
     paths = logictree.collect_info(smlt_file).smpaths
+    if isinstance(source_ids, dict):
+        source_ids = {decode(k): v for k, v in source_ids.items()}
     for dic in parallel.Starmap.apply(reduce_sm, (paths, source_ids)):
         path = dic['path']
         model = dic['model']

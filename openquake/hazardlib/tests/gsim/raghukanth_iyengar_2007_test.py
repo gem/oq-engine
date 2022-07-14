@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -64,7 +64,7 @@ class RaghukanthIyengar2007TestCase(BaseGSIMTestCase):
         # set reasonable default values
         gmpe = self.GSIM_CLASS()
         ctx.mag = np.array([6.5])
-        ctx.rhypo = np.array([100.])
+        ctx.rhypo = ctx.rrup = np.array([100.])
         im_type = sorted(gmpe.COEFFS_BEDROCK.sa_coeffs)[0]
         std_types = list(gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
 

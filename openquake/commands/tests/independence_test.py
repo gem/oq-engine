@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2021 GEM Foundation
+# Copyright (C) 2016-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,7 +27,9 @@ level 3            risklib
 level 2            hazardlib
 level 1            baselib
 """
+import os.path
 import unittest
+import collections
 from openquake.baselib.general import assert_independent
 
 
@@ -47,3 +49,21 @@ class IndependenceTestCase(unittest.TestCase):
 
     def test_engine(self):
         assert_independent('openquake.engine', 'openquake.server')
+
+
+class CaseConsistencyTestCase(unittest.TestCase):
+    """
+    Make sure all the files in the repo are distinct
+    """
+    def test(self):
+        repodir = os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.dirname(__file__))))
+        fnames = []
+        for cwd, dirs, files in os.walk(repodir):
+            for f in files:
+                fnames.append(os.path.join(cwd, f))
+        cnt = collections.Counter([f.lower() for f in fnames])
+        for key, counts in cnt.items():
+            if counts > 1:
+                raise RuntimeError('There are case-inconsistent files %s' %
+                                   key)

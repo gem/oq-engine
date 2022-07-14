@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -108,6 +108,7 @@ class CalculatorTestCase(unittest.TestCase):
         cls.duration = general.AccumDict()
         if OQ_CALC_OUTPUTS:
             writers.write_csv = write_csv
+        os.environ['OQ_DATABASE'] = 'local'
 
     def get_calc(self, testfile, job_ini, **kw):
         """
@@ -116,8 +117,6 @@ class CalculatorTestCase(unittest.TestCase):
         self.testdir = os.path.dirname(testfile) if os.path.isfile(testfile) \
             else testfile
         params = readinput.get_params(os.path.join(self.testdir, job_ini), kw)
-        oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
-            base.calculators)
         oq = oqvalidation.OqParam(**params)
         oq._input_files = readinput.get_input_files(oq)
         oq.validate()

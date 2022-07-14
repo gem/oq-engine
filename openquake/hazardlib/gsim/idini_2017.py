@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,14 +44,9 @@ def _get_distance_term_1(trt, C, ctx):
     Equation (5)
     """
     mag = ctx.mag
-    if mag < 7.7:
-        R = ctx.rhypo
-    else:
-        R = ctx.rrup
-
+    R = np.where(mag < 7.7, ctx.rhypo, ctx.rrup)
     g = C['c3'] + CONSTS['c4'] * (mag - CONSTS['Mr'])
-    Ro = CONSTS['c6'] * 10 ** (
-        CONSTS['c7'] * (mag - CONSTS['Mr']))
+    Ro = CONSTS['c6'] * 10 ** (CONSTS['c7'] * (mag - CONSTS['Mr']))
     return g * np.log10(R + Ro) + C['c5'] * R
 
 
@@ -75,8 +70,7 @@ def _get_magnitude_term_1(trt, C, ctx):
     """
     Returns the magnitude scaling term defined in Equation (3)
     """
-    mag = ctx.mag
-    return C['c1'] + C['c2'] * mag + C['c9'] * mag ** 2.0
+    return C['c1'] + C['c2'] * ctx.mag + C['c9'] * ctx.mag ** 2.0
 
 
 @_get_magnitude_term.add(const.TRT.SUBDUCTION_INTRASLAB)
@@ -132,7 +126,7 @@ class IdiniEtAl2017SInter(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
@@ -146,11 +140,11 @@ class IdiniEtAl2017SInter(GMPE):
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is closest distance to rupture, for
-    #: interface events M>=7.7, and hypocentral distance for interface events 
+    #: interface events M>=7.7, and hypocentral distance for interface events
     #: M<7.7
-    REQUIRES_DISTANCES = {'rrup','rhypo'}
+    REQUIRES_DISTANCES = {'rrup', 'rhypo'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

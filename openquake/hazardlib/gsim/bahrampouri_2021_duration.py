@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,23 +29,20 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import RSD595, RSD575
 
 
-def _get_source_term(C, ctx):
+def _get_source_term(trt, C, ctx):
     """
     Compute the source term described in Eq. 8:
     `` 10.^(m1*(M-m2))+m3``
     m3 = varies as per focal mechanism for ASC and Slab TRTs
     """
-    if ctx.rake <= -45.0 and ctx.rake >= -135.0:
-        # Normal faulting
-        m3 = C["m3_NS"]
-
-    elif ctx.rake >= 45.0 and ctx.rake <= 135.0:
-        # Reverse faulting
-        m3 = C["m3_RS"]
+    if trt == const.TRT.SUBDUCTION_INTERFACE:
+        m3 = np.full_like(ctx.rake, C["m3_RS"])  # reverse
     else:
-        # No adjustment for strike-slip faulting
-        m3 = C["m3_SS"]
-    fsource = round(10**(C['m1'] * (ctx.mag-C['m2'])) + m3, 4)
+        ss = C["m3_SS"]  # strike-slip
+        m3 = np.full_like(ctx.rake, ss)
+        m3[(ctx.rake <= -45.) & (ctx.rake >= -135.)] = C["m3_NS"]  # normal
+        m3[(ctx.rake >= 45.) & (ctx.rake <= 135.)] = C["m3_RS"]  # reverse
+    fsource = np.round(10 ** (C['m1'] * (ctx.mag - C['m2'])) + m3, 4)
     return fsource
 
 
@@ -53,17 +50,14 @@ def _get_path_term(C, ctx):
     """
     Implementing Eqs. 9, 10 and 11
     """
-    slope = C['r1'] + C['r2']*(ctx.mag-4.0)
-
-    if ctx.mag > C['M2']:
-        mse = 1
-    elif ctx.mag <= C['M1']:
-        mse = 0
-    else:
-        mse = ((ctx.mag - C['M1'])/(C['M2'] - C['M1']))
+    slope = C['r1'] + C['r2'] * (ctx.mag - 4.0)
+    mse = (ctx.mag - C['M1']) / (C['M2'] - C['M1'])
+    mse[ctx.mag > C['M2']] = 1.
+    mse[ctx.mag <= C['M1']] = 0.
     fpath = np.round(slope * ctx.rrup, 4)
     idx = ctx.rrup > C['R1']
-    fpath[idx] = np.round(slope * (C['R1']+(mse*(ctx.rrup[idx] - C['R1']))), 4)
+    term = mse[idx] * (ctx.rrup[idx] - C['R1'])
+    fpath[idx] = np.round(slope[idx] * (C['R1'] + term), 4)
     return fpath
 
 
@@ -71,12 +65,12 @@ def _get_site_term(C, ctx):
     """
     Implementing Eqs. 5, 6 and 12
     """
-    mean_z1pt0 = (np.exp(((-5.23 / 2.) * np.log(((ctx.vs30 ** 2.) +
+    mean_z1pt0 = (np.exp(((-5.23 / 2.) * np.log((ctx.vs30 ** 2. +
                   412.39 ** 2.) / (1360 ** 2. + 412.39 ** 2.)))-0.9))
     delta_z1pt0 = np.round(ctx.z1pt0 - mean_z1pt0, 4)
     fsite = []
     for i, value in enumerate(delta_z1pt0):
-        s = (np.round(C['s1']*np.log(min(ctx.vs30[i], 600.)/600.) +
+        s = (np.round(C['s1'] * np.log(min(ctx.vs30[i], 600.) / 600.) +
              C['s2']*min(delta_z1pt0[i], 250.0) + C['s3'], 4))
         fsite.append(s)
     return fsite
@@ -113,7 +107,7 @@ class BahrampouriEtAldm2021Asc(GMPE):
 
     #: Supported intensity measure component is the geometric mean horizontal
     #: component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total, see table 7, page 35
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
@@ -128,17 +122,18 @@ class BahrampouriEtAldm2021Asc(GMPE):
     #: Required distance measure is closest distance to rupture
     REQUIRES_DISTANCES = {'rrup'}
 
-
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            mean[m] = np.log(_get_source_term(C, ctx) +
-                _get_path_term(C, ctx)) + _get_site_term(C, ctx)
+            mean[m] = np.log(
+                _get_source_term(trt, C, ctx) + _get_path_term(C, ctx)
+            ) + _get_site_term(C, ctx)
             sig[m], tau[m], phi[m] = _get_stddevs(C)
 
 
@@ -149,7 +144,7 @@ class BahrampouriEtAldm2021Asc(GMPE):
     """)
 
 
-class BahrampouriEtAldm2021SSlab(GMPE):
+class BahrampouriEtAldm2021SSlab(BahrampouriEtAldm2021Asc):
     """
     Implements GMPE by Mahdi Bahrampouri, Adrian Rodriguez-Marek
     and Russell A Green developed from the KiK-net database. This GMPE is
@@ -167,7 +162,7 @@ class BahrampouriEtAldm2021SSlab(GMPE):
 
     #: Supported intensity measure component is the geometric mean horizontal
     #: component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total, see table 7, page 35
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
@@ -182,21 +177,6 @@ class BahrampouriEtAldm2021SSlab(GMPE):
     #: Required distance measure is closest distance to rupture
     REQUIRES_DISTANCES = {'rrup'}
 
-
-
-    def compute(self, ctx, imts, mean, sig, tau, phi):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.compute>`
-        for spec of input and result values.
-        """
-        for m, imt in enumerate(imts):
-            C = self.COEFFS[imt]
-            mean[m] = np.log(_get_source_term(C, ctx) +
-                _get_path_term(C, ctx)) + _get_site_term(C, ctx)
-            sig[m], tau[m], phi[m] = _get_stddevs(C)
-
-
     COEFFS = CoeffsTable(sa_damping=5, table="""
     imt       m1     m2    m3_RS  m3_SS  m3_NS   M1  M2    r1      r2      R1     s1      s2        s3      sig    tau    phi_s2s  phi_ss
     rsd595  0.385  4.1604  5.828  4.231  5.496  5.5  8.0  0.09936  0.02495  200.0  -0.244  0.001409  -0.04109  0.458   0.194   0.245   0.335
@@ -204,7 +184,7 @@ class BahrampouriEtAldm2021SSlab(GMPE):
     """)
 
 
-class BahrampouriEtAldm2021SInter(GMPE):
+class BahrampouriEtAldm2021SInter(BahrampouriEtAldm2021Asc):
     """
     Implements GMPE by Mahdi Bahrampouri, Adrian Rodriguez-Marek
     and Russell A Green developed from the KiK-net database. This GMPE is
@@ -222,7 +202,7 @@ class BahrampouriEtAldm2021SInter(GMPE):
 
     #: Supported intensity measure component is the geometric mean horizontal
     #: component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total, see table 7, page 35
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
@@ -236,21 +216,6 @@ class BahrampouriEtAldm2021SInter(GMPE):
 
     #: Required distance measure is closest distance to rupture
     REQUIRES_DISTANCES = {'rrup'}
-
-
-    def compute(self, ctx, imts, mean, sig, tau, phi):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.compute>`
-        for spec of input and result values.
-        """
-        for m, imt in enumerate(imts):
-            C = self.COEFFS[imt]
-            mean[m] = np.log(_get_source_term(C, ctx) +
-                _get_path_term(C, ctx)) + _get_site_term(C, ctx)
-            sig[m], tau[m], phi[m] = _get_stddevs(C)
-
-
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     imt       m1     m2      m3_RS  M1    M2    r1      r2       R1           s1      s2        s3      sig    tau    phi_s2s  phi_ss

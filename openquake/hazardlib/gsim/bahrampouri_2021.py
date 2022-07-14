@@ -24,9 +24,30 @@ class:`bahrampouriEtAl2021SSlab`,
 class:`bahrampouriEtAl2021SInter`,
 """
 import numpy as np
+import pandas as pd
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import IA
+from scipy.interpolate import interp1d
+from math import sin, cos, sqrt, atan2, radians
+from openquake.hazardlib.geo.geodetic import npoints_towards
+from openquake.hazardlib.geo import Point
+import shapely.geometry as sg
+from shapely.geometry import LineString
+
+
+
+# coordinates from the author
+# Kyushu - VOLCANIC_FRONT
+kyushu = LineString([(127.067, 27.250), (128.983, 28.800), (130.217, 30.433),
+                     (130.817, 32.767), (131.600, 33.567), (131.850, 34.367)])
+# Honshu - VOLCANIC_FRONT
+honshu = LineString([(148.583, 45.417), (146.917, 44.450), (144.717, 43.683),
+                     (144.017, 43.600), (142.683, 43.500), (141.517, 43.400),
+                     (140.667, 42.050), (141.117, 41.267), (141.000, 40.450),
+                     (140.583, 39.033), (140.133, 37.733), (138.367, 36.600),
+                     (138.733, 35.383), (139.750, 33.133), (140.300, 30.483),
+                     (140.567, 28.317), (141.267, 25.417)])
 
 
 def _compute_magnitude(ctx, C, trt):
@@ -35,18 +56,18 @@ def _compute_magnitude(ctx, C, trt):
     """
 
     if trt == const.TRT.ACTIVE_SHALLOW_CRUST:
-        fsource = (C['a1'] + (C['a2'] * ctx.mag) +
-                   (C['a3'] * max((ctx.mag - C['a4']), 0)) +
-                   (C['a7'] * np.log((ctx.ztor) + 1)))
+        fsource = (C['a1'] + C['a2'] * ctx.mag +
+                   C['a3'] * np.maximum((ctx.mag - C['a4']), 0) +
+                   C['a7'] * np.log((ctx.ztor) + 1))
     else:
         if trt == const.TRT.SUBDUCTION_INTERFACE:
             Finter = 1
         elif trt == const.TRT.SUBDUCTION_INTRASLAB:
             Finter = 0
-        fsource = (C['a1'] + (C['a2'] * ctx.mag) +
-                   (C['a3'] * max((ctx.mag - C['a4']), 0)) +
-                   (C['a5'] * max((ctx.mag - C['a6']), 0)) +
-                   (C['a7'] * np.log((ctx.ztor) + 1)) + (C['a8'] * Finter))
+        fsource = (C['a1'] + C['a2'] * ctx.mag +
+                   C['a3'] * np.maximum((ctx.mag - C['a4']), 0) +
+                   C['a5'] * np.maximum((ctx.mag - C['a6']), 0) +
+                   C['a7'] * np.log((ctx.ztor) + 1) + C['a8'] * Finter)
     return fsource
 
 
@@ -54,15 +75,14 @@ def _get_source_saturation_term(ctx, C):
     """
     Compute the near source saturation as described in Eq. 11
     """
-    if ctx.mag <= C['b7']:
-        h = C['b5'] + C['b6'] * (ctx.mag-C['b7'])
-    elif ctx.mag < C['b7'] and ctx.mag <= C['b8']:
-        h = (C['b9'] + (C['b10']*(ctx.mag-C['b7'])) +
-             (C['b11']*(ctx.mag-C['b7'])**2) +
-             (C['b12']*(ctx.mag-C['b7'])**3))
-    else:
-        h = C['b13'] + (C['b14'] * (ctx.mag - C['b8']))
-
+    h = np.zeros_like(ctx.mag)
+    h = (C['b9'] + C['b10'] * (ctx.mag - C['b7']) +
+         C['b11'] * (ctx.mag - C['b7'])**2 +
+         C['b12'] * (ctx.mag - C['b7'])**3)
+    before = ctx.mag <= C['b7']
+    after = ctx.mag > C['b8']
+    h[before] = C['b5'] + C['b6'] * (ctx.mag[before] - C['b7'])
+    h[after] = C['b13'] + C['b14'] * (ctx.mag[after] - C['b8'])
     return h
 
 
@@ -72,29 +92,91 @@ def _get_site_term(ctx, C):
     Fsite = c1*ln(vs30)
 
     """
-    fsite = C['c1']*np.log(ctx.vs30)
+    fsite = C['c1'] * np.log(ctx.vs30)
     return fsite
 
 
 def _get_stddevs(C):
+
     sig = C['sig']
     tau = C['tau']
     phi = np.sqrt(C['phi_ss']**2 + C['phi_s2s']**2)
     return sig, tau, phi
 
 
+def _check_cm_ck(kyushu, honshu, ctx):
+    """
+    To check if the source to site path crosses either of the volcanic regions.
+    - Cm is 1 if the path from the source to the site crosses the volcanic
+        front in Honshu and Hokkaido and 0 otherwise;
+    - CK is 1 if the path from the source to the site crosses the volcanic
+        front in Kyushu and 0 otherwise;
+    - There is a possibility that the path may not cross either of the volcanic
+        fronts. In such cases, these coefficients are taken as 0.
+    """
+    tmp = np.array([kyushu.crosses(LineString([(hypo_lon, hypo_lat), (lon, lat)]))
+                    for hypo_lon, hypo_lat, lon, lat in
+                    zip(ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)])
+    tmp_1 = np.array([honshu.crosses(LineString([(hypo_lon, hypo_lat), (lon, lat)]))
+                     for hypo_lon, hypo_lat, lon, lat in
+                     zip(ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)])
+    ck = tmp.astype(int)
+    cm = tmp_1.astype(int)
+    return cm, ck
+
+
+def _compute_volcanic_distances(ctx, kyushu, honshu):
+    cm, ck = _check_cm_ck(kyushu, honshu, ctx)
+    """
+    the buffer regions have been chosen in such a way that
+    the backarc of Honshu and forearc of Kyushu is calculated.
+    These buffer regions helps in understanding if a given site
+    belongs to the forearc or backarc of the volcanic front.
+    These buffer regions were arbitrarily chosen. There is scope
+    for improvement in the future when more information is made
+    available about the backarc and forearc of the volcanic fronts.
+    """
+    buffer_region = honshu.buffer(-3.0, single_sided=True)  # backarc
+    buffer_region_1 = kyushu.buffer(-3.0, single_sided=True)  # forearc
+
+    for m, k, lon, lat in zip(cm, ck, ctx.lon, ctx.lat):
+        if m == 1:  # the site is in either the forearc or back arc of Honshu
+            dst = honshu.distance(sg.Point(lon, lat))
+            rrup_b = np.where(sg.Point(lon, lat).within(buffer_region),
+                              dst, ctx.rrup - dst)
+            rrup_f = np.where(sg.Point(lon, lat).within(buffer_region),
+                              ctx.rrup - dst, dst)
+        elif k == 1:  # the site is in either the forearc or back arc of Kyushu
+            dst = kyushu.distance(sg.Point(lon, lat))
+            rrup_f = np.where(sg.Point(lon, lat).within(buffer_region_1),
+                              dst, ctx.rrup - dst)
+            rrup_b = np.where(sg.Point(lon, lat).within(buffer_region_1),
+                              ctx.rrup - dst, dst)
+        else:
+            # the source to site path does not cross any volcanic front but the site
+            # can still be in the backarc of honshu or forearc of Kyushu volcanic front
+            tmp = sg.Point(lon, lat).within(buffer_region)
+            tmp_1 = sg.Point(lon, lat).within(buffer_region_1)
+            if tmp:  # check if the site is in the backarc region of honshu
+                rrup_b = honshu.distance(sg.Point(lon, lat))
+                rrup_f = ctx.rrup - rrup_b
+            elif tmp_1:  # check if the site is in the forearcarc region of Kyushu
+                rrup_f = kyushu.distance(sg.Point(lon, lat))
+                rrup_b = ctx.rrup - rrup_f
+            else:
+                # a neutral case wherein the site is not located in the vicinity of
+                # either of the volcanic fronts
+                rrup_f = 0
+                rrup_b = 0
+    return rrup_f, rrup_b, cm, ck
+
+
 def _compute_distance(ctx, C, trt):
     """
-    Cm is 1 if the path from the source to the site crosses the volcanic
-    front in Honshu and Hokkaido and 0 otherwise;
-    CK is 1 if the path from the source to the site crosses the volcanic
-    front in Kyushu and 0 otherwise;
+    f = forearc
+    b = backarc
     """
-    cm = 0  # temporary
-    ck = 0  # temporary
-    rrup_b = ctx.xvf
-    rrup_f = ctx.rrup - abs(ctx.xvf)
-
+    rrup_b, rrup_f, cm, ck = _compute_volcanic_distances(ctx, kyushu, honshu)
     sst = _get_source_saturation_term(ctx, C)
     tmp = (10**sst)**2
     if trt == const.TRT.ACTIVE_SHALLOW_CRUST:
@@ -155,7 +237,7 @@ class BahrampouriEtAl2021Asc(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {IA}
 
     #: Supported intensity measure component is geometric mean
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.MEDIAN_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see paragraph "Equations for standard deviations", page
@@ -163,18 +245,16 @@ class BahrampouriEtAl2021Asc(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
-    #: Required site parameters are Vs30 and xvf
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
+    #: Required site parameters are Vs30 and coordinates of the site
+    REQUIRES_SITES_PARAMETERS = {'lon', 'lat', 'vs30'}
 
     #: Required rupture parameters are magnitude,ztor
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor', 'hypo_lon', 'hypo_lat'}
 
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
-
-    #: Required distance measures are Rrup (see Table 2,
-    #: page 1031).
+    #: Required distance measures are rrup (see Table 2, page 1031).
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -212,7 +292,7 @@ class BahrampouriEtAl2021SInter(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {IA}
 
     #: Supported intensity measure component is geometric mean
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.MEDIAN_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see paragraph "Equations for standard deviations", page
@@ -220,18 +300,19 @@ class BahrampouriEtAl2021SInter(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
-    #: Required site parameters are Vs30 and xvf
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
+    #: Required site parameters are Vs30 and coordinates of the site
+
+    REQUIRES_SITES_PARAMETERS = {'lon', 'lat', 'vs30'}
 
     #: Required rupture parameters are magnitude,ztor
 
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor', 'hypo_lon', 'hypo_lat'}
 
-    #: Required distance measures are Rrup (see Table 2,
-    #: page 1031).
+    #: Required distance measures are rrup (see Table 2, page 1031).
+
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -261,14 +342,14 @@ class BahrampouriEtAl2021SSlab(GMPE):
     Kik-net database'.
     """
 
-    #: Supported tectonic region type is SUBDUCTION INTERFACE, see title!
+    #: Supported tectonic region type is SUBDUCTION INTERSLAB, see title!
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     #: Supported intensity measure types are areas intensity
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {IA}
 
     #: Supported intensity measure component is geometric mean
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.MEDIAN_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see paragraph "Equations for standard deviations", page
@@ -276,18 +357,17 @@ class BahrampouriEtAl2021SSlab(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
-    #: Required site parameters are Vs30 and xvf
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
+    #: Required site parameters are Vs30 and coordinates of the site
+    REQUIRES_SITES_PARAMETERS = {'lon', 'lat', 'vs30'}
 
     #: Required rupture parameters are magnitude,ztor
 
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor', 'hypo_lon', 'hypo_lat'}
 
-    #: Required distance measures are Rrup (see Table 2,
-    #: page 1031).
+    #: Required distance measures are rrup (see Table 2, page 1031).
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

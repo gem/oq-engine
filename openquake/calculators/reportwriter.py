@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -42,7 +42,6 @@ class ReportWriter(object):
     title = {
         'params': 'Parameters',
         'inputs': 'Input files',
-        'full_lt': 'Composite source model',
         'required_params_per_trt':
         'Required parameters per tectonic region type',
         'ruptures_events': 'Specific information for event based',
@@ -70,7 +69,7 @@ class ReportWriter(object):
         versions = sorted(dstore['/'].attrs.items())
         self.text += '\n\n' + views.text_table(versions)
         self.text += '\n\nnum_sites = %d, num_levels = %d, num_rlzs = %s' % (
-            len(dstore['sitecol']), oq.imtls.size, num_rlzs)
+            len(dstore['sitecol']), oq.imtls.size if oq.imtls else 0, num_rlzs)
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""
@@ -93,7 +92,6 @@ class ReportWriter(object):
         for name in ('params', 'inputs'):
             self.add(name)
         if 'full_lt' in ds:
-            self.add('full_lt')
             self.add('required_params_per_trt')
         if 'rup_data' in ds:
             self.add('ruptures_events')

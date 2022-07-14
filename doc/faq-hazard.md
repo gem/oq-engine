@@ -1,5 +1,35 @@
 # FAQ about running hazard calculations
 
+## performance
+
+### Can I estimate the runtime of a classical calculation without running it?
+
+Since engine 3.15 you can. The trick is to run a reduced calculation first, by
+using the command
+
+  $ oq engine --run job.ini --sample-sources=0.01
+
+This will reduce the number of ruptures by ~100 times so that the
+reduced calculation will complete in a reasonable amount of time. Then
+in the log you will see the estimate runtime for the full calculation.
+For instance for the SHARE model on a computer with
+an i7 processor you will see something like this:
+
+[2022-04-19 08:57:05 #4054 INFO] Estimated time 72.3 hours
+
+The estimate is rather rough, so do not take it at the letter. The
+runtime can be reduced by orders of magnitude by tuning parameters
+like the `pointsource_distance` and `ps_grid_spacing`, discussed at
+length in the [advanced manual](https://docs.openquake.org/oq-engine/advanced/general.html#pointsource-distance).
+
+## logic trees
+
+### How should I interpret the "Realizations" output?
+
+This is explained in the advanced manual:
+
+https://docs.openquake.org/oq-engine/advanced/logic_trees.html
+
 ## classical calculations
 
 ### How do I export the hazard curves/maps/uhs for each realization?
@@ -32,16 +62,6 @@ $ oq engine --run job.ini --hc=<ID> --exports csv
 where `<ID>` must be replaced with the ID of the original calculation.
 Hazard maps and UHS can be regenerated from an existing calculation
 quite efficiently.
-
-### How do I set the pointsource_distance?
-
-In several hazard models (for instance Australia, Canada, etc) it is
-possible to improve significantly the performance by tuning a parameter
-called `pointsource_distance`. The parameter is discussed in the [advanced
-manual](https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance). You can calibrate the value of the `pointsource_distance`
-by taking a few reference sites, computing the hazard map values there, and
-then playing with the parameter until you get good performance without loosing
-too much precision.
 
 ## disaggregation calculations
 
@@ -82,7 +102,7 @@ realizations before performing the disaggregation.
 A single rupture can produce multiple seismic events during the
 investigation time. How many depends on the number of stochastic event sets,
 on the rupture occurrence rate and on the `ses_seed` parameters, as
-[explained here](https://docs.openquake.org/oq-engine/advanced/rupture-sampling.html).
+[explained here](https://docs.openquake.org/oq-engine/advanced/event_based.html#rupture-sampling-how-does-it-work).
 In the engine a rupture is uniquely identified by
 a rupture ID, which is a 32 bit positive integer.
 Starting from engine 3.7, seismic events are uniquely identified by an
