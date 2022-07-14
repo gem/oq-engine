@@ -1348,7 +1348,8 @@ class OqParam(valid.ParamSet):
                     mini[imt] = 0
         if 'default' in mini:
             del mini['default']
-        return numpy.array([mini.get(imt) or 1E-10 for imt in self.imtls])
+        min_iml = numpy.array([mini.get(imt) or 1E-10 for imt in self.imtls])
+        return min_iml
 
     def levels_per_imt(self):
         """

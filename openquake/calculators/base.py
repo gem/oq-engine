@@ -1320,8 +1320,6 @@ def create_risk_by_event(calc):
     crmodel = calc.crmodel
     if 'risk' in oq.calculation_mode:
         fields = [('loss', F32)]
-        #if hasattr(calc, 'policy_df'):
-        #    fields.append(('ins_loss', F32))
         descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
                  ('variance', F32)] + fields
         dstore.create_df('risk_by_event', descr, K=K, L=len(oq.loss_types))
@@ -1331,3 +1329,18 @@ def create_risk_by_event(calc):
                  [(dc, F32) for dc in crmodel.get_dmg_csq()])
         dstore.create_df('risk_by_event', descr, K=K,
                          L=len(oq.loss_types), limit_states=dmgs)
+
+
+def run_calc(job_ini, **kw):
+    """
+    Helper to run calculations programmatically.
+
+    :param job_ini: path to a job.ini file or dictionary of parameters
+    :param kw: parameters to override
+    :returns: a Calculator instance
+    """
+    with logs.init("job", job_ini) as log:
+        log.params.update(kw)
+        calc = calculators(log.get_oqparam(), log.calc_id)
+        calc.run()
+        return calc
