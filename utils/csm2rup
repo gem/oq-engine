@@ -71,15 +71,8 @@ def main(job_ini):
     """
     Convert a composite source model into a DataFrame of ruptures
     """
-    with logs.init("job", job_ini) as log:
-        oq = log.get_oqparam()
-        oq.calculation_mode = 'preclassical'
-        # drop sites and site_model files to work with an empty sitecol
-        for k in ('sites', 'site_model'):
-            oq.inputs.pop(k, None)
-        calc = base.calculators(oq, log.calc_id)
-        calc.run()  # build the CompositeSourceModel
-        csm2rup(calc.csm, calc.datastore)
+    calc = base.run_calc(job_ini, calculation_mode='preclassical')
+    csm2rup(calc.csm, calc.datastore)
 
 
 if __name__ == '__main__':
