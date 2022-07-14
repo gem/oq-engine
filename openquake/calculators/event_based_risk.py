@@ -128,9 +128,6 @@ def aggreg(outputs, crmodel, ARKD, aggids, rlz_id, monitor):
                         dic[col].append(arr[li, c])
         fix_dtypes(dic)
         df = pandas.DataFrame(dic)
-        red = df[(df.loss_id == 9) & (df.agg_id == 0)]
-        if len(red):
-            print(red)
     return dict(avg=loss_by_AR, alt=df)
 
 
