@@ -48,7 +48,7 @@ $ python3.9 install.py user
 ```
 _*Note 2*: Users can decided the preferred Python version (e.g., `$python3.9 install.py user`)_
 
-_*Note 3*: Users wiht M1 CPU must use Python 3.9 (e.g., `$python3.9 install.py user`)_
+_*Note 3*: Users with the M1 CPU must use Python 3.9 (e.g., `$python3.9 install.py user`)_
 
 **on Linux:**
 ```
