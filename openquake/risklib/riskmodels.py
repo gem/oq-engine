@@ -714,7 +714,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a dictionary keyed by extended loss type
         """
         lc = scientific.LossComputer(self, asset_df)
-        return lc.compute(haz, sec_losses, rndgen)
+        return lc.output(haz, sec_losses, rndgen)
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))

@@ -1442,7 +1442,7 @@ class LossComputer(dict):
                 self[key, lt] = crm._riskmodels[key]
                 self.wdic[key, lt] = weight
 
-    def compute(self, haz, sec_losses=(), rndgen=None):
+    def output(self, haz, sec_losses=(), rndgen=None):
         """
         Compute averages by using the taxonomy mapping
 
