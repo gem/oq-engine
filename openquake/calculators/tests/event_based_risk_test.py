@@ -264,7 +264,7 @@ agg_id
 
     def test_case_5(self):
         # taxonomy mapping, the numbers are different in Ubuntu 20 vs 18
-        self.run_calc(case_5.__file__, 'job_eb.ini')
+        self.run_calc(case_5.__file__, 'job.ini')
         fnames = export(('aggcurves', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),

@@ -1420,13 +1420,18 @@ def _agg(loss_dfs, weights=None):
     return pandas.concat(loss_dfs).groupby(['eid', 'aid']).sum().reset_index()
 
 
-class AvgRiskModel(dict):
+class LossComputer(dict):
     """
     A callable dictionary of risk models able to compute average losses
     according to the taxonomy mapping. It also computes secondary losses
     *after* the average (this is a hugely simplifying approximation).
+
+    :param crm: a CompositeRiskModel
+    :param asset_df: a DataFrame of assets with the same taxonomy
     """
-    def __init__(self, crm, taxidx):
+    def __init__(self, crm, asset_df):
+        [taxidx] = asset_df.taxonomy.unique()
+        self.asset_df = asset_df
         self.imtls = crm.imtls
         self.alias = {
             imt: 'gmv_%d' % i for i, imt in enumerate(crm.primary_imtls)}
@@ -1437,13 +1442,13 @@ class AvgRiskModel(dict):
                 self[key, lt] = crm._riskmodels[key]
                 self.wdic[key, lt] = weight
 
-    def __call__(self, asset_df, haz, sec_losses, rndgen):
+    def compute(self, haz, sec_losses=(), rndgen=None):
         """
         Compute averages by using the taxonomy mapping
 
-        :param asset_df: a DataFrame of assets of the given taxonomy
         :param haz: a DataFrame of GMFs or hazard curves
         :param sec_losses: a list of functions updating the loss dict
+        :param rndgen: None or MultiEventRNG instance
         :returns: loss dict {extended_loss_type: loss_output}
         """
         dic = collections.defaultdict(list)  # lt -> outs
@@ -1459,9 +1464,9 @@ class AvgRiskModel(dict):
                 imt = rm.imt_by_lt[lt]
             col = self.alias.get(imt, imt)
             if event:
-                out = rm(lt, asset_df, haz, col, rndgen)
+                out = rm(lt, self.asset_df, haz, col, rndgen)
             else:  # classical
-                out = rm(lt, asset_df, haz.array[self.imtls(imt), 0])
+                out = rm(lt, self.asset_df, haz.array[self.imtls(imt), 0])
             weights[lt].append(self.wdic[key, lt])
             dic[lt].append(out)
         out = {}
@@ -1479,7 +1484,7 @@ class AvgRiskModel(dict):
                 out[lt] = outs[0]
         if event:
             for update_losses in sec_losses:
-                update_losses(asset_df, out)
+                update_losses(self.asset_df, out)
         return out
 
 

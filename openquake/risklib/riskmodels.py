@@ -705,17 +705,16 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
 
-    def get_output(self, taxoidx, asset_df, haz, sec_losses=(), rndgen=None):
+    def get_output(self, asset_df, haz, sec_losses=(), rndgen=None):
         """
-        :param taxoidx: a taxonomy index
-        :param asset_df: a DataFrame of assets of the given taxonomy
-        :param haz: a DataFrame of GMVs on that site
-        :param sec_losses: a list of SecondaryLoss instances
+        :param asset_df: a DataFrame of assets with the same taxonomy
+        :param haz: a DataFrame of GMVs on the sites of the assets
+        :param sec_losses: a list of functions
         :param rndgen: a MultiEventRNG instance
-        :returns: a dictionary keyed by loss type
+        :returns: a dictionary keyed by extended loss type
         """
-        avgrm = scientific.AvgRiskModel(self, taxoidx)
-        return avgrm(asset_df, haz, sec_losses, rndgen)
+        lc = scientific.LossComputer(self, asset_df)
+        return lc.compute(haz, sec_losses, rndgen)
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))
