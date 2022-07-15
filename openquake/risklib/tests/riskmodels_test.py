@@ -21,11 +21,10 @@ import pickle
 import unittest
 import unittest.mock as mock
 import numpy
-import pandas
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
-from openquake.risklib import riskmodels, nrml_examples, scientific
+from openquake.risklib import riskmodels, nrml_examples
 from openquake.qa_tests_data.scenario_damage import case_4b
 
 FF_DIR = os.path.dirname(case_4b.__file__)
@@ -294,3 +293,43 @@ lossCategory="contents">
             nrml.to_python(self.wrong_csq_model_3)
         self.assertIn("node params: Expected 'ds3', got 'ds4', line 12",
                       str(ctx.exception))
+
+
+class LossComputerTestCase(unittest.TestCase):
+    def test_instantiate(self):
+        dic = {'alias': {'PGA': 'gmv_0'},
+               'asset_df': {'area': [1.0],
+                            'id': [b'a2'],
+                            'lat': [38.17],
+                            'lon': [15.56],
+                            'site_id': [0],
+                            'taxonomy': [1],
+                            'value-number': [2000.0],
+                            'value-structural': [2000.0]},
+               'calculation_mode': 'event_based_risk',
+               'loss_types': ['structural'],
+               'rdic': {('RC', 'structural'):
+                        {('structural', 'vulnerability'): '{\n'
+                         '"openquake.risklib.scientific.VulnerabilityFunction": '
+                         '{\n'
+                         '"id": '
+                         '"RC",\n'
+                         '"imt": '
+                         '"PGA",\n'
+                         '"imls": '
+                         '[0.1, 0.2, '
+                         '0.3, 0.5, '
+                         '0.7],\n'
+                         '"mean_loss_ratios": '
+                         '[0.0035, '
+                         '0.07, 0.14, '
+                         '0.28, '
+                         '0.56],\n'
+                         '"covs": '
+                         '[0.0, 0.0, '
+                         '0.0, 0.0, '
+                         '0.0],\n'
+                         '"distribution_name": '
+                         '"LN"}}'}},
+               'wdic': {('RC', 'structural'): 1}}
+        riskmodels.get_loss_computer(dic)

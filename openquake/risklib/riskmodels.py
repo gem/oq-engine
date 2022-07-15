@@ -408,6 +408,24 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     return RiskModel(oqparam.calculation_mode, taxonomy, **extra)
 
 
+def get_loss_computer(dic):
+    """
+    Builds a LossComputer instance from a suitable dictionary
+    """
+    lc = scientific.LossComputer.__new__(scientific.LossComputer)
+    lc.asset_df = pandas.DataFrame(dic['asset_df'])
+    lc.wdic = dic['wdic']
+    for (riskid, lt), rfdic in dic['rdic'].items():
+        rfs = {k: hdf5.json_to_obj(json) for k, json in rfdic.items()}
+        rm = RiskModel(dic['calculation_mode'], 'taxonomy',
+                       risk_functions=rfs)
+        lc[riskid, lt] = rm
+    lc.loss_types = dic['loss_types']
+    lc.calculation_mode = dic['calculation_mode']
+    lc.alias = dic['alias']
+    return lc
+
+
 # ######################## CompositeRiskModel #########################
 
 class ValidationError(Exception):

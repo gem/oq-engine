@@ -28,6 +28,7 @@ import numpy
 import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats
+from openquake.baselib import hdf5
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -35,6 +36,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 U16 = numpy.uint16
 U8 = numpy.uint8
+
 TWO32 = 2 ** 32
 KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
                       'fatalities', 'homeless']
@@ -1435,6 +1437,7 @@ class LossComputer(dict):
         self.imtls = crm.imtls
         self.alias = {
             imt: 'gmv_%d' % i for i, imt in enumerate(crm.primary_imtls)}
+        self.calculation_mode = crm.oqparam.calculation_mode
         self.loss_types = crm.loss_types
         self.wdic = {}
         for lt in self.loss_types:
@@ -1486,6 +1489,22 @@ class LossComputer(dict):
             for update_losses in sec_losses:
                 update_losses(self.asset_df, out)
         return out
+
+    def todict(self):
+        """
+        :returns: a literal dict describing the LossComputer
+        """
+        rdic = {}
+        for (riskid, lt), rm in self.items():
+            rdic[riskid, lt] = {k: hdf5.obj_to_json(rf)
+                                for k, rf in rm.risk_functions.items()}
+        df = self.asset_df
+        return dict(asset_df={col: df[col].tolist() for col in df.columns},
+                    rdic=rdic,
+                    wdic=self.wdic,
+                    alias=self.alias,
+                    loss_types=self.loss_types,
+                    calculation_mode=self.calculation_mode)
 
 
 # ####################### Consequences ##################################### #
