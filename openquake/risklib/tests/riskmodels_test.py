@@ -310,15 +310,13 @@ class LossComputerTestCase(unittest.TestCase):
             'calculation_mode': 'event_based_risk',
             'loss_types': ['structural'],
             'rdic': {('RC', 'structural'):
-                     {('structural', 'vulnerability'): '{\n'
-                      '"openquake.risklib.scientific.VulnerabilityFunction":'
-                      '{\n"id": "RC",\n'
-                      '"imt": "PGA",\n'
-                      '"imls": [0.1, 0.2, 0.3, 0.5, 0.7],\n'
-                      '"mean_loss_ratios": '
-                      '[0.0035, 0.07, 0.14, 0.28, 0.56],\n'
-                      '"covs": [0.0, 0.0, 0.0, 0.0, 0.0],\n'
-                      '"distribution_name": '
-                      '"LN"}}'}},
+                     {('structural', 'vulnerability'):
+                      '{"openquake.risklib.scientific.VulnerabilityFunction":'
+                      '{"id": "RC",'
+                      '"imt": "PGA",'
+                      '"imls": [0.1, 0.2, 0.3, 0.5, 0.7],'
+                      '"mean_loss_ratios": [0.0035, 0.07, 0.14, 0.28, 0.56],'
+                      '"covs": [0.0, 0.0, 0.0, 0.0, 0.0],'
+                      '"distribution_name": "LN"}}'}},
             'wdic': {('RC', 'structural'): 1}}
         riskmodels.get_loss_computer(dic)
