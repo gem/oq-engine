@@ -1499,12 +1499,13 @@ class RiskComputer(dict):
             rfs.append({k: hdf5.obj_to_json(rf)
                         for k, rf in rm.risk_functions.items()})
         df = self.asset_df
-        return dict(asset_df={col: df[col].tolist() for col in df.columns},
-                    functions=rfs,
-                    wdic=self.wdic,
-                    alias=self.alias,
-                    loss_types=self.loss_types,
-                    calculation_mode=self.calculation_mode)
+        dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
+                   functions=rfs,
+                   wdic=self.wdic,
+                   alias=self.alias,
+                   loss_types=self.loss_types,
+                   calculation_mode=self.calculation_mode)
+        return dic
 
 
 # ####################### Consequences ##################################### #
