@@ -1,14 +1,20 @@
-#,,,"generated_by='OpenQuake engine 3.15.0-gite3e05c8d53', start_date='2022-06-03T07:55:07', checksum=3248968340"
+#,,,"generated_by='OpenQuake engine 3.15.0-git6dc8832514', start_date='2022-07-15T06:46:26', checksum=3676842672"
 loss_type,loss,stat,NAME_1
-business_interruption,186262.5078125,mean,Mid-Western
-business_interruption,91321.94878472222,quantile-0.15,Mid-Western
-business_interruption,178767.2005208333,quantile-0.85,Mid-Western
-structural,237500.434375,mean,Mid-Western
-structural,180558.59548611112,quantile-0.15,Mid-Western
-structural,233005.02604166666,quantile-0.85,Mid-Western
-business_interruption,91563.77578124999,mean,Far-Western
-business_interruption,56790.430989583336,quantile-0.15,Far-Western
-business_interruption,88818.51171875,quantile-0.85,Far-Western
-structural,276301.7828125,mean,Far-Western
-structural,163385.8515625,quantile-0.15,Far-Western
-structural,267387.3671875,quantile-0.85,Far-Western
+contents,186262.52265625002,mean,Mid-Western
+contents,91321.95703125,quantile-0.15,Mid-Western
+contents,178767.21484375,quantile-0.85,Mid-Western
+structural,237500.4625,mean,Mid-Western
+structural,180558.59722222222,quantile-0.15,Mid-Western
+structural,233005.0520833333,quantile-0.85,Mid-Western
+structural+contents,423762.9828125,mean,Mid-Western
+structural+contents,271880.53211805556,quantile-0.15,Mid-Western
+structural+contents,411772.2630208333,quantile-0.85,Mid-Western
+contents,91563.775390625,mean,Far-Western
+contents,56790.42730034722,quantile-0.15,Far-Western
+contents,88818.51106770834,quantile-0.85,Far-Western
+structural,276301.78125,mean,Far-Western
+structural,163385.83680555556,quantile-0.15,Far-Western
+structural,267387.3645833333,quantile-0.85,Far-Western
+structural+contents,367865.571875,mean,Far-Western
+structural+contents,220176.27604166666,quantile-0.15,Far-Western
+structural+contents,356205.890625,quantile-0.85,Far-Western
