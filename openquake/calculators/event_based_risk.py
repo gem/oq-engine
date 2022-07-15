@@ -171,8 +171,7 @@ def event_based_risk(df, oqparam, dstore, monitor):
                 continue
             with mon_risk:
                 adf = adf.set_index('ordinal')
-                out = crmodel.get_output(
-                    taxo, adf, gmf_df, oqparam._sec_losses, rng)
+                out = crmodel.get_output(adf, gmf_df, oqparam._sec_losses, rng)
             yield out
 
     return aggreg(outputs(), crmodel, ARK, aggids, rlz_id, monitor)

@@ -102,7 +102,7 @@ def event_based_damage(df, oqparam, dstore, monitor):
                 if not float_dmg_dist:
                     dprobs = rng.boolean_dist(probs, num_sims).mean(axis=1)
             for taxo, adf in asset_df.groupby('taxonomy'):
-                out = crmodel.get_output(taxo, adf, gmf_df)
+                out = crmodel.get_output(adf, gmf_df)
                 aids = adf.index.to_numpy()
                 assets = adf.to_records()
                 if float_dmg_dist:

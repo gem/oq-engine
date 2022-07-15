@@ -408,6 +408,24 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     return RiskModel(oqparam.calculation_mode, taxonomy, **extra)
 
 
+def get_loss_computer(dic):
+    """
+    Builds a LossComputer instance from a suitable dictionary
+    """
+    lc = scientific.LossComputer.__new__(scientific.LossComputer)
+    lc.asset_df = pandas.DataFrame(dic['asset_df'])
+    lc.wdic = dic['wdic']
+    for (riskid, lt), rfdic in dic['rdic'].items():
+        rfs = {k: hdf5.json_to_obj(json) for k, json in rfdic.items()}
+        rm = RiskModel(dic['calculation_mode'], 'taxonomy',
+                       risk_functions=rfs)
+        lc[riskid, lt] = rm
+    lc.loss_types = dic['loss_types']
+    lc.calculation_mode = dic['calculation_mode']
+    lc.alias = dic['alias']
+    return lc
+
+
 # ######################## CompositeRiskModel #########################
 
 class ValidationError(Exception):
@@ -705,17 +723,16 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
 
-    def get_output(self, taxoidx, asset_df, haz, sec_losses=(), rndgen=None):
+    def get_output(self, asset_df, haz, sec_losses=(), rndgen=None):
         """
-        :param taxoidx: a taxonomy index
-        :param asset_df: a DataFrame of assets of the given taxonomy
-        :param haz: a DataFrame of GMVs on that site
-        :param sec_losses: a list of SecondaryLoss instances
+        :param asset_df: a DataFrame of assets with the same taxonomy
+        :param haz: a DataFrame of GMVs on the sites of the assets
+        :param sec_losses: a list of functions
         :param rndgen: a MultiEventRNG instance
-        :returns: a dictionary keyed by loss type
+        :returns: a dictionary keyed by extended loss type
         """
-        avgrm = scientific.AvgRiskModel(self, taxoidx)
-        return avgrm(asset_df, haz, sec_losses, rndgen)
+        lc = scientific.LossComputer(self, asset_df)
+        return lc.output(haz, sec_losses, rndgen)
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))

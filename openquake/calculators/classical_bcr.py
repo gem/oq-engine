@@ -49,7 +49,7 @@ def classical_bcr(riskinputs, param, monitor):
         for taxo, assets in ri.asset_df.groupby('taxonomy'):
             for rlz in range(R):
                 pcurve = haz.extract(rlz)
-                out = crmodel.get_output(taxo, assets, pcurve)
+                out = crmodel.get_output(assets, pcurve)
                 for asset, (eal_orig, eal_retro, bcr) in zip(
                         assets.to_records(), out['structural']):
                     aval = asset['value-structural']
