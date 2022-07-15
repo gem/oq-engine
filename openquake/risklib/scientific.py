@@ -1422,20 +1422,20 @@ def _agg(loss_dfs, weights=None):
 
 class AvgRiskModel(dict):
     """
-    A dictionary of risk models associated to a taxonomy mapping
+    A callable dictionary of risk models able to compute average losses
+    according to the taxonomy mapping. It also computes secondary losses
+    *after* the average (this is a hugely simplifying approximation).
     """
-    def __init__(self, crm, taxidx, imtls, primary_imts):
-        self.imtls = imtls
-        self.alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary_imts)}
-        self.ext_loss_types = crm.oqparam.ext_loss_types
+    def __init__(self, crm, taxidx):
+        self.imtls = crm.imtls
+        self.alias = {
+            imt: 'gmv_%d' % i for i, imt in enumerate(crm.primary_imtls)}
+        self.loss_types = crm.loss_types
         self.wdic = {}
-        for lt in crm.loss_types:
+        for lt in self.loss_types:
             for key, weight in crm.tmap[lt][taxidx]:
                 self[key, lt] = crm._riskmodels[key]
                 self.wdic[key, lt] = weight
-        for lt in self.ext_loss_types:
-            if lt.endswith('_ins'):
-                self.wdic[key, lt] = self.wdic[key, lt[:-4]]
 
     def __call__(self, asset_df, haz, sec_losses, rndgen):
         """
@@ -1460,12 +1460,12 @@ class AvgRiskModel(dict):
             weights[lt].append(self.wdic[key, lt])
             dic[lt].append(out)
         out = {}
-        for lt in self.ext_loss_types:
+        for lt in self.loss_types:
             outs = dic[lt]
             if len(outs) == 0:  # can happen for nonstructural_ins
                 continue
             elif len(outs) > 1 and hasattr(outs[0], 'loss'):
-                # computing the average dataframe for event_based_risk
+                # computing the average dataframe for event_based_risk/case_8
                 out[lt] = _agg(outs, weights[lt])
             elif len(outs) > 1:
                 # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
@@ -1476,27 +1476,6 @@ class AvgRiskModel(dict):
             for update_losses in sec_losses:
                 update_losses(asset_df, out)
         return out
-
-
-# not used anymore
-def make_epsilons(matrix, seed, correlation):
-    """
-    Given a matrix of shape (A, E) returns a matrix of the same shape
-    obtained by applying the multivariate_normal distribution to
-    A points and E samples, by starting from the given seed and
-    correlation.
-    """
-    if seed is not None:
-        numpy.random.seed(seed)
-    A = len(matrix)
-    E = len(matrix[0])
-    if not correlation:  # avoid building the covariance matrix
-        return numpy.random.normal(size=(E, A)).transpose()
-    means_vector = numpy.zeros(A)
-    covariance_matrix = (numpy.ones((A, A)) * correlation +
-                         numpy.diag(numpy.ones(A)) * (1 - correlation))
-    return numpy.random.multivariate_normal(
-        means_vector, covariance_matrix, E).transpose()
 
 
 # ####################### Consequences ##################################### #

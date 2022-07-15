@@ -714,8 +714,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param rndgen: a MultiEventRNG instance
         :returns: a dictionary keyed by loss type
         """
-        avgrm = scientific.AvgRiskModel(
-            self, taxoidx, self.imtls, self.primary_imtls)
+        avgrm = scientific.AvgRiskModel(self, taxoidx)
         return avgrm(asset_df, haz, sec_losses, rndgen)
 
     def __iter__(self):
