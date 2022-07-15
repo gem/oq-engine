@@ -18,6 +18,7 @@
 """
 This module includes the scientific API of the oq-risklib
 """
+import ast
 import copy
 import bisect
 import itertools
@@ -1496,12 +1497,14 @@ class RiskComputer(dict):
         """
         rfs = []
         for (riskid, lt), rm in self.items():
-            rfs.append({k: hdf5.obj_to_json(rf)
-                        for k, rf in rm.risk_functions.items()})
+            dic = {}
+            for ltk, rf in rm.risk_functions.items():
+                dic['%s:%s' % ltk] = ast.literal_eval(hdf5.obj_to_json(rf))
+            rfs.append(dic)
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
                    functions=rfs,
-                   wdic=self.wdic,
+                   wdic={'%s:%s' % k: v for k, v in self.wdic.items()},
                    alias=self.alias,
                    loss_types=self.loss_types,
                    calculation_mode=self.calculation_mode)

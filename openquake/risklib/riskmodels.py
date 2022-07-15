@@ -415,8 +415,9 @@ def get_risk_computer(dic):
     lc = scientific.RiskComputer.__new__(scientific.RiskComputer)
     lc.asset_df = pandas.DataFrame(dic['asset_df'])
     lc.wdic = dic['wdic']
-    for (riskid, lt), functions in zip(dic['wdic'], dic['functions']):
-        rfs = {k: hdf5.json_to_obj(json) for k, json in functions.items()}
+    for rlt, functions in zip(dic['wdic'], dic['functions']):
+        riskid, lt = rlt.split(':')
+        rfs = {tuple(ltk.split(':')): dic for ltk, dic in functions.items()}
         rm = RiskModel(dic['calculation_mode'], 'taxonomy',
                        risk_functions=rfs)
         lc[riskid, lt] = rm
