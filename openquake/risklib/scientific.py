@@ -1441,7 +1441,10 @@ class AvgRiskModel(dict):
         """
         Compute averages by using the taxonomy mapping
 
-        :returns: a dictionary extended_loss_type -> loss output
+        :param asset_df: a DataFrame of assets of the given taxonomy
+        :param haz: a DataFrame of GMFs or hazard curves
+        :param sec_losses: a list of functions updating the loss dict
+        :returns: loss dict {extended_loss_type: loss_output}
         """
         dic = collections.defaultdict(list)  # lt -> outs
         weights = collections.defaultdict(list)  # lt -> weights
