@@ -44,6 +44,7 @@ occupants occupants_day occupants_night occupants_transit
 structural+nonstructural structural+contents nonstructural+contents
 structural+nonstructural+contents
 structural_ins nonstructural_ins reinsurance'''.split())
+TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
 LTI = {lt: i for i, lt in enumerate(LOSSTYPE)}
 
 
@@ -1110,8 +1111,7 @@ def total_losses(asset_df, losses_by_rl, kind):
     :param losses_by_rl: riskid, lt -> DataFrame[eid, aid]
     :param kind: kind of total loss (i.e. "structural+nonstructural")
     """
-    if kind in ('structural+nonstructural',
-                'structural+nonstructural+contents'):
+    if kind in TOTLOSSES:
         ltypes = kind.split('+')
     else:
         raise ValueError(kind)
@@ -1431,13 +1431,13 @@ class AvgRiskModel(dict):
     A dictionary of risk models associated to a taxonomy mapping
     """
     def __init__(self, crm, taxidx):
-        self.loss_types = crm.oqparam.ext_loss_types
+        self.ext_loss_types = crm.oqparam.ext_loss_types
         self.wdic = {}
         for lt in crm.loss_types:
             for key, weight in crm.tmap[lt][taxidx]:
                 self[key, lt] = crm._riskmodels[key]
                 self.wdic[key, lt] = weight
-        for lt in self.loss_types:
+        for lt in self.ext_loss_types:
             if lt.endswith('_ins'):
                 self.wdic[key, lt] = self.wdic[key, lt[:-4]]
 
@@ -1446,7 +1446,7 @@ class AvgRiskModel(dict):
         Compute averages by using the taxonomy mapping
         """
         out = {}
-        for lt in self.loss_types:
+        for lt in self.ext_loss_types:
             outs = [dic[k] for k in dic if k[1] == lt]
             weights = [self.wdic[k] for k in self.wdic if k[1] == lt]
             if len(outs) == 0:  # can happen for nonstructural_ins
