@@ -214,7 +214,6 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         aae(lrem, expected_lrem, atol=1E-3)
 
 
-
 class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
     IMT = 'PGA'
 

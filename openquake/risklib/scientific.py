@@ -1440,6 +1440,8 @@ class AvgRiskModel(dict):
     def __call__(self, asset_df, haz, sec_losses, rndgen):
         """
         Compute averages by using the taxonomy mapping
+
+        :returns: a dictionary extended_loss_type -> loss output
         """
         dic = collections.defaultdict(list)  # lt -> outs
         weights = collections.defaultdict(list)  # lt -> weights
