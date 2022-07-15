@@ -483,6 +483,10 @@ class DisaggregationCalculator(base.HazardCalculator):
                         out[key][s, m, p, :] = pprod(mat4, axis=2)
                     elif key == 'Mag_Dist_Eps' and k == 0:
                         out[key][s, m, p, :] = mat4
+                    elif key == 'Mag_Dist_TRT' and k == 0:
+                        out[key][s, m, p, :] = pprod(mat5, axis=(3)).transpose(1, 2, 0, 3)  # T Mag Dist Z -> Mag Dist T Z
+                    elif key == 'Mag_Dist_TRT_Eps' and k == 0:
+                        out[key][s, m, p, :] = mat5.transpose(1, 2, 0, 3, 4)  # T Mag Dist Eps Z -> Mag Dist T Eps Z
                     elif key == 'Lon_Lat' and k == 1:
                         out[key][s, m, p, :] = pprod(mat4, axis=0)
                     elif key == 'Mag_Lon_Lat' and k == 1:
