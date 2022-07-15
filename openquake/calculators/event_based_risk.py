@@ -268,7 +268,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
     def create_avg_losses(self):
         oq = self.oqparam
-        L = len(oq.ext_loss_types)
         ws = self.datastore['weights']
         R = 1 if oq.collect_rlzs else len(ws)
         if oq.collect_rlzs:
@@ -281,8 +280,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 self.avg_ratio = numpy.array([oq.time_ratio] * len(ws))
             else:  # scenario
                 self.avg_ratio = 1. / self.num_events
-        self.avg_losses = numpy.zeros((self.A, R, L), F32)
+        self.avg_losses = {}
         for lt in oq.ext_loss_types:
+            self.avg_losses[lt] = numpy.zeros((self.A, R), F32)
             self.datastore.create_dset(
                 'avg_losses-rlzs/' + lt, F32, (self.A, R))
             self.datastore.set_shape_descr(
@@ -358,7 +358,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if not dic:
             return
         self.gmf_bytes += dic['alt'].memory_usage().sum()
-        lti = self.oqparam.lti
         self.oqparam.ground_motion_fields = False  # hack
         with self.monitor('saving risk_by_event'):
             alt = dic['alt']
@@ -368,7 +367,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     hdf5.extend(dset, alt[name].to_numpy())
             for ln, ls in dic['avg'].items():
                 for coo in ls:
-                    self.avg_losses[coo.row, coo.col, lti[ln]] += coo.data
+                    self.avg_losses[ln][coo.row, coo.col] += coo.data
 
     def post_execute(self, dummy):
         """
@@ -390,11 +389,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             raise RuntimeError('risk_by_event contains %d duplicates!' %
                                (len(arr) - len(uni)))
         if oq.avg_losses:
-            for r in range(self.R):
-                self.avg_losses[:, r] *= self.avg_ratio[r]
-            for li, lt in enumerate(oq.loss_types):
+            for lt in oq.ext_loss_types:
+                al = self.avg_losses[lt]
+                for r in range(self.R):
+                    al[:, r] *= self.avg_ratio[r]
                 name = 'avg_losses-rlzs/' + lt
-                self.datastore[name][:] = self.avg_losses[:, :, li]
+                self.datastore[name][:] = al
                 stats.set_rlzs_stats(self.datastore, name,
                                      asset_id=self.assetcol['id'])
 
