@@ -297,39 +297,28 @@ lossCategory="contents">
 
 class LossComputerTestCase(unittest.TestCase):
     def test_instantiate(self):
-        dic = {'alias': {'PGA': 'gmv_0'},
-               'asset_df': {'area': [1.0],
-                            'id': [b'a2'],
-                            'lat': [38.17],
-                            'lon': [15.56],
-                            'site_id': [0],
-                            'taxonomy': [1],
-                            'value-number': [2000.0],
-                            'value-structural': [2000.0]},
-               'calculation_mode': 'event_based_risk',
-               'loss_types': ['structural'],
-               'rdic': {('RC', 'structural'):
-                        {('structural', 'vulnerability'): '{\n'
-                         '"openquake.risklib.scientific.VulnerabilityFunction": '
-                         '{\n'
-                         '"id": '
-                         '"RC",\n'
-                         '"imt": '
-                         '"PGA",\n'
-                         '"imls": '
-                         '[0.1, 0.2, '
-                         '0.3, 0.5, '
-                         '0.7],\n'
-                         '"mean_loss_ratios": '
-                         '[0.0035, '
-                         '0.07, 0.14, '
-                         '0.28, '
-                         '0.56],\n'
-                         '"covs": '
-                         '[0.0, 0.0, '
-                         '0.0, 0.0, '
-                         '0.0],\n'
-                         '"distribution_name": '
-                         '"LN"}}'}},
-               'wdic': {('RC', 'structural'): 1}}
+        dic = {
+            'alias': {'PGA': 'gmv_0'},
+            'asset_df': {'area': [1.0],
+                         'id': [b'a2'],
+                         'lat': [38.17],
+                         'lon': [15.56],
+                         'site_id': [0],
+                         'taxonomy': [1],
+                         'value-number': [2000.0],
+                         'value-structural': [2000.0]},
+            'calculation_mode': 'event_based_risk',
+            'loss_types': ['structural'],
+            'rdic': {('RC', 'structural'):
+                     {('structural', 'vulnerability'): '{\n'
+                      '"openquake.risklib.scientific.VulnerabilityFunction":'
+                      '{\n"id": "RC",\n'
+                      '"imt": "PGA",\n'
+                      '"imls": [0.1, 0.2, 0.3, 0.5, 0.7],\n'
+                      '"mean_loss_ratios": '
+                      '[0.0035, 0.07, 0.14, 0.28, 0.56],\n'
+                      '"covs": [0.0, 0.0, 0.0, 0.0, 0.0],\n'
+                      '"distribution_name": '
+                      '"LN"}}'}},
+            'wdic': {('RC', 'structural'): 1}}
         riskmodels.get_loss_computer(dic)
