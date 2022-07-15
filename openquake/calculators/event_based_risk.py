@@ -380,7 +380,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # sanity check on the risk_by_event
         alt = self.datastore.read_df('risk_by_event')
         K = self.datastore['risk_by_event'].attrs.get('K', 0)
-        upper_limit = self.E * self.L * (K + 1)
+        upper_limit = self.E * (K + 1) * len(oq.ext_loss_types)
         size = len(alt)
         assert size <= upper_limit, (size, upper_limit)
         # sanity check on uniqueness by (agg_id, loss_id, event_id)
