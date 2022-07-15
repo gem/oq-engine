@@ -16,7 +16,9 @@ The script allows the user to select between different kinds of installations:
 
 >_**Note 1.** On some Linux distributions (i.e. Ubuntu) you may need to install the package `python3-venv` before running the installer_
 > <br />
->_**Note 2.** New Macs with the M1 CPU are unsupported but users have managed to install the engine via Rosetta or natively by using the system Python (version 3.9)_
+>_**Note 2.** New Macs with the M1 CPU are supported only if you're on macOS 12.x and for python3.9.
+><br />_ Apple ships its own version of Python with OS X. However, we strongly recommend installing the official Python distribution.
+Alternatively, use Python from one of the OS X package managers (Homebrew, MacPorts, Fink).
 > <br />
 >_**Note 3.** For `user` and `devel` installation methods, the virtual environment `openquake` will be created in the home directory. Make sure you have no folder called `openquake`in your home directory that can cause conflicts._<br />_Users with no knowledge of virtual environments are referred to this page of the Python tutorial: https://docs.python.org/3/tutorial/venv.html_
 > <br />
@@ -42,9 +44,11 @@ C:\>python.exe install.py user
 _*Note 1*: Make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](../faq.md#certificate-verification-on-macOS)._
 ```
 $ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
-$ python3 install.py user
+$ python3.9 install.py user
 ```
 _*Note 2*: Users can decided the preferred Python version (e.g., `$python3.9 install.py user`)_
+
+_*Note 3*: Users with the M1 CPU must use Python 3.9 (e.g., `$python3.9 install.py user`)_
 
 **on Linux:**
 ```
@@ -97,9 +101,12 @@ C:\>python.exe install.py devel
 _*Note 1*: Make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](../faq.md#certificate-verification-on-macOS)._
 ```
 $ git clone https://github.com/gem/oq-engine.git
-$ cd oq-engine && python3 install.py devel
+$ cd oq-engine
+$ python3.9 install.py devel
 ```
 _*Note 2*: Users can decided the preferred Python version (e.g., `$python3.9 install.py user`)_
+
+_*Note 3*: Users wiht M1 CPU must use Python 3.9 (e.g., `$python3.9 install.py user`)_
 
 **on Linux:**
 ```
