@@ -408,15 +408,15 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     return RiskModel(oqparam.calculation_mode, taxonomy, **extra)
 
 
-def get_loss_computer(dic):
+def get_risk_computer(dic):
     """
-    Builds a LossComputer instance from a suitable dictionary
+    Builds a RiskComputer instance from a suitable dictionary
     """
-    lc = scientific.LossComputer.__new__(scientific.LossComputer)
+    lc = scientific.RiskComputer.__new__(scientific.RiskComputer)
     lc.asset_df = pandas.DataFrame(dic['asset_df'])
     lc.wdic = dic['wdic']
-    for (riskid, lt), rfdic in dic['rdic'].items():
-        rfs = {k: hdf5.json_to_obj(json) for k, json in rfdic.items()}
+    for (riskid, lt), functions in zip(dic['wdic'], dic['functions']):
+        rfs = {k: hdf5.json_to_obj(json) for k, json in functions.items()}
         rm = RiskModel(dic['calculation_mode'], 'taxonomy',
                        risk_functions=rfs)
         lc[riskid, lt] = rm
@@ -731,7 +731,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param rndgen: a MultiEventRNG instance
         :returns: a dictionary keyed by extended loss type
         """
-        lc = scientific.LossComputer(self, asset_df)
+        lc = scientific.RiskComputer(self, asset_df)
         return lc.output(haz, sec_losses, rndgen)
 
     def __iter__(self):

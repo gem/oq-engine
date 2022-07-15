@@ -1422,7 +1422,7 @@ def _agg(loss_dfs, weights=None):
     return pandas.concat(loss_dfs).groupby(['eid', 'aid']).sum().reset_index()
 
 
-class LossComputer(dict):
+class RiskComputer(dict):
     """
     A callable dictionary of risk models able to compute average losses
     according to the taxonomy mapping. It also computes secondary losses
@@ -1492,15 +1492,15 @@ class LossComputer(dict):
 
     def todict(self):
         """
-        :returns: a literal dict describing the LossComputer
+        :returns: a literal dict describing the RiskComputer
         """
-        rdic = {}
+        rfs = []
         for (riskid, lt), rm in self.items():
-            rdic[riskid, lt] = {k: hdf5.obj_to_json(rf)
-                                for k, rf in rm.risk_functions.items()}
+            rfs.append({k: hdf5.obj_to_json(rf)
+                        for k, rf in rm.risk_functions.items()})
         df = self.asset_df
         return dict(asset_df={col: df[col].tolist() for col in df.columns},
-                    rdic=rdic,
+                    functions=rfs,
                     wdic=self.wdic,
                     alias=self.alias,
                     loss_types=self.loss_types,

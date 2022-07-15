@@ -295,7 +295,7 @@ lossCategory="contents">
                       str(ctx.exception))
 
 
-class LossComputerTestCase(unittest.TestCase):
+class RiskComputerTestCase(unittest.TestCase):
     def test_instantiate(self):
         dic = {
             'alias': {'PGA': 'gmv_0'},
@@ -309,14 +309,14 @@ class LossComputerTestCase(unittest.TestCase):
                          'value-structural': [2000.0]},
             'calculation_mode': 'event_based_risk',
             'loss_types': ['structural'],
-            'rdic': {('RC', 'structural'):
-                     {('structural', 'vulnerability'):
-                      '{"openquake.risklib.scientific.VulnerabilityFunction":'
-                      '{"id": "RC",'
-                      '"imt": "PGA",'
-                      '"imls": [0.1, 0.2, 0.3, 0.5, 0.7],'
-                      '"mean_loss_ratios": [0.0035, 0.07, 0.14, 0.28, 0.56],'
-                      '"covs": [0.0, 0.0, 0.0, 0.0, 0.0],'
-                      '"distribution_name": "LN"}}'}},
+            'functions': [
+                {('structural', 'vulnerability'):
+                 '{"openquake.risklib.scientific.VulnerabilityFunction":'
+                 '{"id": "RC",'
+                 '"imt": "PGA",'
+                 '"imls": [0.1, 0.2, 0.3, 0.5, 0.7],'
+                 '"mean_loss_ratios": [0.0035, 0.07, 0.14, 0.28, 0.56],'
+                 '"covs": [0.0, 0.0, 0.0, 0.0, 0.0],'
+                 '"distribution_name": "LN"}}'}],
             'wdic': {('RC', 'structural'): 1}}
-        riskmodels.get_loss_computer(dic)
+        riskmodels.get_risk_computer(dic)
