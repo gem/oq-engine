@@ -1430,7 +1430,9 @@ class AvgRiskModel(dict):
     """
     A dictionary of risk models associated to a taxonomy mapping
     """
-    def __init__(self, crm, taxidx):
+    def __init__(self, crm, taxidx, imtls, primary_imts):
+        self.imtls = imtls
+        self.alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary_imts)}
         self.ext_loss_types = crm.oqparam.ext_loss_types
         self.wdic = {}
         for lt in crm.loss_types:
@@ -1441,10 +1443,28 @@ class AvgRiskModel(dict):
             if lt.endswith('_ins'):
                 self.wdic[key, lt] = self.wdic[key, lt[:-4]]
 
-    def __call__(self, dic):
+    def __call__(self, asset_df, haz, sec_losses, rndgen):
         """
         Compute averages by using the taxonomy mapping
         """
+        dic = {}
+        event = hasattr(haz, 'eid')  # else classical (haz.array)
+        for key, lt in self:
+            rm = self[key, lt]
+            if len(rm.imt_by_lt) == 1:
+                # NB: if `check_risk_ids` raise an error then
+                # this code branch will never run
+                [(lt, imt)] = rm.imt_by_lt.items()
+            else:
+                imt = rm.imt_by_lt[lt]
+            col = self.alias.get(imt, imt)
+            if event:
+                dic[key, lt] = rm(lt, asset_df, haz, col, rndgen)
+            else:  # classical
+                dic[key, lt] = rm(lt, asset_df, haz.array[self.imtls(imt), 0])
+        if event:
+            for update_losses in sec_losses:
+                update_losses(asset_df, dic)
         out = {}
         for lt in self.ext_loss_types:
             outs = [dic[k] for k in dic if k[1] == lt]

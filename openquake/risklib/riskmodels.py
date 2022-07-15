@@ -707,39 +707,18 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
 
-    def get_output(self, taxoidx, asset_df, haz, sec_losses=(), rndgen=None,
-                   rlz=None):
+    def get_output(self, taxoidx, asset_df, haz, sec_losses=(), rndgen=None):
         """
         :param taxoidx: a taxonomy index
         :param asset_df: a DataFrame of assets of the given taxonomy
         :param haz: a DataFrame of GMVs on that site
         :param sec_losses: a list of SecondaryLoss instances
         :param rndgen: a MultiEventRNG instance
-        :param rlz: a realization index (or None)
         :returns: a dictionary keyed by loss type
         """
-        primary = self.primary_imtls
-        alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
-        event = hasattr(haz, 'eid')  # else classical (haz.array)
-        out = {}  # (key, lt) -> df
-        avgrm = scientific.AvgRiskModel(self, taxoidx)
-        for key, lt in avgrm:
-            rm = avgrm[key, lt]
-            if len(rm.imt_by_lt) == 1:
-                # NB: if `check_risk_ids` raise an error then
-                # this code branch will never run
-                [(lt, imt)] = rm.imt_by_lt.items()
-            else:
-                imt = rm.imt_by_lt[lt]
-            col = alias.get(imt, imt)
-            if event:
-                out[key, lt] = rm(lt, asset_df, haz, col, rndgen)
-            else:  # classical
-                out[key, lt] = rm(lt, asset_df, haz.array[self.imtls(imt), 0])
-
-        for update_losses in sec_losses:
-            update_losses(asset_df, out)
-        return avgrm(out)
+        avgrm = scientific.AvgRiskModel(
+            self, taxoidx, self.imtls, self.primary_imtls)
+        return avgrm(asset_df, haz, sec_losses, rndgen)
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))
