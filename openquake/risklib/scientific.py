@@ -1108,7 +1108,7 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
 def total_losses(asset_df, losses_by_lt, kind):
     """
     :param asset_df: DataFrame of assets
-    :param losses_by_lt: riskid, lt -> DataFrame[eid, aid]
+    :param losses_by_lt: lt -> DataFrame[eid, aid]
     :param kind: kind of total loss (i.e. "structural+nonstructural")
     """
     if kind in TOTLOSSES:
