@@ -1,20 +1,20 @@
-#,,,"generated_by='OpenQuake engine 3.15.0-gite173d8a26f', start_date='2022-07-15T09:56:16', checksum=350190347"
+#,,,"generated_by='OpenQuake engine 3.15.0-gitc569606166', start_date='2022-07-15T10:03:27', checksum=350190347"
 loss_type,loss,stat,NAME_1
-contents,183579.38828125002,mean,Mid-Western
-contents,81027.39626736111,quantile-0.15,Mid-Western
-contents,175483.17838541666,quantile-0.85,Mid-Western
+contents,183579.40234375003,mean,Mid-Western
+contents,81027.39713541667,quantile-0.15,Mid-Western
+contents,175483.19140625,quantile-0.85,Mid-Western
 structural,243501.5078125,mean,Mid-Western
 structural,188498.15711805556,quantile-0.15,Mid-Western
 structural,239159.1380208333,quantile-0.85,Mid-Western
-structural+contents,473275.315625,mean,Mid-Western
-structural+contents,283081.38368055556,quantile-0.15,Mid-Western
-structural+contents,458260.0052083333,quantile-0.85,Mid-Western
-contents,91537.921484375,mean,Far-Western
-contents,56546.25151909722,quantile-0.15,Far-Western
-contents,88775.42122395834,quantile-0.85,Far-Western
-structural,276308.1421875,mean,Far-Western
-structural,163445.91232638888,quantile-0.15,Far-Western
-structural,267397.9661458334,quantile-0.85,Far-Western
-structural+contents,367846.07812500006,mean,Far-Western
-structural+contents,219992.16840277778,quantile-0.15,Far-Western
-structural+contents,356173.4010416667,quantile-0.85,Far-Western
+structural+contents,427080.88125,mean,Mid-Western
+structural+contents,269525.5451388889,quantile-0.15,Mid-Western
+structural+contents,414642.3020833334,quantile-0.85,Mid-Western
+contents,91537.92226562499,mean,Far-Western
+contents,56546.258897569445,quantile-0.15,Far-Western
+contents,88775.42252604167,quantile-0.85,Far-Western
+structural,276308.140625,mean,Far-Western
+structural,163445.89756944444,quantile-0.15,Far-Western
+structural,267397.9635416666,quantile-0.85,Far-Western
+structural+contents,367846.10625,mean,Far-Western
+structural+contents,219992.17013888888,quantile-0.15,Far-Western
+structural+contents,356173.4270833334,quantile-0.85,Far-Western

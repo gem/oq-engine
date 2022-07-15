@@ -1,4 +1,4 @@
-#,,,,,"generated_by='OpenQuake engine 3.15.0-gite173d8a26f', start_date='2022-07-15T09:56:16', checksum=350190347, risk_investigation_time=10000.0, num_events=7786, effective_time=20000.0, limit_states=''"
+#,,,,,"generated_by='OpenQuake engine 3.15.0-gitc569606166', start_date='2022-07-15T10:03:27', checksum=350190347, risk_investigation_time=10000.0, num_events=7786, effective_time=20000.0, limit_states=''"
 taxonomy,return_period,loss_type,rlz_id,loss_value,loss_ratio
 Wood/Res,5,contents,0,0.00000E+00,0.00000E+00
 Wood/Res,10,contents,0,0.00000E+00,0.00000E+00
@@ -29,10 +29,10 @@ Wood/Res,50,structural+contents,0,0.00000E+00,0.00000E+00
 Wood/Res,100,structural+contents,0,0.00000E+00,0.00000E+00
 Wood/Res,200,structural+contents,0,0.00000E+00,0.00000E+00
 Wood/Res,500,structural+contents,0,1.76947E+03,5.67409E-02
-Wood/Res,1000,structural+contents,0,5.54481E+03,1.77804E-01
-Wood/Res,2000,structural+contents,0,9.73098E+03,3.12041E-01
-Wood/Res,5000,structural+contents,0,1.53011E+04,4.90655E-01
-Wood/Res,10000,structural+contents,0,1.65469E+04,5.30604E-01
+Wood/Res,1000,structural+contents,0,4.73246E+03,1.51754E-01
+Wood/Res,2000,structural+contents,0,6.70723E+03,2.15079E-01
+Wood/Res,5000,structural+contents,0,1.15076E+04,3.69009E-01
+Wood/Res,10000,structural+contents,0,1.24661E+04,3.99748E-01
 Wood/Res,5,contents,1,0.00000E+00,0.00000E+00
 Wood/Res,10,contents,1,0.00000E+00,0.00000E+00
 Wood/Res,20,contents,1,0.00000E+00,0.00000E+00
@@ -64,8 +64,8 @@ Wood/Res,200,structural+contents,1,0.00000E+00,0.00000E+00
 Wood/Res,500,structural+contents,1,0.00000E+00,0.00000E+00
 Wood/Res,1000,structural+contents,1,1.16656E+03,3.74079E-02
 Wood/Res,2000,structural+contents,1,1.81255E+03,5.81223E-02
-Wood/Res,5000,structural+contents,1,5.46237E+03,1.75160E-01
-Wood/Res,10000,structural+contents,1,1.11253E+04,3.56752E-01
+Wood/Res,5000,structural+contents,1,3.82907E+03,1.22786E-01
+Wood/Res,10000,structural+contents,1,8.43586E+03,2.70510E-01
 Wood/Com,5,contents,0,0.00000E+00,0.00000E+00
 Wood/Com,10,contents,0,0.00000E+00,0.00000E+00
 Wood/Com,20,contents,0,0.00000E+00,0.00000E+00
@@ -96,9 +96,9 @@ Wood/Com,100,structural+contents,0,0.00000E+00,0.00000E+00
 Wood/Com,200,structural+contents,0,0.00000E+00,0.00000E+00
 Wood/Com,500,structural+contents,0,1.06147E+03,3.40378E-02
 Wood/Com,1000,structural+contents,0,1.60925E+03,5.16032E-02
-Wood/Com,2000,structural+contents,0,4.91638E+03,1.57652E-01
-Wood/Com,5000,structural+contents,0,1.35125E+04,4.33301E-01
-Wood/Com,10000,structural+contents,0,3.40806E+04,1.09285E+00
+Wood/Com,2000,structural+contents,0,4.30731E+03,1.38121E-01
+Wood/Com,5000,structural+contents,0,9.54401E+03,3.06045E-01
+Wood/Com,10000,structural+contents,0,2.33891E+04,7.50010E-01
 Wood/Com,5,contents,1,0.00000E+00,0.00000E+00
 Wood/Com,10,contents,1,0.00000E+00,0.00000E+00
 Wood/Com,20,contents,1,0.00000E+00,0.00000E+00
@@ -129,9 +129,9 @@ Wood/Com,100,structural+contents,1,0.00000E+00,0.00000E+00
 Wood/Com,200,structural+contents,1,0.00000E+00,0.00000E+00
 Wood/Com,500,structural+contents,1,0.00000E+00,0.00000E+00
 Wood/Com,1000,structural+contents,1,1.27150E+03,4.07729E-02
-Wood/Com,2000,structural+contents,1,2.13740E+03,6.85395E-02
-Wood/Com,5000,structural+contents,1,5.64261E+03,1.80940E-01
-Wood/Com,10000,structural+contents,1,1.04474E+04,3.35012E-01
+Wood/Com,2000,structural+contents,1,1.92032E+03,6.15784E-02
+Wood/Com,5000,structural+contents,1,3.80858E+03,1.22129E-01
+Wood/Com,10000,structural+contents,1,7.27123E+03,2.33164E-01
 Adobe/Res,5,contents,0,0.00000E+00,0.00000E+00
 Adobe/Res,10,contents,0,0.00000E+00,0.00000E+00
 Adobe/Res,20,contents,0,0.00000E+00,0.00000E+00

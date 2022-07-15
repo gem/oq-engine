@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.15.0-gite173d8a26f', start_date='2022-07-15T09:56:16', checksum=350190347, risk_investigation_time=10000.0, num_events=7786, effective_time=20000.0, limit_states=''"
+#,,,,"generated_by='OpenQuake engine 3.15.0-gitc569606166', start_date='2022-07-15T10:03:27', checksum=350190347, risk_investigation_time=10000.0, num_events=7786, effective_time=20000.0, limit_states=''"
 return_period,loss_type,rlz_id,loss_value,loss_ratio
 5,contents,0,0.00000E+00,0.00000E+00
 10,contents,0,0.00000E+00,0.00000E+00
@@ -27,12 +27,12 @@ return_period,loss_type,rlz_id,loss_value,loss_ratio
 20,structural+contents,0,0.00000E+00,0.00000E+00
 50,structural+contents,0,1.24401E+03,9.97285E-03
 100,structural+contents,0,2.31780E+03,1.85810E-02
-200,structural+contents,0,4.34097E+03,3.48001E-02
-500,structural+contents,0,9.13907E+03,7.32650E-02
-1000,structural+contents,0,1.39903E+04,1.12155E-01
-2000,structural+contents,0,1.64118E+04,1.31568E-01
-5000,structural+contents,0,2.43260E+04,1.95014E-01
-10000,structural+contents,0,6.34587E+04,5.08727E-01
+200,structural+contents,0,4.10531E+03,3.29109E-02
+500,structural+contents,0,8.25112E+03,6.61466E-02
+1000,structural+contents,0,1.15933E+04,9.29399E-02
+2000,structural+contents,0,1.51757E+04,1.21659E-01
+5000,structural+contents,0,2.11097E+04,1.69230E-01
+10000,structural+contents,0,4.86864E+04,3.90303E-01
 5,contents,1,0.00000E+00,0.00000E+00
 10,contents,1,0.00000E+00,0.00000E+00
 20,contents,1,0.00000E+00,0.00000E+00
@@ -60,9 +60,9 @@ return_period,loss_type,rlz_id,loss_value,loss_ratio
 20,structural+contents,1,0.00000E+00,0.00000E+00
 50,structural+contents,1,0.00000E+00,0.00000E+00
 100,structural+contents,1,1.44472E+03,1.15818E-02
-200,structural+contents,1,2.35198E+03,1.88551E-02
-500,structural+contents,1,5.52287E+03,4.42751E-02
+200,structural+contents,1,2.33013E+03,1.86799E-02
+500,structural+contents,1,5.30538E+03,4.25315E-02
 1000,structural+contents,1,6.80708E+03,5.45701E-02
-2000,structural+contents,1,1.22358E+04,9.80907E-02
+2000,structural+contents,1,1.04285E+04,8.36018E-02
 5000,structural+contents,1,1.66585E+04,1.33546E-01
 10000,structural+contents,1,1.85222E+04,1.48486E-01
