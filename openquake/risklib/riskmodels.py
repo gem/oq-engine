@@ -340,8 +340,7 @@ class RiskModel(object):
             steps_per_interval=self.steps_per_interval)
         damages = numpy.array([a['value-number'] * damage
                                for a in assets.to_records()])
-        return hdf5.ArrayWrapper(numpy.array([damages] * len(assets)),
-                                 dict(weight=1.))
+        return numpy.array([damages] * len(assets))
 
     def event_based_risk(self, loss_type, assets, gmf_df, col, rndgen):
         """
@@ -374,8 +373,7 @@ class RiskModel(object):
         gmvs = gmf_df[col].to_numpy()
         ffs = self.risk_functions[loss_type, 'fragility']
         damages = scientific.scenario_damage(ffs, gmvs).T
-        return hdf5.ArrayWrapper(numpy.array([damages] * len(assets)),
-                                 dict(weight=1.))
+        return numpy.array([damages] * len(assets))
 
     event_based_damage = scenario_damage
 

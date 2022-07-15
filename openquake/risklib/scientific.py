@@ -1080,15 +1080,15 @@ def insured_losses(losses, deductible, insured_limit):
     return out
 
 
-def insurance_losses(asset_df, losses_by_rl, policy_df):
+def insurance_losses(asset_df, losses_by_lt, policy_df):
     """
     :param asset_df: DataFrame of assets
-    :param losses_by_rl: riskid, lt -> DataFrame[eid, aid]
+    :param losses_by_lt: lt -> DataFrame[eid, aid]
     :param asset_df: a DataFrame of assets with index "ordinal"
     """
     asset_policy_df = asset_df.join(
         policy_df.set_index('policy'), on='policy', how='inner')
-    for (riskid, lt), out in list(losses_by_rl.items()):
+    for lt, out in list(losses_by_lt.items()):
         if len(out) == 0:
             continue
         adf = asset_policy_df[asset_policy_df.loss_type == lt]
@@ -1102,26 +1102,20 @@ def insurance_losses(asset_df, losses_by_rl, policy_df):
         deds = j.deductible.to_numpy() * values
         lims = j.insurance_limit.to_numpy() * values
         new['loss'] = insured_losses(losses, deds, lims)
-        losses_by_rl[riskid, lt + '_ins'] = new
+        losses_by_lt[lt + '_ins'] = new
 
 
-def total_losses(asset_df, losses_by_rl, kind):
+def total_losses(asset_df, losses_by_lt, kind):
     """
     :param asset_df: DataFrame of assets
-    :param losses_by_rl: riskid, lt -> DataFrame[eid, aid]
+    :param losses_by_lt: riskid, lt -> DataFrame[eid, aid]
     :param kind: kind of total loss (i.e. "structural+nonstructural")
     """
     if kind in TOTLOSSES:
         ltypes = kind.split('+')
     else:
         raise ValueError(kind)
-    acc = {riskid: [] for riskid, lt in losses_by_rl}
-    for ltype in ltypes:
-        for (riskid, lt), out in list(losses_by_rl.items()):
-            if lt == ltype:
-                acc[riskid].append(out)
-    for riskid, outs in acc.items():
-        losses_by_rl[riskid, kind] = _agg(outs)
+    losses_by_lt[kind] = _agg([losses_by_lt[lt] for lt in ltypes])
 
 
 def insurance_loss_curve(curve, deductible, insured_limit):
@@ -1447,7 +1441,8 @@ class AvgRiskModel(dict):
         """
         Compute averages by using the taxonomy mapping
         """
-        dic = {}
+        dic = collections.defaultdict(list)  # lt -> outs
+        weights = collections.defaultdict(list)  # lt -> weights
         event = hasattr(haz, 'eid')  # else classical (haz.array)
         for key, lt in self:
             rm = self[key, lt]
@@ -1459,26 +1454,27 @@ class AvgRiskModel(dict):
                 imt = rm.imt_by_lt[lt]
             col = self.alias.get(imt, imt)
             if event:
-                dic[key, lt] = rm(lt, asset_df, haz, col, rndgen)
+                out = rm(lt, asset_df, haz, col, rndgen)
             else:  # classical
-                dic[key, lt] = rm(lt, asset_df, haz.array[self.imtls(imt), 0])
-        if event:
-            for update_losses in sec_losses:
-                update_losses(asset_df, dic)
+                out = rm(lt, asset_df, haz.array[self.imtls(imt), 0])
+            weights[lt].append(self.wdic[key, lt])
+            dic[lt].append(out)
         out = {}
         for lt in self.ext_loss_types:
-            outs = [dic[k] for k in dic if k[1] == lt]
-            weights = [self.wdic[k] for k in self.wdic if k[1] == lt]
+            outs = dic[lt]
             if len(outs) == 0:  # can happen for nonstructural_ins
                 continue
             elif len(outs) > 1 and hasattr(outs[0], 'loss'):
                 # computing the average dataframe for event_based_risk
-                out[lt] = _agg(outs, weights)
+                out[lt] = _agg(outs, weights[lt])
             elif len(outs) > 1:
                 # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
-                out[lt] = numpy.average(outs, weights=weights, axis=0)
+                out[lt] = numpy.average(outs, weights=weights[lt], axis=0)
             else:
                 out[lt] = outs[0]
+        if event:
+            for update_losses in sec_losses:
+                update_losses(asset_df, out)
         return out
 
 
