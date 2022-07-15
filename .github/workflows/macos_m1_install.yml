@@ -1,0 +1,61 @@
+name: MacOS M1 engine with python 3.9
+'on':
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
+  schedule:
+    - cron: "15 11 * * *"
+  push:
+    branches: [ ae-m1test ]
+
+jobs:
+
+  Install_and_test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ARM64]
+        python-version: [3.9]
+    steps:
+    # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Set up Python3 with brew
+        run: |
+          brew install python@${{ matrix.python-version }}
+      - name: Run Installation of oq-engine in devel mode
+        env: 
+          BRANCH: ${{ github.event.inputs.git-ref }}
+        run: |
+          echo "sqlite3 version"
+          which sqlite3
+          sqlite3 --version
+          export PIP_DEFAULT_TIMEOUT=100
+          python3.9 -m pip install -U pip wheel setuptools
+          #
+          echo "branch to test: ${BRANCH}"
+          if [[ "$BRANCH" != "" ]] 
+          then
+            python3.9 install.py devel --version ${BRANCH}
+          else
+            python3.9 install.py devel 
+          fi
+      - name: Run demos to test installation
+        run: |
+          source ~/openquake/bin/activate
+          pip3 install pytest
+          oq --version
+          oq dbserver start
+          pytest -vs /Users/runner/work/oq-engine/oq-engine/openquake/calculators
+          #after demos also a calculation
+          sleep 5
+          oq engine --run "https://downloads.openquake.org/jobs/risk_test.zip"
