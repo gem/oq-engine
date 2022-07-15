@@ -192,9 +192,9 @@ def export_avg_losses(ekey, dstore):
     """
     dskey = ekey[0]
     oq = dstore['oqparam']
-    dt = [(ln, F32) for ln in oq.loss_types]
+    dt = [(ln, F32) for ln in oq.ext_loss_types]
     name, value, rlzs_or_stats = _get_data(
-        dstore, dskey, oq.loss_types, oq.hazard_stats())
+        dstore, dskey, oq.ext_loss_types, oq.hazard_stats())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assets = get_assets(dstore)
     md = dstore.metadata
@@ -204,7 +204,7 @@ def export_avg_losses(ekey, dstore):
     for ros, values in zip(rlzs_or_stats, value.transpose(1, 0, 2)):
         dest = dstore.build_fname(name, ros, 'csv')
         array = numpy.zeros(len(values), dt)
-        for li, ln in enumerate(oq.loss_types):
+        for li, ln in enumerate(oq.ext_loss_types):
             array[ln] = values[:, li]
         writer.save(compose_arrays(assets, array), dest, comment=md,
                     renamedict=dict(id='asset_id'))
