@@ -102,8 +102,8 @@ class RiskFuncList(list):
                 riskfuncs, operator.attrgetter('loss_type', 'kind'))
             # there is a single risk function in each lst below
             if kind:
-                ddic[riskid] = {(lt, k): lst[0] for (lt, k), lst in dic.items()
-                                if k == kind}
+                ddic[riskid] = {ltk: lst[0] for ltk, lst in dic.items()
+                                if ltk[-1] == kind}
             else:
                 ddic[riskid] = {ltk: lst[0] for ltk, lst in dic.items()}
         return ddic
