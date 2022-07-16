@@ -135,6 +135,7 @@ class Sampler(object):
 class VulnerabilityFunction(object):
     dtype = numpy.dtype([('iml', F64), ('loss_ratio', F64), ('cov', F64)])
     seed = None  # to be overridden
+    kind = 'vulnerability'
 
     def __init__(self, vf_id, imt, imls, mean_loss_ratios, covs=None,
                  distribution="LN"):
@@ -517,6 +518,7 @@ class VulnerabilityModel(dict):
 # ############################## fragility ############################### #
 
 class FragilityFunctionContinuous(object):
+    kind = 'fragility'
 
     def __init__(self, limit_state, mean, stddev, minIML, maxIML, nodamage=0):
         self.limit_state = limit_state
@@ -558,6 +560,7 @@ class FragilityFunctionContinuous(object):
 
 
 class FragilityFunctionDiscrete(object):
+    kind = 'fragility'
 
     def __init__(self, limit_state, imls, poes, no_damage_limit=None):
         self.limit_state = limit_state
@@ -615,6 +618,8 @@ class FragilityFunctionList(list):
     A list of fragility functions with common attributes; there is a
     function for each limit state.
     """
+    kind = 'fragility'
+
     # NB: the list is populated after instantiation by .append calls
     def __init__(self, array, **attrs):
         self.array = array
@@ -675,6 +680,7 @@ class ConsequenceModel(dict):
     :param str description: description of the model
     :param limitStates: a list of limit state strings
     """
+    kind = 'consequence'
 
     def __init__(self, id, assetCategory, lossCategory, description,
                  limitStates):

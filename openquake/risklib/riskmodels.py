@@ -20,7 +20,6 @@ import ast
 import json
 import copy
 import logging
-import operator
 import functools
 import collections
 import numpy
@@ -28,7 +27,7 @@ import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
-from openquake.baselib.general import AccumDict, cached_property, groupby
+from openquake.baselib.general import AccumDict, cached_property
 from openquake.hazardlib import valid, nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
@@ -93,20 +92,16 @@ class RiskFuncList(list):
     """
     def groupby_id(self, kind=None):
         """
-        :returns: double dictionary id -> loss_type, kind -> risk_function
+        :returns: dictionary id -> risk_functions
         """
-        ddic = {}
-        for riskid, riskfuncs in groupby(
-                self, operator.attrgetter('id')).items():
-            dic = groupby(
-                riskfuncs, operator.attrgetter('loss_type', 'kind'))
+        dic = AccumDict(accum=[])
+        for rf in self:
             # there is a single risk function in each lst below
-            if kind:
-                ddic[riskid] = {ltk: lst[0] for ltk, lst in dic.items()
-                                if ltk[-1] == kind}
-            else:
-                ddic[riskid] = {ltk: lst[0] for ltk, lst in dic.items()}
-        return ddic
+            if kind and rf.kind == kind:
+                dic[rf.id].append(rf)
+            elif not kind:
+                dic[rf.id].append(rf)
+        return dic
 
 
 def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
@@ -413,6 +408,8 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     if oqparam.calculation_mode == 'classical_bcr':
         extra['interest_rate'] = oqparam.interest_rate
         extra['asset_life_expectancy'] = oqparam.asset_life_expectancy
+    extra['risk_functions'] = {
+        (rf.loss_type, rf.kind): rf for rf in extra['risk_functions']}
     return RiskModel(oqparam.calculation_mode, taxonomy, **extra)
 
 
@@ -566,15 +563,15 @@ class CompositeRiskModel(collections.abc.Mapping):
         # LEGACY: extract the consequences from the risk models, if any
         if 'losses_by_taxonomy' not in self.consdict:
             self.consdict['losses_by_taxonomy'] = {}
-        for riskid, dic in self.risklist.groupby_id(
+        for riskid, rfs in self.risklist.groupby_id(
                 kind='consequence').items():
-            if dic:
+            if rfs:
                 # this happens for consequence models in XML format,
                 # see EventBasedDamageTestCase.test_case_11
-                dtlist = [(lt, F32) for lt, kind in dic]
+                dtlist = [(rf.loss_type, F32) for rf in rfs]
                 coeffs = numpy.zeros(len(self.risklist.limit_states), dtlist)
-                for (lt, kind), cf in dic.items():
-                    coeffs[lt] = cf
+                for rf in rfs:
+                    coeffs[rf.loss_type] = rf
                 self.consdict['losses_by_taxonomy'][riskid] = coeffs
         self.damage_states = []
         self._riskmodels = {}  # riskid -> crmodel
@@ -743,6 +740,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a dictionary keyed by extended loss type
         """
         lc = scientific.RiskComputer(self, asset_df)
+        raise SystemExit(lc.todict())
         return lc.output(haz, sec_losses, rndgen)
 
     def __iter__(self):
