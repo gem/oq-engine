@@ -18,6 +18,7 @@
 """
 This module includes the scientific API of the oq-risklib
 """
+import ast
 import copy
 import bisect
 import itertools
@@ -1422,7 +1423,7 @@ def _agg(loss_dfs, weights=None):
     return pandas.concat(loss_dfs).groupby(['eid', 'aid']).sum().reset_index()
 
 
-class LossComputer(dict):
+class RiskComputer(dict):
     """
     A callable dictionary of risk models able to compute average losses
     according to the taxonomy mapping. It also computes secondary losses
@@ -1438,9 +1439,9 @@ class LossComputer(dict):
         self.alias = {
             imt: 'gmv_%d' % i for i, imt in enumerate(crm.primary_imtls)}
         self.calculation_mode = crm.oqparam.calculation_mode
-        self.loss_types = crm.loss_types
+        self.minimum_asset_loss = crm.oqparam.minimum_asset_loss  # lt->float
         self.wdic = {}
-        for lt in self.loss_types:
+        for lt in self.minimum_asset_loss:
             for key, weight in crm.tmap[lt][taxidx]:
                 self[key, lt] = crm._riskmodels[key]
                 self.wdic[key, lt] = weight
@@ -1473,7 +1474,7 @@ class LossComputer(dict):
             weights[lt].append(self.wdic[key, lt])
             dic[lt].append(out)
         out = {}
-        for lt in self.loss_types:
+        for lt in self.minimum_asset_loss:
             outs = dic[lt]
             if len(outs) == 0:  # can happen for nonstructural_ins
                 continue
@@ -1492,19 +1493,22 @@ class LossComputer(dict):
 
     def todict(self):
         """
-        :returns: a literal dict describing the LossComputer
+        :returns: a literal dict describing the RiskComputer
         """
-        rdic = {}
+        rfs = []
         for (riskid, lt), rm in self.items():
-            rdic[riskid, lt] = {k: hdf5.obj_to_json(rf)
-                                for k, rf in rm.risk_functions.items()}
+            dic = {}
+            for ltk, rf in rm.risk_functions.items():
+                dic['%s:%s' % ltk] = ast.literal_eval(hdf5.obj_to_json(rf))
+            rfs.append(dic)
         df = self.asset_df
-        return dict(asset_df={col: df[col].tolist() for col in df.columns},
-                    rdic=rdic,
-                    wdic=self.wdic,
-                    alias=self.alias,
-                    loss_types=self.loss_types,
-                    calculation_mode=self.calculation_mode)
+        dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
+                   risk_functions=rfs,
+                   wdic={'%s:%s' % k: v for k, v in self.wdic.items()},
+                   alias=self.alias,
+                   minimum_asset_loss=self.minimum_asset_loss,
+                   calculation_mode=self.calculation_mode)
+        return dic
 
 
 # ####################### Consequences ##################################### #
