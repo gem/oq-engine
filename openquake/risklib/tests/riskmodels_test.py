@@ -309,7 +309,7 @@ class RiskComputerTestCase(unittest.TestCase):
                          'value-structural': [2000.0]},
             'calculation_mode': 'event_based_risk',
             'loss_types': ['structural'],
-            'functions': [
+            'risk_functions': [
                 {'structural:vulnerability':
                  {"openquake.risklib.scientific.VulnerabilityFunction":
                   {"id": "RC",

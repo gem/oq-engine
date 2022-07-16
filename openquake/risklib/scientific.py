@@ -1503,7 +1503,7 @@ class RiskComputer(dict):
             rfs.append(dic)
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
-                   functions=rfs,
+                   risk_functions=rfs,
                    wdic={'%s:%s' % k: v for k, v in self.wdic.items()},
                    alias=self.alias,
                    loss_types=self.loss_types,
