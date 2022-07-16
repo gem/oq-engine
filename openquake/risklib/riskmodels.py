@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import re
 import ast
+import json
 import copy
 import logging
 import operator
@@ -231,6 +232,13 @@ class RiskModel(object):
                 for (lt, kind), vf in risk_functions.items()
                 if kind == 'vulnerability_retrofitted'}
 
+        # set imt_by_lt
+        self.imt_by_lt = {}  # dictionary loss_type -> imt
+        for lt, kind in self.risk_functions:
+            if kind in 'vulnerability fragility':
+                imt = self.risk_functions[lt, kind].imt
+                self.imt_by_lt[lt] = imt
+
     @property
     def loss_types(self):
         """
@@ -408,20 +416,27 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     return RiskModel(oqparam.calculation_mode, taxonomy, **extra)
 
 
-def get_risk_computer(dic):
+def get_riskcomputer(dic):
     """
     Builds a RiskComputer instance from a suitable dictionary
     """
     lc = scientific.RiskComputer.__new__(scientific.RiskComputer)
     lc.asset_df = pandas.DataFrame(dic['asset_df'])
-    lc.wdic = dic['wdic']
-    for rlt, functions in zip(dic['wdic'], dic['risk_functions']):
+    rlts = dic['wdic'].keys()
+    weights = dic['wdic'].values()
+    lc.wdic = {}
+    for rlt, weight, functions in zip(rlts, weights, dic['risk_functions']):
         riskid, lt = rlt.split(':')
-        rfs = {tuple(ltk.split(':')): dic for ltk, dic in functions.items()}
-        rm = RiskModel(dic['calculation_mode'], 'taxonomy',
-                       risk_functions=rfs)
+        rfs = {}  # risk functions
+        for ltk, d in functions.items():
+            rf = hdf5.json_to_obj(json.dumps(d))
+            rf.init()
+            rfs[tuple(ltk.split(':'))] = rf
+        rm = RiskModel(dic['calculation_mode'], 'taxonomy', rfs,
+                       minimum_asset_loss=dic['minimum_asset_loss'])
         lc[riskid, lt] = rm
-    lc.loss_types = dic['loss_types']
+        lc.wdic[riskid, lt] = weight
+    lc.minimum_asset_loss = dic['minimum_asset_loss']
     lc.calculation_mode = dic['calculation_mode']
     lc.alias = dic['alias']
     return lc
@@ -613,11 +628,6 @@ class CompositeRiskModel(collections.abc.Mapping):
                 # save the number of nonzero coefficients of variation
                 if hasattr(rf, 'covs') and rf.covs.any():
                     self.covs += 1
-            rm.imt_by_lt = {}  # dictionary loss_type -> imt
-            for lt, kind in rm.risk_functions:
-                if kind in 'vulnerability fragility':
-                    imt = rm.risk_functions[lt, kind].imt
-                    rm.imt_by_lt[lt] = imt
         self.curve_params = self.make_curve_params()
         iml = collections.defaultdict(list)
         # ._riskmodels is empty if read from the hazard calculation

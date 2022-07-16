@@ -1439,9 +1439,9 @@ class RiskComputer(dict):
         self.alias = {
             imt: 'gmv_%d' % i for i, imt in enumerate(crm.primary_imtls)}
         self.calculation_mode = crm.oqparam.calculation_mode
-        self.loss_types = crm.loss_types
+        self.minimum_asset_loss = crm.oqparam.minimum_asset_loss  # lt->float
         self.wdic = {}
-        for lt in self.loss_types:
+        for lt in self.minimum_asset_loss:
             for key, weight in crm.tmap[lt][taxidx]:
                 self[key, lt] = crm._riskmodels[key]
                 self.wdic[key, lt] = weight
@@ -1474,7 +1474,7 @@ class RiskComputer(dict):
             weights[lt].append(self.wdic[key, lt])
             dic[lt].append(out)
         out = {}
-        for lt in self.loss_types:
+        for lt in self.minimum_asset_loss:
             outs = dic[lt]
             if len(outs) == 0:  # can happen for nonstructural_ins
                 continue
@@ -1506,7 +1506,7 @@ class RiskComputer(dict):
                    risk_functions=rfs,
                    wdic={'%s:%s' % k: v for k, v in self.wdic.items()},
                    alias=self.alias,
-                   loss_types=self.loss_types,
+                   minimum_asset_loss=self.minimum_asset_loss,
                    calculation_mode=self.calculation_mode)
         return dic
 

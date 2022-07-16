@@ -21,6 +21,7 @@ import pickle
 import unittest
 import unittest.mock as mock
 import numpy
+import pandas
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
@@ -296,7 +297,7 @@ lossCategory="contents">
 
 
 class RiskComputerTestCase(unittest.TestCase):
-    def test_instantiate(self):
+    def test1(self):
         dic = {
             'alias': {'PGA': 'gmv_0'},
             'asset_df': {'area': [1.0],
@@ -308,7 +309,7 @@ class RiskComputerTestCase(unittest.TestCase):
                          'value-number': [2000.0],
                          'value-structural': [2000.0]},
             'calculation_mode': 'event_based_risk',
-            'loss_types': ['structural'],
+            'minimum_asset_loss': {'structural': 0},
             'risk_functions': [
                 {'structural:vulnerability':
                  {"openquake.risklib.scientific.VulnerabilityFunction":
@@ -319,4 +320,9 @@ class RiskComputerTestCase(unittest.TestCase):
                    "covs": [0.0, 0.0, 0.0, 0.0, 0.0],
                    "distribution_name": "LN"}}}],
             'wdic': {'RC:structural': 1}}
-        riskmodels.get_risk_computer(dic)
+        gmfs = {'eid': [0, 1],
+                'sid': [0, 0],
+                'gmv_0': [.23, .31]}
+        rc = riskmodels.get_riskcomputer(dic)
+        out = rc.output(pandas.DataFrame(gmfs))
+        print(out)
