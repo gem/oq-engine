@@ -420,14 +420,12 @@ def get_riskcomputer(dic):
     lc = scientific.RiskComputer.__new__(scientific.RiskComputer)
     lc.asset_df = pandas.DataFrame(dic['asset_df'])
     lc.wdic = {}
-    rfdic = {}
     for rlt, weight in dic['wdic'].items():
         riskid, lt = rlt.split(':')
-        rfs = []  # risk functions
+        rfdic = {}
         for func in dic['risk_functions'][rlt]:
             rf = hdf5.json_to_obj(json.dumps(func))
             rf.init()
-            rfs.append(rf)
             rfdic[lt, rf.kind] = rf
         rm = RiskModel(dic['calculation_mode'], 'taxonomy', rfdic,
                        minimum_asset_loss=dic['minimum_asset_loss'])
