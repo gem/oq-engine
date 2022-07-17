@@ -1501,11 +1501,11 @@ class RiskComputer(dict):
         """
         :returns: a literal dict describing the RiskComputer
         """
-        rfs = general.AccumDict(accum=[])
+        rfs = general.AccumDict(accum={})
         for rlt, rm in self.items():
-            for rf in rm.risk_functions.values():
-                rfs['%s:%s' % rlt].append(
-                    ast.literal_eval(hdf5.obj_to_json(rf)))
+            for ltk, rf in rm.risk_functions.items():
+                rfs['%s:%s' % rlt]['%s:%s' % ltk] = ast.literal_eval(
+                    hdf5.obj_to_json(rf))
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
                    risk_functions=rfs,

@@ -423,7 +423,7 @@ def get_riskcomputer(dic):
     for rlt, weight in dic['wdic'].items():
         riskid, lt = rlt.split(':')
         rfdic = {}
-        for func in dic['risk_functions'][rlt]:
+        for func in dic['risk_functions'][rlt].values():
             rf = hdf5.json_to_obj(json.dumps(func))
             rf.init()
             rfdic[lt, rf.kind] = rf

@@ -20,6 +20,7 @@ import os
 import pickle
 import unittest
 import unittest.mock as mock
+import toml
 import numpy
 import pandas
 from numpy.testing import assert_almost_equal
@@ -312,18 +313,20 @@ class RiskComputerTestCase(unittest.TestCase):
             'minimum_asset_loss': {'structural': 0},
             'risk_functions': {
                 'RC:structural':
-                [{"openquake.risklib.scientific.VulnerabilityFunction":
+                {'structural:vulnerability':
+                 {"openquake.risklib.scientific.VulnerabilityFunction":
                   {"id": "RC",
                    "imt": "PGA",
                    "imls": [0.1, 0.2, 0.3, 0.5, 0.7],
                    "mean_loss_ratios": [0.0035, 0.07, 0.14, 0.28, 0.56],
                    "covs": [0.0, 0.0, 0.0, 0.0, 0.0],
-                   "distribution_name": "LN"}}]},
+                   "distribution_name": "LN"}}}},
             'wdic': {'RC:structural': 1}}
         gmfs = {'eid': [0, 1],
                 'sid': [0, 0],
                 'gmv_0': [.23, .31]}
         rc = riskmodels.get_riskcomputer(dic)
         self.assertEqual(dic, rc.todict())
+        print(toml.dumps(dic))
         out = rc.output(pandas.DataFrame(gmfs))
         print(out)
