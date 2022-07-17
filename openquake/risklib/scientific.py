@@ -29,7 +29,7 @@ import numpy
 import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -1501,12 +1501,11 @@ class RiskComputer(dict):
         """
         :returns: a literal dict describing the RiskComputer
         """
-        rfs = []
-        for (riskid, lt), rm in self.items():
-            dic = {}
-            for ltk, rf in rm.risk_functions.items():
-                dic['%s:%s' % ltk] = ast.literal_eval(hdf5.obj_to_json(rf))
-            rfs.append(dic)
+        rfs = general.AccumDict(accum=[])
+        for rlt, rm in self.items():
+            for rf in rm.risk_functions.values():
+                rfs['%s:%s' % rlt].append(
+                    ast.literal_eval(hdf5.obj_to_json(rf)))
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
                    risk_functions=rfs,

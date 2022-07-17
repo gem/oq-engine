@@ -419,17 +419,17 @@ def get_riskcomputer(dic):
     """
     lc = scientific.RiskComputer.__new__(scientific.RiskComputer)
     lc.asset_df = pandas.DataFrame(dic['asset_df'])
-    rlts = dic['wdic'].keys()
-    weights = dic['wdic'].values()
     lc.wdic = {}
-    for rlt, weight, functions in zip(rlts, weights, dic['risk_functions']):
+    rfdic = {}
+    for rlt, weight in dic['wdic'].items():
         riskid, lt = rlt.split(':')
-        rfs = {}  # risk functions
-        for ltk, d in functions.items():
-            rf = hdf5.json_to_obj(json.dumps(d))
+        rfs = []  # risk functions
+        for func in dic['risk_functions'][rlt]:
+            rf = hdf5.json_to_obj(json.dumps(func))
             rf.init()
-            rfs[tuple(ltk.split(':'))] = rf
-        rm = RiskModel(dic['calculation_mode'], 'taxonomy', rfs,
+            rfs.append(rf)
+            rfdic[lt, rf.kind] = rf
+        rm = RiskModel(dic['calculation_mode'], 'taxonomy', rfdic,
                        minimum_asset_loss=dic['minimum_asset_loss'])
         lc[riskid, lt] = rm
         lc.wdic[riskid, lt] = weight
@@ -740,7 +740,6 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a dictionary keyed by extended loss type
         """
         lc = scientific.RiskComputer(self, asset_df)
-        raise SystemExit(lc.todict())
         return lc.output(haz, sec_losses, rndgen)
 
     def __iter__(self):
