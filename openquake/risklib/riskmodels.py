@@ -244,8 +244,7 @@ class RiskModel(object):
         for lt, rfs in self.risk_functions.items():
             for rf in rfs:
                 if rf.kind in ('vulnerability', 'fragility'):
-                    imt = self.risk_functions[lt][0].imt
-                    self.imt_by_lt[lt] = imt
+                    self.imt_by_lt[lt] = rf.imt
 
     @property
     def loss_types(self):
@@ -386,7 +385,8 @@ class RiskModel(object):
         and D the number of damage states.
         """
         gmvs = gmf_df[col].to_numpy()
-        [ffs] = self.risk_functions[loss_type]
+        [ffs] = [rf for rf in self.risk_functions[loss_type]
+                 if rf.kind == 'fragility']
         damages = scientific.scenario_damage(ffs, gmvs).T
         return numpy.array([damages] * len(assets))
 
@@ -579,10 +579,10 @@ class CompositeRiskModel(collections.abc.Mapping):
             if rfs:
                 # this happens for consequence models in XML format,
                 # see EventBasedDamageTestCase.test_case_11
-                dtlist = [(rf.loss_type, F32) for rf in rfs]
+                dtlist = [(lt, F32) for lt in rfs]
                 coeffs = numpy.zeros(len(self.risklist.limit_states), dtlist)
-                for rf in rfs:
-                    coeffs[rf.loss_type] = rf
+                for lt, [rf] in rfs.items():
+                    coeffs[lt] = rf.array
                 self.consdict['losses_by_taxonomy'][riskid] = coeffs
         self.damage_states = []
         self._riskmodels = {}  # riskid -> crmodel
