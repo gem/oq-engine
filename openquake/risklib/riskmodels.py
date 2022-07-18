@@ -86,7 +86,7 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def by_lt(funclist):
+def group_by_lt(funclist):
     """
     Converts a list of objects with attribute .loss_type in to a dictionary
     of lists keyed by the loss type.
@@ -114,9 +114,7 @@ class RiskFuncList(list):
                 ddic[rf.id].append(rf)
             elif not kind:
                 ddic[rf.id].append(rf)
-        for riskid, rfs in ddic.items():
-            ddic[riskid] = by_lt(rfs)
-        return ddic
+        return {riskid: group_by_lt(rfs) for riskid, rfs in ddic.items()}
 
 
 def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
@@ -441,7 +439,8 @@ def get_riskcomputer(dic):
         rfs[riskid].append(rf)
     for rlt, weight in dic['wdic'].items():
         riskid, lt = rlt.split(':')
-        rm = RiskModel(dic['calculation_mode'], 'taxonomy', by_lt(rfs[riskid]),
+        rm = RiskModel(dic['calculation_mode'], 'taxonomy',
+                       group_by_lt(rfs[riskid]),
                        minimum_asset_loss=dic['minimum_asset_loss'])
         rc[riskid, lt] = rm
         rc.wdic[riskid, lt] = weight
