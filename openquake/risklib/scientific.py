@@ -1445,6 +1445,7 @@ class RiskComputer(dict):
         self.alias = {
             imt: 'gmv_%d' % i for i, imt in enumerate(crm.primary_imtls)}
         self.calculation_mode = crm.oqparam.calculation_mode
+        self.loss_types = crm.loss_types
         self.minimum_asset_loss = crm.oqparam.minimum_asset_loss  # lt->float
         self.wdic = {}
         for lt in self.minimum_asset_loss:
