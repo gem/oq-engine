@@ -86,6 +86,17 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
+def by_lt(funclist):
+    """
+    Converts a list of objects with attribute .loss_type in to a dictionary
+    of lists keyed by the loss type.
+    """
+    d = AccumDict(accum=[])
+    for rf in funclist:
+        d[rf.loss_type].append(rf)
+    return d
+
+
 class RiskFuncList(list):
     """
     A list of risk functions with attributes .id, .loss_type, .kind
@@ -104,10 +115,7 @@ class RiskFuncList(list):
             elif not kind:
                 ddic[rf.id].append(rf)
         for riskid, rfs in ddic.items():
-            by_lt = AccumDict(accum=[])
-            for rf in rfs:
-                by_lt[rf.loss_type].append(rf)
-            ddic[riskid] = by_lt
+            ddic[riskid] = by_lt(rfs)
         return ddic
 
 
@@ -421,24 +429,26 @@ def get_riskcomputer(dic):
     """
     Builds a RiskComputer instance from a suitable dictionary
     """
-    lc = scientific.RiskComputer.__new__(scientific.RiskComputer)
-    lc.asset_df = pandas.DataFrame(dic['asset_df'])
-    lc.wdic = {}
+    rc = scientific.RiskComputer.__new__(scientific.RiskComputer)
+    rc.asset_df = pandas.DataFrame(dic['asset_df'])
+    rc.wdic = {}
+    rfs = AccumDict(accum=[])
+    for rlk, func in dic['risk_functions'].items():
+        riskid, lt, kind = rlk.split(':')
+        rf = hdf5.json_to_obj(json.dumps(func))
+        rf.init()
+        rf.loss_type = lt
+        rfs[riskid].append(rf)
     for rlt, weight in dic['wdic'].items():
         riskid, lt = rlt.split(':')
-        rfdic = {}
-        for func in dic['risk_functions'][rlt].values():
-            rf = hdf5.json_to_obj(json.dumps(func))
-            rf.init()
-            rfdic[lt, rf.kind] = rf
-        rm = RiskModel(dic['calculation_mode'], 'taxonomy', rfdic,
+        rm = RiskModel(dic['calculation_mode'], 'taxonomy', by_lt(rfs[riskid]),
                        minimum_asset_loss=dic['minimum_asset_loss'])
-        lc[riskid, lt] = rm
-        lc.wdic[riskid, lt] = weight
-    lc.minimum_asset_loss = dic['minimum_asset_loss']
-    lc.calculation_mode = dic['calculation_mode']
-    lc.alias = dic['alias']
-    return lc
+        rc[riskid, lt] = rm
+        rc.wdic[riskid, lt] = weight
+    rc.minimum_asset_loss = dic['minimum_asset_loss']
+    rc.calculation_mode = dic['calculation_mode']
+    rc.alias = dic['alias']
+    return rc
 
 
 # ######################## CompositeRiskModel #########################
@@ -742,8 +752,8 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param rndgen: a MultiEventRNG instance
         :returns: a dictionary keyed by extended loss type
         """
-        lc = scientific.RiskComputer(self, asset_df)
-        return lc.output(haz, sec_losses, rndgen)
+        rc = scientific.RiskComputer(self, asset_df)
+        return rc.output(haz, sec_losses, rndgen)
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))

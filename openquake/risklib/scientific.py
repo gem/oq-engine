@@ -1448,9 +1448,9 @@ class RiskComputer(dict):
         self.minimum_asset_loss = crm.oqparam.minimum_asset_loss  # lt->float
         self.wdic = {}
         for lt in self.minimum_asset_loss:
-            for key, weight in crm.tmap[lt][taxidx]:
-                self[key, lt] = crm._riskmodels[key]
-                self.wdic[key, lt] = weight
+            for riskid, weight in crm.tmap[lt][taxidx]:
+                self[riskid, lt] = crm._riskmodels[riskid]
+                self.wdic[riskid, lt] = weight
 
     def output(self, haz, sec_losses=(), rndgen=None):
         """
@@ -1501,14 +1501,15 @@ class RiskComputer(dict):
         """
         :returns: a literal dict describing the RiskComputer
         """
-        rfs = general.AccumDict(accum={})
+        rfdic = {}
         for rlt, rm in self.items():
-            for ltk, rf in rm.risk_functions.items():
-                rfs['%s:%s' % rlt]['%s:%s' % ltk] = ast.literal_eval(
-                    hdf5.obj_to_json(rf))
+            for lt, rfs in rm.risk_functions.items():
+                for rf in rfs:
+                    rlk = '%s:%s:%s' % (rf.id, lt, rf.kind)
+                    rfdic[rlk] = ast.literal_eval(hdf5.obj_to_json(rf))
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
-                   risk_functions=rfs,
+                   risk_functions=rfdic,
                    wdic={'%s:%s' % k: v for k, v in self.wdic.items()},
                    alias=self.alias,
                    minimum_asset_loss=self.minimum_asset_loss,
