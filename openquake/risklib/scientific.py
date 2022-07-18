@@ -29,7 +29,7 @@ import numpy
 import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -135,6 +135,7 @@ class Sampler(object):
 class VulnerabilityFunction(object):
     dtype = numpy.dtype([('iml', F64), ('loss_ratio', F64), ('cov', F64)])
     seed = None  # to be overridden
+    kind = 'vulnerability'
 
     def __init__(self, vf_id, imt, imls, mean_loss_ratios, covs=None,
                  distribution="LN"):
@@ -517,6 +518,7 @@ class VulnerabilityModel(dict):
 # ############################## fragility ############################### #
 
 class FragilityFunctionContinuous(object):
+    kind = 'fragility'
 
     def __init__(self, limit_state, mean, stddev, minIML, maxIML, nodamage=0):
         self.limit_state = limit_state
@@ -558,6 +560,7 @@ class FragilityFunctionContinuous(object):
 
 
 class FragilityFunctionDiscrete(object):
+    kind = 'fragility'
 
     def __init__(self, limit_state, imls, poes, no_damage_limit=None):
         self.limit_state = limit_state
@@ -615,6 +618,8 @@ class FragilityFunctionList(list):
     A list of fragility functions with common attributes; there is a
     function for each limit state.
     """
+    kind = 'fragility'
+
     # NB: the list is populated after instantiation by .append calls
     def __init__(self, array, **attrs):
         self.array = array
@@ -675,6 +680,7 @@ class ConsequenceModel(dict):
     :param str description: description of the model
     :param limitStates: a list of limit state strings
     """
+    kind = 'consequence'
 
     def __init__(self, id, assetCategory, lossCategory, description,
                  limitStates):
@@ -1442,9 +1448,9 @@ class RiskComputer(dict):
         self.minimum_asset_loss = crm.oqparam.minimum_asset_loss  # lt->float
         self.wdic = {}
         for lt in self.minimum_asset_loss:
-            for key, weight in crm.tmap[lt][taxidx]:
-                self[key, lt] = crm._riskmodels[key]
-                self.wdic[key, lt] = weight
+            for riskid, weight in crm.tmap[lt][taxidx]:
+                self[riskid, lt] = crm._riskmodels[riskid]
+                self.wdic[riskid, lt] = weight
 
     def output(self, haz, sec_losses=(), rndgen=None):
         """
@@ -1495,15 +1501,15 @@ class RiskComputer(dict):
         """
         :returns: a literal dict describing the RiskComputer
         """
-        rfs = []
-        for (riskid, lt), rm in self.items():
-            dic = {}
-            for ltk, rf in rm.risk_functions.items():
-                dic['%s:%s' % ltk] = ast.literal_eval(hdf5.obj_to_json(rf))
-            rfs.append(dic)
+        rfdic = {}
+        for rlt, rm in self.items():
+            for lt, rfs in rm.risk_functions.items():
+                for rf in rfs:
+                    rlk = '%s:%s:%s' % (rf.id, lt, rf.kind)
+                    rfdic[rlk] = ast.literal_eval(hdf5.obj_to_json(rf))
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
-                   risk_functions=rfs,
+                   risk_functions=rfdic,
                    wdic={'%s:%s' % k: v for k, v in self.wdic.items()},
                    alias=self.alias,
                    minimum_asset_loss=self.minimum_asset_loss,

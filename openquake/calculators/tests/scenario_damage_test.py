@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import unittest
 import numpy
 from openquake.hazardlib import InvalidFile
 from openquake.baselib.writers import write_csv

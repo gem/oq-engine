@@ -20,6 +20,7 @@ import os
 import pickle
 import unittest
 import unittest.mock as mock
+import toml
 import numpy
 import pandas
 from numpy.testing import assert_almost_equal
@@ -310,19 +311,71 @@ class RiskComputerTestCase(unittest.TestCase):
                          'value-structural': [2000.0]},
             'calculation_mode': 'event_based_risk',
             'minimum_asset_loss': {'structural': 0},
-            'risk_functions': [
-                {'structural:vulnerability':
-                 {"openquake.risklib.scientific.VulnerabilityFunction":
-                  {"id": "RC",
-                   "imt": "PGA",
-                   "imls": [0.1, 0.2, 0.3, 0.5, 0.7],
-                   "mean_loss_ratios": [0.0035, 0.07, 0.14, 0.28, 0.56],
-                   "covs": [0.0, 0.0, 0.0, 0.0, 0.0],
-                   "distribution_name": "LN"}}}],
+            'risk_functions': {
+                'RC:structural:vulnerability':
+                {"openquake.risklib.scientific.VulnerabilityFunction":
+                 {"id": "RC",
+                  "loss_type": "structural",
+                  "imt": "PGA",
+                  "imls": [0.1, 0.2, 0.3, 0.5, 0.7],
+                  "mean_loss_ratios": [0.0035, 0.07, 0.14, 0.28, 0.56],
+                  "covs": [0.0, 0.0, 0.0, 0.0, 0.0],
+                  "distribution_name": "LN"}}},
             'wdic': {'RC:structural': 1}}
         gmfs = {'eid': [0, 1],
                 'sid': [0, 0],
                 'gmv_0': [.23, .31]}
         rc = riskmodels.get_riskcomputer(dic)
+        print(toml.dumps(dic))
+        self.assertEqual(dic, rc.todict())
+        out = rc.output(pandas.DataFrame(gmfs))
+        print(out)
+
+    def test2(self):
+        dic = {'alias': {'PGA': 'gmv_0',
+                         'SA(0.2)': 'gmv_1',
+                         'SA(0.5)': 'gmv_2',
+                         'SA(0.8)': 'gmv_3',
+                         'SA(1.0)': 'gmv_4'},
+               'asset_df': {'area': [10.0, 1.0],
+                            'id': [b'a0', b'a3'],
+                            'lat': [29.1098, 27.9015],
+                            'lon': [81.2985, 85.7477],
+                            'policy': [2, 1],
+                            'site_id': [0, 2],
+                            'taxonomy': [1, 1],
+                            'value-nonstructural': [1500.0, 2500.0],
+                            'value-number': [3.0, 10.0],
+                            'value-structural': [3000.0, 5000.0]},
+               'calculation_mode': 'event_based_risk',
+               'minimum_asset_loss': {'nonstructural': 0, 'structural': 0},
+               'risk_functions': {
+                   'RM:nonstructural:vulnerability': {
+                       'openquake.risklib.scientific.VulnerabilityFunction': {
+                           'covs': [0.0001, 0.0001, 0.0001, 0.0001, 0.0001],
+                           'distribution_name': 'LN',
+                           'id': 'RM',
+                           'imls': [0.1, 0.2, 0.4, 0.7, 1.0],
+                           'imt': 'SA(1.0)',
+                           'mean_loss_ratios': [0.1, 0.2, 0.35, 0.6, 0.9]}},
+                   'RM:structural:vulnerability': {
+                       'openquake.risklib.scientific.VulnerabilityFunction': {
+                           'covs': [0.0001, 0.0001, 0.0001, 0.0001, 0.0001],
+                           'distribution_name': 'LN',
+                           'id': 'RM',
+                           'imls': [0.02, 0.3, 0.5, 0.9, 1.2],
+                           'imt': 'PGA',
+                           'mean_loss_ratios': [0.05, 0.1, 0.2, 0.4, 0.8]}}},
+               'wdic': {'RM:nonstructural': 1, 'RM:structural': 1}}
+
+        gmfs = {'eid': [0, 2],
+                'sid': [0, 0],
+                'gmv_0': [.23, .31],
+                'gmv_1': [.23, .41],
+                'gmv_2': [.23, .51],
+                'gmv_3': [.23, .32],
+                'gmv_4': [.23, .21]}
+        rc = riskmodels.get_riskcomputer(dic)
+        print(toml.dumps(dic))
         out = rc.output(pandas.DataFrame(gmfs))
         print(out)
