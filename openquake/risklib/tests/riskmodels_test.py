@@ -310,6 +310,7 @@ class RiskComputerTestCase(unittest.TestCase):
                          'value-number': [2000.0],
                          'value-structural': [2000.0]},
             'calculation_mode': 'event_based_risk',
+            'loss_types': ['structural'],
             'minimum_asset_loss': {'structural': 0},
             'risk_functions': {
                 'RC:structural:vulnerability':
@@ -348,7 +349,7 @@ class RiskComputerTestCase(unittest.TestCase):
                             'value-number': [3.0, 10.0],
                             'value-structural': [3000.0, 5000.0]},
                'calculation_mode': 'event_based_risk',
-               'minimum_asset_loss': {'nonstructural': 0, 'structural': 0},
+               'loss_types': ['nonstructural', 'structural'],
                'risk_functions': {
                    'RM:nonstructural:vulnerability': {
                        'openquake.risklib.scientific.VulnerabilityFunction': {

@@ -437,14 +437,16 @@ def get_riskcomputer(dic):
         rf.init()
         rf.loss_type = lt
         rfs[riskid].append(rf)
+    mal = dic.get('minimum_asset_loss', {lt: 0. for lt in dic['loss_types']})
     for rlt, weight in dic['wdic'].items():
         riskid, lt = rlt.split(':')
         rm = RiskModel(dic['calculation_mode'], 'taxonomy',
                        group_by_lt(rfs[riskid]),
-                       minimum_asset_loss=dic['minimum_asset_loss'])
+                       minimum_asset_loss=mal)
         rc[riskid, lt] = rm
         rc.wdic[riskid, lt] = weight
-    rc.minimum_asset_loss = dic['minimum_asset_loss']
+    rc.loss_types = dic['loss_types']
+    rc.minimum_asset_loss = mal
     rc.calculation_mode = dic['calculation_mode']
     rc.alias = dic['alias']
     return rc

@@ -1512,6 +1512,7 @@ class RiskComputer(dict):
                    risk_functions=rfdic,
                    wdic={'%s:%s' % k: v for k, v in self.wdic.items()},
                    alias=self.alias,
+                   loss_types=self.loss_types,
                    minimum_asset_loss=self.minimum_asset_loss,
                    calculation_mode=self.calculation_mode)
         return dic
