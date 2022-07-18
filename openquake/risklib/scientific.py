@@ -1092,8 +1092,8 @@ def insured_losses(losses, deductible, insured_limit):
 def insurance_losses(asset_df, losses_by_lt, policy_df):
     """
     :param asset_df: DataFrame of assets
-    :param losses_by_lt: lt -> DataFrame[eid, aid]
-    :param asset_df: a DataFrame of assets with index "ordinal"
+    :param losses_by_lt: loss_type -> DataFrame[eid, aid, variance, loss]
+    :param policy_df: a DataFrame of policies
     """
     asset_policy_df = asset_df.join(
         policy_df.set_index('policy'), on='policy', how='inner')
