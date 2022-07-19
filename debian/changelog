@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Internal: added a way to disable the DbServer from openquake.cfg or
+    by setting OQ_DATABASE=local
   * Implemented `total_losses`
   * Optimized "computing risk" in the event_based_risk calculator (~30% faster)
   * Changed the magnitude binning formula, thus fixing some disaggregation
@@ -24,7 +26,6 @@
   * Fixed `ps_grid_spacing` approximation when the grid is degenerate
   * Logging a warning when starting from an old hazard calculation
   * The extra fields of the site collection were lost when using --hc
-  * Internal: implemented direct database access with OQ_DATABASE=local
 
   [Julián Santiago Montejo Espitia]
   * Implemented the Arteta et al. (2021) subduction model for Colombia
