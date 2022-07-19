@@ -226,10 +226,10 @@ class RiskModel(object):
         self.risk_functions = risk_functions
         vars(self).update(kw)
         steps = kw.get('lrem_steps_per_interval')
-        if calcmode in 'classical_risk':
+        if calcmode in ('classical', 'classical_risk'):
             self.loss_ratios = {
-                lt: tuple(vf.mean_loss_ratios_with_steps(steps))
-                for lt, [vf] in risk_functions.items()}
+                lt: tuple(vfs[0].mean_loss_ratios_with_steps(steps))
+                for lt, vfs in risk_functions.items()}
         if calcmode == 'classical_bcr':
             self.loss_ratios_orig = {}
             self.loss_ratios_retro = {}
