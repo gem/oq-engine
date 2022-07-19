@@ -1467,7 +1467,8 @@ class OqParam(valid.ParamSet):
         if self.total_losses:
             etypes = self.loss_types + [self.total_losses]
         if 'insurance' in self.inputs:
-            etypes = self.loss_types + [lt + '_ins' for lt in self.loss_types]
+            itypes = [lt + '_ins' for lt in self.inputs['insurance']]
+            etypes = self.loss_types + itypes
         return etypes
 
     def loss_dt(self, dtype=F64):
