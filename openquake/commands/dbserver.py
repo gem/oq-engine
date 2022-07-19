@@ -32,6 +32,10 @@ def main(cmd,
     """
     start/stop/restart the database server, or return its status
     """
+    if os.environ.get('OQ_DATABASE') == 'local':
+        print('Doing nothing since OQ_DATABASE=local')
+        return
+
     if config.multi_user:
         user = getpass.getuser()
         if user != 'openquake':
