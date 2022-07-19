@@ -200,11 +200,8 @@ def fix_geometry_sections(smdict, h5):
     sections = [sections[suid] for suid in sorted(sections)]
     for idx, sec in enumerate(sections):
         sec.suid = idx
-    if h5 and sections:
-        with hdf5.File(h5.filename[:-5] + '_tmp.hdf5', 'w') as tmp:
-            h5.tempname = tmp.filename
-            tmp.save_vlen('multi_fault_sections',
-                          [kite_to_geom(sec) for sec in sections])
+    if sections:
+        geoms = [kite_to_geom(sec) for sec in sections]
 
     # fix the MultiFaultSources
     section_idxs = []
@@ -214,8 +211,7 @@ def fix_geometry_sections(smdict, h5):
                 if hasattr(src, 'set_sections'):
                     if not sections:
                         raise RuntimeError('Missing geometryModel files!')
-                    if h5:
-                        src.hdf5path = h5.tempname
+                    src.geoms = geoms
                     src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
                                         for idxs in src.rupture_idxs]
                     for idxs in src.rupture_idxs:

@@ -113,21 +113,12 @@ class MultiFaultSource(BaseSeismicSource):
         """
         An iterator for the ruptures.
         """
-        # Check
-        if not self.hdf5path and 'sections' not in self.__dict__:
-            raise RuntimeError('You forgot to call set_sections in %s!' % self)
-
         # iter on the ruptures
         step = kwargs.get('step', 1)
         n = len(self.mags)
-        if self.hdf5path:
-            with hdf5.File(self.hdf5path, 'r') as f:
-                geoms = f['multi_fault_sections'][:]
-            s = [geom_to_kite(geom) for geom in geoms]
-            for idx, sec in enumerate(s):
-                sec.suid = idx
-        else:
-            s = self.sections
+        s = [geom_to_kite(geom) for geom in self.geoms]
+        for idx, sec in enumerate(s):
+            sec.suid = idx
         for i in range(0, n, step**2):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
@@ -184,14 +175,9 @@ class MultiFaultSource(BaseSeismicSource):
         """
         Bounding box containing the surfaces, enlarged by the maximum distance
         """
-        if self.hdf5path:
-            with hdf5.File(self.hdf5path, 'r') as f:
-                geoms = f['multi_fault_sections'][:]
-            s = [geom_to_kite(geom) for geom in geoms]
-        else:
-            s = self.sections
         surfaces = []
-        for sec in s:
+        for geom in self.geoms:
+            sec = geom_to_kite(geom)
             if isinstance(sec, MultiSurface):
                 surfaces.extend(sec.surfaces)
             else:
