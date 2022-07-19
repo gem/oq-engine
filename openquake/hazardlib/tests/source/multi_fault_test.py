@@ -76,16 +76,16 @@ class MultiFaultTestCase(unittest.TestCase):
         # test instantiation and rupture generation
         src = MultiFaultSource("01", "test", "Moon Crust",
                                self.rup_idxs, self.pmfs, self.mags, self.rakes)
-        src.set_sections(self.sections)
+        src.set_geoms(self.sections)
         rups = list(src.iter_ruptures())
         self.assertEqual(7, len(rups))
 
     def test02(self):
-        # test set_sections, 3 is not a known section ID
+        # test set_geoms, 3 is not a known section ID
         rup_idxs = [[0], [1], [3], [0], [1], [3], [0]]
         mfs = MultiFaultSource("01", "test", "Moon Crust", rup_idxs,
                                self.pmfs, self.mags, self.rakes)
         with self.assertRaises(IndexError) as ctx:
-            mfs.set_sections(self.sections)
+            mfs.set_geoms(self.sections)
         expected = 'list index out of range'
         self.assertEqual(expected, str(ctx.exception))

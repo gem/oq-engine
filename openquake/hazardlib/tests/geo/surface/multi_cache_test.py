@@ -69,7 +69,7 @@ class GetRxRy0FromCacheTestCase(unittest.TestCase):
         s2i = {suid: i for i, suid in enumerate(geom.sections)}
         self.src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
                                  for idxs in self.src.rupture_idxs]
-        self.src.set_sections(sections)
+        self.src.set_geoms(sections)
 
     def test_multi_cache_01(self):
         """ Tests results remain stable after multiple calls """

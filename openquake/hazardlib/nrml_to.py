@@ -101,7 +101,7 @@ def appendrow(row, rows, chatty, sections=(), s2i={}):
     if row.code == 'F':  # row.coords is a multiFaultSource
         row.coords.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
                                    for idxs in row.coords.rupture_idxs]
-        row.coords.set_sections(sections)
+        row.coords.set_geoms(sections)
         row.coords = [row.coords.polygon.coords]
     row.wkt = wkt = to_wkt(row.geom, row.coords)
     if wkt.startswith('POINT'):

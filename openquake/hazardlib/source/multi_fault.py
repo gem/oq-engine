@@ -21,14 +21,14 @@ defines :class:`MultiFaultSource`.
 import numpy as np
 from typing import Union
 
-from openquake.baselib import hdf5
 from openquake.baselib.general import gen_slices
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.rupture import (
     NonParametricProbabilisticRupture)
 from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
-from openquake.hazardlib.geo.surface.kite_fault import geom_to_kite
+from openquake.hazardlib.geo.surface.kite_fault import (
+    geom_to_kite, kite_to_geom)
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
@@ -66,17 +66,17 @@ class MultiFaultSource(BaseSeismicSource):
     """
     code = b'F'
     MODIFICATIONS = {}
-    hdf5path = ''
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
                  rupture_idxs: list, occurrence_probs: Union[list, np.ndarray],
-                 magnitudes: list, rakes: list):
+                 magnitudes: list, rakes: list, geoms: list):
         nrups = len(rupture_idxs)
         assert len(occurrence_probs) == len(magnitudes) == len(rakes) == nrups
         self.rupture_idxs = rupture_idxs
         self.probs_occur = occurrence_probs
         self.mags = magnitudes
         self.rakes = rakes
+        self.geoms = geoms
         super().__init__(source_id, name, tectonic_region_type)
 
     def is_gridded(self):
@@ -93,26 +93,24 @@ class MultiFaultSource(BaseSeismicSource):
         return dict(mag=self.mags, rake=self.rakes,
                     probs_occur=self.probs_occur, rupture_idxs=ridxs)
 
-    def set_sections(self, sections):
+    def set_geoms(self, sections):
         """
         :param sections: a list of N surfaces
         """
         assert sections
-        # this is fundamental for the distance cache
-        for idx, sec in enumerate(sections):
-            sec.suid = idx
-        # `i` is the index of the rupture of the `n` admitted by this source.
         # In this loop we check that all the IDs of the sections composing one
         # rupture have a object in the section list describing their geometry.
         for i in range(len(self.mags)):
             for idx in self.rupture_idxs[i]:
                 sections[idx]
-        self.sections = sections
+        self.geoms = [kite_to_geom(sec) for sec in sections]
 
     def iter_ruptures(self, **kwargs):
         """
         An iterator for the ruptures.
         """
+        if not self.geoms:
+            raise RuntimeError('You forgot to call .set_geoms!')
         # iter on the ruptures
         step = kwargs.get('step', 1)
         n = len(self.mags)
@@ -133,6 +131,7 @@ class MultiFaultSource(BaseSeismicSource):
                 PMF(data))
 
     def __iter__(self):
+        # splitting is tested in disaggregation/NZ in oq-risk-tests
         if len(self.mags) <= BLOCKSIZE:  # already split
             yield self
             return
@@ -145,8 +144,8 @@ class MultiFaultSource(BaseSeismicSource):
                 self.rupture_idxs[slc],
                 self.probs_occur[slc],
                 self.mags[slc],
-                self.rakes[slc])
-            src.hdf5path = self.hdf5path
+                self.rakes[slc],
+                self.geoms)
             src.num_ruptures = src.count_ruptures()
             yield src
 
@@ -175,14 +174,7 @@ class MultiFaultSource(BaseSeismicSource):
         """
         Bounding box containing the surfaces, enlarged by the maximum distance
         """
-        surfaces = []
-        for geom in self.geoms:
-            sec = geom_to_kite(geom)
-            if isinstance(sec, MultiSurface):
-                surfaces.extend(sec.surfaces)
-            else:
-                surfaces.append(sec)
-        multi_surf = MultiSurface(surfaces)
+        multi_surf = MultiSurface(list(map(geom_to_kite, self.geoms)))
         west, east, north, south = multi_surf.get_bounding_box()
         a1 = maxdist * KM_TO_DEGREES
         a2 = angular_distance(maxdist, north, south)

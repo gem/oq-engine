@@ -208,10 +208,10 @@ def fix_geometry_sections(smdict, h5):
     for smod in smodels:
         for sg in smod.src_groups:
             for src in sg:
-                if hasattr(src, 'set_sections'):
+                if hasattr(src, 'set_geoms'):
                     if not sections:
                         raise RuntimeError('Missing geometryModel files!')
-                    src.geoms = geoms
+                    src.geoms[:] = geoms
                     src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
                                         for idxs in src.rupture_idxs]
                     for idxs in src.rupture_idxs:
