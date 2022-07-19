@@ -393,14 +393,14 @@ class ZipTestCase(unittest.TestCase):
 
     def test_zip_ebr(self):
         # this is a case with an exposure.csv
-        ini = os.path.join(os.path.dirname(case_eb.__file__), 'job_eb.ini')
+        ini = os.path.join(os.path.dirname(case_eb.__file__), 'job_ins.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
         sap.runline(f'openquake.commands zip {ini} {xzip}')
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(
             ['exposure.csv', 'exposure1.xml', 'gmpe_logic_tree.xml',
-             'job_eb.ini', 'policy.csv', 'source_model.xml',
+             'job_ins.ini', 'policy.csv', 'source_model.xml',
              'source_model_logic_tree.xml',
              'vulnerability_model_nonstco.xml',
              'vulnerability_model_stco.xml'],
