@@ -29,7 +29,7 @@ import numpy
 import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -46,6 +46,8 @@ business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
 structural+nonstructural structural+contents nonstructural+contents
 structural+nonstructural+contents
+structural+nonstructural_ins structural+contents_ins nonstructural+contents_ins
+structural+nonstructural+contents_ins
 structural_ins nonstructural_ins reinsurance'''.split())
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
 LTI = {lt: i for i, lt in enumerate(LOSSTYPE)}
@@ -1097,6 +1099,9 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
     """
     asset_policy_df = asset_df.join(
         policy_df.set_index('policy'), on='policy', how='inner')
+    for lt in policy_df.loss_type.unique():
+        if '+' in lt:
+            total_losses(asset_df, losses_by_lt, lt)
     for lt, out in list(losses_by_lt.items()):
         if len(out) == 0:
             continue
@@ -1106,7 +1111,11 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
             continue
         new['variance'] = 0.
         j = new.join(adf, on='aid', how='inner')
-        values = j['value-' + lt].to_numpy()
+        if '+' in lt:
+            values = numpy.sum(
+                j['value-' + ltype].to_numpy() for ltype in lt.split('+'))
+        else:
+            values = j['value-' + lt].to_numpy()
         losses = j.loss.to_numpy()
         deds = j.deductible.to_numpy() * values
         lims = j.insurance_limit.to_numpy() * values
@@ -1559,10 +1568,10 @@ def get_agg_value(consequence, agg_values, agg_id, xltype):
     elif consequence == 'homeless':
         return aval['occupants_night']
     elif consequence in ('loss', 'losses'):
+        if xltype.endswith('_ins'):
+            xltype = xltype[:-4]
         if '+' in xltype:  # total loss type
             return sum(aval[lt] for lt in xltype.split('+'))
-        elif xltype.endswith('_ins'):
-            xltype = xltype[:-4]
         return aval[xltype]
     else:
         raise NotImplementedError(consequence)

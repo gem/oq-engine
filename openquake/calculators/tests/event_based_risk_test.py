@@ -80,9 +80,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                                   delta=1E-5)
 
-    def test_case_1_eb(self):
+    def test_case_1_ins(self):
+        # no aggregation
+        self.run_calc(case_1.__file__, 'job2.ini')
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-5)
+
         # this is a case with insured losses and tags
-        self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4')
+        self.run_calc(case_1.__file__, 'job_ins.ini', concurrent_tasks='4')
 
         # testing the view agg_id
         agg_id = view('agg_id', self.calc.datastore)
@@ -131,7 +136,7 @@ agg_id
 
         # test ct_independence
         loss4 = view('portfolio_losses', self.calc.datastore)
-        self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='0')
+        self.run_calc(case_1.__file__, 'job_ins.ini', concurrent_tasks='0')
         loss0 = view('portfolio_losses', self.calc.datastore)
         self.assertEqual(loss0, loss4)
 
