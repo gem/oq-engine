@@ -264,7 +264,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.eids = None
                 readinput.gsim_lt_cache.clear()
 
-                # remove temporary hdf5 file, if any
+                # remove temporary hdf5 file, if any (currently none)
                 if os.path.exists(self.datastore.tempname) and remove:
                     os.remove(self.datastore.tempname)
         return getattr(self, 'exported', {})
