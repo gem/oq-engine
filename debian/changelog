@@ -1,3 +1,6 @@
+  [Anne Hulsey]
+  * Contributed `Mag_Dist_TRT` and `Mag_Dist_TRT_Eps` disaggregations
+
   [Michele Simionato]
   * Internal: added a way to disable the DbServer from openquake.cfg or
     by setting OQ_DATABASE=local

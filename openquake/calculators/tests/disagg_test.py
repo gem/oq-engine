@@ -108,8 +108,11 @@ class DisaggregationTestCase(CalculatorTestCase):
         # this exercise sampling
         self.run_calc(case_4.__file__, 'job.ini')
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        print([os.path.basename(f) for f in fnames])
-        self.assertEqual(len(fnames), 10)  # 2 sid x 8 keys x 2 poe x 2 imt
+        self.assertEqual(len(fnames), 14)
+        # Dist-0 Lon_Lat-0 Lon_Lat_TRT-0 Lon_Lat_TRT-1
+        # Mag-0 Mag_Dist-0 Mag_Dist_Eps-0 Mag_Dist_TRT-0
+        # Mag_Dist_TRT-1 Mag_Dist_TRT_Eps-0 Mag_Dist_TRT_Eps-1
+        # Mag_Lon_Lat-0, TRT-0 TRT-1
         for fname in fnames:
             if 'Mag_Dist' in fname and 'Eps' not in fname:
                 self.assertEqualFiles(
@@ -186,7 +189,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         os.remove(fname)
 
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 16)  # 2 sid x 8 keys x 2 poe x 2 imt
+        self.assertEqual(len(fnames), 20)
         for fname in fnames:
             if 'Mag_Dist' in fname and 'Eps' not in fname:
                 self.assertEqualFiles(
