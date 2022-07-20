@@ -452,7 +452,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
         vcurves = []  # hazard curves with a vertical section for large poes
         for (s, m, k), mat6 in sorted(results.items()):
-            # NB: k is an index with value 0 (MagDistEps) or 1 (MagLonLat)
+            # NB: k is an index with value 0 (MagDistEps) or 1 (LonLat)
             imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
                 mat5 = mat6[..., p, :]
@@ -484,9 +484,10 @@ class DisaggregationCalculator(base.HazardCalculator):
                     elif key == 'Mag_Dist_Eps' and k == 0:
                         out[key][s, m, p, :] = mat4
                     elif key == 'Mag_Dist_TRT' and k == 0:
-                        out[key][s, m, p, :] = pprod(mat5, axis=(3)).transpose(1, 2, 0, 3)  # T Mag Dist Z -> Mag Dist T Z
+                        out[key][s, m, p, :] = pprod(mat5, axis=(3)).transpose(
+                            1, 2, 0, 3)  # T Ma D Z -> Ma D T Z
                     elif key == 'Mag_Dist_TRT_Eps' and k == 0:
-                        out[key][s, m, p, :] = mat5.transpose(1, 2, 0, 3, 4)  # T Mag Dist Eps Z -> Mag Dist T Eps Z
+                        out[key][s, m, p, :] = mat5.transpose(1, 2, 0, 3, 4)
                     elif key == 'Lon_Lat' and k == 1:
                         out[key][s, m, p, :] = pprod(mat4, axis=0)
                     elif key == 'Mag_Lon_Lat' and k == 1:

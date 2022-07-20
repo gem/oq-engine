@@ -1,3 +1,6 @@
+  [Anne Hulsey]
+  * Contributed `Mag_Dist_TRT` and `Mag_Dist_TRT_Eps` disaggregations
+
   [Michele Simionato]
   * Implemented `total_losses`
   * Optimized "computing risk" in the event_based_risk calculator (~30% faster)

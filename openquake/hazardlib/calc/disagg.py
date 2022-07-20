@@ -424,9 +424,7 @@ mag_dist_eps_pmf = partial(pprod, axis=(LON, LAT))
 lon_lat_pmf = partial(pprod, axis=(DIS, MAG, EPS))
 mag_lon_lat_pmf = partial(pprod, axis=(DIS, EPS))
 trt_pmf = partial(pprod, axis=(1, 2, 3, 4, 5))
-# applied on matrix TRT MAG DIS LON LAT EPS
 mag_dist_trt_pmf = partial(pprod, axis=(3, 4, 5))
-# applied on matrix TRT MAG DIS LON LAT EPS
 mag_dist_trt_eps_pmf = partial(pprod, axis=(3, 4))
 # applied on matrix TRT MAG DIS LON LAT EPS
 
@@ -454,7 +452,7 @@ pmf_map = dict([
     ('TRT', trt_pmf),
     ('Mag_Dist', mag_dist_pmf),
     ('Mag_Dist_Eps', mag_dist_eps_pmf),
-	('Mag_Dist_TRT', mag_dist_trt_pmf),
+    ('Mag_Dist_TRT', mag_dist_trt_pmf),
     ('Mag_Dist_TRT_Eps', mag_dist_trt_eps_pmf),
     ('Lon_Lat', lon_lat_pmf),
     ('Mag_Lon_Lat', mag_lon_lat_pmf),
