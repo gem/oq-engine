@@ -212,7 +212,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # weighting the heavy sources
         nrups = parallel.Starmap(
             count_ruptures, [(src,) for src in sources if src.code in b'AMC'],
-            progress=logging.debug
+            progress=logging.debug,
         ).reduce()
         for src in sources:
             try:
@@ -234,6 +234,7 @@ class EventBasedCalculator(base.HazardCalculator):
             cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], oq)
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
+        self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
