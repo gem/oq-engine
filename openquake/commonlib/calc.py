@@ -274,7 +274,7 @@ class RuptureImporter(object):
                           len(dupl), dupl)
         rup_array['geom_id'] = rup_array['id']
         rup_array['id'] = numpy.arange(nr)
-        self.datastore['ruptures'] = rup_array
+        self.datastore['ruptures'][:] = rup_array
         rgetters = get_rupture_getters(  # fast
             self.datastore, self.oqparam.concurrent_tasks)
         self._save_events(rup_array, rgetters)
