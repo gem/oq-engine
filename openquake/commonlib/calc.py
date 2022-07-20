@@ -22,7 +22,7 @@ import logging
 from unittest.mock import Mock
 import numpy
 
-from openquake.baselib import parallel
+from openquake.baselib import parallel, hdf5
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
 from openquake.hazardlib.source.rupture import EBRupture, events_dt
@@ -274,7 +274,9 @@ class RuptureImporter(object):
                           len(dupl), dupl)
         rup_array['geom_id'] = rup_array['id']
         rup_array['id'] = numpy.arange(nr)
-        self.datastore['ruptures'][:] = rup_array
+        if len(self.datastore['ruptures']):
+            self.datastore['ruptures'].resize((0,))
+        hdf5.extend(self.datastore['ruptures'], rup_array)
         rgetters = get_rupture_getters(  # fast
             self.datastore, self.oqparam.concurrent_tasks)
         self._save_events(rup_array, rgetters)
