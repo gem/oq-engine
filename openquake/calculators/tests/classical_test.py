@@ -54,11 +54,10 @@ def check_disagg_by_src(dstore, lvl=-1):
     mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
     dbs = dstore.sel('disagg_by_src')  # N, R, M, L, Ns
     if mutex.sum():
-        mws = info[mutex]['mutex_weight']
         dbs_indep = dbs[:, :, :, :, ~mutex]
         dbs_mutex = dbs[:, :, :, :, mutex]
         poes_indep = general.pprod(dbs_indep, axis=4)  # N, R, M, L
-        poes_mutex = numpy.average(dbs_mutex, weights=mws, axis=4)
+        poes_mutex = dbs_mutex.sum(axis=4)  # N, R, M, L
         poes = poes_indep + poes_mutex - poes_indep * poes_mutex
     else:
         poes = general.pprod(dbs, axis=4)  # N, R, M, L
@@ -485,7 +484,7 @@ hazard_uhs-std.csv
         self.assertEqual(tot_probs_occur, 4)  # 2 x 2
 
         # check disagg_by_src
-        # check_disagg_by_src(self.calc.datastore, lvl=-1)
+        check_disagg_by_src(self.calc.datastore, lvl=-1)
 
         # make sure the disaggregation works
         hc_id = str(self.calc.datastore.calc_id)
