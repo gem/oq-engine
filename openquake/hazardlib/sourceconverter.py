@@ -1179,7 +1179,7 @@ class SourceConverter(RuptureConverter):
                                   'srcs_weights')}
         if node.attrib.get('src_interdep') != 'mutex':
             # ignore weights set to 1 in old versions of the engine
-            srcs_weights = None 
+            srcs_weights = None
         sg = SourceGroup(trt, min_mag=self.minimum_magnitude)
         sg.temporal_occurrence_model = self.get_tom(node)
         sg.name = node.attrib.get('name')
