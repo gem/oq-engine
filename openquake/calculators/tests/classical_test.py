@@ -51,7 +51,6 @@ def check_disagg_by_src(dstore, lvl=-1):
     """
     info = dstore['source_info'][:]
     mutex = info['mutex_weight'] > 0
-    extract(dstore, 'disagg_by_src?lvl_id=-1')  # check not broken
     mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
     dbs = dstore.sel('disagg_by_src')  # N, R, M, L, Ns
     if mutex.sum():
@@ -484,6 +483,9 @@ hazard_uhs-std.csv
         probs_occur = self.calc.datastore['rup/probs_occur'][:]
         tot_probs_occur = sum(len(po) for po in probs_occur)
         self.assertEqual(tot_probs_occur, 28)  # 14 x 2
+
+        # check disagg_by_src
+        check_disagg_by_src(self.calc.datastore, lvl=-1)
 
         # make sure the disaggregation works
         hc_id = str(self.calc.datastore.calc_id)
