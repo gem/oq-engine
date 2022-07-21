@@ -128,7 +128,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         # there is a collapsed nonparametric source with len(probs_occur)==3
 
     def test_case_6(self):
-        # test with international date line
+        # test with international date line and disagg_by_src
         self.run_calc(case_6.__file__, 'job.ini')
 
         # test CSV export
