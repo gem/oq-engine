@@ -64,7 +64,9 @@ def check_disagg_by_src(dstore, lvl=-1):
     rlz_weights = dstore['weights'][:]
     mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L
     aac(mean, mean2, atol=1E-6)
-    assert mean[:, :, lvl].any()  # otherwise the check would be trivial
+
+    # considering a level for which the mean is nonzero
+    assert mean[:, :, lvl].any(), mean[:, :, lvl]
     # print('mean =', mean[:, :, lvl])
 
     # check the extract call is not broken

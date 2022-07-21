@@ -1352,7 +1352,7 @@ class PmapMaker(object):
         dic = {}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
-        grp_id = self.cmaker.grp_id
+        grp_id = self.sources[0].grp_id
         if self.src_mutex:
             pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
             pmap_by_src = self._make_src_mutex()
