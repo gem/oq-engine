@@ -45,7 +45,7 @@ ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
 
 
-def check_disagg_by_src(dstore):
+def check_disagg_by_src(dstore, lvl=-1):
     """
     Make sure that by composing disagg_by_src one gets the hazard curves
     """
@@ -66,6 +66,12 @@ def check_disagg_by_src(dstore):
     rlz_weights = dstore['weights'][:]
     mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L
     aac(mean, mean2, atol=1E-6)
+    assert mean[:, :, lvl].any()  # otherwise the check would be trivial
+    # print('mean =', mean[:, :, lvl])
+
+    # check the extract call is not broken
+    aw = extract(dstore, 'disagg_by_src?lvl_id=%d' % lvl)
+    assert aw.array.dtype.names == ('src_id', 'poe')
 
 
 def get_dists(dstore):
@@ -478,9 +484,6 @@ hazard_uhs-std.csv
         probs_occur = self.calc.datastore['rup/probs_occur'][:]
         tot_probs_occur = sum(len(po) for po in probs_occur)
         self.assertEqual(tot_probs_occur, 28)  # 14 x 2
-
-        # check disagg_by_src
-        check_disagg_by_src(self.calc.datastore)
 
         # make sure the disaggregation works
         hc_id = str(self.calc.datastore.calc_id)
