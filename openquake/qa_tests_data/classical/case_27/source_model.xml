@@ -11,24 +11,11 @@ xmlns:gml="http://www.opengis.net/gml"
         name="Nankai"
         rup_interdep="indep"
         src_interdep="mutex"
-        srcs_weights="0.0125 0.0125 0.0125 0.0125 0.1625 0.1625 0.0125 0.0125 0.025 0.025 0.05 0.05 0.325 0.025 0.1"
+        srcs_weights="0.625 0.375"
         tectonicRegion="Subduction Interface"
         >
             <nonParametricSeismicSource id="case_01" name="Nankai Trough - CASE 1"/>
             <nonParametricSeismicSource id="case_02" name="Nankai Trough - CASE 2"/>
-            <nonParametricSeismicSource id="case_03" name="Nankai Trough - CASE 3"/>
-            <nonParametricSeismicSource id="case_04" name="Nankai Trough - CASE 4"/>
-            <nonParametricSeismicSource id="case_05" name="Nankai Trough - CASE 5"/>
-            <nonParametricSeismicSource id="case_06" name="Nankai Trough - CASE 6"/>
-            <nonParametricSeismicSource id="case_07" name="Nankai Trough - CASE 7"/>
-            <nonParametricSeismicSource id="case_08" name="Nankai Trough - CASE 8"/>
-            <nonParametricSeismicSource id="case_09" name="Nankai Trough - CASE 9"/>
-            <nonParametricSeismicSource id="case_10" name="Nankai Trough - CASE 10"/>
-            <nonParametricSeismicSource id="case_11" name="Nankai Trough - CASE 11"/>
-            <nonParametricSeismicSource id="case_12" name="Nankai Trough - CASE 12"/>
-            <nonParametricSeismicSource id="case_13" name="Nankai Trough - CASE 13"/>
-            <nonParametricSeismicSource id="case_14" name="Nankai Trough - CASE 14"/>
-            <nonParametricSeismicSource id="case_15" name="Nankai Trough - CASE 15"/>
         </sourceGroup>
         <sourceGroup
             name="point source"

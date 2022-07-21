@@ -49,13 +49,24 @@ def check_disagg_by_src(dstore, lvl=-1):
     """
     Make sure that by composing disagg_by_src one gets the hazard curves
     """
+    info = dstore['source_info'][:]
+    mutex = info['mutex_weight'] > 0
     mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
     dbs = dstore.sel('disagg_by_src')  # N, R, M, L, Ns
-    poes = general.pprod(dbs, axis=4)  # N, R, M, L
-    weights = dstore['weights'][:]
-    mean2 = numpy.einsum('sr...,r->s...', poes, weights)  # N, M, L
-    aac(mean, mean2, atol=1E-6)
-    assert mean[:, :, lvl].any()  # otherwise the check would be trivial
+    if mutex.sum():
+        dbs_indep = dbs[:, :, :, :, ~mutex]
+        dbs_mutex = dbs[:, :, :, :, mutex]
+        poes_indep = general.pprod(dbs_indep, axis=4)  # N, R, M, L
+        poes_mutex = dbs_mutex.sum(axis=4)  # N, R, M, L
+        poes = poes_indep + poes_mutex - poes_indep * poes_mutex
+    else:
+        poes = general.pprod(dbs, axis=4)  # N, R, M, L
+    rlz_weights = dstore['weights'][:]
+    mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L
+    aac(mean, mean2, atol=1E-7)
+
+    # considering a level for which the mean is nonzero
+    assert mean[:, :, lvl].any(), mean[:, :, lvl]
     # print('mean =', mean[:, :, lvl])
 
     # check the extract call is not broken
@@ -472,7 +483,10 @@ hazard_uhs-std.csv
         # make sure probs_occur are stored as expected
         probs_occur = self.calc.datastore['rup/probs_occur'][:]
         tot_probs_occur = sum(len(po) for po in probs_occur)
-        self.assertEqual(tot_probs_occur, 28)  # 14 x 2
+        self.assertEqual(tot_probs_occur, 4)  # 2 x 2
+
+        # check disagg_by_src
+        check_disagg_by_src(self.calc.datastore, lvl=-1)
 
         # make sure the disaggregation works
         hc_id = str(self.calc.datastore.calc_id)
