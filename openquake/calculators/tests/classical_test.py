@@ -151,7 +151,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hcurve.csv', fname)
 
         # check disagg_by_src for a single realization
-        check_disagg_by_src(self.calc.datastore)
+        check_disagg_by_src(self.calc.datastore, lvl=0)
 
     def test_case_3(self):
         self.assert_curves_ok(
@@ -666,7 +666,7 @@ hazard_uhs-std.csv
     def test_case_45(self):
         # this is a test for MMI with disagg_by_src and sampling
         self.assert_curves_ok(["hazard_curve-mean-MMI.csv"], case_45.__file__)
-        check_disagg_by_src(self.calc.datastore)
+        check_disagg_by_src(self.calc.datastore, lvl=0)
 
     def test_case_46(self):
         # SMLT with applyToBranches
