@@ -143,6 +143,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <sourceGroup
         name="group 1"
         tectonicRegion="active shallow crust"
+        src_interdep="mutex"
         srcs_weights="0.5 0.5"
         >
             <pointSource
