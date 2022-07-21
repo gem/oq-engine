@@ -154,7 +154,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
         self.assertEqual(aw.trt, [b'Active Shallow Crust'])
 
-        check_disagg_by_src(self.calc.datastore)
+        check_disagg_by_src(self.calc.datastore, lvl=0)
 
     def test_case_7(self):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site

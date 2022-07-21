@@ -1257,7 +1257,10 @@ class PmapMaker(object):
         self.cmaker = cmaker
         self.srcfilter = srcfilter
         self.N = len(self.srcfilter.sitecol.complete)
-        self.group = group
+        try:
+            self.sources = group.sources
+        except AttributeError:  # already a list of sources
+            self.sources = group
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
         self.cmaker.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         self.fewsites = self.N <= cmaker.max_sites_disagg
@@ -1299,7 +1302,7 @@ class PmapMaker(object):
         allctxs = []
         totlen = 0
         t0 = time.time()
-        for src in self.group:
+        for src in self.sources:
             ctxs = self._get_ctxs(src)
             src.nsites = sum(len(ctx) for ctx in ctxs)
             totlen += src.nsites
@@ -1310,8 +1313,8 @@ class PmapMaker(object):
         if allctxs:
             cm.get_pmap(concat(allctxs), pmap)
         dt = time.time() - t0
-        nsrcs = len(self.group)
-        for src in self.group:
+        nsrcs = len(self.sources)
+        for src in self.sources:
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(src.nsites)
             self.source_data['esites'].append(src.esites)
@@ -1323,9 +1326,9 @@ class PmapMaker(object):
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
-        pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
+        pmap_by_src = {}
         cm = self.cmaker
-        for src in self.group:
+        for src in self.sources:
             t0 = time.time()
             pm = ProbabilityMap(cm.imtls.size, len(cm.gsims))
             ctxs = self._get_ctxs(src)
@@ -1334,7 +1337,7 @@ class PmapMaker(object):
             if nsites:
                 cm.get_pmap(ctxs, pm)
             p = (~pm if cm.rup_indep else pm) * src.mutex_weight
-            pmap += p
+            pmap_by_src[src.source_id] = p
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(nsites)
@@ -1343,23 +1346,33 @@ class PmapMaker(object):
             self.source_data['weight'].append(src.weight)
             self.source_data['ctimes'].append(dt)
             self.source_data['taskno'].append(cm.task_no)
-        return pmap
+        return pmap_by_src
 
     def make(self):
+        dic = {}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
+        grp_id = self.cmaker.grp_id
         if self.src_mutex:
-            pmap = self._make_src_mutex()
+            pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
+            pmap_by_src = self._make_src_mutex()
+            for source_id, pm in pmap_by_src.items():
+                pmap += pm
         else:
             pmap = self._make_src_indep()
-        dic = {'pmap': pmap,
-               'cfactor': self.cmaker.collapser.cfactor,
-               'rup_data': concat(self.rupdata),
-               'source_data': self.source_data,
-               'task_no': self.task_no,
-               'grp_id': self.group[0].grp_id}
-        if self.disagg_by_src:
-            dic['source_id'] = self.group[0].source_id
+        dic['pmap'] = pmap
+        dic['cfactor'] = self.cmaker.collapser.cfactor
+        dic['rup_data'] = concat(self.rupdata)
+        dic['source_data'] = self.source_data
+        dic['task_no'] = self.task_no
+        dic['grp_id'] = grp_id
+        if self.disagg_by_src and self.src_mutex:
+            dic['pmap_by_src'] = pmap_by_src
+        elif self.disagg_by_src:
+            # all the sources in the group have the same source_id because
+            # of the groupby(group, get_source_id) in classical.py
+            src = self.sources[0].source_id.split(':')[0]
+            dic['pmap_by_src'] = {src: pmap}
         return dic
 
 
