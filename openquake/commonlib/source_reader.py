@@ -68,8 +68,7 @@ def create_source_info(csm, h5):
     data = {}  # src_id -> row
     wkts = []
     lens = []
-    sources = csm.get_sources()
-    for srcid, srcs in general.groupby(sources, basename).items():
+    for srcid, srcs in general.groupby(csm.get_sources(), basename).items():
         src = srcs[0]
         num_ruptures = sum(src.num_ruptures for src in srcs)
         mutex = getattr(src, 'mutex_weight', 0)
@@ -88,7 +87,7 @@ def create_source_info(csm, h5):
             src.id = srcid
 
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
-                 len(csm.src_groups), len(sources), numpy.mean(lens))
+                 len(csm.src_groups), len(data), numpy.mean(lens))
     csm.source_info = data  # src_id -> row
     num_srcs = len(csm.source_info)
     # avoid hdf5 damned bug by creating source_info in advance
