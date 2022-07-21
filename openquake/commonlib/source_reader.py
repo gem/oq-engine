@@ -88,7 +88,7 @@ def create_source_info(csm, h5):
             src.id = srcid
 
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
-                 len(csm.src_groups), sum(sources), numpy.mean(lens))
+                 len(csm.src_groups), len(sources), numpy.mean(lens))
     csm.source_info = data  # src_id -> row
     num_srcs = len(csm.source_info)
     # avoid hdf5 damned bug by creating source_info in advance
