@@ -646,9 +646,9 @@ hazard_uhs-std.csv
                               shift_hypo='false')
 
     def test_case_45(self):
-        # this is a test for MMI with disagg_by_src
+        # this is a test for MMI with disagg_by_src and sampling
         self.assert_curves_ok(["hazard_curve-mean-MMI.csv"], case_45.__file__)
-        self.calc.datastore.read_df('disagg_by_src', 'src_id')
+        check_disagg_by_src(self.calc.datastore)
 
     def test_case_46(self):
         # SMLT with applyToBranches
