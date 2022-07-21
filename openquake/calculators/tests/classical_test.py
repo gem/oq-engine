@@ -45,17 +45,22 @@ ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
 
 
-def check_disagg_by_src(dstore):
+def check_disagg_by_src(dstore, lvl=-1):
     """
     Make sure that by composing disagg_by_src one gets the hazard curves
     """
-    extract(dstore, 'disagg_by_src?lvl_id=-1')  # check not broken
     mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
     dbs = dstore.sel('disagg_by_src')  # N, R, M, L, Ns
     poes = general.pprod(dbs, axis=4)  # N, R, M, L
     weights = dstore['weights'][:]
     mean2 = numpy.einsum('sr...,r->s...', poes, weights)  # N, M, L
     aac(mean, mean2, atol=1E-6)
+    assert mean[:, :, lvl].any()  # otherwise the check would be trivial
+    # print('mean =', mean[:, :, lvl])
+
+    # check the extract call is not broken
+    aw = extract(dstore, 'disagg_by_src?lvl_id=%d' % lvl)
+    assert aw.array.dtype.names == ('src_id', 'poe')
 
 
 def get_dists(dstore):
@@ -136,7 +141,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hcurve.csv', fname)
 
         # check disagg_by_src for a single realization
-        check_disagg_by_src(self.calc.datastore)
+        check_disagg_by_src(self.calc.datastore, lvl=0)
 
     def test_case_3(self):
         self.assert_curves_ok(
@@ -648,7 +653,7 @@ hazard_uhs-std.csv
     def test_case_45(self):
         # this is a test for MMI with disagg_by_src and sampling
         self.assert_curves_ok(["hazard_curve-mean-MMI.csv"], case_45.__file__)
-        check_disagg_by_src(self.calc.datastore)
+        check_disagg_by_src(self.calc.datastore, lvl=0)
 
     def test_case_46(self):
         # SMLT with applyToBranches
