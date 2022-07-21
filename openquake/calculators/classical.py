@@ -254,6 +254,7 @@ class Hazard:
                 if isinstance(key, str):
                     # in case of disagg_by_src key is a source ID
                     rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
+                    print(key, pmap)
                     self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
                         self.get_hcurves(pmap, rlzs_by_gsim))
 
