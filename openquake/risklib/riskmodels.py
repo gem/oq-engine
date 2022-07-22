@@ -432,14 +432,14 @@ def get_riskcomputer(dic):
     rc.wdic = {}
     rfs = AccumDict(accum=[])
     for rlk, func in dic['risk_functions'].items():
-        riskid, lt, kind = rlk.split(':')
+        riskid, lt, kind = rlk.split('#')
         rf = hdf5.json_to_obj(json.dumps(func))
         rf.init()
         rf.loss_type = lt
         rfs[riskid].append(rf)
     mal = dic.get('minimum_asset_loss', {lt: 0. for lt in dic['loss_types']})
     for rlt, weight in dic['wdic'].items():
-        riskid, lt = rlt.split(':')
+        riskid, lt = rlt.split('#')
         rm = RiskModel(dic['calculation_mode'], 'taxonomy',
                        group_by_lt(rfs[riskid]),
                        minimum_asset_loss=mal)

@@ -1515,12 +1515,12 @@ class RiskComputer(dict):
         for rlt, rm in self.items():
             for lt, rfs in rm.risk_functions.items():
                 for rf in rfs:
-                    rlk = '%s:%s:%s' % (rf.id, lt, rf.kind)
+                    rlk = '%s#%s#%s' % (rf.id, lt, rf.kind)
                     rfdic[rlk] = ast.literal_eval(hdf5.obj_to_json(rf))
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
                    risk_functions=rfdic,
-                   wdic={'%s:%s' % k: v for k, v in self.wdic.items()},
+                   wdic={'%s#%s' % k: v for k, v in self.wdic.items()},
                    alias=self.alias,
                    loss_types=self.loss_types,
                    minimum_asset_loss=self.minimum_asset_loss,

@@ -291,7 +291,8 @@ class SimpleId(object):
         elif re.match(self.regex, value):
             return value
         raise ValueError(
-            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-:" % value)
+            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-:"
+            % value)
 
 
 MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
@@ -303,6 +304,15 @@ asset_id = SimpleId(ASSET_ID_LENGTH)
 source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\.\-_]+$')
 nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
     ASSET_ID_LENGTH, r'[a-zA-Z0-9\.`!#$%\(\)\+/,;@\[\]\^_{|}~-]+')
+
+
+def risk_id(value):
+    """
+    A valid risk ID cannot contain the characters #'"
+    """
+    if '#' in value or '"' in value or "'" in value:
+        raise ValueError('Invalid ID "%s" contains forbidden chars' % value)
+    return value
 
 
 class FloatRange(object):
