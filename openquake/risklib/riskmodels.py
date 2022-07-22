@@ -128,6 +128,10 @@ class RiskFuncList(list):
         return {riskid: group_by_lt(rfs) for riskid, rfs in ddic.items()}
 
 
+class Dict(dict):
+    pass
+
+
 def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                        'vulnerability_retrofitted'):
     """
@@ -139,7 +143,7 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
         a list of risk functions
     """
     kinds = kind.split()
-    rmodels = AccumDict()
+    rmodels = AccumDict(accum=[])
     for kind in kinds:
         for key in sorted(oqparam.inputs):
             mo = re.match('(occupants|%s)_%s$' % (COST_TYPE_REGEX, kind), key)
@@ -147,15 +151,15 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                 loss_type = mo.group(1)  # the cost_type in the key
                 # can be occupants, structural, nonstructural, ...
                 rmodel = nrml.to_python(oqparam.inputs[key])
+                rmodel.kind = kind
                 if kind == 'consequence':
                     logging.warning('Consequence models in XML format are '
                                     'deprecated, please replace %s with a CSV',
                                     oqparam.inputs[key])
                 if len(rmodel) == 0:
                     raise InvalidFile('%s is empty!' % oqparam.inputs[key])
-                rmodels[loss_type, kind] = rmodel
-                if rmodel.lossCategory is None:  # NRML 0.4
-                    continue
+                rmodels[loss_type].append(rmodel)
+                assert rmodel.lossCategory
                 cost_type = str(rmodel.lossCategory)
                 rmodel_kind = rmodel.__class__.__name__
                 kind_ = kind.replace('_retrofitted', '')  # strip retrofitted
@@ -174,8 +178,21 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
     cl_risk = oqparam.calculation_mode in ('classical', 'classical_risk')
     rlist = RiskFuncList()
     rlist.limit_states = []
-    for (loss_type, kind), rm in sorted(rmodels.items()):
-        if kind == 'fragility':
+    for loss_type, rmlist in sorted(rmodels.items()):
+        rm = rmlist[0]
+        if rm.kind == 'vulnerability' and len(rmlist) == 2:  # retrofitted
+            rm_retro = rmlist[1]
+            _fix(rm, loss_type, cl_risk)
+            _fix(rm_retro, loss_type, cl_risk)
+            for rf, rf_retro in zip(rm.values(), rm_retro.values()):
+                dic = Dict({'orig': rf, 'retro': rf_retro})
+                dic.kind = 'vulnerability'
+                dic.loss_type = loss_type
+                dic.id = rf.id
+                dic.imt = rf.imt
+                dic.imls = rf.imls
+                rlist.append(dic)
+        elif rm.kind == 'fragility':
             for (imt, riskid), ffl in sorted(rm.items()):
                 if not rlist.limit_states:
                     rlist.limit_states.extend(rm.limitStates)
@@ -184,22 +201,27 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                 assert rlist.limit_states == rm.limitStates, (
                     rlist.limit_states, rm.limitStates)
                 ffl.loss_type = loss_type
-                ffl.kind = kind
+                ffl.kind = rm.kind
                 rlist.append(ffl)
-        elif kind == 'consequence':
+        elif rm.kind == 'consequence':
             for riskid, cf in sorted(rm.items()):
                 rf = hdf5.ArrayWrapper(
-                    cf, dict(id=riskid, loss_type=loss_type, kind=kind))
+                    cf, dict(id=riskid, loss_type=loss_type, kind=rm.kind))
                 rlist.append(rf)
-        else:  # vulnerability, vulnerability_retrofitted
-            # only for classical_risk reduce the loss_ratios
-            # to make sure they are strictly increasing
-            for (imt, riskid), rf in sorted(rm.items()):
-                rf = rf.strictly_increasing() if cl_risk else rf
-                rf.loss_type = loss_type
-                rf.kind = kind
-                rlist.append(rf)
+        else:  # vulnerability
+            _fix(rm, loss_type, cl_risk)
+            rlist.extend(rm.values())
     return rlist
+
+
+def _fix(rm, loss_type, cl_risk):
+    # vulnerability, vulnerability_retrofitted
+    # only for classical_risk reduce the loss_ratios
+    # to make sure they are strictly increasing
+    for key in sorted(rm):
+        rf = rm[key].strictly_increasing() if cl_risk else rm[key]
+        rf.loss_type = loss_type
+        rf.kind = rm.kind
 
 
 loss_poe_dt = numpy.dtype([('loss', F64), ('poe', F64)])
@@ -244,11 +266,11 @@ class RiskModel(object):
         if calcmode == 'classical_bcr':
             self.loss_ratios_orig = {}
             self.loss_ratios_retro = {}
-            for lt, (vf_orig, vf_retro) in risk_functions.items():
+            for lt, [vf_dict] in risk_functions.items():
                 self.loss_ratios_orig[lt] = tuple(
-                    vf_orig.mean_loss_ratios_with_steps(steps))
+                    vf_dict['orig'].mean_loss_ratios_with_steps(steps))
                 self.loss_ratios_retro[lt] = tuple(
-                    vf_retro.mean_loss_ratios_with_steps(steps))
+                    vf_dict['retro'].mean_loss_ratios_with_steps(steps))
 
         # set imt_by_lt
         self.imt_by_lt = {}  # dictionary loss_type -> imt
@@ -320,7 +342,8 @@ class RiskModel(object):
                 'retrofitted is not defined for ' + loss_type)
         n = len(assets)
         self.assets = assets
-        vf, vf_retro = self.risk_functions[loss_type]
+        [dic] = self.risk_functions[loss_type]
+        vf, vf_retro = dic['orig'], dic['retro']
         imls = self.hazard_imtls[vf.imt]
         curves_orig = functools.partial(
             scientific.classical, vf, imls,
@@ -768,10 +791,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a dictionary keyed by extended loss type
         """
         rc = scientific.RiskComputer(self, asset_df)
-        dic = rc.todict()
-        rc2 = get_riskcomputer(dic)
-        dic2 = rc2.todict()
-        _comparedicts(dic, dic2)
+        #dic = rc.todict()
+        #rc2 = get_riskcomputer(dic)
+        #dic2 = rc2.todict()
+        #_comparedicts(dic, dic2)
         return rc.output(haz, sec_losses, rndgen)
 
     def __iter__(self):
