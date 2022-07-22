@@ -139,8 +139,8 @@ class VulnerabilityFunction(object):
     seed = None  # to be overridden
     kind = 'vulnerability'
 
-    def __init__(self, vf_id, imt, imls, mean_loss_ratios, covs=None,
-                 distribution="LN"):
+    def __init__(self, loss_type, vf_id, imt, imls, mean_loss_ratios,
+                 covs=None, distribution="LN"):
         """
         A wrapper around a probabilistic distribution function
         (currently, the Log-normal ("LN") and Beta ("BT")
@@ -169,6 +169,7 @@ class VulnerabilityFunction(object):
         :param str distribution_name: The probabilistic distribution
             related to this function.
         """
+        self.loss_type = loss_type
         self.id = vf_id
         self.imt = imt
         self._check_vulnerability_data(
@@ -348,16 +349,17 @@ class VulnerabilityFunction(object):
                 [self.imls[-1], self.imls[0], lambda x: x]))
 
     def __getstate__(self):
-        return (self.id, self.imt, self.imls, self.mean_loss_ratios,
-                self.covs, self.distribution_name)
+        return (self.loss_type, self.id, self.imt, self.imls,
+                self.mean_loss_ratios, self.covs, self.distribution_name)
 
     def __setstate__(self, state):
-        self.id = state[0]
-        self.imt = state[1]
-        self.imls = state[2]
-        self.mean_loss_ratios = state[3]
-        self.covs = state[4]
-        self.distribution_name = state[5]
+        self.loss_type = state[0]
+        self.id = state[1]
+        self.imt = state[2]
+        self.imls = state[3]
+        self.mean_loss_ratios = state[4]
+        self.covs = state[5]
+        self.distribution_name = state[6]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
@@ -415,7 +417,8 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
     :param ratios: an array of mean ratios (M)
     :param probs: a matrix of probabilities of shape (M, L)
     """
-    def __init__(self, vf_id, imt, imls, loss_ratios, probs):
+    def __init__(self, loss_type, vf_id, imt, imls, loss_ratios, probs):
+        self.loss_type = loss_type
         self.id = vf_id
         self.imt = imt
         self._check_vulnerability_data(imls, loss_ratios, probs)
@@ -435,16 +438,17 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self._probs_i1d = interpolate.interp1d(self.imls, self.probs)
 
     def __getstate__(self):
-        return (self.id, self.imt, self.imls, self.loss_ratios,
+        return (self.loss_type, self.id, self.imt, self.imls, self.loss_ratios,
                 self.probs, self.distribution_name)
 
     def __setstate__(self, state):
-        self.id = state[0]
-        self.imt = state[1]
-        self.imls = state[2]
-        self.loss_ratios = state[3]
-        self.probs = state[4]
-        self.distribution_name = state[5]
+        self.loss_type = state[0]
+        self.id = state[1]
+        self.imt = state[2]
+        self.imls = state[3]
+        self.loss_ratios = state[4]
+        self.probs = state[5]
+        self.distribution_name = state[6]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, probs):
@@ -625,6 +629,7 @@ class FragilityFunctionList(list):
     # NB: the list is populated after instantiation by .append calls
     def __init__(self, array, **attrs):
         self.array = array
+        assert 'loss_type' in attrs
         vars(self).update(attrs)
 
     def mean_loss_ratios_with_steps(self, steps):

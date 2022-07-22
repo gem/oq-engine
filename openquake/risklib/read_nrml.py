@@ -72,6 +72,7 @@ def get_vulnerability_functions_04(node, fname):
                     (len(coefficients), len(imls), fname,
                      vfun.coefficientsVariation.lineno))
             with context(fname, vfun):
+                import pdb; pdb.set_trace()
                 vmodel[imt_str, vf_id] = scientific.VulnerabilityFunction(
                     vf_id, imt_str, imls, loss_ratios, coefficients,
                     vfun['probabilisticDistribution'])
@@ -93,6 +94,7 @@ def get_vulnerability_functions_05(node, fname):
     vf_ids = set()
     vmodel = scientific.VulnerabilityModel(**node.attrib)
     # imt, vf_id -> vulnerability function
+    lt = node['lossCategory']
     for vfun in node.getnodes('vulnerabilityFunction'):
         with context(fname, vfun):
             imt = vfun.imls['imt']
@@ -122,7 +124,7 @@ def get_vulnerability_functions_05(node, fname):
                 len(loss_ratios), len(imls))
             vmodel[imt, vf_id] = (
                 scientific.VulnerabilityFunctionWithPMF(
-                    vf_id, imt, imls, F64(loss_ratios), all_probs))
+                    lt, vf_id, imt, imls, F64(loss_ratios), all_probs))
         else:
             with context(fname, vfun):
                 loss_ratios = ~vfun.meanLRs
@@ -139,7 +141,7 @@ def get_vulnerability_functions_05(node, fname):
                                  vfun.covLRs.lineno))
             with context(fname, vfun):
                 vmodel[imt, vf_id] = scientific.VulnerabilityFunction(
-                    vf_id, imt, imls, F64(loss_ratios), coefficients,
+                    lt, vf_id, imt, imls, F64(loss_ratios), coefficients,
                     vfun['dist'])
     return vmodel
 
