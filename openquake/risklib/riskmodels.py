@@ -89,7 +89,7 @@ def build_vf_node(vf):
 def group_by_lt(funclist):
     """
     Converts a list of objects with attribute .loss_type in to a dictionary
-    of lists keyed by the loss type.
+    loss_type -> risk_function
     """
     d = AccumDict(accum=[])
     for rf in funclist:
@@ -101,6 +101,10 @@ def group_by_lt(funclist):
             cf, ffl = lst
             ffl.cf = cf
             d[lt] = ffl
+        elif lst[1].kind == 'vulnerability_retrofitted':
+            vf, retro = lst
+            vf.retro = retro
+            d[lt] = vf
         else:
             raise RuntimeError(lst)
     return d
