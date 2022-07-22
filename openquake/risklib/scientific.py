@@ -175,7 +175,7 @@ class VulnerabilityFunction(object):
             imls, mean_loss_ratios, covs, distribution)
         self.imls = numpy.array(imls)
         self.mean_loss_ratios = numpy.array(mean_loss_ratios)
-
+        self.retro = False
         if covs is not None:
             self.covs = numpy.array(covs)
         else:
@@ -349,7 +349,7 @@ class VulnerabilityFunction(object):
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.mean_loss_ratios,
-                self.covs, self.distribution_name)
+                self.covs, self.distribution_name, self.retro)
 
     def __setstate__(self, state):
         self.id = state[0]
@@ -358,6 +358,7 @@ class VulnerabilityFunction(object):
         self.mean_loss_ratios = state[3]
         self.covs = state[4]
         self.distribution_name = state[5]
+        self.retro = state[6]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
@@ -418,6 +419,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
     def __init__(self, vf_id, imt, imls, loss_ratios, probs):
         self.id = vf_id
         self.imt = imt
+        self.retro = False
         self._check_vulnerability_data(imls, loss_ratios, probs)
         self.imls = imls
         self.loss_ratios = loss_ratios
@@ -436,7 +438,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.loss_ratios,
-                self.probs, self.distribution_name)
+                self.probs, self.distribution_name, self.retro)
 
     def __setstate__(self, state):
         self.id = state[0]
@@ -445,6 +447,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self.loss_ratios = state[3]
         self.probs = state[4]
         self.distribution_name = state[5]
+        self.retro = state[6]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, probs):
@@ -1513,10 +1516,9 @@ class RiskComputer(dict):
         """
         rfdic = {}
         for rlt, rm in self.items():
-            for lt, rfs in rm.risk_functions.items():
-                for rf in rfs:
-                    rlk = '%s#%s#%s' % (rf.id, lt, rf.kind)
-                    rfdic[rlk] = ast.literal_eval(hdf5.obj_to_json(rf))
+            for lt, rf in rm.risk_functions.items():
+                rlk = '%s#%s#%s' % (rf.id, lt, rf.kind)
+                rfdic[rlk] = ast.literal_eval(hdf5.obj_to_json(rf))
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
                    risk_functions=rfdic,
