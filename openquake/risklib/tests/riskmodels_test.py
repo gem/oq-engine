@@ -312,8 +312,7 @@ class RiskComputerTestCase(unittest.TestCase):
             'calculation_mode': 'event_based_risk',
             'loss_types': ['structural'],
             'minimum_asset_loss': {'structural': 0},
-            'risk_functions': {
-                'RC:structural:vulnerability':
+            'risk_functions': [
                 {"openquake.risklib.scientific.VulnerabilityFunction":
                  {"id": "RC",
                   "loss_type": "structural",
@@ -321,8 +320,8 @@ class RiskComputerTestCase(unittest.TestCase):
                   "imls": [0.1, 0.2, 0.3, 0.5, 0.7],
                   "mean_loss_ratios": [0.0035, 0.07, 0.14, 0.28, 0.56],
                   "covs": [0.0, 0.0, 0.0, 0.0, 0.0],
-                  "distribution_name": "LN"}}},
-            'wdic': {'RC:structural': 1}}
+                  "distribution_name": "LN"}}],
+            'wdic': {'RC@structural': 1}}
         gmfs = {'eid': [0, 1],
                 'sid': [0, 0],
                 'gmv_0': [.23, .31]}
@@ -350,24 +349,24 @@ class RiskComputerTestCase(unittest.TestCase):
                             'value-structural': [3000.0, 5000.0]},
                'calculation_mode': 'event_based_risk',
                'loss_types': ['nonstructural', 'structural'],
-               'risk_functions': {
-                   'RM:nonstructural:vulnerability': {
-                       'openquake.risklib.scientific.VulnerabilityFunction': {
-                           'covs': [0.0001, 0.0001, 0.0001, 0.0001, 0.0001],
-                           'distribution_name': 'LN',
-                           'id': 'RM',
-                           'imls': [0.1, 0.2, 0.4, 0.7, 1.0],
-                           'imt': 'SA(1.0)',
-                           'mean_loss_ratios': [0.1, 0.2, 0.35, 0.6, 0.9]}},
-                   'RM:structural:vulnerability': {
-                       'openquake.risklib.scientific.VulnerabilityFunction': {
-                           'covs': [0.0001, 0.0001, 0.0001, 0.0001, 0.0001],
-                           'distribution_name': 'LN',
-                           'id': 'RM',
-                           'imls': [0.02, 0.3, 0.5, 0.9, 1.2],
-                           'imt': 'PGA',
-                           'mean_loss_ratios': [0.05, 0.1, 0.2, 0.4, 0.8]}}},
-               'wdic': {'RM:nonstructural': 1, 'RM:structural': 1}}
+               'risk_functions': [
+                   {'openquake.risklib.scientific.VulnerabilityFunction': {
+                       'covs': [0.0001, 0.0001, 0.0001, 0.0001, 0.0001],
+                       'distribution_name': 'LN',
+                       'id': 'RM',
+                       'imls': [0.1, 0.2, 0.4, 0.7, 1.0],
+                       'imt': 'SA(1.0)',
+                       'loss_type': 'nonstructural',
+                       'mean_loss_ratios': [0.1, 0.2, 0.35, 0.6, 0.9]}},
+                   {'openquake.risklib.scientific.VulnerabilityFunction': {
+                       'covs': [0.0001, 0.0001, 0.0001, 0.0001, 0.0001],
+                       'distribution_name': 'LN',
+                       'id': 'RM',
+                       'imls': [0.02, 0.3, 0.5, 0.9, 1.2],
+                       'imt': 'PGA',
+                       'loss_type': 'nonstructural',
+                       'mean_loss_ratios': [0.05, 0.1, 0.2, 0.4, 0.8]}}],
+               'wdic': {'RM@nonstructural': 1, 'RM@structural': 1}}
 
         gmfs = {'eid': [0, 2],
                 'sid': [0, 0],

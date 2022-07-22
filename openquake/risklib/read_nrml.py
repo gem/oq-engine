@@ -48,6 +48,7 @@ def get_vulnerability_functions_04(node, fname):
     # imt, vf_id -> vulnerability function
     vmodel = scientific.VulnerabilityModel(**node.attrib)
     for vset in node:
+        lt = vset['lossCategory']
         imt_str = vset.IML['IMT']
         imls = ~vset.IML
         imts.add(imt_str)
@@ -72,9 +73,8 @@ def get_vulnerability_functions_04(node, fname):
                     (len(coefficients), len(imls), fname,
                      vfun.coefficientsVariation.lineno))
             with context(fname, vfun):
-                import pdb; pdb.set_trace()
                 vmodel[imt_str, vf_id] = scientific.VulnerabilityFunction(
-                    vf_id, imt_str, imls, loss_ratios, coefficients,
+                    lt, vf_id, imt_str, imls, loss_ratios, coefficients,
                     vfun['probabilisticDistribution'])
     return vmodel
 
@@ -240,6 +240,7 @@ def get_fragility_model(node, fname):
     for ff in ffs:
         array, attrs = ffconvert(fname, limit_states, ff)
         attrs['id'] = ff['id']
+        attrs['loss_type'] = loss_type
         ffl = scientific.FragilityFunctionList(array, **attrs)
         fmodel[ff.imls['imt'], ff['id']] = ffl
     return fmodel

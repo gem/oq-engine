@@ -629,7 +629,7 @@ class FragilityFunctionList(list):
     # NB: the list is populated after instantiation by .append calls
     def __init__(self, array, **attrs):
         self.array = array
-        assert 'loss_type' in attrs
+        assert 'loss_type' in attrs, attrs
         vars(self).update(attrs)
 
     def mean_loss_ratios_with_steps(self, steps):
@@ -1516,16 +1516,15 @@ class RiskComputer(dict):
         """
         :returns: a literal dict describing the RiskComputer
         """
-        rfdic = {}
+        rflist = []
         for rlt, rm in self.items():
-            for lt, rfs in rm.risk_functions.items():
+            for rfs in rm.risk_functions.values():
                 for rf in rfs:
-                    rlk = '%s:%s:%s' % (rf.id, lt, rf.kind)
-                    rfdic[rlk] = ast.literal_eval(hdf5.obj_to_json(rf))
+                    rflist.append(ast.literal_eval(hdf5.obj_to_json(rf)))
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
-                   risk_functions=rfdic,
-                   wdic={'%s:%s' % k: v for k, v in self.wdic.items()},
+                   risk_functions=rflist,
+                   wdic={'%s@%s' % k: v for k, v in self.wdic.items()},
                    alias=self.alias,
                    loss_types=self.loss_types,
                    minimum_asset_loss=self.minimum_asset_loss,
