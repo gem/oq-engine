@@ -180,7 +180,10 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
     rlist.limit_states = []
     for loss_type, rmlist in sorted(rmodels.items()):
         rm = rmlist[0]
-        if rm.kind == 'vulnerability' and len(rmlist) == 2:  # retrofitted
+        if rm.kind == 'vulnerability' and len(rmlist) == 1:  # vulnerability
+            _fix(rm, loss_type, cl_risk)
+            rlist.extend(rm.values())
+        elif rm.kind == 'vulnerability' and len(rmlist) == 2:  # retrofitted
             rm_retro = rmlist[1]
             _fix(rm, loss_type, cl_risk)
             _fix(rm_retro, loss_type, cl_risk)
@@ -208,9 +211,8 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                 rf = hdf5.ArrayWrapper(
                     cf, dict(id=riskid, loss_type=loss_type, kind=rm.kind))
                 rlist.append(rf)
-        else:  # vulnerability
-            _fix(rm, loss_type, cl_risk)
-            rlist.extend(rm.values())
+        else:
+            raise NotImplementedError(rm.kind)
     return rlist
 
 
@@ -219,9 +221,10 @@ def _fix(rm, loss_type, cl_risk):
     # only for classical_risk reduce the loss_ratios
     # to make sure they are strictly increasing
     for key in sorted(rm):
-        rf = rm[key].strictly_increasing() if cl_risk else rm[key]
-        rf.loss_type = loss_type
-        rf.kind = rm.kind
+        if cl_risk:
+            rm[key] = rm[key].strictly_increasing()
+        rm[key].loss_type = loss_type
+        rm[key].kind = rm.kind
 
 
 loss_poe_dt = numpy.dtype([('loss', F64), ('poe', F64)])
