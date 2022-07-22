@@ -43,6 +43,17 @@ RISK_TYPE_REGEX = re.compile(
     r'(%s|occupants|fragility)_([\w_]+)' % COST_TYPE_REGEX)
 
 
+def _assert_equal(d1, d2):
+    d1.pop('loss_type', None)
+    d2.pop('loss_type', None)
+    assert sorted(d1) == sorted(d2), (sorted(d1), sorted(d2))
+    for k, v in d1.items():
+        if isinstance(v, dict):
+            _assert_equal(v, d2[k])
+        else:
+            assert v == d2[k], (v, d2[k])
+
+
 def get_risk_files(inputs):
     """
     :param inputs: a dictionary key -> path name
@@ -445,14 +456,17 @@ def get_riskcomputer(dic):
     for rlk, func in dic['risk_functions'].items():
         riskid, lt, kind = rlk.split('#')
         rf = hdf5.json_to_obj(json.dumps(func))
-        rf.init()
-        rf.loss_type = lt
+        if hasattr(rf, 'init'):
+            rf.init()
+            rf.loss_type = lt
         rfs[riskid].append(rf)
+    steps = dic.get('lrem_steps_per_interval', 1)
     mal = dic.get('minimum_asset_loss', {lt: 0. for lt in dic['loss_types']})
     for rlt, weight in dic['wdic'].items():
         riskid, lt = rlt.split('#')
         rm = RiskModel(dic['calculation_mode'], 'taxonomy',
                        group_by_lt(rfs[riskid]),
+                       lrem_steps_per_interval=steps,
                        minimum_asset_loss=mal)
         rc[riskid, lt] = rm
         rc.wdic[riskid, lt] = weight
@@ -764,6 +778,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a dictionary keyed by extended loss type
         """
         rc = scientific.RiskComputer(self, asset_df)
+        # dic = rc.todict()
+        # rc2 = get_riskcomputer(dic)
+        # dic2 = rc2.todict()
+        # _assert_equal(dic, dic2)
         return rc.output(haz, sec_losses, rndgen)
 
     def __iter__(self):
