@@ -70,6 +70,13 @@ def create_source_info(csm, h5):
     lens = []
     for srcid, srcs in general.groupby(csm.get_sources(), basename).items():
         src = srcs[0]
+        # check all fragments have the same group ID
+        for newsrc in srcs[1:]:
+            if newsrc.grp_id != src.grp_id:
+                raise RuntimeError(
+                    'Fragments %s and %s belongs to different groups' %
+                    (newsrc.source_id, src.source_id))
+
         num_ruptures = sum(src.num_ruptures for src in srcs)
         mutex = getattr(src, 'mutex_weight', 0)
         trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
