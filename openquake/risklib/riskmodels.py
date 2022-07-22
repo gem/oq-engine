@@ -94,6 +94,15 @@ def group_by_lt(funclist):
     d = AccumDict(accum=[])
     for rf in funclist:
         d[rf.loss_type].append(rf)
+    for lt, lst in d.items():
+        if len(lst) == 1:
+            d[lt] = lst[0]
+        elif lst[1].kind == 'fragility':
+            cf, ffl = lst
+            ffl.cf = cf
+            d[lt] = ffl
+        else:
+            raise RuntimeError(lst)
     return d
 
 
@@ -228,23 +237,22 @@ class RiskModel(object):
         steps = kw.get('lrem_steps_per_interval')
         if calcmode in ('classical', 'classical_risk'):
             self.loss_ratios = {
-                lt: tuple(vfs[0].mean_loss_ratios_with_steps(steps))
-                for lt, vfs in risk_functions.items()}
+                lt: tuple(vf.mean_loss_ratios_with_steps(steps))
+                for lt, vf in risk_functions.items()}
         if calcmode == 'classical_bcr':
             self.loss_ratios_orig = {}
             self.loss_ratios_retro = {}
-            for lt, (vf_orig, vf_retro) in risk_functions.items():
+            for lt, vf in risk_functions.items():
                 self.loss_ratios_orig[lt] = tuple(
-                    vf_orig.mean_loss_ratios_with_steps(steps))
+                    vf.mean_loss_ratios_with_steps(steps))
                 self.loss_ratios_retro[lt] = tuple(
-                    vf_retro.mean_loss_ratios_with_steps(steps))
+                    vf.retro.mean_loss_ratios_with_steps(steps))
 
         # set imt_by_lt
         self.imt_by_lt = {}  # dictionary loss_type -> imt
-        for lt, rfs in self.risk_functions.items():
-            for rf in rfs:
-                if rf.kind in ('vulnerability', 'fragility'):
-                    self.imt_by_lt[lt] = rf.imt
+        for lt, rf in self.risk_functions.items():
+            if rf.kind in ('vulnerability', 'fragility'):
+                self.imt_by_lt[lt] = rf.imt
 
     @property
     def loss_types(self):
@@ -287,7 +295,7 @@ class RiskModel(object):
             a composite array (loss, poe) of shape (A, C)
         """
         n = len(assets)
-        [vf] = self.risk_functions[loss_type]
+        vf = self.risk_functions[loss_type]
         lratios = self.loss_ratios[loss_type]
         imls = self.hazard_imtls[vf.imt]
         values = assets['value-' + loss_type].to_numpy()
@@ -309,13 +317,13 @@ class RiskModel(object):
                 'retrofitted is not defined for ' + loss_type)
         n = len(assets)
         self.assets = assets
-        vf, vf_retro = self.risk_functions[loss_type]
+        vf = self.risk_functions[loss_type]
         imls = self.hazard_imtls[vf.imt]
         curves_orig = functools.partial(
             scientific.classical, vf, imls,
             loss_ratios=self.loss_ratios_orig[loss_type])
         curves_retro = functools.partial(
-            scientific.classical, vf_retro, imls,
+            scientific.classical, vf.retro, imls,
             loss_ratios=self.loss_ratios_retro[loss_type])
         original_loss_curves = numpy.array([curves_orig(hazard)] * n)
         retrofitted_loss_curves = numpy.array([curves_retro(hazard)] * n)
@@ -385,8 +393,7 @@ class RiskModel(object):
         and D the number of damage states.
         """
         gmvs = gmf_df[col].to_numpy()
-        [ffs] = [rf for rf in self.risk_functions[loss_type]
-                 if rf.kind == 'fragility']
+        ffs = self.risk_functions[loss_type]
         damages = scientific.scenario_damage(ffs, gmvs).T
         return numpy.array([damages] * len(assets))
 
@@ -583,7 +590,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 # see EventBasedDamageTestCase.test_case_11
                 dtlist = [(lt, F32) for lt in rfs]
                 coeffs = numpy.zeros(len(self.risklist.limit_states), dtlist)
-                for lt, [rf] in rfs.items():
+                for lt, rf in rfs.items():
                     coeffs[lt] = rf.array
                 self.consdict['losses_by_taxonomy'][riskid] = coeffs
         self.damage_states = []
@@ -642,8 +649,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         iml = collections.defaultdict(list)
         # ._riskmodels is empty if read from the hazard calculation
         for riskid, rm in self._riskmodels.items():
-            for lt, rfs in rm.risk_functions.items():
-                rf = rfs[0]
+            for lt, rf in rm.risk_functions.items():
                 if hasattr(rf, 'imt'):  # vulnerability
                     iml[rf.imt].append(rf.imls[0])
         if sum(oq.minimum_intensity.values()) == 0 and iml:
@@ -705,7 +711,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 allratios = []
                 for taxo in sorted(self):
                     rm = self[taxo]
-                    rf = rm.risk_functions[loss_type][0]
+                    rf = rm.risk_functions[loss_type]
                     if loss_type in rm.loss_ratios:
                         ratios = rm.loss_ratios[loss_type]
                         allratios.append(ratios)
@@ -794,11 +800,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         dic = {'riskid': [], 'loss_type': [], 'riskfunc': []}
         for riskid, rm in self._riskmodels.items():
-            for lt, rfs in rm.risk_functions.items():
-                for rf in rfs:
-                    dic['riskid'].append(riskid)
-                    dic['loss_type'].append(lt)
-                    dic['riskfunc'].append(hdf5.obj_to_json(rf))
+            for lt, rf in rm.risk_functions.items():
+                dic['riskid'].append(riskid)
+                dic['loss_type'].append(lt)
+                dic['riskfunc'].append(hdf5.obj_to_json(rf))
         return pandas.DataFrame(dic)
 
     def __repr__(self):
