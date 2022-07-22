@@ -377,7 +377,7 @@ def export_damages_csv(ekey, dstore):
             data = orig[:, i] * rate
             A, L, Dc = data.shape
             if Dc == D:  # no consequences, export nothing
-                return
+                return []
             csq_dt = build_csq_dt(dstore)
             damages = numpy.zeros(A, csq_dt)
             for a in range(A):

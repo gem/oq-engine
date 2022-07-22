@@ -179,11 +179,14 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
     rlist = RiskFuncList()
     rlist.limit_states = []
     for loss_type, rmlist in sorted(rmodels.items()):
-        rm = rmlist[0]
-        if rm.kind == 'vulnerability' and len(rmlist) == 1:  # vulnerability
+        if len(rmlist) == 2:
+            rm, rm2 = rmlist
+        else:
+            rm, rm2 = rmlist[0], None
+        if rm.kind == 'vulnerability' and not rm2:  # vulnerability
             _fix(rm, loss_type, cl_risk)
             rlist.extend(rm.values())
-        elif rm.kind == 'vulnerability' and len(rmlist) == 2:  # retrofitted
+        elif rm.kind == 'vulnerability' and rm2:  # retrofitted
             rm_retro = rmlist[1]
             _fix(rm, loss_type, cl_risk)
             _fix(rm_retro, loss_type, cl_risk)
@@ -195,7 +198,7 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                 dic.imt = rf.imt
                 dic.imls = rf.imls
                 rlist.append(dic)
-        elif rm.kind == 'fragility':
+        else:  # fragility
             for (imt, riskid), ffl in sorted(rm.items()):
                 if not rlist.limit_states:
                     rlist.limit_states.extend(rm.limitStates)
@@ -206,13 +209,11 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                 ffl.loss_type = loss_type
                 ffl.kind = rm.kind
                 rlist.append(ffl)
-        elif rm.kind == 'consequence':
-            for riskid, cf in sorted(rm.items()):
-                rf = hdf5.ArrayWrapper(
-                    cf, dict(id=riskid, loss_type=loss_type, kind=rm.kind))
-                rlist.append(rf)
-        else:
-            raise NotImplementedError(rm.kind)
+            if rm2:  # consequence
+                for riskid, cf in sorted(rm2.items()):
+                    rf = hdf5.ArrayWrapper(
+                        cf, dict(id=riskid, loss_type=loss_type, kind=rm.kind))
+                    rlist.append(rf)
     return rlist
 
 
