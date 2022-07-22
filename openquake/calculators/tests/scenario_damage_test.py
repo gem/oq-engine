@@ -245,11 +245,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
     def test_case_14(self):
         # inconsistent IDs between fragility and consequence
-        with self.assertRaises(NameError) as ctx:
+        with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_14.__file__, 'job.ini')
-        self.assertIn(
-            "['CR+PC/LDUAL/HBET:8.19/m', 'CR+PC/LDUAL/HBET:8.19/m ']",
-            str(ctx.exception))
+        self.assertIn("'CR+PC/LDUAL/HBET:8.19/m'", str(ctx.exception))
 
     def test_case_15(self):
         # infrastructure risk
