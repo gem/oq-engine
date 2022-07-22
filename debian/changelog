@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added some restrictions on risk IDs
   * Extended `disagg_by_src` to mutually exclusive sources (i.e. Japan)
 
   [Anne Hulsey]
