@@ -352,7 +352,7 @@ class RiskModel(object):
 
         where N is the number of points and D the number of damage states.
         """
-        [ffl] = self.risk_functions[loss_type]
+        ffl = self.risk_functions[loss_type]
         hazard_imls = self.hazard_imtls[ffl.imt]
         rtime = self.risk_investigation_time or self.investigation_time
         damage = scientific.classical_damage(
@@ -374,7 +374,7 @@ class RiskModel(object):
         else:
             val = assets['value-' + loss_type].to_numpy()
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
-        [vf] = self.risk_functions[loss_type]
+        vf = self.risk_functions[loss_type]
         return vf(asset_df, gmf_df, col, rndgen,
                   self.minimum_asset_loss[loss_type])
 
