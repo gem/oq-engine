@@ -18,7 +18,7 @@
 
 import unittest
 import numpy
-from openquake.baselib.hdf5 import dumps
+from openquake.baselib.hdf5 import dumps, obj_to_json, json_to_obj
 
 
 class DumpsTestCase(unittest.TestCase):
@@ -28,3 +28,24 @@ class DumpsTestCase(unittest.TestCase):
 
         dic = dict(base_path=r"C:\Users\test")
         self.assertEqual(dumps(dic), '{\n"base_path": "C:\\\\Users\\\\test"}')
+
+
+class Obj:
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+
+class ObjToJsonTestCase(unittest.TestCase):
+    def test_flat(self):
+        obj = Obj(1, 0)
+        js = obj_to_json(obj)
+        self.assertEqual(js, '{\n"openquake.baselib.tests.hdf5_test.Obj":'
+                         ' {\n"a": 1,\n"b": 0}}')
+        ob = json_to_obj(js)
+        self.assertEqual(vars(obj), vars(ob))
+
+    def test_nested(self):
+        obj = Obj(1, Obj(1, 2))
+        js = obj_to_json(obj)
+        print(js)

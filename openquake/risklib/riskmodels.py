@@ -125,19 +125,13 @@ class RiskFuncList(list):
     """
     A list of risk functions with attributes .id, .loss_type, .kind
     """
-    def groupby_id(self, kind=None):
+    def groupby_id(self):
         """
-        :param kind:
-            if None, return all functions, else the ones of the given kind
         :returns: dictionary id -> loss_type -> risk_function
         """
         ddic = AccumDict(accum=[])
         for rf in self:
-            # there is a single risk function in each lst below
-            if kind and rf.kind == kind:
-                ddic[rf.id].append(rf)
-            elif not kind:
-                ddic[rf.id].append(rf)
+            ddic[rf.id].append(rf)
         return {riskid: group_by_lt(rfs) for riskid, rfs in ddic.items()}
 
 
@@ -454,11 +448,15 @@ def get_riskcomputer(dic):
     rc.wdic = {}
     rfs = AccumDict(accum=[])
     for rlk, func in dic['risk_functions'].items():
-        riskid, lt, kind = rlk.split('#')
+        riskid, lt = rlk.split('#')
         rf = hdf5.json_to_obj(json.dumps(func))
         if hasattr(rf, 'init'):
             rf.init()
             rf.loss_type = lt
+        if getattr(rf, 'retro', False):
+            rf.retro = hdf5.json_to_obj(json.dumps(rf.retro))
+            rf.retro.init()
+            rf.retro.loss_type = lt
         rfs[riskid].append(rf)
     steps = dic.get('lrem_steps_per_interval', 1)
     mal = dic.get('minimum_asset_loss', {lt: 0. for lt in dic['loss_types']})
@@ -601,15 +599,17 @@ class CompositeRiskModel(collections.abc.Mapping):
         # LEGACY: extract the consequences from the risk models, if any
         if 'losses_by_taxonomy' not in self.consdict:
             self.consdict['losses_by_taxonomy'] = {}
-        for riskid, rfs in self.risklist.groupby_id(
-                kind='consequence').items():
-            if rfs:
+        riskdict = self.risklist.groupby_id()
+        for riskid, rf_by_lt in riskdict.items():
+            cons_by_lt = {lt: rf.cf for lt, rf in rf_by_lt.items()
+                          if hasattr(rf, 'cf')}
+            if cons_by_lt:
                 # this happens for consequence models in XML format,
                 # see EventBasedDamageTestCase.test_case_11
-                dtlist = [(lt, F32) for lt in rfs]
+                dtlist = [(lt, F32) for lt in cons_by_lt]
                 coeffs = numpy.zeros(len(self.risklist.limit_states), dtlist)
-                for lt, rf in rfs.items():
-                    coeffs[lt] = rf.array
+                for lt, cf in cons_by_lt.items():
+                    coeffs[lt] = cf.array
                 self.consdict['losses_by_taxonomy'][riskid] = coeffs
         self.damage_states = []
         self._riskmodels = {}  # riskid -> crmodel
