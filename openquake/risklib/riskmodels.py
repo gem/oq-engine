@@ -459,6 +459,10 @@ def get_riskcomputer(dic):
         if hasattr(rf, 'init'):
             rf.init()
             rf.loss_type = lt
+        if getattr(rf, 'retro', False):
+            rf.retro = hdf5.json_to_obj(json.dumps(rf.retro))
+            rf.retro.init()
+            rf.retro.loss_type = lt
         rfs[riskid].append(rf)
     steps = dic.get('lrem_steps_per_interval', 1)
     mal = dic.get('minimum_asset_loss', {lt: 0. for lt in dic['loss_types']})
@@ -778,10 +782,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a dictionary keyed by extended loss type
         """
         rc = scientific.RiskComputer(self, asset_df)
-        # dic = rc.todict()
-        # rc2 = get_riskcomputer(dic)
-        # dic2 = rc2.todict()
-        # _assert_equal(dic, dic2)
+        dic = rc.todict()
+        rc2 = get_riskcomputer(dic)
+        dic2 = rc2.todict()
+        _assert_equal(dic, dic2)
         return rc.output(haz, sec_losses, rndgen)
 
     def __iter__(self):
