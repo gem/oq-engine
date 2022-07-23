@@ -960,7 +960,5 @@ def json_to_obj(js):
     [(dotname, attrs)] = json.loads(js).items()
     cls = dotname2cls(dotname)
     obj = cls.__new__(cls)
-    if isinstance(attrs, str):
-        attrs = json.loads(attrs)
     vars(obj).update(attrs)
     return obj
