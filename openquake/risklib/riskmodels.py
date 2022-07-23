@@ -448,7 +448,7 @@ def get_riskcomputer(dic):
     rc.wdic = {}
     rfs = AccumDict(accum=[])
     for rlk, func in dic['risk_functions'].items():
-        riskid, lt, kind = rlk.split('#')
+        riskid, lt = rlk.split('#')
         rf = hdf5.json_to_obj(json.dumps(func))
         if hasattr(rf, 'init'):
             rf.init()

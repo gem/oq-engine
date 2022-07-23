@@ -1515,10 +1515,10 @@ class RiskComputer(dict):
         :returns: a literal dict describing the RiskComputer
         """
         rfdic = {}
-        for rlt, rm in self.items():
+        for rm in self.values():
             for lt, rf in rm.risk_functions.items():
-                rlk = '%s#%s#%s' % (rf.id, lt, rf.kind)
-                rfdic[rlk] = ast.literal_eval(hdf5.obj_to_json(rf))
+                rfdic['%s#%s' % (rf.id, lt)] = ast.literal_eval(
+                    hdf5.obj_to_json(rf))
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
                    risk_functions=rfdic,
