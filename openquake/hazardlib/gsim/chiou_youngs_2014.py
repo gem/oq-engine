@@ -44,7 +44,7 @@ def _get_centered_cdpp(clsname, ctx):
     return np.zeros(ctx.rrup.shape)
 
 
-def _get_centered_z1pt0(clsname, ctx):
+def _get_delta_z1pt0(clsname, ctx):
     """
     Get z1pt0 centered on the Vs30- dependent average z1pt0(m)
     California and non-Japan regions
@@ -60,7 +60,7 @@ def _get_centered_z1pt0(clsname, ctx):
     return ctx.z1pt0 - np.exp(mean_z1pt0)
 
 
-def _get_centered_ztor(ctx):
+def _get_delta_ztor(ctx):
     """
     Get ztor centered on the M- dependent avarage ztor(km)
     by different fault types.
@@ -301,7 +301,7 @@ def get_ln_y_ref(clsname, C, ctx):
     Equation 11
     """
     region = get_region(clsname)
-    delta_ztor = _get_centered_ztor(ctx)
+    delta_ztor = _get_delta_ztor(ctx)
     return (get_stress_scaling(C) +
             get_magnitude_scaling(C, ctx.mag) +
             get_source_scaling_terms(C, ctx, delta_ztor) +
@@ -411,7 +411,7 @@ def get_mean_stddevs(name, C, ctx):
     y_ref = np.exp(ln_y_ref)
     # Get the site amplification
     # Get basin depth
-    dz1pt0 = _get_centered_z1pt0(name, ctx)
+    dz1pt0 = _get_delta_z1pt0(name, ctx)
     # for Z1.0 = 0.0 no deep soil correction is applied
     dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
     f_z1pt0 = get_basin_depth_term(name, C, dz1pt0)
@@ -597,3 +597,71 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
             exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, 1130) - 360))
             exp2 = np.exp(C['phi3'] * (1130 - 360))
             mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2)
+
+
+def get_mean_stddevs_inv(name, C, ctx):
+    """
+    Return mean and standard deviation values
+    """
+
+    # Get ground motion on reference rock
+    ln_y_ref = get_ln_y_ref(name, C, ctx)
+    y_ref = np.exp(ln_y_ref)
+
+    # Get basin depth
+
+    dz1pt0 = _get_delta_z1pt0(name, ctx)
+
+    # for Z1.0 = 0.0 no deep soil correction is applied
+    dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
+    f_z1pt0 = get_basin_depth_term(name, C, dz1pt0)
+
+    # Get linear amplification term
+    f_lin = get_linear_site_term(name, C, ctx)
+
+    # Set nonlinear amplification term
+    f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
+
+    # Add on the site amplification
+    mean = ln_y_ref + (f_lin + f_z1pt0)
+
+    # Get standard deviations
+    sig, tau, phi = get_stddevs(
+        name, C, ctx, ctx.mag, y_ref, f_nl_scaling)
+
+    return mean, sig, tau, phi
+
+
+class ChiouYoungs2014Inversion(ChiouYoungs2014):
+    """
+    Implements the version of the CY14 model as described in the Stafford et
+    al. (2022) paper publiched on EQS.
+    """
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        """
+        Override the `compute` method
+        """
+        name = self.__class__.__name__
+
+        # Compute reference PGA
+        pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs_inv(
+            name, self.COEFFS[PGA()], ctx)
+
+        # For each IMT
+        for m, imt in enumerate(imts):
+
+            if repr(imt) == "PGA":
+                mean[m] = pga_mean
+                sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
+            else:
+                imt_mean, imt_sig, imt_tau, imt_phi = \
+                    get_mean_stddevs_inv(name, self.COEFFS[imt], ctx)
+
+                # The predicted PSA value at T ≤ 0.3s should be set equal to
+                # the value of PGA when it falls below the predicted PGA
+                mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
+                    if repr(imt).startswith("SA") and imt.period <= 0.3 \
+                    else imt_mean
+
+                sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
