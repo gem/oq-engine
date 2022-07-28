@@ -35,6 +35,7 @@ CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
              "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
 
 
+
 def _get_centered_cdpp(clsname, ctx):
     """
     Returns the centred dpp term (zero by default)
@@ -295,20 +296,25 @@ def get_region(clsname):
         return "CAL"
 
 
-def get_ln_y_ref(clsname, C, ctx):
+def get_ln_y_ref(clsname, C, ctx, imt, add_delta_c1=False, use_hw=True):
     """
     Returns the ground motion on the reference rock, described fully by
     Equation 11
     """
     region = get_region(clsname)
     delta_ztor = _get_delta_ztor(ctx)
-    return (get_stress_scaling(C) +
-            get_magnitude_scaling(C, ctx.mag) +
-            get_source_scaling_terms(C, ctx, delta_ztor) +
-            get_hanging_wall_term(C, ctx) +
-            get_geometric_spreading(C, ctx.mag, ctx.rrup) +
-            get_far_field_distance_scaling(region, C, ctx.mag, ctx.rrup) +
-            get_directivity(clsname, C, ctx))
+
+    out = (get_stress_scaling(C) +
+           get_magnitude_scaling(C, ctx.mag) +
+           get_source_scaling_terms(C, ctx, delta_ztor) +
+           get_geometric_spreading(C, ctx.mag, ctx.rrup) +
+           get_far_field_distance_scaling(region, C, ctx.mag, ctx.rrup) +
+           get_directivity(clsname, C, ctx))
+    if use_hw:
+        out += get_hanging_wall_term(C, ctx)
+    if add_delta_c1:
+        out += get_delta_c1(ctx.rrup, imt, ctx.mag)
+    return out
 
 
 def get_magnitude_scaling(C, mag):
@@ -393,6 +399,18 @@ def get_stress_scaling(C):
     return C["c1"]
 
 
+def get_delta_c1(rrup, imt, mag):
+    """
+    """
+    s1 = 0.4050 - 0.1989 * np.max([mag-7, 0])
+    s2 = -0.2413 + 0.1587 * np.max([mag-7, 0])
+    s3 = 0.1474 + 0.0261 * np.max([mag-7, 0])
+    s = s1 + s2 / np.cosh(s3 * rrup)
+    tb = np.max([0, mag-7])
+    t0 = float(imt.period) if imt.__name__[0:2] == 'SA' else 0.0
+    return s * np.max([np.log(t0/tb),0])**2
+
+
 def get_tau(C, mag):
     """
     Returns the between-event variability described in equation 13, line 2
@@ -402,12 +420,12 @@ def get_tau(C, mag):
     return C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
 
 
-def get_mean_stddevs(name, C, ctx):
+def get_mean_stddevs(name, C, ctx, imt):
     """
     Return mean and standard deviation values
     """
     # Get ground motion on reference rock
-    ln_y_ref = get_ln_y_ref(name, C, ctx)
+    ln_y_ref = get_ln_y_ref(name, C, ctx, imt)
     y_ref = np.exp(ln_y_ref)
     # Get the site amplification
     # Get basin depth
@@ -478,14 +496,15 @@ class ChiouYoungs2014(GMPE):
         """
         name = self.__class__.__name__
         # reference to page 1144, PSA might need PGA value
-        pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(name, self.COEFFS[PGA()], ctx)
+        pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
+            name, self.COEFFS[PGA()], ctx, PGA())
         for m, imt in enumerate(imts):
             if repr(imt) == "PGA":
                 mean[m] = pga_mean
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = \
-                    get_mean_stddevs(name, self.COEFFS[imt], ctx)
+                    get_mean_stddevs(name, self.COEFFS[imt], ctx, imt)
                 # reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
                 # when it falls below the predicted PGA
@@ -604,16 +623,17 @@ def get_mean_stddevs_inv(name, C, ctx):
     Return mean and standard deviation values
     """
 
-    # Get ground motion on reference rock
-    ln_y_ref = get_ln_y_ref(name, C, ctx)
+    # Get ground motion on reference rock. Note that in this case the hanging
+    # wall correction is turned off
+    ln_y_ref = get_ln_y_ref(name, C, ctx, use_hw=False)
     y_ref = np.exp(ln_y_ref)
 
-    # Get basin depth
-
-    dz1pt0 = _get_delta_z1pt0(name, ctx)
+    # Get z1pt0 from vs30 and set the delta z1pt0 to 0
+    term1 = (ctx.vs30**4 + 571**4) / (1360**4 + 571**4)
+    ctx.z1pt0 = -7.15/4.0*np.log(term1)
+    dz1pt0 = np.zeros_like(ctx.vs30)
 
     # for Z1.0 = 0.0 no deep soil correction is applied
-    dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
     f_z1pt0 = get_basin_depth_term(name, C, dz1pt0)
 
     # Get linear amplification term
@@ -622,7 +642,7 @@ def get_mean_stddevs_inv(name, C, ctx):
     # Set nonlinear amplification term
     f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
 
-    # Add on the site amplification
+    # Add the site amplification (only linear component)
     mean = ln_y_ref + (f_lin + f_z1pt0)
 
     # Get standard deviations
@@ -640,7 +660,7 @@ class ChiouYoungs2014Inversion(ChiouYoungs2014):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        Override the `compute` method
+        Overriding the original `compute` method
         """
         name = self.__class__.__name__
 
