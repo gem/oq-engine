@@ -79,7 +79,8 @@ def main(job_ini,
     """
     Run a calculation
     """
-    dbserver.ensure_on()
+    if not os.environ.get('OQ_DATABASE'):
+        dbserver.ensure_on()
     user_name = getpass.getuser()
     try:
         host = socket.gethostname()

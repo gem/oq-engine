@@ -70,6 +70,13 @@ def create_source_info(csm, h5):
     lens = []
     for srcid, srcs in general.groupby(csm.get_sources(), basename).items():
         src = srcs[0]
+        # check all fragments have the same group ID
+        for newsrc in srcs[1:]:
+            if newsrc.grp_id != src.grp_id:
+                raise RuntimeError(
+                    'Fragments %s and %s belongs to different groups' %
+                    (newsrc.source_id, src.source_id))
+
         num_ruptures = sum(src.num_ruptures for src in srcs)
         mutex = getattr(src, 'mutex_weight', 0)
         trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
@@ -87,8 +94,7 @@ def create_source_info(csm, h5):
             src.id = srcid
 
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
-                 len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
-                 numpy.mean(lens))
+                 len(csm.src_groups), len(data), numpy.mean(lens))
     csm.source_info = data  # src_id -> row
     num_srcs = len(csm.source_info)
     # avoid hdf5 damned bug by creating source_info in advance

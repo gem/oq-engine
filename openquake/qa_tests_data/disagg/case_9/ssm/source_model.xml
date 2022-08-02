@@ -4,10 +4,10 @@
 >
     <sourceModel name="Model 1" investigation_time="1.0">
         <sourceGroup
-            name="MUTEX ruptures"
+            name="MUTEX sources"
             rup_interdep="indep"
             src_interdep="mutex"
-            srcs_weights="1.0 1.0 1.0 1.0"
+            srcs_weights=".25 .25 .25 .25"
             tectonicRegion="TRTA">
 
             <nonParametricSeismicSource id="s1" name="I source">

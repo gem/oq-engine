@@ -252,9 +252,8 @@ class Hazard:
         if pmaps:  # called inside a loop
             for key, pmap in pmaps.items():
                 if isinstance(key, str):
-                    # contains only string keys in case of disaggregation
+                    # in case of disagg_by_src key is a source ID
                     rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
-                    # works because disagg_by_src disables submit_split
                     self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
                         self.get_hcurves(pmap, rlzs_by_gsim))
 
@@ -294,10 +293,11 @@ class ClassicalCalculator(base.HazardCalculator):
 
         pmap = dic['pmap']
         pmap.grp_id = grp_id
-        source_id = dic.pop('source_id', None)
-        if source_id:
+        pmap_by_src = dic.pop('pmap_by_src', {})
+        for source_id, pm in pmap_by_src.items():
             # store the poes for the given source
-            acc[source_id.split(':')[0]] = pmap
+            acc[source_id] = pm
+            pm.grp_id = grp_id
         if pmap:
             acc[grp_id] |= pmap
         self.n_outs[grp_id] -= 1
@@ -497,12 +497,6 @@ class ClassicalCalculator(base.HazardCalculator):
                         len(block), sum(src.weight for src in block))
                     trip = (block, sids, cmakers[grp_id])
                     triples.append(trip)
-                    # outs = (oq.outs_per_task if len(block) >= oq.outs_per_task
-                    #         else len(block))
-                    # if outs > 1 and not oq.disagg_by_src:
-                    #     smap.submit_split(trip, oq.time_per_task, outs)
-                    #     self.n_outs[grp_id] += outs
-                    # else:
                     smap.submit(trip)
                     self.n_outs[grp_id] += 1
         return smap

@@ -1,5 +1,14 @@
   [Michele Simionato]
-  * Implemented `total_losses`
+  * Added some restrictions on risk IDs
+  * Extended `disagg_by_src` to mutually exclusive sources (i.e. Japan)
+
+  [Anne Hulsey]
+  * Contributed `Mag_Dist_TRT` and `Mag_Dist_TRT_Eps` disaggregations
+
+  [Michele Simionato]
+  * Internal: added a way to disable the DbServer from openquake.cfg or
+    by setting OQ_DATABASE=local
+  * Implemented `total_losses`, even for insurance calculations
   * Optimized "computing risk" in the event_based_risk calculator (~30% faster)
   * Changed the magnitude binning formula, thus fixing some disaggregation
     calculations (for instance when there is a single magnitude for a TRT)
@@ -24,7 +33,6 @@
   * Fixed `ps_grid_spacing` approximation when the grid is degenerate
   * Logging a warning when starting from an old hazard calculation
   * The extra fields of the site collection were lost when using --hc
-  * Internal: implemented direct database access with OQ_DATABASE=local
 
   [Julián Santiago Montejo Espitia]
   * Implemented the Arteta et al. (2021) subduction model for Colombia

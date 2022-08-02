@@ -68,7 +68,7 @@ def lit_eval(string):
 
 def get_info(dstore):
     """
-    :returns: {'stats': dic, 'loss_types': dic, 'num_rlzs': R}
+    :returns: a dict with 'stats', 'loss_types', 'num_rlzs', 'tagnames', etc
     """
     oq = dstore['oqparam']
     stats = {stat: s for s, stat in enumerate(oq.hazard_stats())}

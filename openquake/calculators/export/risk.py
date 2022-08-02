@@ -152,7 +152,7 @@ def export_aggrisk_stats(ekey, dstore):
         pairs.append((tagnames, numpy.isin(dataf.agg_id, agg_ids)))
     fnames = []
     for tagnames, ok in pairs:
-        df = dataf[ok]
+        df = dataf[ok].copy()
         if tagnames:
             tagvalues = numpy.array([aggtags[agg_id] for agg_id in df.agg_id])
             for n, name in enumerate(tagnames):
@@ -377,7 +377,7 @@ def export_damages_csv(ekey, dstore):
             data = orig[:, i] * rate
             A, L, Dc = data.shape
             if Dc == D:  # no consequences, export nothing
-                return
+                return []
             csq_dt = build_csq_dt(dstore)
             damages = numpy.zeros(A, csq_dt)
             for a in range(A):

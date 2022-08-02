@@ -264,7 +264,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.eids = None
                 readinput.gsim_lt_cache.clear()
 
-                # remove temporary hdf5 file, if any
+                # remove temporary hdf5 file, if any (currently none)
                 if os.path.exists(self.datastore.tempname) and remove:
                     os.remove(self.datastore.tempname)
         return getattr(self, 'exported', {})
@@ -572,8 +572,6 @@ class HazardCalculator(BaseCalculator):
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.datastore['rlzs_by_g'] = sum(
                 fake.get_rlzs_by_grp().values(), [])
-            with hdf5.File(self.datastore.tempname, 'a') as t:
-                t['oqparam'] = oq
             self.realizations = fake.get_realizations()
             self.save_crmodel()
             self.datastore.swmr_on()

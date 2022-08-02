@@ -7,7 +7,7 @@ You can install Python via [python.org](https://www.python.org/downloads/).
 The script allows the user to select between different kinds of installations:
 
 1. [`user` installation](#user-installation) (Windows, macOS, and Linux)
-2. [`devel` installation](#user-installation)(Windows, macOS, and Linux)
+2. [`devel` installation](#devel-installation) (Windows, macOS, and Linux)
 3. [`server` installation](#server-installation) (only available for Linux)
 4. [`devel_server` installation](#devel_server-installation) (only available for Linux)
 
@@ -106,7 +106,7 @@ $ python3.9 install.py devel
 ```
 _*Note 2*: Users can decided the preferred Python version (e.g., `$python3.9 install.py user`)_
 
-_*Note 3*: Users wiht M1 CPU must use Python 3.9 (e.g., `$python3.9 install.py user`)_
+_*Note 3*: Users with M1 CPU must use Python 3.9 (e.g., `$python3.9 install.py user`)_
 
 **on Linux:**
 ```
@@ -189,6 +189,7 @@ $ python3 install.py user --version=3.10
 To uninstall the engine, use the --remove flag:
 
 **on Windows:**
+Depending on the type of installation, please choose one of the following commands:
 ```
 C:\>cd %USERPROFILE%
 C:\>python install.py devel --remove
@@ -196,9 +197,10 @@ C:\>python install.py user --remove
 ```
 
 **on macOS and Linux:**
+Depending on the type of installation, please choose one of the following commands:
 ```
-$ python3 install.py devel --remove
 $ python3 install.py user --remove
+$ python3 install.py devel --remove
 $ sudo -H python3 install.py server --remove
 ```
 

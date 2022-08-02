@@ -1,6 +1,6 @@
-#,,,,,,,,"generated_by='OpenQuake engine 3.15.0-gitdb154d6fb0', start_date='2022-07-15T06:16:59', checksum=3852733441, investigation_time=50.0, risk_investigation_time=50.0"
-asset_id,policy,taxonomy,lon,lat,nonstructural,structural,nonstructural_ins,structural_ins
-a0,A,RM,81.29850,29.10980,4.57195E+01,1.20380E+02,0.00000E+00,1.60336E+01
-a1,A,RC,83.08230,27.90060,1.99868E+01,1.07033E+02,0.00000E+00,7.25075E+01
-a2,B,W,85.74770,27.90150,2.30519E+01,1.83082E+02,0.00000E+00,1.59331E+02
-a3,B,RM,85.74770,27.90150,1.47280E+02,2.75007E+02,0.00000E+00,1.81257E+02
+#,,,,,,,"generated_by='OpenQuake engine 3.15.0-git59f786096a', start_date='2022-07-19T09:34:40', checksum=2528448976, investigation_time=50.0, risk_investigation_time=50.0"
+asset_id,policy,taxonomy,lon,lat,nonstructural,structural,structural+nonstructural_ins
+a0,A,RM,81.29850,29.10980,4.57195E+01,1.20380E+02,2.68714E+01
+a1,A,RC,83.08230,27.90060,1.99868E+01,1.07033E+02,6.75041E+01
+a2,B,W,85.74770,27.90150,2.30519E+01,1.83082E+02,1.78008E+02
+a3,B,RM,85.74770,27.90150,1.47280E+02,2.75007E+02,2.81977E+02
