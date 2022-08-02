@@ -58,8 +58,8 @@ jobs:
           pip3 install pytest
           oq --version
           oq dbserver start
-          ls -lrt /Users/runner/actions-runner/
-          pytest -vs /Users/runner/actions-runner/_work/oq-engine/oq-engine/openquake/calculators
-          #after demos also a calculation
           sleep 5
           oq engine --run "https://downloads.openquake.org/jobs/risk_test.zip"
+          sleep 5
+          ls -lrt /Users/runner/runner-isolation/actions-runner/_work/oq-engine
+          #pytest -vs /Users/runner/actions-runner/_work/oq-engine/oq-engine/openquake/calculators
