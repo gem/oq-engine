@@ -40,6 +40,9 @@ jobs:
         env: 
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
+          env
+          echo $PATH
+          export PATH=/opt/homebrew/bin:/opt/homebrew/sbin:$PATH
           echo "sqlite3 version"
           which sqlite3
           sqlite3 --version
