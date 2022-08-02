@@ -1336,8 +1336,16 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
                 cm.get_pmap(ctxs, pm)
+
             p = (~pm if cm.rup_indep else pm) * src.mutex_weight
-            pmap_by_src[src.source_id] = p
+            if ':' in src.source_id:
+                sid = src.source_id.split(':')[0]
+                if sid in pmap_by_src.keys():
+                    pmap_by_src[sid].__iadd__(p)
+                else:
+                    pmap_by_src[sid] = p
+            else:
+                pmap_by_src[src.source_id] = p
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(nsites)
@@ -1346,6 +1354,7 @@ class PmapMaker(object):
             self.source_data['weight'].append(src.weight)
             self.source_data['ctimes'].append(dt)
             self.source_data['taskno'].append(cm.task_no)
+
         return pmap_by_src
 
     def make(self):
