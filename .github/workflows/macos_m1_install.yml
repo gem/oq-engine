@@ -7,9 +7,7 @@ name: MacOS M1 engine with python 3.9
         default: master
         required: true
   schedule:
-    - cron: "15 11 * * *"
-  push:
-    branches: [ ae-m1test ]
+    - cron: "15 12 * * *"
 
 jobs:
 
