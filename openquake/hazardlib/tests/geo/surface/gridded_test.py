@@ -90,8 +90,8 @@ class GriddedSurfaceTestCase(unittest.TestCase):
         dip = self.surf.get_dip()
         dip_2 = self.surf2.get_dip()
         dip_3 = self.surf3.get_dip()
-        self.assertEqual(dip, 89.47425735908817)
-        self.assertEqual(dip_2, 87.51942230089811)
+        self.assertEqual(dip, 89.5257814236058)
+        self.assertEqual(dip_2, 88.72644590509023)
         self.assertEqual(dip_3, 89.52578142360555)
 
     def test_get_width(self):
