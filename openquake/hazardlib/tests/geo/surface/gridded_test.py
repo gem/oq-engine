@@ -71,6 +71,13 @@ class GriddedSurfaceTestCase(unittest.TestCase):
                           self.mesh)
 
     def test_get_strike(self):
+        ## the Gridded surface was constructed individually 
+        ## for the points in surf, surf2 and surf3. See
+        ## :meth:`openquake.hazardlib.geo.surface.gridded.from_points_list`
+        ## the strike values were calculated for each of the 
+        ## gridded surface using the same method as explained in 
+        ## :meth:`openquake.hazardlib.geo.surface.gridded.get_strike`
+        
         strike = self.surf.get_strike()
         strike_2 = self.surf2.get_strike()
         strike_3 = self.surf3.get_strike()
@@ -81,7 +88,11 @@ class GriddedSurfaceTestCase(unittest.TestCase):
 
     def test_dip(self):   
         dip = self.surf.get_dip()
-        self.assertEqual(dip, 90.4742185763942)
+        dip_2 = self.surf2.get_dip()
+        dip_3 = self.surf3.get_dip()
+        self.assertEqual(dip, 89.47425735908817)
+        self.assertEqual(dip_2, 87.51942230089811)
+        self.assertEqual(dip_3, 89.52578142360555)
 
     def test_get_width(self):
         self.assertRaises(NotImplementedError, self.surf.get_width)
