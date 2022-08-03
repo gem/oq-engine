@@ -166,6 +166,8 @@ class GriddedSurface(BaseSurface):
             
         """
         p, n = plane_fit(self.mesh.xyz)
+        if n[2] < 0:
+            n = -1 * n
         dip = 90 - np.rad2deg(np.arcsin(np.dot(n, [0, 0, 1])))
         return dip
 
