@@ -133,12 +133,17 @@ class GriddedSurface(BaseSurface):
      
     def get_strike(self):
         """
-        p = point on the plane derived from plane_fit function.
-        the point is normalised and the angle between the 
-        normalised vector and the YZ plane is calculated.  
+        Compute strike value for a gridded surface. 
         
-        :returns:
-            the function calculates strike value for a gridded surface
+        A point 'p' on the surface is calculated through 
+        plane_fit. See 
+        :meth:`openquake.hazardlib.geo.utils.plane_fit`
+        Strike is calculated as the angle between 'p' 
+        and the YZ plane. 
+        
+        returns:
+            strike (in decimal degrees) of a gridded surface
+            
         """
         p, n = plane_fit(self.mesh.xyz)
         p = p / np.sum(p**2)**0.5
@@ -149,14 +154,16 @@ class GriddedSurface(BaseSurface):
         
     def get_dip(self):
         """
+        Compute dip value for a gridded surface. 
         
-        The angle between the normal vector and the XY plane must be 
-        calculated. hence, a normal vector to the XY plane = [0,0,1]
-        is considered and a dot product is applied to find the angle
-        between n and [0, 0, 1].
+        A point perpendicular to the surface 'n' 
+        is calculated through plane_fit. See
+        :meth:`openquake.hazardlib.geo.utils.plane_fit`.
+        The angle between 'n' and the XY plane is the dip.
 
         returns:    
-            the function calculates the dip angle for gridded surface
+            dip (in decimal degrees) of a gridded surface
+            
         """
         p, n = plane_fit(self.mesh.xyz)
         dip = 90 - np.rad2deg(np.arcsin(np.dot(n, [0, 0, 1])))
