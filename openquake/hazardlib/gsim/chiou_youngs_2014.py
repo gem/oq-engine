@@ -296,24 +296,32 @@ def get_region(clsname):
         return "CAL"
 
 
-def get_ln_y_ref(clsname, C, ctx, imt, add_delta_c1=False, use_hw=True):
+def get_ln_y_ref(clsname, C, ctx, conf):
     """
     Returns the ground motion on the reference rock, described fully by
     Equation 11
     """
+
+    add_delta_c1 = conf.get('add_delta_c1', False)
+    use_hw = conf.get('use_hw', True)
+    alpha_nm = conf.get('alpha_nm', 1.0)
+
     region = get_region(clsname)
     delta_ztor = _get_delta_ztor(ctx)
 
     out = (get_stress_scaling(C) +
            get_magnitude_scaling(C, ctx.mag) +
-           get_source_scaling_terms(C, ctx, delta_ztor) +
+           get_source_scaling_terms(C, ctx, delta_ztor, alpha_nm) +
            get_geometric_spreading(C, ctx.mag, ctx.rrup) +
            get_far_field_distance_scaling(region, C, ctx.mag, ctx.rrup) +
            get_directivity(clsname, C, ctx))
+
     if use_hw:
         out += get_hanging_wall_term(C, ctx)
+
     if add_delta_c1:
         out += get_delta_c1(ctx.rrup, imt, ctx.mag)
+
     return out
 
 
@@ -351,7 +359,7 @@ def get_phi(C, mag, ctx, nl0):
     return mdep * phi
 
 
-def get_source_scaling_terms(C, ctx, delta_ztor):
+def get_source_scaling_terms(C, ctx, delta_ztor, alpha_nm):
     """
     Returns additional source scaling parameters related to style of
     faulting, dip and top of rupture depth
@@ -364,7 +372,7 @@ def get_source_scaling_terms(C, ctx, delta_ztor):
     # reverse faulting flag
     f_src[pos] += C["c1a"] + (C["c1c"] / coshm[pos])
     # normal faulting flag
-    f_src[neg] += C["c1b"] + (C["c1d"] / coshm[neg])
+    f_src[neg] += (C["c1b"] + (C["c1d"] / coshm[neg])) * alpha_nm
     # Top of rupture term
     f_src += (C["c7"] + (C["c7b"] / coshm)) * delta_ztor
     # Dip term
@@ -401,6 +409,7 @@ def get_stress_scaling(C):
 
 def get_delta_c1(rrup, imt, mag):
     """
+    Return the delta_c1 parameter as proposed by Boore et al. (2022; eq. 2)
     """
     s1 = 0.4050 - 0.1989 * np.max([mag-7, 0])
     s2 = -0.2413 + 0.1587 * np.max([mag-7, 0])
@@ -420,14 +429,13 @@ def get_tau(C, mag):
     return C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
 
 
-def get_mean_stddevs(name, C, ctx, imt):
+def get_mean_stddevs(name, C, ctx, imt, conf):
     """
     Return mean and standard deviation values
     """
     # Get ground motion on reference rock
-    ln_y_ref = get_ln_y_ref(name, C, ctx, imt)
+    ln_y_ref = get_ln_y_ref(name, C, ctx, conf)
     y_ref = np.exp(ln_y_ref)
-    # Get the site amplification
     # Get basin depth
     dz1pt0 = _get_delta_z1pt0(name, ctx)
     # for Z1.0 = 0.0 no deep soil correction is applied
@@ -488,6 +496,11 @@ class ChiouYoungs2014(GMPE):
     #: Reference shear wave velocity
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
 
+    def __init__(self, add_delta_c1=False, **kwargs):
+        super().__init__(add_delta_c1=add_delta_c1, **kwargs)
+        self.conf = {}
+        self.conf['add_delta_c1'] = add_delta_c1
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -497,14 +510,14 @@ class ChiouYoungs2014(GMPE):
         name = self.__class__.__name__
         # reference to page 1144, PSA might need PGA value
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
-            name, self.COEFFS[PGA()], ctx, PGA())
+            name, self.COEFFS[PGA()], ctx, PGA(), self.conf)
         for m, imt in enumerate(imts):
             if repr(imt) == "PGA":
                 mean[m] = pga_mean
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:
-                imt_mean, imt_sig, imt_tau, imt_phi = \
-                    get_mean_stddevs(name, self.COEFFS[imt], ctx, imt)
+                imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
+                    name, self.COEFFS[imt], ctx, imt, self.conf)
                 # reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
                 # when it falls below the predicted PGA
@@ -623,9 +636,11 @@ def get_mean_stddevs_inv(name, C, ctx):
     Return mean and standard deviation values
     """
 
+    conf = {'use_hw': True}
+
     # Get ground motion on reference rock. Note that in this case the hanging
     # wall correction is turned off
-    ln_y_ref = get_ln_y_ref(name, C, ctx, use_hw=False)
+    ln_y_ref = get_ln_y_ref(name, C, ctx, conf)
     y_ref = np.exp(ln_y_ref)
 
     # Get z1pt0 from vs30 and set the delta z1pt0 to 0
