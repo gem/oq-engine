@@ -123,7 +123,7 @@ def get_distance_coefficients_3(kind, c3, delta_c3_epsilon, C, imt, sctx):
     percentile of the C3 values. 
     """
     delta_c3 = np.array([[0] * 2] * len(sctx.lon), dtype = float)
-    with fiona.open('/Users/shreyasvi/oq-engine/openquake/hazardlib/'
+    with fiona.open('/oq-engine/openquake/hazardlib/'
          'gsim/Kotha_2020/kotha_attenuation_regions.geojson') as att:
         for i, (lo, la) in enumerate(zip(sctx.lon, sctx.lat)):
             pt = Point(lo, la)
@@ -199,7 +199,7 @@ def get_dl2l(ctx, imt, delta_l2l_epsilon):
     """
 
     dl2l = np.array([[0] * 2] * len(ctx.hypo_lon), dtype = float)
-    with fiona.open('/Users/shreyasvi/oq-engine/openquake/hazardlib/'
+    with fiona.open('/oq-engine/openquake/hazardlib/'
         'gsim/Kotha_2020/kotha_tectonic_regions.geojson') as tec:
         for i, (lo, la) in enumerate(zip(ctx.hypo_lon, ctx.hypo_lat)):
             pt = Point(lo, la)
