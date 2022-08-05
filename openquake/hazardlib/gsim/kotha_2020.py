@@ -40,10 +40,10 @@ from openquake.hazardlib.geo.mesh import Mesh
 CONSTANTS = {"Mref": 4.5, "Rref": 30., "Mh": 5.7,
              "h_D10": 4.0, "h_10D20": 8.0, "h_D20": 12.0}
 
-with open('oq-engine/openquake/hazardlib/gsim/Kotha_2020/kotha_attenuation_regions.geojson') as a:
+with open('/Users/shreyasvi/oq-engine/openquake/hazardlib/gsim/Kotha_2020/kotha_attenuation_regions.geojson') as a:
     att = geojson.load(a)
 
-with open('oq-engine/openquake/hazardlib/gsim/Kotha_2020/kotha_tectonic_regions.geojson') as t:
+with open('/Users/shreyasvi/oq-engine/openquake/hazardlib/gsim/Kotha_2020/kotha_tectonic_regions.geojson') as t:
     tec = geojson.load(t)
 
 # The large-magnitude statistical standard deviation values are taken from data
@@ -110,7 +110,7 @@ def get_distance_coefficients_1(kind, c3, c3_epsilon, C, imt, sctx):
     if c3:
         
         # Use the c3 that has been defined on input
-        return c3[imt]
+        return c3[imt][0]
     else:
         # Define the c3 as a number of standard deviation multiplied
         # by tau_c3
@@ -128,7 +128,6 @@ def get_distance_coefficients_3(kind, c3, delta_c3_epsilon, C, imt, sctx):
     Hence, a epsilon value of +/- 1.6 represents the 5th and 95th 
     percentile of the C3 values. 
     """
-
     delta_c3 = np.array([[0] * 2] * len(sctx.lon), dtype = float)
     for i, (lo, la) in enumerate(zip(sctx.lon, sctx.lat)):
         pt = Point(lo, la)
@@ -171,12 +170,12 @@ def get_distance_coefficients_2(kind, c3, c3_epsilon, C, imt, sctx):
     return c3_ + c3_epsilon * tau_c3
 
 
-def get_distance_term(kind, c3, c3_epsilon, C, ctx, rjb, imt):
+def get_distance_term(kind, c3, c3_epsilon, C, ctx, imt):
     """
     Returns the distance attenuation factor
     """
     h = _get_h(C, ctx.hypo_depth)
-    rval = np.sqrt(rjb ** 2. + h ** 2.)
+    rval = np.sqrt(ctx.rjb ** 2. + h ** 2.)
     rref_val = np.sqrt(CONSTANTS["Rref"] ** 2. + h ** 2.)
     c3 = get_distance_coefficients(kind, c3, c3_epsilon, C, imt, ctx)
     f_r = (C["c1"] + C["c2"] * (ctx.mag - CONSTANTS["Mref"])) *\
@@ -456,7 +455,7 @@ class KothaEtAl2020(GMPE):
                 phi_s2s = None
             mean[m] = (get_magnitude_scaling(C, ctx.mag) +
                        get_distance_term(self.kind, self.c3, self.c3_epsilon,
-                                         C, ctx, ctx.rjb, imt) +
+                                         C, ctx, imt) +
                        get_site_amplification(self.kind, extra, C, ctx, imt))
             # GMPE originally in cm/s/s - convert to g
             if imt.string.startswith(('PGA', 'SA')):
