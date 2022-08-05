@@ -24,6 +24,7 @@ Module exports :class:`KothaEtAl2020`,
                :class:`KothaEtAl2020ESHM20SlopeGeology`
                :class:`KothaEtAl2020regional`
 """
+import os
 import numpy as np
 from scipy.constants import g
 from openquake.hazardlib.geo.packager import fiona
@@ -36,6 +37,8 @@ from openquake.hazardlib.gsim.nga_east import (get_tau_at_quantile, ITPL,
 from shapely.geometry import shape, Point, Polygon
 import itertools
 from openquake.hazardlib.geo.mesh import Mesh
+
+DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'Kotha_2020')
 
 CONSTANTS = {"Mref": 4.5, "Rref": 30., "Mh": 5.7,
              "h_D10": 4.0, "h_10D20": 8.0, "h_D20": 12.0}
@@ -123,8 +126,8 @@ def get_distance_coefficients_3(kind, c3, delta_c3_epsilon, C, imt, sctx):
     percentile of the C3 values. 
     """
     delta_c3 = np.array([[0] * 2] * len(sctx.lon), dtype = float)
-    with fiona.open('/oq-engine/openquake/hazardlib/'
-         'gsim/Kotha_2020/kotha_attenuation_regions.geojson') as att:
+    fname = os.path.join(DATA_FOLDER, 'kotha_attenuation_regions.geojson')
+    with fiona.open(fname) as att:
         for i, (lo, la) in enumerate(zip(sctx.lon, sctx.lat)):
             pt = Point(lo, la)
             region = []
@@ -199,8 +202,8 @@ def get_dl2l(ctx, imt, delta_l2l_epsilon):
     """
 
     dl2l = np.array([[0] * 2] * len(ctx.hypo_lon), dtype = float)
-    with fiona.open('/oq-engine/openquake/hazardlib/'
-        'gsim/Kotha_2020/kotha_tectonic_regions.geojson') as tec:
+    fname = os.path.join(DATA_FOLDER, 'kotha_tectonic_regions.geojson')
+    with fiona.open(fname) as tec:
         for i, (lo, la) in enumerate(zip(ctx.hypo_lon, ctx.hypo_lat)):
             pt = Point(lo, la)
             region = []
