@@ -36,7 +36,6 @@ version has also a binary installer that can be downloaded from https://download
 - Run the command `conda install -c conda-forge openquake.engine` or `pip install openquake.engine`.
 - To start the Web UI (a django app), run the command `oq webui start`.
 - Wait for a few seconds a browser will pop up.
-[comment]: <> (THIS IS ACOMMENT, Devs, I have a video for this installation procedure. Not including the link because of self-promo)
 
 ## Run the OpenQuake Engine
 
