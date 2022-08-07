@@ -31,6 +31,13 @@ version has also a binary installer that can be downloaded from https://download
 ![installer-screenshot-2](../img/win-installer-2.png)
 ![installer-screenshot-3](../img/win-installer-3.png)
 
+## Install Using Anaconda
+- Open Command Prompt and Activate your environment using the `activate` command.
+- Run the command `conda install -c conda-forge openquake.engine` or `pip install openquake.engine`.
+- To start the Web UI (a django app), run the command `oq webui start`.
+- Wait for a few seconds a browser will pop up.
+[comment]: <> (THIS IS ACOMMENT, Devs, I have a video for this installation procedure. Not including the link because of self-promo)
+
 ## Run the OpenQuake Engine
 
 Continue on [How to run the OpenQuake Engine](../running/windows.md)
