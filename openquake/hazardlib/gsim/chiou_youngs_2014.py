@@ -35,7 +35,6 @@ CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
              "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
 
 
-
 def _get_centered_cdpp(clsname, ctx):
     """
     Returns the centred dpp term (zero by default)
@@ -302,15 +301,26 @@ def get_ln_y_ref(clsname, C, ctx, conf):
     Equation 11
     """
 
-    add_delta_c1 = conf.get('add_delta_c1', False)
-    use_hw = conf.get('use_hw', True)
-    alpha_nm = conf.get('alpha_nm', 1.0)
+    imt = conf.get('imt')
+    add_delta_c1 = conf.get('add_delta_c1')
+    use_hw = conf.get('use_hw')
+    alpha_nm = conf.get('alpha_nm')
+    delta_gamma_table = conf.get('delta_gamma_table')
+    source_function_table = conf.get('source_function_table')
 
     region = get_region(clsname)
     delta_ztor = _get_delta_ztor(ctx)
 
+    delta_cm = 0
+    if source_function_table is not None:
+        C = source_function_table(imt)
+        chi = C['chi']
+        delta_s1 = C['delta_s1']
+        delta_s2 = C['delta_s2']
+        delta_cm = chi * 2/3 * np.log10(delta_s2 / delta_s1)
+
     out = (get_stress_scaling(C) +
-           get_magnitude_scaling(C, ctx.mag) +
+           get_magnitude_scaling(C, ctx.mag, delta_cm) +
            get_source_scaling_terms(C, ctx, delta_ztor, alpha_nm) +
            get_geometric_spreading(C, ctx.mag, ctx.rrup) +
            get_far_field_distance_scaling(region, C, ctx.mag, ctx.rrup) +
@@ -320,18 +330,20 @@ def get_ln_y_ref(clsname, C, ctx, conf):
         out += get_hanging_wall_term(C, ctx)
 
     if add_delta_c1:
+        imt = conf["imt"]
         out += get_delta_c1(ctx.rrup, imt, ctx.mag)
 
     return out
 
 
-def get_magnitude_scaling(C, mag):
+def get_magnitude_scaling(C, mag, delta_cm):
     """
     Returns the magnitude scaling
     """
-    f_m = np.log(1.0 + np.exp(C["cn"] * (C["cm"] - mag)))
-    f_m = CONSTANTS["c2"] * (mag - 6.0) +\
-        ((CONSTANTS["c2"] - C["c3"]) / C["cn"]) * f_m
+    f_m = np.log(1.0 + np.exp(C["cn"] * (C["cm"] + delta_cm - mag)))
+    f_m = (CONSTANTS["c2"] * (mag - 6.0) +\
+           ((CONSTANTS["c2"] - C["c3"]) / C["cn"]) * f_m -
+           (CONSTANTS["c2"] - C["c3"]) * delta_cm)
     return f_m
 
 
@@ -417,7 +429,7 @@ def get_delta_c1(rrup, imt, mag):
     s = s1 + s2 / np.cosh(s3 * rrup)
     tb = np.max([0, mag-7])
     t0 = float(imt.period) if imt.__name__[0:2] == 'SA' else 0.0
-    return s * np.max([np.log(t0/tb),0])**2
+    return s * np.max([np.log(t0/tb), 0])**2
 
 
 def get_tau(C, mag):
@@ -496,10 +508,49 @@ class ChiouYoungs2014(GMPE):
     #: Reference shear wave velocity
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
 
-    def __init__(self, add_delta_c1=False, **kwargs):
-        super().__init__(add_delta_c1=add_delta_c1, **kwargs)
+    def __init__(self, use_hw=True, add_delta_c1=False, alpha_nm=1.0,
+                 source_function_table=None, delta_gamma_table=None, **kwargs):
+        super().__init__(use_hw=use_hw,
+                         add_delta_c1=add_delta_c1,
+                         alpha_nm=alpha_nm,
+                         source_function_table=source_function_table,
+                         delta_gamma_table=delta_gamma_table,
+                         **kwargs)
+
+        # Adding into the to conf dictionary
         self.conf = {}
-        self.conf['add_delta_c1'] = add_delta_c1
+        self.conf['use_hw'] = use_hw
+        self.conf['alpha_nm'] = alpha_nm
+        self.conf['source_function_table'] = source_function_table
+        self.conf['delta_gamma_table'] = delta_gamma_table
+
+        # The file with the `source function table` has a structure similar to
+        # a traditional coefficient table. The columns in the `source function
+        # table` are:
+        # - IMT             the intensity measure type (either PGA or SA)
+        # - chi             i.e. χFS2RS in equation 6
+        # - delta_s1        the stress parameter in the host region
+        # - delta_s2        the stress parameter in the target region
+        if source_function_table is not None:
+            with open(source_function_table, encoding='utf8') as f:
+                tmp = f.readlines()
+            self.source_function_table = CoeffsTable(
+                sa_damping=5, table=tmp)
+
+        # The file with the `path adjustment table` has a structure similar to
+        # a traditional coefficient table. The columns in the `path adjustment
+        # table` are:
+        # - IMT             the intensity measure type (either PGA or SA)
+        # - c0
+        # - c1
+        # - c2
+        # - c3
+        self.delta_gamma_table = None
+        if delta_gamma_table is not None:
+            with open(delta_gamma_table, encoding='utf8') as f:
+                tmp = f.readlines()
+            self.delta_gamma_table = CoeffsTable(
+                sa_damping=5, table=tmp)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -512,6 +563,7 @@ class ChiouYoungs2014(GMPE):
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
             name, self.COEFFS[PGA()], ctx, PGA(), self.conf)
         for m, imt in enumerate(imts):
+            self.conf['imt'] = imt
             if repr(imt) == "PGA":
                 mean[m] = pga_mean
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
