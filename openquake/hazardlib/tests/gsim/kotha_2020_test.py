@@ -31,7 +31,7 @@ from openquake.hazardlib.gsim.kotha_2020 import (
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.kotha_2020 import get_distance_coefficients_3, get_dl2l
 
-MAX_DISCREP = 0.1
+MAX_DISCREP = 0.01
 
 # Build the c3 and dl2l input tables
 c3 = CoeffsTable(sa_damping=5, table="""\
