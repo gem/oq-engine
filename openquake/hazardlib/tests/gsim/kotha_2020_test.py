@@ -31,7 +31,7 @@ from openquake.hazardlib.gsim.kotha_2020 import (
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.kotha_2020 import get_distance_coefficients_3, get_dl2l
 
-MAX_DISCREP = 0.01
+MAX_DISCREP = 0.1
 
 # Build the c3 and dl2l input tables
 c3 = CoeffsTable(sa_damping=5, table="""\
@@ -130,32 +130,42 @@ class KothaEtAl2020InstantiationTestCase(unittest.TestCase):
 
 class KothaEtAl2020regionalcoefficientsTestCase(unittest.TestCase):
     ## test to check the selection of region and site specific coefficients
+
     def test_get_distance_coefficients3(self):
         c3 = None
         delta_c3_epsilon = 0
         kind = 'regional'
         imt = 'PGA'
         C = KothaEtAl2020regional.COEFFS[PGA()]
-        data = [[-4.13, 38.55], [7.74, 46.23], [10.579, 62.477], [12.34, 45.03], [15.02, 39.80]]
+        ## manually selected sites
+        data = [[-4.13, 38.55], [7.74, 46.23], [10.579, 62.477], 
+                [12.34, 45.03], [15.02, 39.80]] 
         sctx = pd.DataFrame(data, columns=['lon', 'lat'])
-        expected_val = np.array([-0.609876182476899, -0.589902644476899, -0.609876182476899, -0.530099285476899, -1.065428170476899])
+        ## values retireved manually from the author provided csv files
+        expected_val = np.array([-0.609876182476899, -0.589902644476899, 
+            -0.609876182476899, -0.530099285476899, -1.065428170476899])
         target = get_distance_coefficients_3(kind, c3, delta_c3_epsilon, C, imt, sctx)
         np.testing.assert_array_equal(target, expected_val)
 
     def test_get_dl2l_coefficients(self):
         delta_l2l_epsilon = 0
         imt = 'PGA'
-        hypo = [[-4.13, 38.55], [7.74, 46.23], [10.579, 62.477], [12.34, 45.03], [15.02, 39.80]]
+        ## manually selected sites
+        hypo = [[-4.13, 38.55], [7.74, 46.23], [10.579, 62.477], 
+                [12.34, 45.03], [15.02, 39.80]]
         ctx = pd.DataFrame(hypo, columns=['hypo_lon', 'hypo_lat'])
+        ## values retireved manually from the author provided csv files
         expected_val = np.array([0., -0.1490727,  0., -0.28239376, -0.2107627 ])
-        dl2l = get_dl2l(ctx, imt, delta_l2l_epsilon)
+        dl2l = get_dl2l(ctx, imt, delta_l2l_epsilon)            
         np.testing.assert_array_equal(dl2l, expected_val)
     
 
 class KothaEtAl2020regionalTestCase(BaseGSIMTestCase):
     ##Testing the adjusted version of the GMPE
     GSIM_CLASS = KothaEtAl2020regional
-
+    ## for a list of pre defined scenarios, the GMPE predictions
+    ## were calculated in a notebook using the 
+    ## `KothaEtAl2020regional.get_mean_and_stddevs(ctxs, ctxs, ctxs, i, [StdDev.TOTAL])`
     def test_all(self):
         self.check("kotha20/KOTHA_2020_REGIONAL_MEAN.csv",
                 max_discrep_percentage=MAX_DISCREP)

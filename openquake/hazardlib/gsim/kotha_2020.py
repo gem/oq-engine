@@ -97,6 +97,7 @@ def _get_h(C, hypo_depth):
 
 get_distance_coefficients = CallableDict()
 
+
 @get_distance_coefficients.add("base","site","slope")
 def get_distance_coefficients_1(kind, c3, c3_epsilon, C, imt, sctx):
     """
@@ -143,6 +144,7 @@ def get_distance_coefficients_2(kind, c3, c3_epsilon, C, imt, sctx):
         tau_c3[idx] = C3_R["tau_region_{:s}".format(str(i))]
     return c3_ + c3_epsilon * tau_c3
 
+
 @get_distance_coefficients.add("regional")
 def get_distance_coefficients_3(kind, c3, delta_c3_epsilon, C, imt, sctx):
     """
@@ -167,6 +169,7 @@ def get_distance_coefficients_3(kind, c3, delta_c3_epsilon, C, imt, sctx):
     
     return C["c3"] + delta_c3[:, 0] + delta_c3_epsilon * delta_c3[:, 1]
 
+
 def get_distance_term(kind, c3, c3_epsilon, C, ctx, imt):
     """
     Returns the distance attenuation factor
@@ -188,6 +191,7 @@ def get_magnitude_scaling(C, mag):
     return np.where(mag <= CONSTANTS["Mh"],
                     C["e1"] + C["b1"] * d_m + C["b2"] * d_m ** 2.0,
                     C["e1"] + C["b3"] * d_m)
+
 
 def get_dl2l(ctx, imt, delta_l2l_epsilon):
     """
@@ -543,6 +547,7 @@ class KothaEtAl2020regional(KothaEtAl2020):
         self.delta_c3_epsilon = delta_c3_epsilon
         self.ergodic = ergodic
 
+
 class KothaEtAl2020Site(KothaEtAl2020):
     """
     Preliminary adaptation of the Kotha et al. (2020) GMPE using
@@ -552,6 +557,7 @@ class KothaEtAl2020Site(KothaEtAl2020):
     REQUIRES_SITES_PARAMETERS = {"vs30"}
 
     kind = "site"
+    
     
 class KothaEtAl2020Slope(KothaEtAl2020):
     """
