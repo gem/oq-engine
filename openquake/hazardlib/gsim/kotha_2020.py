@@ -27,16 +27,15 @@ Module exports :class:`KothaEtAl2020`,
 import os
 import numpy as np
 from scipy.constants import g
-from openquake.hazardlib.geo.packager import fiona
+import fiona
+from shapely.geometry import Point, Polygon, shape
+from shapely.prepared import prep
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, from_string
 from openquake.hazardlib.gsim.nga_east import (get_tau_at_quantile, ITPL,
                                                TAU_EXECUTION, TAU_SETUP)
-from shapely.geometry import shape, Point, Polygon
-import itertools
-from openquake.hazardlib.geo.mesh import Mesh
 
 DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'Kotha_2020')
 
@@ -107,36 +106,12 @@ def get_distance_coefficients_1(kind, c3, c3_epsilon, C, imt, sctx):
     if c3:
         
         # Use the c3 that has been defined on input
-        return c3[imt][0]
+        return c3
     else:
         # Define the c3 as a number of standard deviation multiplied
         # by tau_c3
         return C["c3"] + (c3_epsilon * C["tau_c3"])
 
-@get_distance_coefficients.add("regional")
-def get_distance_coefficients_3(kind, c3, delta_c3_epsilon, C, imt, sctx):
-    """
-    Return site-specific coefficient 'C3'. The function retirieves the 
-    value of delta_c3 and the standard error of delta_c3 from the 'att' 
-    geojson file depending on the location of site. This delta_c3 is 
-    added to the generic coefficient 'c3' from the GMPE. if delta_c3_epsilon
-    is provided, standard error of delta_c3 will also be included.
-    In this case epsilon represents the quantile distribution. 
-    Hence, a epsilon value of +/- 1.6 represents the 5th and 95th 
-    percentile of the C3 values. 
-    """
-    delta_c3 = np.array([[0] * 2] * len(sctx.lon), dtype = float)
-    fname = os.path.join(DATA_FOLDER, 'kotha_attenuation_regions.geojson')
-    with fiona.open(fname) as att:
-        for i, (lo, la) in enumerate(zip(sctx.lon, sctx.lat)):
-            pt = Point(lo, la)
-            region = []
-            region = [feature['properties'] for feature in att 
-                        if shape(feature['geometry']).contains(pt)]
-            if len(region):
-                delta_c3[i][0] = region[0][str(imt)]
-                delta_c3[i][1] = region[0][str(imt)+'_se']
-    return C["c3"] + delta_c3[:, 0] + delta_c3_epsilon * delta_c3[:, 1]
 
 @get_distance_coefficients.add("ESHM20", "geology")
 def get_distance_coefficients_2(kind, c3, c3_epsilon, C, imt, sctx):
@@ -168,6 +143,29 @@ def get_distance_coefficients_2(kind, c3, c3_epsilon, C, imt, sctx):
         tau_c3[idx] = C3_R["tau_region_{:s}".format(str(i))]
     return c3_ + c3_epsilon * tau_c3
 
+@get_distance_coefficients.add("regional")
+def get_distance_coefficients_3(kind, c3, delta_c3_epsilon, C, imt, sctx):
+    """
+    Return site-specific coefficient 'C3'. The function retirieves the 
+    value of delta_c3 and the standard error of delta_c3 from the 'att' 
+    geojson file depending on the location of site. This delta_c3 is 
+    added to the generic coefficient 'c3' from the GMPE. A delta_c3_epsilon
+    value of +/- 1.6 gives the 95% confidence interval for delta_c3.
+    """
+    s = []
+    [s.append(Point(lon, lat)) for lon, lat in zip(sctx.lon, sctx.lat)]
+    delta_c3 =np.zeros((len(sctx.lat), 2), dtype = float)
+    fname = os.path.join(DATA_FOLDER, 'kotha_attenuation_regions.geojson')
+    with fiona.open(fname) as att:
+        for i, feature in enumerate(att):
+            prepared_polygon = prep(shape(feature['geometry']))
+            contained = list(filter(prepared_polygon.contains, s))
+            if contained:
+                l = [np.where((sctx['lon']== p.x) & (sctx['lat']==p.y))[0]for p in contained]
+                delta_c3[l, 0] = feature['properties'][str(imt)]
+                delta_c3[l, 1] = feature['properties'][str(imt)+'_se']
+    
+    return C["c3"] + delta_c3[:, 0] + delta_c3_epsilon * delta_c3[:, 1]
 
 def get_distance_term(kind, c3, c3_epsilon, C, ctx, imt):
     """
@@ -196,24 +194,24 @@ def get_dl2l(ctx, imt, delta_l2l_epsilon):
     Returns rupture source specific delta_l2l values. The method
     retrieves the delta_l2l and standard error of delta_l2l values.
     if delta_l2l_epsilon is provided, standard error of delta_c3 
-    will be included. In this case epsilon represents the quantile
-    distribution. Hence, a epsilon value of +/- 1.6 represents
-    the 5th and 95th percentile of the dl2l values. 
+    will be included. A delta_l2l_epsilon value of +/- 1.6 gives 
+    the 95% confidence interval for delta_l2l.
     """
-
-    dl2l = np.array([[0] * 2] * len(ctx.hypo_lon), dtype = float)
+    f = []
+    [f.append(Point(lon, lat)) for lon, lat in zip(ctx.hypo_lon, ctx.hypo_lat)]
+    dl2l = np.zeros((len(ctx.hypo_lon), 2), dtype = float)
     fname = os.path.join(DATA_FOLDER, 'kotha_tectonic_regions.geojson')
     with fiona.open(fname) as tec:
-        for i, (lo, la) in enumerate(zip(ctx.hypo_lon, ctx.hypo_lat)):
-            pt = Point(lo, la)
-            region = []
-            region = [feature['properties'] for feature in tec
-                        if shape(feature['geometry']).contains(pt)]
-            if len(region):
-                dl2l[i][0] = region[0][str(imt)]
-                dl2l[i][1] = region[0][str(imt)+'_se']
+        for i, feature in enumerate(tec):
+            prepared_polygon = prep(shape(feature['geometry']))
+            contained = list(filter(prepared_polygon.contains, f))
+            if contained:
+                l = [np.where((ctx['hypo_lon']== p.x) & (ctx['hypo_lat']==p.y))[0]for p in contained]
+                dl2l[l, 0] = feature['properties'][str(imt)]
+                dl2l[l, 1] = feature['properties'][str(imt)+'_se']
 
     return dl2l[:, 0] + delta_l2l_epsilon * dl2l[:, 1]
+    
 
 def get_sigma_mu_adjustment(C, imt, ctx):
     """
@@ -522,7 +520,7 @@ class KothaEtAl2020(GMPE):
 
 class KothaEtAl2020regional(KothaEtAl2020):
     """
-    Preliminary adaptation of the Kotha et al. (2020) GMPE using
+    Adaptation of the Kotha et al. (2020) GMPE using
     the source and site specific adjustments. 
     """
 
