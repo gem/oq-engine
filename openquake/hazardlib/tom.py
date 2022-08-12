@@ -337,7 +337,7 @@ class NegativeBinomialTOM(BaseTOM):
         tau = 1 / alpha
         theta = tau / (tau + numpy.array(mean_rate).flatten()*self.time_span)
         if not n_max:
-            n_max = numpy.max(scipy.stats.nbinom.ppf(tol, tau, theta).astype(int))
+            n_max = max(numpy.max(scipy.stats.nbinom.ppf(tol, tau, theta).astype(int)), 4)
         pmf = scipy.stats.nbinom.pmf(numpy.arange(0, n_max), tau, theta[:, None])
         return pmf
 
