@@ -108,6 +108,7 @@ class CalculatorTestCase(unittest.TestCase):
         cls.duration = general.AccumDict()
         if OQ_CALC_OUTPUTS:
             writers.write_csv = write_csv
+        os.environ['OQ_DATABASE'] = 'local'
 
     def get_calc(self, testfile, job_ini, **kw):
         """

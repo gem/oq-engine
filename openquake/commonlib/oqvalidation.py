@@ -715,6 +715,14 @@ time_per_task:
   Example: *time_per_task=600*
   Default: 2000
 
+total_losses:
+  Used in event based risk calculations to compute total losses and
+  and total curves by summing across different loss types. Possible values
+  are "structural+nonstructural", "structural+contents",
+  "nonstructural+contents", "structural+nonstructural+contents".
+  Example: *total_losses = structural+nonstructural*
+  Default: None
+
 truncation_level:
   Truncation level used in the GMPEs.
   Example: *truncation_level = 0* to compute median GMFs.
@@ -763,7 +771,8 @@ ALL_CALCULATORS = ['classical_risk',
                    'preclassical',
                    'conditional_spectrum',
                    'event_based_damage',
-                   'scenario_damage']
+                   'scenario_damage',
+                   'reinsurance_risk']
 
 
 def check_same_levels(imtls):
@@ -794,7 +803,8 @@ class OqParam(valid.ParamSet):
     _input_files = ()  # set in get_oqparam
     KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
                     'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
-                    'source_model_logic_tree', 'hazard_curves', 'insurance',
+                    'source_model_logic_tree', 'hazard_curves',
+                    'insurance', 'reinsurance', 'ins_loss',
                     'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
                     'fragility', 'consequence', 'reqv', 'input_zip',
                     'amplification',
@@ -957,6 +967,11 @@ class OqParam(valid.ParamSet):
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, None)
     time_per_task = valid.Param(valid.positivefloat, 2000)
+    total_losses = valid.Param(
+        valid.Choice('structural+nonstructural',
+                     'structural+contents',
+                     'nonstructural+contents',
+                     'structural+nonstructural+contents'), None)
     truncation_level = valid.Param(valid.positivefloat, 99.)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
@@ -1056,8 +1071,7 @@ class OqParam(valid.ParamSet):
         if ('ps_grid_spacing' in names_vals and
                 float(names_vals['ps_grid_spacing']) and
                 'pointsource_distance' not in names_vals):
-            self.pointsource_distance = dict(
-                default=float(names_vals['ps_grid_spacing']))
+            self.pointsource_distance = dict(default=10.)
         if self.collapse_level >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 
@@ -1334,7 +1348,8 @@ class OqParam(valid.ParamSet):
                     mini[imt] = 0
         if 'default' in mini:
             del mini['default']
-        return numpy.array([mini.get(imt) or 1E-10 for imt in self.imtls])
+        min_iml = numpy.array([mini.get(imt) or 1E-10 for imt in self.imtls])
+        return min_iml
 
     def levels_per_imt(self):
         """
@@ -1429,7 +1444,7 @@ class OqParam(valid.ParamSet):
         """
         Dictionary extended_loss_type -> extended_loss_type index
         """
-        return {lt: i for i, (lt, dt) in enumerate(self.loss_dt_list())}
+        return {lt: i for i, lt in enumerate(self.ext_loss_types)}
 
     @property
     def loss_types(self):
@@ -1442,6 +1457,19 @@ class OqParam(valid.ParamSet):
         for lt in self.all_cost_types:
             names.append(lt)
         return names
+
+    @property
+    def ext_loss_types(self):
+        """
+        :returns: list of loss types + secondary loss types
+        """
+        etypes = self.loss_types
+        if self.total_losses:
+            etypes = self.loss_types + [self.total_losses]
+        if 'insurance' in self.inputs:
+            itypes = [lt + '_ins' for lt in self.inputs['insurance']]
+            etypes = self.loss_types + itypes
+        return etypes
 
     def loss_dt(self, dtype=F64):
         """
@@ -1590,6 +1618,14 @@ class OqParam(valid.ParamSet):
         return (self.calculation_mode in
                 'event_based_risk ebrisk event_based_damage')
 
+    def is_valid_disagg_by_src(self):
+        """
+        disagg_by_src can be set only if ps_grid_spacing = 0
+        """
+        if self.disagg_by_src:
+            return self.ps_grid_spacing == 0
+        return True
+
     def is_valid_shakemap(self):
         """
         hazard_calculation_id must be set if shakemap_id is set
@@ -1714,15 +1750,6 @@ class OqParam(valid.ParamSet):
             ('classical', 'disaggregation'))
         return not invalid
 
-    def is_valid_ps_grid_spacing(self):
-        """
-        `ps_grid_spacing` must be smaller than the `pointsource_distance`
-        """
-        if not self.ps_grid_spacing:
-            return True
-        return self.ps_grid_spacing <= calc.filters.getdefault(
-            self.pointsource_distance, 'default')
-
     def is_valid_soil_intensities(self):
         """
         soil_intensities must be defined only in classical calculations
@@ -1832,7 +1859,8 @@ class OqParam(valid.ParamSet):
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
                 'multi_peril' in self.inputs or 'rupture_model' in self.inputs
-                or 'scenario' in self.calculation_mode):
+                or 'scenario' in self.calculation_mode
+                or 'ins_loss' in self.inputs):
             return
         if ('source_model_logic_tree' not in self.inputs and
                 self.inputs['job_ini'] != '<in-memory>' and

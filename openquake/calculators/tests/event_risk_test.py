@@ -63,8 +63,8 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(alt), 10)
         totloss = alt.loss.sum()
 
-        # avg_losses-rlzs has shape (A, R, LI)
-        avglosses = self.calc.datastore['avg_losses-rlzs'][:, 0, :].sum(axis=0)
+        avglosses = self.calc.datastore[
+            'avg_losses-rlzs/structural'][:, 0].sum(axis=0)
         aae(avglosses / 1E6, totloss / 1E6, decimal=4)
 
     def test_ebr_2(self):
@@ -97,12 +97,12 @@ class GmfEbRiskTestCase(CalculatorTestCase):
                                   delta=1E-5)
 
     def test_case_master(self):
-        self.run_calc(case_master.__file__, 'job.ini', insured_losses='false')
+        self.run_calc(case_master.__file__, 'job.ini')
         calc0 = self.calc.datastore  # single file event_based_risk
-        self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
+        self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='event_based')
         calc1 = self.calc.datastore  # event_based
-        self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
+        self.run_calc(case_master.__file__, 'job.ini',
                       hazard_calculation_id=str(calc1.calc_id),
                       source_model_logic_tree_file='',
                       gsim_logic_tree_file='')

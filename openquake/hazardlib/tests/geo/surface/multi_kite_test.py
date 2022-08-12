@@ -359,9 +359,7 @@ class NZLTestCase(unittest.TestCase):
         sconv = SourceConverter(investigation_time=1.,
                                 rupture_mesh_spacing=self.rms)
 
-        # Read geometry model. It contains a list of sections (i.e. instances
-        # of :class:`openquake.hazardlib.source.multi_fault.FaultSection`).
-        # The surface of each section in this case is an instance of
+        # Read geometry model. It contains a list of surfaces, instances of
         # :class:`openquake.hazardlib.geo.surface.KiteFault`
         fname = 'sections_rupture200_sections.xml'
         fname = os.path.join(BASE_DATA_PATH, fname)
@@ -370,13 +368,13 @@ class NZLTestCase(unittest.TestCase):
         # Create the surface
         sfcs = []
         for sec in gmodel.sections:
-            sfcs.append(gmodel.sections[sec].surface)
+            sfcs.append(gmodel.sections[sec])
         self.msrf = MultiSurface(sfcs)
 
         # Create second surface
         keys = list(gmodel.sections)
         self.sec_id = keys[1]
-        sfcs2 = [gmodel.sections[self.sec_id].surface]
+        sfcs2 = [gmodel.sections[self.sec_id]]
         self.msrf2 = MultiSurface(sfcs2)
 
     def test_nzl_tors(self):

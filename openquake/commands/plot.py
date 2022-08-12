@@ -21,6 +21,7 @@ import json
 import logging
 import shapely
 import numpy
+import pandas
 from scipy.stats import linregress
 from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
@@ -430,7 +431,7 @@ def make_figure_sources(extractors, what):
     ax.plot(sitecol['lon'], sitecol['lat'], '.')
     ax.plot(lons, lats, 'o')
     pp.set_lim(ss_lons, ss_lats)
-    ax.set_title('%d/%d sources' % (n, tot))
+    ax.set_title('calc#%d, %d/%d sources' % (ex.calc_id, n, tot))
     return plt
 
 
@@ -692,6 +693,34 @@ def plot_wkt(wkt_string):
     return plt
 
 
+def plot_csv(fname):
+    """
+    Plot a CSV with columns (title, time1, time2, ...)
+    """
+    df = pandas.read_csv(fname)
+    title, *cols = df.columns
+    plt = import_plt()
+
+    vals = [df[col].to_numpy() for col in cols]
+
+    x = numpy.arange(len(df))  # the label locations
+    width = 0.3  # the width of the bars
+
+    fig, ax = plt.subplots()
+    delta = -width
+    for col, val in zip(cols, vals):
+        rect = ax.bar(x + delta, val, width, label=col)
+        ax.bar_label(rect)
+        delta += width
+
+    ax.set_title(title)
+    ax.set_xticks(x, df[title])
+    ax.legend()
+
+    fig.tight_layout()
+    plt.show()
+
+
 def main(what,
          calc_id: int = -1,
          others: int = [],
@@ -700,6 +729,9 @@ def main(what,
     """
     Generic plotter for local and remote calculations.
     """
+    if what.endswith('.csv'):
+        plot_csv(what)
+        return
     if what.startswith('POLYGON'):
         plt = plot_wkt(what)
         plt.show()

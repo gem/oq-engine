@@ -19,6 +19,7 @@ import os
 import operator
 import collections
 import pickle
+import toml
 import copy
 import logging
 try:
@@ -34,7 +35,6 @@ from openquake.baselib.node import context, striptag, Node, node_to_dict
 from openquake.hazardlib import geo, mfd, pmf, source, tom, valid, InvalidFile
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source import NonParametricSeismicSource
-from openquake.hazardlib.source.multi_fault import FaultSection
 
 
 U32 = numpy.uint32
@@ -103,10 +103,10 @@ def rounded_unique(mags, idxs):
     :raises: ValueError if the rounded magnitudes contain duplicates
     """
     mags = numpy.round(mags, 2)
-    mag_idxs = list(zip(mags, idxs))
+    mag_idxs = [(mag, ' '.join(idx)) for mag, idx in zip(mags, idxs)]
     dupl = extract_dupl(mag_idxs)
     if dupl:
-        logging.error('%s %s contains duplicates' % dupl[0])
+        logging.error('the pair (mag=%s, idxs=%s) is duplicated' % dupl[0])
     return mags
 
 
@@ -290,6 +290,16 @@ class SourceGroup(collections.abc.Sequence):
             sg.sources = block
             out.append(sg)
         return out
+
+    def get_tom_toml(self, time_span):
+        """
+        :returns: the TOM as a json string {'PoissonTOM': {'time_span': 50}}
+        """
+        tom = self.temporal_occurrence_model
+        if tom is None:
+            return '[PoissonTOM]\ntime_span=%s' % time_span
+        dic = {tom.__class__.__name__: vars(tom)}
+        return toml.dumps(dic)
 
     def __repr__(self):
         return '<%s %s, %d source(s)>' % (
@@ -730,7 +740,7 @@ class SourceConverter(RuptureConverter):
     def convert_section(self, node):
         """
         :param node: a section node
-        :returns: a FaultSection instance
+        :returns: a list of surfaces
         """
         with context(self.fname, node):
             if hasattr(node, 'planarSurface'):
@@ -740,23 +750,31 @@ class SourceConverter(RuptureConverter):
             else:
                 raise ValueError('Only planarSurfaces or kiteSurfaces ' +
                                  'supported')
-            surfs = self.convert_surfaces(surfaces, node['id'])
-        return FaultSection(node['id'], surfs)
+            return self.convert_surfaces(surfaces, node['id'])
 
     def get_tom(self, node):
         """
         Convert the given node into a Temporal Occurrence Model object.
 
-        :param node: a node of kind poissonTOM or brownianTOM
-        :returns: a :class:`openquake.hazardlib.mfd.EvenlyDiscretizedMFD.` or
-                  :class:`openquake.hazardlib.mfd.TruncatedGRMFD` instance
+        :param node: a node of kind poissonTOM or similar
+        :returns: a :class:`openquake.hazardlib.tom.BaseTOM` instance
         """
+        occurrence_rate = node.get('occurrence_rate')
+        kwargs = {}
+        # the occurrence_rate is not None only for clusters of sources,
+        # the ones implemented in calc.hazard_curve, see test case_35
+        if occurrence_rate:
+            tom_cls = tom.registry['ClusterPoissonTOM']
+            return tom_cls(self.investigation_time, occurrence_rate)
         if 'tom' in node.attrib:
             tom_cls = tom.registry[node['tom']]
+            # if tom is negbinom, sets mu and alpha attr to tom_class
+            if node['tom'] == 'NegativeBinomialTOM':
+                kwargs = {'alpha': float(node['alpha']),
+                          'mu': float(node['mu'])}
         else:
             tom_cls = tom.registry['PoissonTOM']
-        return tom_cls(time_span=self.investigation_time,
-                       occurrence_rate=node.get('occurrence_rate'))
+        return tom_cls(time_span=self.investigation_time, **kwargs)
 
     def convert_mfdist(self, node):
         """
@@ -1100,31 +1118,46 @@ class SourceConverter(RuptureConverter):
         sid = node.get('id')
         name = node.get('name')
         trt = node.get('tectonicRegion')
-        pmfs = []
+        path = os.path.splitext(self.fname)[0] + '.hdf5'
+        hdf5_fname = path if os.path.exists(path) else None
+        if hdf5_fname and node.text is None:
+            # read the rupture data from the HDF5 file
+            with hdf5.File(hdf5_fname, 'r') as h:
+                dic = {k: d[:] for k, d in h[node['id']].items()}
+            with context(self.fname, node):
+                idxs = [x.decode('utf8').split() for x in dic['rupture_idxs']]
+                mags = rounded_unique(dic['mag'], idxs)
+            # NB: the sections will be fixed later on, in source_reader
+            mfs = MultiFaultSource(sid, name, trt, idxs, dic['probs_occur'],
+                                   dic['mag'], dic['rake'])
+            return mfs
+        probs = []
         mags = []
         rakes = []
         idxs = []
         num_probs = None
         for i, rupnode in enumerate(node):
-            prb = pmf.PMF(valid.pmf(rupnode['probs_occur']))
-            if num_probs is None:  # first time
-                num_probs = len(prb.data)
-            elif len(prb.data) != num_probs:
-                # probs_occur must have uniform length for all ruptures
-                with context(self.fname, rupnode):
-                    raise ValueError(
-                        'prob_occurs=%s has %d elements, expected %s'
-                        % (rupnode['probs_occur'], len(prb.data), num_probs))
-            pmfs.append(prb)
-            mags.append(~rupnode.magnitude)
-            rakes.append(~rupnode.rake)
-            indexes = rupnode.sectionIndexes['indexes']
-            idxs.append(tuple(indexes.split(',')))
+            with context(self.fname, rupnode):
+                prb = valid.probabilities(rupnode['probs_occur'])
+                if num_probs is None:  # first time
+                    num_probs = len(prb)
+                elif len(prb) != num_probs:
+                    # probs_occur must have uniform length for all ruptures
+                    with context(self.fname, rupnode):
+                        raise ValueError(
+                            'prob_occurs=%s has %d elements, expected %s'
+                            % (rupnode['probs_occur'], len(prb),
+                               num_probs))
+                probs.append(prb)
+                mags.append(~rupnode.magnitude)
+                rakes.append(~rupnode.rake)
+                indexes = rupnode.sectionIndexes['indexes']
+                idxs.append(tuple(indexes.split(',')))
         with context(self.fname, node):
             mags = rounded_unique(mags, idxs)
         rakes = numpy.array(rakes)
         # NB: the sections will be fixed later on, in source_reader
-        mfs = MultiFaultSource(sid, name, trt, idxs, pmfs, mags, rakes)
+        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes)
         return mfs
 
     def convert_sourceModel(self, node):
@@ -1144,6 +1177,9 @@ class SourceConverter(RuptureConverter):
         grp_attrs = {k: v for k, v in node.attrib.items()
                      if k not in ('name', 'src_interdep', 'rup_interdep',
                                   'srcs_weights')}
+        if node.attrib.get('src_interdep') != 'mutex':
+            # ignore weights set to 1 in old versions of the engine
+            srcs_weights = None
         sg = SourceGroup(trt, min_mag=self.minimum_magnitude)
         sg.temporal_occurrence_model = self.get_tom(node)
         sg.name = node.attrib.get('name')
@@ -1161,6 +1197,7 @@ class SourceConverter(RuptureConverter):
             msg += ' occurrence model'
             assert 'tom' in node.attrib, msg
             if isinstance(tom, PoissonTOM):
+                # hack in place of a ClusterPoissonTOM
                 assert hasattr(sg, 'occurrence_rate')
 
         for src_node in node:

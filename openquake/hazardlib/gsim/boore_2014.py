@@ -276,6 +276,8 @@ class BooreEtAl2014(GMPE):
         super().__init__(**kwargs)
         self.region = region
         self.sof = sof
+        if region != "nobasin":  # z1pt0 is used if period >= 0.65
+            self.REQUIRES_SITES_PARAMETERS |= {'z1pt0'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

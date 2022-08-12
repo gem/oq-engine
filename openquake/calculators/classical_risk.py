@@ -51,7 +51,7 @@ def classical_risk(riskinputs, oqparam, monitor):
         for taxo, asset_df in ri.asset_df.groupby('taxonomy'):
             for rlz in range(R):
                 pcurve = haz.extract(rlz)
-                out = crmodel.get_output(taxo, asset_df, pcurve, rlz=rlz)
+                out = crmodel.get_output(asset_df, pcurve)
                 for li, loss_type in enumerate(crmodel.loss_types):
                     # loss_curves has shape (A, C)
                     for i, asset in enumerate(asset_df.to_records()):
@@ -116,7 +116,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                      for cp in self.crmodel.curve_params
                      if cp.user_provided}
         self.loss_curve_dt = scientific.build_loss_curve_dt(
-            curve_res, insured_losses=False)
+            curve_res, insurance_losses=False)
         ltypes = self.crmodel.loss_types
 
         # loss curves stats are generated always
@@ -129,10 +129,11 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 avg_losses[a, s, li] = statloss[s]
                 base.set_array(stat_curves_lt['poes'][a, s], statpoes[s])
                 base.set_array(stat_curves_lt['losses'][a, s], losses)
-        self.datastore['avg_losses-stats'] = avg_losses
-        self.datastore.set_shape_descr(
-            'avg_losses-stats', asset_id=self.assetcol['id'],
-            stat=stats, loss_type=self.oqparam.loss_types)
+        for li, lt in enumerate(ltypes):
+            self.datastore['avg_losses-stats/' + lt] = avg_losses[:, :, li]
+            self.datastore.set_shape_descr(
+                'avg_losses-stats/' + lt,
+                asset_id=self.assetcol['id'], stat=stats)
         self.datastore['loss_curves-stats'] = stat_curves
         self.datastore.set_attrs('loss_curves-stats', stat=stats)
 

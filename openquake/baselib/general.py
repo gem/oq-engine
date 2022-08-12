@@ -41,6 +41,7 @@ import multiprocessing
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
 from decorator import decorator
+from openquake.baselib import __version__
 from openquake.baselib.python3compat import decode
 
 U8 = numpy.uint8
@@ -415,18 +416,19 @@ def removetmp():
                 pass
 
 
-def git_suffix(fname):
+def engine_version():
     """
-    :returns: `<short git hash>` if Git repository found
+    :returns: __version__ + `<short git hash>` if Git repository found
     """
     # we assume that the .git folder is two levels above any package
     # i.e. openquake/engine/../../.git
-    git_path = os.path.join(os.path.dirname(fname), '..', '..', '.git')
+    git_path = os.path.join(os.path.dirname(__file__), '..', '..', '.git')
 
     # macOS complains if we try to execute git and it's not available.
     # Code will run, but a pop-up offering to install bloatware (Xcode)
     # is raised. This is annoying in end-users installations, so we check
     # if .git exists before trying to execute the git executable
+    gh = ''
     if os.path.isdir(git_path):
         try:
             gh = subprocess.check_output(
@@ -434,13 +436,12 @@ def git_suffix(fname):
                 stderr=open(os.devnull, 'w'),
                 cwd=os.path.dirname(git_path)).strip()
             gh = "-git" + decode(gh) if gh else ''
-            return gh
         except Exception:
+            pass
             # trapping everything on purpose; git may not be installed or it
             # may not work properly
-            pass
 
-    return ''
+    return __version__ + gh
 
 
 def run_in_process(code, *args):

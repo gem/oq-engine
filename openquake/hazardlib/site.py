@@ -127,6 +127,7 @@ site_param_dt = {
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
     'siteclass': (numpy.string_, 1),
+    'geohash': (numpy.string_, 6),
     'z1pt4': numpy.float64,
     'backarc': numpy.uint8,  # 0=forearc,1=backarc,2=alongarc
     'xvf': numpy.float64,
@@ -140,6 +141,10 @@ site_param_dt = {
     'h800': numpy.float64,
     'geology': (numpy.string_, 20),
     'amplfactor': numpy.float64,
+    'fpeak': numpy.float64,
+    # Fundamental period and and amplitude of HVRSR spectra
+    'THV': numpy.float64,
+    'PHV': numpy.float64,
 
     # parameters for secondary perils
     'friction_mid': numpy.float64,
@@ -160,7 +165,6 @@ site_param_dt = {
     'dwb': numpy.float64,
     'hwater': numpy.float64,
     'precip': numpy.float64,
-    'fpeak': numpy.float64,
 
     # parameters for YoudEtAl2002
     'freeface_ratio': numpy.float64,

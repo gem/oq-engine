@@ -68,18 +68,16 @@ def _distances_from_dcache(rup, sites, param, dcache):
     suids = []  # surface IDs
     for srf in rup.surface.surfaces:
         suids.append(srf.suid)
-        if srf.suid not in dcache:
+        if (srf.suid, param) not in dcache:
             # This function returns the distances that will be added to the
             # cache. In case of Rx and Ry0, the information cache will
             # include the ToR of each surface as well as the GC2 t and u
             # coordinates for each section.
-            distdic = _multi_distances(srf, sites, param)
-            # Save information into the cache for the current surfac.
-            for key in distdic:
-                dcache[srf.suid, key] = distdic[key]
-
+            for key, val in _multi_distances(srf, sites, param).items():
+                dcache[srf.suid, key] = val
     # Computing distances using the cache
     if param in ['rjb', 'rrup']:
+        dcache.hit += 1
         distances = dcache[suids[0], param]
         # This is looping over all the surface IDs composing the rupture
         for suid in suids[1:]:
@@ -344,12 +342,11 @@ class SourceFilter(object):
             self.integration_distance = integration_distance
         self.slc = slice(None)
 
-    # not used right now
-    def reduce(self, factor=100):
+    def reduce(self, multiplier=5):
         """
         Reduce the SourceFilter to a subset of sites
         """
-        idxs = numpy.arange(0, len(self.sitecol), factor)
+        idxs = numpy.arange(0, len(self.sitecol), multiplier)
         sc = object.__new__(site.SiteCollection)
         sc.array = self.sitecol[idxs]
         sc.complete = self.sitecol.complete

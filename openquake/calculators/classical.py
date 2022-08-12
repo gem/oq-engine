@@ -252,9 +252,8 @@ class Hazard:
         if pmaps:  # called inside a loop
             for key, pmap in pmaps.items():
                 if isinstance(key, str):
-                    # contains only string keys in case of disaggregation
+                    # in case of disagg_by_src key is a source ID
                     rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
-                    # works because disagg_by_src disables submit_split
                     self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
                         self.get_hcurves(pmap, rlzs_by_gsim))
 
@@ -294,10 +293,11 @@ class ClassicalCalculator(base.HazardCalculator):
 
         pmap = dic['pmap']
         pmap.grp_id = grp_id
-        source_id = dic.pop('source_id', None)
-        if source_id:
+        pmap_by_src = dic.pop('pmap_by_src', {})
+        for source_id, pm in pmap_by_src.items():
             # store the poes for the given source
-            acc[source_id.split(':')[0]] = pmap
+            acc[source_id] = pm
+            pm.grp_id = grp_id
         if pmap:
             acc[grp_id] |= pmap
         self.n_outs[grp_id] -= 1
@@ -312,7 +312,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         self.init_poes()
         params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
-                  'probs_occur', 'sids', 'src_id'}
+                  'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
 
         for trt, gsims in gsims_by_trt.items():
@@ -327,7 +327,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = U16  # storing only for few sites
                 elif param == 'probs_occur':
                     dt = hdf5.vfloat64
-                elif param == 'src_id':
+                elif param in ('src_id', 'rup_id'):
                     dt = U32
                 elif param == 'grp_id':
                     dt = U16
@@ -359,16 +359,9 @@ class ClassicalCalculator(base.HazardCalculator):
         sources = list(self.csm.source_info)
         size, msg = get_nbytes_msg(
             dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
-        ps = any(src.code == b'P' for src in self.csm.get_sources())
-        if size > TWO32 and not ps:
+        if size > TWO32:
             raise RuntimeError('The matrix disagg_by_src is too large: %s'
                                % msg)
-        elif size > TWO32:
-            msg = ('The source model contains point sources: you cannot set '
-                   'disagg_by_src=true unless you convert them to multipoint '
-                   'sources with the command oq upgrade_nrml --multipoint %s'
-                   ) % oq.base_path
-            raise RuntimeError(msg)
         return sources
 
     def init_poes(self):
@@ -504,15 +497,8 @@ class ClassicalCalculator(base.HazardCalculator):
                         len(block), sum(src.weight for src in block))
                     trip = (block, sids, cmakers[grp_id])
                     triples.append(trip)
-                    # outs = (oq.outs_per_task if len(block) >= oq.outs_per_task
-                    #         else len(block))
-                    # if outs > 1 and not oq.disagg_by_src:
-                    #     smap.submit_split(trip, oq.time_per_task, outs)
-                    #     self.n_outs[grp_id] += outs
-                    # else:
                     smap.submit(trip)
                     self.n_outs[grp_id] += 1
-        logging.info('grp_id->n_outs: %s', list(self.n_outs.values()))
         return smap
 
     def collect_hazard(self, acc, pmap_by_kind):
@@ -557,10 +543,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
             elif slow_tasks:
                 logging.info(msg)
-
-        if 'rup' in self.datastore:
-            tot = len(self.datastore['rup/mag'])
-            logging.info('Stored {:_d} ruptures'.format(tot))
 
         if '_poes' in self.datastore:
             self.post_classical()

@@ -31,7 +31,7 @@ import numpy
 
 from openquake.baselib.general import distinct
 from openquake.baselib import config, hdf5
-from openquake.hazardlib import imt, scalerel, gsim, pmf, site
+from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance, floatdict  # needed
@@ -138,6 +138,19 @@ def gsim(value, basedir=''):
     gs = gsim_class(**kwargs)
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     return gs
+
+
+def occurrence_model(value):
+    """
+    Converts a TOML string into a TOM instance
+
+    >>> print(occurrence_model('[PoissonTOM]\\ntime_span=50.0'))
+    [PoissonTOM]
+    time_span = 50.0
+    <BLANKLINE>
+    """
+    [(clsname, dic)] = toml.loads(value).items()
+    return tom.registry[clsname](**dic)
 
 
 def logic_tree_path(value):
@@ -278,7 +291,8 @@ class SimpleId(object):
         elif re.match(self.regex, value):
             return value
         raise ValueError(
-            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-:" % value)
+            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-:"
+            % value)
 
 
 MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
@@ -290,6 +304,15 @@ asset_id = SimpleId(ASSET_ID_LENGTH)
 source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\.\-_]+$')
 nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
     ASSET_ID_LENGTH, r'[a-zA-Z0-9\.`!#$%\(\)\+/,;@\[\]\^_{|}~-]+')
+
+
+def risk_id(value):
+    """
+    A valid risk ID cannot contain the characters #'"
+    """
+    if '#' in value or '"' in value or "'" in value:
+        raise ValueError('Invalid ID "%s" contains forbidden chars' % value)
+    return value
 
 
 class FloatRange(object):
@@ -826,24 +849,6 @@ def logscale(x_min, x_max, n):
                          (x_max, x_min))
     delta = numpy.log(x_max / x_min)
     return numpy.exp(delta * numpy.arange(n) / (n - 1)) * x_min
-
-
-def sqrscale(x_min, x_max, n):
-    """
-    :param x_min: minumum value
-    :param x_max: maximum value
-    :param n: number of steps
-    :returns: an array of n values from x_min to x_max in a quadratic scale
-    """
-    if not (isinstance(n, int) and n > 0):
-        raise ValueError('n must be a positive integer, got %s' % n)
-    if x_min < 0:
-        raise ValueError('x_min must be positive, got %s' % x_min)
-    if x_max <= x_min:
-        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
-                         (x_max, x_min))
-    delta = numpy.sqrt(x_max - x_min) / (n - 1)
-    return x_min + (delta * numpy.arange(n))**2
 
 
 def dictionary(value):

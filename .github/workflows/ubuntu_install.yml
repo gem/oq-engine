@@ -62,7 +62,7 @@ jobs:
         then
           python install.py devel --version ${BRANCH}
         else
-          python install.py devel 
+          python install.py devel
         fi
     - name: Run tests
       run: |

@@ -42,6 +42,7 @@ import getpass
 import zipfile
 import tempfile
 import argparse
+import platform
 import subprocess
 from urllib.request import urlopen
 try:
@@ -296,6 +297,7 @@ def fix_version(commit, venv):
     with open(fname, 'w') as f:
         f.write(''.join(lines))
 
+
 def install(inst, version):
     """
     Install the engine in one of the three possible modes
@@ -345,8 +347,12 @@ def install(inst, version):
 
     # install the requirements
     branch = get_branch(version)
+    if sys.platform == 'darwin':
+        mac = '_' + platform.machine(),  # x86_64 or arm64
+    else:
+        mac = '',
     req = f'https://raw.githubusercontent.com/gem/oq-engine/{branch}/' \
-        'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
+        'requirements-py%d%d-%s%s.txt' % (PYVER + PLATFORM[sys.platform] + mac)
 
     subprocess.check_call([pycmd, '-m', 'pip', 'install', '-r', req])
 
@@ -384,6 +390,10 @@ def install(inst, version):
         oqreal = '%s\\Scripts\\oq' % inst.VENV
     else:
         oqreal = '%s/bin/oq' % inst.VENV
+
+    if inst in (user, devel):  # create/upgrade the db in the default location
+        # do not stop if `oq dbserver upgrade` is missing (versions < 3.15)
+        subprocess.run([oqreal, 'dbserver', 'upgrade'])
 
     if (inst is server and not os.path.exists(inst.OQ) or
        inst is devel_server and not os.path.exists(inst.OQ)):
@@ -423,23 +433,24 @@ def install(inst, version):
                 ['systemctl', 'enable', '--now', service_name])
             subprocess.check_call(['systemctl', 'start', service_name])
 
-    # download and unzip the demos
-    try:
-        with urlopen(DEMOS) as f:
-            data = f.read()
-    except OSError:
-        msg = 'However, we could not download the demos from %s' % DEMOS
-    else:
-        th, tmp = tempfile.mkstemp(suffix='.zip')
-        with os.fdopen(th, 'wb') as t:
-            t.write(data)
-        zipfile.ZipFile(tmp).extractall(inst.VENV)
-        os.remove(tmp)
-        path = os.path.join(inst.VENV, 'demos', 'hazard',
-                            'AreaSourceClassicalPSHA', 'job.ini')
-        msg = ('You can run a test calculation with the command\n'
-               f'{oqreal} engine --run {path}')
-    print('The engine was installed successfully.\n' + msg)
+    if inst in (user, server):
+        # download and unzip the demos
+        try:
+            with urlopen(DEMOS) as f:
+                data = f.read()
+        except OSError:
+            msg = 'However, we could not download the demos from %s' % DEMOS
+        else:
+            th, tmp = tempfile.mkstemp(suffix='.zip')
+            with os.fdopen(th, 'wb') as t:
+                t.write(data)
+            zipfile.ZipFile(tmp).extractall(inst.VENV)
+            os.remove(tmp)
+            path = os.path.join(inst.VENV, 'demos', 'hazard',
+                                'AreaSourceClassicalPSHA', 'job.ini')
+            msg = ('You can run a test calculation with the command\n'
+                   f'{oqreal} engine --run {path}')
+            print('The engine was installed successfully.\n' + msg)
 
 
 def remove(inst):

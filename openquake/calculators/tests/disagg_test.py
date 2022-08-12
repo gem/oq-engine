@@ -29,8 +29,8 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.tests.classical_test import check_disagg_by_src
 from openquake.qa_tests_data.disagg import (
-    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
-    case_master)
+    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
+    case_10, case_master)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -56,7 +56,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.run_calc(test_dir, 'job.ini', calculation_mode='classical')
         hc_id = self.calc.datastore.calc_id
         out = self.run_calc(test_dir, 'job.ini', exports=fmt,
-                            hazard_calculation=str(hc_id))
+                            hazard_calculation_id=str(hc_id))
         got = out['disagg', fmt]
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
@@ -108,8 +108,11 @@ class DisaggregationTestCase(CalculatorTestCase):
         # this exercise sampling
         self.run_calc(case_4.__file__, 'job.ini')
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        print([os.path.basename(f) for f in fnames])
-        self.assertEqual(len(fnames), 10)  # 2 sid x 8 keys x 2 poe x 2 imt
+        self.assertEqual(len(fnames), 14)
+        # Dist-0 Lon_Lat-0 Lon_Lat_TRT-0 Lon_Lat_TRT-1
+        # Mag-0 Mag_Dist-0 Mag_Dist_Eps-0 Mag_Dist_TRT-0
+        # Mag_Dist_TRT-1 Mag_Dist_TRT_Eps-0 Mag_Dist_TRT_Eps-1
+        # Mag_Lon_Lat-0, TRT-0 TRT-1
         for fname in fnames:
             if 'Mag_Dist' in fname and 'Eps' not in fname:
                 self.assertEqualFiles(
@@ -125,7 +128,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         # there is a collapsed nonparametric source with len(probs_occur)==3
 
     def test_case_6(self):
-        # test with international date line
+        # test with international date line and disagg_by_src
         self.run_calc(case_6.__file__, 'job.ini')
 
         # test CSV export
@@ -151,7 +154,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
         self.assertEqual(aw.trt, [b'Active Shallow Crust'])
 
-        check_disagg_by_src(self.calc.datastore)
+        check_disagg_by_src(self.calc.datastore, lvl=0)
 
     def test_case_7(self):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
@@ -186,7 +189,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         os.remove(fname)
 
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 16)  # 2 sid x 8 keys x 2 poe x 2 imt
+        self.assertEqual(len(fnames), 20)
         for fname in fnames:
             if 'Mag_Dist' in fname and 'Eps' not in fname:
                 self.assertEqualFiles(
@@ -201,3 +204,16 @@ class DisaggregationTestCase(CalculatorTestCase):
         # test mre results
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
+
+    def test_case_9(self):
+        # test mutex disaggregation. Results checked against hand-computed
+        # values (mp - 2022.06.28)
+        self.run_calc(case_9.__file__, 'job.ini')
+        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
+
+    def test_case_10(self):
+        # test single magnitude
+        self.run_calc(case_10.__file__, 'job.ini')
+        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/Mag-0.csv', fname)

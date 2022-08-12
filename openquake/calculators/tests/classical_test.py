@@ -24,7 +24,6 @@ from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile, contexts, nrml
 from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.hazardlib.sourcewriter import write_source_model
-from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -40,23 +39,39 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
     case_66, case_67, case_68, case_69, case_70, case_71, case_72, case_73,
-    case_74, case_75, case_76, case_77)
+    case_74, case_75, case_76, case_77, case_78)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
 
 
-def check_disagg_by_src(dstore):
+def check_disagg_by_src(dstore, lvl=-1):
     """
     Make sure that by composing disagg_by_src one gets the hazard curves
     """
-    extract(dstore, 'disagg_by_src?lvl_id=-1')  # check not broken
+    info = dstore['source_info'][:]
+    mutex = info['mutex_weight'] > 0
     mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
     dbs = dstore.sel('disagg_by_src')  # N, R, M, L, Ns
-    poes = general.pprod(dbs, axis=4)  # N, R, M, L
-    weights = dstore['weights'][:]
-    mean2 = numpy.einsum('sr...,r->s...', poes, weights)  # N, M, L
-    aac(mean, mean2, atol=1E-6)
+    if mutex.sum():
+        dbs_indep = dbs[:, :, :, :, ~mutex]
+        dbs_mutex = dbs[:, :, :, :, mutex]
+        poes_indep = general.pprod(dbs_indep, axis=4)  # N, R, M, L
+        poes_mutex = dbs_mutex.sum(axis=4)  # N, R, M, L
+        poes = poes_indep + poes_mutex - poes_indep * poes_mutex
+    else:
+        poes = general.pprod(dbs, axis=4)  # N, R, M, L
+    rlz_weights = dstore['weights'][:]
+    mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L
+    aac(mean, mean2, atol=1E-7)
+
+    # considering a level for which the mean is nonzero
+    assert mean[:, :, lvl].any(), mean[:, :, lvl]
+    # print('mean =', mean[:, :, lvl])
+
+    # check the extract call is not broken
+    aw = extract(dstore, 'disagg_by_src?lvl_id=%d' % lvl)
+    assert aw.array.dtype.names == ('src_id', 'poe')
 
 
 def get_dists(dstore):
@@ -137,7 +152,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hcurve.csv', fname)
 
         # check disagg_by_src for a single realization
-        check_disagg_by_src(self.calc.datastore)
+        check_disagg_by_src(self.calc.datastore, lvl=0)
 
     def test_case_3(self):
         self.assert_curves_ok(
@@ -320,7 +335,7 @@ hazard_uhs-std.csv
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
             case_17.__file__)
         ids = decode(self.calc.datastore['source_info']['source_id'])
-        numpy.testing.assert_equal(ids, ['A;0', 'B', 'A;1'])
+        numpy.testing.assert_equal(ids, ['A;0', 'A;1', 'B'])
 
     def test_case_18(self):  # GMPEtable, PointMSR, 3 hypodepths
         self.assert_curves_ok(
@@ -381,8 +396,8 @@ hazard_uhs-std.csv
         df = self.calc.datastore.read_df('source_info', 'source_id')
         numpy.testing.assert_equal(
             decode(list(df.index)),
-            ['SFLT1;0', 'COMFLT1;0', 'CHAR1;0', 'CHAR1;1',
-             'CHAR1;2', 'COMFLT1;1', 'SFLT1;1'])
+            ['CHAR1;0', 'CHAR1;1', 'CHAR1;2', 'COMFLT1;0', 'COMFLT1;1',
+             'SFLT1;0', 'SFLT1;1'])
 
         # check pandas readability of hcurves-rlzs and hcurves-stats
         df = self.calc.datastore.read_df('hcurves-rlzs', 'lvl')
@@ -449,9 +464,9 @@ hazard_uhs-std.csv
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'],
                               case_24.__file__, delta=1E-3)
         total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
-        self.assertEqual(total, 780)  # 260 x 3
+        self.assertEqual(total, 780)  # 260 x 3; 2 sites => 1560 contexts
         self.assertEqual(len(self.calc.datastore['rup/mag']), 1560)
-        numpy.testing.assert_equal(self.calc.cfactor, [243, 1560])
+        numpy.testing.assert_equal(self.calc.cfactor, [264, 1560])
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
 
@@ -468,20 +483,22 @@ hazard_uhs-std.csv
         # make sure probs_occur are stored as expected
         probs_occur = self.calc.datastore['rup/probs_occur'][:]
         tot_probs_occur = sum(len(po) for po in probs_occur)
-        self.assertEqual(tot_probs_occur, 28)  # 14 x 2
+        self.assertEqual(tot_probs_occur, 4)  # 2 x 2
 
-        # make sure there is an error when trying to disaggregate
-        with self.assertRaises(NotImplementedError):
-            hc_id = str(self.calc.datastore.calc_id)
-            self.run_calc(case_27.__file__, 'job.ini',
-                          hazard_calculation_id=hc_id,
-                          calculation_mode='disaggregation',
-                          truncation_level="3",
-                          poes_disagg="0.02",
-                          mag_bin_width="0.1",
-                          distance_bin_width="10.0",
-                          coordinate_bin_width="1.0",
-                          num_epsilon_bins="6")
+        # check disagg_by_src
+        check_disagg_by_src(self.calc.datastore, lvl=-1)
+
+        # make sure the disaggregation works
+        hc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(case_27.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id,
+                      calculation_mode='disaggregation',
+                      truncation_level="3",
+                      poes_disagg="0.02",
+                      mag_bin_width="0.1",
+                      distance_bin_width="10.0",
+                      coordinate_bin_width="1.0",
+                      num_epsilon_bins="6")
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
@@ -648,9 +665,9 @@ hazard_uhs-std.csv
                               shift_hypo='false')
 
     def test_case_45(self):
-        # this is a test for MMI with disagg_by_src
+        # this is a test for MMI with disagg_by_src and sampling
         self.assert_curves_ok(["hazard_curve-mean-MMI.csv"], case_45.__file__)
-        self.calc.datastore.read_df('disagg_by_src', 'src_id')
+        check_disagg_by_src(self.calc.datastore, lvl=0)
 
     def test_case_46(self):
         # SMLT with applyToBranches
@@ -907,19 +924,20 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurve-mean.csv', f)
 
     def test_case_65(self):
-        # reading/writing a multiFaultSource
-        oq = readinput.get_oqparam('job.ini', pkg=case_65)
-        csm = readinput.get_composite_source_model(oq)
-        tmpname = general.gettemp()
-        out = write_source_model(tmpname, csm.src_groups)
-        self.assertEqual(out[0], tmpname)
-        self.assertEqual(out[1], tmpname[:-4] + '_sections.xml')
-
         # running the calculation
         self.run_calc(case_65.__file__, 'job.ini')
 
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
+
+        # reading/writing a multiFaultSource
+        csm = self.calc.datastore['_csm']
+        tmpname = general.gettemp()
+        [src] = csm.src_groups[0].sources
+        src.rupture_idxs = [tuple(map(str, idxs)) for idxs in src.rupture_idxs]
+        out = write_source_model(tmpname, csm.src_groups)
+        self.assertEqual(out[0], tmpname)
+        # self.assertEqual(out[1], tmpname[:-4] + '_sections.xml')
 
         # make sure we are not breaking event_based
         self.run_calc(case_65.__file__, 'job_eb.ini')
@@ -1065,3 +1083,10 @@ hazard_uhs-std.csv
         self.run_calc(case_77.__file__, 'job.ini')
         [f1] = export(('uhs/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/uhs-mean.csv', f1)
+
+    def test_case_78(self):
+        # test calculation for modifiable GMPE with original tabular GMM
+        self.run_calc(case_78.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA_NegBinomTest.csv', f1)
+

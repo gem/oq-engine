@@ -55,6 +55,7 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     """
     :returns: (mag dist lon lat eps trt) edges and shape dictionary
     """
+    assert mags_by_trt
     tl = oq.truncation_level
     if oq.rlz_index is None:
         Z = oq.num_rlzs_disagg
@@ -68,9 +69,13 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
         mags.update(float(mag) for mag in _mags)
         trts.append(trt)
     mags = sorted(mags)
-    mag_edges = oq.mag_bin_width * numpy.arange(
-        int(numpy.floor(min(mags) / oq.mag_bin_width)),
-        int(numpy.ceil(max(mags) / oq.mag_bin_width) + 1))
+    min_mag = mags[0]
+    max_mag = mags[-1]
+    n1 = int(numpy.floor(min_mag / oq.mag_bin_width))
+    n2 = int(numpy.ceil(max_mag / oq.mag_bin_width))
+    if n2 == n1 or max_mag >= round((oq.mag_bin_width * n2), 3):
+        n2 += 1
+    mag_edges = oq.mag_bin_width * numpy.arange(n1, n2+1)
 
     # build dist_edges
     maxdist = max(oq.maximum_distance.max().values())
@@ -152,7 +157,7 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
     # Multi-dimensional iteration
-    min_eps = min(epsilons)
+    min_eps, max_eps = epsilons.min(), epsilons.max()
     for (m, p, z), iml in numpy.ndenumerate(iml3):
         if iml == -numpy.inf:  # zero hazard
             continue
@@ -169,7 +174,7 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
         # Now we split the epsilon into parts (one for each epsilon-bin larger
         # than lvls)
         if epsstar:
-            iii = (lvls >= min(epsilons)) & (lvls < max(epsilons))
+            iii = (lvls >= min_eps) & (lvls < max_eps)
             # The leftmost indexes are ruptures and epsilons
             poes[iii, idxs[iii]-1, m, p, z] = truncnorm.sf(lvls[iii])
         else:
@@ -419,6 +424,8 @@ mag_dist_eps_pmf = partial(pprod, axis=(LON, LAT))
 lon_lat_pmf = partial(pprod, axis=(DIS, MAG, EPS))
 mag_lon_lat_pmf = partial(pprod, axis=(DIS, EPS))
 trt_pmf = partial(pprod, axis=(1, 2, 3, 4, 5))
+mag_dist_trt_pmf = partial(pprod, axis=(3, 4, 5))
+mag_dist_trt_eps_pmf = partial(pprod, axis=(3, 4))
 # applied on matrix TRT MAG DIS LON LAT EPS
 
 
@@ -445,6 +452,8 @@ pmf_map = dict([
     ('TRT', trt_pmf),
     ('Mag_Dist', mag_dist_pmf),
     ('Mag_Dist_Eps', mag_dist_eps_pmf),
+    ('Mag_Dist_TRT', mag_dist_trt_pmf),
+    ('Mag_Dist_TRT_Eps', mag_dist_trt_eps_pmf),
     ('Lon_Lat', lon_lat_pmf),
     ('Mag_Lon_Lat', mag_lon_lat_pmf),
     ('Lon_Lat_TRT', lon_lat_trt_pmf),

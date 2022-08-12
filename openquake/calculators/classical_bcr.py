@@ -49,7 +49,7 @@ def classical_bcr(riskinputs, param, monitor):
         for taxo, assets in ri.asset_df.groupby('taxonomy'):
             for rlz in range(R):
                 pcurve = haz.extract(rlz)
-                out = crmodel.get_output(taxo, assets, pcurve, rlz=rlz)
+                out = crmodel.get_output(assets, pcurve)
                 for asset, (eal_orig, eal_retro, bcr) in zip(
                         assets.to_records(), out['structural']):
                     aval = asset['value-structural']
@@ -82,4 +82,5 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
             bcr_data[aid]['annual_loss_retro'] = data[:, 1]
             bcr_data[aid]['bcr'] = data[:, 2]
         self.datastore['bcr-rlzs'] = bcr_data
-        stats.set_rlzs_stats(self.datastore, 'bcr', assets=self.assetcol['id'])
+        stats.set_rlzs_stats(
+            self.datastore, 'bcr-rlzs', assets=self.assetcol['id'])

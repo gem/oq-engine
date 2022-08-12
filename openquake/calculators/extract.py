@@ -18,6 +18,7 @@
 from urllib.parse import parse_qs
 from unittest.mock import Mock
 from functools import lru_cache
+import operator
 import logging
 import json
 import gzip
@@ -35,10 +36,11 @@ from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, read_cmakers
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
+from openquake.risklib.scientific import LOSSTYPE
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
 from openquake.calculators import getters
@@ -66,7 +68,7 @@ def lit_eval(string):
 
 def get_info(dstore):
     """
-    :returns: {'stats': dic, 'loss_types': dic, 'num_rlzs': R}
+    :returns: a dict with 'stats', 'loss_types', 'num_rlzs', 'tagnames', etc
     """
     oq = dstore['oqparam']
     stats = {stat: s for s, stat in enumerate(oq.hazard_stats())}
@@ -149,6 +151,17 @@ def barray(iterlines):
     lst = [line.encode('utf-8') for line in iterlines]
     arr = numpy.array(lst)
     return arr
+
+
+def avglosses(dstore, loss_types, kind):
+    """
+    :returns: an array of average losses of shape (A, R, L)
+    """
+    lst = []
+    for loss_type in loss_types:
+        lst.append(dstore['avg_losses-%s/%s' % (kind, loss_type)][()])
+    # shape L, A, R -> A, R, L
+    return numpy.array(lst).transpose(1, 2, 0)
 
 
 def extract_(dstore, dspath):
@@ -501,6 +514,42 @@ def extract_rups_by_mag_dist(dstore, what):
     return extract_effect(dstore, 'rups_by_mag_dist')
 
 
+# for debugging classical calculations with few sites
+@extract.add('rup_ids')
+def extract_rup_ids(dstore, what):
+    """
+    Extract src_id, rup_id from the stored contexts
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/rup_ids
+    """
+    n = len(dstore['rup/grp_id'])
+    data = numpy.zeros(n, [('src_id', U32), ('rup_id', U32)])
+    data['src_id'] = dstore['rup/src_id'][:]
+    data['rup_id'] = dstore['rup/rup_id'][:]
+    data = numpy.unique(data)
+    return data
+
+
+# for debugging classical calculations with few sites
+@extract.add('mean_by_rup')
+def extract_mean_by_rup(dstore, what):
+    """
+    Extract src_id, rup_id, mean from the stored contexts
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/mean_by_rup
+    """
+    N = len(dstore['sitecol'])
+    assert N == 1
+    out = []
+    for cmaker in read_cmakers(dstore):
+        for ctx in cmaker.read_ctxs(dstore):
+            # shape (4, G, M, U) => U
+            means = cmaker.get_mean_stds([ctx])[0].mean(axis=(0, 1))
+            out.extend(zip(ctx.src_id, ctx.rup_id, means))
+    out.sort(key=operator.itemgetter(0, 1))
+    return numpy.array(out, [('src_id', U32), ('rup_id', U32), ('mean', F64)])
+
+
 @extract.add('source_data')
 def extract_source_data(dstore, what):
     """
@@ -533,7 +582,7 @@ def extract_sources(dstore, what):
     codes = qdict.get('code', None)
     if codes is not None:
         codes = [code.encode('utf8') for code in codes]
-    fields = 'source_id code num_sites eff_ruptures'
+    fields = 'source_id code num_sites num_ruptures'
     info = dstore['source_info'][()][fields.split()]
     wkt = decode(dstore['source_wkt'][()])
     arrays = []
@@ -675,7 +724,7 @@ def extract_agg_curves(dstore, what):
 
     /extract/agg_curves?kind=stats,absolute=1&loss_type=occupants&occupancy=RES
 
-    Returns an array of shape (P, S, 1...)
+    Returns an array of shape (P, S, ...)
     """
     info = get_info(dstore)
     qdic = parse(what, info)
@@ -683,7 +732,7 @@ def extract_agg_curves(dstore, what):
     for a in ('k', 'rlzs', 'kind', 'loss_type', 'absolute'):
         del tagdict[a]
     k = qdic['k']  # rlz or stat index
-    lt = tagdict.pop('lt')  # loss type string
+    lts = tagdict.pop('lt')  # loss type string
     [l] = qdic['loss_type']  # loss type index
     tagnames = sorted(tagdict)
     if set(tagnames) != info['tagnames']:
@@ -695,17 +744,16 @@ def extract_agg_curves(dstore, what):
         lst = decode(dstore['agg_keys'][:])
         agg_id = lst.index(','.join(tagvalues))
     kinds = list(info['stats'])
-    name = 'agg_curves-stats'
+    name = 'agg_curves-stats/' + lts[0]
     units = dstore.get_attr(name, 'units')
     shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
     units = dstore.get_attr(name, 'units')
     rps = shape_descr['return_period']
-    tup = (agg_id, k, l)
-    arr = dstore[name][tup].T  # shape P, R
+    arr = dstore[name][agg_id, k].T  # shape P, R
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
-        evalue, = dstore['agg_values'][agg_id][lt]
+        evalue, = dstore['agg_values'][agg_id][lts]
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
@@ -735,13 +783,12 @@ def extract_agg_losses(dstore, what):
     loss_type, tags = get_loss_type_tags(what)
     if not loss_type:
         raise ValueError('loss_type not passed in agg_losses/<loss_type>')
-    L = dstore['oqparam'].lti[loss_type]
-    if 'avg_losses-stats' in dstore:
+    if 'avg_losses-stats/' + loss_type in dstore:
         stats = list(dstore['oqparam'].hazard_stats())
-        losses = dstore['avg_losses-stats'][:, :, L]
-    elif 'avg_losses-rlzs' in dstore:
+        losses = dstore['avg_losses-stats/' + loss_type][:]
+    elif 'avg_losses-rlzs/' + loss_type in dstore:
         stats = ['mean']
-        losses = dstore['avg_losses-rlzs'][:, :, L]
+        losses = dstore['avg_losses-rlzs/' + loss_type][:]
     else:
         raise KeyError('No losses found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], losses, tags, stats)
@@ -782,14 +829,15 @@ def extract_aggregate(dstore, what):
     tagnames = qdic.get('tag', [])
     assetcol = dstore['assetcol']
     loss_types = info['loss_types']
-    ltypes = qdic.get('loss_type', [])  # list of indices
-    if ltypes:
-        lti = ltypes[0]
-        lt = [lt for lt, i in loss_types.items() if i == lti]
-        array = dstore[name + suffix][:, qdic['k'][0], lti]
-        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {}, lt)
+    ridx = qdic['k'][0]
+    lis = qdic.get('loss_type', [])  # list of indices
+    if lis:
+        li = lis[0]
+        lts = [lt for lt, i in loss_types.items() if i == li]
+        array = dstore['avg_losses%s/%s' % (suffix, lts[0])][:, ridx]
+        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {}, lts)
     else:
-        array = dstore[name + suffix][:, qdic['k'][0]]
+        array = avglosses(dstore, loss_types, suffix[1:])[:, ridx]
         aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {},
                           loss_types)
     for tagname in tagnames:
@@ -800,8 +848,10 @@ def extract_aggregate(dstore, what):
 
 @extract.add('losses_by_asset')
 def extract_losses_by_asset(dstore, what):
-    loss_dt = dstore['oqparam'].loss_dt(F32)
+    oq = dstore['oqparam']
+    loss_dt = oq.loss_dt(F32)
     rlzs = dstore['full_lt'].get_realizations()
+    stats = oq.hazard_stats()  # statname -> statfunc
     assets = util.get_assets(dstore)
     if 'losses_by_asset' in dstore:
         losses_by_asset = dstore['losses_by_asset'][()]
@@ -811,13 +861,14 @@ def extract_losses_by_asset(dstore, what):
             data = util.compose_arrays(assets, losses)
             yield 'rlz-%03d' % rlz.ordinal, data
     elif 'avg_losses-stats' in dstore:
-        aw = hdf5.ArrayWrapper.from_(dstore['avg_losses-stats'])
-        for s, stat in enumerate(aw.stat):
-            losses = cast(aw[:, s], loss_dt)
+        # only QGIS is testing this
+        avg_losses = avglosses(dstore, loss_dt.names, 'stats')  # shape ASL
+        for s, stat in enumerate(stats):
+            losses = cast(avg_losses[:, s], loss_dt)
             data = util.compose_arrays(assets, losses)
             yield stat, data
     elif 'avg_losses-rlzs' in dstore:  # there is only one realization
-        avg_losses = dstore['avg_losses-rlzs'][()]
+        avg_losses = avglosses(dstore, loss_dt.names, 'rlzs')
         losses = cast(avg_losses, loss_dt)
         data = util.compose_arrays(assets, losses)
         yield 'rlz-000', data
@@ -1332,7 +1383,7 @@ def extract_risk_stats(dstore, what):
     oq = dstore['oqparam']
     stats = oq.hazard_stats()
     df = dstore.read_df(what)
-    df['loss_type'] = [oq.loss_types[lid] for lid in df.loss_id]
+    df['loss_type'] = [LOSSTYPE[lid] for lid in df.loss_id]
     del df['loss_id']
     kfields = [f for f in df.columns if f in {
         'agg_id', 'loss_type', 'return_period'}]
