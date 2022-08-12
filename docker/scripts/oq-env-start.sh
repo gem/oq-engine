@@ -32,8 +32,8 @@ do
     sleep 1
 done
 
-if [ "$LOCKDOWN" = "TRUE" ]; then
-    echo "LOCKDOWN = ${LOCKDOWN}" > $HOME/local_settings.py
+if [ "$LOCKDOWN" = "True" ]; then
+    echo "LOCKDOWN = True" > $HOME/local_settings.py
     oq webui migrate
 	if [ -n "$ADMIN_LOGIN" ];
 	then
