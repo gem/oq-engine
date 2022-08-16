@@ -24,6 +24,8 @@ Module exports :class:`ChiouYoungs2014`
                :class:`ChiouYoungs2014PEER`
                :class:`ChiouYoungs2014NearFaultEffect`
 """
+import os
+import pathlib
 import numpy as np
 
 from openquake.baselib.general import CallableDict
@@ -295,44 +297,65 @@ def get_region(clsname):
         return "CAL"
 
 
+def _get_delta_cm(conf, imt):
+    # See equation A19 in Boore et al. (2022)
+
+    # If the stress parameters are not defined at the instantiation level, the
+    # conf dictionary does not contain the source_function_table
+    source_function_table = conf.get('source_function_table', None)
+
+    # Get stress params
+    stress_par_host = conf.get('stress_par_host')
+    stress_par_targ = conf.get('stress_par_target')
+    C = source_function_table[imt]
+
+    # Compute chi
+    if stress_par_targ > stress_par_host:
+        chi = C['chi_delta_pos']
+    else:
+        chi = C['chi_delta_neg']
+
+    # Compute delta_cm
+    delta_cm = chi * 2/3 * np.log10(stress_par_targ / stress_par_host)
+
+    return delta_cm
+
+
 def get_ln_y_ref(clsname, C, ctx, conf):
     """
     Returns the ground motion on the reference rock, described fully by
     Equation 11
     """
 
+    # Read configuration parameters
     imt = conf.get('imt')
     add_delta_c1 = conf.get('add_delta_c1')
     use_hw = conf.get('use_hw')
     alpha_nm = conf.get('alpha_nm')
-    delta_gamma_table = conf.get('delta_gamma_table')
-    source_function_table = conf.get('source_function_table')
+    delta_gamma_tab = conf.get('delta_gamma_tab')
 
+    # Get the region name from the name of the class
     region = get_region(clsname)
     delta_ztor = _get_delta_ztor(ctx)
 
+    # Delta CM is the correction factor for stress
     delta_cm = 0
-    if source_function_table is not None:
-        C = source_function_table(imt)
-        chi = C['chi']
-        delta_s1 = C['delta_s1']
-        delta_s2 = C['delta_s2']
-        delta_cm = chi * 2/3 * np.log10(delta_s2 / delta_s1)
+    if 'source_function_table' in conf:
+        delta_cm = _get_delta_cm(conf, imt)
 
+    # Compute median ground motion
     out = (get_stress_scaling(C) +
            get_magnitude_scaling(C, ctx.mag, delta_cm) +
            get_source_scaling_terms(C, ctx, delta_ztor, alpha_nm) +
            get_geometric_spreading(C, ctx.mag, ctx.rrup) +
            get_far_field_distance_scaling(region, C, ctx.mag, ctx.rrup) +
            get_directivity(clsname, C, ctx))
-
+    # Adjust ground-motion for the hanging wall effect
     if use_hw:
         out += get_hanging_wall_term(C, ctx)
-
+    # Long period adjustment as per Boore et al. (2022)
     if add_delta_c1:
-        imt = conf["imt"]
         out += get_delta_c1(ctx.rrup, imt, ctx.mag)
-
     return out
 
 
@@ -340,8 +363,9 @@ def get_magnitude_scaling(C, mag, delta_cm):
     """
     Returns the magnitude scaling
     """
+    f_m = np.zeros_like(mag)
     f_m = np.log(1.0 + np.exp(C["cn"] * (C["cm"] + delta_cm - mag)))
-    f_m = (CONSTANTS["c2"] * (mag - 6.0) +\
+    f_m = (CONSTANTS["c2"] * (mag - 6.0) +
            ((CONSTANTS["c2"] - C["c3"]) / C["cn"]) * f_m -
            (CONSTANTS["c2"] - C["c3"]) * delta_cm)
     return f_m
@@ -509,48 +533,56 @@ class ChiouYoungs2014(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
 
     def __init__(self, use_hw=True, add_delta_c1=False, alpha_nm=1.0,
-                 source_function_table=None, delta_gamma_table=None, **kwargs):
+                 stress_par_host=None, stress_par_target=None,
+                 delta_gamma_tab=None, **kwargs):
         super().__init__(use_hw=use_hw,
                          add_delta_c1=add_delta_c1,
                          alpha_nm=alpha_nm,
-                         source_function_table=source_function_table,
-                         delta_gamma_table=delta_gamma_table,
+                         stress_par_host=stress_par_host,
+                         stress_par_target=stress_par_target,
+                         delta_gamma_tab=delta_gamma_tab,
                          **kwargs)
 
         # Adding into the to conf dictionary
         self.conf = {}
         self.conf['use_hw'] = use_hw
         self.conf['alpha_nm'] = alpha_nm
-        self.conf['source_function_table'] = source_function_table
-        self.conf['delta_gamma_table'] = delta_gamma_table
+        self.conf['stress_par_host'] = stress_par_host
+        self.conf['stress_par_target'] = stress_par_target
+        self.conf['delta_gamma_tab'] = delta_gamma_tab
 
         # The file with the `source function table` has a structure similar to
         # a traditional coefficient table. The columns in the `source function
         # table` are:
         # - IMT             the intensity measure type (either PGA or SA)
+        # - S1FS            param
+        # - S1RS            param
+        # - S2FS            param
+        # - S2RS            param
+        # chi_delta_neg chi_delta_pos
         # - chi             i.e. χFS2RS in equation 6
-        # - delta_s1        the stress parameter in the host region
-        # - delta_s2        the stress parameter in the target region
-        if source_function_table is not None:
-            with open(source_function_table, encoding='utf8') as f:
-                tmp = f.readlines()
-            self.source_function_table = CoeffsTable(
+        if stress_par_target is not None:
+            cwd = pathlib.Path(__file__).parent.resolve()
+            fname = "chiou_youngs_2014_source_function_table.txt"
+            fpath = os.path.join(cwd, fname)
+            with open(fpath, encoding='utf8') as f:
+                tmp = f.read()
+            self.conf['source_function_table'] = CoeffsTable(
                 sa_damping=5, table=tmp)
 
         # The file with the `path adjustment table` has a structure similar to
         # a traditional coefficient table. The columns in the `path adjustment
         # table` are:
         # - IMT             the intensity measure type (either PGA or SA)
-        # - c0
-        # - c1
-        # - c2
-        # - c3
-        self.delta_gamma_table = None
-        if delta_gamma_table is not None:
-            with open(delta_gamma_table, encoding='utf8') as f:
+        # - c0              param
+        # - c1              param
+        # - c2              param
+        # - c3              param
+        self.delta_gamma_tab = None
+        if delta_gamma_tab is not None:
+            with open(delta_gamma_tab, encoding='utf8') as f:
                 tmp = f.readlines()
-            self.delta_gamma_table = CoeffsTable(
-                sa_damping=5, table=tmp)
+            self.delta_gamma_tab = CoeffsTable(sa_damping=5, table=tmp)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -560,8 +592,10 @@ class ChiouYoungs2014(GMPE):
         """
         name = self.__class__.__name__
         # reference to page 1144, PSA might need PGA value
+        self.conf['imt'] = PGA()
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
             name, self.COEFFS[PGA()], ctx, PGA(), self.conf)
+        # compute
         for m, imt in enumerate(imts):
             self.conf['imt'] = imt
             if repr(imt) == "PGA":
@@ -571,8 +605,8 @@ class ChiouYoungs2014(GMPE):
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
                     name, self.COEFFS[imt], ctx, imt, self.conf)
                 # reference to page 1144
-                # Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
-                # when it falls below the predicted PGA
+                # Predicted PSA value at T ≤ 0.3s should be set equal to the
+                # value of PGA when it falls below the predicted PGA
                 mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
                     if repr(imt).startswith("SA") and imt.period <= 0.3 \
                     else imt_mean
