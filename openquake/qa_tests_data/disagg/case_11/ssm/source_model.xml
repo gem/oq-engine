@@ -82,5 +82,58 @@
                 </simpleFaultRupture>
             </nonParametricSeismicSource>
         </sourceGroup>
+
+	<sourceGroup
+            name="Independent sources"
+            tectonicRegion="TRTA"
+            rup_interdep="indep"
+            src_interdep="indep">
+
+            <nonParametricSeismicSource id="s4" name="IV source">
+                <simpleFaultRupture probs_occur="0.95 0.05">
+                    <magnitude> 5.9 </magnitude>
+                    <rake>90.0</rake>
+                    <hypocenter depth="7.5" lon="-0.3" lat="0.15"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -0.3 0.0 -0.3 0.3
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip> 90.0 </dip>
+                        <upperSeismoDepth>0.0</upperSeismoDepth>
+                        <lowerSeismoDepth>15.0</lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+        </sourceGroup>
+
+        <!-- This source contains only one rupture which is the duplicate of
+        one rupture in the group with mutex sources -->
+        <sourceGroup
+            name="Independent sources"
+            tectonicRegion="TRTA"
+            rup_interdep="indep"
+            src_interdep="indep">
+
+            <nonParametricSeismicSource id="s5" name="V source">
+                <simpleFaultRupture probs_occur="0.99 0.01">
+                    <magnitude> 7.0 </magnitude>
+                    <rake>90.0</rake>
+                    <hypocenter depth="7.5" lon="-4.5" lat="0.0"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -0.6 0.0 -0.3 0.0
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip> 90.0 </dip>
+                        <upperSeismoDepth>0.0</upperSeismoDepth>
+                        <lowerSeismoDepth>15.0</lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+        </sourceGroup>
+
     </sourceModel>
 </nrml>
