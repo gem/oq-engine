@@ -48,7 +48,6 @@ Current stable version is the **OpenQuake Engine 3.14**. The documentation is av
 * [About](doc/about.md)
 * [FAQ](doc/faq.md)
 * [Manuals](https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual)
-* [OQ Commands](doc/adv-manual/oq-commands.rst)
 * [Architecture](doc/adv-manual/architecture.rst)
 * [Calculation Workflow](doc/calculation-workflow.md)
 * [Hardware Suggestions](doc/hardware-suggestions.md)

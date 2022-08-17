@@ -294,6 +294,7 @@ class ClassicalCalculator(base.HazardCalculator):
         pmap = dic['pmap']
         pmap.grp_id = grp_id
         pmap_by_src = dic.pop('pmap_by_src', {})
+        # pmap_by_src is non-empty only for mutex sources, see contexts.py
         for source_id, pm in pmap_by_src.items():
             # store the poes for the given source
             acc[source_id] = pm
