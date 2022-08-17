@@ -1,4 +1,4 @@
-# Copyright (C) 2020 GEM Foundation
+# Copyright (C) 2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -41,8 +41,8 @@ ENV LOCKDOWN=False
 WORKDIR ${HOME}
 RUN mkdir oqdata 
 #
-ADD scripts/oq-env-start.sh ${HOME}
+ADD scripts/oq-start.sh ${HOME}
 EXPOSE 8800:8800
 STOPSIGNAL SIGINT
 ENTRYPOINT ["/bin/bash", "-c"]
-CMD ["./oq-env-start.sh"]  
+CMD ["./oq-start.sh"]  
