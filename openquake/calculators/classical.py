@@ -342,13 +342,10 @@ class ClassicalCalculator(base.HazardCalculator):
         # NB: the relevant ruptures are less than the effective ruptures,
         # which are a preclassical concept
         if self.oqparam.disagg_by_src:
-            sources = self.get_source_ids()
+            self.get_source_ids()  # sets .M, .L1, .Ns
             self.datastore.create_dset(
                 'disagg_by_src', F32,
                 (self.N, self.R, self.M, self.L1, self.Ns))
-            self.datastore.set_shape_descr(
-                'disagg_by_src', site_id=self.N, rlz_id=self.R,
-                imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
 
     def get_source_ids(self):
         """
@@ -545,6 +542,12 @@ class ClassicalCalculator(base.HazardCalculator):
             elif slow_tasks:
                 logging.info(msg)
 
+        sources = self.get_source_ids()
+        if self.oqparam.disagg_by_src and any(';' in src for src in sources):
+            self.datastore.set_shape_descr(
+                'disagg_by_src', site_id=self.N, rlz_id=self.R,
+                imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
+            # arr = self.datastore['disagg_by_src'][:]
         if '_poes' in self.datastore:
             self.post_classical()
 
