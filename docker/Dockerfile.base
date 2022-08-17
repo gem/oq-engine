@@ -18,7 +18,7 @@ FROM rockylinux:8
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
       vendor="GEM Foundation"
 
-ARG repo=openquake-stable
+ARG repo=openquake
 
 RUN dnf install -y dnf-plugins-core && \
     dnf copr enable -y gem/$repo && \
