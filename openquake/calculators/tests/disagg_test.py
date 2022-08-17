@@ -212,14 +212,18 @@ class DisaggregationTestCase(CalculatorTestCase):
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
 
+        # checks that hazard curves for sources sum to the the total
         check_disagg_by_src(self.calc.datastore)
+
+        # checking that the right number of sources appear in dsg_by_src
+        dstore = self.calc.datastore.open('r')
+        self.assertEqual(dstore['disagg_by_src'].shape[-1], 6)
 
     def test_case_10(self):
         # test single magnitude
         self.run_calc(case_10.__file__, 'job.ini')
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag-0.csv', fname)
-
 
     def test_case_11(self):
         # test mutex disagg by src when sources grouped by prefix
@@ -228,6 +232,9 @@ class DisaggregationTestCase(CalculatorTestCase):
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
 
+        # checks that hazard curves for sources sum to the the total
         check_disagg_by_src(self.calc.datastore)
 
-
+        # checking that the right number of sources appear in dsg_by_src
+        dstore = self.calc.datastore.open('r')
+        self.assertEqual(dstore['disagg_by_src'].shape[-1], 3)
