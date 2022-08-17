@@ -240,11 +240,11 @@ class NegativeBinomialTOM(BaseTOM):
         :param time_span:
             The time interval of interest, in years.
         :param occurrence_rate:
-            To initialize super_class (usually overriden by method get_probability_no_exceedance())
+            To initialize super_class (usually overriden by method
+            get_probability_no_exceedance())
         :param parameters:
-            (list/np.ndarray) Parameters of the negbinom temporal model, in form of mean rate/dispersion (μ / α)
-            Kagan and Jackson, (2010)
-
+            (list/np.ndarray) Parameters of the negbinom temporal model, in
+            form of mean rate/dispersion (μ / α)  Kagan and Jackson, (2010)
 
                                     k
                    Γ(τ + k)      μ           1
@@ -260,7 +260,8 @@ class NegativeBinomialTOM(BaseTOM):
         self.mu = mu
         self.alpha = alpha
         if numpy.any(self.mu <= 0) or numpy.any(self.alpha <= 0):
-            raise ValueError('Mean rate and rate dispersion must be greater than 0')
+            raise ValueError('Mean rate and rate dispersion must be greater '
+                             'than 0')
         self.time_span = time_span
 
     def get_probability_one_or_more_occurrences(self, mean_rate=None):
@@ -328,8 +329,8 @@ class NegativeBinomialTOM(BaseTOM):
         :param tol:
             Quantile value up to which calculate the pmf
         :returns:
-            1D numpy array containing the probability mass distribution, up to tolerance level.
-
+            1D numpy array containing the probability mass distribution,
+            up to tolerance level.
         """
         # Gets dispersion from source object
         alpha = self.alpha
@@ -337,8 +338,14 @@ class NegativeBinomialTOM(BaseTOM):
         tau = 1 / alpha
         theta = tau / (tau + numpy.array(mean_rate).flatten()*self.time_span)
         if not n_max:
-            n_max = max(numpy.max(scipy.stats.nbinom.ppf(tol, tau, theta).astype(int)), 4)
-        pmf = scipy.stats.nbinom.pmf(numpy.arange(0, n_max), tau, theta[:, None])
+            n_max = numpy.max(
+                scipy.stats.nbinom.ppf(tol, tau, theta).astype(int))
+            if n_max < 4:
+                # minimum n_max for which the hazard equation is integrated,
+                # to avoid precision issues for probabilities of occur (<1e-6)
+                n_max = 4
+        pmf = scipy.stats.nbinom.pmf(
+            numpy.arange(0, n_max), tau, theta[:, None])
         return pmf
 
     def get_probability_no_exceedance(self, mean_rate, poes):
