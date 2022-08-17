@@ -39,7 +39,7 @@ $ docker run -u 0 -t -i  openquake/engine:nightly /bin/bash
 ```
 
 ### Environment Variables
-The Openquake image uses several environment variables but no one are required 
+The Openquake image uses several environment variables 
 
 LOCKDOWN
 
