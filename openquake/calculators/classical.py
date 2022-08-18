@@ -28,15 +28,14 @@ try:
     from PIL import Image
 except ImportError:
     Image = None
-from openquake.baselib import (
-    performance, parallel, hdf5, config, python3compat)
+from openquake.baselib import performance, parallel, hdf5, config
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
     get_nbytes_msg, agg_probs, pprod)
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
-from openquake.commonlib import calc
+from openquake.commonlib import calc, source_reader
 from openquake.calculators import base, getters
 
 U16 = numpy.uint16
@@ -84,15 +83,28 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 def semicolon_aggregate(probs, source_ids):
     """
     :param probs: array of shape (..., Ns)
-    :param source_ids: list source IDs with semicolons of length Ns
-    :returns: array of shape (..., N) and list of length N with N < Ns
+    :param source_ids: list of source IDs (some with semicolons) of length Ns
+    :returns: array of shape (..., Ns) and list of length N with N < Ns
 
-    >>> source_ids=['A;0', 'A;1', 'A;2', 'B', 'C', 'D;0', 'D;1']
+    This is used to aggregate array of probabilities in the case of sources
+    which are variations of a base source. Here is an example with Ns=7
+    sources reducible to N=4 base sources:
+
+    >>> source_ids = ['A;0', 'A;1', 'A;2', 'B', 'C', 'D;0', 'D;1']
     >>> probs = numpy.array([[.01, .02, .03, .04, .05, .06, .07],
     ...                      [.00, .01, .02, .03, .04, .05, .06]])
-    >>> semicolon_aggregate(probs, source_ids)
-    (array([[0.058906, 0.04    , 0.05    , 0.1258  ],
-           [0.0298  , 0.03    , 0.04    , 0.107   ]]), array(['A', 'B', 'C', 'D'], dtype='<U1'))
+
+    `semicolon_aggregate` effectively reduces the array of probabilities
+    from 7 to 4 components, however for storage convenience it does not
+    change the shape, so the missing components are zeros:
+
+    >>> semicolon_aggregate(probs, source_ids)  # (2, 7) => (2, 4)
+    (array([[0.058906, 0.04    , 0.05    , 0.1258  , 0.      , 0.      ,
+            0.      ],
+           [0.0298  , 0.03    , 0.04    , 0.107   , 0.      , 0.      ,
+            0.      ]]), array(['A', 'B', 'C', 'D'], dtype='<U1'))
+
+    It is assumed that the semicolon sources are independent, i.e. not mutex.
     """
     srcids = [srcid.split(';')[0] for srcid in source_ids]
     unique, indices = numpy.unique(srcids, return_inverse=True)
@@ -565,14 +577,19 @@ class ClassicalCalculator(base.HazardCalculator):
             elif slow_tasks:
                 logging.info(msg)
         if self.oqparam.disagg_by_src and '_poes' in self.datastore:
-            sources = list(self.csm.source_info)
-            if any(';' in src for src in sources):
+            srcids = list(self.csm.source_info)
+            if any(';' in srcid for srcid in srcids):
+                # enable reduction of the array disagg_by_src
+                for srcid, src in self.csm.source_info.items():
+                    if ';' in srcid:
+                        # make sure semicolon srcids are independent
+                        assert not src[source_reader.MUTEX]
                 arr = self.datastore['disagg_by_src'][:]
-                arr, sources = semicolon_aggregate(arr, sources)
+                arr, srcids = semicolon_aggregate(arr, srcids)
                 self.datastore['disagg_by_src'][:] = arr
                 self.datastore.set_shape_descr(
                     'disagg_by_src', site_id=self.N, rlz_id=self.R,
-                    imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
+                    imt=list(self.oqparam.imtls), lvl=self.L1, src_id=srcids)
         if '_poes' in self.datastore:
             self.post_classical()
 
