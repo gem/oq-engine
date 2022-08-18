@@ -28,10 +28,11 @@ try:
     from PIL import Image
 except ImportError:
     Image = None
-from openquake.baselib import performance, parallel, hdf5, config
+from openquake.baselib import (
+    performance, parallel, hdf5, config, python3compat)
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
-    get_nbytes_msg, agg_probs)
+    get_nbytes_msg, agg_probs, pprod)
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
@@ -79,6 +80,26 @@ def store_ctxs(dstore, rupdata_list, grp_id):
             else:
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
+
+def semicolon_aggregate(probs, source_ids):
+    """
+    :param probs: array of shape (..., Ns)
+    :param source_ids: list source IDs with semicolons of length Ns
+    :returns: array of shape (..., N) and list of length N with N < Ns
+
+    >>> source_ids=['A;0', 'A;1', 'A;2', 'B', 'C', 'D;0', 'D;1']
+    >>> probs = numpy.array([[.01, .02, .03, .04, .05, .06, .07],
+    ...                      [.00, .01, .02, .03, .04, .05, .06]])
+    >>> semicolon_aggregate(probs, source_ids)
+    (array([[0.058906, 0.04    , 0.05    , 0.1258  ],
+           [0.0298  , 0.03    , 0.04    , 0.107   ]]), array(['A', 'B', 'C', 'D'], dtype='<U1'))
+    """
+    srcids = [srcid.split(';')[0] for srcid in source_ids]
+    unique, indices = numpy.unique(srcids, return_inverse=True)
+    new = numpy.zeros_like(probs)
+    for i, s1, s2 in performance._idx_start_stop(indices):
+        new[..., i] = pprod(probs[..., s1:s2], axis=-1)
+    return new, unique
 
 #  ########################### task functions ############################ #
 
@@ -336,30 +357,30 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = F32
                 descr.append((param, dt))
             self.datastore.create_df('rup', descr, 'gzip')
-        self.Ns = len(self.csm.source_info)
         self.cfactor = numpy.zeros(2)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         # NB: the relevant ruptures are less than the effective ruptures,
         # which are a preclassical concept
         if self.oqparam.disagg_by_src:
-            self.get_source_ids()  # sets .M, .L1, .Ns
-            self.datastore.create_dset(
-                'disagg_by_src', F32,
-                (self.N, self.R, self.M, self.L1, self.Ns))
+            self.create_disagg_by_src()
 
-    def get_source_ids(self):
+    def create_disagg_by_src(self):
         """
         :returns: the unique source IDs contained in the composite model
         """
         oq = self.oqparam
         self.M = len(oq.imtls)
         self.L1 = oq.imtls.size // self.M
-        sources = list(self.csm.source_info)
+        sources = python3compat.decode(
+            self.datastore['source_info']['source_id'])
         size, msg = get_nbytes_msg(
-            dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
+            dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=len(sources)))
         if size > TWO32:
             raise RuntimeError('The matrix disagg_by_src is too large: %s'
                                % msg)
+        self.datastore.create_dset(
+            'disagg_by_src', F32,
+            (self.N, self.R, self.M, self.L1, len(sources)))
         return sources
 
     def init_poes(self):
@@ -542,12 +563,18 @@ class ClassicalCalculator(base.HazardCalculator):
             elif slow_tasks:
                 logging.info(msg)
 
-        sources = self.get_source_ids()
+        sources = python3compat.decode(
+            self.datastore['source_info']['source_id'])
         if self.oqparam.disagg_by_src and any(';' in src for src in sources):
-            self.datastore.set_shape_descr(
-                'disagg_by_src', site_id=self.N, rlz_id=self.R,
-                imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
-            # arr = self.datastore['disagg_by_src'][:]
+            arr = self.datastore['disagg_by_src'][:]
+            arr, sources = semicolon_aggregate(arr, sources)
+            '''
+            if 'disagg_by_src' in set(self.datastore):  # not using --hc
+                self.datastore['disagg_by_src'][:] = arr
+                self.datastore.set_shape_descr(
+                    'disagg_by_src', site_id=self.N, rlz_id=self.R,
+                    imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
+            '''
         if '_poes' in self.datastore:
             self.post_classical()
 
