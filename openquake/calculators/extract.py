@@ -1197,7 +1197,7 @@ def extract_disagg_by_src(dstore, what):
         f['site_id'], f['rlz_id'], f['imt_id'], f['lvl_id']]
     arr = numpy.zeros(len(src_id), [('src_id', '<S16'), ('poe', '<f8')])
     arr['src_id'] = src_id
-    arr['poe'] = poe
+    arr['poe'] = poe[:len(src_id)]
     arr.sort(order='poe')
     return ArrayWrapper(arr[::-1], dict(json=hdf5.dumps(f)))
 
