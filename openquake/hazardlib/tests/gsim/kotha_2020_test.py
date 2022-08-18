@@ -129,13 +129,14 @@ class KothaEtAl2020InstantiationTestCase(unittest.TestCase):
             "must be input in the form of a dictionary, if specified")
 
 class KothaEtAl2020regionalcoefficientsTestCase(unittest.TestCase):
-    ## test to check the selection of region and site specific coefficients
-
+    # test to check the selection of region and site specific coefficients
+    # the test sites and their corresponding delta_l2l and delta_c3 values
+    # were selected manually. 
     def test_get_distance_coefficients3(self):
-        c3 = None
         delta_c3_epsilon = 0
-        kind = 'regional'
         imt = 'PGA'
+        f = KothaEtAl2020regional()
+        self.att = f.att
         C = KothaEtAl2020regional.COEFFS[PGA()]
         ## manually selected sites
         data = [[-4.13, 38.55], [7.74, 46.23], [10.579, 62.477], 
@@ -144,24 +145,26 @@ class KothaEtAl2020regionalcoefficientsTestCase(unittest.TestCase):
         ## values retireved manually from the author provided csv files
         expected_val = np.array([-0.609876182476899, -0.589902644476899, 
             -0.609876182476899, -0.530099285476899, -1.065428170476899])
-        target = get_distance_coefficients_3(kind, c3, delta_c3_epsilon, C, imt, sctx)
+        target = get_distance_coefficients_3(self.att, delta_c3_epsilon, C, imt, sctx)
         np.testing.assert_array_equal(target, expected_val)
 
     def test_get_dl2l_coefficients(self):
         delta_l2l_epsilon = 0
         imt = 'PGA'
+        f = KothaEtAl2020regional()
+        self.tec = f.tec
         ## manually selected sites
         hypo = [[-4.13, 38.55], [7.74, 46.23], [10.579, 62.477], 
                 [12.34, 45.03], [15.02, 39.80]]
         ctx = pd.DataFrame(hypo, columns=['hypo_lon', 'hypo_lat'])
         ## values retireved manually from the author provided csv files
         expected_val = np.array([0., -0.1490727,  0., -0.28239376, -0.2107627 ])
-        dl2l = get_dl2l(ctx, imt, delta_l2l_epsilon)            
+        dl2l = get_dl2l(self.tec, ctx, imt, delta_l2l_epsilon)            
         np.testing.assert_array_equal(dl2l, expected_val)
     
 
 class KothaEtAl2020regionalTestCase(BaseGSIMTestCase):
-    ##Testing the adjusted version of the GMPE
+    ##Testing the regional version of the GMPE
     GSIM_CLASS = KothaEtAl2020regional
     ## for a list of pre defined scenarios, the GMPE predictions
     ## were calculated in a notebook using the 
