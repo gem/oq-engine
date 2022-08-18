@@ -371,8 +371,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.M = len(oq.imtls)
         self.L1 = oq.imtls.size // self.M
-        sources = python3compat.decode(
-            self.datastore['source_info']['source_id'])
+        sources = list(self.csm.source_info)
         size, msg = get_nbytes_msg(
             dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=len(sources)))
         if size > TWO32:
@@ -381,6 +380,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.create_dset(
             'disagg_by_src', F32,
             (self.N, self.R, self.M, self.L1, len(sources)))
+        self.datastore.set_shape_descr(
+            'disagg_by_src', site_id=self.N, rlz_id=self.R,
+            imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
         return sources
 
     def init_poes(self):
@@ -562,19 +564,15 @@ class ClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
             elif slow_tasks:
                 logging.info(msg)
-
-        sources = python3compat.decode(
-            self.datastore['source_info']['source_id'])
-        if self.oqparam.disagg_by_src and any(';' in src for src in sources):
-            arr = self.datastore['disagg_by_src'][:]
-            arr, sources = semicolon_aggregate(arr, sources)
-            '''
-            if 'disagg_by_src' in set(self.datastore):  # not using --hc
+        if self.oqparam.disagg_by_src and '_poes' in self.datastore:
+            sources = list(self.csm.source_info)
+            if any(';' in src for src in sources):
+                arr = self.datastore['disagg_by_src'][:]
+                arr, sources = semicolon_aggregate(arr, sources)
                 self.datastore['disagg_by_src'][:] = arr
                 self.datastore.set_shape_descr(
                     'disagg_by_src', site_id=self.N, rlz_id=self.R,
                     imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
-            '''
         if '_poes' in self.datastore:
             self.post_classical()
 
