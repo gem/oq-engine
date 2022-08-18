@@ -36,7 +36,7 @@ TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
 by_id = operator.attrgetter('source_id')
 
-CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT = 3, 4, 5, 6
+CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0

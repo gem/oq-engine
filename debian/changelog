@@ -1,6 +1,7 @@
   [Michele Simionato]
-  * Added some restrictions on risk IDs
+  * Restricted the accepted characters in risk IDs
   * Extended `disagg_by_src` to mutually exclusive sources (i.e. Japan)
+    and managed the so-called "semicolon" sources specially
 
   [Anne Hulsey]
   * Contributed `Mag_Dist_TRT` and `Mag_Dist_TRT_Eps` disaggregations
