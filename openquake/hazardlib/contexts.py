@@ -1339,11 +1339,11 @@ class PmapMaker(object):
 
             p = (~pm if cm.rup_indep else pm) * src.mutex_weight
             if ':' in src.source_id:
-                sid = src.source_id.split(':')[0]
-                if sid in pmap_by_src.keys():
-                    pmap_by_src[sid].__iadd__(p)
+                srcid = basename(src)
+                if srcid in pmap_by_src:
+                    pmap_by_src[srcid] += p
                 else:
-                    pmap_by_src[sid] = p
+                    pmap_by_src[srcid] = p
             else:
                 pmap_by_src[src.source_id] = p
             dt = time.time() - t0
