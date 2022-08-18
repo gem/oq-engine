@@ -1326,6 +1326,7 @@ class PmapMaker(object):
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
+        # used in the Japan model, test case_27
         pmap_by_src = {}
         cm = self.cmaker
         for src in self.sources:
