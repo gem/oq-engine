@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Added some restriction on the accepted characters in risk IDs
+  * Restricted the accepted characters in risk IDs
   * Extended `disagg_by_src` to mutually exclusive sources (i.e. Japan)
     and managed the so-called "semicolon" sources specially
 
