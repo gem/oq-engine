@@ -1326,6 +1326,7 @@ class PmapMaker(object):
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
+        # used in the Japan model, test case_27
         pmap_by_src = {}
         cm = self.cmaker
         for src in self.sources:
@@ -1336,8 +1337,16 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
                 cm.get_pmap(ctxs, pm)
+
             p = (~pm if cm.rup_indep else pm) * src.mutex_weight
-            pmap_by_src[src.source_id] = p
+            if ':' in src.source_id:
+                srcid = basename(src)
+                if srcid in pmap_by_src:
+                    pmap_by_src[srcid] += p
+                else:
+                    pmap_by_src[srcid] = p
+            else:
+                pmap_by_src[src.source_id] = p
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(nsites)
@@ -1346,6 +1355,7 @@ class PmapMaker(object):
             self.source_data['weight'].append(src.weight)
             self.source_data['ctimes'].append(dt)
             self.source_data['taskno'].append(cm.task_no)
+
         return pmap_by_src
 
     def make(self):
