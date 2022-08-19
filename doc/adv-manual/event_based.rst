@@ -1870,7 +1870,8 @@ The ``custom_site_id``
 ----------------------
 
 Since engine 3.13, it is possible to assign 6-character ASCII strings
-as unique identifiers for the sites. This can be convenient in various
+as unique identifiers for the sites (8-characters since engine 3.15).
+This can be convenient in various
 situations, especially when splitting a calculation in geographic regions.
 The way to enable it is to add a field called ``custom_site_id`` to
 the site model file, which must be unique for each site.
