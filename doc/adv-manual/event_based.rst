@@ -929,11 +929,7 @@ output: *after* performing the calculation, some statistics are performed
 on the stored ground motion fields. However, in the case of a single
 rupture it is possible to estimate the geometric mean and the geometric
 standard deviation  *a priori*, using hazardlib and without performing
-a full calculation. It is enough to instantiate the rupture, the site
-collection and the GMPE (that can be an ``AvgGMPE`` in the case of
-multiple GMPEs`) and to call directly the method ``.get_mean_and_stddevs``.
-That is easy and nice but it should be noticed that it comes with some
-limitation:
+a full calculation. However, there are some limitations to this approach:
 
 1. it only works when there is a single rupture
 2. you have to manage the ``minimum_intensity`` manually if you want to compare
@@ -1221,7 +1217,7 @@ large, the user will get a warning about suspicious GMFs.
 Moreover, especially for old ShakeMaps, the USGS can provide them in a
 format that the engine cannot read.
 
-Thus, this feature is not expected to work in 100% of the cases.
+Thus, this feature is not expected to work in all cases.
 
 Extended consequences
 =====================
@@ -1490,13 +1486,6 @@ buildings, which will be independent from the realization::
 In this demo there is no ``aggregate_by`` specified, so the only aggregation
 which is performed is the total aggregation. You are invited to specify
 ``aggregate_by`` and study how ``aggrisk`` changes.
-
-New risk features
-======================
-
-Here we document some new risk features which have not yet made it
-into the engine manual. These are new features and cannot be
-considered fully-tested and stable yet.
 
 Taxonomy mapping
 ---------------------------------
