@@ -249,7 +249,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         gmfa = gmfdict['rlz-000']
         self.assertEqual(gmfa.shape, (7,))
         self.assertEqual(gmfa.dtype.names,
-                         ('lon', 'lat', 'MMI'))
+                         ('custom_site_id', 'lon', 'lat', 'MMI'))
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
