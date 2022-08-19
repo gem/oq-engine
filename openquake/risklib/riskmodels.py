@@ -584,7 +584,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 consequence, tagname = byname.split('_by_')
                 # the taxonomy map is a dictionary loss_type ->
                 # [[(risk_taxon, weight]),...] for each asset taxonomy
-                for risk_t, weight in self.tmap[loss_type][asset['taxonomy']]:
+                for risk_t, weight in self.tmap[loss_type][asset[tagname]]:
                     # for instance risk_t = 'W_LFM-DUM_H6'
                     cs = coeffs[risk_t][loss_type]
                     csq[consequence] += scientific.consequence(
