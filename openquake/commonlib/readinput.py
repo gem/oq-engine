@@ -961,6 +961,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         # you can in other cases, typically with a grid which is mostly empty
         # (i.e. there are many hazard sites with no assets)
         assetcol.reduce_also(sitecol)
+    if 'custom_site_id' not in sitecol.array.dtype.names:
+        gh = sitecol.geohash(8)
+        if len(numpy.unique(gh)) < len(gh):
+            logging.error('geohashes are not unique')
+        sitecol.add_col('custom_site_id', 'S8', gh)
     return sitecol, assetcol, discarded
 
 

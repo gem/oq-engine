@@ -225,8 +225,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         gmfdict = dict(extract(self.calc.datastore, 'gmf_data'))
         gmfa = gmfdict['rlz-000']
         self.assertEqual(gmfa.shape, (9,))
-        self.assertEqual(gmfa.dtype.names,
-                         ('lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
+        self.assertEqual(
+            gmfa.dtype.names,
+            ('custom_site_id', 'lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
@@ -248,7 +249,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         gmfa = gmfdict['rlz-000']
         self.assertEqual(gmfa.shape, (7,))
         self.assertEqual(gmfa.dtype.names,
-                         ('lon', 'lat', 'MMI'))
+                         ('custom_site_id', 'lon', 'lat', 'MMI'))
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
