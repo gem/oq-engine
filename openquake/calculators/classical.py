@@ -477,6 +477,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 logging.info('Finished tile %d of %d', t, len(tiles))
         self.store_info()
         self.haz.store_disagg(acc)
+        if self.cfactor[0] == 0:
+            raise RuntimeError('Filtered away all ruptures??')
         logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
             int(self.cfactor[1]), int(self.cfactor[0]),
             self.cfactor[1] / self.cfactor[0]))

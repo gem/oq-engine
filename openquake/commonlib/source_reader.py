@@ -70,13 +70,6 @@ def create_source_info(csm, h5):
     lens = []
     for srcid, srcs in general.groupby(csm.get_sources(), basename).items():
         src = srcs[0]
-        # check all fragments have the same group ID
-        for newsrc in srcs[1:]:
-            if newsrc.grp_id != src.grp_id:
-                raise RuntimeError(
-                    'Fragments %s and %s belongs to different groups' %
-                    (newsrc.source_id, src.source_id))
-
         num_ruptures = sum(src.num_ruptures for src in srcs)
         mutex = getattr(src, 'mutex_weight', 0)
         trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
@@ -487,10 +480,13 @@ class CompositeSourceModel:
         """
         Set the src.offset field for each source
         """
+        def fragmentno(src):
+            fragment = src.source_id.split(':')[1]
+            return int(fragment.replace(';', ''))
         for srcs in general.groupby(self.get_sources(), basename).values():
             offset = 0
             if len(srcs) > 1:  # order by split number
-                srcs.sort(key=lambda src: int(src.source_id.split(':')[1]))
+                srcs.sort(key=fragmentno)
             for src in srcs:
                 src.offset = offset
                 offset += src.num_ruptures
