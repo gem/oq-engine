@@ -27,7 +27,7 @@ import numpy
 
 from openquake.baselib import parallel, general, hdf5
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, tom
-from openquake.hazardlib.contexts import ContextMaker, basename
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
@@ -51,6 +51,12 @@ source_info_dt = numpy.dtype([
 ])
 
 
+def get_source_id(src):  # before the colon
+    if getattr(src, 'mutex_weight', 0):
+        return src.source_id.split(';', 1)[0]
+    return src.source_id.split(':', 1)[0]
+
+
 def mutex_by_grp(src_groups):
     """
     :returns: a composite array with boolean fields src_mutex, rup_mutex
@@ -68,7 +74,8 @@ def create_source_info(csm, h5):
     data = {}  # src_id -> row
     wkts = []
     lens = []
-    for srcid, srcs in general.groupby(csm.get_sources(), basename).items():
+    for srcid, srcs in general.groupby(
+            csm.get_sources(), get_source_id).items():
         src = srcs[0]
         num_ruptures = sum(src.num_ruptures for src in srcs)
         mutex = getattr(src, 'mutex_weight', 0)
@@ -361,7 +368,7 @@ class CompositeSourceModel:
             for src in sg:
                 src.grp_id = grp_id
                 if src.code != b'P':
-                    source_id = basename(src)
+                    source_id = get_source_id(src)
                     self.code[source_id] = src.code
 
     # used for debugging; assume PoissonTOM; use read_cmakers instead
@@ -459,10 +466,16 @@ class CompositeSourceModel:
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         assert len(source_data) < TWO32, len(source_data)
-        for src_id, nsites, weight, ctimes in zip(
-                source_data['src_id'], source_data['nsites'],
+        src_mutex = mutex_by_grp(self.src_groups)['src_mutex']
+        for src_id, grp_id, nsites, weight, ctimes in zip(
+                source_data['src_id'], source_data['grp_id'],
+                source_data['nsites'],
                 source_data['weight'], source_data['ctimes']):
-            row = self.source_info[src_id.split(':')[0]]
+            if src_mutex[grp_id]:
+                baseid = src_id.split(';', 1)[0]
+            else:
+                baseid = src_id.split(':', 1)[0]
+            row = self.source_info[baseid]
             row[CALC_TIME] += ctimes
             row[WEIGHT] += weight
             row[NUM_SITES] += nsites
@@ -481,9 +494,11 @@ class CompositeSourceModel:
         Set the src.offset field for each source
         """
         def fragmentno(src):
-            fragment = src.source_id.split(':')[1]
-            return int(fragment.replace(';', ''))
-        for srcs in general.groupby(self.get_sources(), basename).values():
+            fragment = src.source_id.split(':', 1)[1]
+            return int(fragment)
+        for srcs in general.groupby(
+                self.get_sources(),
+                lambda src: src.source_id.split(':', 1)[0]).values():
             offset = 0
             if len(srcs) > 1:  # order by split number
                 srcs.sort(key=fragmentno)

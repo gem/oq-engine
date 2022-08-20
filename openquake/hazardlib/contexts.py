@@ -285,7 +285,7 @@ def basename(src):
     """
     :returns: the base name of a split source
     """
-    return src.source_id.split(':')[0]
+    return src.source_id.split(';', 1)[0]
 
 
 def get_num_distances(gsims):
@@ -1316,6 +1316,7 @@ class PmapMaker(object):
         nsrcs = len(self.sources)
         for src in self.sources:
             self.source_data['src_id'].append(src.source_id)
+            self.source_data['grp_id'].append(src.grp_id)
             self.source_data['nsites'].append(src.nsites)
             self.source_data['esites'].append(src.esites)
             self.source_data['nrupts'].append(src.num_ruptures)
@@ -1339,7 +1340,7 @@ class PmapMaker(object):
                 cm.get_pmap(ctxs, pm)
 
             p = (~pm if cm.rup_indep else pm) * src.mutex_weight
-            if ':' in src.source_id:
+            if ';' in src.source_id:
                 srcid = basename(src)
                 if srcid in pmap_by_src:
                     pmap_by_src[srcid] += p
@@ -1349,6 +1350,7 @@ class PmapMaker(object):
                 pmap_by_src[src.source_id] = p
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
+            self.source_data['grp_id'].append(src.grp_id)
             self.source_data['nsites'].append(nsites)
             self.source_data['esites'].append(src.esites)
             self.source_data['nrupts'].append(nctxs)
