@@ -79,8 +79,8 @@ def _get_delta_ztor(ctx):
 
 def _get_ln_y_ref(ctx, C):
     """
-    Get an intensity on a reference soil.
-    Implements eq. 13a.
+    Used only in the ACME2019 variant. This function gets an intensity on a
+    reference soil. Implements eq. 13a.
     """
     # Reverse faulting flag
     Frv = 1. if 30 <= ctx.rake <= 150 else 0.
@@ -324,7 +324,7 @@ def _get_delta_cm(conf, imt):
 def get_ln_y_ref(clsname, C, ctx, conf):
     """
     Returns the ground motion on the reference rock, described fully by
-    Equation 11
+    Equation 11 in CY14eqs (page 1131).
     """
 
     # Read configuration parameters
@@ -332,6 +332,8 @@ def get_ln_y_ref(clsname, C, ctx, conf):
     add_delta_c1 = conf.get('add_delta_c1')
     use_hw = conf.get('use_hw')
     alpha_nm = conf.get('alpha_nm')
+
+    # TODO not yet used
     delta_gamma_tab = conf.get('delta_gamma_tab')
 
     # Get the region name from the name of the class
@@ -343,19 +345,29 @@ def get_ln_y_ref(clsname, C, ctx, conf):
     if 'source_function_table' in conf:
         delta_cm = _get_delta_cm(conf, imt)
 
-    # Compute median ground motion
+    # Compute median ground motion:
+    # - The `get_magnitude_scaling` function when `delta_cm` ≠ 0 applies a
+    #   correction to ground motion that accounts for the differences in the
+    #   stress parameter between the host and target region as described in
+    #   Boore at al. (2022)
+    # - The `get_source_scaling_terms` function applies a correction to
+    #   ground motion for the style of faulting as per Boore et al. (2022;
+    #   eq. 5). The `alpha_nm` is provided at the instantiation level.
     out = (get_stress_scaling(C) +
            get_magnitude_scaling(C, ctx.mag, delta_cm) +
            get_source_scaling_terms(C, ctx, delta_ztor, alpha_nm) +
            get_geometric_spreading(C, ctx.mag, ctx.rrup) +
            get_far_field_distance_scaling(region, C, ctx.mag, ctx.rrup) +
            get_directivity(clsname, C, ctx))
+
     # Adjust ground-motion for the hanging wall effect
     if use_hw:
         out += get_hanging_wall_term(C, ctx)
-    # Long period adjustment as per Boore et al. (2022)
+
+    # Long period adjustment as per Boore et al. (2022; see equation 4)
     if add_delta_c1:
         out += get_delta_c1(ctx.rrup, imt, ctx.mag)
+
     return out
 
 
@@ -402,15 +414,20 @@ def get_source_scaling_terms(C, ctx, delta_ztor, alpha_nm):
     """
     f_src = np.zeros_like(ctx.mag)
     coshm = np.cosh(2.0 * np.clip(ctx.mag - 4.5, 0., None))
+
     # Style of faulting term
     pos = (30 <= ctx.rake) & (ctx.rake <= 150)
     neg = (-120 <= ctx.rake) & (ctx.rake <= -60)
+
     # reverse faulting flag
     f_src[pos] += C["c1a"] + (C["c1c"] / coshm[pos])
+
     # normal faulting flag
     f_src[neg] += (C["c1b"] + (C["c1d"] / coshm[neg])) * alpha_nm
+
     # Top of rupture term
     f_src += (C["c7"] + (C["c7b"] / coshm)) * delta_ztor
+
     # Dip term
     f_src += ((CONSTANTS["c11"] + (C["c11b"] / coshm)) *
               np.cos(np.radians(ctx.dip)) ** 2.0)
@@ -469,21 +486,27 @@ def get_mean_stddevs(name, C, ctx, imt, conf):
     """
     Return mean and standard deviation values
     """
+
     # Get ground motion on reference rock
     ln_y_ref = get_ln_y_ref(name, C, ctx, conf)
     y_ref = np.exp(ln_y_ref)
+
     # Get basin depth
     dz1pt0 = _get_delta_z1pt0(name, ctx)
+
     # for Z1.0 = 0.0 no deep soil correction is applied
     dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
     f_z1pt0 = get_basin_depth_term(name, C, dz1pt0)
+
     # Get linear amplification term
     f_lin = get_linear_site_term(name, C, ctx)
+
     # Get nonlinear amplification term
     f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
 
     # Add on the site amplification
     mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)
+
     # Get standard deviations
     sig, tau, phi = get_stddevs(
         name, C, ctx, ctx.mag, y_ref, f_nl_scaling)
@@ -493,7 +516,7 @@ def get_mean_stddevs(name, C, ctx, imt, conf):
 
 class ChiouYoungs2014(GMPE):
     """
-    Implements GMPE developed by Brian S.-J. Chiou and Robert R. Youngs
+    Implements GMM developed by Brian S.-J. Chiou and Robert R. Youngs
 
     Chiou, B. S.-J. and Youngs, R. R. (2014), "Updated of the Chiou and Youngs
     NGA Model for the Average Horizontal Component of Peak Ground Motion and
@@ -559,7 +582,6 @@ class ChiouYoungs2014(GMPE):
         # - S1RS            param
         # - S2FS            param
         # - S2RS            param
-        # chi_delta_neg chi_delta_pos
         # - chi             i.e. χFS2RS in equation 6
         if stress_par_target is not None:
             cwd = pathlib.Path(__file__).parent.resolve()
@@ -583,6 +605,7 @@ class ChiouYoungs2014(GMPE):
             with open(delta_gamma_tab, encoding='utf8') as f:
                 tmp = f.readlines()
             self.delta_gamma_tab = CoeffsTable(sa_damping=5, table=tmp)
+        # TODO this correction is not yet implemented!
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
