@@ -275,7 +275,7 @@ class SimpleId(object):
     :param length: maximum length of the ID
     :param regex: accepted characters
     """
-    def __init__(self, length, regex=r'^[\w_\-\.]+$'):
+    def __init__(self, length, regex=r'^[\w_\-:]+$'):
         self.length = length
         self.regex = regex
         self.__name__ = 'SimpleId(%d, %s)' % (length, regex)
@@ -283,7 +283,7 @@ class SimpleId(object):
     def __call__(self, value):
         if max(map(ord, value)) > 127:
             raise ValueError(
-                'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-.;'
+                'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-:'
                 % value)
         elif len(value) > self.length:
             raise ValueError("The ID '%s' is longer than %d character" %
@@ -291,7 +291,7 @@ class SimpleId(object):
         elif re.match(self.regex, value):
             return value
         raise ValueError(
-            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-."
+            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-:"
             % value)
 
 
