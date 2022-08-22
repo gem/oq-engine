@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import re
 import copy
 import os.path
 import pickle
@@ -27,7 +29,7 @@ import numpy
 
 from openquake.baselib import parallel, general, hdf5
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, tom
-from openquake.hazardlib.contexts import ContextMaker, basename
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
@@ -51,6 +53,19 @@ source_info_dt = numpy.dtype([
 ])
 
 
+def basename(src_id):
+    return re.split('[.:;]', src_id, 1)[0]
+
+
+def get_source_id(src):
+    return re.split('[.:]', src.source_id, 1)[0]
+
+
+def fragmentno(src):
+    fragment = re.split('[;:.]', src.source_id, 1)[1]
+    return int(fragment.replace('.', ''))
+
+
 def mutex_by_grp(src_groups):
     """
     :returns: a composite array with boolean fields src_mutex, rup_mutex
@@ -68,15 +83,9 @@ def create_source_info(csm, h5):
     data = {}  # src_id -> row
     wkts = []
     lens = []
-    for srcid, srcs in general.groupby(csm.get_sources(), basename).items():
+    for srcid, srcs in general.groupby(
+            csm.get_sources(), get_source_id).items():
         src = srcs[0]
-        # check all fragments have the same group ID
-        for newsrc in srcs[1:]:
-            if newsrc.grp_id != src.grp_id:
-                raise RuntimeError(
-                    'Fragments %s and %s belongs to different groups' %
-                    (newsrc.source_id, src.source_id))
-
         num_ruptures = sum(src.num_ruptures for src in srcs)
         mutex = getattr(src, 'mutex_weight', 0)
         trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
@@ -368,7 +377,7 @@ class CompositeSourceModel:
             for src in sg:
                 src.grp_id = grp_id
                 if src.code != b'P':
-                    source_id = basename(src)
+                    source_id = get_source_id(src)
                     self.code[source_id] = src.code
 
     # used for debugging; assume PoissonTOM; use read_cmakers instead
@@ -466,10 +475,12 @@ class CompositeSourceModel:
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         assert len(source_data) < TWO32, len(source_data)
-        for src_id, nsites, weight, ctimes in zip(
-                source_data['src_id'], source_data['nsites'],
+        for src_id, grp_id, nsites, weight, ctimes in zip(
+                source_data['src_id'], source_data['grp_id'],
+                source_data['nsites'],
                 source_data['weight'], source_data['ctimes']):
-            row = self.source_info[src_id.split(':')[0]]
+            baseid = re.split('[.:]', src_id, 1)[0]
+            row = self.source_info[baseid]
             row[CALC_TIME] += ctimes
             row[WEIGHT] += weight
             row[NUM_SITES] += nsites
@@ -487,10 +498,11 @@ class CompositeSourceModel:
         """
         Set the src.offset field for each source
         """
-        for srcs in general.groupby(self.get_sources(), basename).values():
+        for srcs in general.groupby(
+                self.get_sources(), get_source_id).values():
             offset = 0
             if len(srcs) > 1:  # order by split number
-                srcs.sort(key=lambda src: int(src.source_id.split(':')[1]))
+                srcs.sort(key=fragmentno)
             for src in srcs:
                 src.offset = offset
                 offset += src.num_ruptures

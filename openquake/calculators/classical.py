@@ -58,10 +58,6 @@ class Set(set):
     __iadd__ = set.__ior__
 
 
-def get_source_id(src):  # used in submit_tasks
-    return src.source_id.split(':')[0]
-
-
 def store_ctxs(dstore, rupdata_list, grp_id):
     """
     Store contexts in the datastore
@@ -327,7 +323,7 @@ class ClassicalCalculator(base.HazardCalculator):
         pmap = dic['pmap']
         pmap.grp_id = grp_id
         pmap_by_src = dic.pop('pmap_by_src', {})
-        # pmap_by_src is non-empty only for mutex sources, see contexts.py
+        # len(pmap_by_src) > 1 only for mutex sources, see contexts.py
         for source_id, pm in pmap_by_src.items():
             # store the poes for the given source
             acc[source_id] = pm
@@ -477,6 +473,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 logging.info('Finished tile %d of %d', t, len(tiles))
         self.store_info()
         self.haz.store_disagg(acc)
+        if self.cfactor[0] == 0:
+            raise RuntimeError('Filtered away all ruptures??')
         logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
             int(self.cfactor[1]), int(self.cfactor[0]),
             self.cfactor[1] / self.cfactor[0]))
@@ -519,7 +517,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 smap.submit(trip)
                 self.n_outs[grp_id] += 1
             else:  # regroup the sources in blocks
-                blks = (groupby(sg, get_source_id).values()
+                blks = (groupby(sg, source_reader.get_source_id).values()
                         if oq.disagg_by_src else
                         block_splitter(
                             sg, max_weight, get_weight, sort=True))

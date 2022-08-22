@@ -301,7 +301,7 @@ def split_source(src):
     grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib
     if len(splits) > 1:
         for i, split in enumerate(splits):
-            split.source_id = '%s:%s' % (src.source_id, i)
+            split.source_id = '%s.%s' % (src.source_id, i)
             split.trt_smr = src.trt_smr
             split.grp_id = grp_id
             split.id = src.id
