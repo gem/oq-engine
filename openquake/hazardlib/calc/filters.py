@@ -29,7 +29,7 @@ from openquake.hazardlib import site
 from openquake.hazardlib.geo.surface.multi import (
     MultiSurface, _multi_distances, _multi_rx_ry0)
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
+    KM_TO_DEGREES, angular_distance, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
 U32 = numpy.uint32
@@ -371,7 +371,7 @@ class SourceFilter(object):
         except Exception as exc:
             raise
             raise exc.__class__('source %s: %s' % (src.source_id, exc))
-        return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
+        return bbox
 
     def get_rectangle(self, src):
         """
