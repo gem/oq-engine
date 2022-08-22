@@ -285,7 +285,7 @@ def basename(src):
     """
     :returns: the base name of a split source
     """
-    return src.source_id.split(';', 1)[0]
+    return src.source_id.split('.', 1)[0]
 
 
 def get_num_distances(gsims):
@@ -1340,7 +1340,7 @@ class PmapMaker(object):
                 cm.get_pmap(ctxs, pm)
 
             p = (~pm if cm.rup_indep else pm) * src.mutex_weight
-            if ';' in src.source_id:
+            if '.' in src.source_id:
                 srcid = basename(src)
                 if srcid in pmap_by_src:
                     pmap_by_src[srcid] += p

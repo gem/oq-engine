@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import re
 import copy
 import os.path
 import pickle
@@ -51,10 +53,17 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def get_source_id(src):  # before the colon
-    if getattr(src, 'mutex_weight', 0):
-        return src.source_id.split(';', 1)[0]
-    return src.source_id.split(':', 1)[0]
+def basename(src_id):
+    return re.split('[.:;]', src_id, 1)[0]
+
+
+def get_source_id(src):
+    return re.split('[.:]', src.source_id, 1)[0]
+
+
+def fragmentno(src):
+    fragment = re.split('[.:;]', src.source_id, 1)[1]
+    return int(fragment.replace(';', '').replace(':', ''))
 
 
 def mutex_by_grp(src_groups):
@@ -471,10 +480,7 @@ class CompositeSourceModel:
                 source_data['src_id'], source_data['grp_id'],
                 source_data['nsites'],
                 source_data['weight'], source_data['ctimes']):
-            if src_mutex[grp_id]:
-                baseid = src_id.split(';', 1)[0]
-            else:
-                baseid = src_id.split(':', 1)[0]
+            baseid = re.split('[.:]', src_id, 1)[0]
             row = self.source_info[baseid]
             row[CALC_TIME] += ctimes
             row[WEIGHT] += weight
@@ -493,12 +499,7 @@ class CompositeSourceModel:
         """
         Set the src.offset field for each source
         """
-        def fragmentno(src):
-            fragment = src.source_id.split(':', 1)[1]
-            return int(fragment)
-        for srcs in general.groupby(
-                self.get_sources(),
-                lambda src: src.source_id.split(':', 1)[0]).values():
+        for srcs in general.groupby(self.get_sources(), get_source_id).values():
             offset = 0
             if len(srcs) > 1:  # order by split number
                 srcs.sort(key=fragmentno)
