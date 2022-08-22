@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import abc
 import copy
 import time
@@ -285,7 +286,7 @@ def basename(src):
     """
     :returns: the base name of a split source
     """
-    return src.source_id.split('.', 1)[0]
+    return re.split('[.:]', src.source_id, 1)[0]
 
 
 def get_num_distances(gsims):
@@ -1383,8 +1384,8 @@ class PmapMaker(object):
         elif self.disagg_by_src:
             # all the sources in the group have the same source_id because
             # of the groupby(group, get_source_id) in classical.py
-            src = self.sources[0].source_id.split(':')[0]
-            dic['pmap_by_src'] = {src: pmap}
+            srcid = basename(self.sources[0])
+            dic['pmap_by_src'] = {srcid: pmap}
         return dic
 
 

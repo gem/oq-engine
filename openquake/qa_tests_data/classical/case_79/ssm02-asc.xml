@@ -12,7 +12,7 @@ xmlns:gml="http://www.opengis.net/gml"
 	tectonicRegion="Active Shallow Crust"
 	>
 	<multiPointSource
-            id="ASCTRAS407;0"
+            id="ASCTRAS407.0"
             name="multiPointSource-98"
             >
                 <multiPointGeometry>

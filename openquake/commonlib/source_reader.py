@@ -475,7 +475,6 @@ class CompositeSourceModel:
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         assert len(source_data) < TWO32, len(source_data)
-        src_mutex = mutex_by_grp(self.src_groups)['src_mutex']
         for src_id, grp_id, nsites, weight, ctimes in zip(
                 source_data['src_id'], source_data['grp_id'],
                 source_data['nsites'],
@@ -499,7 +498,8 @@ class CompositeSourceModel:
         """
         Set the src.offset field for each source
         """
-        for srcs in general.groupby(self.get_sources(), get_source_id).values():
+        for srcs in general.groupby(
+                self.get_sources(), get_source_id).values():
             offset = 0
             if len(srcs) > 1:  # order by split number
                 srcs.sort(key=fragmentno)
