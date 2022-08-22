@@ -62,8 +62,8 @@ def get_source_id(src):
 
 
 def fragmentno(src):
-    fragment = re.split('[;:.]', src.source_id, 1)[1]
-    return int(fragment.replace('.', ''))
+    fragment = re.split('[:.;]', src.source_id, 1)[1]
+    return int(fragment.replace('.', '').replace(';', ''))
 
 
 def mutex_by_grp(src_groups):
