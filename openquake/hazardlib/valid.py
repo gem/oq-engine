@@ -31,12 +31,14 @@ import numpy
 
 from openquake.baselib.general import distinct
 from openquake.baselib import config, hdf5
-from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
+from openquake.hazardlib import imt, scalerel, gsim, site, tom
+from openquake.hazardlib import pmf as hl_pmf
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance, floatdict  # needed
 
-PRECISION = pmf.PRECISION
+PRECISION = hl_pmf.PRECISION
+VERYSMALL = 1e-15
 
 SCALEREL = scalerel.get_available_magnitude_scalerel()
 
@@ -926,7 +928,7 @@ def pmf(value):
     [(0.157, 0), (0.843, 1)]
     """
     probs = probabilities(value)
-    if sum(probs) != 1:
+    if abs(sum(probs) - 1.0) > VERYSMALL:
         # avoid https://github.com/gem/oq-engine/issues/5901
         raise ValueError('The probabilities %s do not sum up to 1!' % value)
     return [(p, i) for i, p in enumerate(probs)]

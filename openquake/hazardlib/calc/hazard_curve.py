@@ -53,6 +53,7 @@ from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import PoissonTOM, FatedTOM
+from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource
 
 
 def _cluster(imtls, tom, gsims, pmap):
@@ -89,6 +90,7 @@ def classical(group, sitecol, cmaker):
     src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
     cluster = getattr(group, 'cluster', None)
     trts = set()
+    are_np_srcs = []
     for src in group:
         if not src.num_ruptures:
             # src.num_ruptures may not be set, so it is set here
@@ -96,6 +98,19 @@ def classical(group, sitecol, cmaker):
         # set the proper TOM in case of a cluster
         if cluster:
             src.temporal_occurrence_model = FatedTOM(time_span=1)
+            # Check if all the ruptures in the cluster are
+            if hasattr(src, 'data'):
+                for dat in src.data:
+                    nonp = False
+                    if (isinstance(src, NonParametricSeismicSource) and
+                        dat[1].data[0][0] < 1.0 and dat[1].data[0][0] > 0.0):
+                        nonp = True
+                    are_np_srcs.append(nonp)
+            # Define a fated temporal occurrence model only when there in no
+            # specific probability of occurrence
+            if ~numpy.all(numpy.array(are_np_srcs)):
+                src.temporal_occurrence_model = FatedTOM(time_span=1)
+            print(">>", are_np_srcs)
         trts.add(src.tectonic_region_type)
     [trt] = trts  # there must be a single tectonic region type
     if cmaker.trt != '*':
