@@ -54,14 +54,21 @@ source_info_dt = numpy.dtype([
 
 
 def basename(src_id):
+    "Prefix before :.;"
     return re.split('[.:;]', src_id, 1)[0]
 
 
 def get_source_id(src):
-    return re.split('[.:]', src.source_id, 1)[0]
+    "Prefix before :."
+    src_id = src if isinstance(src, str) else src.source_id
+    base, rest = re.split('[.:]', src_id, 1)
+    if ';' in rest:
+        return base + ';' + rest.split(';')[1]
+    return base
 
 
 def fragmentno(src):
+    "Postfix after :.; as an integer"
     fragment = re.split('[:.;]', src.source_id, 1)[1]
     return int(fragment.replace('.', '').replace(';', ''))
 
@@ -479,7 +486,7 @@ class CompositeSourceModel:
                 source_data['src_id'], source_data['grp_id'],
                 source_data['nsites'],
                 source_data['weight'], source_data['ctimes']):
-            baseid = re.split('[.:]', src_id, 1)[0]
+            baseid = get_source_id(src_id)
             row = self.source_info[baseid]
             row[CALC_TIME] += ctimes
             row[WEIGHT] += weight

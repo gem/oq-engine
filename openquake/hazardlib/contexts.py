@@ -286,7 +286,11 @@ def basename(src):
     """
     :returns: the base name of a split source
     """
-    return re.split('[.:]', src.source_id, 1)[0]
+    src_id = src if isinstance(src, str) else src.source_id
+    base, rest = re.split('[.:]', src_id, 1)
+    if ';' in rest:
+        return base + ';' + rest.split(';')[1]
+    return base
 
 
 def get_num_distances(gsims):
