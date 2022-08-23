@@ -659,11 +659,12 @@ def build_multi_fault_source_node(multi_fault_source):
         probs = ' '.join(map(str, prbs))
         nodes = [Node('magnitude', text=str(mag)),
                  Node('sectionIndexes',
-                      {'indexes': ','.join(map(str, rup_idxs))}),
+                      {'indexes': ' '.join(map(str, rup_idxs))}),
                  Node('rake', text=str(rake))]
         rup_node = Node('multiPlanesRupture', {'probs_occur': probs},
                         nodes=nodes)
         rup_nodes.append(rup_node)
+
     return Node("multiFaultSource",
                 get_source_attributes(multi_fault_source),
                 nodes=rup_nodes)

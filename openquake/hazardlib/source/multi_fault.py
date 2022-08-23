@@ -89,7 +89,7 @@ class MultiFaultSource(BaseSeismicSource):
         """
         ridxs = []
         for rupture_idxs in self.rupture_idxs:
-            ridxs.append(' '.join(f'{rupture_idxs}'))
+            ridxs.append(' '.join(map(str, rupture_idxs)))
         # each pmf has the form [(prob0, 0), (prob1, 1), ...]
         return dict(mag=self.mags, rake=self.rakes,
                     probs_occur=self.probs_occur, rupture_idxs=ridxs)
