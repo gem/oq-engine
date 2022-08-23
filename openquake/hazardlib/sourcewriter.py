@@ -29,7 +29,7 @@ from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf
 from openquake.hazardlib.source import (
     NonParametricSeismicSource, check_complex_fault, PointSource)
-from openquake.hazardlib.tom import PoissonTOM, NegativeBinomialTOM
+from openquake.hazardlib.tom import NegativeBinomialTOM
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
 
@@ -795,8 +795,9 @@ def write_source_model(dest, sources_or_groups, name=None,
     with open(dest, 'wb') as f:
         nrml.write([smodel], f, '%s')
     if sections:
-        secnodes = [obj_to_node(sec) for sec in sections]
-        gmodel = Node("geometryModel", attrs, nodes=secnodes)
+        secnode = Node('section', {'id': '1'},
+                       nodes=[obj_to_node(sec) for sec in sections])
+        gmodel = Node("geometryModel", attrs, nodes=[secnode])
         with open(dest[:-4] + '_sections.xml', 'wb') as f:
             nrml.write([gmodel], f, '%s')
             out.append(f.name)
