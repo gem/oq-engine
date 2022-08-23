@@ -95,10 +95,18 @@ def classical(group, sitecol, cmaker):
         if not src.num_ruptures:
             # src.num_ruptures may not be set, so it is set here
             src.num_ruptures = src.count_ruptures()
-        # set the proper TOM in case of a cluster
+        # Set to the source the proper TOM in case of a cluster. Options here
+        # should the following:
+        # - FatedTOM to the source and ruptures with probabilities of
+        #   occurrence equal to [0 1]: in this case if the cluster occur the
+        #   source occurs and all the ruptures occur once
+        # - FatedTOM to the source: in this case if the cluster occur the
+        #   source occurs and all the ruptures occur
         if cluster:
-            src.temporal_occurrence_model = FatedTOM(time_span=1)
-            # Check if all the ruptures in the cluster are
+            # Check if all the ruptures in the cluster are non parametric
+            # sources and the probabilities of occurrence are different than
+            # the ones expected in case of a 'fated' cluster model i.e. a model
+            # where the all the ruptures have a prob=1 to occur.
             if hasattr(src, 'data'):
                 for dat in src.data:
                     nonp = False
@@ -106,11 +114,13 @@ def classical(group, sitecol, cmaker):
                         dat[1].data[0][0] < 1.0 and dat[1].data[0][0] > 0.0):
                         nonp = True
                     are_np_srcs.append(nonp)
-            # Define a fated temporal occurrence model only when there in no
+            # Define a fated temporal occurrence model for
             # specific probability of occurrence
             if ~numpy.all(numpy.array(are_np_srcs)):
                 src.temporal_occurrence_model = FatedTOM(time_span=1)
-            print(">>", are_np_srcs)
+            else:
+                src.temporal_occurrence_model = None
+            breakpoint()
         trts.add(src.tectonic_region_type)
     [trt] = trts  # there must be a single tectonic region type
     if cmaker.trt != '*':
