@@ -105,7 +105,7 @@ def get_distance_coefficients_1(kind, c3, c3_epsilon, C, imt, sctx):
     existing tau_c3 distribution
     """
     if c3:
-        
+
         # Use the c3 that has been defined on input
         return c3
     else:
@@ -147,22 +147,23 @@ def get_distance_coefficients_2(kind, c3, c3_epsilon, C, imt, sctx):
 
 def get_distance_coefficients_3(att, delta_c3_epsilon, C, imt, sctx):
     """
-    Return site-specific coefficient 'C3'. The function retrieves the 
-    value of delta_c3 and the standard error of delta_c3 from the 'att' 
-    geojson file depending on the location of site. This delta_c3 is 
+    Return site-specific coefficient 'C3'. The function retrieves the
+    value of delta_c3 and the standard error of delta_c3 from the 'att'
+    geojson file depending on the location of site. This delta_c3 is
     added to the generic coefficient 'c3' from the GMPE. A delta_c3_epsilon
     value of +/- 1.6 gives the 95% confidence interval for delta_c3.
     """
     s = [(Point(lon, lat)) for lon, lat in zip(sctx.lon, sctx.lat)]
-    delta_c3 =np.zeros((len(sctx.lat), 2), dtype = float)
+    delta_c3 = np.zeros((len(sctx.lat), 2), dtype=float)
     for i, feature in enumerate(att):
         prepared_polygon = prep(shape(feature['geometry']))
         contained = list(filter(prepared_polygon.contains, s))
         if contained:
-            l = np.concatenate([np.where((sctx['lon']== p.x) & (sctx['lat']==p.y))[0] for p in contained])
+            l = np.concatenate([np.where((sctx['lon'] == p.x) &
+                               (sctx['lat'] == p.y))[0] for p in contained])
             delta_c3[l, 0] = feature['properties'][str(imt)]
             delta_c3[l, 1] = feature['properties'][str(imt)+'_se']
-        
+
     return C["c3"] + delta_c3[:, 0] + delta_c3_epsilon * delta_c3[:, 1]
 
 
@@ -176,7 +177,7 @@ def get_distance_term(kind, c3, c3_epsilon, C, ctx, imt):
     if kind != 'regional':
         c3 = get_distance_coefficients(kind, c3, c3_epsilon, C, imt, ctx)
     f_r = (C["c1"] + C["c2"] * (ctx.mag - CONSTANTS["Mref"])) *\
-        np.log(rval / rref_val) + (c3 * (rval - rref_val) / 100.)    
+        np.log(rval / rref_val) + (c3 * (rval - rref_val) / 100.)
     return f_r
 
 
@@ -194,22 +195,23 @@ def get_dl2l(tec, ctx, imt, delta_l2l_epsilon):
     """
     Returns rupture source specific delta_l2l values. The method
     retrieves the delta_l2l and standard error of delta_l2l values.
-    if delta_l2l_epsilon is provided, standard error of delta_c3 
-    will be included. A delta_l2l_epsilon value of +/- 1.6 gives 
+    if delta_l2l_epsilon is provided, standard error of delta_c3
+    will be included. A delta_l2l_epsilon value of +/- 1.6 gives
     the 95% confidence interval for delta_l2l.
     """
     f = [(Point(lon, lat)) for lon, lat in zip(ctx.hypo_lon, ctx.hypo_lat)]
-    dl2l = np.zeros((len(ctx.hypo_lon), 2), dtype = float)
+    dl2l = np.zeros((len(ctx.hypo_lon), 2), dtype=float)
     for i, feature in enumerate(tec):
         prepared_polygon = prep(shape(feature['geometry']))
         contained = list(filter(prepared_polygon.contains, f))
         if contained:
-            l = np.concatenate([np.where((ctx['hypo_lon']== p.x) & (ctx['hypo_lat']==p.y))[0] for p in contained])
+            l = np.concatenate([np.where((ctx['hypo_lon'] == p.x) &
+                               (ctx['hypo_lat'] == p.y))[0] for p in contained])
             dl2l[l, 0] = feature['properties'][str(imt)]
             dl2l[l, 1] = feature['properties'][str(imt)+'_se']
 
     return dl2l[:, 0] + delta_l2l_epsilon * dl2l[:, 1]
-    
+
 
 def get_sigma_mu_adjustment(C, imt, ctx):
     """
@@ -450,12 +452,14 @@ class KothaEtAl2020(GMPE):
                 extra['GEOLOGICAL_UNITS'] = self.GEOLOGICAL_UNITS
             else:
                 phi_s2s = None
-            if self.kind =='regional':
-                c3 = get_distance_coefficients_3(self.att, self.delta_c3_epsilon, C, imt, ctx)
+            if self.kind == 'regional':
+                c3 = get_distance_coefficients_3(self.att,
+                                                 self.delta_c3_epsilon,
+                                                 C, imt, ctx)
             else:
                 c3 = self.c3
             fp = get_distance_term(self.kind, c3, self.c3_epsilon,
-                                        C, ctx, imt)
+                                   C, ctx, imt)
             mean[m] = (get_magnitude_scaling(C, ctx.mag) + fp +
                        get_site_amplification(self.kind, extra, C, ctx, imt))
             # GMPE originally in cm/s/s - convert to g
@@ -523,24 +527,25 @@ class KothaEtAl2020(GMPE):
 class KothaEtAl2020regional(KothaEtAl2020):
     """
     Adaptation of the Kotha et al. (2020) GMPE using
-    the source and site specific adjustments. 
+    the source and site specific adjustments.
     """
 
     #: Required rupture parameters are magnitude, hypocentral location
-    REQUIRES_RUPTURE_PARAMETERS = {'mag','hypo_lat', 'hypo_lon', 'hypo_depth'}
-   
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_lat', 'hypo_lon', 'hypo_depth'}
+
     #: Required site parameter are vs30, lat and lon of the site
     REQUIRES_SITES_PARAMETERS = {'vs30', 'lat', 'lon'}
 
     kind = "regional"
 
-    def __init__(self, delta_l2l_epsilon=0.0, delta_c3_epsilon=0.0, ergodic=True, 
-                c3=None, dl2l=None, **kwargs):
+    def __init__(self, delta_l2l_epsilon=0.0, delta_c3_epsilon=0.0,
+                 ergodic=True, c3=None, dl2l=None, **kwargs):
         """
         Instantiate setting the dl2l and c3 terms.
         """
         super().__init__(delta_l2l_epsilon=delta_l2l_epsilon,
-                         delta_c3_epsilon=delta_c3_epsilon, ergodic=ergodic, **kwargs)
+                         delta_c3_epsilon=delta_c3_epsilon,
+                         ergodic=ergodic, **kwargs)
         self.delta_l2l_epsilon = delta_l2l_epsilon
         self.delta_c3_epsilon = delta_c3_epsilon
         self.ergodic = ergodic
@@ -548,7 +553,6 @@ class KothaEtAl2020regional(KothaEtAl2020):
         self.att = np.array(fiona.open(attenuation_file), dtype=object)
         tectonic_file = os.path.join(DATA_FOLDER, 'kotha_tectonic_regions.geojson')
         self.tec = np.array(fiona.open(tectonic_file), dtype=object)
-
 
 
 class KothaEtAl2020Site(KothaEtAl2020):
@@ -560,8 +564,8 @@ class KothaEtAl2020Site(KothaEtAl2020):
     REQUIRES_SITES_PARAMETERS = {"vs30"}
 
     kind = "site"
-    
-    
+
+
 class KothaEtAl2020Slope(KothaEtAl2020):
     """
     Preliminary adaptation of the Kotha et al. (2020) GMPE using
@@ -893,5 +897,5 @@ class KothaEtAl2020ESHM20SlopeGeology(KothaEtAl2020ESHM20):
     5.0000     0.01675139    0.01898142           0.02123988    0.02293046   -0.00517242    -0.04022363   -0.04159239   0.00326963
     6.0000     0.00884584    0.01248789           0.01338540    0.01433546   -0.00328602    -0.02576612   -0.02615088   0.00321300
     7.0000     0.00754320    0.01081496           0.00952506    0.01292858   -0.00247815    -0.02210686   -0.02284293   0.00365737
-    8.0000     0.01794388    0.01906271           0.01478150    0.02515701   -0.00401437    -0.03950798   -0.04270189   0.00480742 
+    8.0000     0.01794388    0.01906271           0.01478150    0.02515701   -0.00401437    -0.03950798   -0.04270189   0.00480742
     """)
