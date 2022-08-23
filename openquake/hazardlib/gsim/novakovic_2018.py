@@ -119,7 +119,9 @@ class NovakovicEtAl2018(GMPE):
         - Novakovic et al. (2020) "Empirically Calibrated Ground-Motion
           Prediction Equation for Oklahoma" -
 
-    The default parameters used are for OK.
+    Note that the default parameters used are for OK i.e. when the region_fle
+    is left empty, the default file used is `novakovic_2018_reg_adj_ok.txt`
+
     :param d_sigma:
         The stress-drop [bar]
     :param region_fle:
@@ -199,7 +201,6 @@ class NovakovicEtAl2018(GMPE):
             tau[m] = np.ones_like(tau[m]) * CR['between_event']
             phi[m] = np.ones_like(tau[m]) * CR['within_event']
             sig[m] = (tau[m]**2 + phi[m]**2)**0.5
-
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
           IMT      Mh      e0      e1      e2      e3      b3      b4      s0      s1      s2      s3            s4      s5      s6      s7      s8      s9
