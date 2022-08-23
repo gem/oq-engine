@@ -29,7 +29,7 @@ import numpy
 
 from openquake.baselib import parallel, general, hdf5
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, tom
-from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.contexts import ContextMaker, basename
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
@@ -53,15 +53,9 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def basename(src_id):
-    return re.split('[.:;]', src_id, 1)[0]
-
-
-def get_source_id(src):
-    return re.split('[.:]', src.source_id, 1)[0]
-
 
 def fragmentno(src):
+    "Postfix after :.; as an integer"
     fragment = re.split('[:.;]', src.source_id, 1)[1]
     return int(fragment.replace('.', '').replace(';', ''))
 
@@ -84,7 +78,7 @@ def create_source_info(csm, h5):
     wkts = []
     lens = []
     for srcid, srcs in general.groupby(
-            csm.get_sources(), get_source_id).items():
+            csm.get_sources(), basename).items():
         src = srcs[0]
         num_ruptures = sum(src.num_ruptures for src in srcs)
         mutex = getattr(src, 'mutex_weight', 0)
@@ -377,7 +371,7 @@ class CompositeSourceModel:
             for src in sg:
                 src.grp_id = grp_id
                 if src.code != b'P':
-                    source_id = get_source_id(src)
+                    source_id = basename(src)
                     self.code[source_id] = src.code
 
     # used for debugging; assume PoissonTOM; use read_cmakers instead
@@ -479,7 +473,7 @@ class CompositeSourceModel:
                 source_data['src_id'], source_data['grp_id'],
                 source_data['nsites'],
                 source_data['weight'], source_data['ctimes']):
-            baseid = re.split('[.:]', src_id, 1)[0]
+            baseid = basename(src_id)
             row = self.source_info[baseid]
             row[CALC_TIME] += ctimes
             row[WEIGHT] += weight
@@ -498,8 +492,7 @@ class CompositeSourceModel:
         """
         Set the src.offset field for each source
         """
-        for srcs in general.groupby(
-                self.get_sources(), get_source_id).values():
+        for srcs in general.groupby(self.get_sources(), basename).values():
             offset = 0
             if len(srcs) > 1:  # order by split number
                 srcs.sort(key=fragmentno)
