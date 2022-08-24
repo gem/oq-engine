@@ -123,7 +123,7 @@ def main(
         vs30measured=False,
         *,
         exposure_xml=None,
-        sites_csv=None,
+        sites_csv=(),
         grid_spacing: float = 0,
         assoc_distance: float = 5,
         output='site_model.csv'):
@@ -171,17 +171,22 @@ def main(
             else:
                 haz_sitecol = assetcol
                 discarded = []
-        elif sites_csv:
-            lons, lats = [], []
-            for fname in sites_csv:
-                check_fname(fname, 'sites_csv', output)
-                with read(fname) as csv:
-                    for line in csv:
-                        if line.startswith('lon,lat'):  # possible header
-                            continue
-                        lon, lat = line.split(',')[:2]
-                        lons.append(valid.longitude(lon))
-                        lats.append(valid.latitude(lat))
+        elif len(sites_csv):
+            if hasattr(sites_csv, 'lon'):
+                # sites_csv can be a DataFrame when used programmatically
+                lons, lats = sites_csv.lon.to_numpy(), sites_csv.lat.to_numpy()
+            else:
+                # sites_csv is a list of filenames
+                lons, lats = [], []
+                for fname in sites_csv:
+                    check_fname(fname, 'sites_csv', output)
+                    with read(fname) as csv:
+                        for line in csv:
+                            if line.startswith('lon,lat'):  # possible header
+                                continue
+                            lon, lat = line.split(',')[:2]
+                            lons.append(valid.longitude(lon))
+                            lats.append(valid.latitude(lat))
             haz_sitecol = site.SiteCollection.from_points(
                 lons, lats, req_site_params=req_site_params)
             if grid_spacing:
@@ -197,7 +202,8 @@ def main(
         if z2pt5:
             haz_sitecol.array['z2pt5'] = calculate_z2pt5_ngaw2(vs30['vs30'])
         hdf5['sitecol'] = haz_sitecol
-        writers.write_csv(output, haz_sitecol.array[fields])
+        if output:
+            writers.write_csv(output, haz_sitecol.array[fields])
     logging.info('Saved %d rows in %s' % (len(haz_sitecol), output))
     logging.info(mon)
     return haz_sitecol
@@ -208,7 +214,7 @@ main.z1pt0 = dict(help='build the z1pt0', abbrev='-1')
 main.z2pt5 = dict(help='build the z2pt5', abbrev='-2')
 main.vs30measured = dict(help='build the vs30measured', abbrev='-3')
 main.exposure_xml = dict(help='exposure(s) in XML format', nargs='*')
-main.sites_csv = dict(help='sites in CSV format', nargs='*')
+main.sites_csv = dict(help='sites in CSV format (filenames)', nargs='*')
 main.grid_spacing = 'grid spacing in km (the default 0 means no grid)'
 main.assoc_distance = 'sites over this distance are discarded'
 main.output = 'output file'
