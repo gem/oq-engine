@@ -278,6 +278,12 @@ def get_shakemap_array(grid_file, uncertainty_file=None):
     :returns: array with fields lon, lat, vs30, val, std
     """
     data = _get_shakemap_array(grid_file)
+    count = sum(imt in data.dtype['val'].names
+                for imt in ('PGA', 'SA(0.3)', 'SA(1.0)'))
+    if count < 4:
+        logging.warning('%s does not contain (PGA, SA03, SA10)',
+                        grid_file.fp.name)
+
     if uncertainty_file:
         data2 = _get_shakemap_array(uncertainty_file)
         # sanity check: lons and lats must be the same
