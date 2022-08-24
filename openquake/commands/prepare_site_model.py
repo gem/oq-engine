@@ -172,16 +172,21 @@ def main(
                 haz_sitecol = assetcol
                 discarded = []
         elif sites_csv:
-            lons, lats = [], []
-            for fname in sites_csv:
-                check_fname(fname, 'sites_csv', output)
-                with read(fname) as csv:
-                    for line in csv:
-                        if line.startswith('lon,lat'):  # possible header
-                            continue
-                        lon, lat = line.split(',')[:2]
-                        lons.append(valid.longitude(lon))
-                        lats.append(valid.latitude(lat))
+            if hasattr(sites_csv, 'lon'):
+                # sites_csv can be a DataFrame when used programmatically
+                lons, lats = sites_csv.lon.to_numpy(), sites_csv.lat.to_numpy()
+            else:
+                # sites_csv is a list of filenames
+                lons, lats = [], []
+                for fname in sites_csv:
+                    check_fname(fname, 'sites_csv', output)
+                    with read(fname) as csv:
+                        for line in csv:
+                            if line.startswith('lon,lat'):  # possible header
+                                continue
+                            lon, lat = line.split(',')[:2]
+                            lons.append(valid.longitude(lon))
+                            lats.append(valid.latitude(lat))
             haz_sitecol = site.SiteCollection.from_points(
                 lons, lats, req_site_params=req_site_params)
             if grid_spacing:
