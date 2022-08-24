@@ -795,9 +795,11 @@ def write_source_model(dest, sources_or_groups, name=None,
     with open(dest, 'wb') as f:
         nrml.write([smodel], f, '%s')
     if sections:
+        # surfaces have no 'id', so we use sections instead, with an 'id'
+        # starting from 0; this is necessary for conversion to hdf5
         secnodes = [Node('section', {'id': str(i)},
                          nodes=[obj_to_node(sec)])
-                    for i, sec in enumerate(sections, 1)]
+                    for i, sec in enumerate(sections)]
         gmodel = Node("geometryModel", attrs, nodes=secnodes)
         with open(dest[:-4] + '_sections.xml', 'wb') as f:
             nrml.write([gmodel], f, '%s')

@@ -120,6 +120,8 @@ class SourceWriterTestCase(unittest.TestCase):
             sm = toml.load(f)['sourceModel']
         self.assertEqual(smodel.name, sm['_name'])
 
+    # NB: UCERF-like sources are tested in multi_fault_test.py
+
 
 class TOMLTestCase(unittest.TestCase):
     def test_toml(self):
