@@ -278,7 +278,9 @@ def get_shakemap_array(grid_file, uncertainty_file=None):
     :returns: array with fields lon, lat, vs30, val, std
     """
     data = _get_shakemap_array(grid_file)
-    if hasattr(grid_file, 'fp'):
+    if isinstance(grid_file, str):
+        fname = grid_file
+    elif hasattr(grid_file, 'fp'):
         fname = grid_file.fp.name
     else:
         fname = grid_file.name
