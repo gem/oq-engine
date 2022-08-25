@@ -480,7 +480,7 @@ class ContextMaker(object):
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
-        self.make_mon = monitor('PMapMaker', measuremem=True)
+        self.col_mon = monitor('collecting contexts', measuremem=True)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
@@ -1308,16 +1308,17 @@ class PmapMaker(object):
         allctxs = []
         totlen = 0
         t0 = time.time()
-        for src in self.sources:
-            ctxs = self._get_ctxs(src)
-            src.nsites = sum(len(ctx) for ctx in ctxs)
-            totlen += src.nsites
-            allctxs.extend(ctxs)
-            if src.nsites and totlen > maxsize:
+        with self.col_mon:
+            for src in self.sources:
+                ctxs = self._get_ctxs(src)
+                src.nsites = sum(len(ctx) for ctx in ctxs)
+                totlen += src.nsites
+                allctxs.extend(ctxs)
+                if src.nsites and totlen > maxsize:
+                    cm.get_pmap(concat(allctxs), pmap)
+                    allctxs.clear()
+            if allctxs:
                 cm.get_pmap(concat(allctxs), pmap)
-                allctxs.clear()
-        if allctxs:
-            cm.get_pmap(concat(allctxs), pmap)
         dt = time.time() - t0
         nsrcs = len(self.sources)
         for src in self.sources:
@@ -1367,31 +1368,30 @@ class PmapMaker(object):
         return pmap_by_src
 
     def make(self):
-        with self.make_mon:
-            dic = {}
-            self.rupdata = []
-            self.source_data = AccumDict(accum=[])
-            grp_id = self.sources[0].grp_id
-            if self.src_mutex:
-                pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
-                pmap_by_src = self._make_src_mutex()
-                for source_id, pm in pmap_by_src.items():
-                    pmap += pm
-            else:
-                pmap = self._make_src_indep()
-            dic['pmap'] = pmap
-            dic['cfactor'] = self.cmaker.collapser.cfactor
-            dic['rup_data'] = concat(self.rupdata)
-            dic['source_data'] = self.source_data
-            dic['task_no'] = self.task_no
-            dic['grp_id'] = grp_id
-            if self.disagg_by_src and self.src_mutex:
-                dic['pmap_by_src'] = pmap_by_src
-            elif self.disagg_by_src:
-                # all the sources in the group have the same source_id because
-                # of the groupby(group, get_source_id) in classical.py
-                srcid = basename(self.sources[0])
-                dic['pmap_by_src'] = {srcid: pmap}
+        dic = {}
+        self.rupdata = []
+        self.source_data = AccumDict(accum=[])
+        grp_id = self.sources[0].grp_id
+        if self.src_mutex:
+            pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
+            pmap_by_src = self._make_src_mutex()
+            for source_id, pm in pmap_by_src.items():
+                pmap += pm
+        else:
+            pmap = self._make_src_indep()
+        dic['pmap'] = pmap
+        dic['cfactor'] = self.cmaker.collapser.cfactor
+        dic['rup_data'] = concat(self.rupdata)
+        dic['source_data'] = self.source_data
+        dic['task_no'] = self.task_no
+        dic['grp_id'] = grp_id
+        if self.disagg_by_src and self.src_mutex:
+            dic['pmap_by_src'] = pmap_by_src
+        elif self.disagg_by_src:
+            # all the sources in the group have the same source_id because
+            # of the groupby(group, get_source_id) in classical.py
+            srcid = basename(self.sources[0])
+            dic['pmap_by_src'] = {srcid: pmap}
         return dic
 
 
