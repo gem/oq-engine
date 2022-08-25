@@ -34,6 +34,13 @@ from openquake.hazardlib.tom import NegativeBinomialTOM
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
 
 
+def r5(x):
+    """
+    Round lon, lat to 5 digits
+    """
+    return round(x, 5)
+
+
 def build_area_source_geometry(area_source):
     """
     Returns the area source geometry as a Node
@@ -97,9 +104,9 @@ def build_linestring_node(line, with_depth=False):
     geom = []
     for p in line.points:
         if with_depth:
-            geom.extend((p.x, p.y, p.z))
+            geom.extend((r5(p.x), r5(p.y), r5(p.z)))
         else:
-            geom.extend((p.x, p.y))
+            geom.extend((r5(p.x), r5(p.y)))
     poslist_node = Node("gml:posList", text=geom)
     return Node("gml:LineString", nodes=[poslist_node])
 
