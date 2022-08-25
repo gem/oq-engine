@@ -481,7 +481,6 @@ class ContextMaker(object):
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
-        self.col_mon = monitor('collecting contexts', measuremem=True)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
@@ -1322,7 +1321,6 @@ class PmapMaker(object):
         if allctxs:
             cm.get_pmap(concat(allctxs), pmap)
             allctxs.clear()
-        print('==================== contexts=%.1f MB' % ctxs_mb)
         dt = time.time() - t0
         nsrcs = len(self.sources)
         for src in self.sources:

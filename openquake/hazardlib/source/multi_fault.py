@@ -35,8 +35,8 @@ from openquake.hazardlib.source.base import BaseSeismicSource
 
 F32 = np.float32
 BLOCKSIZE = 200
-# the BLOCKSIZE has to be large to reduce the number of sources and
-# therefore the redundant data transfer in the .sections attribute
+# NB: we need enough sources for parallelization and not too
+# big to cause an out-of-memory when building the contexts
 
 
 class MultiFaultSource(BaseSeismicSource):
