@@ -52,6 +52,7 @@ TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
+MAX_MB = 512
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
@@ -480,7 +481,6 @@ class ContextMaker(object):
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
-        self.col_mon = monitor('collecting contexts', measuremem=True)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
@@ -1302,23 +1302,25 @@ class PmapMaker(object):
 
     def _make_src_indep(self):
         # sources with the same ID
-        maxsize = TWO20 if self.collapse_level is None else TWO20 * 16
         pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         cm = self.cmaker
         allctxs = []
+        ctxs_mb = 0
         totlen = 0
         t0 = time.time()
-        with self.col_mon:
-            for src in self.sources:
-                ctxs = self._get_ctxs(src)
-                src.nsites = sum(len(ctx) for ctx in ctxs)
-                totlen += src.nsites
-                allctxs.extend(ctxs)
-                if src.nsites and totlen > maxsize:
-                    cm.get_pmap(concat(allctxs), pmap)
-                    allctxs.clear()
-            if allctxs:
+        for src in self.sources:
+            ctxs = self._get_ctxs(src)
+            ctxs_mb += sum(ctx.nbytes for ctx in ctxs) / TWO20  # TWO20=1MB
+            src.nsites = sum(len(ctx) for ctx in ctxs)
+            totlen += src.nsites
+            allctxs.extend(ctxs)
+            if ctxs_mb > MAX_MB:
                 cm.get_pmap(concat(allctxs), pmap)
+                allctxs.clear()
+                ctxs_mb = 0
+        if allctxs:
+            cm.get_pmap(concat(allctxs), pmap)
+            allctxs.clear()
         dt = time.time() - t0
         nsrcs = len(self.sources)
         for src in self.sources:
