@@ -247,6 +247,6 @@ if LOCKDOWN:
         },
     ]
 
-    LOGIN_REDIRECT_URL = '/engine'
+    LOGIN_REDIRECT_URL = '/mypath'
 
     LOGIN_EXEMPT_URLS = ('/accounts/ajax_login/', )
