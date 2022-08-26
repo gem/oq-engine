@@ -258,7 +258,7 @@ def _get_shakemap_array(xml_file):
            if f['name'] in SHAKEMAP_FIELDS}
     out = {name: [] for name in idx}
     uncertainty = any(imt.startswith('STD') for imt in out)
-    missing = REQUIRED_IMTS - set(out)
+    missing = sorted(REQUIRED_IMTS - set(out))
     if not uncertainty and missing:
         raise RuntimeError('Missing %s in %s' % (missing, fname))
     for name in idx:

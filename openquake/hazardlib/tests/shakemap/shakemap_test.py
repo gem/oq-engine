@@ -191,7 +191,7 @@ class ShakemapTestCase(unittest.TestCase):
     def test_missing_imts(self):
         f = os.path.join(CDIR, 'invalid_grid.xml')
         uridict = dict(kind='usgs_xml', grid_url=f, uncertainty_url=None)
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(RuntimeError) as ctx:
             get_sitecol_shakemap(
                 uridict.pop('kind'), uridict, ['PGA', 'PSA03', 'PSA10'])
- 
+        self.assertIn("Missing ['PSA03', 'PSA10']", str(ctx.exception))
