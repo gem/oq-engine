@@ -60,6 +60,7 @@ FIELDMAP = {
     'STDPSA10': ('std', 'SA(1.0)'),
     'STDPSA30': ('std', 'SA(3.0)'),
 }
+REQUIRED_IMTS = {'PGA', 'PSA03', 'PSA10'}
 
 
 class MissingLink(Exception):
@@ -237,6 +238,12 @@ def get_shapefile_arrays(polygons, records):
 
 
 def _get_shakemap_array(xml_file):
+    if isinstance(xml_file, str):
+        fname = xml_file
+    elif hasattr(xml_file, 'fp'):
+        fname = xml_file.fp.name
+    else:
+        fname = xml_file.name
     if hasattr(xml_file, 'read'):
         data = io.BytesIO(xml_file.read())
     else:
@@ -250,6 +257,10 @@ def _get_shakemap_array(xml_file):
     idx = {f['name']: int(f['index']) - 1 for f in fields
            if f['name'] in SHAKEMAP_FIELDS}
     out = {name: [] for name in idx}
+    uncertainty = any(imt.startswith('STD') for imt in out)
+    missing = sorted(REQUIRED_IMTS - set(out))
+    if not uncertainty and missing:
+        raise RuntimeError('Missing %s in %s' % (missing, fname))
     for name in idx:
         i = idx[name]
         if name in FIELDMAP:
