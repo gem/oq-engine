@@ -174,7 +174,8 @@ class ShakemapTestCase(unittest.TestCase):
         self.assertEqual(len(sitecol), n)
 
         _, gmfs = to_gmfs(shakemap, {'kind': 'mmi'}, False,
-                          truncation_level=3, num_gmfs=1000, seed=42, imts=['MMI'])
+                          truncation_level=3, num_gmfs=1000, seed=42,
+                          imts=['MMI'])
 
         gmf_by_imt = gmfs.mean(axis=1)
         std_by_imt = gmfs.std(axis=1)
@@ -186,3 +187,11 @@ class ShakemapTestCase(unittest.TestCase):
                          [0.72233552],
                          [0.72033749],
                          [0.69906908]])
+
+    def test_missing_imts(self):
+        f = os.path.join(CDIR, 'invalid_grid.xml')
+        uridict = dict(kind='usgs_xml', grid_url=f, uncertainty_url=None)
+        with self.assertRaises(RuntimeError):
+            get_sitecol_shakemap(
+                uridict.pop('kind'), uridict, ['PGA', 'PSA03', 'PSA10'])
+ 
