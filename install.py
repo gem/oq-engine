@@ -231,7 +231,7 @@ def install_standalone(venv):
             subprocess.check_call(["git", "clone", STANDALONE % app])
             subprocess.check_call(['%s/bin/pip' % venv, 'install',
                                    '-e', STANDALONE % app], env=env)
-            if app == 'taxtweb'
+            if app == 'taxtweb' :
                 env = {'PYBUILD_NAME': 'oq-taxonomy'}
                 subprocess.check_call(['%s/bin/pip' % venv, 'install',
                                    '-e', STANDALONE % app], env=env)
