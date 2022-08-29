@@ -60,7 +60,10 @@ jobs:
         echo "branch to test: ${BRANCH}"
         if [[ "$BRANCH" != "" ]]
         then
-          python3 install.py devel_server --version ${BRANCH}
+          pwd
+          git status
+          cd ..
+          python3 oq-engine/install.py devel_server --version ${BRANCH}
         else
           python3 install.py devel_server
         fi
