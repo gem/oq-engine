@@ -339,8 +339,9 @@ def install(inst, version):
             if 'died with <Signals.SIGABRT' in str(exc):
                 shutil.rmtree(inst.VENV)
                 raise RuntimeError(
-                    'Could not execute %s -m ensurepip --upgrade: %s'
-                    % (pycmd, 'Probably you are using the system Python'))
+                    'Could not execute ensurepip --upgrade: %s %s'
+                    % (pycmd, 'Probably you are using the system Python (%s)'
+                       % sys.executable))
         subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
                                'pip', 'wheel'])
     else:
