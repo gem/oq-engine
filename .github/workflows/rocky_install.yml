@@ -45,6 +45,7 @@ jobs:
         pyver=`echo ${{ matrix.python-version }} | tr -d .`
         dnf update -y
         dnf install -y python${pyver}
+        dnf install -y git git-lfs
         #check version of python
         echo "check version of python"
         pip3 -V
@@ -60,7 +61,9 @@ jobs:
         echo "branch to test: ${BRANCH}"
         if [[ "$BRANCH" != "" ]]
         then
-          python3 install.py devel_server --version ${BRANCH}
+          pwd
+          cd ..
+          python3 oq-engine/install.py devel_server --version ${BRANCH}
         else
           python3 install.py devel_server
         fi
