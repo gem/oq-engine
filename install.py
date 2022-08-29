@@ -227,7 +227,7 @@ def install_standalone(venv):
     for app in 'standalone ipt taxonomy taxtweb'.split():
         print("Applications " +  app + "are not installed yet")
         try:
-            print("git" + "clone" + STANDALONE % app])
+            print("git" + "clone" + STANDALONE % app)
             subprocess.check_call(["git", "clone", STANDALONE % app])
             subprocess.check_call(['%s/bin/pip' % venv, 'install',
                                    '-e', STANDALONE % app], env=env)
