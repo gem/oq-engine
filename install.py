@@ -333,7 +333,14 @@ def install(inst, version):
 
     # upgrade pip and before check that it is installed in venv
     if sys.platform != 'win32':
-        subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
+        try:
+            subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
+        except subprocess.CalledProcessError as exc:
+            if 'died with <Signals.SIGABRT' in str(exc):
+                shutil.rmtree(inst.VENV)
+                raise RuntimeError(
+                    'Could not execute %s -m ensurepip --upgrade: %s'
+                    % (pycmd, 'Probably you are using the system Python'))
         subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
                                'pip', 'wheel'])
     else:
