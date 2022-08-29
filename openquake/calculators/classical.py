@@ -578,10 +578,6 @@ class ClassicalCalculator(base.HazardCalculator):
             srcids = list(self.csm.source_info)
             if any(';' in srcid for srcid in srcids):
                 # enable reduction of the array disagg_by_src
-                for srcid, src in self.csm.source_info.items():
-                    if ';' in srcid:
-                        # make sure semicolon srcids are independent
-                        assert not src[source_reader.MUTEX]
                 arr = self.datastore['disagg_by_src'][:]
                 arr, srcids = semicolon_aggregate(arr, srcids)
                 self.datastore['disagg_by_src'][:] = arr
