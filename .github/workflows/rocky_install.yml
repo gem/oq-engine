@@ -62,7 +62,6 @@ jobs:
         if [[ "$BRANCH" != "" ]]
         then
           pwd
-          git status
           cd ..
           python3 oq-engine/install.py devel_server --version ${BRANCH}
         else
