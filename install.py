@@ -186,6 +186,24 @@ GITBRANCH = 'https://github.com/gem/oq-engine/archive/%s.zip'
 STANDALONE = 'https://github.com/gem/oq-platform-%s/archive/master.zip'
 
 
+def ensure(pip=None, pyvenv=None):
+    """
+    Create venv and install pip
+    """
+    try:
+        if pyvenv:
+            venv.EnvBuilder(with_pip=True).create(pyvenv)
+        else:
+            subprocess.check_call([pip, '-m', 'ensurepip', '--upgrade'])
+    except subprocess.CalledProcessError as exc:
+        if 'died with <Signals.SIGABRT' in str(exc):
+            shutil.rmtree(inst.VENV)
+            raise RuntimeError(
+                'Could not execute ensurepip --upgrade: %s'
+                % ('Probably you are using the system Python (%s)'
+                   % sys.executable))
+
+
 def get_branch(version):
     """
     Convert "version" into a branch name
@@ -319,8 +337,7 @@ def install(inst, version):
 
     # create the openquake venv if necessary
     if not os.path.exists(inst.VENV) or not os.listdir(inst.VENV):
-        # create venv
-        venv.EnvBuilder(with_pip=True).create(inst.VENV)
+        ensure(pyvenv=inst.VENV)
         print('Created %s' % inst.VENV)
 
     if sys.platform == 'win32':
@@ -333,15 +350,7 @@ def install(inst, version):
 
     # upgrade pip and before check that it is installed in venv
     if sys.platform != 'win32':
-        try:
-            subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
-        except subprocess.CalledProcessError as exc:
-            if 'died with <Signals.SIGABRT' in str(exc):
-                shutil.rmtree(inst.VENV)
-                raise RuntimeError(
-                    'Could not execute ensurepip --upgrade: %s'
-                    % ('Probably you are using the system Python (%s)'
-                       % sys.executable))
+        ensure(pip=pycmd)
         subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
                                'pip', 'wheel'])
     else:
