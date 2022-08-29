@@ -228,17 +228,17 @@ def install_standalone(venv):
         try:
             print("Applications " +  STANDALONE % app + " are not installed yet \n")
             print("git " + "clone " + STANDALONE % app)
-            subprocess.check_call(["git", "clone", STANDALONE % app])
+            #subprocess.check_call(["git", "clone", STANDALONE % app])
             repos = './oq-platform-' + app
             subprocess.check_call(['%s/bin/pip' % venv, 'install',
-                                   '-e', repos])
+                                   '-e git+', STANDALONE % app])
             """
             NOTE: try to use git+https to install
             """
             if app == "taxtweb" :
                 print ("INSIDE IF")
                 subprocess.check_call(['%s/bin/pip' % venv, 'install',
-                                   '-e', repos],
+                                   '-e git+', STANDALONE % app],
                                    env={'PYBUILD_NAME': 'oq-taxonomy'})
         except Exception as exc:
             print('%s: could not install %s' % (exc, STANDALONE % app))
