@@ -185,7 +185,7 @@ PLATFORM = {'linux': ('linux64',),  # from sys.platform to requirements.txt
             'win32': ('win64',)}
 DEMOS = 'https://artifacts.openquake.org/travis/demos-master.zip'
 GITBRANCH = 'https://github.com/gem/oq-engine/archive/%s.zip'
-STANDALONE = 'https://github.com/gem/oq-platform-%s/archive/master.zip'
+STANDALONE = 'https://github.com/gem/oq-platform-%s'
 
 
 def ensure(pip=None, pyvenv=None):
@@ -224,12 +224,17 @@ def install_standalone(venv):
     Install the standalone Django applications if possible
     """
     print("The standalone applications are not installed yet")
-    return
-    for app in 'standalone ipt taxtweb taxonomy'.split():
-        env = {'PYBUILD_NAME': 'oq-taxonomy'} if app == 'taxonomy' else {}
+    for app in 'standalone ipt taxonomy taxtweb'.split():
+        print("Applications " +  app + "are not installed yet")
         try:
+            print("git" + "clone" + STANDALONE % app])
+            subprocess.check_call(["git", "clone", STANDALONE % app])
             subprocess.check_call(['%s/bin/pip' % venv, 'install',
-                                   '--upgrade', STANDALONE % app], env=env)
+                                   '-e', STANDALONE % app], env=env)
+            if app == 'taxtweb'
+                env = {'PYBUILD_NAME': 'oq-taxonomy'}
+                subprocess.check_call(['%s/bin/pip' % venv, 'install',
+                                   '-e', STANDALONE % app], env=env)
         except Exception as exc:
             print('%s: could not install %s' % (exc, STANDALONE % app))
 
