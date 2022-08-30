@@ -570,7 +570,7 @@ def get_site_collection(oqparam, h5=None):
         dt = site.site_param_dt[param]
         if dt is F64 and (sitecol.array[param] == 0.).all():
             raise ValueError('The site parameter %s is always zero: please '
-                             'check the site nodel' % param)
+                             'check the site model' % param)
     return sitecol
 
 
