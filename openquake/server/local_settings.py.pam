@@ -20,3 +20,6 @@ AUTHENTICATION_BACKENDS += (
 
 #Static Folder
 STATIC_ROOT = ''
+
+# WEBUI config uncomment and set properly if needed
+# WEBUIURL = 'http://localhost:8800/'
