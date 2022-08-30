@@ -23,7 +23,8 @@ jobs:
         #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+       #python-version: [3.7, 3.8, 3.9]
+        python-version: [3.9]
 
     steps:
   # This Checkout use git-ref keyword from dispatch
@@ -58,13 +59,11 @@ jobs:
         #pip3 install -r requirements-$PY_VER-linux64.txt
         #pip3 install -e .\[osgeo\]
         echo "branch to test: ${BRANCH}"
-        # go up of a folder to test CDIR
-        cd ..
         if [[ "$BRANCH" != "" ]] 
         then
-          python oq-engine/install.py devel --version ${BRANCH}
+          python install.py devel --version ${BRANCH}
         else
-          python oq-engine/install.py devel
+          python install.py devel
         fi
     - name: Run tests
       run: |
