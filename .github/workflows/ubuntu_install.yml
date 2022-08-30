@@ -58,11 +58,13 @@ jobs:
         #pip3 install -r requirements-$PY_VER-linux64.txt
         #pip3 install -e .\[osgeo\]
         echo "branch to test: ${BRANCH}"
+        # go up of a folder to test CDIR
+        cd ..
         if [[ "$BRANCH" != "" ]] 
         then
-          python install.py devel --version ${BRANCH}
+          python oq-engine/install.py devel --version ${BRANCH}
         else
-          python install.py devel
+          python oq-engine/install.py devel
         fi
     - name: Run tests
       run: |
