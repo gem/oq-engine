@@ -374,6 +374,8 @@ def install(inst, version):
         'requirements-py%d%d-%s%s.txt' % (PYVER + PLATFORM[sys.platform] + mac)
 
     subprocess.check_call([pycmd, '-m', 'pip', 'install', '-r', req])
+    
+    print ("check folder CDIR" + CDIR)
 
     if (inst is devel or inst is devel_server):  # install from the local repo
         subprocess.check_call([pycmd, '-m', 'pip', 'install', '-e', CDIR])
