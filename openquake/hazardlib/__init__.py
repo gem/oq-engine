@@ -242,6 +242,7 @@ def read_input(hparams, **extra):
             src.grp_id = grp_id
             src.trt_smr = grp_id
             src.samples = num_rlzs
+            src.smweight = 1. / num_rlzs
             idx += 1
 
     cmakerdict = {}  # trt => cmaker
