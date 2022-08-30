@@ -27,7 +27,8 @@ from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
-from openquake.qa_tests_data.classical import case_2, case_15, case_21
+from openquake.qa_tests_data.classical import (case_2, case_15, 
+        case_21, case_34)
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import (
     case_2 as ebr2, case_caracas)
@@ -497,6 +498,11 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
                 os.remove(h5.filename)
         self.assertEqual(
             error.call_args[0][0], 'source SFLT2: too large: 84 km')
+
+    def test_site_model_with_xvf(self):
+        oq = readinput.get_oqparam('job.ini', case_34)
+        ssclt = readinput.get_composite_source_model(oq)
+        self.assertEqual(ssclt.source_model_lt.source_ids['956'], ['b1']) 
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):
