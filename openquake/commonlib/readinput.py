@@ -536,7 +536,8 @@ def get_site_collection(oqparam, h5=None):
             req_site_params.add('ampcode')
         if h5 and 'site_model' in h5:  # comes from a site_model.csv
             sm = h5['site_model'][:]
-        elif 'site_model' in oqparam.inputs:
+        elif (not h5 and 'site_model' in oqparam.inputs and
+              'exposure' not in oqparam.inputs):
             # tested in test_with_site_model
             sm = get_site_model(oqparam)
         else:
