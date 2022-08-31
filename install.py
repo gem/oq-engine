@@ -235,7 +235,7 @@ def install_standalone(venv):
             """
 
         except Exception as exc:
-            print('%s: could not install %s' % (exc, STANDALONE % app))
+            print('%s: could not install %s' % (exc, app))
 
 
 def before_checks(inst, port, remove, usage):
