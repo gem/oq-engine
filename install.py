@@ -224,16 +224,12 @@ def install_standalone(venv):
     """
     print("The standalone applications are not installed yet")
     #
-    for app in 'oq-platform-standalone oq-platform-ipt oq-platform-taxonomy oq-platform-taxtweb openquake.taxonomy'.split():
+    for app in 'oq-platform-standalone oq-platform-ipt \
+        oq-platform-taxonomy oq-platform-taxtweb openquake.taxonomy'.split():
         try:
             print("Applications " +  app + " are not installed yet \n")
             subprocess.check_call(['%s/bin/pip' % venv, 'install',
                             '--find-links', URL_STANDALONE, app])
-            """
-            python -m pip install --index-url https://wheelhouse.openquake.org/py/standalone/latest/ Packages
-            if installation is not devel remove the repos
-            """
-
         except Exception as exc:
             print('%s: could not install %s' % (exc, app))
 
