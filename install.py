@@ -228,7 +228,7 @@ def install_standalone(venv):
         try:
             print("Applications " +  % app + " are not installed yet \n")
             subprocess.check_call(['%s/bin/pip' % venv, 'install',
-                            '--index-url', URL_STANDALONE, app])
+                            '--find-links', URL_STANDALONE, app])
             """
             python -m pip install --index-url https://wheelhouse.openquake.org/py/standalone/latest/ Packages
             if installation is not devel remove the repos
