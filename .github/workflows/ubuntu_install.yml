@@ -47,8 +47,6 @@ jobs:
       env: 
         BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
-        #git status
-        #grep setuptools requirements*
         #PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
         #echo $PY_VER
         #https://pip.pypa.io/en/stable/user_guide/

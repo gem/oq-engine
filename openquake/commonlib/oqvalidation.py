@@ -31,7 +31,7 @@ import numpy
 from openquake.baselib import __version__, hdf5, python3compat, config
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.shakemap.maps import get_array
+from openquake.hazardlib import shakemap
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
@@ -1632,7 +1632,8 @@ class OqParam(valid.ParamSet):
         """
         if self.shakemap_uri:
             kind = self.shakemap_uri['kind']
-            sig = inspect.signature(get_array[kind])
+            get_array = getattr(shakemap.parsers, 'get_array_' + kind)
+            sig = inspect.signature(get_array)
             # parameters without default value
             params = [p.name for p in list(
                 sig.parameters.values()) if p.default is p.empty]

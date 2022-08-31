@@ -65,7 +65,7 @@ except ImportError:
             sys.exit('venv is missing! Please see the documentation of your '
                      'Operating System to install it')
 
-CDIR = os.path.dirname(__file__)
+CDIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class server:
@@ -384,7 +384,7 @@ def install(inst, version):
         'requirements-py%d%d-%s%s.txt' % (PYVER + PLATFORM[sys.platform] + mac)
 
     subprocess.check_call([pycmd, '-m', 'pip', 'install', '-r', req])
-
+    
     if (inst is devel or inst is devel_server):  # install from the local repo
         subprocess.check_call([pycmd, '-m', 'pip', 'install', '-e', CDIR])
     elif version is None:  # install the stable version
