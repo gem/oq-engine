@@ -1,5 +1,6 @@
 
 import os
+import logging
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.commonlib import logs, logictree
 from openquake.commonlib.readinput import get_site_collection
@@ -30,7 +31,7 @@ def main(id, site_model, *, num_gmfs: int = 0, random_seed: int = 42,
         sitecol, shakemap, discarded = get_sitecol_shakemap(
             dic, imts, get_site_collection(oq))
         if len(discarded):
-            print('%d sites discarded', len(discarded))
+            logging.warning('%d sites discarded', len(discarded))
         calc.datastore['sitecol'] = sitecol
         calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
         if num_gmfs:
