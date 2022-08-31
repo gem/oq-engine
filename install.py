@@ -224,8 +224,7 @@ def install_standalone(venv):
     """
     print("The standalone applications are not installed yet")
     #
-    for app in 'oq-platform-standalone oq-platform-ipt oq-platform-taxonomy
-        oq-platform-taxtweb openquake.taxonomy'.split():
+    for app in 'oq-platform-standalone oq-platform-ipt oq-platform-taxonomy oq-platform-taxtweb openquake.taxonomy'.split():
         try:
             print("Applications " +  % app + " are not installed yet \n")
             subprocess.check_call(['%s/bin/pip' % venv, 'install',
