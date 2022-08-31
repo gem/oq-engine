@@ -499,7 +499,7 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         self.assertEqual(
             error.call_args[0][0], 'source SFLT2: too large: 84 km')
 
-    def test_site_model_with_xvf(self):
+    def test_with_site_model(self):
         oq = readinput.get_oqparam('job.ini', case_34)
         ssclt = readinput.get_composite_source_model(oq)
         self.assertEqual(ssclt.source_model_lt.source_ids['956'], ['b1'])
