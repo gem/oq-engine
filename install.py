@@ -223,6 +223,13 @@ def install_standalone(venv):
     Install the standalone Django applications if possible
     """
     print("The standalone applications are not installed yet")
+    if sys.platform == 'win32':
+        if os.path.exists('python\\python._pth.old'):
+            pycmd = inst.VENV + '\\python.exe'
+        else:
+            pycmd = inst.VENV + '\\Scripts\\python.exe'
+    else:
+        pycmd = inst.VENV + '/bin/python3'
     #
     for app in 'oq-platform-standalone oq-platform-ipt \
         oq-platform-taxonomy oq-platform-taxtweb openquake.taxonomy'.split():
