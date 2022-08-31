@@ -214,8 +214,9 @@ def get_array_usgs_id(kind, id):
         raise MissingLink('Could not find grid.xml link in %s' % url)
     uncertainty = contents.get('download/uncertainty.xml.zip') or contents.get(
         'download/uncertainty.xml')
-    return get_array('usgs_xml', grid['url'],
-                     uncertainty['url'] if uncertainty else None)
+    return get_array(
+        kind='usgs_xml', grid_url=grid['url'],
+        uncertainty_url=uncertainty['url'] if uncertainty else None)
 
 
 def get_array_file_npy(kind, fname):
