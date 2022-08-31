@@ -224,28 +224,13 @@ def install_standalone(venv):
     Install the standalone Django applications if possible
     """
     print("The standalone applications are not installed yet")
-    print(f'{venv=}')
-    to_clone = os.path.join(venv,"src")
-    print("Folder to create '% s' "  % to_clone)
-    os.mkdir(to_clone)
-    print("Directory '% s' created" % to_clone)
     #
-    os.chdir(to_clone)
-    #
-    for app in 'standalone ipt taxonomy taxtweb'.split():
+    whl_url = "https://wheelhouse.openquake.org/py/standalone/"
+    for whl in 'standalone ipt taxonomy taxtweb'.split():
         try:
             print("Applications " +  STANDALONE % app + " are not installed yet \n")
-            print("git " + "clone " + STANDALONE % app)
-            subprocess.check_call(["ls"])
-            subprocess.check_call(["git", "clone", STANDALONE % app])
-            repos = './oq-platform-' + app
             subprocess.check_call(['%s/bin/pip' % venv, 'install',
                                    '-e', repos])
-            if app == "taxtweb" :
-                print ("INSIDE IF")
-                subprocess.check_call(['%s/bin/pip' % venv, 'install',
-                                   '-e', repos],
-                                   env={'PYBUILD_NAME': 'oq-taxonomy'})
             """
             if installation is not devel remove the repos
             """
@@ -394,7 +379,7 @@ def install(inst, version):
         'requirements-py%d%d-%s%s.txt' % (PYVER + PLATFORM[sys.platform] + mac)
 
     subprocess.check_call([pycmd, '-m', 'pip', 'install', '-r', req])
-    
+
     if (inst is devel or inst is devel_server):  # install from the local repo
         subprocess.check_call([pycmd, '-m', 'pip', 'install', '-e', CDIR])
     elif version is None:  # install the stable version
