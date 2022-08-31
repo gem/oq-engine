@@ -185,8 +185,7 @@ PLATFORM = {'linux': ('linux64',),  # from sys.platform to requirements.txt
             'win32': ('win64',)}
 DEMOS = 'https://artifacts.openquake.org/travis/demos-master.zip'
 GITBRANCH = 'https://github.com/gem/oq-engine/archive/%s.zip'
-STANDALONE = 'https://github.com/gem/oq-platform-%s'
-
+URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
 
 def ensure(pip=None, pyvenv=None):
     """
@@ -225,13 +224,14 @@ def install_standalone(venv):
     """
     print("The standalone applications are not installed yet")
     #
-    whl_url = "https://wheelhouse.openquake.org/py/standalone/"
-    for whl in 'standalone ipt taxonomy taxtweb'.split():
+    for app in 'oq-platform-standalone oq-platform-ipt oq-platform-taxonomy
+        oq-platform-taxtweb openquake.taxonomy'.split():
         try:
-            print("Applications " +  STANDALONE % app + " are not installed yet \n")
+            print("Applications " +  % app + " are not installed yet \n")
             subprocess.check_call(['%s/bin/pip' % venv, 'install',
-                                   '-e', repos])
+                            '--index-url', URL_STANDALONE, app])
             """
+            python -m pip install --index-url https://wheelhouse.openquake.org/py/standalone/latest/ Packages
             if installation is not devel remove the repos
             """
 
