@@ -47,8 +47,6 @@ jobs:
       env: 
         BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
-        #git status
-        #grep setuptools requirements*
         #PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
         #echo $PY_VER
         #https://pip.pypa.io/en/stable/user_guide/
@@ -58,13 +56,11 @@ jobs:
         #pip3 install -r requirements-$PY_VER-linux64.txt
         #pip3 install -e .\[osgeo\]
         echo "branch to test: ${BRANCH}"
-        # go up of a folder to test CDIR
-        cd ..
         if [[ "$BRANCH" != "" ]] 
         then
-          python oq-engine/install.py devel --version ${BRANCH}
+          python install.py devel --version ${BRANCH}
         else
-          python oq-engine/install.py devel
+          python install.py devel
         fi
     - name: Run tests
       run: |
