@@ -228,7 +228,8 @@ def install_standalone(venv):
         oq-platform-taxonomy oq-platform-taxtweb openquake.taxonomy'.split():
         try:
             print("Applications " +  app + " are not installed yet \n")
-            subprocess.check_call(['%s/bin/pip' % venv, 'install',
+
+            subprocess.check_call([pycmd, '-m', 'pip', 'install',
                             '--find-links', URL_STANDALONE, app])
         except Exception as exc:
             print('%s: could not install %s' % (exc, app))
