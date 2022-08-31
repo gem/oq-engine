@@ -40,8 +40,7 @@ class ShakemapTestCase(unittest.TestCase):
         f1 = os.path.join(CDIR, 'ghorka_grid.xml')
         f2 = os.path.join(CDIR, 'ghorka_uncertainty.zip')
         uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
-        sitecol, shakemap, *_ = get_sitecol_shakemap(uridict.pop('kind'),
-                                                     uridict, imt_dt.names)
+        sitecol, shakemap, *_ = get_sitecol_shakemap(uridict, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, _ = mean_std(shakemap, site_effects=True)
@@ -148,8 +147,7 @@ class ShakemapTestCase(unittest.TestCase):
         f1 = os.path.join(CDIR, 'test_shaking.zip')
         f2 = os.path.join(CDIR, 'test_uncertainty.xml')
         uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
-        sitecol, shakemap, *_ = get_sitecol_shakemap(uridict.pop('kind'),
-                                                     uridict, imt_dt.names)
+        sitecol, shakemap, *_ = get_sitecol_shakemap(uridict, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, std_by_imt = mean_std(shakemap, site_effects=False)
@@ -168,8 +166,7 @@ class ShakemapTestCase(unittest.TestCase):
         f1 = os.path.join(CDIR, 'ghorka_grid.zip')
         uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=None)
 
-        sitecol, shakemap, *_ = get_sitecol_shakemap(uridict.pop('kind'),
-                                                     uridict, ['MMI'])
+        sitecol, shakemap, *_ = get_sitecol_shakemap(uridict, ['MMI'])
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
 
@@ -192,6 +189,5 @@ class ShakemapTestCase(unittest.TestCase):
         f = os.path.join(CDIR, 'invalid_grid.xml')
         uridict = dict(kind='usgs_xml', grid_url=f, uncertainty_url=None)
         with self.assertRaises(RuntimeError) as ctx:
-            get_sitecol_shakemap(
-                uridict.pop('kind'), uridict, ['PGA', 'PSA03', 'PSA10'])
+            get_sitecol_shakemap(uridict, ['PGA', 'PSA03', 'PSA10'])
         self.assertIn("Missing ['PSA03', 'PSA10']", str(ctx.exception))
