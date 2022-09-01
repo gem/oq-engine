@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Replaced command `oq download_shakemap` with `oq shakemap2gmfs`
   * Raised an error for missing required IMTs in ShakeMap grid files
   * Extended the `custom_site_id` to 8 characters
   * Restricted the accepted characters in risk IDs

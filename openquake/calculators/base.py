@@ -326,7 +326,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         for fmt in fmts:
             if not fmt:
                 continue
-            if fmt == 'csv' and self.R > 1:
+            if fmt == 'csv':
                 self._export(('realizations', fmt))
             for key in sorted(keys):  # top level keys
                 if 'rlzs' in key and self.R > 1:
