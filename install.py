@@ -185,8 +185,7 @@ PLATFORM = {'linux': ('linux64',),  # from sys.platform to requirements.txt
             'win32': ('win64',)}
 DEMOS = 'https://artifacts.openquake.org/travis/demos-master.zip'
 GITBRANCH = 'https://github.com/gem/oq-engine/archive/%s.zip'
-STANDALONE = 'https://github.com/gem/oq-platform-%s/archive/master.zip'
-
+URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
 
 def ensure(pip=None, pyvenv=None):
     """
@@ -224,14 +223,23 @@ def install_standalone(venv):
     Install the standalone Django applications if possible
     """
     print("The standalone applications are not installed yet")
-    return
-    for app in 'standalone ipt taxtweb taxonomy'.split():
-        env = {'PYBUILD_NAME': 'oq-taxonomy'} if app == 'taxonomy' else {}
+    if sys.platform == 'win32':
+        if os.path.exists('python\\python._pth.old'):
+            pycmd = inst.VENV + '\\python.exe'
+        else:
+            pycmd = inst.VENV + '\\Scripts\\python.exe'
+    else:
+        pycmd = inst.VENV + '/bin/python3'
+    #
+    for app in 'oq-platform-standalone oq-platform-ipt \
+        oq-platform-taxonomy oq-platform-taxtweb openquake.taxonomy'.split():
         try:
-            subprocess.check_call(['%s/bin/pip' % venv, 'install',
-                                   '--upgrade', STANDALONE % app], env=env)
+            print("Applications " +  app + " are not installed yet \n")
+
+            subprocess.check_call([pycmd, '-m', 'pip', 'install',
+                            '--find-links', URL_STANDALONE, app])
         except Exception as exc:
-            print('%s: could not install %s' % (exc, STANDALONE % app))
+            print('%s: could not install %s' % (exc, app))
 
 
 def before_checks(inst, port, remove, usage):
@@ -374,7 +382,7 @@ def install(inst, version):
         'requirements-py%d%d-%s%s.txt' % (PYVER + PLATFORM[sys.platform] + mac)
 
     subprocess.check_call([pycmd, '-m', 'pip', 'install', '-r', req])
-    
+
     if (inst is devel or inst is devel_server):  # install from the local repo
         subprocess.check_call([pycmd, '-m', 'pip', 'install', '-e', CDIR])
     elif version is None:  # install the stable version
