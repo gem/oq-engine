@@ -45,35 +45,6 @@ ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
 
 
-def check_disagg_by_src(dstore, lvl=-1):
-    """
-    Make sure that by composing disagg_by_src one gets the hazard curves
-    """
-    info = dstore['source_info'][:]
-    mutex = info['mutex_weight'] > 0
-    mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
-    dbs = dstore.sel('disagg_by_src')  # N, R, M, L, Ns
-    if mutex.sum():
-        dbs_indep = dbs[:, :, :, :, ~mutex]
-        dbs_mutex = dbs[:, :, :, :, mutex]
-        poes_indep = general.pprod(dbs_indep, axis=4)  # N, R, M, L
-        poes_mutex = dbs_mutex.sum(axis=4)  # N, R, M, L
-        poes = poes_indep + poes_mutex - poes_indep * poes_mutex
-    else:
-        poes = general.pprod(dbs, axis=4)  # N, R, M, L
-    rlz_weights = dstore['weights'][:]
-    mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L
-    aac(mean, mean2, atol=1E-7)
-
-    # considering a level for which the mean is nonzero
-    assert mean[:, :, lvl].any(), mean[:, :, lvl]
-    # print('mean =', mean[:, :, lvl])
-
-    # check the extract call is not broken
-    aw = extract(dstore, 'disagg_by_src?lvl_id=%d' % lvl)
-    assert aw.array.dtype.names == ('src_id', 'poe')
-
-
 def get_dists(dstore):
     dic = general.AccumDict(accum=[])  # site_id -> distances
     rup = dstore['rup']
@@ -150,9 +121,6 @@ class ClassicalTestCase(CalculatorTestCase):
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve.csv', fname)
-
-        # check disagg_by_src for a single realization
-        check_disagg_by_src(self.calc.datastore, lvl=0)
 
     def test_case_3(self):
         self.assert_curves_ok(
@@ -264,9 +232,6 @@ class ClassicalTestCase(CalculatorTestCase):
                          ('0.005', '0.007', '0.0098', '0.0137', '0.0192',
                           '0.0269', '0.0376', '0.0527', '0.0738', '0.103',
                           '0.145', '0.203', '0.284'))
-
-        # test disagg_by_src in a complex case with duplicated sources
-        check_disagg_by_src(self.calc.datastore)
 
     def test_case_14(self):
         # test classical with 2 gsims and 1 sample
@@ -485,9 +450,6 @@ hazard_uhs-std.csv
         tot_probs_occur = sum(len(po) for po in probs_occur)
         self.assertEqual(tot_probs_occur, 4)  # 2 x 2
 
-        # check disagg_by_src
-        check_disagg_by_src(self.calc.datastore, lvl=-1)
-
         # make sure the disaggregation works
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_27.__file__, 'job.ini',
@@ -667,7 +629,6 @@ hazard_uhs-std.csv
     def test_case_45(self):
         # this is a test for MMI with disagg_by_src and sampling
         self.assert_curves_ok(["hazard_curve-mean-MMI.csv"], case_45.__file__)
-        check_disagg_by_src(self.calc.datastore, lvl=0)
 
     def test_case_46(self):
         # SMLT with applyToBranches
@@ -1094,4 +1055,3 @@ hazard_uhs-std.csv
     def test_case_79(self):
         # disagg_by_src with semicolon sources
         self.run_calc(case_79.__file__, 'job.ini')
-        check_disagg_by_src(self.calc.datastore)
