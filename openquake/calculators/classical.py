@@ -36,7 +36,7 @@ from openquake.hazardlib.contexts import ContextMaker, read_cmakers, basename
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
 from openquake.commonlib import calc
-from openquake.calculators import base, getters
+from openquake.calculators import base, getters, extract
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -108,6 +108,35 @@ def semicolon_aggregate(probs, source_ids):
     for i, s1, s2 in performance._idx_start_stop(indices):
         new[..., i] = pprod(probs[..., s1:s2], axis=-1)
     return new, unique
+
+
+def check_disagg_by_src(dstore, lvl=-1):
+    """
+    Make sure that by composing disagg_by_src one gets the hazard curves
+    """
+    info = dstore['source_info'][:]
+    mutex = info['mutex_weight'] > 0
+    mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
+    dbs = dstore.sel('disagg_by_src')  # N, R, M, L, Ns
+    if mutex.sum():
+        dbs_indep = dbs[:, :, :, :, ~mutex]
+        dbs_mutex = dbs[:, :, :, :, mutex]
+        poes_indep = pprod(dbs_indep, axis=4)  # N, R, M, L
+        poes_mutex = dbs_mutex.sum(axis=4)  # N, R, M, L
+        poes = poes_indep + poes_mutex - poes_indep * poes_mutex
+    else:
+        poes = pprod(dbs, axis=4)  # N, R, M, L
+    rlz_weights = dstore['weights'][:]
+    mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L
+    numpy.testing.assert_allclose(mean, mean2, atol=1E-7)
+
+    # considering a level for which the mean is nonzero
+    if mean[:, :, lvl].sum() == 0:
+        logging.warning('zero poes for level=%d' % lvl)
+
+    # check the extract call is not broken
+    aw = extract.extract(dstore, 'disagg_by_src?lvl_id=%d' % lvl)
+    assert aw.array.dtype.names == ('src_id', 'poe')
 
 #  ########################### task functions ############################ #
 
@@ -586,6 +615,9 @@ class ClassicalCalculator(base.HazardCalculator):
                     imt=list(self.oqparam.imtls), lvl=self.L1, src_id=srcids)
         if '_poes' in self.datastore:
             self.post_classical()
+        if 'disagg_by_src' in self.datastore:
+            logging.info('Comparing disagg_by_src vs mean curves')
+            check_disagg_by_src(self.datastore)
 
     def _create_hcurves_maps(self):
         oq = self.oqparam

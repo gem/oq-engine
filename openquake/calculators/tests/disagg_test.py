@@ -28,7 +28,6 @@ from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
-from openquake.calculators.tests.classical_test import check_disagg_by_src
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_master)
@@ -155,8 +154,6 @@ class DisaggregationTestCase(CalculatorTestCase):
         aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
         self.assertEqual(aw.trt, [b'Active Shallow Crust'])
 
-        check_disagg_by_src(self.calc.datastore, lvl=0)
-
     def test_case_7(self):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
         self.run_calc(case_7.__file__, 'job.ini')
@@ -196,8 +193,6 @@ class DisaggregationTestCase(CalculatorTestCase):
                 self.assertEqualFiles(
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
-        check_disagg_by_src(self.calc.datastore)
-
     def test_case_8(self):
         # test epsilon star
         self.run_calc(case_8.__file__, 'job.ini')
@@ -214,9 +209,6 @@ class DisaggregationTestCase(CalculatorTestCase):
             raise unittest.SkipTest('Temporarily skipped')
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
-
-        # checks that hazard curves for sources sum to the the total
-        check_disagg_by_src(self.calc.datastore)
 
         # checking that the right number of sources appear in dsg_by_src
         dstore = self.calc.datastore.open('r')
@@ -237,9 +229,6 @@ class DisaggregationTestCase(CalculatorTestCase):
             raise unittest.SkipTest('Temporarily skipped')
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
 
-        # checks that hazard curves for sources sum to the the total
-        check_disagg_by_src(self.calc.datastore)
-
         # checking that the right number of sources appear in dsg_by_src
         dstore = self.calc.datastore.open('r')
         self.assertEqual(dstore['disagg_by_src'].shape[-1], 3)
@@ -247,4 +236,3 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_12(self):
         # check source IDs with :, . and ;
         self.run_calc(case_12.__file__, 'job.ini')
-        check_disagg_by_src(self.calc.datastore)
