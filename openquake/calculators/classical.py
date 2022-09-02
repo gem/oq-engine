@@ -128,7 +128,7 @@ def check_disagg_by_src(dstore, lvl=-1):
         poes = pprod(dbs, axis=4)  # N, R, M, L
     rlz_weights = dstore['weights'][:]
     mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L
-    numpy.testing.assert_allclose(mean, mean2, atol=1E-7)
+    numpy.testing.assert_allclose(mean, mean2, atol=1E-6)
 
     # considering a level for which the mean is nonzero
     if mean[:, :, lvl].sum() == 0:
