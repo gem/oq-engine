@@ -580,7 +580,8 @@ class IterResult(object):
                 del self.h5['task_sent']
                 self.h5['task_sent'] = str(task_sent)
                 name = result.mon.operation[6:]  # strip 'total '
-                result.mon.save_task_info(self.h5, result, name, mem_gb)
+                n = self.name + ':' + name if name == 'split_task' else name
+                result.mon.save_task_info(self.h5, result, n, mem_gb)
                 result.mon.flush(self.h5)
             elif not result.func:  # real output
                 yield val
