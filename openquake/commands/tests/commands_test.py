@@ -54,7 +54,7 @@ NRML_DIR = os.path.dirname(tests.__file__)
 MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
 
 
-def setup():
+def setup_module():
     os.environ['OQ_DATABASE'] = 'local'
 
 
@@ -643,3 +643,4 @@ class NRML2CSVTestCase(unittest.TestCase):
 
 def teardown_module():
     parallel.Starmap.shutdown()
+    del os.environ['OQ_DATABASE']
