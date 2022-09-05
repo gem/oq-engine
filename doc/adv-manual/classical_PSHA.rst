@@ -260,15 +260,6 @@ for engine versions >=3.13 it produces the exact mean curves (using
 the ``AvgPoeGMPE``); otherwise it will produce a different kind of collapsing
 (using the ``AvgGMPE``).
 
-Site-specific classical calculations
-==========================================
-
-We plan to introduce special optimizations for site-specific classical
-calculations. Preliminary investigations show that the GMPEs could be
-made 30x faster by parallelizing on the ruptures. However the work is
-currently stopped for lack of funding. Please get in contact with us if
-you are willing to sponsor work in this direction.
-
 Parametric GMPEs
 ===================================
 
@@ -921,6 +912,91 @@ Note 2: the precision and performance of the ``ps_grid_spacing`` approximation
 change at every release: you should not expect to get the same numbers and
 performance across releases even if the model is the same and the parameters
 are the same.
+
+disagg_by_src
+=======================================
+
+Given a system of various sources affecting a specific site,
+one very common question to ask is: what are the more relevant sources,
+i.e. which sources contribute the most to the mean hazard curve?
+The engine is able to answer such question by setting the ``disagg_by_src``
+flag in the job.ini file. When doing that, the engine saves in
+the datastore a 5-dimensional array called ``disagg_by_src`` with
+dimensions (site ID, realization ID, intensity measure type,
+intensity measure level, source ID). For that it is possible to extract
+the contribution of each source to the mean hazard curve (interested
+people should look at the code in the function ``check_disagg_by_src``).
+The array ``disagg_by_src`` can also be read as a pandas DataFrame,
+then getting something like the following::
+
+>> dstore.read_df('disagg_by_src', index='src_id')
+               site_id  rlz_id  imt  lvl         value
+ASCTRAS407           0       0  PGA    0  9.703749e-02
+IF-CFS-GRID03        0       0  PGA    0  3.720510e-02
+ASCTRAS407           0       0  PGA    1  6.735009e-02
+IF-CFS-GRID03        0       0  PGA    1  2.851081e-02
+ASCTRAS407           0       0  PGA    2  4.546237e-02
+...                ...     ...  ...  ...           ...
+IF-CFS-GRID03        0      31  PGA   17  6.830692e-05
+ASCTRAS407           0      31  PGA   18  1.072884e-06
+IF-CFS-GRID03        0      31  PGA   18  1.275539e-05
+ASCTRAS407           0      31  PGA   19  1.192093e-07
+IF-CFS-GRID03        0      31  PGA   19  5.960464e-07
+
+The ``value`` field here is the probability of exceedence in the hazard
+curve. The ``lvl`` field is an integer corresponding to the intensity
+measure level in the hazard curve.
+
+It should be noticed that many hazard models contain thousands of
+sources and as a consequence the ``disagg_by_src`` matrix can be
+impossible to compute without running out of memory. Even if you have
+enough memory, having a very large ``disagg_by_src`` matrix is a bad
+idea, so there is a limit on the size of the matrix, hard-coded to 4
+GB. The way to circumvent the limit is to reduce the number of
+sources: for instance you could convert point sources in multipoint
+sources.
+
+In engine 3.15 we also introduced the so-called "colon convention" on source
+IDs: if you have many sources that for some reason can be collected
+together - for instance because they are all in the same region or
+because they are components of a same source split by magnitude - you
+can tell to the engine to collect them in the ``disagg_by_src``
+matrix. The trick is to use IDs with the same prefix, a colon and then a
+numeric index. For instance, if you had 3 sources with IDs ``src_mag_6.65``,
+``src_mag_6.75``, ``src_mag_6.85``, fragments of the same source with
+different magnitudes, you could change their IDs to something like
+``src:0``, ``src:1``, ``src:2`` and that would reduce the size of the
+matrix ``disagg_by_src`` by 3 times by collecting together the contributions
+of each source. There is no restriction on the numeric indices to start
+from 0, so using the names ``src:665``, ``src:675``, ``src:685`` would
+work too and would be clearer: the IDs should be unique, however.
+
+If the IDs are not unique and the engine determines that the underlying
+sources are different, then an extension "semicolon + incremental index"
+is automatically added. This is useful when the hazard modeler wants
+to define a model where the same source appears in different versions
+having changed some of the parameters. In that case the modeler should
+use always the same ID: the engine will automatically distinguish the
+sources during the calculation of the hazard curves and consider them the same
+when saving the array ``disagg_by_src``: you can see an example in the
+test ``qa_tests_data/classical/case_79`` in the engine code base. In that
+case the ``source_info`` dataset will list 6 sources 
+``ASCTRAS407;0``, ``ASCTRAS407;1``, ``ASCTRAS407;2``, ``ASCTRAS407;3``,
+``IF-CFS-GRID03;0``, ``IF-CFS-GRID03;1`` but the matrix ``disagg_by_src``
+will see only two sources ``ASCTRAS407`` and ``IF-CFS-GRID03`` obtained
+by composing together the versions of the underlying sources.
+
+In version 3.15 ``disagg_by_src`` was extended to work with mutually
+exclusive sources, i.e. for the Japan model. You can see an example in
+the test ``qa_tests_data/classical/case_27``. However, the case of
+mutually exclusive ruptures - an example is the New Madrid cluster
+in the USA model - is not supported yet.
+
+NB: ``disagg_by_src`` can be set to true only if the
+``ps_grid_spacing`` approximation is disabled. The reason is that the
+``ps_grid_spacing`` approximation builds effective sources which are
+not in the original source model, thus breaking the connection between
+the values of the matrix and the original sources.
 
 The conditional spectrum calculator
 ========================================
