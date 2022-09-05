@@ -929,19 +929,19 @@ people should look at the code in the function ``check_disagg_by_src``).
 The array ``disagg_by_src`` can also be read as a pandas DataFrame,
 then getting something like the following::
 
->> dstore.read_df('disagg_by_src', index='src_id')
-               site_id  rlz_id  imt  lvl         value
-ASCTRAS407           0       0  PGA    0  9.703749e-02
-IF-CFS-GRID03        0       0  PGA    0  3.720510e-02
-ASCTRAS407           0       0  PGA    1  6.735009e-02
-IF-CFS-GRID03        0       0  PGA    1  2.851081e-02
-ASCTRAS407           0       0  PGA    2  4.546237e-02
-...                ...     ...  ...  ...           ...
-IF-CFS-GRID03        0      31  PGA   17  6.830692e-05
-ASCTRAS407           0      31  PGA   18  1.072884e-06
-IF-CFS-GRID03        0      31  PGA   18  1.275539e-05
-ASCTRAS407           0      31  PGA   19  1.192093e-07
-IF-CFS-GRID03        0      31  PGA   19  5.960464e-07
+ >> dstore.read_df('disagg_by_src', index='src_id')
+                site_id  rlz_id  imt  lvl         value
+ ASCTRAS407           0       0  PGA    0  9.703749e-02
+ IF-CFS-GRID03        0       0  PGA    0  3.720510e-02
+ ASCTRAS407           0       0  PGA    1  6.735009e-02
+ IF-CFS-GRID03        0       0  PGA    1  2.851081e-02
+ ASCTRAS407           0       0  PGA    2  4.546237e-02
+ ...                ...     ...  ...  ...           ...
+ IF-CFS-GRID03        0      31  PGA   17  6.830692e-05
+ ASCTRAS407           0      31  PGA   18  1.072884e-06
+ IF-CFS-GRID03        0      31  PGA   18  1.275539e-05
+ ASCTRAS407           0      31  PGA   19  1.192093e-07
+ IF-CFS-GRID03        0      31  PGA   19  5.960464e-07
 
 The ``value`` field here is the probability of exceedence in the hazard
 curve. The ``lvl`` field is an integer corresponding to the intensity
