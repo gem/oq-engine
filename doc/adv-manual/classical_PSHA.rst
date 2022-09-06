@@ -957,11 +957,13 @@ sources: for instance you could convert point sources in multipoint
 sources.
 
 In engine 3.15 we also introduced the so-called "colon convention" on source
-IDs: if you have many sources that for some reason can be collected
-together - for instance because they are all in the same region or
+IDs: if you have many sources defined in different files or source groups
+that for some reason should be collected
+together - for instance because they all account for seismicity in the same 
+tectonic region, or
 because they are components of a same source split by magnitude - you
-can tell to the engine to collect them in the ``disagg_by_src``
-matrix. The trick is to use IDs with the same prefix, a colon and then a
+can tell the engine to collect them into one source in the ``disagg_by_src``
+matrix. The trick is to use IDs with the same prefix, a colon, and then a
 numeric index. For instance, if you had 3 sources with IDs ``src_mag_6.65``,
 ``src_mag_6.75``, ``src_mag_6.85``, fragments of the same source with
 different magnitudes, you could change their IDs to something like
@@ -974,9 +976,11 @@ work too and would be clearer: the IDs should be unique, however.
 If the IDs are not unique and the engine determines that the underlying
 sources are different, then an extension "semicolon + incremental index"
 is automatically added. This is useful when the hazard modeler wants
-to define a model where the same source appears in different versions
-having changed some of the parameters. In that case the modeler should
-use always the same ID: the engine will automatically distinguish the
+to define a model where the more than one version of the same source appears 
+in the same source group, having changed some of the parameters, or when varied
+versions of a source appear in each branch of a logic tree. In that case, the modeler should
+use always the exact same ID (i.e. without the colon and numeric index): 
+the engine will automatically distinguish the
 sources during the calculation of the hazard curves and consider them the same
 when saving the array ``disagg_by_src``: you can see an example in the
 test ``qa_tests_data/classical/case_79`` in the engine code base. In that
@@ -991,6 +995,34 @@ exclusive sources, i.e. for the Japan model. You can see an example in
 the test ``qa_tests_data/classical/case_27``. However, the case of
 mutually exclusive ruptures - an example is the New Madrid cluster
 in the USA model - is not supported yet.
+
+In some cases it is tricky to discern whether use of the colon convention
+or identical source IDs is appropriate. The following list indicates the cases 
+in which source collection has been tested so far, and the appropriate 
+approach to source IDs.
+
+1. Sources in the same source group are scaled alternatives
+   of each other. For example, this occurs when for a given source, epistemic
+   uncertainties such as occurrence rates or geometries are considered, 
+   but the modeller has pre-scaled the rates rather than including the alternative
+   hypothesis in separate logic tree branches. 
+   **Naming approach**: identical IDs.
+
+2. Sources in different files are alternatives of each other, e.g. each is used 
+   in a different branch of the source model logic tree. 
+   **Naming approach**: identical IDs.
+
+3. A source consists of multiple source groups, potentially in different files, 
+   each including one or more sources (e.g. a non-parametric source) with many 
+   ruptures. 
+   **Naming approach**: colon convention
+
+4. One source consists of many mutually exclusive sources, as in 
+   ``qa_tests_data/classical/case_27``. 
+   **Naming approach**: colon convention
+
+Cases 1 and 2 could include include more than one source typology, as in 
+``qa_tests_data/classical/case_79``.
 
 NB: ``disagg_by_src`` can be set to true only if the
 ``ps_grid_spacing`` approximation is disabled. The reason is that the
