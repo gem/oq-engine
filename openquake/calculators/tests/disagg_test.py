@@ -207,8 +207,9 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.run_calc(case_9.__file__, 'job.ini')
         if platform.machine() == 'arm64':
             raise unittest.SkipTest('Temporarily skipped')
-        [fname] = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
+        [f1, f2] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/Mag-0.csv', f1)
+        self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', f2)
 
         # checking that the right number of sources appear in dsg_by_src
         dstore = self.calc.datastore.open('r')

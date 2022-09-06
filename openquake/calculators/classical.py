@@ -110,7 +110,7 @@ def semicolon_aggregate(probs, source_ids):
     return new, unique
 
 
-def check_disagg_by_src(dstore, lvl=-1):
+def check_disagg_by_src(dstore):
     """
     Make sure that by composing disagg_by_src one gets the hazard curves
     """
@@ -130,12 +130,8 @@ def check_disagg_by_src(dstore, lvl=-1):
     mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L
     numpy.testing.assert_allclose(mean, mean2, atol=1E-6)
 
-    # considering a level for which the mean is nonzero
-    if mean[:, :, lvl].sum() == 0:
-        logging.warning('zero poes for level=%d' % lvl)
-
     # check the extract call is not broken
-    aw = extract.extract(dstore, 'disagg_by_src?lvl_id=%d' % lvl)
+    aw = extract.extract(dstore, 'disagg_by_src?lvl_id=-1')
     assert aw.array.dtype.names == ('src_id', 'poe')
 
 #  ########################### task functions ############################ #

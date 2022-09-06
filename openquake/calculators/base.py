@@ -866,7 +866,7 @@ class HazardCalculator(BaseCalculator):
             if self.crmodel and missing:
                 raise RuntimeError(
                     'The exposure contains the taxonomy strings '
-                    '%s which are not in the risk model' % missing)
+                    '%s which are not in the fragility/vulnerability/consequence model' % missing)
 
             self.crmodel.check_risk_ids(oq.inputs)
 

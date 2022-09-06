@@ -360,7 +360,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
                 assert_close(a[x], b[x], rtol, atol, x)
         return
     if hasattr(a, '__dict__'):  # objects with an attribute dictionary
-        assert_close(vars(a), vars(b), context=a)
+        assert_close(vars(a), vars(b), rtol, atol, context=a)
         return
     if hasattr(a, '__iter__'):  # iterable objects
         xs, ys = list(a), list(b)
