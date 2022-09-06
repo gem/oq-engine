@@ -122,7 +122,7 @@ def export_hcurves_by_imt_csv(
         lst.append(('poe-%.7f' % iml, F32))
     custom = 'custom_site_id' in sitecol.array.dtype.names
     if custom:
-        lst.insert(0, ('custom_site_id', 'S6'))
+        lst.insert(0, ('custom_site_id', 'S8'))
     hcurves = numpy.zeros(nsites, lst)
     if custom:
         for sid, csi, lon, lat, dep in zip(

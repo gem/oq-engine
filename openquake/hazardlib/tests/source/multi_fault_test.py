@@ -15,10 +15,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import tempfile
 import unittest
+from openquake.baselib import hdf5, python3compat
 from openquake.hazardlib.source.multi_fault import MultiFaultSource
 from openquake.hazardlib.geo.surface import KiteSurface
 from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
+from openquake.hazardlib.sourcewriter import write_source_model
+from openquake.hazardlib.sourceconverter import SourceGroup
+from openquake.hazardlib.nrml import SourceModel
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -73,10 +78,22 @@ class MultiFaultTestCase(unittest.TestCase):
         self.rakes = rakes
 
     def test01(self):
-        # test instantiation and rupture generation
+        # test instantiation
         src = MultiFaultSource("01", "test", "Moon Crust",
                                self.rup_idxs, self.pmfs, self.mags, self.rakes)
         src.set_sections(self.sections)
+
+        # test conversion to XML
+        smodel = SourceModel([SourceGroup("Moon Crust", [src], "test_group")])
+        fd, tmp = tempfile.mkstemp(suffix='.xml')
+        with os.fdopen(fd, 'wb'):
+            sm_xml, gm_hdf5, gm_xml = write_source_model(tmp, smodel)
+        # check the stored section indices
+        with hdf5.File(gm_hdf5, 'r') as f:
+            lines = python3compat.decode(f['01/rupture_idxs'][:])
+        self.assertEqual(lines, ['0', '1', '2', '0 1', '0 2', '1 2', '0 1 2'])
+
+        # test rupture generation
         rups = list(src.iter_ruptures())
         self.assertEqual(7, len(rups))
 

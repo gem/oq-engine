@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import abc
 import copy
 import time
@@ -51,6 +52,7 @@ TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
+MAX_MB = 512
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
@@ -285,7 +287,11 @@ def basename(src):
     """
     :returns: the base name of a split source
     """
-    return src.source_id.split(':')[0]
+    src_id = src if isinstance(src, str) else src.source_id
+    splits = re.split('[.:]', src_id, 1)
+    if len(splits) == 2 and ';' in splits[1]:
+        return splits[0] + ';' + splits[1].split(';')[1]
+    return splits[0]
 
 
 def get_num_distances(gsims):
@@ -543,9 +549,6 @@ class ContextMaker(object):
         """
         assert ctxs
         dd = self.defaultdict.copy()
-        if self.fewsites:
-            dd['clon'] = numpy.float64(0.)
-            dd['clat'] = numpy.float64(0.)
         if magi is not None:  # magnitude bin used in disaggregation
             dd['magi'] = numpy.uint8(0)
 
@@ -557,7 +560,9 @@ class ContextMaker(object):
             shps = [ctx.probs_occur.shape for ctx in ctxs]
             np = max(i[1] if len(i) > 1 else i[0] for i in shps)
         dd['probs_occur'] = numpy.zeros(np)
-
+        if self.fewsites:  # must be at the end
+            dd['clon'] = numpy.float64(0.)
+            dd['clat'] = numpy.float64(0.)
         C = sum(len(ctx) for ctx in ctxs)
         ra = RecordBuilder(**dd).zeros(C)
         start = 0
@@ -1296,26 +1301,30 @@ class PmapMaker(object):
 
     def _make_src_indep(self):
         # sources with the same ID
-        maxsize = TWO20 if self.collapse_level is None else TWO20 * 16
         pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         cm = self.cmaker
         allctxs = []
+        ctxs_mb = 0
         totlen = 0
         t0 = time.time()
         for src in self.sources:
             ctxs = self._get_ctxs(src)
+            ctxs_mb += sum(ctx.nbytes for ctx in ctxs) / TWO20  # TWO20=1MB
             src.nsites = sum(len(ctx) for ctx in ctxs)
             totlen += src.nsites
             allctxs.extend(ctxs)
-            if src.nsites and totlen > maxsize:
+            if ctxs_mb > MAX_MB:
                 cm.get_pmap(concat(allctxs), pmap)
                 allctxs.clear()
+                ctxs_mb = 0
         if allctxs:
             cm.get_pmap(concat(allctxs), pmap)
+            allctxs.clear()
         dt = time.time() - t0
         nsrcs = len(self.sources)
         for src in self.sources:
             self.source_data['src_id'].append(src.source_id)
+            self.source_data['grp_id'].append(src.grp_id)
             self.source_data['nsites'].append(src.nsites)
             self.source_data['esites'].append(src.esites)
             self.source_data['nrupts'].append(src.num_ruptures)
@@ -1326,6 +1335,7 @@ class PmapMaker(object):
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
+        # used in the Japan model, test case_27
         pmap_by_src = {}
         cm = self.cmaker
         for src in self.sources:
@@ -1336,16 +1346,26 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
                 cm.get_pmap(ctxs, pm)
+
             p = (~pm if cm.rup_indep else pm) * src.mutex_weight
-            pmap_by_src[src.source_id] = p
+            if ':' in src.source_id:
+                srcid = basename(src)
+                if srcid in pmap_by_src:
+                    pmap_by_src[srcid] += p
+                else:
+                    pmap_by_src[srcid] = p
+            else:
+                pmap_by_src[src.source_id] = p
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
+            self.source_data['grp_id'].append(src.grp_id)
             self.source_data['nsites'].append(nsites)
             self.source_data['esites'].append(src.esites)
             self.source_data['nrupts'].append(nctxs)
             self.source_data['weight'].append(src.weight)
             self.source_data['ctimes'].append(dt)
             self.source_data['taskno'].append(cm.task_no)
+
         return pmap_by_src
 
     def make(self):
@@ -1371,8 +1391,8 @@ class PmapMaker(object):
         elif self.disagg_by_src:
             # all the sources in the group have the same source_id because
             # of the groupby(group, get_source_id) in classical.py
-            src = self.sources[0].source_id.split(':')[0]
-            dic['pmap_by_src'] = {src: pmap}
+            srcid = basename(self.sources[0])
+            dic['pmap_by_src'] = {srcid: pmap}
         return dic
 
 

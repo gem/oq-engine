@@ -326,7 +326,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         for fmt in fmts:
             if not fmt:
                 continue
-            if fmt == 'csv' and self.R > 1:
+            if fmt == 'csv':
                 self._export(('realizations', fmt))
             for key in sorted(keys):  # top level keys
                 if 'rlzs' in key and self.R > 1:
@@ -1225,6 +1225,30 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
         dstore['agg_values'] = assetcol.get_agg_values(aggby)
 
 
+def save_shakemap(calc, sitecol, shakemap, gmf_dict):
+    """
+    Store a ShakeMap array as a gmf_data dataset.
+    """
+    logging.info('Building GMFs')
+    oq = calc.oqparam
+    with calc.monitor('building/saving GMFs'):
+        imts, gmfs = to_gmfs(shakemap, gmf_dict, oq.site_effects,
+                             oq.truncation_level,
+                             oq.number_of_ground_motion_fields,
+                             oq.random_seed, oq.imtls)
+        N, E, M = gmfs.shape
+        events = numpy.zeros(E, rupture.events_dt)
+        events['id'] = numpy.arange(E, dtype=U32)
+        calc.datastore['events'] = events
+        # convert into an array of dtype gmv_data_dt
+        lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
+               for ei, event in enumerate(events)
+               for s in numpy.arange(N, dtype=U32)]
+        oq.hazard_imtls = {str(imt): [0] for imt in imts}
+        data = numpy.array(lst, oq.gmf_data_dt())
+        create_gmf_data(calc.datastore, imts, data=data)
+
+
 def read_shakemap(calc, haz_sitecol, assetcol):
     """
     Enabled only if there is a shakemap_id parameter in the job.ini.
@@ -1233,7 +1257,6 @@ def read_shakemap(calc, haz_sitecol, assetcol):
     and stored in the datastore.
     """
     oq = calc.oqparam
-    E = oq.number_of_ground_motion_fields
     imtls = oq.imtls or calc.datastore.parent['oqparam'].imtls
     oq.risk_imtls = {imt: list(imls) for imt, imls in imtls.items()}
     logging.info('Getting/reducing shakemap')
@@ -1250,7 +1273,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         else:
             uridict = oq.shakemap_uri
         sitecol, shakemap, discarded = get_sitecol_shakemap(
-            uridict.pop('kind'), uridict, oq.imtls, haz_sitecol,
+            uridict, oq.imtls, haz_sitecol,
             oq.asset_hazard_distance['default'])
         if len(discarded):
             calc.datastore['discarded'] = discarded
@@ -1285,22 +1308,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         else:
             # no correlation required, basic calculation is faster
             gmf_dict = {'kind': 'basic'}
-
-    logging.info('Building GMFs')
-    with calc.monitor('building/saving GMFs'):
-        imts, gmfs = to_gmfs(shakemap, gmf_dict, oq.site_effects,
-                             oq.truncation_level, E, oq.random_seed, oq.imtls)
-        N, E, M = gmfs.shape
-        events = numpy.zeros(E, rupture.events_dt)
-        events['id'] = numpy.arange(E, dtype=U32)
-        calc.datastore['events'] = events
-        # convert into an array of dtype gmv_data_dt
-        lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
-               for ei, event in enumerate(events)
-               for s in numpy.arange(N, dtype=U32)]
-        oq.hazard_imtls = {str(imt): [0] for imt in imts}
-        data = numpy.array(lst, oq.gmf_data_dt())
-        create_gmf_data(calc.datastore, imts, data=data)
+    save_shakemap(calc, sitecol, shakemap, gmf_dict)
     return sitecol, assetcol
 
 
