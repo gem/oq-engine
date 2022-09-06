@@ -1013,8 +1013,8 @@ def _taxonomy_mapping(filename, taxonomies):
     taxonomies = taxonomies[1:]  # strip '?'
     missing = set(taxonomies) - set(dic)
     if missing:
-        raise InvalidFile('The taxonomies %s are in the exposure but not in '
-                          'the taxonomy mapping %s' % (missing, filename))
+        raise InvalidFile('The taxonomy strings %s are in the exposure but not in '
+                          'the taxonomy mapping file %s' % (missing, filename))
     lst = [[("?", 1)]]
     for taxo in taxonomies:
         recs = dic[taxo]
