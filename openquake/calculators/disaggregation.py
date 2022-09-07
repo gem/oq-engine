@@ -361,15 +361,15 @@ class DisaggregationCalculator(base.HazardCalculator):
         # that would break the ordering of the indices causing an incredibly
         # worse performance, but visible only in extra-large calculations!
         cmakers = read_cmakers(self.datastore)
-        for block in block_splitter(rdata, maxweight,
-                                    key=operator.itemgetter('grp_id')):
-            grp_id = block[0]['grp_id']
+        grp_ids = U32(rdata['grp_id'])
+        for grp_id, slices in performance.get_slices(grp_ids).items():
+            [(start, stop)] = slices
+            slc = slice(start, stop)
             cmaker = cmakers[grp_id]
-            U = max(U, block.weight)
-            slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
+            U = max(U, stop - start)
             smap.submit((dstore, slc, cmaker, self.hmap4,
                          magi[slc], self.bin_edges))
-            task_inputs.append((grp_id, slc.stop-slc.start))
+            task_inputs.append((grp_id, stop-start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
