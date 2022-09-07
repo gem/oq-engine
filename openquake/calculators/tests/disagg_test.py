@@ -71,8 +71,6 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_2(self):
         # this is a case with disagg_outputs = Mag and 4 realizations
         # site #0 is partially discarded
-        if sys.platform == 'darwin':
-            raise unittest.SkipTest('MacOSX')
         self.assert_curves_ok(['Mag-0.csv', 'Mag-1.csv'], case_2.__file__)
 
         # check we can read the exported files and compute the mean
