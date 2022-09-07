@@ -363,13 +363,13 @@ class DisaggregationCalculator(base.HazardCalculator):
         cmakers = read_cmakers(self.datastore)
         grp_ids = U32(rdata['grp_id'])
         for grp_id, slices in performance.get_slices(grp_ids).items():
-            [(start, stop)] = slices
-            slc = slice(start, stop)
             cmaker = cmakers[grp_id]
-            U = max(U, stop - start)
-            smap.submit((dstore, slc, cmaker, self.hmap4,
-                         magi[slc], self.bin_edges))
-            task_inputs.append((grp_id, stop-start))
+            for start, stop in slices:
+                slc = slice(start, stop)
+                U = max(U, stop - start)
+                smap.submit((dstore, slc, cmaker, self.hmap4,
+                             magi[slc], self.bin_edges))
+                task_inputs.append((grp_id, stop - start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
