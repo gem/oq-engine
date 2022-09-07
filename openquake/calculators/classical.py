@@ -302,14 +302,15 @@ class Hazard:
                 lst.append((dic['grp_start'], trt, dic['avg_poe'],
                             dic['nsites']))
         self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
-
         if pmaps:  # called inside a loop
+            disagg_by_src = self.datastore['disagg_by_src'][()]
             for key, pmap in pmaps.items():
                 if isinstance(key, str):
                     # in case of disagg_by_src key is a source ID
                     rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
-                    self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
+                    disagg_by_src[..., self.srcidx[key]] = (
                         self.get_hcurves(pmap, rlzs_by_gsim))
+            self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
 @base.calculators.add('classical', 'ucerf_classical')
