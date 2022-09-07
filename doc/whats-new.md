@@ -5,8 +5,7 @@ The complete list of changes is listed in the changelog:
 
 https://github.com/gem/oq-engine/blob/engine-3.15/debian/changelog
 
-Classical PSHA
---------------
+# Classical PSHA
 
 The major highligh of the release is an optimization of point-like
 sources resulting in a speedup from 1.5 to 50 times, measured on various
@@ -61,8 +60,7 @@ Finally, we removed a logging statement that could cause an out of
 memory in some calculations: thanks to Chris Chamberlain of
 GNS-Science for discoving the issue.
 
-Disaggregation
---------------
+# Disaggregation
 
 The disaggregation calculator was failing when a tectonic region type
 had a single magnitude, or when, due to rounding issues, incorrect
@@ -87,8 +85,7 @@ it has been fixed now.
 Finally, Anne Hulsey from GNS New Zealand contributed two new kinds of
 disaggregation: `Mag_Dist_TRT` and `Mag_Dist_TRT_Eps`.
 
-Hazard sources
---------------
+# Hazard sources
 
 There were several changes in multi fault sources and a few bugs were
 fixed while implementing the New Zealand model.  As a new feature the
@@ -108,8 +105,7 @@ We also fixed a bug in `upgrade_nrml` when converting point sources with
 varying seismogenic depths into multipoint sources and changed the
 sourcewriter to round the coordinates to 4 digits after the decimal point.
 
-hazardlib
----------
+# hazardlib
 
 Tom Son contributed a bug fix to the Chiou & Youngs 2014 model: the
 Spectral Acceleration at T ≤ 0.3s was not being set correctly.
@@ -138,8 +134,7 @@ the legacy method `get_mean_and_stddevs`.
 We added a check for missing mags when calling the class GMPETable incorrectly
 from hazardlib and we added a property `GMPETable.filename`.
 
-Risk
-----
+# Risk
 
 We added some restrictions on the risk IDs (they must be printable
 ASCII characters excluding #'"); further restrictions may be added
@@ -190,8 +185,7 @@ In presence of an exposure, a `custom_site_id` field is automatically
 added to the site collection, if not present already. It is computed
 as a geohash 8-characters long and it is meant for debugging purposes.
 
-oq commands
------------
+# oq commands
 
 The command `oq download_shakemap` has been replaced with a command
 `oq shakemap2gmfs` which is able to convert a ShakeMap coming from
@@ -206,8 +200,7 @@ We extended the command `oq engine` with and option `--sample-sources`
 to reduce large calculations by sampling the source model (useful for
 debugging).
 
-Bug fixes and new checks
--------------------------
+# Bug fixes and new checks
 
 A bug in event based calculations, where far away ruptures coming from
 multi fault sources were needlessly stored, has been fixed.
@@ -238,8 +231,7 @@ We added a warning for missing IMTs in ShakeMaps.
 When using the `--hc` options extra fields of the site collection, such as
 the `custom_site_id` were lost: this is now fixed.
 
-Installer and dependencies
---------------------------
+# Installer and dependencies
 
 The universal installer now officially support the M1 processor with Python 3.9
 (see https://github.com/gem/oq-engine/blob/master/doc/installing/universal.md)
@@ -265,8 +257,7 @@ risk infrastructure calculations.
 
 We raised the toml module version to 0.10.2.
 
-Other
------
+# Other
 
 Thanks to a grant from US AID the engine manual has been converted from
 latex format to sphinx format and it is now accessible online at the
