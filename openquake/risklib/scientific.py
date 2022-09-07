@@ -971,7 +971,8 @@ def classical_damage(
 #
 
 
-def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios):
+def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios,
+              investigation_time, risk_investigation_time):
     """
     :param vulnerability_function:
         an instance of
@@ -983,6 +984,16 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios):
         the hazard curve
     :param loss_ratios:
         a tuple of C loss ratios
+    :param investigation_time:
+        hazard investigation time
+    :param risk_investigation_time:
+        risk investigation time
+    :param steps_per_interval:
+        steps per interval
+    :returns:
+        an array of M probabilities of occurrence where M is the numbers
+        of damage states.
+
     :returns:
         an array of shape (2, C)
     """
