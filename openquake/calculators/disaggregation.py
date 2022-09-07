@@ -47,6 +47,17 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
+def _collapse(ddic):
+    # reduce the disaggregation accumulator for debugging purposes
+    # s, m, k -> trti, magi -> 6D array => s, m, trti, magi -> poe
+    cdic = {}
+    for (s, m, k), dic in ddic.items():
+        if k == 0:
+            for (trti, magi), matrix in dic.items():
+                cdic[s, m, trti, magi] = pprod(matrix)
+    return cdic
+
+
 def _matrix(matrices, num_trts, num_mag_bins):
     # convert a dict trti, magi -> matrix into a single matrix
     trti, magi = next(iter(matrices))
@@ -375,8 +386,8 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         dt = numpy.dtype([('trti', U8), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
-        results = smap.reduce(self.agg_result, AccumDict(accum={}))
-        return results  # imti, sid -> trti, magi -> 6D array
+        results = smap.reduce(self.agg_result)
+        return results  # s, m, k -> trti, magi -> 6D array
 
     def agg_result(self, acc, result):
         """
@@ -391,8 +402,11 @@ class DisaggregationCalculator(base.HazardCalculator):
             magi = result.pop('magi')
             for (s, m), out in result.items():
                 for k in (0, 1):
+                    if (s, m, k) not in acc:
+                        acc[s, m, k] = {}
                     x = acc[s, m, k].get((trti, magi), 0)
                     acc[s, m, k][trti, magi] = agg_probs(x, out[k])
+        print(_collapse(acc))
         return acc
 
     def post_execute(self, results):
