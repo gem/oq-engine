@@ -204,7 +204,7 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_9(self):
         # test mutex disaggregation. Results checked against hand-computed
         # values by Marco Pagani - 2022.06.28
-        self.run_calc(case_9.__file__, 'job.ini', concurrent_tasks='2')
+        self.run_calc(case_9.__file__, 'job.ini', concurrent_tasks='4')
         [f1, f2] = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag-0.csv', f1)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', f2)

@@ -47,14 +47,13 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def _collapse(ddic):
-    # reduce the disaggregation accumulator for debugging purposes
-    # s, m, k -> trti, magi -> 6D array => s, m, trti, magi -> poe
+def _collapse_res(rdic):
+    # reduce the result dictionary for debugging purposes
+    # s, m -> (array, array)
     cdic = {}
-    for (s, m, k), dic in ddic.items():
-        if k == 0:
-            for (trti, magi), matrix in dic.items():
-                cdic[s, m, trti, magi] = pprod(matrix)
+    for tup, out in rdic.items():
+        if isinstance(tup, tuple):
+            cdic[tup] = pprod(out[0])
     return cdic
 
 
@@ -162,6 +161,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
                         mat6 = matrix[..., m, :, :]
                         if mat6.any():
                             res[s, m] = output(mat6)
+            # print(_collapse_res(res))
             yield res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
@@ -369,7 +369,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
             smap.submit((dstore, slc, cmaker, self.hmap4,
                          magi[slc], self.bin_edges))
-            task_inputs.append((cmaker.trti, slc.stop-slc.start))
+            task_inputs.append((grp_id, slc.stop-slc.start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
@@ -384,7 +384,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 (humansize(data_transfer), humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer: %s', humansize(data_transfer))
 
-        dt = numpy.dtype([('trti', U8), ('nrups', U32)])
+        dt = numpy.dtype([('grp_id', U8), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
         results = smap.reduce(self.agg_result)
         return results  # s, m, k -> trti, magi -> 6D array
@@ -406,7 +406,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                         acc[s, m, k] = {}
                     x = acc[s, m, k].get((trti, magi), 0)
                     acc[s, m, k][trti, magi] = agg_probs(x, out[k])
-        print(_collapse(acc))
         return acc
 
     def post_execute(self, results):
