@@ -26,14 +26,14 @@ have a look at [FAQ related to cluster deployments](faq-cluster.md).
 
 ### Help! Should I disable hyperthreading?
 
-Yes. Disabling hyperthreading will save memory and make the engine
+Yes. Disabling hyperthreading will save memory and will make the engine
 faster. Suppose for instance that you have a machine with a powerful
 i9 processor and 16 GB of RAM. It seems a lot. In reality it is not.
 The operating system will consume some memory, the browser will consume a
 lot of memory, you may have other applications open and you may end up with
 less than 10 GB of available memory. If hyperthreading is enabled the engine
 will see 10x2 = 20 cores; running parallel computations may easily consume
-0.5 GB per core, i.e. 10 GB, so you will run out of memory. With Hyperthreading
+0.5 GB per core, i.e. 10 GB, so you will run out of memory. With hyperthreading
 disabled you will still have 5 GB of available RAM. We recommend to ALWAYS
 disable hyperthreading from the BIOS.
 
@@ -42,13 +42,29 @@ disable hyperthreading from the BIOS.
 This is another way to save memory. If you are on a single machine,
 the way to do it is to edit the file openquake.cfg and add the lines
 (if for instance you want to use 8 cores)
-
+```
 [distribution]
 num_cores = 8
-
+```
 If you are on a cluster you must edit the section [zworkers] and the parameter
 `host_cores`, replacing the `-1` with the number of cores to be used on
 each machine.
+
+### Help! I am running out of memory!
+
+If you are on a laptop, the first thing to do is close all memory consuming
+applications. Remember that running the enigne from the command-line is the
+most memory-efficient way to run calculations (browesers can use significant 
+memory from your laptop).
+You can also limit the number of parallel threads as explained
+before (i.e. disable hyperthreading, reduce num_cores) or disable
+parallelism altogether by giving the command
+
+$ oq engine --run job.ini --no-distribute
+
+or by setting `concurrent_tasks = 0` in the job.ini file.
+If you still run out of memory, then you must reduce your calculation or
+upgrade your system.
 
 ******
 

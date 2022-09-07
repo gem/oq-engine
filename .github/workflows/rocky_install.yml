@@ -40,11 +40,12 @@ jobs:
       if: github.event.inputs.git-ref != ''
       with:
         ref: ${{ github.event.inputs.git-ref }}
-    - name: Set up Python  ${{ matrix.python-version }} 
+    - name: Set up Python  ${{ matrix.python-version }}
       run: |
         pyver=`echo ${{ matrix.python-version }} | tr -d .`
         dnf update -y
         dnf install -y python${pyver}
+        dnf install -y git git-lfs
         #check version of python
         echo "check version of python"
         pip3 -V
@@ -60,7 +61,9 @@ jobs:
         echo "branch to test: ${BRANCH}"
         if [[ "$BRANCH" != "" ]]
         then
-          python3 install.py devel_server --version ${BRANCH}
+          pwd
+          cd ..
+          python3 oq-engine/install.py devel_server --version ${BRANCH}
         else
           python3 install.py devel_server
         fi
@@ -72,4 +75,4 @@ jobs:
         export PYTEST_ADDOPTS="--color=yes"
         # set owner to openquake to run test and create cache for pytest
         chown -R openquake /__w/oq-engine/
-        runuser -l openquake -c '/opt/openquake/venv/bin/pytest -vsx /__w/oq-engine/oq-engine/openquake/calculators'
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/risk_test.zip '

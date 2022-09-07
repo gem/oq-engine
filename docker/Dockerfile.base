@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2019-2021 GEM Foundation
+# Copyright (C) 2019-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -14,15 +14,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-FROM centos:8
+FROM rockylinux:8
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
       vendor="GEM Foundation"
 
-ARG repo=openquake-stable
+ARG repo=openquake
 
 RUN dnf install -y dnf-plugins-core && \
     dnf copr enable -y gem/$repo && \
-    dnf install -y oq-python36 && \
+    dnf install -y oq-python39 && \
     dnf clean all
 
 RUN useradd -u 1000 openquake && \

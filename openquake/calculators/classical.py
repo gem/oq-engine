@@ -31,12 +31,12 @@ except ImportError:
 from openquake.baselib import performance, parallel, hdf5, config
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
-    get_nbytes_msg, agg_probs)
-from openquake.hazardlib.contexts import ContextMaker, read_cmakers
+    get_nbytes_msg, agg_probs, pprod)
+from openquake.hazardlib.contexts import ContextMaker, read_cmakers, basename
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
 from openquake.commonlib import calc
-from openquake.calculators import base, getters
+from openquake.calculators import base, getters, extract
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -58,10 +58,6 @@ class Set(set):
     __iadd__ = set.__ior__
 
 
-def get_source_id(src):  # used in submit_tasks
-    return src.source_id.split(':')[0]
-
-
 def store_ctxs(dstore, rupdata_list, grp_id):
     """
     Store contexts in the datastore
@@ -79,6 +75,64 @@ def store_ctxs(dstore, rupdata_list, grp_id):
             else:
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
+
+def semicolon_aggregate(probs, source_ids):
+    """
+    :param probs: array of shape (..., Ns)
+    :param source_ids: list of source IDs (some with semicolons) of length Ns
+    :returns: array of shape (..., Ns) and list of length N with N < Ns
+
+    This is used to aggregate array of probabilities in the case of sources
+    which are variations of a base source. Here is an example with Ns=7
+    sources reducible to N=4 base sources:
+
+    >>> source_ids = ['A;0', 'A;1', 'A;2', 'B', 'C', 'D;0', 'D;1']
+    >>> probs = numpy.array([[.01, .02, .03, .04, .05, .06, .07],
+    ...                      [.00, .01, .02, .03, .04, .05, .06]])
+
+    `semicolon_aggregate` effectively reduces the array of probabilities
+    from 7 to 4 components, however for storage convenience it does not
+    change the shape, so the missing components are zeros:
+
+    >>> semicolon_aggregate(probs, source_ids)  # (2, 7) => (2, 4)
+    (array([[0.058906, 0.04    , 0.05    , 0.1258  , 0.      , 0.      ,
+            0.      ],
+           [0.0298  , 0.03    , 0.04    , 0.107   , 0.      , 0.      ,
+            0.      ]]), array(['A', 'B', 'C', 'D'], dtype='<U1'))
+
+    It is assumed that the semicolon sources are independent, i.e. not mutex.
+    """
+    srcids = [srcid.split(';')[0] for srcid in source_ids]
+    unique, indices = numpy.unique(srcids, return_inverse=True)
+    new = numpy.zeros_like(probs)
+    for i, s1, s2 in performance._idx_start_stop(indices):
+        new[..., i] = pprod(probs[..., s1:s2], axis=-1)
+    return new, unique
+
+
+def check_disagg_by_src(dstore):
+    """
+    Make sure that by composing disagg_by_src one gets the hazard curves
+    """
+    info = dstore['source_info'][:]
+    mutex = info['mutex_weight'] > 0
+    mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
+    dbs = dstore.sel('disagg_by_src')  # N, R, M, L, Ns
+    if mutex.sum():
+        dbs_indep = dbs[:, :, :, :, ~mutex]
+        dbs_mutex = dbs[:, :, :, :, mutex]
+        poes_indep = pprod(dbs_indep, axis=4)  # N, R, M, L
+        poes_mutex = dbs_mutex.sum(axis=4)  # N, R, M, L
+        poes = poes_indep + poes_mutex - poes_indep * poes_mutex
+    else:
+        poes = pprod(dbs, axis=4)  # N, R, M, L
+    rlz_weights = dstore['weights'][:]
+    mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L
+    numpy.testing.assert_allclose(mean, mean2, atol=1E-6)
+
+    # check the extract call is not broken
+    aw = extract.extract(dstore, 'disagg_by_src?lvl_id=-1')
+    assert aw.array.dtype.names == ('src_id', 'poe')
 
 #  ########################### task functions ############################ #
 
@@ -252,9 +306,8 @@ class Hazard:
         if pmaps:  # called inside a loop
             for key, pmap in pmaps.items():
                 if isinstance(key, str):
-                    # contains only string keys in case of disaggregation
+                    # in case of disagg_by_src key is a source ID
                     rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
-                    # works because disagg_by_src disables submit_split
                     self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
                         self.get_hcurves(pmap, rlzs_by_gsim))
 
@@ -294,10 +347,12 @@ class ClassicalCalculator(base.HazardCalculator):
 
         pmap = dic['pmap']
         pmap.grp_id = grp_id
-        source_id = dic.pop('source_id', None)
-        if source_id:
+        pmap_by_src = dic.pop('pmap_by_src', {})
+        # len(pmap_by_src) > 1 only for mutex sources, see contexts.py
+        for source_id, pm in pmap_by_src.items():
             # store the poes for the given source
-            acc[source_id.split(':')[0]] = pmap
+            acc[source_id] = pm
+            pm.grp_id = grp_id
         if pmap:
             acc[grp_id] |= pmap
         self.n_outs[grp_id] -= 1
@@ -312,7 +367,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         self.init_poes()
         params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
-                  'probs_occur', 'sids', 'src_id'}
+                  'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
 
         for trt, gsims in gsims_by_trt.items():
@@ -327,7 +382,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = U16  # storing only for few sites
                 elif param == 'probs_occur':
                     dt = hdf5.vfloat64
-                elif param == 'src_id':
+                elif param in ('src_id', 'rup_id'):
                     dt = U32
                 elif param == 'grp_id':
                     dt = U16
@@ -335,21 +390,14 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = F32
                 descr.append((param, dt))
             self.datastore.create_df('rup', descr, 'gzip')
-        self.Ns = len(self.csm.source_info)
         self.cfactor = numpy.zeros(2)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         # NB: the relevant ruptures are less than the effective ruptures,
         # which are a preclassical concept
         if self.oqparam.disagg_by_src:
-            sources = self.get_source_ids()
-            self.datastore.create_dset(
-                'disagg_by_src', F32,
-                (self.N, self.R, self.M, self.L1, self.Ns))
-            self.datastore.set_shape_descr(
-                'disagg_by_src', site_id=self.N, rlz_id=self.R,
-                imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
+            self.create_disagg_by_src()
 
-    def get_source_ids(self):
+    def create_disagg_by_src(self):
         """
         :returns: the unique source IDs contained in the composite model
         """
@@ -358,17 +406,16 @@ class ClassicalCalculator(base.HazardCalculator):
         self.L1 = oq.imtls.size // self.M
         sources = list(self.csm.source_info)
         size, msg = get_nbytes_msg(
-            dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
-        ps = any(src.code == b'P' for src in self.csm.get_sources())
-        if size > TWO32 and not ps:
+            dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=len(sources)))
+        if size > TWO32:
             raise RuntimeError('The matrix disagg_by_src is too large: %s'
                                % msg)
-        elif size > TWO32:
-            msg = ('The source model contains point sources: you cannot set '
-                   'disagg_by_src=true unless you convert them to multipoint '
-                   'sources with the command oq upgrade_nrml --multipoint %s'
-                   ) % oq.base_path
-            raise RuntimeError(msg)
+        self.datastore.create_dset(
+            'disagg_by_src', F32,
+            (self.N, self.R, self.M, self.L1, len(sources)))
+        self.datastore.set_shape_descr(
+            'disagg_by_src', site_id=self.N, rlz_id=self.R,
+            imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
         return sources
 
     def init_poes(self):
@@ -451,6 +498,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 logging.info('Finished tile %d of %d', t, len(tiles))
         self.store_info()
         self.haz.store_disagg(acc)
+        if self.cfactor[0] == 0:
+            raise RuntimeError('Filtered away all ruptures??')
         logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
             int(self.cfactor[1]), int(self.cfactor[0]),
             self.cfactor[1] / self.cfactor[0]))
@@ -493,7 +542,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 smap.submit(trip)
                 self.n_outs[grp_id] += 1
             else:  # regroup the sources in blocks
-                blks = (groupby(sg, get_source_id).values()
+                blks = (groupby(sg, basename).values()
                         if oq.disagg_by_src else
                         block_splitter(
                             sg, max_weight, get_weight, sort=True))
@@ -504,15 +553,8 @@ class ClassicalCalculator(base.HazardCalculator):
                         len(block), sum(src.weight for src in block))
                     trip = (block, sids, cmakers[grp_id])
                     triples.append(trip)
-                    # outs = (oq.outs_per_task if len(block) >= oq.outs_per_task
-                    #         else len(block))
-                    # if outs > 1 and not oq.disagg_by_src:
-                    #     smap.submit_split(trip, oq.time_per_task, outs)
-                    #     self.n_outs[grp_id] += outs
-                    # else:
                     smap.submit(trip)
                     self.n_outs[grp_id] += 1
-        logging.info('grp_id->n_outs: %s', list(self.n_outs.values()))
         return smap
 
     def collect_hazard(self, acc, pmap_by_kind):
@@ -557,13 +599,21 @@ class ClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
             elif slow_tasks:
                 logging.info(msg)
-
-        if 'rup' in self.datastore:
-            tot = len(self.datastore['rup/mag'])
-            logging.info('Stored {:_d} ruptures'.format(tot))
-
+        if self.oqparam.disagg_by_src and '_poes' in self.datastore:
+            srcids = list(self.csm.source_info)
+            if any(';' in srcid for srcid in srcids):
+                # enable reduction of the array disagg_by_src
+                arr = self.datastore['disagg_by_src'][:]
+                arr, srcids = semicolon_aggregate(arr, srcids)
+                self.datastore['disagg_by_src'][:] = arr
+                self.datastore.set_shape_descr(
+                    'disagg_by_src', site_id=self.N, rlz_id=self.R,
+                    imt=list(self.oqparam.imtls), lvl=self.L1, src_id=srcids)
         if '_poes' in self.datastore:
             self.post_classical()
+        if 'disagg_by_src' in self.datastore:
+            logging.info('Comparing disagg_by_src vs mean curves')
+            check_disagg_by_src(self.datastore)
 
     def _create_hcurves_maps(self):
         oq = self.oqparam

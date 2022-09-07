@@ -19,7 +19,6 @@
 import os
 import sys
 import time
-import sqlite3
 import logging
 import getpass
 import threading
@@ -32,16 +31,8 @@ from openquake.hazardlib import valid
 from openquake.commonlib import logs
 from openquake.engine import __version__
 from openquake.server.db import actions
-from openquake.server import dbapi
+from openquake.commonlib.dbapi import db
 from openquake.server import __file__ as server_path
-
-
-db = dbapi.Db(sqlite3.connect, os.path.expanduser(config.dbserver.file),
-              isolation_level=None, detect_types=sqlite3.PARSE_DECLTYPES,
-              timeout=20)
-db.cmd = lambda action, *args: getattr(actions, action)(db, *args)
-# NB: I am increasing the timeout from 5 to 20 seconds to see if the random
-# OperationalError: "database is locked" disappear in the WebUI tests
 
 
 class DbServer(object):

@@ -310,7 +310,6 @@ class Line(object):
         # Now compute T and U
         t_upp, u_upp = get_tu(ui, ti, segments_len, weights)
         t_upp[iot] = 0.0
-
         return t_upp, u_upp, weights
 
     def get_ui_ti(self, mesh, uhat, that):

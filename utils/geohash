@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+
+import numpy
+import pandas
+from openquake.baselib import sap
+from openquake.hazardlib.geo.utils import geohash
+
+
+def main(sites_csv):
+    """
+    Add a geohash column 6-chars long to a CSV file with lon, lat
+    """
+    df = pandas.read_csv(sites_csv)
+    df['lon'] = numpy.round(df.lon, 5)
+    df['lat'] = numpy.round(df.lat, 5)
+    df['geohash'] = [geohash(lon, lat, 6).decode('utf8')
+                     for lon, lat in zip(df.lon, df.lat)]
+    df.to_csv(sites_csv, index=False)
+
+if __name__ == '__main__':
+    sap.run(main)

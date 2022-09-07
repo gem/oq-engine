@@ -48,7 +48,7 @@ class ChiouYoungs2014TestCase(BaseGSIMTestCase):
 
     def test_mean_hanging_wall_strike_slip(self):
         self.check('NGA/CY14/CY14_MEDIAN_MS_HW_SS.csv',
-                       max_discrep_percentage=0.05)
+                   max_discrep_percentage=0.05)
 
     def test_inter_event_stddev(self):
         # data generated from opensha

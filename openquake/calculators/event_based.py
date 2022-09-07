@@ -234,6 +234,7 @@ class EventBasedCalculator(base.HazardCalculator):
             cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], oq)
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
+        self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
@@ -371,8 +372,10 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.ground_motion_fields and oq.min_iml.sum() == 0:
             logging.warning('The GMFs are not filtered: '
                             'you may want to set a minimum_intensity')
-        else:
+        elif oq.minimum_intensity:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
+        else:
+            logging.info('min_iml=%s', oq.min_iml)
         self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
             dstore.parent = datastore.read(oq.hazard_calculation_id)

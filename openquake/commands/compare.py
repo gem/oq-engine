@@ -56,7 +56,7 @@ class Comparator(object):
         for ex in self.extractors:
             time = ex.get('performance_data')['time_sec'].sum()
             data.append((ex.calc_id, time))
-        print(views.text_table(data, ['calc_id', 'time']))
+        print(views.text_table(data, ['calc_id', 'time'], ext='org'))
 
     def getsids(self, samplesites):
         sids = self.sitecol['sids']
@@ -162,21 +162,27 @@ class Comparator(object):
             fdict = {ex.calc_id: open('%s.txt' % ex.calc_id, 'w')
                      for ex in self.extractors}
             for calc_id, f in fdict.items():
-                f.write(views.text_table(rows[calc_id], header))
+                f.write(views.text_table(rows[calc_id], header, ext='org'))
                 print('Generated %s' % f.name)
         else:
-            print(views.text_table(rows['all'], header))
+            print(views.text_table(rows['all'], header, ext='org'))
         return arrays
 
 
 # works only locally for the moment
-def compare_rups(calc_1: int, calc_2: int):
+def compare_rups(calc_1: int, calc_2: int, site_id: int = 0):
     """
-    Compare the ruptures of two calculations as pandas DataFrames
+    Compare the ruptures affecting the given site ID as pandas DataFrames
     """
     with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
-        df1 = ds1.read_df('rup')
-        df2 = ds2.read_df('rup')
+        df1 = ds1.read_df('rup', sel={'sids': site_id})
+        df2 = ds2.read_df('rup', sel={'sids': site_id})
+    del df1['probs_occur']
+    del df2['probs_occur']
+    lens = len(df1), len(df2)
+    if lens[0] != lens[1]:
+        print('%d != %d ruptures' % lens)
+        return
     print(df1.compare(df2))
 
 
@@ -200,7 +206,8 @@ def compare_uhs(calc_ids: int, files=False, *, poe_id: int = 0,
         delta = numpy.abs(arrays[0] - arrays[1]).max(axis=1)
         amax = delta.argmax()
         row = ('%.5f' % c.oq.poes[poe_id], rms, delta[amax], amax)
-        print(views.text_table([row], ['poe', 'rms-diff', 'max-diff', 'site']))
+        print(views.text_table([row], ['poe', 'rms-diff', 'max-diff', 'site'],
+                               ext='org'))
 
 
 def compare_hmaps(imt, calc_ids: int, files=False, *,
@@ -215,7 +222,8 @@ def compare_hmaps(imt, calc_ids: int, files=False, *,
         maxdiff = numpy.abs(arrays[0] - arrays[1]).max(axis=0)  # P
         rows = [(str(poe), rms, md) for poe, rms, md in zip(
             c.oq.poes, numpy.sqrt(ms), maxdiff)]
-        print(views.text_table(rows, ['poe', 'rms-diff', 'max-diff']))
+        print(views.text_table(rows, ['poe', 'rms-diff', 'max-diff'],
+                               ext='org'))
 
 
 def compare_hcurves(imt, calc_ids: int, files=False, *,

@@ -20,7 +20,7 @@ an i7 processor you will see something like this:
 The estimate is rather rough, so do not take it at the letter. The
 runtime can be reduced by orders of magnitude by tuning parameters
 like the `pointsource_distance` and `ps_grid_spacing`, discussed at
-length in the [advanced manual](https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance).
+length in the [advanced manual](https://docs.openquake.org/oq-engine/advanced/general.html#pointsource-distance).
 
 ## logic trees
 
@@ -28,7 +28,7 @@ length in the [advanced manual](https://docs.openquake.org/oq-engine/advanced/co
 
 This is explained in the advanced manual:
 
-https://docs.openquake.org/oq-engine/advanced/logic-trees.html
+https://docs.openquake.org/oq-engine/advanced/logic_trees.html
 
 ## classical calculations
 
@@ -102,7 +102,7 @@ realizations before performing the disaggregation.
 A single rupture can produce multiple seismic events during the
 investigation time. How many depends on the number of stochastic event sets,
 on the rupture occurrence rate and on the `ses_seed` parameters, as
-[explained here](https://docs.openquake.org/oq-engine/advanced/rupture-sampling.html).
+[explained here](https://docs.openquake.org/oq-engine/advanced/event_based.html#rupture-sampling-how-does-it-work).
 In the engine a rupture is uniquely identified by
 a rupture ID, which is a 32 bit positive integer.
 Starting from engine 3.7, seismic events are uniquely identified by an
@@ -127,8 +127,8 @@ spatial correlation with a lot of sites. Assuming the parameters of the
 calculation are in a `job.ini` file you can run the following lines in
 the notebook:
 ```python
-In[1]: from openquake.commands.run import run
-In[2]: calc = run(['job.ini'])
+In[1]: from openquake.calculators.base import run_calc
+In[2]: calc = run_calc('job.ini')
 ```
 Then you can inspect the contents of the datastore and perform your
 postprocessing:

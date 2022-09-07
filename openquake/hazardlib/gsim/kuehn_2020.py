@@ -644,8 +644,7 @@ class KuehnEtAl2020SInter(GMPE):
                  self.REQUIRES_SITES_PARAMETERS.union({"z2pt5", })
         elif self.region in ("NZL", "TWN"):
             # If region is NZL or TWN then the GMPE needs Z1.0
-            self.REQUIRES_SITES_PARAMETERS = \
-                 self.REQUIRES_SITES_PARAMETERS.union({"z1pt0", })
+            self.REQUIRES_SITES_PARAMETERS |= {"z1pt0"}
         else:
             pass
 

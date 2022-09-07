@@ -28,10 +28,17 @@ from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf
 from openquake.hazardlib.source import (
-    NonParametricSeismicSource, check_complex_fault)
-from openquake.hazardlib.tom import PoissonTOM
+    NonParametricSeismicSource, check_complex_fault, PointSource)
+from openquake.hazardlib.tom import NegativeBinomialTOM
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
+
+
+def r4(x):
+    """
+    Round lon, lat to 4 digits (11 meters)
+    """
+    return round(x, 4)
 
 
 def build_area_source_geometry(area_source):
@@ -97,9 +104,9 @@ def build_linestring_node(line, with_depth=False):
     geom = []
     for p in line.points:
         if with_depth:
-            geom.extend((p.x, p.y, p.z))
+            geom.extend((r4(p.x), r4(p.y), r4(p.z)))
         else:
-            geom.extend((p.x, p.y))
+            geom.extend((r4(p.x), r4(p.y)))
     poslist_node = Node("gml:posList", text=geom)
     return Node("gml:LineString", nodes=[poslist_node])
 
@@ -442,6 +449,12 @@ def get_source_attributes(source):
             for data in source.data:
                 weights.append(data[0].weight)
             attrs['rup_weights'] = numpy.array(weights)
+    elif isinstance(source, PointSource):
+        tom = source.temporal_occurrence_model
+        if isinstance(tom, NegativeBinomialTOM):
+            attrs['tom'] = 'NegativeBinomialTOM'
+            attrs['mu'] = tom.mu
+            attrs['alpha'] = tom.alpha
     return attrs
 
 
@@ -632,6 +645,7 @@ def build_kite_fault_source_node(fault_source):
                 nodes=source_nodes)
 
 
+# tested in case_65
 @obj_to_node.add('MultiFaultSource')
 def build_multi_fault_source_node(multi_fault_source):
     """
@@ -644,35 +658,23 @@ def build_multi_fault_source_node(multi_fault_source):
         Instance of :class:`openquake.baselib.node.Node`
     """
     rup_nodes = []  # multiPlanesRupture
-    for rup_idxs, pmf_, mag, rake in zip(
+    for rup_idxs, prbs, mag, rake in zip(
             multi_fault_source.rupture_idxs,
-            multi_fault_source.pmfs,
+            multi_fault_source.probs_occur,
             multi_fault_source.mags,
             multi_fault_source.rakes):
-        probs = ' '.join(map(str, [pair[0] for pair in pmf_.data]))
+        probs = ' '.join(map(str, prbs))
         nodes = [Node('magnitude', text=str(mag)),
-                 Node('sectionIndexes', {'indexes': ','.join(rup_idxs)}),
+                 Node('sectionIndexes',
+                      {'indexes': ' '.join(map(str, rup_idxs))}),
                  Node('rake', text=str(rake))]
         rup_node = Node('multiPlanesRupture', {'probs_occur': probs},
                         nodes=nodes)
         rup_nodes.append(rup_node)
+
     return Node("multiFaultSource",
                 get_source_attributes(multi_fault_source),
                 nodes=rup_nodes)
-
-
-@obj_to_node.add('FaultSection')
-def build_section(section):
-    """
-    Parses a FaultSection instance to a Node class
-
-    :param section:
-        A FaultSection instance
-    :returns:
-        Instance of :class:`openquake.baselib.node.Node`
-    """
-    nodes = [obj_to_node(section.surface)]
-    return Node("section", {'id': section.sec_id}, nodes=nodes)
 
 
 @obj_to_node.add('SourceGroup')
@@ -691,8 +693,8 @@ def build_source_group(source_group):
         attrs['cluster'] = 'true'
     if source_group.temporal_occurrence_model is not None:
         tom = source_group.temporal_occurrence_model
-        if isinstance(tom, PoissonTOM) and tom.occurrence_rate:
-            attrs['tom'] = 'PoissonTOM'
+        if hasattr(tom, 'occurrence_rate'):
+            attrs['tom'] = 'ClusterPoissonTOM'
             attrs['occurrence_rate'] = tom.occurrence_rate
     srcs_weights = [getattr(src, 'mutex_weight', 1) for src in source_group]
     if set(srcs_weights) != {1}:
@@ -791,17 +793,20 @@ def write_source_model(dest, sources_or_groups, name=None,
         out.append(dest5)
 
     # produce a geometryModel if there are MultiFaultSources
-    sections = {}
+    sections = []
     for group in groups:
         for src in group:
             if hasattr(src, 'sections'):
-                sections.update(src.sections)
-    sections = {sid: sections[sid] for sid in sections}
+                sections.extend(src.sections)
     smodel = Node("sourceModel", attrs, nodes=nodes)
     with open(dest, 'wb') as f:
         nrml.write([smodel], f, '%s')
     if sections:
-        secnodes = [obj_to_node(sec) for sec in sections.values()]
+        # surfaces have no 'id', so we use sections instead, with an 'id'
+        # starting from 0; this is necessary for conversion to hdf5
+        secnodes = [Node('section', {'id': str(i)},
+                         nodes=[obj_to_node(sec)])
+                    for i, sec in enumerate(sections)]
         gmodel = Node("geometryModel", attrs, nodes=secnodes)
         with open(dest[:-4] + '_sections.xml', 'wb') as f:
             nrml.write([gmodel], f, '%s')

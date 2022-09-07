@@ -27,7 +27,8 @@ from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
-from openquake.qa_tests_data.classical import case_2, case_15, case_21
+from openquake.qa_tests_data.classical import (
+        case_2, case_15, case_21, case_34)
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import (
     case_2 as ebr2, case_caracas)
@@ -331,7 +332,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
-        oqparam.insured_losses = False
+        oqparam.insurance_losses = False
         oqparam.inputs = {'exposure': [self.exposure0]}
         oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
@@ -366,7 +367,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
-        oqparam.insured_losses = True
+        oqparam.insurance_losses = True
         oqparam.inputs = {'exposure': [self.exposure],
                           'structural_vulnerability': None}
         oqparam.region = '''\
@@ -407,7 +408,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
-        oqparam.insured_losses = False
+        oqparam.insurance_losses = False
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
         with self.assertRaises(ValueError) as ctx:
@@ -497,6 +498,11 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
                 os.remove(h5.filename)
         self.assertEqual(
             error.call_args[0][0], 'source SFLT2: too large: 84 km')
+
+    def test_with_site_model(self):
+        oq = readinput.get_oqparam('job.ini', case_34)
+        ssclt = readinput.get_composite_source_model(oq)
+        self.assertEqual(ssclt.source_model_lt.source_ids['956'], ['b1'])
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):

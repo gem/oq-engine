@@ -1,0 +1,6 @@
+﻿policy,policy_unit,liability,deductible,min_deductible,treaty
+A,asset,500000,,0,surplus_1
+B,asset,1500000,,0,surplus_1
+C,asset,3000000,,0,surplus_1
+D,asset,1,,0,surplus_1
+E,policy,8000000,,0,surplus_1

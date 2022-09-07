@@ -69,6 +69,11 @@ def collapse_nphc(src):
         src.magnitude_scaling_relationship = PointMSR()
 
 
+# group together consistent point sources (same group, same msr)
+def same_key(src):
+    return (src.grp_id, msr_name(src))
+
+
 def preclassical(srcs, sites, cmaker, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
@@ -92,7 +97,9 @@ def preclassical(srcs, sites, cmaker, monitor):
         return dic
 
     sf = SourceFilter(sites, cmaker.maximum_distance)
-    with monitor('splitting sources'):
+    multiplier = 1 + len(sites) // 10_000
+    sf = sf.reduce(multiplier)
+    with monitor('filtering/splitting'):
         for src in srcs:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
@@ -104,7 +111,7 @@ def preclassical(srcs, sites, cmaker, monitor):
     dic = grid_point_sources(split_sources, spacing, monitor)
     # this is also prefiltering the split sources
     mon = monitor('weighting sources', measuremem=False)
-    cmaker.set_weight(dic[grp_id], sf, mon)
+    cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
     # print(mon.duration, [s.source_id for s in dic[grp_id]])
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
@@ -141,14 +148,14 @@ class PreClassicalCalculator(base.HazardCalculator):
         csm = self.csm
         self.datastore['trt_smrs'] = csm.get_trt_smrs()
         self.datastore['toms'] = numpy.array(
-            [sg.tom_name for sg in csm.src_groups], hdf5.vstr)
+            [sg.get_tom_toml(self.oqparam.investigation_time)
+             for sg in csm.src_groups], hdf5.vstr)
         cmakers = read_cmakers(self.datastore, csm.full_lt)
         M = len(self.oqparam.imtls)
         G = max(len(cm.gsims) for cm in cmakers)
         N = get_maxsize(M, G)
         logging.info('NMG = ({:_d}, {:_d}, {:_d}) = {:.1f} MB'.format(
             N, M, G, N*M*G*8 / 1024**2))
-        h5 = self.datastore.hdf5
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
@@ -170,11 +177,12 @@ class PreClassicalCalculator(base.HazardCalculator):
                 normal_sources.extend(sg)
 
         # run preclassical for non-atomic sources
-        sources_by_grp = groupby(
-            normal_sources, lambda src: (src.grp_id, msr_name(src)))
+        sources_by_key = groupby(normal_sources, same_key)
+        self.datastore.hdf5['full_lt'] = csm.full_lt
         logging.info('Starting preclassical')
-        smap = parallel.Starmap(preclassical, h5=h5)
-        for (grp_id, msr), srcs in sources_by_grp.items():
+        self.datastore.swmr_on()
+        smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
+        for (grp_id, msr), srcs in sources_by_key.items():
             pointsources, pointlike, others = [], [], []
             for src in srcs:
                 if hasattr(src, 'location'):
@@ -233,11 +241,11 @@ class PreClassicalCalculator(base.HazardCalculator):
                     assert src.weight
                     assert src.num_ruptures
                     acc[src.code] += int(src.num_ruptures)
+        csm.fix_src_offset()
         for val, key in sorted((val, key) for key, val in acc.items()):
             cls = code2cls[key].__name__
             logging.info('{} ruptures: {:_d}'.format(cls, val))
         self.store_source_info(source_data(csm.get_sources()))
-        h5['full_lt'] = csm.full_lt
         return res
 
     def execute(self):

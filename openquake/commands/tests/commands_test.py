@@ -31,6 +31,7 @@ from openquake.baselib import parallel, sap
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import tests
 from openquake import commonlib
+from openquake.commonlib import dbapi
 from openquake.commonlib.datastore import read
 from openquake.commonlib.readinput import get_params
 from openquake.engine.engine import create_jobs, run_jobs
@@ -45,12 +46,16 @@ from openquake.qa_tests_data.event_based_risk import (
     case_master, case_1 as case_eb)
 from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
-from openquake.server import manage, dbapi, dbserver
+from openquake.server import manage, dbserver
 from openquake.server.tests import data as test_data
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 NRML_DIR = os.path.dirname(tests.__file__)
 MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
+
+
+def setup_module():
+    os.environ['OQ_DATABASE'] = 'local'
 
 
 class Print(object):
@@ -388,14 +393,14 @@ class ZipTestCase(unittest.TestCase):
 
     def test_zip_ebr(self):
         # this is a case with an exposure.csv
-        ini = os.path.join(os.path.dirname(case_eb.__file__), 'job_eb.ini')
+        ini = os.path.join(os.path.dirname(case_eb.__file__), 'job_ins.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
         sap.runline(f'openquake.commands zip {ini} {xzip}')
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(
             ['exposure.csv', 'exposure1.xml', 'gmpe_logic_tree.xml',
-             'job_eb.ini', 'policy.csv', 'source_model.xml',
+             'job_ins.ini', 'policy.csv', 'source_model.xml',
              'source_model_logic_tree.xml',
              'vulnerability_model_nonstco.xml',
              'vulnerability_model_stco.xml'],
@@ -638,3 +643,4 @@ class NRML2CSVTestCase(unittest.TestCase):
 
 def teardown_module():
     parallel.Starmap.shutdown()
+    del os.environ['OQ_DATABASE']
