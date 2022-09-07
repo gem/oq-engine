@@ -171,7 +171,8 @@ class ClassicalTestCase(unittest.TestCase):
         ratios = tuple(vulnerability_function.mean_loss_ratios_with_steps(2))
 
         loss_ratio_curve = scientific.classical(
-            vulnerability_function, hazard_imls, hazard_curve, ratios)
+            vulnerability_function, hazard_imls, hazard_curve, ratios,
+            investigation_time=50, risk_investigation_time=1)
 
         expected_curve = [
             (0.0, 0.96), (0.025, 0.96),
