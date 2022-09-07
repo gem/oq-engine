@@ -1241,7 +1241,6 @@ def broadcast(func, composite_array, *args):
     return res
 
 
-# TODO: remove this from openquake.risklib.qa_tests.bcr_test
 def average_loss(lc):
     """
     Given a loss curve array with `poe` and `loss` fields,
