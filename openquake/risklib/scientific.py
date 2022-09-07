@@ -988,12 +988,6 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios,
         hazard investigation time
     :param risk_investigation_time:
         risk investigation time
-    :param steps_per_interval:
-        steps per interval
-    :returns:
-        an array of M probabilities of occurrence where M is the numbers
-        of damage states.
-
     :returns:
         an array of shape (2, C)
     """
