@@ -90,13 +90,26 @@ Calculation data will be stored in `$HOME/oqdata`.
 Users who intend to modify the engine codebase or add new features for the engine should use the `devel` installation:
 
 **on Windows:**
+
+You will need to have `git` installed on your PC to clone the engine codebase and periodically keep it up to date. You can check if you already have `git` installed by trying to run `git` from the command prompt:
 ```
-C:\>git clone https://github.com/gem/oq-engine.git
-C:\>cd oq-engine 
-C:\>python.exe install.py devel
+C:\> git --version
+```
+If you don’t have `git` installed already, you can install it from https://git-scm.com/download/win, before proceeding to the following steps in a new command prompt window or in Git Bash.
+
+```
+C:\> git clone https://github.com/gem/oq-engine.git
+C:\> cd oq-engine 
+C:\> python.exe install.py devel
 ```
 
 **on macOS:**
+
+You will need to have `git` installed on your Mac to clone the engine codebase and periodically keep it up to date. You can check if you already have `git` installed by trying to run `git` from the Terminal:
+```
+$ git --version
+```
+If you don’t have `git` installed already, macOS will prompt you to install it through the Xcode Command Line Tools; simply follow the instructions.
 
 _*Note 1*: Make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](../faq.md#certificate-verification-on-macOS)._
 ```
@@ -104,7 +117,7 @@ $ git clone https://github.com/gem/oq-engine.git
 $ cd oq-engine
 $ python3.9 install.py devel
 ```
-_*Note 2*: Users can decided the preferred Python version (e.g., `$python3.9 install.py user`)_
+_*Note 2*: Users can choose the preferred Python version (e.g., `$python3.9 install.py user`)_
 
 _*Note 3*: Users with M1 CPU must use Python 3.9 (e.g., `$python3.9 install.py user`)_
 
