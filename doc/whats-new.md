@@ -162,11 +162,11 @@ are insured losses (which have been reimplemented) and total losses
 (brand new). You can find examples in the event based risk tests,
 but essentially it is possible to write in the job.ini something like
 
-total_losses = structural+contents
+`total_losses = structural+contents`
 
 or
 
-total_losses = structural+nonstructural+contents
+`total_losses = structural+nonstructural+contents`
 
 and have the new loss type pop up in the CSV outputs as a new column.
 This is especially useful for computing total loss curves, or in
