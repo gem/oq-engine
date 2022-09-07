@@ -1,5 +1,5 @@
   [Kendra Johnson]
-  * Fixed disaggregation in presence of multiFaultSources
+  * Fixed disaggregation by lon, lat in presence of multiFaultSources
 
   [Michele Simionato]
   * Replaced command `oq download_shakemap` with `oq shakemap2gmfs`
