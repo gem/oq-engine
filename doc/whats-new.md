@@ -1,5 +1,5 @@
 The release 3.15 is the result of 5 months of work involving more than
-310 pull requests, featuring more optimizations and new features.
+310 pull requests, featuring many significant optimizations and new features.
 
 The complete list of changes is listed in the changelog:
 
@@ -9,14 +9,14 @@ https://github.com/gem/oq-engine/blob/engine-3.15/debian/changelog
 
 The major highligh of the release is an optimization of point-like
 sources resulting in a speedup from 1.5 to 50 times, measured on various
-hazard models dominated by point-like sources. The speedup is
-larger for single site calculations. It was obtained by using several
-different optimizations, including a careful allocation of the arrays in
-memory and using numba-accelerated code when
+hazard models dominated by point-like sources. The speedup is especially
+large for single site calculations. It was obtained by using
+different optimizations, including a careful allocation of the arrays
+and writing numba-accelerated code for
 building the planar surfaces and computing the distances.
 
-We also reduced the memory consumption, thus solving an out of memory
-issue in UCERF calculations.
+We reduced the memory consumption in the context objects, thus
+solving an out of memory issue in UCERF calculations.
 
 We improved the `ps_grid_spacing` approximation which
 is now more precise. Setting the `ps_grid_spacing` parameter
@@ -32,13 +32,14 @@ in many models. We also improved the weighting algorithm by taking into
 account the number of GMPEs per tectonic region type and thus solving a
 slow task issue affecting the ESHM20 model.
 
-At user request, we made it possible to filter the ruptures of a model by magnitude
-range. The way to do it is to use a magnitude-dependent `maximum_distance`.
-For instance using
+At user request, we made it possible to filter the ruptures of a model
+by magnitude range. The way to do it is to use a magnitude-dependent
+`maximum_distance`.  For instance using
 
   `maximum_distance = [(5.5, 70), (6, 100), (6.5, 150), (7, 200), (8, 250)]`
 
-will discard magnitudes < 5.5 and > 8.
+will discard magnitudes < 5.5 and > 8. This is semantic change with respect
+to the past where outside magnitudes were not discarded.
 
 There was a major (but internal) change to the way ruptures are stored in
 classical calculations with few sites. Now we store context objects rather
@@ -47,13 +48,12 @@ as well as the disaggregation and conditional spectrum calculators.
 
 The change made it possible a performance improvement in
 disaggregation calculations and paved the way for disaggregation by
-rupture, a long desired feature, since now reproducible rupture
+rupture, since now reproducible rupture
 IDs￼are stored in the context arrays.
 
 There was a lot of effort on the `disagg_by_src` functionality, which
 has been extended to mutually exclusive sources (used in the Japan
-model) and now understands the so-called "colon convention",
-documented here:
+model) and has additional features documented here:
 https://docs.openquake.org/oq-engine/advanced/classical_PSHA.html#disagg-by-src
 
 Finally, we removed a logging statement that could cause an out of
@@ -77,7 +77,7 @@ disaggregation.  For examples of use see the tests in
 `qa_tests_data/disagg` from `case_8` to `case_12`.
 
 In some models with nonParametric/multiFaultSources the calculators
-was returning NaNs: this has been fixed.
+was returning spurios NaNs: this has been fixed.
 
 lon,lat disaggregation with multiFaultSources was giving incorrect results:
 it has been fixed now.
@@ -90,20 +90,25 @@ disaggregation: `Mag_Dist_TRT` and `Mag_Dist_TRT_Eps`.
 There were several changes in multi fault sources and a few bugs were
 fixed while implementing the New Zealand model.  As a new feature the
 SourceWriter writes multi fault sources in HDF5 format rather than
-XML, drastically speeding up the reading time (by 3600 times in the
-UCERF model!). The data transfer in multi fault sources has been
+XML, thus drastically speeding up the reading time (by 3600 times in the
+UCERF model). The data transfer in multi fault sources has been
 drastically reduced too.
 
 Sources have been extended to support parametric temporal occurrence
 models in their XML representation. We also have a way to serialize
 parametric temporal occurrence models inside the datastore.  Thanks to
-that the engine can now manage the negative binomial temporal
-occurrence model contributed by Pablo Iturrieta and used in the latest
+such features the engine can now manage the **negative binomial temporal
+occurrence model** contributed by Pablo Iturrieta and used in the latest
 New Zealand model.
 
-We also fixed a bug in `upgrade_nrml` when converting point sources with
-varying seismogenic depths into multipoint sources and changed the
-sourcewriter to round the coordinates to 4 digits after the decimal point.
+We fixed a bug in `upgrade_nrml` when converting point sources with
+varying seismogenic depths into multipoint sources.
+
+We changed the sourcewriter to round the coordinates to 4 digits after
+the decimal point. This helps in limiting the platform dependencies,
+since in general when the precision is not specified the XML generated
+on a Mac with M1 processor is different from the XML generated on a
+Linux/Windows Intel machine.
 
 # hazardlib
 
@@ -120,7 +125,7 @@ The Hassani and Atkinson (2018) GMPE has been added to hazardlib.
 
 The Bahrampouri (2021) Arias Intensity GMPE with region-specific
 coefficients `Cm` and `Ck` has been added. Notice that the performance is
-expected to be limited since a geospatial query is performed for each rupture.
+expected to be poor since a geospatial query is performed for each rupture.
 
 We implemented a parametric Magnitude Scaling Relationship
 called `CScalingMSR` for use in the New Zealand model.
@@ -168,7 +173,8 @@ This is especially useful for computing total loss curves, or in
 situations were the insurance is based on the total losses obtained by
 summing different loss types.
 
-The event_based_risk has been refactored with same speedup (a few percent).
+The event based risk calculator has been refactored with same speedup
+(a few percent).
 
 Thanks to Ashta Poudel and Anirudh Rao a module `connectivity.py` to
 compute infrastructure risk has been added to the engine. The connectivity
