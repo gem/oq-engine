@@ -242,7 +242,7 @@ class RiskModel(object):
         self.calcmode = calcmode
         self.taxonomy = taxonomy
         self.risk_functions = risk_functions
-        vars(self).update(kw)
+        vars(self).update(kw)  # updates risk_investigation_time too
         steps = kw.get('lrem_steps_per_interval')
         if calcmode in ('classical', 'classical_risk'):
             self.loss_ratios = {

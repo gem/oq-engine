@@ -128,7 +128,7 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
     :param sid: the site ID
-    :param bin_edges:
+    :param bin_edges: a tuple of bin edges
     :param epsstar: a boolean. When True, disaggregation contains eps* results
     """
     # disaggregate (separate) PoE in different contributions

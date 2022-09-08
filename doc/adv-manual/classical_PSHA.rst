@@ -947,6 +947,10 @@ The ``value`` field here is the probability of exceedence in the hazard
 curve. The ``lvl`` field is an integer corresponding to the intensity
 measure level in the hazard curve.
 
+There is a consistency check comparing the mean hazard curves
+with the value obtained by composing the probab `disagg_by_src` array,
+for the heighest level of each intensity measure type.
+
 It should be noticed that many hazard models contain thousands of
 sources and as a consequence the ``disagg_by_src`` matrix can be
 impossible to compute without running out of memory. Even if you have

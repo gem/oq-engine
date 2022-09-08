@@ -110,7 +110,7 @@ def semicolon_aggregate(probs, source_ids):
     return new, unique
 
 
-def check_disagg_by_src(dstore, lvl=-1):
+def check_disagg_by_src(dstore):
     """
     Make sure that by composing disagg_by_src one gets the hazard curves
     """
@@ -130,12 +130,8 @@ def check_disagg_by_src(dstore, lvl=-1):
     mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L
     numpy.testing.assert_allclose(mean, mean2, atol=1E-6)
 
-    # considering a level for which the mean is nonzero
-    if mean[:, :, lvl].sum() == 0:
-        logging.warning('zero poes for level=%d' % lvl)
-
     # check the extract call is not broken
-    aw = extract.extract(dstore, 'disagg_by_src?lvl_id=%d' % lvl)
+    aw = extract.extract(dstore, 'disagg_by_src?lvl_id=-1')
     assert aw.array.dtype.names == ('src_id', 'poe')
 
 #  ########################### task functions ############################ #
@@ -306,14 +302,15 @@ class Hazard:
                 lst.append((dic['grp_start'], trt, dic['avg_poe'],
                             dic['nsites']))
         self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
-
         if pmaps:  # called inside a loop
+            disagg_by_src = self.datastore['disagg_by_src'][()]
             for key, pmap in pmaps.items():
                 if isinstance(key, str):
                     # in case of disagg_by_src key is a source ID
                     rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
-                    self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
+                    disagg_by_src[..., self.srcidx[key]] = (
                         self.get_hcurves(pmap, rlzs_by_gsim))
+            self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
 @base.calculators.add('classical', 'ucerf_classical')

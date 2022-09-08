@@ -71,8 +71,6 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_2(self):
         # this is a case with disagg_outputs = Mag and 4 realizations
         # site #0 is partially discarded
-        if sys.platform == 'darwin':
-            raise unittest.SkipTest('MacOSX')
         self.assert_curves_ok(['Mag-0.csv', 'Mag-1.csv'], case_2.__file__)
 
         # check we can read the exported files and compute the mean
@@ -203,12 +201,11 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     def test_case_9(self):
         # test mutex disaggregation. Results checked against hand-computed
-        # values (mp - 2022.06.28)
-        self.run_calc(case_9.__file__, 'job.ini')
-        if platform.machine() == 'arm64':
-            raise unittest.SkipTest('Temporarily skipped')
-        [fname] = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
+        # values by Marco Pagani - 2022.06.28
+        self.run_calc(case_9.__file__, 'job.ini', concurrent_tasks='2')
+        [f1, f2] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/Mag-0.csv', f1)
+        self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', f2)
 
         # checking that the right number of sources appear in dsg_by_src
         dstore = self.calc.datastore.open('r')
@@ -225,8 +222,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         # MDE results use same values as test_case_9
         self.run_calc(case_11.__file__, 'job.ini')
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
-        if platform.machine() == 'arm64':
-            raise unittest.SkipTest('Temporarily skipped')
+        #if platform.machine() == 'arm64':
+        #    raise unittest.SkipTest('Temporarily skipped')
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
 
         # checking that the right number of sources appear in dsg_by_src
