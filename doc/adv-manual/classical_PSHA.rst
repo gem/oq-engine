@@ -957,11 +957,10 @@ sources: for instance you could convert point sources in multipoint
 sources.
 
 In engine 3.15 we also introduced the so-called "colon convention" on source
-IDs: if you have many sources defined in different files or source groups
-that for some reason should be collected
+IDs: if you have many sources that for some reason should be collected
 together - for instance because they all account for seismicity in the same 
-tectonic region, or
-because they are components of a same source split by magnitude - you
+tectonic region, or because they are components of a same source but are split
+into separate sources by magnitude - you
 can tell the engine to collect them into one source in the ``disagg_by_src``
 matrix. The trick is to use IDs with the same prefix, a colon, and then a
 numeric index. For instance, if you had 3 sources with IDs ``src_mag_6.65``,
@@ -976,11 +975,11 @@ work too and would be clearer: the IDs should be unique, however.
 If the IDs are not unique and the engine determines that the underlying
 sources are different, then an extension "semicolon + incremental index"
 is automatically added. This is useful when the hazard modeler wants
-to define a model where the more than one version of the same source appears 
-in the same source group, having changed some of the parameters, or when varied
-versions of a source appear in each branch of a logic tree. In that case, the modeler should
-use always the exact same ID (i.e. without the colon and numeric index): 
-the engine will automatically distinguish the
+to define a model where the more than one version of the same source appears
+in one source model, having changed some of the parameters, or when varied
+versions of a source appear in each branch of a logic tree. In that case, 
+the modeler should use always the exact same ID (i.e. without the colon and 
+numeric index): the engine will automatically distinguish the
 sources during the calculation of the hazard curves and consider them the same
 when saving the array ``disagg_by_src``: you can see an example in the
 test ``qa_tests_data/classical/case_79`` in the engine code base. In that
@@ -997,24 +996,27 @@ mutually exclusive ruptures - an example is the New Madrid cluster
 in the USA model - is not supported yet.
 
 In some cases it is tricky to discern whether use of the colon convention
-or identical source IDs is appropriate. The following list indicates the cases 
-in which source collection has been tested so far, and the appropriate 
-approach to source IDs.
+or identical source IDs is appropriate. The following list indicates several
+possible cases that a user may encounter, and the appropriate approach to 
+assigning source IDs. Note that this list includes the cases that have been 
+tested so far, and is not a comprehensive list of all cases that may arise.
 
-1. Sources in the same source group are scaled alternatives
-   of each other. For example, this occurs when for a given source, epistemic
+1. Sources in the same source group/source model are scaled alternatives of 
+   each other. For example, this occurs when for a given source, epistemic
    uncertainties such as occurrence rates or geometries are considered, 
-   but the modeller has pre-scaled the rates rather than including the alternative
-   hypothesis in separate logic tree branches. 
+   but the modeller has pre-scaled the rates rather than including the 
+   alternative hypothesis in separate logic tree branches. 
    **Naming approach**: identical IDs.
 
 2. Sources in different files are alternatives of each other, e.g. each is used 
    in a different branch of the source model logic tree. 
    **Naming approach**: identical IDs.
 
-3. A source consists of multiple source groups, potentially in different files, 
-   each including one or more sources (e.g. a non-parametric source) with many 
-   ruptures. 
+3. A source is defined in OQ by numerous sources, either in the same file or 
+   different ones. For example, one could have a set of non-parametric sources,
+   each with many rutpures, that are grouped together into single files by 
+   magnitude. Or, one could have many point sources that together represent the 
+   seismicity from one source. 
    **Naming approach**: colon convention
 
 4. One source consists of many mutually exclusive sources, as in 
