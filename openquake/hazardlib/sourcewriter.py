@@ -697,6 +697,7 @@ def build_source_group(source_group):
             attrs['tom'] = 'ClusterPoissonTOM'
             attrs['occurrence_rate'] = tom.occurrence_rate
     if source_group.src_interdep == 'mutex':
+        # tested in multi_fault_test
         attrs['srcs_weights'] = ' '.join(
             '%.7f' % getattr(src, 'mutex_weight', 1 / len(source_group))
             for src in source_group)
