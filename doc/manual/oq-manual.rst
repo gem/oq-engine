@@ -2444,6 +2444,24 @@ If ``iml_disagg`` is specified, the user should not include
 ``intensity_measure_types_and_levels`` in the “Calculation
 configuration” section (see page ) since it is explicitly given here.
 
+The OQ Engine supports the calculation of two typologies of disaggregation 
+result involving :math:`\epsilon`. The standard approach used by the 
+OQ Engine is described in the 
+`OQ Engine Underlying Hazard Science Book <https://www.globalquakemodel.org/openquake>`_
+The reader interested in learning more about the :math:`\epsilon^*` can refer 
+to the PEER report 
+`Probabilistic Seismic Hazard Analysis Code Verification, PEER Report 2018-03 <https://peer.berkeley.edu/publications/2018-03>`_
+
+To obtain disaggregation results in terms of :math:`\epsilon`\* the
+additional line below must be added to the disaggregation section of
+the configuration file:
+
+.. code:: ini
+   :number-lines: 7
+
+   [disaggregation]
+   epsilon_star = True
+
 .. _Event based PSHA:
 
 Event based PSHA 
