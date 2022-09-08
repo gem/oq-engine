@@ -462,15 +462,38 @@ def get_stress_scaling(C):
 
 def get_delta_c1(rrup, imt, mag):
     """
-    Return the delta_c1 parameter as proposed by Boore et al. (2022; eq. 2)
+    Return the delta_c1 parameter as proposed by Boore et al. (2022)
     """
-    s1 = 0.4050 - 0.1989 * np.max([mag-7, 0])
-    s2 = -0.2413 + 0.1587 * np.max([mag-7, 0])
-    s3 = 0.1474 + 0.0261 * np.max([mag-7, 0])
-    s = s1 + s2 / np.cosh(s3 * rrup)
-    tb = np.max([0, mag-7])
-    t0 = float(imt.period) if imt.__name__[0:2] == 'SA' else 0.0
-    return s * np.max([np.log(t0/tb), 0])**2
+    # Initialise output
+    delta_c1 = np.zeros_like(mag)
+
+    # Apply correction only to 'PGA'
+    if str(imt) != 'PGA':
+
+        # Computing tB, the period below which the correction do not apply
+        tb = 2 - np.maximum(0, mag-7)
+
+        # Apply correction only if period is larger than tb
+        idx = float(imt.period) > tb
+        if np.any(idx):
+
+            # Equations 3b, 3c and 3d
+            s1 = 0.2704 - 0.0694 * np.maximum(mag[idx]-7, 0)
+            s2 = -0.1342 + 0.0716 * np.maximum(mag[idx]-7, 0)
+            s3 = 0.2513 + 0.0419 * np.maximum(mag[idx]-7, 0)
+
+            # Equations 3a
+            s = s1 + s2 / np.cosh(s3 * rrup[idx])
+
+            # Equation 2
+            try:
+                delta_c1[idx] = s * np.maximum(
+                        np.log(float(imt.period)/tb[idx]), 0)**2
+            except ValueError:
+                breakpoint()
+                exit()
+    
+    return delta_c1
 
 
 def get_tau(C, mag):
@@ -570,6 +593,7 @@ class ChiouYoungs2014(GMPE):
         self.conf = {}
         self.conf['use_hw'] = use_hw
         self.conf['alpha_nm'] = alpha_nm
+        self.conf['add_delta_c1'] = add_delta_c1
         self.conf['stress_par_host'] = stress_par_host
         self.conf['stress_par_target'] = stress_par_target
         self.conf['delta_gamma_tab'] = delta_gamma_tab
