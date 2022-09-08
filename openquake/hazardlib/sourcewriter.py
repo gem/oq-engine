@@ -696,8 +696,9 @@ def build_source_group(source_group):
         if hasattr(tom, 'occurrence_rate'):
             attrs['tom'] = 'ClusterPoissonTOM'
             attrs['occurrence_rate'] = tom.occurrence_rate
-    srcs_weights = [getattr(src, 'mutex_weight', 1) for src in source_group]
-    if set(srcs_weights) != {1}:
+    srcs_weights = [getattr(src, 'mutex_weight', 1 / len(source_group))
+                    for src in source_group]
+    if source_group.src_interdep == 'mutex':
         attrs['srcs_weights'] = ' '.join(map(str, srcs_weights))
     return Node('sourceGroup', attrs, nodes=source_nodes)
 
