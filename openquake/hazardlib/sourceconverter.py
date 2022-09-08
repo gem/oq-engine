@@ -1218,13 +1218,18 @@ class SourceConverter(RuptureConverter):
                 else:  # transmit as it is
                     setattr(src, attr, node[attr])
             sg.update(src)
-        if srcs_weights is not None:
+        if sg.src_interdep == 'mutex':
             if len(node) and len(srcs_weights) != len(node):
                 raise ValueError(
                     'There are %d srcs_weights but %d source(s) in %s'
                     % (len(srcs_weights), len(node), self.fname))
+            tot = 0
             for src, sw in zip(sg, srcs_weights):
                 src.mutex_weight = sw
+                tot += sw
+            with context(self.fname, node):
+                numpy.testing.assert_allclose(
+                    tot, 1., err_msg='sum(srcs_weights)')
 
         # check that, when the cluster option is set, the group has a temporal
         # occurrence model properly defined

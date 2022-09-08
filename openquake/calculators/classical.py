@@ -128,7 +128,9 @@ def check_disagg_by_src(dstore):
         poes = pprod(dbs, axis=4)  # N, R, M, L
     rlz_weights = dstore['weights'][:]
     mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L
-    numpy.testing.assert_allclose(mean, mean2, atol=1E-6)
+    if not numpy.allclose(mean, mean2, atol=1E-6):
+        logging.error('check_disagg_src fails: %s =! %s',
+                      mean[0], mean2[0])
 
     # check the extract call is not broken
     aw = extract.extract(dstore, 'disagg_by_src?lvl_id=-1')
