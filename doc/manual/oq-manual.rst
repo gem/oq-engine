@@ -2448,11 +2448,11 @@ The OQ Engine supports the calculation of two typologies of disaggregation
 result involving :math:`{\epsilon}`. The standard approach used by the 
 OQ Engine is described in the 
 `OQ Engine Underlying Hazard Science Book <https://www.globalquakemodel.org/openquake>`_
-The reader interested in learning more about the :math:`{\epsilon}`* can refer 
+The reader interested in learning more about the :math:`{\epsilon}`\* can refer 
 to the PEER report 
 `Probabilistic Seismic Hazard Analysis Code Verification, PEER Report 2018-03 <https://peer.berkeley.edu/publications/2018-03>`_
 
-To obtain disaggregation results in terms of :math:`{\epsilon}`* the additional line 
+To obtain disaggregation results in terms of :math:`{\epsilon}`\* the additional line 
 below must be added to the disaggregation section of the configuration file:
 
 .. code:: ini
