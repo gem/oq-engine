@@ -1010,10 +1010,12 @@ tested so far, and is not a comprehensive list of all cases that may arise.
    uncertainties such as occurrence rates or geometries are considered, 
    but the modeller has pre-scaled the rates rather than including the 
    alternative hypothesis in separate logic tree branches. 
+
    **Naming approach**: identical IDs.
 
 2. Sources in different files are alternatives of each other, e.g. each is used 
    in a different branch of the source model logic tree. 
+
    **Naming approach**: identical IDs.
 
 3. A source is defined in OQ by numerous sources, either in the same file or 
@@ -1021,10 +1023,12 @@ tested so far, and is not a comprehensive list of all cases that may arise.
    each with many rutpures, that are grouped together into single files by 
    magnitude. Or, one could have many point sources that together represent the 
    seismicity from one source. 
+
    **Naming approach**: colon convention
 
 4. One source consists of many mutually exclusive sources, as in 
    ``qa_tests_data/classical/case_27``. 
+
    **Naming approach**: colon convention
 
 Cases 1 and 2 could include include more than one source typology, as in 
