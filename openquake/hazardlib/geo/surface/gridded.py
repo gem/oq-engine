@@ -27,9 +27,9 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
-from numpy import (array, dot, arccos, arctan, arcsin, clip)
-from numpy.linalg import norm
+from numpy import arcsin
 from openquake.hazardlib.geo.utils import plane_fit
+from openquake.hazardlib.geo.geodetic import azimuth
 
 
 class GriddedSurface(BaseSurface):
@@ -145,13 +145,13 @@ class GriddedSurface(BaseSurface):
             strike (in decimal degrees) of a gridded surface
             
         """
-        p, n = plane_fit(self.mesh.xyz)
-        p = p / np.sum(p**2)**0.5
-        strike = np.rad2deg(np.arccos(np.dot(p, [1, 0, 0])))
+        p, n = plane_fit(self.mesh.array.T)
+        y = [0, 0, 1]
+        cross = np.cross(n, y)
+        strike = azimuth(0.0,0.0,cross[0],cross[1])
+
         return strike
 
-
-        
     def get_dip(self):
         """
         Compute dip value for a gridded surface. 
@@ -163,12 +163,13 @@ class GriddedSurface(BaseSurface):
 
         returns:    
             dip (in decimal degrees) of a gridded surface
-            
         """
         p, n = plane_fit(self.mesh.xyz)
+        y = [0, 0, 1]
         if n[2] < 0:
             n = -1 * n
-        dip = 90 - np.rad2deg(np.arcsin(np.dot(n, [0, 0, 1])))
+        dip = 90 - np.rad2deg(np.arcsin(np.dot(n, y)))
+
         return dip
 
     def get_width(self):
