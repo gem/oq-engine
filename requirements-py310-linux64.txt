@@ -36,7 +36,7 @@ https://wheelhouse.openquake.org/v3/linux/py/Django-3.2.12-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/asgiref-3.4.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/django_pam-2.0.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/python_pam-1.8.4-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/setuptools-63.1.0-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/setuptools-59.8.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/pytz-2019.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/networkx-2.8.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/python_dateutil-2.8.0-py2.py3-none-any.whl
