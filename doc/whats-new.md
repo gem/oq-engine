@@ -7,7 +7,7 @@ https://github.com/gem/oq-engine/blob/engine-3.15/debian/changelog
 
 # Classical PSHA
 
-The major highligh of the release is an optimization of point-like
+The major highlight of the release is an optimization of point-like
 sources resulting in a speedup from 1.5 to 50 times, measured on various
 hazard models dominated by point-like sources. The speedup is especially
 large for single site calculations. It was obtained by using
@@ -49,7 +49,7 @@ as well as the disaggregation and conditional spectrum calculators.
 The change made it possible a performance improvement in
 disaggregation calculations and paved the way for disaggregation by
 rupture, since now reproducible rupture
-IDs￼are stored in the context arrays.
+IDs are stored in the context arrays.
 
 There was a lot of effort on the `disagg_by_src` functionality, which
 has been extended to mutually exclusive sources (used in the Japan
@@ -58,7 +58,7 @@ https://docs.openquake.org/oq-engine/advanced/classical_PSHA.html#disagg-by-src
 
 Finally, we removed a logging statement that could cause an out of
 memory in some calculations: thanks to Chris Chamberlain of
-GNS-Science for discoving the issue.
+GNS-Science for discovering the issue.
 
 # Disaggregation
 
@@ -77,7 +77,7 @@ disaggregation.  For examples of use see the tests in
 `qa_tests_data/disagg` from `case_8` to `case_12`.
 
 In some models with nonParametric/multiFaultSources the calculators
-was returning spurios NaNs: this has been fixed.
+was returning spurious NaNs: this has been fixed.
 
 lon,lat disaggregation with multiFaultSources was giving incorrect results:
 it has been fixed now.
@@ -89,14 +89,14 @@ disaggregation: `Mag_Dist_TRT` and `Mag_Dist_TRT_Eps`.
 
 There were several changes in multi fault sources and a few bugs were
 fixed while implementing the New Zealand model.  As a new feature the
-SourceWriter writes multi fault sources in HDF5 format rather than
-XML, thus drastically speeding up the reading time (by 3600 times in the
-UCERF model). The data transfer in multi fault sources has been
+SourceWriter writes multi-fault sources in HDF5 format rather than
+XML, thus drastically speeding up the reading time (by 3,600 times in the
+UCERF3 model). The data transfer in multi-fault sources has been
 drastically reduced too.
 
 Sources have been extended to support parametric temporal occurrence
 models in their XML representation. We also have a way to serialize
-parametric temporal occurrence models inside the datastore.  Thanks to
+parametric temporal occurrence models inside the datastore. Thanks to
 such features the engine can now manage the **negative binomial temporal
 occurrence model** contributed by Pablo Iturrieta and used in the latest
 New Zealand model.
@@ -173,11 +173,13 @@ This is especially useful for computing total loss curves, or in
 situations were the insurance is based on the total losses obtained by
 summing different loss types.
 
-The event based risk calculator has been refactored with same speedup
+The event based risk calculator has been refactored with some speedup
 (a few percent).
 
-There was some work to make the engine able to compute infrastructure
-risk: however, this is still experimental and left undocumented for the moment.
+Thanks to Ashta Poudel and Anirudh Rao a module `connectivity.py` to
+compute infrastructure risk has been added to the engine. The connectivity
+is automatically computed for scenario_damage calculations with an exposure
+in the format documented here: XXX
 
 The `aggrisk` output, that was experimental in previous version
 of the engine, has been finalized. Now it is consistent with the
@@ -237,11 +239,11 @@ the `custom_site_id` were lost: this is now fixed.
 
 # Installer and dependencies
 
-The universal installer now officially support the M1 processor with Python 3.9
+The universal installer now officially supports the M1 processor with Python 3.9
 (see https://github.com/gem/oq-engine/blob/master/doc/installing/universal.md)
 
-We fixed a few bugs: now the installer can be work outside of
-the oq-engine directory and there is a better error message when it is
+We fixed a few bugs: now the installer can be run from outside of
+the oq-engine directory, and there is a better error message when it is
 called with an unsupported Python version.
 
 The installer also installs the standalone tools, which are visible in
@@ -250,8 +252,8 @@ separate tabs in the WebUI. Before they had to be installed manually.
 Our RPM packages use the universal installer internally.
 
 `numba` has been added to the list of dependencies and it is now automatically
-installed with the engine. The engine still works without it, even if
-calculations can be slower.
+installed with the engine. The engine still works without it, though
+calculations might be slower without numba.
 
 We added NetworkX as a dependency: this is used only when performing
 risk infrastructure calculations.
@@ -263,16 +265,16 @@ We raised the toml module version to 0.10.2.
 
 # Other
 
-Thanks to a grant from US AID the engine manual has been converted from
-latex format to sphinx format and it is now accessible online at the
+Thanks to a grant from USAID the engine manual has been converted from
+LaTeX format to Sphinx format and it is now accessible online at the
 address https://docs.openquake.org/oq-engine/manual/
 We also overhauled the advanced manual and documented the new features.
 
 Modern laptops/PCs tend to have many cores but not enough memory per
-core.  To avoid running out of memory the engine now automatically
-disables the parallelization if less than 0.5 GB per core are
-available. We remind our users that for large calculations 4 GB per
-core are recommended; also, hyperthreading should be disabled to increase
+core. To avoid running out of memory the engine now automatically
+disables parallelization if less than 0.5 GB per core is
+available. We remind our users that for large calculations, 4 GB per
+core is recommended; also, hyperthreading should be disabled to increase
 the available memory per core.
 
 If the DbServer does not start, it is now possible to
@@ -283,6 +285,6 @@ or to set `dbserver.host = local` in the openquake.cfg file.
 We extended the WebUI to display the host name in the calculation list:
 this is useful when running calculations on a shared database.
 
-At user request we introduced three new environment variables `OQ_ADMIN_LOGIN`,
+At user request, we introduced three new environment variables `OQ_ADMIN_LOGIN`,
 `OQ_ADMIN_PASSWORD`, `OQ_ADMIN_EMAIL` that can be used to set the credentials
 of the administrator user in the WebUI.
