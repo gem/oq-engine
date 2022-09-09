@@ -1241,7 +1241,6 @@ def broadcast(func, composite_array, *args):
     return res
 
 
-# TODO: remove this from openquake.risklib.qa_tests.bcr_test
 def average_loss(lc):
     """
     Given a loss curve array with `poe` and `loss` fields,
@@ -1469,7 +1468,7 @@ class RiskComputer(dict):
         """
         Compute averages by using the taxonomy mapping
 
-        :param haz: a DataFrame of GMFs or hazard curves
+        :param haz: a DataFrame of GMFs or a ProbabilityCurve
         :param sec_losses: a list of functions updating the loss dict
         :param rndgen: None or MultiEventRNG instance
         :returns: loss dict {extended_loss_type: loss_output}

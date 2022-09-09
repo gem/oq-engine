@@ -71,8 +71,6 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_2(self):
         # this is a case with disagg_outputs = Mag and 4 realizations
         # site #0 is partially discarded
-        if sys.platform == 'darwin':
-            raise unittest.SkipTest('MacOSX')
         self.assert_curves_ok(['Mag-0.csv', 'Mag-1.csv'], case_2.__file__)
 
         # check we can read the exported files and compute the mean
@@ -224,8 +222,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         # MDE results use same values as test_case_9
         self.run_calc(case_11.__file__, 'job.ini')
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
-        if platform.machine() == 'arm64':
-            raise unittest.SkipTest('Temporarily skipped')
+        #if platform.machine() == 'arm64':
+        #    raise unittest.SkipTest('Temporarily skipped')
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
 
         # checking that the right number of sources appear in dsg_by_src
