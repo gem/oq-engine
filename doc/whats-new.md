@@ -176,10 +176,8 @@ summing different loss types.
 The event based risk calculator has been refactored with same speedup
 (a few percent).
 
-Thanks to Ashta Poudel and Anirudh Rao a module `connectivity.py` to
-compute infrastructure risk has been added to the engine. The connectivity
-is automatically computed for scenario_damage calculations with an exposure
-in the format documented here: XXX
+There was some work to make the engine able to compute infrastructure
+risk: however, this is still experimental and left undocumented for the moment.
 
 The `aggrisk` output, that was experimental in previous version
 of the engine, has been finalized. Now it is consistent with the
