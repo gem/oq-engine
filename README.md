@@ -21,11 +21,9 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 +## Documentation
 -## Documentation (master tree)
 -->
+## OpenQuake Engine version 3.15
 
-[![AGPLv3](https://www.gnu.org/graphics/agplv3-88x31.png)](https://www.gnu.org/licenses/agpl.html)
-[![PyPI Version](https://img.shields.io/pypi/v/openquake.engine.svg)](https://pypi.python.org/pypi/openquake.engine)
-![PyPI - Wheel](https://img.shields.io/pypi/wheel/openquake.engine.svg)
-[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/gem/oq-engine.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/gem/oq-engine/context:python)
+* [What's new](./doc/whats-new.md)
 
 ### Current LTS release (for users wanting stability)
 
@@ -33,13 +31,7 @@ Current Long Term Support version is the **OpenQuake Engine 3.11** 'Wegener'. Th
 
 * [What's new](../engine-3.11/doc/whats-new.md)
 
-### Current release (for users needing the latest features)
-
-Current stable version is the **OpenQuake Engine 3.14**. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.14#openquake-engine.
-
-* [What's new](../engine-3.14/doc/whats-new.md)
-
-## Documentation (master tree)
+## Documentation
 
 <!-- GEM END -->
 
@@ -48,6 +40,7 @@ Current stable version is the **OpenQuake Engine 3.14**. The documentation is av
 * [About](doc/about.md)
 * [FAQ](doc/faq.md)
 * [Manuals](https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual)
+* [OQ Commands](doc/adv-manual/oq-commands.rst)
 * [Architecture](doc/adv-manual/architecture.rst)
 * [Calculation Workflow](doc/calculation-workflow.md)
 * [Hardware Suggestions](doc/hardware-suggestions.md)

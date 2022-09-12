@@ -261,7 +261,7 @@ the `custom_site_id` were lost: this is now fixed.
 # Installer and dependencies
 
 The universal installer now officially supports the M1 processor with Python 3.9
-(see https://github.com/gem/oq-engine/blob/master/doc/installing/universal.md)
+(see https://github.com/gem/oq-engine/blob/engine-3.15/doc/installing/universal.md)
 and Ubuntu 2022 and any linux system with Python 3.10.
 
 We fixed a few bugs: now the installer can be run from outside of
