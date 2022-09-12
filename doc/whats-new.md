@@ -202,6 +202,9 @@ We added a command `oq dbserver upgrade` to create/upgrade the schema of the
 engine database without starting the DbServer. This is used in the
 universal installer.
 
+We added a command `oq compare risk_by_event` to compare event loss tables.
+It raises an error if the GMFs are not compatible.
+
 We extended the command `oq engine` with and option `--sample-sources`
 to reduce large calculations by sampling the source model (useful for
 debugging).
@@ -241,6 +244,7 @@ the `custom_site_id` were lost: this is now fixed.
 
 The universal installer now officially supports the M1 processor with Python 3.9
 (see https://github.com/gem/oq-engine/blob/master/doc/installing/universal.md)
+and Ubuntu 2022 and any linux system with Python 3.10.
 
 We fixed a few bugs: now the installer can be run from outside of
 the oq-engine directory, and there is a better error message when it is

@@ -248,13 +248,20 @@ def compare_avg_gmf(imt, calc_ids: int, files=False, *,
         print('rms-diff =', sigma)
 
 
+# works only locally for the moment
 def compare_risk_by_event(event: int, calc_ids: int, *,
                           rtol: float = 0, atol: float = 1E-3):
     """
     Compare risk_by_event for a given event across two calculations.
+    Raise an error if the GMFs are not compatible.
     """
     ds0 = datastore.read(calc_ids[0])
     ds1 = datastore.read(calc_ids[1])
+    df0 = ds0.read_df('gmf_data', 'sid', sel={'eid': event})
+    df1 = ds1.read_df('gmf_data', 'sid', sel={'eid': event})
+    df = df0.compare(df1)
+    if len(df):
+        print('Not comparable GMFs: %s', df); return
     df0 = ds0.read_df('risk_by_event', 'agg_id', sel={'event_id': event})
     df1 = ds1.read_df('risk_by_event', 'agg_id', sel={'event_id': event})
     print(df0)
