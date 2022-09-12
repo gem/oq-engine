@@ -186,10 +186,18 @@ summing different loss types.
 The event based risk calculator has been refactored with some speedup
 (a few percent).
 
-Thanks to Ashta Poudel and Anirudh Rao a module `connectivity.py` to
-compute infrastructure risk has been added to the engine. The connectivity
-is automatically computed for scenario_damage calculations with an exposure
-in the format documented here: XXX
+Thanks to Astha Poudel and [Anirudh Rao](https://github.com/raoanirudh), 
+an experimental module to assess linear infrastructure risk 
+[connectivity.py](https://github.com/gem/oq-engine/blob/engine-3.15/openquake/risklib/connectivity.py)
+has been added to the engine. Common metrics to measure network connectivity
+loss are automatically computed for scenario_damage calculations or 
+event_based_damage calculations with an exposure containing the nodes and 
+links/edges describing an infrastructure network. While detailed 
+documentation for the module will be added once it graduates from
+the experimental stage, a working example for a water supply system
+with the scenario_damage calculator can be found in the QA tests directory: 
+[scenario_damage/case_15](https://github.com/gem/oq-engine/tree/engine-3.15/openquake/qa_tests_data/scenario_damage/case_15)
+
 
 The `aggrisk` output, that was experimental in previous version
 of the engine, has been finalized. Now it is consistent with the
