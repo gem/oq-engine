@@ -35,9 +35,9 @@ Current Long Term Support version is the **OpenQuake Engine 3.11** 'Wegener'. Th
 
 ### Current release (for users needing the latest features)
 
-Current stable version is the **OpenQuake Engine 3.14**. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.14#openquake-engine.
+Current stable version is the **OpenQuake Engine 3.15**. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.15#openquake-engine.
 
-* [What's new](../engine-3.14/doc/whats-new.md)
+* [What's new](../engine-3.15/doc/whats-new.md)
 
 ## Documentation (master tree)
 
