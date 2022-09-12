@@ -1,4 +1,4 @@
-name: Windows Install engine for 3.7, 3.8 and 3.9
+name: Windows Install engine for 3.7, 3.8 and 3.9 and 3.10
 
 on:
   workflow_dispatch:
@@ -24,7 +24,7 @@ jobs:
       BRANCH: ${{ github.event.inputs.git-ref }}
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, "3.10"]
 
     steps:
       - name: Check out the codebase.
@@ -58,7 +58,7 @@ jobs:
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
           set PIP_DEFAULT_TIMEOUT=100
-          python -m pip install pip wheel setuptools --upgrade
+          python -m pip install pip --upgrade
           #echo Branch to test %BRANCH%
           #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
           write-Host "Branch to test $Env:BRANCH " 
