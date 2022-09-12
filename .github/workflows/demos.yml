@@ -110,23 +110,24 @@ jobs:
           chmod 600 ./.deploy_rsa
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
-          cd doc/manual && make html
-          echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@docs.copenquake.org:/var/www/docs.openquake.org/oq-engine/manual/;"
+          cd doc/manual && make html && make latexpdf
+          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/build/latex/OpenQuakeEngineManual.pdf docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/manual/;
+          echo "Uploading docs.openquake.org/oq-engine/manual/"
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/manual/;
           cd ../sphinx && make html && cd ../adv-manual && make html && make latexpdf
-          echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@docs.copenquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;"
+          echo "uploading OpenQuakeforAdvancedUsers.pdf to docs.openquake.org/oq-engine/advanced/"
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
           # publish
           if [ "$UPLOAD" == "master" ]
           then
-            echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/${UPLOAD}/"
+            echo "Uploading docs.openquake.org/oq-engine/${UPLOAD}/"
             rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/${UPLOAD}/
           else
             VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
             HTDOCS=/var/www/docs.openquake.org/oq-engine/
             DEST=${HTDOCS}${VER}
             echo " Building docs of oq-engine for version ${BUILD}"
-            echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax  ../sphinx/build/html/ docs@docs.openquake.org:${DEST}"
+            echo "Uploading docs.openquake.org:${DEST}"
             rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax ../sphinx/build/html/ docs@docs.openquake.org:${DEST}
             echo "Create symlink for $BUILD manual"
             echo "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org 'cd ${HTDOCS} ; ln -vs ${VER} ${BUILD}'"
