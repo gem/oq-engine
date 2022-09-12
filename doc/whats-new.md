@@ -53,8 +53,12 @@ IDs are stored in the context arrays.
 
 There was a lot of effort on the `disagg_by_src` functionality, which
 has been extended to mutually exclusive sources (used in the Japan
-model) and has additional features documented here:
+model) and has some new features documented here:
 https://docs.openquake.org/oq-engine/advanced/classical_PSHA.html#disagg-by-src
+
+The storing of the `disagg_by_src` array is much more efficient and
+there is a consistency check with the mean hazard curves which is
+always enabled.
 
 Finally, we removed a logging statement that could cause an out of
 memory in some calculations: thanks to Chris Chamberlain of
@@ -72,9 +76,11 @@ The calculator has been extended to work with mutually exclusive
 sources and now it is possible to perform disaggregations of the Japan
 model.
 
-There is a new undocumented feature called `epsilon_star`
-disaggregation.  For examples of use see the tests in
-`qa_tests_data/disagg` from `case_8` to `case_12`.
+There is a new feature called `epsilon_star` disaggregation (in the
+sense of the PEER report
+https://peer.berkeley.edu/sites/default/files/2018_03_hale_final_8.13.18.pdf).
+For examples of use see the tests in `qa_tests_data/disagg` from `case_8`
+to `case_12`.
 
 In some models with nonParametric/multiFaultSources the calculators
 was returning spurious NaNs: this has been fixed.
@@ -94,12 +100,16 @@ XML, thus drastically speeding up the reading time (by 3,600 times in the
 UCERF3 model). The data transfer in multi-fault sources has been
 drastically reduced too.
 
+
 Sources have been extended to support parametric temporal occurrence
 models in their XML representation. We also have a way to serialize
 parametric temporal occurrence models inside the datastore. Thanks to
 such features the engine can now manage the **negative binomial temporal
 occurrence model** contributed by Pablo Iturrieta and used in the latest
 New Zealand model.
+
+We added a check on sum(srcs_weights) == 1 for mutually exclusive sources
+that was missing.
 
 We fixed a bug in `upgrade_nrml` when converting point sources with
 varying seismogenic depths into multipoint sources.
