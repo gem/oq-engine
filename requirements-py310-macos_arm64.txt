@@ -36,7 +36,7 @@ https://wheelhouse.openquake.org/v3/linux/py/python_pam-1.8.4-py2.py3-none-any.w
 https://wheelhouse.openquake.org/v3/py/setuptools-59.8.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/pytz-2022.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/networkx-2.8.2-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/linux/py/python_dateutil-2.8.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/pyparsing-2.4.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/cycler-0.10.0-py2.py3-none-any.whl
 
