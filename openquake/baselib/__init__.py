@@ -129,4 +129,4 @@ else:  # linux
     config.multi_user = install_user == 'root'
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.15.0'
+__version__ = '3.16.0'
