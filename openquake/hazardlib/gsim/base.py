@@ -237,14 +237,14 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #:     See :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_rx_distance`.
     #: ``ry0``
     #:     Horizontal distance off the end of the rupture measured parallel to
-    #      strike. See:
+    #:     strike.
     #:     See :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_ry0_distance`.
     #: ``rcdpp``
     #:     Direct point parameter for directivity effect centered on the site- and earthquake-specific
-    #      average DPP used. See:
-    #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_dppvalue`.
+    #:     average DPP used. See
+    #:     :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_dppvalue`.
     #: ``rvolc``
-    #:     Source to site distance passing through surface projection of volcanic zone
+    #:     Source to site distance passing through surface projection of volcanic zone.
     #:
     #: All the distances are available from the :class:`DistancesContext`
     #: object attributes with same names. Values are in kilometers.
