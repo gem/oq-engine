@@ -50,7 +50,7 @@ master_doc = 'index'
 # General information about the project.
 project = u'OpenQuake Engine Manual'
 copyright = u'2018-2022, GEM Foundation'
-author = u'Marco Pagani, Vitor Silva, Anirudh Rao, Michele Simionato, Robin Gee, Kendra Johnson'
+author = u'M. Pagani, V. Silva, A. Rao, M. Simionato'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
