@@ -116,11 +116,14 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         # of the calculation stores the ruptures in chunks of constant
         # grp_id, therefore it is possible to build (start, stop) slices
         out = general.AccumDict()  # grp_id => dict
+
+        # Computing CMS
         for gid, start, stop in performance._idx_start_stop(rdata['grp_id']):
             cmaker = self.cmakers[gid]
             ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
             for ctx in ctxs:
-                out += cmaker.get_cs_contrib(ctx, imti, self.imls)
+                out += cmaker.get_cs_contrib(ctx, imti, self.imls, oq.poes)
+
         return out
 
     def save(self, dsetname, csdic):
