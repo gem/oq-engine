@@ -137,6 +137,6 @@ jobs:
             # unlink before to link to new version of manual
             ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd ${HTDOCS} && pwd && unlink ${BUILD} && ln -vs ${VER} ${BUILD}'"
             # unlink before to link to new version of manual
-            ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd ${PDFDOCS} && pwd && unlink OpenQuake_Manual_${BUILD}.pdf && ln -vs OpenQuake_Manual_${VER}.pdf OpenQuake_Manual_${BUILD}.pdf'"
+            ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd ${PDFDOCS} && pwd && unlink \"OpenQuake Manual (${BUILD}).pdf\" && ln -vs \"OpenQuake Manual ${VER}.pdf\" \"OpenQuake Manual (${BUILD}).pdf\"'"
             set +x
           fi
