@@ -112,7 +112,7 @@ jobs:
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
           cd doc/manual && make html && make latexpdf
-          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:/var/www/docs.openquake.org/manuals/OpenQuake Manual ${VER}.pdf";
+          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:/var/www/docs.openquake.org/manuals/OpenQuake\ Manual\ ${VER}.pdf";
           echo "Uploading docs.openquake.org/oq-engine/manual/"
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/manual/;
           cd ../sphinx && make html && cd ../adv-manual && make html && make latexpdf
