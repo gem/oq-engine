@@ -74,10 +74,10 @@ jobs:
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
           chmod 600 ./.deploy_rsa
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
-          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@docs.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${GITHUB_BR}.zip"
+          set -x
           scp -v -o ConnectTimeout=120 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@docs.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${GITHUB_BR}.zip
-          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@docs.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_BR}.zip"
-          scp  -v -o ConnectTimeout=120 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@docs.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_BR}.zip
+          scp -v -o ConnectTimeout=120 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@docs.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_BR}.zip
+          set +x
       - name: Make docs and rsync to docs.openquake.org
         shell: bash
         env:
@@ -112,7 +112,7 @@ jobs:
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
           cd doc/manual && make html && make latexpdf
-          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax build/latex/OpenQuakeEngineManual.pdf \"docs@docs.openquake.org:/var/www/docs.openquake.org/manuals/OpenQuake Manual ${VER}.pdf\";
+          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:/var/www/docs.openquake.org/manuals/OpenQuake Manual ${VER}.pdf";
           echo "Uploading docs.openquake.org/oq-engine/manual/"
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/manual/;
           cd ../sphinx && make html && cd ../adv-manual && make html && make latexpdf
