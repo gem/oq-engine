@@ -113,7 +113,7 @@ jobs:
           cd doc/manual && make html && make latexpdf
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/latex/OpenQuakeEngineManual.pdf docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/manual/;
           echo "Uploading docs.openquake.org/oq-engine/manual/"
-          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/manual/;
+          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax build/html/ docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/manual/;
           cd ../sphinx && make html && cd ../adv-manual && make html && make latexpdf
           echo "uploading OpenQuakeforAdvancedUsers.pdf to docs.openquake.org/oq-engine/advanced/"
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
