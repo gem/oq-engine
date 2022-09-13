@@ -354,7 +354,7 @@ def avglosses_data_transfer(token, dstore):
         '8 bytes x %d tasks = %s' % (N, R, L, ct, humansize(size_bytes)))
 
 
-# for scenario_risk
+# for scenario_risk and classical_risk
 @view.add('totlosses')
 def view_totlosses(token, dstore):
     """
@@ -364,7 +364,15 @@ def view_totlosses(token, dstore):
     sanity check for the correctness of the implementation.
     """
     oq = dstore['oqparam']
-    tot_losses = dstore['avg_losses-rlzs/structural'][()].sum(axis=0)
+    tot_losses = 0
+    for ltype in oq.loss_types:
+        name = 'avg_losses-stats/' + ltype
+        try:
+            tot = dstore[name][()].sum(axis=0)
+        except KeyError:
+            name = 'avg_losses-rlzs/' + ltype
+            tot = dstore[name][()].sum(axis=0)
+        tot_losses += tot
     return text_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
 
 
