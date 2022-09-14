@@ -180,7 +180,6 @@ class VulnerabilityFunction(object):
             self.covs = numpy.array(covs)
         else:
             self.covs = numpy.zeros(self.imls.shape)
-
         for lr, cov in zip(self.mean_loss_ratios, self.covs):
             if lr == 0 and cov > 0:
                 msg = ("It is not valid to define a mean loss ratio = 0 "
@@ -238,14 +237,14 @@ class VulnerabilityFunction(object):
         Compute the survival probability based on the underlying
         distribution.
         """
+        # scipy does not handle correctly the limit case stddev = 0.
+        # In that case, when `mean` > 0 the survival function
+        # approaches to a step function, otherwise (`mean` == 0) we
+        # returns 0
+        if stddev == 0:
+            return numpy.piecewise(
+                loss_ratio, [loss_ratio > mean or not mean], [0, 1])
         if self.distribution_name == 'LN':
-            # scipy does not handle correctly the limit case stddev = 0.
-            # In that case, when `mean` > 0 the survival function
-            # approaches to a step function, otherwise (`mean` == 0) we
-            # returns 0
-            if stddev == 0:
-                return numpy.piecewise(
-                    loss_ratio, [loss_ratio > mean or not mean], [0, 1])
             variance = stddev ** 2.0
             sigma = numpy.sqrt(numpy.log((variance / mean ** 2.0) + 1.0))
             mu = mean ** 2.0 / numpy.sqrt(variance + mean ** 2.0)
