@@ -180,7 +180,9 @@ class VulnerabilityFunction(object):
             self.covs = numpy.array(covs)
         else:
             self.covs = numpy.zeros(self.imls.shape)
-
+        if distribution == 'BT' and self.covs.any() == 0:
+            raise ValueError('Some coefficients of variation for %s are zeros'
+                             % vf_id)
         for lr, cov in zip(self.mean_loss_ratios, self.covs):
             if lr == 0 and cov > 0:
                 msg = ("It is not valid to define a mean loss ratio = 0 "
@@ -250,8 +252,6 @@ class VulnerabilityFunction(object):
             sigma = numpy.sqrt(numpy.log((variance / mean ** 2.0) + 1.0))
             mu = mean ** 2.0 / numpy.sqrt(variance + mean ** 2.0)
             return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
-        elif self.distribution_name == 'BT':
-            return stats.beta.sf(loss_ratio, *_alpha_beta(mean, stddev))
         else:
             raise NotImplementedError(self.distribution_name)
 
