@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Managed the case with CoVs = 0 for the beta distribution
+
 python3-oq-engine (3.15.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]
