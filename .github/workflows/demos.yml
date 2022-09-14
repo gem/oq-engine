@@ -114,7 +114,7 @@ jobs:
           cd doc/manual && make html && make latexpdf
           if [ "$UPLOAD" == "master" ]
           then
-            PDF_VER="(master)"
+            PDF_VER="\(master\)"
           else
             PDF_VER=${VER}
           fi
