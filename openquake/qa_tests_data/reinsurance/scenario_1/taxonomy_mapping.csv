@@ -1,0 +1,13 @@
+﻿taxonomy,conversion,weight
+MUR/H:1,Weak_PGA,1
+MUR/H:2,Weak_PGA,0.5
+MUR/H:2,Moderate_PGA,0.5
+MUR/H:3,Weak_PGA,0.7
+MUR/H:3,Moderate_PGA,0.3
+MUR/H:4,Weak_SA,1
+MUR/H:5,Weak_SA,1
+CR/H:2,Moderate_PGA,1
+CR/H:3,Weak_SA,0.5
+CR/H:3,Moderate_SA,0.5
+CR/H:4,Moderate_SA,1
+CR/H:5,Moderate_SA,1

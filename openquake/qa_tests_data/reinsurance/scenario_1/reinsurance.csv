@@ -1,0 +1,4 @@
+﻿treaty_id,treaty_type,max_retention,reinsurance_cover,treaty_limit
+WXL/R_metro,wxlr,500000,3000000,3500000
+CatXL_rural,catxl,20000000,480000000,500000000
+CatXL_reg,catxl,5000000,5000000,10000000

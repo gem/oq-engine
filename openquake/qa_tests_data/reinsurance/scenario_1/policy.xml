@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+
+  <reinsuranceModel>
+    <description>reinsurance model</description>
+
+
+  <!--  POLICY DATA  -->
+    <oqParams>
+      <field oq="policy" input="Policy" />
+      <field oq="policy_units" input="Policy_units" />
+      <field oq="deductible" input="Deductible" />
+      <field oq="liability" input="Limit" />
+    </oqParams>
+
+    <policies>policy.csv</policies>
+
+
+    <!--  PROPORTIONAL REINSURANCE COLUMNS  -->
+    <!--  The proportional RI information is included in the policy.csv file  -->
+    <ProportionalRI>
+      <field oq="retention" input="Retention" />
+      <field oq="cession_1" input="Surplus_metro" max_event_cession="10000000" />
+      <field oq="cession_2" input="QS_rural" max_event_cession="100000000" />
+      <field oq="cession_3" input="QS_reg" max_event_cession="25000000" />
+      <field oq="cession_4" input="Sur1_reg" max_event_cession="75000000" />
+      <field oq="cession_5" input="Fac_reg" max_event_cession="75000000" />
+      <field oq="treaty_id" input="Treaty_id" />
+    </ProportionalRI>
+
+
+    <!--  NON-PROPORTIONAL REINSURANCE FILE  -->
+    <NonProportionalRI>reinsurance.csv</NonProportionalRI>
+
+  </reinsuranceModel>
+</nrml>
+
+
+

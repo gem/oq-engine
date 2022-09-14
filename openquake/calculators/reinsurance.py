@@ -29,10 +29,10 @@ class ReinsuranceCalculator(base.RiskCalculator):
     def execute(self):
         assets = self.assetcol.to_dframe()
         assets['id'] = python3compat.decode(assets.id.to_numpy())
-        losses_df = reinsurance_losses(assets,
-                                       self.ins_loss_df,
-                                       self.policy_df,
-                                       self.treaty_df)
+        losses_df, agg_losses = reinsurance_losses(assets,
+                                                   self.ins_loss_df,
+                                                   self.policy_df,
+                                                   self.treaty_df)
         self.datastore.create_df('reinsurance_losses', losses_df)
 
     def post_execute(self):
