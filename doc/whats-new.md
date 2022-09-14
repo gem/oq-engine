@@ -1,5 +1,5 @@
-The release 3.15 is the result of 5 months of work involving more than
-310 pull requests, featuring many significant optimizations and new features.
+The release 3.15 is the result of 5 months of work involving nearly
+320 pull requests, featuring many significant optimizations and new features.
 
 The complete list of changes is listed in the changelog:
 
