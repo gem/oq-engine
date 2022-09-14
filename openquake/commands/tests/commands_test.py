@@ -46,7 +46,7 @@ from openquake.qa_tests_data.event_based_risk import (
     case_master, case_1 as case_eb)
 from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
-from openquake.server import manage, dbserver
+from openquake.server import dbserver
 from openquake.server.tests import data as test_data
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
@@ -448,18 +448,6 @@ class ZipTestCase(unittest.TestCase):
         names = sorted(zipfile.ZipFile(job_zip).namelist())
         self.assertIn('shakefile/usp000fjta.npy', names)
         shutil.rmtree(dtemp)
-
-
-class DbTestCase(unittest.TestCase):
-    def test_db(self):
-        # the some db commands bypassing the dbserver
-        with Print.patch(), mock.patch(
-                'openquake.commonlib.logs.dbcmd', manage.fakedbcmd):
-            sap.runline('openquake.commands db db_version')
-            try:
-                sap.runline('openquake.commands db calc_info 1')
-            except dbapi.NotFound:  # happens on an empty db
-                pass
 
 
 class EngineRunJobTestCase(unittest.TestCase):

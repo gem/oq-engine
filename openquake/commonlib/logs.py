@@ -186,12 +186,15 @@ class LogContext:
                 user_name,
                 hc_id,
                 host)
+            self.usedb = True
         elif calc_id == -1:
             # only works in single-user situations
             self.calc_id = get_last_calc_id() + 1
+            self.usedb = False
         else:
             # assume the calc_id was alreay created in the db
             self.calc_id = calc_id
+            self.usedb = True
 
     def get_oqparam(self):
         """
@@ -209,7 +212,7 @@ class LogContext:
         for handler in logging.root.handlers:
             fmt = logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S')
             handler.setFormatter(fmt)
-        self.handlers = [LogDatabaseHandler(self.calc_id)]
+        self.handlers = [LogDatabaseHandler(self.calc_id)] if self.usedb else []
         if self.log_file is None:
             # add a StreamHandler if not already there
             if not any(h for h in logging.root.handlers
@@ -233,7 +236,7 @@ class LogContext:
 
     def __getstate__(self):
         # ensure pickleability
-        return dict(calc_id=self.calc_id, params=self.params,
+        return dict(calc_id=self.calc_id, params=self.params, usedb=self.usedb,
                     log_level=self.log_level, log_file=self.log_file,
                     user_name=self.user_name, oqparam=self.oqparam)
 
