@@ -1,4 +1,4 @@
-name: Windows Install engine for 3.7, 3.8 and 3.9 and 3.10
+name: Windows test of OpenQuake Engine
 
 on:
   workflow_dispatch:

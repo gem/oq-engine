@@ -1,4 +1,4 @@
-name: Install OQ engine on Ubuntu OS
+name: Ubuntu test of OpenQuake Engine
 
 on:
   workflow_dispatch:
