@@ -236,7 +236,7 @@ class LogContext:
 
     def __getstate__(self):
         # ensure pickleability
-        return dict(calc_id=self.calc_id, params=self.params,
+        return dict(calc_id=self.calc_id, params=self.params, usedb=self.usedb,
                     log_level=self.log_level, log_file=self.log_file,
                     user_name=self.user_name, oqparam=self.oqparam)
 
