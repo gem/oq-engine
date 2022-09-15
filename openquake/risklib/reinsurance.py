@@ -41,7 +41,7 @@ def reinsurance(agglosses, policies, treaties):
     for _, pol in policies.iterrows():
         losses = agglosses[agglosses.agg_id == pol.policy]
         ins_losses = scientific.insured_losses(
-            losses.loss.to_numpy(), pol.insurance_limit, pol.deductible)
+            losses.loss.to_numpy(), pol.deductible, pol.insurance_limit)
         out['ins_loss'].extend(ins_losses)
         out['event_id'].extend(losses.event_id)
         out['policy_id'].extend([pol.policy] * len(losses))
