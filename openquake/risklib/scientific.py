@@ -18,24 +18,54 @@
 """
 This module includes the scientific API of the oq-risklib
 """
+import ast
 import copy
 import bisect
 import itertools
 import collections
+from pprint import pprint
 from functools import lru_cache
 
 import numpy
 import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats
+from openquake.baselib import hdf5
 
 F64 = numpy.float64
 F32 = numpy.float32
 U32 = numpy.uint32
+U64 = numpy.uint64
 U16 = numpy.uint16
 U8 = numpy.uint8
-KNOWN_CONSEQUENCES = ['loss', 'ins_loss', 'losses', 'collapsed', 'injured',
+
+TWO32 = 2 ** 32
+KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
                       'fatalities', 'homeless']
+LOSSTYPE = numpy.array('''\
+business_interruption contents nonstructural structural
+occupants occupants_day occupants_night occupants_transit
+structural+nonstructural structural+contents nonstructural+contents
+structural+nonstructural+contents
+structural+nonstructural_ins structural+contents_ins nonstructural+contents_ins
+structural+nonstructural+contents_ins
+structural_ins nonstructural_ins reinsurance'''.split())
+TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
+LTI = {lt: i for i, lt in enumerate(LOSSTYPE)}
+
+
+def _reduce(nested_dic):
+    # reduce lists of floats into empty lists inside a nested dictionary
+    # used for pretty printing purposes
+    out = {}
+    for k, dic in nested_dic.items():
+        if isinstance(dic, list) and not isinstance(dic[0], (str, bytes)):
+            out[k] = []
+        elif isinstance(dic, dict):
+            out[k] = _reduce(dic)
+        else:
+            out[k] = dic
+    return out
 
 
 def pairwise(iterable):
@@ -122,6 +152,7 @@ class Sampler(object):
 class VulnerabilityFunction(object):
     dtype = numpy.dtype([('iml', F64), ('loss_ratio', F64), ('cov', F64)])
     seed = None  # to be overridden
+    kind = 'vulnerability'
 
     def __init__(self, vf_id, imt, imls, mean_loss_ratios, covs=None,
                  distribution="LN"):
@@ -159,12 +190,11 @@ class VulnerabilityFunction(object):
             imls, mean_loss_ratios, covs, distribution)
         self.imls = numpy.array(imls)
         self.mean_loss_ratios = numpy.array(mean_loss_ratios)
-
+        self.retro = False
         if covs is not None:
             self.covs = numpy.array(covs)
         else:
             self.covs = numpy.zeros(self.imls.shape)
-
         for lr, cov in zip(self.mean_loss_ratios, self.covs):
             if lr == 0 and cov > 0:
                 msg = ("It is not valid to define a mean loss ratio = 0 "
@@ -222,14 +252,14 @@ class VulnerabilityFunction(object):
         Compute the survival probability based on the underlying
         distribution.
         """
+        # scipy does not handle correctly the limit case stddev = 0.
+        # In that case, when `mean` > 0 the survival function
+        # approaches to a step function, otherwise (`mean` == 0) we
+        # returns 0
+        if stddev == 0:
+            return numpy.piecewise(
+                loss_ratio, [loss_ratio > mean or not mean], [0, 1])
         if self.distribution_name == 'LN':
-            # scipy does not handle correctly the limit case stddev = 0.
-            # In that case, when `mean` > 0 the survival function
-            # approaches to a step function, otherwise (`mean` == 0) we
-            # returns 0
-            if stddev == 0:
-                return numpy.piecewise(
-                    loss_ratio, [loss_ratio > mean or not mean], [0, 1])
             variance = stddev ** 2.0
             sigma = numpy.sqrt(numpy.log((variance / mean ** 2.0) + 1.0))
             mu = mean ** 2.0 / numpy.sqrt(variance + mean ** 2.0)
@@ -333,7 +363,7 @@ class VulnerabilityFunction(object):
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.mean_loss_ratios,
-                self.covs, self.distribution_name)
+                self.covs, self.distribution_name, self.retro)
 
     def __setstate__(self, state):
         self.id = state[0]
@@ -342,6 +372,7 @@ class VulnerabilityFunction(object):
         self.mean_loss_ratios = state[3]
         self.covs = state[4]
         self.distribution_name = state[5]
+        self.retro = state[6]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
@@ -402,6 +433,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
     def __init__(self, vf_id, imt, imls, loss_ratios, probs):
         self.id = vf_id
         self.imt = imt
+        self.retro = False
         self._check_vulnerability_data(imls, loss_ratios, probs)
         self.imls = imls
         self.loss_ratios = loss_ratios
@@ -420,7 +452,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.loss_ratios,
-                self.probs, self.distribution_name)
+                self.probs, self.distribution_name, self.retro)
 
     def __setstate__(self, state):
         self.id = state[0]
@@ -429,6 +461,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self.loss_ratios = state[3]
         self.probs = state[4]
         self.distribution_name = state[5]
+        self.retro = state[6]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, probs):
@@ -504,6 +537,7 @@ class VulnerabilityModel(dict):
 # ############################## fragility ############################### #
 
 class FragilityFunctionContinuous(object):
+    kind = 'fragility'
 
     def __init__(self, limit_state, mean, stddev, minIML, maxIML, nodamage=0):
         self.limit_state = limit_state
@@ -545,6 +579,7 @@ class FragilityFunctionContinuous(object):
 
 
 class FragilityFunctionDiscrete(object):
+    kind = 'fragility'
 
     def __init__(self, limit_state, imls, poes, no_damage_limit=None):
         self.limit_state = limit_state
@@ -602,6 +637,8 @@ class FragilityFunctionList(list):
     A list of fragility functions with common attributes; there is a
     function for each limit state.
     """
+    kind = 'fragility'
+
     # NB: the list is populated after instantiation by .append calls
     def __init__(self, array, **attrs):
         self.array = array
@@ -662,6 +699,7 @@ class ConsequenceModel(dict):
     :param str description: description of the model
     :param limitStates: a list of limit state strings
     """
+    kind = 'consequence'
 
     def __init__(self, id, assetCategory, lossCategory, description,
                  limitStates):
@@ -1042,27 +1080,81 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
 
 def insured_losses(losses, deductible, insured_limit):
     """
-    :param losses: an array of ground-up loss ratios
-    :param float deductible: the deductible limit in fraction form
-    :param float insured_limit: the insured limit in fraction form
+    :param losses: array of ground-up losses
+    :param deductible: array of deductible values
+    :param insured_limit: array of insurance limit values
 
     Compute insured losses for the given asset and losses, from the point
     of view of the insurance company. For instance:
 
-    >>> insured_losses(numpy.array([3, 20, 101]), 5, 100)
+    >>> insured_losses(numpy.array([3, 20, 101]),
+    ...                numpy.array([5, 5, 5]), numpy.array([100, 100, 100]))
     array([ 0, 15, 95])
 
     - if the loss is 3 (< 5) the company does not pay anything
     - if the loss is 20 the company pays 20 - 5 = 15
     - if the loss is 101 the company pays 100 - 5 = 95
     """
-    return numpy.piecewise(
-        losses,
-        [losses < deductible, losses > insured_limit],
-        [0, insured_limit - deductible, lambda x: x - deductible])
+    assert isinstance(losses, numpy.ndarray), losses
+    if not isinstance(deductible, numpy.ndarray):
+        deductible = numpy.full_like(losses, deductible)
+    if not isinstance(insured_limit, numpy.ndarray):
+        insured_limit = numpy.full_like(losses, insured_limit)
+    small = losses < deductible
+    big = losses > insured_limit
+    out = losses - deductible
+    out[small] = 0.
+    out[big] = insured_limit[big] - deductible[big]
+    return out
 
 
-def insured_loss_curve(curve, deductible, insured_limit):
+def insurance_losses(asset_df, losses_by_lt, policy_df):
+    """
+    :param asset_df: DataFrame of assets
+    :param losses_by_lt: loss_type -> DataFrame[eid, aid, variance, loss]
+    :param policy_df: a DataFrame of policies
+    """
+    asset_policy_df = asset_df.join(
+        policy_df.set_index('policy'), on='policy', how='inner')
+    for lt in policy_df.loss_type.unique():
+        if '+' in lt:
+            # add a key like structural+nonstructural to losses_by_lt
+            total_losses(asset_df, losses_by_lt, lt)
+    for lt, out in list(losses_by_lt.items()):
+        if len(out) == 0:
+            continue
+        adf = asset_policy_df[asset_policy_df.loss_type == lt]
+        new = out[numpy.isin(out.aid, adf.index)]
+        if len(new) == 0:
+            continue
+        new['variance'] = 0.
+        j = new.join(adf, on='aid', how='inner')
+        if '+' in lt:
+            values = numpy.sum(
+                j['value-' + ltype].to_numpy() for ltype in lt.split('+'))
+        else:
+            values = j['value-' + lt].to_numpy()
+        losses = j.loss.to_numpy()
+        deds = j.deductible.to_numpy() * values
+        lims = j.insurance_limit.to_numpy() * values
+        new['loss'] = insured_losses(losses, deds, lims)
+        losses_by_lt[lt + '_ins'] = new
+
+
+def total_losses(asset_df, losses_by_lt, kind):
+    """
+    :param asset_df: DataFrame of assets
+    :param losses_by_lt: lt -> DataFrame[eid, aid]
+    :param kind: kind of total loss (i.e. "structural+nonstructural")
+    """
+    if kind in TOTLOSSES:
+        ltypes = kind.split('+')
+    else:
+        raise ValueError(kind)
+    losses_by_lt[kind] = _agg([losses_by_lt[lt] for lt in ltypes])
+
+
+def insurance_loss_curve(curve, deductible, insured_limit):
     """
     Compute an insured loss ratio curve given a loss ratio curve
 
@@ -1072,7 +1164,7 @@ def insured_loss_curve(curve, deductible, insured_limit):
 
     >>> losses = numpy.array([3, 20, 101])
     >>> poes = numpy.array([0.9, 0.5, 0.1])
-    >>> insured_loss_curve(numpy.array([losses, poes]), 5, 100)
+    >>> insurance_loss_curve(numpy.array([losses, poes]), 5, 100)
     array([[ 3.        , 20.        ],
            [ 0.85294118,  0.5       ]])
     """
@@ -1164,7 +1256,6 @@ def broadcast(func, composite_array, *args):
     return res
 
 
-# TODO: remove this from openquake.risklib.qa_tests.bcr_test
 def average_loss(lc):
     """
     Given a loss curve array with `poe` and `loss` fields,
@@ -1206,11 +1297,11 @@ def normalize_curves_eb(curves):
     return loss_ratios, numpy.array(curves_poes)
 
 
-def build_loss_curve_dt(curve_resolution, insured_losses=False):
+def build_loss_curve_dt(curve_resolution, insurance_losses=False):
     """
     :param curve_resolution:
         dictionary loss_type -> curve_resolution
-    :param insured_losses:
+    :param insurance_losses:
         configuration parameter
     :returns:
        loss_curve_dt
@@ -1221,7 +1312,7 @@ def build_loss_curve_dt(curve_resolution, insured_losses=False):
         pairs = [('losses', (F32, C)), ('poes', (F32, C))]
         lc_dt = numpy.dtype(pairs)
         lc_list.append((str(lt), lc_dt))
-    if insured_losses:
+    if insurance_losses:
         for lt in sorted(curve_resolution):
             C = curve_resolution[lt]
             pairs = [('losses', (F32, C)), ('poes', (F32, C))]
@@ -1355,53 +1446,111 @@ class LossCurvesMapsBuilder(object):
             losses, self.return_periods, self.num_events[rlzi], self.eff_time)
 
 
-class InsuredLosses(object):
-    """
-    There is an insured loss for each loss type in the policy dictionary.
-    """
-    def __init__(self, policy_name, policy_dict):
-        self.policy_name = policy_name
-        self.policy_dict = policy_dict
-        self.sec_names = ['ins_loss']
+def _agg(loss_dfs, weights=None):
+    # average loss DataFrames with fields (eid, aid, variance, loss)
+    # NB: if there are weights the DataFrames are changed!!
+    if weights is not None:
+        for loss_df, w in zip(loss_dfs, weights):
+            loss_df['variance'] *= w
+            loss_df['loss'] *= w
+    return pandas.concat(loss_dfs).groupby(['eid', 'aid']).sum().reset_index()
 
-    def update(self, lt, out, asset_df):
+
+class RiskComputer(dict):
+    """
+    A callable dictionary of risk models able to compute average losses
+    according to the taxonomy mapping. It also computes secondary losses
+    *after* the average (this is a hugely simplifying approximation).
+
+    :param crm: a CompositeRiskModel
+    :param asset_df: a DataFrame of assets with the same taxonomy
+    """
+    def __init__(self, crm, asset_df):
+        [taxidx] = asset_df.taxonomy.unique()
+        self.asset_df = asset_df
+        self.imtls = crm.imtls
+        self.alias = {
+            imt: 'gmv_%d' % i for i, imt in enumerate(crm.primary_imtls)}
+        self.calculation_mode = crm.oqparam.calculation_mode
+        self.loss_types = crm.loss_types
+        self.minimum_asset_loss = crm.oqparam.minimum_asset_loss  # lt->float
+        self.wdic = {}
+        for lt in self.minimum_asset_loss:
+            for riskid, weight in crm.tmap[lt][taxidx]:
+                self[riskid, lt] = crm._riskmodels[riskid]
+                self.wdic[riskid, lt] = weight
+
+    def output(self, haz, sec_losses=(), rndgen=None):
         """
-        :param lt: a loss type string
-        :param out: a DataFrame with index (eid, aid)
-        :param asset_df: a DataFrame of assets with index "ordinal"
+        Compute averages by using the taxonomy mapping
+
+        :param haz: a DataFrame of GMFs or a ProbabilityCurve
+        :param sec_losses: a list of functions updating the loss dict
+        :param rndgen: None or MultiEventRNG instance
+        :returns: loss dict {extended_loss_type: loss_output}
         """
-        out['ins_loss'] = numpy.zeros(len(out))
-        if lt in self.policy_dict and len(out):
-            policy = self.policy_dict[lt]
-            for (eid, aid), df in out.iterrows():
-                asset = asset_df.loc[aid]  # aid==ordinal
-                avalue = asset['value-' + lt]
-                policy_idx = asset[self.policy_name]
-                ded, lim = policy[policy_idx]
-                ins = insured_losses(df.loss, ded * avalue, lim * avalue)
-                out.loc[eid, aid]['ins_loss'] = ins
+        dic = collections.defaultdict(list)  # lt -> outs
+        weights = collections.defaultdict(list)  # lt -> weights
+        event = hasattr(haz, 'eid')  # else classical (haz.array)
+        for riskid, lt in self:
+            rm = self[riskid, lt]
+            if len(rm.imt_by_lt) == 1:
+                # NB: if `check_risk_ids` raise an error then
+                # this code branch will never run
+                [(lt, imt)] = rm.imt_by_lt.items()
+            else:
+                imt = rm.imt_by_lt[lt]
+            col = self.alias.get(imt, imt)
+            if event:
+                out = rm(lt, self.asset_df, haz, col, rndgen)
+            else:  # classical
+                out = rm(lt, self.asset_df, haz.array[self.imtls(imt), 0])
+            weights[lt].append(self.wdic[riskid, lt])
+            dic[lt].append(out)
+        out = {}
+        for lt in self.minimum_asset_loss:
+            outs = dic[lt]
+            if len(outs) == 0:  # can happen for nonstructural_ins
+                continue
+            elif len(outs) > 1 and hasattr(outs[0], 'loss'):
+                # computing the average dataframe for event_based_risk/case_8
+                out[lt] = _agg(outs, weights[lt])
+            elif len(outs) > 1:
+                # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
+                out[lt] = numpy.average(outs, weights=weights[lt], axis=0)
+            else:
+                out[lt] = outs[0]
+        if event:
+            for update_losses in sec_losses:
+                update_losses(self.asset_df, out)
+        return out
 
+    def todict(self):
+        """
+        :returns: a literal dict describing the RiskComputer
+        """
+        rfdic = {}
+        for rm in self.values():
+            for lt, rf in rm.risk_functions.items():
+                dic = ast.literal_eval(hdf5.obj_to_json(rf))
+                if getattr(rf, 'retro', False):
+                    retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
+                    dic['openquake.risklib.scientific.VulnerabilityFunction'][
+                        'retro'] = retro
+                rfdic['%s#%s' % (rf.id, lt)] = dic
+        df = self.asset_df
+        dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
+                   risk_functions=rfdic,
+                   wdic={'%s#%s' % k: v for k, v in self.wdic.items()},
+                   alias=self.alias,
+                   loss_types=self.loss_types,
+                   minimum_asset_loss=self.minimum_asset_loss,
+                   calculation_mode=self.calculation_mode)
+        return dic
 
-# not used anymore
-def make_epsilons(matrix, seed, correlation):
-    """
-    Given a matrix of shape (A, E) returns a matrix of the same shape
-    obtained by applying the multivariate_normal distribution to
-    A points and E samples, by starting from the given seed and
-    correlation.
-    """
-    if seed is not None:
-        numpy.random.seed(seed)
-    A = len(matrix)
-    E = len(matrix[0])
-    if not correlation:  # avoid building the covariance matrix
-        return numpy.random.normal(size=(E, A)).transpose()
-    means_vector = numpy.zeros(A)
-    covariance_matrix = (numpy.ones((A, A)) * correlation +
-                         numpy.diag(numpy.ones(A)) * (1 - correlation))
-    return numpy.random.multivariate_normal(
-        means_vector, covariance_matrix, E).transpose()
-
+    def pprint(self):
+        dic = _reduce(self.todict())
+        pprint(dic)
 
 # ####################### Consequences ##################################### #
 
@@ -1428,17 +1577,13 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
         return dmgdist @ coeffs * asset['occupants_night']
 
 
-def get_agg_value(consequence, agg_values, agg_id, loss_type):
+def get_agg_value(consequence, agg_values, agg_id, xltype):
     """
     :returns:
         sum of the values corresponding to agg_id for the given consequence
     """
     aval = agg_values[agg_id]
-    if consequence not in KNOWN_CONSEQUENCES:
-        raise NotImplementedError(consequence)
-    elif consequence in ('loss', 'ins_loss', 'losses'):
-        return aval[loss_type]
-    elif consequence == 'collapsed':
+    if consequence == 'collapsed':
         return aval['number']
     elif consequence == 'injured':
         return aval['occupants_night']
@@ -1446,6 +1591,38 @@ def get_agg_value(consequence, agg_values, agg_id, loss_type):
         return aval['occupants_night']
     elif consequence == 'homeless':
         return aval['occupants_night']
+    elif consequence in ('loss', 'losses'):
+        if xltype.endswith('_ins'):
+            xltype = xltype[:-4]
+        if '+' in xltype:  # total loss type
+            return sum(aval[lt] for lt in xltype.split('+'))
+        return aval[xltype]
+    else:
+        raise NotImplementedError(consequence)
+
+
+# ########################### u64_to_eal ################################# #
+
+def u64_to_eal(u64):
+    """
+    Convert an unit64 into a triple (eid, aid, lid)
+
+    >>> u64_to_eal(42949673216001)
+    (10000, 1000, 1)
+    """
+    eid, x = divmod(u64, TWO32)
+    aid, lid = divmod(x, 256)
+    return eid, aid, lid
+
+
+def eal_to_u64(eid, aid, lid):
+    """
+    Convert a triple (eid, aid, lid) into an uint64:
+
+    >>> eal_to_u64(10000, 1000, 1)
+    42949673216001
+    """
+    return U64(eid * TWO32) + U64(aid * 256) + U64(lid)
 
 
 if __name__ == '__main__':

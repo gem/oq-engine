@@ -34,14 +34,14 @@ from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
 
 F32 = np.float32
-BLOCKSIZE = 100
-# the BLOCKSIZE has to be large to reduce the number of sources and
-# therefore the redundant data transfer in the .sections attribute
+BLOCKSIZE = 200
+# NB: we need enough sources for parallelization and not too
+# big to cause an out-of-memory when building the contexts
 
 
 class MultiFaultSource(BaseSeismicSource):
     """
-    The multi-fault source is a source typology specifiically support the
+    The multi-fault source is a source typology specifically supporting the
     calculation of hazard using fault models with segments participating to
     multiple ruptures.
 
@@ -54,6 +54,7 @@ class MultiFaultSource(BaseSeismicSource):
     :param rupture_idxs:
         A list of lists. Each element contains the IDs of the sections
         participating to a rupture. The cardinality of this list is N.
+        The IDs are integers.
     :param occurrence_probs:
         A list of N probabilities. Each element specifies the probability
         of 0, 1 ... occurrences of a rupture in the investigation time
@@ -88,7 +89,7 @@ class MultiFaultSource(BaseSeismicSource):
         """
         ridxs = []
         for rupture_idxs in self.rupture_idxs:
-            ridxs.append(' '.join(rupture_idxs))
+            ridxs.append(' '.join(map(str, rupture_idxs)))
         # each pmf has the form [(prob0, 0), (prob1, 1), ...]
         return dict(mag=self.mags, rake=self.rakes,
                     probs_occur=self.probs_occur, rupture_idxs=ridxs)
@@ -98,9 +99,11 @@ class MultiFaultSource(BaseSeismicSource):
         :param sections: a list of N surfaces
         """
         assert sections
-        # this is fundamental for the distance cache
+
+        # this is fundamental for the distance cache.
         for idx, sec in enumerate(sections):
             sec.suid = idx
+
         # `i` is the index of the rupture of the `n` admitted by this source.
         # In this loop we check that all the IDs of the sections composing one
         # rupture have a object in the section list describing their geometry.

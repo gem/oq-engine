@@ -75,13 +75,31 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                   delta=1E-5)
 
         # test the src_loss_table extractor
-        [fname] = export(('src_loss_table', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
-                              delta=1E-5)
+        fnames = export(('src_loss_table', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
-    def test_case_1_eb(self):
+    def test_case_1_ins(self):
+        # no aggregation
+        self.run_calc(case_1.__file__, 'job2.ini')
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-5)
+
         # this is a case with insured losses and tags
-        self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4')
+        self.run_calc(case_1.__file__, 'job_ins.ini', concurrent_tasks='4')
+
+        # testing the view agg_id
+        agg_id = view('agg_id', self.calc.datastore)
+        self.assertEqual(str(agg_id), '''\
+       policy taxonomy
+agg_id                
+0           B       RM
+1           B        W
+2           B       RC
+3           A       RM
+4           A        W
+5           A       RC''')
 
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
@@ -118,7 +136,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test ct_independence
         loss4 = view('portfolio_losses', self.calc.datastore)
-        self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='0')
+        self.run_calc(case_1.__file__, 'job_ins.ini', concurrent_tasks='0')
         loss0 = view('portfolio_losses', self.calc.datastore)
         self.assertEqual(loss0, loss4)
 
@@ -170,8 +188,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                               delta=1E-5)
         self.assertEqual(len(self.calc.datastore['events']), 22)
 
-        losses0 = self.calc.datastore['avg_losses-stats'][:, 0, 0]  # shape ARL
-        losses1 = self.calc.datastore['avg_losses-stats'][:, 0, 0]  # shape ARL
+        losses0 = self.calc.datastore['avg_losses-stats/structural'][:, 0]
+        losses1 = self.calc.datastore['avg_losses-stats/structural'][:, 0]
         avg = (losses0 + losses1).sum() / 2
 
         # agg_losses
@@ -190,7 +208,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
-        tot = self.calc.datastore['avg_losses-rlzs'][:, 0, 0].sum()  # A1L
+        tot = self.calc.datastore['avg_losses-rlzs/structural'][:, 0].sum()
         aac(avg, tot, rtol=1E-6)
 
         # aggrisk
@@ -218,7 +236,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job_err.ini')
-        self.assertIn('not in the risk model', str(ctx.exception))
+        self.assertIn('not in the fragility/vulnerability/consequence model', str(ctx.exception))
 
     def test_case_3(self):
         # this is a test with statistics
@@ -251,7 +269,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_5(self):
         # taxonomy mapping, the numbers are different in Ubuntu 20 vs 18
-        self.run_calc(case_5.__file__, 'job_eb.ini')
+        self.run_calc(case_5.__file__, 'job.ini')
         fnames = export(('aggcurves', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),

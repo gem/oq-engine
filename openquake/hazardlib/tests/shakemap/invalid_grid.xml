@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><shakemap_grid xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://earthquake.usgs.gov/eqcenter/shakemap" xsi:schemaLocation="http://earthquake.usgs.gov http://earthquake.usgs.gov/eqcenter/shakemap/xml/schemas/shakemap.xsd" event_id="2022-08-02-009" shakemap_id="2022-08-02-009" shakemap_version="1" code_version="4.0.2+381.g5c76c34" process_timestamp="2022-08-02T02:43:18" shakemap_originator="VI" map_status="automatic" shakemap_event_type="ACTUAL">
+<event event_id="2022-08-02-009" magnitude="5.0" depth="3.8" lat="63.9270" lon="-22.0210" event_timestamp="2022-08-02T02:27:04" event_network="SIL" event_description="Iceland" intensity_observations="0" seismic_stations="29" point_source="True" />
+<grid_specification lon_min="-24.3333" lat_min="63.2917" lon_max="-19.4833" lat_max="65.0000" nominal_lon_spacing="0.0083" nominal_lat_spacing="0.0083" nlon="583" nlat="206"/><grid_field index="1" name="LON" units="dd" />
+<grid_field index="2" name="LAT" units="dd" />
+<grid_field index="3" name="MMI" units="intensity" />
+<grid_field index="4" name="PGA" units="%g" />
+<grid_field index="5" name="PGV" units="cm/s" />
+<grid_field index="6" name="SVEL" units="m/s" />
+<grid_data>
+-24.3333 65.0000 1.1 0.01609 0.03327 800
+-24.3250 65.0000 1.1 0.01615 0.03336 800
+-24.3167 65.0000 1.1 0.0162 0.03346 800
+</grid_data>
+</shakemap_grid>

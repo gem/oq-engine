@@ -536,6 +536,10 @@ def get_site_collection(oqparam, h5=None):
             req_site_params.add('ampcode')
         if h5 and 'site_model' in h5:  # comes from a site_model.csv
             sm = h5['site_model'][:]
+        elif (not h5 and 'site_model' in oqparam.inputs and
+              'exposure' not in oqparam.inputs):
+            # tested in test_with_site_model
+            sm = get_site_model(oqparam)
         else:
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
@@ -567,7 +571,7 @@ def get_site_collection(oqparam, h5=None):
         dt = site.site_param_dt[param]
         if dt is F64 and (sitecol.array[param] == 0.).all():
             raise ValueError('The site parameter %s is always zero: please '
-                             'check the site nodel' % param)
+                             'check the site model' % param)
     return sitecol
 
 
@@ -961,6 +965,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         # you can in other cases, typically with a grid which is mostly empty
         # (i.e. there are many hazard sites with no assets)
         assetcol.reduce_also(sitecol)
+    if 'custom_site_id' not in sitecol.array.dtype.names:
+        gh = sitecol.geohash(8)
+        if len(numpy.unique(gh)) < len(gh):
+            logging.error('geohashes are not unique')
+        sitecol.add_col('custom_site_id', 'S8', gh)
     return sitecol, assetcol, discarded
 
 
@@ -1004,8 +1013,8 @@ def _taxonomy_mapping(filename, taxonomies):
     taxonomies = taxonomies[1:]  # strip '?'
     missing = set(taxonomies) - set(dic)
     if missing:
-        raise InvalidFile('The taxonomies %s are in the exposure but not in '
-                          'the taxonomy mapping %s' % (missing, filename))
+        raise InvalidFile('The taxonomy strings %s are in the exposure but not in '
+                          'the taxonomy mapping file %s' % (missing, filename))
     lst = [[("?", 1)]]
     for taxo in taxonomies:
         recs = dic[taxo]

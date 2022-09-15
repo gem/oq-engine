@@ -1,9 +1,54 @@
   [Michele Simionato]
+  * Reduced precision in the header of the UHS csv files
+  * Managed the case with CoVs = 0 for the beta distribution
+
+python3-oq-engine (3.15.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Added a check on sum(srcs_weights) == 1 for mutex sources
+
+  [Kendra Johnson]
+  * Fixed disaggregation by lon, lat in presence of multiFaultSources
+
+  [Michele Simionato]
+  * Replaced command `oq download_shakemap` with `oq shakemap2gmfs`
+  * Raised an error for missing required IMTs in ShakeMap grid files
+  * Extended the `custom_site_id` to 8 characters
+  * Restricted the accepted characters in risk IDs
+  * Extended `disagg_by_src` to mutually exclusive sources (i.e. Japan)
+    and managed "colon" sources specially
+
+  [Anne Hulsey]
+  * Contributed `Mag_Dist_TRT` and `Mag_Dist_TRT_Eps` disaggregations
+
+  [Michele Simionato]
+  * Internal: added a way to disable the DbServer from openquake.cfg or
+    by setting OQ_DATABASE=local
+  * Implemented `total_losses`, even for insurance calculations
+  * Optimized "computing risk" in the event_based_risk calculator (~30% faster)
+  * Changed the magnitude binning formula, thus fixing some disaggregation
+    calculations (for instance when there is a single magnitude for a TRT)
+  * Changed the aggrisk/aggcurves exporters in presence of insurance losses
+  * Internal: changed how avg_losses, src_loss_table and agg_curves-stats are
+    stored to simplify the management of secondary losses
+  * Internal: we have now repeatable rupture IDs in classical PSHA
+
+  [Pablo Iturrieta]
+  * Added support for negative binomial temporal occurrence models
+
+  [Marco Pagani, Michele Simionato]
+  * Added support for disaggregation in case of mutually exclusive sources
+
+  [Michele Simionato]
+  * Fixed error message when trying to compute disagg_by_src with too many
+    sources: in some cases, it contained a misleading reference to point sources
+  * Reorganized the Advanced Manual; changed the theme to be consistent with
+    the OpenQuake manual
+  * Internal: added command `oq db engine_version`
   * Added a check for required site parameters not passed correctly
   * Fixed `ps_grid_spacing` approximation when the grid is degenerate
   * Logging a warning when starting from an old hazard calculation
   * The extra fields of the site collection were lost when using --hc
-  * Internal: implemented direct database access with OQ_DATABASE=local
 
   [Julián Santiago Montejo Espitia]
   * Implemented the Arteta et al. (2021) subduction model for Colombia
@@ -88,6 +133,8 @@
     some GMFs calculations not setting truncation_level can now give
     different results since truncation_level=None is now replaced with
     truncation_level=99
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 12 Sep 2022 07:57:27 +0000
 
 python3-oq-engine (3.14.0-1~xenial01) xenial; urgency=low
 

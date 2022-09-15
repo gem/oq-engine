@@ -6,7 +6,7 @@
       <costTypes>
         <costType name="structural" type="aggregated" unit="EUR"/>
         <costType name="nonstructural" type="aggregated" unit="EUR"/>
-        <costType name="business_interruption" type="aggregated" unit="days"/>
+        <costType name="contents" type="aggregated" unit="EUR"/>
       </costTypes>
     </conversions>
     <tagNames>NAME_1 NAME_2 NAME_3 NAME_4</tagNames>
@@ -16,7 +16,7 @@
 				<costs>
 					<cost type="structural" value="11340"/>
 					<cost type="nonstructural" value="19845"/>
-					<cost type="business_interruption" value="19845"/>
+					<cost type="contents" value="19845"/>
 				</costs>
 				<occupancies>
 					<occupancy occupants="5" period="night"/>
@@ -28,7 +28,7 @@
 				<costs>
 					<cost type="structural" value="11340"/>
 					<cost type="nonstructural" value="19845"/>
-					<cost type="business_interruption" value="19845"/>
+					<cost type="contents" value="19845"/>
 				</costs>
 				<occupancies>
 					<occupancy occupants="5" period="night"/>
@@ -40,7 +40,7 @@
         <costs>
           <cost type="structural" value="11340"/>
           <cost type="nonstructural" value="19845"/>
-          <cost type="business_interruption" value="19845"/>
+          <cost type="contents" value="19845"/>
         </costs>
         <occupancies>
           <occupancy occupants="5" period="night"/>
@@ -52,7 +52,7 @@
         <costs>
           <cost type="structural" value="11340"/>
           <cost type="nonstructural" value="19845"/>
-          <cost type="business_interruption" value="19845"/>
+          <cost type="contents" value="19845"/>
         </costs>
         <occupancies>
           <occupancy occupants="5" period="night"/>

@@ -1,6 +1,6 @@
 .. Adding a real title here messes with the Heading numbers
 
-OpenQuake-engine Instruction Manual
+OpenQuake-engine Manual |VERSION|
 ===================================
 
 .. section-numbering::
@@ -14,19 +14,24 @@ OpenQuake-engine Instruction Manual
 
 | **Authors**
 | Marco Pagani\ :math:`^1`, Vitor Silva\ :math:`^1`, Anirudh
-  Rao\ :math:`^1`, Michele Simionato\ :math:`^1`, Robin Gee\ :math:`^1`,
+  Rao\ :math:`^1`, Michele Simionato\ :math:`^1`,
   Kendra Johnson\ :math:`^1`
 | **Authors on previous versions**
-| Helen Crowley\ :math:`^2`, Damiano Monelli, Graeme
-  Weatherill\ :math:`^3`
+| Helen Crowley\ :math:`^2`, Damiano Monelli\ :math:`^3`, Graeme
+  Weatherill\ :math:`^4`, Robin Gee\ :math:`^5`
 
 
 
 +----------------------+----------------------+----------------------+
-| :math:`^1` GEM       | :math:`^2` EUCENTRE  | :math:`^3` GFZ       |
-| Foundation via       | via Ferrata, 1 Pavia | Helmholtzstraße 6/7  |
-| Ferrata, 1 Pavia     | Italy                | Potsdam Germany      |
-| Italy                |                      |                      |
+| :math:`^1` GEM       | :math:`^2` EUCENTRE, | :math:`^3` RenRe,    |
+| Foundation, via      | via Ferrata 1,       | Beethovenstrasse 33, |
+| Ferrata 1, 27100     | 27100 Pavia,         | CH-8002 Zürich,      |
+| Pavia, Italy         | Italy                | Switzerland          |
++----------------------+----------------------+----------------------+
+| :math:`^4` GFZ,      | :math:`^5` PartnerRe,|                      |
+| Helmholtzstraße 6/7, | Hardstrasse 301,     |                      |
+| 14473 Potsdam,       | CH-8002 Zürich,      |                      |
+| Germany              | Switzerland          |                      |
 +----------------------+----------------------+----------------------+
 
 | Email address for all current authors:
@@ -34,9 +39,9 @@ OpenQuake-engine Instruction Manual
 
 | **Citation**
 | Please cite this document as:
-| GEM (2022). The OpenQuake-engine User Manual. *Global Earthquake Model
-  (GEM) OpenQuake Manual for Engine version 3.14.0.
-  doi: 10.13117/GEM.OPENQUAKE.MAN.ENGINE.3.14.0*
+  GEM (2022). The OpenQuake-engine User Manual. Global Earthquake Model
+  (GEM) OpenQuake Manual for Engine version |VERSION|.
+  doi: 10.13117/GEM.OPENQUAKE.MAN.ENGINE. |VERSION|
 
 | **Disclaimer**
 | The OpenQuake-engine User Manual is distributed in the hope that it
@@ -2439,6 +2444,24 @@ If ``iml_disagg`` is specified, the user should not include
 ``intensity_measure_types_and_levels`` in the “Calculation
 configuration” section (see page ) since it is explicitly given here.
 
+The OQ Engine supports the calculation of two typologies of disaggregation 
+result involving :math:`\epsilon`. The standard approach used by the 
+OQ Engine is described in the 
+`OQ Engine Underlying Hazard Science Book <https://cloud-storage.globalquakemodel.org/public/wix-new-website/pdf-collections-wix/publications/OQ%20Hazard%20Science%201.0.pdf>`_ .
+The reader interested in learning more about the :math:`\epsilon^*` can refer 
+to the PEER report 
+`Probabilistic Seismic Hazard Analysis Code Verification, PEER Report 2018-03 <https://peer.berkeley.edu/publications/2018-03>`_ .
+
+To obtain disaggregation results in terms of :math:`\epsilon`\* the
+additional line below must be added to the disaggregation section of
+the configuration file:
+
+.. code:: ini
+   :number-lines: 7
+
+   [disaggregation]
+   epsilon_star = True
+
 .. _Event based PSHA:
 
 Event based PSHA 
@@ -3042,7 +3065,7 @@ latitude and longitude coordinates.
 
 .. container::
 
-   .. table:: Example of a ground motion fields csv output file for a scenario (`Download example <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/hazard/verbatim/output_scenario_gmfs.csv>`__)
+   .. table:: Example of a ground motion fields csv output file for a scenario (`Download example <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/output_scenario_gmfs.csv>`__)
       :name: output:gmf_scenario
 
       ======== ======= ======= =========== =============== ===============
@@ -3069,7 +3092,7 @@ intensity measure types specified in the job configuration file.
 
 .. container::
 
-   .. table:: Example of a sites csv output file for a scenario (`Download example <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/hazard/verbatim/output_scenario_sites.csv>`__)
+   .. table:: Example of a sites csv output file for a scenario (`Download example <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/output_scenario_sites.csv>`__)
       :name: output:sitemesh
 
       =========== ========== ========
@@ -5281,7 +5304,7 @@ and first few lines of the file Washington.csv in
 .. FIXME table too wide and :width: attribute is not recognised
 
 .. csv-table:: Example exposure csv file
-   :file: oqum/risk/verbatim/input_exposure_wa.csv
+   :file: input_exposure_wa.csv
    :name: input:exposure_csv_wa
    :header-rows: 1
 
@@ -6455,13 +6478,13 @@ coordinates.
    file in the csv format. This file must define Ground Motion Fields for all of the
    intensity measure types used in the *Fragility Model*. (`Download an
    example file
-   here <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/input_scenario_gmfs.csv>`__).
+   here <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/input_scenario_gmfs.csv>`__).
 
 -  ``sites_csv``: a parameter used to define the path to the sites file
    in the csv format. This file must define site id, longitude, and
    latitude for all of the sites for the Ground Motion Fields file provided using
    the ``gmfs_csv`` parameter. (`Download an example file
-   here <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/input_scenario_sites.csv>`__).
+   here <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/input_scenario_sites.csv>`__).
 
 The above calculation(s) can be run using the command line:
 

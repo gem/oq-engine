@@ -1,4 +1,4 @@
-name: Install OQ engine on Ubuntu OS
+name: Ubuntu test of OpenQuake Engine
 
 on:
   workflow_dispatch:
@@ -23,7 +23,7 @@ jobs:
         #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, "3.10"]
 
     steps:
   # This Checkout use git-ref keyword from dispatch
@@ -47,8 +47,6 @@ jobs:
       env: 
         BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
-        #git status
-        #grep setuptools requirements*
         #PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
         #echo $PY_VER
         #https://pip.pypa.io/en/stable/user_guide/

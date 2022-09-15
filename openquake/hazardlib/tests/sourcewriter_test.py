@@ -40,6 +40,7 @@ ALT_MFDS = os.path.join(os.path.dirname(__file__),
 COLLECTION = os.path.join(os.path.dirname(__file__),
                           'source_model/source_group_collection.xml')
 
+# NB: this is RUP_MUTEX, SRC_MUTEX is tested in multi_fault_test
 MUTEX = os.path.join(os.path.dirname(__file__),
                      'source_model/nonparametric-source-mutex-ruptures.xml')
 
@@ -119,6 +120,8 @@ class SourceWriterTestCase(unittest.TestCase):
         with open(temp, 'r') as f:
             sm = toml.load(f)['sourceModel']
         self.assertEqual(smodel.name, sm['_name'])
+
+    # NB: UCERF-like sources are tested in multi_fault_test.py
 
 
 class TOMLTestCase(unittest.TestCase):

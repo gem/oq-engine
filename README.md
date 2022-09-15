@@ -1,6 +1,6 @@
 # OpenQuake Engine
 
-![OpenQuake Logo](https://github.com/gem/oq-infrastructure/raw/master/logos/oq-logo.png)
+![OpenQuake Logo](https://raw.githubusercontent.com/gem/oq-infrastructure/master/logos/oq-logo.png)
 
 The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters. DOI: [10.13117/openquake.engine](https://doi.org/10.13117/openquake.engine)
 
@@ -35,9 +35,9 @@ Current Long Term Support version is the **OpenQuake Engine 3.11** 'Wegener'. Th
 
 ### Current release (for users needing the latest features)
 
-Current stable version is the **OpenQuake Engine 3.14**. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.14#openquake-engine.
+Current stable version is the **OpenQuake Engine 3.15**. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.15#openquake-engine.
 
-* [What's new](../engine-3.14/doc/whats-new.md)
+* [What's new](../engine-3.15/doc/whats-new.md)
 
 ## Documentation (master tree)
 
@@ -48,7 +48,6 @@ Current stable version is the **OpenQuake Engine 3.14**. The documentation is av
 * [About](doc/about.md)
 * [FAQ](doc/faq.md)
 * [Manuals](https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual)
-* [OQ Commands](doc/adv-manual/oq-commands.rst)
 * [Architecture](doc/adv-manual/architecture.rst)
 * [Calculation Workflow](doc/calculation-workflow.md)
 * [Hardware Suggestions](doc/hardware-suggestions.md)

@@ -382,9 +382,9 @@ def update_validators():
     Call this to updade the global nrml.validators
     """
     validators.update({
-        'fragilityFunction.id': valid.utf8,  # taxonomy
-        'vulnerabilityFunction.id': valid.utf8,  # taxonomy
-        'consequenceFunction.id': valid.utf8,  # taxonomy
+        'fragilityFunction.id': valid.risk_id,  # taxonomy
+        'vulnerabilityFunction.id': valid.risk_id,  # taxonomy
+        'consequenceFunction.id': valid.risk_id,  # taxonomy
         'asset.id': valid.asset_id,
         'costType.name': valid.cost_type,
         'costType.type': valid.cost_type_type,

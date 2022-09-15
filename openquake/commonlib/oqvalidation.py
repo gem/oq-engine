@@ -31,7 +31,7 @@ import numpy
 from openquake.baselib import __version__, hdf5, python3compat, config
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.shakemap.maps import get_array
+from openquake.hazardlib import shakemap
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
@@ -715,6 +715,14 @@ time_per_task:
   Example: *time_per_task=600*
   Default: 2000
 
+total_losses:
+  Used in event based risk calculations to compute total losses and
+  and total curves by summing across different loss types. Possible values
+  are "structural+nonstructural", "structural+contents",
+  "nonstructural+contents", "structural+nonstructural+contents".
+  Example: *total_losses = structural+nonstructural*
+  Default: None
+
 truncation_level:
   Truncation level used in the GMPEs.
   Example: *truncation_level = 0* to compute median GMFs.
@@ -763,7 +771,8 @@ ALL_CALCULATORS = ['classical_risk',
                    'preclassical',
                    'conditional_spectrum',
                    'event_based_damage',
-                   'scenario_damage']
+                   'scenario_damage',
+                   'reinsurance_risk']
 
 
 def check_same_levels(imtls):
@@ -794,7 +803,8 @@ class OqParam(valid.ParamSet):
     _input_files = ()  # set in get_oqparam
     KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
                     'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
-                    'source_model_logic_tree', 'hazard_curves', 'insurance',
+                    'source_model_logic_tree', 'hazard_curves',
+                    'insurance', 'reinsurance', 'ins_loss',
                     'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
                     'fragility', 'consequence', 'reqv', 'input_zip',
                     'amplification',
@@ -957,6 +967,11 @@ class OqParam(valid.ParamSet):
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, None)
     time_per_task = valid.Param(valid.positivefloat, 2000)
+    total_losses = valid.Param(
+        valid.Choice('structural+nonstructural',
+                     'structural+contents',
+                     'nonstructural+contents',
+                     'structural+nonstructural+contents'), None)
     truncation_level = valid.Param(valid.positivefloat, 99.)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
@@ -1295,7 +1310,7 @@ class OqParam(valid.ParamSet):
     def risk_event_rates(self, num_events, num_haz_rlzs):
         """
         :param num_events: the number of events per risk realization
-        :param num_haz_rlzs the number of hazard realizations
+        :param num_haz_rlzs: the number of hazard realizations
 
         If risk_investigation_time is 1, returns the annual event rates for
         each realization as a list, possibly of 1 element.
@@ -1333,7 +1348,8 @@ class OqParam(valid.ParamSet):
                     mini[imt] = 0
         if 'default' in mini:
             del mini['default']
-        return numpy.array([mini.get(imt) or 1E-10 for imt in self.imtls])
+        min_iml = numpy.array([mini.get(imt) or 1E-10 for imt in self.imtls])
+        return min_iml
 
     def levels_per_imt(self):
         """
@@ -1404,7 +1420,7 @@ class OqParam(valid.ParamSet):
         """
         imts_dt = numpy.dtype([(imt, F32) for imt in self.imtls
                                if imt.startswith(('PGA', 'SA'))])
-        return numpy.dtype([(str(poe), imts_dt) for poe in self.poes])
+        return numpy.dtype([('%.6f' % poe, imts_dt) for poe in self.poes])
 
     def imt_periods(self):
         """
@@ -1428,7 +1444,7 @@ class OqParam(valid.ParamSet):
         """
         Dictionary extended_loss_type -> extended_loss_type index
         """
-        return {lt: i for i, (lt, dt) in enumerate(self.loss_dt_list())}
+        return {lt: i for i, lt in enumerate(self.ext_loss_types)}
 
     @property
     def loss_types(self):
@@ -1441,6 +1457,19 @@ class OqParam(valid.ParamSet):
         for lt in self.all_cost_types:
             names.append(lt)
         return names
+
+    @property
+    def ext_loss_types(self):
+        """
+        :returns: list of loss types + secondary loss types
+        """
+        etypes = self.loss_types
+        if self.total_losses:
+            etypes = self.loss_types + [self.total_losses]
+        if 'insurance' in self.inputs:
+            itypes = [lt + '_ins' for lt in self.inputs['insurance']]
+            etypes = self.loss_types + itypes
+        return etypes
 
     def loss_dt(self, dtype=F64):
         """
@@ -1589,13 +1618,22 @@ class OqParam(valid.ParamSet):
         return (self.calculation_mode in
                 'event_based_risk ebrisk event_based_damage')
 
+    def is_valid_disagg_by_src(self):
+        """
+        disagg_by_src can be set only if ps_grid_spacing = 0
+        """
+        if self.disagg_by_src:
+            return self.ps_grid_spacing == 0
+        return True
+
     def is_valid_shakemap(self):
         """
         hazard_calculation_id must be set if shakemap_id is set
         """
         if self.shakemap_uri:
             kind = self.shakemap_uri['kind']
-            sig = inspect.signature(get_array[kind])
+            get_array = getattr(shakemap.parsers, 'get_array_' + kind)
+            sig = inspect.signature(get_array)
             # parameters without default value
             params = [p.name for p in list(
                 sig.parameters.values()) if p.default is p.empty]
@@ -1822,7 +1860,8 @@ class OqParam(valid.ParamSet):
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
                 'multi_peril' in self.inputs or 'rupture_model' in self.inputs
-                or 'scenario' in self.calculation_mode):
+                or 'scenario' in self.calculation_mode
+                or 'ins_loss' in self.inputs):
             return
         if ('source_model_logic_tree' not in self.inputs and
                 self.inputs['job_ini'] != '<in-memory>' and

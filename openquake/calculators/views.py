@@ -36,7 +36,7 @@ from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util, logictree
-from openquake.risklib.scientific import losses_by_period, return_periods
+from openquake.risklib.scientific import losses_by_period, return_periods, LTI
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
@@ -194,8 +194,7 @@ def view_slow_sources(token, dstore, maxrows=20):
     Returns the slowest sources
     """
     info = dstore['source_info']['source_id', 'code',
-                                 'calc_time', 'num_sites', 'eff_ruptures']
-    info = info[info['eff_ruptures'] > 0]
+                                 'calc_time', 'num_sites', 'num_ruptures']
     info.sort(order='calc_time')
     data = numpy.zeros(len(info), dt(info.dtype.names))
     for name in info.dtype.names:
@@ -355,7 +354,7 @@ def avglosses_data_transfer(token, dstore):
         '8 bytes x %d tasks = %s' % (N, R, L, ct, humansize(size_bytes)))
 
 
-# for scenario_risk
+# for scenario_risk and classical_risk
 @view.add('totlosses')
 def view_totlosses(token, dstore):
     """
@@ -365,7 +364,15 @@ def view_totlosses(token, dstore):
     sanity check for the correctness of the implementation.
     """
     oq = dstore['oqparam']
-    tot_losses = dstore['avg_losses-rlzs'][()].sum(axis=0)
+    tot_losses = 0
+    for ltype in oq.loss_types:
+        name = 'avg_losses-stats/' + ltype
+        try:
+            tot = dstore[name][()].sum(axis=0)
+        except KeyError:
+            name = 'avg_losses-rlzs/' + ltype
+            tot = dstore[name][()].sum(axis=0)
+        tot_losses += tot
     return text_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
 
 
@@ -378,10 +385,10 @@ def alt_to_many_columns(alt, loss_types):
         dic[ln] = []
     for (eid, kid), df in alt.groupby(['event_id', 'agg_id']):
         dic['event_id'].append(eid)
-        arr = numpy.zeros(len(loss_types))
-        arr[df.loss_id.to_numpy()] = df.loss.to_numpy()
-        for li, ln in enumerate(loss_types):
-            dic[ln].append(arr[li])
+        for ln in loss_types:
+            arr = df[df.loss_id == LTI[ln]].loss.to_numpy()
+            loss = 0 if len(arr) == 0 else arr[0]  # arr has size 0 or 1
+            dic[ln].append(loss)
     return pandas.DataFrame(dic)
 
 
@@ -431,8 +438,8 @@ def view_portfolio_loss(token, dstore):
     E = len(rlzs)
     ws = weights[rlzs]
     avgs = []
-    for li, ln in enumerate(oq.loss_types):
-        df = alt_df[alt_df.loss_id == li]
+    for ln in oq.loss_types:
+        df = alt_df[alt_df.loss_id == LTI[ln]]
         eids = df.pop('event_id').to_numpy()
         avgs.append(ws[eids] @ df.loss.to_numpy() / ws.sum() * E / R)
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
@@ -1237,13 +1244,13 @@ def view_agg_id(token, dstore):
     """
     Show the available aggregations
     """
-    dfa = dstore.read_df('agg_keys')
-    keys = [col for col in dfa.columns if not col.endswith('_')]
-    df = dfa[keys]
-    totdf = pandas.DataFrame({key: ['*total*'] for key in keys})
-    concat = pandas.concat([df, totdf], ignore_index=True)
-    concat.index.name = 'agg_id'
-    return concat
+    [aggby] = dstore['oqparam'].aggregate_by
+    keys = [key.decode('utf8').split(',') for key in dstore['agg_keys'][:]]
+    keys = numpy.array(keys)  # shape (N, A)
+    dic = {aggkey: keys[:, a] for a, aggkey in enumerate(aggby)}
+    df = pandas.DataFrame(dic)
+    df.index.name = 'agg_id'
+    return df
 
 
 @view.add('mean_perils')

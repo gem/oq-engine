@@ -10,7 +10,7 @@ openquake.commonlib.datastore module
     :show-inheritance:
 
 openquake.commonlib.dbapi module
------------------------------
+--------------------------------
 
 .. automodule:: openquake.commonlib.dbapi
     :members:

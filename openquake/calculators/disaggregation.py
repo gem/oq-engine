@@ -23,7 +23,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import parallel, hdf5, performance
 from openquake.baselib.general import (
     AccumDict, get_nbytes_msg, humansize, pprod, agg_probs, block_splitter)
 from openquake.baselib.python3compat import encode
@@ -45,6 +45,16 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+
+
+def _collapse_res(rdic):
+    # reduce the result dictionary for debugging purposes
+    # s, m -> (array, array)
+    cdic = {}
+    for tup, out in rdic.items():
+        if isinstance(tup, tuple):
+            cdic[tup] = pprod(out[0])
+    return cdic
 
 
 def _matrix(matrices, num_trts, num_mag_bins):
@@ -98,7 +108,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     :param dstore:
         a DataStore instance
     :param slc:
-        a slice of ruptures
+        a slice of contexts
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param hmap4:
@@ -115,6 +125,9 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         ctxs = cmaker.read_ctxs(dstore, slc, magidx)
+    if cmaker.rup_mutex:
+        raise NotImplementedError('Disaggregation with mutex ruptures')
+
     # Set epsstar boolean variable
     epsstar = dstore['oqparam'].epsilon_star
     dis_mon = monitor('disaggregate', measuremem=False)
@@ -142,16 +155,35 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
                 iml2 = dict(zip(imts, iml3))
                 with dis_mon:
                     # 7D-matrix #disbins, #lonbins, #latbins, #epsbins, M, P, Z
-                    matrix = disagg.disaggregate(close, cmaker, g_by_z[s],
-                                                 iml2, eps3, s, bins,
-                                                 epsstar=epsstar)  # 7D-matrix
+                    matrix = weighted_disagg(close, cmaker, g_by_z[s],
+                                             iml2, eps3, s, bins, epsstar)
                     for m in range(M):
                         mat6 = matrix[..., m, :, :]
                         if mat6.any():
                             res[s, m] = output(mat6)
+            # print(_collapse_res(res))
             yield res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
+
+
+def weighted_disagg(close, cmaker, g_by_z, iml2, eps3, s, bins, epsstar):
+    """
+    :returns: a 7D disaggregation matrix, weighted if src_mutex is True
+    """
+    if cmaker.src_mutex:
+        # getting a context array and a weight for each source
+        # NB: relies on ctx.weight having all equal weights, being
+        # built as ctx['weight'] = src.mutex_weight in contexts.py
+        ctxs = performance.split_array(close, close.src_id)
+        weights = [ctx.weight[0] for ctx in ctxs]
+        mats = [disagg.disaggregate(ctx, cmaker, g_by_z,
+                                    iml2, eps3, s, bins, epsstar=epsstar)
+                for ctx in ctxs]
+        return numpy.average(mats, weights=weights, axis=0)
+    else:
+        return disagg.disaggregate(close, cmaker, g_by_z,
+                                   iml2, eps3, s, bins, epsstar=epsstar)
 
 
 def get_outputs_size(shapedic, disagg_outputs):
@@ -195,14 +227,6 @@ class DisaggregationCalculator(base.HazardCalculator):
             raise ValueError(
                 'The number of sites is to disaggregate is %d, but you have '
                 'max_sites_disagg=%d' % (self.N, few))
-        if hasattr(self, 'csm'):
-            for sg in self.csm.src_groups:
-                if sg.atomic:
-                    raise NotImplementedError(
-                        'Atomic groups are not supported yet')
-        elif self.datastore['source_info'].attrs['atomic']:
-            raise NotImplementedError(
-                'Atomic groups are not supported yet')
         all_edges, shapedic = disagg.get_edges_shapedic(
             self.oqparam, self.sitecol, self.datastore['source_mags'])
         *b, trts = all_edges
@@ -337,15 +361,15 @@ class DisaggregationCalculator(base.HazardCalculator):
         # that would break the ordering of the indices causing an incredibly
         # worse performance, but visible only in extra-large calculations!
         cmakers = read_cmakers(self.datastore)
-        for block in block_splitter(rdata, maxweight,
-                                    key=operator.itemgetter('grp_id')):
-            grp_id = block[0]['grp_id']
+        grp_ids = U32(rdata['grp_id'])
+        for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
-            U = max(U, block.weight)
-            slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
-            smap.submit((dstore, slc, cmaker, self.hmap4,
-                         magi[slc], self.bin_edges))
-            task_inputs.append((cmaker.trti, slc.stop-slc.start))
+            for start, stop in slices:
+                slc = slice(start, stop)
+                U = max(U, stop - start)
+                smap.submit((dstore, slc, cmaker, self.hmap4,
+                             magi[slc], self.bin_edges))
+                task_inputs.append((grp_id, stop - start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
@@ -360,10 +384,10 @@ class DisaggregationCalculator(base.HazardCalculator):
                 (humansize(data_transfer), humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer: %s', humansize(data_transfer))
 
-        dt = numpy.dtype([('trti', U8), ('nrups', U32)])
+        dt = numpy.dtype([('grp_id', U8), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
-        results = smap.reduce(self.agg_result, AccumDict(accum={}))
-        return results  # imti, sid -> trti, magi -> 6D array
+        results = smap.reduce(self.agg_result)
+        return results  # s, m, k -> trti, magi -> 6D array
 
     def agg_result(self, acc, result):
         """
@@ -378,6 +402,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             magi = result.pop('magi')
             for (s, m), out in result.items():
                 for k in (0, 1):
+                    if (s, m, k) not in acc:
+                        acc[s, m, k] = {}
                     x = acc[s, m, k].get((trti, magi), 0)
                     acc[s, m, k][trti, magi] = agg_probs(x, out[k])
         return acc
@@ -439,7 +465,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
         vcurves = []  # hazard curves with a vertical section for large poes
         for (s, m, k), mat6 in sorted(results.items()):
-            # NB: k is an index with value 0 (MagDistEps) or 1 (MagLonLat)
+            # NB: k is an index with value 0 (MagDistEps) or 1 (LonLat)
             imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
                 mat5 = mat6[..., p, :]
@@ -470,6 +496,11 @@ class DisaggregationCalculator(base.HazardCalculator):
                         out[key][s, m, p, :] = pprod(mat4, axis=2)
                     elif key == 'Mag_Dist_Eps' and k == 0:
                         out[key][s, m, p, :] = mat4
+                    elif key == 'Mag_Dist_TRT' and k == 0:
+                        out[key][s, m, p, :] = pprod(mat5, axis=(3)).transpose(
+                            1, 2, 0, 3)  # T Ma D Z -> Ma D T Z
+                    elif key == 'Mag_Dist_TRT_Eps' and k == 0:
+                        out[key][s, m, p, :] = mat5.transpose(1, 2, 0, 3, 4)
                     elif key == 'Lon_Lat' and k == 1:
                         out[key][s, m, p, :] = pprod(mat4, axis=0)
                     elif key == 'Mag_Lon_Lat' and k == 1:

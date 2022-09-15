@@ -33,7 +33,6 @@ import json
 import zipfile
 from shapely.geometry import Polygon
 import numpy
-from openquake.baselib.general import CallableDict
 from openquake.baselib.node import node_from_xml
 
 
@@ -60,6 +59,7 @@ FIELDMAP = {
     'STDPSA10': ('std', 'SA(1.0)'),
     'STDPSA30': ('std', 'SA(3.0)'),
 }
+REQUIRED_IMTS = {'PGA', 'PSA03', 'PSA10'}
 
 
 class MissingLink(Exception):
@@ -96,10 +96,25 @@ def path2url(url):
     return url
 
 
-get_array = CallableDict()
+def get_array(**kw):
+    """
+    :param kw: a dictionary with a key 'kind' and various parameters
+    :returs: ShakeMap as a numpy array, dowloaded or read in various ways
+    """
+    kind = kw['kind']
+    if kind == 'shapefile':
+        return get_array_shapefile(kind, kw['fname'])
+    elif kind == 'usgs_xml':
+        return get_array_usgs_xml(kind, kw['grid_url'],
+                                  kw.get('uncertainty_url'))
+    elif kind == 'usgs_id':
+        return get_array_usgs_id(kind, kw['id'])
+    elif kind == 'file_npy':
+        return get_array_file_npy(kind, kw['fname'])
+    else:
+        raise KeyError(kw)
 
 
-@get_array.add('shapefile')
 def get_array_shapefile(kind, fname):
     """
     Download and parse data saved as a shapefile.
@@ -153,7 +168,6 @@ def get_array_shapefile(kind, fname):
     return get_shapefile_arrays(polygons, data)
 
 
-@get_array.add('usgs_xml')
 def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
     """
     Read a ShakeMap in XML format from the local file system
@@ -187,7 +201,6 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
             'USGS xml grid file could not be found at %s' % grid_url) from e
 
 
-@get_array.add('usgs_id')
 def get_array_usgs_id(kind, id):
     """
     Download a ShakeMap from the USGS site
@@ -201,11 +214,11 @@ def get_array_usgs_id(kind, id):
         raise MissingLink('Could not find grid.xml link in %s' % url)
     uncertainty = contents.get('download/uncertainty.xml.zip') or contents.get(
         'download/uncertainty.xml')
-    return get_array('usgs_xml', grid['url'],
-                     uncertainty['url'] if uncertainty else None)
+    return get_array(
+        kind='usgs_xml', grid_url=grid['url'],
+        uncertainty_url=uncertainty['url'] if uncertainty else None)
 
 
-@get_array.add('file_npy')
 def get_array_file_npy(kind, fname):
     """
     Read a ShakeMap in .npy format from the local file system
@@ -237,6 +250,12 @@ def get_shapefile_arrays(polygons, records):
 
 
 def _get_shakemap_array(xml_file):
+    if isinstance(xml_file, str):
+        fname = xml_file
+    elif hasattr(xml_file, 'fp'):
+        fname = xml_file.fp.name
+    else:
+        fname = xml_file.name
     if hasattr(xml_file, 'read'):
         data = io.BytesIO(xml_file.read())
     else:
@@ -250,6 +269,10 @@ def _get_shakemap_array(xml_file):
     idx = {f['name']: int(f['index']) - 1 for f in fields
            if f['name'] in SHAKEMAP_FIELDS}
     out = {name: [] for name in idx}
+    uncertainty = any(imt.startswith('STD') for imt in out)
+    missing = sorted(REQUIRED_IMTS - set(out))
+    if not uncertainty and missing:
+        raise RuntimeError('Missing %s in %s' % (missing, fname))
     for name in idx:
         i = idx[name]
         if name in FIELDMAP:

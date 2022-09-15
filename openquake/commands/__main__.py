@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import sys
 import logging
 import warnings
@@ -37,10 +36,6 @@ elif PY_VER == (3, 6):
     print('Python 3.6 (%s) is not supported; the engine may not work correctly'
           % sys.executable)
 
-# force cluster users to use `oq engine` so that we have centralized logs
-if os.environ['OQ_DISTRIBUTE'] == 'celery' and 'run' in sys.argv:
-    print('You are on a cluster and you are using oq run?? '
-          'Use oq engine --run instead!')
 
 # sanity check, all display name keys must be exportable
 dic = general.groupby(export.export, operator.itemgetter(0))

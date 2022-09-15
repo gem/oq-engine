@@ -80,6 +80,7 @@ def event_based_damage(df, oqparam, dstore, monitor):
     if R > 1:
         allrlzs = dstore['events']['rlz_id']
     loss_types = crmodel.oqparam.loss_types
+    assert len(loss_types) == L
     float_dmg_dist = oqparam.float_dmg_dist  # True by default
     if dstore.parent:
         dstore.parent.close()  # essential on Windows with h5py>=3.6
@@ -101,7 +102,7 @@ def event_based_damage(df, oqparam, dstore, monitor):
                 if not float_dmg_dist:
                     dprobs = rng.boolean_dist(probs, num_sims).mean(axis=1)
             for taxo, adf in asset_df.groupby('taxonomy'):
-                out = crmodel.get_output(taxo, adf, gmf_df)
+                out = crmodel.get_output(adf, gmf_df)
                 aids = adf.index.to_numpy()
                 assets = adf.to_records()
                 if float_dmg_dist:
@@ -150,18 +151,19 @@ def event_based_damage(df, oqparam, dstore, monitor):
                             for kids in aggids:
                                 for a, aid in enumerate(aids):
                                     dddict[eid, kids[aid]][lti] += d3[a, e]
-    return to_dframe(dddict, ci, L), dmgcsq
+    return _dframe(dddict, ci, loss_types), dmgcsq
 
 
-def to_dframe(adic, ci, L):
+def _dframe(adic, ci, loss_types):
+    # convert {eid, kid: dd} into a DataFrame (agg_id, event_id, loss_id)
     dic = general.AccumDict(accum=[])
     for (eid, kid), dd in sorted(adic.items()):
-        for lti in range(L):
-            dic['event_id'].append(eid)
+        for li, lt in enumerate(loss_types):
             dic['agg_id'].append(kid)
-            dic['loss_id'].append(lti)
+            dic['event_id'].append(eid)
+            dic['loss_id'].append(scientific.LTI[lt])
             for sname, si in ci.items():
-                dic[sname].append(dd[lti, si])
+                dic[sname].append(dd[li, si])
     fix_dtypes(dic)
     return pandas.DataFrame(dic)
 
@@ -259,7 +261,7 @@ class DamageCalculator(EventBasedRiskCalculator):
             self.dmgcsq[:, r] /= ne
         self.datastore['damages-rlzs'] = self.dmgcsq
         set_rlzs_stats(self.datastore,
-                       'damages',
+                       'damages-rlzs',
                        asset_id=self.assetcol['id'],
                        rlz=numpy.arange(self.R),
                        loss_type=oq.loss_types,

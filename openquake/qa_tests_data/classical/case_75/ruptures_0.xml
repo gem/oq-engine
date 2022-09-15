@@ -3,6 +3,8 @@
 xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
+  <!-- old style UCERF, no .hdf5, generic indexes; for new style UCERF with
+       .hdf5 and numeric indexes starting from 0 see case_65 -->
     <sourceModel investigation_time="1.0" name="test">
         <sourceGroup rup_interdep="indep" src_interdep="indep"
         tectonicRegion="Active Shallow Crust">
