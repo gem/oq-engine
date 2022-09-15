@@ -719,7 +719,7 @@ class HazardCalculator(BaseCalculator):
         """
         policy_df = general.AccumDict(accum=[])
         for loss_type, fname in lt_fnames:
-            df = pandas.read_csv(fname)
+            df = pandas.read_csv(fname, keep_default_na=False)
             policy_idx = getattr(self.assetcol.tagcol, 'policy_idx')
             for col in df.columns:
                 if col == 'policy':

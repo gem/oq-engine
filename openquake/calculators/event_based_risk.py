@@ -238,7 +238,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             K = 0
         self.datastore.swmr_on()
         sec_losses = []  # one insured loss for each loss type with a policy
-        if hasattr(self, 'policy_df'):
+        if hasattr(self, 'policy_df') and 'reinsurance' not in oq.inputs:
             sec_losses.append(
                 partial(insurance_losses, policy_df=self.policy_df))
         if oq.total_losses:
