@@ -80,6 +80,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                                   delta=1E-5)
 
+        # reinsurance test
+        hc_id = self.calc.datastore.calc_id
+        self.run_calc(case_1.__file__, 'job_re.ini',
+                      hazard_calculation_id=hc_id)
+        # TODO: check reinsurance_by_event        
+
     def test_case_1_ins(self):
         # no aggregation
         self.run_calc(case_1.__file__, 'job2.ini')

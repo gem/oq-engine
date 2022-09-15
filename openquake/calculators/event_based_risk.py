@@ -393,8 +393,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             # there must be a single loss type (possibly a total type)
             [lt] = oq.inputs['reinsurance']
             agg_loss_table = alt[alt.loss_id == LTI[lt]]
-            out = reinsurance(agg_loss_table, self.policy_df, self.treaty_df)
-            self.datastore.create_df('reinsurance_by_event', out)
+            dfs = []
+            for _, policy in self.policy_df.iterrows():
+                dfs.append(reinsurance(agg_loss_table, policy, self.treaty_df))
+            self.datastore.create_df('reinsurance_by_event', pandas.concat(dfs))
 
         if oq.avg_losses:
             for lt in oq.ext_loss_types:
