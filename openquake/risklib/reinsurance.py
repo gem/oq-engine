@@ -18,9 +18,31 @@
 
 import pandas as pd
 import numpy as np
+from openquake.risklib import scientific
+
 KNOWN_LOSS_TYPES = {
     'structural', 'nonstructural', 'contents',
     'value-structural', 'value-nonstructural', 'value-contents'}
+
+
+def reinsurance(agglosses, pol, treaties):
+    '''
+    :param DataFrame losses:
+        losses aggregated by policy (keys agg_id, event_id)
+    :param Series pol:
+        Description of policy characteristics
+    :param DataFrame treaties:
+        Description of reinsurance characteristics
+    :returns:
+        DataFrame of reinsurance losses by event ID and policy ID
+    '''
+    out = {}
+    losses = agglosses[agglosses.agg_id == pol['policy']]
+    out['claim'] = scientific.insured_losses(
+        losses.loss.to_numpy(), pol['deductible'], pol['insurance_limit'])
+    out['event_id'] = losses.event_id.to_numpy()
+    out['policy_id'] = [pol['policy']] * len(losses)
+    return pd.DataFrame(out)
 
 
 def reinsurance_losses(exposure, losses, policy, treaty):

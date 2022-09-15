@@ -1078,11 +1078,11 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
 # Insured Losses
 #
 
-def insured_losses(losses, deductible, insured_limit):
+def insured_losses(losses, deductible, insurance_limit):
     """
     :param losses: array of ground-up losses
     :param deductible: array of deductible values
-    :param insured_limit: array of insurance limit values
+    :param insurance_limit: array of insurance limit values
 
     Compute insured losses for the given asset and losses, from the point
     of view of the insurance company. For instance:
@@ -1098,13 +1098,14 @@ def insured_losses(losses, deductible, insured_limit):
     assert isinstance(losses, numpy.ndarray), losses
     if not isinstance(deductible, numpy.ndarray):
         deductible = numpy.full_like(losses, deductible)
-    if not isinstance(insured_limit, numpy.ndarray):
-        insured_limit = numpy.full_like(losses, insured_limit)
+    if not isinstance(insurance_limit, numpy.ndarray):
+        insurance_limit = numpy.full_like(losses, insurance_limit)
+    assert (deductible < insurance_limit).all()
     small = losses < deductible
-    big = losses > insured_limit
+    big = losses > insurance_limit
     out = losses - deductible
     out[small] = 0.
-    out[big] = insured_limit[big] - deductible[big]
+    out[big] = insurance_limit[big] - deductible[big]
     return out
 
 
@@ -1154,13 +1155,13 @@ def total_losses(asset_df, losses_by_lt, kind):
     losses_by_lt[kind] = _agg([losses_by_lt[lt] for lt in ltypes])
 
 
-def insurance_loss_curve(curve, deductible, insured_limit):
+def insurance_loss_curve(curve, deductible, insurance_limit):
     """
     Compute an insured loss ratio curve given a loss ratio curve
 
     :param curve: an array 2 x R (where R is the curve resolution)
     :param float deductible: the deductible limit in fraction form
-    :param float insured_limit: the insured limit in fraction form
+    :param float insurance_limit: the insured limit in fraction form
 
     >>> losses = numpy.array([3, 20, 101])
     >>> poes = numpy.array([0.9, 0.5, 0.1])
@@ -1168,7 +1169,7 @@ def insurance_loss_curve(curve, deductible, insured_limit):
     array([[ 3.        , 20.        ],
            [ 0.85294118,  0.5       ]])
     """
-    losses, poes = curve[:, curve[0] <= insured_limit]
+    losses, poes = curve[:, curve[0] <= insurance_limit]
     limit_poe = interpolate.interp1d(
         *curve, bounds_error=False, fill_value=1)(deductible)
     return numpy.array([
