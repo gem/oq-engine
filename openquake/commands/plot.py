@@ -228,7 +228,7 @@ def make_figure_uhs(extractors, what):
                       (site, poe, oq.investigation_time))
         ax.set_ylabel('g')
         for ck, arr in got.items():
-            curve = list(arr['%f.6' % poe][imts])
+            curve = list(arr['%.6f' % poe][imts])
             ax.plot(periods, curve, '-', label='%s_%s' % ck)
             ax.plot(periods, curve, '.')
         ax.grid(True)
