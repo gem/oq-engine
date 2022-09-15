@@ -38,7 +38,7 @@ def reinsurance(agglosses, pol, treaties):
     '''
     out = {}
     losses = agglosses[agglosses.agg_id == pol['policy']]
-    out['ins_loss'] = scientific.insured_losses(
+    out['claim'] = scientific.insured_losses(
         losses.loss.to_numpy(), pol['deductible'], pol['insurance_limit'])
     out['event_id'] = losses.event_id.to_numpy()
     out['policy_id'] = [pol['policy']] * len(losses)

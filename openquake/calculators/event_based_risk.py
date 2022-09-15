@@ -396,7 +396,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             dfs = []
             for _, policy in self.policy_df.iterrows():
                 dfs.append(reinsurance(agg_loss_table, policy, self.treaty_df))
-            self.datastore.create_df('reinsurance_by_event', pandas.concat(dfs))
+            self.datastore.create_df('insurance_by_event', pandas.concat(dfs))
 
         if oq.avg_losses:
             for lt in oq.ext_loss_types:
