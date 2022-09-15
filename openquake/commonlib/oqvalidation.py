@@ -1075,6 +1075,7 @@ class OqParam(valid.ParamSet):
         if self.collapse_level >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 
+        # checks for risk
         self._risk_files = get_risk_files(self.inputs)
         if self.risk_files:
             # checks for risk_files
@@ -1095,6 +1096,9 @@ class OqParam(valid.ParamSet):
             self.check_missing('site_model', 'debug')
             self.check_missing('gsim_logic_tree', 'debug')
             self.check_missing('source_model_logic_tree', 'debug')
+
+        if self.job_type == 'risk':
+            self.check_aggregate_by()
 
         # check investigation_time
         if (self.investigation_time and
@@ -1775,18 +1779,6 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
-    def is_valid_aggregate_by(self):
-        """
-        At the moment only `aggregate_by=id` or `aggregate_by=site_id`
-        are accepted
-        """
-        tagset = asset.tagset(self.aggregate_by)
-        if 'id' in tagset and len(tagset) > 1:
-            return False
-        elif 'site_id' in tagset and len(tagset) > 1:
-            return False
-        return True
-
     def is_valid_export_dir(self):
         """
         export_dir={export_dir} must refer to a directory,
@@ -1844,6 +1836,17 @@ class OqParam(valid.ParamSet):
         nostats = not hstats or hstats == ['mean']
         return nostats and self.number_of_logic_tree_samples > 1 and (
             self.sampling_method == 'early_weights')
+
+    def check_aggregate_by(self):
+        tagset = asset.tagset(self.aggregate_by)
+        if 'id' in tagset and len(tagset) > 1:
+            raise ValueError('aggregate_by = id must contain a single tag')
+        elif 'site_id' in tagset and len(tagset) > 1:
+            raise ValueError('aggregate_by = site_id must contain a single tag')
+        elif 'reinsurance' in self.inputs:
+            if not any(['policy'] == aggby for aggby in self.aggregate_by):
+                raise ValueError('missing aggregate_by=policy')
+        return True
 
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or
