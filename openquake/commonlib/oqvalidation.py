@@ -1420,7 +1420,7 @@ class OqParam(valid.ParamSet):
         """
         imts_dt = numpy.dtype([(imt, F32) for imt in self.imtls
                                if imt.startswith(('PGA', 'SA'))])
-        return numpy.dtype([(str(poe), imts_dt) for poe in self.poes])
+        return numpy.dtype([('%.6f' % poe, imts_dt) for poe in self.poes])
 
     def imt_periods(self):
         """
