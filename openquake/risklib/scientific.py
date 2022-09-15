@@ -1475,8 +1475,8 @@ class RiskComputer(dict):
         dic = collections.defaultdict(list)  # lt -> outs
         weights = collections.defaultdict(list)  # lt -> weights
         event = hasattr(haz, 'eid')  # else classical (haz.array)
-        for key, lt in self:
-            rm = self[key, lt]
+        for riskid, lt in self:
+            rm = self[riskid, lt]
             if len(rm.imt_by_lt) == 1:
                 # NB: if `check_risk_ids` raise an error then
                 # this code branch will never run
@@ -1488,7 +1488,7 @@ class RiskComputer(dict):
                 out = rm(lt, self.asset_df, haz, col, rndgen)
             else:  # classical
                 out = rm(lt, self.asset_df, haz.array[self.imtls(imt), 0])
-            weights[lt].append(self.wdic[key, lt])
+            weights[lt].append(self.wdic[riskid, lt])
             dic[lt].append(out)
         out = {}
         for lt in self.minimum_asset_loss:
