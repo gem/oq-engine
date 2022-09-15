@@ -30,6 +30,7 @@ from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LTI)
+from openquake.risklib.reinsurance import reinsurance
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
     PostRiskCalculator, post_aggregate, fix_dtypes)
@@ -387,6 +388,14 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if len(uni) < len(arr):
             raise RuntimeError('risk_by_event contains %d duplicates!' %
                                (len(arr) - len(uni)))
+
+        if 'reinsurance' in oq.inputs:
+            # there must be a single loss type (possibly a total type)
+            [lt] = oq.inputs['reinsurance']
+            agg_loss_table = alt[alt.loss_id == LTI[lt]]
+            out = reinsurance(agg_loss_table, self.policy_df, self.treaty_df)
+            self.datastore.create_df('reinsurance_by_event', out)
+
         if oq.avg_losses:
             for lt in oq.ext_loss_types:
                 al = self.avg_losses[lt]
