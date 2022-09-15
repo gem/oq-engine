@@ -1118,6 +1118,7 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
         policy_df.set_index('policy'), on='policy', how='inner')
     for lt in policy_df.loss_type.unique():
         if '+' in lt:
+            # add a key like structural+nonstructural to losses_by_lt
             total_losses(asset_df, losses_by_lt, lt)
     for lt, out in list(losses_by_lt.items()):
         if len(out) == 0:
@@ -1447,6 +1448,7 @@ class LossCurvesMapsBuilder(object):
 
 def _agg(loss_dfs, weights=None):
     # average loss DataFrames with fields (eid, aid, variance, loss)
+    # NB: if there are weights the DataFrames are changed!!
     if weights is not None:
         for loss_df, w in zip(loss_dfs, weights):
             loss_df['variance'] *= w
