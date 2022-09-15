@@ -23,6 +23,7 @@ import copy
 import bisect
 import itertools
 import collections
+from pprint import pprint
 from functools import lru_cache
 
 import numpy
@@ -51,6 +52,20 @@ structural+nonstructural+contents_ins
 structural_ins nonstructural_ins reinsurance'''.split())
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
 LTI = {lt: i for i, lt in enumerate(LOSSTYPE)}
+
+
+def _reduce(nested_dic):
+    # reduce lists of floats into empty lists inside a nested dictionary
+    # used for pretty printing purposes
+    out = {}
+    for k, dic in nested_dic.items():
+        if isinstance(dic, list) and not isinstance(dic[0], (str, bytes)):
+            out[k] = []
+        elif isinstance(dic, dict):
+            out[k] = _reduce(dic)
+        else:
+            out[k] = dic
+    return out
 
 
 def pairwise(iterable):
@@ -1531,6 +1546,9 @@ class RiskComputer(dict):
                    calculation_mode=self.calculation_mode)
         return dic
 
+    def pprint(self):
+        dic = _reduce(self.todict())
+        pprint(dic)
 
 # ####################### Consequences ##################################### #
 
