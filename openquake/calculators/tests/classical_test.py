@@ -262,7 +262,8 @@ hazard_uhs-std.csv
         self.assertEqual(arr['mean'].dtype.names, ('PGA',))
         [fname] = export(('uhs', 'npz'), self.calc.datastore)
         arr = numpy.load(fname)['all']
-        self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
+        self.assertEqual(arr['mean'].dtype.names,
+                         ('0.010000', '0.100000', '0.200000'))
 
         # check deserialization of source_model_lt
         r0, r1, r2 = self.calc.datastore['full_lt/source_model_lt']

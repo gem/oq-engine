@@ -1,4 +1,4 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.13.0-gitfaee77f868', start_date='2021-10-27T05:05:01', checksum=3047074524, kind='rlz-000', investigation_time=50.0"
-custom_site_id,lon,lat,5e-05~PGA,5e-05~SA(0.05),5e-05~SA(0.1),5e-05~SA(0.2),5e-05~SA(0.5)
-IT0001,6.00000,32.50000,3.957318E-02,7.553571E-02,8.383135E-02,8.066284E-02,5.578351E-02
+#,,,,,,,"generated_by='OpenQuake engine 3.16.0-git6c0e27a6d6', start_date='2022-09-15T06:21:50', checksum=3211637346, kind='rlz-000', investigation_time=50.0"
+custom_site_id,lon,lat,0.000050~PGA,0.000050~SA(0.05),0.000050~SA(0.1),0.000050~SA(0.2),0.000050~SA(0.5)
+IT0001,6.00000,32.50000,3.957312E-02,7.553557E-02,8.383120E-02,8.066273E-02,5.578346E-02
 IT0002,7.50000,36.00000,0.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00
