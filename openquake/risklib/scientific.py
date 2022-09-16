@@ -1136,14 +1136,8 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
         else:
             values = j['value-' + lt].to_numpy()
         losses = j.loss.to_numpy()
-        try:
-            deds = j.deductible_abs.to_numpy()
-        except AttributeError:
-            deds = j.deductible.to_numpy() * values
-        try:
-            lims = j.insurance_limit_abs.to_numpy()
-        except AttributeError:
-            lims = j.insurance_limit.to_numpy() * values
+        deds = j.deductible.to_numpy() * values
+        lims = j.insurance_limit.to_numpy() * values
         new['loss'] = insured_losses(losses, deds, lims)
         losses_by_lt[lt + '_ins'] = new
 
