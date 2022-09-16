@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Supported absolute values for `deductible` and `insurance_limit`
+    in insurance calculations (before we supported only fractions)
   * Reduced precision in the header of the UHS csv files
   * Managed the case with CoVs = 0 for the beta distribution
 
