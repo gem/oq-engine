@@ -62,6 +62,14 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32),
                         ('len', U16)])
 
+def validate_probs(probs, msg):
+    """
+    Validate an array of probabilities
+    """
+    bad = (probs < 0) | (probs > 1)
+    if bad.any():
+        raise ValueError('%s: invalid probabilities %s' % (msg, probs[bad]))
+
 
 def check_imtls(this, parent):
     """
@@ -725,6 +733,9 @@ class HazardCalculator(BaseCalculator):
             for col in df.columns:
                 if col == 'policy':
                     policy_df[col].extend([policy_idx[x] for x in df[col]])
+                elif col in ('deductible', 'insurance_limit'):
+                    validate_probs(df[col].to_numpy(), f'{col} in {fname}')
+                    policy_df[col].extend(df[col])
                 else:
                     policy_df[col].extend(df[col])
             policy_df['loss_type'].extend([loss_type] * len(df))
