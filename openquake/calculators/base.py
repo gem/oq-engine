@@ -82,6 +82,29 @@ def check_imtls(this, parent):
                                  imls, parent[imt], imt))
 
 
+def check_fields(fields, header, fname):
+    """
+    Make sure the right fields are present in a CSV file. For instance:
+
+    >>> check_fields(['deductible'], [], '*')
+    Traceback (most recent call last):
+     ...
+    openquake.baselib.InvalidFile: *: deductible is missing in the header
+
+    >>> check_fields(['deductible'], ['deductible', 'deductible_abs'], '*')
+    Traceback (most recent call last):
+     ...
+    openquake.baselib.InvalidFile: *: you cannot have both deductible and deductible_abs in the header
+    """
+    for field in fields:
+        num = sum(field == f or field + '_abs' == f for f in header)
+        if num == 0:
+            raise InvalidFile(f'{fname}: {field} is missing in the header')
+        elif num > 1:
+            raise InvalidFile(f'{fname}: you cannot have both '
+                              f'{field} and {field}_abs in the header')
+
+
 # this is used for the minimum_intensity dictionaries
 def consistent(dic1, dic2):
     """
@@ -729,6 +752,7 @@ class HazardCalculator(BaseCalculator):
         policy_df = general.AccumDict(accum=[])
         for loss_type, fname in lt_fnames:
             df = pandas.read_csv(fname, keep_default_na=False)
+            check_fields(['deductible', 'insurance_limit'], df.columns, fname)
             policy_idx = getattr(self.assetcol.tagcol, 'policy_idx')
             for col in df.columns:
                 if col == 'policy':
