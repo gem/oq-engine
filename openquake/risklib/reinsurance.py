@@ -38,10 +38,20 @@ def reinsurance(agglosses, pol, treaties):
     '''
     out = {}
     losses = agglosses[agglosses.agg_id == pol['policy']]
-    out['claim'] = scientific.insured_losses(
+    out['claim'] = claim = scientific.insured_losses(
         losses.loss.to_numpy(), pol['deductible'], pol['insurance_limit'])
     out['event_id'] = losses.event_id.to_numpy()
     out['policy_id'] = [pol['policy']] * len(losses)
+    if pol['treaty']:
+        [treaty_id] = pol['treaty'].split()
+        tr = treaties.loc[treaty_id]
+        retention = tr['qs_retention'] * claim
+        cession = tr['qs_cession'] * claim
+        over = cession > tr['treaty_limit']
+        cession[over] = tr['treaty_limit']
+        retention[over] += cession[over] - tr['treaty_limit']
+        out['retention'] = retention
+        out['cession'] = cession
     return pd.DataFrame(out)
 
 

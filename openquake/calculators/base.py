@@ -701,14 +701,15 @@ class HazardCalculator(BaseCalculator):
             self.load_insurance_data(oq.inputs['insurance'].items())
         rdic = oq.inputs.get('reinsurance')
         if rdic:
-            self.treaty_df = pandas.read_csv(rdic.pop('treaty'))
+            treaty_df = pandas.read_csv(rdic.pop('treaty'))
             self.load_insurance_data(rdic.items())
-            treaties = set(self.treaty_df.treaty)
-            assert len(treaties) == len(self.treaty_df), 'Not unique treaties'
+            treaties = set(treaty_df.treaty)
+            assert len(treaties) == len(treaty_df), 'Not unique treaties'
             for string in self.policy_df.treaty:
                 for policy in string.split():
                     assert policy in treaties, policy
-            self.datastore.create_df('treaty_df', self.treaty_df)
+            self.datastore.create_df('treaty_df', treaty_df)
+            self.treaty_df = treaty_df.set_index('treaty')
         if oq.inputs.get('ins_loss'):  # used in the ReinsuranceCalculator
             self.ins_loss_df = pandas.read_csv(oq.inputs['ins_loss'])
         return readinput.exposure
