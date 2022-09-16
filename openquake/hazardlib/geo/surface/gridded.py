@@ -134,12 +134,12 @@ class GriddedSurface(BaseSurface):
     def get_strike(self):
         """
         Compute strike value for a gridded surface. 
-        
-        A point 'p' on the surface is calculated through 
-        plane_fit. See 
+        A point 'n' perpendicular to the surface is 
+        calculated through plane_fit. See 
         :meth:`openquake.hazardlib.geo.utils.plane_fit`
-        Strike is calculated as the angle between 'p' 
-        and the YZ plane. 
+        Strike is measured with respect to True North
+        using azimuth function. See
+        :meth:`openquake.hazardlib.geo.geodetic.azimuth`
         
         returns:
             strike (in decimal degrees) of a gridded surface
