@@ -21,8 +21,9 @@ import unittest
 import pandas
 from openquake.risklib.reinsurance import reinsurance
 
-def _df(string, sep=','):  # DataFrame from string
-    return pandas.read_csv(io.StringIO(string), sep=sep, keep_default_na=False)
+def _df(string, sep=',', index_col=None):  # DataFrame from string
+    return pandas.read_csv(io.StringIO(string), sep=sep, index_col=index_col,
+                           keep_default_na=False)
 
 risk_by_event = _df('''\
 event_id	agg_id	loss
@@ -50,18 +51,18 @@ event_id	agg_id	loss
 
 treaty = _df('''\
 treaty,treaty_type,treaty_unit,qs_retention,qs_cession,treaty_limit
-qs_1,quota_share,policy,0.4,0.6,5000000
-''')
+qs_1,quota_share,policy,0.1,0.9,2000
+''', index_col='treaty')
+
 
 class ReinsuranceTestCase(unittest.TestCase):
     def test_1(self):
-        pol = dict(policy=1, insurance_limit=1.0, deductible=0.1,
-                   treaty=['qs_1'])
+        pol = dict(policy=1, insurance_limit=1.0, deductible=0.1, treaty='')
         out = reinsurance(risk_by_event, pol, treaty)
-        print(out)
+        print('\n', out)
 
     def test_2(self):
-        pol = dict(policy=2, insurance_limit=2.0, deductible=0.1,
-                   treaty=[])
+        pol = dict(policy=2, insurance_limit=0.9, deductible=0.05,
+                   treaty='qs_1')
         out = reinsurance(risk_by_event, pol, treaty)
-        print(out)
+        print('\n', out)

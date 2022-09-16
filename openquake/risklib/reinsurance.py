@@ -25,6 +25,7 @@ KNOWN_LOSS_TYPES = {
     'value-structural', 'value-nonstructural', 'value-contents'}
 
 
+# tested in test_reinsurance.py
 def reinsurance(agglosses, pol, treaties):
     '''
     :param DataFrame losses:
@@ -37,20 +38,19 @@ def reinsurance(agglosses, pol, treaties):
         DataFrame of reinsurance losses by event ID and policy ID
     '''
     out = {}
-    losses = agglosses[agglosses.agg_id == pol['policy']]
+    df = agglosses[agglosses.agg_id == pol['policy']]
+    losses = df.loss.to_numpy()
     out['claim'] = claim = scientific.insured_losses(
-        losses.loss.to_numpy(), pol['deductible'], pol['insurance_limit'])
-    out['event_id'] = losses.event_id.to_numpy()
-    out['policy_id'] = [pol['policy']] * len(losses)
+        losses, losses * pol['deductible'], losses * pol['insurance_limit'])
+    out['event_id'] = df.event_id.to_numpy()
+    out['policy_id'] = [pol['policy']] * len(df)
     if pol['treaty']:
         [treaty_id] = pol['treaty'].split()
         tr = treaties.loc[treaty_id]
-        retention = tr['qs_retention'] * claim
         cession = tr['qs_cession'] * claim
         over = cession > tr['treaty_limit']
         cession[over] = tr['treaty_limit']
-        retention[over] += cession[over] - tr['treaty_limit']
-        out['retention'] = retention
+        out['retention'] = claim - cession
         out['cession'] = cession
     return pd.DataFrame(out)
 
