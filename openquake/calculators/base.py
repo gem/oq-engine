@@ -84,12 +84,17 @@ def check_imtls(this, parent):
 
 def check_fields(fields, header, fname):
     """
-    Make sure the right fields are present in a CSV file. For instance
+    Make sure the right fields are present in a CSV file. For instance:
+
+    >>> check_fields(['deductible'], [], '*')
+    Traceback (most recent call last):
+     ...
+    openquake.baselib.InvalidFile: *: deductible is missing in the header
 
     >>> check_fields(['deductible'], ['deductible', 'deductible_abs'], '*')
-Traceback (most recent call last):
-  ...
-openquake.baselib.InvalidFile: *: you cannot have both deductible and deductible_abs in the header
+    Traceback (most recent call last):
+     ...
+    openquake.baselib.InvalidFile: *: you cannot have both deductible and deductible_abs in the header
     """
     for field in fields:
         num = sum(field == f or field + '_abs' == f for f in header)
