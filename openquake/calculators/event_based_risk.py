@@ -393,6 +393,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             # there must be a single loss type (possibly a total type)
             [lt] = oq.inputs['reinsurance']
             agg_loss_table = alt[alt.loss_id == LTI[lt]]
+            if len(agg_loss_table) == 0:
+                raise ValueError('No losses for reinsurance %s' % lt)
             dfs = []
             for _, policy in self.policy_df.iterrows():
                 dfs.append(reinsurance(agg_loss_table, policy, self.treaty_df))

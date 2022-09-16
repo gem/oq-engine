@@ -36,7 +36,7 @@ from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib import logictree
-from openquake.risklib import asset
+from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
 
 __doc__ = """\
@@ -1099,6 +1099,8 @@ class OqParam(valid.ParamSet):
 
         if self.job_type == 'risk':
             self.check_aggregate_by()
+        if 'reinsurance' in self.inputs:
+            self.check_reinsurance()
 
         # check investigation_time
         if (self.investigation_time and
@@ -1847,6 +1849,22 @@ class OqParam(valid.ParamSet):
             if not any(['policy'] == aggby for aggby in self.aggregate_by):
                 raise ValueError('missing aggregate_by=policy')
         return True
+
+    def check_reinsurance(self):
+        # there must be a 'treaty' and a loss type (possibly a total type)
+        dic = self.inputs['reinsurance'].copy()
+        try:
+            del dic['treaty']
+            [lt] = dic
+        except (KeyError, ValueError):
+            raise InvalidFile('%s: invalid reinsurance %s'
+                              % (self.inputs['job_ini'], dic))
+        if lt not in scientific.LTI:
+            raise InvalidFile('%s: unknown loss type %s in reinsurance'
+                              % (self.inputs['job_ini'], lt))
+        if '+' in lt and not self.total_losses:
+            raise InvalidFile('%s: you forgot to set total_losses=%s'
+                              % (self.inputs['job_ini'], lt))
 
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or
