@@ -145,10 +145,18 @@ class GriddedSurface(BaseSurface):
             strike (in decimal degrees) of a gridded surface
             
         """
-        p, n = plane_fit(self.mesh.array.T)
-        y = [0, 0, 1]
-        cross = np.cross(n, y)
-        strike = azimuth(0.0,0.0,cross[0],cross[1])
+        ## the function does not provide reliable estimates 
+        ## at sites closer to the poles. Hence, the below 
+        ## check is applied.
+        nt = np.array([i < -55 for i in self.mesh.lats])
+        qt = np.array([i > 55 for i in self.mesh.lats])
+        if (qt | nt).all(): 
+            raise NotImplementedError('GriddedSurface')
+        else:
+            p, n = plane_fit(self.mesh.array.T)
+            y = [0, 0, 1]
+            cross = np.cross(n, y)
+            strike = azimuth(0.0,0.0,cross[0],cross[1])
 
         return strike
 
