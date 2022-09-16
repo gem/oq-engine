@@ -25,6 +25,21 @@ KNOWN_LOSS_TYPES = {
     'value-structural', 'value-nonstructural', 'value-contents'}
 
 
+def get_ded_lim(losses, policy):
+    """
+    :returns: deductible and insurance_limit as arrays of absolute values
+    """
+    try:
+        ded = policy['deductible_abs']
+    except KeyError:
+        ded = losses * policy['deductible']
+    try:
+        lim = policy['insurance_limit_abs']
+    except KeyError:
+        lim = losses * policy['insurance_limit']
+    return ded, lim
+
+    
 # tested in test_reinsurance.py
 def reinsurance(agglosses, pol, treaties):
     '''
@@ -40,8 +55,8 @@ def reinsurance(agglosses, pol, treaties):
     out = {}
     df = agglosses[agglosses.agg_id == pol['policy']]
     losses = df.loss.to_numpy()
-    out['claim'] = claim = scientific.insured_losses(
-        losses, losses * pol['deductible'], losses * pol['insurance_limit'])
+    ded, lim = get_ded_lim(losses, pol)
+    out['claim'] = claim = scientific.insured_losses(losses, ded, lim)
     out['event_id'] = df.event_id.to_numpy()
     out['policy_id'] = [pol['policy']] * len(df)
     if pol['treaty']:
