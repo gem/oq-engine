@@ -56,12 +56,12 @@ qs_1,quota_share,policy,0.1,0.9,2000
 
 
 class ReinsuranceTestCase(unittest.TestCase):
-    def test_1(self):
+    def test_policy1(self):
         pol = dict(policy=1, insurance_limit=1.0, deductible=0.1, treaty='')
         out = reinsurance(risk_by_event, pol, treaty)
         print('\n', out)
 
-    def test_2(self):
+    def test_policy2(self):
         pol = dict(policy=2, insurance_limit=0.9, deductible=0.05,
                    treaty='qs_1')
         out = reinsurance(risk_by_event, pol, treaty)
