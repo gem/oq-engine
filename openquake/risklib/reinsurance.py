@@ -50,8 +50,10 @@ def reinsurance(agglosses, pol, treaties):
         cession = tr['qs_cession'] * claim
         over = cession > tr['treaty_limit']
         cession[over] = tr['treaty_limit']
-        out['retention'] = claim - cession
         out['cession'] = cession
+    else:
+        out['cession'] = np.zeros_like(claim)
+    out['retention'] = claim - out['cession']
     return pd.DataFrame(out)
 
 
