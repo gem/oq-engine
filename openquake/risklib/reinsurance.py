@@ -27,16 +27,16 @@ KNOWN_LOSS_TYPES = {
 
 def get_ded_lim(losses, policy):
     """
-    :returns: deductible and insurance_limit as arrays of absolute values
+    :returns: deductible and liability as arrays of absolute values
     """
-    try:
-        ded = policy['deductible_abs']
-    except KeyError:
+    if policy['deductible_abs']:
+        ded = policy['deductible']
+    else:
         ded = losses * policy['deductible']
-    try:
-        lim = policy['insurance_limit_abs']
-    except KeyError:
-        lim = losses * policy['insurance_limit']
+    if policy['liability_abs']:
+        lim = policy['liability']
+    else:
+        lim = losses * policy['liability']
     return ded, lim
 
     

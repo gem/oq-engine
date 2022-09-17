@@ -90,19 +90,10 @@ def check_fields(fields, header, fname):
     Traceback (most recent call last):
      ...
     openquake.baselib.InvalidFile: *: deductible is missing in the header
-
-    >>> check_fields(['deductible'], ['deductible', 'deductible_abs'], '*')
-    Traceback (most recent call last):
-     ...
-    openquake.baselib.InvalidFile: *: you cannot have both deductible and deductible_abs in the header
     """
     for field in fields:
-        num = sum(field == f or field + '_abs' == f for f in header)
-        if num == 0:
+        if field not in header:
             raise InvalidFile(f'{fname}: {field} is missing in the header')
-        elif num > 1:
-            raise InvalidFile(f'{fname}: you cannot have both '
-                              f'{field} and {field}_abs in the header')
 
 
 # this is used for the minimum_intensity dictionaries
@@ -749,19 +740,25 @@ class HazardCalculator(BaseCalculator):
         """
         Read the insurance files and populate the policy_df
         """
+        oq = self.oqparam
         policy_df = general.AccumDict(accum=[])
         for loss_type, fname in lt_fnames:
             df = pandas.read_csv(fname, keep_default_na=False)
-            check_fields(['deductible', 'insurance_limit'], df.columns, fname)
+            if 'reinsurance' in oq.inputs:
+                check_fields(['deductible', 'liability', 'deductible_abs',
+                              'liability_abs'], df.columns, fname)
+            else:
+                check_fields(['deductible', 'insurance_limit'],
+                             df.columns, fname)
             policy_idx = getattr(self.assetcol.tagcol, 'policy_idx')
             for col in df.columns:
                 if col == 'policy':
                     policy_df[col].extend([policy_idx[x] for x in df[col]])
-                elif col in ('deductible', 'insurance_limit'):
-                    validate_probs(df[col].to_numpy(), f'{col} in {fname}')
-                    policy_df[col].extend(df[col])
                 else:
                     policy_df[col].extend(df[col])
+            if 'insurance_limit' in df.columns:
+                validate_probs(df.insurance_limit.to_numpy(),
+                               f'insurance_limit in {fname}')
             policy_df['loss_type'].extend([loss_type] * len(df))
         assert policy_df
         self.policy_df = pandas.DataFrame(policy_df)
