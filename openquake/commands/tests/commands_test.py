@@ -522,7 +522,6 @@ Source Loss Table'''.splitlines())
         dic = get_params(job_ini)
         dic['calculation_mode'] = 'event_based'
         tempdir = tempfile.mkdtemp()
-        dbserver.ensure_on()
         with mock.patch.dict(os.environ, OQ_DATADIR=tempdir):
             [job] = run_jobs(create_jobs([dic], 'error'))
             job = commonlib.logs.dbcmd('get_job', job.calc_id)
