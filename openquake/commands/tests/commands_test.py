@@ -400,7 +400,7 @@ class ZipTestCase(unittest.TestCase):
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(
             ['exposure.csv', 'exposure1.xml', 'gmpe_logic_tree.xml',
-             'job_ins.ini', 'policy.csv', 'source_model.xml',
+             'job_ins.ini', 'policy_ins.csv', 'source_model.xml',
              'source_model_logic_tree.xml',
              'vulnerability_model_nonstco.xml',
              'vulnerability_model_stco.xml'],
