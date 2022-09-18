@@ -58,6 +58,8 @@ KNOWN_DISTANCES = frozenset(
     .split())
 # the following is used in the collapse method
 IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
+MEA = 0
+STD = 1
 
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -1048,7 +1050,7 @@ class ContextMaker(object):
         return out
 
     # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-    def get_cs_contrib(self, ctx, imti, imls, cms_poes, cms=[]):
+    def get_cs_contrib(self, ctx, imti, imls, cs_poes, cs=[]):
         """
         Compute the contributions to the conditional spectra, in a form
         suitable for later composition.
@@ -1061,11 +1063,12 @@ class ContextMaker(object):
             IMT index in the range 0..M-1
         :param imls:
             P intensity measure levels for the IMT specified by the index
-        :param cms_poes:
+        :param cs_poes:
             Probabilities of exceedence for which we compute the CMS
-        :param cms:
-            The finale CMS mean. This is used for the calculation of the 
-            standard deviation.
+        :param cs:
+            The final CS. This is used for the calculation of the 
+            standard deviation. This is a dictionary with one key = 0 and 
+            value as the dictionary returned by this method.
         :returns:
             a dictionary g_ -> key -> array where g_ is an index,
             key is the string '_c' or '_s',  and the arrays have shape
@@ -1136,22 +1139,50 @@ class ContextMaker(object):
                     ws = -numpy.log(
                         (1. - probs[slc]) ** poes) / self.investigation_time
                     
-                    # AfE for the investigated IMT+L
-                    ws /= -numpy.log(1. - cms_poes[p])
+                    # Normalizing by the AfE for the investigated IMT and level
+                    ws /= -numpy.log(1. - cs_poes[p])
+
+                    # If sum of ws is close to 1 we normalize
+                    if numpy.abs(ws.sum() - 1.0) < 1e-2:
+                        ws /= ws.sum()
                     
-                    # Normalising weights 
+                    # Normalising weights
                     s[n, p] = ws.sum()  # weights not summing up to 1
+                    
+                    """
+                    # Equation 14 in Lin et al. (2013)
+                    term1 = mu[0, :] + eps * numpy.multiply(rho, sig[0, :])
+                    c[:, n, MEA, p] = numpy.multiply(ws, term1)
+
+                    if len(cs) > 0:
+
+                        # Equation 15 in Lin et al. (2013)
+                        term2 = sig[0, :] * (1. - rho**2)**0.5
+                        term3 = (term1 - cs[0]['_c'][:, n, 0, p])
+                        # breakpoint()
+                        term4 = term2**2 + term3**2
+                        c[:, n, 1, p] = numpy.multiply(ws, term4)
+                    """
 
                     # For each intensity measure type
                     for m in m_range:
+
                         # Equation 14 in Lin et al. (2013)
                         term1 = (mu[m] + rho[m] * eps * sig[m])
-                        c[m, n, 0, p] = ws @ term1 
-                        # Equation 15 in Lin et al. (2013)
-                        # term2 = sig[m] * (1. - rho[m]**2)**0.5
-                        # term3 = 
-                        # term4 = (term1 - term3)**2
-                        # c[m, n, 1, p] = ws @ (term2**2)**0.5
+                        c[m, n, MEA, p] = ws @ term1
+
+                        # This is executed only if we already have the final CS
+                        if len(cs) > 0:
+
+                            # Equation 15 in Lin et al. (2013)
+                            term2 = sig[m] * (1. - rho[m]**2)**0.5
+                            term3 = (term1 - cs[0]['_c'][m, n, 0, p])
+                            term3 = 0
+                            # ws /= numpy.sum(ws)
+                            # breakpoint()
+                            # print(m, ws, term1, term2, term3)
+                            c[m, n, 1, p] = ws @ (term2**2 + term3**2)
+
         return out
 
     def gen_poes(self, ctx):

@@ -46,8 +46,8 @@ def to_spectra(csdic, n, p):
     for r in range(R):
         c, s = csdic[r].values()
         if s[n, p]:
-            out[r, :, 0] = numpy.exp(c[:, n, 0, p] / s[n, p])
-            out[r, :, 1] = numpy.sqrt(c[:, n, 1, p] / s[n, p])
+            out[r, :, 0] = numpy.exp(c[:, n, 0, p])
+            out[r, :, 1] = numpy.sqrt(c[:, n, 1, p])
     return out
 
 
@@ -117,12 +117,31 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         # grp_id, therefore it is possible to build (start, stop) slices
         out = general.AccumDict()  # grp_id => dict
 
-        # Computing CMS
+        # Computing CS
         for gid, start, stop in performance._idx_start_stop(rdata['grp_id']):
             cmaker = self.cmakers[gid]
             ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
             for ctx in ctxs:
                 out += cmaker.get_cs_contrib(ctx, imti, self.imls, oq.poes)
+
+        # Apply weights. csmean is a dictionary with integer keys 
+        # (corresponding to the rlz ID) and value corresponding to a 
+        # dictionary with keys '_c' and '_s'. In '_c' we 
+        # have an array of shape (M, N, 2, P) where:
+        # - M is the number of IMTs
+        # - N is the number of sites
+        # - 2 (i.e. CS and its std)
+        # - P is the the number of IMLs
+        csdic, csmean = self._apply_weights(out)
+ 
+        # Computing standard deviation
+        out = general.AccumDict()  # grp_id => dict
+        for gid, start, stop in performance._idx_start_stop(rdata['grp_id']):
+            cmaker = self.cmakers[gid]
+            ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
+            for ctx in ctxs:
+                out += cmaker.get_cs_contrib(ctx, imti, self.imls, oq.poes,
+                        csmean)
 
         return out
 
@@ -140,7 +159,18 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         self.datastore.set_attrs(dsetname, **attrs)
 
     def post_execute(self, acc):
-        # store the conditional spectrum contributions in the datasets _c, _s
+
+        # Apply weights
+        csdic, csmean = self._apply_weights(acc)
+        
+        # Saving results
+        self.save('cs-rlzs', csdic)
+        self.save('cs-stats', csmean)
+
+    def _apply_weights(self, acc):
+
+        # Processing results. Store the conditional spectrum contributions
+        # in the datasets _c, _s
         for _g, dic in acc.items():
             for key, arr in dic.items():
                 self.datastore[key][_g] = arr  # shapes MN2P and NP
@@ -151,11 +181,12 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         for _g, rlzs in enumerate(rlzs_by_g):
             for r in rlzs:
                 csdic[r] += acc[_g]
-        self.save('cs-rlzs', csdic)
 
-        # build mean spectrum
+        # build final conditional spectrum and std
         weights = self.datastore['weights'][:]
         csmean = csdict(self.M, self.N, self.P, 0, 1)
         for r, weight in enumerate(weights):
             csmean[0] += csdic[r] * weight
-        self.save('cs-stats', csmean)
+
+        return csdic, csmean
+
