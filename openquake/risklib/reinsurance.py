@@ -88,6 +88,8 @@ def parse(fname):
             dic[name].append(tr[name])
     df = pd.read_csv(policyfname, keep_default_na=False).rename(columns=fieldmap)
     check_fields(['deductible', 'liability'], df.columns, fname)
+    df['deductible_abs'] = np.ones(len(df), bool)
+    df['liability_abs'] = np.ones(len(df), bool)
     return df, pd.DataFrame(dic)
 
 
