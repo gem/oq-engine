@@ -705,8 +705,10 @@ class HazardCalculator(BaseCalculator):
                         '%d assets were discarded; use `oq show discarded` to'
                         ' show them and `oq plot_assets` to plot them' %
                         len(discarded))
-        if oq.inputs.get('insurance'):
+        if 'insurance' in oq.inputs:
             self.load_insurance_data(oq.inputs['insurance'].items())
+        elif 'reinsurance' in oq.inputs:
+            self.load_insurance_data(oq.inputs['reinsurance'].items())
         if oq.inputs.get('ins_loss'):  # used in the ReinsuranceCalculator
             self.ins_loss_df = pandas.read_csv(oq.inputs['ins_loss'])
         return readinput.exposure
@@ -721,13 +723,10 @@ class HazardCalculator(BaseCalculator):
             if 'reinsurance' in oq.inputs:
                 assert len(lt_fnames) == 1, lt_fnames
                 df, treaty_df = reinsurance.parse(fname)
-                treaties = set(treaty_df.treaty)
+                treaties = set(treaty_df.id)
                 assert len(treaties) == len(treaty_df), 'Not unique treaties'
-                for string in self.policy_df.treaty:
-                    for policy in string.split():
-                        assert policy in treaties, policy
                 self.datastore.create_df('treaty_df', treaty_df)
-                self.treaty_df = treaty_df.set_index('treaty')
+                self.treaty_df = treaty_df.set_index('id')
             else:
                 df = pandas.read_csv(fname, keep_default_na=False)
                 reinsurance.check_fields(['deductible', 'insurance_limit'],
