@@ -25,7 +25,7 @@ from openquake.hazardlib import read_input, valid, contexts
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
-OVERWRITE_EXPECTED = False
+OVERWRITE_EXPECTED = True
 
 CWD = os.path.dirname(__file__)
 SOURCES_XML = os.path.join(CWD, 'data', 'sm01.xml')
@@ -54,7 +54,7 @@ PARAM = dict(source_model_file=SOURCES_XML,
                     "SA(1.0)": valid.logscale(0.005, 2.13, 45),
                     "SA(2.0)": valid.logscale(0.005, 2.13, 45)})
 imti = 4  # corresponds to SA(0.2)
-imls = [np.log(1.001392E-01)]
+poes = [0.000404]
 
 
 # useful while debugging
@@ -108,9 +108,14 @@ class CondSpectraTestCase(unittest.TestCase):
         assert len(ctx) == 100
         ctx1 = ctx[:50]
         ctx2 = ctx[50:]
-        dic1 = cmaker.get_cs_contrib(ctx1, imti, imls)[0]
-        dic2 = cmaker.get_cs_contrib(ctx2, imti, imls)[0]
-        dic = cmaker.get_cs_contrib(ctx, imti, imls)[0]
+
+        # The hazard for the target IMT and poe
+        poes = [0.000404]
+        imls = [0.394359437]
+
+        dic1 = cmaker.get_cs_contrib(ctx1, imti, imls, poes)[0]
+        dic2 = cmaker.get_cs_contrib(ctx2, imti, imls, poes)[0]
+        dic = cmaker.get_cs_contrib(ctx, imti, imls, poes)[0]
         aac((dic1['_c'] + dic2['_c']) / (dic1['_s'] + dic2['_s']),
             dic['_c'] / dic['_s'])
 
@@ -120,7 +125,12 @@ class CondSpectraTestCase(unittest.TestCase):
         [cmaker] = inp.cmakerdict.values()
         [src_group] = inp.groups
         [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
-        csdic = cmaker.get_cs_contrib(ctx, imti, imls)
+
+        # The hazard for the target IMT and poe=0.002105
+        poes = [0.002105]
+        imls = [0.238531932]
+
+        csdic = cmaker.get_cs_contrib(ctx, imti, imls, poes)
         df = csdic_to_dframe(csdic, cmaker.imts, 0, 0)
 
         # check the result
@@ -130,38 +140,5 @@ class CondSpectraTestCase(unittest.TestCase):
                       float_format='%.6f')
         expdf = pandas.read_csv(expected)
         pandas.testing.assert_frame_equal(df, expdf, atol=1E-6)
-        # to plot the spectra uncomment the following line
-        # plot(df, cmaker.imts)
-
-    def test_6_rlzs(self):
-        # test with 2x3 realizations and TRTA, TRTB
-        # rlzs_by_g = 012, 345, 03, 14, 25
-        inp = read_input(
-            PARAM, source_model_file=os.path.join(CWD, 'data', 'sm02.xml'))
-        R = inp.gsim_lt.get_num_paths()
-
-        # compute the contributions by trt
-        tot = AccumDict()  # g_ -> key -> array
-        for src_group in inp.groups:
-            cmaker = inp.cmakerdict[src_group.trt]
-            [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
-            tot += cmaker.get_cs_contrib(ctx, imti, imls)
-
-        # compose the contributions by rlz, 0+2, 0+3, 0+4, 1+2, 1+3, 1+4
-        rlzs_by_g = inp.gsim_lt.get_rlzs_by_g()
-        csdic = contexts.csdict(len(cmaker.imts), 1, 1, 0, R)
-        for g_, rlz_ids in enumerate(rlzs_by_g):
-            for r in rlz_ids:
-                csdic[r] += tot[g_]
-        df = csdic_to_dframe(csdic, cmaker.imts, 0, 0)
-
-        # check the results
-        expected = os.path.join(CWD, 'expected', 'spectra6.csv')
-        if OVERWRITE_EXPECTED:
-            df.to_csv(expected, index=False, line_terminator='\r\n',
-                      float_format='%.6f')
-        expdf = pandas.read_csv(expected)
-        pandas.testing.assert_frame_equal(df, expdf, atol=1E-6)
-
         # to plot the spectra uncomment the following line
         # plot(df, cmaker.imts)
