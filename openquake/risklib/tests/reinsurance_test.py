@@ -17,13 +17,18 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import os
+import pathlib
 import unittest
 import pandas
-from openquake.risklib.reinsurance import reinsurance
+from openquake.risklib import reinsurance
+
+CDIR = pathlib.Path(os.path.dirname(__file__))
 
 def _df(string, sep=',', index_col=None):  # DataFrame from string
     return pandas.read_csv(io.StringIO(string), sep=sep, index_col=index_col,
                            keep_default_na=False)
+
 
 risk_by_event = _df('''\
 event_id	agg_id	loss
@@ -49,21 +54,29 @@ event_id	agg_id	loss
 5	1	761.1264
 ''', sep='\t')
 
+
 treaty = _df('''\
-treaty,treaty_type,treaty_unit,qs_retention,qs_cession,treaty_limit
-qs_1,quota_share,policy,0.1,0.9,2000
-''', index_col='treaty')
+id,max_retention,limit
+wxlr,100000,200000
+''', index_col='id')
 
 
 class ReinsuranceTestCase(unittest.TestCase):
+    def test_parse(self):
+        policy_df, treaty_df = reinsurance.parse(CDIR / 'reinsurance.xml')
+        print(policy_df)
+        print(treaty_df)
+        self.assertEqual(len(policy_df), 12)
+        self.assertEqual(len(treaty_df), 3)
+        
     def test_policy1(self):
         pol = dict(policy=1, liability=1.0, liability_abs=False,
-                   deductible=0.1, deductible_abs=False, treaty='')
-        out = reinsurance(risk_by_event, pol, treaty)
+                   deductible=0.1, deductible_abs=False, nonprop1='wxlr')
+        out = reinsurance.reinsurance(risk_by_event, pol, treaty)
         print('\n', out)
 
     def test_policy2(self):
         pol = dict(policy=2, liability=0.9, liability_abs=False,
-                   deductible=0.05, deductible_abs=False, treaty='')
-        out = reinsurance(risk_by_event, pol, treaty)
+                   deductible=0.05, deductible_abs=False, nonprop1='wxlr')
+        out = reinsurance.reinsurance(risk_by_event, pol, treaty)
         print('\n', out)

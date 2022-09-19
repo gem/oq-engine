@@ -1131,8 +1131,8 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
         new['variance'] = 0.
         j = new.join(adf, on='aid', how='inner')
         if '+' in lt:
-            values = numpy.sum(
-                j['value-' + ltype].to_numpy() for ltype in lt.split('+'))
+            lst = [j['value-' + ltype].to_numpy() for ltype in lt.split('+')]
+            values = numpy.sum(lst, axis=0)  # shape num_values
         else:
             values = j['value-' + lt].to_numpy()
         losses = j.loss.to_numpy()

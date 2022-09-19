@@ -771,8 +771,7 @@ ALL_CALCULATORS = ['classical_risk',
                    'preclassical',
                    'conditional_spectrum',
                    'event_based_damage',
-                   'scenario_damage',
-                   'reinsurance_risk']
+                   'scenario_damage']
 
 
 def check_same_levels(imtls):
@@ -1854,9 +1853,8 @@ class OqParam(valid.ParamSet):
         # there must be a 'treaty' and a loss type (possibly a total type)
         dic = self.inputs['reinsurance'].copy()
         try:
-            del dic['treaty']
             [lt] = dic
-        except (KeyError, ValueError):
+        except ValueError:
             raise InvalidFile('%s: invalid reinsurance %s'
                               % (self.inputs['job_ini'], dic))
         if lt not in scientific.LTI:

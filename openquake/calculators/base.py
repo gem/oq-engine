@@ -40,7 +40,7 @@ from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
-from openquake.risklib import riskinput, riskmodels
+from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import (
     readinput, logictree, datastore, source_reader, logs)
 from openquake.calculators.export import export as exp
@@ -80,20 +80,6 @@ def check_imtls(this, parent):
             raise ValueError('The intensity measure levels %s are different '
                              'from the parent levels %s for %s' % (
                                  imls, parent[imt], imt))
-
-
-def check_fields(fields, header, fname):
-    """
-    Make sure the right fields are present in a CSV file. For instance:
-
-    >>> check_fields(['deductible'], [], '*')
-    Traceback (most recent call last):
-     ...
-    openquake.baselib.InvalidFile: *: deductible is missing in the header
-    """
-    for field in fields:
-        if field not in header:
-            raise InvalidFile(f'{fname}: {field} is missing in the header')
 
 
 # this is used for the minimum_intensity dictionaries
@@ -719,19 +705,10 @@ class HazardCalculator(BaseCalculator):
                         '%d assets were discarded; use `oq show discarded` to'
                         ' show them and `oq plot_assets` to plot them' %
                         len(discarded))
-        if oq.inputs.get('insurance'):
+        if 'insurance' in oq.inputs:
             self.load_insurance_data(oq.inputs['insurance'].items())
-        rdic = oq.inputs.get('reinsurance')
-        if rdic:
-            treaty_df = pandas.read_csv(rdic.pop('treaty'))
-            self.load_insurance_data(rdic.items())
-            treaties = set(treaty_df.treaty)
-            assert len(treaties) == len(treaty_df), 'Not unique treaties'
-            for string in self.policy_df.treaty:
-                for policy in string.split():
-                    assert policy in treaties, policy
-            self.datastore.create_df('treaty_df', treaty_df)
-            self.treaty_df = treaty_df.set_index('treaty')
+        elif 'reinsurance' in oq.inputs:
+            self.load_insurance_data(oq.inputs['reinsurance'].items())
         if oq.inputs.get('ins_loss'):  # used in the ReinsuranceCalculator
             self.ins_loss_df = pandas.read_csv(oq.inputs['ins_loss'])
         return readinput.exposure
@@ -743,14 +720,18 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         policy_df = general.AccumDict(accum=[])
         for loss_type, fname in lt_fnames:
-            df = pandas.read_csv(fname, keep_default_na=False)
             if 'reinsurance' in oq.inputs:
-                check_fields(['deductible', 'liability', 'deductible_abs',
-                              'liability_abs'], df.columns, fname)
+                assert len(lt_fnames) == 1, lt_fnames
+                df, treaty_df = reinsurance.parse(fname)
+                treaties = set(treaty_df.id)
+                assert len(treaties) == len(treaty_df), 'Not unique treaties'
+                self.datastore.create_df('treaty_df', treaty_df)
+                self.treaty_df = treaty_df.set_index('id')
             else:
-                check_fields(['deductible', 'insurance_limit'],
-                             df.columns, fname)
-            policy_idx = getattr(self.assetcol.tagcol, 'policy_idx')
+                df = pandas.read_csv(fname, keep_default_na=False)
+                reinsurance.check_fields(['deductible', 'insurance_limit'],
+                                         df.columns, fname)
+            policy_idx = self.assetcol.tagcol.policy_idx
             for col in df.columns:
                 if col == 'policy':
                     policy_df[col].extend([policy_idx[x] for x in df[col]])

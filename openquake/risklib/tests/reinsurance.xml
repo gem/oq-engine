@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+
+  <reinsuranceModel>
+    <description>reinsurance model</description>
+
+    <fieldMap>
+      <field oq="policy" input="Policy" />
+      <field oq="deductible" input="Deductible" />
+      <field oq="liability" input="Limit" />
+      <field oq="prop1" input="Surplus_metro" max_event_cession="10000000" />
+      <field oq="prop2" input="QS_rural" max_event_cession="100000000" />
+      <field oq="prop3" input="QS_reg" max_event_cession="25000000" />
+      <field oq="prop4" input="Sur1_reg" max_event_cession="75000000" />
+      <field oq="prop5" input="Fac_reg" max_event_cession="75000000" />
+      <field oq="nonprop1" input="Treaty_id" />
+    </fieldMap>
+
+    <policies>policies.csv</policies>
+
+    <nonProportional>
+      <treaty id="WXLR_metro" type="wxlr" max_retention="500000" limit="3500000" />
+      <treaty id="CatXL_rural" type="catxl" max_retention="2000000" limit="50000000" />
+      <treaty id="CatXL_reg" type="catxl" max_retention="5000000" limit="500000000" />
+    </nonProportional>
+
+  </reinsuranceModel>
+</nrml>
+
+
