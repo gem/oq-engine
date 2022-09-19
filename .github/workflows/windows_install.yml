@@ -76,7 +76,7 @@ jobs:
           }
       - name: Run demos to test installation
         run: |
-          C:\Users\runneradmin\openquake\Scripts\activate.ps1 -RunAsAdmin
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
           #
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
