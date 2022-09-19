@@ -1095,9 +1095,9 @@ def view_risk_by_event(token, dstore):
                    line_terminator='\r\n')
     return out.getvalue()
 
-@view.add('insurance_by_event')
+@view.add('reinsurance_by_event')
 def view_reinsurance_by_event(token, dstore):
-    df = dstore.read_df('insurance_by_event')
+    df = dstore.read_df('reinsurance_by_event')
     del df['policy_id']
     return df.groupby('event_id').sum()
 
