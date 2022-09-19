@@ -78,18 +78,24 @@ def parse(fname):
     """
     rmodel = nrml.read(fname).reinsuranceModel
     fieldmap = {}
+    max_cession = {}
     for node in rmodel.fieldMap:
-        fieldmap[node['input']] = node['oq']
+        fieldmap[node['input']] = col = node['oq']
+        mce = node.get('max_cession_event')
+        if mce:
+            max_cession[col] = mce
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
     nonprop = [treaty.attrib for treaty in rmodel.nonProportional]
     dic = {col: [] for col in TREATY_COLUMNS}
     for tr in nonprop:
         for name in TREATY_COLUMNS:
             dic[name].append(tr[name])
-    df = pd.read_csv(policyfname, keep_default_na=False).rename(columns=fieldmap)
+    df = pd.read_csv(policyfname, keep_default_na=False).rename(
+        columns=fieldmap)
     check_fields(['deductible', 'liability'], df.columns, fname)
     df['deductible_abs'] = np.ones(len(df), bool)
     df['liability_abs'] = np.ones(len(df), bool)
+    df.max_cession = max_cession
     return df, pd.DataFrame(dic)
 
 
