@@ -4,8 +4,8 @@
   <reinsuranceModel>
     <description>Test reinsurance model</description>
     <fieldMap>
-      <field oq="prop1" input="surplus" max_event_cession="10000000" />
-      <field oq="prop2" input="quota_shared" max_event_cession="100000000" />
+      <field oq="prop1" input="surplus" max_cession_event="1000" />
+      <field oq="prop2" input="quota_shared" max_cession_event="2000" />
       <field oq="nonprop1" input="np_treaty" />
     </fieldMap>
     <policies>policy.csv</policies>
