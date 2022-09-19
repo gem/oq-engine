@@ -56,9 +56,9 @@ event_id	agg_id	loss
 
 
 treaty = _df('''\
-treaty,treaty_type,treaty_unit,qs_retention,qs_cession,treaty_limit
-qs_1,quota_share,policy,0.1,0.9,2000
-''', index_col='treaty')
+id,max_retention,limit
+wxlr,100000,200000
+''', index_col='id')
 
 
 class ReinsuranceTestCase(unittest.TestCase):
@@ -71,12 +71,12 @@ class ReinsuranceTestCase(unittest.TestCase):
         
     def test_policy1(self):
         pol = dict(policy=1, liability=1.0, liability_abs=False,
-                   deductible=0.1, deductible_abs=False, treaty='')
+                   deductible=0.1, deductible_abs=False, nonprop1='wxlr')
         out = reinsurance.reinsurance(risk_by_event, pol, treaty)
         print('\n', out)
 
     def test_policy2(self):
         pol = dict(policy=2, liability=0.9, liability_abs=False,
-                   deductible=0.05, deductible_abs=False, treaty='')
+                   deductible=0.05, deductible_abs=False, nonprop1='wxlr')
         out = reinsurance.reinsurance(risk_by_event, pol, treaty)
         print('\n', out)

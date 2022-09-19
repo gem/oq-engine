@@ -91,35 +91,38 @@ def parse(fname):
     return df, pd.DataFrame(dic)
 
 
-def claim_to_cessions(fractions, nonprop, out):
+def claim_to_cessions(claim, fractions, nonprop):
     """
-    >>> claim_to_cessions([.3, .5], {'max_retention': 100_000, 'limit': 200_000}, {'claim': 900_000})
-    {'claim': 900000, 'prop1': 270000.0, 'prop2': 450000.0, 'retention': 100000, 'nonprop1': 80000.0}
+    Converts an array of claims into a dictionary of arrays
 
-    >>> claim_to_cessions([.4, .4], {'max_retention': 100_000, 'limit': 200_000}, {'claim': 1_800_000})
-    {'claim': 1800000, 'prop1': 720000.0, 'prop2': 720000.0, 'retention': 160000.0, 'nonprop1': 200000}
+    >>> claim_to_cessions(np.array([900_000]), [.3, .5], {'max_retention': 100_000, 'limit': 200_000})
+    {'claim': array([900000]), 'prop1': array([270000.]), 'prop2': array([450000.]), 'retention': array([100000.]), 'nonprop1': array([80000.])}
 
-    >>> claim_to_cessions([.4, .4], {'max_retention': 100_000, 'limit': 200_000}, {'claim': 80_000})
-    {'claim': 80000, 'prop1': 32000.0, 'prop2': 32000.0, 'retention': 0, 'nonprop1': 16000.0}
+    >>> claim_to_cessions(np.array([1_800_000]), [.4, .4], {'max_retention': 100_000, 'limit': 200_000})
+    {'claim': array([1800000]), 'prop1': array([720000.]), 'prop2': array([720000.]), 'retention': array([160000.]), 'nonprop1': array([200000.])}
+
+    >>> claim_to_cessions(np.array([80_000]), [.4, .4], {'max_retention': 100_000, 'limit': 200_000})
+    {'claim': array([80000]), 'prop1': array([32000.]), 'prop2': array([32000.]), 'retention': array([0.]), 'nonprop1': array([16000.])}
     """
     # proportional cessions
     assert sum(fractions) < 1
+    out = {'claim': claim}
     for i, frac in enumerate(fractions, 1):
         cession = 'prop%d' % i
-        out[cession] = out['claim'] * frac
-    out['retention'] = out['claim'] * (1. - sum(fractions))
+        out[cession] = claim * frac
+    out['retention'] = claim * (1. - sum(fractions))
 
     # nonproportional cessions
     out['nonprop1'] = out['retention'] - nonprop['max_retention']
-    if out['nonprop1'] < 0:
-        out['nonprop1'] = out['retention']
-        out['retention'] = 0
-    elif out['nonprop1'] > nonprop['limit']:
-        out['retention'] = nonprop['max_retention'] + out['nonprop1'] - nonprop['limit']
-        out['nonprop1'] = nonprop['limit']
-    else:
-        out['retention'] = nonprop['max_retention']
-    return {k: round(v, 6) for k, v in out.items()}
+    neg = out['nonprop1'] < 0
+    neg_ret = (out['retention'][neg]).copy()
+    over = (out['nonprop1'] > nonprop['limit']) & (out['nonprop1'] > 0)
+    out['retention'][over] = nonprop['max_retention'] + out['nonprop1'][over] - nonprop['limit']
+    out['nonprop1'][over] = nonprop['limit']
+    out['retention'][~over] = nonprop['max_retention']
+    out['nonprop1'][neg] = neg_ret
+    out['retention'][neg] = 0
+    return {k: np.round(v, 6) for k, v in out.items()}
 
 
 # tested in test_reinsurance.py
@@ -138,10 +141,10 @@ def reinsurance(agglosses_df, pol, treaty_df):
     df = agglosses_df[agglosses_df.agg_id == pol['policy']]
     losses = df.loss.to_numpy()
     ded, lim = get_ded_lim(losses, pol)
-    out['claim'] = scientific.insured_losses(losses, ded, lim)
+    claim = scientific.insured_losses(losses, ded, lim)
     out['event_id'] = df.event_id.to_numpy()
     out['policy_id'] = [pol['policy']] * len(df)
     fractions = [pol[col] for col in pol if col.startswith('prop')]
     nonprop = treaty_df.loc[pol['nonprop1']]
-    claim_to_cessions(fractions, nonprop, out)
+    out.update(claim_to_cessions(claim, fractions, nonprop))
     return pd.DataFrame(out)
