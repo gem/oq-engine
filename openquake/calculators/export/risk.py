@@ -603,6 +603,8 @@ def export_aggcurves_csv(ekey, dstore):
 def export_reinsurance_by_event(ekey, dstore):
     dest = dstore.export_path('%s.%s' % ekey)
     df = dstore.read_df(ekey[0])
+    if 'rlz_id' in df.columns and df.rlz_id.sum() == 0:
+        del df['rlz_id']  # there is a single rlz; don't display it
     fmap = json.loads(dstore.get_attr('treaty_df', 'field_map'))
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     writer.save(df.rename(columns=fmap), dest, comment=dstore.metadata)
