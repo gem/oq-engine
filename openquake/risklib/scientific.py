@@ -916,13 +916,21 @@ def scenario_damage(fragility_functions, gmvs):
 
 def annual_frequency_of_exceedence(poe, t_haz):
     """
-    :param poe: array of probabilities of exceedence
+    :param poe: array of probabilities of exceedence in time t_haz
     :param t_haz: hazard investigation time
     :returns: array of frequencies (with +inf values where poe=1)
     """
     assert not (poe == 1).any()  # avoid log(0)
     return - numpy.log(1-poe) / t_haz
 
+def probability_of_exceedance(afoe, t_risk):
+    """
+    :param afoe: array of annual frequencies of exceedence
+    :param t_risk: risk investigation time
+    :returns: array of probabilities of exceedance in time t_risk
+    """
+    return 1 - numpy.exp(-t_risk * afoe)
+    
 
 def classical_damage(
         fragility_functions, hazard_imls, hazard_poes,
@@ -955,19 +963,21 @@ def classical_damage(
     else:
         imls = hazard_imls
         poes = numpy.array(hazard_poes)
-    afe = annual_frequency_of_exceedence(poes, investigation_time)
-    annual_frequency_of_occurrence = pairwise_diff(
-        pairwise_mean([afe[0]] + list(afe) + [afe[-1]]))
+    # convert the hazard probabilities of exceedance to 
+    # annual frequencies of exceedance, and then occurrence
+    afoes = annual_frequency_of_exceedence(poes, investigation_time)
+    afoos = pairwise_diff(
+        pairwise_mean([afoes[0]] + list(afoes) + [afoes[-1]]))
     poes_per_damage_state = []
     for ff in fragility_functions:
-        fx = annual_frequency_of_occurrence @ ff(imls)
+        fx = afoos @ ff(imls)
         poe_per_damage_state = 1. - numpy.exp(-fx * risk_investigation_time)
         poes_per_damage_state.append(poe_per_damage_state)
     poos = pairwise_diff([1] + poes_per_damage_state + [0])
     return poos
 
 #
-# Classical
+# Classical Risk
 #
 
 
@@ -1005,12 +1015,19 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios,
     # interpolate the hazard curve
     poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
 
-    # compute the poos
-    pos = pairwise_diff(poes)
-    lrem_po = numpy.empty(lrem.shape)
-    for idx, po in enumerate(pos):
-        lrem_po[:, idx] = lrem[:, idx] * po  # column * po
-    return numpy.array([loss_ratios, lrem_po.sum(axis=1)])
+    # convert the hazard probabilities of exceedance ot annual
+    # frequencies of exceedance, and then occurrence
+    afoes = annual_frequency_of_exceedence(poes, investigation_time)
+    afoos = pairwise_diff(
+        pairwise_mean([afoes[0]] + list(afoes) + [afoes[-1]]))
+
+    # compute the annual frequency of exceedance of the loss ratios
+    # lrem = loss ratio exceedance matrix
+    lr_afoes = numpy.empty(lrem.shape)
+    for idx, afoo in enumerate(afoos):
+        lr_afoes[:, idx] = lrem[:, idx] * afoo  # column * afoo
+    lr_poes = probability_of_exceedance(lr_afoes.sum(axis=1), risk_investigation_time)
+    return numpy.array([loss_ratios, lr_poes])
 
 
 # used in classical_risk only
