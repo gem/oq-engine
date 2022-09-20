@@ -53,7 +53,7 @@ def save_curve_stats(dstore):
     periods = aggcurves_df.return_period.unique()
     P = len(periods)
     for lt in oq.ext_loss_types:
-        loss_id = scientific.LTI[lt]
+        loss_id = scientific.LOSSID[lt]
         out = numpy.zeros((K + 1, S, P))
         aggdf = aggcurves_df[aggcurves_df.loss_id == loss_id]
         for agg_id, df in aggdf.groupby("agg_id"):
@@ -354,7 +354,7 @@ class PostRiskCalculator(base.RiskCalculator):
             with self.monitor('src_loss_table', measuremem=True):
                 for loss_type in oq.loss_types:
                     source_ids, losses = get_src_loss_table(
-                        self.datastore, scientific.LTI[loss_type])
+                        self.datastore, scientific.LOSSID[loss_type])
                     self.datastore['src_loss_table/' + loss_type] = losses
                     self.datastore.set_shape_descr(
                         'src_loss_table/' + loss_type, source=source_ids)
@@ -381,7 +381,7 @@ class PostRiskCalculator(base.RiskCalculator):
         #              views.view('portfolio_loss', self.datastore))
         if oq.investigation_time and 'risk' in oq.calculation_mode:
             for ln in self.oqparam.loss_types:
-                li = scientific.LTI[ln]
+                li = scientific.LOSSID[ln]
                 dloss = views.view('delta_loss:%d' % li, self.datastore)
                 if dloss['delta'].mean() > .1:  # more than 10% variation
                     logging.warning(
