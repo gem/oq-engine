@@ -212,6 +212,7 @@ def build_aggcurves(items, builder):
     return dic
 
 
+# aggcurves are built in parallel, aggrisk sequentially
 def build_store_agg(dstore, rbe_df, num_events):
     """
     Build the aggrisk and aggcurves tables from the risk_by_event table
