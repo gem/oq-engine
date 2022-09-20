@@ -710,8 +710,6 @@ class HazardCalculator(BaseCalculator):
             self.load_insurance_data(oq.inputs['insurance'].items())
         elif 'reinsurance' in oq.inputs:
             self.load_insurance_data(oq.inputs['reinsurance'].items())
-        if oq.inputs.get('ins_loss'):  # used in the ReinsuranceCalculator
-            self.ins_loss_df = pandas.read_csv(oq.inputs['ins_loss'])
         return readinput.exposure
 
     def load_insurance_data(self, lt_fnames):
