@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added calculation of `reinsurance_by_event` and `reinsurance_curves`
+    given a `reinsurance.xml` file
   * Supported absolute values for `deductible` and `insurance_limit`
     in insurance calculations (before we supported only fractions)
   * Reduced precision in the header of the UHS csv files

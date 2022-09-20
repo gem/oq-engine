@@ -212,7 +212,8 @@ def build_aggcurves(items, builder):
     return dic
 
 
-def store_agg(dstore, rbe_df, num_events):
+# aggcurves are built in parallel, aggrisk sequentially
+def build_store_agg(dstore, rbe_df, num_events):
     """
     Build the aggrisk and aggcurves tables from the risk_by_event table
     """
@@ -274,6 +275,42 @@ def store_agg(dstore, rbe_df, num_events):
     return aggrisk
 
 
+def build_reinsurance_curves(dstore, num_events):
+    """
+    Build the reinsurance_curves table from the reinsurance_by_event table
+    """
+    oq = dstore['oqparam']
+    assert oq.investigation_time > 0  # event based
+    size = dstore.getsize('reinsurance_by_event')
+    logging.info('Building reinsurance_curves from %s of reinsurance_by_event',
+                 general.humansize(size))
+    tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
+    if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
+        tr /= len(dstore['weights'])
+    rlz_id = dstore['events']['rlz_id']
+    rbe_df = dstore.read_df('reinsurance_by_event', 'event_id')
+    columns = rbe_df.columns
+    if len(num_events) > 1:
+        rbe_df['rlz_id'] = rlz_id[rbe_df.index.to_numpy()]
+    else:
+        rbe_df['rlz_id'] = 0
+    builder = get_loss_builder(dstore, num_events=num_events)
+    dic = general.AccumDict(accum=[])
+    for rlz_id, df in rbe_df.groupby('rlz_id'):
+        curve = {col: builder.build_curve(df[col].to_numpy(), rlz_id)
+                 for col in columns}
+        for p, period in enumerate(builder.return_periods):
+            dic['rlz_id'].append(rlz_id)
+            dic['return_period'].append(period)
+            for col in curve:
+                dic[col].append(curve[col][p])
+    dic['return_period'] = F32(dic['return_period'])
+    dic['rlz_id'] = U16(dic['rlz_id'])
+    dstore.create_df('reinsurance_curves', pandas.DataFrame(dic),
+                     units=dstore['cost_calculator'].get_units(
+                         oq.loss_types))
+
+
 @base.calculators.add('post_risk')
 class PostRiskCalculator(base.RiskCalculator):
     """
@@ -330,7 +367,9 @@ class PostRiskCalculator(base.RiskCalculator):
             rbe_df['agg_id'] = idxs[rbe_df['agg_id'].to_numpy()]
             rbe_df = rbe_df.groupby(
                 ['event_id', 'loss_id', 'agg_id']).sum().reset_index()
-        self.aggrisk = store_agg(self.datastore, rbe_df, self.num_events)
+        self.aggrisk = build_store_agg(self.datastore, rbe_df, self.num_events)
+        if 'reinsurance_by_event' in self.datastore:
+            build_reinsurance_curves(self.datastore, self.num_events)
         return 1
 
     def post_execute(self, dummy):
