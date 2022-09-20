@@ -58,19 +58,37 @@ def get_ded_lim(losses, policy):
     return ded, lim
 
 
-def check_fields(fields, header, fname):
+def check_fields(fields, dframe, fname):
     """
     Make sure the right fields are present in a CSV file. For instance:
 
-    >>> check_fields(['deductible'], [], '*')
+    >>> check_fields(['deductible'], pd.DataFrame(), '*')
     Traceback (most recent call last):
      ...
     openquake.baselib.InvalidFile: *: deductible is missing in the header
     """
     for field in fields:
-        if field not in header:
+        if field not in dframe.columns:
             raise InvalidFile(f'{fname}: {field} is missing in the header')
-
+        else:
+            arr = dframe[field].to_numpy()
+            if len(arr) == 0:
+                raise InvalidFile(f'{fname}: is empty')
+            if isinstance(arr[0], str):  # there was a `%` in the column
+                vals = np.zeros(len(arr), float)
+                _abs = np.zeros(len(arr), bool)
+                for i, x in enumerate(arr):
+                    if x.endswith('%'):
+                        vals[i] = float(x[:-1]) / 100.
+                        _abs[i] = False
+                    else:
+                        vals[i] = float(x)
+                        _abs[i] = True
+                dframe[field] = vals
+                dframe[field + '_abs'] = _abs
+            else:  # assume all absolute
+                dframe[field + '_abs'] = np.ones(len(arr))
+                
 
 def parse(fname):
     """
@@ -95,7 +113,7 @@ def parse(fname):
             dic[name].append(tr[name])
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
-    check_fields(['deductible', 'liability'], df.columns, fname)
+    check_fields(['deductible', 'liability'], df, fname)
     df['deductible_abs'] = np.ones(len(df), bool)
     df['liability_abs'] = np.ones(len(df), bool)
     return df, pd.DataFrame(dic), np.array(max_cession), reversemap
