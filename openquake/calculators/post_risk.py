@@ -212,7 +212,7 @@ def build_aggcurves(items, builder):
     return dic
 
 
-def store_agg(dstore, rbe_df, num_events):
+def build_store_agg(dstore, rbe_df, num_events):
     """
     Build the aggrisk and aggcurves tables from the risk_by_event table
     """
@@ -330,7 +330,7 @@ class PostRiskCalculator(base.RiskCalculator):
             rbe_df['agg_id'] = idxs[rbe_df['agg_id'].to_numpy()]
             rbe_df = rbe_df.groupby(
                 ['event_id', 'loss_id', 'agg_id']).sum().reset_index()
-        self.aggrisk = store_agg(self.datastore, rbe_df, self.num_events)
+        self.aggrisk = build_store_agg(self.datastore, rbe_df, self.num_events)
         return 1
 
     def post_execute(self, dummy):
