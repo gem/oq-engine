@@ -9,11 +9,11 @@
       <field oq="policy" input="Policy" />
       <field oq="deductible" input="Deductible" />
       <field oq="liability" input="Limit" />
-      <field oq="prop1" input="Surplus_metro" max_event_cession="10000000" />
-      <field oq="prop2" input="QS_rural" max_event_cession="100000000" />
-      <field oq="prop3" input="QS_reg" max_event_cession="25000000" />
-      <field oq="prop4" input="Sur1_reg" max_event_cession="75000000" />
-      <field oq="prop5" input="Fac_reg" max_event_cession="75000000" />
+      <field oq="prop1" input="Surplus_metro" max_cession_event="10000000" />
+      <field oq="prop2" input="QS_rural" max_cession_event="100000000" />
+      <field oq="prop3" input="QS_reg" max_cession_event="25000000" />
+      <field oq="prop4" input="Sur1_reg" max_cession_event="75000000" />
+      <field oq="prop5" input="Fac_reg" max_cession_event="75000000" />
       <field oq="nonprop1" input="Treaty_id" />
     </fieldMap>
 

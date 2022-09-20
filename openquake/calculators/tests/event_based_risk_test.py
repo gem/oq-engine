@@ -84,8 +84,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         hc_id = self.calc.datastore.calc_id
         self.run_calc(case_1.__file__, 'job_re.ini',
                       hazard_calculation_id=hc_id)
-        fname = gettemp(str(view('insurance_by_event', self.calc.datastore)))
-        self.assertEqualFiles('expected/insurance_by_event.txt', fname,
+        [fname] = export(('reinsurance_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance_by_event.csv', fname,
                               delta=1E-5)
 
     def test_case_1_ins(self):

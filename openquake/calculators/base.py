@@ -19,6 +19,7 @@ import os
 import sys
 import abc
 import pdb
+import json
 import time
 import logging
 import operator
@@ -709,8 +710,6 @@ class HazardCalculator(BaseCalculator):
             self.load_insurance_data(oq.inputs['insurance'].items())
         elif 'reinsurance' in oq.inputs:
             self.load_insurance_data(oq.inputs['reinsurance'].items())
-        if oq.inputs.get('ins_loss'):  # used in the ReinsuranceCalculator
-            self.ins_loss_df = pandas.read_csv(oq.inputs['ins_loss'])
         return readinput.exposure
 
     def load_insurance_data(self, lt_fnames):
@@ -722,10 +721,12 @@ class HazardCalculator(BaseCalculator):
         for loss_type, fname in lt_fnames:
             if 'reinsurance' in oq.inputs:
                 assert len(lt_fnames) == 1, lt_fnames
-                df, treaty_df = reinsurance.parse(fname)
+                df, treaty_df, max_cession, fieldmap = reinsurance.parse(fname)
                 treaties = set(treaty_df.id)
                 assert len(treaties) == len(treaty_df), 'Not unique treaties'
-                self.datastore.create_df('treaty_df', treaty_df)
+                self.datastore.create_df('treaty_df', treaty_df,
+                                         max_cession=max_cession,
+                                         field_map=json.dumps(fieldmap))
                 self.treaty_df = treaty_df.set_index('id')
             else:
                 df = pandas.read_csv(fname, keep_default_na=False)

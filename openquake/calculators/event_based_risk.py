@@ -30,7 +30,7 @@ from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LTI)
-from openquake.risklib.reinsurance import reinsurance
+from openquake.risklib import reinsurance
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
     PostRiskCalculator, post_aggregate, fix_dtypes)
@@ -397,8 +397,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 raise ValueError('No losses for reinsurance %s' % lt)
             dfs = []
             for _, policy in self.policy_df.iterrows():
-                dfs.append(reinsurance(agg_loss_table, dict(policy), self.treaty_df))
-            self.datastore.create_df('insurance_by_event', pandas.concat(dfs))
+                df = reinsurance.by_policy(
+                    agg_loss_table, dict(policy), self.treaty_df)
+                dfs.append(df)
+            max_cession = self.datastore.get_attr('treaty_df', 'max_cession')
+            rbe = reinsurance.by_event(pandas.concat(dfs), max_cession)
+            self.datastore.create_df('reinsurance_by_event', rbe)
 
         if oq.avg_losses:
             for lt in oq.ext_loss_types:
