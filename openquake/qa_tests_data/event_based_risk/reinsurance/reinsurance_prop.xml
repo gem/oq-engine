@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <reinsuranceModel>
+    <description>Test proportional reinsurance model</description>
+    <fieldMap>
+      <field oq="prop1" input="surplus" max_cession_event="500" />
+    </fieldMap>
+    <policies>policy.csv</policies>
+    <nonProportional />
+  </reinsuranceModel>
+</nrml>

@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import ast
 import os.path
 import numbers
@@ -36,7 +37,8 @@ from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util, logictree
-from openquake.risklib.scientific import losses_by_period, return_periods, LTI
+from openquake.risklib.scientific import (
+    losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
@@ -354,7 +356,7 @@ def avglosses_data_transfer(token, dstore):
         '8 bytes x %d tasks = %s' % (N, R, L, ct, humansize(size_bytes)))
 
 
-# for scenario_risk
+# for scenario_risk and classical_risk
 @view.add('totlosses')
 def view_totlosses(token, dstore):
     """
@@ -364,7 +366,15 @@ def view_totlosses(token, dstore):
     sanity check for the correctness of the implementation.
     """
     oq = dstore['oqparam']
-    tot_losses = dstore['avg_losses-rlzs/structural'][()].sum(axis=0)
+    tot_losses = 0
+    for ltype in oq.loss_types:
+        name = 'avg_losses-stats/' + ltype
+        try:
+            tot = dstore[name][()].sum(axis=0)
+        except KeyError:
+            name = 'avg_losses-rlzs/' + ltype
+            tot = dstore[name][()].sum(axis=0)
+        tot_losses += tot
     return text_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
 
 
@@ -378,7 +388,7 @@ def alt_to_many_columns(alt, loss_types):
     for (eid, kid), df in alt.groupby(['event_id', 'agg_id']):
         dic['event_id'].append(eid)
         for ln in loss_types:
-            arr = df[df.loss_id == LTI[ln]].loss.to_numpy()
+            arr = df[df.loss_id == LOSSID[ln]].loss.to_numpy()
             loss = 0 if len(arr) == 0 else arr[0]  # arr has size 0 or 1
             dic[ln].append(loss)
     return pandas.DataFrame(dic)
@@ -431,7 +441,7 @@ def view_portfolio_loss(token, dstore):
     ws = weights[rlzs]
     avgs = []
     for ln in oq.loss_types:
-        df = alt_df[alt_df.loss_id == LTI[ln]]
+        df = alt_df[alt_df.loss_id == LOSSID[ln]]
         eids = df.pop('event_id').to_numpy()
         avgs.append(ws[eids] @ df.loss.to_numpy() / ws.sum() * E / R)
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
@@ -1064,6 +1074,29 @@ def view_event_loss_table(token, dstore):
     del df['loss_id']
     del df['variance']
     return df[:20]
+
+
+@view.add('risk_by_event')
+def view_risk_by_event(token, dstore):
+    """
+    Display the top 20 losses of the aggregate loss table as a TSV.
+    If aggregate_by was missing in the calculation, returns nothing.
+
+    $ oq show risk_by_event:<loss_type>
+    """
+    _, ltype = token.split(':')
+    loss_id = LOSSID[ltype]
+    df = dstore.read_df('risk_by_event', sel=dict(loss_id=loss_id))
+    del df['loss_id']
+    del df['variance']
+    agg_keys = dstore['agg_keys'][:]
+    df = df[df.agg_id < df.agg_id.max()].sort_values('loss', ascending=False)
+    df['agg_key'] = decode(agg_keys[df.agg_id.to_numpy()])
+    del df['agg_id']
+    out = io.StringIO()
+    df[:20].to_csv(out, sep='\t', index=False, float_format='%.1f',
+                   line_terminator='\r\n')
+    return out.getvalue()
 
 
 @view.add('delta_loss')

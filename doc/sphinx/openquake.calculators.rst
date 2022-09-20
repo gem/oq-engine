@@ -104,11 +104,10 @@ reportwriter module
     :undoc-members:
     :show-inheritance:
 
-
-scenario_damage module
+conditional_spectrum module
 --------------------------------------------
 
-.. automodule:: openquake.calculators.scenario_damage
+.. automodule:: openquake.calculators.conditional_spectrum
     :members:
     :undoc-members:
     :show-inheritance:

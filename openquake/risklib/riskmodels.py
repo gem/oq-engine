@@ -784,6 +784,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a dictionary keyed by extended loss type
         """
         rc = scientific.RiskComputer(self, asset_df)
+        # rc.pprint()
         # dic = rc.todict()
         # rc2 = get_riskcomputer(dic)
         # dic2 = rc2.todict()

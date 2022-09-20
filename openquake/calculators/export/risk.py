@@ -599,15 +599,13 @@ def export_aggcurves_csv(ekey, dstore):
     return fnames
 
 
-@export.add(('reinsurance_losses', 'csv'))
-def export_reinsurance(ekey, dstore):
-    policy = dstore['assetcol/tagcol'].policy
+@export.add(('reinsurance_by_event', 'csv'), ('reinsurance_curves', 'csv'))
+def export_reinsurance_by_event(ekey, dstore):
     dest = dstore.export_path('%s.%s' % ekey)
-    fields = 'id policy retention cession remainder'.split()
-    df = dstore.read_df('reinsurance_losses').sort_values('id')
-    df['policy'] = [policy[idx] for idx in df.policy]
-    if 'no_insured' in df.columns:
-        fields.append('no_insured')
+    df = dstore.read_df(ekey[0])
+    if 'rlz_id' in df.columns and df.rlz_id.sum() == 0:
+        del df['rlz_id']  # there is a single rlz; don't display it
+    fmap = json.loads(dstore.get_attr('treaty_df', 'field_map'))
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    writer.save(df[fields], dest, comment=dstore.metadata)
+    writer.save(df.rename(columns=fmap), dest, comment=dstore.metadata)
     return [dest]

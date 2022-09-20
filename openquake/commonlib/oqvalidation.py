@@ -36,7 +36,7 @@ from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib import logictree
-from openquake.risklib import asset
+from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
 
 __doc__ = """\
@@ -771,8 +771,7 @@ ALL_CALCULATORS = ['classical_risk',
                    'preclassical',
                    'conditional_spectrum',
                    'event_based_damage',
-                   'scenario_damage',
-                   'reinsurance_risk']
+                   'scenario_damage']
 
 
 def check_same_levels(imtls):
@@ -1075,6 +1074,7 @@ class OqParam(valid.ParamSet):
         if self.collapse_level >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 
+        # checks for risk
         self._risk_files = get_risk_files(self.inputs)
         if self.risk_files:
             # checks for risk_files
@@ -1095,6 +1095,11 @@ class OqParam(valid.ParamSet):
             self.check_missing('site_model', 'debug')
             self.check_missing('gsim_logic_tree', 'debug')
             self.check_missing('source_model_logic_tree', 'debug')
+
+        if self.job_type == 'risk':
+            self.check_aggregate_by()
+        if 'reinsurance' in self.inputs:
+            self.check_reinsurance()
 
         # check investigation_time
         if (self.investigation_time and
@@ -1310,7 +1315,7 @@ class OqParam(valid.ParamSet):
     def risk_event_rates(self, num_events, num_haz_rlzs):
         """
         :param num_events: the number of events per risk realization
-        :param num_haz_rlzs the number of hazard realizations
+        :param num_haz_rlzs: the number of hazard realizations
 
         If risk_investigation_time is 1, returns the annual event rates for
         each realization as a list, possibly of 1 element.
@@ -1420,7 +1425,7 @@ class OqParam(valid.ParamSet):
         """
         imts_dt = numpy.dtype([(imt, F32) for imt in self.imtls
                                if imt.startswith(('PGA', 'SA'))])
-        return numpy.dtype([(str(poe), imts_dt) for poe in self.poes])
+        return numpy.dtype([('%.6f' % poe, imts_dt) for poe in self.poes])
 
     def imt_periods(self):
         """
@@ -1775,18 +1780,6 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
-    def is_valid_aggregate_by(self):
-        """
-        At the moment only `aggregate_by=id` or `aggregate_by=site_id`
-        are accepted
-        """
-        tagset = asset.tagset(self.aggregate_by)
-        if 'id' in tagset and len(tagset) > 1:
-            return False
-        elif 'site_id' in tagset and len(tagset) > 1:
-            return False
-        return True
-
     def is_valid_export_dir(self):
         """
         export_dir={export_dir} must refer to a directory,
@@ -1844,6 +1837,32 @@ class OqParam(valid.ParamSet):
         nostats = not hstats or hstats == ['mean']
         return nostats and self.number_of_logic_tree_samples > 1 and (
             self.sampling_method == 'early_weights')
+
+    def check_aggregate_by(self):
+        tagset = asset.tagset(self.aggregate_by)
+        if 'id' in tagset and len(tagset) > 1:
+            raise ValueError('aggregate_by = id must contain a single tag')
+        elif 'site_id' in tagset and len(tagset) > 1:
+            raise ValueError('aggregate_by = site_id must contain a single tag')
+        elif 'reinsurance' in self.inputs:
+            if not any(['policy'] == aggby for aggby in self.aggregate_by):
+                raise ValueError('missing aggregate_by=policy')
+        return True
+
+    def check_reinsurance(self):
+        # there must be a 'treaty' and a loss type (possibly a total type)
+        dic = self.inputs['reinsurance'].copy()
+        try:
+            [lt] = dic
+        except ValueError:
+            raise InvalidFile('%s: invalid reinsurance %s'
+                              % (self.inputs['job_ini'], dic))
+        if lt not in scientific.LOSSID:
+            raise InvalidFile('%s: unknown loss type %s in reinsurance'
+                              % (self.inputs['job_ini'], lt))
+        if '+' in lt and not self.total_losses:
+            raise InvalidFile('%s: you forgot to set total_losses=%s'
+                              % (self.inputs['job_ini'], lt))
 
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or

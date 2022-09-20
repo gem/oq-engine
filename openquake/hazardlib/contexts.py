@@ -1057,7 +1057,7 @@ class ContextMaker(object):
         :param imls:
             P intensity measure levels for the IMT specified by the index
         :returns:
-            a dictionary g_ -> key -> array where g_ is an index,
+            a dictionary g -> key -> array where g is an index,
             key is the string '_c' or '_s',  and the arrays have shape
             (M, N, 2, P) or (N, P) respectively.
 

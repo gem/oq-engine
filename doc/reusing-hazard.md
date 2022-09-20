@@ -18,7 +18,7 @@ scenario and for event based calculations, i.e. to reuse the GMFs.
 Reusing the hazard for scenario calculations is relatively
 straighforward: it is enough to keep the GMFs in CSV format and to
 start from there by using the `gmfs_file` option in the job.ini. This
-works across versions already. The reason is that the logic tress is
+works across versions already. The reason is that the logic tree is
 trivial in this case: internally, the engine assumes that there is a single
 realization and automatically creates a fake logic tree object.
 

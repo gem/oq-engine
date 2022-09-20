@@ -29,7 +29,8 @@ from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.risklib.scientific import (
-    total_losses, insurance_losses, MultiEventRNG, LTI)
+    total_losses, insurance_losses, MultiEventRNG, LOSSID)
+from openquake.risklib import reinsurance
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
     PostRiskCalculator, post_aggregate, fix_dtypes)
@@ -125,7 +126,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
                 if arr[li].any():
                     dic['event_id'].append(eid)
                     dic['agg_id'].append(kid)
-                    dic['loss_id'].append(LTI[xtypes[li]])
+                    dic['loss_id'].append(LOSSID[xtypes[li]])
                     for c, col in enumerate(value_cols):
                         dic[col].append(arr[li, c])
         fix_dtypes(dic)
@@ -238,7 +239,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             K = 0
         self.datastore.swmr_on()
         sec_losses = []  # one insured loss for each loss type with a policy
-        if hasattr(self, 'policy_df'):
+        if hasattr(self, 'policy_df') and 'reinsurance' not in oq.inputs:
             sec_losses.append(
                 partial(insurance_losses, policy_df=self.policy_df))
         if oq.total_losses:
@@ -387,6 +388,24 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if len(uni) < len(arr):
             raise RuntimeError('risk_by_event contains %d duplicates!' %
                                (len(arr) - len(uni)))
+
+        if 'reinsurance' in oq.inputs:
+            # there must be a single loss type (possibly a total type)
+            [lt] = oq.inputs['reinsurance']
+            agg_loss_table = alt[alt.loss_id == LOSSID[lt]]
+            if len(agg_loss_table) == 0:
+                raise ValueError('No losses for reinsurance %s' % lt)
+            dfs = []
+            for _, policy in self.policy_df.iterrows():
+                df = reinsurance.by_policy(
+                    agg_loss_table, dict(policy), self.treaty_df)
+                dfs.append(df)
+            by_policy = pandas.concat(dfs)
+            # print(by_policy)  # when debugging
+            max_cession = self.datastore.get_attr('treaty_df', 'max_cession')
+            rbe = reinsurance.by_event(by_policy, max_cession)
+            self.datastore.create_df('reinsurance_by_event', rbe)
+
         if oq.avg_losses:
             for lt in oq.ext_loss_types:
                 al = self.avg_losses[lt]
