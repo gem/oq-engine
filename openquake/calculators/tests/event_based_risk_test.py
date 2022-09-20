@@ -579,7 +579,27 @@ agg_id
 
 class ReinsuranceTestCase(CalculatorTestCase):
 
-    def test_1(self):
+    def test_prop(self):
+        rf = "{'structural+nonstructural': 'reinsurance_prop.xml'}"
+        self.run_calc(reinsurance.__file__, 'job.ini', reinsurance_file=rf)
+        [fname] = export(('reinsurance_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance_by_event_prop.csv', fname,
+                              delta=1E-5)
+        [fname] = export(('reinsurance_curves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance_curves_prop.csv', fname,
+                              delta=1E-5)
+
+    def test_nonprop(self):
+        rf = "{'structural+nonstructural': 'reinsurance_np.xml'}"
+        self.run_calc(reinsurance.__file__, 'job.ini', reinsurance_file=rf)
+        [fname] = export(('reinsurance_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance_by_event_np.csv', fname,
+                              delta=1E-5)
+        [fname] = export(('reinsurance_curves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance_curves_np.csv', fname,
+                              delta=1E-5)
+
+    def test_prop_nonprop(self):
         self.run_calc(reinsurance.__file__, 'job.ini')
         [fname] = export(('reinsurance_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance_by_event.csv', fname,
