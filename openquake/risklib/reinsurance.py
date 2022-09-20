@@ -122,7 +122,7 @@ def parse(fname):
     return df, pd.DataFrame(dic), np.array(max_cession), reversemap
 
 
-def claim_to_cessions(claim, fractions, nonprop):
+def claim_to_cessions(claim, fractions, nonprop=None):
     """
     Converts an array of claims into a dictionary of arrays
 
@@ -142,6 +142,8 @@ def claim_to_cessions(claim, fractions, nonprop):
         cession = 'prop%d' % i
         out[cession] = claim * frac
     out['retention'] = claim * (1. - sum(fractions))
+    if nonprop is None:
+        return {k: np.round(v, 6) for k, v in out.items()}
 
     # nonproportional cessions
     out['nonprop1'] = out['retention'] - nonprop['max_retention']
@@ -177,7 +179,10 @@ def by_policy(agglosses_df, pol, treaty_df):
     out['event_id'] = df.event_id.to_numpy()
     out['policy_id'] = [pol['policy']] * len(df)
     fractions = [pol[col] for col in pol if col.startswith('prop')]
-    nonprop = treaty_df.loc[pol['nonprop1']]
+    try:
+        nonprop = treaty_df.loc[pol['nonprop1']]
+    except KeyError:
+        nonprop = None
     out.update(claim_to_cessions(claim, fractions, nonprop))
     return pd.DataFrame(out)
 
