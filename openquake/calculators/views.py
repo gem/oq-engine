@@ -1089,7 +1089,7 @@ def view_risk_by_event(token, dstore):
     df = dstore.read_df('risk_by_event', sel=dict(loss_id=loss_id))
     del df['loss_id']
     del df['variance']
-    df = df[df.agg_id > 0].sort_values('loss', ascending=False)
+    df = df[df.agg_id < df.agg_id.max()].sort_values('loss', ascending=False)
     out = io.StringIO()
     df[:20].to_csv(out, sep='\t', index=False, float_format='%s',
                    line_terminator='\r\n')
