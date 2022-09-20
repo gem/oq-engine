@@ -400,7 +400,7 @@ class ZipTestCase(unittest.TestCase):
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(
             ['exposure.csv', 'exposure1.xml', 'gmpe_logic_tree.xml',
-             'job_ins.ini', 'policy.csv', 'source_model.xml',
+             'job_ins.ini', 'policy_ins.csv', 'source_model.xml',
              'source_model_logic_tree.xml',
              'vulnerability_model_nonstco.xml',
              'vulnerability_model_stco.xml'],
@@ -522,7 +522,6 @@ Source Loss Table'''.splitlines())
         dic = get_params(job_ini)
         dic['calculation_mode'] = 'event_based'
         tempdir = tempfile.mkdtemp()
-        dbserver.ensure_on()
         with mock.patch.dict(os.environ, OQ_DATADIR=tempdir):
             [job] = run_jobs(create_jobs([dic], 'error'))
             job = commonlib.logs.dbcmd('get_job', job.calc_id)

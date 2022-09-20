@@ -1,4 +1,9 @@
   [Michele Simionato]
+  * Added calculation of `reinsurance_by_event` and `reinsurance_curves`
+    given a `reinsurance.xml` file
+  * Supported absolute values for `deductible` and `insurance_limit`
+    in insurance calculations (before we supported only fractions)
+  * Reduced precision in the header of the UHS csv files
   * Managed the case with CoVs = 0 for the beta distribution
 
 python3-oq-engine (3.15.0-1~xenial01) xenial; urgency=low

@@ -80,6 +80,17 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                                   delta=1E-5)
 
+        # reinsurance test
+        hc_id = self.calc.datastore.calc_id
+        self.run_calc(case_1.__file__, 'job_re.ini',
+                      hazard_calculation_id=hc_id)
+        [fname] = export(('reinsurance_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance_by_event.csv', fname,
+                              delta=1E-5)
+        [fname] = export(('reinsurance_curves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance_curves.csv', fname,
+                              delta=1E-5)
+
     def test_case_1_ins(self):
         # no aggregation
         self.run_calc(case_1.__file__, 'job2.ini')

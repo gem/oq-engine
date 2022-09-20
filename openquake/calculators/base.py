@@ -19,6 +19,7 @@ import os
 import sys
 import abc
 import pdb
+import json
 import time
 import logging
 import operator
@@ -40,7 +41,7 @@ from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
-from openquake.risklib import riskinput, riskmodels
+from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import (
     readinput, logictree, datastore, source_reader, logs)
 from openquake.calculators.export import export as exp
@@ -61,6 +62,14 @@ TWO32 = 2 ** 32
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32),
                         ('len', U16)])
+
+def validate_probs(probs, msg):
+    """
+    Validate an array of probabilities
+    """
+    bad = (probs < 0) | (probs > 1)
+    if bad.any():
+        raise ValueError('%s: invalid probabilities %s' % (msg, probs[bad]))
 
 
 def check_imtls(this, parent):
@@ -625,7 +634,7 @@ class HazardCalculator(BaseCalculator):
             calc.datastore.close()
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_weight '
-                'amplifier policy_df full_lt exported'
+                'amplifier policy_df treaty_df full_lt exported'
             ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -697,35 +706,41 @@ class HazardCalculator(BaseCalculator):
                         '%d assets were discarded; use `oq show discarded` to'
                         ' show them and `oq plot_assets` to plot them' %
                         len(discarded))
-        if oq.inputs.get('insurance'):
+        if 'insurance' in oq.inputs:
             self.load_insurance_data(oq.inputs['insurance'].items())
-        rdic = oq.inputs.get('reinsurance')
-        if rdic:
-            self.treaty_df = pandas.read_csv(rdic.pop('treaty'))
-            self.load_insurance_data(rdic.items())
-            treaties = set(self.treaty_df.treaty)
-            assert len(treaties) == len(self.treaty_df), 'Not unique treaties'
-            for string in self.policy_df.treaty:
-                for policy in string.split():
-                    assert policy in treaties, policy
-            self.datastore.create_df('treaty_df', self.treaty_df)
-        if oq.inputs.get('ins_loss'):  # used in the ReinsuranceCalculator
-            self.ins_loss_df = pandas.read_csv(oq.inputs['ins_loss'])
+        elif 'reinsurance' in oq.inputs:
+            self.load_insurance_data(oq.inputs['reinsurance'].items())
         return readinput.exposure
 
     def load_insurance_data(self, lt_fnames):
         """
         Read the insurance files and populate the policy_df
         """
+        oq = self.oqparam
         policy_df = general.AccumDict(accum=[])
         for loss_type, fname in lt_fnames:
-            df = pandas.read_csv(fname)
-            policy_idx = getattr(self.assetcol.tagcol, 'policy_idx')
+            if 'reinsurance' in oq.inputs:
+                assert len(lt_fnames) == 1, lt_fnames
+                df, treaty_df, max_cession, fieldmap = reinsurance.parse(fname)
+                treaties = set(treaty_df.id)
+                assert len(treaties) == len(treaty_df), 'Not unique treaties'
+                self.datastore.create_df('treaty_df', treaty_df,
+                                         max_cession=max_cession,
+                                         field_map=json.dumps(fieldmap))
+                self.treaty_df = treaty_df.set_index('id')
+            else:
+                df = pandas.read_csv(fname, keep_default_na=False)
+                reinsurance.check_fields(['deductible', 'insurance_limit'],
+                                         df.columns, fname)
+            policy_idx = self.assetcol.tagcol.policy_idx
             for col in df.columns:
                 if col == 'policy':
                     policy_df[col].extend([policy_idx[x] for x in df[col]])
                 else:
                     policy_df[col].extend(df[col])
+            if 'insurance_limit' in df.columns:
+                validate_probs(df.insurance_limit.to_numpy(),
+                               f'insurance_limit in {fname}')
             policy_df['loss_type'].extend([loss_type] * len(df))
         assert policy_df
         self.policy_df = pandas.DataFrame(policy_df)

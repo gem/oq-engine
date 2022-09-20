@@ -380,3 +380,17 @@ class RiskComputerTestCase(unittest.TestCase):
         print(toml.dumps(dic))
         out = rc.output(pandas.DataFrame(gmfs))
         print(out)
+
+    def test3(self):
+        # TODO: a case with nontrivial wdic, for instance
+        # 'wdic': {'Wood/Com#contents': 1.0,
+        #          'Wood1#structural': 0.6,
+        #          'Wood2#structural': 0.4}
+        # NB: for the same loss type the weights must sum up to 1
+        pass
+
+    def test4(self):
+        # TODO: a case with secondary losses, for instance
+        # seclosses = [partial(total_losses, kind=oq.total_losses)]
+        # seclosses = [partial(insurance_losses, policy_df=self.policy_df)]
+        pass

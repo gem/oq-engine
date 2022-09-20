@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import ast
 import os.path
 import numbers
@@ -36,7 +37,8 @@ from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util, logictree
-from openquake.risklib.scientific import losses_by_period, return_periods, LTI
+from openquake.risklib.scientific import (
+    losses_by_period, return_periods, LTI, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
@@ -1072,6 +1074,26 @@ def view_event_loss_table(token, dstore):
     del df['loss_id']
     del df['variance']
     return df[:20]
+
+
+@view.add('risk_by_event')
+def view_risk_by_event(token, dstore):
+    """
+    Display the top 20 losses of the aggregate loss table as a TSV.
+    If aggregate_by was missing in the calculation, returns nothing.
+
+    $ oq show risk_by_event:<loss_type>
+    """
+    _, ltype = token.split(':')
+    loss_id = LTI[ltype]
+    df = dstore.read_df('risk_by_event', sel=dict(loss_id=loss_id))
+    del df['loss_id']
+    del df['variance']
+    df = df[df.agg_id > 0].sort_values('loss', ascending=False)
+    out = io.StringIO()
+    df[:20].to_csv(out, sep='\t', index=False, float_format='%s',
+                   line_terminator='\r\n')
+    return out.getvalue()
 
 
 @view.add('delta_loss')

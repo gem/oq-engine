@@ -229,7 +229,7 @@ def make_uhs(hmap, info):
     for p, poe in enumerate(info['poes']):
         for m, imt in enumerate(info['imtls']):
             if imt.startswith(('PGA', 'SA')):
-                uhs[str(poe)][imt] = hmap[:, m, p]
+                uhs['%.6f' % poe][imt] = hmap[:, m, p]
     return uhs
 
 
