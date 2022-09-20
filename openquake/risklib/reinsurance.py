@@ -74,16 +74,19 @@ def check_fields(fields, header, fname):
 
 def parse(fname):
     """
-    Parse a reinsurance.xml file and returns (policy_df, treaties)
+    Parse a reinsurance.xml file and returns
+    (policy_df, treaty_df, max_cession, field_map)
     """
     rmodel = nrml.read(fname).reinsuranceModel
     fieldmap = {}
-    max_cession = {}
+    reversemap = {}
+    max_cession = []
     for node in rmodel.fieldMap:
         fieldmap[node['input']] = col = node['oq']
+        reversemap[col] = node['input']
         mce = node.get('max_cession_event')
         if mce:
-            max_cession[col] = mce
+            max_cession.append(mce)
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
     nonprop = [treaty.attrib for treaty in rmodel.nonProportional]
     dic = {col: [] for col in TREATY_COLUMNS}
@@ -95,8 +98,7 @@ def parse(fname):
     check_fields(['deductible', 'liability'], df.columns, fname)
     df['deductible_abs'] = np.ones(len(df), bool)
     df['liability_abs'] = np.ones(len(df), bool)
-    df.max_cession = max_cession
-    return df, pd.DataFrame(dic)
+    return df, pd.DataFrame(dic), np.array(max_cession), reversemap
 
 
 def claim_to_cessions(claim, fractions, nonprop):
@@ -134,7 +136,7 @@ def claim_to_cessions(claim, fractions, nonprop):
 
 
 # tested in test_reinsurance.py
-def reinsurance(agglosses_df, pol, treaty_df):
+def by_policy(agglosses_df, pol, treaty_df):
     '''
     :param DataFrame losses:
         losses aggregated by policy (keys agg_id, event_id)
@@ -156,3 +158,19 @@ def reinsurance(agglosses_df, pol, treaty_df):
     nonprop = treaty_df.loc[pol['nonprop1']]
     out.update(claim_to_cessions(claim, fractions, nonprop))
     return pd.DataFrame(out)
+
+
+def by_event(by_policy_df, max_cession):
+    """
+    :param by_policy_df: output of by_policy
+    :param max_cession: maximum cession for each proportional treaty
+    """
+    df = by_policy_df.groupby('event_id').sum()
+    del df['policy_id']
+    for col in by_policy_df.columns:
+        if col.startswith('prop'):
+            cession = max_cession[int(col[4:]) - 1]
+            over = df[col] > cession
+            df['retention'][over] += df[col][over] - cession
+            df[col][over] = cession
+    return df.reset_index()
