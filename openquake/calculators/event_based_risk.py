@@ -29,7 +29,7 @@ from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.risklib.scientific import (
-    total_losses, insurance_losses, MultiEventRNG, LTI)
+    total_losses, insurance_losses, MultiEventRNG, LOSSID)
 from openquake.risklib import reinsurance
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
@@ -126,7 +126,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
                 if arr[li].any():
                     dic['event_id'].append(eid)
                     dic['agg_id'].append(kid)
-                    dic['loss_id'].append(LTI[xtypes[li]])
+                    dic['loss_id'].append(LOSSID[xtypes[li]])
                     for c, col in enumerate(value_cols):
                         dic[col].append(arr[li, c])
         fix_dtypes(dic)
@@ -392,7 +392,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if 'reinsurance' in oq.inputs:
             # there must be a single loss type (possibly a total type)
             [lt] = oq.inputs['reinsurance']
-            agg_loss_table = alt[alt.loss_id == LTI[lt]]
+            agg_loss_table = alt[alt.loss_id == LOSSID[lt]]
             if len(agg_loss_table) == 0:
                 raise ValueError('No losses for reinsurance %s' % lt)
             dfs = []

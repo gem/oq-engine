@@ -1857,7 +1857,7 @@ class OqParam(valid.ParamSet):
         except ValueError:
             raise InvalidFile('%s: invalid reinsurance %s'
                               % (self.inputs['job_ini'], dic))
-        if lt not in scientific.LTI:
+        if lt not in scientific.LOSSID:
             raise InvalidFile('%s: unknown loss type %s in reinsurance'
                               % (self.inputs['job_ini'], lt))
         if '+' in lt and not self.total_losses:

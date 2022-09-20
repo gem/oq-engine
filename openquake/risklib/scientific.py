@@ -51,7 +51,7 @@ structural+nonstructural_ins structural+contents_ins nonstructural+contents_ins
 structural+nonstructural+contents_ins
 structural_ins nonstructural_ins reinsurance'''.split())
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
-LTI = {lt: i for i, lt in enumerate(LOSSTYPE)}
+LOSSID = {lt: i for i, lt in enumerate(LOSSTYPE)}
 
 
 def _reduce(nested_dic):
