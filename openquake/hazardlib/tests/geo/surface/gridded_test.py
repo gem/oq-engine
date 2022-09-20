@@ -73,6 +73,7 @@ class GriddedSurfaceTestCase(unittest.TestCase):
     def test_get_ry0_distance(self):
         self.assertRaises(NotImplementedError, self.surf.get_ry0_distance,
                           self.mesh)
+
     def test_get_width(self):
         self.assertRaises(NotImplementedError, self.surf.get_width)
 
@@ -90,10 +91,11 @@ class GriddedSurfaceTestCase(unittest.TestCase):
 
 
 def _get_grd(fault_trace, usd, lsd, dip, mesh_spacing):
-        # Build the surface
-        sfc = SimpleFaultSurface.from_fault_data(
-                fault_trace, usd, lsd, dip, mesh_spacing)
-        return GriddedSurface(sfc.mesh)
+    # Build the surface
+    sfc = SimpleFaultSurface.from_fault_data(
+            fault_trace, usd, lsd, dip, mesh_spacing)
+    return GriddedSurface(sfc.mesh)
+
 
 class GriddedSurfaceSfc1Test(unittest.TestCase):
 
@@ -162,7 +164,7 @@ class GriddedSurfaceSfc3Test(unittest.TestCase):
 
 
 class GriddedSurfaceSfc4Test(unittest.TestCase):
-    # In this case the surface crosses the IDL
+    # Getting close to the Pole
 
     def setUp(self):
 
