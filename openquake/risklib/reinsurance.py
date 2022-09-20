@@ -97,7 +97,7 @@ def parse(fname):
     """
     rmodel = nrml.read(fname).reinsuranceModel
     fieldmap = {}
-    reversemap = {}
+    reversemap = {} # prop1->name1
     max_cession = []
     for node in rmodel.fieldMap:
         fieldmap[node['input']] = col = node['oq']
@@ -105,6 +105,9 @@ def parse(fname):
         mce = node.get('max_cession_event')
         if mce:
             max_cession.append(mce)
+    for name, col in fieldmap.items():
+        if col.startswith('prop'):
+            reversemap['overspill' + col[4:]] = 'overspill_' + name
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
     nonprop = [treaty.attrib for treaty in rmodel.nonProportional]
     dic = {col: [] for col in TREATY_COLUMNS}
@@ -145,7 +148,8 @@ def claim_to_cessions(claim, fractions, nonprop):
     neg = out['nonprop1'] < 0
     neg_ret = (out['retention'][neg]).copy()
     over = (out['nonprop1'] > nonprop['limit']) & (out['nonprop1'] > 0)
-    out['retention'][over] = nonprop['max_retention'] + out['nonprop1'][over] - nonprop['limit']
+    out['retention'][over] = (nonprop['max_retention'] +
+                              out['nonprop1'][over] - nonprop['limit'])
     out['nonprop1'][over] = nonprop['limit']
     out['retention'][~over] = nonprop['max_retention']
     out['nonprop1'][neg] = neg_ret
@@ -189,6 +193,7 @@ def by_event(by_policy_df, max_cession):
         if col.startswith('prop'):
             cession = max_cession[int(col[4:]) - 1]
             over = df[col] > cession
+            df['overspill' + col[4:]] = np.maximum(df[col] - cession, 0)
             df['retention'][over] += df[col][over] - cession
             df[col][over] = cession
     return df.reset_index()
