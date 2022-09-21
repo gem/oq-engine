@@ -120,6 +120,9 @@ def parse(fname):
     check_fields(['deductible', 'liability'], df, fname)
     df['deductible_abs'] = np.ones(len(df), bool)
     df['liability_abs'] = np.ones(len(df), bool)
+    for col in reversemap:
+        if col.startswith('nonprop'):
+            df[col] = np.bool_(df[col])
     return df, pd.DataFrame(nonprop), max_cession, reversemap
 
 
@@ -168,31 +171,32 @@ def claim_to_cessions(claim, policy, nonprops=()):
     # nonproportional cessions
     for col, nonprop in nonprops.iterrows():
         out[col] = np.zeros(len(claim))
-        apply_nonprop(out[col], out['retention'],
-                      nonprop['max_retention'], nonprop['limit'])
+        if policy[col]:
+            apply_nonprop(out[col], out['retention'],
+                          nonprop['max_retention'], nonprop['limit'])
     return {k: np.round(v, 6) for k, v in out.items()}
 
 
 # tested in test_reinsurance.py
-def by_policy(agglosses_df, pol, treaty_df):
+def by_policy(agglosses_df, pol_dict, treaty_df):
     '''
     :param DataFrame losses:
         losses aggregated by policy (keys agg_id, event_id)
-    :param pol:
-        Policy record or dictionary
+    :param dict pol_dict:
+        Policy parameters, with pol_dict['policy'] being an integer >= 1
     :param DataFrame treaty_df:
         Non-proportional treaties
     :returns:
         DataFrame of reinsurance losses by event ID and policy ID
     '''
     out = {}
-    df = agglosses_df[agglosses_df.agg_id == pol['policy'] - 1]
+    df = agglosses_df[agglosses_df.agg_id == pol_dict['policy'] - 1]
     losses = df.loss.to_numpy()
-    ded, lim = get_ded_lim(losses, pol)
+    ded, lim = get_ded_lim(losses, pol_dict)
     claim = scientific.insured_losses(losses, ded, lim)
     out['event_id'] = df.event_id.to_numpy()
-    out['policy_id'] = [pol['policy']] * len(df)
-    out.update(claim_to_cessions(claim, pol, treaty_df))
+    out['policy_id'] = [pol_dict['policy']] * len(df)
+    out.update(claim_to_cessions(claim, pol_dict, treaty_df))
     return pd.DataFrame(out)
 
 
