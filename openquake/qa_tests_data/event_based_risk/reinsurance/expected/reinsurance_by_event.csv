@@ -1,5 +1,5 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.16.0-gitd12b42f3ba', start_date='2022-09-21T05:41:41', checksum=4007403783"
-event_id,claim,surplus,quota_shared,retention,np_treaty,overspill_surplus,overspill_quota_shared
+#,,,,,,,"generated_by='OpenQuake engine 3.16.0-git9ffe68088f', start_date='2022-09-21T07:26:26', checksum=3928361144"
+event_id,claim,surplus,quota_shared,retention,WXLR,overspill_surplus,overspill_quota_shared
 0,1.41443E+02,2.82886E+01,4.24329E+01,5.00000E+01,2.07214E+01,0.00000E+00,0.00000E+00
 1,2.45206E+02,4.90412E+01,7.35618E+01,5.00000E+01,7.26031E+01,0.00000E+00,0.00000E+00
 2,4.15459E+02,8.30919E+01,1.24638E+02,5.00000E+01,1.57730E+02,0.00000E+00,0.00000E+00

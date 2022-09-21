@@ -1,5 +1,5 @@
-#,,,"generated_by='OpenQuake engine 3.16.0-gitd12b42f3ba', start_date='2022-09-21T05:41:41', checksum=2474506987"
-return_period,claim,retention,np_treaty
+#,,,"generated_by='OpenQuake engine 3.16.0-gitd36a40bea9', start_date='2022-09-21T07:51:26', checksum=3233932326"
+return_period,claim,retention,WXLR
 3.00000E+01,1.51209E+02,5.00000E+01,1.01209E+02
 6.00000E+01,6.67052E+02,3.17052E+02,3.50000E+02
 1.20000E+02,8.99950E+02,5.49950E+02,3.50000E+02

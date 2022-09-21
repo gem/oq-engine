@@ -26,8 +26,6 @@ KNOWN_LOSS_TYPES = {
     'structural', 'nonstructural', 'contents',
     'value-structural', 'value-nonstructural', 'value-contents'}
 
-TREATY_COLUMNS = ('id', 'type', 'max_retention', 'limit')
-
 
 def infer_dtype(df):
     """
@@ -99,40 +97,43 @@ def parse(fname):
     fieldmap = {}
     reversemap = {} # propN->nameN
     max_cession = {}  # propN->cessionN
+    nonprop = dict(id=[], max_retention=[], limit=[])
     for node in rmodel.fieldMap:
         fieldmap[node['input']] = col = node['oq']
         reversemap[col] = node['input']
         mce = node.get('max_cession_event')
         if mce:
             max_cession[col] = mce
+        treaty_type = node.get('type')
+        assert treaty_type in (None, 'prop','wxlr', 'catxl'), treaty_type
+        if treaty_type in ('wxlr', 'catxl'):
+            nonprop['id'].append(col)
+            nonprop['max_retention'].append(node['max_retention'])
+            nonprop['limit'].append(node['limit'])
     for name, col in fieldmap.items():
         if col.startswith('prop'):
             reversemap['overspill' + col[4:]] = 'overspill_' + name
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
-    nonprop = [treaty.attrib for treaty in rmodel.nonProportional]
-    dic = {col: [] for col in TREATY_COLUMNS}
-    for tr in nonprop:
-        for name in TREATY_COLUMNS:
-            dic[name].append(tr[name])
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
     check_fields(['deductible', 'liability'], df, fname)
     df['deductible_abs'] = np.ones(len(df), bool)
     df['liability_abs'] = np.ones(len(df), bool)
-    return df, pd.DataFrame(dic), max_cession, reversemap
+    return df, pd.DataFrame(nonprop), max_cession, reversemap
 
 
-def claim_to_cessions(claim, fractions, nonprop=None):
+def claim_to_cessions(claim, fractions, nonprops=()):
     """
     Converts an array of claims into a dictionary of arrays
 
-    >>> claim_to_cessions(np.array([900_000]), [.3, .5], {'max_retention': 100_000, 'limit': 200_000})
+    >>> df = pd.DataFrame({'id': ['nonprop1'], 'max_retention': [100_000], 'limit': [200_000]}).set_index('id')
+    >>> claim_to_cessions(np.array([900_000]), [.3, .5], df)
     {'claim': array([900000]), 'prop1': array([270000.]), 'prop2': array([450000.]), 'retention': array([100000.]), 'nonprop1': array([80000.])}
 
-    >>> claim_to_cessions(np.array([1_800_000]), [.4, .4], {'max_retention': 100_000, 'limit': 200_000})
+    >>> claim_to_cessions(np.array([1_800_000]), [.4, .4], df)
     {'claim': array([1800000]), 'prop1': array([720000.]), 'prop2': array([720000.]), 'retention': array([160000.]), 'nonprop1': array([200000.])}
 
-    >>> claim_to_cessions(np.array([80_000]), [.4, .4], {'max_retention': 100_000, 'limit': 200_000})
+    >>> claim_to_cessions(np.array([80_000]), [.4, .4], df)
     {'claim': array([80000]), 'prop1': array([32000.]), 'prop2': array([32000.]), 'retention': array([0.]), 'nonprop1': array([16000.])}
     """
     # proportional cessions
@@ -142,20 +143,21 @@ def claim_to_cessions(claim, fractions, nonprop=None):
         cession = 'prop%d' % i
         out[cession] = claim * frac
     out['retention'] = claim * (1. - sum(fractions))
-    if nonprop is None:
+    if len(nonprops) == 0:
         return {k: np.round(v, 6) for k, v in out.items()}
 
     # nonproportional cessions
-    out['nonprop1'] = out['retention'] - nonprop['max_retention']
-    neg = out['nonprop1'] < 0
-    neg_ret = (out['retention'][neg]).copy()
-    over = (out['nonprop1'] > nonprop['limit']) & (out['nonprop1'] > 0)
-    out['retention'][over] = (nonprop['max_retention'] +
-                              out['nonprop1'][over] - nonprop['limit'])
-    out['nonprop1'][over] = nonprop['limit']
-    out['retention'][~over] = nonprop['max_retention']
-    out['nonprop1'][neg] = neg_ret
-    out['retention'][neg] = 0
+    for col, nonprop in nonprops.iterrows():
+        out[col] = out['retention'] - nonprop['max_retention']
+        neg = out[col] < 0
+        neg_ret = (out['retention'][neg]).copy()
+        over = (out[col] > nonprop['limit']) & (out[col] > 0)
+        out['retention'][over] = (nonprop['max_retention'] +
+                                  out[col][over] - nonprop['limit'])
+        out[col][over] = nonprop['limit']
+        out['retention'][~over] = nonprop['max_retention']
+        out[col][neg] = neg_ret
+        out['retention'][neg] = 0
     return {k: np.round(v, 6) for k, v in out.items()}
 
 
@@ -167,7 +169,7 @@ def by_policy(agglosses_df, pol, treaty_df):
     :param Series pol:
         Description of policy characteristics
     :param DataFrame treaty_df:
-        Description of reinsurance characteristics
+        Non-proportional treaties
     :returns:
         DataFrame of reinsurance losses by event ID and policy ID
     '''
@@ -179,11 +181,7 @@ def by_policy(agglosses_df, pol, treaty_df):
     out['event_id'] = df.event_id.to_numpy()
     out['policy_id'] = [pol['policy']] * len(df)
     fractions = [pol[col] for col in pol if col.startswith('prop')]
-    try:
-        nonprop = treaty_df.loc[pol['nonprop1']]
-    except KeyError:
-        nonprop = None
-    out.update(claim_to_cessions(claim, fractions, nonprop))
+    out.update(claim_to_cessions(claim, fractions, treaty_df))
     return pd.DataFrame(out)
 
 

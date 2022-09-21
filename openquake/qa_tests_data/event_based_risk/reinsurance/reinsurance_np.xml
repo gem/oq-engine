@@ -4,11 +4,9 @@
   <reinsuranceModel>
     <description>Test nonproportional reinsurance model</description>
     <fieldMap>
-      <field oq="nonprop1" input="np_treaty" />
+      <field oq="nonprop1" input="WXLR" type="wxlr"
+             max_retention="50" limit="350" />
     </fieldMap>
     <policies>policy.csv</policies>
-    <nonProportional>
-      <treaty id="WXLR" type="wxlr" max_retention="50" limit="350" />
-    </nonProportional>
   </reinsuranceModel>
 </nrml>

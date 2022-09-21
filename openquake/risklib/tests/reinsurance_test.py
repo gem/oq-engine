@@ -55,44 +55,29 @@ event_id	agg_id	loss
 ''', sep='\t')
 
 
-treaty = _df('''\
-id,max_retention,limit
-wxlr,100000,200000
-''', index_col='id')
-
-
 class ReinsuranceTestCase(unittest.TestCase):
-    def test_parse(self):
+    @classmethod
+    def setUpClass(cls):
         policy_df, treaty_df, maxc, fmap = reinsurance.parse(
             CDIR / 'reinsurance.xml')
         print(policy_df)
         print(treaty_df)
-        self.assertEqual(len(policy_df), 12)
-        self.assertEqual(len(treaty_df), 3)
-        self.assertEqual(len(maxc), 5)
-        self.assertEqual(fmap, {'deductible': 'Deductible',
-                                'liability': 'Limit',
-                                'nonprop1': 'Treaty_id',
-                                'overspill1': 'overspill_Surplus_metro',
-                                'overspill2': 'overspill_QS_rural',
-                                'overspill3': 'overspill_QS_reg',
-                                'overspill4': 'overspill_Sur1_reg',
-                                'overspill5': 'overspill_Fac_reg',
-                                'policy': 'Policy',
-                                'prop1': 'Surplus_metro',
-                                'prop2': 'QS_rural',
-                                'prop3': 'QS_reg',
-                                'prop4': 'Sur1_reg',
-                                'prop5': 'Fac_reg'})
+        print(maxc)
+        print(fmap)
+        assert len(policy_df) == 12
+        assert len(treaty_df) == 3
+        assert len(maxc) == 5
+        assert len(fmap) == 16
+        cls.treaty_df = treaty_df
         
     def test_policy1(self):
         pol = dict(policy=1, liability=1.0, liability_abs=False,
                    deductible=0.1, deductible_abs=False, nonprop1='wxlr')
-        out = reinsurance.by_policy(risk_by_event, pol, treaty)
+        out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
         print('\n', out)
 
     def test_policy2(self):
         pol = dict(policy=2, liability=0.9, liability_abs=False,
                    deductible=0.05, deductible_abs=False, nonprop1='wxlr')
-        out = reinsurance.by_policy(risk_by_event, pol, treaty)
+        out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
         print('\n', out)
