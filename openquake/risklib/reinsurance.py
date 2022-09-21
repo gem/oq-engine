@@ -126,13 +126,14 @@ def claim_to_cessions(claim, fractions, nonprops=()):
     """
     Converts an array of claims into a dictionary of arrays
 
-    >>> claim_to_cessions(np.array([900_000]), [.3, .5], {'max_retention': 100_000, 'limit': 200_000})
+    >>> df = pd.DataFrame({'id': ['nonprop1'], 'max_retention': [100_000], 'limit': [200_000]}).set_index('id')
+    >>> claim_to_cessions(np.array([900_000]), [.3, .5], df)
     {'claim': array([900000]), 'prop1': array([270000.]), 'prop2': array([450000.]), 'retention': array([100000.]), 'nonprop1': array([80000.])}
 
-    >>> claim_to_cessions(np.array([1_800_000]), [.4, .4], {'max_retention': 100_000, 'limit': 200_000})
+    >>> claim_to_cessions(np.array([1_800_000]), [.4, .4], df)
     {'claim': array([1800000]), 'prop1': array([720000.]), 'prop2': array([720000.]), 'retention': array([160000.]), 'nonprop1': array([200000.])}
 
-    >>> claim_to_cessions(np.array([80_000]), [.4, .4], {'max_retention': 100_000, 'limit': 200_000})
+    >>> claim_to_cessions(np.array([80_000]), [.4, .4], df)
     {'claim': array([80000]), 'prop1': array([32000.]), 'prop2': array([32000.]), 'retention': array([0.]), 'nonprop1': array([16000.])}
     """
     # proportional cessions
