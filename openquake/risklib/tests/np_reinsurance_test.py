@@ -30,28 +30,29 @@ def _df(string, sep=',', index_col=None):  # DataFrame from string
                            keep_default_na=False)
 
 
+# NB: agg_id starts from 0, policy_id from 1
 risk_by_event = _df('''\
 event_id	agg_id	loss
-25	2	4159.046
-27	2	3141.0974
-28	2	3136.3154
-26	2	2859.9182
-29	2	2603.0217
-23	2	1730.9891
+25	1	4159.046
+27	1	3141.0974
+28	1	3136.3154
+26	1	2859.9182
+29	1	2603.0217
+23	1	1730.9891
+41	0	1178.0742
 41	1	1178.0742
-41	2	1178.0742
+40	0	1170.1654
 40	1	1170.1654
-40	2	1170.1654
-21	2	1157.2078
+21	1	1157.2078
+33	0	1117.877
 33	1	1117.877
-33	2	1117.877
-20	2	1066.6654
-16	2	1016.66644
-22	2	1000.24884
+20	1	1066.6654
+16	1	1016.66644
+22	1	1000.24884
+13	0	764.2781
 13	1	764.2781
-13	2	764.2781
-5	2	761.1264
 5	1	761.1264
+5	0	761.1264
 ''', sep='\t')
 
 
@@ -60,26 +61,53 @@ class ReinsuranceTestCase(unittest.TestCase):
     def setUpClass(cls):
         policy_df, treaty_df, maxc, fmap = reinsurance.parse(
             CDIR / 'reinsurance.xml')
+        assert not maxc  # there are no proportional treaties
         print(policy_df)
         print(treaty_df)
-        print(maxc)
         print(fmap)
         assert len(policy_df) == 12
         assert len(treaty_df) == 3
-        assert len(maxc) == 5
-        assert len(fmap) == 16
+        assert len(fmap) == 6
         cls.treaty_df = treaty_df.set_index('id')
         
     def test_policy1(self):
+        expected = _df('''\
+event_id,policy_id,claim,retention,nonprop1,nonprop2,nonprop3
+41,1,1060.26678,50.0,560.26678,300.0,150.0
+40,1,1053.14886,50.0,553.14886,300.0,150.0
+33,1,1006.08930,50.0,506.08930,300.0,150.0
+13,1, 687.85029,50.0,187.85029,300.0,150.0
+ 5,1, 685.01376,50.0,185.01376,300.0,150.0
+''')
         pol = dict(policy=1, liability=1.0, liability_abs=False,
                    deductible=0.1, deductible_abs=False,
                    nonprop1=True, nonprop2=True, nonprop3=True)
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
         print('\n', out)
+        assert len(out.compare(expected)) == 0
 
     def test_policy2(self):
+        expected = _df('''\
+event_id,policy_id,claim,retention,nonprop1,nonprop2,nonprop3
+25,2,3535.189100,50.0,3035.189100,300.0,150.0
+27,2,2669.932790,50.0,2169.932790,300.0,150.0
+28,2,2665.868090,50.0,2165.868090,300.0,150.0
+26,2,2430.930470,50.0,1930.930470,300.0,150.0
+29,2,2212.568445,50.0,1712.568445,300.0,150.0
+23,2,1471.340735,50.0, 971.340735,300.0,150.0
+41,2,1001.363070,50.0, 501.363070,300.0,150.0
+40,2, 994.640590,50.0, 494.640590,300.0,150.0
+21,2, 983.626630,50.0, 483.626630,300.0,150.0
+33,2, 950.195450,50.0, 450.195450,300.0,150.0
+20,2, 906.665590,50.0, 406.665590,300.0,150.0
+16,2, 864.166474,50.0, 364.166474,300.0,150.0
+22,2, 850.211514,50.0, 350.211514,300.0,150.0
+13,2, 649.636385,50.0, 149.636385,300.0,150.0
+ 5,2, 646.957440,50.0, 146.957440,300.0,150.0
+''')
         pol = dict(policy=2, liability=0.9, liability_abs=False,
                    deductible=0.05, deductible_abs=False,
                    nonprop1=True, nonprop2=True, nonprop3=True)
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
         print('\n', out)
+        assert len(out.compare(expected)) == 0
