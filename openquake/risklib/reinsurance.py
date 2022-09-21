@@ -172,7 +172,7 @@ def by_policy(agglosses_df, pol, treaty_df):
         DataFrame of reinsurance losses by event ID and policy ID
     '''
     out = {}
-    df = agglosses_df[agglosses_df.agg_id == pol['policy']]
+    df = agglosses_df[agglosses_df.agg_id == pol['policy'] - 1]
     losses = df.loss.to_numpy()
     ded, lim = get_ded_lim(losses, pol)
     claim = scientific.insured_losses(losses, ded, lim)
