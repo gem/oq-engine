@@ -74,7 +74,7 @@ class ReinsuranceTestCase(unittest.TestCase):
         cls.treaty_df = treaty_df.set_index('id')
         
     def test_policy1(self):
-        # VA_region_1, CatXL_reg
+        # VA_region_1, CatXL_reg, max_retention=50, limit=5000
         expected = _df('''\
 event_id,policy_id,claim,retention,nonprop1,nonprop2,nonprop3
 41,1,1060.26678,50.0,560.26678,300.0,150.0
@@ -91,7 +91,7 @@ event_id,policy_id,claim,retention,nonprop1,nonprop2,nonprop3
         assert len(out.compare(expected)) == 0
 
     def test_policy2(self):
-        # VA_region_2, CatXL_reg
+        # VA_region_2, CatXL_reg, max_retention=50, limit=5000
         expected = _df('''\
 event_id,policy_id,claim,retention,nonprop1,nonprop2,nonprop3
 25,2,3535.189100,50.0,3035.189100,300.0,150.0
