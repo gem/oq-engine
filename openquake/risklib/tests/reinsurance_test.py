@@ -72,12 +72,14 @@ class ReinsuranceTestCase(unittest.TestCase):
         
     def test_policy1(self):
         pol = dict(policy=1, liability=1.0, liability_abs=False,
-                   deductible=0.1, deductible_abs=False, nonprop1='wxlr')
+                   deductible=0.1, deductible_abs=False,
+                   nonprop1=True, nonprop2=True, nonprop3=True)
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
         print('\n', out)
 
     def test_policy2(self):
         pol = dict(policy=2, liability=0.9, liability_abs=False,
-                   deductible=0.05, deductible_abs=False, nonprop1='wxlr')
+                   deductible=0.05, deductible_abs=False,
+                   nonprop1=True, nonprop2=True, nonprop3=True)
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
         print('\n', out)
