@@ -123,7 +123,8 @@ def parse(fname):
     return df, pd.DataFrame(nonprop), max_cession, reversemap
 
 
-#@compile("(float64[:],float64[:],float64,float64)")
+@compile(["(float64[:],float64[:],float64,float64)",
+          "(float64[:],float32[:],float64,float64)"])
 def apply_nonprop(cession, retention, maxret, limit):
     for i, ret in np.ndenumerate(retention):
         overmax = ret - maxret
