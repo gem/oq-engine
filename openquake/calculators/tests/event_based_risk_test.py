@@ -579,6 +579,13 @@ agg_id
 
 class ReinsuranceTestCase(CalculatorTestCase):
 
+    def test_no_reinsurance(self):
+        rf = "{'structural+nonstructural': 'no_reinsurance.xml'}"
+        self.run_calc(reinsurance.__file__, 'job.ini', reinsurance_file=rf)
+        [fname] = export(('reinsurance_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/no_reinsurance_by_event.csv', fname,
+                              delta=1E-5)
+
     def test_prop(self):
         rf = "{'structural+nonstructural': 'reinsurance_prop.xml'}"
         self.run_calc(reinsurance.__file__, 'job.ini', reinsurance_file=rf)
