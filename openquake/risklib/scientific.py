@@ -1032,8 +1032,7 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios,
     # convert the hazard probabilities of exceedance ot annual
     # frequencies of exceedance, and then occurrence
     afoes = annual_frequency_of_exceedence(poes, investigation_time)
-    afoos = pairwise_diff(
-        pairwise_mean([afoes[0]] + list(afoes) + [afoes[-1]]))
+    afoos = pairwise_diff(afoes)
 
     # compute the annual frequency of exceedance of the loss ratios
     # lrem = loss ratio exceedance matrix
