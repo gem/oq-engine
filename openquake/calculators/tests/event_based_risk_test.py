@@ -617,3 +617,16 @@ class ReinsuranceTestCase(CalculatorTestCase):
         [fname] = export(('reinsurance_avg', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance_avg.csv', fname,
                               delta=1E-5)
+
+    def test_many_levels(self):
+        self.run_calc(reinsurance.__file__, 'job2.ini')
+        [fname] = export(('reinsurance_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance_by_event2.csv', fname,
+                              delta=1E-5)
+        [fname] = export(('reinsurance_curves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance_curves2.csv', fname,
+                              delta=1E-5)
+        [fname] = export(('reinsurance_avg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance_avg2.csv', fname,
+                              delta=1E-5)
+        

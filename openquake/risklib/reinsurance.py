@@ -120,6 +120,9 @@ def parse(fname):
     check_fields(['deductible', 'liability'], df, fname)
     df['deductible_abs'] = np.ones(len(df), bool)
     df['liability_abs'] = np.ones(len(df), bool)
+    for col in reversemap:
+        if col.startswith('nonprop'):
+            df[col] = np.bool_(df[col])
     return df, pd.DataFrame(nonprop), max_cession, reversemap
 
 
@@ -137,21 +140,25 @@ def apply_nonprop(cession, retention, maxret, limit):
                 cession[i] = overmax
 
 
-def claim_to_cessions(claim, fractions, nonprops=()):
+def claim_to_cessions(claim, policy, nonprops=()):
     """
     Converts an array of claims into a dictionary of arrays
 
-    >>> df = pd.DataFrame({'id': ['nonprop1'], 'max_retention': [100_000], 'limit': [200_000]}).set_index('id')
-    >>> claim_to_cessions(np.array([900_000]), [.3, .5], df)
+    >>> df = pd.DataFrame({'id': ['nonprop1'], 'max_retention': [100_000],
+    ...                    'limit': [200_000]}).set_index('id')
+    >>> pol1 = {'prop1': .3, 'prop2': .5, 'nonprop1': True}
+    >>> pol2 = {'prop1': .4, 'prop2': .4, 'nonprop1': True}
+    >>> claim_to_cessions(np.array([900_000]), pol1, df)
     {'claim': array([900000]), 'prop1': array([270000.]), 'prop2': array([450000.]), 'retention': array([100000.]), 'nonprop1': array([80000.])}
 
-    >>> claim_to_cessions(np.array([1_800_000]), [.4, .4], df)
+    >>> claim_to_cessions(np.array([1_800_000]), pol2, df)
     {'claim': array([1800000]), 'prop1': array([720000.]), 'prop2': array([720000.]), 'retention': array([160000.]), 'nonprop1': array([200000.])}
 
-    >>> claim_to_cessions(np.array([80_000]), [.4, .4], df)
+    >>> claim_to_cessions(np.array([80_000]), pol2, df)
     {'claim': array([80000]), 'prop1': array([32000.]), 'prop2': array([32000.]), 'retention': array([16000.]), 'nonprop1': array([0.])}
     """
     # proportional cessions
+    fractions = [policy[col] for col in policy if col.startswith('prop')]
     assert sum(fractions) < 1
     out = {'claim': claim}
     for i, frac in enumerate(fractions, 1):
@@ -164,31 +171,32 @@ def claim_to_cessions(claim, fractions, nonprops=()):
     # nonproportional cessions
     for col, nonprop in nonprops.iterrows():
         out[col] = np.zeros(len(claim))
-        apply_nonprop(out[col], out['retention'], nonprop['max_retention'], nonprop['limit'])
+        if policy[col]:
+            apply_nonprop(out[col], out['retention'],
+                          nonprop['max_retention'], nonprop['limit'])
     return {k: np.round(v, 6) for k, v in out.items()}
 
 
 # tested in test_reinsurance.py
-def by_policy(agglosses_df, pol, treaty_df):
+def by_policy(agglosses_df, pol_dict, treaty_df):
     '''
     :param DataFrame losses:
         losses aggregated by policy (keys agg_id, event_id)
-    :param Series pol:
-        Description of policy characteristics
+    :param dict pol_dict:
+        Policy parameters, with pol_dict['policy'] being an integer >= 1
     :param DataFrame treaty_df:
         Non-proportional treaties
     :returns:
         DataFrame of reinsurance losses by event ID and policy ID
     '''
     out = {}
-    df = agglosses_df[agglosses_df.agg_id == pol['policy'] - 1]
+    df = agglosses_df[agglosses_df.agg_id == pol_dict['policy'] - 1]
     losses = df.loss.to_numpy()
-    ded, lim = get_ded_lim(losses, pol)
+    ded, lim = get_ded_lim(losses, pol_dict)
     claim = scientific.insured_losses(losses, ded, lim)
     out['event_id'] = df.event_id.to_numpy()
-    out['policy_id'] = [pol['policy']] * len(df)
-    fractions = [pol[col] for col in pol if col.startswith('prop')]
-    out.update(claim_to_cessions(claim, fractions, treaty_df))
+    out['policy_id'] = [pol_dict['policy']] * len(df)
+    out.update(claim_to_cessions(claim, pol_dict, treaty_df))
     return pd.DataFrame(out)
 
 
