@@ -68,7 +68,7 @@ class ReinsuranceTestCase(unittest.TestCase):
         assert len(treaty_df) == 3
         assert len(maxc) == 5
         assert len(fmap) == 16
-        cls.treaty_df = treaty_df
+        cls.treaty_df = treaty_df.set_index('id')
         
     def test_policy1(self):
         pol = dict(policy=1, liability=1.0, liability_abs=False,

@@ -19,6 +19,7 @@
 import os
 import pandas as pd
 import numpy as np
+from openquake.baselib.performance import compile
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.risklib import scientific
 
@@ -122,6 +123,19 @@ def parse(fname):
     return df, pd.DataFrame(nonprop), max_cession, reversemap
 
 
+#@compile("(float64[:],float64[:],float64,float64)")
+def apply_nonprop(cession, retention, maxret, limit):
+    for i, ret in np.ndenumerate(retention):
+        overmax = ret - maxret
+        if ret > maxret:
+            if overmax > limit:
+                retention[i] = maxret + overmax - limit
+                cession[i] = limit
+            else:
+                retention[i] = maxret
+                cession[i] = overmax
+
+
 def claim_to_cessions(claim, fractions, nonprops=()):
     """
     Converts an array of claims into a dictionary of arrays
@@ -134,7 +148,7 @@ def claim_to_cessions(claim, fractions, nonprops=()):
     {'claim': array([1800000]), 'prop1': array([720000.]), 'prop2': array([720000.]), 'retention': array([160000.]), 'nonprop1': array([200000.])}
 
     >>> claim_to_cessions(np.array([80_000]), [.4, .4], df)
-    {'claim': array([80000]), 'prop1': array([32000.]), 'prop2': array([32000.]), 'retention': array([0.]), 'nonprop1': array([16000.])}
+    {'claim': array([80000]), 'prop1': array([32000.]), 'prop2': array([32000.]), 'retention': array([16000.]), 'nonprop1': array([0.])}
     """
     # proportional cessions
     assert sum(fractions) < 1
@@ -148,16 +162,8 @@ def claim_to_cessions(claim, fractions, nonprops=()):
 
     # nonproportional cessions
     for col, nonprop in nonprops.iterrows():
-        out[col] = out['retention'] - nonprop['max_retention']
-        neg = out[col] < 0
-        neg_ret = (out['retention'][neg]).copy()
-        over = (out[col] > nonprop['limit']) & (out[col] > 0)
-        out['retention'][over] = (nonprop['max_retention'] +
-                                  out[col][over] - nonprop['limit'])
-        out[col][over] = nonprop['limit']
-        out['retention'][~over] = nonprop['max_retention']
-        out[col][neg] = neg_ret
-        out['retention'][neg] = 0
+        out[col] = np.zeros(len(claim))
+        apply_nonprop(out[col], out['retention'], nonprop['max_retention'], nonprop['limit'])
     return {k: np.round(v, 6) for k, v in out.items()}
 
 
@@ -192,11 +198,14 @@ def by_event(by_policy_df, max_cession):
     """
     df = by_policy_df.groupby('event_id').sum()
     del df['policy_id']
+    dic = {'event_id': df.index.to_numpy()}
+    for col in df.columns:
+        dic[col] = df[col].to_numpy() 
     for col, cession in max_cession.items():
-        over = df[col] > cession
-        overspill = np.maximum(df[col] - cession, 0)
+        over = dic[col] > cession
+        overspill = np.maximum(dic[col] - cession, 0)
         if overspill.any():
-            df['overspill' + col[4:]] = overspill
-        df['retention'][over] += df[col][over] - cession
-        df[col][over] = cession
-    return df.reset_index()
+            dic['overspill' + col[4:]] = overspill
+        dic['retention'][over] += dic[col][over] - cession
+        dic[col][over] = cession
+    return pd.DataFrame(dic)
