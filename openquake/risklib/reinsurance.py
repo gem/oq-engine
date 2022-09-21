@@ -194,7 +194,9 @@ def by_event(by_policy_df, max_cession):
     del df['policy_id']
     for col, cession in max_cession.items():
         over = df[col] > cession
-        df['overspill' + col[4:]] = np.maximum(df[col] - cession, 0)
+        overspill = np.maximum(df[col] - cession, 0)
+        if overspill.any():
+            df['overspill' + col[4:]] = overspill
         df['retention'][over] += df[col][over] - cession
         df[col][over] = cession
     return df.reset_index()
