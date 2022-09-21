@@ -275,12 +275,12 @@ def build_store_agg(dstore, rbe_df, num_events):
     return aggrisk
 
 
-def build_reinsurance_curves(dstore, num_events):
+def build_reinsurance(dstore, num_events):
     """
-    Build the reinsurance_curves table from the reinsurance_by_event table
+    Build and store the table `reinsurance_avg`; for event_based, also
+    build the `reinsurance_curves` table.
     """
     oq = dstore['oqparam']
-    assert oq.investigation_time > 0  # event based
     size = dstore.getsize('reinsurance_by_event')
     logging.info('Building reinsurance_curves from %s of reinsurance_by_event',
                  general.humansize(size))
@@ -295,15 +295,27 @@ def build_reinsurance_curves(dstore, num_events):
     else:
         rbe_df['rlz_id'] = 0
     builder = get_loss_builder(dstore, num_events=num_events)
+    avg = general.AccumDict(accum=[])
     dic = general.AccumDict(accum=[])
     for rlz_id, df in rbe_df.groupby('rlz_id'):
-        curve = {col: builder.build_curve(df[col].to_numpy(), rlz_id)
-                 for col in columns}
-        for p, period in enumerate(builder.return_periods):
-            dic['rlz_id'].append(rlz_id)
-            dic['return_period'].append(period)
-            for col in curve:
-                dic[col].append(curve[col][p])
+        ne = num_events[rlz_id]
+        avg['rlz_id'].append(rlz_id)
+        for col in columns:
+            agg = df[col].sum()
+            avg[col].append(agg * tr if oq.investigation_time else agg / ne)
+        if oq.investigation_time:
+            curve = {col: builder.build_curve(df[col].to_numpy(), rlz_id)
+                     for col in columns}
+            for p, period in enumerate(builder.return_periods):
+                dic['rlz_id'].append(rlz_id)
+                dic['return_period'].append(period)
+                for col in curve:
+                    dic[col].append(curve[col][p])
+    dstore.create_df('reinsurance_avg', pandas.DataFrame(avg),
+                     units=dstore['cost_calculator'].get_units(
+                         oq.loss_types))
+    if oq.investigation_time is None:
+        return
     dic['return_period'] = F32(dic['return_period'])
     dic['rlz_id'] = U16(dic['rlz_id'])
     dstore.create_df('reinsurance_curves', pandas.DataFrame(dic),
@@ -369,7 +381,7 @@ class PostRiskCalculator(base.RiskCalculator):
                 ['event_id', 'loss_id', 'agg_id']).sum().reset_index()
         self.aggrisk = build_store_agg(self.datastore, rbe_df, self.num_events)
         if 'reinsurance_by_event' in self.datastore:
-            build_reinsurance_curves(self.datastore, self.num_events)
+            build_reinsurance(self.datastore, self.num_events)
         return 1
 
     def post_execute(self, dummy):

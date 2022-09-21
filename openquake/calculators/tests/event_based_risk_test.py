@@ -614,3 +614,6 @@ class ReinsuranceTestCase(CalculatorTestCase):
         [fname] = export(('reinsurance_curves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance_curves.csv', fname,
                               delta=1E-5)
+        [fname] = export(('reinsurance_avg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance_avg.csv', fname,
+                              delta=1E-5)

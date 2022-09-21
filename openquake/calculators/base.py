@@ -725,7 +725,7 @@ class HazardCalculator(BaseCalculator):
                 treaties = set(treaty_df.id)
                 assert len(treaties) == len(treaty_df), 'Not unique treaties'
                 self.datastore.create_df('treaty_df', treaty_df,
-                                         max_cession=max_cession,
+                                         max_cession=json.dumps(max_cession),
                                          field_map=json.dumps(fieldmap))
                 self.treaty_df = treaty_df.set_index('id')
             else:  # insurance
