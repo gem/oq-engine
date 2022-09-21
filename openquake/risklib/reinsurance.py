@@ -97,14 +97,14 @@ def parse(fname):
     """
     rmodel = nrml.read(fname).reinsuranceModel
     fieldmap = {}
-    reversemap = {} # prop1->name1
-    max_cession = []
+    reversemap = {} # propN->nameN
+    max_cession = {}  # propN->cessionN
     for node in rmodel.fieldMap:
         fieldmap[node['input']] = col = node['oq']
         reversemap[col] = node['input']
         mce = node.get('max_cession_event')
         if mce:
-            max_cession.append(mce)
+            max_cession[col] = mce
     for name, col in fieldmap.items():
         if col.startswith('prop'):
             reversemap['overspill' + col[4:]] = 'overspill_' + name
@@ -119,7 +119,7 @@ def parse(fname):
     check_fields(['deductible', 'liability'], df, fname)
     df['deductible_abs'] = np.ones(len(df), bool)
     df['liability_abs'] = np.ones(len(df), bool)
-    return df, pd.DataFrame(dic), np.array(max_cession), reversemap
+    return df, pd.DataFrame(dic), max_cession, reversemap
 
 
 def claim_to_cessions(claim, fractions, nonprop=None):
@@ -189,16 +189,14 @@ def by_policy(agglosses_df, pol, treaty_df):
 
 def by_event(by_policy_df, max_cession):
     """
-    :param by_policy_df: output of by_policy
-    :param max_cession: maximum cession for each proportional treaty
+    :param DataFrame by_policy_df: output of `by_policy`
+    :param dict max_cession: maximum cession for proportional treaties
     """
     df = by_policy_df.groupby('event_id').sum()
     del df['policy_id']
-    for col in by_policy_df.columns:
-        if col.startswith('prop'):
-            cession = max_cession[int(col[4:]) - 1]
-            over = df[col] > cession
-            df['overspill' + col[4:]] = np.maximum(df[col] - cession, 0)
-            df['retention'][over] += df[col][over] - cession
-            df[col][over] = cession
+    for col, cession in max_cession.items():
+        over = df[col] > cession
+        df['overspill' + col[4:]] = np.maximum(df[col] - cession, 0)
+        df['retention'][over] += df[col][over] - cession
+        df[col][over] = cession
     return df.reset_index()
