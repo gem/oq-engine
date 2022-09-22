@@ -57,7 +57,8 @@ jobs:
         env: 
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
-          set PIP_DEFAULT_TIMEOUT=100
+          $env:PIP_DEFAULT_TIMEOUT = 100
+          $env:HDF5_USE_FILE_LOCKING = 'FALSE'
           python -m pip install pip --upgrade
           #echo Branch to test %BRANCH%
           #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
@@ -77,6 +78,9 @@ jobs:
       - name: Run demos to test installation
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          $env:PIP_DEFAULT_TIMEOUT = 100
+          $env:HDF5_USE_FILE_LOCKING = 'FALSE'
+          dir env:
           #
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
