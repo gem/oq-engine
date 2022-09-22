@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import
 import sys
 import logging
 import warnings
@@ -42,6 +43,8 @@ dic = general.groupby(export.export, operator.itemgetter(0))
 for key in DISPLAY_NAME:
     assert key in dic, key
 
+if sys.platform == 'win32':
+    os.environ[''] = 'FALSE'
 
 # global settings, like logging and warnings
 def oq():
