@@ -182,7 +182,7 @@ event_id,policy_id,claim,retention,nonprop1,nonprop2,nonprop3
         # rur_Ant_1, WXLR_metro(500, 3500) + CatXL_Rural(200, 5000)
         expected = _df('''\
 event_id,policy_id,claim,retention,nonprop1,nonprop2,nonprop3
-25,      3,        3659.046,200.0, 3159.046,300.0,   0.0''')
+25,      3,        3659.046,200.0, 3000,459.046,   0.0''')
         pol = dict(self.policy_df.loc[2])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
         assert_ok(out, expected)

@@ -144,12 +144,13 @@ def parse(fname):
 @compile(["(float64[:],float64[:],float64,float64)",
           "(float64[:],float32[:],float64,float64)"])
 def apply_nonprop(cession, retention, maxret, limit):
+    capacity = limit - maxret
     for i, ret in np.ndenumerate(retention):
         overmax = ret - maxret
         if ret > maxret:
-            if overmax > limit:
-                retention[i] = maxret + overmax - limit
-                cession[i] = limit
+            if overmax > capacity:
+                retention[i] = maxret + overmax - capacity
+                cession[i] = capacity
             else:
                 retention[i] = maxret
                 cession[i] = overmax
