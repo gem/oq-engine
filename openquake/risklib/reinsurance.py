@@ -249,7 +249,7 @@ def _by_event(by_policy_df, max_cession, treaty_df):
         dic['retention'][over] += dic[col][over] - cession
         dic[col][over] = cession
 
-    # catxl overspill
+    # catxl applied everywhere
     catxl = treaty_df[treaty_df.type == 'catxl']
     for col, nonprop in catxl.iterrows():
         dic[col] = np.zeros(len(df))
