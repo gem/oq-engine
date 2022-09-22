@@ -38,7 +38,7 @@ from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import (
-    losses_by_period, return_periods, LTI, LOSSTYPE)
+    losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
@@ -388,7 +388,7 @@ def alt_to_many_columns(alt, loss_types):
     for (eid, kid), df in alt.groupby(['event_id', 'agg_id']):
         dic['event_id'].append(eid)
         for ln in loss_types:
-            arr = df[df.loss_id == LTI[ln]].loss.to_numpy()
+            arr = df[df.loss_id == LOSSID[ln]].loss.to_numpy()
             loss = 0 if len(arr) == 0 else arr[0]  # arr has size 0 or 1
             dic[ln].append(loss)
     return pandas.DataFrame(dic)
@@ -441,7 +441,7 @@ def view_portfolio_loss(token, dstore):
     ws = weights[rlzs]
     avgs = []
     for ln in oq.loss_types:
-        df = alt_df[alt_df.loss_id == LTI[ln]]
+        df = alt_df[alt_df.loss_id == LOSSID[ln]]
         eids = df.pop('event_id').to_numpy()
         avgs.append(ws[eids] @ df.loss.to_numpy() / ws.sum() * E / R)
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
@@ -1085,21 +1085,18 @@ def view_risk_by_event(token, dstore):
     $ oq show risk_by_event:<loss_type>
     """
     _, ltype = token.split(':')
-    loss_id = LTI[ltype]
+    loss_id = LOSSID[ltype]
     df = dstore.read_df('risk_by_event', sel=dict(loss_id=loss_id))
     del df['loss_id']
     del df['variance']
-    df = df[df.agg_id > 0].sort_values('loss', ascending=False)
+    agg_keys = dstore['agg_keys'][:]
+    df = df[df.agg_id < df.agg_id.max()].sort_values('loss', ascending=False)
+    df['agg_key'] = decode(agg_keys[df.agg_id.to_numpy()])
+    del df['agg_id']
     out = io.StringIO()
-    df[:20].to_csv(out, sep='\t', index=False, float_format='%s',
+    df[:20].to_csv(out, sep='\t', index=False, float_format='%.1f',
                    line_terminator='\r\n')
     return out.getvalue()
-
-@view.add('insurance_by_event')
-def view_reinsurance_by_event(token, dstore):
-    df = dstore.read_df('insurance_by_event')
-    del df['policy_id']
-    return df.groupby('event_id').sum()
 
 
 @view.add('delta_loss')
