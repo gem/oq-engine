@@ -27,11 +27,17 @@ def _df(string, sep=',', index_col=None):
     return pandas.read_csv(io.StringIO(string), sep=sep, index_col=index_col,
                            keep_default_na=False)
 
+def assert_ok(got, exp):
+    cmp = got.compare(exp)
+    if len(cmp):
+        print(cmp)
+        raise ValueError('got unexpected result')
+
 
 # NB: agg_id starts from 0, policy_id from 1
 risk_by_event = _df('''\
 event_id	agg_id	loss
-25	1	4159.046
+25	2	4159.046
 27	1	3141.0974
 28	1	3136.3154
 26	1	2859.9182
@@ -43,10 +49,6 @@ event_id	agg_id	loss
 40	1	1170.1654
 21	1	1157.2078
 33	0	1117.877
-33	1	1117.877
-20	1	1066.6654
-16	1	1016.66644
-22	1	1000.24884
 13	0	764.2781
 13	1	764.2781
 5	1	761.1264
@@ -55,18 +57,9 @@ event_id	agg_id	loss
 
 CSV = '''\
 Policy,Limit,Deductible,WXLR_metro,CatXL_rural,CatXL_reg
-VA_region_1,7850000,0,0,0,1
-VA_region_2,54000000,1080000,0,0,1
-VA_region_3,23300000,466000,0,0,1
-VA_region_4,16400000,328000,0,0,1
-VA_region_5,30000000,600000,0,0,1
-VA_region_6,7900000,0,0,0,1
-VA_region_7,52000000,1040000,0,0,1
-VA_region_8,25000000,500000,0,0,1
-VA_region_9,10000000,200000,0,0,1
-rur_Ant_1,1575000,31500,0,1,0
-rur_Ant_10,14250000,285000,0,1,0
-rur_Ant_100,8750000,175000,0,1,0
+VA_region_1,8000,100,0,0,1
+VA_region_2,4000,200,1,1,1
+rur_Ant_1,  5000,500,1,1,0
 '''
 
 XML = '''\
@@ -84,7 +77,7 @@ XML = '''\
       <field oq="nonprop2" input="CatXL_rural" type="catxl"
              max_retention="200" limit="5000" />
       <field oq="nonprop3" input="CatXL_reg" type="catxl"
-             max_retention="50" limit="5000" />
+             max_retention="50" limit="2500" />
     </fieldMap>
     <policies>{}</policies>
   </reinsuranceModel>
@@ -92,63 +85,57 @@ XML = '''\
 '''
 
 class ReinsuranceTestCase(unittest.TestCase):
-    # "WXLR_metro" max_retention="500" limit="3500"
-    # "CatXL_rural" max_retention="200" limit="5000"
-    # "CatXL_reg" max_retention="50" limit="5000"
     @classmethod
     def setUpClass(cls):
         csvfname = general.gettemp(CSV)
-        policy_df, treaty_df, maxc, fmap = reinsurance.parse(
+        cls.policy_df, treaty_df, maxc, fmap = reinsurance.parse(
             general.gettemp(XML.format(csvfname)))
+        cls.policy_df['policy'] = range(1, 4)  # starts from 1
         assert not maxc  # there are no proportional treaties
-        print(policy_df)
+        print(cls.policy_df)
         print(treaty_df)
         print(fmap)
-        assert len(policy_df) == 12
+        assert len(cls.policy_df) == 3
         assert len(treaty_df) == 3
         assert len(fmap) == 6
         cls.treaty_df = treaty_df.set_index('id')
         
     def test_policy1(self):
-        # VA_region_1, CatXL_reg, max_retention=50, limit=5000
+        # VA_region_1, CatXL_reg(50, 5000)
         expected = _df('''\
 event_id,policy_id,claim,retention,nonprop1,nonprop2,nonprop3
-41,1,1060.26678,50.0,560.26678,300.0,150.0
-40,1,1053.14886,50.0,553.14886,300.0,150.0
-33,1,1006.08930,50.0,506.08930,300.0,150.0
-13,1, 687.85029,50.0,187.85029,300.0,150.0
- 5,1, 685.01376,50.0,185.01376,300.0,150.0
-''')
-        pol = dict(policy=1, liability=1.0, liability_abs=False,
-                   deductible=0.1, deductible_abs=False,
-                   nonprop1=True, nonprop2=True, nonprop3=True)
+41,1,1078.0742,50.0,0.0,0.0,1028.0742
+40,1,1070.1654,50.0,0.0,0.0,1020.1654
+33,1,1017.8770,50.0,0.0,0.0,967.8770
+13,1, 664.2781,50.0,0.0,0.0,614.2781
+ 5,1, 661.1264,50.0,0.0,0.0,611.1264''')
+        pol = dict(self.policy_df.loc[0])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
-        print('\n', out)
-        assert len(out.compare(expected)) == 0
+        assert_ok(out, expected)
 
     def test_policy2(self):
-        # VA_region_2, CatXL_reg, max_retention=50, limit=5000
+        # VA_region_2, CatXL_reg(50, 2500)
         expected = _df('''\
 event_id,policy_id,claim,retention,nonprop1,nonprop2,nonprop3
-25,2,3535.189100,50.0,3035.189100,300.0,150.0
-27,2,2669.932790,50.0,2169.932790,300.0,150.0
-28,2,2665.868090,50.0,2165.868090,300.0,150.0
-26,2,2430.930470,50.0,1930.930470,300.0,150.0
-29,2,2212.568445,50.0,1712.568445,300.0,150.0
-23,2,1471.340735,50.0, 971.340735,300.0,150.0
-41,2,1001.363070,50.0, 501.363070,300.0,150.0
-40,2, 994.640590,50.0, 494.640590,300.0,150.0
-21,2, 983.626630,50.0, 483.626630,300.0,150.0
-33,2, 950.195450,50.0, 450.195450,300.0,150.0
-20,2, 906.665590,50.0, 406.665590,300.0,150.0
-16,2, 864.166474,50.0, 364.166474,300.0,150.0
-22,2, 850.211514,50.0, 350.211514,300.0,150.0
-13,2, 649.636385,50.0, 149.636385,300.0,150.0
- 5,2, 646.957440,50.0, 146.957440,300.0,150.0
-''')
-        pol = dict(policy=2, liability=0.9, liability_abs=False,
-                   deductible=0.05, deductible_abs=False,
-                   nonprop1=True, nonprop2=True, nonprop3=True)
+27,2,2941.0974,50.0,2441.0974,300.0,150.0
+28,2,2936.3154,50.0,2436.3154,300.0,150.0
+26,2,2659.9182,50.0,2159.9182,300.0,150.0
+29,2,2403.0217,50.0,1903.0217,300.0,150.0
+23,2,1530.9891,50.0,1030.9891,300.0,150.0
+41,2, 978.0742,50.0, 478.0742,300.0,150.0
+40,2, 970.1654,50.0, 470.1654,300.0,150.0
+21,2, 957.2078,50.0, 457.2078,300.0,150.0
+13,2, 564.2781,50.0,  64.2781,300.0,150.0
+ 5,2, 561.1264,50.0,  61.1264,300.0,150.0''')
+        pol = dict(self.policy_df.loc[1])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
-        print('\n', out)
-        assert len(out.compare(expected)) == 0
+        assert_ok(out, expected)
+
+    def test_policy3(self):
+        # rur_Ant_1, WXLR_metro(500, 3500) + CatXL_Rural(200, 5000)
+        expected = _df('''\
+event_id,policy_id,claim,retention,nonprop1,nonprop2,nonprop3
+25,3,3659.046,200.0,3159.046,300.0,0.0''')        
+        pol = dict(self.policy_df.loc[2])
+        out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
+        assert_ok(out, expected)
