@@ -28,20 +28,6 @@ KNOWN_LOSS_TYPES = {
     'value-structural', 'value-nonstructural', 'value-contents'}
 
 
-def infer_dtype(df):
-    """
-    :param df: a non-empty DataFrame
-    :returns: a structured dtype with bytes and/or float fields
-    """
-    lst = []
-    for col in df.columns:
-        if isinstance(df[col][0], str):
-            lst.append((col, (np.string_, 16)))
-        else:
-            lst.append((col, float))
-    return np.dtype(lst)
-
-
 def get_ded_lim(losses, policy):
     """
     :returns: deductible and liability as arrays of absolute values
@@ -87,7 +73,27 @@ def check_fields(fields, dframe, fname):
                 dframe[field + '_abs'] = _abs
             else:  # assume all absolute
                 dframe[field + '_abs'] = np.ones(len(arr))
-                
+
+
+# validate the file policy.csv
+def check_fractions(colnames, colvalues, fname):
+    """
+    Make sure the sum of the proportional fractions is below 1 and raise
+    a clear error if not.
+    """
+    n = len(colvalues[0])
+    for i in range(n):
+        tot = 0
+        for c, col in enumerate(colnames):
+            frac = colvalues[c][i]
+            if frac > 1 or frac < 0:
+                raise ValueError(
+                    f'{fname}:{i+2}: invalid fraction {col}={frac}')
+            tot += frac
+        if tot > 1:
+            raise ValueError(f'{fname}:{i+2} the sum of the fractions must be '
+                             f'under 1, got {tot}')
+
 
 def parse(fname):
     """
@@ -120,9 +126,18 @@ def parse(fname):
     check_fields(['deductible', 'liability'], df, fname)
     df['deductible_abs'] = np.ones(len(df), bool)
     df['liability_abs'] = np.ones(len(df), bool)
-    for col in reversemap:
-        if col.startswith('nonprop'):
+
+    # validate policy input
+    colnames = []
+    colvalues = []
+    for col, origname in reversemap.items():
+        if col.startswith('prop'):
+            colnames.append(origname)
+            colvalues.append(df[col].to_numpy())
+        elif col.startswith('nonprop'):
             df[col] = np.bool_(df[col])
+    if colnames:
+        check_fractions(colnames, colvalues, policyfname)
     return df, pd.DataFrame(nonprop), max_cession, reversemap
 
 
