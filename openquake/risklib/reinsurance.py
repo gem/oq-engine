@@ -207,7 +207,7 @@ def claim_to_cessions(claim, policy, nonprops=()):
 # tested in test_reinsurance.py
 def by_policy(agglosses_df, pol_dict, treaty_df):
     '''
-    :param DataFrame losses:
+    :param DataFrame agglosses_df:
         losses aggregated by policy (keys agg_id, event_id)
     :param dict pol_dict:
         Policy parameters, with pol_dict['policy'] being an integer >= 1
@@ -228,7 +228,7 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
     return pd.DataFrame(out)
 
 
-def by_event(by_policy_df, max_cession, treaty_df):
+def _by_event(by_policy_df, max_cession, treaty_df):
     """
     :param DataFrame by_policy_df: output of `by_policy`
     :param dict max_cession: maximum cession for proportional treaties
@@ -257,3 +257,19 @@ def by_event(by_policy_df, max_cession, treaty_df):
                       nonprop['max_retention'], nonprop['limit'])
 
     return pd.DataFrame(dic)
+
+
+def by_event(agglosses_df, policy_df, max_cession, treaty_df):
+    """
+    :param DataFrame agglosses_df: losses aggregated by (agg_id, event_id)
+    :param DataFrame policy_df: policies
+    :param dict max_cession: maximum cession for proportional treaties
+    :param DataFrame treaty_df: treaties
+    """
+    dfs = []
+    for _, policy in policy_df.iterrows():
+        df = by_policy(agglosses_df, dict(policy), treaty_df)
+        dfs.append(df)
+    df = pd.concat(dfs)
+    # print(by_policy)  # when debugging
+    return _by_event(df, max_cession, treaty_df)
