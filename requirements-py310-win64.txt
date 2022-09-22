@@ -17,6 +17,7 @@ https://wheelhouse.openquake.org/v3/windows/py310/llvmlite-0.39.1-cp310-cp310-wi
 https://wheelhouse.openquake.org/v3/windows/py310/numba-0.56.2-cp310-cp310-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py310/psutil-5.9.2-cp310-cp310-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py310/numpy-1.23.3-cp310-cp310-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py310/h5py-3.7.0-cp310-cp310-win_amd64.whl
 #
 #python
 https://wheelhouse.openquake.org/v3/linux/py/docutils-0.14-py3-none-any.whl
@@ -41,4 +42,3 @@ https://wheelhouse.openquake.org/v3/py//python_dateutil-2.8.2-py2.py3-none-any.w
 https://wheelhouse.openquake.org/v3/linux/py/pyparsing-2.4.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/cycler-0.10.0-py2.py3-none-any.whl
 #
-h5py==3.5.0
