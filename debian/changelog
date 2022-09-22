@@ -1,3 +1,6 @@
+  [Antonio Ettorre]
+  * Bumped h5py to version 3.7.0
+
   [Michele Simionato]
   * Added calculation of `reinsurance_by_event` and `reinsurance_curves`
     given a `reinsurance.xml` file
