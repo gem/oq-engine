@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import sys
 import unittest
 import pandas
 from openquake.baselib import general
@@ -28,16 +29,19 @@ def _df(string, sep=',', index_col=None):
                            keep_default_na=False)
 
 def assert_ok(got, exp):
-    cmp = got.compare(exp)
+    try:
+        cmp = got.compare(exp)
+    except ValueError:
+        sys.exit(str(got))
     if len(cmp):
-        print(cmp)
-        raise ValueError('got unexpected result')
+        sys.exit(str(got))       
+    
 
 
 # NB: agg_id starts from 0, policy_id from 1
 risk_by_event = _df('''\
 event_id,agg_id,loss
-25,     2,      4159.046
+25,     2,      9159.046
 27,     1,      3141.0974
 28,     1,      3136.3154
 26,     1,      2859.9182
@@ -56,10 +60,10 @@ event_id,agg_id,loss
 ''')
 
 CSV_NP = '''\
-Policy,Limit,Deductible,WXLR_metro,CatXL_rural,CatXL_reg
+Policy,Limit,Deductible,WXLR_metro,WXLR_rural,CatXL_reg
 VA_region_1,8000,100,0,0,1
 VA_region_2,4000,200,1,1,1
-rur_Ant_1,  5000,500,1,1,0
+rur_Ant_1,  9000,500,1,1,0
 '''
 
 XML_NP = '''\
@@ -74,7 +78,7 @@ XML_NP = '''\
       <field oq="liability" input="Limit" />
       <field oq="nonprop1" input="WXLR_metro" type="wxlr"
              max_retention="500" limit="3500" />
-      <field oq="nonprop2" input="CatXL_rural" type="catxl"
+      <field oq="nonprop2" input="WXLR_rural" type="wxlr"
              max_retention="200" limit="5000" />
       <field oq="nonprop3" input="CatXL_reg" type="catxl"
              max_retention="50" limit="2500" />
@@ -149,12 +153,12 @@ class ReinsuranceTestCase(unittest.TestCase):
     def test_policy1(self):
         # VA_region_1, CatXL_reg(50, 2500)
         expected = _df('''\
-event_id,policy_id,claim,retention,nonprop1,nonprop2,nonprop3
-41,1,1078.0742,50.0,0.0,0.0,1028.0742
-40,1,1070.1654,50.0,0.0,0.0,1020.1654
-33,1,1017.8770,50.0,0.0,0.0,967.8770
-13,1, 664.2781,50.0,0.0,0.0,614.2781
- 5,1, 661.1264,50.0,0.0,0.0,611.1264''')
+event_id,policy_id,claim,retention,nonprop1,nonprop2
+41,1,1078.0742,1078.0742,0.0,0.0
+40,1,1070.1654,1070.1654,0.0,0.0
+33,1,1017.8770,1017.8770,0.0,0.0
+13,1, 664.2781, 664.2781,0.0,0.0
+ 5,1, 661.1264, 661.1264,0.0,0.0''')
         pol = dict(self.policy_df.loc[0])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
         assert_ok(out, expected)
@@ -163,17 +167,17 @@ event_id,policy_id,claim,retention,nonprop1,nonprop2,nonprop3
         # VA_region_2
         # WXLR_metro(500, 3500) + CatXL_Rural(200, 5000) + CatXL_reg(50, 2500)
         expected = _df('''\
-event_id,policy_id,claim,retention,nonprop1,nonprop2,nonprop3
-27,2,2941.0974,50.0,2441.0974,300.0,150.0
-28,2,2936.3154,50.0,2436.3154,300.0,150.0
-26,2,2659.9182,50.0,2159.9182,300.0,150.0
-29,2,2403.0217,50.0,1903.0217,300.0,150.0
-23,2,1530.9891,50.0,1030.9891,300.0,150.0
-41,2, 978.0742,50.0, 478.0742,300.0,150.0
-40,2, 970.1654,50.0, 470.1654,300.0,150.0
-21,2, 957.2078,50.0, 457.2078,300.0,150.0
-13,2, 564.2781,50.0,  64.2781,300.0,150.0
- 5,2, 561.1264,50.0,  61.1264,300.0,150.0''')
+event_id,policy_id,claim,retention,nonprop1,nonprop2
+0,27,2 ,2941.0974,200.0,2441.0974,300.0
+1,28,2 ,2936.3154,200.0,2436.3154,300.0
+2,26,2 ,2659.9182,200.0,2159.9182,300.0
+3,29,2 ,2403.0217,200.0,1903.0217,300.0
+4,23,2 ,1530.9891,200.0,1030.9891,300.0
+5,41,2 , 978.0742,200.0, 478.0742,300.0
+6,40,2 , 970.1654,200.0, 470.1654,300.0
+7,21,2 , 957.2078,200.0, 457.2078,300.0
+8,13,2 , 564.2781,200.0,  64.2781,300.0
+9, 5,2 , 561.1264,200.0,  61.1264,300.0''')
         pol = dict(self.policy_df.loc[1])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
         assert_ok(out, expected)
@@ -181,8 +185,13 @@ event_id,policy_id,claim,retention,nonprop1,nonprop2,nonprop3
     def test_policy3(self):
         # rur_Ant_1, WXLR_metro(500, 3500) + CatXL_Rural(200, 5000)
         expected = _df('''\
-event_id,policy_id,claim,retention,nonprop1,nonprop2,nonprop3
-25,      3,        3659.046,200.0, 3000,459.046,   0.0''')
+event_id,policy_id,claim,retention,nonprop1,nonprop2
+25,      3,        8500,700.0, 3000,4800''')
         pol = dict(self.policy_df.loc[2])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
         assert_ok(out, expected)
+        byevent = reinsurance.by_event(out, {}, self.treaty_df)
+        expec = _df('''\
+event_id,claim,retention,nonprop1,nonprop2,nonprop3
+25,      8500.0,   50.0,   3000.0,  4800.0,   650.0''')
+        assert_ok(byevent, expec)

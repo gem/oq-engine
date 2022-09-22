@@ -104,17 +104,18 @@ def parse(fname):
     fieldmap = {}
     reversemap = {} # propN->nameN
     max_cession = {}  # propN->cessionN
-    nonprop = dict(id=[], max_retention=[], limit=[])
+    nonprop = dict(id=[], type=[], max_retention=[], limit=[])
     for node in rmodel.fieldMap:
         fieldmap[node['input']] = col = node['oq']
         reversemap[col] = node['input']
         mce = node.get('max_cession_event')
         if mce:
             max_cession[col] = mce
-        treaty_type = node.get('type')
+        treaty_type = node.get('type', 'prop')
         assert treaty_type in (None, 'prop','wxlr', 'catxl'), treaty_type
         if treaty_type in ('wxlr', 'catxl'):
             nonprop['id'].append(col)
+            nonprop['type'].append(treaty_type)
             nonprop['max_retention'].append(node['max_retention'])
             nonprop['limit'].append(node['limit'])
     for name, col in fieldmap.items():
@@ -158,20 +159,24 @@ def apply_nonprop(cession, retention, maxret, limit):
 
 def claim_to_cessions(claim, policy, nonprops=()):
     """
+    :param claim: an array of claims
+    :param policy: a dictionary corresponding to a specific policy
+    :param nonprops: dataframe with nonprop treaties of type wxlr
+
     Converts an array of claims into a dictionary of arrays
 
     >>> df = pd.DataFrame({'id': ['nonprop1'], 'max_retention': [100_000],
-    ...                    'limit': [200_000]}).set_index('id')
+    ...                    'limit': [200_000], type: 'wxlr'}).set_index('id')
     >>> pol1 = {'prop1': .3, 'prop2': .5, 'nonprop1': True}
     >>> pol2 = {'prop1': .4, 'prop2': .4, 'nonprop1': True}
     >>> claim_to_cessions(np.array([900_000]), pol1, df)
-    {'claim': array([900000]), 'prop1': array([270000.]), 'prop2': array([450000.]), 'retention': array([100000.]), 'nonprop1': array([80000.])}
+    {'claim': array([900000]), 'retention': array([100000.]), 'prop1': array([270000.]), 'prop2': array([450000.]), 'nonprop1': array([80000.])}
 
     >>> claim_to_cessions(np.array([1_800_000]), pol2, df)
-    {'claim': array([1800000]), 'prop1': array([720000.]), 'prop2': array([720000.]), 'retention': array([160000.]), 'nonprop1': array([200000.])}
+    {'claim': array([1800000]), 'retention': array([260000.]), 'prop1': array([720000.]), 'prop2': array([720000.]), 'nonprop1': array([100000.])}
 
     >>> claim_to_cessions(np.array([80_000]), pol2, df)
-    {'claim': array([80000]), 'prop1': array([32000.]), 'prop2': array([32000.]), 'retention': array([16000.]), 'nonprop1': array([0.])}
+    {'claim': array([80000]), 'retention': array([16000.]), 'prop1': array([32000.]), 'prop2': array([32000.]), 'nonprop1': array([0.])}
     """
     # proportional cessions
     fractions = [policy[col] for col in policy if col.startswith('prop')]
@@ -191,11 +196,11 @@ def claim_to_cessions(claim, policy, nonprops=()):
                           nonprop['max_retention'], nonprop['limit'])
 
     # sanity check, uncomment it in case of errors
-    # tot = out['retention'].copy()
-    # for col in out:
-    #     if col.startswith(('prop', 'nonprop')):
-    #         tot += out[col]
-    # np.testing.assert_allclose(tot, out['claim'], rtol=1E-6)
+    tot = out['retention'].copy()
+    for col in out:
+        if col.startswith(('prop', 'nonprop')):
+            tot += out[col]
+    np.testing.assert_allclose(tot, out['claim'], rtol=1E-6)
     return {k: np.round(v, 6) for k, v in out.items()}
 
 
@@ -218,20 +223,24 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
     claim = scientific.insured_losses(losses, ded, lim)
     out['event_id'] = df.event_id.to_numpy()
     out['policy_id'] = [pol_dict['policy']] * len(df)
-    out.update(claim_to_cessions(claim, pol_dict, treaty_df))
+    wxlr_df = treaty_df[treaty_df.type == 'wxlr']
+    out.update(claim_to_cessions(claim, pol_dict, wxlr_df))
     return pd.DataFrame(out)
 
 
-def by_event(by_policy_df, max_cession):
+def by_event(by_policy_df, max_cession, treaty_df):
     """
     :param DataFrame by_policy_df: output of `by_policy`
     :param dict max_cession: maximum cession for proportional treaties
+    :param DataFrame treaty_df: treaties
     """
     df = by_policy_df.groupby('event_id').sum()
     del df['policy_id']
     dic = {'event_id': df.index.to_numpy()}
     for col in df.columns:
-        dic[col] = df[col].to_numpy() 
+        dic[col] = df[col].to_numpy()
+
+    # proportional overspill
     for col, cession in max_cession.items():
         over = dic[col] > cession
         overspill = np.maximum(dic[col] - cession, 0)
@@ -239,4 +248,12 @@ def by_event(by_policy_df, max_cession):
             dic['overspill' + col[4:]] = overspill
         dic['retention'][over] += dic[col][over] - cession
         dic[col][over] = cession
+
+    # catxl overspill
+    catxl = treaty_df[treaty_df.type == 'catxl']
+    for col, nonprop in catxl.iterrows():
+        dic[col] = np.zeros(len(df))
+        apply_nonprop(dic[col], dic['retention'],
+                      nonprop['max_retention'], nonprop['limit'])
+
     return pd.DataFrame(dic)
