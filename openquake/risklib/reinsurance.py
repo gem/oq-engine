@@ -196,11 +196,11 @@ def claim_to_cessions(claim, policy, nonprops=()):
                           nonprop['max_retention'], nonprop['limit'])
 
     # sanity check, uncomment it in case of errors
-    # tot = out['retention'].copy()
-    # for col in out:
-    #     if col.startswith(('prop', 'nonprop')):
-    #         tot += out[col]
-    # np.testing.assert_allclose(tot, out['claim'], rtol=1E-6)
+    tot = out['retention'].copy()
+    for col in out:
+        if col.startswith(('prop', 'nonprop')):
+            tot += out[col]
+    np.testing.assert_allclose(tot, out['claim'], rtol=1E-6)
     return {k: np.round(v, 6) for k, v in out.items()}
 
 
@@ -256,5 +256,4 @@ def by_event(by_policy_df, max_cession, treaty_df):
         apply_nonprop(dic[col], dic['retention'],
                       nonprop['max_retention'], nonprop['limit'])
 
-    import pdb; pdb.set_trace()
     return pd.DataFrame(dic)

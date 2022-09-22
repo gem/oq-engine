@@ -41,7 +41,7 @@ def assert_ok(got, exp):
 # NB: agg_id starts from 0, policy_id from 1
 risk_by_event = _df('''\
 event_id,agg_id,loss
-25,     2,      4159.046
+25,     2,      9159.046
 27,     1,      3141.0974
 28,     1,      3136.3154
 26,     1,      2859.9182
@@ -63,7 +63,7 @@ CSV_NP = '''\
 Policy,Limit,Deductible,WXLR_metro,WXLR_rural,CatXL_reg
 VA_region_1,8000,100,0,0,1
 VA_region_2,4000,200,1,1,1
-rur_Ant_1,  5000,500,1,1,0
+rur_Ant_1,  9000,500,1,1,0
 '''
 
 XML_NP = '''\
@@ -186,7 +186,12 @@ event_id,policy_id,claim,retention,nonprop1,nonprop2
         # rur_Ant_1, WXLR_metro(500, 3500) + CatXL_Rural(200, 5000)
         expected = _df('''\
 event_id,policy_id,claim,retention,nonprop1,nonprop2
-25,      3,        3659.046,200.0, 3000,459.046''')
+25,      3,        8500,700.0, 3000,4800''')
         pol = dict(self.policy_df.loc[2])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
         assert_ok(out, expected)
+        byevent = reinsurance.by_event(out, {}, self.treaty_df)
+        expec = _df('''\
+event_id,claim,retention,nonprop1,nonprop2,nonprop3
+25,      8500.0,   50.0,   3000.0,  4800.0,   650.0''')
+        assert_ok(byevent, expec)
