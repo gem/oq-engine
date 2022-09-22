@@ -405,7 +405,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             # print(by_policy)  # when debugging
             max_cession = self.datastore.get_attr('treaty_df', 'max_cession')
             rbe = reinsurance.by_event(
-                by_policy, self.treaty_df, json.loads(max_cession))
+                by_policy, json.loads(max_cession), self.treaty_df)
             self.datastore.create_df('reinsurance_by_event', rbe)
 
         if oq.avg_losses:
