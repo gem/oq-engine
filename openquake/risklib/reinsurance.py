@@ -176,11 +176,10 @@ def claim_to_cessions(claim, policy, nonprops=()):
     # proportional cessions
     fractions = [policy[col] for col in policy if col.startswith('prop')]
     assert sum(fractions) < 1
-    out = {'claim': claim}
+    out = {'claim': claim, 'retention': claim * (1. - sum(fractions))}
     for i, frac in enumerate(fractions, 1):
         cession = 'prop%d' % i
         out[cession] = claim * frac
-    out['retention'] = claim * (1. - sum(fractions))
     if len(nonprops) == 0:
         return {k: np.round(v, 6) for k, v in out.items()}
 
@@ -190,6 +189,13 @@ def claim_to_cessions(claim, policy, nonprops=()):
         if policy[col]:
             apply_nonprop(out[col], out['retention'],
                           nonprop['max_retention'], nonprop['limit'])
+
+    # sanity check, uncomment it in case of errors
+    # tot = out['retention'].copy()
+    # for col in out:
+    #     if col.startswith(('prop', 'nonprop')):
+    #         tot += out[col]
+    # np.testing.assert_allclose(tot, out['claim'], rtol=1E-6)
     return {k: np.round(v, 6) for k, v in out.items()}
 
 
