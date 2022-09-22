@@ -165,7 +165,7 @@ event_id,policy_id,claim,retention,nonprop1,nonprop2
 
     def test_policy2(self):
         # VA_region_2
-        # WXLR_metro(500, 3500) + CatXL_Rural(200, 5000) + CatXL_reg(50, 2500)
+        # WXLR_metro(500, 3500) + WXLR_rural(200, 5000) + CatXL_reg(50, 2500)
         expected = _df('''\
 event_id,policy_id,claim,retention,nonprop1,nonprop2
 0,27,2 ,2941.0974,200.0,2441.0974,300.0
@@ -183,7 +183,7 @@ event_id,policy_id,claim,retention,nonprop1,nonprop2
         assert_ok(out, expected)
 
     def test_policy3(self):
-        # rur_Ant_1, WXLR_metro(500, 3500) + CatXL_Rural(200, 5000)
+        # rur_Ant_1, WXLR_metro(500, 3500) + WXLR_rural(200, 5000)
         expected = _df('''\
 event_id,policy_id,claim,retention,nonprop1,nonprop2
 25,      3,        8500,700.0, 3000,4800''')
