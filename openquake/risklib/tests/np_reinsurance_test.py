@@ -17,15 +17,13 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import io
-import os
-import pathlib
 import unittest
 import pandas
+from openquake.baselib import general
 from openquake.risklib import reinsurance
 
-CDIR = pathlib.Path(os.path.dirname(__file__))
-
-def _df(string, sep=',', index_col=None):  # DataFrame from string
+def _df(string, sep=',', index_col=None):
+    # build a DataFrame from a string
     return pandas.read_csv(io.StringIO(string), sep=sep, index_col=index_col,
                            keep_default_na=False)
 
@@ -55,6 +53,43 @@ event_id	agg_id	loss
 5	0	761.1264
 ''', sep='\t')
 
+CSV = '''\
+Policy,Limit,Deductible,WXLR_metro,CatXL_rural,CatXL_reg
+VA_region_1,7850000,0,0,0,1
+VA_region_2,54000000,1080000,0,0,1
+VA_region_3,23300000,466000,0,0,1
+VA_region_4,16400000,328000,0,0,1
+VA_region_5,30000000,600000,0,0,1
+VA_region_6,7900000,0,0,0,1
+VA_region_7,52000000,1040000,0,0,1
+VA_region_8,25000000,500000,0,0,1
+VA_region_9,10000000,200000,0,0,1
+rur_Ant_1,1575000,31500,0,1,0
+rur_Ant_10,14250000,285000,0,1,0
+rur_Ant_100,8750000,175000,0,1,0
+'''
+
+XML = '''\
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+
+  <reinsuranceModel>
+    <description>reinsurance model</description>
+
+    <fieldMap>
+      <field oq="policy" input="Policy" />
+      <field oq="deductible" input="Deductible" />
+      <field oq="liability" input="Limit" />
+      <field oq="nonprop1" input="WXLR_metro" type="wxlr" max_retention="500" limit="3500" />
+      <field oq="nonprop2" input="CatXL_rural" type="catxl" max_retention="200" limit="5000" />
+      <field oq="nonprop3" input="CatXL_reg" type="catxl" max_retention="50" limit="5000" />
+    </fieldMap>
+
+    <policies>{}</policies>
+  </reinsuranceModel>
+</nrml>
+'''
 
 class ReinsuranceTestCase(unittest.TestCase):
     # "WXLR_metro" max_retention="500" limit="3500"
@@ -62,8 +97,9 @@ class ReinsuranceTestCase(unittest.TestCase):
     # "CatXL_reg" max_retention="50" limit="5000"
     @classmethod
     def setUpClass(cls):
+        csvfname = general.gettemp(CSV)
         policy_df, treaty_df, maxc, fmap = reinsurance.parse(
-            CDIR / 'reinsurance.xml')
+            general.gettemp(XML.format(csvfname)))
         assert not maxc  # there are no proportional treaties
         print(policy_df)
         print(treaty_df)
