@@ -266,6 +266,7 @@ def by_policy_event(agglosses_df, policy_df, max_cession, treaty_df):
     :param DataFrame policy_df: policies
     :param dict max_cession: maximum cession for proportional treaties
     :param DataFrame treaty_df: treaties
+    :returns: (by_policy_df, by_event_df)
     """
     dfs = []
     for _, policy in policy_df.iterrows():
