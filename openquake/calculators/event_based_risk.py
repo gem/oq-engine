@@ -396,16 +396,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             agg_loss_table = alt[alt.loss_id == LOSSID[lt]]
             if len(agg_loss_table) == 0:
                 raise ValueError('No losses for reinsurance %s' % lt)
-            dfs = []
-            for _, policy in self.policy_df.iterrows():
-                df = reinsurance.by_policy(
-                    agg_loss_table, dict(policy), self.treaty_df)
-                dfs.append(df)
-            by_policy = pandas.concat(dfs)
-            # print(by_policy)  # when debugging
             max_cession = self.datastore.get_attr('treaty_df', 'max_cession')
-            rbe = reinsurance.by_event(
-                by_policy, json.loads(max_cession), self.treaty_df)
+            rbe = reinsurance.by_event(agg_loss_table, self.policy_df,
+                                       json.loads(max_cession), self.treaty_df)
             self.datastore.create_df('reinsurance_by_event', rbe)
 
         if oq.avg_losses:
