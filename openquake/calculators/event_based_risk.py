@@ -166,12 +166,14 @@ def event_based_risk(df, oqparam, dstore, monitor):
                             int(oqparam.asset_correlation))
 
     def outputs():
-        mon_risk = monitor('computing risk', measuremem=False)
-        for taxo, adf in assetcol.to_dframe().groupby('taxonomy'):
+        mon_risk = monitor('computing risk', measuremem=True)
+        # can aggregate millions of asset by using few GBs of RAM
+        gbt = assetcol.to_dframe().groupby('taxonomy')
+        for taxo, adf in gbt:
             gmf_df = df[numpy.isin(df.sid.to_numpy(), adf.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
-            with mon_risk:
+            with mon_risk:  # this is using a lot of memory
                 adf = adf.set_index('ordinal')
                 out = crmodel.get_output(adf, gmf_df, oqparam._sec_losses, rng)
             yield out
@@ -331,8 +333,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             eids = self.datastore['gmf_data/eid'][:]
             self.log_info(eids)
             self.datastore.swmr_on()  # crucial!
+            allargs = list(self.gen_args(eids))
             smap = parallel.Starmap(
-                event_based_risk, self.gen_args(eids), h5=self.datastore.hdf5)
+                event_based_risk, allargs, h5=self.datastore.hdf5)
             smap.monitor.save('assets', self.assetcol.to_dframe('id'))
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
