@@ -43,8 +43,13 @@ def get_ded_lim(losses, policy):
     return ded, lim
 
 
-def check_fields(fields, dframe, fname):
+def check_fields(fields, dframe, idxdict, fname):
     """
+    :param fields: fields to check (the first field is the primary key)
+    :param dframe: DataFrame with the contents of fname
+    :param idxdict: dictionary key -> index (starting from 1)
+    :param fname: file containing the fields to check
+
     Make sure the right fields are present in a CSV file. For instance:
 
     >>> check_fields(['deductible'], pd.DataFrame(), '*')
@@ -52,13 +57,14 @@ def check_fields(fields, dframe, fname):
      ...
     openquake.baselib.InvalidFile: *: deductible is missing in the header
     """
-    for field in fields:
+    key = fields[0]
+    idx = [idxdict[name] for name in dframe[key]]  # indices starting from 1
+    dframe[key] = idx
+    for no, field in enumerate(fields):
         if field not in dframe.columns:
             raise InvalidFile(f'{fname}: {field} is missing in the header')
-        else:
+        elif no > 0:  # for the value fields
             arr = dframe[field].to_numpy()
-            if len(arr) == 0:
-                raise InvalidFile(f'{fname}: is empty')
             if isinstance(arr[0], str):  # there was a `%` in the column
                 vals = np.zeros(len(arr), float)
                 _abs = np.zeros(len(arr), bool)
@@ -73,7 +79,6 @@ def check_fields(fields, dframe, fname):
                 dframe[field + '_abs'] = _abs
             else:  # assume all absolute
                 dframe[field + '_abs'] = np.ones(len(arr))
-
 
 # validate the file policy.csv
 def check_fractions(colnames, colvalues, fname):
@@ -95,8 +100,11 @@ def check_fractions(colnames, colvalues, fname):
                              f'under 1, got {tot}')
 
 
-def parse(fname):
+def parse(fname, policy_idx):
     """
+    :param fname: CSV file containing the policies
+    :param policy_idx: dictionary policy name -> policy index
+
     Parse a reinsurance.xml file and returns
     (policy_df, treaty_df, max_cession, field_map)
     """
@@ -124,7 +132,7 @@ def parse(fname):
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
-    check_fields(['deductible', 'liability'], df, fname)
+    check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname)
     df['deductible_abs'] = np.ones(len(df), bool)
     df['liability_abs'] = np.ones(len(df), bool)
 

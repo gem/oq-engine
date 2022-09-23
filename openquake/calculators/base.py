@@ -63,14 +63,6 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32),
                         ('len', U16)])
 
-def validate_probs(probs, msg):
-    """
-    Validate an array of probabilities
-    """
-    bad = (probs < 0) | (probs > 1)
-    if bad.any():
-        raise ValueError('%s: invalid probabilities %s' % (msg, probs[bad]))
-
 
 def check_imtls(this, parent):
     """
@@ -718,10 +710,13 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         policy_df = general.AccumDict(accum=[])
+        # here is an example of policy_idx: {'?': 0, 'B': 1, 'A': 2}
+        policy_idx = self.assetcol.tagcol.policy_idx
         for loss_type, fname in lt_fnames:
             if 'reinsurance' in oq.inputs:
                 assert len(lt_fnames) == 1, lt_fnames
-                df, treaty_df, max_cession, fieldmap = reinsurance.parse(fname)
+                df, treaty_df, max_cession, fieldmap = reinsurance.parse(
+                    fname, policy_idx)
                 treaties = set(treaty_df.id)
                 assert len(treaties) == len(treaty_df), 'Not unique treaties'
                 self.datastore.create_df('treaty_df', treaty_df,
@@ -731,14 +726,12 @@ class HazardCalculator(BaseCalculator):
             else:  # insurance
                 #  `deductible` and `insurance_limit` as fractions
                 df = pandas.read_csv(fname, keep_default_na=False)
-                validate_probs(df.insurance_limit.to_numpy(),
-                               f'insurance_limit in {fname}')
-            policy_idx = self.assetcol.tagcol.policy_idx
+                df['policy'] = [policy_idx[pol] for pol in df.policy]
+                reinsurance.check_fractions(
+                    ['insurance_limit'],
+                    [df.insurance_limit.to_numpy()], fname)
             for col in df.columns:
-                if col == 'policy':
-                    policy_df[col].extend([policy_idx[x] for x in df[col]])
-                else:
-                    policy_df[col].extend(df[col])
+                policy_df[col].extend(df[col])
             policy_df['loss_type'].extend([loss_type] * len(df))
         assert policy_df
         self.policy_df = pandas.DataFrame(policy_df)
