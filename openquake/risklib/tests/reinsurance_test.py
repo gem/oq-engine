@@ -144,7 +144,6 @@ class ReinsuranceTestCase(unittest.TestCase):
         xmlfname = general.gettemp(XML_NP.format(csvfname))
         cls.policy_df, treaty_df, maxc, fmap = reinsurance.parse(
             xmlfname, policy_idx)
-        cls.policy_df['policy'] = range(1, 4)  # starts from 1
         assert not maxc  # there are no proportional treaties
         print(cls.policy_df)
         print(treaty_df)

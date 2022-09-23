@@ -46,7 +46,7 @@ def check_fields(fields, dframe, fname, idxdict, refvalues=None):
     The size of `dframe` must be the same as the length of `refvalues`.
     """
     key = fields[0]
-    idx = [idxdict[name] - 1 for name in dframe[key]]
+    idx = [idxdict[name] for name in dframe[key]]  # indices starting from 1
     n = len(idx)
     for fieldno, field in enumerate(fields):
         if field not in dframe.columns:
@@ -57,10 +57,11 @@ def check_fields(fields, dframe, fname, idxdict, refvalues=None):
                 vals = np.zeros(n, float)
                 for i, x in zip(idx, arr):
                     if x.endswith('%'):
-                        vals[i] = float(x[:-1]) / 100. * refvalues[i]
+                        vals[i - 1] = float(x[:-1]) / 100. * refvalues[i - 1]
                     else:
-                        vals[i] = float(x)
+                        vals[i - 1] = float(x)
                 dframe[field] = vals
+    dframe[key] = idx
 
 
 # validate the file policy.csv

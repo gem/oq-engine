@@ -735,10 +735,7 @@ class HazardCalculator(BaseCalculator):
                     ['policy', 'insurance_limit'],
                     [df.insurance_limit.to_numpy()], fname, policy_idx)
             for col in df.columns:
-                if col == 'policy':
-                    policy_df[col].extend([policy_idx[x] for x in df[col]])
-                else:
-                    policy_df[col].extend(df[col])
+                policy_df[col].extend(df[col].to_numpy())
             policy_df['loss_type'].extend([loss_type] * len(df))
         assert policy_df
         self.policy_df = pandas.DataFrame(policy_df)
