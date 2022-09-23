@@ -727,9 +727,9 @@ class HazardCalculator(BaseCalculator):
                 #  `deductible` and `insurance_limit` as fractions
                 df = pandas.read_csv(fname, keep_default_na=False)
                 df['policy'] = [policy_idx[pol] for pol in df.policy]
-                reinsurance.check_fractions(
-                    ['insurance_limit'],
-                    [df.insurance_limit.to_numpy()], fname)
+                for col in ['deductible', 'insurance_limit']:
+                    reinsurance.check_fractions(
+                        [col], [df[col].to_numpy()], fname)
             for col in df.columns:
                 policy_df[col].extend(df[col])
             policy_df['loss_type'].extend([loss_type] * len(df))
