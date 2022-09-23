@@ -710,6 +710,8 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         policy_df = general.AccumDict(accum=[])
+        # here is an example of policy_idx: {'?': 0, 'B': 1, 'A': 2}
+        policy_idx = self.assetcol.tagcol.policy_idx
         for loss_type, fname in lt_fnames:
             if 'reinsurance' in oq.inputs:
                 assert len(lt_fnames) == 1, lt_fnames
@@ -719,7 +721,7 @@ class HazardCalculator(BaseCalculator):
                 else:
                     agg_values = arr[loss_type]
                 df, treaty_df, max_cession, fieldmap = reinsurance.parse(
-                    fname, agg_values[:-1])  # discard the last agg_value
+                    fname, policy_idx, agg_values)
                 treaties = set(treaty_df.id)
                 assert len(treaties) == len(treaty_df), 'Not unique treaties'
                 self.datastore.create_df('treaty_df', treaty_df,
@@ -730,8 +732,8 @@ class HazardCalculator(BaseCalculator):
                 #  `deductible` and `insurance_limit` as fractions
                 df = pandas.read_csv(fname, keep_default_na=False)
                 reinsurance.check_fractions(
-                    ['insurance_limit'], [df.insurance_limit.to_numpy()], fname)
-            policy_idx = self.assetcol.tagcol.policy_idx
+                    ['policy', 'insurance_limit'],
+                    [df.insurance_limit.to_numpy()], fname, policy_idx)
             for col in df.columns:
                 if col == 'policy':
                     policy_df[col].extend([policy_idx[x] for x in df[col]])

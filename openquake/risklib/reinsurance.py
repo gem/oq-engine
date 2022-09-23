@@ -28,27 +28,36 @@ KNOWN_LOSS_TYPES = {
     'value-structural', 'value-nonstructural', 'value-contents'}
 
 
-def check_fields(fields, dframe, fname, aggvalues):
+def check_fields(fields, dframe, fname, idxdict, refvalues=None):
     """
+    :param fields: fields to check (can contain absolute values or fraction)
+    :param dframe: DataFrame with the contents of fname
+    :param fname: file containing the fields to check
+    :param refvalues: reference values used to multiply the fractions
+
     Make sure the right fields are present in a CSV file. For instance:
 
     >>> check_fields(['deductible'], pd.DataFrame(), '*')
     Traceback (most recent call last):
      ...
     openquake.baselib.InvalidFile: *: deductible is missing in the header
+
+    Also, converts relative values to absolute values by using the refvalues.
+    The size of `dframe` must be the same as the length of `refvalues`.
     """
-    n = len(aggvalues)  # number of aggregations (policies)
-    for field in fields:
+    key = fields[0]
+    idx = [idxdict[name] - 1 for name in dframe[key]]
+    n = len(idx)
+    for fieldno, field in enumerate(fields):
         if field not in dframe.columns:
             raise InvalidFile(f'{fname}: {field} is missing in the header')
-        else:
+        elif fieldno > 0:  # field 0 is the key, the others the values
             arr = dframe[field].to_numpy()
-            assert len(arr) == n, (len(arr), n)
             if isinstance(arr[0], str):  # there was a `%` in the column
                 vals = np.zeros(n, float)
-                for i, x in enumerate(arr):
+                for i, x in zip(idx, arr):
                     if x.endswith('%'):
-                        vals[i] = float(x[:-1]) / 100. * aggvalues[i]
+                        vals[i] = float(x[:-1]) / 100. * refvalues[i]
                     else:
                         vals[i] = float(x)
                 dframe[field] = vals
@@ -74,8 +83,12 @@ def check_fractions(colnames, colvalues, fname):
                              f'under 1, got {tot}')
 
 
-def parse(fname, agg_values=None):
+def parse(fname, policy_idx, totvalues=None):
     """
+    :param fname: path to a CSV file containing policies
+    :param policy_idx: dictionary policy name -> policy index
+    :param totvalues: total values of the asset for each policy
+
     Parse a reinsurance.xml file and returns
     (policy_df, treaty_df, max_cession, field_map)
     """
@@ -103,7 +116,8 @@ def parse(fname, agg_values=None):
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
-    check_fields(['deductible', 'liability'], df, fname, agg_values)
+    check_fields(['policy', 'deductible', 'liability'],
+                 df, fname, policy_idx, totvalues)
 
     # validate policy input
     colnames = []
