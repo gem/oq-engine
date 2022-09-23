@@ -36,7 +36,7 @@ def assert_ok(got, exp):
     if len(cmp):
         sys.exit(str(got))       
     
-
+policy_idx = {'?': 0, 'VA_region_1': 1, 'VA_region_2': 2, 'rur_Ant_1': 3}
 
 # NB: agg_id starts from 0, policy_id from 1
 risk_by_event = _df('''\
@@ -108,28 +108,31 @@ class InvalidFractionsTestCase(unittest.TestCase):
     def test_negative_fraction(self):
         csvfname = general.gettemp('''\
 policy,liability,deductible,qshared,surplus
-pol1,10000,100,.1,.2
-pol2,10000,100,.1,-.2''')
+VA_region_1,10000,100,.1,.2
+VA_region_2,10000,100,.1,-.2''')
+        xmlfname = general.gettemp(XML_PR.format(csvfname))
         with self.assertRaises(ValueError) as ctx:
-            reinsurance.parse(general.gettemp(XML_PR.format(csvfname)))
+            reinsurance.parse(xmlfname, policy_idx)
         self.assertIn(':3: invalid fraction surplus=-0.2', str(ctx.exception))
 
     def test_toolarge_fraction(self):
         csvfname = general.gettemp('''\
 policy,liability,deductible,qshared,surplus
-pol1,10000,100,.1,.2
-pol2,10000,100,.1,1.2''')
+VA_region_1,10000,100,.1,.2
+VA_region_2,10000,100,.1,1.2''')
+        xmlfname = general.gettemp(XML_PR.format(csvfname))
         with self.assertRaises(ValueError) as ctx:
-            reinsurance.parse(general.gettemp(XML_PR.format(csvfname)))
+            reinsurance.parse(xmlfname, policy_idx)
         self.assertIn(':3: invalid fraction surplus=1.2', str(ctx.exception))
 
     def test_excess_fraction(self):
         csvfname = general.gettemp('''\
 policy,liability,deductible,qshared,surplus
-pol1,10000,100,.1,.2
-pol2,10000,100,.3,.8''')
+VA_region_1,10000,100,.1,.2
+VA_region_2,10000,100,.3,.8''')
+        xmlfname = general.gettemp(XML_PR.format(csvfname))
         with self.assertRaises(ValueError) as ctx:
-            reinsurance.parse(general.gettemp(XML_PR.format(csvfname)))
+            reinsurance.parse(xmlfname, policy_idx)
         self.assertIn(':3 the sum of the fractions must be under 1, got 1.1',
                       str(ctx.exception))
 
@@ -138,9 +141,9 @@ class ReinsuranceTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         csvfname = general.gettemp(CSV_NP)
+        xmlfname = general.gettemp(XML_NP.format(csvfname))
         cls.policy_df, treaty_df, maxc, fmap = reinsurance.parse(
-            general.gettemp(XML_NP.format(csvfname)))
-        cls.policy_df['policy'] = range(1, 4)  # starts from 1
+            xmlfname, policy_idx)
         assert not maxc  # there are no proportional treaties
         print(cls.policy_df)
         print(treaty_df)
