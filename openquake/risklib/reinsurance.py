@@ -49,13 +49,6 @@ def check_fields(fields, dframe, idxdict, fname):
     :param dframe: DataFrame with the contents of fname
     :param idxdict: dictionary key -> index (starting from 1)
     :param fname: file containing the fields to check
-
-    Make sure the right fields are present in a CSV file. For instance:
-
-    >>> check_fields(['deductible'], pd.DataFrame(), '*')
-    Traceback (most recent call last):
-     ...
-    openquake.baselib.InvalidFile: *: deductible is missing in the header
     """
     key = fields[0]
     idx = [idxdict[name] for name in dframe[key]]  # indices starting from 1
