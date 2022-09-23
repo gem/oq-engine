@@ -28,22 +28,7 @@ KNOWN_LOSS_TYPES = {
     'value-structural', 'value-nonstructural', 'value-contents'}
 
 
-def get_ded_lim(losses, policy):
-    """
-    :returns: deductible and liability as arrays of absolute values
-    """
-    if policy['deductible_abs']:
-        ded = policy['deductible']
-    else:
-        ded = losses * policy['deductible']
-    if policy['liability_abs']:
-        lim = policy['liability']
-    else:
-        lim = losses * policy['liability']
-    return ded, lim
-
-
-def check_fields(fields, dframe, fname):
+def check_fields(fields, dframe, fname, aggvalues):
     """
     Make sure the right fields are present in a CSV file. For instance:
 
@@ -52,27 +37,21 @@ def check_fields(fields, dframe, fname):
      ...
     openquake.baselib.InvalidFile: *: deductible is missing in the header
     """
+    n = len(aggvalues)  # number of aggregations (policies)
     for field in fields:
         if field not in dframe.columns:
             raise InvalidFile(f'{fname}: {field} is missing in the header')
         else:
             arr = dframe[field].to_numpy()
-            if len(arr) == 0:
-                raise InvalidFile(f'{fname}: is empty')
+            assert len(arr) == n, (len(arr), n)
             if isinstance(arr[0], str):  # there was a `%` in the column
-                vals = np.zeros(len(arr), float)
-                _abs = np.zeros(len(arr), bool)
+                vals = np.zeros(n, float)
                 for i, x in enumerate(arr):
                     if x.endswith('%'):
-                        vals[i] = float(x[:-1]) / 100.
-                        _abs[i] = False
+                        vals[i] = float(x[:-1]) / 100. * aggvalues[i]
                     else:
                         vals[i] = float(x)
-                        _abs[i] = True
                 dframe[field] = vals
-                dframe[field + '_abs'] = _abs
-            else:  # assume all absolute
-                dframe[field + '_abs'] = np.ones(len(arr))
 
 
 # validate the file policy.csv
@@ -95,7 +74,7 @@ def check_fractions(colnames, colvalues, fname):
                              f'under 1, got {tot}')
 
 
-def parse(fname):
+def parse(fname, agg_values=None):
     """
     Parse a reinsurance.xml file and returns
     (policy_df, treaty_df, max_cession, field_map)
@@ -124,9 +103,7 @@ def parse(fname):
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
-    check_fields(['deductible', 'liability'], df, fname)
-    df['deductible_abs'] = np.ones(len(df), bool)
-    df['liability_abs'] = np.ones(len(df), bool)
+    check_fields(['deductible', 'liability'], df, fname, agg_values)
 
     # validate policy input
     colnames = []
@@ -219,8 +196,8 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
     out = {}
     df = agglosses_df[agglosses_df.agg_id == pol_dict['policy'] - 1]
     losses = df.loss.to_numpy()
-    ded, lim = get_ded_lim(losses, pol_dict)
-    claim = scientific.insured_losses(losses, ded, lim)
+    claim = scientific.insured_losses(
+        losses, pol_dict['deductible'], pol_dict['liability'])
     out['event_id'] = df.event_id.to_numpy()
     out['policy_id'] = [pol_dict['policy']] * len(df)
     wxlr_df = treaty_df[treaty_df.type == 'wxlr']

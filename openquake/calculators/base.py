@@ -713,7 +713,13 @@ class HazardCalculator(BaseCalculator):
         for loss_type, fname in lt_fnames:
             if 'reinsurance' in oq.inputs:
                 assert len(lt_fnames) == 1, lt_fnames
-                df, treaty_df, max_cession, fieldmap = reinsurance.parse(fname)
+                arr = self.assetcol.get_agg_values(oq.aggregate_by)
+                if '+' in loss_type:
+                    agg_values = sum([arr[lt] for lt in loss_type.split('+')])
+                else:
+                    agg_values = arr[loss_type]
+                df, treaty_df, max_cession, fieldmap = reinsurance.parse(
+                    fname, agg_values[:-1])  # discard the last agg_value
                 treaties = set(treaty_df.id)
                 assert len(treaties) == len(treaty_df), 'Not unique treaties'
                 self.datastore.create_df('treaty_df', treaty_df,
