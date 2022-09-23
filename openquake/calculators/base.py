@@ -63,14 +63,6 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32),
                         ('len', U16)])
 
-def validate_probs(probs, msg):
-    """
-    Validate an array of probabilities
-    """
-    bad = (probs < 0) | (probs > 1)
-    if bad.any():
-        raise ValueError('%s: invalid probabilities %s' % (msg, probs[bad]))
-
 
 def check_imtls(this, parent):
     """
@@ -731,8 +723,8 @@ class HazardCalculator(BaseCalculator):
             else:  # insurance
                 #  `deductible` and `insurance_limit` as fractions
                 df = pandas.read_csv(fname, keep_default_na=False)
-                validate_probs(df.insurance_limit.to_numpy(),
-                               f'insurance_limit in {fname}')
+                reinsurance.check_fractions(
+                    ['insurance_limit'], [df.insurance_limit.to_numpy()], fname)
             policy_idx = self.assetcol.tagcol.policy_idx
             for col in df.columns:
                 if col == 'policy':
