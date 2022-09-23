@@ -198,7 +198,7 @@ event_id,policy_id,claim,retention,nonprop1,nonprop2
         expected = _df('''\
 event_id,claim,retention,nonprop1,nonprop2,nonprop3
 25,      8500.0,   50.0,   3000.0,  4800.0,   650.0''', index_col='event_id')
-        byevent = reinsurance.by_event(risk_by_event, self.policy_df, {},
-                                       self.treaty_df)
+        bypolicy, byevent = reinsurance.by_policy_event(
+            risk_by_event, self.policy_df, {}, self.treaty_df)
         byevent = byevent[byevent.event_id == 25].set_index('event_id')
         assert_ok(byevent, expected)
