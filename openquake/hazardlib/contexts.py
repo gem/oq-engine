@@ -20,6 +20,7 @@ import re
 import abc
 import copy
 import time
+import scipy.stats as sts
 import warnings
 import itertools
 import collections
@@ -28,6 +29,7 @@ import numpy
 import shapely
 from scipy.interpolate import interp1d
 
+from openquake.hazardlib.imt import from_string
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
 from openquake.baselib.performance import Monitor, split_array, compile, numba
@@ -275,7 +277,6 @@ class Collapser(object):
         allsids = [[sid] for sid in close['sids']]
         if len(far):  # this is slow
             allsids.extend(split_array(far['sids'], uic[1], uic[2]))
-        # print(len(out), len(ctx))
         return out.view(numpy.recarray), allsids
 
 
@@ -1255,7 +1256,7 @@ def print_finite_size(rups):
 
 class PmapMaker(object):
     """
-    A class to compute the PoEs from a given source
+    A class to compute the PoEs or the joint MRD from a given source
     """
     def __init__(self, cmaker, srcfilter, group):
         vars(self).update(vars(cmaker))
@@ -1394,6 +1395,198 @@ class PmapMaker(object):
             srcid = basename(self.sources[0])
             dic['pmap_by_src'] = {srcid: pmap}
         return dic
+
+
+class MRDMaker(object):
+    """
+    A class to compute the joint MRD
+
+    :param cmaker:
+    :param srcfilter:
+    :param group:
+    :param corrm:
+    """
+    def __init__(self, cmaker, srcfilter, group, corrm):
+        vars(self).update(vars(cmaker))
+        self.cmaker = cmaker
+        self.srcfilter = srcfilter
+        self.N = len(self.srcfilter.sitecol.complete)
+        try:
+            self.sources = group.sources
+        except AttributeError:  # already a list of sources
+            self.sources = group
+        self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
+        self.cmaker.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
+        self.fewsites = self.N <= cmaker.max_sites_disagg
+        self.corrm = corrm
+
+    def _get_ctxs(self, src):
+        sites = self.srcfilter.get_close_sites(src)
+        if sites is None:
+            return []
+        ctxs = self.cmaker.get_ctxs(src, sites)
+        if hasattr(src, 'mutex_weight'):
+            for ctx in ctxs:
+                if ctx.weight.any():
+                    ctx['weight'] *= src.mutex_weight
+                else:
+                    ctx['weight'] = src.mutex_weight
+        if self.fewsites:  # keep rupdata in memory (before collapse)
+            for ctx in ctxs:
+                self.rupdata.append(ctx)
+        return ctxs
+
+    def _make_mrd_indep(self):
+        """
+        Independent sources
+        """
+        keys = list(self.imtls.keys())
+        # MRD is a 4-D array with shape |imls| x |imls| x Number of GSIMS
+        mrd = numpy.zeros(shape=(len(self.imtls[keys[0]])-1,
+                                 len(self.imtls[keys[0]])-1,
+                                 len(self.srcfilter.sitecol),
+                                 len(self.gsims)))
+        # Process sources
+        cm = self.cmaker
+        allctxs = []
+        ctxs_mb = 0
+        totlen = 0
+        t0 = time.time()
+        for src in self.sources:
+            ctxs = self._get_ctxs(src)
+            ctxs_mb += sum(ctx.nbytes for ctx in ctxs) / TWO20  # TWO20=1MB
+            src.nsites = sum(len(ctx) for ctx in ctxs)
+            totlen += src.nsites
+            allctxs.extend(ctxs)
+            if ctxs_mb > MAX_MB:
+                # Create mrds
+                _get_mrd(allctxs, cm, self.corrm, mrd)
+                allctxs.clear()
+                ctxs_mb = 0
+        if allctxs:
+            # Here we call the context Maker
+            _get_mrd(allctxs, cm, self.corrm, mrd)
+            # cm.get_pmap(concat(allctxs), pmap)
+            allctxs.clear()
+        # Rupture data
+        dt = time.time() - t0
+        nsrcs = len(self.sources)
+        for src in self.sources:
+            self.source_data['src_id'].append(src.source_id)
+            self.source_data['grp_id'].append(src.grp_id)
+            self.source_data['nsites'].append(src.nsites)
+            self.source_data['esites'].append(src.esites)
+            self.source_data['nrupts'].append(src.num_ruptures)
+            self.source_data['weight'].append(src.weight)
+            self.source_data['ctimes'].append(
+                dt * src.nsites / totlen if totlen else dt / nsrcs)
+            self.source_data['taskno'].append(cm.task_no)
+
+        # Computing the MRD
+        return mrd
+
+    def make_mrd(self):
+        """
+        Compute the joint mean rate density
+
+        :returns:
+            A tuple containing the 'mrd' and the logarithm of the two IMLs
+        """
+        self.rupdata = []
+        self.source_data = AccumDict(accum=[])
+        mrd = self._make_mrd_indep()
+        return mrd
+
+
+def _get_mrd(allctxs, cm, crosscorr, mrd):
+    """
+    This computes the mean rate density by means of the multivariate
+    normal function available in scipy
+    """
+    PLOT = True
+
+    # Correlation matrix
+    keys = list(cm.imtls.keys())
+    imts = [from_string(k) for k in keys]
+    corrm = crosscorr.get_cross_correlation_mtx(imts)
+
+    # Compute mean and standard deviation
+    [mea, sig, _, _] = cm.get_mean_stds(allctxs)
+
+    # Unique source and site IDs
+    sit_i = numpy.unique(allctxs[0].sids)
+    src_i = numpy.unique(allctxs[0].src_id)
+    rup_i = {}
+    for i in src_i:
+        idx = allctxs[0].src_id == i
+        rup_i[i] = numpy.unique(allctxs[0].rup_id[idx])
+
+    # Computing the MRD
+    im1 = numpy.log(cm.imtls[keys[0]])
+    im2 = numpy.log(cm.imtls[keys[1]])
+
+    # Build the covariance matrix. mea and sig shape: G x L x N where G is
+    # the number of GMMs, L is the number of intensity measure types and N
+    # is the number of sites
+    trate = 0
+    for g, _ in enumerate(cm.gsims):
+        for s in sit_i:
+            for ss in src_i:
+                for sr in rup_i[ss]:
+
+                    ctx_id = numpy.nonzero(((allctxs[0].sids == s) &
+                                            (allctxs[0].src_id == ss) &
+                                            (allctxs[0].rup_id == sr)))[0]
+
+                    assert len(ctx_id) == 1
+                    if len(ctx_id) < 1:
+                        continue
+
+                    slc0 = numpy.index_exp[g, :, ctx_id[0]]
+                    slc1 = numpy.index_exp[g, 0, ctx_id[0]]
+                    slc2 = numpy.index_exp[g, 1, ctx_id[0]]
+
+                    cov = corrm[0, 1] * (sig[slc1] * sig[slc2])
+                    comtx = numpy.array([[sig[slc1]**2, cov],
+                                         [cov, sig[slc2]**2]])
+
+                    # Create bivariate gaussian distribution.
+                    tmp = numpy.squeeze(mea[slc0])
+                    mvn = sts.multivariate_normal(tmp, comtx)
+
+                    # Lower-left
+                    x1, x2 = numpy.meshgrid(im1[:-1], im2[:-1], sparse=False)
+                    vals_ll = mvn.cdf(numpy.dstack((x1, x2)))
+                    # Lower-right
+                    x1, x2 = numpy.meshgrid(im1[1:], im2[:-1], sparse=False)
+                    vals_lr = mvn.cdf(numpy.dstack((x1, x2)))
+                    # Upper-left
+                    x1, x2 = numpy.meshgrid(im1[:-1], im2[1:], sparse=False)
+                    vals_ul = mvn.cdf(numpy.dstack((x1, x2)))
+                    # Upper-right
+                    x1, x2 = numpy.meshgrid(im1[1:], im2[1:], sparse=False)
+                    vals_ur = mvn.cdf(numpy.dstack((x1, x2)))
+
+                    # Compute the values in each cell
+                    partial = vals_ur - vals_ul - vals_lr + vals_ll
+
+                    # Remove values that go below zero (mostly numerical
+                    # errors)
+                    idx = partial < 0
+                    partial[idx] = numpy.abs(partial[idx])
+
+                    # Check
+                    msg = f'{numpy.min(partial):.8f} {numpy.max(partial):.8f}'
+                    assert ((numpy.min(partial) >= 0.0) &
+                            (numpy.max(partial) <= 1), msg)
+
+                    # Scaling the joint PMF by the rate of occurrence of the
+                    # rupture. TODO address the case where we have the poes
+                    # instead of rates. MRD has shape: |imls| x |imls| x
+                    # |sites| x |gmms|
+                    mrd[:, :, s, g] += (
+                        allctxs[0].occurrence_rate[ctx_id[0]] * partial)
+                    trate += allctxs[0].occurrence_rate[ctx_id[0]]
 
 
 class BaseContext(metaclass=abc.ABCMeta):

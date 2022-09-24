@@ -19,6 +19,7 @@
 import os
 import unittest
 import numpy
+import matplotlib.pyplot as plt
 
 from openquake.baselib.general import DictArray
 from openquake.hazardlib import read_input, calc
@@ -26,7 +27,7 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
-    Effect, ContextMaker, Collapser, get_distances)
+    Effect, ContextMaker, Collapser, get_distances, MRDMaker, PmapMaker)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.rupture import \
@@ -42,6 +43,10 @@ from openquake.hazardlib.geo.surface.planar import (
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
+from openquake.hazardlib.source import SimpleFaultSource
+from openquake.hazardlib.cross_correlation import BakerJayaram2008
+from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 
 PLOTTING = False
 aac = numpy.testing.assert_allclose
@@ -557,3 +562,117 @@ class PlanarDistancesTestCase(unittest.TestCase):
         for par in ('rx', 'ry0', 'rjb', 'rhypo', 'repi'):
             dist = get_distances_planar(planar, sites, par)[0]
             aac(dist, ctx[par], err_msg=par)
+
+
+def _get_src():
+    # MFD
+    incr_mfd = EvenlyDiscretizedMFD(
+        min_mag=6.0, bin_width=0.5, occurrence_rates=[0.001, 0.0005])
+    # Source
+    simple = SimpleFaultSource(
+        source_id="3",
+        name="Test",
+        tectonic_region_type="Crust",
+        mfd=incr_mfd,
+        rupture_mesh_spacing=5.0,
+        magnitude_scaling_relationship=WC1994(),
+        rupture_aspect_ratio=1.5,
+        upper_seismogenic_depth=0.0,
+        lower_seismogenic_depth=20.0,
+        fault_trace=Line([Point(-121.82290, 37.73010),
+                          Point(-122.03880, 37.87710)]),
+        dip=45.0,
+        rake=30.0,
+        temporal_occurrence_model=PoissonTOM(1.))
+    simple.grp_id = '1'
+    return simple
+
+
+class MRDMakeTestCase(unittest.TestCase):
+
+    def setUp(self):
+        gm = AbrahamsonEtAl2014()
+        imtls = {'SA(0.2)': numpy.logspace(-3.0, 0.3, 40),
+                 'SA(1.0)': numpy.logspace(-3.0, 0.3, 40)}
+        self.corrm = BakerJayaram2008()
+        oqp = {'imtls': imtls, 'truncation_level': 9}
+        self.cmaker = ContextMaker('Crust', [gm], oqp)
+        site1 = Site(Point(-121.9, 37.8), 760, z1pt0=30., z2pt5=0.5)
+        site2 = Site(Point(-121.9, 37.7), 760, z1pt0=30., z2pt5=0.5)
+        site3 = Site(Point(-121.9, 37.6), 760, z1pt0=30., z2pt5=0.5)
+        sitecol = SiteCollection([site1, site2, site3])
+        #sitecol = SiteCollection([site1])
+        self.srcfilter = SourceFilter(sitecol)
+
+    def test_mrd_init(self):
+        """ Test MRDMaker init """
+        _ = MRDMaker(self.cmaker, self.srcfilter, [_get_src()], self.corrm)
+
+    def test_mrd_make(self):
+        """ Test MRD calculation """
+
+        # Compute Joint MRD
+        mrdm = MRDMaker(self.cmaker, self.srcfilter, [_get_src()], self.corrm)
+        keys = list(self.cmaker.imtls.keys())
+        im1 = numpy.log(self.cmaker.imtls[keys[0]])
+        im2 = numpy.log(self.cmaker.imtls[keys[1]])
+        mrd = mrdm.make_mrd()
+
+        # Compute pmap
+        pmap = PmapMaker(self.cmaker, self.srcfilter, [_get_src()]).make()
+
+        # Computing the AfE for the first IMT at site 0
+        poe = numpy.squeeze(numpy.abs(pmap['pmap'][0].array[:40]))
+        afe = numpy.log(1-poe)
+        afo1 = numpy.diff(afe)
+
+        # Check that the marginal coincides with the annual frequency of
+        # exceedance obtained from the hazard curve
+        ma1 = numpy.squeeze(numpy.sum(mrd[:, :, 0, 0], axis=0))
+        numpy.testing.assert_array_almost_equal(afo1, ma1)
+
+        # Computing the AfE for the first IMT at site 0
+        poe = numpy.squeeze(numpy.abs(pmap['pmap'][0].array[40:]))
+        afe = numpy.log(1-poe)
+        afo2 = numpy.diff(afe)
+
+        # Check that the marginal coincides with the annual frequency of
+        # exceedance obtained from the hazard curve
+        ma2 = numpy.squeeze(numpy.sum(mrd[:, :, 0, 0], axis=1))
+        numpy.testing.assert_array_almost_equal(afo2, ma2, decimal=5)
+
+        if PLOTTING:
+            # MRD for the 3 sites
+            fig, axs = plt.subplots(2, 2)
+            fig.set_size_inches(8, 6)
+            nmax = 3
+            for i in range(nmax):
+                idxs = numpy.unravel_index(i, axs.shape)
+                plt.sca(axs[idxs])
+                im1c = im1[:-1] + numpy.diff(im1) / 2
+                im2c = im2[:-1] + numpy.diff(im2) / 2
+                tmp = numpy.log10(mrd[:, :, i, 0])
+                plt.contourf(im2c, im1c, tmp)
+                if i == 1:
+                    _ = plt.title('MRD')
+                _ = plt.grid(which='major', ls='--', color='grey')
+                _ = plt.xlabel(keys[0])
+                _ = plt.ylabel(keys[1])
+            idxs = numpy.unravel_index(nmax, axs.shape)
+            plt.sca(axs[idxs])
+            _ = plt.colorbar(pad=0.2)
+            plt.show()
+
+            # Marginal MRD
+            fig, axs = plt.subplots(1, 1)
+            cim = self.cmaker.imtls[keys[0]][:-1]
+            cim += numpy.diff(self.cmaker.imtls[keys[0]])/2
+            idx = afo1 > 0
+            plt.plot(cim[idx], afo1[idx], '--')
+            plt.plot(cim, ma1, 'o', markevery=5)
+            plt.xscale('log')
+            plt.yscale('log')
+            plt.xlabel(keys[0])
+            plt.ylabel('Annual Frequency of Occurrence')
+            plt.grid(which='major', ls='--', color='grey')
+            plt.show()
