@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Added the get_dip and get_strike methods to the gridded surface
+
+  [Michele Simionato]
   * Added calculation of `reinsurance_by_event` and `reinsurance_curves`
     given a `reinsurance.xml` file
   * Supported absolute values for `deductible` and `insurance_limit`
