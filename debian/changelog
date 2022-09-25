@@ -1,3 +1,8 @@
+
+  [Michele Simionato]
+  * Added a class for computing the Joint Mean Rate Density for two IMTs. This
+    is useful for implementing VPSHA.
+
   [Michele Simionato]
   * Added calculation of `reinsurance_by_event` and `reinsurance_curves`
     given a `reinsurance.xml` file

@@ -601,7 +601,6 @@ class MRDMakeTestCase(unittest.TestCase):
         site2 = Site(Point(-121.9, 37.7), 760, z1pt0=30., z2pt5=0.5)
         site3 = Site(Point(-121.9, 37.6), 760, z1pt0=30., z2pt5=0.5)
         sitecol = SiteCollection([site1, site2, site3])
-        #sitecol = SiteCollection([site1])
         self.srcfilter = SourceFilter(sitecol)
 
     def test_mrd_init(self):
