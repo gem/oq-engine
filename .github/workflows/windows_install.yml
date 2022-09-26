@@ -81,4 +81,5 @@ jobs:
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           python -m pip install pytest
+          pytest -vsx ~/work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
           pytest -vs D:\a\oq-engine\oq-engine\openquake\calculators
