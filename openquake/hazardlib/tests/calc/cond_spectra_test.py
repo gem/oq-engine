@@ -25,7 +25,7 @@ from openquake.hazardlib import read_input, valid, contexts
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
-OVERWRITE_EXPECTED = True
+OVERWRITE_EXPECTED = False
 
 CWD = os.path.dirname(__file__)
 SOURCES_XML = os.path.join(CWD, 'data', 'sm01.xml')

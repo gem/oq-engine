@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Fixed the calculation of conditonal spectra
+
   [Antonio Ettorre]
   * Bumped h5py to version 3.7.0
 
