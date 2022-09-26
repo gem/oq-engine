@@ -223,10 +223,11 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
     ded, lim = get_ded_lim(losses, pol_dict)
     claim = scientific.insured_losses(losses, ded, lim)
     out['event_id'] = df.event_id.to_numpy()
-    out['policy_id'] = [pol_dict['policy']] * len(df)
+    out['policy_id'] = np.array([pol_dict['policy']] * len(df))
     wxlr_df = treaty_df[treaty_df.type == 'wxlr']
     out.update(claim_to_cessions(claim, pol_dict, wxlr_df))
-    return pd.DataFrame(out)
+    nonzero = out['claim'] > 0  # discard zero claims
+    return pd.DataFrame({k: out[k][nonzero] for k in out})
 
 
 def _by_event(by_policy_df, max_cession, treaty_df):
