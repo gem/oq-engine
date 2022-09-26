@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-12]
-        python-version: [3.9, "3.10"]
+        python-version: [3.8, 3.9, "3.10"]
     steps:
     # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
@@ -60,5 +60,6 @@ jobs:
           pip3 install pytest
           oq --version
           oq dbserver start
+          pytest -vsx ~/work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
           pytest -vs /Users/runner/work/oq-engine/oq-engine/openquake/calculators
           #oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
