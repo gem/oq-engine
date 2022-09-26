@@ -27,10 +27,10 @@ Module exports :class:`KothaEtAl2020`,
 import os
 import numpy as np
 from scipy.constants import g
-import fiona
 from shapely.geometry import Point, shape
 from shapely.prepared import prep
 from openquake.baselib.general import CallableDict
+from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, from_string
