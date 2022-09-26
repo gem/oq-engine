@@ -32,11 +32,11 @@ def get_ded_lim(losses, policy):
     """
     :returns: deductible and liability as arrays of absolute values
     """
-    if policy['deductible_abs']:
+    if policy.get('deductible_abs', True):
         ded = policy['deductible']
     else:
         ded = losses * policy['deductible']
-    if policy['liability_abs']:
+    if policy.get('liability_abs', True):
         lim = policy['liability']
     else:
         lim = losses * policy['liability']

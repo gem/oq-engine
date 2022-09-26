@@ -202,3 +202,28 @@ event_id,claim,retention,nonprop1,nonprop2,nonprop3
             risk_by_event, self.policy_df, {}, self.treaty_df)
         byevent = byevent[byevent.event_id == 25].set_index('event_id')
         assert_ok(byevent, expected)
+
+    def test_max_cession(self):
+        max_cession = {'prop1': 5000}
+        treaty_df = _df('''\
+id,type,max_retention,limit
+nonprop1,wxlr, 200,    4000
+nonprop2,catxl,500,   10000
+''').set_index('id')
+        pol_df = _df('''\
+policy,liability,deductible,prop1,nonprop1,nonprop2
+1,     99000,        0,     .5,   1,   1
+2,     99000,        0,     .4,   1,   1
+3,     99000,        0,     .6,   1,   1
+''')
+        risk_by_event = _df('''\
+event_id,agg_id,loss
+1,     0,      12000
+1,     1,      5000
+1,     2,      3000
+''')
+        expected = _df('''\
+event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
+       1,20000,    500.0,5000.0, 7600.0,    4800.0,6900.0''')
+        bypolicy, byevent = reinsurance.by_policy_event(
+            risk_by_event, pol_df, max_cession, treaty_df)
