@@ -40,4 +40,5 @@ https://wheelhouse.openquake.org/v3/macos/py38/kiwisolver-1.1.0-cp38-cp38-macosx
 https://wheelhouse.openquake.org/v3/macos/py38/matplotlib-3.1.2-cp38-cp38-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py38/pyproj-2.5.0-cp38-cp38-macosx_10_9_x86_64.whl
 #
-https://wheelhouse.openquake.org/v3/macos/py38/GDAL-3.3.3-cp38-cp38-macosx_10_14_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py38/GDAL-3.4.3-cp38-cp38-macosx_10_15_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py38/Fiona-1.8.21-cp38-cp38-macosx_10_10_x86_64.whl
