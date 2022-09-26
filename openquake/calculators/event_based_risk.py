@@ -400,8 +400,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             if len(agg_loss_table) == 0:
                 raise ValueError('No losses for reinsurance %s' % lt)
             max_cession = self.datastore.get_attr('treaty_df', 'max_cession')
-            rbe = reinsurance.by_event(agg_loss_table, self.policy_df,
-                                       json.loads(max_cession), self.treaty_df)
+            rbp, rbe = reinsurance.by_policy_event(
+                agg_loss_table, self.policy_df,
+                json.loads(max_cession), self.treaty_df)
+            self.datastore.create_df('reinsurance_by_policy', rbp)
             self.datastore.create_df('reinsurance_by_event', rbe)
 
         if oq.avg_losses:

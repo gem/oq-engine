@@ -261,12 +261,13 @@ def _by_event(by_policy_df, max_cession, treaty_df):
     return pd.DataFrame(dic)
 
 
-def by_event(agglosses_df, policy_df, max_cession, treaty_df):
+def by_policy_event(agglosses_df, policy_df, max_cession, treaty_df):
     """
     :param DataFrame agglosses_df: losses aggregated by (agg_id, event_id)
     :param DataFrame policy_df: policies
     :param dict max_cession: maximum cession for proportional treaties
     :param DataFrame treaty_df: treaties
+    :returns: (by_policy_df, by_event_df)
     """
     dfs = []
     for _, policy in policy_df.iterrows():
@@ -274,4 +275,4 @@ def by_event(agglosses_df, policy_df, max_cession, treaty_df):
         dfs.append(df)
     df = pd.concat(dfs)
     # print(by_policy)  # when debugging
-    return _by_event(df, max_cession, treaty_df)
+    return df, _by_event(df, max_cession, treaty_df)
