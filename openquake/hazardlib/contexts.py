@@ -1066,8 +1066,8 @@ class ContextMaker(object):
         :param cs_poes:
             Probabilities of exceedence for which we compute the CMS
         :param cs:
-            The final CS. This is used for the calculation of the 
-            standard deviation. This is a dictionary with one key = 0 and 
+            The final CS. This is used for the calculation of the
+            standard deviation. This is a dictionary with one key = 0 and
             value as the dictionary returned by this method.
         :returns:
             a dictionary g -> key -> array where g is an index,
@@ -1092,11 +1092,11 @@ class ContextMaker(object):
         rho = numpy.array([self.cross_correl.get_correlation(imt_ref, imt)
                            for imt in self.imts])
         m_range = range(len(self.imts))
-        
+
         # This computes the probability of at least one occurrence
-        # probs = 1 - exp(-occurrence_rates*time_span). NOTE that we 
+        # probs = 1 - exp(-occurrence_rates*time_span). NOTE that we
         # assume the contexts here are homogenous i.e. they either use
-        # the occurrence rate or the probability of occurrence in the 
+        # the occurrence rate or the probability of occurrence in the
         # investigation time
         if len(ctx.probs_occur[0]):
             probs = numpy.array([numpy.sum(p[1:]) for p in ctx.probs_occur])
@@ -1133,36 +1133,21 @@ class ContextMaker(object):
                     # `eps` and `poes` have shape U
                     eps = (numpy.log(imls[p]) - mu[imti]) / sig[imti]
                     poes = _truncnorm_sf(self.truncation_level, eps)
-                    
+
                     # Converting to rates and dividing by the rate of
                     # exceedance of the reference IMT and level
                     ws = -numpy.log(
                         (1. - probs[slc]) ** poes) / self.investigation_time
-                    
+
                     # Normalizing by the AfE for the investigated IMT and level
                     ws /= -numpy.log(1. - cs_poes[p])
 
                     # If sum of ws is close to 1 we normalize
                     if numpy.abs(ws.sum() - 1.0) < 1e-2:
                         ws /= ws.sum()
-                    
+
                     # Normalising weights
                     s[n, p] = ws.sum()  # weights not summing up to 1
-                    
-                    """
-                    # Equation 14 in Lin et al. (2013)
-                    term1 = mu[0, :] + eps * numpy.multiply(rho, sig[0, :])
-                    c[:, n, MEA, p] = numpy.multiply(ws, term1)
-
-                    if len(cs) > 0:
-
-                        # Equation 15 in Lin et al. (2013)
-                        term2 = sig[0, :] * (1. - rho**2)**0.5
-                        term3 = (term1 - cs[0]['_c'][:, n, 0, p])
-                        # breakpoint()
-                        term4 = term2**2 + term3**2
-                        c[:, n, 1, p] = numpy.multiply(ws, term4)
-                    """
 
                     # For each intensity measure type
                     for m in m_range:
@@ -1178,9 +1163,6 @@ class ContextMaker(object):
                             term2 = sig[m] * (1. - rho[m]**2)**0.5
                             term3 = (term1 - cs[0]['_c'][m, n, 0, p])
                             term3 = 0
-                            # ws /= numpy.sum(ws)
-                            # breakpoint()
-                            # print(m, ws, term1, term2, term3)
                             c[m, n, 1, p] = ws @ (term2**2 + term3**2)
 
         return out

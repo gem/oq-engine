@@ -25,7 +25,7 @@ from openquake.hazardlib import read_input, valid, contexts
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
-OVERWRITE_EXPECTED = False
+OVERWRITE_EXPECTED = True
 
 CWD = os.path.dirname(__file__)
 SOURCES_XML = os.path.join(CWD, 'data', 'sm01.xml')
@@ -62,8 +62,10 @@ def plot(df, imts):
     import matplotlib.pyplot as plt
     periods = [im.period for im in imts]
     fig, axs = plt.subplots(1, 2)
-    axs[0].plot(periods, df.cs_exp, 'x-')
-    axs[1].plot(periods, df.cs_std, 'x-')
+    axs[0].plot(df.period[:11], df.cs_exp[:11], 'x-')
+    axs[0].plot(df.period[11:], df.cs_exp[11:], 'x-')
+    axs[1].plot(df.period[:11], df.cs_std[:11], 'x-')
+    axs[1].plot(df.period[11:], df.cs_std[11:], 'x-')
     axs[0].grid(which='both')
     axs[1].grid(which='both')
     axs[0].set_xscale('log')
@@ -130,7 +132,23 @@ class CondSpectraTestCase(unittest.TestCase):
         poes = [0.002105]
         imls = [0.238531932]
 
+        # Compute mean CS
         csdic = cmaker.get_cs_contrib(ctx, imti, imls, poes)
+
+        # CS container
+        S = csdic[0]['_c'].shape
+        tmp = {0: AccumDict({'_c': np.zeros((S[0], S[1], 1, S[3])),
+                             '_s': np.zeros((S[1], S[3]))})}
+        w1 = inp.gsim_lt.branches[0].weight['weight']
+        w2 = inp.gsim_lt.branches[1].weight['weight']
+
+        tmp[0]['_c'][:, 0, 0, 0] = (
+            csdic[0]['_c'][:, 0, 0, 0] * w1 + csdic[0]['_c'][:, 0, 1, 0] * w2)
+
+        # Compute std
+        csdic = cmaker.get_cs_contrib(ctx, imti, imls, poes, tmp)
+
+        # Create DF for test
         df = csdic_to_dframe(csdic, cmaker.imts, 0, 0)
 
         # check the result
