@@ -275,6 +275,7 @@ class MultiSurface(BaseSurface):
         """
         Compute bounding box for each surface element, and then return
         the bounding box of all surface elements' bounding boxes.
+
         :return:
            A tuple of four items. These items represent western, eastern,
            northern and southern borders of the bounding box respectively.

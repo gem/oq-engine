@@ -174,7 +174,7 @@ def build_planar(planin, hdd, lon, lat, usd, lsd):
     """
     :param planin:
         Surface input parameters as an array of shape (M, N)
-    :param lon, lat
+    :param lon, lat:
         Longitude and latitude of the hypocenters (scalars)
     :parameter deps:
         Depths of the hypocenters (vector)

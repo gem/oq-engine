@@ -1,5 +1,5 @@
-#,,,,"generated_by='OpenQuake engine 3.10.0-gite373e5fdb2', start_date='2020-09-10T10:00:22', checksum=480536762, kind='mean', investigation_time=50.0"
-lon,lat,0.01~PGA,0.1~PGA,0.2~PGA
+#,,,,"generated_by='OpenQuake engine 3.16.0-git6c0e27a6d6', start_date='2022-09-15T06:21:28', checksum=2514252443, kind='mean', investigation_time=50.0"
+lon,lat,0.010000~PGA,0.100000~PGA,0.200000~PGA
 -0.10000,0.00000,8.000000E-01,4.333487E-01,3.100116E-01
 0.00000,0.00000,8.000000E-01,4.208834E-01,2.970662E-01
 0.10000,0.00000,8.000000E-01,6.935206E-01,3.650668E-01

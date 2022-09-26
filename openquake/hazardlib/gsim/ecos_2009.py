@@ -73,6 +73,7 @@ class ECOS2009(GMPE):
 
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
+    #: Required distance rhypo
     REQUIRES_DISTANCES = {'rhypo'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):

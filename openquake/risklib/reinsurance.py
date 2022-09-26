@@ -16,324 +16,262 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import pandas as pd
 import numpy as np
+from openquake.baselib.performance import compile
+from openquake.hazardlib import nrml, InvalidFile
+from openquake.risklib import scientific
+
 KNOWN_LOSS_TYPES = {
     'structural', 'nonstructural', 'contents',
     'value-structural', 'value-nonstructural', 'value-contents'}
 
 
-def reinsurance_losses(exposure, losses, policy, treaty):
+def get_ded_lim(losses, policy):
+    """
+    :returns: deductible and liability as arrays of absolute values
+    """
+    if policy['deductible_abs']:
+        ded = policy['deductible']
+    else:
+        ded = losses * policy['deductible']
+    if policy['liability_abs']:
+        lim = policy['liability']
+    else:
+        lim = losses * policy['liability']
+    return ded, lim
+
+
+def check_fields(fields, dframe, idxdict, fname):
+    """
+    :param fields: fields to check (the first field is the primary key)
+    :param dframe: DataFrame with the contents of fname
+    :param idxdict: dictionary key -> index (starting from 1)
+    :param fname: file containing the fields to check
+    """
+    key = fields[0]
+    idx = [idxdict[name] for name in dframe[key]]  # indices starting from 1
+    dframe[key] = idx
+    for no, field in enumerate(fields):
+        if field not in dframe.columns:
+            raise InvalidFile(f'{fname}: {field} is missing in the header')
+        elif no > 0:  # for the value fields
+            arr = dframe[field].to_numpy()
+            if isinstance(arr[0], str):  # there was a `%` in the column
+                vals = np.zeros(len(arr), float)
+                _abs = np.zeros(len(arr), bool)
+                for i, x in enumerate(arr):
+                    if x.endswith('%'):
+                        vals[i] = float(x[:-1]) / 100.
+                        _abs[i] = False
+                    else:
+                        vals[i] = float(x)
+                        _abs[i] = True
+                dframe[field] = vals
+                dframe[field + '_abs'] = _abs
+            else:  # assume all absolute
+                dframe[field + '_abs'] = np.ones(len(arr))
+
+# validate the file policy.csv
+def check_fractions(colnames, colvalues, fname):
+    """
+    Make sure the sum of the proportional fractions is below 1 and raise
+    a clear error if not.
+    """
+    n = len(colvalues[0])
+    for i in range(n):
+        tot = 0
+        for c, col in enumerate(colnames):
+            frac = colvalues[c][i]
+            if frac > 1 or frac < 0:
+                raise ValueError(
+                    f'{fname}:{i+2}: invalid fraction {col}={frac}')
+            tot += frac
+        if tot > 1:
+            raise ValueError(f'{fname}:{i+2} the sum of the fractions must be '
+                             f'under 1, got {tot}')
+
+
+def parse(fname, policy_idx):
+    """
+    :param fname: CSV file containing the policies
+    :param policy_idx: dictionary policy name -> policy index
+
+    Parse a reinsurance.xml file and returns
+    (policy_df, treaty_df, max_cession, field_map)
+    """
+    rmodel = nrml.read(fname).reinsuranceModel
+    fieldmap = {}
+    reversemap = {} # propN->nameN
+    max_cession = {}  # propN->cessionN
+    nonprop = dict(id=[], type=[], max_retention=[], limit=[])
+    for node in rmodel.fieldMap:
+        fieldmap[node['input']] = col = node['oq']
+        reversemap[col] = node['input']
+        mce = node.get('max_cession_event')
+        if mce:
+            max_cession[col] = mce
+        treaty_type = node.get('type', 'prop')
+        assert treaty_type in (None, 'prop','wxlr', 'catxl'), treaty_type
+        if treaty_type in ('wxlr', 'catxl'):
+            nonprop['id'].append(col)
+            nonprop['type'].append(treaty_type)
+            nonprop['max_retention'].append(node['max_retention'])
+            nonprop['limit'].append(node['limit'])
+    for name, col in fieldmap.items():
+        if col.startswith('prop'):
+            reversemap['overspill' + col[4:]] = 'overspill_' + name
+    policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
+    df = pd.read_csv(policyfname, keep_default_na=False).rename(
+        columns=fieldmap)
+    check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname)
+    df['deductible_abs'] = np.ones(len(df), bool)
+    df['liability_abs'] = np.ones(len(df), bool)
+
+    # validate policy input
+    colnames = []
+    colvalues = []
+    for col, origname in reversemap.items():
+        if col.startswith('prop'):
+            colnames.append(origname)
+            colvalues.append(df[col].to_numpy())
+        elif col.startswith('nonprop'):
+            df[col] = np.bool_(df[col])
+    if colnames:
+        check_fractions(colnames, colvalues, policyfname)
+    return df, pd.DataFrame(nonprop), max_cession, reversemap
+
+
+@compile(["(float64[:],float64[:],float64,float64)",
+          "(float64[:],float32[:],float64,float64)"])
+def apply_nonprop(cession, retention, maxret, limit):
+    capacity = limit - maxret
+    for i, ret in np.ndenumerate(retention):
+        overmax = ret - maxret
+        if ret > maxret:
+            if overmax > capacity:
+                retention[i] = maxret + overmax - capacity
+                cession[i] = capacity
+            else:
+                retention[i] = maxret
+                cession[i] = overmax
+
+
+def claim_to_cessions(claim, policy, nonprops=()):
+    """
+    :param claim: an array of claims
+    :param policy: a dictionary corresponding to a specific policy
+    :param nonprops: dataframe with nonprop treaties of type wxlr
+
+    Converts an array of claims into a dictionary of arrays
+
+    >>> df = pd.DataFrame({'id': ['nonprop1'], 'max_retention': [100_000],
+    ...                    'limit': [200_000], type: 'wxlr'}).set_index('id')
+    >>> pol1 = {'prop1': .3, 'prop2': .5, 'nonprop1': True}
+    >>> pol2 = {'prop1': .4, 'prop2': .4, 'nonprop1': True}
+    >>> claim_to_cessions(np.array([900_000]), pol1, df)
+    {'claim': array([900000]), 'retention': array([100000.]), 'prop1': array([270000.]), 'prop2': array([450000.]), 'nonprop1': array([80000.])}
+
+    >>> claim_to_cessions(np.array([1_800_000]), pol2, df)
+    {'claim': array([1800000]), 'retention': array([260000.]), 'prop1': array([720000.]), 'prop2': array([720000.]), 'nonprop1': array([100000.])}
+
+    >>> claim_to_cessions(np.array([80_000]), pol2, df)
+    {'claim': array([80000]), 'retention': array([16000.]), 'prop1': array([32000.]), 'prop2': array([32000.]), 'nonprop1': array([0.])}
+    """
+    # proportional cessions
+    fractions = [policy[col] for col in policy if col.startswith('prop')]
+    assert sum(fractions) < 1
+    out = {'claim': claim, 'retention': claim * (1. - sum(fractions))}
+    for i, frac in enumerate(fractions, 1):
+        cession = 'prop%d' % i
+        out[cession] = claim * frac
+    if len(nonprops) == 0:
+        return {k: np.round(v, 6) for k, v in out.items()}
+
+    # nonproportional cessions
+    for col, nonprop in nonprops.iterrows():
+        out[col] = np.zeros(len(claim))
+        if policy[col]:
+            apply_nonprop(out[col], out['retention'],
+                          nonprop['max_retention'], nonprop['limit'])
+
+    # sanity check, uncomment it in case of errors
+    tot = out['retention'].copy()
+    for col in out:
+        if col.startswith(('prop', 'nonprop')):
+            tot += out[col]
+    np.testing.assert_allclose(tot, out['claim'], rtol=1E-6)
+    return {k: np.round(v, 6) for k, v in out.items()}
+
+
+# tested in test_reinsurance.py
+def by_policy(agglosses_df, pol_dict, treaty_df):
     '''
-    :param DataFrame exposure:
-        Exposure in OQ format (id, taxonomy, ...)
-    :param DataFrame losses:
-        Average annual losses per asset (id, structural, ...)
-    :param DataFrame policy:
-        Description of policy characteristics in OQ format.
-    :param DataFrame treaty:
-        Description of reinsurance characteristics in OQ format.
+    :param DataFrame agglosses_df:
+        losses aggregated by policy (keys agg_id, event_id)
+    :param dict pol_dict:
+        Policy parameters, with pol_dict['policy'] being an integer >= 1
+    :param DataFrame treaty_df:
+        Non-proportional treaties
     :returns:
-        Complete DataFrame with calculation details.
+        DataFrame of reinsurance losses by event ID and policy ID
     '''
-    # Input validation (to be implemented):
-    # ------------------------------------------------------------------------
-    #  EXPOSURE MODEL
-    #   - Exposure model in OQ format and with 'policy' column
-    #
-    #  POLICY AND REINSURANCE FILES
-    #   - Check that all policies in assets are within policy file
-    #   - For the following colummns check:
-    #       `policy`        : each row should be unique (no duplicated policy)
-    #       `policy_unit`   : str. Options: ['asset', 'policy']
-    #       `liability`     : float >= 0
-    #       `deductible`    : float >= 0
-    #       `min_deductible`: float >= 0
-    #
-    # POLICY AND REINSURANCE FILES
-    #   - Check that all treaties in policies are within reinsurance file
-    #   - For the following colummns check:
-    #       `treaty`      : each row should be unique (no duplicated treaty)
-    #       `treaty_type` : str.
-    #           Options: ['quota_share', 'surplus', 'WXL', 'CatXL']
-    #       `treaty_unit `: str.
-    #           Options: ['policy', 'treaty', 'event']
-    #       `qs_retention`:  0 <= float <= 1
-    #       `qs_cession`  :  0 <= float <= 1
-    #       `surplus_line`: float >= 0
-    #       `treaty_limit`: float >= 0
-    # Create single dataframe with total values (exposure and losses)
-    assets = tot_cost_losses(exposure, losses)
-
-    # Estimate absolute liability and deductible at policy_unit
-    df = process_insurance(assets, policy)
-    # Apply reinsurance treaties
-    return compute_reinsurance(df, treaty)
+    out = {}
+    df = agglosses_df[agglosses_df.agg_id == pol_dict['policy'] - 1]
+    losses = df.loss.to_numpy()
+    ded, lim = get_ded_lim(losses, pol_dict)
+    claim = scientific.insured_losses(losses, ded, lim)
+    out['event_id'] = df.event_id.to_numpy()
+    out['policy_id'] = np.array([pol_dict['policy']] * len(df))
+    wxlr_df = treaty_df[treaty_df.type == 'wxlr']
+    out.update(claim_to_cessions(claim, pol_dict, wxlr_df))
+    nonzero = out['claim'] > 0  # discard zero claims
+    return pd.DataFrame({k: out[k][nonzero] for k in out})
 
 
-def apply_treaty(row, n):
-    '''
-    Assign appropriate treaty to apply for each row in the DataFrame
-    '''
-    if row.treaty_unit in ['treaty', 'event']:
-        # Pending to implement
-        print('Need to adjust code. It is missing the implementation for',
-              'treaty_units = `treaty` or `event`')
-
-    if row.treaty_type == 'quota_share':
-        row = quota_share(row)
-
-    elif row.treaty_type == 'surplus':
-        row = surplus(row)
-
-    elif row.treaty_type != row.treaty_type:  # If treaty_type is NaN then ..
-        if n == 0:
-            # No reinsurance treaty. All losses go to retention
-            row['retention'] = row.claim
-            row['cession'] = 0
-            row['remainder'] = 0
-        else:
-            row['retention'] = row[f'retention_{n}']
-            row['cession'] = row[f'cession_{n}']
-            row['remainder'] = row[f'remainder_{n}']
-
-    else:
-        assert f'Error. Not supported treaty_type {row.treaty_type}'
-
-    return row
-
-
-def quota_share(row):
+def _by_event(by_policy_df, max_cession, treaty_df):
     """
-    In a quota share treaty, return the `retention`, `cession` and `remainder`.
-    The function is applied per row (either asset, policy or treaty).
-    A previous aggregation at the specified unit needs to be done in advance
-
-    The "row" input must have the following attributes:
-
-        deductible: max(deductible, min_deductible)
-        liability: absolute value with respect to the treaty unit
-        qs_retention: fraction (proportion)
-        qs_cession: fraction (proportion)
-        treaty_limit: absolute value with respect to the treaty unit
-        claim: absolute value with respect to the treaty unit
+    :param DataFrame by_policy_df: output of `by_policy`
+    :param dict max_cession: maximum cession for proportional treaties
+    :param DataFrame treaty_df: treaties
     """
-
-    claim = row.claim
-    liability = row.liability
-    qs_retention = row.qs_retention  # 0 <= float <= 1
-    qs_cession = row.qs_cession      # 0 <= float <= 1
-    treaty_limit = row.treaty_limit
-
-    # Adjust qs proportions when liability > traty_limit
-    if liability <= treaty_limit:
-        retention = claim * qs_retention
-        cession = claim * qs_cession
-        remainder = 0
-    else:
-        retention = claim * qs_retention * treaty_limit / liability
-        cession = claim * qs_cession * treaty_limit / liability
-        remainder = claim * (liability - treaty_limit)/liability
-    assert np.isclose(remainder, max(0, claim - retention - cession),
-                      0.0001), 'Check remainder calcs'
-    row['retention'] = retention
-    row['cession'] = cession
-    row['remainder'] = remainder
-
-    return row
-
-
-def surplus(row):
-    """
-    In a surplus treaty, return the `retention`, `cession` and `remainder`.
-    The function is applied per row (either asset, policy or treaty).
-    A previous aggregation at the specified unit needs to be done in advance
-    The "row" input must have the following attributes:
-
-        deductible: max(deductible, min_deductible)
-        liability: absolute value with respect to the treaty unit
-        line: maximum retention limit (integer, units)
-        treaty_limit: absolute value with respect to the treaty unit.
-                       = underwriting capacity
-                       = retention + treaty_capacity (reinsurance allocation)
-        claim: absolute value with respect to the treaty unit
-    """
-
-    claim = row.claim
-    liability = row.liability
-    line = row.surplus_line
-    treaty_limit = row.treaty_limit
-
-    # Adjust Surplus proportions when liability > traty_limit
-    if liability <= line:
-        retention = claim
-        cession = 0
-        remainder = 0
-
-    elif liability <= treaty_limit:
-        retention = claim * line / liability
-        cession = claim * (liability - line) / liability
-        remainder = 0
-
-    else:
-        retention = claim * line / liability
-        cession = claim * (treaty_limit - line) / liability
-        remainder = claim * (liability - treaty_limit)/liability
-
-    assert np.isclose(remainder, max(0, claim - retention - cession),
-                      0.0001), 'Check remainder calcs'
-
-    row['retention'] = retention
-    row['cession'] = cession
-    row['remainder'] = remainder
-
-    return row
-
-
-def sum_loss_types(df):
-    """
-    :returns: structural (+ nonstructural) (+ contents)
-    """
-    losses = np.zeros(len(df))
+    df = by_policy_df.groupby('event_id').sum()
+    del df['policy_id']
+    dic = {'event_id': df.index.to_numpy()}
     for col in df.columns:
-        if col in KNOWN_LOSS_TYPES:
-            losses += df[col]
-    return losses
+        dic[col] = df[col].to_numpy()
+
+    # proportional overspill
+    for col, cession in max_cession.items():
+        over = dic[col] > cession
+        overspill = np.maximum(dic[col] - cession, 0)
+        if overspill.any():
+            dic['overspill' + col[4:]] = overspill
+        dic['retention'][over] += dic[col][over] - cession
+        dic[col][over] = cession
+
+    # catxl applied everywhere
+    catxl = treaty_df[treaty_df.type == 'catxl']
+    for col, nonprop in catxl.iterrows():
+        dic[col] = np.zeros(len(df))
+        apply_nonprop(dic[col], dic['retention'],
+                      nonprop['max_retention'], nonprop['limit'])
+
+    return pd.DataFrame(dic)
 
 
-def tot_cost_losses(exposure, losses):
+def by_event(agglosses_df, policy_df, max_cession, treaty_df):
     """
-    Estimate total exposed value and total loss considering all loss types
-        (str + nonstr + contents)
-
-    !!! NOTE: If the exposure is specified per area or per building
-        (as opposed to total cost), then it is necessary to estimate total cost
-
-    Returns
-    -------
-    assets:
-        DataFrame with total exposure and losses
+    :param DataFrame agglosses_df: losses aggregated by (agg_id, event_id)
+    :param DataFrame policy_df: policies
+    :param dict max_cession: maximum cession for proportional treaties
+    :param DataFrame treaty_df: treaties
     """
-    exposure['total_cost'] = sum_loss_types(exposure)
-    sum_losses = pd.DataFrame(
-        dict(id=losses.id.to_numpy(), losses=sum_loss_types(losses)))
-    assets = exposure.merge(sum_losses, how='inner', on='id')
-    assert assets.losses.sum() != 0, 'No losses in exposure model'
-
-    return assets
-
-
-def process_insurance(assets, df_policy):
-    """
-    Estimate effective values for the specified "policy_units"
-    """
-    del df_policy['loss_type']  # TODO: multiple loss_types are wrong
-
-    # Create policy dataframe where all values are applicable per "policy_unit"
-    cols = ['id', 'policy', 'total_cost', 'losses']
-
-    # -  for policies at "asset" level:
-    p_asset = df_policy.policy[df_policy.policy_unit == 'asset']
-    df_a = assets[cols][assets.policy.isin(p_asset)]
-
-    # -  for policies at "policy" level:
-    p_policy = df_policy.policy[df_policy.policy_unit == 'policy']
-    df_p = assets[cols][assets.policy.isin(p_policy)]
-    df_p = df_p.groupby(by='policy').sum().reset_index()
-
-    # merge values
-    df = pd.concat([df_a, df_p])
-    df = df.merge(df_policy, on='policy')
-    assert df.empty is False, 'Empty DataFrame. Check input files'
-
-    # Estimate absolute values from fractions at the "policy_units" level
-    # When values <= 1, then assume input is a fraction
-    df.loc[df.liability <= 1, 'liability'] = df.liability * df.total_cost
-    df.loc[df.deductible <= 1, 'deductible'] = df.deductible * df.total_cost
-
-    # Effective deductible
-    df.deductible = df[['deductible', 'min_deductible']].max(axis=1)
-    df.drop(columns={'min_deductible'}, inplace=True)
-
-    # When losses > liability, only cover up to the liability value
-    # Include column for no_insured losses when applicable
-    no_insured = df['losses'] - df['liability']
-    no_insured[no_insured <= 0] = 0  # Minimum no_insured = 0
-    if any(no_insured):
-        df['no_insured'] = no_insured
-
-    # Estimate claim
-    df['claim'] = df.losses - df.deductible
-    df.loc[df['claim'] < 0, 'claim'] = 0  # Minimum claim = 0
-
-    # Maximum claim up to liability
-    mask = df['claim'] > df['liability']
-    df.loc[mask, 'claim'] = df.loc[mask, 'liability']
-
-    return df
-
-
-def compute_reinsurance(data, reinsurance):
-    """
-    Returns a DataFrame with the losses for the reinsurance company
-    """
-    # Identify layers of treaties applicable for each policy
-    data['layers'] = data.treaty
-    mask = ~data.treaty.isna()
-    data['n_layers'] = data[mask].treaty.str.count(' ')
-
-    # Estimate reinsurance values for first layer
-    df = data.copy()
-    df['treaty'] = data.treaty.str.split(' ', expand=True)[0].str.strip()
-    df_ins = df.merge(reinsurance, on='treaty', how='left')
-    df_ins = df_ins.apply(apply_treaty, args=[0], axis=1).apply(pd.Series)
-
-    # MULTIPLE REINSURANCE LEVELS
-
-    # Validation
-    # ----------
-    # 1. UPPER layer retention limit == treaty_limit UNDERLYING layer
-
-    cols = ['id', 'policy', 'retention', 'cession', 'remainder']
-    max_layers = data.n_layers.max().astype(int)
-    if max_layers >= 2:
-        for n in range(1, max_layers):
-
-            # Get previous layer estimates
-            layer_n = df_ins.loc[:, cols]
-            layer_n.rename(columns={'retention': f'retention_{n}',
-                                    'cession': f'cession_{n}',
-                                    'remainder': f'remainder_{n}'},
-                           inplace=True)
-            df = df.merge(layer_n, how='left')  # raise errors if empty
-
-            # Currently only SURPLUS upper layers are supported
-            # The upper layer reinsurance is applied to the remainder
-            df_ins = df.copy()
-            df_ins['treaty'] = data.treaty.str.split(' ', expand=True)[
-                n].str.strip()
-            df_ins = df_ins.merge(reinsurance, on='treaty', how='left')
-            assert df_ins['treaty_type'].isin(['surplus', np.nan]).all(), \
-                'Check upper layers treaty_type. Only Surplus is supported'
-            df_ins = df_ins.apply(apply_treaty, args=[n], axis=1).apply(
-                pd.Series)
-
-        # Rename last layer
-        layer_n = df_ins.loc[:, cols]
-        layer_n.rename(columns={'retention': f'retention_{n + 1}',
-                                'cession': f'cession_{n + 1}',
-                                'remainder': f'remainder_{n + 1}'},
-                       inplace=True)
-        df = df.merge(layer_n, how='left')  # raise errors if empty
-
-        # Add deductible in reinsurance input
-        df['treaty'] = data['treaty']
-        df['retention'] = df['retention_1']
-        df['cession'] = df['claim'] - df['retention'] - df[
-            f'remainder_{n + 1}']
-        df['remainder'] = df[f'remainder_{n+1}']
-    else:
-        df = df_ins
-
-    df.id.fillna('*', inplace=True)  # aggregate results
-    return df
+    dfs = []
+    for _, policy in policy_df.iterrows():
+        df = by_policy(agglosses_df, dict(policy), treaty_df)
+        dfs.append(df)
+    df = pd.concat(dfs)
+    # print(by_policy)  # when debugging
+    return _by_event(df, max_cession, treaty_df)

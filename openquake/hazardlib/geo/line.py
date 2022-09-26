@@ -85,7 +85,7 @@ class Line(object):
     @classmethod
     def from_vectors(cls, lons, lats, deps=None):
         """
-        Creates a line from three :numpy:`numpy.ndarray` instances containing
+        Creates a line from three numpy.ndarray instances containing
         longitude, latitude and depths values
         """
         arrs = lons, lats
@@ -107,6 +107,7 @@ class Line(object):
         """
         Check if this line is horizontal (i.e. all depths of points
         are equal).
+
         :returns bool:
             True if this line is horizontal, false otherwise.
         """
@@ -194,8 +195,9 @@ class Line(object):
 
     def get_lengths(self) -> np.ndarray:
         """
-        Calculate a :class:`numpy.ndarray` instance with the length
-        of the segments composing the polyline
+        Calculate a numpy.ndarray instance with the length
+        of the segments composing the polyline.
+
         :returns:
             Segments length in km.
         """
@@ -209,6 +211,7 @@ class Line(object):
         """
         Calculate the length of the line as a sum of lengths of all its
         segments.
+
         :returns:
             Total length in km.
         """
@@ -218,6 +221,7 @@ class Line(object):
         """
         Removes the points where the change in direction is lower than a
         tolerance value.
+
         :param delta:
             An angle in decimal degrees
         """
@@ -235,6 +239,7 @@ class Line(object):
     def resample_to_num_points(self, num_points):
         """
         Resample the line to a specified number of points.
+
         :param num_points:
             Integer number of points the resulting line should have.
         :returns:
@@ -270,7 +275,8 @@ class Line(object):
 
     def get_tu(self, mesh):
         """
-        Computes the U and T coordinates of the GC2 method for a mesh of points
+        Computes the U and T coordinates of the GC2 method for a mesh of points.
+
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
         """
@@ -314,8 +320,8 @@ class Line(object):
 
     def get_ui_ti(self, mesh, uhat, that):
         """
-        Compute the t and u coordinates. ti and ui have shape (num_segments x
-        num_sites)
+        Compute the t and u coordinates. ti and ui have shape
+        (num_segments x num_sites).
         """
 
         # Creating the projection
@@ -350,6 +356,7 @@ class Line(object):
         """
         Return the unit vectors defining the local origin for each segment of
         the trace.
+
         :param sx:
             The vector with the x coordinates of the trace
         :param sy:
@@ -379,7 +386,8 @@ class Line(object):
 
 def get_average_azimuth(azimuths, distances) -> float:
     """
-    Computes the average azimuth
+    Computes the average azimuth.
+
     :param azimuths:
         A :class:`numpy.ndarray` instance
     :param distances:
@@ -401,7 +409,8 @@ def get_average_azimuth(azimuths, distances) -> float:
 
 def get_tu(ui, ti, sl, weights):
     """
-    Compute the T and U quantitities
+    Compute the T and U quantitities.
+
     :param ui:
         A :class:`numpy.ndarray` instance of cardinality (num segments x num
         sites)

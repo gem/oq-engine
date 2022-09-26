@@ -1,3 +1,19 @@
+  [Antonio Ettorre]
+  * Bumped h5py to version 3.7.0
+
+  [Michele Simionato]
+  * Added the get_dip and get_strike methods to the gridded surface
+
+  [Michele Simionato]
+  * Added calculation of `reinsurance_by_event` and `reinsurance_curves`
+    given a `reinsurance.xml` file
+  * Supported absolute values for `deductible` and `insurance_limit`
+    in insurance calculations (before we supported only fractions)
+  * Reduced precision in the header of the UHS csv files
+  * Managed the case with CoVs = 0 for the beta distribution
+
+python3-oq-engine (3.15.0-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Added a check on sum(srcs_weights) == 1 for mutex sources
 
@@ -69,7 +85,7 @@
   * Fixed a bug in `upgrade_nrml -m` for point sources with different usd/lsd
   * Automatically discard irrelevant TRTs in disaggregation calculations
 
-  [Ashta Poudel, Anirudh Rao, Michele Simionato]
+  [Astha Poudel, Anirudh Rao, Michele Simionato]
   * Added the ability to run connectivity analysis in event_based_damage
     and scenario_damage calculation with an appropriate exposure
 
@@ -127,6 +143,8 @@
     some GMFs calculations not setting truncation_level can now give
     different results since truncation_level=None is now replaced with
     truncation_level=99
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 12 Sep 2022 07:57:27 +0000
 
 python3-oq-engine (3.14.0-1~xenial01) xenial; urgency=low
 
