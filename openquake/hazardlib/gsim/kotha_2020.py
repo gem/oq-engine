@@ -22,16 +22,22 @@ Module exports :class:`KothaEtAl2020`,
                :class:`KothaEtAl2020Slope`,
                :class:`KothaEtAl2020ESHM20`,
                :class:`KothaEtAl2020ESHM20SlopeGeology`
+               :class:`KothaEtAl2020regional`
 """
+import os
 import numpy as np
 from scipy.constants import g
-
+import fiona
+from shapely.geometry import Point, Polygon, shape
+from shapely.prepared import prep
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, from_string
 from openquake.hazardlib.gsim.nga_east import (get_tau_at_quantile, ITPL,
                                                TAU_EXECUTION, TAU_SETUP)
+
+DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'Kotha_2020')
 
 CONSTANTS = {"Mref": 4.5, "Rref": 30., "Mh": 5.7,
              "h_D10": 4.0, "h_10D20": 8.0, "h_D20": 12.0}
@@ -99,6 +105,7 @@ def get_distance_coefficients_1(kind, c3, c3_epsilon, C, imt, sctx):
     existing tau_c3 distribution
     """
     if c3:
+
         # Use the c3 that has been defined on input
         return c3
     else:
@@ -113,7 +120,6 @@ def get_distance_coefficients_2(kind, c3, c3_epsilon, C, imt, sctx):
     Returns the c3 term. If c3 was input directly into the GMPE then
     this over-rides the c3 regionalisation. Otherwise the c3 and tau_c3
     are determined according to the region to which each site is assigned.
-
     Note that no regionalisation is defined for PGV and hence the
     default values from Kotha et al. (2020) are taken unless defined
     otherwise in the input c3
@@ -139,14 +145,37 @@ def get_distance_coefficients_2(kind, c3, c3_epsilon, C, imt, sctx):
     return c3_ + c3_epsilon * tau_c3
 
 
-def get_distance_term(kind, c3, c3_epsilon, C, ctx, rjb, imt):
+def get_distance_coefficients_3(att, delta_c3_epsilon, C, imt, sctx):
+    """
+    Return site-specific coefficient 'C3'. The function retrieves the
+    value of delta_c3 and the standard error of delta_c3 from the 'att'
+    geojson file depending on the location of site. This delta_c3 is
+    added to the generic coefficient 'c3' from the GMPE. A delta_c3_epsilon
+    value of +/- 1.6 gives the 95% confidence interval for delta_c3.
+    """
+    s = [(Point(lon, lat)) for lon, lat in zip(sctx.lon, sctx.lat)]
+    delta_c3 = np.zeros((len(sctx.lat), 2), dtype=float)
+    for i, feature in enumerate(att):
+        prepared_polygon = prep(shape(feature['geometry']))
+        contained = list(filter(prepared_polygon.contains, s))
+        if contained:
+            l = np.concatenate([np.where((sctx['lon'] == p.x) &
+                               (sctx['lat'] == p.y))[0] for p in contained])
+            delta_c3[l, 0] = feature['properties'][str(imt)]
+            delta_c3[l, 1] = feature['properties'][str(imt)+'_se']
+
+    return C["c3"] + delta_c3[:, 0] + delta_c3_epsilon * delta_c3[:, 1]
+
+
+def get_distance_term(kind, c3, c3_epsilon, C, ctx, imt):
     """
     Returns the distance attenuation factor
     """
     h = _get_h(C, ctx.hypo_depth)
-    rval = np.sqrt(rjb ** 2. + h ** 2.)
+    rval = np.sqrt(ctx.rjb ** 2. + h ** 2.)
     rref_val = np.sqrt(CONSTANTS["Rref"] ** 2. + h ** 2.)
-    c3 = get_distance_coefficients(kind, c3, c3_epsilon, C, imt, ctx)
+    if kind != 'regional':
+        c3 = get_distance_coefficients(kind, c3, c3_epsilon, C, imt, ctx)
     f_r = (C["c1"] + C["c2"] * (ctx.mag - CONSTANTS["Mref"])) *\
         np.log(rval / rref_val) + (c3 * (rval - rref_val) / 100.)
     return f_r
@@ -160,6 +189,28 @@ def get_magnitude_scaling(C, mag):
     return np.where(mag <= CONSTANTS["Mh"],
                     C["e1"] + C["b1"] * d_m + C["b2"] * d_m ** 2.0,
                     C["e1"] + C["b3"] * d_m)
+
+
+def get_dl2l(tec, ctx, imt, delta_l2l_epsilon):
+    """
+    Returns rupture source specific delta_l2l values. The method
+    retrieves the delta_l2l and standard error of delta_l2l values.
+    if delta_l2l_epsilon is provided, standard error of delta_c3
+    will be included. A delta_l2l_epsilon value of +/- 1.6 gives
+    the 95% confidence interval for delta_l2l.
+    """
+    f = [(Point(lon, lat)) for lon, lat in zip(ctx.hypo_lon, ctx.hypo_lat)]
+    dl2l = np.zeros((len(ctx.hypo_lon), 2), dtype=float)
+    for i, feature in enumerate(tec):
+        prepared_polygon = prep(shape(feature['geometry']))
+        contained = list(filter(prepared_polygon.contains, f))
+        if contained:
+            l = np.concatenate([np.where((ctx['hypo_lon'] == p.x) &
+                               (ctx['hypo_lat'] == p.y))[0] for p in contained])
+            dl2l[l, 0] = feature['properties'][str(imt)]
+            dl2l[l, 1] = feature['properties'][str(imt)+'_se']
+
+    return dl2l[:, 0] + delta_l2l_epsilon * dl2l[:, 1]
 
 
 def get_sigma_mu_adjustment(C, imt, ctx):
@@ -194,7 +245,7 @@ def get_site_amplification(kind, extra, C, ctx, imt):
     """
     if kind == "base":  # no site amplification
         ampl = 0.
-    elif kind == "site":
+    elif kind in {"site", "regional"}:
         # Render with respect to 800 m/s reference Vs30
         sref = np.log(ctx.vs30 / 800.)
         ampl = (C["g0_vs30"] + C["g1_vs30"] * sref +
@@ -257,7 +308,7 @@ def get_stddevs(kind, ergodic, phi_s2s, C, ctx, imt):
             phi_s2s[ctx.vs30measured] += C["phi_s2s_obs"]
             phi_s2s[np.logical_not(ctx.vs30measured)] += C["phi_s2s_inf"]
             phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
-        elif kind == 'site':
+        elif kind in {"site", "regional"}:
             phi = np.sqrt(phi ** 2.0 + C["phi_s2s_vs30"] ** 2.)
         elif kind == 'slope':
             phi = np.sqrt(phi ** 2. + C["phi_s2s_slope"] ** 2.)
@@ -272,41 +323,32 @@ class KothaEtAl2020(GMPE):
     """
     Implements the first complete version of the newly derived GMPE
     for Shallow Crustal regions using the Engineering Strong Motion Flatfile.
-
     Kotha, S. R., Weatherill, G., Bindi, D., Cotton F. (2020) "A regionally-
     adaptable ground-motion model for shallow crustal earthquakes in Europe.
     Bulletin of Earthquake Engineering, 18:4091-4125
-
     The GMPE is desiged for regional adaptation within a logic-tree framework,
     and as such contains several parameters that can be calibrated on input:
-
     1) Source-region scaling, a simple scalar factor that defines how much
     to increase or decrease the "regional average" ground motion in the region.
     This value is taken as the maximum of the source-region variability term
     (tau_l2l) and the statistical uncertainty (sigma_mu). The latter defines
     the within-model uncertainty owing to the data set from which the model is
     derived and only exceeds the former at large magnitudes
-
     2) Residual attenuation scaling "c3", a factor that controls the residual
     attenuation part of the model to make the ground motion decay more or less
     rapidly with distance than the regional average.
-
     Both factors are period dependent.
-
     The two adaptable factors can be controlled either by direct specification
     at input (in the form of an imt-dependent dictionary) or by a number of
     standard deviations multiplying the existing variance terms. The two
     approaches are mutually exclusive, with the directly specified parameters
     always being used if defined on input.
-
     In the core form of the GMPE no site term is included. This is added in the
     subclasses.
-
     :param float sigma_mu_epsilon:
         Parameter to control the source-region scaling as a number of
         standard deviations by which to multiply the source-region to source-
         region variance, max(tau_l2l, sigma_mu)
-
     :param float c3_epsilon:
         Parameter to control the residual attenuation scaling as a number
         of standard deviations by which to multiply the attenuation-region
@@ -315,16 +357,13 @@ class KothaEtAl2020(GMPE):
         attenuation as an instance of :class:
         `openquake.hazardlib.gsim.base.CoeffsTable`. If absent, the value is
         taken from the normal coefficients table.
-
     :param bool ergodic:
         Use the ergodic standard deviation (True) or non-ergodic standard
         deviation (False)
-
     :param dict dl2l:
         If specifying the source-region scaling directly, defines the
         increase or decrease of the ground motion in the form of an imt-
         dependent dictionary of delta L2L factors
-
     :param dict c3:
         If specifying the residual attenuation scaling directly, defines the
         apparent anelastic attenuation term, c3, as an imt-dependent
@@ -413,10 +452,15 @@ class KothaEtAl2020(GMPE):
                 extra['GEOLOGICAL_UNITS'] = self.GEOLOGICAL_UNITS
             else:
                 phi_s2s = None
-
-            mean[m] = (get_magnitude_scaling(C, ctx.mag) +
-                       get_distance_term(self.kind, self.c3, self.c3_epsilon,
-                                         C, ctx, ctx.rjb, imt) +
+            if self.kind == 'regional':
+                c3 = get_distance_coefficients_3(self.att,
+                                                 self.delta_c3_epsilon,
+                                                 C, imt, ctx)
+            else:
+                c3 = self.c3
+            fp = get_distance_term(self.kind, c3, self.c3_epsilon,
+                                   C, ctx, imt)
+            mean[m] = (get_magnitude_scaling(C, ctx.mag) + fp +
                        get_site_amplification(self.kind, extra, C, ctx, imt))
             # GMPE originally in cm/s/s - convert to g
             if imt.string.startswith(('PGA', 'SA')):
@@ -426,6 +470,11 @@ class KothaEtAl2020(GMPE):
             if self.dl2l:
                 # The source-region parameter is specified explicity
                 mean[m] += self.dl2l[imt]["dl2l"]
+
+            elif self.kind == 'regional':
+                dl2l = get_dl2l(self.tec, ctx, imt, self.delta_l2l_epsilon)
+                mean[m] += dl2l
+
             elif self.sigma_mu_epsilon:
                 # epistemic uncertainty factor (sigma_mu) multiplied by
                 # the number of standard deviations
@@ -473,6 +522,37 @@ class KothaEtAl2020(GMPE):
     7.000   0.19675504234642   3.78431011962409   0.716569352050671   1.696310364814470   -1.28517895409644   0.2596896867469380   -0.070585399916418   0.146488759166368   0.523331606096182   0.434396029381517   0.208231539543981   0.385850838707000   -0.204046508080049   -0.155173106999605    0.2164856914333770    0.339211265835413   -0.0541313319257671   -0.1393109833551150   -0.00443019667996698   0.432359150492787
     8.000  -0.08979569600589   3.74815514351616   0.726493405776986   1.695347146909250   -1.32882937608962   0.2849197966362740   -0.051296439369391   0.150981191615944   0.508537123776905   0.429104860654150   0.216201318346277   0.387633769846605   -0.193908824182191   -0.148759113452472    0.2094261301289650    0.337650861518699   -0.0507933301386227   -0.1365792860813190   -0.00532310915144333   0.411101516213337
     """)
+
+
+class KothaEtAl2020regional(KothaEtAl2020):
+    """
+    Adaptation of the Kotha et al. (2020) GMPE using
+    the source and site specific adjustments.
+    """
+
+    #: Required rupture parameters are magnitude, hypocentral location
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_lat', 'hypo_lon', 'hypo_depth'}
+
+    #: Required site parameter are vs30, lat and lon of the site
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'lat', 'lon'}
+
+    kind = "regional"
+
+    def __init__(self, delta_l2l_epsilon=0.0, delta_c3_epsilon=0.0,
+                 ergodic=True, c3=None, dl2l=None, **kwargs):
+        """
+        Instantiate setting the dl2l and c3 terms.
+        """
+        super().__init__(delta_l2l_epsilon=delta_l2l_epsilon,
+                         delta_c3_epsilon=delta_c3_epsilon,
+                         ergodic=ergodic, **kwargs)
+        self.delta_l2l_epsilon = delta_l2l_epsilon
+        self.delta_c3_epsilon = delta_c3_epsilon
+        self.ergodic = ergodic
+        attenuation_file = os.path.join(DATA_FOLDER, 'kotha_attenuation_regions.geojson')
+        self.att = np.array(fiona.open(attenuation_file), dtype=object)
+        tectonic_file = os.path.join(DATA_FOLDER, 'kotha_tectonic_regions.geojson')
+        self.tec = np.array(fiona.open(tectonic_file), dtype=object)
 
 
 class KothaEtAl2020Site(KothaEtAl2020):
@@ -610,14 +690,11 @@ class KothaEtAl2020ESHM20(KothaEtAl2020):
     Adaptation of the Kotha et al. (2020) GMPE for application to the
     2020 European Seismic Hazard Model, as described in Weatherill et al.
     (2020)
-
     Weatherill, G., Kotha, S. R. and Cotton, F. (2020) "A regionally-adaptable
     'scaled-backbone' ground motion logic tree for shallow seismicity in
     Europe: application to the 2020 European seismic hazard model". Bulletin
     of Earthquake Engineering, 18:5087 - 5117
-
     There are three key adaptations of the original Kotha et al. (2020) GMM:
-
     1) The use of the residual attenuation regions, which represent the five
     main sub-regions of Europe with similar attenuation characteristics. The
     assignment to a particular group is now a site-dependent property,
@@ -626,12 +703,10 @@ class KothaEtAl2020ESHM20(KothaEtAl2020):
     belongs (1 - 5) or else the default values (0). For each region an expected
     c3 and variance, tau_c3, are defined from which the resulting c3 is taken
     as a multiple of the number of standard deviations of tau_c3.
-
     2) The site amplification is defined using a two-segment piecewise linear
     linear function. This form of the GMPE defines the site in terms of a
     measured or inferred Vs30, with the total aleatory variability adjusted
     accordingly.
-
     3) A magnitude-dependent heteroskedastic aleatroy uncertainty model is
     used for the region-corrected between-event residuals and the site-
     corrected within event residuals. The former taken from the "global" tau
@@ -639,7 +714,6 @@ class KothaEtAl2020ESHM20(KothaEtAl2020):
     model of Al Atik (2015) adapted to the distribution of site-corrected
     within-event residuals determined by the original regression of Kotha et
     al. (2020).
-
     Al Atik, L. (2015) NGA-East: Ground-Motion Standard Deviation Models for
     Central and Eastern North America, PEER Technical Report, No 2015/07
     """
@@ -823,5 +897,5 @@ class KothaEtAl2020ESHM20SlopeGeology(KothaEtAl2020ESHM20):
     5.0000     0.01675139    0.01898142           0.02123988    0.02293046   -0.00517242    -0.04022363   -0.04159239   0.00326963
     6.0000     0.00884584    0.01248789           0.01338540    0.01433546   -0.00328602    -0.02576612   -0.02615088   0.00321300
     7.0000     0.00754320    0.01081496           0.00952506    0.01292858   -0.00247815    -0.02210686   -0.02284293   0.00365737
-    8.0000     0.01794388    0.01906271           0.01478150    0.02515701   -0.00401437    -0.03950798   -0.04270189   0.00480742 
+    8.0000     0.01794388    0.01906271           0.01478150    0.02515701   -0.00401437    -0.03950798   -0.04270189   0.00480742
     """)
