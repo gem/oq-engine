@@ -565,14 +565,18 @@ class LossesByEventTestCase(unittest.TestCase):
         aae(mean, full, rtol=1E-2)  # converges only at 1%
 
     def test_maximum_probable_loss(self):
-        # MPL breaks summability
+        # checking that MPL does not break summability
         rng = numpy.random.default_rng(42)
-        claim = 1000 + rng.random(10) * 1000
-        cession = rng.random(10) * 1000
+        claim = numpy.round(1000 + rng.random(10) * 1000)
+        cession = numpy.round(rng.random(10) * 1000)
         period = 2000
         efftime = 10000
         retention = claim - cession
-        claim_mpl = scientific.maximum_probable_loss(claim, period, efftime)
-        cession_mpl = scientific.maximum_probable_loss(cession, period, efftime)
-        ret_mpl = scientific.maximum_probable_loss(retention, period, efftime)
-        print(claim_mpl, cession_mpl, ret_mpl)
+        idxs = numpy.argsort(cession)
+        claim_mpl = scientific.maximum_probable_loss(
+            claim, period, efftime, idxs)
+        cession_mpl = scientific.maximum_probable_loss(
+            cession, period, efftime, idxs)
+        ret_mpl = scientific.maximum_probable_loss(
+            retention, period, efftime, idxs)
+        self.assertEqual(claim_mpl, cession_mpl + ret_mpl)
