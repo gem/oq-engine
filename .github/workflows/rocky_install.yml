@@ -71,6 +71,9 @@ jobs:
         source /opt/openquake/venv/bin/activate
         pip install pytest
         pip install -U numpy
+        echo "list installed wheels and other"
+        pip list
+        pip freeze
         runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
         export PYTEST_ADDOPTS="--color=yes"
         # set owner to openquake to run test and create cache for pytest
