@@ -165,24 +165,9 @@ def claim_to_cessions(claim, policy, treaty_df):
     """
     :param claim: an array of claims
     :param policy: a dictionary corresponding to a specific policy
-    :param nonprops: dataframe with nonprop treaties of type wxlr
+    :param treaty_df: dataframe with treaties
 
-    Converts an array of claims into a dictionary of arrays
-
-    >>> df = pd.DataFrame({'id': ['prop1', 'nonprop1'],
-    ...                    'max_retention': [0, 100_000],
-    ...                    'limit': [1_000_000, 200_000],
-    ...                     type: ['prop', 'wxlr']}).set_index('id')
-    >>> pol1 = {'prop1': .3, 'prop2': .5, 'nonprop1': True}
-    >>> pol2 = {'prop1': .4, 'prop2': .4, 'nonprop1': True}
-    >>> claim_to_cessions(np.array([900_000]), pol1, df)
-    {'claim': array([900000]), 'retention': array([100000.]), 'prop1': array([270000.]), 'prop2': array([450000.]), 'nonprop1': array([80000.])}
-
-    >>> claim_to_cessions(np.array([1_800_000]), pol2, df)
-    {'claim': array([1800000]), 'retention': array([260000.]), 'prop1': array([720000.]), 'prop2': array([720000.]), 'nonprop1': array([100000.])}
-
-    >>> claim_to_cessions(np.array([80_000]), pol2, df)
-    {'claim': array([80000]), 'retention': array([16000.]), 'prop1': array([32000.]), 'prop2': array([32000.]), 'nonprop1': array([0.])}
+    Converts an array of claims into a dictionary of arrays.
     """
     # proportional cessions
     fractions = [policy[col] for col in policy if col.startswith('prop')]
@@ -192,11 +177,8 @@ def claim_to_cessions(claim, policy, treaty_df):
         cession = 'prop%d' % i
         out[cession] = claim * frac
 
-    wxl = treaty_df[treaty_df.type == 'wxlr']
-    if len(wxl) == 0:
-        return {k: np.round(v, 6) for k, v in out.items()}
-
     # wxlr cessions
+    wxl = treaty_df[treaty_df.type == 'wxlr']
     for col, nonprop in wxl.iterrows():
         out[col] = np.zeros(len(claim))
         if policy[col]:
