@@ -16,6 +16,7 @@ https://wheelhouse.openquake.org/v3/linux/py38/matplotlib-3.1.2-cp38-cp38-manyli
 https://wheelhouse.openquake.org/v3/linux/py38/pyproj-2.5.0-cp38-cp38-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py38/GDAL-3.4.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py38/Fiona-1.8.21-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py38/llvmlite-0.39.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 #
 ### Plotting ###
 # comment the following lines to skip installation
