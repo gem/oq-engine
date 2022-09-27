@@ -67,5 +67,6 @@ jobs:
         source ~/openquake/bin/activate
         pip install pytest
         oq dbserver start
-        pytest -vsx ~/work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
-        pytest -vsx ~/work/oq-engine/oq-engine/openquake/calculators
+        pytest -vsx --color=yes ~/work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
+        pytest -vsx --color=yes ~/work/oq-engine/oq-engine/openquake/sep
+        pytest -vsx --color=yes ~/work/oq-engine/oq-engine/openquake/calculators
