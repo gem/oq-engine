@@ -1,5 +1,5 @@
 
-  [Michele Simionato]
+  [Marco Pagani]
   * Added a class for computing the Joint Mean Rate Density for two IMTs. This
     is useful for implementing VPSHA.
 
