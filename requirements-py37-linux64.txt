@@ -42,5 +42,5 @@ https://wheelhouse.openquake.org/v3/linux/py37/kiwisolver-1.1.0-cp37-cp37m-manyl
 https://wheelhouse.openquake.org/v3/linux/py37/matplotlib-3.1.2-cp37-cp37m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py37/pyproj-2.5.0-cp37-cp37m-manylinux1_x86_64.whl
 #
-https://wheelhouse.openquake.org/v3/linux/py37/GDAL-3.4.3-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py37/GDAL-3.3.3-cp37-cp37m-manylinux_2_5_x86_64.manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py37/Fiona-1.8.21-cp37-cp37m-manylinux2014_x86_64.whl
