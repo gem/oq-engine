@@ -335,7 +335,8 @@ class PostRiskCalculator(base.RiskCalculator):
         if oq.hazard_calculation_id and not ds.parent:
             ds.parent = datastore.read(oq.hazard_calculation_id)
             base.save_agg_values(
-                ds, self.assetcol, oq.loss_types, oq.aggregate_by)
+                ds, self.assetcol, oq.loss_types,
+                oq.aggregate_by, oq.max_aggregations)
             aggby = ds.parent['oqparam'].aggregate_by
             self.reaggreate = (
                 aggby and oq.aggregate_by and oq.aggregate_by[0] not in aggby)
