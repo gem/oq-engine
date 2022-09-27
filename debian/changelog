@@ -1,7 +1,10 @@
-  [Antonio Ettorre]
-  * Bumped h5py to version 3.7.0
-
   [Michele Simionato]
+  * Changed the risk calculators to reuse the hazard exposure (if any)
+
+  [Antonio Ettorre]
+  * Bumped h5py to version 3.7.0 and added fiona 1.8.21
+
+  [Marco Pagani]
   * Added the get_dip and get_strike methods to the gridded surface
 
   [Michele Simionato]
