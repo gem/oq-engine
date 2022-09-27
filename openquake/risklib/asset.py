@@ -326,8 +326,9 @@ class TagCollection(object):
                                 format(len(aggkey)))
             if len(aggkey) >= max_aggregations:
                 # forbid too many aggregations
-                raise ValueError('Too many aggregation tags: %d >= %d' %
-                                 (len(aggkey), TWO32))
+                raise ValueError(
+                    'Too many aggregation tags: %d >= max_aggregations=%d' %
+                    (len(aggkey), max_aggregations))
         return aggkey
 
     def gen_tags(self, tagname):
