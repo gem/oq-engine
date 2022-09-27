@@ -43,5 +43,5 @@ https://wheelhouse.openquake.org/v3/linux/py39/matplotlib-3.3.4-cp39-cp39-manyli
 https://wheelhouse.openquake.org/v3/linux/py39/Pillow-8.1.2-cp39-cp39-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/pyproj-3.0.1-cp39-cp39-manylinux2010_x86_64.whl
 #
-https://wheelhouse.openquake.org/v3/linux/py39/GDAL-3.3.3-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py39/GDAL-3.4.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/Fiona-1.8.21-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
