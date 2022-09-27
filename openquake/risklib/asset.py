@@ -321,11 +321,12 @@ class TagCollection(object):
             for idxs in itertools.product(*ranges):
                 aggkey[ag, idxs] = tuple(
                     tags[idx] for idx, tags in zip(idxs, alltags))
-            if len(aggkey) >= TWO16 and 'site_id' not in self.tagnames:
-                # forbid too many aggregations (they are usual an user mistake)
-                # except for aggregate_by=site_id which is legitimate
+            if len(aggkey) >= TWO16:
+                logging.warning('Performing %d aggregations!', len(aggkey))
+            if len(aggkey) >= TWO32:
+                # forbid too many aggregations
                 raise ValueError('Too many aggregation tags: %d >= %d' %
-                                 (len(aggkey), TWO16))
+                                 (len(aggkey), TWO32))
         return aggkey
 
     def gen_tags(self, tagname):
