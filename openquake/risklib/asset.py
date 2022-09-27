@@ -322,7 +322,8 @@ class TagCollection(object):
                 aggkey[ag, idxs] = tuple(
                     tags[idx] for idx, tags in zip(idxs, alltags))
             if len(aggkey) >= TWO16:
-                logging.warning('Performing %d aggregations!', len(aggkey))
+                logging.warning('Performing {:_d} aggregations!'.
+                                format(len(aggkey)))
             if len(aggkey) >= TWO32:
                 # forbid too many aggregations
                 raise ValueError('Too many aggregation tags: %d >= %d' %
