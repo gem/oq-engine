@@ -70,7 +70,7 @@ jobs:
       run: |
         source /opt/openquake/venv/bin/activate
         pip install pytest
-        pip install -U numpy==1.22 scipy==1.8.1 numba==0.56.2
+        pip install -U scipy==1.8.1 numba==0.56.2 numpy
         echo "list installed wheels and other"
         pip list
         pip freeze
