@@ -61,6 +61,6 @@ jobs:
           oq --version
           oq dbserver start
           pytest -vsx --color=yes ~/work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
-          pytest -vs  --color=yes /Users/runner/work/oq-engine/oq-engine/openquake/calculators
           pytest -vsx --color=yes /Users/runner/work/oq-engine/oq-engine/openquake/sep
+          pytest -vs  --color=yes /Users/runner/work/oq-engine/oq-engine/openquake/calculators
           #oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
