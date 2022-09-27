@@ -375,9 +375,10 @@ def run_jobs(jobs):
             with h5py.File(ppath, 'r') as f:
                 prev_version = f.attrs['engine_version']
                 if prev_version != version:
-                    logging.warning('Starting from a hazard (%d) computed with'
-                                    ' an obsolete version of the engine: %s',
-                                    hc_id, version)
+                    # here the logger is not initialized yet
+                    print('Starting from a hazard (%d) computed with'
+                          ' an obsolete version of the engine: %s' %
+                          (hc_id, version))
     jobarray = len(jobs) > 1 and jobs[0].multi
     try:
         poll_queue(jobs[0].calc_id, poll_time=15)

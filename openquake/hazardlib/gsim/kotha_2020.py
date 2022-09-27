@@ -27,10 +27,10 @@ Module exports :class:`KothaEtAl2020`,
 import os
 import numpy as np
 from scipy.constants import g
-import fiona
-from shapely.geometry import Point, Polygon, shape
+from shapely.geometry import Point, shape
 from shapely.prepared import prep
 from openquake.baselib.general import CallableDict
+from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, from_string
@@ -529,6 +529,7 @@ class KothaEtAl2020regional(KothaEtAl2020):
     Adaptation of the Kotha et al. (2020) GMPE using
     the source and site specific adjustments.
     """
+    experimental = True
 
     #: Required rupture parameters are magnitude, hypocentral location
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_lat', 'hypo_lon', 'hypo_depth'}

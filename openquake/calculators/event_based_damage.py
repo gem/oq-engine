@@ -66,7 +66,8 @@ def event_based_damage(df, oqparam, dstore, monitor):
             df = dstore.read_df('gmf_data', slc=df)
         assetcol = dstore['assetcol']
         if K:
-            aggids, _ = assetcol.build_aggids(oqparam.aggregate_by)
+            aggids, _ = assetcol.build_aggids(
+                oqparam.aggregate_by, oqparam.max_aggregations)
         else:
             aggids = numpy.zeros(len(assetcol), U16)
         crmodel = monitor.read('crmodel')

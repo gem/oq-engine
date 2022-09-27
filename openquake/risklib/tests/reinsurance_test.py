@@ -142,9 +142,8 @@ class ReinsuranceTestCase(unittest.TestCase):
     def setUpClass(cls):
         csvfname = general.gettemp(CSV_NP)
         xmlfname = general.gettemp(XML_NP.format(csvfname))
-        cls.policy_df, treaty_df, maxc, fmap = reinsurance.parse(
+        cls.policy_df, treaty_df, fmap = reinsurance.parse(
             xmlfname, policy_idx)
-        assert not maxc  # there are no proportional treaties
         print(cls.policy_df)
         print(treaty_df)
         print(fmap)
@@ -198,7 +197,68 @@ event_id,policy_id,claim,retention,nonprop1,nonprop2
         expected = _df('''\
 event_id,claim,retention,nonprop1,nonprop2,nonprop3
 25,      8500.0,   50.0,   3000.0,  4800.0,   650.0''', index_col='event_id')
-        byevent = reinsurance.by_event(risk_by_event, self.policy_df, {},
-                                       self.treaty_df)
+        bypolicy, byevent = reinsurance.by_policy_event(
+            risk_by_event, self.policy_df, self.treaty_df)
         byevent = byevent[byevent.event_id == 25].set_index('event_id')
         assert_ok(byevent, expected)
+
+    def test_max_cession(self):
+        treaty_df = _df('''\
+id,type,max_retention,limit
+prop1,prop,      0,    5000
+nonprop1,wxlr, 200,    4000
+nonprop2,catxl,500,   10000
+''').set_index('id')
+        pol_df = _df('''\
+policy,liability,deductible,prop1,nonprop1,nonprop2
+1,     99000,        0,     .5,   1,   1
+2,     99000,        0,     .4,   1,   1
+3,     99000,        0,     .6,   1,   1
+''')
+        risk_by_event = _df('''\
+event_id,agg_id,loss
+1,     0,      12000
+1,     1,      5000
+1,     2,      3000
+''')
+        expected = _df('''\
+event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
+       1,20000,    500.0,5000.0, 7600.0,    4800.0,6900.0''')
+        bypolicy, byevent = reinsurance.by_policy_event(
+            risk_by_event, pol_df, treaty_df)
+
+    def _test_many_levels(self):
+        max_cession = {'prop1': 5000}
+        treaty_df = _df('''\
+id,type,max_retention,limit
+prop1,prop,   0,   9000
+cat1,catxl, 200,   4000
+cat2,catxl, 500,  10000
+cat3,catxl, 200,   4000
+cat4,catxl, 500,  10000
+cat5,catxl,1000,  50000
+''').set_index('id')
+        pol_df = _df('''\
+policy,liability,deductible,qshared,cat1,cat2,cat3,cat4,cat5
+1,     99000,        0,     .5,        1,   0,   0,   1,   1
+2,     99000,        0,     .4,        1,   0,   0,   1,   1
+3,     99000,        0,     .6,        0,   1,   0,   1,   1
+4,     99000,        0,     .6,        0,   1,   0,   1,   1
+5,     99000,        0,     .0,        0,   0,   1,   0,   1
+6,     99000,        0,     .0,        0,   0,   1,   0,   1
+''')
+        # catcomb = '10011', '01011', '00101' = 19, 11, 5
+        risk_by_event = _df('''\
+event_id,agg_id,loss
+1,     0,      12000
+1,     1,      5000
+1,     2,      3000
+1,     3,      12000
+1,     4,      5000
+1,     5,      3000
+''')
+        expected = _df('''\
+event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
+       1,20000,    500.0,5000.0, 7600.0,    4800.0,6900.0''')
+        bypolicy, byevent = reinsurance.by_policy_event(
+            risk_by_event, pol_df, max_cession, treaty_df)
