@@ -8,7 +8,7 @@ https://wheelhouse.openquake.org/macos/arm64/py39/matplotlib-3.5.2-cp39-cp39-mac
 https://wheelhouse.openquake.org/macos/arm64/py39/Shapely-1.8.2-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py39/Pillow-9.1.1-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py39/scipy-1.8.1-cp39-cp39-macosx_12_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/numpy-1.22.4-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/numpy-1.23.3-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py39/h5py-3.7.0-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py39/numba-0.56.2-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py39/llvmlite-0.39.1-cp39-cp39-macosx_11_0_arm64.whl
