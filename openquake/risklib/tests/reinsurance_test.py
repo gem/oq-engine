@@ -231,6 +231,7 @@ event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
         max_cession = {'prop1': 5000}
         treaty_df = _df('''\
 id,type,max_retention,limit
+prop1,prop,   0,   9000
 cat1,catxl, 200,   4000
 cat2,catxl, 500,  10000
 cat3,catxl, 200,   4000
@@ -243,8 +244,8 @@ policy,liability,deductible,qshared,cat1,cat2,cat3,cat4,cat5
 2,     99000,        0,     .4,        1,   0,   0,   1,   1
 3,     99000,        0,     .6,        0,   1,   0,   1,   1
 4,     99000,        0,     .6,        0,   1,   0,   1,   1
-5,     99000,        0,     .6,        0,   0,   1,   0,   1
-6,     99000,        0,     .6,        0,   0,   1,   0,   1
+5,     99000,        0,     .0,        0,   0,   1,   0,   1
+6,     99000,        0,     .0,        0,   0,   1,   0,   1
 ''')
         # catcomb = '10011', '01011', '00101' = 19, 11, 5
         risk_by_event = _df('''\

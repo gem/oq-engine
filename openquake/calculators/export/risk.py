@@ -600,7 +600,7 @@ def export_aggcurves_csv(ekey, dstore):
 
 
 @export.add(('reinsurance_by_event', 'csv'), ('reinsurance_curves', 'csv'),
-            ('reinsurance_avg', 'csv'))
+            ('reinsurance_avg', 'csv'), ('aggrisk_reinsurance', 'csv'))
 def export_reinsurance_by_event(ekey, dstore):
     dest = dstore.export_path('%s.%s' % ekey)
     df = dstore.read_df(ekey[0])
