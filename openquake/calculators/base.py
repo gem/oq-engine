@@ -715,12 +715,10 @@ class HazardCalculator(BaseCalculator):
         for loss_type, fname in lt_fnames:
             if 'reinsurance' in oq.inputs:
                 assert len(lt_fnames) == 1, lt_fnames
-                df, treaty_df, max_cession, fieldmap = reinsurance.parse(
-                    fname, policy_idx)
+                df, treaty_df, fieldmap = reinsurance.parse(fname, policy_idx)
                 treaties = set(treaty_df.id)
                 assert len(treaties) == len(treaty_df), 'Not unique treaties'
                 self.datastore.create_df('treaty_df', treaty_df,
-                                         max_cession=json.dumps(max_cession),
                                          field_map=json.dumps(fieldmap))
                 self.treaty_df = treaty_df.set_index('id')
             else:  # insurance

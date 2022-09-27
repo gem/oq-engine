@@ -142,9 +142,8 @@ class ReinsuranceTestCase(unittest.TestCase):
     def setUpClass(cls):
         csvfname = general.gettemp(CSV_NP)
         xmlfname = general.gettemp(XML_NP.format(csvfname))
-        cls.policy_df, treaty_df, maxc, fmap = reinsurance.parse(
+        cls.policy_df, treaty_df, fmap = reinsurance.parse(
             xmlfname, policy_idx)
-        assert not maxc  # there are no proportional treaties
         print(cls.policy_df)
         print(treaty_df)
         print(fmap)
@@ -199,14 +198,14 @@ event_id,policy_id,claim,retention,nonprop1,nonprop2
 event_id,claim,retention,nonprop1,nonprop2,nonprop3
 25,      8500.0,   50.0,   3000.0,  4800.0,   650.0''', index_col='event_id')
         bypolicy, byevent = reinsurance.by_policy_event(
-            risk_by_event, self.policy_df, {}, self.treaty_df)
+            risk_by_event, self.policy_df, self.treaty_df)
         byevent = byevent[byevent.event_id == 25].set_index('event_id')
         assert_ok(byevent, expected)
 
     def test_max_cession(self):
-        max_cession = {'prop1': 5000}
         treaty_df = _df('''\
 id,type,max_retention,limit
+prop1,prop,      0,    5000
 nonprop1,wxlr, 200,    4000
 nonprop2,catxl,500,   10000
 ''').set_index('id')
@@ -226,7 +225,7 @@ event_id,agg_id,loss
 event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
        1,20000,    500.0,5000.0, 7600.0,    4800.0,6900.0''')
         bypolicy, byevent = reinsurance.by_policy_event(
-            risk_by_event, pol_df, max_cession, treaty_df)
+            risk_by_event, pol_df, treaty_df)
 
     def _test_many_levels(self):
         max_cession = {'prop1': 5000}
