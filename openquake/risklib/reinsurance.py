@@ -22,7 +22,14 @@ import numpy as np
 from openquake.baselib.performance import compile
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.risklib import scientific
+"""
+Here is some info about the used data structures.
+There are 3 main dataframes:
 
+1. treaty_df (id, type, max_retention, limit) with type in prop, wxlr, catxl
+2. policy_df (policy, liability, deductible, prop1, nonprop1, cat1)
+3. risk_by_event (event_id, agg_id, loss) with agg_id == policy_id-1
+"""
 KNOWN_LOSS_TYPES = {
     'structural', 'nonstructural', 'contents',
     'value-structural', 'value-nonstructural', 'value-contents'}

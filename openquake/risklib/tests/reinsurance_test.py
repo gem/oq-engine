@@ -227,8 +227,7 @@ event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
         bypolicy, byevent = reinsurance.by_policy_event(
             risk_by_event, pol_df, treaty_df)
 
-    def _test_many_levels(self):
-        max_cession = {'prop1': 5000}
+    def test_many_levels(self):
         treaty_df = _df('''\
 id,type,max_retention,limit
 prop1,prop,   0,   9000
@@ -239,7 +238,7 @@ cat4,catxl, 500,  10000
 cat5,catxl,1000,  50000
 ''').set_index('id')
         pol_df = _df('''\
-policy,liability,deductible,qshared,cat1,cat2,cat3,cat4,cat5
+policy,liability,deductible,prop1,cat1,cat2,cat3,cat4,cat5
 1,     99000,        0,     .5,        1,   0,   0,   1,   1
 2,     99000,        0,     .4,        1,   0,   0,   1,   1
 3,     99000,        0,     .6,        0,   1,   0,   1,   1
@@ -261,4 +260,4 @@ event_id,agg_id,loss
 event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
        1,20000,    500.0,5000.0, 7600.0,    4800.0,6900.0''')
         bypolicy, byevent = reinsurance.by_policy_event(
-            risk_by_event, pol_df, max_cession, treaty_df)
+            risk_by_event, pol_df, treaty_df)
