@@ -260,9 +260,13 @@ def by_policy_event(agglosses_df, policy_df, treaty_df):
     :returns: (by_policy_df, by_event_df)
     """
     dfs = []
+    cats = [name for name, treaty in treaty_df.iterrows()
+            if treaty.type == 'catxl']
     for _, policy in policy_df.iterrows():
         df = by_policy(agglosses_df, dict(policy), treaty_df)
+        for cat in cats:
+            df[cat] = policy[cat] * df.retention
         dfs.append(df)
     df = pd.concat(dfs)
-    # print(by_policy)  # when debugging
+    # print(df)  # when debugging
     return df, _by_event(df, treaty_df)
