@@ -112,6 +112,7 @@ def parse(fname, policy_idx):
     fieldmap = {}
     reversemap = {} # propN->nameN
     treaty = dict(id=[], type=[], max_retention=[], limit=[])
+    nonprop = set()
     for node in rmodel.fieldMap:
         fieldmap[node['input']] = col = node['oq']
         reversemap[col] = node['input']
@@ -125,6 +126,7 @@ def parse(fname, policy_idx):
         else:
             limit = node['limit']
             maxret = node['max_retention']
+            nonprop.add(col)
         treaty['id'].append(col)
         treaty['type'].append(treaty_type)
         treaty['max_retention'].append(maxret)
@@ -146,7 +148,7 @@ def parse(fname, policy_idx):
         if col.startswith('prop'):
             colnames.append(origname)
             colvalues.append(df[col].to_numpy())
-        elif col.startswith('treaty'):
+        elif col in nonprop:
             df[col] = np.bool_(df[col])
     if colnames:
         check_fractions(colnames, colvalues, policyfname)
