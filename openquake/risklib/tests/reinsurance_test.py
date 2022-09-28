@@ -147,17 +147,6 @@ id,type,max_retention,limit
 prop1,prop,      0,    5000
 prop2,prop,      0,    8000
 ''').set_index('id')
-        pol_df = _df('''\
-policy,liability,deductible,prop1,prop2
-1,     99000,        0,     .5,   .3
-2,     99000,        0,     .4,   .3
-3,     99000,        0,     .5,   .3
-4,     99000,        0,     .4,   .3
-''')
-        expected = _df('''\
-event_id,claim,retention,prop1,prop2,overspill1
-       1,26000,13200.0,5000.0,7800.0,6900.0
-''')
         bypolicy = _df('''\
 event_id,policy_id,claim,retention,prop1,prop2
 1,       1,        12000,  2400.0,6000.0,3600.0
@@ -165,7 +154,9 @@ event_id,policy_id,claim,retention,prop1,prop2
 1,       3,         3000,   600.0,1500.0, 900.0
 1,       4,         6000,  1800.0,2400.0,1800.0''')
         byevent = reinsurance._by_event(bypolicy, treaty_df)
-        assert_ok(byevent, expected)
+        assert_ok(byevent, _df('''\
+event_id,claim,retention,prop1,prop2,overspill1
+       1,26000,13200.0,5000.0,7800.0,6900.0'''))
 
     def test_two_portfolios(self):
         # the first treaty applies to the first two policies,
