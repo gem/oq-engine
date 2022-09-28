@@ -81,8 +81,8 @@ jobs:
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           python -m pip install pytest
-          pytest -vsx ~/work/oq-engine/oq-engine/openquake/sep
+          pytest -vsx --color=yes D:\a\oq-engine\oq-engine\openquake\sep
           #
-          pytest -vsx --color=yes ~/work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
-          #pytest -vsx --color=yes D:\a\oq-engine\oq-engine\openquake\calculators
-          pytest -vsx --color=yes ~/work/oq-engine/oq-engine/openquake/calculators
+          pytest -vsx --color=yes D:\a\oq-engine\oq-engine\openquake\openquake\hazardlib\tests\gsim\kotha_2020_test.py
+          #
+          pytest -vsx --color=yes D:\a\oq-engine\oq-engine\openquake\calculators
