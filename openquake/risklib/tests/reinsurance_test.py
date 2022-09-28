@@ -19,9 +19,12 @@
 import io
 import sys
 import unittest
+import numpy
 import pandas
 from openquake.baselib import general
 from openquake.risklib import reinsurance
+
+aac = numpy.testing.assert_allclose
 
 def _df(string, sep=',', index_col=None):
     # build a DataFrame from a string
@@ -29,12 +32,12 @@ def _df(string, sep=',', index_col=None):
                            keep_default_na=False)
 
 def assert_ok(got, exp):
-    try:
-        cmp = got.compare(exp)
-    except ValueError:
-        sys.exit(str(got))
-    if len(cmp):
-        sys.exit(str(got))       
+    assert (got.columns == exp.columns).all()
+    for col in got.columns:
+        try:
+            aac(got[col], exp[col])
+        except ValueError:
+            sys.exit(f'Wrong column {col} in {got}')
     
 policy_idx = {'?': 0, 'VA_region_1': 1, 'VA_region_2': 2, 'rur_Ant_1': 3}
 
@@ -135,6 +138,73 @@ VA_region_2,10000,100,.3,.8''')
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn(':3 the sum of the fractions must be under 1, got 1.1',
                       str(ctx.exception))
+
+
+class ProportionalTestCase(unittest.TestCase):
+    def test_single_portfolio(self):
+        treaty_df = _df('''\
+id,type,max_retention,limit
+prop1,prop,      0,    5000
+prop2,prop,      0,    8000
+''').set_index('id')
+        pol_df = _df('''\
+policy,liability,deductible,prop1,prop2
+1,     99000,        0,     .5,   .3
+2,     99000,        0,     .4,   .3
+3,     99000,        0,     .5,   .3
+4,     99000,        0,     .4,   .3
+''')
+        risk_by_event = _df('''\
+event_id,agg_id,loss
+1,     0,      12000
+1,     1,      5000
+1,     2,      3000
+1,     3,      6000
+''')
+        expected = _df('''\
+event_id,claim,retention,prop1,prop2,overspill1
+       1,26000,13200.0,5000.0,7800.0,6900.0
+''')
+        bypolicy, byevent = reinsurance.by_policy_event(
+            risk_by_event, pol_df, treaty_df)
+        exp = _df('''\
+event_id,policy_id,claim,retention,prop1,prop2
+1,       1.0,      12000,  2400.0,6000.0,3600.0
+1,       2.0,       5000,  1500.0,2000.0,1500.0
+1,       3.0,       3000,   600.0,1500.0, 900.0
+1,       4.0,       6000,  1800.0,2400.0,1800.0''')
+        assert_ok(bypolicy, exp)
+        assert_ok(byevent, expected)
+
+    def test_two_portfolios(self):
+        # the first treaty applies to the first two policies,
+        # the second to the last two policies
+        treaty_df = _df('''\
+id,type,max_retention,limit
+prop1,prop,      0,    5000
+prop2,prop,      0,    8000
+''').set_index('id')
+        pol_df = _df('''\
+policy,liability,deductible,prop1,prop2
+1,     99000,        0,     .5,   0
+2,     99000,        0,     .4,   0
+3,     99000,        0,     0,   .6
+4,     99000,        0,     0,   .6
+''')
+        risk_by_event = _df('''\
+event_id,agg_id,loss
+1,     0,      12000
+1,     1,      5000
+1,     2,      3000
+1,     3,      6000
+''')
+        expected = _df('''\
+event_id,claim,retention,prop1,prop2,overspill1
+       1,26000,15600.0,5000.0,5400.0,3000.0
+''')
+        bypolicy, byevent = reinsurance.by_policy_event(
+            risk_by_event, pol_df, treaty_df)
+        assert_ok(byevent, expected)
 
 
 class ReinsuranceTestCase(unittest.TestCase):
