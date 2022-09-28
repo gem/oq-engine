@@ -156,7 +156,8 @@ def parse(fname, policy_idx):
 
 
 @compile(["(float64[:],float64[:],float64,float64)",
-          "(float64[:],float32[:],float64,float64)"])
+          "(float64[:],float32[:],float64,float64)",
+          "(float32[:],float32[:],float64,float64)"])
 def apply_nonprop(cession, retention, maxret, limit):
     capacity = limit - maxret
     for i, ret in np.ndenumerate(retention):
@@ -244,11 +245,14 @@ def _by_event(by_policy_df, treaty_df):
 
     # catxl applied everywhere
     catxl = treaty_df[treaty_df.type == 'catxl']
+    tot = np.zeros(len(df))
     for col, nonprop in catxl.iterrows():
-        dic[col] = np.zeros(len(df))
-        apply_nonprop(dic[col], dic['retention'],
+        cession = np.zeros(len(df))
+        apply_nonprop(cession, dic[col],
                       nonprop['max_retention'], nonprop['limit'])
-
+        dic[col] = cession
+        tot += cession
+    dic['retention'] -= tot
     return pd.DataFrame(dic)
 
 
