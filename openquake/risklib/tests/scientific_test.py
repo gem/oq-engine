@@ -565,12 +565,12 @@ class LossesByEventTestCase(unittest.TestCase):
         ret_mpl = scientific.maximum_probable_loss(
             retention, period, efftime, idxs)
         self.assertEqual(claim_mpl, cession_mpl + ret_mpl)
-        print('claim', claim[idxs], claim_mpl)
-        print('cession', cession[idxs], cession_mpl)
-        print('retention', retention[idxs], ret_mpl)
-        #[1094. 1128. 1439. 1450. 1697. 1761. 1774. 1786. 1859. 1976.] 1761.
-        #[443. 828. 927. 632. 823. 555. 371.  64. 644. 227.] 555.
-        #[651. 300. 512. 818. 874. 1206. 1403. 1722. 1215. 1749.] 1206.
+        # print('claim', claim[idxs], claim_mpl)
+        # print('cession', cession[idxs], cession_mpl)
+        # print('retention', retention[idxs], ret_mpl)
+        # [1094. 1128. 1439. 1450. 1697. 1761. 1774. 1786. 1859. 1976.] 1761.
+        # [443. 828. 927. 632. 823. 555. 371.  64. 644. 227.] 555.
+        # [651. 300. 512. 818. 874. 1206. 1403. 1722. 1215. 1749.] 1206.
 
     def test_claim(self):
         # curves for claim=cession+retention        
@@ -589,6 +589,7 @@ class LossesByEventTestCase(unittest.TestCase):
         ret_curve = scientific.losses_by_period(
             retention, periods, n, efftime, idxs)
         aae(claim_curve, cession_curve + ret_curve)
+        print('keeping event associations')
         print('claim', claim_curve)
         print('cession', cession_curve)
         print('retention', ret_curve)
@@ -599,3 +600,14 @@ class LossesByEventTestCase(unittest.TestCase):
             ax.plot(periods, ret_curve, label='retention')
             ax.legend()
             plt.show()
+
+        claim_curve = scientific.losses_by_period(
+            claim, periods, n, efftime)
+        cession_curve = scientific.losses_by_period(
+            cession, periods, n, efftime)
+        ret_curve = scientific.losses_by_period(
+            retention, periods, n, efftime)
+        print('not keeping event associations')
+        print('claim', claim_curve)
+        print('cession', cession_curve)
+        print('retention', ret_curve)
