@@ -18,7 +18,7 @@ https://wheelhouse.openquake.org/v3/linux/py310/numba-0.56.2-cp310-cp310-manylin
 https://wheelhouse.openquake.org/v3/linux/py310/psutil-5.9.2-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py310/GDAL-3.4.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py310/Fiona-1.8.21-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-pyproj==3.4.0
+https://wheelhouse.openquake.org/v3/linux/py310/pyproj-3.4.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 #
 https://wheelhouse.openquake.org/v3/linux/py/docutils-0.14-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/decorator-4.4.2-py2.py3-none-any.whl
