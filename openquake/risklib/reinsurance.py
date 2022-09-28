@@ -269,6 +269,7 @@ def by_policy_event(agglosses_df, policy_df, treaty_df):
     for _, policy in policy_df.iterrows():
         df = by_policy(agglosses_df, dict(policy), treaty_df)
         for cat in cats:
+            # policy[cat] is 1 if the CatXL applies to the policy, 0 otherwise
             df[cat] = policy[cat] * df.retention
         dfs.append(df)
     df = pd.concat(dfs)
