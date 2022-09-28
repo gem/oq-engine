@@ -154,26 +154,17 @@ policy,liability,deductible,prop1,prop2
 3,     99000,        0,     .5,   .3
 4,     99000,        0,     .4,   .3
 ''')
-        risk_by_event = _df('''\
-event_id,agg_id,loss
-1,     0,      12000
-1,     1,      5000
-1,     2,      3000
-1,     3,      6000
-''')
         expected = _df('''\
 event_id,claim,retention,prop1,prop2,overspill1
        1,26000,13200.0,5000.0,7800.0,6900.0
 ''')
-        bypolicy, byevent = reinsurance.by_policy_event(
-            risk_by_event, pol_df, treaty_df)
-        exp = _df('''\
+        bypolicy = _df('''\
 event_id,policy_id,claim,retention,prop1,prop2
-1,       1.0,      12000,  2400.0,6000.0,3600.0
-1,       2.0,       5000,  1500.0,2000.0,1500.0
-1,       3.0,       3000,   600.0,1500.0, 900.0
-1,       4.0,       6000,  1800.0,2400.0,1800.0''')
-        assert_ok(bypolicy, exp)
+1,       1,        12000,  2400.0,6000.0,3600.0
+1,       2,         5000,  1500.0,2000.0,1500.0
+1,       3,         3000,   600.0,1500.0, 900.0
+1,       4,         6000,  1800.0,2400.0,1800.0''')
+        byevent = reinsurance._by_event(bypolicy, treaty_df)
         assert_ok(byevent, expected)
 
     def test_two_portfolios(self):
