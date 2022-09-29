@@ -19,6 +19,7 @@
 import os
 import pandas as pd
 import numpy as np
+from openquake.baselib.general import BASE183
 from openquake.baselib.performance import compile
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.risklib import scientific
@@ -26,7 +27,8 @@ from openquake.risklib import scientific
 Here is some info about the used data structures.
 There are 3 main dataframes:
 
-1. treaty_df (id, type, max_retention, limit) with type in prop, wxlr, catxl
+1. treaty_df (id, type, max_retention, limit, code)
+   with type in prop, wxlr, catxl
 2. policy_df (policy, liability, deductible, prop1, nonprop1, cat1)
 3. risk_by_event (event_id, agg_id, loss) with agg_id == policy_id-1
 """
@@ -152,7 +154,9 @@ def parse(fname, policy_idx):
             df[col] = np.bool_(df[col])
     if colnames:
         check_fractions(colnames, colvalues, policyfname)
-    return df, pd.DataFrame(treaty), reversemap
+    treaty_df = pd.DataFrame(treaty)
+    treaty_df['code'] = [BASE183[i] for i in range(len(treaty_df))]
+    return df, treaty_df, reversemap
 
 
 @compile(["(float64[:],float64[:],float64,float64)",
