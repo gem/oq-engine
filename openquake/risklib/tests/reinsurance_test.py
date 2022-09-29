@@ -334,7 +334,7 @@ def new_claim(key, claim, maxret, capacity, cession):
     return ret
 
 
-def smart_agg(claim_df, treaty_df, cession):
+def clever_agg(claim_df, treaty_df, cession):
     """
     :param claim_df: a DataFrame with fields (key, claim)
     :param treaty_df: a treaty DataFrame
@@ -356,12 +356,12 @@ def smart_agg(claim_df, treaty_df, cession):
         dic['claim'].append(claim)
     print(dic)
     if len(dic['key']) > 1:
-        return smart_agg(pandas.DataFrame(dic), treaty_df, cession)
+        return clever_agg(pandas.DataFrame(dic), treaty_df, cession)
     return dic['claim']
         
 
 
-def test_smart_agg():
+def test_clever_agg():
     treaty_df = _df('''\
 id,type,max_retention,limit,code
 cat1,catxl, 200,   4000,A
@@ -380,6 +380,6 @@ claim,key
 3000,..C.E
 ''')
     cession = {code: 0 for code in treaty_df.index}
-    retention = smart_agg(df, treaty_df, cession)
+    retention = clever_agg(df, treaty_df, cession)
     print(retention, cession)
     assert sum(cession.values()) + retention == df.claim.sum()
