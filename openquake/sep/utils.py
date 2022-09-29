@@ -1,5 +1,6 @@
 from typing import Callable, Union
 
+import os
 import numpy as np
 import pandas as pd
 import pyproj as pj
@@ -8,6 +9,12 @@ try:
 except ImportError:
     gdal = None
 from numpy.lib.stride_tricks import as_strided
+
+
+# Set PROJ_LIB to dir containing proj.db to avoid:
+# 'ERROR 1: PROJ: proj_create_from_name: Cannot find proj.db'
+if 'PROJ_LIB' not in os.environ:
+    os.environ['PROJ_LIB'] = pj.datadir.get_data_dir()
 
 
 def sample_raster_at_points(raster_file: str, lon_pts: np.ndarray, lat_pts:
@@ -78,7 +85,7 @@ def make_2d_array_strides(arr, window_radius, linear=True):
 
     :param window_radius:
         Radius of the window (not counting the origin) in array count units.
-    
+
     :param linear:
         Flag specifying the shape of the stride collection.
 
@@ -119,7 +126,7 @@ def rolling_array_operation(
 
     :param array:
         Array of values that the window function will be passed over.
-        
+
     :param func:
         Function to be applied to each subarray. Should operate on an array and
         return a scalar.
