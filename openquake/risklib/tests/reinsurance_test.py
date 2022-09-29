@@ -336,30 +336,30 @@ def new_claim(code, claim, maxret, capacity, cession):
     return ret
 
 
-def clever_agg(claim_df, treaty_df, cession):
+def clever_agg(keys, claims, treaty_df, cession):
     """
-    :param claim_df: a DataFrame with fields (key, claim)
+    :param keys: a list of keys
+    :param claims: a list of claims
     :param treaty_df: a treaty DataFrame
     :param cession: a dictionary treaty.code -> cession value
 
     Recursively compute cessions and retentions for each treaty.
     Populate the cession dictionary and returns the final retention.
     """
-    sumdf = claim_df.groupby('key').sum()
-    dic = {'key': [], 'claim': []}
-    for key, claim in zip(sumdf.index, sumdf.claim):
+    ukeys, sums = general.fast_agg2(keys, numpy.array(claims))
+    newkeys, newclaims = [], []
+    for key, claim in zip(ukeys, sums):
         code = key[0]
         newkey = key[1:]
         if code != '.':
             tr = treaty_df.loc[code]
             capacity = tr.limit - tr.max_retention
             claim = new_claim(code, claim, tr.max_retention, capacity, cession)
-        dic['key'].append(newkey)
-        dic['claim'].append(claim)
-    print(dic)
-    if len(dic['key']) > 1:
-        return clever_agg(pandas.DataFrame(dic), treaty_df, cession)
-    return dic['claim'][0]
+        newkeys.append(newkey)
+        newclaims.append(claim)
+    if len(newkeys) > 1:
+        return clever_agg(newkeys, newclaims, treaty_df, cession)
+    return newclaims[0]
         
 
 
@@ -382,6 +382,6 @@ claim,key
 3000,..C.E
 ''')
     cession = {code: 0 for code in treaty_df.index}
-    retention = clever_agg(df, treaty_df, cession)
+    retention = clever_agg(df.key, df.claim, treaty_df, cession)
     assert cession == {'A': 3800, 'B': 5500, 'C': 3800, 'D': 5200, 'E': 3700}
     assert retention == 1000
