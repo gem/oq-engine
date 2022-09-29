@@ -373,15 +373,25 @@ cat4,catxl, 500,  10000,D
 cat5,catxl,1000,  50000,E
 ''').set_index('code')
     df = _df('''\
-claim,key
-6000,A..DE
-3000,A..DE
-1200,.B.DE
-4800,.B.DE
-5000,..C.E
-3000,..C.E
+event_id,claim,key
+0,6000,A..DE
+0,3000,A..DE
+0,1200,.B.DE
+0,4800,.B.DE
+0,5000,..C.E
+0,3000,..C.E
 ''')
-    cession = {code: 0 for code in treaty_df.index}
-    retention = clever_agg(dict(key=df.key, claim=df.claim), treaty_df, cession)
+    keys = df.key.unique()
+    eids = df.event_id.unique()
+    E = len(eids)
+    dic = {key: numpy.zeros(E) for key in keys}
+    for key in keys:
+        this = df[df.key == key]
+        ok = numpy.isin(eids, this.event_id.to_numpy())
+        import pdb; pdb.set_trace()
+        dic[key][ok] = this.claim.to_numpy()
+    cession = {code: numpy.zeros(E) for code in treaty_df.index}
+    
+    retention = clever_agg(dic, treaty_df, cession)
     print(retention, cession)
     assert sum(cession.values()) + retention == df.claim.sum()
