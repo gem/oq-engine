@@ -370,9 +370,9 @@ event_id,claim,key
     E = len(eids)
     cession = {code: numpy.zeros(E) for code in treaty_df.index}
     keys = ['A..DE', 'A..DE', '.B.DE', '.B.DE', '..C.E', '..C.E']
-    claims = [arr(6000, 6000), arr(3000, 3000),
-              arr(1200, 1200), arr(4800, 4800),
-              arr(5000, 5000), arr(3000, 3000)]
+    claims = [arr(6000), arr(3000),
+              arr(1200), arr(4800),
+              arr(5000), arr(3000)]
     retention = clever_agg(keys, claims, treaty_df, cession)
     assert cession == {'A': arr(3800),
                        'B': arr(5500),
