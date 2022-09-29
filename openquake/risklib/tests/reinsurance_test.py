@@ -25,6 +25,7 @@ from openquake.baselib import general
 from openquake.risklib import reinsurance
 
 aac = numpy.testing.assert_allclose
+appl = reinsurance.apply_nonprop.py_func
 
 def _df(string, sep=',', index_col=None):
     # build a DataFrame from a string
@@ -315,3 +316,70 @@ event_id,claim,retention,prop1,nonprop1,nonprop2,nonprop3,nonprop4,nonprop5
         bypolicy, byevent = reinsurance.by_policy_event(
             risk_by_event, pol_df, treaty_df)
         #assert_ok(byevent, expected)
+
+
+def new_claim(key, claim, maxret, capacity, cession):
+    code = key[0]
+    overmax = claim - maxret
+    if claim > maxret:
+        if overmax > capacity:
+            ret = maxret + overmax - capacity
+            cession[code] = capacity
+        else:
+            ret = maxret
+            cession[code] = overmax
+    else:
+        ret = 0
+        cession[code] = 0
+    return ret
+
+
+def smart_agg(claim_df, treaty_df, cession):
+    """
+    :param claim_df: a DataFrame with fields (key, claim)
+    :param treaty_df: a treaty DataFrame
+    :param cession: a dictionary treaty.code -> cession value
+
+    Recursively compute cessions and retentions for each treaty.
+    Populate the cession dictionary and returns the final retention.
+    """
+    sumdf = claim_df.groupby('key').sum()
+    dic = {'key': [], 'claim': []}
+    for key, claim in zip(sumdf.index, sumdf.claim):
+        code = key[0]
+        newkey = key[1:]
+        if code != '.':
+            tr = treaty_df.loc[code]
+            capacity = tr.limit - tr.max_retention
+            claim = new_claim(key, claim, tr.max_retention, capacity, cession)
+        dic['key'].append(newkey)
+        dic['claim'].append(claim)
+    print(dic)
+    if len(dic['key']) > 1:
+        return smart_agg(pandas.DataFrame(dic), treaty_df, cession)
+    return dic['claim']
+        
+
+
+def test_smart_agg():
+    treaty_df = _df('''\
+id,type,max_retention,limit,code
+cat1,catxl, 200,   4000,A
+cat2,catxl, 500,  10000,B
+cat3,catxl, 200,   4000,C
+cat4,catxl, 500,  10000,D
+cat5,catxl,1000,  50000,E
+''').set_index('code')
+    df = _df('''\
+claim,key
+6000,A..DE
+3000,A..DE
+1200,.B.DE
+4800,.B.DE
+5000,..C.E
+3000,..C.E
+''')
+    cession = {code: 0 for code in treaty_df.index}
+    retention = smart_agg(df, treaty_df, cession)
+    print(retention, cession)
+    assert sum(cession.values()) + retention == df.claim.sum()
