@@ -17,77 +17,181 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import io
-import os
-import pathlib
+import sys
 import unittest
 import pandas
+from openquake.baselib import general
 from openquake.risklib import reinsurance
 
-CDIR = pathlib.Path(os.path.dirname(__file__))
-
-def _df(string, sep=',', index_col=None):  # DataFrame from string
+def _df(string, sep=',', index_col=None):
+    # build a DataFrame from a string
     return pandas.read_csv(io.StringIO(string), sep=sep, index_col=index_col,
                            keep_default_na=False)
 
+def assert_ok(got, exp):
+    try:
+        cmp = got.compare(exp)
+    except ValueError:
+        sys.exit(str(got))
+    if len(cmp):
+        sys.exit(str(got))       
+    
 
+
+# NB: agg_id starts from 0, policy_id from 1
 risk_by_event = _df('''\
-event_id	agg_id	loss
-25	2	4159.046
-27	2	3141.0974
-28	2	3136.3154
-26	2	2859.9182
-29	2	2603.0217
-23	2	1730.9891
-41	1	1178.0742
-41	2	1178.0742
-40	1	1170.1654
-40	2	1170.1654
-21	2	1157.2078
-33	1	1117.877
-33	2	1117.877
-20	2	1066.6654
-16	2	1016.66644
-22	2	1000.24884
-13	1	764.2781
-13	2	764.2781
-5	2	761.1264
-5	1	761.1264
-''', sep='\t')
+event_id,agg_id,loss
+25,     2,      9159.046
+27,     1,      3141.0974
+28,     1,      3136.3154
+26,     1,      2859.9182
+29,     1,      2603.0217
+23,     1,      1730.9891
+41,     0,      1178.0742
+41,     1,      1178.0742
+40,     0,      1170.1654
+40,     1,      1170.1654
+21,     1,      1157.2078
+33,     0,      1117.877
+13,     0,      764.2781
+13,     1,      764.2781
+5,      1,      761.1264
+5,      0,      761.1264
+''')
+
+CSV_NP = '''\
+Policy,Limit,Deductible,WXLR_metro,WXLR_rural,CatXL_reg
+VA_region_1,8000,100,0,0,1
+VA_region_2,4000,200,1,1,1
+rur_Ant_1,  9000,500,1,1,0
+'''
+
+XML_NP = '''\
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <reinsuranceModel>
+    <description>reinsurance model</description>
+    <fieldMap>
+      <field oq="policy" input="Policy" />
+      <field oq="deductible" input="Deductible" />
+      <field oq="liability" input="Limit" />
+      <field oq="nonprop1" input="WXLR_metro" type="wxlr"
+             max_retention="500" limit="3500" />
+      <field oq="nonprop2" input="WXLR_rural" type="wxlr"
+             max_retention="200" limit="5000" />
+      <field oq="nonprop3" input="CatXL_reg" type="catxl"
+             max_retention="50" limit="2500" />
+    </fieldMap>
+    <policies>{}</policies>
+  </reinsuranceModel>
+</nrml>
+'''
+
+XML_PR = '''\
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <reinsuranceModel>
+    <description>reinsurance model</description>
+    <fieldMap>
+      <field oq="prop1" input="qshared" />
+      <field oq="prop2" input="surplus" />
+    </fieldMap>
+    <policies>{}</policies>
+  </reinsuranceModel>
+</nrml>
+'''
 
 
-treaty = _df('''\
-id,max_retention,limit
-wxlr,100000,200000
-''', index_col='id')
+class InvalidFractionsTestCase(unittest.TestCase):
+    def test_negative_fraction(self):
+        csvfname = general.gettemp('''\
+policy,liability,deductible,qshared,surplus
+pol1,10000,100,.1,.2
+pol2,10000,100,.1,-.2''')
+        with self.assertRaises(ValueError) as ctx:
+            reinsurance.parse(general.gettemp(XML_PR.format(csvfname)))
+        self.assertIn(':3: invalid fraction surplus=-0.2', str(ctx.exception))
+
+    def test_toolarge_fraction(self):
+        csvfname = general.gettemp('''\
+policy,liability,deductible,qshared,surplus
+pol1,10000,100,.1,.2
+pol2,10000,100,.1,1.2''')
+        with self.assertRaises(ValueError) as ctx:
+            reinsurance.parse(general.gettemp(XML_PR.format(csvfname)))
+        self.assertIn(':3: invalid fraction surplus=1.2', str(ctx.exception))
+
+    def test_excess_fraction(self):
+        csvfname = general.gettemp('''\
+policy,liability,deductible,qshared,surplus
+pol1,10000,100,.1,.2
+pol2,10000,100,.3,.8''')
+        with self.assertRaises(ValueError) as ctx:
+            reinsurance.parse(general.gettemp(XML_PR.format(csvfname)))
+        self.assertIn(':3 the sum of the fractions must be under 1, got 1.1',
+                      str(ctx.exception))
 
 
 class ReinsuranceTestCase(unittest.TestCase):
-    def test_parse(self):
-        policy_df, treaty_df, maxc, fmap = reinsurance.parse(
-            CDIR / 'reinsurance.xml')
-        print(policy_df)
+    @classmethod
+    def setUpClass(cls):
+        csvfname = general.gettemp(CSV_NP)
+        cls.policy_df, treaty_df, maxc, fmap = reinsurance.parse(
+            general.gettemp(XML_NP.format(csvfname)))
+        cls.policy_df['policy'] = range(1, 4)  # starts from 1
+        assert not maxc  # there are no proportional treaties
+        print(cls.policy_df)
         print(treaty_df)
-        self.assertEqual(len(policy_df), 12)
-        self.assertEqual(len(treaty_df), 3)
-        self.assertEqual(len(maxc), 5)
-        self.assertEqual(fmap, {'deductible': 'Deductible',
-                                'liability': 'Limit',
-                                'nonprop1': 'Treaty_id',
-                                'policy': 'Policy',
-                                'prop1': 'Surplus_metro',
-                                'prop2': 'QS_rural',
-                                'prop3': 'QS_reg',
-                                'prop4': 'Sur1_reg',
-                                'prop5': 'Fac_reg'})
+        print(fmap)
+        assert len(cls.policy_df) == 3
+        assert len(treaty_df) == 3
+        assert len(fmap) == 6
+        cls.treaty_df = treaty_df.set_index('id')
         
     def test_policy1(self):
-        pol = dict(policy=1, liability=1.0, liability_abs=False,
-                   deductible=0.1, deductible_abs=False, nonprop1='wxlr')
-        out = reinsurance.by_policy(risk_by_event, pol, treaty)
-        print('\n', out)
+        # VA_region_1, CatXL_reg(50, 2500)
+        expected = _df('''\
+event_id,policy_id,claim,retention,nonprop1,nonprop2
+41,1,1078.0742,1078.0742,0.0,0.0
+40,1,1070.1654,1070.1654,0.0,0.0
+33,1,1017.8770,1017.8770,0.0,0.0
+13,1, 664.2781, 664.2781,0.0,0.0
+ 5,1, 661.1264, 661.1264,0.0,0.0''')
+        pol = dict(self.policy_df.loc[0])
+        out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
+        assert_ok(out, expected)
 
     def test_policy2(self):
-        pol = dict(policy=2, liability=0.9, liability_abs=False,
-                   deductible=0.05, deductible_abs=False, nonprop1='wxlr')
-        out = reinsurance.by_policy(risk_by_event, pol, treaty)
-        print('\n', out)
+        # VA_region_2
+        # WXLR_metro(500, 3500) + WXLR_rural(200, 5000) + CatXL_reg(50, 2500)
+        expected = _df('''\
+event_id,policy_id,claim,retention,nonprop1,nonprop2
+0,27,2 ,2941.0974,200.0,2441.0974,300.0
+1,28,2 ,2936.3154,200.0,2436.3154,300.0
+2,26,2 ,2659.9182,200.0,2159.9182,300.0
+3,29,2 ,2403.0217,200.0,1903.0217,300.0
+4,23,2 ,1530.9891,200.0,1030.9891,300.0
+5,41,2 , 978.0742,200.0, 478.0742,300.0
+6,40,2 , 970.1654,200.0, 470.1654,300.0
+7,21,2 , 957.2078,200.0, 457.2078,300.0
+8,13,2 , 564.2781,200.0,  64.2781,300.0
+9, 5,2 , 561.1264,200.0,  61.1264,300.0''')
+        pol = dict(self.policy_df.loc[1])
+        out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
+        assert_ok(out, expected)
+
+    def test_policy3(self):
+        # rur_Ant_1, WXLR_metro(500, 3500) + WXLR_rural(200, 5000)
+        expected = _df('''\
+event_id,policy_id,claim,retention,nonprop1,nonprop2
+25,      3,        8500,700.0, 3000,4800''')
+        pol = dict(self.policy_df.loc[2])
+        out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
+        assert_ok(out, expected)
+        byevent = reinsurance.by_event(out, {}, self.treaty_df)
+        expec = _df('''\
+event_id,claim,retention,nonprop1,nonprop2,nonprop3
+25,      8500.0,   50.0,   3000.0,  4800.0,   650.0''')
+        assert_ok(byevent, expec)

@@ -725,22 +725,20 @@ class HazardCalculator(BaseCalculator):
                 treaties = set(treaty_df.id)
                 assert len(treaties) == len(treaty_df), 'Not unique treaties'
                 self.datastore.create_df('treaty_df', treaty_df,
-                                         max_cession=max_cession,
+                                         max_cession=json.dumps(max_cession),
                                          field_map=json.dumps(fieldmap))
                 self.treaty_df = treaty_df.set_index('id')
-            else:
+            else:  # insurance
+                #  `deductible` and `insurance_limit` as fractions
                 df = pandas.read_csv(fname, keep_default_na=False)
-                reinsurance.check_fields(['deductible', 'insurance_limit'],
-                                         df.columns, fname)
+                validate_probs(df.insurance_limit.to_numpy(),
+                               f'insurance_limit in {fname}')
             policy_idx = self.assetcol.tagcol.policy_idx
             for col in df.columns:
                 if col == 'policy':
                     policy_df[col].extend([policy_idx[x] for x in df[col]])
                 else:
                     policy_df[col].extend(df[col])
-            if 'insurance_limit' in df.columns:
-                validate_probs(df.insurance_limit.to_numpy(),
-                               f'insurance_limit in {fname}')
             policy_df['loss_type'].extend([loss_type] * len(df))
         assert policy_df
         self.policy_df = pandas.DataFrame(policy_df)

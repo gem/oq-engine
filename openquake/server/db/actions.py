@@ -308,6 +308,7 @@ DISPLAY_NAME = {
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'cs-stats': 'Mean Conditional Spectra',
     'reinsurance_by_event': 'Reinsurance By Event',
+    'reinsurance_curves': 'Aggregated Reinsurance Curves',
     'ruptures': 'Earthquake Ruptures',
     'hcurves': 'Hazard Curves',
     'hmaps': 'Hazard Maps',

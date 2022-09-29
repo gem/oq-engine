@@ -1,3 +1,6 @@
+  [Antonio Ettorre]
+  * Bumped h5py to version 3.7.0
+
   [Michele Simionato]
   * Added calculation of `reinsurance_by_event` and `reinsurance_curves`
     given a `reinsurance.xml` file
@@ -79,7 +82,7 @@ python3-oq-engine (3.15.0-1~xenial01) xenial; urgency=low
   * Fixed a bug in `upgrade_nrml -m` for point sources with different usd/lsd
   * Automatically discard irrelevant TRTs in disaggregation calculations
 
-  [Ashta Poudel, Anirudh Rao, Michele Simionato]
+  [Astha Poudel, Anirudh Rao, Michele Simionato]
   * Added the ability to run connectivity analysis in event_based_damage
     and scenario_damage calculation with an appropriate exposure
 
