@@ -1,10 +1,13 @@
-  [Marco Pagani]
-  * Fixed the calculation of conditonal spectra
-
-  [Antonio Ettorre]
-  * Bumped h5py to version 3.7.0
 
   [Michele Simionato]
+  * Added a parameter `max_aggregations` with a default of 100,000
+  * Changed the risk calculators to reuse the hazard exposure (if any)
+
+  [Antonio Ettorre]
+  * Bumped h5py to version 3.7.0 and added fiona 1.8.21
+
+  [Marco Pagani]
+  * Fixed the calculation of conditonal spectra
   * Added the get_dip and get_strike methods to the gridded surface
 
   [Michele Simionato]
