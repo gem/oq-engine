@@ -373,15 +373,23 @@ cat4,catxl, 500,  10000,D
 cat5,catxl,1000,  50000,E
 ''').set_index('code')
     df = _df('''\
-claim,key
-6000,A..DE
-3000,A..DE
-1200,.B.DE
-4800,.B.DE
-5000,..C.E
-3000,..C.E
+event_id,claim,key
+0,6000,A..DE
+0,3000,A..DE
+0,1200,.B.DE
+0,4800,.B.DE
+0,5000,..C.E
+0,3000,..C.E
+1,6000,A..DE
+1,3000,A..DE
+1,1200,.B.DE
+1,4800,.B.DE
+1,5000,..C.E
+1,3000,..C.E
 ''')
-    cession = {code: 0 for code in treaty_df.index}
-    retention = clever_agg(df.key, df.claim, treaty_df, cession)
-    assert cession == {'A': 3800, 'B': 5500, 'C': 3800, 'D': 5200, 'E': 3700}
-    assert retention == 1000
+    for eid, grp in df.groupby('event_id'):
+        cession = {code: 0 for code in treaty_df.index}
+        retention = clever_agg(grp.key, grp.claim, treaty_df, cession)
+        assert cession == {
+            'A': 3800, 'B': 5500, 'C': 3800, 'D': 5200, 'E': 3700}
+        assert retention == 1000
