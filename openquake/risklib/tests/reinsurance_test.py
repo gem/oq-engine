@@ -359,7 +359,7 @@ def clever_agg(claim_df, treaty_df, cession):
     print(dic)
     if len(dic['key']) > 1:
         return clever_agg(pandas.DataFrame(dic), treaty_df, cession)
-    return dic['claim']
+    return dic['claim'][0]
         
 
 
@@ -383,5 +383,5 @@ claim,key
 ''')
     cession = {code: 0 for code in treaty_df.index}
     retention = clever_agg(df, treaty_df, cession)
-    print(retention, cession)
-    assert sum(cession.values()) + retention == df.claim.sum()
+    assert cession == {'A': 3800, 'B': 5500, 'C': 3800, 'D': 5200, 'E': 3700}
+    assert retention == 1000
