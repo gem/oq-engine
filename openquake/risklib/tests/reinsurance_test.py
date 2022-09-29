@@ -283,7 +283,7 @@ event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
     def test_many_levels(self):
         treaty_df = _df('''\
 id,type,max_retention,limit
-prop1,prop,   0,   9000
+prop1,prop,   0,  90000
 cat1,catxl, 200,   4000
 cat2,catxl, 500,  10000
 cat3,catxl, 200,   4000
@@ -292,12 +292,12 @@ cat5,catxl,1000,  50000
 ''').set_index('id')
         pol_df = _df('''\
 policy,liability,deductible,prop1,cat1,cat2,cat3,cat4,cat5
-1,     99000,        0,     .5,        1,   0,   0,   1,   1
-2,     99000,        0,     .4,        1,   0,   0,   1,   1
-3,     99000,        0,     .6,        0,   1,   0,   1,   1
-4,     99000,        0,     .6,        0,   1,   0,   1,   1
-5,     99000,        0,     .0,        0,   0,   1,   0,   1
-6,     99000,        0,     .0,        0,   0,   1,   0,   1
+1,     99000,        0,     .5,      1,   0,   0,   1,   1
+2,     99000,        0,     .4,      1,   0,   0,   1,   1
+3,     99000,        0,     .6,      0,   1,   0,   1,   1
+4,     99000,        0,     .6,      0,   1,   0,   1,   1
+5,     99000,        0,     .0,      0,   0,   1,   0,   1
+6,     99000,        0,     .0,      0,   0,   1,   0,   1
 ''')
         # catcomb = '10011', '01011', '00101' = 19, 11, 5
         risk_by_event = _df('''\
@@ -310,7 +310,8 @@ event_id,agg_id,loss
 1,     5,      3000
 ''')
         expected = _df('''\
-event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
-       1,20000,    500.0,5000.0, 7600.0,    4800.0,6900.0''')
+event_id,claim,retention,prop1,nonprop1,nonprop2,nonprop3,nonprop4,nonprop5
+       1,40000,   1000.0,17000.0,3800.0,  5500.0,  3800.0,  5200.0,  3700.0''')
         bypolicy, byevent = reinsurance.by_policy_event(
             risk_by_event, pol_df, treaty_df)
+        #assert_ok(byevent, expected)

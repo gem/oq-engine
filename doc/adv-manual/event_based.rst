@@ -343,7 +343,7 @@ Since the return period is 2,000 = 10,000 / 5 to compute the MPL
 it is enough to take the fifth loss ordered in descending order:
 
 >>> MPL_COM = [1500, 700, 600, 400, 350, 200, 123, 0, 0, 0][4] = 350
->>> MPL_RES = [0, 0, 150, 200, 250, 300, 500, 600, 800, 1200][4] = 250
+>>> MPL_RES = [1200, 800, 600, 500, 300, 250, 200, 150, 0, 0][4] = 300
 
 Given this algorithm, it is clear why the MPL cannot be additive, i.e.
 MPL(COM + RES) != MPL(COM) + MPL(RES): doing the sums before or
@@ -354,7 +354,7 @@ by taking the fifth loss of the sorted sums
 [2000, 1400, 1000, 800, 750, 600, 600, 600, 123, 0]
 
 one gets ``MPL(COM + RES) = 750`` which is different from
-``MPL(RES) + MPL(COM) = 350 + 250``.
+``MPL(RES) + MPL(COM) = 350 + 300 = 650``.
 
 The engine is able to compute aggregate loss curves correctly, i.e.
 by doing the sums before the ordering phase. In order to perform
