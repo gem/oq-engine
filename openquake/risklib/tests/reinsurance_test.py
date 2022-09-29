@@ -25,7 +25,6 @@ from openquake.baselib import general
 from openquake.risklib import reinsurance
 
 aac = numpy.testing.assert_allclose
-appl = reinsurance.apply_nonprop.py_func
 
 def _df(string, sep=',', index_col=None):
     # build a DataFrame from a string
@@ -318,23 +317,6 @@ event_id,claim,retention,prop1,nonprop1,nonprop2,nonprop3,nonprop4,nonprop5
         #assert_ok(byevent, expected)
 
 
-def new_claim(code, claim, maxret, capacity, cession):
-    """
-    :returns: new claim after application of the treaty
-    """
-    overmax = claim - maxret
-    if claim > maxret:
-        if overmax > capacity:
-            ret = maxret + overmax - capacity
-            cession[code] = capacity
-        else:
-            ret = maxret
-            cession[code] = overmax
-    else:
-        ret = 0
-        cession[code] = 0
-    return ret
-
 
 def clever_agg(claim_key, treaty_df, cession):
     """
@@ -345,22 +327,26 @@ def clever_agg(claim_key, treaty_df, cession):
     Recursively compute cessions and retentions for each treaty.
     Populate the cession dictionary and returns the final retention.
     """
-    sumdf = pandas.DataFrame(claim_key).groupby('key').sum()
+    keys, claims = general.fast_agg2(
+        claim_key['key'], numpy.array(claim_key['claim']))
     dic = {'key': [], 'claim': []}
-    for key, claim in zip(sumdf.index, sumdf.claim):
+    for key, claim in zip(keys, claims):
         code = key[0]
         newkey = key[1:]
         if code != '.':
             tr = treaty_df.loc[code]
-            capacity = tr.limit - tr.max_retention
-            claim = new_claim(code, claim, tr.max_retention, capacity, cession)
+            reinsurance.apply_nonprop(
+                cession[code], claim, tr.max_retention, tr.limit)
         dic['key'].append(newkey)
         dic['claim'].append(claim)
     print(dic)
     if len(dic['key']) > 1:
         return clever_agg(dic, treaty_df, cession)
     return dic['claim']
-        
+
+
+def arr(*args):
+    return numpy.array(args, float)
 
 
 def test_clever_agg():
@@ -381,17 +367,15 @@ event_id,claim,key
 0,5000,..C.E
 0,3000,..C.E
 ''')
-    keys = df.key.unique()
     eids = df.event_id.unique()
     E = len(eids)
-    dic = {key: numpy.zeros(E) for key in keys}
-    for key in keys:
-        this = df[df.key == key]
-        ok = numpy.isin(eids, this.event_id.to_numpy())
-        import pdb; pdb.set_trace()
-        dic[key][ok] = this.claim.to_numpy()
-    cession = {code: numpy.zeros(E) for code in treaty_df.index}
-    
+    keys = ['A..DE', 'A..DE', '.B.DE', '.B.DE', '..C.E', '..C.E']
+    claims = [arr(6000, 6000), arr(3000, 3000),
+              arr(1200, 1200), arr(4800, 4800),
+              arr(5000, 5000), arr(3000, 3000)]
+    dic = {'key': keys, 'claim': claims}
+    cession = {code: numpy.zeros(E) for code in treaty_df.index}    
     retention = clever_agg(dic, treaty_df, cession)
     print(retention, cession)
+    import pdb; pdb.set_trace()
     assert sum(cession.values()) + retention == df.claim.sum()
