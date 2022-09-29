@@ -318,8 +318,10 @@ event_id,claim,retention,prop1,nonprop1,nonprop2,nonprop3,nonprop4,nonprop5
         #assert_ok(byevent, expected)
 
 
-def new_claim(key, claim, maxret, capacity, cession):
-    code = key[0]
+def new_claim(code, claim, maxret, capacity, cession):
+    """
+    :returns: new claim after application of the treaty
+    """
     overmax = claim - maxret
     if claim > maxret:
         if overmax > capacity:
@@ -351,7 +353,7 @@ def clever_agg(claim_df, treaty_df, cession):
         if code != '.':
             tr = treaty_df.loc[code]
             capacity = tr.limit - tr.max_retention
-            claim = new_claim(key, claim, tr.max_retention, capacity, cession)
+            claim = new_claim(code, claim, tr.max_retention, capacity, cession)
         dic['key'].append(newkey)
         dic['claim'].append(claim)
     print(dic)
