@@ -61,10 +61,9 @@ jobs:
           oq --version
           oq dbserver start
           sleep 5
-          oq engine --run "https://downloads.openquake.org/jobs/risk_test.zip"
+          ls -lrt /Users/runner/actions-runner/_work/oq-engine
+          pytest -vsx --color=yes /Users/runner/actions-runner/_work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
+          pytest -vsx --color=yes /Users/runner/actions-runner/_work/oq-engine/oq-engine/openquake/sep
+          pytest -vsx --color=yes /Users/runner/actions-runner/_work/oq-engine/oq-engine/openquake/calculators
           sleep 5
-          ls -lrt /Users/runner/runner-isolation/actions-runner/_work/oq-engine
-          pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
-          pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/sep
-          pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/calculators
-          #oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          oq engine --run "https://downloads.openquake.org/jobs/risk_test.zip"
