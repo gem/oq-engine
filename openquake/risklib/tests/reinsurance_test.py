@@ -35,7 +35,7 @@ def assert_ok(got, exp):
     assert (got.columns == exp.columns).all()
     for col in got.columns:
         try:
-            aac(got[col], exp[col])
+            aac(got[col], exp[col], err_msg=col)
         except ValueError:
             sys.exit(f'Wrong column {col} in {got}')
     
@@ -245,12 +245,13 @@ event_id,policy_id,claim,retention,nonprop1,nonprop2
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
         assert_ok(out, expected)
 
-    def test_by_event(self):
+    def test_by_cat_no_apply(self):
         expected = _df('''\
 event_id,claim,retention,nonprop1,nonprop2,nonprop3
-25,      8500.0,   50.0,   3000.0,  4800.0,   650.0''', index_col='event_id')
+25,      8500.0,   700.0,   3000.0,  4800.0,   0.0''', index_col='event_id')
         bypolicy, byevent = reinsurance.by_policy_event(
             risk_by_event, self.policy_df, self.treaty_df)
+        # the catxl does not apply on event 25
         byevent = byevent[byevent.event_id == 25].set_index('event_id')
         assert_ok(byevent, expected)
 
