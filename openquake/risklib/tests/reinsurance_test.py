@@ -368,3 +368,5 @@ event_id,claim,prop1,key
     aac(cession['D'], [5200, 5200])
     aac(cession['E'], [3700, 3700])
     aac(data[:, 0], [1000, 1000])  # retention
+    aac(data[:, 1], [40000, 40000])  # claim
+    aac(data[:, 2], [17000, 17000])  # prop1
