@@ -314,7 +314,16 @@ class StreamingXMLWriter(object):
             return
         self.start_tag(tag, node.attrib)
         if node.text is not None:
-            txt = escape(scientificformat(node.text).strip())
+            if node.tag == 'posList':
+                # NOTE: by convention, posList must be a flat list of
+                # space-separated coordinates. Here we expect as input a list
+                # of lists of tuples
+                txt = escape(
+                    ' '.join('%s' % coord
+                             for coord in
+                             list(itertools.chain(*node.text[0]))))
+            else:
+                txt = escape(scientificformat(node.text).strip())
             if txt:
                 self._write(txt)
         for subnode in node:
