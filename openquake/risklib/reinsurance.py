@@ -296,6 +296,6 @@ def by_policy_event(agglosses_df, policy_df, treaty_df):
         dfs.append(df)
     rbp = pd.concat(dfs)
     print(df)  # when debugging
-    rbe = _by_event(rbp, treaty_df)
+    rbe = _by_event(rbp, tdf)
     del rbp['treaty_key']
     return rbp, rbe
