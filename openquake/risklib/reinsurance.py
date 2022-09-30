@@ -271,7 +271,6 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
 
 def _by_event(rbp, treaty_df):
     tdf = treaty_df.set_index('code')
-    del rbp['policy_id']
     catdf = tdf[tdf.type == 'catxl']
     noncat = tdf[tdf.type != 'catxl']
     cols = ['event_id', 'claim'] + list(noncat.id)
