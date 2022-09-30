@@ -326,6 +326,7 @@ event_id,claim,retention,prop1,nonprop1,nonprop2,nonprop3,nonprop4,nonprop5
 def test_clever_agg():
     treaty_df = _df('''\
 id,type,max_retention,limit,code
+prop1,prop, 0,   100000,F
 cat1,catxl, 200,   4000,A
 cat2,catxl, 500,  10000,B
 cat3,catxl, 200,   4000,C
@@ -333,35 +334,37 @@ cat4,catxl, 500,  10000,D
 cat5,catxl,1000,  50000,E
 ''').set_index('code')
     df = _df('''\
-event_id,claim,key
-0,6000,A..DE
-0,3000,A..DE
-0,1200,.B.DE
-0,4800,.B.DE
-0,5000,..C.E
-0,3000,..C.E
-1,6000,A..DE
-1,3000,A..DE
-1,1200,.B.DE
-1,4800,.B.DE
-1,5000,..C.E
-1,3000,..C.E
+event_id,claim,prop1,key
+0,12000,6000,FA..DE
+0,5000,2000,FA..DE
+0,3000,1800,F.B.DE
+0,12000,7200,F.B.DE
+0,5000,0,F..C.E
+0,3000,0,F..C.E
+1,12000,6000,FA..DE
+1,5000,2000,FA..DE
+1,3000,1800,F.B.DE
+1,12000,7200,F.B.DE
+1,5000,0,F..C.E
+1,3000,0,F..C.E
 ''')
     eids, idxs = numpy.unique(df.event_id.to_numpy(), return_inverse=True)
     df['event_id'] = idxs
     E = len(eids)
     cession = {code: numpy.zeros(E) for code in treaty_df.index}
-    keys, claims = [], []
+    keys, datalist = [], []
     for key, grp in df.groupby('key'):
-        claim = numpy.zeros(E)
-        gb = grp[['event_id', 'claim']].groupby('event_id').sum()
-        claim[gb.index] = gb.claim.to_numpy()
+        data = numpy.zeros((E, 3))
+        gb = grp[['event_id', 'claim', 'prop1']].groupby('event_id').sum()
+        data[gb.index, 1] = gb.claim.to_numpy()  # claim
+        data[gb.index, 2] = gb.prop1.to_numpy()  # prop1
+        data[gb.index, 0] = data[:, 1] - data[:, 2]  # retention
         keys.append(key)
-        claims.append(claim)
-    retention = reinsurance.clever_agg(keys, claims, treaty_df, cession)
+        datalist.append(data)
+    data = reinsurance.clever_agg(keys, datalist, treaty_df, cession)
     aac(cession['A'], [3800, 3800])
     aac(cession['B'], [5500, 5500])
     aac(cession['C'], [3800, 3800])
     aac(cession['D'], [5200, 5200])
     aac(cession['E'], [3700, 3700])
-    aac(retention, [1000, 1000])
+    aac(data[:, 0], [1000, 1000])  # retention
