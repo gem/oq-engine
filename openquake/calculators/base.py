@@ -912,7 +912,8 @@ class HazardCalculator(BaseCalculator):
         # compute exposure stats
         if hasattr(self, 'assetcol'):
             save_agg_values(
-                self.datastore, self.assetcol, oq.loss_types, oq.aggregate_by)
+                self.datastore, self.assetcol, oq.loss_types,
+                oq.aggregate_by, oq.max_aggregations)
 
     def store_rlz_info(self, rel_ruptures):
         """
@@ -1207,20 +1208,20 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
         dstore['avg_gmf'] = avg_gmf
 
 
-def save_agg_values(dstore, assetcol, lossnames, aggby):
+def save_agg_values(dstore, assetcol, lossnames, aggby, maxagg):
     """
     Store agg_keys, agg_values.
     :returns: the aggkey dictionary key -> tags
     """
     if aggby:
-        aggids, aggtags = assetcol.build_aggids(aggby)
+        aggids, aggtags = assetcol.build_aggids(aggby, maxagg)
         logging.info('Storing %d aggregation keys', len(aggids))
         agg_keys = [','.join(tags) for tags in aggtags]
         dstore['agg_keys'] = numpy.array(agg_keys, hdf5.vstr)
         if 'assetcol' not in set(dstore):
             dstore['assetcol'] = assetcol
     if assetcol.get_value_fields():
-        dstore['agg_values'] = assetcol.get_agg_values(aggby)
+        dstore['agg_values'] = assetcol.get_agg_values(aggby, maxagg)
 
 
 def save_shakemap(calc, sitecol, shakemap, gmf_dict):

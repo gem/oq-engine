@@ -150,7 +150,8 @@ def event_based_risk(df, oqparam, dstore, monitor):
             df = dstore.read_df('gmf_data', slc=df)
         assetcol = dstore['assetcol']
         if oqparam.K:
-            aggids, _ = assetcol.build_aggids(oqparam.aggregate_by)
+            aggids, _ = assetcol.build_aggids(
+                oqparam.aggregate_by, oqparam.max_aggregations)
         else:
             aggids = ()
         crmodel = monitor.read('crmodel')
