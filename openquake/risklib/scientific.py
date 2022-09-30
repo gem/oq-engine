@@ -1365,7 +1365,20 @@ def return_periods(eff_time, num_losses):
     return U32(periods)
 
 
-def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
+def maximum_probable_loss(losses, return_period, eff_time, sorting_idxs=None):
+    """
+    :returns: Maximum Probable Loss at the given return period
+
+    >>> losses = [1000., 0., 2000., 1500., 780., 900., 1700., 0., 100., 200.]
+    >>> maximum_probable_loss(losses, 2000, 10_000)
+    900.0
+    """
+    return losses_by_period(losses, [return_period], len(losses), eff_time,
+                            sorting_idxs)[0]
+
+
+def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
+                     sorting_idxs=None):
     """
     :param losses: simulated losses
     :param return_periods: return periods of interest
@@ -1398,7 +1411,10 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
             % (num_events, num_losses))
     if eff_time is None:
         eff_time = return_periods[-1]
-    losses = numpy.sort(losses)
+    if sorting_idxs is None:
+        losses = numpy.sort(losses)
+    else:
+        losses = losses[sorting_idxs]
     # num_losses < num_events: just add zeros
     num_zeros = num_events - num_losses
     if num_zeros:
