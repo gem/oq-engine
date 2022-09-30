@@ -314,16 +314,15 @@ def by_policy_event(agglosses_df, policy_df, treaty_df):
     cats = [name for name, treaty in treaty_df.iterrows()
             if treaty.type == 'catxl']
     assert (treaty_df.limit != NOLIMIT).all()
-    tdf = treaty_df[treaty_df.type != 'wxlr']
     for _, policy in policy_df.iterrows():
         df = by_policy(agglosses_df, dict(policy), treaty_df)
         for cat in cats:
             # policy[cat] is 1 if the CatXL applies to the policy, 0 otherwise
             df[cat] = policy[cat] * df.retention
-        df['treaty_key'] = build_treaty_key(policy, tdf)
+        df['treaty_key'] = build_treaty_key(policy, treaty_df)
         dfs.append(df)
     rbp = pd.concat(dfs)
     # print(df)  # when debugging
-    rbe = _by_event(rbp, tdf)
+    rbe = _by_event(rbp, treaty_df)
     del rbp['treaty_key']
     return rbp, rbe
