@@ -26,10 +26,12 @@ from openquake.risklib import reinsurance
 
 aac = numpy.testing.assert_allclose
 
+
 def _df(string, sep=',', index_col=None):
     # build a DataFrame from a string
     return pandas.read_csv(io.StringIO(string), sep=sep, index_col=index_col,
                            keep_default_na=False)
+
 
 def assert_ok(got, exp):
     if len(got.columns) != len(exp.columns):
@@ -145,9 +147,10 @@ VA_region_2,10000,100,.3,.8''')
 
 class ProportionalTestCase(unittest.TestCase):
     def test_single_portfolio(self):
+        # two proportional treaties with with no overspill
         treaty_df = _df('''\
 id,type,max_retention,limit
-prop1,prop,      0,    5000
+prop1,prop,      0,    50000
 prop2,prop,      0,    8000
 ''').set_index('id')
         bypolicy = _df('''\
@@ -158,8 +161,8 @@ event_id,policy_id,claim,retention,prop1,prop2
 1,       4,         6000,  1800.0,2400.0,1800.0''')
         byevent = reinsurance._by_event(bypolicy, treaty_df)
         assert_ok(byevent, _df('''\
-event_id,claim,retention,prop1,prop2,overspill1
-       1,26000,13200.0,5000.0,7800.0,6900.0'''))
+event_id,claim,retention,prop1,prop2
+       1,26000,6300.0,11900.0,7800.0'''))
 
     def test_two_portfolios(self):
         # the first treaty applies to the first two policies,
