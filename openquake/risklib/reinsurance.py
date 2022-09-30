@@ -32,6 +32,7 @@ There are 3 main dataframes:
 2. policy_df (policy, liability, deductible, prop1, nonprop1, cat1)
 3. risk_by_event (event_id, agg_id, loss) with agg_id == policy_id-1
 """
+NOLIMIT = 1E100
 KNOWN_LOSS_TYPES = {
     'structural', 'nonstructural', 'contents',
     'value-structural', 'value-nonstructural', 'value-contents'}
@@ -123,7 +124,7 @@ def parse(fname, policy_idx):
         treaty_type = node.get('type', 'prop')
         assert treaty_type in ('prop', 'wxlr', 'catxl'), treaty_type
         if treaty_type == 'prop':
-            limit = node.get('max_cession_event', 1E100)
+            limit = node.get('max_cession_event', NOLIMIT)
             maxret = 0
         else:
             limit = node['limit']
@@ -284,13 +285,17 @@ def by_policy_event(agglosses_df, policy_df, treaty_df):
     dfs = []
     cats = [name for name, treaty in treaty_df.iterrows()
             if treaty.type == 'catxl']
+    assert (treaty_df.limit != NOLIMIT).all()
+    tdf = treaty_df[treaty_df.type != 'wxlr']
     for _, policy in policy_df.iterrows():
         df = by_policy(agglosses_df, dict(policy), treaty_df)
         for cat in cats:
             # policy[cat] is 1 if the CatXL applies to the policy, 0 otherwise
             df[cat] = policy[cat] * df.retention
-        df['treaty_key'] = build_treaty_key(policy, treaty_df)
+        df['treaty_key'] = build_treaty_key(policy, tdf)
         dfs.append(df)
-    df = pd.concat(dfs)
+    rbp = pd.concat(dfs)
     print(df)  # when debugging
-    return df, _by_event(df, treaty_df)
+    rbe = _by_event(rbp, treaty_df)
+    del rbp['treaty_key']
+    return rbp, rbe
