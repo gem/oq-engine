@@ -233,7 +233,7 @@ def clever_agg(ukeys, datalist, treaty_df, cession):
         newkey = key[1:]
         if code != '.':
             tr = treaty_df.loc[code]
-            if tr.type != 'prop':
+            if tr.type == 'catxl':
                 apply_treaty(cession[code], data[:, 0], tr.max_retention,
                              tr.limit - tr.max_retention)
         newkeys.append(newkey)
