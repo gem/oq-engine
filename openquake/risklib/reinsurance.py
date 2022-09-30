@@ -83,6 +83,7 @@ def check_fields(fields, dframe, idxdict, fname):
             else:  # assume all absolute
                 dframe[field + '_abs'] = np.ones(len(arr))
 
+
 # validate the file policy.csv
 def check_fractions(colnames, colvalues, fname):
     """
@@ -113,7 +114,7 @@ def parse(fname, policy_idx):
     """
     rmodel = nrml.read(fname).reinsuranceModel
     fieldmap = {}
-    reversemap = {} # propN->nameN
+    reversemap = {}  # propN->nameN
     treaty = dict(id=[], type=[], max_retention=[], limit=[])
     nonprop = set()
     for node in rmodel.fieldMap:
@@ -163,8 +164,7 @@ def parse(fname, policy_idx):
 @compile(["(float64[:],float64[:],float64,float64)",
           "(float64[:],float32[:],float64,float64)",
           "(float32[:],float32[:],float64,float64)"])
-def apply_nonprop(cession, retention, maxret, limit):
-    capacity = limit - maxret
+def apply_treaty(cession, retention, maxret, capacity):
     for i, ret in np.ndenumerate(retention):
         overmax = ret - maxret
         if ret > maxret:
@@ -196,9 +196,10 @@ def claim_to_cessions(claim, policy, treaty_df):
     wxl = treaty_df[treaty_df.type == 'wxlr']
     for col, nonprop in wxl.iterrows():
         out[col] = np.zeros(len(claim))
+        maxret = nonprop['max_retention']
+        capacity = nonprop['limit'] - maxret
         if policy[col]:
-            apply_nonprop(out[col], out['retention'],
-                          nonprop['max_retention'], nonprop['limit'])
+            apply_treaty(out[col], out['retention'], maxret, capacity)
 
     return {k: np.round(v, 6) for k, v in out.items()}
 
@@ -232,7 +233,8 @@ def clever_agg(ukeys, claims, treaty_df, cession):
         newkey = key[1:]
         if code != '.':
             tr = treaty_df.loc[code]
-            apply_nonprop(cession[code], claim, tr.max_retention, tr.limit)
+            apply_treaty(cession[code], claim, tr.max_retention,
+                         tr.limit - tr.max_retention)
         newkeys.append(newkey)
         newclaims.append(claim)
     if len(newkeys) > 1:
@@ -292,8 +294,9 @@ def _by_event(by_policy_df, treaty_df):
     tot = np.zeros(len(df))
     for col, nonprop in catxl.iterrows():
         cession = np.zeros(len(df))
-        apply_nonprop(cession, dic[col],
-                      nonprop['max_retention'], nonprop['limit'])
+        maxret = nonprop['max_retention']
+        capacity = nonprop['limit'] - maxret
+        apply_treaty(cession, dic[col], maxret, capacity)
         dic[col] = cession
         tot += cession
     dic['retention'] -= tot
