@@ -277,27 +277,26 @@ def _by_event(rbp, treaty_df):
     eids, idxs = np.unique(rbp.event_id.to_numpy(), return_inverse=True)
     rbp['event_id'] = idxs
     E = len(eids)
-    dic = dict(event_id=eids, retention=np.zeros(E), claim=np.zeros(E))
-    cession = dict(retention=np.zeros(E), claim=np.zeros(E))
-    for code in tdf.index:
-        cession[code] = np.zeros(E)
+    dic = dict(event_id=eids)
+    cession = {code: np.zeros(E) for code in tdf.index}  # all fields
     keys, datalist = [], []
     for key, grp in rbp.groupby('treaty_key'):
         data = np.zeros((E, len(cols)))
         gb = grp[cols].groupby('event_id').sum()
-        data[gb.index, 1] = gb.claim.to_numpy()  # claim
         for i, col in enumerate(cols):
-            if i > 0: # except event_id
+            if i > 0: # claim, noncat1, ...
                 data[gb.index, i] = gb[col].to_numpy()
-        data[:, 0] = data[:, 1]  # retention
+        data[:, 0] = data[:, 1]  # retention = claim - noncats
         for c in range(2, len(cols)):
             data[:, 0] -= data[:, c]
         keys.append(key)
         datalist.append(data)
     data = clever_agg(keys, datalist, tdf, cession)
+    import pdb; pdb.set_trace()
     dic['retention'] = data[:, 0]
-    for c, col in enumerate(cols[1:], 1):
+    for c, col in enumerate(cols[1:], 1):  # copy claim and noncats
         dic[col] = data[:, c]
+    # now copy the catxl columns
     catdf = tdf[tdf.type == 'catxl']
     for code, col in zip(catdf.index, catdf.id):
         dic[col] = cession[code]
