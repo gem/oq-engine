@@ -32,6 +32,9 @@ def _df(string, sep=',', index_col=None):
                            keep_default_na=False)
 
 def assert_ok(got, exp):
+    if len(got.columns) != len(exp.columns):
+        raise ValueError('Different columns %s != %s' %
+                         (got.columns, exp.columns))
     assert (got.columns == exp.columns).all()
     for col in got.columns:
         try:
@@ -162,9 +165,9 @@ event_id,claim,retention,prop1,prop2,overspill1
         # the first treaty applies to the first two policies,
         # the second to the last two policies
         treaty_df = _df('''\
-id,type,max_retention,limit
-prop1,prop,      0,    5000
-prop2,prop,      0,    8000
+id,type,max_retention,limit,code
+prop1,prop,      0,    5000,A
+prop2,prop,      0,    8000,B
 ''').set_index('id')
         pol_df = _df('''\
 policy,liability,deductible,prop1,prop2
@@ -257,10 +260,10 @@ event_id,claim,retention,nonprop1,nonprop2,nonprop3
 
     def test_max_cession(self):
         treaty_df = _df('''\
-id,type,max_retention,limit
-prop1,prop,      0,    5000
-nonprop1,wxlr, 200,    4000
-nonprop2,catxl,500,   10000
+id,type,max_retention,limit,code
+prop1,prop,      0,    5000,A
+nonprop1,wxlr, 200,    4000,B
+nonprop2,catxl,500,   10000,C
 ''').set_index('id')
         pol_df = _df('''\
 policy,liability,deductible,prop1,nonprop1,nonprop2
@@ -282,13 +285,13 @@ event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
 
     def test_many_levels(self):
         treaty_df = _df('''\
-id,type,max_retention,limit
-prop1,prop,   0,  90000
-cat1,catxl, 200,   4000
-cat2,catxl, 500,  10000
-cat3,catxl, 200,   4000
-cat4,catxl, 500,  10000
-cat5,catxl,1000,  50000
+id,type,max_retention,limit,code
+prop1,prop,   0,  90000,A
+cat1,catxl, 200,   4000,B
+cat2,catxl, 500,  10000,C
+cat3,catxl, 200,   4000,D
+cat4,catxl, 500,  10000,E
+cat5,catxl,1000,  50000,F
 ''').set_index('id')
         pol_df = _df('''\
 policy,liability,deductible,prop1,cat1,cat2,cat3,cat4,cat5
@@ -315,33 +318,6 @@ event_id,claim,retention,prop1,nonprop1,nonprop2,nonprop3,nonprop4,nonprop5
         bypolicy, byevent = reinsurance.by_policy_event(
             risk_by_event, pol_df, treaty_df)
         #assert_ok(byevent, expected)
-
-
-
-def clever_agg(ukeys, claims, treaty_df, cession):
-    """
-    :param ukeys: a list of unique keys
-    :param claims: a list of arrays of the same size
-    :param treaty_df: a treaty DataFrame
-    :param cession: a dictionary treaty.code -> cession array
-
-    Recursively compute cessions and retentions for each treaty.
-    Populate the cession dictionary and returns the final retention.
-    """
-    newkeys, newclaims = [], []
-    for key, claim in zip(ukeys, claims):
-        code = key[0]
-        newkey = key[1:]
-        if code != '.':
-            tr = treaty_df.loc[code]
-            reinsurance.apply_nonprop(
-                cession[code], claim, tr.max_retention, tr.limit)
-        newkeys.append(newkey)
-        newclaims.append(claim)
-    if len(newkeys) > 1:
-        keys, sums = general.fast_agg2(newkeys, numpy.array(newclaims))
-        return clever_agg(keys, sums, treaty_df, cession)
-    return newclaims[0]
 
 
 def test_clever_agg():
@@ -379,7 +355,7 @@ event_id,claim,key
         claim[gb.index] = gb.claim.to_numpy()
         keys.append(key)
         claims.append(claim)
-    retention = clever_agg(keys, claims, treaty_df, cession)
+    retention = reinsurance.clever_agg(keys, claims, treaty_df, cession)
     aac(cession['A'], [3800, 3800])
     aac(cession['B'], [5500, 5500])
     aac(cession['C'], [3800, 3800])
