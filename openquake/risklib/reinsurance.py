@@ -272,19 +272,20 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
 def _by_event(rbp, treaty_df):
     tdf = treaty_df.set_index('code')
     del rbp['policy_id']
+    catdf = tdf[tdf.type == 'catxl']
     noncat = tdf[tdf.type != 'catxl']
     cols = ['event_id', 'claim'] + list(noncat.id)
     eids, idxs = np.unique(rbp.event_id.to_numpy(), return_inverse=True)
     rbp['event_id'] = idxs
     E = len(eids)
     dic = dict(event_id=eids)
-    cession = {code: np.zeros(E) for code in tdf.index}  # all fields
+    cession = {code: np.zeros(E) for code in catdf.index}
     keys, datalist = [], []
     for key, grp in rbp.groupby('treaty_key'):
         data = np.zeros((E, len(cols)))
         gb = grp[cols].groupby('event_id').sum()
         for i, col in enumerate(cols):
-            if i > 0: # claim, noncat1, ...
+            if i > 0:  # claim, noncat1, ...
                 data[gb.index, i] = gb[col].to_numpy()
         data[:, 0] = data[:, 1]  # retention = claim - noncats
         for c in range(2, len(cols)):
@@ -296,7 +297,6 @@ def _by_event(rbp, treaty_df):
     for c, col in enumerate(cols[1:], 1):  # copy claim and noncats
         dic[col] = data[:, c]
     # now copy the catxl columns
-    catdf = tdf[tdf.type == 'catxl']
     for code, col in zip(catdf.index, catdf.id):
         dic[col] = cession[code]
     return pd.DataFrame(dic)
