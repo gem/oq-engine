@@ -5,6 +5,9 @@
 
 
 
+..
+  NOTE: authors must be aligned with "author" variable in conf.py file
+
 | **Authors**
 | Marco Pagani\ :math:`^1`, Vitor Silva\ :math:`^1`, Anirudh
   Rao\ :math:`^1`, Michele Simionato\ :math:`^1`,
