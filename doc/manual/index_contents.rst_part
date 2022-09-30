@@ -1,6 +1,3 @@
-Contents
-========
-
 .. container:: center
 
 
@@ -78,17 +75,5 @@ Contents
 
 | © 2013–2022 GEM Foundation
 | *April 2022*
-
-
-.. toctree::
-   :numbered:
-   :maxdepth: 2
-
-   introduction
-   hazard
-   risk
-   thanks
-   glossary
-
 
 
