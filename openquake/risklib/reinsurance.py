@@ -217,30 +217,31 @@ def build_treaty_key(pol_dict, treaty_df):
     return ''.join(key)
 
 
-def clever_agg(ukeys, claims, treaty_df, cession):
+def clever_agg(ukeys, datalist, treaty_df, cession):
     """
     :param ukeys: a list of unique keys
-    :param claims: a list of arrays of the same size
+    :param datalist: a list of matrices of the shape (E, 2+T)
     :param treaty_df: a treaty DataFrame
     :param cession: a dictionary treaty.code -> cession array
 
     Recursively compute cessions and retentions for each treaty.
     Populate the cession dictionary and returns the final retention.
     """
-    newkeys, newclaims = [], []
-    for key, claim in zip(ukeys, claims):
+    newkeys, newdatalist = [], []
+    for key, data in zip(ukeys, datalist):
         code = key[0]
         newkey = key[1:]
         if code != '.':
             tr = treaty_df.loc[code]
-            apply_treaty(cession[code], claim, tr.max_retention,
-                         tr.limit - tr.max_retention)
+            if tr.type == 'catxl':
+                apply_treaty(cession[code], data[:, 0], tr.max_retention,
+                             tr.limit - tr.max_retention)
         newkeys.append(newkey)
-        newclaims.append(claim)
+        newdatalist.append(data)
     if len(newkeys) > 1:
-        keys, sums = fast_agg2(newkeys, np.array(newclaims))
+        keys, sums = fast_agg2(newkeys, np.array(newdatalist))
         return clever_agg(keys, sums, treaty_df, cession)
-    return newclaims[0]
+    return newdatalist[0]
 
 
 # tested in test_reinsurance.py
