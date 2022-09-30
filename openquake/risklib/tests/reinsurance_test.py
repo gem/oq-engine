@@ -19,12 +19,12 @@
 import io
 import sys
 import unittest
-import numpy
+import numpy as np
 import pandas
 from openquake.baselib import general
 from openquake.risklib import reinsurance
 
-aac = numpy.testing.assert_allclose
+aac = np.testing.assert_allclose
 
 
 def _df(string, sep=',', index_col=None):
@@ -348,25 +348,39 @@ event_id,claim,prop1,key
 1,5000,0,F..C.E
 1,3000,0,F..C.E
 ''')
-    eids, idxs = numpy.unique(df.event_id.to_numpy(), return_inverse=True)
-    df['event_id'] = idxs
+    rbe = by_event(df, treaty_df)
+    assert_ok(rbe, _df('''\
+event_id,retention,claim,cat1,cat2,cat3,cat4,cat5,prop1
+0,       1000.0, 40000.0,3800.0,5500.0,3800.0,5200.0,3700.0,17000.0
+1,       1000.0, 40000.0,3800.0,5500.0,3800.0,5200.0,3700.0,17000.0'''))
+
+
+def by_event(rbp, treaty_df):
+    noncat = treaty_df[treaty_df.type != 'catxl']
+    cols = ['event_id', 'claim'] + list(noncat.id)
+    eids, idxs = np.unique(rbp.event_id.to_numpy(), return_inverse=True)
+    rbp['event_id'] = idxs
     E = len(eids)
-    cession = {code: numpy.zeros(E) for code in treaty_df.index}
+    cession = dict(
+        event_id=eids, retention=np.zeros(E), claim=np.zeros(E))
+    for code in treaty_df[treaty_df.type == 'catxl'].index:
+        cession[code] = np.zeros(E)
     keys, datalist = [], []
-    for key, grp in df.groupby('key'):
-        data = numpy.zeros((E, 3))
-        gb = grp[['event_id', 'claim', 'prop1']].groupby('event_id').sum()
+    for key, grp in rbp.groupby('key'):
+        data = np.zeros((E, len(cols)))
+        gb = grp[cols].groupby('event_id').sum()
         data[gb.index, 1] = gb.claim.to_numpy()  # claim
-        data[gb.index, 2] = gb.prop1.to_numpy()  # prop1
-        data[gb.index, 0] = data[:, 1] - data[:, 2]  # retention
+        for i, col in enumerate(cols):
+            if i > 0: # except event_id
+                data[gb.index, i] = gb[col].to_numpy()
+        data[:, 0] = data[:, 1]  # retention
+        for c in range(2, len(cols)):
+            data[:, 0] -= data[:, c]
         keys.append(key)
         datalist.append(data)
     data = reinsurance.clever_agg(keys, datalist, treaty_df, cession)
-    aac(cession['A'], [3800, 3800])
-    aac(cession['B'], [5500, 5500])
-    aac(cession['C'], [3800, 3800])
-    aac(cession['D'], [5200, 5200])
-    aac(cession['E'], [3700, 3700])
-    aac(data[:, 0], [1000, 1000])  # retention
-    aac(data[:, 1], [40000, 40000])  # claim
-    aac(data[:, 2], [17000, 17000])  # prop1
+    cession['retention'] = data[:, 0]
+    alias = dict(zip(treaty_df.index, treaty_df.id))
+    for c, col in enumerate(cols[1:], 1):
+        cession[col] = data[:, c]
+    return pandas.DataFrame(cession).rename(columns=alias)
