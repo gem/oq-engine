@@ -326,29 +326,29 @@ event_id,claim,retention,prop1,nonprop1,nonprop2,nonprop3,nonprop4,nonprop5
 def test_clever_agg():
     treaty_df = _df('''\
 id,type,max_retention,limit,code
-prop1,prop, 0,   100000,F
-cat1,catxl, 200,   4000,A
-cat2,catxl, 500,  10000,B
-cat3,catxl, 200,   4000,C
-cat4,catxl, 500,  10000,D
-cat5,catxl,1000,  50000,E
-''').set_index('code')
-    df = _df('''\
-event_id,claim,prop1,key
-0,12000,6000,FA..DE
-0,5000,2000,FA..DE
-0,3000,1800,F.B.DE
-0,12000,7200,F.B.DE
-0,5000,0,F..C.E
-0,3000,0,F..C.E
-1,12000,6000,FA..DE
-1,5000,2000,FA..DE
-1,3000,1800,F.B.DE
-1,12000,7200,F.B.DE
-1,5000,0,F..C.E
-1,3000,0,F..C.E
+prop1,prop, 0,   100000,A
+cat1,catxl, 200,   4000,B
+cat2,catxl, 500,  10000,C
+cat3,catxl, 200,   4000,D
+cat4,catxl, 500,  10000,E
+cat5,catxl,1000,  50000,F
 ''')
-    rbe = by_event(df, treaty_df)
+    df = _df('''\
+event_id,claim,prop1,key,policy_id
+0,12000,6000,AB..EF,1
+0,5000,2000,AB..EF,2
+0,3000,1800,A.C.EF,3
+0,12000,7200,A.C.EF,4
+0,5000,0,A..D.F,5
+0,3000,0,A..D.F,6
+1,12000,6000,AB..EF,1
+1,5000,2000,AB..EF,2
+1,3000,1800,A.C.EF,3
+1,12000,7200,A.C.EF,4
+1,5000,0,A..D.F,5
+1,3000,0,A..D.F,6
+''')
+    rbe = by_event(df, treaty_df.set_index('code'))
     assert_ok(rbe, _df('''\
 event_id,retention,claim,cat1,cat2,cat3,cat4,cat5,prop1
 0,       1000.0, 40000.0,3800.0,5500.0,3800.0,5200.0,3700.0,17000.0
