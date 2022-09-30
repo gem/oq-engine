@@ -318,19 +318,18 @@ event_id,claim,retention,prop1,nonprop1,nonprop2,nonprop3,nonprop4,nonprop5
 
 
 
-def clever_agg(keys, claims, treaty_df, cession):
+def clever_agg(ukeys, claims, treaty_df, cession):
     """
-    :param keys: a list of keys
-    :param claims: a list of claims
+    :param keys: a list of unique keys
+    :param claims: a list of arrays
     :param treaty_df: a treaty DataFrame
-    :param cession: a dictionary treaty.code -> cession value
+    :param cession: a dictionary treaty.code -> cession values
 
     Recursively compute cessions and retentions for each treaty.
     Populate the cession dictionary and returns the final retention.
     """
-    ukeys, sums = general.fast_agg2(keys, numpy.array(claims))
     newkeys, newclaims = [], []
-    for key, claim in zip(ukeys, sums):
+    for key, claim in zip(ukeys, claims):
         code = key[0]
         newkey = key[1:]
         if code != '.':
@@ -340,7 +339,8 @@ def clever_agg(keys, claims, treaty_df, cession):
         newkeys.append(newkey)
         newclaims.append(claim)
     if len(newkeys) > 1:
-        return clever_agg(newkeys, newclaims, treaty_df, cession)
+        keys, sums = general.fast_agg2(newkeys, numpy.array(newclaims))
+        return clever_agg(keys, sums, treaty_df, cession)
     return newclaims[0]
         
 
@@ -366,13 +366,17 @@ event_id,claim,key
 0,5000,..C.E
 0,3000,..C.E
 ''')
-    eids = df.event_id.unique()
+    eids, idxs = numpy.unique(df.event_id.to_numpy(), return_inverse=True)
+    df['event_id'] = idxs
     E = len(eids)
     cession = {code: numpy.zeros(E) for code in treaty_df.index}
-    keys = ['A..DE', 'A..DE', '.B.DE', '.B.DE', '..C.E', '..C.E']
-    claims = [arr(6000), arr(3000),
-              arr(1200), arr(4800),
-              arr(5000), arr(3000)]
+    keys, claims = [], []
+    for key, grp in df.groupby('key'):
+        claim = numpy.zeros(E)
+        gb = grp[['event_id', 'claim']].groupby('event_id').sum()
+        claim[gb.index] = gb.claim.to_numpy()
+        keys.append(key)
+        claims.append(claim)
     retention = clever_agg(keys, claims, treaty_df, cession)
     assert cession == {'A': arr(3800),
                        'B': arr(5500),
