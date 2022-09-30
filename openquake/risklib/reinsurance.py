@@ -202,6 +202,19 @@ def claim_to_cessions(claim, policy, treaty_df):
     return {k: np.round(v, 6) for k, v in out.items()}
 
 
+def build_treaty_key(pol_dict, treaty_df):
+    """
+    :returns: the treaty_key for the given policy
+    """
+    cols = treaty_df.index.to_numpy()
+    codes = treaty_df.code.to_numpy()
+    key = ['.'] * len(cols)
+    for c, col in enumerate(cols):
+        if pol_dict[col] > 0:
+            key[c] = codes[c]
+    return ''.join(key)
+
+
 # tested in test_reinsurance.py
 def by_policy(agglosses_df, pol_dict, treaty_df):
     '''
@@ -223,7 +236,8 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
     out['policy_id'] = np.array([pol_dict['policy']] * len(df))
     out.update(claim_to_cessions(claim, pol_dict, treaty_df))
     nonzero = out['claim'] > 0  # discard zero claims
-    return pd.DataFrame({k: out[k][nonzero] for k in out})
+    out_df = pd.DataFrame({k: out[k][nonzero] for k in out})
+    return out_df
 
 
 def _by_event(by_policy_df, treaty_df):
@@ -275,7 +289,8 @@ def by_policy_event(agglosses_df, policy_df, treaty_df):
         for cat in cats:
             # policy[cat] is 1 if the CatXL applies to the policy, 0 otherwise
             df[cat] = policy[cat] * df.retention
+        df['treaty_key'] = build_treaty_key(policy, treaty_df)
         dfs.append(df)
     df = pd.concat(dfs)
-    # print(df)  # when debugging
+    print(df)  # when debugging
     return df, _by_event(df, treaty_df)
