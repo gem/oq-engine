@@ -292,7 +292,6 @@ def _by_event(rbp, treaty_df):
         keys.append(key)
         datalist.append(data)
     data = clever_agg(keys, datalist, tdf, cession)
-    import pdb; pdb.set_trace()
     dic['retention'] = data[:, 0]
     for c, col in enumerate(cols[1:], 1):  # copy claim and noncats
         dic[col] = data[:, c]
