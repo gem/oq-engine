@@ -412,6 +412,11 @@ max:
   Example: *max = true*.
   Default: False
 
+max_aggregations:
+  Maximum number of aggregation keys.
+  Example: *max_aggregations = 200_000*
+  Default: 100_000
+
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
 
@@ -900,6 +905,7 @@ class OqParam(valid.ParamSet):
     maximum_distance = valid.Param(valid.IntegrationDistance.new)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
+    max_aggregations = valid.Param(valid.positivefloat, 100_000)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_potential_gmfs = valid.Param(valid.positiveint, 2E11)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)

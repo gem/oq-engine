@@ -237,7 +237,8 @@ agg_id
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job_err.ini')
-        self.assertIn('not in the fragility/vulnerability/consequence model', str(ctx.exception))
+        self.assertIn('not in the fragility/vulnerability/consequence model',
+                      str(ctx.exception))
 
     def test_case_3(self):
         # this is a test with statistics
@@ -630,3 +631,6 @@ class ReinsuranceTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/reinsurance_avg2.csv', fname,
                               delta=1E-5)
         
+        [fname] = export(('aggrisk_reinsurance', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk_reinsurance.csv', fname,
+                              delta=1E-5)

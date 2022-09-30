@@ -150,7 +150,8 @@ def event_based_risk(df, oqparam, dstore, monitor):
             df = dstore.read_df('gmf_data', slc=df)
         assetcol = dstore['assetcol']
         if oqparam.K:
-            aggids, _ = assetcol.build_aggids(oqparam.aggregate_by)
+            aggids, _ = assetcol.build_aggids(
+                oqparam.aggregate_by, oqparam.max_aggregations)
         else:
             aggids = ()
         crmodel = monitor.read('crmodel')
@@ -166,12 +167,14 @@ def event_based_risk(df, oqparam, dstore, monitor):
                             int(oqparam.asset_correlation))
 
     def outputs():
-        mon_risk = monitor('computing risk', measuremem=False)
-        for taxo, adf in assetcol.to_dframe().groupby('taxonomy'):
+        mon_risk = monitor('computing risk', measuremem=True)
+        # can aggregate millions of asset by using few GBs of RAM
+        gbt = assetcol.to_dframe().groupby('taxonomy')
+        for taxo, adf in gbt:
             gmf_df = df[numpy.isin(df.sid.to_numpy(), adf.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
-            with mon_risk:
+            with mon_risk:  # this is using a lot of memory
                 adf = adf.set_index('ordinal')
                 out = crmodel.get_output(adf, gmf_df, oqparam._sec_losses, rng)
             yield out
@@ -331,8 +334,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             eids = self.datastore['gmf_data/eid'][:]
             self.log_info(eids)
             self.datastore.swmr_on()  # crucial!
+            allargs = list(self.gen_args(eids))
             smap = parallel.Starmap(
-                event_based_risk, self.gen_args(eids), h5=self.datastore.hdf5)
+                event_based_risk, allargs, h5=self.datastore.hdf5)
             smap.monitor.save('assets', self.assetcol.to_dframe('id'))
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
@@ -396,16 +400,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             agg_loss_table = alt[alt.loss_id == LOSSID[lt]]
             if len(agg_loss_table) == 0:
                 raise ValueError('No losses for reinsurance %s' % lt)
-            dfs = []
-            for _, policy in self.policy_df.iterrows():
-                df = reinsurance.by_policy(
-                    agg_loss_table, dict(policy), self.treaty_df)
-                dfs.append(df)
-            by_policy = pandas.concat(dfs)
-            # print(by_policy)  # when debugging
-            max_cession = self.datastore.get_attr('treaty_df', 'max_cession')
-            rbe = reinsurance.by_event(
-                by_policy, json.loads(max_cession), self.treaty_df)
+            rbp, rbe = reinsurance.by_policy_event(
+                agg_loss_table, self.policy_df, self.treaty_df)
+            self.datastore.create_df('reinsurance_by_policy', rbp)
             self.datastore.create_df('reinsurance_by_event', rbe)
 
         if oq.avg_losses:

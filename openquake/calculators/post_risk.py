@@ -277,8 +277,8 @@ def build_store_agg(dstore, rbe_df, num_events):
 
 def build_reinsurance(dstore, num_events):
     """
-    Build and store the table `reinsurance_avg`; for event_based, also
-    build the `reinsurance_curves` table.
+    Build and store the tables `aggrisk_reinsurance` and `reinsurance_avg`;
+    for event_based, also build the `reinsurance_curves` table.
     """
     oq = dstore['oqparam']
     size = dstore.getsize('reinsurance_by_event')
@@ -314,6 +314,25 @@ def build_reinsurance(dstore, num_events):
     dstore.create_df('reinsurance_avg', pandas.DataFrame(avg),
                      units=dstore['cost_calculator'].get_units(
                          oq.loss_types))
+    # aggrisk by policy
+    avg = general.AccumDict(accum=[])
+    rbp_df = dstore.read_df('reinsurance_by_policy')
+    if len(num_events) > 1:
+        rbp_df['rlz_id'] = rlz_id[rbe_df.event_id.to_numpy()]
+    else:
+        rbp_df['rlz_id'] = 0
+    columns = [col for col in rbp_df.columns if col not in
+               {'event_id', 'policy_id', 'rlz_id'}]
+    for (rlz_id, policy_id), df in rbp_df.groupby(['rlz_id', 'policy_id']):
+        ne = num_events[rlz_id]
+        avg['rlz_id'].append(rlz_id)
+        avg['policy_id'].append(policy_id)
+        for col in columns:
+            agg = df[col].sum()
+            avg[col].append(agg * tr if oq.investigation_time else agg / ne)
+    dstore.create_df('aggrisk_reinsurance', pandas.DataFrame(avg),
+                     units=dstore['cost_calculator'].get_units(
+                         oq.loss_types))
     if oq.investigation_time is None:
         return
     dic['return_period'] = F32(dic['return_period'])
@@ -335,7 +354,8 @@ class PostRiskCalculator(base.RiskCalculator):
         if oq.hazard_calculation_id and not ds.parent:
             ds.parent = datastore.read(oq.hazard_calculation_id)
             base.save_agg_values(
-                ds, self.assetcol, oq.loss_types, oq.aggregate_by)
+                ds, self.assetcol, oq.loss_types,
+                oq.aggregate_by, oq.max_aggregations)
             aggby = ds.parent['oqparam'].aggregate_by
             self.reaggreate = (
                 aggby and oq.aggregate_by and oq.aggregate_by[0] not in aggby)
