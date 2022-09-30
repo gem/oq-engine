@@ -225,7 +225,7 @@ def clever_agg(ukeys, datalist, treaty_df, cession):
     Recursively compute cessions and retentions for each treaty.
     Populate the cession dictionary and returns the final retention.
     """
-    if len(ukeys) == 1:
+    if len(ukeys) == 1 and ukeys[0] == '':
         return datalist[0]
     newkeys, newdatalist = [], []
     for key, data in zip(ukeys, datalist):
