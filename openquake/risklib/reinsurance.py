@@ -19,7 +19,7 @@
 import os
 import pandas as pd
 import numpy as np
-from openquake.baselib.general import BASE183
+from openquake.baselib.general import BASE183, fast_agg2
 from openquake.baselib.performance import compile
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.risklib import scientific
@@ -216,6 +216,31 @@ def build_treaty_key(pol_dict, treaty_df):
     return ''.join(key)
 
 
+def clever_agg(ukeys, claims, treaty_df, cession):
+    """
+    :param ukeys: a list of unique keys
+    :param claims: a list of arrays of the same size
+    :param treaty_df: a treaty DataFrame
+    :param cession: a dictionary treaty.code -> cession array
+
+    Recursively compute cessions and retentions for each treaty.
+    Populate the cession dictionary and returns the final retention.
+    """
+    newkeys, newclaims = [], []
+    for key, claim in zip(ukeys, claims):
+        code = key[0]
+        newkey = key[1:]
+        if code != '.':
+            tr = treaty_df.loc[code]
+            apply_nonprop(cession[code], claim, tr.max_retention, tr.limit)
+        newkeys.append(newkey)
+        newclaims.append(claim)
+    if len(newkeys) > 1:
+        keys, sums = fast_agg2(newkeys, np.array(newclaims))
+        return clever_agg(keys, sums, treaty_df, cession)
+    return newclaims[0]
+
+
 # tested in test_reinsurance.py
 def by_policy(agglosses_df, pol_dict, treaty_df):
     '''
@@ -244,7 +269,7 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
 def _by_event(by_policy_df, treaty_df):
     """
     :param DataFrame by_policy_df: output of `by_policy`
-    :param DataFrame treaty_df: treaties
+    :param DataFrame treaty_df: treaties keyed by the 1-char code
     """
     df = by_policy_df.groupby('event_id').sum()
     del df['policy_id']
@@ -295,7 +320,7 @@ def by_policy_event(agglosses_df, policy_df, treaty_df):
         df['treaty_key'] = build_treaty_key(policy, tdf)
         dfs.append(df)
     rbp = pd.concat(dfs)
-    print(df)  # when debugging
+    # print(df)  # when debugging
     rbe = _by_event(rbp, tdf)
     del rbp['treaty_key']
     return rbp, rbe

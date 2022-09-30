@@ -320,33 +320,6 @@ event_id,claim,retention,prop1,nonprop1,nonprop2,nonprop3,nonprop4,nonprop5
         #assert_ok(byevent, expected)
 
 
-
-def clever_agg(ukeys, claims, treaty_df, cession):
-    """
-    :param ukeys: a list of unique keys
-    :param claims: a list of arrays of the same size
-    :param treaty_df: a treaty DataFrame
-    :param cession: a dictionary treaty.code -> cession array
-
-    Recursively compute cessions and retentions for each treaty.
-    Populate the cession dictionary and returns the final retention.
-    """
-    newkeys, newclaims = [], []
-    for key, claim in zip(ukeys, claims):
-        code = key[0]
-        newkey = key[1:]
-        if code != '.':
-            tr = treaty_df.loc[code]
-            reinsurance.apply_nonprop(
-                cession[code], claim, tr.max_retention, tr.limit)
-        newkeys.append(newkey)
-        newclaims.append(claim)
-    if len(newkeys) > 1:
-        keys, sums = general.fast_agg2(newkeys, numpy.array(newclaims))
-        return clever_agg(keys, sums, treaty_df, cession)
-    return newclaims[0]
-
-
 def test_clever_agg():
     treaty_df = _df('''\
 id,type,max_retention,limit,code
@@ -382,7 +355,7 @@ event_id,claim,key
         claim[gb.index] = gb.claim.to_numpy()
         keys.append(key)
         claims.append(claim)
-    retention = clever_agg(keys, claims, treaty_df, cession)
+    retention = reinsurance.clever_agg(keys, claims, treaty_df, cession)
     aac(cession['A'], [3800, 3800])
     aac(cession['B'], [5500, 5500])
     aac(cession['C'], [3800, 3800])
