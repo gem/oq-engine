@@ -37,7 +37,7 @@ def assert_ok(got, exp):
     if len(got.columns) != len(exp.columns):
         raise ValueError('Different columns %s != %s' %
                          (got.columns, exp.columns))
-    assert (got.columns == exp.columns).all()
+    assert list(got.columns) == list(exp.columns)
     for col in got.columns:
         try:
             aac(got[col], exp[col], err_msg=col)
@@ -149,29 +149,30 @@ class ProportionalTestCase(unittest.TestCase):
     def test_single_portfolio(self):
         # two proportional treaties with with no overspill
         treaty_df = _df('''\
-id,type,max_retention,limit
-prop1,prop,      0,    50000
-prop2,prop,      0,    8000
-''').set_index('id')
+id,type,max_retention,limit,code
+prop1,prop,      0,    50000,A
+prop2,prop,      0,     8000,B
+''')
         bypolicy = _df('''\
-event_id,policy_id,claim,retention,prop1,prop2
-1,       1,        12000,  2400.0,6000.0,3600.0
-1,       2,         5000,  1500.0,2000.0,1500.0
-1,       3,         3000,   600.0,1500.0, 900.0
-1,       4,         6000,  1800.0,2400.0,1800.0''')
+event_id,policy_id,claim,retention,prop1,prop2,treaty_key
+1,       1,        12000,  2400.0,6000.0,3600.0,AB
+1,       2,         5000,  1500.0,2000.0,1500.0,AB
+1,       3,         3000,   600.0,1500.0, 900.0,AB
+1,       4,         6000,  1800.0,2400.0,1800.0,AB''')
         byevent = reinsurance._by_event(bypolicy, treaty_df)
         assert_ok(byevent, _df('''\
-event_id,claim,retention,prop1,prop2
-       1,26000,6300.0,11900.0,7800.0'''))
+event_id,retention,claim,prop1,prop2
+       1,6300.0,26000,11900.0,7800.0'''))
 
     def test_two_portfolios(self):
+        raise unittest.SkipTest('using overspill')
         # the first treaty applies to the first two policies,
         # the second to the last two policies
         treaty_df = _df('''\
 id,type,max_retention,limit,code
 prop1,prop,      0,    5000,A
 prop2,prop,      0,    8000,B
-''').set_index('id')
+''')
         pol_df = _df('''\
 policy,liability,deductible,prop1,prop2
 1,     99000,        0,     .5,   0
@@ -208,7 +209,7 @@ class ReinsuranceTestCase(unittest.TestCase):
         assert len(cls.policy_df) == 3
         assert len(treaty_df) == 3
         assert len(fmap) == 6
-        cls.treaty_df = treaty_df.set_index('id')
+        cls.treaty_df = treaty_df
         
     def test_policy1(self):
         # VA_region_1, CatXL_reg(50, 2500)
@@ -253,8 +254,8 @@ event_id,policy_id,claim,retention,nonprop1,nonprop2
 
     def test_by_cat_no_apply(self):
         expected = _df('''\
-event_id,claim,retention,nonprop1,nonprop2,nonprop3
-25,      8500.0,   700.0,   3000.0,  4800.0,   0.0''', index_col='event_id')
+event_id,retention,claim,nonprop1,nonprop2,nonprop3
+25,      700.0,   8500.0,  3000.0,  4800.0,   0.0''', index_col='event_id')
         bypolicy, byevent = reinsurance.by_policy_event(
             risk_by_event, self.policy_df, self.treaty_df)
         # the catxl does not apply on event 25
@@ -267,7 +268,7 @@ id,type,max_retention,limit,code
 prop1,prop,      0,    5000,A
 nonprop1,wxlr, 200,    4000,B
 nonprop2,catxl,500,   10000,C
-''').set_index('id')
+''')
         pol_df = _df('''\
 policy,liability,deductible,prop1,nonprop1,nonprop2
 1,     99000,        0,     .5,   1,   1
@@ -295,7 +296,7 @@ cat2,catxl, 500,  10000,C
 cat3,catxl, 200,   4000,D
 cat4,catxl, 500,  10000,E
 cat5,catxl,1000,  50000,F
-''').set_index('id')
+''')
         pol_df = _df('''\
 policy,liability,deductible,prop1,cat1,cat2,cat3,cat4,cat5
 1,     99000,        0,     .5,      1,   0,   0,   1,   1
@@ -334,7 +335,7 @@ cat4,catxl, 500,  10000,E
 cat5,catxl,1000,  50000,F
 ''')
     df = _df('''\
-event_id,claim,prop1,key,policy_id
+event_id,claim,prop1,treaty_key,policy_id
 0,12000,6000,AB..EF,1
 0,5000,2000,AB..EF,2
 0,3000,1800,A.C.EF,3
@@ -348,39 +349,8 @@ event_id,claim,prop1,key,policy_id
 1,5000,0,A..D.F,5
 1,3000,0,A..D.F,6
 ''')
-    rbe = by_event(df, treaty_df.set_index('code'))
+    rbe = reinsurance._by_event(df, treaty_df)
     assert_ok(rbe, _df('''\
-event_id,retention,claim,cat1,cat2,cat3,cat4,cat5,prop1
-0,       1000.0, 40000.0,3800.0,5500.0,3800.0,5200.0,3700.0,17000.0
-1,       1000.0, 40000.0,3800.0,5500.0,3800.0,5200.0,3700.0,17000.0'''))
-
-
-def by_event(rbp, treaty_df):
-    noncat = treaty_df[treaty_df.type != 'catxl']
-    cols = ['event_id', 'claim'] + list(noncat.id)
-    eids, idxs = np.unique(rbp.event_id.to_numpy(), return_inverse=True)
-    rbp['event_id'] = idxs
-    E = len(eids)
-    cession = dict(
-        event_id=eids, retention=np.zeros(E), claim=np.zeros(E))
-    for code in treaty_df[treaty_df.type == 'catxl'].index:
-        cession[code] = np.zeros(E)
-    keys, datalist = [], []
-    for key, grp in rbp.groupby('key'):
-        data = np.zeros((E, len(cols)))
-        gb = grp[cols].groupby('event_id').sum()
-        data[gb.index, 1] = gb.claim.to_numpy()  # claim
-        for i, col in enumerate(cols):
-            if i > 0: # except event_id
-                data[gb.index, i] = gb[col].to_numpy()
-        data[:, 0] = data[:, 1]  # retention
-        for c in range(2, len(cols)):
-            data[:, 0] -= data[:, c]
-        keys.append(key)
-        datalist.append(data)
-    data = reinsurance.clever_agg(keys, datalist, treaty_df, cession)
-    cession['retention'] = data[:, 0]
-    alias = dict(zip(treaty_df.index, treaty_df.id))
-    for c, col in enumerate(cols[1:], 1):
-        cession[col] = data[:, c]
-    return pandas.DataFrame(cession).rename(columns=alias)
+event_id,retention,claim,prop1,cat1,cat2,cat3,cat4,cat5
+0,       1000.0, 40000.0,17000.0,3800.0,5500.0,3800.0,5200.0,3700.0
+1,       1000.0, 40000.0,17000.0,3800.0,5500.0,3800.0,5200.0,3700.0'''))

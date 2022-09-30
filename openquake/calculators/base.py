@@ -720,7 +720,7 @@ class HazardCalculator(BaseCalculator):
                 assert len(treaties) == len(treaty_df), 'Not unique treaties'
                 self.datastore.create_df('treaty_df', treaty_df,
                                          field_map=json.dumps(fieldmap))
-                self.treaty_df = treaty_df.set_index('id')
+                self.treaty_df = treaty_df
             else:  # insurance
                 #  `deductible` and `insurance_limit` as fractions
                 df = pandas.read_csv(fname, keep_default_na=False)
