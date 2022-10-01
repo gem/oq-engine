@@ -401,7 +401,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             if len(agg_loss_table) == 0:
                 raise ValueError('No losses for reinsurance %s' % lt)
             rbp, rbe = reinsurance.by_policy_event(
-                agg_loss_table, self.policy_df, self.treaty_df)
+                agg_loss_table, self.policy_df, self.treaty_df, self._monitor)
             self.datastore.create_df('reinsurance_by_policy', rbp)
             self.datastore.create_df('reinsurance_by_event', rbe)
 

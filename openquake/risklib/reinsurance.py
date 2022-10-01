@@ -20,7 +20,7 @@ import os
 import pandas as pd
 import numpy as np
 from openquake.baselib.general import BASE183, fast_agg2
-from openquake.baselib.performance import compile
+from openquake.baselib.performance import compile, Monitor
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.risklib import scientific
 """
@@ -282,44 +282,47 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
     return out_df
 
 
-def _by_event(rbp, treaty_df):
-    tdf = treaty_df.set_index('code')
-    inpcols = ['event_id', 'claim'] + [t.id for _, t in tdf.iterrows()
-                                       if t.type != 'catxl']
-    outcols = ['retention', 'claim'] + list(tdf.index)
-    idx = {col: i for i, col in enumerate(outcols)}
-    eids, idxs = np.unique(rbp.event_id.to_numpy(), return_inverse=True)
-    rbp['event_id'] = idxs
-    E = len(eids)
-    dic = dict(event_id=eids)
-    keys, datalist = [], []
-    for key, grp in rbp.groupby('policy_grp'):
-        data = np.zeros((E, len(outcols)))
-        gb = grp[inpcols].groupby('event_id').sum()
-        for i, col in enumerate(inpcols):
-            if i > 0:  # claim, noncat1, ...
-                data[gb.index, i] = gb[col].to_numpy()
-        data[:, 0] = data[:, 1]  # retention = claim - noncats
-        for c in range(2, len(outcols)):
-            data[:, 0] -= data[:, c]
-        keys.append(key)
-        datalist.append(data)
-    overspill = {}
-    res = clever_agg(keys, datalist, tdf, idx, overspill)
+def _by_event(rbp, treaty_df, mon=Monitor()):
+    with mon('processing policy_loss_table', measuremem=True):
+        tdf = treaty_df.set_index('code')
+        inpcols = ['event_id', 'claim'] + [t.id for _, t in tdf.iterrows()
+                                           if t.type != 'catxl']
+        outcols = ['retention', 'claim'] + list(tdf.index)
+        idx = {col: i for i, col in enumerate(outcols)}
+        eids, idxs = np.unique(rbp.event_id.to_numpy(), return_inverse=True)
+        rbp['event_id'] = idxs
+        E = len(eids)
+        dic = dict(event_id=eids)
+        keys, datalist = [], []
+        for key, grp in rbp.groupby('policy_grp'):
+            data = np.zeros((E, len(outcols)))
+            gb = grp[inpcols].groupby('event_id').sum()
+            for i, col in enumerate(inpcols):
+                if i > 0:  # claim, noncat1, ...
+                    data[gb.index, i] = gb[col].to_numpy()
+            data[:, 0] = data[:, 1]  # retention = claim - noncats
+            for c in range(2, len(outcols)):
+                data[:, 0] -= data[:, c]
+            keys.append(key)
+            datalist.append(data)
+    with mon('reinsurance by event', measuremem=True):
+        overspill = {}
+        res = clever_agg(keys, datalist, tdf, idx, overspill)
 
-    # sanity check on the result
-    ret = res[:, 0]
-    claim = res[:, 1]
-    cession = res[:, 2:].sum(axis=1)
-    np.testing.assert_allclose(cession + ret, claim)
+        # sanity check on the result
+        ret = res[:, 0]
+        claim = res[:, 1]
+        cession = res[:, 2:].sum(axis=1)
+        np.testing.assert_allclose(cession + ret, claim)
 
-    dic.update({col: res[:, c] for c, col in enumerate(outcols)})
-    dic.update(overspill)
-    alias = dict(zip(tdf.index, tdf.id))
-    return pd.DataFrame(dic).rename(columns=alias)
+        dic.update({col: res[:, c] for c, col in enumerate(outcols)})
+        dic.update(overspill)
+        alias = dict(zip(tdf.index, tdf.id))
+        df = pd.DataFrame(dic).rename(columns=alias)
+    return df
 
 
-def by_policy_event(agglosses_df, policy_df, treaty_df):
+def by_policy_event(agglosses_df, policy_df, treaty_df, mon=Monitor()):
     """
     :param DataFrame agglosses_df: losses aggregated by (agg_id, event_id)
     :param DataFrame policy_df: policies
@@ -334,6 +337,6 @@ def by_policy_event(agglosses_df, policy_df, treaty_df):
         dfs.append(df)
     rbp = pd.concat(dfs)
     # print(df)  # when debugging
-    rbe = _by_event(rbp, treaty_df)
+    rbe = _by_event(rbp, treaty_df, mon)
     del rbp['policy_grp']
     return rbp, rbe
