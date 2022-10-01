@@ -217,12 +217,13 @@ def build_policy_grp(policy, treaty_df):
     return ''.join(key)
 
 
-def clever_agg(ukeys, datalist, treaty_df, cession):
+def clever_agg(ukeys, datalist, treaty_df, idx, over):
     """
     :param ukeys: a list of unique keys
     :param datalist: a list of matrices of the shape (E, 2+T)
     :param treaty_df: a treaty DataFrame
-    :param cession: a dictionary treaty.code -> cession array
+    :param idx: a dictionary treaty.code -> cession index
+    :param over: a dictionary treaty.code -> overspill array
 
     Recursively compute cessions and retentions for each treaty.
     Populate the cession dictionary and returns the final retention.
@@ -235,14 +236,24 @@ def clever_agg(ukeys, datalist, treaty_df, cession):
         newkey = key[1:]
         if code != '.':
             tr = treaty_df.loc[code]
+            ret = data[:, idx['retention']]
+            cession = data[:, idx[code]]
             if tr.type == 'catxl':
-                apply_treaty(cession[code], data[:, 0], tr.max_retention,
+                apply_treaty(cession, ret, tr.max_retention,
                              tr.limit - tr.max_retention)
+            elif tr.type == 'prop':
+                # managing overspill
+                overspill = cession - tr.limit
+                ok = overspill > 0
+                if ok.any():
+                    over['over_' + code] = overspill
+                    ret[ok] += cession[ok] - tr.limit
+                    cession[ok] = tr.limit
         newkeys.append(newkey)
         newdatalist.append(data)
     if len(newkeys) > 1:
         keys, sums = fast_agg2(newkeys, np.array(newdatalist))
-        return clever_agg(keys, sums, treaty_df, cession)
+        return clever_agg(keys, sums, treaty_df, idx, over)
     return newdatalist[0]
 
 
@@ -273,34 +284,32 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
 
 def _by_event(rbp, treaty_df):
     tdf = treaty_df.set_index('code')
-    catdf = tdf[tdf.type == 'catxl']
-    noncat = tdf[tdf.type != 'catxl']
-    cols = ['event_id', 'claim'] + list(noncat.id)
+    inpcols = ['event_id', 'claim'] + [t.id for _, t in tdf.iterrows()
+                                       if t.type != 'catxl']
+    outcols = ['retention', 'claim'] + list(tdf.index)
+    idx = {col: i for i, col in enumerate(outcols)}
     eids, idxs = np.unique(rbp.event_id.to_numpy(), return_inverse=True)
     rbp['event_id'] = idxs
     E = len(eids)
     dic = dict(event_id=eids)
-    cession = {code: np.zeros(E) for code in catdf.index}
     keys, datalist = [], []
     for key, grp in rbp.groupby('policy_grp'):
-        data = np.zeros((E, len(cols)))
-        gb = grp[cols].groupby('event_id').sum()
-        for i, col in enumerate(cols):
+        data = np.zeros((E, len(outcols)))
+        gb = grp[inpcols].groupby('event_id').sum()
+        for i, col in enumerate(inpcols):
             if i > 0:  # claim, noncat1, ...
                 data[gb.index, i] = gb[col].to_numpy()
         data[:, 0] = data[:, 1]  # retention = claim - noncats
-        for c in range(2, len(cols)):
+        for c in range(2, len(outcols)):
             data[:, 0] -= data[:, c]
         keys.append(key)
         datalist.append(data)
-    data = clever_agg(keys, datalist, tdf, cession)
-    dic['retention'] = data[:, 0]
-    for c, col in enumerate(cols[1:], 1):  # copy claim and noncats
-        dic[col] = data[:, c]
-    # now copy the catxl columns
-    for code, col in zip(catdf.index, catdf.id):
-        dic[col] = cession[code]
-    return pd.DataFrame(dic)
+    overspill = {}
+    res = clever_agg(keys, datalist, tdf, idx, overspill)
+    dic.update({col: res[:, c] for c, col in enumerate(outcols)})
+    dic.update(overspill)
+    alias = dict(zip(tdf.index, tdf.id))
+    return pd.DataFrame(dic).rename(columns=alias)
 
 
 def by_policy_event(agglosses_df, policy_df, treaty_df):
