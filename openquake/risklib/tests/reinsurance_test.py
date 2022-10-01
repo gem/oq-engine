@@ -154,7 +154,7 @@ prop1,prop,      0,    50000,A
 prop2,prop,      0,     8000,B
 ''')
         bypolicy = _df('''\
-event_id,policy_id,claim,retention,prop1,prop2,treaty_key
+event_id,policy_id,claim,retention,prop1,prop2,policy_grp
 1,       1,        12000,  2400.0,6000.0,3600.0,AB
 1,       2,         5000,  1500.0,2000.0,1500.0,AB
 1,       3,         3000,   600.0,1500.0, 900.0,AB
@@ -335,7 +335,7 @@ cat4,catxl, 500,  10000,E
 cat5,catxl,1000,  50000,F
 ''')
     df = _df('''\
-event_id,claim,prop1,treaty_key,policy_id
+event_id,claim,prop1,policy_grp,policy_id
 0,12000,6000,AB..EF,1
 0,5000,2000,AB..EF,2
 0,3000,1800,A.C.EF,3
