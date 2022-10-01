@@ -246,7 +246,7 @@ def clever_agg(ukeys, datalist, treaty_df, idx, over):
                 overspill = cession - tr.limit
                 ok = overspill > 0
                 if ok.any():
-                    over['over_' + code] = overspill
+                    over['over_' + code] = np.maximum(overspill, 0)
                     ret[ok] += cession[ok] - tr.limit
                     cession[ok] = tr.limit
         newkeys.append(newkey)
