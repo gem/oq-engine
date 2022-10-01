@@ -306,6 +306,13 @@ def _by_event(rbp, treaty_df):
         datalist.append(data)
     overspill = {}
     res = clever_agg(keys, datalist, tdf, idx, overspill)
+
+    # sanity check on the result
+    ret = res[:, 0]
+    claim = res[:, 1]
+    cession = res[:, 2:].sum(axis=1)
+    np.testing.assert_allclose(cession + ret, claim)
+
     dic.update({col: res[:, c] for c, col in enumerate(outcols)})
     dic.update(overspill)
     alias = dict(zip(tdf.index, tdf.id))
