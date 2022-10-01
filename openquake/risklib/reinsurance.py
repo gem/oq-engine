@@ -202,15 +202,17 @@ def claim_to_cessions(claim, policy, treaty_df):
     return {k: np.round(v, 6) for k, v in out.items()}
 
 
-def build_policy_grp(pol_dict, treaty_df):
+def build_policy_grp(policy, treaty_df):
     """
+    :param policy: policy dictionary or record
+    :param treaty_df: treaty DataFrame
     :returns: the policy_grp for the given policy
     """
     cols = treaty_df.id.to_numpy()
     codes = treaty_df.code.to_numpy()
     key = ['.'] * len(cols)
     for c, col in enumerate(cols):
-        if pol_dict[col] > 0:
+        if policy[col] > 0:
             key[c] = codes[c]
     return ''.join(key)
 
