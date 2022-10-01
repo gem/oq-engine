@@ -709,7 +709,7 @@ class HazardCalculator(BaseCalculator):
         Read the insurance files and populate the policy_df
         """
         oq = self.oqparam
-        policy_df = general.AccumDict(accum=[])
+        policy_acc = general.AccumDict(accum=[])
         # here is an example of policy_idx: {'?': 0, 'B': 1, 'A': 2}
         policy_idx = self.assetcol.tagcol.policy_idx
         for loss_type, fname in lt_fnames:
@@ -729,10 +729,10 @@ class HazardCalculator(BaseCalculator):
                     reinsurance.check_fractions(
                         [col], [df[col].to_numpy()], fname)
             for col in df.columns:
-                policy_df[col].extend(df[col])
-            policy_df['loss_type'].extend([loss_type] * len(df))
-        assert policy_df
-        self.policy_df = pandas.DataFrame(policy_df)
+                policy_acc[col].extend(df[col])
+            policy_acc['loss_type'].extend([loss_type] * len(df))
+        assert policy_acc
+        self.policy_df = pandas.DataFrame(policy_acc)
         self.datastore.create_df('policy', self.policy_df)
 
     def load_crmodel(self):
