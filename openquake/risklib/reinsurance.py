@@ -235,10 +235,15 @@ def clever_agg(ukeys, datalist, treaty_df, idx):
         newkey = key[1:]
         if code != '.':
             tr = treaty_df.loc[code]
+            ret = data[:, idx['retention']]
+            cession = data[:, idx[code]]
             if tr.type == 'catxl':
-                ret = data[:, idx['retention']]
-                apply_treaty(data[:, idx[code]], ret, tr.max_retention,
+                apply_treaty(cession, ret, tr.max_retention,
                              tr.limit - tr.max_retention)
+            elif tr.type == 'prop':
+                over = cession > tr.limit
+                ret[over] += cession[over] - tr.limit
+                cession[over] = tr.limit
         newkeys.append(newkey)
         newdatalist.append(data)
     if len(newkeys) > 1:
@@ -294,8 +299,8 @@ def _by_event(rbp, treaty_df):
             data[:, 0] -= data[:, c]
         keys.append(key)
         datalist.append(data)
-    data = clever_agg(keys, datalist, tdf, idx)
-    dic.update({col: data[:, c] for c, col in enumerate(outcols)})
+    res = clever_agg(keys, datalist, tdf, idx)
+    dic.update({col: res[:, c] for c, col in enumerate(outcols)})
     alias = dict(zip(tdf.index, tdf.id))
     return pd.DataFrame(dic).rename(columns=alias)
 
