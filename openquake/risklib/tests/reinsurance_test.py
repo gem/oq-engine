@@ -165,7 +165,6 @@ event_id,retention,claim,prop1,prop2,over_A
        1,13200.0,26000,5000.0,7800.0,6900'''))
 
     def test_two_portfolios(self):
-        raise unittest.SkipTest('using overspill')
         # the first treaty applies to the first two policies,
         # the second to the last two policies
         treaty_df = _df('''\
@@ -174,11 +173,11 @@ prop1,prop,      0,    5000,A
 prop2,prop,      0,    8000,B
 ''')
         pol_df = _df('''\
-policy,liability,deductible,prop1,prop2
-1,     99000,        0,     .5,   0
-2,     99000,        0,     .4,   0
-3,     99000,        0,     0,   .6
-4,     99000,        0,     0,   .6
+policy,liability,deductible,prop1,prop2,policy_grp
+1,     99000,        0,     .5,   0    ,A.
+2,     99000,        0,     .4,   0    ,A.
+3,     99000,        0,     0,   .6    ,.B
+4,     99000,        0,     0,   .6    ,.B
 ''')
         risk_by_event = _df('''\
 event_id,agg_id,loss
@@ -188,8 +187,8 @@ event_id,agg_id,loss
 1,     3,      6000
 ''')
         expected = _df('''\
-event_id,claim,retention,prop1,prop2,overspill1
-       1,26000,15600.0,5000.0,5400.0,3000.0
+event_id,retention,claim,prop1,prop2,over_A
+       1,15600.0  ,26000,5000.0,5400.0,3000.0
 ''')
         bypolicy, byevent = reinsurance.by_policy_event(
             risk_by_event, pol_df, treaty_df)
