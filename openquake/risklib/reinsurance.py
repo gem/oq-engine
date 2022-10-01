@@ -241,6 +241,7 @@ def clever_agg(ukeys, datalist, treaty_df, idx):
                 apply_treaty(cession, ret, tr.max_retention,
                              tr.limit - tr.max_retention)
             elif tr.type == 'prop':
+                # managing overspill
                 over = cession > tr.limit
                 ret[over] += cession[over] - tr.limit
                 cession[over] = tr.limit

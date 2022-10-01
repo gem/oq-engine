@@ -150,7 +150,7 @@ class ProportionalTestCase(unittest.TestCase):
         # two proportional treaties with with no overspill
         treaty_df = _df('''\
 id,type,max_retention,limit,code
-prop1,prop,      0,    50000,A
+prop1,prop,      0,     5000,A
 prop2,prop,      0,     8000,B
 ''')
         bypolicy = _df('''\
@@ -162,7 +162,7 @@ event_id,policy_id,claim,retention,prop1,prop2,policy_grp
         byevent = reinsurance._by_event(bypolicy, treaty_df)
         assert_ok(byevent, _df('''\
 event_id,retention,claim,prop1,prop2
-       1,6300.0,26000,11900.0,7800.0'''))
+       1,13200.0,26000,5000.0,7800.0'''))
 
     def test_two_portfolios(self):
         raise unittest.SkipTest('using overspill')
