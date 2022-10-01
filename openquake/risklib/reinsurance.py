@@ -202,9 +202,9 @@ def claim_to_cessions(claim, policy, treaty_df):
     return {k: np.round(v, 6) for k, v in out.items()}
 
 
-def build_treaty_key(pol_dict, treaty_df):
+def build_policy_grp(pol_dict, treaty_df):
     """
-    :returns: the treaty_key for the given policy
+    :returns: the policy_grp for the given policy
     """
     cols = treaty_df.id.to_numpy()
     codes = treaty_df.code.to_numpy()
@@ -280,7 +280,7 @@ def _by_event(rbp, treaty_df):
     dic = dict(event_id=eids)
     cession = {code: np.zeros(E) for code in catdf.index}
     keys, datalist = [], []
-    for key, grp in rbp.groupby('treaty_key'):
+    for key, grp in rbp.groupby('policy_grp'):
         data = np.zeros((E, len(cols)))
         gb = grp[cols].groupby('event_id').sum()
         for i, col in enumerate(cols):
@@ -312,10 +312,10 @@ def by_policy_event(agglosses_df, policy_df, treaty_df):
     assert (treaty_df.limit != NOLIMIT).all()
     for _, policy in policy_df.iterrows():
         df = by_policy(agglosses_df, dict(policy), treaty_df)
-        df['treaty_key'] = build_treaty_key(policy, treaty_df)
+        df['policy_grp'] = build_policy_grp(policy, treaty_df)
         dfs.append(df)
     rbp = pd.concat(dfs)
     # print(df)  # when debugging
     rbe = _by_event(rbp, treaty_df)
-    del rbp['treaty_key']
+    del rbp['policy_grp']
     return rbp, rbe
