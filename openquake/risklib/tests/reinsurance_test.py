@@ -161,8 +161,8 @@ event_id,policy_id,claim,retention,prop1,prop2,policy_grp
 1,       4,         6000,  1800.0,2400.0,1800.0,AB''')
         byevent = reinsurance._by_event(bypolicy, treaty_df)
         assert_ok(byevent, _df('''\
-event_id,retention,claim,prop1,prop2
-       1,13200.0,26000,5000.0,7800.0'''))
+event_id,retention,claim,prop1,prop2,over_A
+       1,13200.0,26000,5000.0,7800.0,6900'''))
 
     def test_two_portfolios(self):
         raise unittest.SkipTest('using overspill')

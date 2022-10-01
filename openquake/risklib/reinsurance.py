@@ -217,12 +217,13 @@ def build_policy_grp(policy, treaty_df):
     return ''.join(key)
 
 
-def clever_agg(ukeys, datalist, treaty_df, idx):
+def clever_agg(ukeys, datalist, treaty_df, idx, over):
     """
     :param ukeys: a list of unique keys
     :param datalist: a list of matrices of the shape (E, 2+T)
     :param treaty_df: a treaty DataFrame
     :param idx: a dictionary treaty.code -> cession index
+    :param over: a dictionary treaty.code -> overspill array
 
     Recursively compute cessions and retentions for each treaty.
     Populate the cession dictionary and returns the final retention.
@@ -242,14 +243,17 @@ def clever_agg(ukeys, datalist, treaty_df, idx):
                              tr.limit - tr.max_retention)
             elif tr.type == 'prop':
                 # managing overspill
-                over = cession > tr.limit
-                ret[over] += cession[over] - tr.limit
-                cession[over] = tr.limit
+                overspill = cession - tr.limit
+                ok = overspill > 0
+                if ok.any():
+                    over['over_' + code] = overspill
+                    ret[ok] += cession[ok] - tr.limit
+                    cession[ok] = tr.limit
         newkeys.append(newkey)
         newdatalist.append(data)
     if len(newkeys) > 1:
         keys, sums = fast_agg2(newkeys, np.array(newdatalist))
-        return clever_agg(keys, sums, treaty_df, idx)
+        return clever_agg(keys, sums, treaty_df, idx, over)
     return newdatalist[0]
 
 
@@ -300,8 +304,10 @@ def _by_event(rbp, treaty_df):
             data[:, 0] -= data[:, c]
         keys.append(key)
         datalist.append(data)
-    res = clever_agg(keys, datalist, tdf, idx)
+    overspill = {}
+    res = clever_agg(keys, datalist, tdf, idx, overspill)
     dic.update({col: res[:, c] for c, col in enumerate(outcols)})
+    dic.update(overspill)
     alias = dict(zip(tdf.index, tdf.id))
     return pd.DataFrame(dic).rename(columns=alias)
 
