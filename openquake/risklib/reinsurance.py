@@ -21,6 +21,7 @@ import pandas as pd
 import numpy as np
 from openquake.baselib.general import BASE183, fast_agg2
 from openquake.baselib.performance import compile, Monitor
+from openquake.baselib.writers import scientificformat
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.risklib import scientific
 """
@@ -213,6 +214,22 @@ def build_policy_grp(policy, treaty_df):
     return ''.join(key)
 
 
+def line(row, fmt='%d'):
+    return ''.join(scientificformat(val, fmt).rjust(10) for val in row)
+
+
+def _print(ukeys, datalist, codes, i=0):
+    rows = []
+    for ukey, data in zip(ukeys, datalist):
+        rows.append([ukey] + list(data[i]))
+    rows.sort(key=lambda row: row[0][::-1])
+    # debug printing
+    print()
+    print(line(['treaties'] + codes))
+    for row in rows:
+        print(line(row))
+
+
 def clever_agg(ukeys, datalist, treaty_df, idx, over):
     """
     :param ukeys: a list of unique keys
@@ -224,6 +241,7 @@ def clever_agg(ukeys, datalist, treaty_df, idx, over):
     Recursively compute cessions and retentions for each treaty.
     Populate the cession dictionary and returns the final retention.
     """
+    _print(ukeys, datalist, list(idx))
     if len(ukeys) == 1 and ukeys[0] == '':
         return datalist[0]
     newkeys, newdatalist = [], []
@@ -247,10 +265,8 @@ def clever_agg(ukeys, datalist, treaty_df, idx, over):
                     cession[ok] = tr.limit
         newkeys.append(newkey)
         newdatalist.append(data)
-    if len(newkeys) > 1:
-        keys, sums = fast_agg2(newkeys, np.array(newdatalist))
-        return clever_agg(keys, sums, treaty_df, idx, over)
-    return newdatalist[0]
+    keys, sums = fast_agg2(newkeys, np.array(newdatalist))
+    return clever_agg(keys, sums, treaty_df, idx, over)
 
 
 # tested in test_reinsurance.py
