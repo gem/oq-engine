@@ -219,11 +219,11 @@ def line(row, fmt='%d'):
 
 
 def _print(ukeys, datalist, codes, i=0):
+    # debug printing
     rows = []
     for ukey, data in zip(ukeys, datalist):
         rows.append([ukey] + list(data[i]))
     rows.sort(key=lambda row: row[0][::-1])
-    # debug printing
     print()
     print(line(['treaties'] + codes))
     for row in rows:
@@ -241,7 +241,7 @@ def clever_agg(ukeys, datalist, treaty_df, idx, over):
     Recursively compute cessions and retentions for each treaty.
     Populate the cession dictionary and returns the final retention.
     """
-    _print(ukeys, datalist, list(idx))
+    # _print(ukeys, datalist, list(idx))
     if len(ukeys) == 1 and ukeys[0] == '':
         return datalist[0]
     newkeys, newdatalist = [], []
