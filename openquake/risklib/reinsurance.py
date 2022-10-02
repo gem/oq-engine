@@ -114,30 +114,31 @@ def parse(fname, policy_idx):
     """
     rmodel = nrml.read(fname).reinsuranceModel
     fieldmap = {}
-    reversemap = {}  # propN->nameN
+    fmap = {}  # ex: {'deductible': 'Deductible', 'liability': 'Limit'}
     treaty = dict(id=[], type=[], max_retention=[], limit=[])
     nonprop = set()
+    colnames = []
     for node in rmodel.fieldMap:
-        fieldmap[node['input']] = col = node['oq']
-        reversemap[col] = node['input']
+        col = node.get('oq')
+        if col:
+            fmap[col] = node['input']
         if col in ('policy', 'deductible', 'liability'):  # not a treaty
+            fieldmap[node['input']] = col
             continue
         treaty_type = node.get('type', 'prop')
         assert treaty_type in ('prop', 'wxlr', 'catxl'), treaty_type
         if treaty_type == 'prop':
             limit = node.get('max_cession_event', NOLIMIT)
             maxret = 0
+            colnames.append(node['input'])
         else:
             limit = node['limit']
             maxret = node['max_retention']
-            nonprop.add(col)
-        treaty['id'].append(col)
+            nonprop.add(node['input'])
+        treaty['id'].append(node['input'])
         treaty['type'].append(treaty_type)
         treaty['max_retention'].append(maxret)
         treaty['limit'].append(limit)
-    for name, col in fieldmap.items():
-        if col.startswith('prop'):
-            reversemap['overspill' + col[4:]] = 'overspill_' + name
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
@@ -146,19 +147,14 @@ def parse(fname, policy_idx):
     df['liability_abs'] = np.ones(len(df), bool)
 
     # validate policy input
-    colnames = []
-    colvalues = []
-    for col, origname in reversemap.items():
-        if col.startswith('prop'):
-            colnames.append(origname)
-            colvalues.append(df[col].to_numpy())
-        elif col in nonprop:
-            df[col] = np.bool_(df[col])
+    for col in nonprop:
+        df[col] = np.bool_(df[col])
     if colnames:
+        colvalues = [df[col].to_numpy() for col in colnames]
         check_fractions(colnames, colvalues, policyfname)
     treaty_df = pd.DataFrame(treaty)
     treaty_df['code'] = [BASE183[i] for i in range(len(treaty_df))]
-    return df, treaty_df, reversemap
+    return df, treaty_df, fmap
 
 
 @compile(["(float64[:],float64[:],float64,float64)",
@@ -185,12 +181,12 @@ def claim_to_cessions(claim, policy, treaty_df):
     Converts an array of claims into a dictionary of arrays.
     """
     # proportional cessions
-    fractions = [policy[col] for col in policy if col.startswith('prop')]
+    cols = treaty_df[treaty_df.type == 'prop'].id
+    fractions = [policy[col] for col in cols]
     assert sum(fractions) < 1
     out = {'claim': claim, 'retention': claim * (1. - sum(fractions))}
-    for i, frac in enumerate(fractions, 1):
-        cession = 'prop%d' % i
-        out[cession] = claim * frac
+    for col, frac in zip(cols, fractions):
+        out[col] = claim * frac
 
     # wxlr cessions
     wxl = treaty_df[treaty_df.type == 'wxlr']

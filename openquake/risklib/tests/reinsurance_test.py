@@ -84,12 +84,9 @@ XML_NP = '''\
       <field oq="policy" input="Policy" />
       <field oq="deductible" input="Deductible" />
       <field oq="liability" input="Limit" />
-      <field oq="nonprop1" input="WXLR_metro" type="wxlr"
-             max_retention="500" limit="3500" />
-      <field oq="nonprop2" input="WXLR_rural" type="wxlr"
-             max_retention="200" limit="5000" />
-      <field oq="nonprop3" input="CatXL_reg" type="catxl"
-             max_retention="50" limit="2500" />
+      <field input="WXLR_metro" type="wxlr" max_retention="500" limit="3500" />
+      <field input="WXLR_rural" type="wxlr" max_retention="200" limit="5000" />
+      <field input="CatXL_reg" type="catxl" max_retention="50" limit="2500" />
     </fieldMap>
     <policies>{}</policies>
   </reinsuranceModel>
@@ -204,16 +201,17 @@ class ReinsuranceTestCase(unittest.TestCase):
             xmlfname, policy_idx)
         print(cls.policy_df)
         print(treaty_df)
-        print(fmap)
         assert len(cls.policy_df) == 3
         assert len(treaty_df) == 3
-        assert len(fmap) == 6
+        assert fmap == {'deductible': 'Deductible',
+                        'liability': 'Limit',
+                        'policy': 'Policy'}
         cls.treaty_df = treaty_df
         
     def test_policy1(self):
         # VA_region_1, CatXL_reg(50, 2500)
         expected = _df('''\
-event_id,policy_id,claim,retention,nonprop1,nonprop2
+event_id,policy_id,claim,retention,WXLR_metro,WXLR_rural
 41,1,1078.0742,1078.0742,0.0,0.0
 40,1,1070.1654,1070.1654,0.0,0.0
 33,1,1017.8770,1017.8770,0.0,0.0
@@ -227,7 +225,7 @@ event_id,policy_id,claim,retention,nonprop1,nonprop2
         # VA_region_2
         # WXLR_metro(500, 3500) + WXLR_rural(200, 5000) + CatXL_reg(50, 2500)
         expected = _df('''\
-event_id,policy_id,claim,retention,nonprop1,nonprop2
+event_id,policy_id,claim,retention,WXLR_metro,WXLR_rural
 0,27,2 ,2941.0974,200.0,2441.0974,300.0
 1,28,2 ,2936.3154,200.0,2436.3154,300.0
 2,26,2 ,2659.9182,200.0,2159.9182,300.0
@@ -245,7 +243,7 @@ event_id,policy_id,claim,retention,nonprop1,nonprop2
     def test_policy3(self):
         # rur_Ant_1, WXLR_metro(500, 3500) + WXLR_rural(200, 5000)
         expected = _df('''\
-event_id,policy_id,claim,retention,nonprop1,nonprop2
+event_id,policy_id,claim,retention,WXLR_metro,WXLR_rural
 25,      3,        8500,700.0, 3000,4800''')
         pol = dict(self.policy_df.loc[2])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
@@ -253,7 +251,7 @@ event_id,policy_id,claim,retention,nonprop1,nonprop2
 
     def test_by_cat_no_apply(self):
         expected = _df('''\
-event_id,retention,claim,nonprop1,nonprop2,nonprop3
+event_id,retention,claim,WXLR_metro,WXLR_rural,CatXL_reg
 25,      700.0,   8500.0,  3000.0,  4800.0,   0.0''', index_col='event_id')
         bypolicy, byevent = reinsurance.by_policy_event(
             risk_by_event, self.policy_df, self.treaty_df)
