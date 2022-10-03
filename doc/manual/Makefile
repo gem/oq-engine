@@ -53,6 +53,7 @@ clean:
 
 .PHONY: html
 html:
+	cat index_header.rst_part index_toc.rst_part index_contents.rst_part > index.rst
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
@@ -133,6 +134,7 @@ latex:
 
 .PHONY: latexpdf
 latexpdf:
+	cat index_header.rst_part index_contents.rst_part index_toc.rst_part > index.rst
 	$(SPHINXBUILD) -b latex $(ALLSPHINXOPTS) $(BUILDDIR)/latex
 	@echo "Running LaTeX files through pdflatex..."
 	$(MAKE) -C $(BUILDDIR)/latex all-pdf
