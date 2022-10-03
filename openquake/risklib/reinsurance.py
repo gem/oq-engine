@@ -230,11 +230,13 @@ def clever_agg(ukeys, datalist, treaty_df, idx, over):
     Recursively compute cessions and retentions for each treaty.
     Populate the cession dictionary and returns the final retention.
     """
-    if len(ukeys) == 1 and ukeys[0] == '':
-        return datalist[0]
     if DEBUG:
         print()
         print(line(['apply'] + list(idx)))
+        for key, data in zip(ukeys, datalist):
+            print(line([key] + list(data[0])))
+    if len(ukeys) == 1 and ukeys[0] == '':
+        return datalist[0]
     newkeys, newdatalist = [], []
     for key, data in zip(ukeys, datalist):
         code = key[0]
@@ -254,8 +256,6 @@ def clever_agg(ukeys, datalist, treaty_df, idx, over):
                     over['over_' + code] = np.maximum(overspill, 0)
                     ret[ok] += cession[ok] - tr.limit
                     cession[ok] = tr.limit
-        if DEBUG:
-            print(line([key[1:]] + list(data[0])))
         newkeys.append(newkey)
         newdatalist.append(data)
     keys, sums = fast_agg2(newkeys, np.array(newdatalist))
