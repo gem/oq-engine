@@ -353,6 +353,7 @@ class PostRiskCalculator(base.RiskCalculator):
         self.reaggreate = False
         if oq.hazard_calculation_id and not ds.parent:
             ds.parent = datastore.read(oq.hazard_calculation_id)
+            self.assetcol = ds.parent['assetcol']
             base.save_agg_values(
                 ds, self.assetcol, oq.loss_types,
                 oq.aggregate_by, oq.max_aggregations)
@@ -490,6 +491,5 @@ def post_aggregate(calc_id: int, aggregate_by):
         oqp.hazard_calculation_id = parent.calc_id
         parallel.Starmap.init()
         prc = PostRiskCalculator(oqp, log.calc_id)
-        prc.assetcol = parent['assetcol']
         prc.run(aggregate_by=[aggby])
         engine.expose_outputs(prc.datastore)

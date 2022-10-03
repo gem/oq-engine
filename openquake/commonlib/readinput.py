@@ -1215,7 +1215,6 @@ def get_input_files(oqparam):
             fnames.add(xml)
             fnames.add(os.path.join(os.path.dirname(xml), csv))
         elif isinstance(fname, dict):
-            import pdb; pdb.set_trace()
             for key, val in fname.items():
                 if isinstance(val, list):  # list of files
                     fnames.update(val)
