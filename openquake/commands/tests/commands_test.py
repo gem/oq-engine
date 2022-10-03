@@ -25,6 +25,8 @@ import tempfile
 import unittest
 import numpy
 
+from pathlib import Path
+
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp
 from openquake.baselib import parallel, sap
@@ -626,6 +628,32 @@ class NRML2CSVTestCase(unittest.TestCase):
         self.assertIn('3D MultiLineString', out)
         self.assertIn('Point', out)
         shutil.rmtree(temp_dir)
+
+
+class GPKG2NRMLTestCase(unittest.TestCase):
+
+    def test_nrml_from_gpkg(self):
+        try:
+            import fiona
+        except ImportError:
+            raise unittest.SkipTest('fiona is missing')
+        temp_dir = tempfile.mkdtemp()
+        # first convert nrml to gpkg
+        with Print.patch() as p:
+            sap.runline(f'openquake.commands nrml_to gpkg {MIXED_SRC_MODEL}')
+        # FIXME: setting the outdir does not work when producing gpkg
+        gpkg_path = os.path.join(
+            Path(MIXED_SRC_MODEL).stem + '.gpkg')
+            # temp_dir, Path(MIXED_SRC_MODEL).stem + '.gpkg')
+        out_path = os.path.join(
+            temp_dir, Path(MIXED_SRC_MODEL).stem + '_converted.xml')
+        # then convert the above gpkg back to nrml
+        with Print.patch() as p:
+            sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
+        # FIXME: check the consistency between the initial nrml file and the
+        # one that was produced from the gpkg
+        shutil.rmtree(temp_dir)
+
 
 
 def teardown_module():
