@@ -37,6 +37,7 @@ NOLIMIT = 1E100
 KNOWN_LOSS_TYPES = {
     'structural', 'nonstructural', 'contents',
     'value-structural', 'value-nonstructural', 'value-contents'}
+DEBUG = False
 
 
 def get_ded_lim(losses, policy):
@@ -218,18 +219,6 @@ def line(row, fmt='%d'):
     return ''.join(scientificformat(val, fmt).rjust(10) for val in row)
 
 
-def _print(ukeys, datalist, codes, i=0):
-    # debug printing
-    rows = []
-    for ukey, data in zip(ukeys, datalist):
-        rows.append([ukey] + list(data[i]))
-    rows.sort(key=lambda row: row[0][::-1])
-    print()
-    print(line(['treaties'] + codes))
-    for row in rows:
-        print(line(row))
-
-
 def clever_agg(ukeys, datalist, treaty_df, idx, over):
     """
     :param ukeys: a list of unique keys
@@ -241,9 +230,11 @@ def clever_agg(ukeys, datalist, treaty_df, idx, over):
     Recursively compute cessions and retentions for each treaty.
     Populate the cession dictionary and returns the final retention.
     """
-    # _print(ukeys, datalist, list(idx))
     if len(ukeys) == 1 and ukeys[0] == '':
         return datalist[0]
+    if DEBUG:
+        print()
+        print(line(['apply'] + list(idx)))
     newkeys, newdatalist = [], []
     for key, data in zip(ukeys, datalist):
         code = key[0]
@@ -252,9 +243,9 @@ def clever_agg(ukeys, datalist, treaty_df, idx, over):
             tr = treaty_df.loc[code]
             ret = data[:, idx['retention']]
             cession = data[:, idx[code]]
+            capacity = tr.limit - tr.max_retention
             if tr.type == 'catxl':
-                apply_treaty(cession, ret, tr.max_retention,
-                             tr.limit - tr.max_retention)
+                apply_treaty(cession, ret, tr.max_retention, capacity)
             elif tr.type == 'prop':
                 # managing overspill
                 overspill = cession - tr.limit
@@ -263,6 +254,8 @@ def clever_agg(ukeys, datalist, treaty_df, idx, over):
                     over['over_' + code] = np.maximum(overspill, 0)
                     ret[ok] += cession[ok] - tr.limit
                     cession[ok] = tr.limit
+        if DEBUG:
+            print(line([key[1:]] + list(data[0])))
         newkeys.append(newkey)
         newdatalist.append(data)
     keys, sums = fast_agg2(newkeys, np.array(newdatalist))
