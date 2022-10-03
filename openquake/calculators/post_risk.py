@@ -297,17 +297,17 @@ def build_reinsurance(dstore, num_events):
     builder = get_loss_builder(dstore, num_events=num_events)
     avg = general.AccumDict(accum=[])
     dic = general.AccumDict(accum=[])
-    for rlz_id, df in rbe_df.groupby('rlz_id'):
-        ne = num_events[rlz_id]
-        avg['rlz_id'].append(rlz_id)
+    for rlzid, df in rbe_df.groupby('rlz_id'):
+        ne = num_events[rlzid]
+        avg['rlz_id'].append(rlzid)
         for col in columns:
             agg = df[col].sum()
             avg[col].append(agg * tr if oq.investigation_time else agg / ne)
         if oq.investigation_time:
-            curve = {col: builder.build_curve(df[col].to_numpy(), rlz_id)
+            curve = {col: builder.build_curve(df[col].to_numpy(), rlzid)
                      for col in columns}
             for p, period in enumerate(builder.return_periods):
-                dic['rlz_id'].append(rlz_id)
+                dic['rlz_id'].append(rlzid)
                 dic['return_period'].append(period)
                 for col in curve:
                     dic[col].append(curve[col][p])
@@ -318,7 +318,7 @@ def build_reinsurance(dstore, num_events):
     avg = general.AccumDict(accum=[])
     rbp_df = dstore.read_df('reinsurance_by_policy')
     if len(num_events) > 1:
-        rbp_df['rlz_id'] = rlz_id[rbe_df.event_id.to_numpy()]
+        rbp_df['rlz_id'] = rlz_id[rbp_df.event_id.to_numpy()]
     else:
         rbp_df['rlz_id'] = 0
     columns = [col for col in rbp_df.columns if col not in

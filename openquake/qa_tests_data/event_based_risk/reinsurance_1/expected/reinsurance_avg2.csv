@@ -1,3 +1,3 @@
-#,,,,,,"generated_by='OpenQuake engine 3.16.0-gitb9f6bc9aac', start_date='2022-10-03T07:21:59', checksum=1056120093"
-retention,claim,surplus,quota_shared,wxlr,catxl,overspill_surplus
-1.03960E+02,1.04689E+03,3.27038E+02,2.52743E+02,3.48152E+02,1.50000E+01,4.99001E+00
+#,,,,,,,"generated_by='OpenQuake engine 3.16.0-gitc5793a1439', start_date='2022-10-03T16:00:25', checksum=3293264848"
+rlz_id,retention,claim,surplus,quota_shared,wxlr,catxl,overspill_surplus
+0,1.03960E+02,1.04689E+03,3.27038E+02,2.52743E+02,3.48152E+02,1.50000E+01,4.99001E+00
