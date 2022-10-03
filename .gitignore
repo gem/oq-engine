@@ -21,3 +21,4 @@ demos/*/*.zip
 venv
 *.whl
 .vscode/
+oq-engine/doc/manual/index.rst
