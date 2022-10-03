@@ -353,7 +353,8 @@ class PostRiskCalculator(base.RiskCalculator):
         self.reaggreate = False
         if oq.hazard_calculation_id and not ds.parent:
             ds.parent = datastore.read(oq.hazard_calculation_id)
-            self.assetcol = ds.parent['assetcol']
+            if not hasattr(self, 'assetcol'):
+                self.assetcol = ds.parent['assetcol']
             base.save_agg_values(
                 ds, self.assetcol, oq.loss_types,
                 oq.aggregate_by, oq.max_aggregations)
