@@ -1,0 +1,4 @@
+#,,,,,"generated_by='OpenQuake engine 3.16.0-git359540d3a3', start_date='2022-09-30T16:11:01', checksum=760752202"
+policy_id,claim,retention,surplus,quota_shared,wxlr
+1,6.13245E+02,4.24900E+01,2.45298E+02,1.22649E+02,2.02808E+02
+2,4.33648E+02,7.14803E+01,8.67297E+01,1.30095E+02,1.45344E+02

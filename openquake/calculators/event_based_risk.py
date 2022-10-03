@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import json
 import os.path
 import logging
 import operator
@@ -31,7 +30,6 @@ from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
-from openquake.risklib import reinsurance
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
     PostRiskCalculator, post_aggregate, fix_dtypes)
@@ -393,17 +391,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if len(uni) < len(arr):
             raise RuntimeError('risk_by_event contains %d duplicates!' %
                                (len(arr) - len(uni)))
-
-        if 'reinsurance' in oq.inputs:
-            # there must be a single loss type (possibly a total type)
-            [lt] = oq.inputs['reinsurance']
-            agg_loss_table = alt[alt.loss_id == LOSSID[lt]]
-            if len(agg_loss_table) == 0:
-                raise ValueError('No losses for reinsurance %s' % lt)
-            rbp, rbe = reinsurance.by_policy_event(
-                agg_loss_table, self.policy_df, self.treaty_df)
-            self.datastore.create_df('reinsurance_by_policy', rbp)
-            self.datastore.create_df('reinsurance_by_event', rbe)
 
         if oq.avg_losses:
             for lt in oq.ext_loss_types:
