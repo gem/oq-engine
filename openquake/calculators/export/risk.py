@@ -613,7 +613,10 @@ def export_reinsurance_by_event(ekey, dstore):
     df = dstore.read_df(ekey[0])
     if 'event_id' in df.columns:
         events = dstore['events'][()]
-        df['year'] = events[df.event_id.to_numpy()]['year']
+        if 'year' not in events.dtype.names:  # gmfs.hdf5 missing events
+            df['year'] = 1
+        else:
+            df['year'] = events[df.event_id.to_numpy()]['year']
     if 'policy_id' in df.columns:  # convert policy_id -> policy name
         policy_names = dstore['agg_keys'][:]
         df['policy_id'] = decode(policy_names[df['policy_id'].to_numpy() - 1])
