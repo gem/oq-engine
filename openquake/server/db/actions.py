@@ -307,6 +307,8 @@ DISPLAY_NAME = {
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'cs-stats': 'Mean Conditional Spectra',
+    'aggrisk_reinsurance': 'Average Reinsurance By Policy',
+    'reinsurance_avg': 'Average Reinsurance',
     'reinsurance_by_event': 'Reinsurance By Event',
     'reinsurance_curves': 'Aggregated Reinsurance Curves',
     'ruptures': 'Earthquake Ruptures',
