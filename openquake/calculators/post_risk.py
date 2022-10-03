@@ -284,7 +284,7 @@ def build_reinsurance(dstore, num_events):
     size = dstore.getsize('reinsurance_by_event')
     logging.info('Building reinsurance_curves from %s of reinsurance_by_event',
                  general.humansize(size))
-    tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
+    tr = oq.time_ratio  # risk_invtime / (haz_invtime * num_ses)
     if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
         tr /= len(dstore['weights'])
     rlz_id = dstore['events']['rlz_id']
