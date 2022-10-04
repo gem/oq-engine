@@ -219,13 +219,13 @@ def line(row, fmt='%d'):
     return ''.join(scientificformat(val, fmt).rjust(10) for val in row)
 
 
-def clever_agg(ukeys, datalist, treaty_df, idx, over):
+def clever_agg(ukeys, datalist, treaty_df, idx, overdict):
     """
     :param ukeys: a list of unique keys
     :param datalist: a list of matrices of the shape (E, 2+T)
     :param treaty_df: a treaty DataFrame
     :param idx: a dictionary treaty.code -> cession index
-    :param over: a dictionary treaty.code -> overspill array
+    :param overdic: a dictionary treaty.code -> overspill array
 
     Recursively compute cessions and retentions for each treaty.
     Populate the cession dictionary and returns the final retention.
@@ -246,24 +246,24 @@ def clever_agg(ukeys, datalist, treaty_df, idx, over):
             ret = data[:, idx['retention']]
             cession = data[:, idx[code]]
             capacity = tr.limit - tr.max_retention
-            yes = False
+            has_over = False
             if tr.type == 'catxl':
                 overspill = ret - capacity
-                yes = (overspill > 0).any()
+                has_over = (overspill > 0).any()
                 apply_treaty(cession, ret, tr.max_retention, capacity)
             elif tr.type == 'prop':
                 overspill = cession - capacity
-                ok = overspill > 0
-                yes = (overspill > 0).any()
-                if yes:
-                    ret[ok] += cession[ok] - tr.limit
-                    cession[ok] = tr.limit
-            if tr.type in ('prop', 'catxl') and yes:
-                over['over_' + code] = np.maximum(overspill, 0)
+                over = overspill > 0
+                has_over = (overspill > 0).any()
+                if has_over:
+                    ret[over] += cession[over] - tr.limit
+                    cession[over] = tr.limit
+            if tr.type in ('prop', 'catxl') and has_over:
+                overdict['over_' + code] = np.maximum(overspill, 0)
         newkeys.append(newkey)
         newdatalist.append(data)
     keys, sums = fast_agg2(newkeys, np.array(newdatalist))
-    return clever_agg(keys, sums, treaty_df, idx, over)
+    return clever_agg(keys, sums, treaty_df, idx, overdict)
 
 
 # tested in test_reinsurance.py
