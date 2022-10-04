@@ -246,17 +246,20 @@ def clever_agg(ukeys, datalist, treaty_df, idx, over):
             ret = data[:, idx['retention']]
             cession = data[:, idx[code]]
             capacity = tr.limit - tr.max_retention
-            overspill = ret - capacity
-            ok = overspill > 0
-            yes = ok.any()
-            if tr.type in ('prop', 'catxl') and yes:
-                over['over_' + code] = np.maximum(overspill, 0)
+            yes = False
             if tr.type == 'catxl':
+                overspill = ret - capacity
+                yes = (overspill > 0).any()
                 apply_treaty(cession, ret, tr.max_retention, capacity)
             elif tr.type == 'prop':
+                overspill = cession - capacity
+                ok = overspill > 0
+                yes = (overspill > 0).any()
                 if yes:
                     ret[ok] += cession[ok] - tr.limit
                     cession[ok] = tr.limit
+            if tr.type in ('prop', 'catxl') and yes:
+                over['over_' + code] = np.maximum(overspill, 0)
         newkeys.append(newkey)
         newdatalist.append(data)
     keys, sums = fast_agg2(newkeys, np.array(newdatalist))

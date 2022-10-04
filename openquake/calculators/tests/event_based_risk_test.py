@@ -658,3 +658,8 @@ class ReinsuranceTestCase(CalculatorTestCase):
         self.run_calc(reinsurance_2.__file__, 'job.ini',
                       calculation_mode='post_risk',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
+
+        [fname] = export(('reinsurance_curves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance_curves.csv', fname)
+        [fname] = export(('reinsurance_avg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance_avg.csv', fname)
