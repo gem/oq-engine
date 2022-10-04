@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Increased `sys.recursionlimit` to 1500 to solve a rare pickling issue
   * Added a parameter `max_aggregations` with a default of 100,000
   * Changed the risk calculators to reuse the hazard exposure (if any)
 
