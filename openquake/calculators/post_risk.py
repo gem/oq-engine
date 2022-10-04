@@ -277,12 +277,12 @@ def build_store_agg(dstore, rbe_df, num_events):
 
 def build_reinsurance(dstore, num_events):
     """
-    Build and store the tables `aggrisk_reinsurance` and `reinsurance_avg`;
-    for event_based, also build the `reinsurance_curves` table.
+    Build and store the tables `reinsurance-aggrisk` and `reinsurance-avg_losses`;
+    for event_based, also build the `reinsurance-aggcurves` table.
     """
     oq = dstore['oqparam']
     size = dstore.getsize('reinsurance-risk_by_event')
-    logging.info('Building reinsurance_curves from %s of reinsurance-risk_by_event',
+    logging.info('Building reinsurance-aggcurves from %s of reinsurance-risk_by_event',
                  general.humansize(size))
     tr = oq.time_ratio  # risk_invtime / (haz_invtime * num_ses)
     if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
@@ -311,7 +311,7 @@ def build_reinsurance(dstore, num_events):
                 dic['return_period'].append(period)
                 for col in curve:
                     dic[col].append(curve[col][p])
-    dstore.create_df('reinsurance_avg', pandas.DataFrame(avg),
+    dstore.create_df('reinsurance-avg_losses', pandas.DataFrame(avg),
                      units=dstore['cost_calculator'].get_units(
                          oq.loss_types))
     # aggrisk by policy
@@ -330,14 +330,14 @@ def build_reinsurance(dstore, num_events):
         for col in columns:
             agg = df[col].sum()
             avg[col].append(agg * tr if oq.investigation_time else agg / ne)
-    dstore.create_df('aggrisk_reinsurance', pandas.DataFrame(avg),
+    dstore.create_df('reinsurance-aggrisk', pandas.DataFrame(avg),
                      units=dstore['cost_calculator'].get_units(
                          oq.loss_types))
     if oq.investigation_time is None:
         return
     dic['return_period'] = F32(dic['return_period'])
     dic['rlz_id'] = U16(dic['rlz_id'])
-    dstore.create_df('reinsurance_curves', pandas.DataFrame(dic),
+    dstore.create_df('reinsurance-aggcurves', pandas.DataFrame(dic),
                      units=dstore['cost_calculator'].get_units(
                          oq.loss_types))
 

@@ -593,8 +593,8 @@ class ReinsuranceTestCase(CalculatorTestCase):
         [fname] = export(('reinsurance-risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-risk_by_event_prop.csv', fname,
                               delta=1E-5)
-        [fname] = export(('reinsurance_curves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/reinsurance_curves_prop.csv', fname,
+        [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggcurves_prop.csv', fname,
                               delta=1E-5)
 
     def test_nonprop(self):
@@ -603,8 +603,8 @@ class ReinsuranceTestCase(CalculatorTestCase):
         [fname] = export(('reinsurance-risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-risk_by_event_np.csv', fname,
                               delta=1E-5)
-        [fname] = export(('reinsurance_curves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/reinsurance_curves_np.csv', fname,
+        [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggcurves_np.csv', fname,
                               delta=1E-5)
 
     def test_prop_nonprop(self):
@@ -612,11 +612,11 @@ class ReinsuranceTestCase(CalculatorTestCase):
         [fname] = export(('reinsurance-risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-risk_by_event.csv', fname,
                               delta=1E-5)
-        [fname] = export(('reinsurance_curves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/reinsurance_curves.csv', fname,
+        [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggcurves.csv', fname,
                               delta=1E-5)
-        [fname] = export(('reinsurance_avg', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/reinsurance_avg.csv', fname,
+        [fname] = export(('reinsurance-avg_losses', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-avg_losses.csv', fname,
                               delta=1E-5)
 
     def test_many_levels(self):
@@ -624,15 +624,15 @@ class ReinsuranceTestCase(CalculatorTestCase):
         [fname] = export(('reinsurance-risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-risk_by_event2.csv', fname,
                               delta=1E-5)
-        [fname] = export(('reinsurance_curves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/reinsurance_curves2.csv', fname,
+        [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggcurves2.csv', fname,
                               delta=1E-5)
-        [fname] = export(('reinsurance_avg', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/reinsurance_avg2.csv', fname,
+        [fname] = export(('reinsurance-avg_losses', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-avg_losses2.csv', fname,
                               delta=1E-5)
         
-        [fname] = export(('aggrisk_reinsurance', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggrisk_reinsurance.csv', fname,
+        [fname] = export(('reinsurance-aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggrisk.csv', fname,
                               delta=1E-5)
 
     def test_post_risk(self):
@@ -659,9 +659,9 @@ class ReinsuranceTestCase(CalculatorTestCase):
                       calculation_mode='post_risk',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
 
-        [fname] = export(('reinsurance_curves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/reinsurance_curves.csv', fname,
-                              delta=2E-5)
-        [fname] = export(('reinsurance_avg', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/reinsurance_avg.csv', fname,
-                              delta=1E-5)
+        [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggcurves.csv', fname,
+                              delta=4E-4)
+        [fname] = export(('reinsurance-avg_losses', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-avg_losses.csv', fname,
+                              delta=4E-5)
