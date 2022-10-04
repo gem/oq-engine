@@ -8,9 +8,14 @@ on:
         default: master
         required: true
       oq-release:
-        description: OQ Release (latest or LTS)
-        default: latest
+        description: 'OQ Release'
         required: true
+        default: 'latest'
+        type: choice
+        options:
+        - latest
+        - LTS
+        - dev
   push:
     branches: [ master ]
 jobs:
@@ -91,6 +96,13 @@ jobs:
           UPLOAD: ${{ github.event.inputs.git-ref }}
           BUILD: ${{ github.event.inputs.oq-release }}
         run: |
+          echo "GITHUB_PULL_REQUEST: [$GITHUB_PULL_REQUEST]"
+          echo "GITHUB_DEF_BR:       [$GITHUB_DEF_BR]"
+          echo "GITHUB_REF:          [$GITHUB_REF]"
+          echo "GITHUB_HD_REF:       [$GITHUB_HD_REF]"
+          echo "GITHUB_BS_REF:       [$GITHUB_BS_REF]"
+          echo "UPLOAD:              [$UPLOAD]"
+          echo "BUILD:               [$BUILD]"
           VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
           if [ -z "$GITHUB_HD_REF" ]
              then
