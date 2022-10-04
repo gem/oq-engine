@@ -258,7 +258,7 @@ def clever_agg(ukeys, datalist, treaty_df, idx, overdict):
                 if has_over:
                     ret[over] += cession[over] - tr.limit
                     cession[over] = tr.limit
-            if tr.type in ('prop', 'catxl') and has_over:
+            if has_over:
                 overdict['over_' + code] = np.maximum(overspill, 0)
         newkeys.append(newkey)
         newdatalist.append(data)
