@@ -298,9 +298,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(df)
-        if self.offset >= TWO32:
-            raise RuntimeError(
-                'The gmf_data table has more than %d rows' % TWO32)
         imtls = self.oqparam.imtls
         with agg_mon:
             for key, poes in result.get('hcurves', {}).items():

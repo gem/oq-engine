@@ -241,6 +241,10 @@ class RuptureImporter(object):
     def __init__(self, dstore):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
+        try:
+            self.N = len(dstore['sitecol'])
+        except KeyError:  # missing sitecol
+            self.N = 0
 
     def get_eid_rlz(self, proxies, rlzs_by_gsim):
         """
@@ -331,27 +335,30 @@ class RuptureImporter(object):
 
     def check_overflow(self, E):
         """
-        Raise a ValueError if the number of sites is larger than 65,536 or the
-        number of IMTs is larger than 256 or the number of ruptures is larger
-        than 4,294,967,296. The limits are due to the numpy dtype used to
-        store the GMFs (gmv_dt). There also a limit of max_potential_gmfs on
-        the number of sites times the number of events, to avoid producing too
-        many GMFs. In that case split the calculation or be smarter.
+        Raise a ValueError if the number of IMTs is larger than 256 or the
+        number of events is larger than 4,294,967,296. The limits
+        are due to the numpy dtype used to store the GMFs
+        (gmv_dt). There also a limit of `max_potential_gmfs` on the
+        number of sites times the number of events, to avoid producing
+        too many GMFs. In that case split the calculation or be
+        smarter.
         """
         oq = self.oqparam
+        if len(oq.imtls) > 256:
+            raise ValueError('The event_based calculator is restricted '
+                             'to 256 imts, got %d' % len(oq.imtls))
+        if E > TWO32:
+            raise ValueError('The event_based calculator is restricted '
+                             'to 2^32 events, got %d' % E)
         max_ = dict(sites=TWO32, events=TWO32, imts=2**8)
         num_ = dict(events=E, imts=len(self.oqparam.imtls))
-        n = len(getattr(self, 'sitecol', ()) or ())
-        num_['sites'] = n
+        num_['sites'] = self.N
         if oq.calculation_mode == 'event_based' and oq.ground_motion_fields:
-            if n > oq.max_sites_per_gmf:
+            if self.N * E > oq.max_potential_gmfs:
                 raise ValueError(
-                    'You cannot compute the GMFs for %d > %d sites' %
-                    (n, oq.max_sites_per_gmf))
-            elif n * E > oq.max_potential_gmfs:
-                raise ValueError(
-                    'A GMF calculation with %d sites and %d events is '
-                    'impossibly large' % (n, E))
+                    'A GMF calculation with {:_d} sites and {:_d} events is '
+                    'forbidden unless you raise `max_potential_gmfs` to {:_d}'.
+                    format(self.N, E, self.N * E))
         for var in num_:
             if num_[var] > max_[var]:
                 raise ValueError(
