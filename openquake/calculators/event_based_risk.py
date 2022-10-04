@@ -87,7 +87,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
     """
     mon_agg = monitor('aggregating losses', measuremem=False)
     mon_avg = monitor('averaging losses', measuremem=False)
-    mon_df = monitor('building dataframe', measuremem=True)
+    mon_df = monitor('building event loss table', measuremem=True)
     oq = crmodel.oqparam
     xtypes = oq.ext_loss_types
     loss_by_AR = {ln: [] for ln in xtypes}
