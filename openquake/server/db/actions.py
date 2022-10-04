@@ -309,7 +309,7 @@ DISPLAY_NAME = {
     'cs-stats': 'Mean Conditional Spectra',
     'aggrisk_reinsurance': 'Average Reinsurance By Policy',
     'reinsurance_avg': 'Average Reinsurance',
-    'reinsurance_by_event': 'Reinsurance By Event',
+    'reinsurance-risk_by_event': 'Reinsurance By Event',
     'reinsurance_curves': 'Aggregated Reinsurance Curves',
     'ruptures': 'Earthquake Ruptures',
     'hcurves': 'Hazard Curves',

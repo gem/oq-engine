@@ -281,14 +281,14 @@ def build_reinsurance(dstore, num_events):
     for event_based, also build the `reinsurance_curves` table.
     """
     oq = dstore['oqparam']
-    size = dstore.getsize('reinsurance_by_event')
-    logging.info('Building reinsurance_curves from %s of reinsurance_by_event',
+    size = dstore.getsize('reinsurance-risk_by_event')
+    logging.info('Building reinsurance_curves from %s of reinsurance-risk_by_event',
                  general.humansize(size))
     tr = oq.time_ratio  # risk_invtime / (haz_invtime * num_ses)
     if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
         tr /= len(dstore['weights'])
     rlz_id = dstore['events']['rlz_id']
-    rbe_df = dstore.read_df('reinsurance_by_event', 'event_id')
+    rbe_df = dstore.read_df('reinsurance-risk_by_event', 'event_id')
     columns = rbe_df.columns
     if len(num_events) > 1:
         rbe_df['rlz_id'] = rlz_id[rbe_df.index.to_numpy()]
@@ -387,7 +387,7 @@ class PostRiskCalculator(base.RiskCalculator):
             rbp, rbe = reinsurance.by_policy_event(
                 agg_loss_table, self.policy_df, self.treaty_df, self._monitor)
             self.datastore.create_df('reinsurance_by_policy', rbp)
-            self.datastore.create_df('reinsurance_by_event', rbe)
+            self.datastore.create_df('reinsurance-risk_by_event', rbe)
         if oq.investigation_time and oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
@@ -416,7 +416,7 @@ class PostRiskCalculator(base.RiskCalculator):
             rbe_df = rbe_df.groupby(
                 ['event_id', 'loss_id', 'agg_id']).sum().reset_index()
         self.aggrisk = build_store_agg(self.datastore, rbe_df, self.num_events)
-        if 'reinsurance_by_event' in self.datastore:
+        if 'reinsurance-risk_by_event' in self.datastore:
             build_reinsurance(self.datastore, self.num_events)
         return 1
 
