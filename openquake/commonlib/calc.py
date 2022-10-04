@@ -332,7 +332,7 @@ class RuptureImporter(object):
 
     def check_overflow(self, E):
         """
-        Raise a ValueError if the number of IMTs is larger than 256 or the
+        Raise an error if the number of IMTs is larger than 256 or the
         number of events is larger than 4,294,967,296. The limits
         are due to the numpy dtype used to store the GMFs
         (gmv_dt). There also a limit of `max_potential_gmfs` on the
