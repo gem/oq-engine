@@ -131,15 +131,15 @@ def parse(fname, policy_idx):
         assert treaty_type in ('prop', 'wxlr', 'catxl'), treaty_type
         if treaty_type == 'prop':
             limit = node.get('max_cession_event', NOLIMIT)
-            maxret = 0
+            deduc = 0
             colnames.append(node['input'])
         else:
             limit = node['limit']
-            maxret = node['deductible']
+            deduc = node['deductible']
             nonprop.add(node['input'])
         treaty['id'].append(node['input'])
         treaty['type'].append(treaty_type)
-        treaty['deductible'].append(maxret)
+        treaty['deductible'].append(deduc)
         treaty['limit'].append(limit)
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
@@ -162,15 +162,15 @@ def parse(fname, policy_idx):
 @compile(["(float64[:],float64[:],float64,float64)",
           "(float64[:],float32[:],float64,float64)",
           "(float32[:],float32[:],float64,float64)"])
-def apply_treaty(cession, retention, maxret, capacity):
+def apply_treaty(cession, retention, deduc, capacity):
     for i, ret in np.ndenumerate(retention):
-        overmax = ret - maxret
-        if ret > maxret:
+        overmax = ret - deduc
+        if ret > deduc:
             if overmax > capacity:
-                retention[i] = maxret + overmax - capacity
+                retention[i] = deduc + overmax - capacity
                 cession[i] = capacity
             else:
-                retention[i] = maxret
+                retention[i] = deduc
                 cession[i] = overmax
 
 
@@ -192,10 +192,10 @@ def claim_to_cessions(claim, policy, treaty_df):
 
     # wxlr cessions
     wxl = treaty_df[treaty_df.type == 'wxlr']
-    for col, maxret, limit in zip(wxl.id, wxl.deductible, wxl.limit):
+    for col, deduc, limit in zip(wxl.id, wxl.deductible, wxl.limit):
         out[col] = np.zeros(len(claim))
         if policy[col]:
-            apply_treaty(out[col], out['retention'], maxret, limit - maxret)
+            apply_treaty(out[col], out['retention'], deduc, limit - deduc)
 
     return {k: np.round(v, 6) for k, v in out.items()}
 
