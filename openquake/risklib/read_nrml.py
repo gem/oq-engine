@@ -393,7 +393,6 @@ def update_validators():
         'isAbsolute': valid.boolean,
         'insuranceLimit': valid.positivefloat,
         'deductible': valid.positivefloat,
-        'max_retention': valid.positivefloat,
         'max_cession_event': valid.positivefloat,
         'limit': valid.positivefloat,
         'occupants': valid.positivefloat,

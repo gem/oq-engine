@@ -5,7 +5,7 @@
     <description>Test nonproportional reinsurance model</description>
     <fieldMap>
       <field oq="nonprop1" input="WXLR" type="wxlr"
-             max_retention="50" limit="350" />
+             deductible="50" limit="350" />
     </fieldMap>
     <policies>policy.csv</policies>
   </reinsuranceModel>

@@ -84,9 +84,9 @@ XML_NP = '''\
       <field oq="policy" input="Policy" />
       <field oq="deductible" input="Deductible" />
       <field oq="liability" input="Limit" />
-      <field input="WXLR_metro" type="wxlr" max_retention="500" limit="3500" />
-      <field input="WXLR_rural" type="wxlr" max_retention="200" limit="5000" />
-      <field input="CatXL_reg" type="catxl" max_retention="50" limit="2500" />
+      <field input="WXLR_metro" type="wxlr" deductible="500" limit="3500" />
+      <field input="WXLR_rural" type="wxlr" deductible="200" limit="5000" />
+      <field input="CatXL_reg" type="catxl" deductible="50" limit="2500" />
     </fieldMap>
     <policies>{}</policies>
   </reinsuranceModel>
@@ -146,7 +146,7 @@ class ProportionalTestCase(unittest.TestCase):
     def test_single_portfolio(self):
         # two proportional treaties with with no overspill
         treaty_df = _df('''\
-id,type,max_retention,limit,code
+id,type,deductible,limit,code
 prop1,prop,      0,     5000,A
 prop2,prop,      0,     8000,B
 ''')
@@ -165,7 +165,7 @@ event_id,retention,claim,prop1,prop2,over_A
         # the first treaty applies to the first two policies,
         # the second to the last two policies
         treaty_df = _df('''\
-id,type,max_retention,limit,code
+id,type,deductible,limit,code
 prop1,prop,      0,    5000,A
 prop2,prop,      0,    8000,B
 ''')
@@ -261,7 +261,7 @@ event_id,retention,claim,WXLR_metro,WXLR_rural,CatXL_reg
 
     def test_max_cession(self):
         treaty_df = _df('''\
-id,type,max_retention,limit,code
+id,type,deductible,limit,code
 prop1,prop,      0,    5000,A
 nonprop1,wxlr, 200,    4000,B
 nonprop2,catxl,500,   10000,C
@@ -286,7 +286,7 @@ event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
 
     def test_many_levels(self):
         treaty_df = _df('''\
-id,type,max_retention,limit,code
+id,type,deductible,limit,code
 prop1,prop,   0,  90000,A
 cat1,catxl, 200,   4000,B
 cat2,catxl, 500,  10000,C
