@@ -335,7 +335,7 @@ class RuptureImporter(object):
 
     def check_overflow(self, E):
         """
-        Raise an error if the number of IMTs is larger than 256 or the
+        Raise a ValueError if the number of IMTs is larger than 256 or the
         number of events is larger than 4,294,967,296. The limits
         are due to the numpy dtype used to store the GMFs
         (gmv_dt). There also a limit of `max_potential_gmfs` on the
@@ -344,8 +344,12 @@ class RuptureImporter(object):
         smarter.
         """
         oq = self.oqparam
-        assert len(oq.imtls) <= 256, len(oq.imtls)
-        assert E <= TWO32, E
+        if len(oq.imtls) > 256:
+            raise ValueError('The event_based calculator is restricted '
+                             'to 256 imts, got %d' % len(oq.imtls))
+        if E > TWO32:
+            raise ValueError('The event_based calculator is restricted '
+                             'to 2^32 events, got %d' % E)
         max_ = dict(sites=TWO32, events=TWO32, imts=2**8)
         num_ = dict(events=E, imts=len(self.oqparam.imtls))
         num_['sites'] = self.N
