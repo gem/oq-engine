@@ -1,4 +1,4 @@
-#,,,,,,,,"generated_by='OpenQuake engine 3.16.0-gitc5793a1439', start_date='2022-10-03T16:00:25', checksum=3293264848"
+#,,,,,,,,"generated_by='OpenQuake engine 3.16.0-git6c5def0dc4', start_date='2022-10-04T03:27:35', checksum=3293264848"
 event_id,retention,claim,surplus,quota_shared,wxlr,catxl,overspill_surplus,year
 0,5.00000E+01,1.41443E+02,2.82886E+01,4.24329E+01,2.07214E+01,0.00000E+00,0.00000E+00,1
 1,5.00000E+01,2.45206E+02,4.90412E+01,7.35618E+01,7.26031E+01,7.74951E-06,0.00000E+00,1

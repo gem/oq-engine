@@ -621,8 +621,8 @@ def export_reinsurance_by_event(ekey, dstore):
         policy_names = dstore['agg_keys'][:]
         df['policy_id'] = decode(policy_names[df['policy_id'].to_numpy() - 1])
     fmap = json.loads(dstore.get_attr('treaty_df', 'field_map'))
-    prop = dstore.read_df('treaty_df', sel={'type': b'prop'})
-    for code, col in zip(prop.code, prop.id):
+    treaty_df = dstore.read_df('treaty_df')
+    for code, col in zip(treaty_df.code, treaty_df.id):
         fmap['over_' + code] = 'overspill_' + col
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     writer.save(df.rename(columns=fmap), dest, comment=dstore.metadata)
