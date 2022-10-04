@@ -241,7 +241,10 @@ class RuptureImporter(object):
     def __init__(self, dstore):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
-        self.N = len(dstore['sitecol'])
+        try:
+            self.N = len(dstore['sitecol'])
+        except KeyError:  # missing sitecol
+            self.N = 0
 
     def get_eid_rlz(self, proxies, rlzs_by_gsim):
         """
