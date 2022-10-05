@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <reinsuranceModel>
+    <description>Reinsurance model - Demo Nepal</description>
+
+    <fieldMap>
+
+      <field oq="deductible" input="Deductible" />
+      <field oq="liability" input="Limit" />
+
+      <field input="QuotaShare" type="prop" max_cession_event="50000000" />
+      <field input="Surplus_1" type="prop" max_cession_event="50000000" />
+      <field input="Surplus_2" type="prop" max_cession_event="20000000" />
+      <field input="Facultative" type="prop" max_cession_event="5000000" />
+      <field input="Surplus_West" type="prop" max_cession_event="70000000" />
+
+      <field input="WXL_East" type="wxlr" deductible="20000000" limit=" 100000000" />
+      <field input="WXL_West" type="wxlr" deductible="1000000" limit="50000000" />
+
+      <field input="CatCentral" type="catxl" deductible="10000000" limit="100000000" />
+      <field input="CatEast" type="catxl" deductible="2000000" limit="50000000" />
+      <field input="CatWest" type="catxl" deductible="5000000" limit="75000000" />
+      <field input="CatCountry" type="catxl" deductible="50000000" limit="500000000" />
+    
+    </fieldMap>
+
+    <policies>policy.csv</policies>
+
+  </reinsuranceModel>
+</nrml>
