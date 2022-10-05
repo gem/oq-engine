@@ -396,11 +396,12 @@ else:
         return lambda func: func
 
 
+# used when reading _poes/sid
 @compile(["int64[:, :](uint8[:])",
           "int64[:, :](uint32[:])",
           "int64[:, :](int64[:])"])
 def _idx_start_stop(integers):
-    # given an array of integers returns an array of shape (n, 3)
+    # given an array of integers returns an array int64 of shape (n, 3)
     out = []
     start = i = 0
     prev = integers[0]
@@ -410,7 +411,7 @@ def _idx_start_stop(integers):
             start = i
         prev = val
     out.append((I64(prev), start, i + 1))
-    return numpy.array(out)
+    return numpy.array(out, I64)
 
 
 # this is absurdly fast if you have numba

@@ -376,6 +376,7 @@ class PostRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
 
         if 'reinsurance' in oq.inputs:
+            logging.warning('Reinsurance calculations are still experimental')
             self.policy_df = self.datastore.read_df('policy')
             self.treaty_df = self.datastore.read_df('treaty_df')
             alt = self.datastore.read_df('risk_by_event')
