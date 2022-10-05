@@ -12,7 +12,8 @@ https://docs.openquake.org/oq-engine/advanced/OpenQuakeforAdvancedUsers.pdf
 Contents:
 
 .. toctree::
-   :maxdepth: 1
+   :numbered:
+   :maxdepth: 2
 
    general
    logic_trees
