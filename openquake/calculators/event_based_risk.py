@@ -444,6 +444,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         max_events = max(sizes)
         idx = taxonomies[num_assets_by_taxo.argmax()]
         max_taxo = self.assetcol.tagcol.taxonomy[idx]
-        logging.info('The biggest task will consider %d events x %d assets '
-                     'of taxonomy %s', max_events, max_assets, max_taxo)
+        logging.info('Biggest task with {:_d} GMVs x {:_d} assets of '
+                     'taxonomy {}'.format(max_events, max_assets, max_taxo))
         return allargs
