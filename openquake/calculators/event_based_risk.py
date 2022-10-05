@@ -87,7 +87,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
     """
     mon_agg = monitor('aggregating losses', measuremem=False)
     mon_avg = monitor('averaging losses', measuremem=False)
-    mon_df = monitor('building dataframe', measuremem=True)
+    mon_df = monitor('building event loss table', measuremem=True)
     oq = crmodel.oqparam
     xtypes = oq.ext_loss_types
     loss_by_AR = {ln: [] for ln in xtypes}
@@ -329,10 +329,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
-            eids = self.datastore['gmf_data/eid'][:]
-            self.log_info(eids)
             self.datastore.swmr_on()  # crucial!
-            allargs = list(self.gen_args(eids))
+            with self.monitor('getting gmf_data slices', measuremem=True):
+                allargs = self.get_allargs()
             smap = parallel.Starmap(
                 event_based_risk, allargs, h5=self.datastore.hdf5)
             smap.monitor.save('assets', self.assetcol.to_dframe('id'))
@@ -415,22 +414,27 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         with prc.datastore:
             prc.run(exports='')
 
-    def gen_args(self, eids):
+    def get_allargs(self):
         """
         :yields: pairs (gmf_slice, param)
         """
-        ct = self.oqparam.concurrent_tasks or 1
+        oq = self.oqparam
+        eids = self.datastore['gmf_data/eid'][:]
+        self.log_info(eids)
+        ct = oq.concurrent_tasks or 1
         maxweight = len(eids) / ct
         start = stop = weight = 0
         # IMPORTANT!! we rely on the fact that the hazard part
         # of the calculation stores the GMFs in chunks of constant eid
+        allargs = []
         for eid, group in itertools.groupby(eids):
             nsites = sum(1 for _ in group)
             stop += nsites
             weight += nsites
             if weight > maxweight:
-                yield slice(start, stop), self.oqparam, self.datastore
+                allargs.append((slice(start, stop), oq, self.datastore))
                 weight = 0
                 start = stop
         if weight:
-            yield slice(start, stop), self.oqparam, self.datastore
+            allargs.append((slice(start, stop), oq, self.datastore))
+        return allargs
