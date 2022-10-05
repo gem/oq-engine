@@ -144,8 +144,6 @@ def event_based_risk(df, oqparam, dstore, monitor):
     if dstore.parent:
         dstore.parent.open('r')
     with dstore, monitor('reading data'):
-        if hasattr(df, 'start'):  # it is actually a slice
-            df = dstore.read_df('gmf_data', slc=df)
         assetcol = dstore['assetcol']
         if oqparam.K:
             aggids, _ = assetcol.build_aggids(
@@ -330,13 +328,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
             self.datastore.swmr_on()  # crucial!
-            with self.monitor('getting gmf_data slices', measuremem=True):
-                allargs = self.get_allargs()
-            smap = parallel.Starmap(
-                event_based_risk, allargs, h5=self.datastore.hdf5)
+            smap = parallel.Starmap(event_based_risk, h5=self.datastore.hdf5)
             smap.monitor.save('assets', self.assetcol.to_dframe('id'))
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
+            with self.monitor('getting gmf_data slices', measuremem=True):
+                self.read_gmf_data(smap.submit)
             smap.reduce(self.agg_dicts)
         if self.parent_events:
             assert self.parent_events == len(self.datastore['events'])
@@ -414,9 +411,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         with prc.datastore:
             prc.run(exports='')
 
-    def get_allargs(self):
+    def read_gmf_data(self, submit):
         """
-        :yields: pairs (gmf_slice, param)
+        Read gmf_data and submit tasks
         """
         oq = self.oqparam
         eids = self.datastore['gmf_data/eid'][:]
@@ -426,18 +423,22 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         start = stop = weight = 0
         # IMPORTANT!! we rely on the fact that the hazard part
         # of the calculation stores the GMFs in chunks of constant eid
-        allargs = []
+
+        def read(start, stop):
+            return self.datastore.read_df('gmf_data', slc=slice(start, stop))
+        sizes = []
         for eid, group in itertools.groupby(eids):
             nsites = sum(1 for _ in group)
             stop += nsites
             weight += nsites
             if weight > maxweight:
-                allargs.append((slice(start, stop), oq, self.datastore))
+                submit((read(start, stop), oq, self.datastore))
+                sizes.append(stop - start)
                 weight = 0
                 start = stop
         if weight:
-            allargs.append((slice(start, stop), oq, self.datastore))
-        sizes = [slc.stop - slc.start for slc, oq, ds in allargs]
+            submit((read(start, stop), oq, self.datastore))
+            sizes.append(stop - start)
         taxonomies, num_assets_by_taxo = numpy.unique(
             self.assetcol.taxonomies, return_counts=1)
         max_assets = max(num_assets_by_taxo)
@@ -446,4 +447,3 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         max_taxo = self.assetcol.tagcol.taxonomy[idx]
         logging.info('Biggest task with {:_d} GMVs x {:_d} assets of '
                      'taxonomy {}'.format(max_gmvs, max_assets, max_taxo))
-        return allargs
