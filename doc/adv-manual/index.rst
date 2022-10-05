@@ -13,7 +13,7 @@ Contents:
 
 .. toctree::
    :numbered:
-   :maxdepth: 2
+   :maxdepth: 3
 
    general
    logic_trees
