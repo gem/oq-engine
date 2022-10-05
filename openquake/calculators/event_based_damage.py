@@ -202,12 +202,10 @@ class DamageCalculator(EventBasedRiskCalculator):
             oq.parentdir = os.path.dirname(self.datastore.ppath)
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore)  # check
-        eids = self.datastore['gmf_data/eid'][:]
-        logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
         self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, self.crmodel)
         self.datastore.swmr_on()
         smap = parallel.Starmap(
-            event_based_damage, self.gen_args(eids), h5=self.datastore.hdf5)
+            event_based_damage, self.get_allargs(), h5=self.datastore.hdf5)
         smap.monitor.save('assets', self.assetcol.to_dframe('id'))
         smap.monitor.save('crmodel', self.crmodel)
         return smap.reduce(self.combine)
