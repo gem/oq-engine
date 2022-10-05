@@ -30,11 +30,11 @@ jobs:
 
     steps:
       - name: Check out the codebase (Master)
-        uses: actions/checkout@v2
         if: github.event.inputs.git-ref == ''
-      - name: Check out the codebase (Custom Ref)
         uses: actions/checkout@v2
+      - name: Check out the codebase (Custom Ref)
         if: github.event.inputs.git-ref != ''
+        uses: actions/checkout@v2
         with:
           ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python 3.8
