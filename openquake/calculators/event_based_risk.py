@@ -169,13 +169,15 @@ def event_based_risk(df, oqparam, dstore, monitor):
         # can aggregate millions of asset by using few GBs of RAM
         gbt = assetcol.to_dframe().groupby('taxonomy')
         for taxo, adf in gbt:
-            gmf_df = df[numpy.isin(df.sid.to_numpy(), adf.site_id.to_numpy())]
-            if len(gmf_df) == 0:
-                continue
-            with mon_risk:  # this is using a lot of memory
-                adf = adf.set_index('ordinal')
-                out = crmodel.get_output(adf, gmf_df, oqparam._sec_losses, rng)
-            yield out
+            adf = adf.set_index('ordinal')
+            for sid in adf.site_id.unique():
+                gmf_df = df[df.sid == sid]
+                if len(gmf_df) == 0:
+                    continue
+                with mon_risk:  # this is using a lot of memory
+                    out = crmodel.get_output(
+                        adf, gmf_df, oqparam._sec_losses, rng)
+                yield out
 
     return aggreg(outputs(), crmodel, ARK, aggids, rlz_id, monitor)
 
