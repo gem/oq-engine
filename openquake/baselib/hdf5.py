@@ -414,6 +414,25 @@ class File(h5py.File):
                 data[name] = arr
         return pandas.DataFrame.from_records(data, index=index)
 
+    def read_large_df(self, key, cond=lambda df: df, maxsize=10_000_000):
+        """
+        Read a large dataframe in chunks by applying a condition to each
+        chunk.
+        
+        :returns: the filtered DataFrame
+        """
+        h5group = self[key]
+        cols = h5group.attrs['__pdcolumns__'].split()
+        size = len(h5group[cols[0]])
+        if size < maxsize:
+            return cond(self.read_df(key))
+        dfs = []
+        for slc in general.gen_slices(0, size, maxsize):
+            f = cond(self.read_df(key, slc=slc))
+            print(len(f))
+            dfs.append(f)
+        return pandas.concat(dfs)
+                                                                                                    
     def save_vlen(self, key, data):  # used in SourceWriterTestCase
         """
         Save a sequence of variable-length arrays
