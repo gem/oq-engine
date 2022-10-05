@@ -1569,6 +1569,7 @@ class RiskComputer(dict):
         dic = _reduce(self.todict())
         pprint(dic)
 
+
 # ####################### Consequences ##################################### #
 
 def consequence(consequence, coeffs, asset, dmgdist, loss_type):
