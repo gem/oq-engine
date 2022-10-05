@@ -437,4 +437,13 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 start = stop
         if weight:
             allargs.append((slice(start, stop), oq, self.datastore))
+        sizes = [slc.stop - slc.start for slc, oq, ds in allargs]
+        taxonomies, num_assets_by_taxo = numpy.unique(
+            self.assetcol.taxonomies, return_counts=1)
+        max_assets = max(num_assets_by_taxo)
+        max_events = max(sizes)
+        idx = taxonomies[num_assets_by_taxo.argmax()]
+        max_taxo = self.assetcol.tagcol.taxonomy[idx]
+        logging.info('The biggest task will consider %d events x %d assets '
+                     'of taxonomy %s', max_events, max_assets, max_taxo)
         return allargs
