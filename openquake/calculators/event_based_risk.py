@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import os.path
 import logging
 import operator
@@ -175,13 +176,17 @@ def event_based_risk(df, oqparam, dstore, monitor):
 
     def outputs():
         mon_risk = monitor('computing risk', measuremem=True)
+        mon_filt = monitor('filtering GMFs for taxonomy')
         # can aggregate millions of asset by using few GBs of RAM
         for taxo, adf in assets.groupby('taxonomy'):  # fast
-            # discard the GMFs not affecting the assets (fast)
-            gmf_df = df[numpy.isin(df.sid.to_numpy(), adf.site_id.to_numpy())]
-            if len(gmf_df) == 0:
-                continue
-            adf = adf.set_index('ordinal')  # fast
+            with mon_filt:
+                # discard the GMFs not affecting the assets
+                gmf_sid = df.sid.to_numpy()
+                adf_sid = adf.site_id.to_numpy()
+                gmf_df = df[numpy.isin(gmf_sid, adf_sid)]
+                if len(gmf_df) == 0:
+                    continue
+                adf = adf.set_index('ordinal')  # fast
             with mon_risk:
                 # this is using a lot of memory (and slow)
                 out = crmodel.get_output(adf, gmf_df, oqparam._sec_losses, rng)
@@ -427,14 +432,16 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.log_info(eids)
         ct = oq.concurrent_tasks or 1
         maxweight = len(eids) / ct
+        sids = self.sitecol.sids
         start = stop = weight = 0
         sizes = []
-        sids = self.sitecol.sids
 
-        def read(start, stop):
+        def read_filter(start, stop):
             df = self.datastore.read_df('gmf_data', slc=slice(start, stop))
+            if self.sitecol is not self.sitecol.complete:
+                df = df[numpy.isin(df.sid.to_numpy(), sids)]
             size = len(df)
-            logging.info('Read {:_d} rows of gmf_data'.format(size))
+            sys.stdout.write('.')
             if size:
                 submit((df, oq, self.datastore))
             sizes.append(size)
@@ -445,11 +452,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             stop += nsites
             weight += nsites
             if weight > maxweight:
-                read(start, stop)
+                read_filter(start, stop)
                 weight = 0
                 start = stop
         if weight:
-            read(start, stop)
+            read_filter(start, stop)
         taxonomies, num_assets_by_taxo = numpy.unique(
             self.assetcol.taxonomies, return_counts=1)
         max_assets = max(num_assets_by_taxo)
