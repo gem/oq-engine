@@ -1192,6 +1192,14 @@ vanhoutte_2018
     :undoc-members:
     :show-inheritance:
 
+wong2022
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.wong2022
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 yenier_atkinson_2015
 -------------------------------------------
 
