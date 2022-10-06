@@ -339,7 +339,6 @@ def by_policy_event(agglosses_df, policy_df, treaty_df, mon=Monitor()):
     :returns: (risk_by_policy_df, risk_by_event_df)
     """
     dfs = []
-    assert (treaty_df.limit != NOLIMIT).all()
     for _, policy in policy_df.iterrows():
         df = by_policy(agglosses_df, dict(policy), treaty_df)
         df['policy_grp'] = build_policy_grp(policy, treaty_df)
