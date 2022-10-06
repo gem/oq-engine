@@ -429,8 +429,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         eids = self.datastore['gmf_data/eid'][:]
         sids = self.datastore['gmf_data/sid'][:]
         self.log_info(eids)
-        ct = oq.concurrent_tasks or 1
-        minrows = len(eids) // ct
+        minrows = 10_000
         logging.info('minrows = {:_d}'.format(minrows))
         start = stop = weight = 0
         # IMPORTANT!! we rely on the fact that the hazard part
@@ -438,7 +437,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         allargs = []
         site_ids = self.sitecol.sids
         sizes = []
-        for idx, s1, s2 in performance._idx_start_stop(eids):
+        for idx, s1, s2 in performance._idx_start_stop(eids // 1000):
             stop += s2 - s1
             if self.sitecol is self.sitecol.complete:
                 size = s2 - s1
