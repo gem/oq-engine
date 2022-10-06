@@ -105,6 +105,7 @@ jobs:
           UPLOAD: ${{ github.event.inputs.git-ref }}
           BUILD: ${{ github.event.inputs.oq-release }}
         run: |
+          bash --version
           LTS_VER=$(grep 'Current Long Term Support' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
           VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
           
