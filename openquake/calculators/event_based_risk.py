@@ -455,6 +455,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         for idx, start, stop in performance._idx_start_stop(eids // 1000):
             df = self.datastore.read_df('gmf_data', slc=slice(start, stop))
             if self.sitecol is not self.sitecol.complete:
+                # filter on the sites belonging to the asset collection
                 df = df[numpy.isin(df.sid.to_numpy(), sids)]
             send(df, dfs)
         if dfs:

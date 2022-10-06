@@ -444,7 +444,7 @@ def check_obsolete_version(calculation_mode='WebUI'):
         return
 
     version = logs.dbcmd('engine_version')
-    logging.info('Using engine version %s', version)
+    logging.info('Using DbServer version %s', version)
     headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s;%s' %
                (version, calculation_mode, platform.platform(),
                 config.distribution.oq_distribute)}
