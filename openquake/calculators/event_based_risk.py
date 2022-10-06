@@ -421,12 +421,14 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         ct = oq.concurrent_tasks or 1
         maxweight = len(eids) / ct
         start = stop = weight = 0
-        # IMPORTANT!! we rely on the fact that the hazard part
-        # of the calculation stores the GMFs in chunks of constant eid
 
         def read(start, stop):
+            #filtered = self.sitecol is not self.sitecol.complete
+            #import pdb; pdb.set_trace()
             return self.datastore.read_df('gmf_data', slc=slice(start, stop))
         sizes = []
+        # IMPORTANT!! we rely on the fact that the hazard part
+        # of the calculation stores the GMFs in chunks of constant eid
         for eid, group in itertools.groupby(eids):
             nsites = sum(1 for _ in group)
             stop += nsites

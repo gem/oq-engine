@@ -62,8 +62,6 @@ def event_based_damage(df, oqparam, dstore, monitor):
                 oqparam.hdf5path, parentdir=oqparam.parentdir)
         else:
             dstore.open('r')
-        if hasattr(df, 'start'):  # it is actually a slice
-            df = dstore.read_df('gmf_data', slc=df)
         assetcol = dstore['assetcol']
         if K:
             aggids, _ = assetcol.build_aggids(
@@ -204,10 +202,10 @@ class DamageCalculator(EventBasedRiskCalculator):
             self.builder = get_loss_builder(self.datastore)  # check
         self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, self.crmodel)
         self.datastore.swmr_on()
-        smap = parallel.Starmap(
-            event_based_damage, self.get_allargs(), h5=self.datastore.hdf5)
+        smap = parallel.Starmap(event_based_damage, h5=self.datastore.hdf5)
         smap.monitor.save('assets', self.assetcol.to_dframe('id'))
         smap.monitor.save('crmodel', self.crmodel)
+        self.read_gmf_data(smap.submit)
         return smap.reduce(self.combine)
 
     def combine(self, acc, res):
