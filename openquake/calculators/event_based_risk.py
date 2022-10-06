@@ -175,6 +175,11 @@ def event_based_risk(df, oqparam, dstore, monitor):
                 out = crmodel.get_output(adf, gmf_df, oqparam._sec_losses, rng)
             yield out
 
+    if oqparam.K:
+        aggids, _ = assetcol.build_aggids(
+            oqparam.aggregate_by, oqparam.max_aggregations)
+    else:
+        aggids = ()
     return aggreg(outputs(), crmodel, ARK, aggids, rlz_id, monitor)
 
 
