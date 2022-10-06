@@ -25,7 +25,7 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, parallel, general
+from openquake.baselib import hdf5, parallel, performance, general
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.risklib.scientific import (
@@ -427,6 +427,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         eids = self.datastore['gmf_data/eid'][:]
+        sids = self.datastore['gmf_data/sid'][:]
         self.log_info(eids)
         ct = oq.concurrent_tasks or 1
         maxweight = len(eids) / ct
@@ -434,10 +435,13 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # IMPORTANT!! we rely on the fact that the hazard part
         # of the calculation stores the GMFs in chunks of constant eid
         allargs = []
-        for eid, group in itertools.groupby(eids):
-            nsites = sum(1 for _ in group)
-            stop += nsites
-            weight += nsites
+        site_ids = self.sitecol.sids
+        for idx, s1, s2 in performance._idx_start_stop(eids):
+            stop += s2 - s1
+            if self.sitecol is self.sitecol.complete:
+                weight += s2 - s1
+            else:
+                weight += numpy.isin(sids[s1:s2], site_ids).sum()
             if weight > maxweight:
                 allargs.append((slice(start, stop), oq, self.datastore))
                 weight = 0
