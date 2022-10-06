@@ -429,7 +429,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         eids = self.datastore['gmf_data/eid'][:]
         sids = self.datastore['gmf_data/sid'][:]
         self.log_info(eids)
-        minrows = 10_000
+        minrows = 100_000
         logging.info('minrows = {:_d}'.format(minrows))
         start = stop = weight = 0
         # IMPORTANT!! we rely on the fact that the hazard part
