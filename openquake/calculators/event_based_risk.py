@@ -144,7 +144,8 @@ def event_based_risk(df, oqparam, dstore, monitor):
     if dstore.parent:
         dstore.parent.open('r')
     with dstore, monitor('reading data'):
-        assetcol = dstore['assetcol']
+        # NB: we are reading from the calc_XXX_tmp.hdf5 file for performance
+        assetcol = monitor.read('assetcol')
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]
@@ -318,6 +319,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 h5=self.datastore.hdf5,
                 duration=oq.time_per_task,
                 outs_per_task=5)
+            smap.monitor.save('assetcol', self.assetcol)
             smap.monitor.save('srcfilter', srcfilter)
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
@@ -331,7 +333,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         else:  # start from GMFs
             self.datastore.swmr_on()  # crucial!
             smap = parallel.Starmap(event_based_risk, h5=self.datastore.hdf5)
-            smap.monitor.save('assets', self.assetcol.to_dframe('id'))
+            smap.monitor.save('assetcol', self.assetcol)
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
             with self.monitor('submitting gmf_data', measuremem=True):
@@ -430,10 +432,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             df = self.datastore.read_df('gmf_data', slc=slice(start, stop))
             if self.sitecol is not self.sitecol.complete:
                 df = df[numpy.isin(df.sid.to_numpy(), sids)]
-            logging.info('Read {:_d} rows of gmf_data'.format(len(df)))
-            if len(df):
+            size = len(df)
+            logging.info('Read {:_d} rows of gmf_data'.format(size))
+            if size:
                 submit((df, oq, self.datastore))
-            sizes.append(stop - start)
+            sizes.append(size)
         # IMPORTANT!! we rely on the fact that the hazard part
         # of the calculation stores the GMFs in chunks of constant eid
         for eid, group in itertools.groupby(eids):
