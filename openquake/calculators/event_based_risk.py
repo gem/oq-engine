@@ -145,11 +145,6 @@ def event_based_risk(df, oqparam, dstore, monitor):
         dstore.parent.open('r')
     with dstore, monitor('reading data'):
         assetcol = dstore['assetcol']
-        if oqparam.K:
-            aggids, _ = assetcol.build_aggids(
-                oqparam.aggregate_by, oqparam.max_aggregations)
-        else:
-            aggids = ()
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]
