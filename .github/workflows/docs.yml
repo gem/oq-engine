@@ -105,25 +105,32 @@ jobs:
           UPLOAD: ${{ github.event.inputs.git-ref }}
           BUILD: ${{ github.event.inputs.oq-release }}
         run: |
-          which grep
-          which sed
-          LTS_VERS=$(grep 'Current Long Term Support' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
-          echo "LTS_VERS:            [$LTS_VERS]"
+          LTS_VER=$(grep 'Current Long Term Support' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
+          VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
+          
+          if [ -z "$BUILD" ]; then
+              if [[ "$GITHUB_REF_NAME" == "master" ]]; then
+                  BUILD=master
+              elif [[ "$GITHUB_REF_NAME" ~= ^ongine- ]]; then
+                  if [[ "${GITHUB_REF_NAME#engine-}" == "$LTS_VER" ]]; then
+                      BUILD=LTS
+                  else
+                      BUILD=latest
+                  fi
+              else
+                  BUILD=dev
+              fi
+          fi
+
+          echo "LTS_VER:             [$LTS_VER]"
+          echo "VER:                 [$VER]"
           echo "GITHUB_PULL_REQUEST: [$GITHUB_PULL_REQUEST]"
           echo "GITHUB_DEF_BR:       [$GITHUB_DEF_BR]"
           echo "GITHUB_REF:          [$GITHUB_REF]"
           echo "GITHUB_HD_REF:       [$GITHUB_HD_REF]"
           echo "GITHUB_BS_REF:       [$GITHUB_BS_REF]"
-          echo "UPLOAD:              [$UPLOAD]"
           echo "BUILD:               [$BUILD]"
-          VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
-          
-          exit 123
-          #if [ -z "$BUILD" ]; then
-          #    if [ "$GITHUB_REF_NAME" == "master" ]; then
-          #        BUILD=master
-          #    elif [ "$GITHUB_REF_NAME" 
-          #fi
+          echo "UPLOAD:              [$UPLOAD]"
 
 
           # if [ -z "$GITHUB_HD_REF" ]
