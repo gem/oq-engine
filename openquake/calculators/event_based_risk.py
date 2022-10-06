@@ -167,11 +167,13 @@ def event_based_risk(df, oqparam, dstore, monitor):
         # can aggregate millions of asset by using few GBs of RAM
         gbt = assetcol.to_dframe().groupby('taxonomy')
         for taxo, adf in gbt:
+            # discard the GMFs not affecting the assets
             gmf_df = df[numpy.isin(df.sid.to_numpy(), adf.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
-            with mon_risk:  # this is using a lot of memory
-                adf = adf.set_index('ordinal')
+            adf = adf.set_index('ordinal')  # fast
+            with mon_risk:
+                # this is using a lot of memory and it is slow
                 out = crmodel.get_output(adf, gmf_df, oqparam._sec_losses, rng)
             yield out
 
@@ -337,7 +339,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             smap.monitor.save('assets', self.assetcol.to_dframe('id'))
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
-            with self.monitor('getting gmf_data slices', measuremem=True):
+            with self.monitor('submitting gmf_data', measuremem=True):
                 self.read_gmf_data(smap.submit)
             smap.reduce(self.agg_dicts)
         if self.parent_events:
@@ -434,7 +436,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             if self.sitecol is not self.sitecol.complete:
                 df = df[numpy.isin(df.sid.to_numpy(), sids)]
             logging.info('Read {:_d} rows of gmf_data'.format(len(df)))
-            submit((df, oq, self.datastore))
+            if len(df):
+                submit((df, oq, self.datastore))
             sizes.append(stop - start)
         # IMPORTANT!! we rely on the fact that the hazard part
         # of the calculation stores the GMFs in chunks of constant eid

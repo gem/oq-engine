@@ -37,7 +37,7 @@ import requests
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.general import (
-    random_filter, countby, group_array, get_duplicates, gettemp)
+    random_filter, countby, group_array, get_duplicates, gettemp, humansize)
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -947,9 +947,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         discarded = []
         logging.info('Read {:_d} sites and {:_d} assets from the exposure'.
                      format(len(sitecol), sum(len(a) for a in assets_by_site)))
-
     assetcol = asset.AssetCollection(
         exposure, assets_by_site, oqparam.time_event, oqparam.aggregate_by)
+    logging.info('There are %s of assets', humansize(assetcol.array.nbytes))
     if assetcol.occupancy_periods:
         missing = set(cost_types) - set(exposure.cost_types['name']) - set(
             ['occupants'])
