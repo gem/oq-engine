@@ -3,10 +3,6 @@ name: new docs
 on:
   workflow_dispatch:
     inputs:
-      git-ref:
-        description: Git Ref
-        default: master
-        required: true
       oq-release:
         description: 'OQ Release'
         required: true
