@@ -6,12 +6,13 @@ on:
       oq-release:
         description: 'OQ Release'
         required: true
-        default: 'latest'
+        default: 'dev'
         type: choice
         options:
+          - dev
+          - master
           - latest
           - LTS
-          - dev
   push:
   # (MN: disabled just for test)    branches: [ master ]
 
@@ -20,8 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       EV_NAME: ${{ github.event_name }}
-      # DOCS_BASE: ".oq-engine-docs-refact/"
-      DOCS_BASE: ""
+      DOCS_BASE: ".oq-engine-docs-refact/"
       GITHUB_REF: ${{ github.ref }}
       GITHUB_HD_REF: ${{ github.head_ref }}
       GITHUB_BS_REF: ${{ github.base_ref }}
@@ -105,6 +105,8 @@ jobs:
           UPLOAD: ${{ github.event.inputs.git-ref }}
           BUILD: ${{ github.event.inputs.oq-release }}
         run: |
+          LTS_VERS="$(grep 'Current Long Term Support' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
+          echo "LTS_VERS:            [$LTS_VERS]"
           echo "GITHUB_PULL_REQUEST: [$GITHUB_PULL_REQUEST]"
           echo "GITHUB_DEF_BR:       [$GITHUB_DEF_BR]"
           echo "GITHUB_REF:          [$GITHUB_REF]"
@@ -113,6 +115,15 @@ jobs:
           echo "UPLOAD:              [$UPLOAD]"
           echo "BUILD:               [$BUILD]"
           VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
+          
+
+          if [ -z "$BUILD" ]; then
+              if [ "$GITHUB_REF_NAME" == "master" ]; then
+                  BUILD=master
+              elif [ "$GITHUB_REF_NAME" 
+          fi
+
+
           # if [ -z "$GITHUB_HD_REF" ]
           # then
           #     echo " Is not a pull request, use branch: $GITHUB_DEF_BR"
