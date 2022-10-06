@@ -262,4 +262,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         Store the CompositeSourceModel in binary format
         """
-        self.datastore['_csm'] = csm
+        try:
+            self.datastore['_csm'] = csm
+        except RuntimeError as exc:
+            logging.error(str(exc), exc_info=True)
