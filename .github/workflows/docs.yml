@@ -41,30 +41,22 @@ jobs:
           echo "REF_NAME: $GITHUB_REF_NAME"
           echo "HD_REF: $GITHUB_HD_REF"
           echo "BS_REF: $GITHUB_BS_REF"
-
-      #
-      # - name: Check out the codebase (Master)
-      #   if: github.event.inputs.git-ref == ''
-      #   uses: actions/checkout@v2
-      # - name: Check out the codebase (Custom Ref)
-      #   if: github.event.inputs.git-ref != ''
-      #   uses: actions/checkout@v2
-      #   with:
-      #     ref: ${{ github.event.inputs.git-ref }}
-      # - name: Set up Python 3.8
-      #   uses: actions/setup-python@v2
-      #   with:
-      #     python-version: '3.8'
-      # - name: Upgrade pip and install requirements
-      #   run: |
-      #     pip install -U pip
-      #     pip install -r ./requirements-py38-linux64.txt
-      #     pip install pydata-sphinx-theme
-      #     pip install fiona
-      # - name: Install oq engine
-      #   run: |
-      #     pip install -e .[dev]
-      #     python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])"
+      - name: Check out the codebase
+        uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Upgrade pip and install requirements
+        run: |
+          pip install -U pip
+          pip install -r ./requirements-py38-linux64.txt
+          pip install pydata-sphinx-theme
+          pip install fiona
+      - name: Install oq engine
+        run: |
+          pip install -e .[dev]
+          python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])"
       # - name: Run demos and upload to ci.openquake.org if not workflow_dispatch
       #   if: github.event.inputs.git-ref == ''
       #   shell: bash
