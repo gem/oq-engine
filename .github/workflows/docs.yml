@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       EV_NAME: ${{ github.event_name }}
+      DOCS_BASE: .oq-engine-docs-refact/
       GITHUB_REF:  ${{ github.ref }}
       GITHUB_HD_REF:  ${{ github.head_ref }}
       GITHUB_BS_REF:  ${{ github.base_ref }}
@@ -37,6 +38,7 @@ jobs:
         run: echo "Action triggered by 'push' ($EV_NAME)"
       - name: identify github reference
         run: |
+          echo "DOCS_BASE: [$DOCS_BASE]"
           echo "REF: $GITHUB_REF"
           echo "REF_NAME: $GITHUB_REF_NAME"
           echo "HD_REF: $GITHUB_HD_REF"
@@ -90,11 +92,11 @@ jobs:
       #     scp -v -o ConnectTimeout=120 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@docs.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${GITHUB_BR}.zip
       #     scp -v -o ConnectTimeout=120 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@docs.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_BR}.zip
       #     set +x
-      # - name: Make docs and rsync to docs.openquake.org
-      #   shell: bash
-      #   env:
-      #     DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
-      #     GITHUB_PULL_REQUEST: ${{ github.event.number }}
+      - name: Make docs and rsync to docs.openquake.org
+        shell: bash
+        env:
+          DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
+      # GITHUB_PULL_REQUEST: ${{ github.event.number }}
       #     GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
       #     GITHUB_REF:  ${{ github.ref }}
       #     GITHUB_HD_REF:  ${{ github.head_ref }}
