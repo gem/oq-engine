@@ -19,12 +19,13 @@
 import os.path
 import logging
 import operator
+import itertools
 from functools import partial
 import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, parallel, performance, general
+from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.risklib.scientific import (
@@ -157,11 +158,12 @@ def event_based_risk(df, oqparam, dstore, monitor):
     if dstore.parent:
         dstore.parent.open('r')
     with dstore, monitor('reading data', measuremem=True):
-        # NB: we are reading from the calc_XXX_tmp.hdf5 file for performance
+        if hasattr(df, 'start'):  # it is actually a slice
+            df = dstore.read_df('gmf_data', slc=df)
         assets = monitor.read('assets')
+        aggids = monitor.read('aggids')
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
-        aggids = monitor.read('aggids')
         weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]
     if dstore.parent:
         dstore.parent.close()  # essential on Windows with h5py>=3.6
@@ -174,21 +176,16 @@ def event_based_risk(df, oqparam, dstore, monitor):
 
     def outputs():
         mon_risk = monitor('computing risk', measuremem=True)
-        mon_filt = monitor('filtering GMFs for taxonomy')
         # can aggregate millions of asset by using few GBs of RAM
-        for taxo, adf in assets.groupby('taxonomy'):  # fast
-            with mon_filt:
-                # discard the GMFs not affecting the assets, crucial
-                gmf_sid = df.sid.to_numpy()
-                adf_sid = adf.site_id.to_numpy()
-                gmf_df = df[numpy.isin(gmf_sid, adf_sid)]
-                if len(gmf_df) == 0:
-                    continue
-                adf = adf.set_index('ordinal')  # fast
-            with mon_risk:
-                # this is using a lot of memory (and slow)
+        for taxo, adf in assets.groupby('taxonomy'):
+            gmf_df = df[numpy.isin(df.sid.to_numpy(), adf.site_id.to_numpy())]
+            if len(gmf_df) == 0:
+                continue
+            with mon_risk:  # this is using a lot of memory
+                adf = adf.set_index('ordinal')
                 out = crmodel.get_output(adf, gmf_df, oqparam._sec_losses, rng)
             yield out
+
     return aggreg(outputs(), crmodel, ARK, aggids, rlz_id, monitor)
 
 
@@ -340,10 +337,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
             self.datastore.swmr_on()  # crucial!
-            smap = parallel.Starmap(event_based_risk, h5=self.datastore.hdf5)
+            with self.monitor('getting gmf_data slices', measuremem=True):
+                allargs = self.get_allargs()
+            smap = parallel.Starmap(
+                event_based_risk, allargs, h5=self.datastore.hdf5)
             save_tmp(self, smap.monitor)
-            with self.monitor('submitting gmf_data', measuremem=True):
-                self.read_gmf_data(smap.submit)
             smap.reduce(self.agg_dicts)
         if self.parent_events:
             assert self.parent_events == len(self.datastore['events'])
@@ -421,47 +419,30 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         with prc.datastore:
             prc.run(exports='')
 
-    def read_gmf_data(self, submit):
+    def get_allargs(self):
         """
-        Read gmf_data and submit tasks
+        :yields: pairs (gmf_slice, param)
         """
         oq = self.oqparam
         eids = self.datastore['gmf_data/eid'][:]
         self.log_info(eids)
-        ct = 2 * oq.concurrent_tasks or 1
-        minrows = len(eids) // ct
-        logging.info('minrows = {:_d}'.format(minrows))
-        sids = self.sitecol.sids
-        start = stop = 0
-        sizes = []
-
-        def send(df, dfs):
-            if len(df) > minrows:
-                submit((df, oq, self.datastore))
-                sizes.append(len(df))
-                logging.info('Sending {:_d} rows of GMFs'.format(len(df)))
-                return
-            dfs.append(df)
-            size = sum(len(df) for df in dfs)
-            if size > minrows:
-                submit((pandas.concat(dfs), oq, self.datastore))
-                dfs.clear()
-                sizes.append(size)
-                logging.info('Sending {:_d} rows of GMFs'.format(size))
-
+        ct = oq.concurrent_tasks or 1
+        maxweight = len(eids) / ct
+        start = stop = weight = 0
         # IMPORTANT!! we rely on the fact that the hazard part
         # of the calculation stores the GMFs in chunks of constant eid
-        dfs = []
-        for idx, start, stop in performance._idx_start_stop(eids // 1000):
-            df = self.datastore.read_df('gmf_data', slc=slice(start, stop))
-            if self.sitecol is not self.sitecol.complete:
-                # filter on the sites belonging to the asset collection
-                df = df[numpy.isin(df.sid.to_numpy(), sids)]
-            send(df, dfs)
-        if dfs:
-            df = pandas.concat(dfs)
-            submit((df, oq, self.datastore))
-            sizes.append(len(df))
+        allargs = []
+        for eid, group in itertools.groupby(eids):
+            nsites = sum(1 for _ in group)
+            stop += nsites
+            weight += nsites
+            if weight > maxweight:
+                allargs.append((slice(start, stop), oq, self.datastore))
+                weight = 0
+                start = stop
+        if weight:
+            allargs.append((slice(start, stop), oq, self.datastore))
+        sizes = [slc.stop - slc.start for slc, oq, ds in allargs]
         taxonomies, num_assets_by_taxo = numpy.unique(
             self.assetcol.taxonomies, return_counts=1)
         max_assets = max(num_assets_by_taxo)
@@ -470,3 +451,4 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         max_taxo = self.assetcol.tagcol.taxonomy[idx]
         logging.info('Biggest task with {:_d} GMVs x {:_d} assets of '
                      'taxonomy {}'.format(max_gmvs, max_assets, max_taxo))
+        return allargs
