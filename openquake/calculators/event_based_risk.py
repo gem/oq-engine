@@ -45,6 +45,20 @@ TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
 
 
+def save_tmp(self, monitor, srcfilter=None):
+    oq = self.oqparam
+    monitor.save('assets', self.assetcol.to_dframe())
+    monitor.save('srcfilter', srcfilter)
+    monitor.save('crmodel', self.crmodel)
+    monitor.save('rlz_id', self.rlzs)
+    if oq.K:
+        aggids, _ = self.assetcol.build_aggids(
+            oq.aggregate_by, oq.max_aggregations)
+    else:
+        aggids = ()
+    monitor.save('aggids', aggids)
+
+
 def fast_agg(keys, values, correl, li, acc):
     """
     :param keys: an array of N uint64 numbers encoding (event_id, agg_id)
@@ -145,13 +159,14 @@ def event_based_risk(df, oqparam, dstore, monitor):
         dstore.parent.open('r')
     with dstore, monitor('reading data'):
         # NB: we are reading from the calc_XXX_tmp.hdf5 file for performance
-        assetcol = monitor.read('assetcol')
+        assets = monitor.read('assets')
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
+        aggids = monitor.read('aggids')
         weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]
     if dstore.parent:
         dstore.parent.close()  # essential on Windows with h5py>=3.6
-    ARK = len(assetcol), len(weights), oqparam.K
+    ARK = len(assets), len(weights), oqparam.K
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
     else:
@@ -161,23 +176,16 @@ def event_based_risk(df, oqparam, dstore, monitor):
     def outputs():
         mon_risk = monitor('computing risk', measuremem=True)
         # can aggregate millions of asset by using few GBs of RAM
-        gbt = assetcol.to_dframe().groupby('taxonomy')
-        for taxo, adf in gbt:
-            # discard the GMFs not affecting the assets
+        for taxo, adf in assets.groupby('taxonomy'):  # fast
+            # discard the GMFs not affecting the assets (fast)
             gmf_df = df[numpy.isin(df.sid.to_numpy(), adf.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
             adf = adf.set_index('ordinal')  # fast
             with mon_risk:
-                # this is using a lot of memory and it is slow
+                # this is using a lot of memory (and slow)
                 out = crmodel.get_output(adf, gmf_df, oqparam._sec_losses, rng)
             yield out
-
-    if oqparam.K:
-        aggids, _ = assetcol.build_aggids(
-            oqparam.aggregate_by, oqparam.max_aggregations)
-    else:
-        aggids = ()
     return aggreg(outputs(), crmodel, ARK, aggids, rlz_id, monitor)
 
 
@@ -319,10 +327,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 h5=self.datastore.hdf5,
                 duration=oq.time_per_task,
                 outs_per_task=5)
-            smap.monitor.save('assetcol', self.assetcol)
-            smap.monitor.save('srcfilter', srcfilter)
-            smap.monitor.save('crmodel', self.crmodel)
-            smap.monitor.save('rlz_id', self.rlzs)
+            save_tmp(self, smap.monitor, srcfilter)
             smap.reduce(self.agg_dicts)
             if self.gmf_bytes == 0:
                 raise RuntimeError(
@@ -333,9 +338,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         else:  # start from GMFs
             self.datastore.swmr_on()  # crucial!
             smap = parallel.Starmap(event_based_risk, h5=self.datastore.hdf5)
-            smap.monitor.save('assetcol', self.assetcol)
-            smap.monitor.save('crmodel', self.crmodel)
-            smap.monitor.save('rlz_id', self.rlzs)
+            save_tmp(self, smap.monitor)
             with self.monitor('submitting gmf_data', measuremem=True):
                 self.read_gmf_data(smap.submit)
             smap.reduce(self.agg_dicts)
