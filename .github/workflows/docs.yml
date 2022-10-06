@@ -35,7 +35,7 @@ jobs:
         if: github.event_name == 'push'
         shell: bash
         run: echo "Action triggered by 'push' ($EV_NAME)"
-      - name identify github reference
+      - name: identify github reference
         run: |
           echo "REF: $GITHUB_REF"
           echo "HD_REF: $GITHUB_HD_REF"
