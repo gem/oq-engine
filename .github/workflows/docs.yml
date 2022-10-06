@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       EV_NAME: ${{ github.event_name }}
-      DOCS_BASE: .oq-engine-docs-refact/
+      # DOCS_BASE: .oq-engine-docs-refact/
       GITHUB_REF:  ${{ github.ref }}
       GITHUB_HD_REF:  ${{ github.head_ref }}
       GITHUB_BS_REF:  ${{ github.base_ref }}
