@@ -105,8 +105,9 @@ jobs:
           UPLOAD: ${{ github.event.inputs.git-ref }}
           BUILD: ${{ github.event.inputs.oq-release }}
         run: |
-          ls -l
-          # LTS_VERS="$(grep 'Current Long Term Support' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
+          which grep
+          which sed
+          LTS_VERS="\$(grep 'Current Long Term Support' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
           echo "LTS_VERS:            [$LTS_VERS]"
           echo "GITHUB_PULL_REQUEST: [$GITHUB_PULL_REQUEST]"
           echo "GITHUB_DEF_BR:       [$GITHUB_DEF_BR]"
@@ -117,12 +118,12 @@ jobs:
           echo "BUILD:               [$BUILD]"
           VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
           
-
-          if [ -z "$BUILD" ]; then
-              if [ "$GITHUB_REF_NAME" == "master" ]; then
-                  BUILD=master
-              elif [ "$GITHUB_REF_NAME" 
-          fi
+          exit 123
+          #if [ -z "$BUILD" ]; then
+          #    if [ "$GITHUB_REF_NAME" == "master" ]; then
+          #        BUILD=master
+          #    elif [ "$GITHUB_REF_NAME" 
+          #fi
 
 
           # if [ -z "$GITHUB_HD_REF" ]
