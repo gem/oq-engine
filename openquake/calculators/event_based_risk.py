@@ -421,12 +421,15 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         ct = oq.concurrent_tasks or 1
         maxweight = len(eids) / ct
         start = stop = weight = 0
+        sizes = []
 
         def read(start, stop):
+            df = self.datastore.read_df('gmf_data', slc=slice(start, stop))
             #filtered = self.sitecol is not self.sitecol.complete
             #import pdb; pdb.set_trace()
-            return self.datastore.read_df('gmf_data', slc=slice(start, stop))
-        sizes = []
+            logging.info('Sending {:_d} rows of gmf_data'.format(len(df)))
+            submit((df, oq, self.datastore))
+            sizes.append(stop - start)
         # IMPORTANT!! we rely on the fact that the hazard part
         # of the calculation stores the GMFs in chunks of constant eid
         for eid, group in itertools.groupby(eids):
@@ -434,13 +437,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             stop += nsites
             weight += nsites
             if weight > maxweight:
-                submit((read(start, stop), oq, self.datastore))
-                sizes.append(stop - start)
+                read(start, stop)
                 weight = 0
                 start = stop
         if weight:
-            submit((read(start, stop), oq, self.datastore))
-            sizes.append(stop - start)
+            read(start, stop)
         taxonomies, num_assets_by_taxo = numpy.unique(
             self.assetcol.taxonomies, return_counts=1)
         max_assets = max(num_assets_by_taxo)
