@@ -422,12 +422,13 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         maxweight = len(eids) / ct
         start = stop = weight = 0
         sizes = []
+        sids = self.sitecol.sids
 
-        def read(start, stop):
+        def read_filter(start, stop):
             df = self.datastore.read_df('gmf_data', slc=slice(start, stop))
-            #filtered = self.sitecol is not self.sitecol.complete
-            #import pdb; pdb.set_trace()
-            logging.info('Sending {:_d} rows of gmf_data'.format(len(df)))
+            if self.sitecol is not self.sitecol.complete:
+                df = df[numpy.isin(df.sid.to_numpy(), sids)]
+            logging.info('Read {:_d} rows of gmf_data'.format(len(df)))
             submit((df, oq, self.datastore))
             sizes.append(stop - start)
         # IMPORTANT!! we rely on the fact that the hazard part
@@ -437,11 +438,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             stop += nsites
             weight += nsites
             if weight > maxweight:
-                read(start, stop)
+                read_filter(start, stop)
                 weight = 0
                 start = stop
         if weight:
-            read(start, stop)
+            read_filter(start, stop)
         taxonomies, num_assets_by_taxo = numpy.unique(
             self.assetcol.taxonomies, return_counts=1)
         max_assets = max(num_assets_by_taxo)
