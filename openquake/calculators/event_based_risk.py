@@ -430,7 +430,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         sids = self.datastore['gmf_data/sid'][:]
         self.log_info(eids)
         ct = oq.concurrent_tasks or 1
-        maxweight = len(eids) / ct
+        minrows = len(eids) // ct
+        logging.info('minrows = {:_d}'.format(minrows))
         start = stop = weight = 0
         # IMPORTANT!! we rely on the fact that the hazard part
         # of the calculation stores the GMFs in chunks of constant eid
@@ -445,18 +446,20 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 size = numpy.isin(sids[s1:s2], site_ids).sum()
             sizes.append(size)
             weight += size
-            if weight > maxweight:
+            if weight > minrows:
+                logging.info('Sending {:_d} rows'.format(size))
                 allargs.append((slice(start, stop), oq, self.datastore))
                 weight = 0
                 start = stop
         if weight:
+            logging.info('Sending {:_d} rows'.format(size))
             allargs.append((slice(start, stop), oq, self.datastore))
         taxonomies, num_assets_by_taxo = numpy.unique(
             self.assetcol.taxonomies, return_counts=1)
         max_assets = max(num_assets_by_taxo)
-        max_gmvs = max(sizes)
+        max_rows = max(sizes)
         idx = taxonomies[num_assets_by_taxo.argmax()]
         max_taxo = self.assetcol.tagcol.taxonomy[idx]
-        logging.info('Biggest task with {:_d} GMVs x {:_d} assets of '
-                     'taxonomy {}'.format(max_gmvs, max_assets, max_taxo))
+        logging.info('Biggest task has {:_d} GMVs x {:_d} assets of '
+                     'taxonomy {}'.format(max_rows, max_assets, max_taxo))
         return allargs
