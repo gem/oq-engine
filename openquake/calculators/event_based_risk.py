@@ -157,7 +157,7 @@ def event_based_risk(df, oqparam, dstore, monitor):
     """
     if dstore.parent:
         dstore.parent.open('r')
-    with dstore, monitor('reading data'):
+    with dstore, monitor('reading data', measuremem=True):
         # NB: we are reading from the calc_XXX_tmp.hdf5 file for performance
         assets = monitor.read('assets')
         crmodel = monitor.read('crmodel')
@@ -431,10 +431,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         sizes = []
         sids = self.sitecol.sids
 
-        def read_filter(start, stop):
+        def read(start, stop):
             df = self.datastore.read_df('gmf_data', slc=slice(start, stop))
-            if self.sitecol is not self.sitecol.complete:
-                df = df[numpy.isin(df.sid.to_numpy(), sids)]
             size = len(df)
             logging.info('Read {:_d} rows of gmf_data'.format(size))
             if size:
@@ -447,11 +445,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             stop += nsites
             weight += nsites
             if weight > maxweight:
-                read_filter(start, stop)
+                read(start, stop)
                 weight = 0
                 start = stop
         if weight:
-            read_filter(start, stop)
+            read(start, stop)
         taxonomies, num_assets_by_taxo = numpy.unique(
             self.assetcol.taxonomies, return_counts=1)
         max_assets = max(num_assets_by_taxo)
