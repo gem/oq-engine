@@ -433,30 +433,32 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         ct = oq.concurrent_tasks or 1
         maxweight = len(eids) / ct
         sids = self.sitecol.sids
-        start = stop = weight = 0
+        start = stop = 0
         sizes = []
 
-        def read_filter(start, stop):
+        def read_filter(start, stop, dfs):
             df = self.datastore.read_df('gmf_data', slc=slice(start, stop))
             if self.sitecol is not self.sitecol.complete:
                 df = df[numpy.isin(df.sid.to_numpy(), sids)]
-            size = len(df)
-            sys.stderr.write('.')
-            if size:
-                submit((df, oq, self.datastore))
-            sizes.append(size)
+            dfs.append(df)
+            size = sum(len(df) for df in dfs)
+            if size > maxweight:
+                submit((pandas.concat(dfs), oq, self.datastore))
+                dfs.clear()
+                sizes.append(size)
+                sys.stderr.write('.')
         # IMPORTANT!! we rely on the fact that the hazard part
         # of the calculation stores the GMFs in chunks of constant eid
-        for eid, group in itertools.groupby(eids):
+        dfs = []
+        for _, group in itertools.groupby(eids // 1000):
             nsites = sum(1 for _ in group)
             stop += nsites
-            weight += nsites
-            if weight > maxweight:
-                read_filter(start, stop)
-                weight = 0
-                start = stop
-        if weight:
-            read_filter(start, stop)
+            read_filter(start, stop, dfs)
+            start = stop
+        if dfs:
+            df = pandas.concat(dfs)
+            submit((df, oq, self.datastore))
+            sizes.append(len(df))
         sys.stderr.write('\n')
         taxonomies, num_assets_by_taxo = numpy.unique(
             self.assetcol.taxonomies, return_counts=1)
