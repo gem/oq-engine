@@ -277,7 +277,7 @@ def build_store_agg(dstore, rbe_df, num_events):
 
 def build_reinsurance(dstore, num_events):
     """
-    Build and store the tables `reinsurance-aggrisk` and `reinsurance-avg_losses`;
+    Build and store the tables `reinsurance-avg_losses_policy` and `reinsurance-avg_losses_portfolio`;
     for event_based, also build the `reinsurance-aggcurves` table.
     """
     oq = dstore['oqparam']
@@ -311,7 +311,7 @@ def build_reinsurance(dstore, num_events):
                 dic['return_period'].append(period)
                 for col in curve:
                     dic[col].append(curve[col][p])
-    dstore.create_df('reinsurance-avg_losses', pandas.DataFrame(avg),
+    dstore.create_df('reinsurance-avg_losses_portfolio', pandas.DataFrame(avg),
                      units=dstore['cost_calculator'].get_units(
                          oq.loss_types))
     # aggrisk by policy
@@ -330,7 +330,7 @@ def build_reinsurance(dstore, num_events):
         for col in columns:
             agg = df[col].sum()
             avg[col].append(agg * tr if oq.investigation_time else agg / ne)
-    dstore.create_df('reinsurance-aggrisk', pandas.DataFrame(avg),
+    dstore.create_df('reinsurance-avg_losses_policy', pandas.DataFrame(avg),
                      units=dstore['cost_calculator'].get_units(
                          oq.loss_types))
     if oq.investigation_time is None:
