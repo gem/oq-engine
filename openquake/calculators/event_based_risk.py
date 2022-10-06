@@ -180,7 +180,7 @@ def event_based_risk(df, oqparam, dstore, monitor):
         # can aggregate millions of asset by using few GBs of RAM
         for taxo, adf in assets.groupby('taxonomy'):  # fast
             with mon_filt:
-                # discard the GMFs not affecting the assets
+                # discard the GMFs not affecting the assets, crucial
                 gmf_sid = df.sid.to_numpy()
                 adf_sid = adf.site_id.to_numpy()
                 gmf_df = df[numpy.isin(gmf_sid, adf_sid)]
@@ -441,7 +441,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             if self.sitecol is not self.sitecol.complete:
                 df = df[numpy.isin(df.sid.to_numpy(), sids)]
             size = len(df)
-            sys.stdout.write('.')
+            sys.stderr.write('.')
             if size:
                 submit((df, oq, self.datastore))
             sizes.append(size)
@@ -457,6 +457,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 start = stop
         if weight:
             read_filter(start, stop)
+        sys.stderr.write('\n')
         taxonomies, num_assets_by_taxo = numpy.unique(
             self.assetcol.taxonomies, return_counts=1)
         max_assets = max(num_assets_by_taxo)
