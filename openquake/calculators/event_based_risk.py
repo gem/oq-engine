@@ -19,13 +19,12 @@
 import os.path
 import logging
 import operator
-import itertools
 from functools import partial
 import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, parallel, general
+from openquake.baselib import hdf5, parallel, performance, general
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.risklib.scientific import (
@@ -429,19 +428,22 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         eids = self.datastore['gmf_data/eid'][:]
         self.log_info(eids)
-        ct = oq.concurrent_tasks or 1
-        maxweight = len(eids) / ct
+        ct = 2 * oq.concurrent_tasks or 1
+        minrows = len(eids) // ct
+        logging.info('minrows = {:_d}'.format(minrows))
         sids = self.sitecol.sids
         start = stop = 0
         sizes = []
 
-        def read_filter(start, stop, dfs):
-            df = self.datastore.read_df('gmf_data', slc=slice(start, stop))
-            if self.sitecol is not self.sitecol.complete:
-                df = df[numpy.isin(df.sid.to_numpy(), sids)]
+        def send(df, dfs):
+            if len(df) > minrows:
+                submit((df, oq, self.datastore))
+                sizes.append(len(df))
+                logging.info('Sending {:_d} rows of GMFs'.format(len(df)))
+                return
             dfs.append(df)
             size = sum(len(df) for df in dfs)
-            if size > maxweight:
+            if size > minrows:
                 submit((pandas.concat(dfs), oq, self.datastore))
                 dfs.clear()
                 sizes.append(size)
@@ -450,11 +452,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # IMPORTANT!! we rely on the fact that the hazard part
         # of the calculation stores the GMFs in chunks of constant eid
         dfs = []
-        for _, group in itertools.groupby(eids // 1000):
-            nsites = sum(1 for _ in group)
-            stop += nsites
-            read_filter(start, stop, dfs)
-            start = stop
+        for idx, start, stop in performance._idx_start_stop(eids // 1000):
+            df = self.datastore.read_df('gmf_data', slc=slice(start, stop))
+            if self.sitecol is not self.sitecol.complete:
+                df = df[numpy.isin(df.sid.to_numpy(), sids)]
+            send(df, dfs)
         if dfs:
             df = pandas.concat(dfs)
             submit((df, oq, self.datastore))
