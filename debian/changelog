@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed event_based_risk to transfer filtered GMFs
   * Fixed a performance issue in large event based risk calculations with a 4x
     speedup for Chile
   * Increased `sys.recursionlimit` to 1500 to solve a rare pickling issue
