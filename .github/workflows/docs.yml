@@ -20,11 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       EV_NAME: ${{ github.event_name }}
+      GITHUB_REF:  ${{ github.ref }}
+      GITHUB_HD_REF:  ${{ github.head_ref }}
+      GITHUB_BS_REF:  ${{ github.base_ref }}
       # GITHUB_PULL_REQUEST: ${{ github.event.number }}
       # GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
-      # GITHUB_REF:  ${{ github.ref }}
-      # GITHUB_HD_REF:  ${{ github.head_ref }}
-      # GITHUB_BS_REF:  ${{ github.base_ref }}
 
     steps:
       - name: run if workflow_dispatch
@@ -35,6 +35,12 @@ jobs:
         if: github.event_name == 'push'
         shell: bash
         run: echo "Action triggered by 'push' ($EV_NAME)"
+      - name: identify github reference
+        run: |
+          echo "REF: $GITHUB_REF"
+          echo "HD_REF: $GITHUB_HD_REF"
+          echo "BS_REF: $GITHUB_BS_REF"
+
       # - name: Check out the codebase (Master)
       #   if: github.event.inputs.git-ref == ''
       #   uses: actions/checkout@v2
