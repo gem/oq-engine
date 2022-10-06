@@ -112,7 +112,8 @@ jobs:
           if [ -z "$BUILD" ]; then
               if [[ "$GITHUB_REF_NAME" == "master" ]]; then
                   BUILD=master
-              elif [[ "$GITHUB_REF_NAME" ~= ^ongine- ]]; then
+              # elif [[ "$GITHUB_REF_NAME" ~= ^ongine- ]]; then
+              elif [[ "$GITHUB_REF_NAME" == "zizibu" ]]; then
                   if [[ "${GITHUB_REF_NAME#engine-}" == "$LTS_VER" ]]; then
                       BUILD=LTS
                   else
