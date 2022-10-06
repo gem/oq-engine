@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
 import os.path
 import logging
 import operator
@@ -247,7 +246,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq.hdf5path = self.datastore.filename
         oq.parentdir = parentdir
         logging.info(
-            'There are {:_d} ruptures'.format(len(self.datastore['ruptures'])))
+            'There are {:_d} ruptures and {:_d} events'.format(
+                len(self.datastore['ruptures']),
+                len(self.datastore['events'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
         try:
             K = len(self.datastore['agg_keys'])
@@ -264,8 +265,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq.M = len(oq.all_imts())
         oq.N = self.N
         oq.K = K
-        ct = oq.concurrent_tasks or 1
-        oq.maxweight = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_types)
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
