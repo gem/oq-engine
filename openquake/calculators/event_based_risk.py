@@ -436,19 +436,21 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # of the calculation stores the GMFs in chunks of constant eid
         allargs = []
         site_ids = self.sitecol.sids
+        sizes = []
         for idx, s1, s2 in performance._idx_start_stop(eids):
             stop += s2 - s1
             if self.sitecol is self.sitecol.complete:
-                weight += s2 - s1
+                size = s2 - s1
             else:
-                weight += numpy.isin(sids[s1:s2], site_ids).sum()
+                size = numpy.isin(sids[s1:s2], site_ids).sum()
+            sizes.append(size)
+            weight += size
             if weight > maxweight:
                 allargs.append((slice(start, stop), oq, self.datastore))
                 weight = 0
                 start = stop
         if weight:
             allargs.append((slice(start, stop), oq, self.datastore))
-        sizes = [slc.stop - slc.start for slc, oq, ds in allargs]
         taxonomies, num_assets_by_taxo = numpy.unique(
             self.assetcol.taxonomies, return_counts=1)
         max_assets = max(num_assets_by_taxo)
