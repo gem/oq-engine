@@ -446,7 +446,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 submit((pandas.concat(dfs), oq, self.datastore))
                 dfs.clear()
                 sizes.append(size)
-                sys.stderr.write('.')
+                logging.info('Sending {:_d} rows of GMFs'.format(size))
+
         # IMPORTANT!! we rely on the fact that the hazard part
         # of the calculation stores the GMFs in chunks of constant eid
         dfs = []
@@ -459,7 +460,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             df = pandas.concat(dfs)
             submit((df, oq, self.datastore))
             sizes.append(len(df))
-        sys.stderr.write('\n')
         taxonomies, num_assets_by_taxo = numpy.unique(
             self.assetcol.taxonomies, return_counts=1)
         max_assets = max(num_assets_by_taxo)
