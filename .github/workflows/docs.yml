@@ -107,13 +107,18 @@ jobs:
         run: |
           bash --version
           LTS_VER=$(grep 'Current Long Term Support' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
-          VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
+          ENG_VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
           
           if [ -z "$BUILD" ]; then
               if [[ "$GITHUB_REF_NAME" == "master" ]]; then
                   BUILD=master
               elif [[ "$GITHUB_REF_NAME" =~ ^ongine- ]]; then # FIXME ongine-
-                  if [[ "${GITHUB_REF_NAME#ongine-}" == "$LTS_VER" ]]; then #FIXME ongine-
+                  BRANCH_VER="${GITHUB_REF_NAME#ongine-}" #FIXME ongine-
+                  if [ "$BRANCH_VER" != "$ENG_VER" ]; then
+                      echo "Versions don't match (BRANCH_VER: [$BRANCH_VER] ENG_VER: [$ENG_VER])"
+                      exit 2
+                  fi
+                  if [[ "$BRANCH_VER" == "$LTS_VER" ]]; then
                       BUILD=LTS
                   else
                       BUILD=latest
@@ -124,7 +129,7 @@ jobs:
           fi
 
           echo "LTS_VER:             [$LTS_VER]"
-          echo "VER:                 [$VER]"
+          echo "ENG_VER:             [$ENG_VER]"
           echo "GITHUB_PULL_REQUEST: [$GITHUB_PULL_REQUEST]"
           echo "GITHUB_DEF_BR:       [$GITHUB_DEF_BR]"
           echo "GITHUB_REF:          [$GITHUB_REF]"
