@@ -45,6 +45,20 @@ TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
 
 
+def save_tmp(self, monitor, srcfilter=None):
+    oq = self.oqparam
+    monitor.save('assets', self.assetcol.to_dframe())
+    monitor.save('srcfilter', srcfilter)
+    monitor.save('crmodel', self.crmodel)
+    monitor.save('rlz_id', self.rlzs)
+    if oq.K:
+        aggids, _ = self.assetcol.build_aggids(
+            oq.aggregate_by, oq.max_aggregations)
+    else:
+        aggids = ()
+    monitor.save('aggids', aggids)
+
+
 def fast_agg(keys, values, correl, li, acc):
     """
     :param keys: an array of N uint64 numbers encoding (event_id, agg_id)
@@ -143,21 +157,17 @@ def event_based_risk(df, oqparam, dstore, monitor):
     """
     if dstore.parent:
         dstore.parent.open('r')
-    with dstore, monitor('reading data'):
+    with dstore, monitor('reading data', measuremem=True):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
-        assetcol = dstore['assetcol']
-        if oqparam.K:
-            aggids, _ = assetcol.build_aggids(
-                oqparam.aggregate_by, oqparam.max_aggregations)
-        else:
-            aggids = ()
+        assets = monitor.read('assets')
+        aggids = monitor.read('aggids')
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]
     if dstore.parent:
         dstore.parent.close()  # essential on Windows with h5py>=3.6
-    ARK = len(assetcol), len(weights), oqparam.K
+    ARK = len(assets), len(weights), oqparam.K
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
     else:
@@ -167,8 +177,7 @@ def event_based_risk(df, oqparam, dstore, monitor):
     def outputs():
         mon_risk = monitor('computing risk', measuremem=True)
         # can aggregate millions of asset by using few GBs of RAM
-        gbt = assetcol.to_dframe().groupby('taxonomy')
-        for taxo, adf in gbt:
+        for taxo, adf in assets.groupby('taxonomy'):
             gmf_df = df[numpy.isin(df.sid.to_numpy(), adf.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
@@ -233,7 +242,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq.hdf5path = self.datastore.filename
         oq.parentdir = parentdir
         logging.info(
-            'There are {:_d} ruptures'.format(len(self.datastore['ruptures'])))
+            'There are {:_d} ruptures and {:_d} events'.format(
+                len(self.datastore['ruptures']),
+                len(self.datastore['events'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
         try:
             K = len(self.datastore['agg_keys'])
@@ -318,9 +329,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 h5=self.datastore.hdf5,
                 duration=oq.time_per_task,
                 outs_per_task=5)
-            smap.monitor.save('srcfilter', srcfilter)
-            smap.monitor.save('crmodel', self.crmodel)
-            smap.monitor.save('rlz_id', self.rlzs)
+            save_tmp(self, smap.monitor, srcfilter)
             smap.reduce(self.agg_dicts)
             if self.gmf_bytes == 0:
                 raise RuntimeError(
@@ -334,9 +343,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 allargs = self.get_allargs()
             smap = parallel.Starmap(
                 event_based_risk, allargs, h5=self.datastore.hdf5)
-            smap.monitor.save('assets', self.assetcol.to_dframe('id'))
-            smap.monitor.save('crmodel', self.crmodel)
-            smap.monitor.save('rlz_id', self.rlzs)
+            save_tmp(self, smap.monitor)
             smap.reduce(self.agg_dicts)
         if self.parent_events:
             assert self.parent_events == len(self.datastore['events'])
