@@ -105,7 +105,8 @@ jobs:
           UPLOAD: ${{ github.event.inputs.git-ref }}
           BUILD: ${{ github.event.inputs.oq-release }}
         run: |
-          LTS_VERS="$(grep 'Current Long Term Support' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
+          ls -l
+          # LTS_VERS="$(grep 'Current Long Term Support' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
           echo "LTS_VERS:            [$LTS_VERS]"
           echo "GITHUB_PULL_REQUEST: [$GITHUB_PULL_REQUEST]"
           echo "GITHUB_DEF_BR:       [$GITHUB_DEF_BR]"
