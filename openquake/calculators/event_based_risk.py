@@ -446,7 +446,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             sizes.append(size)
             weight += size
             if weight > minrows:
-                logging.info('Sending {:_d} rows'.format(size))
+                logging.info('Sending {:_d}({:_d}) rows'.format(
+                    s2-s1, size))
                 allargs.append((slice(start, stop), oq, self.datastore))
                 weight = 0
                 start = stop
