@@ -55,14 +55,30 @@ def get_ded_lim(losses, policy):
     return ded, lim
 
 
-def check_fields(fields, dframe, idxdict, fname):
+def check_fields(fields, dframe, idxdict, fname, policyfname, treaties):
     """
     :param fields: fields to check (the first field is the primary key)
     :param dframe: DataFrame with the contents of fname
     :param idxdict: dictionary key -> index (starting from 1)
-    :param fname: file containing the fields to check
+    :param fname: file xml containing the fields to check
+    :param policyfname: file csv containing the fields to check
+    :param treaties: treaty names
     """
     key = fields[0]
+    if len(dframe[key].unique()) < len(dframe):
+        raise InvalidFile(f'{policyfname}: {key} contains duplicates')
+    for treaty in treaties:
+        if treaty not in dframe.columns:
+            raise InvalidFile(f'{policyfname}: {treaty} is missing')
+    policies_from_exposure = list(idxdict)[1:]  # discard '?'
+    policies_from_csv = list(dframe.policy)
+    for policy in policies_from_exposure:
+        if policy not in policies_from_csv:
+            raise InvalidFile(f'{policyfname}: policy "{policy}" is missing')
+    if (dframe.liability < 0).any():
+        raise InvalidFile(f'{policyfname}: liabilities must be => 0')
+    if (dframe.deductible.str.rstrip("%").astype('float') < 0).any():
+        raise InvalidFile(f'{policyfname}: deductibles must be => 0')
     idx = [idxdict[name] for name in dframe[key]]  # indices starting from 1
     dframe[key] = idx
     for no, field in enumerate(fields):
@@ -144,7 +160,8 @@ def parse(fname, policy_idx):
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
-    check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname)
+    check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname,
+                 policyfname, treaty['id'])
     df['deductible_abs'] = np.ones(len(df), bool)
     df['liability_abs'] = np.ones(len(df), bool)
 
