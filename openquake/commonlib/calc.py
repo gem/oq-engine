@@ -455,23 +455,25 @@ def build_gmfslices(dstore, hint):
     eids = dstore['gmf_data/eid'][:]
     sids = dstore['gmf_data/sid'][:]
     logging.info('Building GMF slices')
-    slices = performance.idx_start_stop(eids)
-    if filtered:
-        arrayE3 = weighting(slices, sitecol, num_assets, dstore)
-        if arrayE3[:, WEIGHT].sum() == 0:
-            raise ValueError('The sites in gmf_data are disjoint from the '
-                             'site collection!?')
+    array = performance.idx_start_stop(eids)
+    if filtered and dstore.parent:
+        slices = weighting(array, sitecol, num_assets, dstore)
     else:
-        arrayE3 = numpy.zeros((len(slices), 3), int)  # start, stop, weight
-        for i, (_, start, stop) in enumerate(slices):
-            arrayE3[i, START] = start
-            arrayE3[i, STOP] = stop
-            arrayE3[i, WEIGHT] = num_assets[sids[start:stop]].sum()
-        arrayE3 = arrayE3[arrayE3[:, WEIGHT] > 0]
-    tot_weight = arrayE3[:, WEIGHT].sum()
+        slices = numpy.zeros((len(array), 3), int)  # start, stop, weight
+        for i, (_, start, stop) in enumerate(array):
+            slices[i, START] = start
+            slices[i, STOP] = stop
+            slices[i, WEIGHT] = num_assets[sids[start:stop]].sum()
+        slices = slices[slices[:, WEIGHT] > 0]
+    if slices[:, WEIGHT].sum() == 0:
+        raise ValueError('The sites in gmf_data are disjoint from the '
+                         'site collection!?')
+
+    # split the slices in blocks and then compactify the blocks
+    tot_weight = slices[:, WEIGHT].sum()
     max_weight = numpy.clip(tot_weight / hint, 10_00, 100_000_000)
     blocks = general.block_splitter(
-        arrayE3, max_weight, operator.itemgetter(WEIGHT))
+        slices, max_weight, operator.itemgetter(WEIGHT))
     gmfslices = [compactify(numpy.array(block)) for block in blocks]
     ws = numpy.array([arr[:, WEIGHT].sum() for arr in gmfslices])
     logging.info('Weights min, mean, max {:_d}, {:_d}, {:_d}'.
