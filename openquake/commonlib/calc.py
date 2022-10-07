@@ -443,7 +443,7 @@ def build_gmfslices(dstore, hint):
         arrayE3[i, WEIGHT] = num_assets[oksids].sum()
     arrayE3 = arrayE3[arrayE3[:, WEIGHT] > 0]
     tot_weight = arrayE3[:, WEIGHT].sum()
-    max_weight = numpy.clip(tot_weight / hint, 1000, 10_000_000)
+    max_weight = numpy.clip(tot_weight / hint, 10_00, 100_000_000)
     blocks = general.block_splitter(
         arrayE3, max_weight, operator.itemgetter(WEIGHT))
     gmfslices = [compactify(numpy.array(block)) for block in blocks]
