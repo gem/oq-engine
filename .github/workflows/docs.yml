@@ -204,8 +204,9 @@ jobs:
           # else
           #     PDF_VER=${VER}
           # fi
-          echo rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:${PDFDOCS}OpenQuake\ Manual\ ${PDF_VER}.pdf";
           # rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:${PDFDOCS}OpenQuake\ Manual\ ${PDF_VER}.pdf";
+          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:${PDFDOCS}placeholder.pdf";
+
           # if [ "$PDF_VER_LINK" ]
           # then
           #     ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"$PDFDOCS\" ; ln -sf \"OpenQuake Manual ${PDF_VER}.pdf\" "OpenQuake Manual ${PDF_VER_LINK}.pdf\"'";
