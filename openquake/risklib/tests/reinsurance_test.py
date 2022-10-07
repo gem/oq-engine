@@ -25,6 +25,7 @@ import tempfile
 import numpy as np
 import pandas
 from openquake.baselib import general, InvalidFile
+from openquake.commonlib import readinput
 from openquake.risklib import reinsurance
 
 aac = np.testing.assert_allclose
@@ -118,7 +119,8 @@ class InvalidFractionsTestCase(unittest.TestCase):
         csvfname = general.gettemp('''\
 policy,liability,deductible,qshared,surplus
 VA_region_1,10000,100,.1,.2
-VA_region_2,10000,100,.1,-.2''')
+VA_region_2,10000,100,.1,-.2
+rur_Ant_1,10000,100,.1,.2''')
         xmlfname = general.gettemp(XML_PR.format(csvfname))
         with self.assertRaises(ValueError) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
@@ -128,7 +130,8 @@ VA_region_2,10000,100,.1,-.2''')
         csvfname = general.gettemp('''\
 policy,liability,deductible,qshared,surplus
 VA_region_1,10000,100,.1,.2
-VA_region_2,10000,100,.1,1.2''')
+VA_region_2,10000,100,.1,1.2
+rur_Ant_1,10000,100,.1,.2''')
         xmlfname = general.gettemp(XML_PR.format(csvfname))
         with self.assertRaises(ValueError) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
@@ -138,7 +141,8 @@ VA_region_2,10000,100,.1,1.2''')
         csvfname = general.gettemp('''\
 policy,liability,deductible,qshared,surplus
 VA_region_1,10000,100,.1,.2
-VA_region_2,10000,100,.3,.8''')
+VA_region_2,10000,100,.3,.8
+rur_Ant_1,10000,100,.1,.2''')
         xmlfname = general.gettemp(XML_PR.format(csvfname))
         with self.assertRaises(ValueError) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
@@ -325,7 +329,196 @@ event_id,retention,claim,prop1,cat1,cat2,cat3,cat4,cat5,over_B,over_D
         assert_ok(byevent, expected)
 
 
-class ParseTestCase(unittest.TestCase):
+JOB = '''\
+[general]
+random_seed = 23
+master_seed = 42
+description = Test
+calculation_mode = event_based_risk
+aggregate_by = %(aggregate_by)s
+structural_vulnerability_file = vulnerability_model_stco.xml
+nonstructural_vulnerability_file = vulnerability_model_nonstco.xml
+reinsurance_file = {'structural+nonstructural': 'reinsurance.xml'}
+total_losses = structural+nonstructural
+exposure_file = exposure.xml
+discard_assets = true
+region = 81.1 26, 88 26, 88 30, 81.1 30
+asset_hazard_distance = 20
+sites = 87.7477 27.9015
+hazard_calculation_id = 1
+
+[calculation]
+investigation_time = 50.0
+ses_per_logic_tree_path = 20
+maximum_distance = 100.0
+return_periods = [30, 60, 120, 240, 480, 960]
+'''
+
+VULN_STCO = '''\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <vulnerabilityModel
+    assetCategory="buildings"
+    id="Nepal"
+    lossCategory="structural"
+    >
+        <vulnerabilityFunction
+        dist="LN"
+        id="RC"
+        >
+            <imls
+            imt="SA(0.2)"
+            >
+                2.0000000E-01 5.0000000E-01 9.0000000E-01 1.1000000E+00 1.3000000E+00
+            </imls>
+            <meanLRs>
+                3.5000000E-02 7.0000000E-02 1.4000000E-01 2.8000000E-01 5.6000000E-01
+            </meanLRs>
+            <covLRs>
+                1.0000000E-04 1.0000000E-04 1.0000000E-04 1.0000000E-04 1.0000000E-04
+            </covLRs>
+        </vulnerabilityFunction>
+        <vulnerabilityFunction
+        dist="LN"
+        id="W"
+        >
+            <imls
+            imt="SA(0.5)"
+            >
+                3.0000000E-02 7.0000000E-02 1.5000000E-01 2.2000000E-01 9.5000000E-01
+            </imls>
+            <meanLRs>
+                6.3000000E-02 1.2500000E-01 2.5000000E-01 5.0000000E-01 1.0000000E+00
+            </meanLRs>
+            <covLRs>
+                1.0000000E-04 1.0000000E-04 1.0000000E-04 1.0000000E-04 0.0000000E+00
+            </covLRs>
+        </vulnerabilityFunction>
+        <vulnerabilityFunction
+        dist="LN"
+        id="RM"
+        >
+            <imls
+            imt="PGA"
+            >
+                2.0000000E-02 3.0000000E-01 5.0000000E-01 9.0000000E-01 1.2000000E+00
+            </imls>
+            <meanLRs>
+                5.0000000E-02 1.0000000E-01 2.0000000E-01 4.0000000E-01 8.0000000E-01
+            </meanLRs>
+            <covLRs>
+                1.0000000E-04 1.0000000E-04 1.0000000E-04 1.0000000E-04 1.0000000E-04
+            </covLRs>
+        </vulnerabilityFunction>
+    </vulnerabilityModel>
+</nrml>
+'''
+
+VULN_NONSTCO = '''\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <vulnerabilityModel
+    assetCategory="buildings"
+    id="Nepal"
+    lossCategory="nonstructural"
+    >
+        <vulnerabilityFunction
+        dist="LN"
+        id="W"
+        >
+            <imls
+            imt="SA(0.8)"
+            >
+                3.0000000E-02 7.0000000E-02 1.5000000E-01 2.2000000E-01 9.5000000E-01
+            </imls>
+            <meanLRs>
+                3.0000000E-02 5.0000000E-02 1.0000000E-01 1.5000000E-01 2.0000000E-01
+            </meanLRs>
+            <covLRs>
+                1.0000000E-04 1.0000000E-04 1.0000000E-04 1.0000000E-04 1.0000000E-04
+            </covLRs>
+        </vulnerabilityFunction>
+        <vulnerabilityFunction
+        dist="LN"
+        id="RM"
+        >
+            <imls
+            imt="SA(1.0)"
+            >
+                1.0000000E-01 2.0000000E-01 4.0000000E-01 7.0000000E-01 1.0000000E+00
+            </imls>
+            <meanLRs>
+                1.0000000E-01 2.0000000E-01 3.5000000E-01 6.0000000E-01 9.0000000E-01
+            </meanLRs>
+            <covLRs>
+                1.0000000E-04 1.0000000E-04 1.0000000E-04 1.0000000E-04 1.0000000E-04
+            </covLRs>
+        </vulnerabilityFunction>
+        <vulnerabilityFunction
+        dist="LN"
+        id="RC"
+        >
+            <imls
+            imt="PGA"
+            >
+                2.0000000E-02 3.0000000E-01 5.0000000E-01 9.0000000E-01 1.2000000E+00
+            </imls>
+            <meanLRs>
+                4.0000000E-02 7.0000000E-02 1.4000000E-01 2.0000000E-01 2.5000000E-01
+            </meanLRs>
+            <covLRs>
+                1.0000000E-04 1.0000000E-04 1.0000000E-04 1.0000000E-04 1.0000000E-04
+            </covLRs>
+        </vulnerabilityFunction>
+    </vulnerabilityModel>
+</nrml>
+'''
+
+EXPOXML = '''\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel
+    category="buildings"
+    id="ep"
+    >
+        <description>
+            Exposure Model for buildings located in Pavia
+        </description>
+        <conversions>
+            <area type="per_asset" unit="square meters"/>
+            <costTypes>
+                <costType name="structural" type="per_area" unit="EUR"/>
+                <costType name="nonstructural" type="aggregated" unit="EUR"/>
+            </costTypes>
+        </conversions>
+        <occupancyPeriods/>
+        <tagNames>policy</tagNames>
+        <assets>
+            exposure.csv
+        </assets>
+    </exposureModel>
+</nrml>
+'''
+EXPOCSV = '''\
+id,number,taxonomy,lon,lat,nonstructural,structural,area,policy
+a4,10,RM,87.7477,27.9015,2500,500,100,B
+a2,1000,W,85.7477,27.9015,500,0.1,10,B
+a0,3,RM,81.2985,29.1098,1500,100,10,A
+a1,500,RC,83.0823,27.9006,1000,0.4,10,A
+a3,10,RM,85.7477,27.9015,2500,500,1,B
+'''
+
+
+class WrongInputTestCase(unittest.TestCase):
     """
     Tests for errors in the input files
     """
@@ -333,10 +526,25 @@ class ParseTestCase(unittest.TestCase):
     def setUpClass(cls):
         print('Creating directory with fake input files')
         cls.tmpdir = tempfile.mkdtemp()
+        cls.jobfname = os.path.join(cls.tmpdir, 'job.ini')
         cls.xmlfname = os.path.join(cls.tmpdir, 'reinsurance.xml')
         cls.csvfname = os.path.join(cls.tmpdir, 'policy.csv')
+        cls.vuln_stcofname = os.path.join(
+            cls.tmpdir, 'vulnerability_model_stco.xml')
+        cls.vuln_nonstcofname = os.path.join(
+            cls.tmpdir, 'vulnerability_model_nonstco.xml')
+        cls.expoxmlfname = os.path.join(cls.tmpdir, 'exposure.xml')
+        cls.expocsvfname = os.path.join(cls.tmpdir, 'exposure.csv')
         with open(cls.xmlfname, 'w') as xml:
             xml.write(XML_NP.format('policy.csv'))
+        with open(cls.vuln_stcofname, 'w') as xml:
+            xml.write(VULN_STCO)
+        with open(cls.vuln_nonstcofname, 'w') as xml:
+            xml.write(VULN_NONSTCO)
+        with open(cls.expoxmlfname, 'w') as xml:
+            xml.write(EXPOXML)
+        with open(cls.expocsvfname, 'w') as xml:
+            xml.write(EXPOCSV)
 
     def test_policy_duplicated(self):
         with open(self.csvfname, 'w') as csv:
@@ -345,6 +553,30 @@ class ParseTestCase(unittest.TestCase):
             reinsurance.parse(self.xmlfname, policy_idx)
         self.assertIn('policy contains duplicates', str(ctx.exception))
 
+    def test_wxlr_non_boolean(self):
+        CSV = '''\
+Policy,Limit,Deductible,WXLR_metro,WXLR_rural,CatXL_reg
+VA_region_1,8000,100,0,0,1
+VA_region_2,4000,200,1,1,1.5
+rur_Ant_1,  9000,500,1,1,0
+'''
+        with open(self.csvfname, 'w') as csv:
+            csv.write(CSV)
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(self.xmlfname, policy_idx)
+        self.assertIn('field CatXL_reg must be 0 or 1', str(ctx.exception))
+
+    # TODO: finish
+    def _test_wrong_aggregate_by_1(self):
+        with open(self.jobfname, 'w') as job:
+            job.write(JOB % dict(aggregate_by='taxonomy; policy'))
+        oq = readinput.get_oqparam(self.jobfname)
+        import pdb; pdb.set_trace()
+        with self.assertRaises(InvalidFile) as ctx:
+            readinput.get_reinsurance(oq)
+        self.assertIn('aggregate_by=taxonomy; policy', str(ctx.exception))
+        
+        
     @classmethod
     def tearDownClass(cls):
         print('Deleting directory with fake input files')

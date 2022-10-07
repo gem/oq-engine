@@ -47,7 +47,7 @@ from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, pmf, gsim_lt)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
-from openquake.risklib import asset, riskmodels, scientific
+from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.source_reader import get_csm
@@ -1171,6 +1171,21 @@ def get_shapefiles(dirname):
             out.append(os.path.join(dirname, fname))
     return out
 
+# TODO: use this in calculators.base
+def get_reinsurance(oqparam, assetcol=None):
+    """
+    :returns: (policy_df, treaty_df, field_map)
+    """
+    if assetcol is None:
+        sitecol, assetcol = get_sitecol_assetcol(oqparam)
+    [(loss_type, fname)] = oqparam.inputs['reinsurance'].items()
+    # make sure the first aggregate by is policy
+    if oqparam.aggregate_by[0] != 'policy':
+        raise InvalidFile('%s: aggregate_by=%s' %
+                          (fname, oqparam.aggregate_by))
+    return reinsurance.parse(oqparam.inputs['reinsurance'],
+                             assetcol.tagcol.policy_idx)
+
 
 def get_input_files(oqparam):
     """
@@ -1274,4 +1289,3 @@ def get_checksum32(oqparam, h5=None):
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum
-
