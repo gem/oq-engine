@@ -84,6 +84,10 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties):
         raise InvalidFile(f'{policyfname}: liabilities must be => 0')
     if (dframe.deductible < 0).any():
         raise InvalidFile(f'{policyfname}: deductibles must be => 0')
+    for treaty in treaties:
+        if any(val not in [0, 1] for val in dframe[treaty]):
+            raise InvalidFile(
+                f'{policyfname}: field {treaty} must be 0 or 1')
     idx = [idxdict[name] for name in dframe[key]]  # indices starting from 1
     dframe[key] = idx
     for no, field in enumerate(fields):
