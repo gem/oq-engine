@@ -413,6 +413,28 @@ def compactify(arrayN3):
     return out
 
 
+def filter_sids(slices, risk_sids, dstore, monitor):
+    dstore.open('r')
+    for _, start, stop in slices:
+        haz_sids = dstore['gmf_data/sid'][start:stop]
+        oksids = haz_sids[numpy.isin(haz_sids, risk_sids)]
+        yield start, stop, oksids
+
+
+def weighting(slices, sitecol, num_assets, dstore):
+    hint = parallel.Starmap.num_cores
+    res = parallel.Starmap.apply(
+        filter_sids, (slices, sitecol.sids, dstore.parent),
+        concurrent_tasks=hint, h5=dstore.hdf5)
+    arrayE3 = numpy.zeros((len(slices), 3), int)
+    for i, (start, stop, oksids) in enumerate(sorted(res)):
+        arrayE3[i, START] = start
+        arrayE3[i, STOP] = stop
+        arrayE3[i, WEIGHT] = num_assets[oksids].sum()
+    arr = arrayE3[arrayE3[:, WEIGHT] > 0]
+    return arr
+
+
 def build_gmfslices(dstore, hint):
     """
     :param dstore: a DataStore containing gmf_data in it or its parent
@@ -429,23 +451,20 @@ def build_gmfslices(dstore, hint):
     logging.info('Reading gmf_data')
     eids = dstore['gmf_data/eid'][:]
     sids = dstore['gmf_data/sid'][:]
+    logging.info('Building GMF slices')
+    slices = performance.idx_start_stop(eids)
     if filtered:
-        ok = numpy.isin(sids, sitecol.sids)
-        if (ok == 0).all():
+        arrayE3 = weighting(slices, sitecol, num_assets, dstore)
+        if arrayE3[:, WEIGHT].sum() == 0:
             raise ValueError('The sites in gmf_data are disjoint from the '
                              'site collection!?')
-    logging.info('Building GMF slices')
-    arr = performance.idx_start_stop(eids)
-    arrayE3 = numpy.zeros((len(arr), 3), int)  # start, stop, weight
-    for i, (eid, start, stop) in enumerate(arr):
-        if filtered:
-            oksids = sids[start:stop][ok[start:stop]]
-        else:
-            oksids = sids[start:stop]
-        arrayE3[i, START] = start
-        arrayE3[i, STOP] = stop
-        arrayE3[i, WEIGHT] = num_assets[oksids].sum()
-    arrayE3 = arrayE3[arrayE3[:, WEIGHT] > 0]
+    else:
+        arrayE3 = numpy.zeros((len(slices), 3), int)  # start, stop, weight
+        for i, (_, start, stop) in enumerate(slices):
+            arrayE3[i, START] = start
+            arrayE3[i, STOP] = stop
+            arrayE3[i, WEIGHT] = num_assets[sids[start:stop]].sum()
+        arrayE3 = arrayE3[arrayE3[:, WEIGHT] > 0]
     tot_weight = arrayE3[:, WEIGHT].sum()
     max_weight = numpy.clip(tot_weight / hint, 10_00, 100_000_000)
     blocks = general.block_splitter(
