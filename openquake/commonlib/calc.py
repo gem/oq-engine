@@ -429,7 +429,8 @@ def weighting(slices, sitecol, num_assets, dstore):
         filter_sids, (slices, sitecol.sids, dstore.parent),
         concurrent_tasks=hint, distribute='processpool', h5=dstore.hdf5)
     arrayE3 = numpy.zeros((len(slices), 3), int)
-    for i, (start, stop, oksids) in enumerate(sorted(res)):
+    rows = sorted(sum(res, []))
+    for i, (start, stop, oksids) in enumerate(rows):
         arrayE3[i, START] = start
         arrayE3[i, STOP] = stop
         arrayE3[i, WEIGHT] = num_assets[oksids].sum()
