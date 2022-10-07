@@ -114,42 +114,6 @@ XML_PR = '''\
 '''
 
 
-class InvalidFractionsTestCase(unittest.TestCase):
-    def test_negative_fraction(self):
-        csvfname = general.gettemp('''\
-policy,liability,deductible,qshared,surplus
-VA_region_1,10000,100,.1,.2
-VA_region_2,10000,100,.1,-.2
-rur_Ant_1,10000,100,.1,.2''')
-        xmlfname = general.gettemp(XML_PR.format(csvfname))
-        with self.assertRaises(ValueError) as ctx:
-            reinsurance.parse(xmlfname, policy_idx)
-        self.assertIn(':3: invalid fraction surplus=-0.2', str(ctx.exception))
-
-    def test_toolarge_fraction(self):
-        csvfname = general.gettemp('''\
-policy,liability,deductible,qshared,surplus
-VA_region_1,10000,100,.1,.2
-VA_region_2,10000,100,.1,1.2
-rur_Ant_1,10000,100,.1,.2''')
-        xmlfname = general.gettemp(XML_PR.format(csvfname))
-        with self.assertRaises(ValueError) as ctx:
-            reinsurance.parse(xmlfname, policy_idx)
-        self.assertIn(':3: invalid fraction surplus=1.2', str(ctx.exception))
-
-    def test_excess_fraction(self):
-        csvfname = general.gettemp('''\
-policy,liability,deductible,qshared,surplus
-VA_region_1,10000,100,.1,.2
-VA_region_2,10000,100,.3,.8
-rur_Ant_1,10000,100,.1,.2''')
-        xmlfname = general.gettemp(XML_PR.format(csvfname))
-        with self.assertRaises(ValueError) as ctx:
-            reinsurance.parse(xmlfname, policy_idx)
-        self.assertIn(':3 the sum of the fractions must be under 1, got 1.1',
-                      str(ctx.exception))
-
-
 class ProportionalTestCase(unittest.TestCase):
     def test_single_portfolio(self):
         # two proportional treaties with with no overspill
@@ -329,6 +293,10 @@ event_id,retention,claim,prop1,cat1,cat2,cat3,cat4,cat5,over_B,over_D
         assert_ok(byevent, expected)
 
 
+#############################################################################
+#                            VALIDATION TESTS                               #
+#############################################################################
+
 JOB = '''\
 [general]
 random_seed = 23
@@ -345,7 +313,6 @@ discard_assets = true
 region = 81.1 26, 88 26, 88 30, 81.1 30
 asset_hazard_distance = 20
 sites = 87.7477 27.9015
-hazard_calculation_id = 1
 
 [calculation]
 investigation_time = 50.0
@@ -435,7 +402,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <imls
             imt="SA(0.8)"
             >
-                3.0000000E-02 7.0000000E-02 1.5000000E-01 2.2000000E-01 9.5000000E-01
+                .03 7.0000000E-02 1.5000000E-01 2.2000000E-01 9.5000000E-01
             </imls>
             <meanLRs>
                 3.0000000E-02 5.0000000E-02 1.0000000E-01 1.5000000E-01 2.0000000E-01
@@ -571,13 +538,48 @@ rur_Ant_1,  9000,500,1,1,0
         with open(self.jobfname, 'w') as job:
             job.write(JOB % dict(aggregate_by='taxonomy; policy'))
         oq = readinput.get_oqparam(self.jobfname)
-        import pdb; pdb.set_trace()
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_reinsurance(oq)
         self.assertIn('aggregate_by=taxonomy; policy', str(ctx.exception))
-        
-        
+
     @classmethod
     def tearDownClass(cls):
         print('Deleting directory with fake input files')
         shutil.rmtree(cls.tmpdir)
+
+
+# TODO: integrate in the class above
+class InvalidFractionsTestCase(unittest.TestCase):
+    def test_negative_fraction(self):
+        csvfname = general.gettemp('''\
+policy,liability,deductible,qshared,surplus
+VA_region_1,10000,100,.1,.2
+VA_region_2,10000,100,.1,-.2
+rur_Ant_1,10000,100,.1,.2''')
+        xmlfname = general.gettemp(XML_PR.format(csvfname))
+        with self.assertRaises(ValueError) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn(':3: invalid fraction surplus=-0.2', str(ctx.exception))
+
+    def test_toolarge_fraction(self):
+        csvfname = general.gettemp('''\
+policy,liability,deductible,qshared,surplus
+VA_region_1,10000,100,.1,.2
+VA_region_2,10000,100,.1,1.2
+rur_Ant_1,10000,100,.1,.2''')
+        xmlfname = general.gettemp(XML_PR.format(csvfname))
+        with self.assertRaises(ValueError) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn(':3: invalid fraction surplus=1.2', str(ctx.exception))
+
+    def test_excess_fraction(self):
+        csvfname = general.gettemp('''\
+policy,liability,deductible,qshared,surplus
+VA_region_1,10000,100,.1,.2
+VA_region_2,10000,100,.3,.8
+rur_Ant_1,10000,100,.1,.2''')
+        xmlfname = general.gettemp(XML_PR.format(csvfname))
+        with self.assertRaises(ValueError) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn(':3 the sum of the fractions must be under 1, got 1.1',
+                      str(ctx.exception))
