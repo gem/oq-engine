@@ -77,8 +77,12 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties):
             raise InvalidFile(f'{policyfname}: policy "{policy}" is missing')
     if (dframe.liability < 0).any():
         raise InvalidFile(f'{policyfname}: liabilities must be => 0')
-    if (dframe.deductible.str.rstrip("%").astype('float') < 0).any():
-        raise InvalidFile(f'{policyfname}: deductibles must be => 0')
+    try:
+        if (dframe.deductible < 0).any():
+            raise InvalidFile(f'{policyfname}: deductibles must be => 0')
+    except TypeError:  # it may contain strings like '5%'
+        if (dframe.deductible.str.rstrip("%").astype('float') < 0).any():
+            raise InvalidFile(f'{policyfname}: deductibles must be => 0')
     idx = [idxdict[name] for name in dframe[key]]  # indices starting from 1
     dframe[key] = idx
     for no, field in enumerate(fields):
