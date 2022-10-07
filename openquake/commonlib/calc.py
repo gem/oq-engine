@@ -413,7 +413,15 @@ def compactify(arrayN3):
     return out
 
 
-def filter_sids(slices, risk_sids, dstore, monitor):
+def get_sids_by_event(slices, risk_sids, dstore, monitor):
+    """
+    :param slices: a list of slices per event [(eid, s1, s2), ...]
+    :param risk_sids: site IDs in the exposure
+    :param dstore: a DataStore instance
+    :param monitor: a Monitor instance
+    :returns:
+        the relevant site IDs for each slice as an array [(s1, s2, sids), ...]
+    """
     dstore.open('r')
     out = []
     for _, start, stop in slices:
@@ -421,21 +429,6 @@ def filter_sids(slices, risk_sids, dstore, monitor):
         oksids = haz_sids[numpy.isin(haz_sids, risk_sids)]
         out.append((start, stop, oksids))
     return out
-
-
-def weighting(slices, sitecol, num_assets, dstore):
-    hint = parallel.Starmap.num_cores
-    res = parallel.Starmap.apply(
-        filter_sids, (slices, sitecol.sids, dstore.parent),
-        concurrent_tasks=hint, distribute='processpool', h5=dstore.hdf5)
-    arrayE3 = numpy.zeros((len(slices), 3), int)
-    rows = sorted(sum(res, []))
-    for i, (start, stop, oksids) in enumerate(rows):
-        arrayE3[i, START] = start
-        arrayE3[i, STOP] = stop
-        arrayE3[i, WEIGHT] = num_assets[oksids].sum()
-    arr = arrayE3[arrayE3[:, WEIGHT] > 0]
-    return arr
 
 
 def build_gmfslices(dstore, hint):
@@ -449,22 +442,31 @@ def build_gmfslices(dstore, hint):
     N = sitecol.sids.max() + 1 if filtered else len(sitecol)
     assetcol = dstore['assetcol']
     num_assets = numpy.zeros(N, int)
-    sids, counts = numpy.unique(assetcol['site_id'], return_counts=True)
-    num_assets[sids] = counts
+    risk_sids, counts = numpy.unique(assetcol['site_id'], return_counts=True)
+    num_assets[risk_sids] = counts
     logging.info('Reading gmf_data')
     eids = dstore['gmf_data/eid'][:]
-    sids = dstore['gmf_data/sid'][:]
     logging.info('Building GMF slices')
     array = performance.idx_start_stop(eids)
     if filtered and dstore.parent:
-        slices = weighting(array, sitecol, num_assets, dstore)
+        hint = parallel.Starmap.num_cores
+        res = parallel.Starmap.apply(
+            get_sids_by_event, (array, risk_sids, dstore.parent),
+            concurrent_tasks=hint, distribute='processpool', h5=dstore.hdf5)
+        rows = sorted(sum(res, []))
+        slices = numpy.zeros((len(array), 3), int)
+        for i, (start, stop, oksids) in enumerate(rows):
+            slices[i, START] = start
+            slices[i, STOP] = stop
+            slices[i, WEIGHT] = num_assets[oksids].sum()
     else:
+        sids = dstore['gmf_data/sid'][:]
         slices = numpy.zeros((len(array), 3), int)  # start, stop, weight
         for i, (_, start, stop) in enumerate(array):
             slices[i, START] = start
             slices[i, STOP] = stop
             slices[i, WEIGHT] = num_assets[sids[start:stop]].sum()
-        slices = slices[slices[:, WEIGHT] > 0]
+    slices = slices[slices[:, WEIGHT] > 0]
     if slices[:, WEIGHT].sum() == 0:
         raise ValueError('The sites in gmf_data are disjoint from the '
                          'site collection!?')
