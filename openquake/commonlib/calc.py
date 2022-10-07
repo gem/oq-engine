@@ -450,6 +450,6 @@ def build_gmfslices(dstore, hint):
         arrayE3, max_weight, operator.itemgetter(WEIGHT))
     gmfslices = [compactify(numpy.array(block)) for block in blocks]
     ws = numpy.array([arr[:, WEIGHT].sum() for arr in gmfslices])
-    logging.info('Weights min, max, mean=%d, %d, %d',
-                 ws.min(), ws.max(), ws.mean())
+    logging.info('Weights min, mean, max {:_d}, {:_d}, {:_d}'.
+                 format(ws.min(), int(ws.mean()), ws.max()))
     return gmfslices

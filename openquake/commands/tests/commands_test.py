@@ -31,7 +31,6 @@ from openquake.baselib import parallel, sap
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import tests
 from openquake import commonlib
-from openquake.commonlib import dbapi
 from openquake.commonlib.datastore import read
 from openquake.commonlib.readinput import get_params
 from openquake.engine.engine import create_jobs, run_jobs
@@ -46,7 +45,6 @@ from openquake.qa_tests_data.event_based_risk import (
     case_master, case_1 as case_eb)
 from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
-from openquake.server import dbserver
 from openquake.server.tests import data as test_data
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
@@ -514,7 +512,7 @@ Source Loss Table'''.splitlines())
         # refactoring of the monitoring and it happened several times)
         with read(log.calc_id) as dstore:
             perf = str(view('performance', dstore))
-            self.assertIn('total event_based_risk', perf)
+            self.assertIn('total ebr_from_gmfs', perf)
 
     def test_oqdata(self):
         # the that the environment variable OQ_DATADIR is honored
