@@ -415,10 +415,12 @@ def compactify(arrayN3):
 
 def filter_sids(slices, risk_sids, dstore, monitor):
     dstore.open('r')
+    out = []
     for _, start, stop in slices:
         haz_sids = dstore['gmf_data/sid'][start:stop]
         oksids = haz_sids[numpy.isin(haz_sids, risk_sids)]
-        yield start, stop, oksids
+        out.append((start, stop, oksids))
+    return out
 
 
 def weighting(slices, sitecol, num_assets, dstore):
