@@ -46,6 +46,25 @@ def zero_dmgcsq(A, R, crmodel):
     return numpy.zeros((A, R, L, Dc), F32)
 
 
+def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
+    """
+    :param gmfslices: an array (S, 3) with S slices (start, stop, weight)
+    :param oqparam: OqParam instance
+    :param dstore: DataStore instance from which to read the GMFs
+    :param monitor: a Monitor instance
+    :returns: a dictionary of arrays, the output of event_based_damage
+    """
+    if dstore.parent:
+        dstore.parent.open('r')
+    dfs = []
+    with dstore, monitor('reading data', measuremem=True):
+        for gmfslice in gmfslices:
+            slc = slice(gmfslice[0], gmfslice[1])
+            dfs.append(dstore.read_df('gmf_data', slc=slc))
+        df = pandas.concat(dfs)
+    return event_based_damage(df, oqparam, dstore, monitor)
+
+
 def event_based_damage(df, oqparam, dstore, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
@@ -62,10 +81,9 @@ def event_based_damage(df, oqparam, dstore, monitor):
                 oqparam.hdf5path, parentdir=oqparam.parentdir)
         else:
             dstore.open('r')
-        if hasattr(df, 'start'):  # it is actually a slice
-            df = dstore.read_df('gmf_data', slc=df)
         assetcol = dstore['assetcol']
         if K:
+            # TODO: move this in the controller!
             aggids, _ = assetcol.build_aggids(
                 oqparam.aggregate_by, oqparam.max_aggregations)
         else:
@@ -83,8 +101,6 @@ def event_based_damage(df, oqparam, dstore, monitor):
     loss_types = crmodel.oqparam.loss_types
     assert len(loss_types) == L
     float_dmg_dist = oqparam.float_dmg_dist  # True by default
-    if dstore.parent:
-        dstore.parent.close()  # essential on Windows with h5py>=3.6
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
         for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
@@ -211,7 +227,7 @@ class DamageCalculator(EventBasedRiskCalculator):
             allargs = [(arr, oq, self.datastore) for arr in slice_list]
         self.datastore.swmr_on()
         smap = parallel.Starmap(
-            event_based_damage, allargs, h5=self.datastore.hdf5)
+            damage_from_gmfs, allargs, h5=self.datastore.hdf5)
         smap.monitor.save('assets', self.assetcol.to_dframe('id'))
         smap.monitor.save('crmodel', self.crmodel)
         return smap.reduce(self.combine)
