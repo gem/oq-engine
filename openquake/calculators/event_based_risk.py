@@ -352,7 +352,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
-            logging.info('Building GMF slices')
             with self.monitor('getting gmf_data slices', measuremem=True):
                 slice_list = build_gmfslices(
                     self.datastore, oq.concurrent_tasks or 1)

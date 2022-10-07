@@ -219,8 +219,6 @@ class DamageCalculator(EventBasedRiskCalculator):
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore)  # check
         self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, self.crmodel)
-
-        logging.info('Building GMF slices')
         with self.monitor('getting gmf_data slices', measuremem=True):
             slice_list = calc.build_gmfslices(
                 self.datastore, oq.concurrent_tasks or 1)

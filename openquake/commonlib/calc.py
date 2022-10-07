@@ -427,10 +427,12 @@ def build_gmfslices(dstore, hint):
     num_assets = numpy.zeros(len(sitecol.complete), int)
     sids, counts = numpy.unique(assetcol['site_id'], return_counts=True)
     num_assets[sids] = counts
+    logging.info('Reading gmf_data')
     eids = dstore['gmf_data/eid'][:]
     sids = dstore['gmf_data/sid'][:]
     if filtered:
         ok = numpy.isin(sids, sitecol.sids)
+    logging.info('Building GMF slices')
     arr = performance.idx_start_stop(eids)
     arrayE3 = numpy.zeros((len(arr), 3), int)  # start, stop, weight
     for i, (eid, start, stop) in enumerate(arr):
