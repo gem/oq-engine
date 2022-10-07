@@ -19,6 +19,7 @@
 import os
 import pandas as pd
 import numpy as np
+from pandas.api.types import is_numeric_dtype
 from openquake.baselib.general import BASE183, fast_agg2
 from openquake.baselib.performance import compile, Monitor
 from openquake.baselib.writers import scientificformat
@@ -75,14 +76,14 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties):
     for policy in policies_from_exposure:
         if policy not in policies_from_csv:
             raise InvalidFile(f'{policyfname}: policy "{policy}" is missing')
+    if not is_numeric_dtype(dframe.liability):
+        raise InvalidFile(f'{policyfname}: liabilities must be numeric')
+    if not is_numeric_dtype(dframe.deductible):
+        raise InvalidFile(f'{policyfname}: deductibles must be numeric')
     if (dframe.liability < 0).any():
         raise InvalidFile(f'{policyfname}: liabilities must be => 0')
-    try:
-        if (dframe.deductible < 0).any():
-            raise InvalidFile(f'{policyfname}: deductibles must be => 0')
-    except TypeError:  # it may contain strings like '5%'
-        if (dframe.deductible.str.rstrip("%").astype('float') < 0).any():
-            raise InvalidFile(f'{policyfname}: deductibles must be => 0')
+    if (dframe.deductible < 0).any():
+        raise InvalidFile(f'{policyfname}: deductibles must be => 0')
     idx = [idxdict[name] for name in dframe[key]]  # indices starting from 1
     dframe[key] = idx
     for no, field in enumerate(fields):
