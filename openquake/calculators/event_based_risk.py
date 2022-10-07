@@ -19,7 +19,6 @@
 import os.path
 import logging
 import operator
-import itertools
 from functools import partial
 import numpy
 import pandas

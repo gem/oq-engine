@@ -19,10 +19,12 @@
 import itertools
 import warnings
 import logging
+import functools
+import operator
 from unittest.mock import Mock
 import numpy
 
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
 from openquake.hazardlib.source.rupture import EBRupture, events_dt
@@ -364,3 +366,85 @@ class RuptureImporter(object):
                 raise ValueError(
                     'The %s calculator is restricted to %d %s, got %d' %
                     (oq.calculation_mode, max_[var], var, num_[var]))
+
+
+##############################################################
+# logic for building the GMF slices used in event_based_risk #
+##############################################################
+
+START, STOP, WEIGHT = 0, 1, 2
+
+
+def _concat(acc, slc2):
+    if len(acc) == 0:
+        return [slc2]
+    slc1 = acc[-1]  # last slice
+    if slc2[START] == slc1[STOP]:
+        new = numpy.zeros(3, int)
+        new[START] = slc1[START]
+        new[STOP] = slc2[STOP]
+        new[WEIGHT] = slc1[WEIGHT] + slc2[WEIGHT]
+        return acc[:-1] + [new]
+    return acc + [slc2]
+
+
+def compactify(arrayN3):
+    """
+    :param arrayN3: an array with columns (start, stop, weight)
+    :returns: a shorter array with the same structure
+
+    Here is how it works in an example where the first three slices
+    are compactified into one while the last slice stays as it is:
+
+    >>> arr = numpy.array([[84384702, 84385520, 1308],
+    ...                    [84385520, 84385770, 28],
+    ...                    [84385770, 84386062, 12],
+    ...                    [84387636, 84388028, 183]])
+    >>> compactify(arr)
+    array([[84384702, 84386062,     1348],
+           [84387636, 84388028,      183]])
+    """
+    if len(arrayN3) == 1:
+        # nothing to compactify
+        return arrayN3
+    out = numpy.array(functools.reduce(_concat, arrayN3, []))
+    # sanity check that the compactification preserves the weight
+    assert out[:, WEIGHT].sum() == arrayN3[:, WEIGHT].sum()
+    return out
+
+
+def build_gmfslices(dstore, hint):
+    """
+    :param dstore: a DataStore containing gmf_data in it or its parent
+    :param hint: hint for the number of arrays to generate
+    :returns: a list of slice arrays
+    """
+    sitecol = dstore['sitecol']
+    if dstore.parent:
+        sitecol.complete = dstore.parent['sitecol']
+    filtered = sitecol is not sitecol.complete
+    assetcol = dstore['assetcol']
+    num_assets = numpy.zeros(len(sitecol.complete), int)
+    sids, counts = numpy.unique(assetcol['site_id'], return_counts=True)
+    num_assets[sids] = counts
+    eids = dstore['gmf_data/eid'][:]
+    sids = dstore['gmf_data/sid'][:]
+    if filtered:
+        ok = numpy.isin(sids, sitecol.sids)
+    arr = performance.idx_start_stop(eids)
+    arrayE3 = numpy.zeros((len(arr), 3), int)  # start, stop, weight
+    for i, (eid, start, stop) in enumerate(arr):
+        if filtered:
+            oksids = sids[start:stop][ok[start:stop]]
+        else:
+            oksids = sids[start:stop]
+        arrayE3[i, START] = start
+        arrayE3[i, STOP] = stop
+        arrayE3[i, WEIGHT] = num_assets[oksids].sum()
+    arrayE3 = arrayE3[arrayE3[:, WEIGHT] > 0]
+    tot_weight = arrayE3[:, WEIGHT].sum()
+    max_weight = numpy.clip(tot_weight / hint, 1000, 10_000)
+    blocks = general.block_splitter(
+        arrayE3, max_weight, operator.itemgetter(WEIGHT))
+    gmfslices = [compactify(numpy.array(block)) for block in blocks]
+    return gmfslices
