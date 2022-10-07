@@ -420,11 +420,10 @@ def build_gmfslices(dstore, hint):
     :returns: a list of slice arrays
     """
     sitecol = dstore['sitecol']
-    if dstore.parent:
-        sitecol.complete = dstore.parent['sitecol']
-    filtered = sitecol is not sitecol.complete
+    filtered = (sitecol.sids != numpy.arange(len(sitecol))).any()
+    N = sitecol.sids.max() + 1 if filtered else len(sitecol)
     assetcol = dstore['assetcol']
-    num_assets = numpy.zeros(len(sitecol.complete), int)
+    num_assets = numpy.zeros(N, int)
     sids, counts = numpy.unique(assetcol['site_id'], return_counts=True)
     num_assets[sids] = counts
     logging.info('Reading gmf_data')
@@ -432,6 +431,9 @@ def build_gmfslices(dstore, hint):
     sids = dstore['gmf_data/sid'][:]
     if filtered:
         ok = numpy.isin(sids, sitecol.sids)
+        if (ok == 0).all():
+            raise ValueError('The sites in gmf_data are disjoint from the '
+                             'site collection!?')
     logging.info('Building GMF slices')
     arr = performance.idx_start_stop(eids)
     arrayE3 = numpy.zeros((len(arr), 3), int)  # start, stop, weight
