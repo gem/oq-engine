@@ -24,11 +24,12 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, parallel, performance, general
+from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
+from openquake.commonlib.calc import build_gmfslices
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
     PostRiskCalculator, post_aggregate, fix_dtypes)
@@ -50,6 +51,7 @@ def save_tmp(self, monitor, srcfilter=None):
     monitor.save('srcfilter', srcfilter)
     monitor.save('crmodel', self.crmodel)
     monitor.save('rlz_id', self.rlzs)
+    monitor.save('weights', self.datastore['weights'][:])
     if oq.K:
         aggids, _ = self.assetcol.build_aggids(
             oq.aggregate_by, oq.max_aggregations)
@@ -146,26 +148,39 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
     return dict(avg=loss_by_AR, alt=df)
 
 
-def event_based_risk(df, oqparam, dstore, monitor):
+def ebr_from_gmfs(gmfslices, oqparam, dstore, monitor):
     """
-    :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
-    :param oqparam: parameters coming from the job.ini
-    :param dstore: a DataStore instance
+    :param gmfslices: an array (S, 3) with S slices (start, stop, weight)
+    :param oqparam: OqParam instance
+    :param dstore: DataStore instance from which to read the GMFs
     :param monitor: a Monitor instance
-    :returns: a dictionary of arrays
+    :returns: a dictionary of arrays, the output of event_based_risk
     """
     if dstore.parent:
         dstore.parent.open('r')
+    dfs = []
     with dstore, monitor('reading data', measuremem=True):
-        if hasattr(df, 'start'):  # it is actually a slice
-            df = dstore.read_df('gmf_data', slc=df)
+        for gmfslice in gmfslices:
+            slc = slice(gmfslice[0], gmfslice[1])
+            dfs.append(dstore.read_df('gmf_data', slc=slc))
+        df = pandas.concat(dfs)
+    return event_based_risk(df, oqparam, monitor)
+
+
+def event_based_risk(df, oqparam, monitor):
+    """
+    :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
+    :param oqparam: parameters coming from the job.ini
+    :param monitor: a Monitor instance
+    :returns: a dictionary of arrays
+    """
+    with monitor('reading data', measuremem=True):
         assets = monitor.read('assets')
         aggids = monitor.read('aggids')
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
-        weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]
-    if dstore.parent:
-        dstore.parent.close()  # essential on Windows with h5py>=3.6
+        weights = [1] if oqparam.collect_rlzs else monitor.read('weights')
+
     ARK = len(assets), len(weights), oqparam.K
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
@@ -200,7 +215,7 @@ def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
     dic = event_based.event_based(proxies, full_lt, oqparam, dstore, monitor)
     if len(dic['gmfdata']) == 0:  # no GMFs
         return {}
-    return event_based_risk(dic['gmfdata'], oqparam, dstore, monitor)
+    return event_based_risk(dic['gmfdata'], oqparam, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -337,11 +352,13 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
-            self.datastore.swmr_on()  # crucial!
             with self.monitor('getting gmf_data slices', measuremem=True):
-                allargs = self.get_allargs()
+                slice_list = build_gmfslices(
+                    self.datastore, oq.concurrent_tasks or 1)
+                allargs = [(arr, oq, self.datastore) for arr in slice_list]
+            self.datastore.swmr_on()  # crucial!
             smap = parallel.Starmap(
-                event_based_risk, allargs, h5=self.datastore.hdf5)
+                ebr_from_gmfs, allargs, h5=self.datastore.hdf5)
             save_tmp(self, smap.monitor)
             smap.reduce(self.agg_dicts)
         if self.parent_events:
@@ -420,45 +437,3 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         with prc.datastore:
             prc.run(exports='')
 
-    def get_allargs(self):
-        """
-        :yields: pairs (gmf_slice, param)
-        """
-        oq = self.oqparam
-        eids = self.datastore['gmf_data/eid'][:]
-        sids = self.datastore['gmf_data/sid'][:]
-        self.log_info(eids)
-        minrows = 100_000
-        logging.info('minrows = {:_d}'.format(minrows))
-        start = stop = weight = 0
-        # IMPORTANT!! we rely on the fact that the hazard part
-        # of the calculation stores the GMFs in chunks of constant eid
-        allargs = []
-        site_ids = self.sitecol.sids
-        sizes = []
-        for idx, s1, s2 in performance.idx_start_stop(eids // 1000):
-            stop += s2 - s1
-            if self.sitecol is self.sitecol.complete:
-                size = s2 - s1
-            else:
-                size = numpy.isin(sids[s1:s2], site_ids).sum()
-            sizes.append(size)
-            weight += size
-            if weight > minrows:
-                logging.info('Sending {:_d}({:_d}) rows'.format(
-                    s2-s1, size))
-                allargs.append((slice(start, stop), oq, self.datastore))
-                weight = 0
-                start = stop
-        if weight:
-            logging.info('Sending {:_d} rows'.format(size))
-            allargs.append((slice(start, stop), oq, self.datastore))
-        taxonomies, num_assets_by_taxo = numpy.unique(
-            self.assetcol.taxonomies, return_counts=1)
-        max_assets = max(num_assets_by_taxo)
-        max_rows = max(sizes)
-        idx = taxonomies[num_assets_by_taxo.argmax()]
-        max_taxo = self.assetcol.tagcol.taxonomy[idx]
-        logging.info('Biggest task has {:_d} GMVs x {:_d} assets of '
-                     'taxonomy {}'.format(max_rows, max_assets, max_taxo))
-        return allargs
