@@ -90,8 +90,7 @@ class WongEtAl2022Shallow(GMPE):
 
     #: Required site parameter is only Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
-    
-    
+        
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
 
         for m, imt in enumerate(imts):
