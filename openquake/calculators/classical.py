@@ -105,7 +105,7 @@ def semicolon_aggregate(probs, source_ids):
     srcids = [srcid.split(';')[0] for srcid in source_ids]
     unique, indices = numpy.unique(srcids, return_inverse=True)
     new = numpy.zeros_like(probs)
-    for i, s1, s2 in performance._idx_start_stop(indices):
+    for i, s1, s2 in performance.idx_start_stop(indices):
         new[..., i] = pprod(probs[..., s1:s2], axis=-1)
     return new, unique
 

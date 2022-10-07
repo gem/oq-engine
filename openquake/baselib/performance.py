@@ -400,7 +400,7 @@ else:
 @compile(["int64[:, :](uint8[:])",
           "int64[:, :](uint32[:])",
           "int64[:, :](int64[:])"])
-def _idx_start_stop(integers):
+def idx_start_stop(integers):
     # given an array of integers returns an array int64 of shape (n, 3)
     out = []
     start = i = 0
@@ -427,7 +427,7 @@ def get_slices(uint32s):
     if len(uint32s) == 0:
         return {}
     indices = {}  # idx -> [(start, stop), ...]
-    for idx, start, stop in _idx_start_stop(uint32s):
+    for idx, start, stop in idx_start_stop(uint32s):
         if idx not in indices:
             indices[idx] = []
         indices[idx].append((start, stop))
@@ -462,7 +462,7 @@ def split_array(arr, indices, counts=None):
     [array([0.1, 0.2]), array([0.3, 0.4]), array([0.5])]
     """
     if counts is None:  # ordered indices
-        return [arr[s1:s2] for i, s1, s2 in _idx_start_stop(indices)]
+        return [arr[s1:s2] for i, s1, s2 in idx_start_stop(indices)]
     # indices and counts coming from numpy.unique(arr)
     # this part can be slow, but it is still 10x faster than pandas for EUR!
     cumcounts = counts.cumsum()
