@@ -24,7 +24,7 @@ import pandas
 from openquake.baselib import hdf5, general, parallel
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, connectivity
-from openquake.commonlib import datastore
+from openquake.commonlib import datastore, calc
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
 from openquake.calculators.post_risk import (
@@ -203,9 +203,15 @@ class DamageCalculator(EventBasedRiskCalculator):
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore)  # check
         self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, self.crmodel)
+
+        logging.info('Building GMF slices')
+        with self.monitor('getting gmf_data slices', measuremem=True):
+            slice_list = calc.build_gmfslices(
+                self.datastore, oq.concurrent_tasks or 1)
+            allargs = [(arr, oq, self.datastore) for arr in slice_list]
         self.datastore.swmr_on()
         smap = parallel.Starmap(
-            event_based_damage, self.get_allargs(), h5=self.datastore.hdf5)
+            event_based_damage, allargs, h5=self.datastore.hdf5)
         smap.monitor.save('assets', self.assetcol.to_dframe('id'))
         smap.monitor.save('crmodel', self.crmodel)
         return smap.reduce(self.combine)
