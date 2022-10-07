@@ -437,7 +437,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         allargs = []
         site_ids = self.sitecol.sids
         sizes = []
-        for idx, s1, s2 in performance._idx_start_stop(eids // 1000):
+        for idx, s1, s2 in performance.idx_start_stop(eids // 1000):
             stop += s2 - s1
             if self.sitecol is self.sitecol.complete:
                 size = s2 - s1
