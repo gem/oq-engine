@@ -1,27 +1,30 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
+#
 # Copyright (C) 2022, GEM Foundation
-# 
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import os
 import sys
+import shutil
 import unittest
+import tempfile
 import numpy as np
 import pandas
-from openquake.baselib import general
+from openquake.baselib import general, InvalidFile
 from openquake.risklib import reinsurance
 
 aac = np.testing.assert_allclose
@@ -43,7 +46,8 @@ def assert_ok(got, exp):
             aac(got[col], exp[col], err_msg=col)
         except ValueError:
             sys.exit(f'Wrong column {col} in {got}')
-    
+
+
 policy_idx = {'?': 0, 'VA_region_1': 1, 'VA_region_2': 2, 'rur_Ant_1': 3}
 
 # NB: agg_id starts from 0, policy_id from 1
@@ -319,3 +323,29 @@ event_id,retention,claim,prop1,cat1,cat2,cat3,cat4,cat5,over_B,over_D
         bypolicy, byevent = reinsurance.by_policy_event(
             risk_by_event, pol_df, treaty_df)
         assert_ok(byevent, expected)
+
+
+class ParseTestCase(unittest.TestCase):
+    """
+    Tests for errors in the input files
+    """
+    @classmethod
+    def setUpClass(cls):
+        print('Creating directory with fake input files')
+        cls.tmpdir = tempfile.mkdtemp()
+        cls.xmlfname = os.path.join(cls.tmpdir, 'reinsurance.xml')
+        cls.csvfname = os.path.join(cls.tmpdir, 'policy.csv')
+        with open(cls.xmlfname, 'w') as xml:
+            xml.write(XML_NP.format('policy.csv'))
+
+    def test_policy_duplicated(self):
+        with open(self.csvfname, 'w') as csv:
+            csv.write(CSV_NP.replace('VA_region_1', 'VA_region_2'))
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(self.xmlfname, policy_idx)
+        self.assertIn('policy contains duplicates', str(ctx.exception))
+
+    @classmethod
+    def tearDownClass(cls):
+        print('Deleting directory with fake input files')
+        shutil.rmtree(cls.tmpdir)

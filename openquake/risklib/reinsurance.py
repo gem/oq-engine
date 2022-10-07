@@ -129,7 +129,7 @@ def check_fractions(colnames, colvalues, fname):
 
 def parse(fname, policy_idx):
     """
-    :param fname: CSV file containing the policies
+    :param fname: XML file containing the treaties metadata
     :param policy_idx: dictionary policy name -> policy index
 
     Parse a reinsurance.xml file and returns
