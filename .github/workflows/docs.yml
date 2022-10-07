@@ -196,8 +196,13 @@ jobs:
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
           chmod 600 ./.deploy_rsa
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
+
+          latest_ver="$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine\" ; ( ls | grep \"[0-9]\+\.[0-9]\+\" ; echo \"$ENG_VER\") | LC_ALL=C sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1'"
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
+          echo "latest_ver            [$latest_ver]"
+
           cd doc/manual && make html && make latexpdf
+
           # if [ "$UPLOAD" == "master" ]
           # then
           #     PDF_VER="\(master\)"
@@ -205,10 +210,10 @@ jobs:
           #     PDF_VER=${VER}
           # fi
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --rsync-path="mkdir -p \"${PDFDOCS}\" && rsync" build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:${PDFDOCS}OpenQuake\ Manual\ ${PDF_VER}.pdf";
-          # if [ "$PDF_VER_LINK" ]
-          # then
-          #     ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"$PDFDOCS\" ; ln -sf \"OpenQuake Manual ${PDF_VER}.pdf\" "OpenQuake Manual ${PDF_VER_LINK}.pdf\"'";
-          # fi
+          if [ "$PDF_VER_LINK" ]
+          then
+              ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"$PDFDOCS\" ; ln -sf \"OpenQuake Manual ${PDF_VER}.pdf\" "OpenQuake Manual ${PDF_VER_LINK}.pdf\"'";
+          fi
           # echo "Uploading docs.openquake.org/oq-engine/manual/"
           # rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/manual/;
           # cd ../sphinx && make html && cd ../adv-manual && make html && make latexpdf
