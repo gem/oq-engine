@@ -158,6 +158,9 @@ jobs:
           fi
           PDFDEST=${PDFDOCS}
 
+          # TEST PER PDF_VER_LINK
+          PDF_VER_LINK=test_ver_link
+
           echo "BUILD:               [$BUILD]"
           echo "LTS_VER:             [$LTS_VER]"
           echo "ENG_VER:             [$ENG_VER]"
@@ -203,12 +206,6 @@ jobs:
 
           cd doc/manual && make html && make latexpdf
 
-          # if [ "$UPLOAD" == "master" ]
-          # then
-          #     PDF_VER="\(master\)"
-          # else
-          #     PDF_VER=${VER}
-          # fi
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --rsync-path="mkdir -p \"${PDFDOCS}\" && rsync" build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:${PDFDOCS}OpenQuake\ Manual\ ${PDF_VER}.pdf";
           if [ "$PDF_VER_LINK" ]
           then
