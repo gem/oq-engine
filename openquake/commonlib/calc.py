@@ -28,7 +28,7 @@ from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
 from openquake.hazardlib.source.rupture import EBRupture, events_dt
-from openquake.commonlib import util
+from openquake.commonlib import util, datastore
 
 TWO16 = 2 ** 16
 TWO32 = numpy.float64(2 ** 32)
@@ -372,7 +372,23 @@ class RuptureImporter(object):
 # logic for building the GMF slices used in event_based_risk #
 ##############################################################
 
+slice_dt = numpy.dtype([('task_no', U32), ('start', int), ('stop', int)])
 START, STOP, WEIGHT = 0, 1, 2
+
+
+def fix_legacy_gmf_data(dstore):
+    """
+    Store gmf_data/slices if possible
+    """
+    logging.info('Building gmf_data/slices')
+    eids = dstore['gmf_data/eid'][:]
+    arr = performance.idx_start_stop(eids // 1000)
+    slices = numpy.zeros(len(arr), slice_dt)
+    slices['task_no'] = arr[:, 0]
+    slices['start'] = arr[:, 1]
+    slices['stop'] = arr[:, 2]
+    dstore['gmf_data/slices'] = slices
+    return slices
 
 
 def _concat(acc, slc2):
@@ -419,6 +435,15 @@ def build_gmfslices(dstore, hint):
     :param hint: hint for the number of arrays to generate
     :returns: a list of slice arrays
     """
+    try:
+        slices = dstore['gmf_data/slices'][:]
+    except KeyError:
+        # versions of the engine <= 3.15 did not have slices
+        dstore.parent.close()
+        with datastore.read(dstore.parent.filename, 'r+') as parent:
+            slices = fix_legacy_gmf_data(parent)
+        dstore.parent.open('r')
+
     sitecol = dstore['sitecol']
     filtered = (sitecol.sids != numpy.arange(len(sitecol))).any()
     N = sitecol.sids.max() + 1 if filtered else len(sitecol)
@@ -426,8 +451,7 @@ def build_gmfslices(dstore, hint):
     num_assets = numpy.zeros(N, int)
     sids, counts = numpy.unique(assetcol['site_id'], return_counts=True)
     num_assets[sids] = counts
-    logging.info('Reading gmf_data')
-    eids = dstore['gmf_data/eid'][:]
+    logging.info('Reading sids')
     sids = dstore['gmf_data/sid'][:]
     if filtered:
         ok = numpy.isin(sids, sitecol.sids)
@@ -435,9 +459,8 @@ def build_gmfslices(dstore, hint):
             raise ValueError('The sites in gmf_data are disjoint from the '
                              'site collection!?')
     logging.info('Building GMF slices')
-    arr = performance.idx_start_stop(eids)
-    arrayE3 = numpy.zeros((len(arr), 3), int)  # start, stop, weight
-    for i, (eid, start, stop) in enumerate(arr):
+    arrayE3 = numpy.zeros((len(slices), 3), int)  # start, stop, weight
+    for i, (_, start, stop) in enumerate(slices):
         if filtered:
             oksids = sids[start:stop][ok[start:stop]]
         else:
@@ -447,7 +470,7 @@ def build_gmfslices(dstore, hint):
         arrayE3[i, WEIGHT] = num_assets[oksids].sum()
     arrayE3 = arrayE3[arrayE3[:, WEIGHT] > 0]
     tot_weight = arrayE3[:, WEIGHT].sum()
-    max_weight = numpy.clip(tot_weight / hint, 10_00, 100_000_000)
+    max_weight = numpy.clip(tot_weight / hint, 10_000, 100_000_000)
     blocks = general.block_splitter(
         arrayE3, max_weight, operator.itemgetter(WEIGHT))
     gmfslices = [compactify(numpy.array(block)) for block in blocks]
