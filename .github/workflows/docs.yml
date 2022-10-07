@@ -131,7 +131,7 @@ jobs:
 
           # if [ "$UPLOAD" == "master" ]
           # then
-          #     PDF_VER="\(master\)"
+          #     PDF_VER="(master)"
           # else
           #     PDF_VER=${VER}
           # fi
@@ -147,10 +147,10 @@ jobs:
               PDF_VER_LINK="$BUILD"
           elif [ "$BUILD" == "master" ]; then
               TARGET="${DOCS_BASE}master"
-              PDF_VER="\(master\)"
+              PDF_VER="(master)"
           elif [ "$BUILD" == "dev" ]; then
               TARGET="${DOCS_BASE}dev/$GITHUB_REF_NAME"
-              PDF_VER="\($GITHUB_REF_NAME\)"
+              PDF_VER="($GITHUB_REF_NAME)"
               PDFDOCS="/var/www/docs.openquake.org/${DOCS_BASE}manuals/dev/"
           else
               echo "BUILD [$BUILD] not recognized"
@@ -179,30 +179,13 @@ jobs:
           echo "UPLOAD:              [$UPLOAD]"
 
 
-          # if [ -z "$GITHUB_HD_REF" ]
-          # then
-          #     echo " Is not a pull request, use branch: $GITHUB_DEF_BR"
-          #     GITHUB_BR=`echo ${{ github.event.repository.default_branch }}`
-          # else
-          #     echo " Is a pull request, use branch: $GITHUB_HD_BR"
-          #     GITHUB_BR=`echo ${{ github.head_ref }}`
-          # fi
-          # echo "BRANCH set to $GITHUB_BR"
-          # if [ -z "$UPLOAD" ]
-          # then
-          #     UPLOAD=${GITHUB_BR}
-          #     echo " Is not a workflow_dispatch run, use upload folder: $UPLOAD"
-          # else
-          #     echo " Is a workflow_dispatch run, use branch: $UPLOAD"
-          # fi
-
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
           chmod 600 ./.deploy_rsa
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
 
-          latest_ver="$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine\" ; ( ls | grep \"[0-9]\+\.[0-9]\+\" ; echo \"$ENG_VER\") | LC_ALL=C sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1'")"
+          LATEST_VER="$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine\" ; ( ls | grep \"[0-9]\+\.[0-9]\+\" ; echo \"$ENG_VER\") | LC_ALL=C sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1'")"
+          echo "LATEST_VER           [$LATEST_VER]"
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
-          echo "latest_ver            [$latest_ver]"
 
           cd doc/manual && make html && make latexpdf
 
