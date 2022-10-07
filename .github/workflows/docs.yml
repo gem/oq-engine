@@ -17,7 +17,7 @@ on:
   # (MN: disabled just for test)    branches: [ master ]
 
 jobs:
-  demos:
+  docs:
     runs-on: ubuntu-latest
     env:
       EV_NAME: ${{ github.event_name }}
@@ -204,11 +204,12 @@ jobs:
           # else
           #     PDF_VER=${VER}
           # fi
-          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:${PDFDOCS}OpenQuake\ Manual\ ${PDF_VER}.pdf";
-          if [ "$PDF_VER_LINK" ]
-          then
-              ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"$PDFDOCS\" ; ln -sf \"OpenQuake Manual ${PDF_VER}.pdf\" "OpenQuake Manual ${PDF_VER_LINK}.pdf\"'";
-          fi
+          echo rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:${PDFDOCS}OpenQuake\ Manual\ ${PDF_VER}.pdf";
+          # rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:${PDFDOCS}OpenQuake\ Manual\ ${PDF_VER}.pdf";
+          # if [ "$PDF_VER_LINK" ]
+          # then
+          #     ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"$PDFDOCS\" ; ln -sf \"OpenQuake Manual ${PDF_VER}.pdf\" "OpenQuake Manual ${PDF_VER_LINK}.pdf\"'";
+          # fi
           # echo "Uploading docs.openquake.org/oq-engine/manual/"
           # rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/manual/;
           # cd ../sphinx && make html && cd ../adv-manual && make html && make latexpdf
