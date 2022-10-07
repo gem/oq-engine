@@ -439,10 +439,15 @@ def build_gmfslices(dstore, hint):
         slices = dstore['gmf_data/slices'][:]
     except KeyError:
         # versions of the engine <= 3.15 did not have slices
-        dstore.parent.close()
-        with datastore.read(dstore.parent.filename, 'r+') as parent:
-            slices = fix_legacy_gmf_data(parent)
-        dstore.parent.open('r')
+        parent = dstore.parent
+        if parent:
+            parent.close()
+            with datastore.read(parent.filename, 'r+'):
+                slices = fix_legacy_gmf_data(parent)
+            parent.open('r')
+        else:
+            # starting from gmfs.csv
+            slices = fix_legacy_gmf_data(dstore)
 
     sitecol = dstore['sitecol']
     filtered = (sitecol.sids != numpy.arange(len(sitecol))).any()
