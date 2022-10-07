@@ -159,7 +159,7 @@ def ebr_from_gmfs(gmfslices, oqparam, dstore, monitor):
     if dstore.parent:
         dstore.parent.open('r')
     dfs = []
-    with dstore, monitor('reading data', measuremem=True):
+    with dstore, monitor('reading GMFs', measuremem=True):
         for gmfslice in gmfslices:
             slc = slice(gmfslice[0], gmfslice[1])
             dfs.append(dstore.read_df('gmf_data', slc=slc))
@@ -174,12 +174,14 @@ def event_based_risk(df, oqparam, monitor):
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    with monitor('reading data', measuremem=True):
+    with monitor('reading assets/crmodel', measuremem=True):
         assets = monitor.read('assets')
         aggids = monitor.read('aggids')
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else monitor.read('weights')
+        # can aggregate millions of asset by using few GBs of RAM
+        taxo_assets = assets.groupby('taxonomy')
 
     ARK = len(assets), len(weights), oqparam.K
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
@@ -190,9 +192,13 @@ def event_based_risk(df, oqparam, monitor):
 
     def outputs():
         mon_risk = monitor('computing risk', measuremem=True)
-        # can aggregate millions of asset by using few GBs of RAM
-        for taxo, adf in assets.groupby('taxonomy'):
-            gmf_df = df[numpy.isin(df.sid.to_numpy(), adf.site_id.to_numpy())]
+        fil_mon = monitor('filtering GMFs', measuremem=True)
+        for taxo, adf in taxo_assets:
+            with fil_mon:
+                # can be a bit slow, but it is *crucial* for the performance
+                # of the next step, 'computing risk'
+                gmf_df = df[numpy.isin(
+                    df.sid.to_numpy(), adf.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
             with mon_risk:  # this is using a lot of memory
