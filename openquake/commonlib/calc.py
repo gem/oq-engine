@@ -376,6 +376,7 @@ slice_dt = numpy.dtype([('start', int), ('stop', int), ('eid', U32)])
 START, STOP, WEIGHT = 0, 1, 2
 SLICE_BY_EVENT_NSITES = 1000
 
+
 def build_slice_by_event(eids, offset=0):
     arr = performance.idx_start_stop(eids)
     sbe = numpy.zeros(len(arr), slice_dt)
@@ -454,6 +455,7 @@ def build_gmfslices(dstore, hint):
         slice_by_event = dstore['gmf_data/slice_by_event'][:]
     except KeyError:
         # missing slice_by_event
+        logging.info('Reading the full gmf_data/eid')
         eids = dstore['gmf_data/eid'][:]
         parent = dstore.parent
         N = len(parent['sitecol']) if parent else 0
