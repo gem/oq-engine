@@ -1,6 +1,7 @@
   [Michele Simionato]
   * Strongly reduced the slow tasks and memory consumption in event_based_risk
-    calculations
+    calculations and removed the need to keep (a lot of) the gmf_data table
+    in memory
   * Fixed a performance issue in event based risk calculations, due to the same
     aggregation IDs being computed for each task
   * Increased `sys.recursionlimit` to solve a rare pickling issue and made
