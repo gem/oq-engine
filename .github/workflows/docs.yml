@@ -219,8 +219,8 @@ jobs:
           cd ../sphinx && make html
           rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${TARGET}reference/"
 
-          echo "Make Advanced Manual (HTML & PDF)"
-          cd ../adv-manual && make html && make latexpdf
+          echo "Make Advanced Manual (PDF)"
+          cd ../adv-manual && make clean && make latexpdf
           echo "uploading OpenQuakeforAdvancedUsers (PDF)"
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf "docs@docs.openquake.org:/var/www/docs.openquake.org/${TARGET}PDF/"
 
