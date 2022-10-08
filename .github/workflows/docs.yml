@@ -160,7 +160,7 @@ jobs:
           #             Manual
           #             AdvManual
           
-          if [ "$BUILD" == "release" || "$BUILD" == "LTS" ]; then
+          if [ "$BUILD" == "release" -o "$BUILD" == "LTS" ]; then
               TARGET="${DOCS_BASE}oq-engine/$VER/"
               # TARGET_LINK="${DOCS_BASE}oq-engine/$BUILD"
               PDF_VER="${VER}"
