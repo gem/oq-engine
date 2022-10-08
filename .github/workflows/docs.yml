@@ -224,6 +224,10 @@ jobs:
           echo "uploading OpenQuakeforAdvancedUsers (PDF)"
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/latex/OpenQuakeforAdvancedUsers.pdf "docs@docs.openquake.org:/var/www/docs.openquake.org/${TARGET}PDF/"
 
+          echo "Make Advanced Manual (HTML)"
+          cd ../adv-manual && make clean && make html
+          echo "uploading OpenQuakeforAdvancedUsers (HTML)"
+          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${TARGET}advanced/"
 
 
           # FIXME: link to document
