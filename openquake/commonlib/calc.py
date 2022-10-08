@@ -28,7 +28,7 @@ from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
 from openquake.hazardlib.source.rupture import EBRupture, events_dt
-from openquake.commonlib import util
+from openquake.commonlib import util, datastore
 
 TWO16 = 2 ** 16
 TWO32 = numpy.float64(2 ** 32)
@@ -372,7 +372,18 @@ class RuptureImporter(object):
 # logic for building the GMF slices used in event_based_risk #
 ##############################################################
 
+slice_dt = numpy.dtype([('start', int), ('stop', int), ('eid', U32)])
 START, STOP, WEIGHT = 0, 1, 2
+SLICE_BY_EVENT_NSITES = 1000
+
+
+def build_slice_by_event(eids, offset=0):
+    arr = performance.idx_start_stop(eids)
+    sbe = numpy.zeros(len(arr), slice_dt)
+    sbe['eid'] = arr[:, 0]
+    sbe['start'] = arr[:, 1] + offset
+    sbe['stop'] = arr[:, 2] + offset
+    return sbe
 
 
 def _concat(acc, slc2):
@@ -413,43 +424,82 @@ def compactify(arrayN3):
     return out
 
 
+def ponder(slice_by_event, num_assets, sids_risk, dstore):
+    """
+    Convert an array `slice_by_event` into an array `slice_by_weight`.
+    If `sids_risk` is not None, it is used to filter the hazard sites
+    and in that case the rows with zero weight are discarded.
+    """
+    slice_by_weight = numpy.zeros((len(slice_by_event), 3), int)
+    start, stop = slice_by_event[0]['start'], slice_by_event[-1]['stop']
+    logging.info('Reading {:_d} elements from gmf_data/sid'.format(stop-start))
+    haz_sids = dstore['gmf_data/sid'][start:stop]
+    for i, (s1, s2, _e) in enumerate(slice_by_event):
+        sids = haz_sids[s1-start:s2-start]
+        if sids_risk is not None:
+            sids = sids[numpy.isin(sids, sids_risk)]
+        weight = num_assets[sids].sum()
+        slice_by_weight[i] = (s1, s2, weight)
+    if sids_risk is None:
+        return slice_by_weight
+    return slice_by_weight[slice_by_weight[:, WEIGHT] > 0]
+
+
 def build_gmfslices(dstore, hint):
     """
     :param dstore: a DataStore containing gmf_data in it or its parent
     :param hint: hint for the number of arrays to generate
     :returns: a list of slice arrays
     """
+    try:
+        slice_by_event = dstore['gmf_data/slice_by_event'][:]
+    except KeyError:
+        # missing slice_by_event
+        logging.info('Reading the full gmf_data/eid')
+        eids = dstore['gmf_data/eid'][:]
+        parent = dstore.parent
+        N = len(parent['sitecol']) if parent else 0
+        if parent and N >= SLICE_BY_EVENT_NSITES:
+            # try to fix the parent if there are many sites
+            parent.close()
+            with datastore.read(parent.filename, 'r+') as p:
+                slice_by_event = build_slice_by_event(eids)
+                p['gmf_data/slice_by_event'] = slice_by_event
+            parent.open('r')
+        else:
+            # no parent or few sites
+            slice_by_event = build_slice_by_event(eids)
+
     sitecol = dstore['sitecol']
-    filtered = (sitecol.sids != numpy.arange(len(sitecol))).any()
-    N = sitecol.sids.max() + 1 if filtered else len(sitecol)
+    if dstore.parent:
+        psitecol = dstore.parent['sitecol']
+        filtered = len(sitecol) < len(psitecol)
+        N = psitecol.sids.max() + 1
+    else:
+        filtered = (sitecol.sids != numpy.arange(len(sitecol))).any()
+        N = sitecol.sids.max() + 1
+
     assetcol = dstore['assetcol']
     num_assets = numpy.zeros(N, int)
-    sids, counts = numpy.unique(assetcol['site_id'], return_counts=True)
-    num_assets[sids] = counts
-    logging.info('Reading gmf_data')
-    eids = dstore['gmf_data/eid'][:]
-    sids = dstore['gmf_data/sid'][:]
-    if filtered:
-        ok = numpy.isin(sids, sitecol.sids)
-        if (ok == 0).all():
-            raise ValueError('The sites in gmf_data are disjoint from the '
-                             'site collection!?')
-    logging.info('Building GMF slices')
-    arr = performance.idx_start_stop(eids)
-    arrayE3 = numpy.zeros((len(arr), 3), int)  # start, stop, weight
-    for i, (eid, start, stop) in enumerate(arr):
-        if filtered:
-            oksids = sids[start:stop][ok[start:stop]]
-        else:
-            oksids = sids[start:stop]
-        arrayE3[i, START] = start
-        arrayE3[i, STOP] = stop
-        arrayE3[i, WEIGHT] = num_assets[oksids].sum()
-    arrayE3 = arrayE3[arrayE3[:, WEIGHT] > 0]
-    tot_weight = arrayE3[:, WEIGHT].sum()
-    max_weight = numpy.clip(tot_weight / hint, 10_00, 100_000_000)
+    sids_risk, counts = numpy.unique(assetcol['site_id'], return_counts=True)
+    num_assets[sids_risk] = counts
+    logging.info('Building GMF slice_by_event')
+    slice_by_weight = []
+    if not filtered:
+        sids_risk = None
+    for sbe in numpy.array_split(slice_by_event, parallel.Starmap.num_cores):
+        if len(sbe):
+            sbw = ponder(sbe, num_assets, sids_risk, dstore)
+            if len(sbw) and sbw[:, WEIGHT].sum():
+                slice_by_weight.append(sbw)
+    if not slice_by_weight:
+        raise ValueError('The sites in gmf_data are disjoint from the '
+                         'site collection!?')
+    slice_by_weight = numpy.concatenate(slice_by_weight)
+    tot_weight = slice_by_weight[:, WEIGHT].sum()
+    max_weight = numpy.clip(tot_weight / hint, 10_000, 100_000_000)
     blocks = general.block_splitter(
-        arrayE3, max_weight, operator.itemgetter(WEIGHT))
+        slice_by_weight, max_weight, operator.itemgetter(WEIGHT))
     gmfslices = [compactify(numpy.array(block)) for block in blocks]
     ws = numpy.array([arr[:, WEIGHT].sum() for arr in gmfslices])
     logging.info('Weights min, mean, max {:_d}, {:_d}, {:_d}'.
