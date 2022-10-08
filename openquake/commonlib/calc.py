@@ -424,7 +424,7 @@ def compactify(arrayN3):
     return out
 
 
-def ponder(slice_by_event, num_assets, sids_risk, dstore):
+def ponder(slice_by_event, num_assets, sids_risk, dstore, monitor):
     """
     Convert an array `slice_by_event` into an array `slice_by_weight`.
     If `sids_risk` is not None, it is used to filter the hazard sites
@@ -433,7 +433,9 @@ def ponder(slice_by_event, num_assets, sids_risk, dstore):
     slice_by_weight = numpy.zeros((len(slice_by_event), 3), int)
     start, stop = slice_by_event[0]['start'], slice_by_event[-1]['stop']
     logging.info('Reading {:_d} elements from gmf_data/sid'.format(stop-start))
-    haz_sids = dstore['gmf_data/sid'][start:stop]
+    ds = dstore.parent if dstore.parent else dstore
+    with ds.open('r'):
+        haz_sids = ds['gmf_data/sid'][start:stop]
     for i, (s1, s2, _e) in enumerate(slice_by_event):
         sids = haz_sids[s1-start:s2-start]
         if sids_risk is not None:
@@ -471,14 +473,8 @@ def build_gmfslices(dstore, hint):
             slice_by_event = build_slice_by_event(eids)
 
     sitecol = dstore['sitecol']
-    if dstore.parent:
-        psitecol = dstore.parent['sitecol']
-        filtered = len(sitecol) < len(psitecol)
-        N = psitecol.sids.max() + 1
-    else:
-        filtered = (sitecol.sids != numpy.arange(len(sitecol))).any()
-        N = sitecol.sids.max() + 1
-
+    filtered = (sitecol.sids != numpy.arange(len(sitecol))).any()
+    N = sitecol.sids.max() + 1 if filtered else len(sitecol)
     assetcol = dstore['assetcol']
     num_assets = numpy.zeros(N, int)
     sids_risk, counts = numpy.unique(assetcol['site_id'], return_counts=True)
@@ -487,15 +483,19 @@ def build_gmfslices(dstore, hint):
     slice_by_weight = []
     if not filtered:
         sids_risk = None
-    for sbe in numpy.array_split(slice_by_event, parallel.Starmap.num_cores):
+    dstore.swmr_on()
+    smap = parallel.Starmap(ponder, h5=dstore.hdf5)
+    for sbe in numpy.array_split(slice_by_event, hint):
         if len(sbe):
-            sbw = ponder(sbe, num_assets, sids_risk, dstore)
-            if len(sbw) and sbw[:, WEIGHT].sum():
-                slice_by_weight.append(sbw)
+            smap.submit((sbe, num_assets, sids_risk, dstore))
+    for sbw in smap:
+        if len(sbw):
+            slice_by_weight.append(sbw)
     if not slice_by_weight:
         raise ValueError('The sites in gmf_data are disjoint from the '
                          'site collection!?')
     slice_by_weight = numpy.concatenate(slice_by_weight)
+    # TODO: sort by start
     tot_weight = slice_by_weight[:, WEIGHT].sum()
     max_weight = numpy.clip(tot_weight / hint, 10_000, 100_000_000)
     blocks = general.block_splitter(
