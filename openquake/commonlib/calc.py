@@ -372,23 +372,17 @@ class RuptureImporter(object):
 # logic for building the GMF slices used in event_based_risk #
 ##############################################################
 
-slice_dt = numpy.dtype([('task_no', U32), ('start', int), ('stop', int)])
+slice_dt = numpy.dtype([('start', int), ('stop', int), ('eid', U32)])
 START, STOP, WEIGHT = 0, 1, 2
+SLICE_BY_EVENT_NSITES = 1000
 
-
-def fix_legacy_gmf_data(dstore):
-    """
-    Store gmf_data/slices if possible
-    """
-    logging.info('Building gmf_data/slices')
-    eids = dstore['gmf_data/eid'][:]
-    arr = performance.idx_start_stop(eids // 1000)
-    slices = numpy.zeros(len(arr), slice_dt)
-    slices['task_no'] = arr[:, 0]
-    slices['start'] = arr[:, 1]
-    slices['stop'] = arr[:, 2]
-    dstore['gmf_data/slices'] = slices
-    return slices
+def build_slice_by_event(eids, offset=0):
+    arr = performance.idx_start_stop(eids)
+    sbe = numpy.zeros(len(arr), slice_dt)
+    sbe['eid'] = arr[:, 0]
+    sbe['start'] = arr[:, 1] + offset
+    sbe['stop'] = arr[:, 2] + offset
+    return sbe
 
 
 def _concat(acc, slc2):
@@ -436,18 +430,22 @@ def build_gmfslices(dstore, hint):
     :returns: a list of slice arrays
     """
     try:
-        slices = dstore['gmf_data/slices'][:]
+        slices = dstore['gmf_data/slice_by_event'][:]
     except KeyError:
-        # versions of the engine <= 3.15 did not have slices
+        # missing slice_by_event
+        eids = dstore['gmf_data/eid'][:]
         parent = dstore.parent
-        if parent:
+        N = len(parent['sitecol']) if parent else 0
+        if parent and N >= SLICE_BY_EVENT_NSITES:
+            # try to fix the parent if there are many sites 
             parent.close()
             with datastore.read(parent.filename, 'r+'):
-                slices = fix_legacy_gmf_data(parent)
+                slices = build_slice_by_event(eids)
+                parent['gmf_data/slice_by_event'] = slices
             parent.open('r')
         else:
-            # starting from gmfs.csv
-            slices = fix_legacy_gmf_data(dstore)
+            # no parent or few sites
+            slices = build_slice_by_event(eids)
 
     sitecol = dstore['sitecol']
     filtered = (sitecol.sids != numpy.arange(len(sitecol))).any()
@@ -465,7 +463,7 @@ def build_gmfslices(dstore, hint):
                              'site collection!?')
     logging.info('Building GMF slices')
     arrayE3 = numpy.zeros((len(slices), 3), int)  # start, stop, weight
-    for i, (_, start, stop) in enumerate(slices):
+    for i, (start, stop, _) in enumerate(slices):
         if filtered:
             oksids = sids[start:stop][ok[start:stop]]
         else:
