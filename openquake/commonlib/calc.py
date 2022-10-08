@@ -433,9 +433,8 @@ def ponder(slice_by_event, num_assets, sids_risk, dstore, monitor):
     slice_by_weight = numpy.zeros((len(slice_by_event), 3), int)
     start, stop = slice_by_event[0]['start'], slice_by_event[-1]['stop']
     logging.info('Reading {:_d} elements from gmf_data/sid'.format(stop-start))
-    ds = dstore.parent if dstore.parent else dstore
-    with ds.open('r'):
-        haz_sids = ds['gmf_data/sid'][start:stop]
+    with dstore.open('r'):
+        haz_sids = dstore['gmf_data/sid'][start:stop]
     for i, (s1, s2, _e) in enumerate(slice_by_event):
         sids = haz_sids[s1-start:s2-start]
         if sids_risk is not None:
@@ -483,7 +482,7 @@ def build_gmfslices(dstore, hint):
     slice_by_weight = []
     if not filtered:
         sids_risk = None
-    dstore.swmr_on()
+    dstore.swmr_on()  # crucial!
     smap = parallel.Starmap(ponder, h5=dstore.hdf5)
     for sbe in numpy.array_split(slice_by_event, hint):
         if len(sbe):
