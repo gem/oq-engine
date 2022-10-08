@@ -149,7 +149,7 @@ jobs:
           #             <pdf_docs>
           #         RefGuide
           #         Manual
-          #         AdvManual
+          #         advanced
           #
           # .dev
           #     oq-engine
@@ -158,7 +158,7 @@ jobs:
           #                 <pdf_docs>
           #             RefGuide
           #             Manual
-          #             AdvManual
+          #             advanced
           
           if [ "$BUILD" == "release" -o "$BUILD" == "LTS" ]; then
               TARGET="${DOCS_BASE}oq-engine/$ENG_VER/"
@@ -213,7 +213,18 @@ jobs:
           rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --rsync-path="mkdir -p \"${TARGET}PDF\" && rsync" build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:${TARGET}PDF/OpenQuake Manual ${PDF_VER}.pdf"
 
           echo "Uploading OpenQuake Manual (HTML)"
-          rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${TARGET}Manual/"
+          rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${TARGET}manual/"
+
+          echo "Make Reference Manual (HTML)"
+          cd ../sphinx && make html
+          rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${TARGET}reference/"
+
+          echo "Make Advanced Manual (HTML & PDF)"
+          cd ../adv-manual && make html && make latexpdf
+          echo "uploading OpenQuakeforAdvancedUsers (PDF)"
+          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf "docs@docs.openquake.org:/var/www/docs.openquake.org/${TARGET}PDF/
+
+
 
           # FIXME: link to document
           # if [ "$PDF_VER_LINK" ]
@@ -221,8 +232,8 @@ jobs:
           #     ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"$PDFDOCS\" ; ln -sf \"OpenQuake Manual ${PDF_VER}.pdf\" \"OpenQuake Manual ${PDF_VER_LINK}.pdf\"'"
           # fi
 
-          echo "Uploading docs.openquake.org/oq-engine/manual/"
-          rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/manual/;
+          # echo "Uploading docs.openquake.org/oq-engine/manual/"
+          # rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/manual/;
           # cd ../sphinx && make html && cd ../adv-manual && make html && make latexpdf
           # echo "uploading OpenQuakeforAdvancedUsers.pdf to docs.openquake.org/oq-engine/advanced/"
           # rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
