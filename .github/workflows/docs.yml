@@ -109,7 +109,10 @@ jobs:
           bash --version
           LTS_VER=$(grep 'Current Long Term Support' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
           ENG_VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
-          
+
+          # FIXME: FOR TEST
+          ENG_VER=3.13
+
           if [ -z "$BUILD" ]; then
               if [[ "$GITHUB_REF_NAME" == "master" ]]; then
                   BUILD=master
