@@ -360,7 +360,7 @@ class RuptureImporter(object):
                 raise ValueError(
                     'A GMF calculation with {:_d} sites and {:_d} events is '
                     'forbidden unless you raise `max_potential_gmfs` to {:_d}'.
-                    format(self.N, E, self.N * E))
+                    format(self.N, int(E), int(self.N * E)))
         for var in num_:
             if num_[var] > max_[var]:
                 raise ValueError(
