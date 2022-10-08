@@ -161,9 +161,9 @@ jobs:
           #             AdvManual
           
           if [ "$BUILD" == "release" -o "$BUILD" == "LTS" ]; then
-              TARGET="${DOCS_BASE}oq-engine/$VER/"
+              TARGET="${DOCS_BASE}oq-engine/$ENG_VER/"
               # TARGET_LINK="${DOCS_BASE}oq-engine/$BUILD"
-              PDF_VER="${VER}"
+              PDF_VER="${ENG_VER}"
               PDF_VER_LINK="$BUILD"
           elif [ "$BUILD" == "master" ]; then
               TARGET="${DOCS_BASE}oq-engine/master/"
