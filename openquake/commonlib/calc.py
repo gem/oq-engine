@@ -471,8 +471,14 @@ def build_gmfslices(dstore, hint):
             slice_by_event = build_slice_by_event(eids)
 
     sitecol = dstore['sitecol']
-    filtered = (sitecol.sids != numpy.arange(len(sitecol))).any()
-    N = sitecol.sids.max() + 1 if filtered else len(sitecol)
+    if dstore.parent:
+        psitecol = dstore.parent['sitecol']
+        filtered = len(sitecol) < len(psitecol)
+        N = psitecol.sids.max() + 1
+    else:
+        filtered = (sitecol.sids != numpy.arange(len(sitecol))).any()
+        N = sitecol.sids.max() + 1
+
     assetcol = dstore['assetcol']
     num_assets = numpy.zeros(N, int)
     sids_risk, counts = numpy.unique(assetcol['site_id'], return_counts=True)
@@ -484,7 +490,7 @@ def build_gmfslices(dstore, hint):
     for sbe in numpy.array_split(slice_by_event, parallel.Starmap.num_cores):
         if len(sbe):
             sbw = ponder(sbe, num_assets, sids_risk, dstore)
-            if len(sbw):
+            if len(sbw) and sbw[:, WEIGHT].sum():
                 slice_by_weight.append(sbw)
     if not slice_by_weight:
         raise ValueError('The sites in gmf_data are disjoint from the '
