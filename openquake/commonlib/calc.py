@@ -483,7 +483,7 @@ def build_gmfslices(dstore, hint):
     if not filtered:
         sids_risk = None
     dstore.swmr_on()  # crucial!
-    smap = parallel.Starmap(ponder, h5=dstore.hdf5)
+    smap = parallel.Starmap(ponder, distribute='processpool', h5=dstore.hdf5)
     for sbe in numpy.array_split(slice_by_event, hint):
         if len(sbe):
             smap.submit((sbe, num_assets, sids_risk, dstore))
