@@ -89,7 +89,7 @@ def main(what='contents', calc_id: str_or_int = -1, extra=()):
         obj = ds.getitem(what)
         if '__pdcolumns__' in obj.attrs:
             df = ds.read_df(what)
-            print(df.sort_values(df.columns[0]))
+            print(df)
         elif hasattr(obj, 'items'):  # is a group of datasets
             print(obj)
         else:  # is a single dataset
