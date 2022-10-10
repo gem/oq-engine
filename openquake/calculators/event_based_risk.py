@@ -362,7 +362,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 slice_list = build_gmfslices(
                     self.datastore, oq.concurrent_tasks or 1)
                 allargs = [(arr, oq, self.datastore) for arr in slice_list]
-            self.datastore.swmr_on()  # crucial!
             logging.info('Starting ebr_from_gmfs')
             smap = parallel.Starmap(
                 ebr_from_gmfs, allargs, h5=self.datastore.hdf5)

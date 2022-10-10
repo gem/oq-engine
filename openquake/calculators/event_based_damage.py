@@ -223,7 +223,6 @@ class DamageCalculator(EventBasedRiskCalculator):
             slice_list = calc.build_gmfslices(
                 self.datastore, oq.concurrent_tasks or 1)
             allargs = [(arr, oq, self.datastore) for arr in slice_list]
-        self.datastore.swmr_on()
         smap = parallel.Starmap(
             damage_from_gmfs, allargs, h5=self.datastore.hdf5)
         smap.monitor.save('assets', self.assetcol.to_dframe('id'))
