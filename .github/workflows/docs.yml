@@ -117,7 +117,7 @@ jobs:
           ENG_VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
 
           # FIXME: FOR TEST
-          ENG_VER=3.13
+          ENG_VER=3.15
 
           if [ -z "$BUILD" ]; then
               # FIXME moster => master
@@ -125,11 +125,10 @@ jobs:
                   BUILD=master
               elif [[ "$GITHUB_REF_NAME" =~ ^ongine- ]]; then # FIXME ongine-
                   BRANCH_VER="${GITHUB_REF_NAME#ongine-}" #FIXME ongine-
-                  # FIXME reenable versions check
-                  # if [ "$BRANCH_VER" != "$ENG_VER" ]; then
-                  #     echo "Versions don't match (BRANCH_VER: [$BRANCH_VER] ENG_VER: [$ENG_VER])"
-                  #     exit 2
-                  # fi
+                  if [ "$BRANCH_VER" != "$ENG_VER" ]; then
+                      echo "Versions don't match (BRANCH_VER: [$BRANCH_VER] ENG_VER: [$ENG_VER])"
+                      exit 2
+                  fi
                   if [[ "$BRANCH_VER" == "$LTS_VER" ]]; then
                       BUILD=LTS
                   else
