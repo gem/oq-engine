@@ -32,7 +32,7 @@ from openquake.commonlib import util, datastore
 
 TWO16 = 2 ** 16
 TWO32 = numpy.float64(2 ** 32)
-MAXROWS = 100_000_000
+MAX_NBYTES = 1024**3
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 # in this way even on 32 bit machines Python will not have to convert
 # the generated seed into a long integer
@@ -452,11 +452,12 @@ def build_gmfslices(dstore, hint=None):
     :param hint: hint for the number of arrays to generate
     :returns: a list of slice arrays
     """
-    tot_nrows = len(dstore['gmf_data/sid'])
-    if hint is None:
-        hint = tot_nrows // MAXROWS or 1
     df = dstore.read_df('gmf_data', slc=slice(0, 1))
     nbytes_per_row = df.memory_usage(index=False).sum()
+    maxrows = MAX_NBYTES // nbytes_per_row
+    tot_nrows = len(dstore['gmf_data/sid'])
+    if hint is None:
+        hint = tot_nrows // maxrows or 1
     try:
         slice_by_event = dstore['gmf_data/slice_by_event'][:]
     except KeyError:
@@ -501,7 +502,7 @@ def build_gmfslices(dstore, hint=None):
                          'site collection!?')
     slice_by_weight = numpy.concatenate(slice_by_weight)
     tot_weight = slice_by_weight[:, WEIGHT].sum()
-    max_weight = numpy.clip(tot_weight / hint, 10_000, MAXROWS)
+    max_weight = numpy.clip(tot_weight / hint, 10_000, maxrows)
     blocks = general.block_splitter(
         slice_by_weight, max_weight, operator.itemgetter(WEIGHT))
     gmfslices = [compactify(numpy.array(block)) for block in blocks]
