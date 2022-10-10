@@ -484,7 +484,7 @@ def build_gmfslices(dstore, hint=None):
     num_assets = numpy.zeros(N, int)
     sids_risk, counts = numpy.unique(assetcol['site_id'], return_counts=True)
     num_assets[sids_risk] = counts
-    logging.info('Building GMF slice_by_event')
+    logging.info('Building slice_by_event')
     slice_by_weight = []
     if not filtered:
         sids_risk = None
