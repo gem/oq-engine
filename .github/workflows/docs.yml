@@ -1,4 +1,5 @@
 #  manuals -> master latest e LTS
+#  dev/<branch>/arch
 #
 #  link a pdf e constraint coi test ok
 
@@ -124,10 +125,11 @@ jobs:
                   BUILD=master
               elif [[ "$GITHUB_REF_NAME" =~ ^ongine- ]]; then # FIXME ongine-
                   BRANCH_VER="${GITHUB_REF_NAME#ongine-}" #FIXME ongine-
-                  if [ "$BRANCH_VER" != "$ENG_VER" ]; then
-                      echo "Versions don't match (BRANCH_VER: [$BRANCH_VER] ENG_VER: [$ENG_VER])"
-                      exit 2
-                  fi
+                  # FIXME reenable versions check
+                  # if [ "$BRANCH_VER" != "$ENG_VER" ]; then
+                  #     echo "Versions don't match (BRANCH_VER: [$BRANCH_VER] ENG_VER: [$ENG_VER])"
+                  #     exit 2
+                  # fi
                   if [[ "$BRANCH_VER" == "$LTS_VER" ]]; then
                       BUILD=LTS
                   else
