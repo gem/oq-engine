@@ -26,7 +26,7 @@ import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, dbapi, datastore
+from openquake.commonlib import readinput, dbapi
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -208,7 +208,8 @@ class LogContext:
         """
         :returns: DataStore instance associated to the .calc_id
         """
-        dstore = datastore.new(self.calc_id, self.get_oqparam())
+        from openquake.commonlib.datastore import new
+        dstore = new(self.calc_id, self.get_oqparam())
         dstore.parent = parent
         return dstore
 
