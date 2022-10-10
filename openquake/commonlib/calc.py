@@ -456,6 +456,8 @@ def build_gmfslices(dstore, hint=None):
     nbytes_per_row = df.memory_usage(index=False).sum()
     maxrows = MAX_NBYTES // nbytes_per_row
     tot_nrows = len(dstore['gmf_data/sid'])
+    parent = dstore.parent
+    Np = len(parent['sitecol']) if parent else 0
     if hint is None:
         hint = tot_nrows // maxrows or 1
     try:
@@ -464,9 +466,7 @@ def build_gmfslices(dstore, hint=None):
         # missing slice_by_event
         logging.info('Reading the full gmf_data/eid')
         eids = dstore['gmf_data/eid'][:]
-        parent = dstore.parent
-        N = len(parent['sitecol']) if parent else 0
-        if parent and N >= SLICE_BY_EVENT_NSITES:
+        if parent and Np >= SLICE_BY_EVENT_NSITES:
             # try to fix the parent if there are many sites
             parent.close()
             with datastore.read(parent.filename, 'r+') as p:
@@ -478,7 +478,11 @@ def build_gmfslices(dstore, hint=None):
             slice_by_event = build_slice_by_event(eids)
 
     sitecol = dstore['sitecol']
-    filtered = (sitecol.sids != numpy.arange(len(sitecol))).any()
+    if parent:
+        # important for oq-risk-tests event_based_risk case_8e
+        filtered = len(sitecol) < Np
+    else:
+        filtered = (sitecol.sids != numpy.arange(len(sitecol))).any()
     N = sitecol.sids.max() + 1 if filtered else len(sitecol)
     assetcol = dstore['assetcol']
     num_assets = numpy.zeros(N, int)
@@ -500,7 +504,10 @@ def build_gmfslices(dstore, hint=None):
     if not slice_by_weight:
         raise ValueError('The sites in gmf_data are disjoint from the '
                          'site collection!?')
-    slice_by_weight = numpy.concatenate(slice_by_weight)
+    # NB: the sort below is needed for scenario_damage case_12 with
+    # discrete_damage_distribution = true
+    logging.info('Sorting and compactifying slices')
+    slice_by_weight = numpy.sort(numpy.concatenate(slice_by_weight), axis=0)
     tot_weight = slice_by_weight[:, WEIGHT].sum()
     max_weight = numpy.clip(tot_weight / hint, 10_000, maxrows)
     blocks = general.block_splitter(

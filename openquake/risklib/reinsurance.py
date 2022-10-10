@@ -185,7 +185,7 @@ def claim_to_cessions(claim, policy, treaty_df):
     # proportional cessions
     cols = treaty_df[treaty_df.type == 'prop'].id
     fractions = [policy[col] for col in cols]
-    assert sum(fractions) < 1
+    assert sum(fractions) <= 1
     out = {'claim': claim, 'retention': claim * (1. - sum(fractions))}
     for col, frac in zip(cols, fractions):
         out[col] = claim * frac
