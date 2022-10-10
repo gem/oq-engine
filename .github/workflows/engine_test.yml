@@ -22,11 +22,10 @@ jobs:
     - name: Install dependencies
       run: |
         python install.py devel
-        ~/openquake/bin/activate
-        pip install pytest
     - name: Test with pytest
       run: |
-        ~/openquake/bin/activate
+        source ~/openquake/bin/activate
+        pip install pytest
         oq dbserver start
         pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
 
