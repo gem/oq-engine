@@ -232,7 +232,7 @@ def clever_agg(ukeys, datalist, treaty_df, idx, overdict):
     """
     if DEBUG:
         print()
-        print(line(['apply'] + list(idx)))
+        print(line(['treaty_key'] + list(idx)))
         for key, data in zip(ukeys, datalist):
             print(line([key] + list(data[0])))
     if len(ukeys) == 1 and ukeys[0] == '':
