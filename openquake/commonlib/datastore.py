@@ -146,13 +146,13 @@ def new(calc_id, oqparam, datadir=None, mode=None):
     return dstore
 
 
-def new_dstore_log(description, parent=()):
+def build_dstore_log(description, parent=()):
     """
     :returns: DataStore instance associated to the .calc_id
     """
-    dic = dict(description=description, calculation_mode='scenario')
+    dic = dict(description=description, calculation_mode='custom')
     log = init('job', dic)
-    dstore = new(log.calc_id, log.get_oqparam())
+    dstore = new(log.calc_id, log.get_oqparam(validate=False))
     dstore.parent = parent
     return dstore, log
 

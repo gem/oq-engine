@@ -759,6 +759,7 @@ F64 = numpy.float64
 ALL_CALCULATORS = ['classical_risk',
                    'classical_damage',
                    'classical',
+                   'custom',
                    'event_based',
                    'scenario',
                    'post_risk',

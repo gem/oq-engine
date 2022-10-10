@@ -196,13 +196,13 @@ class LogContext:
             self.calc_id = calc_id
             self.usedb = True
 
-    def get_oqparam(self):
+    def get_oqparam(self, validate=True):
         """
-        :returns: a validated OqParam instance
+        :returns: an OqParam instance
         """
         if self.oqparam:  # set by submit_job
             return self.oqparam
-        return readinput.get_oqparam(self.params)
+        return readinput.get_oqparam(self.params, validate=validate)
 
     def __enter__(self):
         if not logging.root.handlers:  # first time
