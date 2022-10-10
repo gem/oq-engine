@@ -1,3 +1,7 @@
+#  manuals -> master latest e LTS
+#
+#  link a pdf e constraint coi test ok
+
 ---
 name: new docs
 on:
@@ -14,7 +18,8 @@ on:
           - release
           - LTS
   push:
-  # (MN: disabled just for test)    branches: [ master ]
+  # (FIXME MN: disabled just for test)
+  # branches: [ master ]
 
 jobs:
   docs:
@@ -140,8 +145,7 @@ jobs:
           #     PDF_VER=${VER}
           # fi
 
-
-          PDFDOCS="/var/www/docs.openquake.org/${DOCS_BASE}manuals/"
+          PDFDOCS="${DOCS_BASE}manuals/"
           TARGET_LINK=""
           PDF_VER_LINK=""
           # oq-engine
@@ -218,18 +222,30 @@ jobs:
 
           echo "Make Reference Manual (HTML)"
           cd ../sphinx && make html
-          rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${TARGET}reference/"
+          rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:${TARGET}reference/"
 
           echo "Make Advanced Manual (PDF)"
           cd ../adv-manual && make clean && make latexpdf
           echo "uploading OpenQuakeforAdvancedUsers (PDF)"
-          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/latex/OpenQuakeforAdvancedUsers.pdf "docs@docs.openquake.org:/var/www/docs.openquake.org/${TARGET}PDF/"
+          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/latex/OpenQuakeforAdvancedUsers.pdf "docs@docs.openquake.org:${TARGET}PDF/"
 
           echo "Make Advanced Manual (HTML)"
           cd ../adv-manual && make clean && make html
           echo "uploading OpenQuakeforAdvancedUsers (HTML)"
-          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${TARGET}advanced/"
+          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:${TARGET}advanced/"
 
+          if [ "$BUILD" == "LTS" ]; then
+               ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine/\" ; ln -sf \"$ENG_VER\" LTS'"
+          fi
+          if [ "$BUILD" == "relase" -o "$BUILD" == "LTS" ]; then
+              if [ "$LATEST_VER" == "$ENG_VER" ]; then
+                  ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine/\" ; ln -sf \"$ENG_VER\" latest'"
+              fi
+          fi
+
+
+          # ${PDFDOCS} && pwd && unlink \"OpenQuake Manual (${BUILD}).pdf\" && ln -vs \"OpenQuake Manual ${VER}.pdf\" \"OpenQuake Manual (${BUILD}).pdf\"'"
+          # fi
 
           # FIXME: link to document
           # if [ "$PDF_VER_LINK" ]
