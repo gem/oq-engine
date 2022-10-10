@@ -117,7 +117,7 @@ jobs:
           ENG_VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
 
           # FIXME: FOR TEST
-          ENG_VER=3.15
+          ENG_VER=3.11
 
           if [ -z "$BUILD" ]; then
               # FIXME moster => master
