@@ -26,7 +26,7 @@ import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, dbapi
+from openquake.commonlib import readinput, dbapi, datastore
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -204,6 +204,14 @@ class LogContext:
             return self.oqparam
         return readinput.get_oqparam(self.params)
 
+    def get_dstore(self, parent=()):
+        """
+        :returns: DataStore instance associated to the .calc_id
+        """
+        dstore = datastore.new(self.calc_id, self.get_oqparam())
+        dstore.parent = parent
+        return dstore
+
     def __enter__(self):
         if not logging.root.handlers:  # first time
             level = LEVELS.get(self.log_level, self.log_level)
@@ -212,7 +220,8 @@ class LogContext:
         for handler in logging.root.handlers:
             fmt = logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S')
             handler.setFormatter(fmt)
-        self.handlers = [LogDatabaseHandler(self.calc_id)] if self.usedb else []
+        self.handlers = [LogDatabaseHandler(self.calc_id)] \
+            if self.usedb else []
         if self.log_file is None:
             # add a StreamHandler if not already there
             if not any(h for h in logging.root.handlers

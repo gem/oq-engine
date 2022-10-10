@@ -32,6 +32,7 @@ from openquake.commonlib import util, datastore
 
 TWO16 = 2 ** 16
 TWO32 = numpy.float64(2 ** 32)
+MAXROWS = 100_000_000
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 # in this way even on 32 bit machines Python will not have to convert
 # the generated seed into a long integer
@@ -424,7 +425,7 @@ def compactify(arrayN3):
     return out
 
 
-def ponder(slice_by_event, num_assets, sids_risk, dstore, monitor):
+def ponder_slices(slice_by_event, num_assets, sids_risk, dstore, monitor):
     """
     Convert an array `slice_by_event` into an array `slice_by_weight`.
     If `sids_risk` is not None, it is used to filter the hazard sites
@@ -432,7 +433,6 @@ def ponder(slice_by_event, num_assets, sids_risk, dstore, monitor):
     """
     slice_by_weight = numpy.zeros((len(slice_by_event), 3), int)
     start, stop = slice_by_event[0]['start'], slice_by_event[-1]['stop']
-    logging.info('Reading {:_d} elements from gmf_data/sid'.format(stop-start))
     with dstore.open('r'):
         haz_sids = dstore['gmf_data/sid'][start:stop]
     for i, (s1, s2, _e) in enumerate(slice_by_event):
@@ -446,12 +446,17 @@ def ponder(slice_by_event, num_assets, sids_risk, dstore, monitor):
     return slice_by_weight[slice_by_weight[:, WEIGHT] > 0]
 
 
-def build_gmfslices(dstore, hint):
+def build_gmfslices(dstore, hint=None):
     """
     :param dstore: a DataStore containing gmf_data in it or its parent
     :param hint: hint for the number of arrays to generate
     :returns: a list of slice arrays
     """
+    tot_nrows = len(dstore['gmf_data/sid'])
+    if hint is None:
+        hint = tot_nrows // MAXROWS or 1
+    df = dstore.read_df('gmf_data', slc=slice(0, 1))
+    nbytes_per_row = df.memory_usage(index=False).sum()
     try:
         slice_by_event = dstore['gmf_data/slice_by_event'][:]
     except KeyError:
@@ -483,7 +488,8 @@ def build_gmfslices(dstore, hint):
     if not filtered:
         sids_risk = None
     dstore.swmr_on()  # crucial!
-    smap = parallel.Starmap(ponder, distribute='processpool', h5=dstore.hdf5)
+    smap = parallel.Starmap(
+        ponder_slices, distribute='processpool', h5=dstore.hdf5)
     for sbe in numpy.array_split(slice_by_event, hint):
         if len(sbe):
             smap.submit((sbe, num_assets, sids_risk, dstore))
@@ -494,13 +500,18 @@ def build_gmfslices(dstore, hint):
         raise ValueError('The sites in gmf_data are disjoint from the '
                          'site collection!?')
     slice_by_weight = numpy.concatenate(slice_by_weight)
-    # TODO: sort by start
     tot_weight = slice_by_weight[:, WEIGHT].sum()
-    max_weight = numpy.clip(tot_weight / hint, 10_000, 100_000_000)
+    max_weight = numpy.clip(tot_weight / hint, 10_000, MAXROWS)
     blocks = general.block_splitter(
         slice_by_weight, max_weight, operator.itemgetter(WEIGHT))
     gmfslices = [compactify(numpy.array(block)) for block in blocks]
+    ns = sum(len(arr) for arr in gmfslices)
+    logging.info('Built {:d} GMF slices'.format(ns))
+    nrows = sum((arr[:, STOP]-arr[:, START]).sum() for arr in gmfslices)
+    h = general.humansize(nbytes_per_row * nrows)
+    htot = general.humansize(nbytes_per_row * tot_nrows)
+    logging.info('Considering %s of %s of GMFs', h, htot)
     ws = numpy.array([arr[:, WEIGHT].sum() for arr in gmfslices])
-    logging.info('Weights min, mean, max {:_d}, {:_d}, {:_d}'.
+    logging.info('Slice weights min, mean, max {:_d}, {:_d}, {:_d}'.
                  format(ws.min(), int(ws.mean()), ws.max()))
     return gmfslices
