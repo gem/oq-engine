@@ -26,7 +26,7 @@ import h5py
 
 from openquake.baselib import hdf5, performance, general
 from openquake.commonlib.logs import (
-    get_datadir, get_calc_ids, get_last_calc_id, CALC_REGEX, dbcmd)
+    get_datadir, get_calc_ids, get_last_calc_id, CALC_REGEX, dbcmd, init)
 
 
 def hdf5new(datadir=None):
@@ -144,6 +144,17 @@ def new(calc_id, oqparam, datadir=None, mode=None):
     if oqparam.hazard_calculation_id:
         dstore.ppath = read(calc_id, 'r', datadir).ppath
     return dstore
+
+
+def new_dstore_log(description, parent=()):
+    """
+    :returns: DataStore instance associated to the .calc_id
+    """
+    dic = dict(description=description, calculation_mode='custom')
+    log = init('job', dic)
+    dstore = new(log.calc_id, log.get_oqparam())
+    dstore.parent = parent
+    return dstore, log
 
 
 class DataStore(collections.abc.MutableMapping):

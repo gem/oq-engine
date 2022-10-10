@@ -204,15 +204,6 @@ class LogContext:
             return self.oqparam
         return readinput.get_oqparam(self.params)
 
-    def get_dstore(self, parent=()):
-        """
-        :returns: DataStore instance associated to the .calc_id
-        """
-        from openquake.commonlib.datastore import new
-        dstore = new(self.calc_id, self.get_oqparam())
-        dstore.parent = parent
-        return dstore
-
     def __enter__(self):
         if not logging.root.handlers:  # first time
             level = LEVELS.get(self.log_level, self.log_level)
