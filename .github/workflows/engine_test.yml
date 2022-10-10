@@ -21,12 +21,11 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip wheel
-        pip install pytest
-        pip install -r requirements-py39-linux64.txt && pip install -e .
-        python -c'import shapely as s; print("shapely=%s" % s.__version__)'
+        python install.py devel
     - name: Test with pytest
       run: |
+        source ~/openquake/bin/activate
+        pip install pytest
         oq dbserver start
         pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
 
