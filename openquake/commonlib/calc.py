@@ -504,7 +504,10 @@ def build_gmfslices(dstore, hint=None):
     if not slice_by_weight:
         raise ValueError('The sites in gmf_data are disjoint from the '
                          'site collection!?')
-    slice_by_weight = numpy.concatenate(slice_by_weight)
+    # NB: the sort below is needed for scenario_damage case_12 with
+    # discrete_damage_distribution = true
+    logging.info('Sorting and compactifying slices')
+    slice_by_weight = numpy.sort(numpy.concatenate(slice_by_weight), axis=0)
     tot_weight = slice_by_weight[:, WEIGHT].sum()
     max_weight = numpy.clip(tot_weight / hint, 10_000, maxrows)
     blocks = general.block_splitter(
