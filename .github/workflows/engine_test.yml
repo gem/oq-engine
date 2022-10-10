@@ -21,10 +21,12 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel; ~/openquake/bin/activate
+        python install.py devel
+        ~/openquake/bin/activate
         pip install pytest
     - name: Test with pytest
       run: |
+        ~/openquake/bin/activate
         oq dbserver start
         pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
 
