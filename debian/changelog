@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Corner case bug: in the presence of parent site collection and a child
+    site model the engine was associate the site model to the parent
   * Strongly reduced the slow tasks and memory consumption in event_based_risk
     calculations and removed the need to keep (a lot of) the gmf_data table
     in memory
