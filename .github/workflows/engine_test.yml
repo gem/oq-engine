@@ -46,7 +46,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip wheel
-        #pip install fiona pyshp
+        pip install fiona
         pip install pytest
         pip install -r requirements-py38-linux64.txt && pip install -e .
     - name: hazardlib tests
