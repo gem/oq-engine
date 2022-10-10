@@ -889,7 +889,7 @@ class HazardCalculator(BaseCalculator):
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq)
-                self.sitecol.complete.assoc(sm, assoc_dist)
+                self.sitecol.assoc(sm, assoc_dist)
                 self.datastore['sitecol'] = self.sitecol
 
         # store amplification functions if any
