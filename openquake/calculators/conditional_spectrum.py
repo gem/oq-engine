@@ -44,10 +44,9 @@ def to_spectra(csdic, n, p):
     M = len(csdic[0]['_c'])
     out = numpy.zeros((R, M, 2))
     for r in range(R):
-        c, s = csdic[r].values()
-        if s[n, p]:
-            out[r, :, 0] = numpy.exp(c[:, n, 0, p])
-            out[r, :, 1] = numpy.sqrt(c[:, n, 1, p])
+        c, _ = csdic[r].values()
+        out[r, :, 0] = numpy.exp(c[:, n, 0, p])
+        out[r, :, 1] = numpy.sqrt(c[:, n, 1, p])
     return out
 
 
@@ -162,7 +161,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
 
         # Apply weights
         csdic, csmean = self._apply_weights(acc)
-        
+
         # Saving results
         self.save('cs-rlzs', csdic)
         self.save('cs-stats', csmean)
@@ -190,4 +189,3 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
             csmean[0] += csdic[r] * weight
 
         return csdic, csmean
-
