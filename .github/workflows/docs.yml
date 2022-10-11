@@ -162,13 +162,17 @@ jobs:
           #             Manual
           #             advanced
 
-          
+          set -x
           if [ "$BUILD" == "release" -o "$BUILD" == "LTS" ]; then
               TARGET="${DOCS_BASE}oq-engine/$ENG_VER/"
               # TARGET_LINK="${DOCS_BASE}oq-engine/$BUILD"
               PDF_VER="${ENG_VER}"
-              if [ "$BUILD" == "release" -a "$ENG_VER" == "$LATEST_VER" ]; then
-                  PDF_VER_LINK="latest"
+              if [ "$BUILD" == "release" ]; then
+                  if [ "$ENG_VER" == "$LATEST_VER" ]; then
+                      PDF_VER_LINK="latest"
+                  fi
+              elif [ "$BUILD" == "LTS" ]; then
+                  PDF_VER_LINK="LTS"
               fi
           elif [ "$BUILD" == "master" ]; then
               TARGET="${DOCS_BASE}oq-engine/master/"
@@ -182,7 +186,7 @@ jobs:
               exit 3
           fi
           PDFDEST=${PDFDOCS}
-
+          set +x
           # TEST PER PDF_VER_LINK
           # PDF_VER_LINK=test_ver_link
 
