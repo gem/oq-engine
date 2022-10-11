@@ -137,16 +137,15 @@ class CondSpectraTestCase(unittest.TestCase):
 
         # CS container
         S = csdic[0]['_c'].shape
-        tmp = {0: AccumDict({'_c': np.zeros((S[0], S[1], 1, S[3])),
-                             '_s': np.zeros((S[1], S[3]))})}
+        _c = np.zeros((S[0], S[1], 1, S[3]))
         w1 = inp.gsim_lt.branches[0].weight['weight']
         w2 = inp.gsim_lt.branches[1].weight['weight']
 
-        tmp[0]['_c'][:, 0, 0, 0] = (
-            csdic[0]['_c'][:, 0, 0, 0] * w1 + csdic[0]['_c'][:, 0, 1, 0] * w2)
+        _c[:, 0, 0, 0] = (csdic[0]['_c'][:, 0, 0, 0] * w1 +
+                          csdic[0]['_c'][:, 0, 1, 0] * w2)
 
         # Compute std
-        csdic = cmaker.get_cs_contrib(ctx, imti, imls, poes, tmp)
+        csdic = cmaker.get_cs_contrib(ctx, imti, imls, poes, _c)
 
         # Create DF for test
         df = csdic_to_dframe(csdic, cmaker.imts, 0, 0)

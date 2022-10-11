@@ -1050,7 +1050,7 @@ class ContextMaker(object):
         return out
 
     # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-    def get_cs_contrib(self, ctx, imti, imls, cs_poes, cs=[]):
+    def get_cs_contrib(self, ctx, imti, imls, cs_poes, _c=None):
         """
         Compute the contributions to the conditional spectra, in a form
         suitable for later composition.
@@ -1065,10 +1065,9 @@ class ContextMaker(object):
             P intensity measure levels for the IMT specified by the index
         :param cs_poes:
             Probabilities of exceedence for which we compute the CMS
-        :param cs:
-            The final CS. This is used for the calculation of the
-            standard deviation. This is a dictionary with one key = 0 and
-            value as the dictionary returned by this method.
+        :param _c:
+            The previously computed _c contribution. This is used for the
+            calculation of the _s contribution. It is a matrix (M, N, 2, P).
         :returns:
             a dictionary g -> key -> array where g is an index,
             key is the string '_c' or '_s',  and the arrays have shape
@@ -1153,11 +1152,11 @@ class ContextMaker(object):
                         c[m, n, MEA, p] = ws @ term1
 
                         # This is executed only if we already have the final CS
-                        if len(cs) > 0:
+                        if _c is not None:
 
                             # Equation 15 in Lin et al. (2013)
                             term2 = sig[m] * (1. - rho[m]**2)**0.5
-                            term3 = (term1 - cs[0]['_c'][m, n, 0, p])
+                            term3 = term1 - _c[m, n, 0, p]
                             c[m, n, 1, p] = ws @ (term2**2 + term3**2)
 
         return out

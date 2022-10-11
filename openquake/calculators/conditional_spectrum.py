@@ -140,7 +140,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
             ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
             for ctx in ctxs:
                 out += cmaker.get_cs_contrib(ctx, imti, self.imls, oq.poes,
-                                             csmean)
+                                             csmean[0]['_c'])
 
         return out
 
@@ -182,7 +182,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
                 csdic[r] += acc[_g]
         self.convert_and_save('cs-rlzs', csdic)
 
-        # build final conditional spectrum and std
+        # build final conditional mean and std
         weights = self.datastore['weights'][:]
         csmean = csdict(self.M, self.N, self.P, 0, 1)
         for r, weight in enumerate(weights):
