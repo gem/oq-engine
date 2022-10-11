@@ -15,6 +15,7 @@
   * Bumped h5py to version 3.7.0 and added fiona 1.8.21
 
   [Marco Pagani]
+  * Fixed the calculation of conditional spectra
   * Added the get_dip and get_strike methods to the gridded surface
 
   [Michele Simionato]

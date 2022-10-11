@@ -20,8 +20,7 @@ import unittest
 import numpy as np
 from numpy.testing import assert_allclose as aac
 import pandas
-from openquake.baselib.general import AccumDict
-from openquake.hazardlib import read_input, valid, contexts
+from openquake.hazardlib import read_input, valid
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
@@ -54,16 +53,17 @@ PARAM = dict(source_model_file=SOURCES_XML,
                     "SA(1.0)": valid.logscale(0.005, 2.13, 45),
                     "SA(2.0)": valid.logscale(0.005, 2.13, 45)})
 imti = 4  # corresponds to SA(0.2)
-imls = [np.log(1.001392E-01)]
+poes = [0.000404]
 
 
 # useful while debugging
 def plot(df, imts):
     import matplotlib.pyplot as plt
-    periods = [im.period for im in imts]
     fig, axs = plt.subplots(1, 2)
-    axs[0].plot(periods, df.cs_exp, 'x-')
-    axs[1].plot(periods, df.cs_std, 'x-')
+    axs[0].plot(df.period[:11], df.cs_exp[:11], 'x-')
+    axs[0].plot(df.period[11:], df.cs_exp[11:], 'x-')
+    axs[1].plot(df.period[:11], df.cs_std[:11], 'x-')
+    axs[1].plot(df.period[11:], df.cs_std[11:], 'x-')
     axs[0].grid(which='both')
     axs[1].grid(which='both')
     axs[0].set_xscale('log')
@@ -76,18 +76,18 @@ def plot(df, imts):
 
 
 # used to create the expected file the first time
-def csdic_to_dframe(csdic, imts, n, p):
+def cwdic_to_dframe(cwdic, imts, n, p):
     """
-    :param csdic: a double dictionary g_ -> key -> array
+    :param cwdic: a double dictionary g_ -> key -> array
     :param imts: M intensity measure types
     :param rlzs: R realization indices
     :param n: an index in the range 0..N-1 where N is the number of sites
     :param p: an index in the range 0..P-1 where P is the number of IMLs
     """
     dic = dict(rlz_id=[], period=[], cs_exp=[], cs_std=[])
-    for r, cs in csdic.items():
+    for r, cs in cwdic.items():
         c = cs['_c']
-        s = cs['_s']
+        s = cs['_w']
         for m, imt in enumerate(imts):
             dic['rlz_id'].append(r)
             dic['period'].append(imt.period)
@@ -108,11 +108,16 @@ class CondSpectraTestCase(unittest.TestCase):
         assert len(ctx) == 100
         ctx1 = ctx[:50]
         ctx2 = ctx[50:]
-        dic1 = cmaker.get_cs_contrib(ctx1, imti, imls)[0]
-        dic2 = cmaker.get_cs_contrib(ctx2, imti, imls)[0]
-        dic = cmaker.get_cs_contrib(ctx, imti, imls)[0]
-        aac((dic1['_c'] + dic2['_c']) / (dic1['_s'] + dic2['_s']),
-            dic['_c'] / dic['_s'])
+
+        # The hazard for the target IMT and poe
+        poes = [0.000404]
+        imls = [0.394359437]
+
+        dic1 = cmaker.get_cs_contrib(ctx1, imti, imls, poes)[0]
+        dic2 = cmaker.get_cs_contrib(ctx2, imti, imls, poes)[0]
+        dic = cmaker.get_cs_contrib(ctx, imti, imls, poes)[0]
+        aac((dic1['_c'] + dic2['_c']) / (dic1['_w'] + dic2['_w']),
+            dic['_c'] / dic['_w'])
 
     def test_2_rlzs(self):
         # test with two GMPEs, 1 TRT
@@ -120,8 +125,28 @@ class CondSpectraTestCase(unittest.TestCase):
         [cmaker] = inp.cmakerdict.values()
         [src_group] = inp.groups
         [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
-        csdic = cmaker.get_cs_contrib(ctx, imti, imls)
-        df = csdic_to_dframe(csdic, cmaker.imts, 0, 0)
+
+        # The hazard for the target IMT and poe=0.002105
+        poes = [0.002105]
+        imls = [0.238531932]
+
+        # Compute mean CS
+        cwdic = cmaker.get_cs_contrib(ctx, imti, imls, poes)
+
+        # CS container
+        S = cwdic[0]['_c'].shape
+        _c = np.zeros((S[0], S[1], 1, S[3]))
+        w1 = inp.gsim_lt.branches[0].weight['weight']
+        w2 = inp.gsim_lt.branches[1].weight['weight']
+
+        _c[:, 0, 0, 0] = (cwdic[0]['_c'][:, 0, 0, 0] * w1 +
+                          cwdic[0]['_c'][:, 0, 1, 0] * w2)
+
+        # Compute std
+        cwdic = cmaker.get_cs_contrib(ctx, imti, imls, poes, _c)
+
+        # Create DF for test
+        df = cwdic_to_dframe(cwdic, cmaker.imts, 0, 0)
 
         # check the result
         expected = os.path.join(CWD, 'expected', 'spectra2.csv')
@@ -130,38 +155,5 @@ class CondSpectraTestCase(unittest.TestCase):
                       float_format='%.6f')
         expdf = pandas.read_csv(expected)
         pandas.testing.assert_frame_equal(df, expdf, atol=1E-6)
-        # to plot the spectra uncomment the following line
-        # plot(df, cmaker.imts)
-
-    def test_6_rlzs(self):
-        # test with 2x3 realizations and TRTA, TRTB
-        # rlzs_by_g = 012, 345, 03, 14, 25
-        inp = read_input(
-            PARAM, source_model_file=os.path.join(CWD, 'data', 'sm02.xml'))
-        R = inp.gsim_lt.get_num_paths()
-
-        # compute the contributions by trt
-        tot = AccumDict()  # g_ -> key -> array
-        for src_group in inp.groups:
-            cmaker = inp.cmakerdict[src_group.trt]
-            [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
-            tot += cmaker.get_cs_contrib(ctx, imti, imls)
-
-        # compose the contributions by rlz, 0+2, 0+3, 0+4, 1+2, 1+3, 1+4
-        rlzs_by_g = inp.gsim_lt.get_rlzs_by_g()
-        csdic = contexts.csdict(len(cmaker.imts), 1, 1, 0, R)
-        for g_, rlz_ids in enumerate(rlzs_by_g):
-            for r in rlz_ids:
-                csdic[r] += tot[g_]
-        df = csdic_to_dframe(csdic, cmaker.imts, 0, 0)
-
-        # check the results
-        expected = os.path.join(CWD, 'expected', 'spectra6.csv')
-        if OVERWRITE_EXPECTED:
-            df.to_csv(expected, index=False, line_terminator='\r\n',
-                      float_format='%.6f')
-        expdf = pandas.read_csv(expected)
-        pandas.testing.assert_frame_equal(df, expdf, atol=1E-6)
-
         # to plot the spectra uncomment the following line
         # plot(df, cmaker.imts)

@@ -58,6 +58,8 @@ KNOWN_DISTANCES = frozenset(
     .split())
 # the following is used in the collapse method
 IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
+MEA = 0
+STD = 1
 
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -304,7 +306,7 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def csdict(M, N, P, start, stop):
+def cwdict(M, N, P, start, stop):
     """
     :param M: number of IMTs
     :param N: number of sites
@@ -315,7 +317,7 @@ def csdict(M, N, P, start, stop):
     ddic = {}
     for _g in range(start, stop):
         ddic[_g] = AccumDict({'_c': numpy.zeros((M, N, 2, P)),
-                              '_s': numpy.zeros((N, P))})
+                              '_w': numpy.zeros((N, P))})
     return ddic
 
 
@@ -1048,23 +1050,29 @@ class ContextMaker(object):
         return out
 
     # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-    def get_cs_contrib(self, ctx, imti, imls):
+    def get_cs_contrib(self, ctx, imti, imls, cs_poes, _c=None):
         """
+        Compute the contributions to the conditional spectra, in a form
+        suitable for later composition.
+
+        NB: at the present if works only for poissonian contexts
+
         :param ctx:
            a context array
         :param imti:
             IMT index in the range 0..M-1
         :param imls:
             P intensity measure levels for the IMT specified by the index
+        :param cs_poes:
+            Probabilities of exceedence for which we compute the CMS
+        :param _c:
+            The previously computed _c contribution. This is used for the
+            calculation of the _s contribution. It is a matrix (M, N, 2, P).
         :returns:
             a dictionary g -> key -> array where g is an index,
-            key is the string '_c' or '_s',  and the arrays have shape
+            key is the string '_c' or '_w',  and the arrays have shape
             (M, N, 2, P) or (N, P) respectively.
 
-        Compute the contributions to the conditional spectra, in a form
-        suitable for later composition.
-
-        NB: at the present if works only for poissonian contexts
         """
         assert self.tom
         sids, counts = numpy.unique(ctx.sids, return_counts=True)
@@ -1074,15 +1082,28 @@ class ContextMaker(object):
         G = len(self.gsims)
         M = len(self.imtls)
         P = len(imls)
-        out = csdict(M, N, P, self.start, self.start + G)
+
+        # This is the output dictionary as explained above
+        out = cwdict(M, N, P, self.start, self.start + G)
+
         mean_stds = self.get_mean_stds([ctx])  # (4, G, M, N*C)
         imt_ref = self.imts[imti]
         rho = numpy.array([self.cross_correl.get_correlation(imt_ref, imt)
                            for imt in self.imts])
         m_range = range(len(self.imts))
-        # probs = 1 - exp(-occurrence_rates*time_span)
-        probs = self.tom.get_probability_one_or_more_occurrences(
-            ctx.occurrence_rate)  # shape N * U
+
+        # This computes the probability of at least one occurrence
+        # probs = 1 - exp(-occurrence_rates*time_span). NOTE that we
+        # assume the contexts here are homogenous i.e. they either use
+        # the occurrence rate or the probability of occurrence in the
+        # investigation time
+        if len(ctx.probs_occur[0]):
+            probs = numpy.array([numpy.sum(p[1:]) for p in ctx.probs_occur])
+        else:
+            probs = self.tom.get_probability_one_or_more_occurrences(
+                ctx.occurrence_rate)  # shape N * U
+
+        # For every site
         for n in range(N):
             # NB: to understand the code below, consider the case with
             # N=3 sites and C=2 contexts; then the indices N*C are
@@ -1094,20 +1115,50 @@ class ContextMaker(object):
             # 5: third site
             # i.e. idxs = [0, 3], [1, 4], [2, 5] for sites 0, 1, 2
             slc = slice(n, N * U, N)  # U indices
+
+            # For every GMM
             for g in range(G):
                 mu = mean_stds[0, g, :, slc]  # shape (M, U)
                 sig = mean_stds[1, g, :, slc]  # shape (M, U)
+
                 c = out[self.start + g]['_c']
-                s = out[self.start + g]['_s']
+                w = out[self.start + g]['_w']
+
+                # For each IML
                 for p in range(P):
-                    eps = (imls[p] - mu[imti]) / sig[imti]  # shape U
-                    poes = _truncnorm_sf(self.truncation_level, eps)  # shape U
+
+                    # Calculate the contribution of each rupture to the total
+                    # probability of occurrence for the reference IMT. Both
+                    # `eps` and `poes` have shape U
+                    eps = (numpy.log(imls[p]) - mu[imti]) / sig[imti]
+                    poes = _truncnorm_sf(self.truncation_level, eps)
+
+                    # Converting to rates and dividing by the rate of
+                    # exceedance of the reference IMT and level
                     ws = -numpy.log(
                         (1. - probs[slc]) ** poes) / self.investigation_time
-                    s[n, p] = ws.sum()  # weights not summing up to 1
+
+                    # Normalizing by the AfE for the investigated IMT and level
+                    ws /= -numpy.log(1. - cs_poes[p])
+
+                    # Populate normalizer array
+                    w[n, p] = ws.sum()  # weights not summing up to 1
+
+                    # For each intensity measure type
                     for m in m_range:
-                        c[m, n, 0, p] = ws @ (mu[m] + rho[m] * eps * sig[m])
-                        c[m, n, 1, p] = ws @ (sig[m]**2 * (1. - rho[m]**2))
+
+                        # Equation 14 in Lin et al. (2013)
+                        term1 = (mu[m] + rho[m] * eps * sig[m])
+                        c[m, n, MEA, p] = ws @ term1
+
+                        # This is executed only if we already have the final CS
+                        if _c is not None:
+
+                            # Equation 15 in Lin et al. (2013)
+                            term2 = sig[m] * (1. - rho[m]**2)**0.5
+                            term3 = term1 - _c[m, n, 0, p]
+                            c[m, n, STD, p] = ws @ (term2**2 + term3**2)
+
         return out
 
     def gen_poes(self, ctx):
