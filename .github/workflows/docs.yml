@@ -162,7 +162,6 @@ jobs:
           #             Manual
           #             advanced
 
-          set -x
           if [ "$BUILD" == "release" -o "$BUILD" == "LTS" ]; then
               TARGET="${DOCS_BASE}oq-engine/$ENG_VER/"
               # TARGET_LINK="${DOCS_BASE}oq-engine/$BUILD"
@@ -186,7 +185,6 @@ jobs:
               exit 3
           fi
           PDFDEST=${PDFDOCS}
-          set +x
           # TEST PER PDF_VER_LINK
           # PDF_VER_LINK=test_ver_link
 
