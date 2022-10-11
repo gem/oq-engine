@@ -123,7 +123,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
             for ctx in ctxs:
                 out += cmaker.get_cs_contrib(ctx, imti, self.imls, oq.poes)
 
-        # Apply weights. csmean is a dictionary with integer keys
+        # Apply weights. cwmean is a dictionary with integer keys
         # (corresponding to the rlz ID) and value corresponding to a
         # dictionary with keys '_c' and '_w'. In '_c' we
         # have an array of shape (M, N, 2, P) where:
@@ -131,7 +131,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         # - N is the number of sites
         # - 2 (i.e. CS and its std)
         # - P is the the number of IMLs
-        cwdic, csmean = self._apply_weights(out)
+        cwdic, cwmean = self._apply_weights(out)
 
         # Computing standard deviation
         out = general.AccumDict()  # grp_id => dict
@@ -140,7 +140,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
             ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
             for ctx in ctxs:
                 out += cmaker.get_cs_contrib(ctx, imti, self.imls, oq.poes,
-                                             csmean[0]['_c'])
+                                             cwmean[0]['_c'])
 
         return out
 
@@ -160,11 +160,11 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
     def post_execute(self, acc):
 
         # Apply weights
-        cwdic, csmean = self._apply_weights(acc)
+        cwdic, cwmean = self._apply_weights(acc)
 
         # convert dictionaries into spectra and save them
         self.convert_and_save('cs-rlzs', cwdic)
-        self.convert_and_save('cs-stats', csmean)
+        self.convert_and_save('cs-stats', cwmean)
 
     def _apply_weights(self, acc):
 
@@ -184,8 +184,8 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
 
         # build final conditional mean and std
         weights = self.datastore['weights'][:]
-        csmean = cwdict(self.M, self.N, self.P, 0, 1)
+        cwmean = cwdict(self.M, self.N, self.P, 0, 1)
         for r, weight in enumerate(weights):
-            csmean[0] += cwdic[r] * weight
+            cwmean[0] += cwdic[r] * weight
 
-        return cwdic, csmean
+        return cwdic, cwmean

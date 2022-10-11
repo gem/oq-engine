@@ -20,7 +20,6 @@ import unittest
 import numpy as np
 from numpy.testing import assert_allclose as aac
 import pandas
-from openquake.baselib.general import AccumDict
 from openquake.hazardlib import read_input, valid
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.calc.filters import IntegrationDistance
@@ -60,7 +59,6 @@ poes = [0.000404]
 # useful while debugging
 def plot(df, imts):
     import matplotlib.pyplot as plt
-    periods = [im.period for im in imts]
     fig, axs = plt.subplots(1, 2)
     axs[0].plot(df.period[:11], df.cs_exp[:11], 'x-')
     axs[0].plot(df.period[11:], df.cs_exp[11:], 'x-')
