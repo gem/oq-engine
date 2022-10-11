@@ -1,4 +1,3 @@
-
   [Michele Simionato]
   * Corner case bug: in the presence of parent site collection and a child
     site model the engine was associating the site model to the parent
@@ -16,7 +15,7 @@
   * Bumped h5py to version 3.7.0 and added fiona 1.8.21
 
   [Marco Pagani]
-  * Fixed the calculation of conditonal spectra
+  * Fixed the calculation of conditional spectra
   * Added the get_dip and get_strike methods to the gridded surface
 
   [Michele Simionato]
