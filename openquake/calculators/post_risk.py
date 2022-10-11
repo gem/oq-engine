@@ -277,13 +277,14 @@ def build_store_agg(dstore, rbe_df, num_events):
 
 def build_reinsurance(dstore, num_events):
     """
-    Build and store the tables `reinsurance-avg_policy` and `reinsurance-avg_portfolio`;
+    Build and store the tables `reinsurance-avg_policy` and
+    `reinsurance-avg_portfolio`;
     for event_based, also build the `reinsurance-aggcurves` table.
     """
     oq = dstore['oqparam']
     size = dstore.getsize('reinsurance-risk_by_event')
-    logging.info('Building reinsurance-aggcurves from %s of reinsurance-risk_by_event',
-                 general.humansize(size))
+    logging.info('Building reinsurance-aggcurves from %s of '
+                 'reinsurance-risk_by_event', general.humansize(size))
     tr = oq.time_ratio  # risk_invtime / (haz_invtime * num_ses)
     if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
         tr /= len(dstore['weights'])

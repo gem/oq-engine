@@ -296,18 +296,18 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
 def _by_event(rbp, treaty_df, mon=Monitor()):
     with mon('processing policy_loss_table', measuremem=True):
         tdf = treaty_df.set_index('code')
-        inpcols = ['event_id', 'claim'] + [t.id for _, t in tdf.iterrows()
+        inpcols = ['eid', 'claim'] + [t.id for _, t in tdf.iterrows()
                                            if t.type != 'catxl']
         outcols = ['retention', 'claim'] + list(tdf.index)
         idx = {col: i for i, col in enumerate(outcols)}
         eids, idxs = np.unique(rbp.event_id.to_numpy(), return_inverse=True)
-        rbp['event_id'] = idxs
+        rbp['eid'] = idxs
         E = len(eids)
         dic = dict(event_id=eids)
         keys, datalist = [], []
         for key, grp in rbp.groupby('policy_grp'):
             data = np.zeros((E, len(outcols)))
-            gb = grp[inpcols].groupby('event_id').sum()
+            gb = grp[inpcols].groupby('eid').sum()
             for i, col in enumerate(inpcols):
                 if i > 0:  # claim, noncat1, ...
                     data[gb.index, i] = gb[col].to_numpy()
@@ -316,6 +316,7 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
                 data[:, 0] -= data[:, c]
             keys.append(key)
             datalist.append(data)
+        del rbp['eid']
     if len(keys) > 1:
         logging.warning('Splitting the policies in %d policy groups',
                         len(keys))
