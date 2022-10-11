@@ -1142,11 +1142,7 @@ class ContextMaker(object):
                     # Normalizing by the AfE for the investigated IMT and level
                     ws /= -numpy.log(1. - cs_poes[p])
 
-                    # If sum of ws is close to 1 we normalize
-                    if numpy.abs(ws.sum() - 1.0) < 1e-2:
-                        ws /= ws.sum()
-
-                    # Normalising weights
+                    # Populate normalizer array
                     s[n, p] = ws.sum()  # weights not summing up to 1
 
                     # For each intensity measure type
