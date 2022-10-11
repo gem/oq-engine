@@ -179,7 +179,7 @@ jobs:
           elif [ "$BUILD" == "dev" ]; then
               TARGET="${DOCS_BASE}.dev/oq-engine/$GITHUB_REF_NAME/"
               PDF_VER="($GITHUB_REF_NAME)"
-              # PDFDOCS="/var/www/docs.openquake.org/${DOCS_BASE}manuals/dev/"
+              PDFDOCS="${DOCS_BASE}.dev/manuals/"
           else
               echo "BUILD [$BUILD] not recognized"
               exit 3
