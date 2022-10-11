@@ -139,30 +139,9 @@ jobs:
                   BUILD=dev
               fi
           fi
-
-          which git grep sort sed
-          pwd
-          ls -a
-          git branch -rr
-          echo "STEP 1"
-          git ls-remote --heads
-          echo "STEP 1b"
-          git ls-remote
-          echo "STEP 1c"
-          git show-branch -r
-          echo "STEP 1d"
           
-          git branch -rr | grep '/engine-'
-          echo "STEP 2"
-          git branch -rr | grep '/engine-' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n
-          echo "STEP 3"
-          git branch -rr | grep '/engine-' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1
-          echo "STEP 4"
-          git branch -rr | grep '/engine-' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1 | sed 's/^.*ngine-//g'
-          echo "STEP 5"
-          
-          # LATEST_VER="$(git branch -r | grep '/engine-' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1 | sed 's/^.*ngine-//g')"
-          echo "NEW LATEST: $LATEST_VER"
+          LATEST_VER="$(git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1)"
+          echo "NEW LATEST_VER: [$LATEST_VER]"
           # if [ "$UPLOAD" == "master" ]
           # then
           #     PDF_VER="(master)"
