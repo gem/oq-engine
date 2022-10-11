@@ -21,11 +21,11 @@ import numpy as np
 from numpy.testing import assert_allclose as aac
 import pandas
 from openquake.baselib.general import AccumDict
-from openquake.hazardlib import read_input, valid, contexts
+from openquake.hazardlib import read_input, valid
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
-OVERWRITE_EXPECTED = True
+OVERWRITE_EXPECTED = False
 
 CWD = os.path.dirname(__file__)
 SOURCES_XML = os.path.join(CWD, 'data', 'sm01.xml')
