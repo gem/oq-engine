@@ -141,6 +141,8 @@ jobs:
           fi
 
           which git grep sort sed
+          pwd
+          ls
           LATEST_VER="$(git branch -r | grep '/engine-' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1 | sed 's/^.*ngine-//g')"
           echo "NEW LATEST: $LATEST_VER"
           # if [ "$UPLOAD" == "master" ]
