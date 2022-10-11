@@ -1,5 +1,14 @@
 
   [Michele Simionato]
+  * Corner case bug: in the presence of parent site collection and a child
+    site model the engine was associating the site model to the parent
+  * Strongly reduced the slow tasks and memory consumption in event_based_risk
+    calculations and removed the need to keep (a lot of) the gmf_data table
+    in memory
+  * Fixed a performance issue in event based risk calculations, due to the same
+    aggregation IDs being computed for each task
+  * Increased `sys.recursionlimit` to solve a rare pickling issue and made
+    the engine continue even if `_csm` is not stored
   * Added a parameter `max_aggregations` with a default of 100,000
   * Changed the risk calculators to reuse the hazard exposure (if any)
 
@@ -11,7 +20,7 @@
   * Added the get_dip and get_strike methods to the gridded surface
 
   [Michele Simionato]
-  * Added calculation of `reinsurance_by_event` and `reinsurance_curves`
+  * Added calculation of `reinsurance-risk_by_event` and `reinsurance-aggcurves`
     given a `reinsurance.xml` file
   * Supported absolute values for `deductible` and `insurance_limit`
     in insurance calculations (before we supported only fractions)

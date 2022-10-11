@@ -437,11 +437,6 @@ max_sites_disagg:
   Example: *max_sites_disagg = 100*
   Default: 10
 
-max_sites_per_gmf:
-  Restrict the maximum number of sites in event based calculation with GMFs.
-  Example: *max_sites_per_gmf = 100_000*.
-  Default: 65536
-
 max_sites_per_tile:
   Used in classical calculations which are to big to run within the
   available memory. This effectively splits the calculation in homogeneous
@@ -764,6 +759,7 @@ F64 = numpy.float64
 ALL_CALCULATORS = ['classical_risk',
                    'classical_damage',
                    'classical',
+                   'custom',
                    'event_based',
                    'scenario',
                    'post_risk',
@@ -907,9 +903,8 @@ class OqParam(valid.ParamSet):
     max = valid.Param(valid.boolean, False)
     max_aggregations = valid.Param(valid.positivefloat, 100_000)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
-    max_potential_gmfs = valid.Param(valid.positiveint, 2E11)
+    max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
-    max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
     max_sites_per_tile = valid.Param(valid.positiveint, 500_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)

@@ -118,30 +118,30 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         out = general.AccumDict()  # grp_id => dict
 
         # Computing CS
-        for gid, start, stop in performance._idx_start_stop(rdata['grp_id']):
+        for gid, start, stop in performance.idx_start_stop(rdata['grp_id']):
             cmaker = self.cmakers[gid]
             ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
             for ctx in ctxs:
                 out += cmaker.get_cs_contrib(ctx, imti, self.imls, oq.poes)
 
-        # Apply weights. csmean is a dictionary with integer keys 
-        # (corresponding to the rlz ID) and value corresponding to a 
-        # dictionary with keys '_c' and '_s'. In '_c' we 
+        # Apply weights. csmean is a dictionary with integer keys
+        # (corresponding to the rlz ID) and value corresponding to a
+        # dictionary with keys '_c' and '_s'. In '_c' we
         # have an array of shape (M, N, 2, P) where:
         # - M is the number of IMTs
         # - N is the number of sites
         # - 2 (i.e. CS and its std)
         # - P is the the number of IMLs
         csdic, csmean = self._apply_weights(out)
- 
+
         # Computing standard deviation
         out = general.AccumDict()  # grp_id => dict
-        for gid, start, stop in performance._idx_start_stop(rdata['grp_id']):
+        for gid, start, stop in performance.idx_start_stop(rdata['grp_id']):
             cmaker = self.cmakers[gid]
             ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
             for ctx in ctxs:
                 out += cmaker.get_cs_contrib(ctx, imti, self.imls, oq.poes,
-                        csmean)
+                                             csmean)
 
         return out
 
@@ -181,6 +181,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         for _g, rlzs in enumerate(rlzs_by_g):
             for r in rlzs:
                 csdic[r] += acc[_g]
+        self.save('cs-rlzs', csdic)
 
         # build final conditional spectrum and std
         weights = self.datastore['weights'][:]

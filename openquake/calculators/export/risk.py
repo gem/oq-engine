@@ -22,6 +22,7 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5, writers, general
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
@@ -605,14 +606,24 @@ def export_aggcurves_csv(ekey, dstore):
     return fnames
 
 
-@export.add(('reinsurance_by_event', 'csv'), ('reinsurance_curves', 'csv'),
-            ('reinsurance_avg', 'csv'), ('aggrisk_reinsurance', 'csv'))
-def export_reinsurance_by_event(ekey, dstore):
+@export.add(('reinsurance-risk_by_event', 'csv'), ('reinsurance-aggcurves', 'csv'),
+            ('reinsurance-avg_portfolio', 'csv'), ('reinsurance-avg_policy', 'csv'))
+def export_reinsurance(ekey, dstore):
     dest = dstore.export_path('%s.%s' % ekey)
     df = dstore.read_df(ekey[0])
-    if 'rlz_id' in df.columns and df.rlz_id.sum() == 0:
-        del df['rlz_id']  # there is a single rlz; don't display it
+    if 'event_id' in df.columns:
+        events = dstore['events'][()]
+        if 'year' not in events.dtype.names:  # gmfs.hdf5 missing events
+            df['year'] = 1
+        else:
+            df['year'] = events[df.event_id.to_numpy()]['year']
+    if 'policy_id' in df.columns:  # convert policy_id -> policy name
+        policy_names = dstore['agg_keys'][:]
+        df['policy_id'] = decode(policy_names[df['policy_id'].to_numpy() - 1])
     fmap = json.loads(dstore.get_attr('treaty_df', 'field_map'))
+    treaty_df = dstore.read_df('treaty_df')
+    for code, col in zip(treaty_df.code, treaty_df.id):
+        fmap['over_' + code] = 'overspill_' + col
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     writer.save(df.rename(columns=fmap), dest, comment=dstore.metadata)
     return [dest]

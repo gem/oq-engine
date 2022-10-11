@@ -955,6 +955,7 @@ def multi_index(shape, axis=None):
         yield tuple(lst)
 
 
+# NB: the fast_agg functions are usually faster than pandas
 def fast_agg(indices, values=None, axis=0, factor=None, M=None):
     """
     :param indices: N indices in the range 0 ... M - 1 with M < N
@@ -989,6 +990,7 @@ def fast_agg(indices, values=None, axis=0, factor=None, M=None):
     return res
 
 
+# NB: the fast_agg functions are usually faster than pandas
 def fast_agg2(tags, values=None, axis=0):
     """
     :param tags: N non-unique tags out of M
@@ -1009,6 +1011,7 @@ def fast_agg2(tags, values=None, axis=0):
     return uniq, fast_agg(indices, values, axis)
 
 
+# NB: the fast_agg functions are usually faster than pandas
 def fast_agg3(structured_array, kfield, vfields=None, factor=None):
     """
     Aggregate a structured array with a key field (the kfield)

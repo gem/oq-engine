@@ -214,7 +214,7 @@ from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
     gettemp, engine_version)
 
-sys.setrecursionlimit(1200)  # raised a bit to make pickle happier
+sys.setrecursionlimit(2000)  # raised to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
 GB = 1024 ** 3
@@ -481,6 +481,8 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
 
     if mon.operation.endswith('_'):
         name = mon.operation[:-1]
+    elif func is split_task:
+        name = args[1].__name__
     else:
         name = func.__name__
     mon = mon.new(operation='total ' + name, measuremem=True)

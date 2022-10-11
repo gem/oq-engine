@@ -709,30 +709,37 @@ class HazardCalculator(BaseCalculator):
         Read the insurance files and populate the policy_df
         """
         oq = self.oqparam
-        policy_df = general.AccumDict(accum=[])
+        policy_acc = general.AccumDict(accum=[])
         # here is an example of policy_idx: {'?': 0, 'B': 1, 'A': 2}
         policy_idx = self.assetcol.tagcol.policy_idx
         for loss_type, fname in lt_fnames:
             if 'reinsurance' in oq.inputs:
                 assert len(lt_fnames) == 1, lt_fnames
-                df, treaty_df, fieldmap = reinsurance.parse(fname, policy_idx)
+                policy_df, treaty_df, fieldmap = reinsurance.parse(
+                    fname, policy_idx)
                 treaties = set(treaty_df.id)
                 assert len(treaties) == len(treaty_df), 'Not unique treaties'
                 self.datastore.create_df('treaty_df', treaty_df,
                                          field_map=json.dumps(fieldmap))
-                self.treaty_df = treaty_df.set_index('id')
+                self.treaty_df = treaty_df
+                # add policy_grp column
+                for _, pol in policy_df.iterrows():
+                    grp = reinsurance.build_policy_grp(pol, treaty_df)
+                    policy_acc['policy_grp'].append(grp)
+
             else:  # insurance
                 #  `deductible` and `insurance_limit` as fractions
-                df = pandas.read_csv(fname, keep_default_na=False)
-                df['policy'] = [policy_idx[pol] for pol in df.policy]
+                policy_df = pandas.read_csv(fname, keep_default_na=False)
+                policy_df['policy'] = [
+                    policy_idx[pol] for pol in policy_df.policy]
                 for col in ['deductible', 'insurance_limit']:
                     reinsurance.check_fractions(
-                        [col], [df[col].to_numpy()], fname)
-            for col in df.columns:
-                policy_df[col].extend(df[col])
-            policy_df['loss_type'].extend([loss_type] * len(df))
-        assert policy_df
-        self.policy_df = pandas.DataFrame(policy_df)
+                        [col], [policy_df[col].to_numpy()], fname)
+            for col in policy_df.columns:
+                policy_acc[col].extend(policy_df[col])
+            policy_acc['loss_type'].extend([loss_type] * len(policy_df))
+        assert policy_acc
+        self.policy_df = pandas.DataFrame(policy_acc)
         self.datastore.create_df('policy', self.policy_df)
 
     def load_crmodel(self):
@@ -829,7 +836,8 @@ class HazardCalculator(BaseCalculator):
                     assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
             if oq.hazard_calculation_id:  # read the sitecol of the child
-                self.sitecol = readinput.get_site_collection(oq, self.datastore)
+                self.sitecol = readinput.get_site_collection(
+                    oq, self.datastore)
                 self.datastore['sitecol'] = self.sitecol
             else:
                 self.sitecol = haz_sitecol
@@ -864,7 +872,8 @@ class HazardCalculator(BaseCalculator):
             if self.crmodel and missing:
                 raise RuntimeError(
                     'The exposure contains the taxonomy strings '
-                    '%s which are not in the fragility/vulnerability/consequence model' % missing)
+                    '%s which are not in the fragility/vulnerability/'
+                    'consequence model' % missing)
 
             self.crmodel.check_risk_ids(oq.inputs)
 
@@ -880,7 +889,7 @@ class HazardCalculator(BaseCalculator):
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq)
-                self.sitecol.complete.assoc(sm, assoc_dist)
+                self.sitecol.assoc(sm, assoc_dist)
                 self.datastore['sitecol'] = self.sitecol
 
         # store amplification functions if any

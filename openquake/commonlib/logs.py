@@ -196,13 +196,13 @@ class LogContext:
             self.calc_id = calc_id
             self.usedb = True
 
-    def get_oqparam(self):
+    def get_oqparam(self, validate=True):
         """
-        :returns: a validated OqParam instance
+        :returns: an OqParam instance
         """
         if self.oqparam:  # set by submit_job
             return self.oqparam
-        return readinput.get_oqparam(self.params)
+        return readinput.get_oqparam(self.params, validate=validate)
 
     def __enter__(self):
         if not logging.root.handlers:  # first time
@@ -212,7 +212,8 @@ class LogContext:
         for handler in logging.root.handlers:
             fmt = logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S')
             handler.setFormatter(fmt)
-        self.handlers = [LogDatabaseHandler(self.calc_id)] if self.usedb else []
+        self.handlers = [LogDatabaseHandler(self.calc_id)] \
+            if self.usedb else []
         if self.log_file is None:
             # add a StreamHandler if not already there
             if not any(h for h in logging.root.handlers
