@@ -78,18 +78,18 @@ def plot(df, imts):
 
 
 # used to create the expected file the first time
-def csdic_to_dframe(csdic, imts, n, p):
+def cwdic_to_dframe(cwdic, imts, n, p):
     """
-    :param csdic: a double dictionary g_ -> key -> array
+    :param cwdic: a double dictionary g_ -> key -> array
     :param imts: M intensity measure types
     :param rlzs: R realization indices
     :param n: an index in the range 0..N-1 where N is the number of sites
     :param p: an index in the range 0..P-1 where P is the number of IMLs
     """
     dic = dict(rlz_id=[], period=[], cs_exp=[], cs_std=[])
-    for r, cs in csdic.items():
+    for r, cs in cwdic.items():
         c = cs['_c']
-        s = cs['_s']
+        s = cs['_w']
         for m, imt in enumerate(imts):
             dic['rlz_id'].append(r)
             dic['period'].append(imt.period)
@@ -118,8 +118,8 @@ class CondSpectraTestCase(unittest.TestCase):
         dic1 = cmaker.get_cs_contrib(ctx1, imti, imls, poes)[0]
         dic2 = cmaker.get_cs_contrib(ctx2, imti, imls, poes)[0]
         dic = cmaker.get_cs_contrib(ctx, imti, imls, poes)[0]
-        aac((dic1['_c'] + dic2['_c']) / (dic1['_s'] + dic2['_s']),
-            dic['_c'] / dic['_s'])
+        aac((dic1['_c'] + dic2['_c']) / (dic1['_w'] + dic2['_w']),
+            dic['_c'] / dic['_w'])
 
     def test_2_rlzs(self):
         # test with two GMPEs, 1 TRT
@@ -133,22 +133,22 @@ class CondSpectraTestCase(unittest.TestCase):
         imls = [0.238531932]
 
         # Compute mean CS
-        csdic = cmaker.get_cs_contrib(ctx, imti, imls, poes)
+        cwdic = cmaker.get_cs_contrib(ctx, imti, imls, poes)
 
         # CS container
-        S = csdic[0]['_c'].shape
+        S = cwdic[0]['_c'].shape
         _c = np.zeros((S[0], S[1], 1, S[3]))
         w1 = inp.gsim_lt.branches[0].weight['weight']
         w2 = inp.gsim_lt.branches[1].weight['weight']
 
-        _c[:, 0, 0, 0] = (csdic[0]['_c'][:, 0, 0, 0] * w1 +
-                          csdic[0]['_c'][:, 0, 1, 0] * w2)
+        _c[:, 0, 0, 0] = (cwdic[0]['_c'][:, 0, 0, 0] * w1 +
+                          cwdic[0]['_c'][:, 0, 1, 0] * w2)
 
         # Compute std
-        csdic = cmaker.get_cs_contrib(ctx, imti, imls, poes, _c)
+        cwdic = cmaker.get_cs_contrib(ctx, imti, imls, poes, _c)
 
         # Create DF for test
-        df = csdic_to_dframe(csdic, cmaker.imts, 0, 0)
+        df = cwdic_to_dframe(cwdic, cmaker.imts, 0, 0)
 
         # check the result
         expected = os.path.join(CWD, 'expected', 'spectra2.csv')

@@ -306,7 +306,7 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def csdict(M, N, P, start, stop):
+def cwdict(M, N, P, start, stop):
     """
     :param M: number of IMTs
     :param N: number of sites
@@ -317,7 +317,7 @@ def csdict(M, N, P, start, stop):
     ddic = {}
     for _g in range(start, stop):
         ddic[_g] = AccumDict({'_c': numpy.zeros((M, N, 2, P)),
-                              '_s': numpy.zeros((N, P))})
+                              '_w': numpy.zeros((N, P))})
     return ddic
 
 
@@ -1070,7 +1070,7 @@ class ContextMaker(object):
             calculation of the _s contribution. It is a matrix (M, N, 2, P).
         :returns:
             a dictionary g -> key -> array where g is an index,
-            key is the string '_c' or '_s',  and the arrays have shape
+            key is the string '_c' or '_w',  and the arrays have shape
             (M, N, 2, P) or (N, P) respectively.
 
         """
@@ -1084,7 +1084,7 @@ class ContextMaker(object):
         P = len(imls)
 
         # This is the output dictionary as explained above
-        out = csdict(M, N, P, self.start, self.start + G)
+        out = cwdict(M, N, P, self.start, self.start + G)
 
         mean_stds = self.get_mean_stds([ctx])  # (4, G, M, N*C)
         imt_ref = self.imts[imti]
@@ -1122,7 +1122,7 @@ class ContextMaker(object):
                 sig = mean_stds[1, g, :, slc]  # shape (M, U)
 
                 c = out[self.start + g]['_c']
-                s = out[self.start + g]['_s']
+                s = out[self.start + g]['_w']
 
                 # For each IML
                 for p in range(P):
