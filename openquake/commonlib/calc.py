@@ -455,6 +455,7 @@ def build_gmfslices(dstore, hint=None):
     df = dstore.read_df('gmf_data', slc=slice(0, 1))
     nbytes_per_row = df.memory_usage(index=False).sum()
     maxrows = MAX_NBYTES // nbytes_per_row
+    logging.info('Considering blocks of {:_d} rows'.format(maxrows))
     tot_nrows = len(dstore['gmf_data/sid'])
     parent = dstore.parent
     Np = len(parent['sitecol']) if parent else 0
@@ -477,14 +478,15 @@ def build_gmfslices(dstore, hint=None):
             # no parent or few sites
             slice_by_event = build_slice_by_event(eids)
 
+    logging.info('Reading sites and assets')
     sitecol = dstore['sitecol']
+    assetcol = dstore['assetcol']
     if parent:
         # important for oq-risk-tests event_based_risk case_8e
         filtered = len(sitecol) < Np
     else:
         filtered = (sitecol.sids != numpy.arange(len(sitecol))).any()
     N = sitecol.sids.max() + 1 if filtered else len(sitecol)
-    assetcol = dstore['assetcol']
     num_assets = numpy.zeros(N, int)
     sids_risk, counts = numpy.unique(assetcol['site_id'], return_counts=True)
     num_assets[sids_risk] = counts
