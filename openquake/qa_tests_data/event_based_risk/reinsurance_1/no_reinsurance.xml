@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <reinsuranceModel>
+    <description>Test insurance model only</description>
+    <fieldMap/>
+    <policies>policy.csv</policies>
+    <nonProportional/>
+  </reinsuranceModel>
+</nrml>

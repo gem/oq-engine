@@ -61,6 +61,7 @@ class BindiEtAl2011Repi(GMPE):
 
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
+    #: Required distance repi
     REQUIRES_DISTANCES = {'repi'}
 
     fixedh = None

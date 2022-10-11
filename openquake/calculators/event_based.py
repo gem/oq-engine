@@ -287,6 +287,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 [task_no] = numpy.unique(times['task_no'])
                 rupids = list(times['rup_id'])
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
+                if self.N >= calc.SLICE_BY_EVENT_NSITES:
+                    sbe = calc.build_slice_by_event(
+                        df.eid.to_numpy(), self.offset)
+                    hdf5.extend(self.datastore['gmf_data/slice_by_event'], sbe)
                 hdf5.extend(dset, df.sid.to_numpy())
                 hdf5.extend(self.datastore['gmf_data/eid'], df.eid.to_numpy())
                 for m in range(len(primary)):
@@ -298,9 +302,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(df)
-        if self.offset >= TWO32:
-            raise RuntimeError(
-                'The gmf_data table has more than %d rows' % TWO32)
         imtls = self.oqparam.imtls
         with agg_mon:
             for key, poes in result.get('hcurves', {}).items():
@@ -405,6 +406,8 @@ class EventBasedCalculator(base.HazardCalculator):
             dstore.create_dset('gmf_data/sigma_epsilon', sig_eps_dt(oq.imtls))
             dstore.create_dset('gmf_data/time_by_rup',
                                time_dt, (nrups,), fillvalue=None)
+            if self.N >= calc.SLICE_BY_EVENT_NSITES:
+                dstore.create_dset('gmf_data/slice_by_event', calc.slice_dt)
 
         # event_based in parallel
         nr = len(dstore['ruptures'])

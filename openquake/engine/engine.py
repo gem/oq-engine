@@ -250,7 +250,8 @@ def run_calc(log):
             used_mem = psutil.virtual_memory().percent
             if used_mem < 80:  # continue if little memory is in use
                 break
-            logging.info('Used memory %d%%, waiting', used_mem)
+            logging.info('Memory occupation %d%%, the user should free '
+                         'some memory', used_mem)
             time.sleep(5)
         oqparam = log.get_oqparam()
         calc = base.calculators(oqparam, log.calc_id)
@@ -374,9 +375,10 @@ def run_jobs(jobs):
             with h5py.File(ppath, 'r') as f:
                 prev_version = f.attrs['engine_version']
                 if prev_version != version:
-                    logging.warning('Starting from a hazard (%d) computed with'
-                                    ' an obsolete version of the engine: %s',
-                                    hc_id, version)
+                    # here the logger is not initialized yet
+                    print('Starting from a hazard (%d) computed with'
+                          ' an obsolete version of the engine: %s' %
+                          (hc_id, version))
     jobarray = len(jobs) > 1 and jobs[0].multi
     try:
         poll_queue(jobs[0].calc_id, poll_time=15)

@@ -81,3 +81,7 @@ Project management
 Joshua McKenty                                  August 2010
 John Tarter                                     November 2010
 Paul Henshaw             (@pslh)                February 2012
+
+Documentation
+-------------
+Sandra Giacomini                                June 2022

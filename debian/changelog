@@ -2,6 +2,36 @@
   * Added the Wong et al. (2022) ground motion model
 
   [Michele Simionato]
+  * Corner case bug: in the presence of parent site collection and a child
+    site model the engine was associating the site model to the parent
+  * Strongly reduced the slow tasks and memory consumption in event_based_risk
+    calculations and removed the need to keep (a lot of) the gmf_data table
+    in memory
+  * Fixed a performance issue in event based risk calculations, due to the same
+    aggregation IDs being computed for each task
+  * Increased `sys.recursionlimit` to solve a rare pickling issue and made
+    the engine continue even if `_csm` is not stored
+  * Added a parameter `max_aggregations` with a default of 100,000
+  * Changed the risk calculators to reuse the hazard exposure (if any)
+
+  [Antonio Ettorre]
+  * Bumped h5py to version 3.7.0 and added fiona 1.8.21
+
+  [Marco Pagani]
+  * Fixed the calculation of conditional spectra
+  * Added the get_dip and get_strike methods to the gridded surface
+
+  [Michele Simionato]
+  * Added calculation of `reinsurance-risk_by_event` and `reinsurance-aggcurves`
+    given a `reinsurance.xml` file
+  * Supported absolute values for `deductible` and `insurance_limit`
+    in insurance calculations (before we supported only fractions)
+  * Reduced precision in the header of the UHS csv files
+  * Managed the case with CoVs = 0 for the beta distribution
+
+python3-oq-engine (3.15.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
   * Added a check on sum(srcs_weights) == 1 for mutex sources
 
   [Kendra Johnson]
@@ -72,7 +102,7 @@
   * Fixed a bug in `upgrade_nrml -m` for point sources with different usd/lsd
   * Automatically discard irrelevant TRTs in disaggregation calculations
 
-  [Ashta Poudel, Anirudh Rao, Michele Simionato]
+  [Astha Poudel, Anirudh Rao, Michele Simionato]
   * Added the ability to run connectivity analysis in event_based_damage
     and scenario_damage calculation with an appropriate exposure
 
@@ -130,6 +160,8 @@
     some GMFs calculations not setting truncation_level can now give
     different results since truncation_level=None is now replaced with
     truncation_level=99
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 12 Sep 2022 07:57:27 +0000
 
 python3-oq-engine (3.14.0-1~xenial01) xenial; urgency=low
 

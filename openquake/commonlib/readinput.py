@@ -1208,6 +1208,12 @@ def get_input_files(oqparam):
             for exp in asset.Exposure.read_headers(fname):
                 fnames.update(exp.datafiles)
             fnames.update(fname)
+        elif key == 'reinsurance':
+            [xml] = fname.values()
+            node = nrml.read(xml)
+            csv = ~node.reinsuranceModel.policies
+            fnames.add(xml)
+            fnames.add(os.path.join(os.path.dirname(xml), csv))
         elif isinstance(fname, dict):
             for key, val in fname.items():
                 if isinstance(val, list):  # list of files
@@ -1268,3 +1274,4 @@ def get_checksum32(oqparam, h5=None):
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum
+

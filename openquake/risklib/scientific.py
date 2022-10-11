@@ -23,6 +23,7 @@ import copy
 import bisect
 import itertools
 import collections
+from pprint import pprint
 from functools import lru_cache
 
 import numpy
@@ -50,7 +51,21 @@ structural+nonstructural_ins structural+contents_ins nonstructural+contents_ins
 structural+nonstructural+contents_ins
 structural_ins nonstructural_ins reinsurance'''.split())
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
-LTI = {lt: i for i, lt in enumerate(LOSSTYPE)}
+LOSSID = {lt: i for i, lt in enumerate(LOSSTYPE)}
+
+
+def _reduce(nested_dic):
+    # reduce lists of floats into empty lists inside a nested dictionary
+    # used for pretty printing purposes
+    out = {}
+    for k, dic in nested_dic.items():
+        if isinstance(dic, list) and not isinstance(dic[0], (str, bytes)):
+            out[k] = []
+        elif isinstance(dic, dict):
+            out[k] = _reduce(dic)
+        else:
+            out[k] = dic
+    return out
 
 
 def pairwise(iterable):
@@ -180,7 +195,6 @@ class VulnerabilityFunction(object):
             self.covs = numpy.array(covs)
         else:
             self.covs = numpy.zeros(self.imls.shape)
-
         for lr, cov in zip(self.mean_loss_ratios, self.covs):
             if lr == 0 and cov > 0:
                 msg = ("It is not valid to define a mean loss ratio = 0 "
@@ -238,14 +252,14 @@ class VulnerabilityFunction(object):
         Compute the survival probability based on the underlying
         distribution.
         """
+        # scipy does not handle correctly the limit case stddev = 0.
+        # In that case, when `mean` > 0 the survival function
+        # approaches to a step function, otherwise (`mean` == 0) we
+        # returns 0
+        if stddev == 0:
+            return numpy.piecewise(
+                loss_ratio, [loss_ratio > mean or not mean], [0, 1])
         if self.distribution_name == 'LN':
-            # scipy does not handle correctly the limit case stddev = 0.
-            # In that case, when `mean` > 0 the survival function
-            # approaches to a step function, otherwise (`mean` == 0) we
-            # returns 0
-            if stddev == 0:
-                return numpy.piecewise(
-                    loss_ratio, [loss_ratio > mean or not mean], [0, 1])
             variance = stddev ** 2.0
             sigma = numpy.sqrt(numpy.log((variance / mean ** 2.0) + 1.0))
             mu = mean ** 2.0 / numpy.sqrt(variance + mean ** 2.0)
@@ -1064,11 +1078,11 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
 # Insured Losses
 #
 
-def insured_losses(losses, deductible, insured_limit):
+def insured_losses(losses, deductible, insurance_limit):
     """
     :param losses: array of ground-up losses
     :param deductible: array of deductible values
-    :param insured_limit: array of insurance limit values
+    :param insurance_limit: array of insurance limit values
 
     Compute insured losses for the given asset and losses, from the point
     of view of the insurance company. For instance:
@@ -1084,13 +1098,14 @@ def insured_losses(losses, deductible, insured_limit):
     assert isinstance(losses, numpy.ndarray), losses
     if not isinstance(deductible, numpy.ndarray):
         deductible = numpy.full_like(losses, deductible)
-    if not isinstance(insured_limit, numpy.ndarray):
-        insured_limit = numpy.full_like(losses, insured_limit)
+    if not isinstance(insurance_limit, numpy.ndarray):
+        insurance_limit = numpy.full_like(losses, insurance_limit)
+    assert (deductible < insurance_limit).all()
     small = losses < deductible
-    big = losses > insured_limit
+    big = losses > insurance_limit
     out = losses - deductible
     out[small] = 0.
-    out[big] = insured_limit[big] - deductible[big]
+    out[big] = insurance_limit[big] - deductible[big]
     return out
 
 
@@ -1104,6 +1119,7 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
         policy_df.set_index('policy'), on='policy', how='inner')
     for lt in policy_df.loss_type.unique():
         if '+' in lt:
+            # add a key like structural+nonstructural to losses_by_lt
             total_losses(asset_df, losses_by_lt, lt)
     for lt, out in list(losses_by_lt.items()):
         if len(out) == 0:
@@ -1115,8 +1131,8 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
         new['variance'] = 0.
         j = new.join(adf, on='aid', how='inner')
         if '+' in lt:
-            values = numpy.sum(
-                j['value-' + ltype].to_numpy() for ltype in lt.split('+'))
+            lst = [j['value-' + ltype].to_numpy() for ltype in lt.split('+')]
+            values = numpy.sum(lst, axis=0)  # shape num_values
         else:
             values = j['value-' + lt].to_numpy()
         losses = j.loss.to_numpy()
@@ -1139,13 +1155,13 @@ def total_losses(asset_df, losses_by_lt, kind):
     losses_by_lt[kind] = _agg([losses_by_lt[lt] for lt in ltypes])
 
 
-def insurance_loss_curve(curve, deductible, insured_limit):
+def insurance_loss_curve(curve, deductible, insurance_limit):
     """
     Compute an insured loss ratio curve given a loss ratio curve
 
     :param curve: an array 2 x R (where R is the curve resolution)
     :param float deductible: the deductible limit in fraction form
-    :param float insured_limit: the insured limit in fraction form
+    :param float insurance_limit: the insured limit in fraction form
 
     >>> losses = numpy.array([3, 20, 101])
     >>> poes = numpy.array([0.9, 0.5, 0.1])
@@ -1153,7 +1169,7 @@ def insurance_loss_curve(curve, deductible, insured_limit):
     array([[ 3.        , 20.        ],
            [ 0.85294118,  0.5       ]])
     """
-    losses, poes = curve[:, curve[0] <= insured_limit]
+    losses, poes = curve[:, curve[0] <= insurance_limit]
     limit_poe = interpolate.interp1d(
         *curve, bounds_error=False, fill_value=1)(deductible)
     return numpy.array([
@@ -1349,7 +1365,20 @@ def return_periods(eff_time, num_losses):
     return U32(periods)
 
 
-def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
+def maximum_probable_loss(losses, return_period, eff_time, sorting_idxs=None):
+    """
+    :returns: Maximum Probable Loss at the given return period
+
+    >>> losses = [1000., 0., 2000., 1500., 780., 900., 1700., 0., 100., 200.]
+    >>> maximum_probable_loss(losses, 2000, 10_000)
+    900.0
+    """
+    return losses_by_period(losses, [return_period], len(losses), eff_time,
+                            sorting_idxs)[0]
+
+
+def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
+                     sorting_idxs=None):
     """
     :param losses: simulated losses
     :param return_periods: return periods of interest
@@ -1382,7 +1411,10 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
             % (num_events, num_losses))
     if eff_time is None:
         eff_time = return_periods[-1]
-    losses = numpy.sort(losses)
+    if sorting_idxs is None:
+        losses = numpy.sort(losses)
+    else:
+        losses = losses[sorting_idxs]
     # num_losses < num_events: just add zeros
     num_zeros = num_events - num_losses
     if num_zeros:
@@ -1433,6 +1465,7 @@ class LossCurvesMapsBuilder(object):
 
 def _agg(loss_dfs, weights=None):
     # average loss DataFrames with fields (eid, aid, variance, loss)
+    # NB: if there are weights the DataFrames are changed!!
     if weights is not None:
         for loss_df, w in zip(loss_dfs, weights):
             loss_df['variance'] *= w
@@ -1476,8 +1509,8 @@ class RiskComputer(dict):
         dic = collections.defaultdict(list)  # lt -> outs
         weights = collections.defaultdict(list)  # lt -> weights
         event = hasattr(haz, 'eid')  # else classical (haz.array)
-        for key, lt in self:
-            rm = self[key, lt]
+        for riskid, lt in self:
+            rm = self[riskid, lt]
             if len(rm.imt_by_lt) == 1:
                 # NB: if `check_risk_ids` raise an error then
                 # this code branch will never run
@@ -1489,7 +1522,7 @@ class RiskComputer(dict):
                 out = rm(lt, self.asset_df, haz, col, rndgen)
             else:  # classical
                 out = rm(lt, self.asset_df, haz.array[self.imtls(imt), 0])
-            weights[lt].append(self.wdic[key, lt])
+            weights[lt].append(self.wdic[riskid, lt])
             dic[lt].append(out)
         out = {}
         for lt in self.minimum_asset_loss:
@@ -1531,6 +1564,10 @@ class RiskComputer(dict):
                    minimum_asset_loss=self.minimum_asset_loss,
                    calculation_mode=self.calculation_mode)
         return dic
+
+    def pprint(self):
+        dic = _reduce(self.todict())
+        pprint(dic)
 
 
 # ####################### Consequences ##################################### #

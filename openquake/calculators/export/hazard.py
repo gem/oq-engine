@@ -268,7 +268,7 @@ def export_uhs_xml(ekey, dstore):
                 investigation_time=oq.investigation_time, **metadata)
             data = []
             for site, curve in zip(sitemesh, uhs):
-                data.append(UHS(curve[str(poe)], Location(site)))
+                data.append(UHS(curve['%.6f' % poe], Location(site)))
             writer.serialize(data)
             fnames.append(fname)
     return sorted(fnames)

@@ -1,11 +1,11 @@
-Event Based
-========================================
+Event Based and Scenarios
+=========================
 
 Scenario risk calculations usually do not pose a performance problem,
-since they involve a single rupture and a limited geography for analysis. 
+since they involve a single rupture and limited geography for analysis. 
 Some event-based risk calculations, however, may involve millions of ruptures
 and exposures spanning entire countries or even larger regions. This section
-offers some practical tips for running large event based risk calculations, 
+offers some practical tips for running large event-based risk calculations, 
 especially ones involving large logic trees, and proposes techniques that might
 be used to make an intractable calculation tractable.
 
@@ -13,10 +13,10 @@ Understanding the hazard
 ------------------------
 
 Event-based calculations are typically dominated by the hazard component
-(unless there are lots of assets aggregated on few hazard sites) and
+(unless there are lots of assets aggregated on a few hazard sites) and
 therefore the first thing to do is to estimate the size of the hazard,
 i.e. the number of GMFs that will be produced. Since we are talking about
-a large calculation, first of all we need reduce it to a size that is 
+a large calculation, first of all, we need to reduce it to a size that is 
 guaranteed to run quickly. The simplest way to do that is to reduce the 
 parameters directly affecting the number of ruptures generated, i.e.
 
@@ -45,9 +45,9 @@ A good start would be to carefully set the parameters
 ``minimum_magnitude`` and ``minimum_intensity``:
 
 - ``minimum_magnitude`` is a scalar or a dictionary keyed by tectonic region;
-  the engine will discard ruptures with magnitudes below the given threshoulds
+  the engine will discard ruptures with magnitudes below the given thresholds
 - ``minimum_intensity`` is a scalar or a dictionary keyed by the intensity
-  measure type; the engine will discard GMFs below the given intensity threshoulds
+  measure type; the engine will discard GMFs below the given intensity thresholds
 
 Choosing reasonable cutoff thresholds with these parameters can significantly
 reduce the size of your computation when there are a large number of 
@@ -57,9 +57,9 @@ a negligible impact on the damage or losses, and thus could be safely discarded.
 region_grid_spacing
 ---------------------
 
-In our experience, the most common error made by out users is to
+In our experience, the most common error made by our users is to
 compute the hazard at the sites of the exposure. The issue is that it
-very possible to have exposures with millions of assets on millions of
+is possible to have exposures with millions of assets on millions of
 distinct hazard sites. Computing the GMFs for millions of sites is
 hard or even impossible (there is a limit of 4 billion rows on the
 size of the GMF table in the datastore).  Even in the cases when
@@ -67,17 +67,17 @@ computing the hazard is possible, then computing the risk starting
 from an extremely large amount of GMFs will likely be impossible, due
 to memory/runtime constraints.
 
-The second most common error is to use an extremely fine grid for the
+The second most common error is using an extremely fine grid for the
 site model. Remember that if you have a resolution of 250 meters, a
 square of 250 km x 250 km will contain one million sites, which is
-definitely too much. The engine when designed when the site models
+definitely too much. The engine was designed when the site models
 had resolutions around 5-10 km, i.e. of the same order of the hazard
 grid, while nowadays the vs30 fields have a much larger resolution.
 
 Both problems can be solved in a simple way by specifying the
 ``region_grid_spacing`` parameter. Make it large enough that the
 resulting number of sites becomes reasonable and you are done.
-You will loose some precision, but that is preferable to not
+You will lose some precision, but that is preferable to not
 being able to run the calculation. You will need to run a sensitivity
 analysis with different values of ``region_grid_spacing`` parameter
 to make sure that you get consistent results, but that's it.
@@ -85,7 +85,7 @@ to make sure that you get consistent results, but that's it.
 Once a ``region_grid_spacing`` is specified, the engine computes the
 convex hull of the exposure sites and builds a grid of hazard sites,
 associating the site parameters from the closest site in the site model
-and discarding sites in region where there are no assets (i.e. more
+and discarding sites in the region where there are no assets (i.e. more
 distant than ``region_grid_spacing * sqrt(2)``). The precise logic
 is encoded in the function
 ``openquake.commonlib.readinput.get_sitecol_assetcol``, if you want
@@ -122,14 +122,14 @@ the risk configuration file, which by default is false. When the flag
 is set to true, then the hazard realizations are collected together
 when computing the risk results and considered as one. This is
 possible only when the weights of the realizations are all equal,
-otherwise the engine raises an error. Collecting the realizations
-makes the calculation of the losses and loss curves much faster and
+otherwise, the engine raises an error. Collecting the realizations
+makes the calculation of the losses and the loss curves much faster and
 more memory efficient. It is the recommended way to proceed when you
 are interested only in mean results.
 
 Note 1: when using sampling, ``collect_rlzs`` is implicitly set to
 ``True``, so if you want to export the individual results per
-realization you must set explictly ``collect_rlzs=false``.
+realization you must set explicitly ``collect_rlzs=false``.
 
 Note 2: ``collect_rlzs`` is not the inverse of the ``individual rlsz``
 flag. The two flags are completely independent, one refers to risk
@@ -147,7 +147,7 @@ models or ground motion models to the hazard or loss estimates,
 collapsing the logic trees into a single branch to reduce
 computational expense is not an option. But before going through the
 effort of trimming the logic trees, there is an interim step that must
-be explored, at least for large regions like the entire continental
+be explored, at least for large regions, like the entire continental
 United States.  This step is to geographically divide the large region
 into logical smaller subregions, such that the contribution to the
 hazard or losses in one subregion from the other subregions is
@@ -220,20 +220,20 @@ The asset loss table
 
 When performing an event based risk calculation the engine
 keeps in memory a table with the losses for each asset and each event,
-for each loss type. It is usually impossible to fully store such table,
+for each loss type. It is usually impossible to fully store such a table,
 because it is extremely large; for instance, for 1 million assets, 1
 million events, 2 loss types and 4 bytes per loss ~8 TB of disk space
 would be required. It is true that many events will produce zero losses
 because of the `maximum_distance` and `minimum_intensity` parameters,
-but still the asset loss table is prohibitively large and for many years
+but still, the asset loss table is prohibitively large and for many years
 could not be stored. In engine 3.8 we made a breakthrough: we decided to
 store a partial asset loss table, obtained by discarding small losses,
 by leveraging on the fact that loss curves for long enough return periods
 are dominated by extreme events, i.e. there is no point in saving all
 the small losses.
 
-To that aim,the engine honors a parameter called
-``minimum_asset_loss`` which determine how many losses are discarded
+To that aim, the engine honours a parameter called
+``minimum_asset_loss`` which determines how many losses are discarded
 when storing the asset loss table. The rule is simple: losses below
 ``minimum_asset_loss`` are discarded. By choosing the threshold
 properly in an ideal world
@@ -245,9 +245,9 @@ properly in an ideal world
 
 It is the job of the user to verify if 1 and 2 are true in the real world.
 He can assess that by playing with the ``minimum_asset_loss`` in a small
-calculation, finding a good value for it, and then extending to the large
-calculation. Clearly it is a matter of compromise: by sacrificing precision
-it is possible to reduce enourmously the size of the stored asset loss table
+calculation, finding a good value for it, and then extending it to the large
+calculation. Clearly, it is a matter of compromise: by sacrificing precision
+it is possible to reduce enormously the size of the stored asset loss table
 and to make an impossible calculation possible.
 
 Starting from engine 3.11 the asset loss table is stored if the user
@@ -255,10 +255,10 @@ specifies
 
 ``aggregate_by = id``
 
-in the job.ini file. In large calculations it extremely easy to run out of
-memory or the make the calculation extremely slow, so we recommend
+in the job.ini file. In large calculations it is extremely easy to run out of
+memory or make the calculation extremely slow, so we recommend
 not to store the asset loss table. The functionality is there for the sole
-purpose of debugging small calculations, for instance to see the effect
+purpose of debugging small calculations, for instance, to see the effect
 of the ``minimum_asset_loss`` approximation at the asset level.
 
 For large calculations usually one is interested in the aggregate loss
@@ -274,7 +274,7 @@ field ``agg_id`` with 4 possible value: 0 for "Residential", 1 for
 
 NB: if the parameter ``aggregate_by`` is not specified, the engine will
 still compute the aggregate loss table but then the ``agg_id`` field will
-have a single value 0 corresponding to the total portfolio losses.
+have a single value of 0 corresponding to the total portfolio losses.
 
 The Probable Maximum Loss (PML) and the loss curves
 ---------------------------------------------------
@@ -282,14 +282,15 @@ The Probable Maximum Loss (PML) and the loss curves
 Given an effective investigation time and a return period,
 the engine is able to compute a PML for each
 aggregation tag. It does so by using the function
-``openquake.risklib.scientific.losses_by_period`` which takes in input
-an array of cumulative losses associated to the aggregation tag, a
-list of or return periods, and the effective investigation time. If
+``openquake.risklib.scientific.losses_by_period`` which takes as input
+an array of cumulative losses associated with the aggregation tag, a
+list of the return periods, and the effective investigation time. If
 there is a single return period the function returns the PML; if there are
 multiple return periods it returns the loss curve. The two concepts
 are essentially the same thing, since a loss curve is just an array of
-PMLs, one for each return period. For instance
+PMLs, one for each return period. 
 
+For instance:
 .. code-block:: python
 
    >>> from openquake.risklib.scientific import losses_by_period
@@ -300,38 +301,73 @@ PMLs, one for each return period. For instance
 
 computes the Probably Maximum Loss at 500 years for the given losses
 with an effective investigation time of 1000 years. The algorithm works
-by ordering the losses (suppose there are E > 1 losses) generating E time
-periods ``eff_time/E, eff_time/(E-1), ... eff_time/1`` and log-interpolating
+by ordering the losses (suppose there are E losses,  E > 1) generating E time
+periods ``eff_time/E, eff_time/(E-1), ... eff_time/1``, and log-interpolating
 the loss at the return period. Of course this works only if the condition
+``eff_time/E < return_period < eff_time`` is respected.
 
-``eff_time/E < return_period < eff_time``
-
-is respected. In this example there are E=16 losses, so the return period
+In this example there are E=16 losses, so the return period
 must be in the range 62.5 .. 1000 years. If the return period is too
 small the PML will be zero
 
 >>> losses_by_period(losses, [50], eff_time=1000)
 array([0.])
 
-while if the return period is outside the investigation range we will
+while if the return period is outside the investigation range, we will
 refuse the temptation to extrapolate and we will return NaN instead:
 
 >>> losses_by_period(losses, [1500], eff_time=1000)
 array([nan])
 
-The rules above are the reason while you will see zeros or NaNs in the
+The rules above are the reason why you will see zeros or NaNs in the
 loss curves generated by the engine sometimes, especially when there are
-too few events: the valid range will be small and some return periods
-may slip outside the range.
+too few events (the valid range will be small and some return periods
+may slip outside the range).
 
-In order to compute aggregate loss curves you must
-set the ``aggregate_by`` parameter in the ``job.ini`` to one or more tags
-over which you wish to perform the aggregation. Your exposure must contain 
-the specified tags with values for each asset. 
-We have an example for Nepal in our event based risk demo.
-The exposure for this demo contains various tags and in particular a geographic
-tag called NAME1 with values "Mid-Western", "Far-Western", "West", "East",
-"Central", and the ``job_eb.ini`` file defines
+Aggregate loss curves
+~~~~~~~~~~~~~~~~~~~~~
+In some cases the computation of the PML is particularly simple and
+you can do it by hand: this happens when the ratio
+``eff_time/return_period`` is an integer. Consider for instance an
+``eff_time=10,000`` of years and ``return_period=2,000`` of years;
+suppose there are the following 10 losses aggregating the commercial
+and residential buildings of an exposure:
+
+>>> import numpy as np
+>>> losses_COM = np.array([123, 0, 400, 0, 1500, 200, 350, 0, 700, 600])
+>>> losses_RES = np.array([0, 800, 200, 0, 500, 1200, 250, 600, 300, 150])
+
+The loss curve associate the highest loss to 10,000 years, the second
+highest to 10,000/2 years, the third highest to 10,000/3 years, the
+fourth highest to 10,000/4 years, the fifth highest to 10,000 / 5 years
+and so on until the lowest loss is associated to 10,000 / 10 years.
+Since the return period is 2,000 = 10,000 / 5 to compute the MPL
+it is enough to take the fifth loss ordered in descending order:
+
+>>> MPL_COM = [1500, 700, 600, 400, 350, 200, 123, 0, 0, 0][4] = 350
+>>> MPL_RES = [1200, 800, 600, 500, 300, 250, 200, 150, 0, 0][4] = 300
+
+Given this algorithm, it is clear why the MPL cannot be additive, i.e.
+MPL(COM + RES) != MPL(COM) + MPL(RES): doing the sums before or
+after the ordering of the losses is different. In this example
+by taking the fifth loss of the sorted sums
+
+>>> sorted(losses_COM + losses_RES, reverse=True)
+[2000, 1400, 1000, 800, 750, 600, 600, 600, 123, 0]
+
+one gets ``MPL(COM + RES) = 750`` which is different from
+``MPL(RES) + MPL(COM) = 350 + 300 = 650``.
+
+The engine is able to compute aggregate loss curves correctly, i.e.
+by doing the sums before the ordering phase. In order to perform
+aggregations, you need to set the ``aggregate_by`` parameter in the
+``job.ini`` by specifying tags over which you wish to perform the
+aggregation. Your exposure must contain the specified tags
+for each asset.  We have an example for Nepal in our event based risk
+demo.  The exposure for this demo contains various tags and in
+particular a geographic tag called NAME_1 with values "Mid-Western",
+"Far-Western", "West", "East", "Central", and the ``job_eb.ini`` file
+defines
 
 ``aggregate_by = NAME_1``
 
@@ -379,7 +415,7 @@ you the mean and quantile loss curves in a format like the following one::
     1.00000E-03,1000,structural,1.15148E+07,4.38439E-01
     
 If you do not set the ``aggregate_by`` parameter
-you will still able to compute the total loss curve 
+you will still be able to compute the total loss curve 
 (for the entire portfolio of assets), and the total average losses.
 
 Aggregating by multiple tags
@@ -426,7 +462,7 @@ the command::
 The lines in this table are associated to the *generalized aggregation ID*,
 ``agg_id`` which is an index going from ``0`` (meaning aggregate assets with
 NAME_1=*Mid-Western* and taxonomy=*Wood*) to ``24`` (meaning aggregate assets
-with NAME_1=*Mid-Western* and taxonomy=*Wood*); moreover ``agg_id=25`` means
+with NAME_1=*Central* and taxonomy=*Concrete*); moreover ``agg_id=25`` means
 full aggregation.
 
 The ``agg_id`` field enters in ``risk_by_event`` and in outputs like
@@ -447,6 +483,9 @@ The exporter (``oq export agg_losses-rlzs``) converts back the ``agg_id``
 to the proper combination of tags; ``agg_id=25``, i.e. full aggregation,
 is replaced with the string ``*total*``.
 
+It is possible to see the ``agg_id`` field with the command
+``$ oq show agg_id``.
+
 By knowing the number of events, the number of aggregation keys and the
 number of loss types, it is possible to give an upper limit to the size
 of ``risk_by_event``. In the demo there are 1703 events, 26 aggregation
@@ -462,6 +501,7 @@ used. In the case of the demo actually only 20,877 rows are nonzero::
           event_id  agg_id  loss_id           loss      variance
    ...
    [20877 rows x 5 columns]
+
 
 Rupture sampling: how does it work?
 ===================================
@@ -511,14 +551,13 @@ occur around 9,000 times and the second rupture (the one with magnitude
 6.5) to occur around 900 times. Clearly the exact numbers will depend on
 the stochastic seed; if we set
 
->>> import numpy.random
->>> numpy.random.seed(42)
+>>> np.random.seed(42)
 
 then we will have (for ``investigation_time = 1``)
 
->>> numpy.random.poisson(rate1 * num_ses * 1)
+>>> np.random.poisson(rate1 * num_ses * 1)
 8966
->>> numpy.random.poisson(rate2 * num_ses * 1)
+>>> np.random.poisson(rate2 * num_ses * 1)
 921
 
 These are the number of occurrences of each rupture in the effective
@@ -876,40 +915,40 @@ with :math:`\mu`=-2 and :math:`\sigma`=.5; then the ground motion values that yo
 would be as follows:
 
 >>> import numpy
->>> numpy.random.seed(42) # fix the seed
->>> gmvs = numpy.random.lognormal(mean=-2.0, sigma=.5, size=1000)
+>>> np.random.seed(42) # fix the seed
+>>> gmvs = np.random.lognormal(mean=-2.0, sigma=.5, size=1000)
 
 As expected, the variability of the values is rather large, spanning
 more than one order of magnitude:
 
->>> gmvs.min(), numpy.median(gmvs), gmvs.max()
+>>> gmvs.min(), np.median(gmvs), gmvs.max()
 (0.026765710489091852, 0.1370582013790309, 0.9290114132955762)
 
 Also mean and standard deviation of the logarithms are very close to
 the expected values :math:`\mu`=-2 and :math:`\sigma`=.5:
 
->>> numpy.log(gmvs).mean()
+>>> np.log(gmvs).mean()
 -1.9903339720888376
->>> numpy.log(gmvs).std()
+>>> np.log(gmvs).std()
 0.4893631038736771
 
 The geometric mean of the values (i.e. the exponential of the mean
 of the logarithms) is very close to the median, as expected for a lognormal
 distribution:
 
->>> numpy.exp(numpy.log(gmvs).mean())
+>>> np.exp(np.log(gmvs).mean())
 0.13664978061122787
 
 All these properties are broken when the ground motion values
 are truncated below the ``minimum_intensity``::
 
->> gmvs[gmvs < .05] = .05
->> numpy.log(gmvs).mean()
--1.9876078473466177
->> numpy.log(gmvs).std()
-0.48280630467779523
->> numpy.exp(numpy.log(gmvs).mean())
-0.13702281319482504
+ >> gmvs[gmvs < .05] = .05
+ >> np.log(gmvs).mean()
+ -1.9876078473466177
+ >> np.log(gmvs).std()
+ 0.48280630467779523
+ >> np.exp(np.log(gmvs).mean())
+ 0.13702281319482504
 
 In this case the difference is minor, but if the number of simulations
 is small and/or the :math:`\sigma` is large the mean and standard
@@ -957,267 +996,6 @@ GMFs it is a geometric mean - which is the same as the median since the
 distribution is lognormal - so you can also call this the hazardlib
 *median* ground motion field.
 
-How the hazard sites are determined
-===================================
-
-There are several ways to specify the hazard sites in an engine calculation.
-
-1. The user can specify the sites directly in the job.ini using the ``sites``
-   parameter (e.g. ``sites = -122.4194 37.7749, -118.2437 34.0522, -117.1611 32.7157``).
-   This method is perhaps most useful when the analysis is limited to a 
-   handful of sites.
-2. Otherwise the user can specify the list of sites in a CSV file
-   (i.e. ``sites_csv = sites.csv``).
-3. Otherwise the user can specify a grid via the ``region`` and
-   ``region_grid_spacing`` parameters.
-4. Otherwise the sites can be inferred from the exposure, if any,
-   in two different ways:
-   
-   1.    if ``region_grid_spacing`` is specified, a grid is implicitly
-         generated from the convex hull of the exposure and used
-   2.    otherwise the locations of the assets are used as hazard sites
-   
-5. Otherwise the sites can be inferred from the site model file, if any.
-
-It must be noted that the engine rounds longitudes and latitudes	
-to 5 decimal places (or approximately 1 meter spatial resolution),
-so sites that differ only at the 6th decimal place or beyond will
-end up being considered as duplicated sites by the engine, and 
-this will be flagged as an error.
-
-Having determined the sites, a ``SiteCollection`` object is generated
-by associating the closest parameters from the site model (if any)
-or using the global site parameters, if any.
-If the site model is specified, but the closest site parameters are 
-too distant from the sites, a warning is logged for each site.
-
-There are a number of error situations:
-
-1. If both site model and global site parameters are missing, the engine
-   raises an error.
-2. If both site model and global site parameters are specified, the
-   engine raises an error.
-3. Specifying both the sites.csv and a grid is an error.
-4. Specifying both the sites.csv and a site_model.csv is an error.
-   If you are in such situation you should consider using the command
-   ``oq prepare_site_model``
-   to manually prepare a site model on the location of the sites.
-5. Having duplicates (i.e. rows with identical lon, lat up to 5 digits)
-   in the site model is an error.
-
-If you want to compute the hazard on the locations specified by the site model
-and not on the exposure locations, you can split the calculation in two files:
-``job_haz.ini`` containing the site model and ``job_risk.ini`` containing the
-exposure. Then the risk calculator will find the closest hazard to each
-asset and use it. However, if the closest hazard is more distant than the
-``asset_hazard_distance`` parameter (default 15 km) an error is raised.
-
-Scenarios from ShakeMaps
-========================
-
-Beginning with version 3.1, the engine is able to perform `scenario_risk`
-and `scenario_damage` calculations starting from the GeoJSON feed for
-ShakeMaps_ provided by the United States Geological Survey (USGS). 
-Furthermore, starting from version 3.12 it is possible to use 
-ShakeMaps from other sources like the local filesystem or a custom URL.
-
-.. _ShakeMaps: https://earthquake.usgs.gov/data/shakemap/
-
-Running the Calculation
-=======================
-
-In order to enable this functionality one has to prepare a parent
-calculation containing the exposure and risk functions for the
-region of interest, say Peru. To that aim the user will need
-to write a `prepare_job.ini` file like this one::
-
-   [general]
-   description = Peru - Preloading exposure and vulnerability
-   calculation_mode = scenario
-   exposure_file = exposure_model.xml
-   structural_vulnerability_file = structural_vulnerability_model.xml
-
-By running the calculation
-
-  ``$ oq engine --run prepare_job.ini``
-
-The exposure and the risk functions will be imported in the datastore.
-
-This example only includes vulnerability functions for the loss type
-``structural``, but one could also have in this preparatory job file the 
-functions for nonstructural components and contents, and occupants, 
-or fragility functions if damage calculations are of interest.
-
-It is essential that each fragility/vulnerability function in the risk
-model should be conditioned on one of the intensity measure types that 
-are supported by the ShakeMap service – MMI, PGV, PGA, SA(0.3), SA(1.0), 
-and SA(3.0). If your fragility/vulnerability functions involves an intensity
-measure type which is not supported by the ShakeMap system
-(for instance SA(0.6)) the calculation will terminate with an error.
-
-Let's suppose that the calculation ID of this 'pre' calculation is 1000.
-We can now run the risk calculation starting from a ShakeMap.
-For that, one need a `job.ini` file like the following::
-
-   [general]
-   description = Peru - 2007 M8.0 Pisco earthquake losses
-   calculation_mode = scenario_risk
-   number_of_ground_motion_fields = 10
-   truncation_level = 3
-   shakemap_id = usp000fjta
-   spatial_correlation = yes
-   cross_correlation = yes
-
-This example refers to the 2007 Mw8.0 Pisco earthquake in Peru
-(see https://earthquake.usgs.gov/earthquakes/eventpage/usp000fjta#shakemap).
-The risk can be computed by running the risk job file against the prepared
-calculation::
-
-  $ oq engine --run job.ini --hc 1000
-
-Starting from version 3.12 it is also possible to specify the following sources
-instead of a `shakemap_id`::
-
-   # (1) from local files:
-   shakemap_uri = {
-         "kind": "usgs_xml",
-         "grid_url": "relative/path/file.xml",
-         "uncertainty_url": "relative/path/file.xml"
-         }
-
-   # (2) from remote files:
-   shakemap_uri = {
-         "kind": "usgs_xml",
-         "grid_url": "https://url.to/grid.xml",
-         "uncertainty_url": "https://url.to/uncertainty.zip"
-         }
-   
-   # (3) both files in a single archive
-   # containing grid.xml, uncertainty.xml:
-   shakemap_uri = {
-         "kind": "usgs_xml",
-         "grid_url": "relative/path/grid.zip" 
-         }
-
-While it is also possible to define absolute paths, it is advised not to do
-so since using absolute paths will make your calculation not portable
-across different machines.
-
-The files must be valid `.xml` USGS ShakeMaps `(1)`. One or both files can
-also be passed as `.zip` archives containing a single valid xml ShakeMap
-`(2)`. If both files are in the same `.zip`, the archived files `must` be
-named ``grid.xml`` and ``uncertainty.xml``.
-
-Also starting from version 3.12 it is possible to use ESRI Shapefiles
-in the same manner as ShakeMaps. Polygons define areas with the same
-intensity levels and assets/sites will be associated to a polygon if
-contained by the latter. Sites outside of a polygon will be
-discarded. Shapefile inputs can be specified similar to ShakeMaps::
-
-   shakemap_uri = {
-      "kind": "shapefile",
-      "fname": "path_to/file.shp"
-   }
-
-It is only necessary to specify one of the available files, and the rest of the files
-will be expected to be in the same location. It is also possible to have them
-contained together in a `*.zip` file.
-There are at least a `*.shp`-main file and a `*.dbf`-dBASE file required. The 
-record field names, intensity measure types and units all need to be the same 
-as with regular USGS ShakeMaps.
-
-Irrespective of the input, the engine will perform the following operations:
-
-1. download the ShakeMap and convert it into a format
-   suitable for further processing, i.e. a ShakeMaps array with lon, lat fields
-2. the ShakeMap array will be associated to the hazard sites in the region
-   covered by the ShakeMap
-3. by using the parameters ``truncation_level`` and
-   ``number_of_ground_motion_fields`` a set of ground motion fields (GMFs)
-   following the truncated Gaussian distribution will be generated and stored
-   in the datastore
-4. a regular risk calculation will be performed by using such GMFs and the
-   assets within the region covered by the shakemap.
-
-Correlation
-===========
-
-By default the engine tries to compute both the spatial correlation and the
-cross correlation between different intensity measure types. Please note that 
-if you are using MMI as intensity measure type in your vulnerability model,
-it is not possible to apply correlations since those are based on physical measures.
-
-For each kind of correlation you have three choices, that you can set in the 
-`job.ini`, for a total of nine combinations::
-
-- spatial_correlation = yes, cross_correlation = yes  # the default
-- spatial_correlation = no, cross_correlation = no   # disable everything
-- spatial_correlation = yes, cross_correlation = no
-- spatial_correlation = no, cross_correlation = yes
-- spatial_correlation = full, cross_correlation = full
-- spatial_correlation = yes, cross_correlation = full
-- spatial_correlation = no, cross_correlation = full
-- spatial_correlation = full, cross_correlation = no
-- spatial_correlation = full, cross_correlation = yes
-
-`yes` means using the correlation matrix of the Silva-Horspool_ paper;
-`no` mean using no correlation; `full` means using an 
-all-ones correlation matrix.
-
-.. _Silva-Horspool: https://onlinelibrary.wiley.com/doi/abs/10.1002/eqe.3154
-
-Apart from performance considerations, disabling either the spatial correlation 
-or the cross correlation (or both) might be useful to see how significant the 
-effect of the correlation is on the damage/loss estimates.
-
-In particular, due to numeric errors, the spatial correlation matrix - that
-by construction contains only positive numbers - can still produce small
-negative eigenvalues (of the order of -1E-15) and the calculation fails
-with an error message saying that the correlation matrix is not positive
-defined. Welcome to the world of floating point approximation!
-Rather than magically discarding negative eigenvalues the engine raises
-an error and the user has two choices: either disable the spatial correlation
-or reduce the number of sites because that can make the numerical instability
-go away. The easiest way to reduce the number of sites is setting a
-`region_grid_spacing` parameter in the `prepare_job.ini` file, then the
-engine will automatically put the assets on a grid. The larger the grid
-spacing, the fewer the number of points, and the closer the calculation
-will be to tractability.
-
-Performance Considerations
-==========================
-
-The performance of the calculation will be crucially determined by the number
-of hazard sites. For instance, in the case of the Pisco earthquake
-the ShakeMap has 506,142 sites, which is a significantly large number of sites.
-However, the extent of the ShakeMap in longitude and latitude is about 6
-degrees, with a step of 10 km the grid contains around 65 x 65 sites;
-most of the sites are without assets because most of the
-grid is on the sea or on high mountains, so actually there are
-around ~500 effective sites. Computing a correlation matrix of size
-500 x 500 is feasible, so the risk computation can be performed.
-
-Clearly in situations in which the number of hazard sites is too
-large, approximations will have to be made such as using a larger
-`region_grid_spacing`.  Disabling spatial AND cross correlation makes
-it possible run much larger calculations. The performance can be
-further increased by not using a ``truncation_level``.
-
-When applying correlation, a soft cap on the size of the calculations
-is defined. This is done and modifiable through the parameter
-``cholesky_limit`` which refers to the number of sites multiplied by
-the number of intensity measure types used in the vulnerability
-model. Raising that limit is at your own peril, as you might run out
-of memory during calculation or may encounter instabilities in the
-calculations as described above.
-
-If the ground motion values or the standard deviations are particularly
-large, the user will get a warning about suspicious GMFs.
-
-Moreover, especially for old ShakeMaps, the USGS can provide them in a
-format that the engine cannot read.
-
-Thus, this feature is not expected to work in all cases.
 
 Extended consequences
 =====================
@@ -1548,6 +1326,693 @@ Internally both the first usage and the second usage are treated in
 the same way, since the first usage is a special case of the second
 when all the weights are equal to 1.
 
+Correlation of Ground Motion Fields
+=========================================
+
+There are multiple different kind of correlation on the engine, so it
+is extremely easy to get confused. Here I will list all possibilities,
+in historical order.
+
+1. Spatial correlation of ground motion fields has been a feature of
+   the engine from day one. The available models are JB2009 and HM2018.
+2. Cross correlation in ShakeMaps has been available for a few years.
+   The model used there is hard-coded an the user cannot change it,
+   only disable it. The models list below (3. and 4.) *have no effect
+   on ShakeMaps*.
+3. Since version 3.13 the engine provides the BakerJayaram2008 cross
+   correlation model, however at the moment it is used only in the conditional
+   spectrum calculator.
+4. Since version 3.13 the engine provides the GodaAtkinson2009 cross
+   correlation model and the FullCrossCorrelation model which can be
+   used in scenario and event based calculations.
+
+Earthquake theory tells us that ground motion fields depend on two
+different lognormal distributions with parameters (:math:`\mu`,
+:math:`\tau`) and (:math:`\mu`, :math:`\phi`) respectively, which are
+determined by the GMPE (Ground Motion Prediction Equal). Given a
+rupture, a set of M intensity measure types and a collection of N
+sites, the parameters :math:`\mu`, :math:`\tau` and :math:`\phi` are
+arrays of shape (M, N). :math:`\mu` is the mean of the logarithms and
+:math:`\tau` the between-event standard deviation, associated to the
+cross correlation, while :math:`\phi` is the within-event standard
+deviation, associated to the spatial correlation. math:`\tau` and
+:math:`\phi` are normally N-independent, i.e.  each array of shape
+(M, N) actually contains N copies of the same M values read from the
+coefficient table of the GMPE.
+
+In the OpenQuake engine each rupture has associated a random seed
+generated from the parameter ``ses_seed`` given in the job.ini file,
+therefore given a fixed number E of events it is possible to generate
+a deterministic distribution of ground motion fields, i.e. an array of
+shape (M, N, E). Technically such feature is implemented in the class
+``openquake.hazardlib.calc.gmf.GmfComputer``. The algorithm used there
+is to generate two arrays of normally distributed numbers called
+:math:`\epsilon_\tau` (of shape (M, E)) and :math:`\epsilon_\phi` (of
+shape (M, N, E)), one using the between-event standard deviation
+:math:`\tau` and the other using the within-event standard deviation
+:math:`\phi`, while keeping the same mean :math:`\mu`. Then the ground
+motion fields are generated as an array of shape (M, N, E) with the
+formula
+
+.. math::
+
+  gmf = exp(\mu + crosscorrel(\epsilon_\tau) + spatialcorrel(\epsilon\phi))
+
+The details depend on the form of the cross correlation model and of
+the spatial correlation model and you have to study the source code if
+you really want to understand how it works, in particular how the
+correlation matrices are extracted from the correlation models. By
+default, if no cross correlation nor spatial correlation are
+specified, then there are no correlation matrices and
+:math:`crosscorrel(\epsilon_\tau)` and
+:math:`spatialcorrel(\epsilon\phi)` are computed by using
+``scipy.stats.truncnorm``. Otherwise
+``scipy.stats.multivariate_normal`` with a correlation
+matrix of shape (M, M) is used for cross correlation and
+``scipy.stats.multivariate_normal`` distribution with a
+matrix of shape (N, N) is used for spatial correlation. Notice that the
+truncation feature is lost if you use correlation, since scipy does
+not offer at truncated multivariate_normal distribution. Not truncating
+the normal distribution can easily generated non-physical fields, but
+even if the truncation is on it is very possible to generate exceedingly
+large ground motion fields, so the user has to be *very* careful.
+
+Correlation is important because its presence normally causes the risk to
+increase, i.e. ignoring the correlation will under-estimate
+the risk. The best way to play with the correlation is to consider a
+scenario_risk calculation with a single rupture and to change the
+cross and spatial correlation models. Possibilities are to specify
+in the job.ini all possible combinations of
+
+cross_correlation = FullCrossCorrelation
+cross_correlation = GodaAtkinson2009
+ground_motion_correlation_model = JB2009
+ground_motion_correlation_model = HM2018
+
+including removing one or the other or all correlations.
+
+
+Scenarios from ShakeMaps
+========================
+
+Beginning with version 3.1, the engine is able to perform `scenario_risk`
+and `scenario_damage` calculations starting from the GeoJSON feed for
+ShakeMaps_ provided by the United States Geological Survey (USGS). 
+Furthermore, starting from version 3.12 it is possible to use 
+ShakeMaps from other sources like the local filesystem or a custom URL.
+
+.. _ShakeMaps: https://earthquake.usgs.gov/data/shakemap/
+
+Running the Calculation
+-----------------------
+
+In order to enable this functionality one has to prepare a parent
+calculation containing the exposure and risk functions for the
+region of interest, say Peru. To that aim the user will need
+to write a `prepare_job.ini` file like this one::
+
+   [general]
+   description = Peru - Preloading exposure and vulnerability
+   calculation_mode = scenario
+   exposure_file = exposure_model.xml
+   structural_vulnerability_file = structural_vulnerability_model.xml
+
+By running the calculation
+
+  ``$ oq engine --run prepare_job.ini``
+
+The exposure and the risk functions will be imported in the datastore.
+
+This example only includes vulnerability functions for the loss type
+``structural``, but one could also have in this preparatory job file the 
+functions for nonstructural components and contents, and occupants, 
+or fragility functions if damage calculations are of interest.
+
+It is essential that each fragility/vulnerability function in the risk
+model should be conditioned on one of the intensity measure types that 
+are supported by the ShakeMap service – MMI, PGV, PGA, SA(0.3), SA(1.0), 
+and SA(3.0). If your fragility/vulnerability functions involves an intensity
+measure type which is not supported by the ShakeMap system
+(for instance SA(0.6)) the calculation will terminate with an error.
+
+Let's suppose that the calculation ID of this 'pre' calculation is 1000.
+We can now run the risk calculation starting from a ShakeMap.
+For that, one need a `job.ini` file like the following::
+
+   [general]
+   description = Peru - 2007 M8.0 Pisco earthquake losses
+   calculation_mode = scenario_risk
+   number_of_ground_motion_fields = 10
+   truncation_level = 3
+   shakemap_id = usp000fjta
+   spatial_correlation = yes
+   cross_correlation = yes
+
+This example refers to the 2007 Mw8.0 Pisco earthquake in Peru
+(see https://earthquake.usgs.gov/earthquakes/eventpage/usp000fjta#shakemap).
+The risk can be computed by running the risk job file against the prepared
+calculation::
+
+  $ oq engine --run job.ini --hc 1000
+
+Starting from version 3.12 it is also possible to specify the following sources
+instead of a `shakemap_id`::
+
+   # (1) from local files:
+   shakemap_uri = {
+         "kind": "usgs_xml",
+         "grid_url": "relative/path/file.xml",
+         "uncertainty_url": "relative/path/file.xml"
+         }
+
+   # (2) from remote files:
+   shakemap_uri = {
+         "kind": "usgs_xml",
+         "grid_url": "https://url.to/grid.xml",
+         "uncertainty_url": "https://url.to/uncertainty.zip"
+         }
+   
+   # (3) both files in a single archive
+   # containing grid.xml, uncertainty.xml:
+   shakemap_uri = {
+         "kind": "usgs_xml",
+         "grid_url": "relative/path/grid.zip" 
+         }
+
+While it is also possible to define absolute paths, it is advised not to do
+so since using absolute paths will make your calculation not portable
+across different machines.
+
+The files must be valid `.xml` USGS ShakeMaps `(1)`. One or both files can
+also be passed as `.zip` archives containing a single valid xml ShakeMap
+`(2)`. If both files are in the same `.zip`, the archived files `must` be
+named ``grid.xml`` and ``uncertainty.xml``.
+
+Also starting from version 3.12 it is possible to use ESRI Shapefiles
+in the same manner as ShakeMaps. Polygons define areas with the same
+intensity levels and assets/sites will be associated to a polygon if
+contained by the latter. Sites outside of a polygon will be
+discarded. Shapefile inputs can be specified similar to ShakeMaps::
+
+   shakemap_uri = {
+      "kind": "shapefile",
+      "fname": "path_to/file.shp"
+   }
+
+It is only necessary to specify one of the available files, and the rest of the files
+will be expected to be in the same location. It is also possible to have them
+contained together in a `*.zip` file.
+There are at least a `*.shp`-main file and a `*.dbf`-dBASE file required. The 
+record field names, intensity measure types and units all need to be the same 
+as with regular USGS ShakeMaps.
+
+Irrespective of the input, the engine will perform the following operations:
+
+1. download the ShakeMap and convert it into a format
+   suitable for further processing, i.e. a ShakeMaps array with lon, lat fields
+2. the ShakeMap array will be associated to the hazard sites in the region
+   covered by the ShakeMap
+3. by using the parameters ``truncation_level`` and
+   ``number_of_ground_motion_fields`` a set of ground motion fields (GMFs)
+   following the truncated Gaussian distribution will be generated and stored
+   in the datastore
+4. a regular risk calculation will be performed by using such GMFs and the
+   assets within the region covered by the shakemap.
+
+Correlation
+-----------
+
+By default the engine tries to compute both the spatial correlation and the
+cross correlation between different intensity measure types. Please note that 
+if you are using MMI as intensity measure type in your vulnerability model,
+it is not possible to apply correlations since those are based on physical measures.
+
+For each kind of correlation you have three choices, that you can set in the 
+`job.ini`, for a total of nine combinations::
+
+- spatial_correlation = yes, cross_correlation = yes  # the default
+- spatial_correlation = no, cross_correlation = no   # disable everything
+- spatial_correlation = yes, cross_correlation = no
+- spatial_correlation = no, cross_correlation = yes
+- spatial_correlation = full, cross_correlation = full
+- spatial_correlation = yes, cross_correlation = full
+- spatial_correlation = no, cross_correlation = full
+- spatial_correlation = full, cross_correlation = no
+- spatial_correlation = full, cross_correlation = yes
+
+`yes` means using the correlation matrix of the Silva-Horspool_ paper;
+`no` mean using no correlation; `full` means using an 
+all-ones correlation matrix.
+
+.. _Silva-Horspool: https://onlinelibrary.wiley.com/doi/abs/10.1002/eqe.3154
+
+Apart from performance considerations, disabling either the spatial correlation 
+or the cross correlation (or both) might be useful to see how significant the 
+effect of the correlation is on the damage/loss estimates.
+
+In particular, due to numeric errors, the spatial correlation matrix - that
+by construction contains only positive numbers - can still produce small
+negative eigenvalues (of the order of -1E-15) and the calculation fails
+with an error message saying that the correlation matrix is not positive
+defined. Welcome to the world of floating point approximation!
+Rather than magically discarding negative eigenvalues the engine raises
+an error and the user has two choices: either disable the spatial correlation
+or reduce the number of sites because that can make the numerical instability
+go away. The easiest way to reduce the number of sites is setting a
+`region_grid_spacing` parameter in the `prepare_job.ini` file, then the
+engine will automatically put the assets on a grid. The larger the grid
+spacing, the fewer the number of points, and the closer the calculation
+will be to tractability.
+
+Performance Considerations
+--------------------------
+
+The performance of the calculation will be crucially determined by the number
+of hazard sites. For instance, in the case of the Pisco earthquake
+the ShakeMap has 506,142 sites, which is a significantly large number of sites.
+However, the extent of the ShakeMap in longitude and latitude is about 6
+degrees, with a step of 10 km the grid contains around 65 x 65 sites;
+most of the sites are without assets because most of the
+grid is on the sea or on high mountains, so actually there are
+around ~500 effective sites. Computing a correlation matrix of size
+500 x 500 is feasible, so the risk computation can be performed.
+
+Clearly in situations in which the number of hazard sites is too
+large, approximations will have to be made such as using a larger
+`region_grid_spacing`.  Disabling spatial AND cross correlation makes
+it possible run much larger calculations. The performance can be
+further increased by not using a ``truncation_level``.
+
+When applying correlation, a soft cap on the size of the calculations
+is defined. This is done and modifiable through the parameter
+``cholesky_limit`` which refers to the number of sites multiplied by
+the number of intensity measure types used in the vulnerability
+model. Raising that limit is at your own peril, as you might run out
+of memory during calculation or may encounter instabilities in the
+calculations as described above.
+
+If the ground motion values or the standard deviations are particularly
+large, the user will get a warning about suspicious GMFs.
+
+Moreover, especially for old ShakeMaps, the USGS can provide them in a
+format that the engine cannot read.
+
+Thus, this feature is not expected to work in all cases.
+
+
+Reinsurance calculations
+========================
+
+Starting from engine 3.16 reinsurance loss estimates for traditional property 
+contracts are available for event-based and scenario risk calculations. 
+
+The current implementation considers both proportional and
+non-proportional treaties, with multiple layers and
+combinations for different reinsurance programmes.
+
+**Proportional treaties (Pro-Rata)**
+
+    - Quota Share
+    - Surplus
+    - Facultative
+
+**Non-proportional treaties**
+
+    - Working excess of loss per risk, WXL/R (``wxlr``).
+        The unit of loss under this treaty is the "risk". The engine
+        aggregates the losses per "risk" at the policy level, which
+        can include single or multiple assests.
+    - Catastrophic excess of loss per event, CatXL (``catxl``). 
+        The unit of loss under this treaty is the "event".
+
+Assumptions for *non-proportional* treaties:
+
+    - When combined with *proportional* treaties, the
+      *non-proportional* layers are applied over the net loss
+      retention coming from the proportional layers:
+
+            - Proportional layers + WXL/R
+            - Proportional layers + CatXL
+        
+      NOTE: The CatXL is applied over the net loss retention per event
+      coming from the proportional layers, i.e., it includes the
+      overspill losses.  The overspill losses refer to the excess of
+      loss generated by events that exceed the maximum cession per
+      event ("max_cession_event") of each proportional treaty and that
+      are bared by the ceeding company.
+
+    - When combining multiple layers of *non-proportional* treaties,
+      first the ``wxlr`` are estimated, and then the successive layers
+      of CatXL are applied over the net loss retention.
+
+Reinsurance calculations provide, in addition to the ground up losses, 
+the losses allocated to different treaties  during a single event or 
+during multiple events over a given time window.
+Outputs include average losses and aggregated loss curves at policy and 
+portfolio level for the retention and cession under the different treaties.
+
+Input files
+------------
+
+To run reinsurance calculations, in addition to the required files for
+performing event-based or scenario risk calculations, it is required to adjust
+the exposure information, and to include two additional files:
+
+    1. Insurance and reinsurance information: an ``.xml`` file defining the
+       insurance and reinsurance treaties (e.g., "reinsurance.xml").
+    2. Policy information: a ``.csv`` file with details of each policy
+       indicated in the exposure model and the associated reinsurance
+       treaties (e.g., "policy.csv").
+
+
+Exposure file
+~~~~~~~~~~~~~~
+
+The exposure input file (csv and xml with metadata) needs to be adjusted
+to include a ``policy`` tag that indicates the type of policy 
+(and therefore the reinsurance contracts) associated to each asset.
+
+Policies can be defined for single or multiple assets. When multiple assets 
+are allocated to the same policy, losses are aggregated at the policy level
+before applying the insurance and reinsurance deductions.
+
+Below we present an example of an exposure model considering the
+policy information and its associated metadata:
+
+``exposure_model.csv``
+
+    +-----+-----------+---------+-----------+---------+-------------+---------+
+    | id  | lon       | lat     | taxonomy  | number  | structural  | policy  |
+    +=====+===========+=========+===========+=========+=============+=========+
+    | a1  | -122      | 38.113  | tax1      | 1       | 15000       | pol_1   |
+    +-----+-----------+---------+-----------+---------+-------------+---------+
+    | a2  | -122.114  | 38.113  | tax1      | 1       | 10000       | pol_2   |
+    +-----+-----------+---------+-----------+---------+-------------+---------+
+    | a3  | -122.57   | 38.113  | tax2      | 1       | 30000       | pol_3   |
+    +-----+-----------+---------+-----------+---------+-------------+---------+
+    | a4  | -122      | 38      | tax1      | 1       | 85000       | pol_4   |
+    +-----+-----------+---------+-----------+---------+-------------+---------+
+    | a5  | -122      | 37.91   | tax3      | 1       | 50700       | pol_4   |
+    +-----+-----------+---------+-----------+---------+-------------+---------+
+    | a6  | -122      | 38.225  | tax4      | 1       | 20800       | pol_4   |
+    +-----+-----------+---------+-----------+---------+-------------+---------+
+    | a7  | -121.886  | 38.113  | tax1      | 1       | 77000       | pol_4   |
+    +-----+-----------+---------+-----------+---------+-------------+---------+
+
+``exposure.xml``
+
+.. code-block:: xml
+
+    <exposureModel id="ex1" category="buildings" taxonomySource="GEM taxonomy">
+        <description>exposure model</description>
+        <conversions>
+        <costTypes>
+            <costType name="structural" type="aggregated" unit="USD"/>
+        </costTypes>
+        </conversions>
+        <tagNames>policy</tagNames>
+        <assets>
+        exposure_model.csv
+        </assets>
+    </exposureModel>
+    </nrml>
+
+This example presents 7 assets (a1 to a7) with 4 associated policies
+(pol_1 to pol_4).  Notice that the column ``policy`` is mandatory, as
+well as the line ``<tagNames>policy</tagNames>`` in
+the xml. Additional tags can be included as needed.
+
+Insurance reinsurance information (``reinsurance.xml``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The insurance and reinsurance information is defined by a ``reinsurance.xml`` 
+that includes the metadata and treaty characteristics for each treaty
+specified in the policy information. 
+
+The following example facilitates the understanding of the 
+input file:
+
+.. code-block:: xml
+
+  <?xml version="1.0" encoding="UTF-8"?>
+  <nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+        xmlns:gml="http://www.opengis.net/gml">
+    <reinsuranceModel>
+      <description>reinsurance model</description>
+
+      <fieldMap>
+        <field oq="deductible" input="Deductible" />
+        <field oq="liability" input="Limit" />
+        
+        <field input="QuotaShare" type="prop" max_cession_event="250" />
+        <field input="Surplus" type="prop" max_cession_event="500" />
+
+        <field input="WXL/R" type="wxlr" deductible="200" limit="1000" />
+        <field input="CatXL1" type="catxl" deductible="500" limit="2000" />
+        <field input="CatXL2" type="catxl" deductible="100" limit="750" />
+      </fieldMap>
+
+    <policies>policy.csv</policies>
+
+    </reinsuranceModel>
+  </nrml>
+
+**reinsurance.xml parameters:**
+The reinsurance information must include, at least, a ``<description>`` and  
+a list of files that contain the ``<policies>``. The ``<fieldMap>`` block 
+is used to define the reinsurance treaties and their parameters.
+
+The ``oq`` and ``input`` parameters are used to specify the *key* used
+in the engine (``oq``) and its equivalent column header in the policy
+file (``input``).  All reinsurance calculations must include, at
+least, the insurance characteristics of each policy: deductible and
+liability. Then, the definition of reinsurance treaties depends on the
+treaty type: proportional or non proportional.
+
+*Proportional* treaties are identified by the parameter
+``type="prop"``.  The fraction of losses ceeded to each treaty is
+specified for each policy covered by the treaty, and the retention is
+calculated as 1 minus all the fractions specified in the multiple
+layers of proportional treaties. For each proportional treaty it is
+possible to define the ``max_cession_event``.
+
+*Non-proportional* treaties are identified by the parameter
+``type="wxlr"`` or ``type="catxl"``. For each treaty it is required to
+indicate the ``deductible`` and ``limit``.
+
+- **deductible**: the amount (economic value) that the insurer will
+  "deduct" from the ground up losses before paying up to its policy
+  limits. The claim is calculated as ``claim = ground_up_loss -
+  deductible`` The units of the deductible must be compatible with
+  the units indicated in the exposure model (e.g. USD dollars or
+  Euros).
+
+- **liability**: the maximum economic amount that can be covered by
+    the insurance, according to the policy characteristics. The
+    liability is also known as limit or maximum coverage.
+
+- **type**: parameter that specifies the type of treaty. There are
+    three supported types: ``prop`` (for proportional treaties),
+    ``wxlr``, or ``catxl``.
+
+- **max_cession_event**: the maximum cession per event is an optional
+  parameter for *proportional* reinsurance treaties. It refers to the
+  maximum cession accepted by the reinsurance company for the
+  aggregated losses produced by a single event.  If the aggregated
+  losses exceed this threshold, then the cession in excess is reported
+  as an ``overspill``.
+
+- **deductible**: only applicable to *non-proportional* treaties, the
+  maximum retention (also known as "first loss") is
+  the limit above which the reinsurer becomes liable for losses up
+  to the upper limit of cover.
+
+- **limit**: in *non-proportional* treaties it refers to the upper
+  limit of cover or ceiling.  The *reinsurance_cover* is the amount
+  between the ``deductible`` (deductible) and the upper limit of
+  cover.
+
+*Note: the current engine implementation does not support an "annual
+aggregate limit" for non-proportional reinsurance treaties.*
+
+Policy information (``policy.csv``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The policy input file indicates, for each policy, the insurance values 
+(deductible and liability), as well as the reinsurance contracts associated 
+with each policy present in the exposure model.
+
+For **proportional** treaties, the values indicated in each columns refer
+to the fraction of cession under the reinsurance treaty. On the other hand, 
+for **non-proportional** treaties, the values are indicates as 1 for policies
+covered within the treaty and zero when they are not part of the treaty.
+
+The table below presents an example of the four policies indicated in the example
+of the exposure model and the reinsurance presented above:
+
+``policy.csv``
+
+    +---------+------------+-------------+------------+-----------+-------+---------+---------+
+    | policy  | Limit      | Deductible  | QuotaShare | Surplus   | WXLR  | CatXL1  | CatXL2  |
+    +=========+============+=============+============+===========+=======+=========+=========+
+    | pol_1   | 2000       | 400         | 0.1        | 0         | 1     | 1       | 0       |
+    +---------+------------+-------------+------------+-----------+-------+---------+---------+
+    | pol_2   | 1000       | 200         | 0.3        | 0         | 1     | 1       | 0       |
+    +---------+------------+-------------+------------+-----------+-------+---------+---------+
+    | pol_3   | 1000       | 100         | 0          | 0         | 1     | 1       | 0       |
+    +---------+------------+-------------+------------+-----------+-------+---------+---------+
+    | pol_4   | 2000       | 500         | 0          | 0.5       | 0     | 0       | 1       |
+    +---------+------------+-------------+------------+-----------+-------+---------+---------+
+
+The ``policy`` column must contain the same identifiers as the ones specified
+by the ``policy`` field in the exposure model.
+
+In this example the ``Limit`` corresponds to the ``liability`` of each policy, while
+the ``Deductible`` refers to the ``deductible`` in the engine. Both columns indicate
+the absolute values using the same units as the exposed values in the exposure model.
+There are two proportional reinsurance treaties (namely ``QuotaShare`` and ``Surplus``),
+and the values indicated in each column represent the fraction of cession under each treaty.
+For example, for "pol_1" the "QuotaShare" ceeds 0.1 of the losses and there is no cession
+under the "Surplus" treaty; therefore the retention corresponding to the proportional 
+treaties for "pol_1" will be (1 - 0.1 - 0. = 0.9).
+In the case of non-proportional treaties, "pol_1" is allocated to the ``WXLR``
+(an excess of loss per risk) treaty, and to the ``CatXL1`` (a catastrophic excess of
+loss per event) treaty. This policy is not covered by the ``CatXL2`` treaty.
+
+Configuration file ``job.ini``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Reinsurance losses can be calculated for event-based and scenario risk calculations.
+To do so, the configuration file, ``job.in``, needs to specify the parameters
+presented below, in addition to the parameters generally indicated for these type of 
+calculations::
+
+	[risk_calculation]
+	aggregate_by = policy
+	reinsurance_file = {'structural+contents': 'reinsurance.xml'}
+	total_losses = structural+contents
+
+**Additional comments:**
+
+- ``aggregate_by``: it is possible to define multiple aggregation keys.
+    However, for reinsurance calculations the ``policy`` key must be present,
+    otherwise an error message will be raised.
+
+- ``reinsurance_file``: This dictionary associates the reinsurance information
+    to a given the loss_type (the engine supports structural, nonstructural, 
+    contents or its sum). The insurance and reinsurance calculations are applied 
+    over the indicated loss_types, i.e. to the sum of the ground up losses 
+    associated to the specified loss_types.
+
+    *NOTE: The current implementation works only with a single reinsurance file.*
+
+- ``total_losses``: (or total exposed value) needs to be specified when the reinsurance
+    needs to be applied over the sum of two or more loss types (e.g. ``structural+contents``).
+    The definition of total losses is also reflected in the risk outputs of the calculation.
+    NB: if there is a single loss type (e.g. ``structural``) there is no need to specify
+    this parameter, just write ``reinsurance_file = {'structural': 'reinsurance.xml'}``
+
+Output files
+------------
+
+The reinsurance calculations generates estimates of retention and cession under the different
+reinsurance treaties. The following output files are produced:
+
+    1. ``Reinsurance by event``: aggregated estimated per event for the claim, retention, 
+        cession and overspills under each reinsurance treaty.
+
+    2. ``Reinsurance curves``: reinsurance loss exceedance curves describe the probabilities
+         of exceeding a set of loss ratios or loss values, within a given time span 
+         (or investigation interval). The curves are generated for the claim, retention, 
+         cession and overspills under each reinsurance treaty.
+
+    3. ``Average reinsurance losses``: the average reinsurance losses
+        indicates the expected value within the time period specified
+        by risk_investigation_time for the claim, retention, and
+        cessions under each reinsurance treaty for all policies in the
+        Exposure Model.
+
+    4. ``Aggregated reinsurance by policy``:  the average reinsurance losses
+        for each policy, by ignoring the overspill logic.
+
+The parameters indicated in the previous outputs include:
+
+- ``policy``: identifier of the unique policies indicated in the
+  exposure model and policy files.
+
+- ``claim``: ground up losses minus the deductible and up to the policy liability.
+
+- ``retention``: net losses that the insurance company keeps for its own account.
+
+- ``cession_i``: net losses that are ceded by the insurance company to
+    the reinsurer(s) under treaty i. The cession is indicated by the
+    treaty name defined in the reinsurance information.
+
+- ``overspill_treaty_i``: net losses that exceed the maximum cession
+    per event ("max_cession_event") for *proportional* and/or *catxl*
+    treaties.
+
+NOTE: The sum of the claim is not equal to the ground up losses, since
+usually the deductible is nonzero. Moreover there could be
+"non-insured" losses corresponding to policies with no insurance
+contracts or that exceed the policy liability.
+
+How the hazard sites are determined
+===================================
+
+There are several ways to specify the hazard sites in an engine calculation.
+
+1. The user can specify the sites directly in the job.ini using the ``sites``
+   parameter (e.g. ``sites = -122.4194 37.7749, -118.2437 34.0522, -117.1611 32.7157``).
+   This method is perhaps most useful when the analysis is limited to a 
+   handful of sites.
+2. Otherwise the user can specify the list of sites in a CSV file
+   (i.e. ``sites_csv = sites.csv``).
+3. Otherwise the user can specify a grid via the ``region`` and
+   ``region_grid_spacing`` parameters.
+4. Otherwise the sites can be inferred from the exposure, if any,
+   in two different ways:
+   
+   1.    if ``region_grid_spacing`` is specified, a grid is implicitly
+         generated from the convex hull of the exposure and used
+   2.    otherwise the locations of the assets are used as hazard sites
+   
+5. Otherwise the sites can be inferred from the site model file, if any.
+
+It must be noted that the engine rounds longitudes and latitudes	
+to 5 decimal places (or approximately 1 meter spatial resolution),
+so sites that differ only at the 6th decimal place or beyond will
+end up being considered as duplicated sites by the engine, and 
+this will be flagged as an error.
+
+Having determined the sites, a ``SiteCollection`` object is generated
+by associating the closest parameters from the site model (if any)
+or using the global site parameters, if any.
+If the site model is specified, but the closest site parameters are 
+too distant from the sites, a warning is logged for each site.
+
+There are a number of error situations:
+
+1. If both site model and global site parameters are missing, the engine
+   raises an error.
+2. If both site model and global site parameters are specified, the
+   engine raises an error.
+3. Specifying both the sites.csv and a grid is an error.
+4. Specifying both the sites.csv and a site_model.csv is an error.
+   If you are in such situation you should consider using the command
+   ``oq prepare_site_model``
+   to manually prepare a site model on the location of the sites.
+5. Having duplicates (i.e. rows with identical lon, lat up to 5 digits)
+   in the site model is an error.
+
+If you want to compute the hazard on the locations specified by the site model
+and not on the exposure locations, you can split the calculation in two files:
+``job_haz.ini`` containing the site model and ``job_risk.ini`` containing the
+exposure. Then the risk calculator will find the closest hazard to each
+asset and use it. However, if the closest hazard is more distant than the
+``asset_hazard_distance`` parameter (default 15 km) an error is raised.
+
+
 Risk profiles
 =============
 
@@ -1592,9 +2057,11 @@ actually several different ways to do it.
    particularly convenient if you foresee the need to run the risk
    part of the calculations multiple times, while the hazard part remains
    unchanged. Using a precomputed set of GMFs removes the need to rerun
-   the hazard part of the calculations each time.
+   the hazard part of the calculations each time. This workflow has
+   been particularly optimized since version 3.16 of the engine and it is
+   now quite efficient.
 
-4. If you have a really powerful machine, the most efficient way is to
+4. If you have a really powerful machine, the simplest is to
    run a single calculation considering all countries in a single
    job.ini file. The risk profiles can be obtained by using the
    ``aggregate_by`` and ``reaggregate_by`` parameters. This approach
@@ -1675,11 +2142,8 @@ will be extracted from such files, so the dummy global parameters
 can be removed.
 
 It is FUNDAMENTAL FOR PERFORMANCE to have reasonable site model files,
-i.e. the number of sites must be relatively small, let's say below
-100,000 sites. For calculations with large high-definition exposure models,
-trying to calculate the hazard at the location of every single asset
-can easily generate millions of sites, making the calculation intractable
-in terms of both memory and disk space occupation.
+i.e. you should not compute the hazard at the location of every single asset,
+but rather you should use a variable-size grid fitting the exposure.
 
 The engine provides a command ``oq prepare_site_model``
 which is meant to generate sensible site model files starting from
@@ -1689,7 +2153,14 @@ can be reduced to a manageable number. Please refer to the manual in
 the section about the oq commands to see how to use it, or try
 ``oq prepare_site_model --help``.
 
-Approach #4 is the best, since there is only a single file,
+For reference, we were able to compute the hazard for all of South
+America on a grid of half million sites and 1 million years of effective time
+in a few hours in a machine with 120 cores, generating half terabyte of GMFs.
+The difficult part is avoiding running out memory when running the risk
+calculation; huge progress in this direction was made in version 3.16 of
+the engine.
+
+Approach #4 is the best, when applicable, since there is only a single file,
 thus avoiding entirely the possibily of having inconsistent parameters
 in different files. It is also the faster approach, not to mention the
 most convenient one, since you have to manage a single calculation and
@@ -1709,12 +2180,13 @@ approach #3, and also the ``exposure_file`` as follows::
    ...
 
 The engine will automatically build a single asset collection for the
-entire continent of South America. In order to use this approach, you need to
-collect all the vulnerability functions in a single file and the
-taxonomy mapping file must cover the entire exposure for all countries. 
-Moreover, the exposure must contain the associations between 
-asset<->country; in GEM's exposure models, this is typically encoded 
-in a field called ``ID_0``. Then the aggregation by country can be done with the option
+entire continent of South America. In order to use this approach, you
+need to collect all the vulnerability functions in a single file and
+the taxonomy mapping file must cover the entire exposure for all
+countries.  Moreover, the exposure must contain the associations
+between asset<->country; in GEM's exposure models, this is typically
+encoded in a field called ``ID_0``. Then the aggregation by country
+can be done with the option
 
 ::
 
@@ -1744,7 +2216,7 @@ Single-line commands
 When using approach #1 your can run all of the required calculations
 with the command::
 
- $ oq engine --multi --run job_Argentina.csv job_Bolivia.csv ...
+ $ oq engine --run job_Argentina.csv job_Bolivia.csv ...
 
 When using approach #2 your can run all of the required calculations
 with the command::
@@ -1798,15 +2270,15 @@ Argentina, and that the value of the random seed in 123456: if you
 split, assuming there is a single event, you will produce the
 following 3+2 normally distributed random numbers:
 
->>> numpy.random.default_rng(123456).normal(size=3)  # for Chile
+>>> np.random.default_rng(123456).normal(size=3)  # for Chile
 array([ 0.1928212 , -0.06550702,  0.43550665])
->>> numpy.random.default_rng(123456).normal(size=2)  # for Argentina
+>>> np.random.default_rng(123456).normal(size=2)  # for Argentina
 array([ 0.1928212 , -0.06550702])
 
 If you do not split, you will generate the following 5 random numbers
 instead:
 
->>> numpy.random.default_rng(123456).normal(size=5)
+>>> np.random.default_rng(123456).normal(size=5)
 array([ 0.1928212 , -0.06550702,  0.43550665,  0.88235875,  0.37132785])
 
 They are unavoidably different. You may argue that not splitting is
@@ -1820,6 +2292,7 @@ see similar results with and without splitting. But you will
 *never produce identical results*. Only the classical calculator does
 not depend on the splitting of the sites, for event based and scenario
 calculations there is no way out.
+
 
 Special features of the engine
 ===============================
@@ -2087,88 +2560,3 @@ rupture information (otherwise it would immediately run out of disk space,
 since typical hazard models have tens of millions of ruptures) and uses
 a much less aggressive strategy to collapse ruptures, which has the advantage
 of requiring less RAM.
-
-Correlation of Ground Motion Fields
-=========================================
-
-There are multiple different kind of correlation on the engine, so it
-is extremely easy to get confused. Here I will list all possibilities,
-in historical order.
-
-1. Spatial correlation of ground motion fields has been a feature of
-   the engine from day one. The available models are JB2009 and HM2018.
-2. Cross correlation in ShakeMaps has been available for a few years.
-   The model used there is hard-coded an the user cannot change it,
-   only disable it. The models list below (3. and 4.) *have no effect
-   on ShakeMaps*.
-3. Since version 3.13 the engine provides the BakerJayaram2008 cross
-   correlation model, however at the moment it is used only in the conditional
-   spectrum calculator.
-4. Since version 3.13 the engine provides the GodaAtkinson2009 cross
-   correlation model and the FullCrossCorrelation model which can be
-   used in scenario and event based calculations.
-
-Earthquake theory tells us that ground motion fields depend on two
-different lognormal distributions with parameters (:math:`\mu`,
-:math:`\tau`) and (:math:`\mu`, :math:`\phi`) respectively, which are
-determined by the GMPE (Ground Motion Prediction Equal). Given a
-rupture, a set of M intensity measure types and a collection of N
-sites, the parameters :math:`\mu`, :math:`\tau` and :math:`\phi` are
-arrays of shape (M, N). :math:`\mu` is the mean of the logarithms and
-:math:`\tau` the between-event standard deviation, associated to the
-cross correlation, while :math:`\phi` is the within-event standard
-deviation, associated to the spatial correlation. math:`\tau` and
-:math:`\phi` are normally N-independent, i.e.  each array of shape
-(M, N) actually contains N copies of the same M values read from the
-coefficient table of the GMPE.
-
-In the OpenQuake engine each rupture has associated a random seed
-generated from the parameter ``ses_seed`` given in the job.ini file,
-therefore given a fixed number E of events it is possible to generate
-a deterministic distribution of ground motion fields, i.e. an array of
-shape (M, N, E). Technically such feature is implemented in the class
-``openquake.hazardlib.calc.gmf.GmfComputer``. The algorithm used there
-is to generate two arrays of normally distributed numbers called
-:math:`\epsilon_\tau` (of shape (M, E)) and :math:`\epsilon_\phi` (of
-shape (M, N, E)), one using the between-event standard deviation
-:math:`\tau` and the other using the within-event standard deviation
-:math:`\phi`, while keeping the same mean :math:`\mu`. Then the ground
-motion fields are generated as an array of shape (M, N, E) with the
-formula
-
-.. math::
-
-  gmf = exp(\mu + crosscorrel(\epsilon_\tau) + spatialcorrel(\epsilon\phi))
-
-The details depend on the form of the cross correlation model and of
-the spatial correlation model and you have to study the source code if
-you really want to understand how it works, in particular how the
-correlation matrices are extracted from the correlation models. By
-default, if no cross correlation nor spatial correlation are
-specified, then there are no correlation matrices and
-:math:`crosscorrel(\epsilon_\tau)` and
-:math:`spatialcorrel(\epsilon\phi)` are computed by using
-``scipy.stats.truncnorm``. Otherwise
-``scipy.stats.multivariate_normal`` with a correlation
-matrix of shape (M, M) is used for cross correlation and
-``scipy.stats.multivariate_normal`` distribution with a
-matrix of shape (N, N) is used for spatial correlation. Notice that the
-truncation feature is lost if you use correlation, since scipy does
-not offer at truncated multivariate_normal distribution. Not truncating
-the normal distribution can easily generated non-physical fields, but
-even if the truncation is on it is very possible to generate exceedingly
-large ground motion fields, so the user has to be *very* careful.
-
-Correlation is important because its presence normally causes the risk to
-increase, i.e. ignoring the correlation will under-estimate
-the risk. The best way to play with the correlation is to consider a
-scenario_risk calculation with a single rupture and to change the
-cross and spatial correlation models. Possibilities are to specify
-in the job.ini all possible combinations of
-
-cross_correlation = FullCrossCorrelation
-cross_correlation = GodaAtkinson2009
-ground_motion_correlation_model = JB2009
-ground_motion_correlation_model = HM2018
-
-including removing one or the other or all correlations.

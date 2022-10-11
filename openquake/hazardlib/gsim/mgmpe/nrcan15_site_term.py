@@ -146,6 +146,7 @@ class NRCan15SiteTerm(GMPE):
 
     # Parameters
     REQUIRES_SITES_PARAMETERS = {'vs30'}
+    #: Required distances are set on the underlying gmpe
     REQUIRES_DISTANCES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ''

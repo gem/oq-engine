@@ -21,12 +21,13 @@ Module :mod:`openquake.hazardlib.geo.surface.gridded` defines
 :class:`GriddedSurface`.
 """
 import numpy as np
-
+from numpy import linalg as la
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo import utils
-from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo import utils as geo_utils
+from openquake.hazardlib.geo.surface.base import BaseSurface
 
 
 class GriddedSurface(BaseSurface):
@@ -42,6 +43,13 @@ class GriddedSurface(BaseSurface):
         An unstructured mesh of points ideally representing a rupture surface.
         Must be an instance of :class:`~openquake.hazardlib.geo.mesh.Mesh`
     """
+
+    def __init__(self, mesh=None):
+        self.mesh = mesh
+        self.suid = None
+        self.strike = None
+        self.dip = None
+
     @property
     def surface_nodes(self):
         """
@@ -134,9 +142,50 @@ class GriddedSurface(BaseSurface):
         The actual definition of the strike might depend on surface geometry.
 
         :returns:
-            numpy.nan, not available for this kind of surface (yet)
+            The strike angle in degrees
         """
-        return np.nan
+
+        if self.strike is not None:
+            return self.strike
+
+        # Create a projection centered in the center of the cloud of points
+        proj = geo_utils.OrthographicProjection(
+            *geo_utils.get_spherical_bounding_box(
+                self.mesh.lons.flatten(), self.mesh.lats.flatten()))
+
+        # Project the coordinates
+        coo = np.zeros((len(self.mesh.lons.flat), 3))
+        tmp = np.transpose(proj(self.mesh.lons.flat, self.mesh.lats.flat))
+        coo[:, 0] = tmp[:, 0]
+        coo[:, 1] = tmp[:, 1]
+        coo[:, 2] = self.mesh.depths.flat
+        coo[:, 2] *= -1
+        pnt0, vers = geo_utils.plane_fit(coo)
+
+        # Find the angle between the surface projection of the unit vector and
+        # the north direction
+        north = np.array([0, 1, 0])
+        tmp = np.array([vers[0], vers[1], 0])
+        v1_u = north / la.norm(north)
+        v2_u = tmp / la.norm(tmp)
+        phi = np.rad2deg(np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0)))
+
+        # Find the angle between the surface projection of the unit vector and
+        # the unit vector
+        tmp = np.array([vers[0], vers[1], 0])
+        v1_u = vers
+        v2_u = tmp / la.norm(tmp)
+        delta = np.rad2deg(np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0)))
+
+        # Set strike and dip
+        if vers[0] < 0:
+            self.strike = (360 - phi - 90) % 360
+        else:
+            self.strike = (phi - 90) % 360
+        self.dip = 90 - delta
+
+        return self.strike
+
 
     def get_dip(self):
         """
@@ -145,9 +194,11 @@ class GriddedSurface(BaseSurface):
         The actual definition of the dip might depend on surface geometry.
 
         :returns:
-            numpy.nan, not available for this kind of surface (yet)
+            The dip angle in degrees
         """
-        return np.nan
+        if self.dip is None:
+            _ = self.get_strike()
+        return self.dip
 
     def get_width(self):
         """
