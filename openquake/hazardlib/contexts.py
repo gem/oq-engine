@@ -1158,7 +1158,6 @@ class ContextMaker(object):
                             # Equation 15 in Lin et al. (2013)
                             term2 = sig[m] * (1. - rho[m]**2)**0.5
                             term3 = (term1 - cs[0]['_c'][m, n, 0, p])
-                            term3 = 0
                             c[m, n, 1, p] = ws @ (term2**2 + term3**2)
 
         return out
