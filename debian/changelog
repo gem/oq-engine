@@ -1,3 +1,6 @@
+  [Manuela Villani]
+  * Added the Wong et al. (2022) ground motion model
+
   [Michele Simionato]
   * Added a check on sum(srcs_weights) == 1 for mutex sources
 
