@@ -2057,9 +2057,11 @@ actually several different ways to do it.
    particularly convenient if you foresee the need to run the risk
    part of the calculations multiple times, while the hazard part remains
    unchanged. Using a precomputed set of GMFs removes the need to rerun
-   the hazard part of the calculations each time.
+   the hazard part of the calculations each time. This workflow has
+   been particularly optimized since version 3.16 of the engine and it is
+   now quite efficient.
 
-4. If you have a really powerful machine, the most efficient way is to
+4. If you have a really powerful machine, the simplest is to
    run a single calculation considering all countries in a single
    job.ini file. The risk profiles can be obtained by using the
    ``aggregate_by`` and ``reaggregate_by`` parameters. This approach
@@ -2140,11 +2142,8 @@ will be extracted from such files, so the dummy global parameters
 can be removed.
 
 It is FUNDAMENTAL FOR PERFORMANCE to have reasonable site model files,
-i.e. the number of sites must be relatively small, let's say below
-100,000 sites. For calculations with large high-definition exposure models,
-trying to calculate the hazard at the location of every single asset
-can easily generate millions of sites, making the calculation intractable
-in terms of both memory and disk space occupation.
+i.e. you should not compute the hazard at the location of every single asset,
+but rather you should use a variable-size grid fitting the exposure.
 
 The engine provides a command ``oq prepare_site_model``
 which is meant to generate sensible site model files starting from
@@ -2154,7 +2153,14 @@ can be reduced to a manageable number. Please refer to the manual in
 the section about the oq commands to see how to use it, or try
 ``oq prepare_site_model --help``.
 
-Approach #4 is the best, since there is only a single file,
+For reference, we were able to compute the hazard for all of South
+America on a grid of half million sites and 1 million years of effective time
+in a few hours in a machine with 120 cores, generating half terabyte of GMFs.
+The difficult part is avoiding running out memory when running the risk
+calculation; huge progress in this direction was made in version 3.16 of
+the engine.
+
+Approach #4 is the best, when applicable, since there is only a single file,
 thus avoiding entirely the possibily of having inconsistent parameters
 in different files. It is also the faster approach, not to mention the
 most convenient one, since you have to manage a single calculation and
@@ -2174,12 +2180,13 @@ approach #3, and also the ``exposure_file`` as follows::
    ...
 
 The engine will automatically build a single asset collection for the
-entire continent of South America. In order to use this approach, you need to
-collect all the vulnerability functions in a single file and the
-taxonomy mapping file must cover the entire exposure for all countries. 
-Moreover, the exposure must contain the associations between 
-asset<->country; in GEM's exposure models, this is typically encoded 
-in a field called ``ID_0``. Then the aggregation by country can be done with the option
+entire continent of South America. In order to use this approach, you
+need to collect all the vulnerability functions in a single file and
+the taxonomy mapping file must cover the entire exposure for all
+countries.  Moreover, the exposure must contain the associations
+between asset<->country; in GEM's exposure models, this is typically
+encoded in a field called ``ID_0``. Then the aggregation by country
+can be done with the option
 
 ::
 
@@ -2209,7 +2216,7 @@ Single-line commands
 When using approach #1 your can run all of the required calculations
 with the command::
 
- $ oq engine --multi --run job_Argentina.csv job_Bolivia.csv ...
+ $ oq engine --run job_Argentina.csv job_Bolivia.csv ...
 
 When using approach #2 your can run all of the required calculations
 with the command::
