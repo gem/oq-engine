@@ -141,13 +141,6 @@ jobs:
           fi
           
           LATEST_VER="$(git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1)"
-          echo "NEW LATEST_VER: [$LATEST_VER]"
-          # if [ "$UPLOAD" == "master" ]
-          # then
-          #     PDF_VER="(master)"
-          # else
-          #     PDF_VER=${VER}
-          # fi
 
           PDFDOCS="${DOCS_BASE}manuals/"
           TARGET_LINK=""
@@ -173,8 +166,9 @@ jobs:
               TARGET="${DOCS_BASE}oq-engine/$ENG_VER/"
               # TARGET_LINK="${DOCS_BASE}oq-engine/$BUILD"
               PDF_VER="${ENG_VER}"
-              # if [ "$BUILD" == "release" 
-              PDF_VER_LINK="$BUILD"
+              if [ "$BUILD" == "release" -a "$ENG_VER" == "$LASTEST_VER" ]; then
+                  PDF_VER_LINK="latest"
+              fi
           elif [ "$BUILD" == "master" ]; then
               TARGET="${DOCS_BASE}oq-engine/master/"
               PDF_VER="(master)"
@@ -191,6 +185,7 @@ jobs:
           # TEST PER PDF_VER_LINK
           # PDF_VER_LINK=test_ver_link
 
+          echo "LATEST_VER:          [$LATEST_VER]"
           echo "BUILD:               [$BUILD]"
           echo "LTS_VER:             [$LTS_VER]"
           echo "ENG_VER:             [$ENG_VER]"
