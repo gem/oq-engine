@@ -118,10 +118,10 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
 
         # Computing CS
         for gid, start, stop in performance.idx_start_stop(rdata['grp_id']):
-            cmaker = self.cmakers[gid]
             ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
             for ctx in ctxs:
-                out += cmaker.get_cs_contrib(ctx, imti, self.imls, oq.poes)
+                out += self.cmakers[gid].get_cs_contrib(
+                    ctx, imti, self.imls, oq.poes)
 
         # Apply weights. csmean is a dictionary with integer keys
         # (corresponding to the rlz ID) and value corresponding to a
@@ -136,11 +136,10 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         # Computing standard deviation
         out = general.AccumDict()  # grp_id => dict
         for gid, start, stop in performance.idx_start_stop(rdata['grp_id']):
-            cmaker = self.cmakers[gid]
             ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
             for ctx in ctxs:
-                out += cmaker.get_cs_contrib(ctx, imti, self.imls, oq.poes,
-                                             csmean)
+                out += self.cmakers[gid].get_cs_contrib(
+                    ctx, imti, self.imls, oq.poes, csmean)
 
         return out
 
