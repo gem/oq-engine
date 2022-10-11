@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import logging
 import pandas as pd
 import numpy as np
 from openquake.baselib.general import BASE183, fast_agg2
@@ -208,10 +209,11 @@ def build_policy_grp(policy, treaty_df):
     """
     cols = treaty_df.id.to_numpy()
     codes = treaty_df.code.to_numpy()
-    key = ['.'] * len(cols)
+    types = treaty_df.type.to_numpy()
+    key = list(codes)
     for c, col in enumerate(cols):
-        if policy[col] > 0:
-            key[c] = codes[c]
+        if types[c] != 'prop' and policy[col] == 0:
+            key[c] = '.'
     return ''.join(key)
 
 
@@ -314,6 +316,9 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
                 data[:, 0] -= data[:, c]
             keys.append(key)
             datalist.append(data)
+    if len(keys) > 1:
+        logging.warning('Splitting the policies in %d policy groups',
+                        len(keys))
     with mon('reinsurance by event', measuremem=True):
         overspill = {}
         res = clever_agg(keys, datalist, tdf, idx, overspill)
