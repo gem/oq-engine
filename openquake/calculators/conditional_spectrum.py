@@ -23,9 +23,10 @@ import logging
 import numpy
 
 from openquake.baselib import general, performance
-from openquake.commonlib.calc import compute_hazard_maps
+from openquake.commonlib.calc import compute_hazard_maps, get_mean_curve
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.contexts import read_cmakers, csdict
+from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.calc.cond_spectra import get_cs_out, outdict
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -33,21 +34,20 @@ U32 = numpy.uint32
 
 
 # helper function to be used when saving the spectra as an array
-def to_spectra(csdic, n, p):
+def to_spectra(outdic, n, p):
     """
-    :param csdic: dictionary rlz_id->key->array
+    :param outdic: dictionary rlz_id -> array MNOP
     :param n: site index in the range 0..N-1
     :param p: IMLs index in the range 0..P-1
     :returns: conditional spectra as an array of shape (R, M, 2)
     """
-    R = len(csdic)
-    M = len(csdic[0]['_c'])
+    R = len(outdic)
+    M = len(outdic[0])
     out = numpy.zeros((R, M, 2))
     for r in range(R):
-        c, s = csdic[r].values()
-        if s[n, p]:
-            out[r, :, 0] = numpy.exp(c[:, n, 0, p] / s[n, p])
-            out[r, :, 1] = numpy.sqrt(c[:, n, 1, p] / s[n, p])
+        c = outdic[r]
+        out[r, :, 0] = numpy.exp(c[:, n, 1, p])  # NB: seems wrong!
+        out[r, :, 1] = numpy.sqrt(c[:, n, 2, p])
     return out
 
 
@@ -87,17 +87,11 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         rdata = numpy.zeros(totrups, rdt)
         rdata['idx'] = numpy.arange(totrups)
         rdata['grp_id'] = dstore['rup/grp_id'][:]
-        trt_smrs = dstore['trt_smrs'][:]
-        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
-        _G = sum(len(rbg) for rbg in rlzs_by_gsim)
         self.periods = [from_string(imt).period for imt in self.imts]
-        if oq.imls_ref:
-            self.imls = oq.imls_ref
-        else:  # extract imls from the "mean" hazard map
-            curve = self.datastore.sel(
-                'hcurves-stats', stat='mean')[0, 0, imti]
-            [self.imls] = compute_hazard_maps(
-                curve, oq.imtls[oq.imt_ref], oq.poes)  # there is 1 site
+        # extract imls from the "mean" hazard map
+        curve = get_mean_curve(self.datastore, oq.imt_ref)
+        # there is 1 site
+        [self.imls] = compute_hazard_maps(curve, oq.imtls[oq.imt_ref], oq.poes)
         self.P = P = len(self.imls)
         self.datastore.create_dset(
             'cs-rlzs', float, (self.R, M, self.N, 2, self.P))
@@ -108,51 +102,74 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         self.datastore.set_shape_descr(
             'cs-stats', stat='mean', period=self.periods, sid=self.N,
             cs=['spec', 'std'], poe_id=P)
-        self.datastore.create_dset('_c', float, (_G, M, self.N, 2, P))
-        self.datastore.create_dset('_s', float, (_G, self.N, P))
         self.cmakers = read_cmakers(self.datastore)
         # self.datastore.swmr_on()
         # IMPORTANT!! we rely on the fact that the classical part
         # of the calculation stores the ruptures in chunks of constant
         # grp_id, therefore it is possible to build (start, stop) slices
         out = general.AccumDict()  # grp_id => dict
-        for gid, start, stop in performance._idx_start_stop(rdata['grp_id']):
+
+        # Computing CS
+        for gid, start, stop in performance.idx_start_stop(rdata['grp_id']):
             cmaker = self.cmakers[gid]
+            cmaker.poes = oq.poes
             ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
             for ctx in ctxs:
-                out += cmaker.get_cs_contrib(ctx, imti, self.imls)
+                out += get_cs_out(cmaker, ctx, imti, self.imls)
+
+        # Apply weights and get two dictionaries with integer keys
+        # (corresponding to the rlz ID) and array values
+        # of shape (M, N, 3, P) where:
+        # M is the number of IMTs
+        # N is the number of sites
+        # 3 is the number of statistical momenta
+        # P is the the number of IMLs
+        outdic, outmean = self._apply_weights(out)
+
+        # Computing standard deviation
+        for gid, start, stop in performance.idx_start_stop(rdata['grp_id']):
+            cmaker = self.cmakers[gid]
+            cmaker.poes = oq.poes
+            ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
+            for ctx in ctxs:
+                res = get_cs_out(cmaker, ctx, imti, self.imls, outmean[0])
+                for g in res:
+                    out[g][:, :, 2] += res[g][:, :, 2]  # STDDEV
         return out
 
-    def save(self, dsetname, csdic):
+    def convert_and_save(self, dsetname, outdic):
         """
         Save the conditional spectra
         """
         for n in range(self.N):
             for p in range(self.P):  # shape (R, M, N, 2, P)
                 self.datastore[dsetname][:, :, n, :, p] = to_spectra(
-                    csdic, n, p)  # shape (R, M, 2)
+                    outdic, n, p)  # shape (R, M, 2)
         attrs = dict(imls=self.imls, periods=self.periods)
         if self.oqparam.poes:
             attrs['poes'] = self.oqparam.poes
         self.datastore.set_attrs(dsetname, **attrs)
 
     def post_execute(self, acc):
-        # store the conditional spectrum contributions in the datasets _c, _s
-        for _g, dic in acc.items():
-            for key, arr in dic.items():
-                self.datastore[key][_g] = arr  # shapes MN2P and NP
+        # apply weights
+        outdic, outmean = self._apply_weights(acc)
+        # convert dictionaries into spectra and save them
+        self.convert_and_save('cs-rlzs', outdic)
+        self.convert_and_save('cs-stats', outmean)
 
+    def _apply_weights(self, acc):
         # build conditional spectra for each realization
         rlzs_by_g = self.datastore['rlzs_by_g'][()]
-        csdic = csdict(self.M, self.N, self.P, 0, self.R)
+        outdic = outdict(self.M, self.N, self.P, 0, self.R)
         for _g, rlzs in enumerate(rlzs_by_g):
             for r in rlzs:
-                csdic[r] += acc[_g]
-        self.save('cs-rlzs', csdic)
+                outdic[r] += acc[_g]
+        self.convert_and_save('cs-rlzs', outdic)
 
-        # build mean spectrum
+        # build final conditional mean and std
         weights = self.datastore['weights'][:]
-        csmean = csdict(self.M, self.N, self.P, 0, 1)
+        outmean = outdict(self.M, self.N, self.P, 0, 1)  # dict with key 0
         for r, weight in enumerate(weights):
-            csmean[0] += csdic[r] * weight
-        self.save('cs-stats', csmean)
+            outmean[0] += outdic[r] * weight
+
+        return outdic, outmean

@@ -7,9 +7,9 @@
     <fieldMap>
       <field input="treaty_1" type="prop" max_cession_event="250" />
       <field input="treaty_2" type="prop" max_cession_event="500" />
-      <field input="xlr1" type="wxlr" max_retention="200" limit="1000" />
-      <field input="CatXL1" type="catxl" max_retention="200" limit="1000" />
-      <field input="CatXL2" type="catxl" max_retention="100" limit="750" />
+      <field input="xlr1" type="wxlr" deductible="200" limit="1000" />
+      <field input="CatXL1" type="catxl" deductible="200" limit="1000" />
+      <field input="CatXL2" type="catxl" deductible="100" limit="750" />
     </fieldMap>
 
   <policies>policy.csv</policies>

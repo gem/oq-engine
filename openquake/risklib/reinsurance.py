@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import logging
 import pandas as pd
 import numpy as np
 from openquake.baselib.general import BASE183, fast_agg2
@@ -28,7 +29,7 @@ from openquake.risklib import scientific
 Here is some info about the used data structures.
 There are 3 main dataframes:
 
-1. treaty_df (id, type, max_retention, limit, code)
+1. treaty_df (id, type, deductible, limit, code)
    with type in prop, wxlr, catxl
 2. policy_df (policy, liability, deductible, prop1, nonprop1, cat1)
 3. risk_by_event (event_id, agg_id, loss) with agg_id == policy_id-1
@@ -117,7 +118,7 @@ def parse(fname, policy_idx):
     rmodel = nrml.read(fname).reinsuranceModel
     fieldmap = {}
     fmap = {}  # ex: {'deductible': 'Deductible', 'liability': 'Limit'}
-    treaty = dict(id=[], type=[], max_retention=[], limit=[])
+    treaty = dict(id=[], type=[], deductible=[], limit=[])
     nonprop = set()
     colnames = []
     for node in rmodel.fieldMap:
@@ -131,15 +132,15 @@ def parse(fname, policy_idx):
         assert treaty_type in ('prop', 'wxlr', 'catxl'), treaty_type
         if treaty_type == 'prop':
             limit = node.get('max_cession_event', NOLIMIT)
-            maxret = 0
+            deduc = 0
             colnames.append(node['input'])
         else:
             limit = node['limit']
-            maxret = node['max_retention']
+            deduc = node['deductible']
             nonprop.add(node['input'])
         treaty['id'].append(node['input'])
         treaty['type'].append(treaty_type)
-        treaty['max_retention'].append(maxret)
+        treaty['deductible'].append(deduc)
         treaty['limit'].append(limit)
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
@@ -162,15 +163,15 @@ def parse(fname, policy_idx):
 @compile(["(float64[:],float64[:],float64,float64)",
           "(float64[:],float32[:],float64,float64)",
           "(float32[:],float32[:],float64,float64)"])
-def apply_treaty(cession, retention, maxret, capacity):
+def apply_treaty(cession, retention, deduc, capacity):
     for i, ret in np.ndenumerate(retention):
-        overmax = ret - maxret
-        if ret > maxret:
+        overmax = ret - deduc
+        if ret > deduc:
             if overmax > capacity:
-                retention[i] = maxret + overmax - capacity
+                retention[i] = deduc + overmax - capacity
                 cession[i] = capacity
             else:
-                retention[i] = maxret
+                retention[i] = deduc
                 cession[i] = overmax
 
 
@@ -185,17 +186,17 @@ def claim_to_cessions(claim, policy, treaty_df):
     # proportional cessions
     cols = treaty_df[treaty_df.type == 'prop'].id
     fractions = [policy[col] for col in cols]
-    assert sum(fractions) < 1
+    assert sum(fractions) <= 1
     out = {'claim': claim, 'retention': claim * (1. - sum(fractions))}
     for col, frac in zip(cols, fractions):
         out[col] = claim * frac
 
     # wxlr cessions
     wxl = treaty_df[treaty_df.type == 'wxlr']
-    for col, maxret, limit in zip(wxl.id, wxl.max_retention, wxl.limit):
+    for col, deduc, limit in zip(wxl.id, wxl.deductible, wxl.limit):
         out[col] = np.zeros(len(claim))
         if policy[col]:
-            apply_treaty(out[col], out['retention'], maxret, limit - maxret)
+            apply_treaty(out[col], out['retention'], deduc, limit - deduc)
 
     return {k: np.round(v, 6) for k, v in out.items()}
 
@@ -208,10 +209,11 @@ def build_policy_grp(policy, treaty_df):
     """
     cols = treaty_df.id.to_numpy()
     codes = treaty_df.code.to_numpy()
-    key = ['.'] * len(cols)
+    types = treaty_df.type.to_numpy()
+    key = list(codes)
     for c, col in enumerate(cols):
-        if policy[col] > 0:
-            key[c] = codes[c]
+        if types[c] != 'prop' and policy[col] == 0:
+            key[c] = '.'
     return ''.join(key)
 
 
@@ -219,20 +221,20 @@ def line(row, fmt='%d'):
     return ''.join(scientificformat(val, fmt).rjust(10) for val in row)
 
 
-def clever_agg(ukeys, datalist, treaty_df, idx, over):
+def clever_agg(ukeys, datalist, treaty_df, idx, overdict):
     """
     :param ukeys: a list of unique keys
     :param datalist: a list of matrices of the shape (E, 2+T)
     :param treaty_df: a treaty DataFrame
     :param idx: a dictionary treaty.code -> cession index
-    :param over: a dictionary treaty.code -> overspill array
+    :param overdic: a dictionary treaty.code -> overspill array
 
     Recursively compute cessions and retentions for each treaty.
     Populate the cession dictionary and returns the final retention.
     """
     if DEBUG:
         print()
-        print(line(['apply'] + list(idx)))
+        print(line(['treaty_key'] + list(idx)))
         for key, data in zip(ukeys, datalist):
             print(line([key] + list(data[0])))
     if len(ukeys) == 1 and ukeys[0] == '':
@@ -245,21 +247,25 @@ def clever_agg(ukeys, datalist, treaty_df, idx, over):
             tr = treaty_df.loc[code]
             ret = data[:, idx['retention']]
             cession = data[:, idx[code]]
-            capacity = tr.limit - tr.max_retention
+            capacity = tr.limit - tr.deductible
+            has_over = False
             if tr.type == 'catxl':
-                apply_treaty(cession, ret, tr.max_retention, capacity)
+                overspill = ret - capacity
+                has_over = (overspill > 0).any()
+                apply_treaty(cession, ret, tr.deductible, capacity)
             elif tr.type == 'prop':
-                # managing overspill
-                overspill = cession - tr.limit
-                ok = overspill > 0
-                if ok.any():
-                    over['over_' + code] = np.maximum(overspill, 0)
-                    ret[ok] += cession[ok] - tr.limit
-                    cession[ok] = tr.limit
+                overspill = cession - capacity
+                over = overspill > 0
+                has_over = (overspill > 0).any()
+                if has_over:
+                    ret[over] += cession[over] - tr.limit
+                    cession[over] = tr.limit
+            if has_over:
+                overdict['over_' + code] = np.maximum(overspill, 0)
         newkeys.append(newkey)
         newdatalist.append(data)
     keys, sums = fast_agg2(newkeys, np.array(newdatalist))
-    return clever_agg(keys, sums, treaty_df, idx, over)
+    return clever_agg(keys, sums, treaty_df, idx, overdict)
 
 
 # tested in test_reinsurance.py
@@ -290,18 +296,18 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
 def _by_event(rbp, treaty_df, mon=Monitor()):
     with mon('processing policy_loss_table', measuremem=True):
         tdf = treaty_df.set_index('code')
-        inpcols = ['event_id', 'claim'] + [t.id for _, t in tdf.iterrows()
+        inpcols = ['eid', 'claim'] + [t.id for _, t in tdf.iterrows()
                                            if t.type != 'catxl']
         outcols = ['retention', 'claim'] + list(tdf.index)
         idx = {col: i for i, col in enumerate(outcols)}
         eids, idxs = np.unique(rbp.event_id.to_numpy(), return_inverse=True)
-        rbp['event_id'] = idxs
+        rbp['eid'] = idxs
         E = len(eids)
         dic = dict(event_id=eids)
         keys, datalist = [], []
         for key, grp in rbp.groupby('policy_grp'):
             data = np.zeros((E, len(outcols)))
-            gb = grp[inpcols].groupby('event_id').sum()
+            gb = grp[inpcols].groupby('eid').sum()
             for i, col in enumerate(inpcols):
                 if i > 0:  # claim, noncat1, ...
                     data[gb.index, i] = gb[col].to_numpy()
@@ -310,6 +316,10 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
                 data[:, 0] -= data[:, c]
             keys.append(key)
             datalist.append(data)
+        del rbp['eid']
+    if len(keys) > 1:
+        logging.warning('Splitting the policies in %d policy groups',
+                        len(keys))
     with mon('reinsurance by event', measuremem=True):
         overspill = {}
         res = clever_agg(keys, datalist, tdf, idx, overspill)
@@ -335,7 +345,6 @@ def by_policy_event(agglosses_df, policy_df, treaty_df, mon=Monitor()):
     :returns: (risk_by_policy_df, risk_by_event_df)
     """
     dfs = []
-    assert (treaty_df.limit != NOLIMIT).all()
     for _, policy in policy_df.iterrows():
         df = by_policy(agglosses_df, dict(policy), treaty_df)
         df['policy_grp'] = build_policy_grp(policy, treaty_df)

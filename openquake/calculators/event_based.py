@@ -38,6 +38,7 @@ from openquake.hazardlib.source.rupture import (
 from openquake.commonlib import (
     calc, util, logs, readinput, logictree, datastore)
 from openquake.risklib.riskinput import str2rsi, rsi2str
+from openquake.commonlib.calc import get_mean_curve
 from openquake.calculators import base, views
 from openquake.calculators.getters import (
     get_rupture_getters, sig_eps_dt, time_dt)
@@ -53,19 +54,6 @@ TWO32 = numpy.float64(2 ** 32)
 
 
 # ######################## GMF calculator ############################ #
-
-def get_mean_curves(dstore, imt):
-    """
-    Extract the mean hazard curves from the datastore, as an array of shape
-    (N, L1)
-    """
-    if 'hcurves-stats' in dstore:  # shape (N, S, M, L1)
-        arr = dstore.sel('hcurves-stats', stat='mean', imt=imt)
-    else:  # there is only 1 realization
-        arr = dstore.sel('hcurves-rlzs', rlz_id=0, imt=imt)
-    return arr[:, 0, 0, :]
-
-# ########################################################################## #
 
 
 def count_ruptures(src):
@@ -287,6 +275,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 [task_no] = numpy.unique(times['task_no'])
                 rupids = list(times['rup_id'])
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
+                if self.N >= calc.SLICE_BY_EVENT_NSITES:
+                    sbe = calc.build_slice_by_event(
+                        df.eid.to_numpy(), self.offset)
+                    hdf5.extend(self.datastore['gmf_data/slice_by_event'], sbe)
                 hdf5.extend(dset, df.sid.to_numpy())
                 hdf5.extend(self.datastore['gmf_data/eid'], df.eid.to_numpy())
                 for m in range(len(primary)):
@@ -298,9 +290,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(df)
-        if self.offset >= TWO32:
-            raise RuntimeError(
-                'The gmf_data table has more than %d rows' % TWO32)
         imtls = self.oqparam.imtls
         with agg_mon:
             for key, poes in result.get('hcurves', {}).items():
@@ -405,6 +394,8 @@ class EventBasedCalculator(base.HazardCalculator):
             dstore.create_dset('gmf_data/sigma_epsilon', sig_eps_dt(oq.imtls))
             dstore.create_dset('gmf_data/time_by_rup',
                                time_dt, (nrups,), fillvalue=None)
+            if self.N >= calc.SLICE_BY_EVENT_NSITES:
+                dstore.create_dset('gmf_data/slice_by_event', calc.slice_dt)
 
         # event_based in parallel
         nr = len(dstore['ruptures'])
@@ -563,9 +554,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 # the computation
                 self.cl.run()
                 engine.expose_outputs(self.cl.datastore)
+                all = slice(None)
                 for imt in oq.imtls:
-                    cl_mean_curves = get_mean_curves(self.datastore, imt)
-                    eb_mean_curves = get_mean_curves(self.datastore, imt)
+                    cl_mean_curves = get_mean_curve(self.datastore, imt, all)
+                    eb_mean_curves = get_mean_curve(self.datastore, imt, all)
                     self.rdiff, index = util.max_rel_diff_index(
                         cl_mean_curves, eb_mean_curves)
                     logging.warning(

@@ -37,7 +37,6 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import (
     registry, get_pnes, FatedTOM, NegativeBinomialTOM)
 from openquake.hazardlib.site import site_param_dt
-from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
     MINMAG, MAXMAG)
@@ -58,6 +57,8 @@ KNOWN_DISTANCES = frozenset(
     .split())
 # the following is used in the collapse method
 IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
+MEA = 0
+STD = 1
 
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -304,21 +305,6 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def csdict(M, N, P, start, stop):
-    """
-    :param M: number of IMTs
-    :param N: number of sites
-    :param P: number of IMLs
-    :param start: index
-    :param stop: index > start
-    """
-    ddic = {}
-    for _g in range(start, stop):
-        ddic[_g] = AccumDict({'_c': numpy.zeros((M, N, 2, P)),
-                              '_s': numpy.zeros((N, P))})
-    return ddic
-
-
 def _interp(param, name, trt):
     try:
         mdd = param[name]
@@ -371,6 +357,8 @@ class ContextMaker(object):
                 self.mags = ()
             except KeyError:  # missing TRT but there is only one
                 [(_, self.mags)] = oq.mags_by_trt.items()
+        if 'poes' in param:
+            self.poes = param['poes']
         if 'imtls' in param:
             for imt in param['imtls']:
                 if not isinstance(imt, str):
@@ -541,6 +529,12 @@ class ContextMaker(object):
             # happens in the oq-risk-tests for NZ
             ctxs = [ctx[nans], ctx[~nans]]
         return ctxs
+
+    def new_ctx(self, size):
+        """
+        :returns: a recarray of the given size full of zeros
+        """
+        return RecordBuilder(**self.defaultdict).zeros(size)
 
     def recarray(self, ctxs, magi=None):
         """
@@ -1045,69 +1039,6 @@ class ContextMaker(object):
             if self.truncation_level not in (0, 99.) and (
                     out[1, g] == 0.).any():
                 raise ValueError('Total StdDev is zero for %s' % gsim)
-        return out
-
-    # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-    def get_cs_contrib(self, ctx, imti, imls):
-        """
-        :param ctx:
-           a context array
-        :param imti:
-            IMT index in the range 0..M-1
-        :param imls:
-            P intensity measure levels for the IMT specified by the index
-        :returns:
-            a dictionary g -> key -> array where g is an index,
-            key is the string '_c' or '_s',  and the arrays have shape
-            (M, N, 2, P) or (N, P) respectively.
-
-        Compute the contributions to the conditional spectra, in a form
-        suitable for later composition.
-
-        NB: at the present if works only for poissonian contexts
-        """
-        assert self.tom
-        sids, counts = numpy.unique(ctx.sids, return_counts=True)
-        assert len(set(counts)) == 1, counts  # must be all equal
-        N = len(sids)
-        U = len(ctx) // N
-        G = len(self.gsims)
-        M = len(self.imtls)
-        P = len(imls)
-        out = csdict(M, N, P, self.start, self.start + G)
-        mean_stds = self.get_mean_stds([ctx])  # (4, G, M, N*C)
-        imt_ref = self.imts[imti]
-        rho = numpy.array([self.cross_correl.get_correlation(imt_ref, imt)
-                           for imt in self.imts])
-        m_range = range(len(self.imts))
-        # probs = 1 - exp(-occurrence_rates*time_span)
-        probs = self.tom.get_probability_one_or_more_occurrences(
-            ctx.occurrence_rate)  # shape N * U
-        for n in range(N):
-            # NB: to understand the code below, consider the case with
-            # N=3 sites and C=2 contexts; then the indices N*C are
-            # 0: first site
-            # 1: second site
-            # 2: third site
-            # 3: first site
-            # 4: second site
-            # 5: third site
-            # i.e. idxs = [0, 3], [1, 4], [2, 5] for sites 0, 1, 2
-            slc = slice(n, N * U, N)  # U indices
-            for g in range(G):
-                mu = mean_stds[0, g, :, slc]  # shape (M, U)
-                sig = mean_stds[1, g, :, slc]  # shape (M, U)
-                c = out[self.start + g]['_c']
-                s = out[self.start + g]['_s']
-                for p in range(P):
-                    eps = (imls[p] - mu[imti]) / sig[imti]  # shape U
-                    poes = _truncnorm_sf(self.truncation_level, eps)  # shape U
-                    ws = -numpy.log(
-                        (1. - probs[slc]) ** poes) / self.investigation_time
-                    s[n, p] = ws.sum()  # weights not summing up to 1
-                    for m in m_range:
-                        c[m, n, 0, p] = ws @ (mu[m] + rho[m] * eps * sig[m])
-                        c[m, n, 1, p] = ws @ (sig[m]**2 * (1. - rho[m]**2))
         return out
 
     def gen_poes(self, ctx):
