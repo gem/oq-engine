@@ -37,10 +37,3 @@ class ConditionalSpectrumTestCase(CalculatorTestCase):
         [f0, f1] = export(('cs-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/conditional-spectrum-0.csv', f0)
         self.assertEqualFiles('expected/conditional-spectrum-1.csv', f1)
-
-        # now run with imls_ref=0.1, thus ignoring the poes
-        self.run_calc(case_1.__file__, 'job.ini', imls_ref="0.1",
-                      hazard_calculation_id=hc_id)
-        [f0, f1] = export(('cs-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/cond-spectrum-0.csv', f0)
-        self.assertEqualFiles('expected/cond-spectrum-1.csv', f1)
