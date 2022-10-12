@@ -544,6 +544,12 @@ class ContextMaker(object):
             ctxs = [ctx[nans], ctx[~nans]]
         return ctxs
 
+    def new_ctx(self, size):
+        """
+        :returns: a recarray of the given size full of zeros
+        """
+        return RecordBuilder(**self.defaultdict).zeros(size)
+
     def recarray(self, ctxs, magi=None):
         """
         :params ctxs: a non-empty list of homogeneous contexts
