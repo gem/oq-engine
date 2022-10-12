@@ -194,6 +194,45 @@ def sqrscale(x_min, x_max, n):
     return x_min + (delta * numpy.arange(n))**2
 
 
+def calc_cs_contrib(mean_stds, probs, rho, imti, imls, cs_poes,
+                    trunclevel, invtime, c, _c=None):
+    mu = mean_stds[0]  # shape (M, U)
+    sig = mean_stds[1]  # shape (M, U)
+
+    for p, iml in enumerate(imls):
+
+        # Calculate the contribution of each rupture to the total
+        # probability of occurrence for the reference IMT. Both
+        # `eps` and `poes` have shape U
+        eps = (numpy.log(iml) - mu[imti]) / sig[imti]
+        poes = _truncnorm_sf(trunclevel, eps)
+
+        # Converting to rates and dividing by the rate of
+        # exceedance of the reference IMT and level
+        ws = -numpy.log((1. - probs) ** poes) / invtime
+
+        # Normalizing by the AfE for the investigated IMT and level
+        ws /= -numpy.log(1. - cs_poes[p])
+
+        # weights not summing up to 1
+        c[:, 0, p] = ws.sum()
+
+        # For each intensity measure type
+        for m in range(len(mu)):
+
+            # Equation 14 in Lin et al. (2013)
+            term1 = mu[m] + rho[m] * eps * sig[m]
+            c[m, 1, p] = ws @ term1
+
+            # This is executed only if we already have the final CS
+            if _c is not None:
+
+                # Equation 15 in Lin et al. (2013)
+                term2 = sig[m] * (1. - rho[m]**2)**0.5
+                term3 = term1 - _c[m, 1, p]
+                c[m, 2, p] = ws @ (term2**2 + term3**2)
+
+
 class Collapser(object):
     """
     Class managing the collapsing logic.
@@ -1046,7 +1085,7 @@ class ContextMaker(object):
         return out
 
     # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-    def get_cs_contrib(self, ctx, imti, imls, cs_poes, _c=None):
+    def get_cs_contrib(self, ctx, imti, imls, poes, _c=None):
         """
         Compute the contributions to the conditional spectra, in a form
         suitable for later composition.
@@ -1059,15 +1098,14 @@ class ContextMaker(object):
             IMT index in the range 0..M-1
         :param imls:
             P intensity measure levels for the IMT specified by the index
-        :param cs_poes:
+        :param poes:
             Probabilities of exceedence for which we compute the CMS
         :param _c:
-            The previously computed _c contribution. This is used for the
-            calculation of the _s contribution. It is a matrix (M, N, 2, P).
+            The previously computed contribution. This is used for the
+            calculation of the stddev contribution.
         :returns:
-            a dictionary g -> key -> array where g is an index,
-            key is the string '_c' or '_w',  and the arrays have shape
-            (M, N, 2, P) or (N, P) respectively.
+            a dictionary g -> array where g is an index and the array has shape
+            (M, N, O, P) with O=3
 
         """
         assert self.tom
@@ -1113,46 +1151,11 @@ class ContextMaker(object):
 
             # For every GMM
             for g in range(G):
-                mu = mean_stds[0, g, :, slc]  # shape (M, U)
-                sig = mean_stds[1, g, :, slc]  # shape (M, U)
-
-                c = out[self.start + g]
-
-                # For each IML
-                for p in range(P):
-
-                    # Calculate the contribution of each rupture to the total
-                    # probability of occurrence for the reference IMT. Both
-                    # `eps` and `poes` have shape U
-                    eps = (numpy.log(imls[p]) - mu[imti]) / sig[imti]
-                    poes = _truncnorm_sf(self.truncation_level, eps)
-
-                    # Converting to rates and dividing by the rate of
-                    # exceedance of the reference IMT and level
-                    ws = -numpy.log(
-                        (1. - probs[slc]) ** poes) / self.investigation_time
-
-                    # Normalizing by the AfE for the investigated IMT and level
-                    ws /= -numpy.log(1. - cs_poes[p])
-
-                    # Populate normalizer array
-                    c[:, n, 0, p] = ws.sum()  # weights not summing up to 1
-
-                    # For each intensity measure type
-                    for m in range(M):
-
-                        # Equation 14 in Lin et al. (2013)
-                        term1 = (mu[m] + rho[m] * eps * sig[m])
-                        c[m, n, 1, p] = ws @ term1
-
-                        # This is executed only if we already have the final CS
-                        if _c is not None:
-
-                            # Equation 15 in Lin et al. (2013)
-                            term2 = sig[m] * (1. - rho[m]**2)**0.5
-                            term3 = term1 - _c[m, n, 1, p]
-                            c[m, n, 2, p] = ws @ (term2**2 + term3**2)
-
+                c = out[self.start + g][:, n]
+                calc_cs_contrib(
+                    mean_stds[:, g, :, slc], probs[slc], rho, imti, imls, poes,
+                    self.truncation_level, self.investigation_time,
+                    c, _c[:, n] if _c is not None else None)
         return out
 
     def gen_poes(self, ctx):
