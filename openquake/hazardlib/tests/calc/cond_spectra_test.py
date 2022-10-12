@@ -23,6 +23,7 @@ import pandas
 from openquake.hazardlib import read_input, valid
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.calc.filters import IntegrationDistance
+from openquake.hazardlib.calc.cond_spectra import get_cs_contrib
 
 OVERWRITE_EXPECTED = False
 
@@ -111,9 +112,9 @@ class CondSpectraTestCase(unittest.TestCase):
         poes = [0.000404]
         imls = [0.394359437]
 
-        mom1 = cmaker.get_cs_contrib(ctx1, imti, imls, poes)[0]
-        mom2 = cmaker.get_cs_contrib(ctx2, imti, imls, poes)[0]
-        mom = cmaker.get_cs_contrib(ctx, imti, imls, poes)[0]
+        mom1 = get_cs_contrib(cmaker, ctx1, imti, imls, poes)[0]
+        mom2 = get_cs_contrib(cmaker, ctx2, imti, imls, poes)[0]
+        mom = get_cs_contrib(cmaker, ctx, imti, imls, poes)[0]
         aac(mom1 + mom2, mom)
 
     def test_2_rlzs(self):
@@ -128,7 +129,7 @@ class CondSpectraTestCase(unittest.TestCase):
         imls = [0.238531932]
 
         # Compute mean CS
-        cwdic = cmaker.get_cs_contrib(ctx, imti, imls, poes)
+        cwdic = get_cs_contrib(cmaker, ctx, imti, imls, poes)
         # 0, 1 -> array (M, N, O, P) = (11, 1, 3, 1)
 
         # Compute mean across rlzs
@@ -137,7 +138,7 @@ class CondSpectraTestCase(unittest.TestCase):
         _c = cwdic[0] * w1 + cwdic[1] * w2
 
         # Compute std
-        cwdic = cmaker.get_cs_contrib(ctx, imti, imls, poes, _c)
+        cwdic = get_cs_contrib(cmaker, ctx, imti, imls, poes, _c)
 
         # Create DF for test
         df = cwdic_to_dframe(cwdic, cmaker.imts, 0, 0)

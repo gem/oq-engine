@@ -37,7 +37,6 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import (
     registry, get_pnes, FatedTOM, NegativeBinomialTOM)
 from openquake.hazardlib.site import site_param_dt
-from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
     MINMAG, MAXMAG)
@@ -194,61 +193,6 @@ def sqrscale(x_min, x_max, n):
     return x_min + (delta * numpy.arange(n))**2
 
 
-def calc_cs_contrib(mean_stds, probs, rho, imti, imls, cs_poes,
-                    trunclevel, invtime, c, _c=None):
-    M, N, O, P = c.shape
-    U = len(probs) // N
-
-    # For every site
-    for n in range(N):
-        # NB: to understand the code below, consider the case with
-        # N=3 sites and U=2 ruptures; then there are N*U=6 indices:
-        # 0: first site
-        # 1: second site
-        # 2: third site
-        # 3: first site
-        # 4: second site
-        # 5: third site
-        # i.e. idxs = [0, 3], [1, 4], [2, 5] for sites 0, 1, 2
-        slc = slice(n, N * U, N)  # U indices
-
-        mu = mean_stds[0, :, slc]  # shape (M, U)
-        sig = mean_stds[1, :, slc]  # shape (M, U)
-
-        for p, iml in enumerate(imls):
-
-            # Calculate the contribution of each rupture to the total
-            # probability of occurrence for the reference IMT. Both
-            # `eps` and `poes` have shape U
-            eps = (numpy.log(iml) - mu[imti]) / sig[imti]
-            poes = _truncnorm_sf(trunclevel, eps)
-
-            # Converting to rates and dividing by the rate of
-            # exceedance of the reference IMT and level
-            ws = -numpy.log((1. - probs[slc]) ** poes) / invtime
-
-            # Normalizing by the AfE for the investigated IMT and level
-            ws /= -numpy.log(1. - cs_poes[p])
-
-            # weights not summing up to 1
-            c[:, n, 0, p] = ws.sum()
-
-            # For each intensity measure type
-            for m in range(len(mu)):
-
-                # Equation 14 in Lin et al. (2013)
-                term1 = mu[m] + rho[m] * eps * sig[m]
-                c[m, n, 1, p] = ws @ term1
-
-                # This is executed only if we already have the final CS
-                if _c is not None:
-
-                    # Equation 15 in Lin et al. (2013)
-                    term2 = sig[m] * (1. - rho[m]**2)**0.5
-                    term3 = term1 - _c[m, n, 1, p]
-                    c[m, n, 2, p] = ws @ (term2**2 + term3**2)
-
-
 class Collapser(object):
     """
     Class managing the collapsing logic.
@@ -359,17 +303,6 @@ def get_num_distances(gsims):
     for gsim in gsims:
         dists.update(gsim.REQUIRES_DISTANCES)
     return len(dists)
-
-
-def outdict(M, N, P, start, stop):
-    """
-    :param M: number of IMTs
-    :param N: number of sites
-    :param P: number of IMLs
-    :param start: index
-    :param stop: index > start
-    """
-    return {_g: numpy.zeros((M, N, 3, P)) for _g in range(start, stop)}
 
 
 def _interp(param, name, trt):
@@ -1098,64 +1031,6 @@ class ContextMaker(object):
             if self.truncation_level not in (0, 99.) and (
                     out[1, g] == 0.).any():
                 raise ValueError('Total StdDev is zero for %s' % gsim)
-        return out
-
-    # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-    def get_cs_contrib(self, ctx, imti, imls, poes, _c=None):
-        """
-        Compute the contributions to the conditional spectra, in a form
-        suitable for later composition.
-
-        NB: at the present if works only for poissonian contexts
-
-        :param ctx:
-           a context array
-        :param imti:
-            IMT index in the range 0..M-1
-        :param imls:
-            P intensity measure levels for the IMT specified by the index
-        :param poes:
-            Probabilities of exceedence for which we compute the CMS
-        :param _c:
-            The previously computed contribution. This is used for the
-            calculation of the stddev contribution.
-        :returns:
-            a dictionary g -> array where g is an index and the array has shape
-            (M, N, O, P) with O=3
-
-        """
-        assert self.tom
-        sids, counts = numpy.unique(ctx.sids, return_counts=True)
-        assert len(set(counts)) == 1, counts  # must be all equal
-        N = len(sids)
-        G = len(self.gsims)
-        M = len(self.imtls)
-        P = len(imls)
-
-        # This is the output dictionary as explained above
-        out = outdict(M, N, P, self.start, self.start + G)
-
-        mean_stds = self.get_mean_stds([ctx])  # (4, G, M, N*U)
-        imt_ref = self.imts[imti]
-        rho = numpy.array([self.cross_correl.get_correlation(imt_ref, imt)
-                           for imt in self.imts])
-
-        # This computes the probability of at least one occurrence
-        # probs = 1 - exp(-occurrence_rates*time_span). NOTE that we
-        # assume the contexts here are homogenous i.e. they either use
-        # the occurrence rate or the probability of occurrence in the
-        # investigation time
-        if len(ctx.probs_occur[0]):
-            probs = numpy.array([numpy.sum(p[1:]) for p in ctx.probs_occur])
-        else:
-            probs = self.tom.get_probability_one_or_more_occurrences(
-                ctx.occurrence_rate)  # shape N * U
-        # For every GMM
-        for g in range(G):
-            calc_cs_contrib(
-                mean_stds[:, g], probs, rho, imti, imls, poes,
-                self.truncation_level, self.investigation_time,
-                out[self.start + g], _c if _c is not None else None)
         return out
 
     def gen_poes(self, ctx):
