@@ -28,6 +28,9 @@ Starting from OpenQuake version 2.0 we have introduced a "code name" to honour e
 
 The code name for version 3.11 is **Wegener**, in memory of the late Alfred Wegener, polar researcher, geophysicist and meteorologist.
 
+### Current LTS release
+
+Current Long Term Support version is the **OpenQuake Engine 3.11** 'Wegener'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.11#openquake-engine.
 
 * [What's new](../engine-3.11/doc/whats-new.md)
 
