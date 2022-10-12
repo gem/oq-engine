@@ -87,7 +87,7 @@ def _cs_contrib(mean_stds, probs, rho, imti, imls, cs_poes,
 
 
 # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-def get_cs_contrib(cmaker, ctx, imti, imls, poes, _c=None):
+def get_cs_contrib(cmaker, ctx, imti, imls, _c=None):
     """
     Compute the contributions to the conditional spectra, in a form
     suitable for later composition.
@@ -100,8 +100,7 @@ def get_cs_contrib(cmaker, ctx, imti, imls, poes, _c=None):
         IMT index in the range 0..M-1
     :param imls:
         P intensity measure levels for the IMT specified by the index
-    :param poes:
-        Probabilities of exceedence for which we compute the CMS
+        corresponding to cmaker.poes
     :param _c:
         The previously computed contribution. This is used for the
         calculation of the stddev contribution.
@@ -138,7 +137,7 @@ def get_cs_contrib(cmaker, ctx, imti, imls, poes, _c=None):
             ctx.occurrence_rate)  # shape N * U
     # For every GMM
     for g in range(G):
-        _cs_contrib(mean_stds[:, g], probs, rho, imti, imls, poes,
+        _cs_contrib(mean_stds[:, g], probs, rho, imti, imls, cmaker.poes,
                     cmaker.truncation_level, cmaker.investigation_time,
                     out[cmaker.start + g], _c if _c is not None else None)
     return out

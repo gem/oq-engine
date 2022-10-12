@@ -109,12 +109,12 @@ class CondSpectraTestCase(unittest.TestCase):
         ctx2 = ctx[50:]
 
         # The hazard for the target IMT and poe
-        poes = [0.000404]
+        cmaker.poes = [0.000404]
         imls = [0.394359437]
 
-        mom1 = get_cs_contrib(cmaker, ctx1, imti, imls, poes)[0]
-        mom2 = get_cs_contrib(cmaker, ctx2, imti, imls, poes)[0]
-        mom = get_cs_contrib(cmaker, ctx, imti, imls, poes)[0]
+        mom1 = get_cs_contrib(cmaker, ctx1, imti, imls)[0]
+        mom2 = get_cs_contrib(cmaker, ctx2, imti, imls)[0]
+        mom = get_cs_contrib(cmaker, ctx, imti, imls)[0]
         aac(mom1 + mom2, mom)
 
     def test_2_rlzs(self):
@@ -125,11 +125,11 @@ class CondSpectraTestCase(unittest.TestCase):
         [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
 
         # The hazard for the target IMT and poe=0.002105
-        poes = [0.002105]
+        cmaker.poes = [0.002105]
         imls = [0.238531932]
 
         # Compute mean CS
-        cwdic = get_cs_contrib(cmaker, ctx, imti, imls, poes)
+        cwdic = get_cs_contrib(cmaker, ctx, imti, imls)
         # 0, 1 -> array (M, N, O, P) = (11, 1, 3, 1)
 
         # Compute mean across rlzs
@@ -138,7 +138,7 @@ class CondSpectraTestCase(unittest.TestCase):
         _c = cwdic[0] * w1 + cwdic[1] * w2
 
         # Compute std
-        cwdic = get_cs_contrib(cmaker, ctx, imti, imls, poes, _c)
+        cwdic = get_cs_contrib(cmaker, ctx, imti, imls, _c)
 
         # Create DF for test
         df = cwdic_to_dframe(cwdic, cmaker.imts, 0, 0)

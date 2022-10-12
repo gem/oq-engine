@@ -357,6 +357,8 @@ class ContextMaker(object):
                 self.mags = ()
             except KeyError:  # missing TRT but there is only one
                 [(_, self.mags)] = oq.mags_by_trt.items()
+        if 'poes' in param:
+            self.poes = param['poes']
         if 'imtls' in param:
             for imt in param['imtls']:
                 if not isinstance(imt, str):

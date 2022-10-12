@@ -118,9 +118,10 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         # Computing CS
         for gid, start, stop in performance.idx_start_stop(rdata['grp_id']):
             cmaker = self.cmakers[gid]
+            cmaker.poes = oq.poes
             ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
             for ctx in ctxs:
-                out += get_cs_contrib(cmaker, ctx, imti, self.imls, oq.poes)
+                out += get_cs_contrib(cmaker, ctx, imti, self.imls)
 
         # Apply weights and get two dictionaries with integer keys
         # (corresponding to the rlz ID) and array values
@@ -134,10 +135,10 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         # Computing standard deviation
         for gid, start, stop in performance.idx_start_stop(rdata['grp_id']):
             cmaker = self.cmakers[gid]
+            cmaker.poes = oq.poes
             ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
             for ctx in ctxs:
-                res = get_cs_contrib(cmaker, ctx, imti, self.imls, oq.poes,
-                                     cwmean[0])
+                res = get_cs_contrib(cmaker, ctx, imti, self.imls, cwmean[0])
                 for g in res:
                     out[g][:, :, 2] += res[g][:, :, 2]  # STDDEV
         return out
