@@ -345,7 +345,7 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def cwdict(M, N, P, start, stop):
+def outdict(M, N, P, start, stop):
     """
     :param M: number of IMTs
     :param N: number of sites
@@ -1118,7 +1118,7 @@ class ContextMaker(object):
         P = len(imls)
 
         # This is the output dictionary as explained above
-        out = cwdict(M, N, P, self.start, self.start + G)
+        out = outdict(M, N, P, self.start, self.start + G)
 
         mean_stds = self.get_mean_stds([ctx])  # (4, G, M, N*U)
         imt_ref = self.imts[imti]

@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib import general, performance
 from openquake.commonlib.calc import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.contexts import read_cmakers, cwdict
+from openquake.hazardlib.contexts import read_cmakers, outdict
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -164,7 +164,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
     def _apply_weights(self, acc):
         # build conditional spectra for each realization
         rlzs_by_g = self.datastore['rlzs_by_g'][()]
-        cwdic = cwdict(self.M, self.N, self.P, 0, self.R)
+        cwdic = outdict(self.M, self.N, self.P, 0, self.R)
         for _g, rlzs in enumerate(rlzs_by_g):
             for r in rlzs:
                 cwdic[r] += acc[_g]
@@ -172,7 +172,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
 
         # build final conditional mean and std
         weights = self.datastore['weights'][:]
-        cwmean = cwdict(self.M, self.N, self.P, 0, 1)  # dict with key 0
+        cwmean = outdict(self.M, self.N, self.P, 0, 1)  # dict with key 0
         for r, weight in enumerate(weights):
             cwmean[0] += cwdic[r] * weight
 
