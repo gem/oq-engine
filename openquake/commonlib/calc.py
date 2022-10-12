@@ -77,6 +77,27 @@ def convert_to_array(pmap, nsites, imtls, inner_idx=0):
     return curves
 
 
+def get_mean_curve(dstore, imt, site_id=0):
+    """
+    Extract the mean hazard curve from the datastore for the first site.
+    """
+    if 'hcurves-stats' in dstore:  # shape (N, S, M, L1)
+        arr = dstore.sel('hcurves-stats', stat='mean', imt=imt)
+    else:  # there is only 1 realization
+        arr = dstore.sel('hcurves-rlzs', rlz_id=0, imt=imt)
+    return arr[site_id, 0, 0]
+
+
+def get_poe_from_mean_curve(dstore, imt, iml, site_id=0):
+    """
+    Extract the poe corresponding to the given iml by looking at the mean
+    curve for the given imt. `iml` can also be an array.
+    """
+    imls = dstore['oqparam'].imtls[imt]
+    mean_curve = get_mean_curve(dstore, imt, site_id)
+    return numpy.interp(imls, mean_curve)[iml]
+
+
 # ######################### hazard maps ################################### #
 
 # cutoff value for the poe
