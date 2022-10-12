@@ -314,11 +314,7 @@ def cwdict(M, N, P, start, stop):
     :param start: index
     :param stop: index > start
     """
-    ddic = {}
-    for _g in range(start, stop):
-        ddic[_g] = AccumDict({'_c': numpy.zeros((M, N, 2, P)),
-                              '_w': numpy.zeros((M, N, P))})
-    return ddic
+    return {_g: numpy.zeros((M, N, 3, P)) for _g in range(start, stop)}
 
 
 def _interp(param, name, trt):
@@ -1090,7 +1086,6 @@ class ContextMaker(object):
         imt_ref = self.imts[imti]
         rho = numpy.array([self.cross_correl.get_correlation(imt_ref, imt)
                            for imt in self.imts])
-        m_range = range(len(self.imts))
 
         # This computes the probability of at least one occurrence
         # probs = 1 - exp(-occurrence_rates*time_span). NOTE that we
@@ -1121,8 +1116,7 @@ class ContextMaker(object):
                 mu = mean_stds[0, g, :, slc]  # shape (M, U)
                 sig = mean_stds[1, g, :, slc]  # shape (M, U)
 
-                c = out[self.start + g]['_c']
-                w = out[self.start + g]['_w']
+                c = out[self.start + g]
 
                 # For each IML
                 for p in range(P):
@@ -1142,22 +1136,22 @@ class ContextMaker(object):
                     ws /= -numpy.log(1. - cs_poes[p])
 
                     # Populate normalizer array
-                    w[:, n, p] = ws.sum()  # weights not summing up to 1
+                    c[:, n, 0, p] = ws.sum()  # weights not summing up to 1
 
                     # For each intensity measure type
-                    for m in m_range:
+                    for m in range(M):
 
                         # Equation 14 in Lin et al. (2013)
                         term1 = (mu[m] + rho[m] * eps * sig[m])
-                        c[m, n, MEA, p] = ws @ term1
+                        c[m, n, 1, p] = ws @ term1
 
                         # This is executed only if we already have the final CS
                         if _c is not None:
 
                             # Equation 15 in Lin et al. (2013)
                             term2 = sig[m] * (1. - rho[m]**2)**0.5
-                            term3 = term1 - _c[m, n, 0, p]
-                            c[m, n, STD, p] = ws @ (term2**2 + term3**2)
+                            term3 = term1 - _c[m, n, 1, p]
+                            c[m, n, 2, p] = ws @ (term2**2 + term3**2)
 
         return out
 

@@ -78,21 +78,19 @@ def plot(df, imts):
 # used to create the expected file the first time
 def cwdic_to_dframe(cwdic, imts, n, p):
     """
-    :param cwdic: a double dictionary g_ -> key -> array
+    :param cwdic: a dictionary g_ -> array
     :param imts: M intensity measure types
     :param rlzs: R realization indices
     :param n: an index in the range 0..N-1 where N is the number of sites
     :param p: an index in the range 0..P-1 where P is the number of IMLs
     """
     dic = dict(rlz_id=[], period=[], cs_exp=[], cs_std=[])
-    for r, cs in cwdic.items():
-        c = cs['_c']
-        s = cs['_w']
+    for r, c in cwdic.items():
         for m, imt in enumerate(imts):
             dic['rlz_id'].append(r)
             dic['period'].append(imt.period)
-            dic['cs_exp'].append(np.exp(c[m, n, 0, p] / s[m, n, p]))
-            dic['cs_std'].append(np.sqrt(c[m, n, 1, p] / s[m, n, p]))
+            dic['cs_exp'].append(np.exp(c[m, n, 1, p] / c[m, n, 0, p]))
+            dic['cs_std'].append(np.sqrt(c[m, n, 2, p] / c[m, n, 0, p]))
     return pandas.DataFrame(dic)
 
 
@@ -113,11 +111,10 @@ class CondSpectraTestCase(unittest.TestCase):
         poes = [0.000404]
         imls = [0.394359437]
 
-        dic1 = cmaker.get_cs_contrib(ctx1, imti, imls, poes)[0]
-        dic2 = cmaker.get_cs_contrib(ctx2, imti, imls, poes)[0]
-        dic = cmaker.get_cs_contrib(ctx, imti, imls, poes)[0]
-        aac((dic1['_c'] + dic2['_c']) / (dic1['_w'] + dic2['_w']),
-            dic['_c'] / dic['_w'])
+        mom1 = cmaker.get_cs_contrib(ctx1, imti, imls, poes)[0]
+        mom2 = cmaker.get_cs_contrib(ctx2, imti, imls, poes)[0]
+        mom = cmaker.get_cs_contrib(ctx, imti, imls, poes)[0]
+        aac(mom1 + mom2, mom)
 
     def test_2_rlzs(self):
         # test with two GMPEs, 1 TRT
@@ -132,15 +129,12 @@ class CondSpectraTestCase(unittest.TestCase):
 
         # Compute mean CS
         cwdic = cmaker.get_cs_contrib(ctx, imti, imls, poes)
+        # 0, 1 -> array (M, N, O, P) = (11, 1, 3, 1)
 
-        # CS container
-        S = cwdic[0]['_c'].shape
-        _c = np.zeros((S[0], S[1], 1, S[3]))
+        # Compute mean across rlzs
         w1 = inp.gsim_lt.branches[0].weight['weight']
         w2 = inp.gsim_lt.branches[1].weight['weight']
-
-        _c[:, 0, 0, 0] = (cwdic[0]['_c'][:, 0, 0, 0] * w1 +
-                          cwdic[1]['_c'][:, 0, 0, 0] * w2)
+        _c = cwdic[0] * w1 + cwdic[1] * w2
 
         # Compute std
         cwdic = cmaker.get_cs_contrib(ctx, imti, imls, poes, _c)
