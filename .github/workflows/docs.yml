@@ -59,7 +59,7 @@ on:
           - release
           - LTS
   push:
-    [master, 'engine-*', moster, 'ongine-*']
+    branches: [master, 'engine-*', moster, 'ongine-*']
 
 jobs:
   docs:
