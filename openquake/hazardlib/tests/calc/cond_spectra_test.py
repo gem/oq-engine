@@ -140,7 +140,7 @@ class CondSpectraTestCase(unittest.TestCase):
         w2 = inp.gsim_lt.branches[1].weight['weight']
 
         _c[:, 0, 0, 0] = (cwdic[0]['_c'][:, 0, 0, 0] * w1 +
-                          cwdic[0]['_c'][:, 0, 1, 0] * w2)
+                          cwdic[1]['_c'][:, 0, 0, 0] * w2)
 
         # Compute std
         cwdic = cmaker.get_cs_contrib(ctx, imti, imls, poes, _c)
