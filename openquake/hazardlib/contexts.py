@@ -463,7 +463,7 @@ class ContextMaker(object):
 
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
-        self.ctx_mon = monitor('make_contexts', measuremem=False)
+        self.ctx_mon = monitor('make_contexts', measuremem=True)
         self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
@@ -664,96 +664,94 @@ class ContextMaker(object):
         """
         :returns: a RuptureContext (or None if filtered away)
         """
-        with self.ctx_mon:
-            ctx = self.make_rctx(rup)
-            for name in sites.array.dtype.names:
-                setattr(ctx, name, sites[name])
+        ctx = self.make_rctx(rup)
+        for name in sites.array.dtype.names:
+            setattr(ctx, name, sites[name])
 
-            if distances is None:
-                distances = rup.surface.get_min_distance(sites.mesh)
-            ctx.rrup = distances
-            ctx.sites = sites
-            for param in self.REQUIRES_DISTANCES - {'rrup'}:
-                dists = get_distances(rup, sites, param, self.dcache)
-                setattr(ctx, param, dists)
+        if distances is None:
+            distances = rup.surface.get_min_distance(sites.mesh)
+        ctx.rrup = distances
+        ctx.sites = sites
+        for param in self.REQUIRES_DISTANCES - {'rrup'}:
+            dists = get_distances(rup, sites, param, self.dcache)
+            setattr(ctx, param, dists)
 
-            # Equivalent distances
-            reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
-            if reqv_obj and not rup.surface:  # PointRuptures have no surface
-                reqv = reqv_obj.get(ctx.repi, rup.mag)
-                if 'rjb' in self.REQUIRES_DISTANCES:
-                    ctx.rjb = reqv
-                if 'rrup' in self.REQUIRES_DISTANCES:
-                    ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
+        # Equivalent distances
+        reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
+        if reqv_obj and not rup.surface:  # PointRuptures have no surface
+            reqv = reqv_obj.get(ctx.repi, rup.mag)
+            if 'rjb' in self.REQUIRES_DISTANCES:
+                ctx.rjb = reqv
+            if 'rrup' in self.REQUIRES_DISTANCES:
+                ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
 
         return ctx
 
     def _get_ctx_planar(self, mag, planar, sites, src_id, start_stop, tom):
-        with self.ctx_mon:
-            # computing distances
-            rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
-            if self.fewsites:
-                # get the closest points on the surface
-                closest = project_back(planar, xx, yy)  # (3, U, N)
-            dists = {'rrup': rrup}
-            for par in self.REQUIRES_DISTANCES - {'rrup'}:
-                dists[par] = get_distances_planar(planar, sites, par)
-            for par in dists:
-                dst = dists[par]
-                if self.minimum_distance:
-                    dst[dst < self.minimum_distance] = self.minimum_distance
+        # computing distances
+        rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
+        if self.fewsites:
+            # get the closest points on the surface
+            closest = project_back(planar, xx, yy)  # (3, U, N)
+        dists = {'rrup': rrup}
+        for par in self.REQUIRES_DISTANCES - {'rrup'}:
+            dists[par] = get_distances_planar(planar, sites, par)
+        for par in dists:
+            dst = dists[par]
+            if self.minimum_distance:
+                dst[dst < self.minimum_distance] = self.minimum_distance
 
-            # building contexts; ctx has shape (U, N), ctxt (N, U)
-            ctx = self.build_ctx((len(planar), len(sites)))
-            ctxt = ctx.T  # smart trick taking advantage of numpy magic
-            ctxt['src_id'] = src_id
+        # building contexts; ctx has shape (U, N), ctxt (N, U)
+        ctx = self.build_ctx((len(planar), len(sites)))
+        ctxt = ctx.T  # smart trick taking advantage of numpy magic
+        ctxt['src_id'] = src_id
 
-            if self.fewsites:
-                # the loop below is a bit slow
-                for u, rup_id in enumerate(range(*start_stop)):
-                    ctx[u]['rup_id'] = rup_id
+        if self.fewsites:
+            # the loop below is a bit slow
+            for u, rup_id in enumerate(range(*start_stop)):
+                ctx[u]['rup_id'] = rup_id
 
-            # setting rupture parameters
-            for par in self.ruptparams:
-                if par == 'mag':
-                    ctxt[par] = mag
-                elif par == 'occurrence_rate':
-                    ctxt[par] = planar.wlr[:, 2]  # shape U-> (N, U)
-                elif par == 'width':
-                    ctxt[par] = planar.wlr[:, 0]
-                elif par == 'strike':
-                    ctxt[par] = planar.sdr[:, 0]
-                elif par == 'dip':
-                    ctxt[par] = planar.sdr[:, 1]
-                elif par == 'rake':
-                    ctxt[par] = planar.sdr[:, 2]
-                elif par == 'ztor':  # top edge depth
-                    ctxt[par] = planar.corners[:, 2, 0]
-                elif par == 'zbot':  # bottom edge depth
-                    ctxt[par] = planar.corners[:, 2, 3]
-                elif par == 'hypo_lon':
-                    ctxt[par] = planar.hypo[:, 0]
-                elif par == 'hypo_lat':
-                    ctxt[par] = planar.hypo[:, 1]
-                elif par == 'hypo_depth':
-                    ctxt[par] = planar.hypo[:, 2]
+        # setting rupture parameters
+        for par in self.ruptparams:
+            if par == 'mag':
+                ctxt[par] = mag
+            elif par == 'occurrence_rate':
+                ctxt[par] = planar.wlr[:, 2]  # shape U-> (N, U)
+            elif par == 'width':
+                ctxt[par] = planar.wlr[:, 0]
+            elif par == 'strike':
+                ctxt[par] = planar.sdr[:, 0]
+            elif par == 'dip':
+                ctxt[par] = planar.sdr[:, 1]
+            elif par == 'rake':
+                ctxt[par] = planar.sdr[:, 2]
+            elif par == 'ztor':  # top edge depth
+                ctxt[par] = planar.corners[:, 2, 0]
+            elif par == 'zbot':  # bottom edge depth
+                ctxt[par] = planar.corners[:, 2, 3]
+            elif par == 'hypo_lon':
+                ctxt[par] = planar.hypo[:, 0]
+            elif par == 'hypo_lat':
+                ctxt[par] = planar.hypo[:, 1]
+            elif par == 'hypo_depth':
+                ctxt[par] = planar.hypo[:, 2]
 
-            # setting distance parameters
-            for par in dists:
-                ctx[par] = dists[par]
-            if self.fewsites:
-                ctx['clon'] = closest[0]
-                ctx['clat'] = closest[1]
+        # setting distance parameters
+        for par in dists:
+            ctx[par] = dists[par]
+        if self.fewsites:
+            ctx['clon'] = closest[0]
+            ctx['clat'] = closest[1]
 
-            # setting site parameters
-            for par in self.siteparams:
-                ctx[par] = sites.array[par]  # shape N-> (U, N)
-            if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
-                # read Probability Mass Function from model and reshape it
-                # into predetermined shape of probs_occur
-                pmf = tom.get_pmf(planar.wlr[:, 2],
-                                  n_max=ctx['probs_occur'].shape[2])
-                ctx['probs_occur'] = pmf[:, numpy.newaxis, :]
+        # setting site parameters
+        for par in self.siteparams:
+            ctx[par] = sites.array[par]  # shape N-> (U, N)
+        if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
+            # read Probability Mass Function from model and reshape it
+            # into predetermined shape of probs_occur
+            pmf = tom.get_pmf(planar.wlr[:, 2],
+                              n_max=ctx['probs_occur'].shape[2])
+            ctx['probs_occur'] = pmf[:, numpy.newaxis, :]
 
         return ctx
 
@@ -1239,7 +1237,8 @@ class PmapMaker(object):
         totlen = 0
         t0 = time.time()
         for src in self.sources:
-            ctxs = self._get_ctxs(src)
+            with self.cmaker.ctx_mon:
+                ctxs = self._get_ctxs(src)
             ctxs_mb += sum(ctx.nbytes for ctx in ctxs) / TWO20  # TWO20=1MB
             src.nsites = sum(len(ctx) for ctx in ctxs)
             totlen += src.nsites
@@ -1272,7 +1271,8 @@ class PmapMaker(object):
         for src in self.sources:
             t0 = time.time()
             pm = ProbabilityMap(cm.imtls.size, len(cm.gsims))
-            ctxs = self._get_ctxs(src)
+            with self.cmaker.ctx_mon:
+                ctxs = self._get_ctxs(src)
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
