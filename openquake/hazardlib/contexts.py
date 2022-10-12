@@ -865,7 +865,8 @@ class ContextMaker(object):
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         ctxs = []
         if getattr(src, 'location', None) and step == 1:
-            return self.get_ctxs_planar(src, sitecol)
+            with self.ctx_mon:
+                return self.get_ctxs_planar(src, sitecol)
         elif hasattr(src, 'source_id'):  # other source
             with self.ir_mon:
                 allrups = numpy.array(list(src.iter_ruptures(
@@ -881,26 +882,27 @@ class ContextMaker(object):
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
             src_id = 0
-        for rups, sites in rups_sites:  # ruptures with the same magnitude
-            if len(rups) == 0:  # may happen in case of min_mag/max_mag
-                continue
-
-            magdist = self.maximum_distance(rups[0].mag)
-            dists = [get_distances(rup, sites, 'rrup', self.dcache)
-                     for rup in rups]
-            for u, rup in enumerate(rups):
-                mask = dists[u] <= magdist
-                if mask.any():
-                    r_sites = sites.filter(mask)
-                    ctx = self.get_ctx(rup, r_sites, dists[u][mask])
-                    ctx.src_id = src_id
-                    ctx.rup_id = rup.rup_id
-                    ctxs.append(ctx)
-                    if self.fewsites:
-                        c = rup.surface.get_closest_points(sites.complete)
-                        ctx.clon = c.lons[ctx.sids]
-                        ctx.clat = c.lats[ctx.sids]
-        return [] if not ctxs else [self.recarray(ctxs)]
+        with self.ctx_mon:
+            for rups, sites in rups_sites:  # ruptures with the same magnitude
+                if len(rups) == 0:  # may happen in case of min_mag/max_mag
+                    continue
+                magdist = self.maximum_distance(rups[0].mag)
+                dists = [get_distances(rup, sites, 'rrup', self.dcache)
+                         for rup in rups]
+                for u, rup in enumerate(rups):
+                    mask = dists[u] <= magdist
+                    if mask.any():
+                        r_sites = sites.filter(mask)
+                        ctx = self.get_ctx(rup, r_sites, dists[u][mask])
+                        ctx.src_id = src_id
+                        ctx.rup_id = rup.rup_id
+                        ctxs.append(ctx)
+                        if self.fewsites:
+                            c = rup.surface.get_closest_points(sites.complete)
+                            ctx.clon = c.lons[ctx.sids]
+                            ctx.clat = c.lats[ctx.sids]
+            lst = [] if not ctxs else [self.recarray(ctxs)]
+        return lst
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -1237,8 +1239,7 @@ class PmapMaker(object):
         totlen = 0
         t0 = time.time()
         for src in self.sources:
-            with self.cmaker.ctx_mon:
-                ctxs = self._get_ctxs(src)
+            ctxs = self._get_ctxs(src)
             ctxs_mb += sum(ctx.nbytes for ctx in ctxs) / TWO20  # TWO20=1MB
             src.nsites = sum(len(ctx) for ctx in ctxs)
             totlen += src.nsites
@@ -1271,8 +1272,7 @@ class PmapMaker(object):
         for src in self.sources:
             t0 = time.time()
             pm = ProbabilityMap(cm.imtls.size, len(cm.gsims))
-            with self.cmaker.ctx_mon:
-                ctxs = self._get_ctxs(src)
+            ctxs = self._get_ctxs(src)
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
