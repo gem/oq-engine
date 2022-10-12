@@ -124,7 +124,7 @@ jobs:
           if [ -z "$BUILD" ]; then
               if [[ "$GITHUB_REF_NAME" == "moster" ]]; then
                   BUILD=master
-              elif [[ "$GITHUB_REF_NAME" =~ ^engine- -o "$GITHUB_REF_NAME" =~ ^ongine- ]]; then
+              elif [[ "$GITHUB_REF_NAME" =~ ^engine- || "$GITHUB_REF_NAME" =~ ^ongine- ]]; then
                   BRANCH_VER="${GITHUB_REF_NAME#engine-}"
                   if [ "$BRANCH_VER" == "$GITHUB_REF_NAME" ]; then
                       BRANCH_VER="${GITHUB_REF_NAME#ongine-}"
