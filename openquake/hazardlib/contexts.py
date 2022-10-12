@@ -1120,7 +1120,7 @@ class ContextMaker(object):
         # This is the output dictionary as explained above
         out = cwdict(M, N, P, self.start, self.start + G)
 
-        mean_stds = self.get_mean_stds([ctx])  # (4, G, M, N*C)
+        mean_stds = self.get_mean_stds([ctx])  # (4, G, M, N*U)
         imt_ref = self.imts[imti]
         rho = numpy.array([self.cross_correl.get_correlation(imt_ref, imt)
                            for imt in self.imts])
@@ -1139,7 +1139,7 @@ class ContextMaker(object):
         # For every site
         for n in range(N):
             # NB: to understand the code below, consider the case with
-            # N=3 sites and C=2 contexts; then the indices N*C are
+            # N=3 sites and U=2 ruptures; then there are N*U=6 indices:
             # 0: first site
             # 1: second site
             # 2: third site
