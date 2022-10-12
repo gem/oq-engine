@@ -31,7 +31,7 @@ def outdict(M, N, P, start, stop):
     return {_g: numpy.zeros((M, N, 3, P)) for _g in range(start, stop)}
 
 
-def _cs_contrib(mean_stds, probs, rho, imti, imls, cs_poes,
+def _cs_out(mean_stds, probs, rho, imti, imls, cs_poes,
                 trunclevel, invtime, c, _c=None):
     M, N, O, P = c.shape
     U = len(probs) // N
@@ -87,7 +87,7 @@ def _cs_contrib(mean_stds, probs, rho, imti, imls, cs_poes,
 
 
 # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-def get_cs_contrib(cmaker, ctx, imti, imls, _c=None):
+def get_cs_out(cmaker, ctx, imti, imls, _c=None):
     """
     Compute the contributions to the conditional spectra, in a form
     suitable for later composition.
@@ -99,8 +99,8 @@ def get_cs_contrib(cmaker, ctx, imti, imls, _c=None):
     :param imti:
         IMT index in the range 0..M-1
     :param imls:
-        P intensity measure levels for the IMT specified by the index
-        corresponding to cmaker.poes
+        P intensity measure levels for the IMT specified by the index;
+        they are in correspondence with the probabilities in cmaker.poes
     :param _c:
         The previously computed contribution. This is used for the
         calculation of the stddev contribution.
@@ -110,6 +110,7 @@ def get_cs_contrib(cmaker, ctx, imti, imls, _c=None):
 
     """
     assert cmaker.tom
+    assert len(imls) == len(cmaker.poes), (len(cmaker.poes), len(imls))
     sids, counts = numpy.unique(ctx.sids, return_counts=True)
     assert len(set(counts)) == 1, counts  # must be all equal
     N = len(sids)
@@ -137,7 +138,7 @@ def get_cs_contrib(cmaker, ctx, imti, imls, _c=None):
             ctx.occurrence_rate)  # shape N * U
     # For every GMM
     for g in range(G):
-        _cs_contrib(mean_stds[:, g], probs, rho, imti, imls, cmaker.poes,
-                    cmaker.truncation_level, cmaker.investigation_time,
-                    out[cmaker.start + g], _c if _c is not None else None)
+        _cs_out(mean_stds[:, g], probs, rho, imti, imls, cmaker.poes,
+                cmaker.truncation_level, cmaker.investigation_time,
+                out[cmaker.start + g], _c if _c is not None else None)
     return out

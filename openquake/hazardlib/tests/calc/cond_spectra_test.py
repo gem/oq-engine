@@ -23,7 +23,7 @@ import pandas
 from openquake.hazardlib import read_input, valid
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.calc.filters import IntegrationDistance
-from openquake.hazardlib.calc.cond_spectra import get_cs_contrib
+from openquake.hazardlib.calc.cond_spectra import get_cs_out
 
 OVERWRITE_EXPECTED = False
 
@@ -77,16 +77,16 @@ def plot(df, imts):
 
 
 # used to create the expected file the first time
-def cwdic_to_dframe(cwdic, imts, n, p):
+def outdic_to_dframe(outdic, imts, n, p):
     """
-    :param cwdic: a dictionary g_ -> array
+    :param outdic: a dictionary g_ -> array
     :param imts: M intensity measure types
     :param rlzs: R realization indices
     :param n: an index in the range 0..N-1 where N is the number of sites
     :param p: an index in the range 0..P-1 where P is the number of IMLs
     """
     dic = dict(rlz_id=[], period=[], cs_exp=[], cs_std=[])
-    for r, c in cwdic.items():
+    for r, c in outdic.items():
         for m, imt in enumerate(imts):
             dic['rlz_id'].append(r)
             dic['period'].append(imt.period)
@@ -112,9 +112,9 @@ class CondSpectraTestCase(unittest.TestCase):
         cmaker.poes = [0.000404]
         imls = [0.394359437]
 
-        mom1 = get_cs_contrib(cmaker, ctx1, imti, imls)[0]
-        mom2 = get_cs_contrib(cmaker, ctx2, imti, imls)[0]
-        mom = get_cs_contrib(cmaker, ctx, imti, imls)[0]
+        mom1 = get_cs_out(cmaker, ctx1, imti, imls)[0]
+        mom2 = get_cs_out(cmaker, ctx2, imti, imls)[0]
+        mom = get_cs_out(cmaker, ctx, imti, imls)[0]
         aac(mom1 + mom2, mom)
 
     def test_2_rlzs(self):
@@ -129,19 +129,19 @@ class CondSpectraTestCase(unittest.TestCase):
         imls = [0.238531932]
 
         # Compute mean CS
-        cwdic = get_cs_contrib(cmaker, ctx, imti, imls)
+        outdic = get_cs_out(cmaker, ctx, imti, imls)
         # 0, 1 -> array (M, N, O, P) = (11, 1, 3, 1)
 
         # Compute mean across rlzs
         w1 = inp.gsim_lt.branches[0].weight['weight']
         w2 = inp.gsim_lt.branches[1].weight['weight']
-        _c = cwdic[0] * w1 + cwdic[1] * w2
+        _c = outdic[0] * w1 + outdic[1] * w2
 
         # Compute std
-        cwdic = get_cs_contrib(cmaker, ctx, imti, imls, _c)
+        outdic = get_cs_out(cmaker, ctx, imti, imls, _c)
 
         # Create DF for test
-        df = cwdic_to_dframe(cwdic, cmaker.imts, 0, 0)
+        df = outdic_to_dframe(outdic, cmaker.imts, 0, 0)
 
         # check the result
         expected = os.path.join(CWD, 'expected', 'spectra2.csv')

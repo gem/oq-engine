@@ -26,7 +26,7 @@ from openquake.baselib import general, performance
 from openquake.commonlib.calc import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.contexts import read_cmakers
-from openquake.hazardlib.calc.cond_spectra import get_cs_contrib, outdict
+from openquake.hazardlib.calc.cond_spectra import get_cs_out, outdict
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -121,7 +121,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
             cmaker.poes = oq.poes
             ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
             for ctx in ctxs:
-                out += get_cs_contrib(cmaker, ctx, imti, self.imls)
+                out += get_cs_out(cmaker, ctx, imti, self.imls)
 
         # Apply weights and get two dictionaries with integer keys
         # (corresponding to the rlz ID) and array values
@@ -138,7 +138,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
             cmaker.poes = oq.poes
             ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
             for ctx in ctxs:
-                res = get_cs_contrib(cmaker, ctx, imti, self.imls, cwmean[0])
+                res = get_cs_out(cmaker, ctx, imti, self.imls, cwmean[0])
                 for g in res:
                     out[g][:, :, 2] += res[g][:, :, 2]  # STDDEV
         return out
