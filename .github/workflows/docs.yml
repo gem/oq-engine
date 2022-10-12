@@ -232,7 +232,7 @@ jobs:
           if [ "$BUILD" == "LTS" ]; then
                ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine/\"; ln -snf \"$ENG_VER\" LTS'"
           fi
-          if [ "$BUILD" == "relase" -o "$BUILD" == "LTS" ]; then
+          if [ "$BUILD" == "release" -o "$BUILD" == "LTS" ]; then
               if [ "$LATEST_VER" == "$ENG_VER" ]; then
                   ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine/\"; ln -snf \"$ENG_VER\" latest'"
               fi
