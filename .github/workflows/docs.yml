@@ -177,7 +177,8 @@ jobs:
               TARGET="oq-engine/master/"
               PDF_VER="(master)"
           elif [ "$BUILD" == "dev" ]; then
-              TARGET=".dev/oq-engine/$GITHUB_REF_NAME/"
+              DOCS_BASE="${DOCS_BASE}.dev/"
+              TARGET="oq-engine/$GITHUB_REF_NAME/"
               PDF_VER="($GITHUB_REF_NAME)"
               PDFDOCS=".dev/manuals/"
           else
