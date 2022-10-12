@@ -11,10 +11,10 @@ except ImportError:
 from numpy.lib.stride_tricks import as_strided
 
 
-# Set PROJ_LIB to dir containing proj.db to avoid:
+# Set PROJ_DATA (proj == 9.0.1) to dir containing proj.db to avoid:
 # 'ERROR 1: PROJ: proj_create_from_name: Cannot find proj.db'
-if 'PROJ_LIB' not in os.environ:
-    os.environ['PROJ_LIB'] = pj.datadir.get_data_dir()
+if 'PROJ_DATA' not in os.environ:
+    os.environ['PROJ_DATA'] = pj.datadir.get_data_dir()
 
 
 def sample_raster_at_points(raster_file: str, lon_pts: np.ndarray, lat_pts:
