@@ -200,8 +200,6 @@ jobs:
           chmod 600 ./.deploy_rsa
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
 
-          LATEST_VER="$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine\" ; ( ls | grep \"[0-9]\+\.[0-9]\+\" ; echo \"$ENG_VER\") | LC_ALL=C sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1'")"
-          echo "LATEST_VER           [$LATEST_VER]"
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
 
           cd doc/manual && make html && make latexpdf
