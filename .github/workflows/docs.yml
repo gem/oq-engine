@@ -1,34 +1,76 @@
+#  manuals -> master latest e LTS
+#  dev/<branch>/arch
+#
+#  link a pdf e constraint coi test ok
+
+# Tree Structure
+# --------------
+#
+# oq-engine
+#     <x.y>|master
+#         PDF
+#             <pdf_docs>
+#         reference
+#         manual
+#         advanced
+#     latest -> <latest x.y>
+#     LTS    -> <LTS x.y>
+#     reference
+#         latest -> ../latest/reference
+#         LTS    -> ../LTS/reference
+#         master -> ../master/reference
+#     manual
+#         latest -> ../latest/manual
+#         LTS    -> ../LTS/manual
+#         master -> ../master/manual
+#     advanced
+#         latest -> ../latest/advanced
+#         LTS    -> ../LTS/advanced
+#         master -> ../master/advanced
+# manuals
+#     OpenQuake Manual <x.y>.pdf -> ../oq-engine/<x.y>/PDF/OpenQuake Manual <x.y>.pdf
+#     OpenQuake Manual latest.pdf -> OpenQuake Manual <latest_(x.y)>.pdf
+#     OpenQuake Manual LTS.pdf -> OpenQuake Manual <LTS_(x.y)>.pdf
+#
+# .dev
+#     oq-engine
+#         <branch>
+#             PDF
+#                 <pdf_docs>
+#             reference
+#             manual
+#             advanced
+#     manuals
+#         OpenQuake Manual <branch>.pdf -> ../oq-engine/<branch>/PDF/OpenQuake Manual <branch>.pdf
+#
 ---
 name: new docs
 on:
   workflow_dispatch:
     inputs:
-      git-ref:
-        description: Git Ref
-        default: master
-        required: true
       oq-release:
         description: 'OQ Release'
         required: true
-        default: 'latest'
+        default: 'dev'
         type: choice
         options:
-        - latest
-        - LTS
-        - dev
+          - dev
+          - master
+          - release
+          - LTS
   push:
-    # (MN: disabled just for test)    branches: [ master ]
+    branches: [master, 'engine-*', moster, 'ongine-*']
 
 jobs:
-  demos:
+  docs:
     runs-on: ubuntu-latest
     env:
       EV_NAME: ${{ github.event_name }}
-      # GITHUB_PULL_REQUEST: ${{ github.event.number }}
-      # GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
-      # GITHUB_REF:  ${{ github.ref }}
-      # GITHUB_HD_REF:  ${{ github.head_ref }}
-      # GITHUB_BS_REF:  ${{ github.base_ref }}
+      # during devel was DOCS_BASE: ".oq-engine-docs-refact/"
+      DOCS_BASE: ""
+      GITHUB_REF: ${{ github.ref }}
+      GITHUB_HD_REF: ${{ github.head_ref }}
+      GITHUB_BS_REF: ${{ github.base_ref }}
 
     steps:
       - name: run if workflow_dispatch
@@ -39,133 +81,161 @@ jobs:
         if: github.event_name == 'push'
         shell: bash
         run: echo "Action triggered by 'push' ($EV_NAME)"
-      # - name: Check out the codebase (Master)
-      #   if: github.event.inputs.git-ref == ''
-      #   uses: actions/checkout@v2
-      # - name: Check out the codebase (Custom Ref)
-      #   if: github.event.inputs.git-ref != ''
-      #   uses: actions/checkout@v2
-      #   with:
-      #     ref: ${{ github.event.inputs.git-ref }}
-      # - name: Set up Python 3.8
-      #   uses: actions/setup-python@v2
-      #   with:
-      #     python-version: '3.8'
-      # - name: Upgrade pip and install requirements
-      #   run: |
-      #     pip install -U pip
-      #     pip install -r ./requirements-py38-linux64.txt
-      #     pip install pydata-sphinx-theme
-      #     pip install fiona
-      # - name: Install oq engine
-      #   run: |
-      #     pip install -e .[dev]
-      #     python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])"
-      # - name: Run demos and upload to ci.openquake.org if not workflow_dispatch
-      #   if: github.event.inputs.git-ref == ''
-      #   shell: bash
-      #   env:
-      #     DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
-      #     GITHUB_PULL_REQUEST: ${{ github.event.number }}
-      #     GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
-      #     GITHUB_REF:  ${{ github.ref }}
-      #     GITHUB_HD_REF:  ${{ github.head_ref }}
-      #     GITHUB_BS_REF:  ${{ github.base_ref }}
-      #   run: |
-      #     zip -q -r /tmp/demos.zip demos/
-      #     OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
-      #     oq dump /tmp/oqdata.zip
-      #     oq restore /tmp/oqdata.zip /tmp/oqdata
-      #     helpers/zipdemos.sh $(pwd)/demos
-      #     echo " Check if this is a pull request or not"
-      #     if [ -z "$GITHUB_HD_REF" ]
-      #     then
-      #         echo " Is not a pull request, use branch: $GITHUB_DEF_BR"
-      #         GITHUB_BR=`echo ${{ github.event.repository.default_branch }}`
-      #     else
-      #         echo " Is a pull request, use branch: $GITHUB_HD_BR"
-      #         GITHUB_BR=`echo ${{ github.head_ref }}`
-      #     fi
-      #     echo "BRANCH set to $GITHUB_BR"
-      #     gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
-      #     chmod 600 ./.deploy_rsa
-      #     eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
-      #     set -x
-      #     scp -v -o ConnectTimeout=120 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@docs.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${GITHUB_BR}.zip
-      #     scp -v -o ConnectTimeout=120 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@docs.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_BR}.zip
-      #     set +x
-      # - name: Make docs and rsync to docs.openquake.org
-      #   shell: bash
-      #   env:
-      #     DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
-      #     GITHUB_PULL_REQUEST: ${{ github.event.number }}
-      #     GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
-      #     GITHUB_REF:  ${{ github.ref }}
-      #     GITHUB_HD_REF:  ${{ github.head_ref }}
-      #     GITHUB_BS_REF:  ${{ github.base_ref }}
-      #     UPLOAD: ${{ github.event.inputs.git-ref }}
-      #     BUILD: ${{ github.event.inputs.oq-release }}
-      #   run: |
-      #     echo "GITHUB_PULL_REQUEST: [$GITHUB_PULL_REQUEST]"
-      #     echo "GITHUB_DEF_BR:       [$GITHUB_DEF_BR]"
-      #     echo "GITHUB_REF:          [$GITHUB_REF]"
-      #     echo "GITHUB_HD_REF:       [$GITHUB_HD_REF]"
-      #     echo "GITHUB_BS_REF:       [$GITHUB_BS_REF]"
-      #     echo "UPLOAD:              [$UPLOAD]"
-      #     echo "BUILD:               [$BUILD]"
-      #     VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
-      #     if [ -z "$GITHUB_HD_REF" ]
-      #     then
-      #         echo " Is not a pull request, use branch: $GITHUB_DEF_BR"
-      #         GITHUB_BR=`echo ${{ github.event.repository.default_branch }}`
-      #     else
-      #         echo " Is a pull request, use branch: $GITHUB_HD_BR"
-      #         GITHUB_BR=`echo ${{ github.head_ref }}`
-      #     fi
-      #     echo "BRANCH set to $GITHUB_BR"
-      #     if [ -z "$UPLOAD" ]
-      #     then
-      #         UPLOAD=${GITHUB_BR}
-      #         echo " Is not a workflow_dispatch run, use upload folder: $UPLOAD"
-      #     else
-      #         echo " Is a workflow_dispatch run, use branch: $UPLOAD"
-      #     fi
-      #     gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
-      #     chmod 600 ./.deploy_rsa
-      #     eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
-      #     sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
-      #     cd doc/manual && make html && make latexpdf
-      #     if [ "$UPLOAD" == "master" ]
-      #     then
-      #         PDF_VER="\(master\)"
-      #     else
-      #         PDF_VER=${VER}
-      #     fi
-      #     rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:/var/www/docs.openquake.org/manuals/OpenQuake\ Manual\ ${PDF_VER}.pdf";
-      #     echo "Uploading docs.openquake.org/oq-engine/manual/"
-      #     rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/manual/;
-      #     cd ../sphinx && make html && cd ../adv-manual && make html && make latexpdf
-      #     echo "uploading OpenQuakeforAdvancedUsers.pdf to docs.openquake.org/oq-engine/advanced/"
-      #     rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
-      #     # publish
-      #     if [ "$UPLOAD" == "master" ]
-      #     then
-      #         echo "Uploading docs.openquake.org/oq-engine/${UPLOAD}/"
-      #         rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@docs.openquake.org:/var/www/docs.openquake.org/oq-engine/${UPLOAD}/
-      #     else
-      #         VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
-      #         HTDOCS=/var/www/docs.openquake.org/oq-engine/
-      #         DEST=${HTDOCS}${VER}
-      #         PDFDOCS=/var/www/docs.openquake.org/manuals/
-      #         PDFDEST=${PDFDOCS}
-      #         echo " Building docs of oq-engine for version ${BUILD}"
-      #         echo "Uploading docs.openquake.org:${DEST}"
-      #         rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax ../sphinx/build/html/ docs@docs.openquake.org:${DEST}
-      #         echo "Create symlink for $BUILD manual"
-      #         set -x
-      #         # unlink before to link to new version of manual
-      #         ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd ${HTDOCS} && pwd && unlink ${BUILD} && ln -vs ${VER} ${BUILD}'"
-      #         # unlink before to link to new version of manual
-      #         ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd ${PDFDOCS} && pwd && unlink \"OpenQuake Manual (${BUILD}).pdf\" && ln -vs \"OpenQuake Manual ${VER}.pdf\" \"OpenQuake Manual (${BUILD}).pdf\"'"
-      #         set +x
-      #     fi
+      - name: identify github reference
+        run: |
+          echo "DOCS_BASE: [$DOCS_BASE]"
+          echo "REF: $GITHUB_REF"
+          echo "REF_NAME: $GITHUB_REF_NAME"
+          echo "HD_REF: $GITHUB_HD_REF"
+          echo "BS_REF: $GITHUB_BS_REF"
+      - name: Check out the codebase
+        uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Upgrade pip and install requirements
+        run: |
+          pip install -U pip
+          pip install -r ./requirements-py38-linux64.txt
+          pip install pydata-sphinx-theme
+          pip install fiona
+      - name: Install oq engine
+        run: |
+          pip install -e .[dev]
+          python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])"
+      - name: Make docs and rsync to docs.openquake.org
+        shell: bash
+        env:
+          # Used
+          BUILD: ${{ github.event.inputs.oq-release }}
+          DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
+          # GITHUB_PULL_REQUEST: ${{ github.event.number }}
+          GITHUB_DEF_BR: ${{ github.event.repository.default_branch }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_HD_REF: ${{ github.head_ref }}
+          GITHUB_BS_REF: ${{ github.base_ref }}
+          UPLOAD: ${{ github.event.inputs.git-ref }}
+        run: |
+          bash --version
+          LTS_VER=$(grep 'Current Long Term Support' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
+          ENG_VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
+
+          if [ -z "$BUILD" ]; then
+              if [[ "$GITHUB_REF_NAME" == "moster" ]]; then
+                  BUILD=master
+              elif [[ "$GITHUB_REF_NAME" =~ ^engine- -o "$GITHUB_REF_NAME" =~ ^ongine- ]]; then
+                  BRANCH_VER="${GITHUB_REF_NAME#engine-}"
+                  if [ "$BRANCH_VER" == "$GITHUB_REF_NAME" ]; then
+                      BRANCH_VER="${GITHUB_REF_NAME#ongine-}"
+                  fi
+
+                  # TEST: ENABLE IF NEEDED
+                  # ENG_VER=$BRANCH_VER
+                  if [ "$BRANCH_VER" != "$ENG_VER" ]; then
+                      echo "Versions don't match (BRANCH_VER: [$BRANCH_VER] ENG_VER: [$ENG_VER])"
+                      exit 2
+                  fi
+                  if [[ "$BRANCH_VER" == "$LTS_VER" ]]; then
+                      BUILD=LTS
+                  else
+                      BUILD=release
+                  fi
+              else
+                  BUILD=dev
+              fi
+          fi
+
+          LATEST_VER="$(git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1)"
+
+          PDFDOCS="manuals/"
+          TARGET_LINK=""
+          PDF_VER_LINK=""
+          if [ "$BUILD" == "release" -o "$BUILD" == "LTS" ]; then
+              TARGET="oq-engine/$ENG_VER/"
+              # TARGET_LINK="${DOCS_BASE}oq-engine/$BUILD"
+              PDF_VER="${ENG_VER}"
+              if [ "$BUILD" == "release" ]; then
+                  if [ "$ENG_VER" == "$LATEST_VER" ]; then
+                      PDF_VER_LINK="latest"
+                  fi
+              elif [ "$BUILD" == "LTS" ]; then
+                  PDF_VER_LINK="LTS"
+              fi
+          elif [ "$BUILD" == "master" ]; then
+              TARGET="oq-engine/master/"
+              PDF_VER="(master)"
+          elif [ "$BUILD" == "dev" ]; then
+              DOCS_BASE="${DOCS_BASE}.dev/"
+              TARGET="oq-engine/$GITHUB_REF_NAME/"
+              PDF_VER="($GITHUB_REF_NAME)"
+              PDFDOCS="manuals/"
+          else
+              echo "BUILD [$BUILD] not recognized"
+              exit 3
+          fi
+          PDFDEST=${PDFDOCS}
+          # TEST PER PDF_VER_LINK
+          # PDF_VER_LINK=test_ver_link
+
+          echo "LATEST_VER:          [$LATEST_VER]"
+          echo "BUILD:               [$BUILD]"
+          echo "LTS_VER:             [$LTS_VER]"
+          echo "ENG_VER:             [$ENG_VER]"
+          echo "TARGET:              [$TARGET]"
+          echo "TARGET_LINK:         [$TARGET_LINK]"
+          echo "PDF_VER:             [$PDF_VER]"
+          echo "PDF_VER_LINK:        [$PDF_VER_LINK]"
+          echo "PDFDOCS              [$PDFDOCS]"
+          echo "PDFDEST              [$PDFDEST]"
+          echo "----"
+          echo "GITHUB_PULL_REQUEST: [$GITHUB_PULL_REQUEST]"
+          echo "GITHUB_DEF_BR:       [$GITHUB_DEF_BR]"
+          echo "GITHUB_REF:          [$GITHUB_REF]"
+          echo "GITHUB_HD_REF:       [$GITHUB_HD_REF]"
+          echo "GITHUB_BS_REF:       [$GITHUB_BS_REF]"
+          echo "UPLOAD:              [$UPLOAD]"
+
+          gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
+          chmod 600 ./.deploy_rsa
+          eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
+
+          LATEST_VER="$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine\" ; ( ls | grep \"[0-9]\+\.[0-9]\+\" ; echo \"$ENG_VER\") | LC_ALL=C sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1'")"
+          echo "LATEST_VER           [$LATEST_VER]"
+          sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
+
+          cd doc/manual && make html && make latexpdf
+
+          echo "Uploading OpenQuake Manual (PDF)"
+          rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --rsync-path="mkdir -p \"${DOCS_BASE}${TARGET}PDF\" && rsync" build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:${DOCS_BASE}${TARGET}PDF/OpenQuake Manual ${PDF_VER}.pdf"
+          ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}${PDFDOCS}\"; ln -sf \"../${TARGET}PDF/OpenQuake Manual ${PDF_VER}.pdf\" .'"
+          if [ "$PDF_VER_LINK" ]; then
+              echo "Found PDF_VER_LINK set [$PDF_VER_LINK]"
+              ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}manuals/\"; ln -sf \"OpenQuake Manual ${PDF_VER}.pdf\" \"OpenQuake Manual ${PDF_VER_LINK}.pdf\"'"
+          fi
+
+          echo "Uploading OpenQuake Manual (HTML)"
+          rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${DOCS_BASE}${TARGET}manual/"
+
+          echo "Make Reference Manual (HTML)"
+          cd ../sphinx && make html
+          rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:${DOCS_BASE}${TARGET}reference/"
+
+          echo "Make Advanced Manual (PDF)"
+          cd ../adv-manual && make clean && make latexpdf
+          echo "uploading OpenQuakeforAdvancedUsers (PDF)"
+          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/latex/OpenQuakeforAdvancedUsers.pdf "docs@docs.openquake.org:${DOCS_BASE}${TARGET}PDF/"
+
+          echo "Make Advanced Manual (HTML)"
+          cd ../adv-manual && make clean && make html
+          echo "uploading OpenQuakeforAdvancedUsers (HTML)"
+          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:${DOCS_BASE}${TARGET}advanced/"
+
+          if [ "$BUILD" == "LTS" ]; then
+               ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine/\"; ln -snf \"$ENG_VER\" LTS'"
+          fi
+          if [ "$BUILD" == "relase" -o "$BUILD" == "LTS" ]; then
+              if [ "$LATEST_VER" == "$ENG_VER" ]; then
+                  ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine/\"; ln -snf \"$ENG_VER\" latest'"
+              fi
+          fi
