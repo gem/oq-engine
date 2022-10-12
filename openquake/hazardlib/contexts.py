@@ -196,41 +196,57 @@ def sqrscale(x_min, x_max, n):
 
 def calc_cs_contrib(mean_stds, probs, rho, imti, imls, cs_poes,
                     trunclevel, invtime, c, _c=None):
-    mu = mean_stds[0]  # shape (M, U)
-    sig = mean_stds[1]  # shape (M, U)
+    M, N, O, P = c.shape
+    U = len(probs) // N
 
-    for p, iml in enumerate(imls):
+    # For every site
+    for n in range(N):
+        # NB: to understand the code below, consider the case with
+        # N=3 sites and U=2 ruptures; then there are N*U=6 indices:
+        # 0: first site
+        # 1: second site
+        # 2: third site
+        # 3: first site
+        # 4: second site
+        # 5: third site
+        # i.e. idxs = [0, 3], [1, 4], [2, 5] for sites 0, 1, 2
+        slc = slice(n, N * U, N)  # U indices
 
-        # Calculate the contribution of each rupture to the total
-        # probability of occurrence for the reference IMT. Both
-        # `eps` and `poes` have shape U
-        eps = (numpy.log(iml) - mu[imti]) / sig[imti]
-        poes = _truncnorm_sf(trunclevel, eps)
+        mu = mean_stds[0, :, slc]  # shape (M, U)
+        sig = mean_stds[1, :, slc]  # shape (M, U)
 
-        # Converting to rates and dividing by the rate of
-        # exceedance of the reference IMT and level
-        ws = -numpy.log((1. - probs) ** poes) / invtime
+        for p, iml in enumerate(imls):
 
-        # Normalizing by the AfE for the investigated IMT and level
-        ws /= -numpy.log(1. - cs_poes[p])
+            # Calculate the contribution of each rupture to the total
+            # probability of occurrence for the reference IMT. Both
+            # `eps` and `poes` have shape U
+            eps = (numpy.log(iml) - mu[imti]) / sig[imti]
+            poes = _truncnorm_sf(trunclevel, eps)
 
-        # weights not summing up to 1
-        c[:, 0, p] = ws.sum()
+            # Converting to rates and dividing by the rate of
+            # exceedance of the reference IMT and level
+            ws = -numpy.log((1. - probs[slc]) ** poes) / invtime
 
-        # For each intensity measure type
-        for m in range(len(mu)):
+            # Normalizing by the AfE for the investigated IMT and level
+            ws /= -numpy.log(1. - cs_poes[p])
 
-            # Equation 14 in Lin et al. (2013)
-            term1 = mu[m] + rho[m] * eps * sig[m]
-            c[m, 1, p] = ws @ term1
+            # weights not summing up to 1
+            c[:, n, 0, p] = ws.sum()
 
-            # This is executed only if we already have the final CS
-            if _c is not None:
+            # For each intensity measure type
+            for m in range(len(mu)):
 
-                # Equation 15 in Lin et al. (2013)
-                term2 = sig[m] * (1. - rho[m]**2)**0.5
-                term3 = term1 - _c[m, 1, p]
-                c[m, 2, p] = ws @ (term2**2 + term3**2)
+                # Equation 14 in Lin et al. (2013)
+                term1 = mu[m] + rho[m] * eps * sig[m]
+                c[m, n, 1, p] = ws @ term1
+
+                # This is executed only if we already have the final CS
+                if _c is not None:
+
+                    # Equation 15 in Lin et al. (2013)
+                    term2 = sig[m] * (1. - rho[m]**2)**0.5
+                    term3 = term1 - _c[m, n, 1, p]
+                    c[m, n, 2, p] = ws @ (term2**2 + term3**2)
 
 
 class Collapser(object):
@@ -1112,7 +1128,6 @@ class ContextMaker(object):
         sids, counts = numpy.unique(ctx.sids, return_counts=True)
         assert len(set(counts)) == 1, counts  # must be all equal
         N = len(sids)
-        U = len(ctx) // N
         G = len(self.gsims)
         M = len(self.imtls)
         P = len(imls)
@@ -1135,27 +1150,12 @@ class ContextMaker(object):
         else:
             probs = self.tom.get_probability_one_or_more_occurrences(
                 ctx.occurrence_rate)  # shape N * U
-
-        # For every site
-        for n in range(N):
-            # NB: to understand the code below, consider the case with
-            # N=3 sites and U=2 ruptures; then there are N*U=6 indices:
-            # 0: first site
-            # 1: second site
-            # 2: third site
-            # 3: first site
-            # 4: second site
-            # 5: third site
-            # i.e. idxs = [0, 3], [1, 4], [2, 5] for sites 0, 1, 2
-            slc = slice(n, N * U, N)  # U indices
-
-            # For every GMM
-            for g in range(G):
-                c = out[self.start + g][:, n]
-                calc_cs_contrib(
-                    mean_stds[:, g, :, slc], probs[slc], rho, imti, imls, poes,
-                    self.truncation_level, self.investigation_time,
-                    c, _c[:, n] if _c is not None else None)
+        # For every GMM
+        for g in range(G):
+            calc_cs_contrib(
+                mean_stds[:, g], probs, rho, imti, imls, poes,
+                self.truncation_level, self.investigation_time,
+                out[self.start + g], _c if _c is not None else None)
         return out
 
     def gen_poes(self, ctx):
