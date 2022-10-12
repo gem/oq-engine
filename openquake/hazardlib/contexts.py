@@ -317,7 +317,7 @@ def cwdict(M, N, P, start, stop):
     ddic = {}
     for _g in range(start, stop):
         ddic[_g] = AccumDict({'_c': numpy.zeros((M, N, 2, P)),
-                              '_w': numpy.zeros((N, P))})
+                              '_w': numpy.zeros((M, N, P))})
     return ddic
 
 
@@ -1142,7 +1142,7 @@ class ContextMaker(object):
                     ws /= -numpy.log(1. - cs_poes[p])
 
                     # Populate normalizer array
-                    w[n, p] = ws.sum()  # weights not summing up to 1
+                    w[:, n, p] = ws.sum()  # weights not summing up to 1
 
                     # For each intensity measure type
                     for m in m_range:

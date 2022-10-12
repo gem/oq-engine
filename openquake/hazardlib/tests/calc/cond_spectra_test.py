@@ -91,8 +91,8 @@ def cwdic_to_dframe(cwdic, imts, n, p):
         for m, imt in enumerate(imts):
             dic['rlz_id'].append(r)
             dic['period'].append(imt.period)
-            dic['cs_exp'].append(np.exp(c[m, n, 0, p] / s[n, p]))
-            dic['cs_std'].append(np.sqrt(c[m, n, 1, p] / s[n, p]))
+            dic['cs_exp'].append(np.exp(c[m, n, 0, p] / s[m, n, p]))
+            dic['cs_std'].append(np.sqrt(c[m, n, 1, p] / s[m, n, p]))
     return pandas.DataFrame(dic)
 
 

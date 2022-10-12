@@ -107,8 +107,6 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         self.datastore.set_shape_descr(
             'cs-stats', stat='mean', period=self.periods, sid=self.N,
             cs=['spec', 'std'], poe_id=P)
-        self.datastore.create_dset('_c', float, (_G, M, self.N, 2, P))
-        self.datastore.create_dset('_w', float, (_G, self.N, P))
         self.cmakers = read_cmakers(self.datastore)
         # self.datastore.swmr_on()
         # IMPORTANT!! we rely on the fact that the classical part
@@ -167,12 +165,6 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         self.convert_and_save('cs-stats', cwmean)
 
     def _apply_weights(self, acc):
-
-        # Processing results. Store the conditional spectrum contributions
-        # in the datasets _c, _s
-        for _g, dic in acc.items():
-            for key, arr in dic.items():
-                self.datastore[key][_g] = arr  # shapes MN2P and NP
 
         # build conditional spectra for each realization
         rlzs_by_g = self.datastore['rlzs_by_g'][()]
