@@ -1239,11 +1239,13 @@ class PmapMaker(object):
         totlen = 0
         t0 = time.time()
         for src in self.sources:
-            ctxs = self._get_ctxs(src)
-            ctxs_mb += sum(ctx.nbytes for ctx in ctxs) / TWO20  # TWO20=1MB
-            src.nsites = sum(len(ctx) for ctx in ctxs)
-            totlen += src.nsites
-            allctxs.extend(ctxs)
+            nsites = 0
+            for ctx in self._get_ctxs(src):
+                ctxs_mb += ctx.nbytes / TWO20  # TWO20=1MB
+                nsites += len(ctx)
+                allctxs.append(ctx)
+            src.nsites = nsites
+            totlen += nsites
             if ctxs_mb > MAX_MB:
                 cm.get_pmap(concat(allctxs), pmap)
                 allctxs.clear()
@@ -1272,7 +1274,7 @@ class PmapMaker(object):
         for src in self.sources:
             t0 = time.time()
             pm = ProbabilityMap(cm.imtls.size, len(cm.gsims))
-            ctxs = self._get_ctxs(src)
+            ctxs = list(self._get_ctxs(src))
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
