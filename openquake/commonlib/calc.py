@@ -538,7 +538,7 @@ def build_gmfslices(dstore, hint=None):
     logging.info('Sorting and compactifying slices')
     slice_by_weight = numpy.sort(numpy.concatenate(slice_by_weight), axis=0)
     tot_weight = slc_weight(slice_by_weight)
-    max_weight = numpy.clip(tot_weight / hint, 10_000, 1_000_000)
+    max_weight = numpy.clip(tot_weight / hint, 1_000, 1_000_000)
     blocks = general.block_splitter(slice_by_weight, max_weight, slc_weight)
     gmfslices = [compactify(numpy.array(block)) for block in blocks]
     ns = sum(len(arr) for arr in gmfslices)
