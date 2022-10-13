@@ -1,4 +1,11 @@
   [Michele Simionato]
+  * Reduced the memory consumption in large classical calculations
+    (in make_contexts)
+
+  [Marco Pagani, Michele Simionato]
+  * Fixed the calculation of conditional spectra
+
+  [Michele Simionato]
   * Corner case bug: in the presence of parent site collection and a child
     site model the engine was associating the site model to the parent
   * Strongly reduced the slow tasks and memory consumption in event_based_risk
@@ -15,7 +22,6 @@
   * Bumped h5py to version 3.7.0 and added fiona 1.8.21
 
   [Marco Pagani]
-  * Fixed the calculation of conditional spectra
   * Added the get_dip and get_strike methods to the gridded surface
 
   [Michele Simionato]

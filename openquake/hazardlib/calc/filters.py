@@ -59,7 +59,7 @@ def _distances_from_dcache(rup, sites, param, dcache):
     :param dcache:
         A dictionary with the distances. The first key is the
         surface ID and the second one is the type of distance. In a traditional
-        calculation dcache is instatianted by in the `get_ctxs` method of the
+        calculation dcache is instatianted by in the `get_ctx_iter` method of the
         :class:`openquake.hazardlib.contexts.ContextMaker`
     :returns:
         The computed distances for the rupture in input
