@@ -469,7 +469,7 @@ def ponder_slices(slice_by_event, num_assets, sids_risk, dstore, monitor):
             sids = sids[numpy.isin(sids, sids_risk)]
         na = num_assets[sids].sum()
         if na:
-            out.append((s1, s2, na * .01))
+            out.append((s1, s2, 0))
     return numpy.array(out, int)
 
 
