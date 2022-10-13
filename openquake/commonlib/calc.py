@@ -21,7 +21,6 @@ import itertools
 import warnings
 import logging
 import functools
-import operator
 from unittest.mock import Mock
 import numpy
 
@@ -400,6 +399,15 @@ START, STOP, WEIGHT = 0, 1, 2
 SLICE_BY_EVENT_NSITES = 1000
 
 
+def slc_weight(slc):
+    """
+    :returns: the weight a slice array
+    """
+    if len(slc.shape) == 1:
+        return slc[1] - slc[0] + slc[2]
+    return (slc[:, 1] - slc[:, 0] + slc[:, 2]).sum()
+
+
 def build_slice_by_event(eids, offset=0):
     arr = performance.idx_start_stop(eids)
     sbe = numpy.zeros(len(arr), slice_dt)
@@ -442,8 +450,6 @@ def compactify(arrayN3):
         # nothing to compactify
         return arrayN3
     out = numpy.array(functools.reduce(_concat, arrayN3, []))
-    # sanity check that the compactification preserves the weight
-    assert out[:, WEIGHT].sum() == arrayN3[:, WEIGHT].sum()
     return out
 
 
@@ -453,19 +459,18 @@ def ponder_slices(slice_by_event, num_assets, sids_risk, dstore, monitor):
     If `sids_risk` is not None, it is used to filter the hazard sites
     and in that case the rows with zero weight are discarded.
     """
-    slice_by_weight = numpy.zeros((len(slice_by_event), 3), int)
     start, stop = slice_by_event[0]['start'], slice_by_event[-1]['stop']
     with dstore.open('r'):
         haz_sids = dstore['gmf_data/sid'][start:stop]
-    for i, (s1, s2, _e) in enumerate(slice_by_event):
+    out = []
+    for s1, s2, _e in slice_by_event:
         sids = haz_sids[s1-start:s2-start]
         if sids_risk is not None:
             sids = sids[numpy.isin(sids, sids_risk)]
-        weight = num_assets[sids].sum()
-        slice_by_weight[i] = (s1, s2, weight)
-    if sids_risk is None:
-        return slice_by_weight
-    return slice_by_weight[slice_by_weight[:, WEIGHT] > 0]
+        na = num_assets[sids].sum()
+        if na:
+            out.append((s1, s2, na * .01))
+    return numpy.array(out, int)
 
 
 def build_gmfslices(dstore, hint=None):
@@ -532,10 +537,9 @@ def build_gmfslices(dstore, hint=None):
     # discrete_damage_distribution = true
     logging.info('Sorting and compactifying slices')
     slice_by_weight = numpy.sort(numpy.concatenate(slice_by_weight), axis=0)
-    tot_weight = slice_by_weight[:, WEIGHT].sum()
-    max_weight = numpy.clip(tot_weight / hint, 10_000, maxrows)
-    blocks = general.block_splitter(
-        slice_by_weight, max_weight, operator.itemgetter(WEIGHT))
+    tot_weight = slc_weight(slice_by_weight)
+    max_weight = numpy.clip(tot_weight / hint, 1_000, 1_000_000)
+    blocks = general.block_splitter(slice_by_weight, max_weight, slc_weight)
     gmfslices = [compactify(numpy.array(block)) for block in blocks]
     ns = sum(len(arr) for arr in gmfslices)
     logging.info('Built {:d} GMF slices'.format(ns))
@@ -543,7 +547,7 @@ def build_gmfslices(dstore, hint=None):
     h = general.humansize(nbytes_per_row * nrows)
     htot = general.humansize(nbytes_per_row * tot_nrows)
     logging.info('Considering %s of %s of GMFs', h, htot)
-    ws = numpy.array([arr[:, WEIGHT].sum() for arr in gmfslices])
+    ws = numpy.array([slc_weight(arr) for arr in gmfslices])
     logging.info('Slice weights min, mean, max {:_d}, {:_d}, {:_d}'.
-                 format(ws.min(), int(ws.mean()), ws.max()))
+                 format(int(ws.min()), int(ws.mean()), int(ws.max())))
     return gmfslices

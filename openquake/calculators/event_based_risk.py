@@ -29,7 +29,7 @@ from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
-from openquake.commonlib.calc import build_gmfslices
+from openquake.commonlib.calc import build_gmfslices, slc_weight
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
     PostRiskCalculator, post_aggregate, fix_dtypes)
@@ -164,7 +164,7 @@ def ebr_from_gmfs(gmfslices, oqparam, dstore, monitor):
             slc = slice(gmfslice[0], gmfslice[1])
             dfs.append(dstore.read_df('gmf_data', slc=slc))
         df = pandas.concat(dfs)
-    # print(monitor.task_no, len(df), gmfslices[:, 2].sum())
+    # print(monitor.task_no, len(df), slc_weight(gmfslices))
     return event_based_risk(df, oqparam, monitor)
 
 
@@ -443,4 +443,3 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             prc.exported = self.exported
         with prc.datastore:
             prc.run(exports='')
-
