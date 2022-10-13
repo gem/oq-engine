@@ -533,6 +533,28 @@ rur_Ant_1,  9000,500,1,1,0
             reinsurance.parse(self.xmlfname, policy_idx)
         self.assertIn('policy contains duplicates', str(ctx.exception))
 
+    def test_negative_liability(self):
+        csvfname = general.gettemp('''\
+policy,liability,deductible,qshared,surplus
+VA_region_1,10000,100,.1,.2
+VA_region_2,-10000,100,.1,.2
+rur_Ant_1,10000,100,.1,.2''')
+        xmlfname = general.gettemp(XML_PR.format(csvfname))
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn('liabilities must be => 0', str(ctx.exception))
+
+    def test_negative_deductible(self):
+        csvfname = general.gettemp('''\
+policy,liability,deductible,qshared,surplus
+VA_region_1,10000,100,.1,.2
+VA_region_2,10000,-100,.1,.2
+rur_Ant_1,10000,100,.1,.2''')
+        xmlfname = general.gettemp(XML_PR.format(csvfname))
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn('deductibles must be => 0', str(ctx.exception))
+
     def test_nonprop_treaty_non_boolean(self):
         CSV = '''\
 Policy,Limit,Deductible,WXLR_metro,WXLR_rural,CatXL_reg
