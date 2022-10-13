@@ -513,6 +513,19 @@ class WrongInputTestCase(unittest.TestCase):
         with open(cls.expocsvfname, 'w') as xml:
             xml.write(EXPOCSV)
 
+    def test_policy_in_exposure_missing_in_policy_csv(self):
+        POLICYCSV = '''\
+Policy,Limit,Deductible,WXLR_metro,WXLR_rural,CatXL_reg
+VA_region_1,8000,100,0,0,1
+rur_Ant_1,  9000,500,1,1,0
+'''
+        with open(self.csvfname, 'w') as csv:
+            csv.write(POLICYCSV)
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(self.xmlfname, policy_idx)
+        self.assertIn('policy "VA_region_2" is missing', str(ctx.exception))
+
+
     def test_policy_duplicated(self):
         with open(self.csvfname, 'w') as csv:
             csv.write(CSV_NP.replace('VA_region_1', 'VA_region_2'))
@@ -520,7 +533,7 @@ class WrongInputTestCase(unittest.TestCase):
             reinsurance.parse(self.xmlfname, policy_idx)
         self.assertIn('policy contains duplicates', str(ctx.exception))
 
-    def test_wxlr_non_boolean(self):
+    def test_nonprop_treaty_non_boolean(self):
         CSV = '''\
 Policy,Limit,Deductible,WXLR_metro,WXLR_rural,CatXL_reg
 VA_region_1,8000,100,0,0,1
