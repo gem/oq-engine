@@ -153,7 +153,10 @@ def parse(fname, policy_idx):
             fieldmap[node['input']] = col
             continue
         treaty_type = node.get('type', 'prop')
-        assert treaty_type in ('prop', 'wxlr', 'catxl'), treaty_type
+        valid_treaty_types = ('prop', 'wxlr', 'catxl')
+        assert treaty_type in valid_treaty_types, \
+            "Valid treaty types are %s. '%s' was found instead" % (
+                valid_treaty_types, treaty_type)
         if treaty_type == 'prop':
             limit = node.get('max_cession_event', NOLIMIT)
             deduc = 0

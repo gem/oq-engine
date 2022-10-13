@@ -582,6 +582,16 @@ rur_Ant_1,10000,100,.1,.2''')
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn('surplus is missing', str(ctx.exception))
 
+    def test_type_within_prop_wxlr_or_catxl(self):
+        csvfname = general.gettemp(CSV_NP)
+        xmlfname = general.gettemp(
+            XML_NP.format(csvfname).replace('catxl', 'wrongtype'))
+        with self.assertRaises(AssertionError) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn("Valid treaty types are ('prop', 'wxlr', 'catxl')."
+                      " 'wrongtype' was found instead", str(ctx.exception))
+
+
     # TODO: finish
     def _test_wrong_aggregate_by_1(self):
         with open(self.jobfname, 'w') as job:
