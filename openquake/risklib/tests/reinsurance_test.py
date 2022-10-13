@@ -663,6 +663,16 @@ rur_Ant_1,10000,100,.1,.2''')
             readinput.get_reinsurance(oq)
         self.assertIn('aggregate_by=taxonomy; policy', str(ctx.exception))
 
+    def test_missing_aggregate_by_policy(self):
+        with open(self.jobfname, 'w') as job:
+            job.write((JOB % dict(aggregate_by='policy')).replace(
+                'aggregate_by = policy\n', ''))
+        with self.assertRaises(ValueError) as ctx:
+            oq = readinput.get_oqparam(self.jobfname)
+        self.assertIn(
+            'missing aggregate_by=policy',
+            str(ctx.exception))
+
     def test_missing_total_losses(self):
         with open(self.jobfname, 'w') as job:
             job.write((JOB % dict(aggregate_by='policy')).replace(
