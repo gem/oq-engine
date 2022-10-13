@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the performance report that failed for NGAEast GMPEs
   * Reduced the memory consumption in large classical calculations
     (in make_contexts)
 
