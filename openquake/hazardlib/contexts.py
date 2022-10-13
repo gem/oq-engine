@@ -29,7 +29,7 @@ import shapely
 from scipy.interpolate import interp1d
 
 from openquake.baselib.general import (
-    AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
+    AccumDict, DictArray, RecordBuilder, gen_slices, kmean, block_splitter)
 from openquake.baselib.performance import Monitor, split_array, compile, numba
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -886,10 +886,9 @@ class ContextMaker(object):
             fat RuptureContexts sorted by mag
         """
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
-        ctxs = []
         if getattr(src, 'location', None) and step == 1:
-            with self.ctx_mon:
-                return self.get_ctxs_planar(src, sitecol)
+            yield from self.get_ctxs_planar(src, sitecol)
+            return
         elif hasattr(src, 'source_id'):  # other source
             with self.ir_mon:
                 allrups = numpy.array(list(src.iter_ruptures(
@@ -905,10 +904,9 @@ class ContextMaker(object):
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
             src_id = 0
-        with self.ctx_mon:
-            ctxs.extend(self.gen_contexts(rups_sites, src_id))
-            lst = [] if not ctxs else [self.recarray(ctxs)]
-        return lst
+        ctxs = self.gen_contexts(rups_sites, src_id)
+        for block in block_splitter(ctxs, 1000):
+            yield self.recarray(block)
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -1120,7 +1118,7 @@ class ContextMaker(object):
                 self.pointsource_distance < 1000):
             esites = self.estimate_sites(src, sites) * multiplier
         else:
-            ctxs = self.get_ctxs(src, sites, step=10)  # reduced number
+            ctxs = list(self.get_ctxs(src, sites, step=10))  # reduced number
             if not ctxs:
                 return src.num_ruptures if N == 1 else 0
             esites = (len(ctxs[0]) * src.num_ruptures /
@@ -1223,7 +1221,7 @@ class PmapMaker(object):
     def gen_ctxs(self, src):
         sites = self.srcfilter.get_close_sites(src)
         if sites is None:
-            return []
+            return
         for ctx in self.cmaker.get_ctxs(src, sites):
             if hasattr(src, 'mutex_weight'):
                 if ctx.weight.any():
