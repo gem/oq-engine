@@ -1220,21 +1220,19 @@ class PmapMaker(object):
             nbytes += 8 * dparams * nsites
         return nbytes
 
-    def _get_ctxs(self, src):
+    def gen_ctxs(self, src):
         sites = self.srcfilter.get_close_sites(src)
         if sites is None:
             return []
-        ctxs = self.cmaker.get_ctxs(src, sites)
-        if hasattr(src, 'mutex_weight'):
-            for ctx in ctxs:
+        for ctx in self.cmaker.get_ctxs(src, sites):
+            if hasattr(src, 'mutex_weight'):
                 if ctx.weight.any():
                     ctx['weight'] *= src.mutex_weight
                 else:
                     ctx['weight'] = src.mutex_weight
-        if self.fewsites:  # keep rupdata in memory (before collapse)
-            for ctx in ctxs:
+            if self.fewsites:  # keep rupdata in memory (before collapse)
                 self.rupdata.append(ctx)
-        return ctxs
+            yield ctx
 
     def _make_src_indep(self):
         # sources with the same ID
@@ -1246,7 +1244,7 @@ class PmapMaker(object):
         t0 = time.time()
         for src in self.sources:
             nsites = 0
-            for ctx in self._get_ctxs(src):
+            for ctx in self.gen_ctxs(src):
                 ctxs_mb += ctx.nbytes / TWO20  # TWO20=1MB
                 nsites += len(ctx)
                 allctxs.append(ctx)
@@ -1280,7 +1278,7 @@ class PmapMaker(object):
         for src in self.sources:
             t0 = time.time()
             pm = ProbabilityMap(cm.imtls.size, len(cm.gsims))
-            ctxs = list(self._get_ctxs(src))
+            ctxs = list(self.gen_ctxs(src))
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
