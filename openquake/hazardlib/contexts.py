@@ -468,7 +468,7 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
-        self.ir_mon = monitor('iter_ruptures', measuremem=False)
+        self.ir_mon = monitor('iter_ruptures', measuremem=True)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
@@ -906,8 +906,13 @@ class ContextMaker(object):
             rups_sites = [(src, sitecol)]
             src_id = 0
         ctxs = self.gen_contexts(rups_sites, src_id)
-        return self.ctx_mon.iter(
-            (self.recarray(block) for block in block_splitter(ctxs, 1000)))
+        if self.fewsites:
+            with self.ctx_mon:
+                ctxs = list(ctxs)
+                if not ctxs:
+                    return iter([])
+                return iter([self.recarray(ctxs)])
+        return self.ctx_mon.iter((self.recarray([ctx]) for ctx in ctxs))
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -1119,7 +1124,7 @@ class ContextMaker(object):
                 self.pointsource_distance < 1000):
             esites = self.estimate_sites(src, sites) * multiplier
         else:
-            ctxs = list(self.get_ctx_iter(src, sites, step=10))  # reduced number
+            ctxs = list(self.get_ctx_iter(src, sites, step=10))  # reduced
             if not ctxs:
                 return src.num_ruptures if N == 1 else 0
             esites = (len(ctxs[0]) * src.num_ruptures /
