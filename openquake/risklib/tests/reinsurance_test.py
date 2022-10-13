@@ -633,6 +633,27 @@ rur_Ant_1,10000,100,.1,.2''')
                       "could not convert string to float: 'XXX', "
                       "line 11, line 11", str(ctx.exception))
 
+    def test_max_cession_event_is_negative(self):
+        csvfname = general.gettemp(CSV_NP)
+        xmlfname = general.gettemp(
+            XML_NP.format(csvfname).replace(
+                'deductible="200"', 'max_cession_event="-200"'))
+        with self.assertRaises(ValueError) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn("Could not convert max_cession_event->positivefloat: "
+                      "float -200.0 < 0, line 11, line 11", str(ctx.exception))
+
+    def test_max_cession_event_is_not_float(self):
+        csvfname = general.gettemp(CSV_NP)
+        xmlfname = general.gettemp(
+            XML_NP.format(csvfname).replace(
+                'deductible="200"', 'max_cession_event="XXX"'))
+        with self.assertRaises(ValueError) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn("Could not convert max_cession_event->positivefloat: "
+                      "could not convert string to float: 'XXX', "
+                      "line 11, line 11", str(ctx.exception))
+
     # TODO: finish
     def _test_wrong_aggregate_by_1(self):
         with open(self.jobfname, 'w') as job:
