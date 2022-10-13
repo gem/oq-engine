@@ -513,6 +513,8 @@ class WrongInputTestCase(unittest.TestCase):
         with open(cls.expocsvfname, 'w') as xml:
             xml.write(EXPOCSV)
 
+    # Checks in the policy file
+
     def test_policy_in_exposure_missing_in_policy_csv(self):
         POLICYCSV = '''\
 Policy,Limit,Deductible,WXLR_metro,WXLR_rural,CatXL_reg
@@ -524,7 +526,6 @@ rur_Ant_1,  9000,500,1,1,0
         with self.assertRaises(InvalidFile) as ctx:
             reinsurance.parse(self.xmlfname, policy_idx)
         self.assertIn('policy "VA_region_2" is missing', str(ctx.exception))
-
 
     def test_policy_duplicated(self):
         with open(self.csvfname, 'w') as csv:
@@ -567,6 +568,19 @@ rur_Ant_1,  9000,500,1,1,0
         with self.assertRaises(InvalidFile) as ctx:
             reinsurance.parse(self.xmlfname, policy_idx)
         self.assertIn('field CatXL_reg must be 0 or 1', str(ctx.exception))
+
+    # Checks in the reinsurance file
+
+    def test_treaty_in_reinsurancexml_missing_in_policycsv(self):
+        csvfname = general.gettemp('''\
+policy,liability,deductible,qshared,xxsurplus
+VA_region_1,10000,100,.1,.2
+VA_region_2,10000,100,.1,.2
+rur_Ant_1,10000,100,.1,.2''')
+        xmlfname = general.gettemp(XML_PR.format(csvfname))
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn('surplus is missing', str(ctx.exception))
 
     # TODO: finish
     def _test_wrong_aggregate_by_1(self):
