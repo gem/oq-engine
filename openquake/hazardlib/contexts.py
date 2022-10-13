@@ -602,7 +602,7 @@ class ContextMaker(object):
             src.id = i
             sites = srcfilter.get_close_sites(src)
             if sites is not None:
-                ctxs.extend(self.get_ctxs(src, sites))
+                ctxs.extend(self.get_ctx_iter(src, sites))
         return concat(ctxs)
 
     def make_rctx(self, rup):
@@ -872,7 +872,7 @@ class ContextMaker(object):
                         rctx.clat = c.lats[rctx.sids]
                     yield rctx
 
-    def get_ctxs(self, src, sitecol, src_id=0, step=1):
+    def get_ctx_iter(self, src, sitecol, src_id=0, step=1):
         """
         :param src:
             a source object (already split) or a list of ruptures
@@ -883,12 +883,13 @@ class ContextMaker(object):
         :param step:
             > 1 only in preclassical
         :returns:
-            fat RuptureContexts sorted by mag
+            iterator over recarrays
         """
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         if getattr(src, 'location', None) and step == 1:
-            yield from self.get_ctxs_planar(src, sitecol)
-            return
+            with self.ctx_mon:
+                ctxs = self.get_ctxs_planar(src, sitecol)
+            return iter(ctxs)
         elif hasattr(src, 'source_id'):  # other source
             with self.ir_mon:
                 allrups = numpy.array(list(src.iter_ruptures(
@@ -905,8 +906,8 @@ class ContextMaker(object):
             rups_sites = [(src, sitecol)]
             src_id = 0
         ctxs = self.gen_contexts(rups_sites, src_id)
-        for block in block_splitter(ctxs, 1000):
-            yield self.recarray(block)
+        return self.ctx_mon.iter(
+            (self.recarray(block) for block in block_splitter(ctxs, 1000)))
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -1118,7 +1119,7 @@ class ContextMaker(object):
                 self.pointsource_distance < 1000):
             esites = self.estimate_sites(src, sites) * multiplier
         else:
-            ctxs = list(self.get_ctxs(src, sites, step=10))  # reduced number
+            ctxs = list(self.get_ctx_iter(src, sites, step=10))  # reduced number
             if not ctxs:
                 return src.num_ruptures if N == 1 else 0
             esites = (len(ctxs[0]) * src.num_ruptures /
@@ -1222,7 +1223,7 @@ class PmapMaker(object):
         sites = self.srcfilter.get_close_sites(src)
         if sites is None:
             return
-        for ctx in self.cmaker.get_ctxs(src, sites):
+        for ctx in self.cmaker.get_ctx_iter(src, sites):
             if hasattr(src, 'mutex_weight'):
                 if ctx.weight.any():
                     ctx['weight'] *= src.mutex_weight
