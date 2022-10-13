@@ -85,7 +85,7 @@ class GetRxRy0FromCacheTestCase(unittest.TestCase):
         gmm = AbrahamsonEtAl2014()
         param = dict(imtls={'PGA': []}, cache_distances=True)
         cm = ContextMaker('*', [gmm], param)
-        [ctx] = cm.get_ctxs([rup], self.sitec)
+        [ctx] = cm.get_ctx_iter([rup], self.sitec)
 
         # Get the expected ry0 distance
         expected = tors.get_ry0_distance()
@@ -93,7 +93,7 @@ class GetRxRy0FromCacheTestCase(unittest.TestCase):
 
         # Test Ry0
         cache_save = copy.deepcopy(cm.dcache)
-        [ctx] = cm.get_ctxs([rup], self.sitec)
+        [ctx] = cm.get_ctx_iter([rup], self.sitec)
         dcache = cm.dcache
         print('dcache.hit =', dcache.hit)
 
@@ -148,7 +148,7 @@ class GetRxRy0FromCacheTestCase(unittest.TestCase):
         gmm = AbrahamsonEtAl2014()
         param = dict(imtls={'PGA': []}, cache_distances=True)
         cm = ContextMaker('*', [gmm], param)
-        ctxs = cm.get_ctxs(self.src, self.sitec)
+        ctxs = cm.get_ctx_iter(self.src, self.sitec)
 
         # Get multiline
         dcache = cm.dcache
