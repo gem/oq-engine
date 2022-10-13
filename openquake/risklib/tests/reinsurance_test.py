@@ -591,6 +591,47 @@ rur_Ant_1,10000,100,.1,.2''')
         self.assertIn("Valid treaty types are ('prop', 'wxlr', 'catxl')."
                       " 'wrongtype' was found instead", str(ctx.exception))
 
+    def test_deductible_is_negative(self):
+        csvfname = general.gettemp(CSV_NP)
+        xmlfname = general.gettemp(
+            XML_NP.format(csvfname).replace(
+                'deductible="200"', 'deductible="-200"'))
+        with self.assertRaises(ValueError) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn("Could not convert deductible->positivefloat: "
+                      "float -200.0 < 0, line 11, line 11", str(ctx.exception))
+
+    def test_deductible_is_not_float(self):
+        csvfname = general.gettemp(CSV_NP)
+        xmlfname = general.gettemp(
+            XML_NP.format(csvfname).replace(
+                'deductible="200"', 'deductible="XXX"'))
+        with self.assertRaises(ValueError) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn("Could not convert deductible->positivefloat: "
+                      "could not convert string to float: 'XXX', "
+                      "line 11, line 11", str(ctx.exception))
+
+    def test_limit_is_negative(self):
+        csvfname = general.gettemp(CSV_NP)
+        xmlfname = general.gettemp(
+            XML_NP.format(csvfname).replace(
+                'limit="5000"', 'deductible="-5000"'))
+        with self.assertRaises(ValueError) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn("Could not convert deductible->positivefloat: "
+                      "float -5000.0 < 0, line 11, line 11", str(ctx.exception))
+
+    def test_limit_is_not_float(self):
+        csvfname = general.gettemp(CSV_NP)
+        xmlfname = general.gettemp(
+            XML_NP.format(csvfname).replace(
+                'limit="5000"', 'limit="XXX"'))
+        with self.assertRaises(ValueError) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn("Could not convert limit->positivefloat: "
+                      "could not convert string to float: 'XXX', "
+                      "line 11, line 11", str(ctx.exception))
 
     # TODO: finish
     def _test_wrong_aggregate_by_1(self):
