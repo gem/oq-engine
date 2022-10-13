@@ -1247,13 +1247,13 @@ class PmapMaker(object):
                 ctxs_mb += ctx.nbytes / TWO20  # TWO20=1MB
                 nsites += len(ctx)
                 allctxs.append(ctx)
+                if ctxs_mb > MAX_MB:
+                    cm.get_pmap(concat(allctxs), pmap)
+                    allctxs.clear()
+                    ctxs_mb = 0
+        if allctxs:
             src.nsites = nsites
             totlen += nsites
-            if ctxs_mb > MAX_MB:
-                cm.get_pmap(concat(allctxs), pmap)
-                allctxs.clear()
-                ctxs_mb = 0
-        if allctxs:
             cm.get_pmap(concat(allctxs), pmap)
             allctxs.clear()
         dt = time.time() - t0
