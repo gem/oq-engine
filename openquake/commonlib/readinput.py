@@ -735,14 +735,13 @@ def _check_csm(csm, oqparam, h5):
         source.check_complex_faults(srcs)
 
     # build a smart SourceFilter
-    try:
-        sitecol = h5['sitecol']
-    except KeyError:  # not already there
-        sitecol = get_site_collection(oqparam, h5)
-    csm.sitecol = sitecol
-    if sitecol is None:  # missing sites.csv (test_case_1_ruptures)
+    if h5 and 'sitecol' in h5:
+        csm.sitecol = h5['sitecol']
+    else:
+        csm.sitecol = get_site_collection(oqparam, h5)
+    if csm.sitecol is None:  # missing sites.csv (test_case_1_ruptures)
         return
-    srcfilter = SourceFilter(sitecol, oqparam.maximum_distance)
+    srcfilter = SourceFilter(csm.sitecol, oqparam.maximum_distance)
     logging.info('Checking the sources bounding box')
     lons = []
     lats = []
@@ -760,7 +759,7 @@ def _check_csm(csm, oqparam, h5):
         lats.append(box[1])
         lons.append(box[2])
         lats.append(box[3])
-    if cross_idl(*(list(sitecol.lons) + lons)):
+    if cross_idl(*(list(csm.sitecol.lons) + lons)):
         lons = numpy.array(lons) % 360
     else:
         lons = numpy.array(lons)
