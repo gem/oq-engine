@@ -209,7 +209,7 @@ jobs:
           ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}${PDFDOCS}\"; ln -sf \"../${TARGET}PDF/OpenQuake Manual ${PDF_VER}.pdf\" .'"
           if [ "$PDF_VER_LINK" ]; then
               echo "Found PDF_VER_LINK set [$PDF_VER_LINK]"
-              ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}manuals/\"; ln -sf \"OpenQuake Manual ${PDF_VER}.pdf\" \"OpenQuake Manual ${PDF_VER_LINK}.pdf\"'"
+              ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}manuals/\"; ln -sf \"OpenQuake Manual ${PDF_VER}.pdf\" \"OpenQuake Manual (${PDF_VER_LINK}).pdf\"'"
           fi
 
           echo "Uploading OpenQuake Manual (HTML)"
