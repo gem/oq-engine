@@ -907,7 +907,7 @@ class ContextMaker(object):
             src_id = 0
         ctxs = self.gen_contexts(rups_sites, src_id)
         return self.ctx_mon.iter(
-            (self.recarray(block) for block in block_splitter(ctxs, 1000)))
+            (self.recarray(block) for block in block_splitter(ctxs, 100)))
 
     def max_intensity(self, sitecol1, mags, dists):
         """
