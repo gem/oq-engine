@@ -338,6 +338,19 @@ class Monitor(object):
                 return data
             return pickle.loads(data)
 
+    def iter(self, genobj):
+        """
+        :yields: the elements of the generator object
+        """
+        while True:
+            try:
+                with self:
+                    obj = next(genobj)
+            except StopIteration:
+                return
+            else:
+                yield obj
+
     def __repr__(self):
         calc_id = ' #%s ' % self.calc_id if self.calc_id else ' '
         msg = '%s%s%s[%s]' % (self.__class__.__name__, calc_id,
