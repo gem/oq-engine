@@ -663,6 +663,16 @@ rur_Ant_1,10000,100,.1,.2''')
             readinput.get_reinsurance(oq)
         self.assertIn('aggregate_by=taxonomy; policy', str(ctx.exception))
 
+    def test_missing_total_losses(self):
+        with open(self.jobfname, 'w') as job:
+            job.write((JOB % dict(aggregate_by='policy')).replace(
+                'total_losses = structural+nonstructural\n', ''))
+        with self.assertRaises(InvalidFile) as ctx:
+            oq = readinput.get_oqparam(self.jobfname)
+        self.assertIn(
+            'you forgot to set total_losses=structural+nonstructural',
+            str(ctx.exception))
+
     @classmethod
     def tearDownClass(cls):
         print('Deleting directory with fake input files')
