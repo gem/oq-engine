@@ -148,7 +148,7 @@ class GetRxRy0FromCacheTestCase(unittest.TestCase):
         gmm = AbrahamsonEtAl2014()
         param = dict(imtls={'PGA': []}, cache_distances=True)
         cm = ContextMaker('*', [gmm], param)
-        ctxs = cm.get_ctx_iter(self.src, self.sitec)
+        ctxs = list(cm.get_ctx_iter(self.src, self.sitec))
 
         # Get multiline
         dcache = cm.dcache
