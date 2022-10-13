@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import itertools
 import warnings
 import logging
@@ -516,8 +517,8 @@ def build_gmfslices(dstore, hint=None):
     if not filtered:
         sids_risk = None
     dstore.swmr_on()  # crucial!
-    smap = parallel.Starmap(
-        ponder_slices, distribute='processpool', h5=dstore.hdf5)
+    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
+    smap = parallel.Starmap(ponder_slices, distribute=dist, h5=dstore.hdf5)
     for sbe in numpy.array_split(slice_by_event, hint):
         if len(sbe):
             smap.submit((sbe, num_assets, sids_risk, dstore))

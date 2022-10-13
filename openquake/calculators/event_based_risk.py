@@ -164,6 +164,7 @@ def ebr_from_gmfs(gmfslices, oqparam, dstore, monitor):
             slc = slice(gmfslice[0], gmfslice[1])
             dfs.append(dstore.read_df('gmf_data', slc=slc))
         df = pandas.concat(dfs)
+    # print(monitor.task_no, len(df), gmfslices[:, 2].sum())
     return event_based_risk(df, oqparam, monitor)
 
 
