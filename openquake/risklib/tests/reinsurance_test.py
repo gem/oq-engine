@@ -927,11 +927,11 @@ rur_Ant_1,10000,100,.1,.2''')
     def test_missing_total_losses(self):
         with open(self.jobfname, 'w') as job:
             job.write((JOB % dict(aggregate_by='policy')).replace(
-                'total_losses = structural+nonstructural\n', ''))
+                'total_losses = structural+contents\n', ''))
         with self.assertRaises(InvalidFile) as ctx:
             oq = readinput.get_oqparam(self.jobfname)
         self.assertIn(
-            'you forgot to set total_losses=structural+nonstructural',
+            'you forgot to set total_losses=structural+contents',
             str(ctx.exception))
 
     @classmethod
