@@ -151,10 +151,10 @@ def ebr_from_gmfs(gmfslices, oqparam, dstore, monitor):
         df = pandas.concat(dfs)
     # print(monitor.task_no, len(df), slc_weight(gmfslices))
     n = len(df) // 500_000 + 1  # split in n blocks to save memory
-    if n == 1:
-        yield event_based_risk(df, oqparam, monitor)
-    else:
-        for _, grp in df.groupby(df.eid % n):
+    for i, grp in df.groupby(df.eid % n):
+        if i == 0:
+            yield event_based_risk(grp, oqparam, monitor)
+        else:
             yield event_based_risk, grp, oqparam
 
 
