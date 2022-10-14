@@ -154,12 +154,12 @@ def ebr_from_gmfs(gmfslices, oqparam, dstore, monitor):
         items = monitor.read('assets').groupby('taxonomy')
         taxo_assets = [(t, a.set_index('ordinal')) for t, a in items]
     # print(monitor.task_no, len(df), slc_weight(gmfslices))
-    n = len(df) // 200_000 + 1
-    if n == 1:  # do not split
-        yield event_based_risk(df, oqparam, taxo_assets, monitor)
-    else:  # split in n blocks to save memory
-        for _, grp in df.groupby(df.eid % n):
+    n = len(df) // 200_000 + 1  # split in n blocks to save memory
+    for i, grp in df.groupby(df.eid % n):
+        if i == 0:
             yield event_based_risk(grp, oqparam, taxo_assets, monitor)
+        else:
+            yield event_based_risk, grp, oqparam, taxo_assets
 
 
 def event_based_risk(df, oqparam, taxo_assets, monitor):
