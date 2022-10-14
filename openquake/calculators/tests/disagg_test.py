@@ -235,9 +235,22 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.run_calc(case_12.__file__, 'job.ini')
 
     def test_case_13(self):
-        # test epsilon star
+
+        # test calculation with user defined bin edges as in test_8
         self.run_calc(case_13.__file__, 'job.ini')
 
         # test mre results
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
+
+        # test calculation with uneven user defined magnitude bin edges
+        self.run_calc(case_13.__file__, 'job_a.ini')
+
+        # Test mr results. Comparing against the results of the first
+        # calculation in this test. The first value for magnitude 5.8 remains
+        # the same. The contributions for magnitudes 6.5 and 6.7 are combined
+        # into a single value corresponding to 1 - (1-p1) * (1-p2) and the last
+        # value is also the same provided to magnitude 7 in the first
+        # calculation
+        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/Mag_Dist-0.csv', fname)
