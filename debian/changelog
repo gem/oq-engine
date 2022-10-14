@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Added the possibility to define the edges of disaggregation bins
+
   [Michele Simionato]
   * Fixed the performance report that failed for NGAEast GMPEs
   * Reduced the memory consumption in large classical calculations
