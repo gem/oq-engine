@@ -45,7 +45,6 @@ TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
 
 
-
 def fast_agg(keys, values, correl, li, acc):
     """
     :param keys: an array of N uint64 numbers encoding (event_id, agg_id)
@@ -150,27 +149,30 @@ def ebr_from_gmfs(gmfslices, oqparam, dstore, monitor):
             slc = slice(gmfslice[0], gmfslice[1])
             dfs.append(dstore.read_df('gmf_data', slc=slc))
         df = pandas.concat(dfs)
+    with dstore, monitor('reading assets', measuremem=True):
+        # can aggregate millions of asset by using few GBs of RAM
+        items = monitor.read('assets').groupby('taxonomy')
+        taxo_assets = [(t, a.set_index('ordinal')) for t, a in items]
     # print(monitor.task_no, len(df), slc_weight(gmfslices))
-    return event_based_risk(df, oqparam, monitor)
+    return event_based_risk(df, oqparam, taxo_assets, monitor)
 
 
-def event_based_risk(df, oqparam, monitor):
+def event_based_risk(df, oqparam, taxo_assets, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param oqparam: parameters coming from the job.ini
+    :param taxo_assets: pairs (taxonomy, asset dataframe)
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    with monitor('reading assets/crmodel', measuremem=True):
-        assets = monitor.read('assets')
+    with monitor('reading crmodel', measuremem=True):
         aggids = monitor.read('aggids')
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else monitor.read('weights')
-        # can aggregate millions of asset by using few GBs of RAM
-        taxo_assets = assets.groupby('taxonomy')
 
-    ARK = len(assets), len(weights), oqparam.K
+    ARK = (sum(len(assets) for taxo, assets in taxo_assets),
+           len(weights), oqparam.K)
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
     else:
@@ -189,7 +191,6 @@ def event_based_risk(df, oqparam, monitor):
             if len(gmf_df) == 0:
                 continue
             with mon_risk:  # this is using a lot of memory
-                adf = adf.set_index('ordinal')
                 out = crmodel.get_output(adf, gmf_df, oqparam._sec_losses, rng)
             yield out
 
@@ -208,7 +209,11 @@ def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
     dic = event_based.event_based(proxies, full_lt, oqparam, dstore, monitor)
     if len(dic['gmfdata']) == 0:  # no GMFs
         return {}
-    return event_based_risk(dic['gmfdata'], oqparam, monitor)
+    with dstore, monitor('reading assets', measuremem=True):
+        # can aggregate millions of asset by using few GBs of RAM
+        items = monitor.read('assets').groupby('taxonomy')
+        taxo_assets = [(t, a.set_index('ordinal')) for t, a in items]
+    return event_based_risk(dic['gmfdata'], oqparam, taxo_assets, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
