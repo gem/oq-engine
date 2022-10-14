@@ -137,7 +137,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
         for (s, z), r in numpy.ndenumerate(hmap4.rlzs):
             if r in rlzs:
                 g_by_z[s][z] = g
-    eps3 = disagg._eps3(cmaker.truncation_level, cmaker.num_epsilon_bins)
+    eps3 = disagg._eps3(cmaker.truncation_level, bin_edges[4])
     imts = [from_string(im) for im in cmaker.imtls]
     for magi in numpy.unique(magidx):
         for ctxt in ctxs:
