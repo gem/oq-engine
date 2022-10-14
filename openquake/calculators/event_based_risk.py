@@ -29,7 +29,7 @@ from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
-from openquake.commonlib.calc import build_gmfslices, slc_weight
+from openquake.commonlib.calc import build_gmfslices
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
     PostRiskCalculator, post_aggregate, fix_dtypes)
@@ -44,20 +44,6 @@ TWO16 = 2 ** 16
 TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
 
-
-def save_tmp(self, monitor, srcfilter=None):
-    oq = self.oqparam
-    monitor.save('assets', self.assetcol.to_dframe())
-    monitor.save('srcfilter', srcfilter)
-    monitor.save('crmodel', self.crmodel)
-    monitor.save('rlz_id', self.rlzs)
-    monitor.save('weights', self.datastore['weights'][:])
-    if oq.K:
-        aggids, _ = self.assetcol.build_aggids(
-            oq.aggregate_by, oq.max_aggregations)
-    else:
-        aggids = ()
-    monitor.save('aggids', aggids)
 
 
 def fast_agg(keys, values, correl, li, acc):
@@ -235,6 +221,20 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     precalc = 'event_based'
     accept_precalc = ['scenario', 'event_based', 'event_based_risk', 'ebrisk']
 
+    def save_tmp(self, monitor, srcfilter=None):
+        oq = self.oqparam
+        monitor.save('assets', self.assetcol.to_dframe())
+        monitor.save('srcfilter', srcfilter)
+        monitor.save('crmodel', self.crmodel)
+        monitor.save('rlz_id', self.rlzs)
+        monitor.save('weights', self.datastore['weights'][:])
+        if oq.K:
+            aggids, _ = self.assetcol.build_aggids(
+                oq.aggregate_by, oq.max_aggregations)
+        else:
+            aggids = ()
+        monitor.save('aggids', aggids)
+
     def pre_execute(self):
         oq = self.oqparam
         if oq.calculation_mode == 'ebrisk':
@@ -350,7 +350,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 h5=self.datastore.hdf5,
                 duration=oq.time_per_task,
                 outs_per_task=5)
-            save_tmp(self, smap.monitor, srcfilter)
+            self.save_tmp(smap.monitor, srcfilter)
             smap.reduce(self.agg_dicts)
             if self.gmf_bytes == 0:
                 raise RuntimeError(
@@ -366,7 +366,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info('Starting ebr_from_gmfs')
             smap = parallel.Starmap(
                 ebr_from_gmfs, allargs, h5=self.datastore.hdf5)
-            save_tmp(self, smap.monitor)
+            self.save_tmp(smap.monitor)
             smap.reduce(self.agg_dicts)
         if self.parent_events:
             assert self.parent_events == len(self.datastore['events'])
