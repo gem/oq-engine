@@ -87,7 +87,14 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
     if (dframe.deductible < 0).any():
         raise InvalidFile(f'{policyfname}: deductibles must be => 0')
     for treaty, treaty_type in zip(treaties, treaty_types):
-        if treaty_type != 'prop' and not dframe[treaty].isin([0, 1]).all():
+        if treaty_type == 'prop':
+            treaty_sum = dframe[treaty].sum()
+            if not 0 <= treaty_sum <= 1:
+                raise InvalidFile(
+                    '%s: the sum of fractions for "%s" is %s.'
+                    ' It must be >= 0 and <= 1' % (
+                        policyfname, treaty, treaty_sum))
+        elif not dframe[treaty].isin([0, 1]).all():
             raise InvalidFile(
                 f'{policyfname}: field {treaty} must be 0 or 1')
     idx = [idxdict[name] for name in dframe[key]]  # indices starting from 1

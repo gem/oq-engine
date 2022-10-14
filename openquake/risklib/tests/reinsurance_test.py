@@ -794,6 +794,19 @@ rur_Ant_1,  9000,500,1,1,0
             reinsurance.parse(self.xmlfname, policy_idx)
         self.assertIn('policy contains duplicates', str(ctx.exception))
 
+    def test_sum_of_fractions_for_prop_treaties_not_between_0_and_1(self):
+        with open(self.policyfname, 'w') as csv:
+            csv.write(POLICY.replace(
+                'p1_a1,2000,400,0.7,0.1,0.2,1,0',
+                'p1_a1,2000,400,0.7,0.8,0.2,1,0'))
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(
+                self.reinsxmlfname,
+                {'?': 0, 'p1_a1': 1, 'p1_a2': 2, 'p1_a3': 3, 'p2': 4})
+        self.assertIn(
+            'the sum of fractions for "treaty_1" is 1.5.'
+            ' It must be >= 0 and <= 1', str(ctx.exception))
+
     def test_negative_liability(self):
         csvfname = general.gettemp('''\
 policy,liability,deductible,qshared,surplus
