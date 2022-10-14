@@ -149,28 +149,26 @@ def ebr_from_gmfs(gmfslices, oqparam, dstore, monitor):
             slc = slice(gmfslice[0], gmfslice[1])
             dfs.append(dstore.read_df('gmf_data', slc=slc))
         df = pandas.concat(dfs)
-    with dstore, monitor('reading assets', measuremem=True):
-        # can aggregate millions of asset by using few GBs of RAM
-        items = monitor.read('assets').groupby('taxonomy')
-        taxo_assets = [(t, a.set_index('ordinal')) for t, a in items]
     # print(monitor.task_no, len(df), slc_weight(gmfslices))
     n = len(df) // 200_000 + 1  # split in n blocks to save memory
     for i, grp in df.groupby(df.eid % n):
         if i == 0:
-            yield event_based_risk(grp, oqparam, taxo_assets, monitor)
+            yield event_based_risk(grp, oqparam, monitor)
         else:
-            yield event_based_risk, grp, oqparam, taxo_assets
+            yield event_based_risk, grp, oqparam
 
 
-def event_based_risk(df, oqparam, taxo_assets, monitor):
+def event_based_risk(df, oqparam, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param oqparam: parameters coming from the job.ini
-    :param taxo_assets: pairs (taxonomy, asset dataframe)
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    with monitor('reading crmodel', measuremem=True):
+    with monitor('reading assets/crmodel', measuremem=True):
+        # can aggregate millions of asset by using few GBs of RAM
+        items = monitor.read('assets').groupby('taxonomy')
+        taxo_assets = [(t, a.set_index('ordinal')) for t, a in items]
         aggids = monitor.read('aggids')
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
@@ -214,11 +212,7 @@ def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
     dic = event_based.event_based(proxies, full_lt, oqparam, dstore, monitor)
     if len(dic['gmfdata']) == 0:  # no GMFs
         return {}
-    with dstore, monitor('reading assets', measuremem=True):
-        # can aggregate millions of asset by using few GBs of RAM
-        items = monitor.read('assets').groupby('taxonomy')
-        taxo_assets = [(t, a.set_index('ordinal')) for t, a in items]
-    return event_based_risk(dic['gmfdata'], oqparam, taxo_assets, monitor)
+    return event_based_risk(dic['gmfdata'], oqparam, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
