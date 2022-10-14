@@ -232,6 +232,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     accept_precalc = ['scenario', 'event_based', 'event_based_risk', 'ebrisk']
 
     def save_tmp(self, monitor, srcfilter=None):
+        """
+        Save some useful data in the file calc_XXX_tmp.hdf5
+        """
         oq = self.oqparam
         monitor.save('assets', self.assetcol.to_dframe())
         monitor.save('srcfilter', srcfilter)
