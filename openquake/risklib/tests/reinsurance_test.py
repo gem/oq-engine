@@ -876,10 +876,10 @@ rur_Ant_1,10000,100,.1,.2''')
         csvfname = general.gettemp(CSV_NP)
         xmlfname = general.gettemp(
             XML_NP.format(csvfname).replace(
-                'limit="5000"', 'deductible="-5000"'))
+                'limit="5000"', 'limit="-5000"'))
         with self.assertRaises(ValueError) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
-        self.assertIn("Could not convert deductible->positivefloat: "
+        self.assertIn("Could not convert limit->positivefloat: "
                       "float -5000.0 < 0, line 11, line 11", str(ctx.exception))
 
     def test_limit_is_not_float(self):
