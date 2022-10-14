@@ -191,6 +191,13 @@ description:
   Example: *description = Test calculation*.
   Default: "no description"
 
+disagg_bin_edges:
+  A dictionary where the keys can be: mag, eps, dist, lon, lat and the
+  values are lists of floats indicating the edges of the bins used to
+  perform the disaggregation.
+  Example: *disagg_bin_edges = {'mag': [5.0, 5.5, 6.0, 6.5]}*.
+  Default: empty dictionary
+
 disagg_by_src:
   Flag used to enable disaggregation by source when possible.
   Example: *disagg_by_src = true*.
@@ -246,8 +253,7 @@ floating_x_step:
 
 floating_y_step:
   Float, used in rupture generation for kite faults. indicates the fraction
-  of fault width used to float ruptures down dip. (i.e. "0.5" floats the
-  ruptures at half the rupture length). Uniform distribution of the ruptures
+  of fault width used to float ruptures down dip. (i.e. "0.5" floats that half the rupture length). Uniform distribution of the ruptures
   is maintained, such that if the mesh spacing and rupture dimensions
   prohibit the defined overlap fraction, the fraction is increased until
   uniform distribution is achieved. The minimum possible value depends on
