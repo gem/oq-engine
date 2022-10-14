@@ -179,7 +179,7 @@ class ReinsuranceTestCase(unittest.TestCase):
                         'liability': 'Limit',
                         'policy': 'Policy'}
         cls.treaty_df = treaty_df
-        
+
     def test_policy1(self):
         # VA_region_1, CatXL_reg(50, 2500)
         expected = _df('''\
@@ -296,30 +296,6 @@ event_id,retention,claim,prop1,cat1,cat2,cat3,cat4,cat5,over_B,over_D
 #############################################################################
 #                            VALIDATION TESTS                               #
 #############################################################################
-
-JOB = '''\
-[general]
-random_seed = 23
-master_seed = 42
-description = Test
-calculation_mode = event_based_risk
-aggregate_by = %(aggregate_by)s
-structural_vulnerability_file = vulnerability_model_stco.xml
-nonstructural_vulnerability_file = vulnerability_model_nonstco.xml
-reinsurance_file = {'structural+nonstructural': 'reinsurance.xml'}
-total_losses = structural+nonstructural
-exposure_file = exposure.xml
-discard_assets = true
-region = 81.1 26, 88 26, 88 30, 81.1 30
-asset_hazard_distance = 20
-sites = 87.7477 27.9015
-
-[calculation]
-investigation_time = 50.0
-ses_per_logic_tree_path = 20
-maximum_distance = 100.0
-return_periods = [30, 60, 120, 240, 480, 960]
-'''
 
 VULN_STCO = '''\
 <?xml version="1.0" encoding="utf-8"?>
@@ -484,6 +460,256 @@ a1,500,RC,83.0823,27.9006,1000,0.4,10,A
 a3,10,RM,85.7477,27.9015,2500,500,1,B
 '''
 
+JOB = '''\
+[general]
+description = reinsurance case_1c (1 nonprop layer)
+calculation_mode = event_based_risk
+master_seed = 42
+
+[exposure]
+exposure_file = exposure_model.xml
+
+[site_params]
+reference_vs30_type = measured
+reference_vs30_value = 760.0
+reference_depth_to_2pt5km_per_sec = 5.0
+reference_depth_to_1pt0km_per_sec = 100.0
+
+[erf]
+width_of_mfd_bin = 0.1
+rupture_mesh_spacing = 2.0
+area_source_discretization = 10
+
+[logic_trees]
+source_model_logic_tree_file = source_model_logic_tree.xml
+gsim_logic_tree_file = gsim_logic_tree.xml
+
+[hazard_calculation]
+intensity_measure_types = PGA
+truncation_level = 3
+maximum_distance = 200.0
+investigation_time = 1
+number_of_logic_tree_samples = 0
+ses_per_logic_tree_path = 200
+
+[vulnerability]
+structural_vulnerability_file = structural_vulnerability_model.xml
+nonstructural_vulnerability_file = nonstructural_vulnerability_model.xml
+contents_vulnerability_file = contents_vulnerability_model.xml
+# business_interruption_vulnerability_file = downtime_vulnerability_model.xml
+# occupants_vulnerability_file = occupants_vulnerability_model.xml
+
+[risk_calculation]
+aggregate_by = %(aggregate_by)s
+reinsurance_file = {'structural+contents': 'reinsurance1.xml'}
+total_losses = structural+contents
+avg_losses = true
+risk_investigation_time = 1
+
+[export]
+export_dir = ./
+'''
+
+EXPOSURE_MODEL_XML = '''\
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ex1" category="buildings" taxonomySource="GEM taxonomy">
+    <description>exposure model</description>
+
+    <conversions>
+      <costTypes>
+        <costType name="structural" type="aggregated" unit="USD"/>
+        <costType name="nonstructural" type="aggregated" unit="USD"/>
+        <costType name="contents" type="aggregated" unit="USD"/>
+      </costTypes>
+    </conversions>
+
+    <tagNames>tag_1 policy</tagNames>
+
+    <occupancyPeriods>night </occupancyPeriods>
+
+    <assets>
+      exposure_model.csv
+    </assets>
+
+  </exposureModel>
+</nrml>
+'''
+
+EXPOSURE_MODEL_CSV = '''\
+id,lon,lat,taxonomy,number,structural,contents,nonstructural,business_interruption,night,tag_1,policy
+a1,-122,38.113,tax1,1,10000,5000,15000,2000,6,zone_1,p1_a1
+a2,-122.114,38.113,tax1,1,10000,5000,15000,2000,6,zone_1,p1_a2
+a3,-122.57,38.113,tax1,1,10000,5000,15000,2000,6,zone_1,p1_a3
+a4,-122,38,tax1,1,10000,5000,15000,2000,6,zone_2,p2
+a5,-122,37.91,tax1,1,10000,5000,15000,2000,6,zone_2,p2
+a6,-122,38.225,tax1,1,10000,5000,15000,2000,6,zone_2,p2
+a7,-121.886,38.113,tax1,1,10000,5000,15000,2000,6,zone_2,p2
+'''
+
+GSIM_LOGIC_TREE = '''\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+<logicTree logicTreeID='lt1'>
+  <logicTreeBranchingLevel branchingLevelID="bl1">
+    <logicTreeBranchSet uncertaintyType="gmpeModel"
+                        branchSetID="bs1"
+                        applyToTectonicRegionType="Active Shallow Crust">
+
+      <logicTreeBranch branchID="b1">
+        <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+
+  </logicTreeBranchSet>
+  </logicTreeBranchingLevel>
+</logicTree>
+
+</nrml>
+'''
+
+SOURCE_MODEL_LOGIC_TREE = '''\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+<logicTree logicTreeID="lt1">
+  <logicTreeBranchingLevel branchingLevelID="bl1">
+    <logicTreeBranchSet uncertaintyType="sourceModel"
+						branchSetID="bs1">
+      <logicTreeBranch branchID="b1">
+		<uncertaintyModel>source_model.xml</uncertaintyModel>
+		<uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+	</logicTreeBranchSet>
+  </logicTreeBranchingLevel>
+</logicTree>
+
+</nrml>
+'''
+
+STRUCTURAL_VULNERABILITY = '''\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+<vulnerabilityModel id="vm1" assetCategory="buildings" lossCategory="structural">
+
+  <description>ln vf | tax3 | nzcov</description>
+
+  <vulnerabilityFunction id="tax1" dist="LN">
+    <imls imt="PGA">0.05 0.20 0.40 0.60 0.80 1.00 1.20 1.40 1.60 1.80 2.00</imls>
+    <meanLRs>0.01 0.04 0.10 0.20 0.33 0.50 0.67 0.80 0.90 0.96 0.99</meanLRs>
+    <covLRs>0.03 0.12 0.24 0.32 0.38 0.40 0.38 0.32 0.24 0.12 0.03</covLRs>
+  </vulnerabilityFunction>
+
+  <vulnerabilityFunction id="tax2" dist="LN">
+    <imls imt="PGA">0.05 0.20 0.40 0.60 0.80 1.00 1.20 1.40 1.60 1.80 2.00</imls>
+    <meanLRs>0.01 0.02 0.05 0.11 0.18 0.26 0.36 0.41 0.46 0.49 0.51</meanLRs>
+    <covLRs>0.03 0.12 0.24 0.32 0.38 0.40 0.38 0.32 0.24 0.12 0.03</covLRs>
+  </vulnerabilityFunction>
+
+  <vulnerabilityFunction id="tax3" dist="LN">
+    <imls imt="PGA">0.05 0.20 0.40 0.60 0.80 1.00 1.20 1.40 1.60 1.80 2.00</imls>
+    <meanLRs>0.01 0.04 0.09 0.18 0.28 0.47 0.58 0.71 0.79 0.85 0.91</meanLRs>
+    <covLRs>0.03 0.12 0.24 0.32 0.38 0.40 0.38 0.32 0.24 0.12 0.03</covLRs>
+  </vulnerabilityFunction>
+
+</vulnerabilityModel>
+
+</nrml>
+'''
+
+NONSTRUCTURAL_VULNERABILITY = '''\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+<vulnerabilityModel id="vm1" assetCategory="buildings" lossCategory="nonstructural">
+
+  <description>ln vf | tax3 | imt3 | nonstructural</description>
+
+  <vulnerabilityFunction id="tax1" dist="LN">
+    <imls imt="PGA">0.005 0.15 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0</imls>
+    <meanLRs>0.01 0.05 0.12 0.24 0.40 0.60 0.80 0.96 1.00 1.00 1.00</meanLRs>
+    <covLRs>0.03 0.12 0.24 0.32 0.32 0.24 0.12 0.03 0.00 0.00 0.00</covLRs>
+  </vulnerabilityFunction>
+
+  <vulnerabilityFunction id="tax2" dist="LN">
+    <imls imt="SA(0.1)">0.005 0.15 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0</imls>
+    <meanLRs>0.01 0.05 0.12 0.24 0.40 0.60 0.80 0.96 1.00 1.00 1.00</meanLRs>
+    <covLRs>0.03 0.12 0.24 0.32 0.32 0.24 0.12 0.03 0.00 0.00 0.00</covLRs>
+  </vulnerabilityFunction>
+
+  <vulnerabilityFunction id="tax3" dist="LN">
+    <imls imt="SA(0.3)">0.005 0.15 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0</imls>
+    <meanLRs>0.01 0.05 0.12 0.24 0.40 0.60 0.80 0.96 1.00 1.00 1.00</meanLRs>
+    <covLRs>0.03 0.12 0.24 0.32 0.32 0.24 0.12 0.03 0.00 0.00 0.00</covLRs>
+  </vulnerabilityFunction>
+
+</vulnerabilityModel>
+
+</nrml>
+'''
+
+CONTENTS_VULNERABILITY = '''\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+<vulnerabilityModel id="vm1" assetCategory="buildings" lossCategory="contents">
+
+  <description>ln vf | tax3 | imt3 | contents</description>
+
+  <vulnerabilityFunction id="tax1" dist="LN">
+    <imls imt="PGA">0.005 0.15 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0</imls>
+    <meanLRs>0.02 0.10 0.33 0.66 0.90 0.98 1.00 1.00 1.00 1.00 1.00</meanLRs>
+    <covLRs>0.03 0.12 0.24 0.24 0.12 0.03 0.00 0.00 0.00 0.00 0.00</covLRs>
+  </vulnerabilityFunction>
+
+  <vulnerabilityFunction id="tax2" dist="LN">
+    <imls imt="SA(0.1)">0.005 0.15 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0</imls>
+    <meanLRs>0.02 0.10 0.33 0.66 0.90 0.98 1.00 1.00 1.00 1.00 1.00</meanLRs>
+    <covLRs>0.03 0.12 0.24 0.24 0.12 0.03 0.00 0.00 0.00 0.00 0.00</covLRs>
+  </vulnerabilityFunction>
+
+  <vulnerabilityFunction id="tax3" dist="LN">
+    <imls imt="SA(0.4)">0.005 0.15 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0</imls>
+    <meanLRs>0.02 0.10 0.33 0.66 0.90 0.98 1.00 1.00 1.00 1.00 1.00</meanLRs>
+    <covLRs>0.03 0.12 0.24 0.24 0.12 0.03 0.00 0.00 0.00 0.00 0.00</covLRs>
+  </vulnerabilityFunction>
+
+</vulnerabilityModel>
+
+</nrml>
+'''
+
+REINSURANCE = '''\
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <reinsuranceModel>
+    <description>reinsurance model</description>
+
+    <fieldMap>
+      <field input="treaty_1" type="prop" max_cession_event="800" />
+      <field input="treaty_2" type="prop" max_cession_event="400" />
+      <field input="xlr1" type="wxlr" deductible="200" limit="1000" />
+    </fieldMap>
+
+  <policies>policy1.csv</policies>
+
+  </reinsuranceModel>
+</nrml>
+'''
+
+POLICY = '''\
+policy,liability,deductible,retention,treaty_1,treaty_2,xlr1,XLR
+p1_a1,2000,400,0.7,0.1,0.2,1,0
+p1_a2,1000,200,0.6,0.3,0.1,1,0
+p1_a3,1000,100,0.8,0,0.2,1,0
+p2,2000,500,0.5,0.4,0.1,0,1
+'''
+
 
 class WrongInputTestCase(unittest.TestCase):
     """
@@ -502,6 +728,22 @@ class WrongInputTestCase(unittest.TestCase):
             cls.tmpdir, 'vulnerability_model_nonstco.xml')
         cls.expoxmlfname = os.path.join(cls.tmpdir, 'exposure.xml')
         cls.expocsvfname = os.path.join(cls.tmpdir, 'exposure.csv')
+        cls.expo1xmlfname = os.path.join(cls.tmpdir, 'exposure_model.xml')
+        cls.expo1csvfname = os.path.join(cls.tmpdir, 'exposure_model.csv')
+        cls.gsimltfname = os.path.join(
+            cls.tmpdir, 'gsim_logic_tree.xml')
+        cls.srcmdlltfname = os.path.join(
+            cls.tmpdir, 'source_model_logic_tree.xml')
+        cls.strvulnfname = os.path.join(
+            cls.tmpdir, 'structural_vulnerability_model.xml')
+        cls.nonstrvulnfname = os.path.join(
+            cls.tmpdir, 'nonstructural_vulnerability_model.xml')
+        cls.contvulnfname = os.path.join(
+            cls.tmpdir, 'contents_vulnerability_model.xml')
+        cls.reinsxmlfname = os.path.join(
+            cls.tmpdir, 'reinsurance1.xml')
+        cls.policyfname = os.path.join(
+            cls.tmpdir, 'policy1.csv')
         with open(cls.xmlfname, 'w') as xml:
             xml.write(XML_NP.format('policy.csv'))
         with open(cls.vuln_stcofname, 'w') as xml:
@@ -512,6 +754,24 @@ class WrongInputTestCase(unittest.TestCase):
             xml.write(EXPOXML)
         with open(cls.expocsvfname, 'w') as xml:
             xml.write(EXPOCSV)
+        with open(cls.expo1xmlfname, 'w') as xml:
+            xml.write(EXPOSURE_MODEL_XML)
+        with open(cls.expo1csvfname, 'w') as xml:
+            xml.write(EXPOSURE_MODEL_CSV)
+        with open(cls.gsimltfname, 'w') as xml:
+            xml.write(GSIM_LOGIC_TREE)
+        with open(cls.srcmdlltfname, 'w') as xml:
+            xml.write(SOURCE_MODEL_LOGIC_TREE)
+        with open(cls.strvulnfname, 'w') as xml:
+            xml.write(STRUCTURAL_VULNERABILITY)
+        with open(cls.nonstrvulnfname, 'w') as xml:
+            xml.write(NONSTRUCTURAL_VULNERABILITY)
+        with open(cls.contvulnfname, 'w') as xml:
+            xml.write(CONTENTS_VULNERABILITY)
+        with open(cls.reinsxmlfname, 'w') as xml:
+            xml.write(REINSURANCE)
+        with open(cls.policyfname, 'w') as csv:
+            csv.write(POLICY)
 
     # Checks in the policy file
 
@@ -653,15 +913,6 @@ rur_Ant_1,10000,100,.1,.2''')
         self.assertIn("Could not convert max_cession_event->positivefloat: "
                       "could not convert string to float: 'XXX', "
                       "line 11, line 11", str(ctx.exception))
-
-    # TODO: finish
-    def _test_wrong_aggregate_by_1(self):
-        with open(self.jobfname, 'w') as job:
-            job.write(JOB % dict(aggregate_by='taxonomy; policy'))
-        oq = readinput.get_oqparam(self.jobfname)
-        with self.assertRaises(InvalidFile) as ctx:
-            readinput.get_reinsurance(oq)
-        self.assertIn('aggregate_by=taxonomy; policy', str(ctx.exception))
 
     def test_missing_aggregate_by_policy(self):
         with open(self.jobfname, 'w') as job:
