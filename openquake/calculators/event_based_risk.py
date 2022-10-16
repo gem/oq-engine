@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import time
 import os.path
 import logging
 import operator
@@ -165,9 +166,9 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
     return dict(avg=loss_by_AR, alt=df)
 
 
-def ebr_from_gmfs(gmfslices, oqparam, dstore, monitor):
+def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     """
-    :param gmfslices: an array (S, 3) with S slices (start, stop, weight)
+    :param slice_by_event:
     :param oqparam: OqParam instance
     :param dstore: DataStore instance from which to read the GMFs
     :param monitor: a Monitor instance
@@ -175,13 +176,29 @@ def ebr_from_gmfs(gmfslices, oqparam, dstore, monitor):
     """
     if dstore.parent:
         dstore.parent.open('r')
-    dfs = []
+    gmfcols = oqparam.gmf_data_dt().names
+    with dstore:
+        # this is fast compared to reading the GMFs
+        risk_sids = monitor.read('sids')
+        s0, s1 = sbe[0]['start'], sbe[-1]['stop']
+        t0 = time.time()
+        haz_sids = dstore['gmf_data/sid'][s0:s1]
+    dt = time.time() - t0
+    idx, = numpy.where(numpy.isin(haz_sids, risk_sids))
+    if len(idx) == 0:
+        return {}
+    print('waiting %.1f' % dt)
+    time.sleep(dt)
     with dstore, monitor('reading GMFs', measuremem=True):
-        for gmfslice in gmfslices:
-            slc = slice(gmfslice[0], gmfslice[1])
-            dfs.append(dstore.read_df('gmf_data', slc=slc))
-        df = pandas.concat(dfs)
-    # print(monitor.task_no, len(df), slc_weight(gmfslices))
+        start, stop = idx.min(), idx.max() + 1
+        dic = {}
+        for col in gmfcols:
+            if col == 'sid':
+                dic[col] = haz_sids[idx]
+            else:
+                data = dstore['gmf_data/' + col][s0+start:s0+stop]
+                dic[col] = data[idx - start]
+        df = pandas.DataFrame(dic)
     if len(df) < 1_000_000:
         yield event_based_risk(df, oqparam, monitor)
     else:
@@ -264,6 +281,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         Save some useful data in the file calc_XXX_tmp.hdf5
         """
         oq = self.oqparam
+        monitor.save('sids', self.sitecol.sids)
         monitor.save('assets', self.assetcol.to_dframe())
         monitor.save('srcfilter', srcfilter)
         monitor.save('crmodel', self.crmodel)
@@ -399,7 +417,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     'all below the minimum_intensity threshold')
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
-        else:  # start from GMFs                          
+        else:  # start from GMFs
             logging.info('Building gmf_data slices')
             with self.monitor('getting gmf_data slices', measuremem=True):
                 data = self.datastore['gmf_data']
@@ -407,7 +425,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     sbe = data['slice_by_event'][:]
                 except KeyError:
                     sbe = build_slice_by_event(data['eid'][:])
-            self.datastore.swmr_on()
+            self.datastore.swmr_on()  # before the Starmap
             smap = parallel.Starmap.apply(
                 ebr_from_gmfs, (sbe, oq, self.datastore),
                 concurrent_tasks=oq.concurrent_tasks,
