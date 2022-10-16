@@ -24,12 +24,12 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, parallel, general
+from openquake.baselib import hdf5, performance, parallel, general
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
+from openquake.commonlib.calc import slice_dt
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
-from openquake.commonlib.calc import build_gmfslices
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
     PostRiskCalculator, post_aggregate, fix_dtypes)
@@ -43,6 +43,15 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
+
+
+def build_slice_by_event(eids, offset=0):
+    arr = performance.idx_start_stop(eids)
+    sbe = numpy.zeros(len(arr), slice_dt)
+    sbe['eid'] = arr[:, 0]
+    sbe['start'] = arr[:, 1] + offset
+    sbe['stop'] = arr[:, 2] + offset
+    return sbe
 
 
 def split(gmf_df, size):
@@ -390,16 +399,22 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     'all below the minimum_intensity threshold')
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
-        else:  # start from GMFs
+        else:  # start from GMFs                          
+            logging.info('Building gmf_data slices')
             with self.monitor('getting gmf_data slices', measuremem=True):
-                slice_list = build_gmfslices(
-                    self.datastore, oq.concurrent_tasks or 1)
-                allargs = [(arr, oq, self.datastore) for arr in slice_list]
-            logging.info('Starting ebr_from_gmfs')
-            smap = parallel.Starmap(
-                ebr_from_gmfs, allargs, h5=self.datastore.hdf5)
+                data = self.datastore['gmf_data']
+                try:
+                    sbe = data['slice_by_event'][:]
+                except KeyError:
+                    sbe = build_slice_by_event(data['eid'][:])
+            self.datastore.swmr_on()
+            smap = parallel.Starmap.apply(
+                ebr_from_gmfs, (sbe, oq, self.datastore),
+                concurrent_tasks=oq.concurrent_tasks,
+                h5=self.datastore.hdf5)
             self.save_tmp(smap.monitor)
             smap.reduce(self.agg_dicts)
+
         if self.parent_events:
             assert self.parent_events == len(self.datastore['events'])
         return 1
