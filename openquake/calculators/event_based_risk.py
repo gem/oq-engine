@@ -45,6 +45,29 @@ TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
 
 
+def split(gmf_df, size):
+    """
+    Split a dataframe chunks. For instance for
+
+    >>> eids = [1, 1, 1, 2, 2, 4, 5, 5, 6, 8, 8, 8]
+    >>> len(eids)
+    12
+    >>> dfs = split(pandas.DataFrame({'eid': eids}), size=3)
+    >>> [len(df) for df in dfs]
+    [2, 4, 2, 3, 1]
+    >>> dfs = split(pandas.DataFrame({'eid': eids}), size=4)
+    >>> [len(df) for df in dfs]
+    [4, 5, 3]
+    >>> dfs = split(pandas.DataFrame({'eid': eids}), size=6)
+    >>> [len(df) for df in dfs]
+    [1, 4, 7]
+    """
+    n = len(gmf_df) // size + 1
+    if n == 1:
+        return [gmf_df]
+    return [df for _, df in gmf_df.groupby(gmf_df.eid % n)]
+
+
 def fast_agg(keys, values, correl, li, acc):
     """
     :param keys: an array of N uint64 numbers encoding (event_id, agg_id)
@@ -150,11 +173,10 @@ def ebr_from_gmfs(gmfslices, oqparam, dstore, monitor):
             dfs.append(dstore.read_df('gmf_data', slc=slc))
         df = pandas.concat(dfs)
     # print(monitor.task_no, len(df), slc_weight(gmfslices))
-    n = len(df) // 500_000 + 1  # split in n blocks to save memory
-    for i, grp in df.groupby(df.eid % n):
-        if i == 0:
-            yield event_based_risk(grp, oqparam, monitor)
-        else:
+    if len(df) < 1_000_000:
+        yield event_based_risk(df, oqparam, monitor)
+    else:
+        for grp in split(df, 1_000_000):
             yield event_based_risk, grp, oqparam
 
 
@@ -185,17 +207,20 @@ def event_based_risk(df, oqparam, monitor):
     def outputs():
         mon_risk = monitor('computing risk', measuremem=True)
         fil_mon = monitor('filtering GMFs', measuremem=True)
-        for taxo, adf in taxo_assets:
-            with fil_mon:
-                # can be a bit slow, but it is *crucial* for the performance
-                # of the next step, 'computing risk'
-                gmf_df = df[numpy.isin(
-                    df.sid.to_numpy(), adf.site_id.to_numpy())]
-            if len(gmf_df) == 0:
-                continue
-            with mon_risk:  # this is using a lot of memory
-                out = crmodel.get_output(adf, gmf_df, oqparam._sec_losses, rng)
-            yield out
+        for grp in split(df, 200_000):
+            print('{:_d}'.format(len(grp)))
+            for taxo, adf in taxo_assets:
+                with fil_mon:
+                    # *crucial* for the performance
+                    # of the next step, 'computing risk'
+                    gmf_df = grp[numpy.isin(
+                        grp.sid.to_numpy(), adf.site_id.to_numpy())]
+                if len(gmf_df) == 0:
+                    continue
+                with mon_risk:  # this is using a lot of memory
+                    out = crmodel.get_output(
+                        adf, gmf_df, oqparam._sec_losses, rng)
+                yield out
 
     return aggreg(outputs(), crmodel, ARK, aggids, rlz_id, monitor)
 
