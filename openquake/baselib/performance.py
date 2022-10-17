@@ -427,6 +427,24 @@ def idx_start_stop(integers):
     return numpy.array(out, I64)
 
 
+@compile("int64[:, :](uint32[:], uint32)")
+def split_slices(integers, size):
+    # given an array of integers returns an array int64 of shape (n, 2)
+    out = []
+    start = i = 0
+    prev = integers[0]
+    totsize = 1
+    for i, val in enumerate(integers[1:], 1):
+        totsize += 1
+        if val != prev and totsize >= size:
+            out.append((start, i))
+            totsize = 0
+            start = i
+        prev = val
+    out.append((start, i + 1))
+    return numpy.array(out, I64)
+
+
 # this is absurdly fast if you have numba
 def get_slices(uint32s):
     """
