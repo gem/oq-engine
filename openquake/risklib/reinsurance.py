@@ -85,11 +85,13 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
         raise InvalidFile(f'{policyfname}: deductibles must be numeric')
     [indices] = np.where(dframe.liability.to_numpy() < 0)
     if len(indices) > 0:
+        # NOTE: reporting only the first row found
         raise InvalidFile(
             '%s (row %d): a negative liability was found' % (
                 policyfname, indices[0] + 2))
     [indices] = np.where(dframe.deductible.to_numpy() < 0)
     if len(indices) > 0:
+        # NOTE: reporting only the first row found
         raise InvalidFile(
             '%s (row %d): a negative deductible was found' % (
                 policyfname, indices[0] + 2))
@@ -97,16 +99,20 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
     for treaty, treaty_type in zip(treaties, treaty_types):
         if treaty_type == 'prop':
             prop_treaties.append(treaty)
-        elif not dframe[treaty].isin([0, 1]).all():
-            raise InvalidFile(
-                f'{policyfname}: field {treaty} must be 0 or 1')
+        else:
+            [indices] = np.where(~dframe[treaty].isin([0, 1]).to_numpy())
+            if len(indices) > 0:
+                # NOTE: reporting only the first row found
+                raise InvalidFile(
+                    '%s (row %d): values for %s must be either 0 or 1' % (
+                        policyfname, indices[0] + 2, treaty))
     sums = np.zeros(len(dframe))
     for prop_treaty in prop_treaties:
         fractions = dframe[prop_treaty].to_numpy()
         [indices] = np.where(fractions < 0)
         if len(indices) > 0:
-            # there is at least 1 row with negative fraction. The error shows
-            # the first of them
+            # NOTE: there is at least 1 row with negative fraction. The error
+            # shows the first of them
             raise InvalidFile(
                 '%s (row %d): proportional fraction for treaty "%s" is'
                 ' negative' % (policyfname, indices[0] + 2, prop_treaty))

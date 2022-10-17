@@ -827,7 +827,8 @@ rur_Ant_1,  9000,500,1,1,0
             csv.write(CSV)
         with self.assertRaises(InvalidFile) as ctx:
             reinsurance.parse(self.xmlfname, policy_idx)
-        self.assertIn('field CatXL_reg must be 0 or 1', str(ctx.exception))
+        self.assertIn('(row 3): values for CatXL_reg must be either 0 or 1',
+                      str(ctx.exception))
 
     # Checks in the reinsurance file
 
