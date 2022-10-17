@@ -794,19 +794,6 @@ rur_Ant_1,  9000,500,1,1,0
             reinsurance.parse(self.xmlfname, policy_idx)
         self.assertIn('policy contains duplicates', str(ctx.exception))
 
-    def test_sum_of_fractions_for_prop_treaties_not_between_0_and_1(self):
-        with open(self.policyfname, 'w') as csv:
-            csv.write(POLICY.replace(
-                'p1_a1,2000,400,0.7,0.1,0.2,1,0',
-                'p1_a1,2000,400,0.7,0.8,0.2,1,0'))
-        with self.assertRaises(InvalidFile) as ctx:
-            reinsurance.parse(
-                self.reinsxmlfname,
-                {'?': 0, 'p1_a1': 1, 'p1_a2': 2, 'p1_a3': 3, 'p2': 4})
-        self.assertIn(
-            'the sum of fractions for "treaty_1" is 1.5.'
-            ' It must be >= 0 and <= 1', str(ctx.exception))
-
     def test_negative_liability(self):
         csvfname = general.gettemp('''\
 policy,liability,deductible,qshared,surplus
@@ -931,11 +918,10 @@ rur_Ant_1,10000,100,.1,.2''')
         with open(self.jobfname, 'w') as job:
             job.write((JOB % dict(aggregate_by='policy')).replace(
                 'aggregate_by = policy\n', ''))
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(InvalidFile) as ctx:
             oq = readinput.get_oqparam(self.jobfname)
-        self.assertIn(
-            'missing aggregate_by=policy',
-            str(ctx.exception))
+        self.assertIn('expected aggregate_by=policy; got []',
+                      str(ctx.exception))
 
     def test_correct_aggregate_by_policy_semicolon_taxonomy(self):
         with open(self.jobfname, 'w') as job:
@@ -952,6 +938,15 @@ rur_Ant_1,10000,100,.1,.2''')
         self.assertIn("aggregate_by=[['taxonomy'], ['policy']]",
                       str(ctx.exception))
 
+    def test_wrong_aggregate_by_policy_comma_taxonomy(self):
+        with open(self.jobfname, 'w') as job:
+            job.write(JOB % dict(aggregate_by='policy, taxonomy'))
+        with self.assertRaises(InvalidFile) as ctx:
+            oq = readinput.get_oqparam(self.jobfname)
+        self.assertIn(
+            "expected aggregate_by=policy; got [['policy', 'taxonomy']]",
+            str(ctx.exception))
+
     def test_missing_total_losses(self):
         with open(self.jobfname, 'w') as job:
             job.write((JOB % dict(aggregate_by='policy')).replace(
@@ -960,6 +955,20 @@ rur_Ant_1,10000,100,.1,.2''')
             oq = readinput.get_oqparam(self.jobfname)
         self.assertIn(
             'you forgot to set total_losses=structural+contents',
+            str(ctx.exception))
+
+    def test_multiple_reinsurance_files(self):
+        with open(self.jobfname, 'w') as job:
+            job.write((JOB % dict(aggregate_by='policy')).replace(
+                "reinsurance_file = "
+                "{'structural+contents': 'reinsurance1.xml'}",
+                "reinsurance_file = "
+                "{'structural': 'reinsurance1.xml', "
+                "'contents': 'reinsurance1.xml'}"))
+        with self.assertRaises(InvalidFile) as ctx:
+            oq = readinput.get_oqparam(self.jobfname)
+        self.assertIn(
+            "too many loss types in reinsurance ['structural', 'contents']",
             str(ctx.exception))
 
     @classmethod
@@ -977,9 +986,11 @@ VA_region_1,10000,100,.1,.2
 VA_region_2,10000,100,.1,-.2
 rur_Ant_1,10000,100,.1,.2''')
         xmlfname = general.gettemp(XML_PR.format(csvfname))
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(InvalidFile) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
-        self.assertIn(':3: invalid fraction surplus=-0.2', str(ctx.exception))
+        self.assertIn(
+            '(row 3): proportional fraction for treaty "surplus" is negative',
+            str(ctx.exception))
 
     def test_toolarge_fraction(self):
         csvfname = general.gettemp('''\
@@ -988,9 +999,11 @@ VA_region_1,10000,100,.1,.2
 VA_region_2,10000,100,.1,1.2
 rur_Ant_1,10000,100,.1,.2''')
         xmlfname = general.gettemp(XML_PR.format(csvfname))
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(InvalidFile) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
-        self.assertIn(':3: invalid fraction surplus=1.2', str(ctx.exception))
+        self.assertIn(
+            '(row 3): the sum of proportional fractions is 1.3.'
+            ' It must be >= 0 and <= 1', str(ctx.exception))
 
     def test_excess_fraction(self):
         csvfname = general.gettemp('''\
@@ -999,7 +1012,8 @@ VA_region_1,10000,100,.1,.2
 VA_region_2,10000,100,.3,.8
 rur_Ant_1,10000,100,.1,.2''')
         xmlfname = general.gettemp(XML_PR.format(csvfname))
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(InvalidFile) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
-        self.assertIn(':3 the sum of the fractions must be under 1, got 1.1',
-                      str(ctx.exception))
+        self.assertIn(
+            '(row 3): the sum of proportional fractions is 1.1.'
+            ' It must be >= 0 and <= 1', str(ctx.exception))

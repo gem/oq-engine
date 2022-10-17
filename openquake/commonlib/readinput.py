@@ -1170,7 +1170,6 @@ def get_shapefiles(dirname):
             out.append(os.path.join(dirname, fname))
     return out
 
-# TODO: use this in calculators.base
 def get_reinsurance(oqparam, assetcol=None):
     """
     :returns: (policy_df, treaty_df, field_map)
@@ -1183,9 +1182,8 @@ def get_reinsurance(oqparam, assetcol=None):
     if oqparam.aggregate_by[0] != ['policy']:
         raise InvalidFile('%s: aggregate_by=%s' %
                           (fname, oqparam.aggregate_by))
-    return reinsurance.parse(
-        oqparam.inputs['reinsurance'][oqparam.total_losses],
-        assetcol.tagcol.policy_idx)
+    [(key, fname)] = oqparam.inputs['reinsurance'].items()
+    return reinsurance.parse(fname, assetcol.tagcol.policy_idx)
 
 
 def get_input_files(oqparam):

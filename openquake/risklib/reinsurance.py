@@ -87,17 +87,30 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
         raise InvalidFile(f'{policyfname}: liabilities must be => 0')
     if (dframe.deductible < 0).any():
         raise InvalidFile(f'{policyfname}: deductibles must be => 0')
+    prop_treaties = []
     for treaty, treaty_type in zip(treaties, treaty_types):
         if treaty_type == 'prop':
-            treaty_sum = dframe[treaty].sum()
-            if not 0 <= treaty_sum <= 1:
-                raise InvalidFile(
-                    '%s: the sum of fractions for "%s" is %s.'
-                    ' It must be >= 0 and <= 1' % (
-                        policyfname, treaty, treaty_sum))
+            prop_treaties.append(treaty)
         elif not dframe[treaty].isin([0, 1]).all():
             raise InvalidFile(
                 f'{policyfname}: field {treaty} must be 0 or 1')
+    sums = np.zeros(len(dframe))
+    for prop_treaty in prop_treaties:
+        fractions = dframe[prop_treaty].to_numpy()
+        [indices] = np.where(fractions < 0)
+        if len(indices) > 0:
+            # there is at least 1 row with negative fraction. The error shows
+            # the first of them
+            raise InvalidFile(
+                '%s (row %d): proportional fraction for treaty "%s" is'
+                ' negative' % (policyfname, indices[0] + 2, prop_treaty))
+        sums += dframe[prop_treaty].to_numpy()
+    for i, treaty_sum in enumerate(sums):
+        if not 0 <= treaty_sum <= 1:
+            raise InvalidFile(
+                '%s (row %d): the sum of proportional fractions is %s.'
+                ' It must be >= 0 and <= 1' % (
+                    policyfname, i+2, treaty_sum))
     idx = [idxdict[name] for name in dframe[key]]  # indices starting from 1
     dframe[key] = idx
     for no, field in enumerate(fields):

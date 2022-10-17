@@ -1838,7 +1838,9 @@ class OqParam(valid.ParamSet):
             raise ValueError('aggregate_by = site_id must contain a single tag')
         elif 'reinsurance' in self.inputs:
             if not any(['policy'] == aggby for aggby in self.aggregate_by):
-                raise ValueError('missing aggregate_by=policy')
+                raise InvalidFile(
+                    '%s: expected aggregate_by=policy; got %s' % (
+                        self.inputs['job_ini'], self.aggregate_by))
         return True
 
     def check_reinsurance(self):
@@ -1847,8 +1849,8 @@ class OqParam(valid.ParamSet):
         try:
             [lt] = dic
         except ValueError:
-            raise InvalidFile('%s: invalid reinsurance %s'
-                              % (self.inputs['job_ini'], dic))
+            raise InvalidFile('%s: too many loss types in reinsurance %s'
+                              % (self.inputs['job_ini'], list(dic)))
         if lt not in scientific.LOSSID:
             raise InvalidFile('%s: unknown loss type %s in reinsurance'
                               % (self.inputs['job_ini'], lt))
