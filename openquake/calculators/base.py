@@ -712,6 +712,7 @@ class HazardCalculator(BaseCalculator):
         policy_acc = general.AccumDict(accum=[])
         # here is an example of policy_idx: {'?': 0, 'B': 1, 'A': 2}
         if 'reinsurance' in oq.inputs:
+            loss_type = list(lt_fnames)[0][0]
             policy_df, treaty_df, fieldmap = readinput.get_reinsurance(
                 oq, self.assetcol)
             treaties = set(treaty_df.id)
