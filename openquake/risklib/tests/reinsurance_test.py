@@ -937,6 +937,21 @@ rur_Ant_1,10000,100,.1,.2''')
             'missing aggregate_by=policy',
             str(ctx.exception))
 
+    def test_correct_aggregate_by_policy_semicolon_taxonomy(self):
+        with open(self.jobfname, 'w') as job:
+            job.write(JOB % dict(aggregate_by='policy; taxonomy'))
+        oq = readinput.get_oqparam(self.jobfname)
+        readinput.get_reinsurance(oq)
+
+    def test_wrong_aggregate_by_taxonomy_semicolon_policy(self):
+        with open(self.jobfname, 'w') as job:
+            job.write(JOB % dict(aggregate_by='taxonomy; policy'))
+        oq = readinput.get_oqparam(self.jobfname)
+        with self.assertRaises(InvalidFile) as ctx:
+            readinput.get_reinsurance(oq)
+        self.assertIn("aggregate_by=[['taxonomy'], ['policy']]",
+                      str(ctx.exception))
+
     def test_missing_total_losses(self):
         with open(self.jobfname, 'w') as job:
             job.write((JOB % dict(aggregate_by='policy')).replace(
