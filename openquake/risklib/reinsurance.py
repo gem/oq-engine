@@ -306,6 +306,8 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
         dic = dict(event_id=eids)
         keys, datalist = [], []
         for key, grp in rbp.groupby('policy_grp'):
+            logging.info('Processing portfolio %r with %d policies',
+                         key, len(grp))
             data = np.zeros((E, len(outcols)))
             gb = grp[inpcols].groupby('eid').sum()
             for i, col in enumerate(inpcols):
