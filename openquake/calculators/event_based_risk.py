@@ -28,7 +28,7 @@ from scipy import sparse
 from openquake.baselib import hdf5, performance, parallel, general
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
-from openquake.commonlib.calc import slice_dt
+from openquake.commonlib.calc import starmap_from_gmfs
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
 from openquake.calculators import base, event_based
@@ -44,15 +44,6 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
-
-
-def build_slice_by_event(eids, offset=0):
-    arr = performance.idx_start_stop(eids)
-    sbe = numpy.zeros(len(arr), slice_dt)
-    sbe['eid'] = arr[:, 0]
-    sbe['start'] = arr[:, 1] + offset
-    sbe['stop'] = arr[:, 2] + offset
-    return sbe
 
 
 def split(df, size):
@@ -418,20 +409,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
             logging.info('Preparing tasks')
-            with self.monitor('getting gmf_data slices', measuremem=True):
-                data = self.datastore['gmf_data']
-                try:
-                    sbe = data['slice_by_event'][:]
-                except KeyError:
-                    sbe = build_slice_by_event(data['eid'][:])
-            maxweight = (sbe[-1]['stop']-sbe[0]['start']) // (oq.concurrent_tasks or 1)
-            maxweight = numpy.clip(maxweight, 1000, 10_000_000)
-            self.datastore.swmr_on()  # before the Starmap
-            smap = parallel.Starmap.apply(
-                ebr_from_gmfs, (sbe, oq, self.datastore),
-                weight=lambda rec: rec['stop']-rec['start'],
-                maxweight=maxweight,
-                h5=self.datastore.hdf5)
+            smap = starmap_from_gmfs(ebr_from_gmfs, oq, self.datastore)
             self.save_tmp(smap.monitor)
             smap.reduce(self.agg_dicts)
 
