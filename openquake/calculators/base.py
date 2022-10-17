@@ -836,7 +836,8 @@ class HazardCalculator(BaseCalculator):
                     assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
             if oq.hazard_calculation_id:  # read the sitecol of the child
-                self.sitecol = readinput.get_site_collection(oq, self.datastore)
+                self.sitecol = readinput.get_site_collection(
+                    oq, self.datastore)
                 self.datastore['sitecol'] = self.sitecol
             else:
                 self.sitecol = haz_sitecol
@@ -871,7 +872,8 @@ class HazardCalculator(BaseCalculator):
             if self.crmodel and missing:
                 raise RuntimeError(
                     'The exposure contains the taxonomy strings '
-                    '%s which are not in the fragility/vulnerability/consequence model' % missing)
+                    '%s which are not in the fragility/vulnerability/'
+                    'consequence model' % missing)
 
             self.crmodel.check_risk_ids(oq.inputs)
 
@@ -887,7 +889,7 @@ class HazardCalculator(BaseCalculator):
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq)
-                self.sitecol.complete.assoc(sm, assoc_dist)
+                self.sitecol.assoc(sm, assoc_dist)
                 self.datastore['sitecol'] = self.sitecol
 
         # store amplification functions if any

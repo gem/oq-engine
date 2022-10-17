@@ -22,7 +22,7 @@ import logging
 from unittest.mock import Mock
 import numpy
 
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import performance, parallel, hdf5
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
 from openquake.hazardlib.source.rupture import EBRupture, events_dt
@@ -30,6 +30,7 @@ from openquake.commonlib import util
 
 TWO16 = 2 ** 16
 TWO32 = numpy.float64(2 ** 32)
+MAX_NBYTES = 1024**3
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 # in this way even on 32 bit machines Python will not have to convert
 # the generated seed into a long integer
@@ -72,6 +73,27 @@ def convert_to_array(pmap, nsites, imtls, inner_idx=0):
                 curve['%s-%.3f' % (imt, iml)] = pcurve.array[idx, inner_idx]
                 idx += 1
     return curves
+
+
+def get_mean_curve(dstore, imt, site_id=0):
+    """
+    Extract the mean hazard curve from the datastore for the first site.
+    """
+    if 'hcurves-stats' in dstore:  # shape (N, S, M, L1)
+        arr = dstore.sel('hcurves-stats', stat='mean', imt=imt)
+    else:  # there is only 1 realization
+        arr = dstore.sel('hcurves-rlzs', rlz_id=0, imt=imt)
+    return arr[site_id, 0, 0]
+
+
+def get_poe_from_mean_curve(dstore, imt, iml, site_id=0):
+    """
+    Extract the poe corresponding to the given iml by looking at the mean
+    curve for the given imt. `iml` can also be an array.
+    """
+    imls = dstore['oqparam'].imtls[imt]
+    mean_curve = get_mean_curve(dstore, imt, site_id)
+    return numpy.interp(imls, mean_curve)[iml]
 
 
 # ######################### hazard maps ################################### #
@@ -358,9 +380,50 @@ class RuptureImporter(object):
                 raise ValueError(
                     'A GMF calculation with {:_d} sites and {:_d} events is '
                     'forbidden unless you raise `max_potential_gmfs` to {:_d}'.
-                    format(self.N, E, self.N * E))
+                    format(self.N, int(E), int(self.N * E)))
         for var in num_:
             if num_[var] > max_[var]:
                 raise ValueError(
                     'The %s calculator is restricted to %d %s, got %d' %
                     (oq.calculation_mode, max_[var], var, num_[var]))
+
+
+##############################################################
+# logic for building the GMF slices used in event_based_risk #
+##############################################################
+
+SLICE_BY_EVENT_NSITES = 1000
+
+slice_dt = numpy.dtype([('start', int), ('stop', int), ('eid', U32)])
+
+
+def build_slice_by_event(eids, offset=0):
+    arr = performance.idx_start_stop(eids)
+    sbe = numpy.zeros(len(arr), slice_dt)
+    sbe['eid'] = arr[:, 0]
+    sbe['start'] = arr[:, 1] + offset
+    sbe['stop'] = arr[:, 2] + offset
+    return sbe
+
+
+def starmap_from_gmfs(task_func, oq, dstore):
+    """
+    :param task_func: function or generator with signature (gmf_df, oq, dstore)
+    :param oq: an OqParam instance
+    :param dstore: DataStore instance where the GMFs are stored
+    :returns: a Starmap object used for event based calculations
+    """
+    data = dstore['gmf_data']
+    try:
+        sbe = data['slice_by_event'][:]
+    except KeyError:
+        sbe = build_slice_by_event(data['eid'][:])
+    nrows = sbe[-1]['stop'] - sbe[0]['start']
+    maxweight = numpy.ceil(nrows / (oq.concurrent_tasks or 1))
+    dstore.swmr_on()  # before the Starmap
+    smap = parallel.Starmap.apply(
+        task_func, (sbe, oq, dstore),
+        weight=lambda rec: rec['stop']-rec['start'],
+        maxweight=numpy.clip(maxweight, 1000, 10_000_000),
+        h5=dstore.hdf5)
+    return smap

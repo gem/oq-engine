@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import logging
 import pandas as pd
 import numpy as np
 from pandas.api.types import is_numeric_dtype
@@ -223,7 +224,7 @@ def claim_to_cessions(claim, policy, treaty_df):
     # proportional cessions
     cols = treaty_df[treaty_df.type == 'prop'].id
     fractions = [policy[col] for col in cols]
-    assert sum(fractions) < 1
+    assert sum(fractions) <= 1
     out = {'claim': claim, 'retention': claim * (1. - sum(fractions))}
     for col, frac in zip(cols, fractions):
         out[col] = claim * frac
@@ -246,10 +247,11 @@ def build_policy_grp(policy, treaty_df):
     """
     cols = treaty_df.id.to_numpy()
     codes = treaty_df.code.to_numpy()
-    key = ['.'] * len(cols)
+    types = treaty_df.type.to_numpy()
+    key = list(codes)
     for c, col in enumerate(cols):
-        if policy[col] > 0:
-            key[c] = codes[c]
+        if types[c] != 'prop' and policy[col] == 0:
+            key[c] = '.'
     return ''.join(key)
 
 
@@ -270,7 +272,7 @@ def clever_agg(ukeys, datalist, treaty_df, idx, overdict):
     """
     if DEBUG:
         print()
-        print(line(['apply'] + list(idx)))
+        print(line(['treaty_key'] + list(idx)))
         for key, data in zip(ukeys, datalist):
             print(line([key] + list(data[0])))
     if len(ukeys) == 1 and ukeys[0] == '':
@@ -322,7 +324,7 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
     ded, lim = get_ded_lim(losses, pol_dict)
     claim = scientific.insured_losses(losses, ded, lim)
     out['event_id'] = df.event_id.to_numpy()
-    out['policy_id'] = np.array([pol_dict['policy']] * len(df))
+    out['policy_id'] = np.array([pol_dict['policy']] * len(df), int)
     out.update(claim_to_cessions(claim, pol_dict, treaty_df))
     nonzero = out['claim'] > 0  # discard zero claims
     out_df = pd.DataFrame({k: out[k][nonzero] for k in out})
@@ -332,18 +334,18 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
 def _by_event(rbp, treaty_df, mon=Monitor()):
     with mon('processing policy_loss_table', measuremem=True):
         tdf = treaty_df.set_index('code')
-        inpcols = ['event_id', 'claim'] + [t.id for _, t in tdf.iterrows()
-                                           if t.type != 'catxl']
+        inpcols = ['eid', 'claim'] + [t.id for _, t in tdf.iterrows()
+                                      if t.type != 'catxl']
         outcols = ['retention', 'claim'] + list(tdf.index)
         idx = {col: i for i, col in enumerate(outcols)}
         eids, idxs = np.unique(rbp.event_id.to_numpy(), return_inverse=True)
-        rbp['event_id'] = idxs
+        rbp['eid'] = idxs
         E = len(eids)
         dic = dict(event_id=eids)
         keys, datalist = [], []
         for key, grp in rbp.groupby('policy_grp'):
             data = np.zeros((E, len(outcols)))
-            gb = grp[inpcols].groupby('event_id').sum()
+            gb = grp[inpcols].groupby('eid').sum()
             for i, col in enumerate(inpcols):
                 if i > 0:  # claim, noncat1, ...
                     data[gb.index, i] = gb[col].to_numpy()
@@ -352,6 +354,10 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
                 data[:, 0] -= data[:, c]
             keys.append(key)
             datalist.append(data)
+        del rbp['eid']
+    if len(keys) > 1:
+        logging.warning('Splitting the policies in %d policy groups',
+                        len(keys))
     with mon('reinsurance by event', measuremem=True):
         overspill = {}
         res = clever_agg(keys, datalist, tdf, idx, overspill)

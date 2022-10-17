@@ -1,4 +1,17 @@
   [Michele Simionato]
+  * Fixed the performance report that failed for NGAEast GMPEs
+  * Reduced the memory consumption in large classical calculations
+    (in make_contexts)
+
+  [Marco Pagani, Michele Simionato]
+  * Fixed the calculation of conditional spectra
+
+  [Michele Simionato]
+  * Corner case bug: in the presence of parent site collection and a child
+    site model the engine was associating the site model to the parent
+  * Strongly reduced the slow tasks and memory consumption in event_based_risk
+    calculations and removed the need to keep (a lot of) the gmf_data table
+    in memory
   * Fixed a performance issue in event based risk calculations, due to the same
     aggregation IDs being computed for each task
   * Increased `sys.recursionlimit` to solve a rare pickling issue and made

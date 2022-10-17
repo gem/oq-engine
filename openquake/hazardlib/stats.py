@@ -108,17 +108,18 @@ def norm_cdf(x, a, s):
 
 def calc_momenta(array, weights):
     """
-    :param array: an array of shape E, ...
+    :param array: an array of shape (E, ...)
     :param weights: an array of length E
-    :returns: an array of shape (2, ...) with the first two statistical moments
+    :returns: an array of shape (3, ...) with the first 3 statistical moments
     """
-    momenta = numpy.zeros((2,) + array.shape[1:])
-    momenta[0] = numpy.einsum('i,i...', weights, array)
-    momenta[1] = numpy.einsum('i,i...', weights, array**2)
+    momenta = numpy.zeros((3,) + array.shape[1:])
+    momenta[0] = weights.sum()
+    momenta[1] = numpy.einsum('i,i...', weights, array)
+    momenta[2] = numpy.einsum('i,i...', weights, array**2)
     return momenta
 
 
-def calc_avg_std(momenta, totweight):
+def calc_avg_std(momenta):
     """
     :param momenta: an array of shape (2, ...) obtained via calc_momenta
     :param totweight: total weight to divide for
@@ -126,13 +127,15 @@ def calc_avg_std(momenta, totweight):
 
     >>> arr = numpy.array([[2, 4, 6], [3, 5, 7]])
     >>> weights = numpy.ones(2)
-    >>> calc_avg_std(calc_momenta(arr, weights), weights.sum())
+    >>> calc_avg_std(calc_momenta(arr, weights))
     array([[2.5, 4.5, 6.5],
            [0.5, 0.5, 0.5]])
     """
-    avgstd = numpy.zeros_like(momenta)
-    avgstd[0] = avg = momenta[0] / totweight
-    avgstd[1] = numpy.sqrt(numpy.maximum(momenta[1] / totweight - avg ** 2, 0))
+    avgstd = numpy.zeros_like(momenta[1:])
+    avgstd[0] = avg = momenta[1] / momenta[0]
+    # make sure the variance is positive (due to numeric errors can be -1E-9)
+    var = numpy.maximum(momenta[2] / momenta[0] - avg ** 2, 0.)
+    avgstd[1] = numpy.sqrt(var)
     return avgstd
 
 
@@ -148,7 +151,7 @@ def avg_std(array, weights=None):
     """
     if weights is None:
         weights = numpy.ones(len(array))
-    return calc_avg_std(calc_momenta(array, weights), weights.sum())
+    return calc_avg_std(calc_momenta(array, weights))
 
 
 def geom_avg_std(array, weights=None):

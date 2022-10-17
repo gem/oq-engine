@@ -581,6 +581,10 @@ hazard_uhs-std.csv
             'hazard_curve-mean-PGV.csv', 'hazard_map-mean.csv'],
                               case_40.__file__, delta=1E-6)
 
+        # checking fullreport can be exported, see https://
+        # groups.google.com/g/openquake-users/c/m5vH4rGMWNc/m/8bcBexXNAQAJ
+        [fname] = export(('fullreport', 'rst'), self.calc.datastore)
+
     def test_case_41(self):
         # SERA Site Amplification Models including EC8 Site Classes and Geology
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
