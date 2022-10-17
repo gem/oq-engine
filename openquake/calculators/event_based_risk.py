@@ -418,17 +418,20 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
-            logging.info('Building gmf_data slices')
+            logging.info('Preparing tasks')
             with self.monitor('getting gmf_data slices', measuremem=True):
                 data = self.datastore['gmf_data']
                 try:
                     sbe = data['slice_by_event'][:]
                 except KeyError:
                     sbe = build_slice_by_event(data['eid'][:])
+            maxweight = (sbe[-1]['stop']-sbe[0]['start']) // (oq.concurrent_tasks or 1)
+            maxweight = numpy.clip(maxweight, 1000, 10_000_000)
             self.datastore.swmr_on()  # before the Starmap
             smap = parallel.Starmap.apply(
                 ebr_from_gmfs, (sbe, oq, self.datastore),
-                concurrent_tasks=oq.concurrent_tasks,
+                weight=lambda rec: rec['stop']-rec['start'],
+                maxweight=maxweight,
                 h5=self.datastore.hdf5)
             self.save_tmp(smap.monitor)
             smap.reduce(self.agg_dicts)
