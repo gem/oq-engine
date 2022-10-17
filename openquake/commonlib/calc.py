@@ -408,14 +408,18 @@ def build_slice_by_event(eids, offset=0):
 
 def starmap_from_gmfs(task_func, oq, dstore):
     """
-    :returns: a Starmap object useful for event based calculations
+    :param task_func: function or generator with signature (gmf_df, oq, dstore)
+    :param oq: an OqParam instance
+    :param dstore: DataStore instance where the GMFs are stored
+    :returns: a Starmap object used for event based calculations
     """
     data = dstore['gmf_data']
     try:
         sbe = data['slice_by_event'][:]
     except KeyError:
         sbe = build_slice_by_event(data['eid'][:])
-    maxweight = (sbe[-1]['stop']-sbe[0]['start']) // (oq.concurrent_tasks or 1)
+    nrows = sbe[-1]['stop'] - sbe[0]['start']
+    maxweight = numpy.ceil(nrows / (oq.concurrent_tasks or 1))
     dstore.swmr_on()  # before the Starmap
     smap = parallel.Starmap.apply(
         task_func, (sbe, oq, dstore),

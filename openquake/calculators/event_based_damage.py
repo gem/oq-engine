@@ -248,11 +248,16 @@ class DamageCalculator(EventBasedRiskCalculator):
         Store damages-rlzs/stats, aggrisk and aggcurves
         """
         oq = self.oqparam
-        # no damage check
+        # no damage check, perhaps the sites where disjoint from gmf_data
         if self.dmgcsq[:, :, :, 1:].sum() == 0:
-            self.nodamage = True
-            logging.warning(
-                'There is no damage, perhaps the hazard is too small?')
+            haz_sids = self.datastore['gmf_data/sid'][:]
+            count = numpy.isin(haz_sids, self.sitecol.sids).sum()
+            if count == 0:
+                raise ValueError('The sites in gmf_data are disjoint from the '
+                                 'site collection!?')
+            else:
+                logging.warning(
+                    'There is no damage, perhaps the hazard is too small?')
             return
 
         prc = PostRiskCalculator(oq, self.datastore.calc_id)

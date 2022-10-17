@@ -46,29 +46,6 @@ TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
 
 
-def split(df, size):
-    """
-    Split a dataframe chunks. For instance for
-
-    >>> eids = U32([1, 1, 1, 2, 2, 4, 5, 5, 6, 8, 8, 8])
-    >>> len(eids)
-    12
-    >>> dfs = split(pandas.DataFrame({'eid': eids}), size=3)
-    >>> [len(df) for df in dfs]
-    [3, 3, 3, 3]
-    >>> dfs = split(pandas.DataFrame({'eid': eids}), size=4)
-    >>> [len(df) for df in dfs]
-    [3, 5, 4]
-    >>> dfs = split(pandas.DataFrame({'eid': eids}), size=6)
-    >>> [len(df) for df in dfs]
-    [5, 7]
-    """
-    if len(df) <= size:
-        return [df]
-    eids = df.eid.to_numpy()
-    return [df[s0:s1] for s0, s1 in performance.split_slices(eids, size)]
-
-
 def fast_agg(keys, values, correl, li, acc):
     """
     :param keys: an array of N uint64 numbers encoding (event_id, agg_id)
@@ -193,8 +170,8 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     if len(df) < 500_000:
         yield event_based_risk(df, oqparam, monitor)
     else:
-        for grp in split(df, 1_000_000):
-            yield event_based_risk, grp, oqparam
+        for s0, s1 in performance.split_slices(df.eid.to_numpy(), 1_000_000):
+            yield event_based_risk, df[s0:s1], oqparam
 
 
 def event_based_risk(df, oqparam, monitor):
@@ -224,7 +201,8 @@ def event_based_risk(df, oqparam, monitor):
     def outputs():
         mon_risk = monitor('computing risk', measuremem=True)
         fil_mon = monitor('filtering GMFs', measuremem=True)
-        for grp in split(df, 200_000):
+        for s0, s1 in performance.split_slices(df.eid.to_numpy(), 200_000):
+            grp = df[s0:s1]
             for taxo, adf in taxo_assets:
                 with fil_mon:
                     # *crucial* for the performance
