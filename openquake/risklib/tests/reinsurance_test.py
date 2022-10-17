@@ -171,8 +171,6 @@ class ReinsuranceTestCase(unittest.TestCase):
         xmlfname = general.gettemp(XML_NP.format(csvfname))
         cls.policy_df, treaty_df, fmap = reinsurance.parse(
             xmlfname, policy_idx)
-        print(cls.policy_df)
-        print(treaty_df)
         assert len(cls.policy_df) == 3
         assert len(treaty_df) == 3
         assert fmap == {'deductible': 'Deductible',
