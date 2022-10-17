@@ -83,10 +83,16 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
         raise InvalidFile(f'{policyfname}: liabilities must be numeric')
     if not is_numeric_dtype(dframe.deductible):
         raise InvalidFile(f'{policyfname}: deductibles must be numeric')
-    if (dframe.liability < 0).any():
-        raise InvalidFile(f'{policyfname}: liabilities must be => 0')
-    if (dframe.deductible < 0).any():
-        raise InvalidFile(f'{policyfname}: deductibles must be => 0')
+    [indices] = np.where(dframe.liability.to_numpy() < 0)
+    if len(indices) > 0:
+        raise InvalidFile(
+            '%s (row %d): a negative liability was found' % (
+                policyfname, indices[0] + 2))
+    [indices] = np.where(dframe.deductible.to_numpy() < 0)
+    if len(indices) > 0:
+        raise InvalidFile(
+            '%s (row %d): a negative deductible was found' % (
+                policyfname, indices[0] + 2))
     prop_treaties = []
     for treaty, treaty_type in zip(treaties, treaty_types):
         if treaty_type == 'prop':

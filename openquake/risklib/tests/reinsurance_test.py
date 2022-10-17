@@ -801,7 +801,8 @@ rur_Ant_1,10000,100,.1,.2''')
         xmlfname = general.gettemp(XML_PR.format(csvfname))
         with self.assertRaises(InvalidFile) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
-        self.assertIn('liabilities must be => 0', str(ctx.exception))
+        self.assertIn('(row 3): a negative liability was found',
+                      str(ctx.exception))
 
     def test_negative_deductible(self):
         csvfname = general.gettemp('''\
@@ -812,7 +813,8 @@ rur_Ant_1,10000,100,.1,.2''')
         xmlfname = general.gettemp(XML_PR.format(csvfname))
         with self.assertRaises(InvalidFile) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
-        self.assertIn('deductibles must be => 0', str(ctx.exception))
+        self.assertIn('(row 3): a negative deductible was found',
+                      str(ctx.exception))
 
     def test_nonprop_treaty_non_boolean(self):
         CSV = '''\
