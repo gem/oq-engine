@@ -187,7 +187,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     idx, = numpy.where(numpy.isin(haz_sids, risk_sids))
     if len(idx) == 0:
         return {}
-    print('waiting %.1f' % dt)
+    # print('waiting %.1f' % dt)
     time.sleep(dt)
     with dstore, monitor('reading GMFs', measuremem=True):
         start, stop = idx.min(), idx.max() + 1
@@ -199,7 +199,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
                 data = dstore['gmf_data/' + col][s0+start:s0+stop]
                 dic[col] = data[idx - start]
         df = pandas.DataFrame(dic)
-    if len(df) < 1_000_000:
+    if len(df) < 500_000:
         yield event_based_risk(df, oqparam, monitor)
     else:
         for grp in split(df, 1_000_000):
@@ -234,7 +234,6 @@ def event_based_risk(df, oqparam, monitor):
         mon_risk = monitor('computing risk', measuremem=True)
         fil_mon = monitor('filtering GMFs', measuremem=True)
         for grp in split(df, 200_000):
-            print('{:_d}'.format(len(grp)))
             for taxo, adf in taxo_assets:
                 with fil_mon:
                     # *crucial* for the performance
