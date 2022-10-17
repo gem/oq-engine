@@ -55,27 +55,27 @@ def build_slice_by_event(eids, offset=0):
     return sbe
 
 
-def split(gmf_df, size):
+def split(df, size):
     """
     Split a dataframe chunks. For instance for
 
-    >>> eids = [1, 1, 1, 2, 2, 4, 5, 5, 6, 8, 8, 8]
+    >>> eids = U32([1, 1, 1, 2, 2, 4, 5, 5, 6, 8, 8, 8])
     >>> len(eids)
     12
     >>> dfs = split(pandas.DataFrame({'eid': eids}), size=3)
     >>> [len(df) for df in dfs]
-    [2, 4, 2, 3, 1]
+    [3, 3, 3, 3]
     >>> dfs = split(pandas.DataFrame({'eid': eids}), size=4)
     >>> [len(df) for df in dfs]
-    [4, 5, 3]
+    [3, 5, 4]
     >>> dfs = split(pandas.DataFrame({'eid': eids}), size=6)
     >>> [len(df) for df in dfs]
-    [1, 4, 7]
+    [5, 7]
     """
-    n = len(gmf_df) // size + 1
-    if n == 1:
-        return [gmf_df]
-    return [df for _, df in gmf_df.groupby(gmf_df.eid % n)]
+    if len(df) <= size:
+        return [df]
+    eids = df.eid.to_numpy()
+    return [df[s0:s1] for s0, s1 in performance.split_slices(eids, size)]
 
 
 def fast_agg(keys, values, correl, li, acc):
