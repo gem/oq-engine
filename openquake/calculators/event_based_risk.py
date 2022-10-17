@@ -201,7 +201,7 @@ def event_based_risk(df, oqparam, monitor):
     def outputs():
         mon_risk = monitor('computing risk', measuremem=True)
         fil_mon = monitor('filtering GMFs', measuremem=False)
-        for s0, s1 in performance.split_slices(df.eid.to_numpy(), 200_000):
+        for s0, s1 in performance.split_slices(df.eid.to_numpy(), 400_000):
             grp = df[s0:s1]
             for taxo, adf in taxo_assets:
                 with fil_mon:
