@@ -167,7 +167,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
                 data = dstore['gmf_data/' + col][s0+start:s0+stop]
                 dic[col] = data[idx - start]
         df = pandas.DataFrame(dic)
-    if len(df) < 500_000:
+    if len(df) < 750_000:
         yield event_based_risk(df, oqparam, monitor)
     else:
         for s0, s1 in performance.split_slices(df.eid.to_numpy(), 1_000_000):
@@ -200,7 +200,7 @@ def event_based_risk(df, oqparam, monitor):
 
     def outputs():
         mon_risk = monitor('computing risk', measuremem=True)
-        fil_mon = monitor('filtering GMFs', measuremem=True)
+        fil_mon = monitor('filtering GMFs', measuremem=False)
         for s0, s1 in performance.split_slices(df.eid.to_numpy(), 200_000):
             grp = df[s0:s1]
             for taxo, adf in taxo_assets:
