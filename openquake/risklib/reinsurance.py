@@ -349,7 +349,7 @@ def by_policy_event(agglosses_df, policy_df, treaty_df, mon=Monitor()):
     dfs = []
     for _, policy in policy_df.iterrows():
         if policy.policy % 100 == 0:  # starts from 1
-            logging.info("Processing policy %d", policy.policy)
+            logging.info("Processed %d policies", policy.policy)
         df = by_policy(agglosses_df, dict(policy), treaty_df)
         df['policy_grp'] = build_policy_grp(policy, treaty_df)
         dfs.append(df)
