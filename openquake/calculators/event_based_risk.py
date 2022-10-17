@@ -185,6 +185,8 @@ def event_based_risk(df, oqparam, monitor):
         # can aggregate millions of asset by using few GBs of RAM
         items = monitor.read('assets').groupby('taxonomy')
         taxo_assets = [(t, a.set_index('ordinal')) for t, a in items]
+        # put the taxonomy with more assets first
+        taxo_assets.sort(key=lambda ta: len(ta[1]), reverse=True)
         aggids = monitor.read('aggids')
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
@@ -201,7 +203,7 @@ def event_based_risk(df, oqparam, monitor):
     def outputs():
         mon_risk = monitor('computing risk', measuremem=True)
         fil_mon = monitor('filtering GMFs', measuremem=False)
-        for s0, s1 in performance.split_slices(df.eid.to_numpy(), 400_000):
+        for s0, s1 in performance.split_slices(df.eid.to_numpy(), 250_000):
             grp = df[s0:s1]
             for taxo, adf in taxo_assets:
                 with fil_mon:
