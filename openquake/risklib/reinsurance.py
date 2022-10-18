@@ -128,7 +128,6 @@ def parse(fname, policy_idx):
         'policy', 'deductible', 'liability'}
     for col in missing_treaties:  # remove missing treaties
         del df[col]
-    import pdb; pdb.set_trace()
     return df, treaty_df, fmap
 
 
@@ -184,7 +183,7 @@ def build_policy_grp(policy, treaty_df):
     types = treaty_df.type.to_numpy()
     key = list(codes)
     for c, col in enumerate(cols):
-        if types[c] != 'prop' and policy[col] == 0:
+        if types[c] == 'catxl' and policy[col] == 0:
             key[c] = '.'
     return ''.join(key)
 
