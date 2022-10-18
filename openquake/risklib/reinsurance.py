@@ -38,7 +38,7 @@ NOLIMIT = 1E100
 KNOWN_LOSS_TYPES = {
     'structural', 'nonstructural', 'contents',
     'value-structural', 'value-nonstructural', 'value-contents'}
-DEBUG = True
+DEBUG = False
 
 
 def check_fields(fields, dframe, idxdict, fname):
