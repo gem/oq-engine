@@ -185,8 +185,6 @@ def event_based_risk(df, oqparam, monitor):
         # can aggregate millions of asset by using few GBs of RAM
         items = monitor.read('assets').groupby('taxonomy')
         taxo_assets = [(t, a.set_index('ordinal')) for t, a in items]
-        # put the taxonomy with more assets first
-        taxo_assets.sort(key=lambda ta: len(ta[1]), reverse=True)
         aggids = monitor.read('aggids')
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
