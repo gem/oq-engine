@@ -38,7 +38,7 @@ NOLIMIT = 1E100
 KNOWN_LOSS_TYPES = {
     'structural', 'nonstructural', 'contents',
     'value-structural', 'value-nonstructural', 'value-contents'}
-DEBUG = False
+DEBUG = True
 
 
 def check_fields(fields, dframe, idxdict, fname):
@@ -124,6 +124,11 @@ def parse(fname, policy_idx):
         check_fractions(colnames, colvalues, policyfname)
     treaty_df = pd.DataFrame(treaty)
     treaty_df['code'] = [BASE183[i] for i in range(len(treaty_df))]
+    missing_treaties = set(df.columns) - set(treaty_df.id) - {
+        'policy', 'deductible', 'liability'}
+    for col in missing_treaties:  # remove missing treaties
+        del df[col]
+    import pdb; pdb.set_trace()
     return df, treaty_df, fmap
 
 
@@ -203,6 +208,7 @@ def clever_agg(ukeys, datalist, treaty_df, idx, overdict):
         print()
         print(line(['treaty_key'] + list(idx)))
         for key, data in zip(ukeys, datalist):
+            # printing the losses for the first event
             print(line([key] + list(data[0])))
     if len(ukeys) == 1 and ukeys[0] == '':
         return datalist[0]
