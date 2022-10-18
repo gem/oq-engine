@@ -285,7 +285,7 @@ event_id,agg_id,loss
 ''')
         expected = _df('''\
 event_id,retention,claim,prop1,cat1,cat2,cat3,cat4,cat5,over_B,over_D
-       1,   1000.0,40000.,17000.,3800.,5500.,3800.,5200.,3700.,5200.,4200.''')
+       1,   1000.0,40000.,17000.,3800.,5500.,3800.,5200.,3700.,5000.,4000.''')
         bypolicy, byevent = reinsurance.by_policy_event(
             risk_by_event, pol_df, treaty_df)
         assert_ok(byevent, expected)
