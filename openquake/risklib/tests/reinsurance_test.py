@@ -882,7 +882,8 @@ rur_Ant_1,10000,100,.1,.2''')
         with self.assertRaises(ValueError) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn("Could not convert limit->positivefloat: "
-                      "float -5000.0 < 0, line 11, line 11", str(ctx.exception))
+                      "float -5000.0 < 0, line 11, line 11",
+                      str(ctx.exception))
 
     def test_limit_is_not_float(self):
         csvfname = general.gettemp(CSV_NP)
@@ -921,7 +922,7 @@ rur_Ant_1,10000,100,.1,.2''')
             job.write((JOB % dict(aggregate_by='policy')).replace(
                 'aggregate_by = policy\n', ''))
         with self.assertRaises(InvalidFile) as ctx:
-            oq = readinput.get_oqparam(self.jobfname)
+            readinput.get_oqparam(self.jobfname)
         self.assertIn('expected aggregate_by=policy; got []',
                       str(ctx.exception))
 
@@ -944,7 +945,7 @@ rur_Ant_1,10000,100,.1,.2''')
         with open(self.jobfname, 'w') as job:
             job.write(JOB % dict(aggregate_by='policy, taxonomy'))
         with self.assertRaises(InvalidFile) as ctx:
-            oq = readinput.get_oqparam(self.jobfname)
+            readinput.get_oqparam(self.jobfname)
         self.assertIn(
             "expected aggregate_by=policy; got [['policy', 'taxonomy']]",
             str(ctx.exception))
@@ -954,7 +955,7 @@ rur_Ant_1,10000,100,.1,.2''')
             job.write((JOB % dict(aggregate_by='policy')).replace(
                 'total_losses = structural+contents\n', ''))
         with self.assertRaises(InvalidFile) as ctx:
-            oq = readinput.get_oqparam(self.jobfname)
+            readinput.get_oqparam(self.jobfname)
         self.assertIn(
             'you forgot to set total_losses=structural+contents',
             str(ctx.exception))
@@ -968,7 +969,7 @@ rur_Ant_1,10000,100,.1,.2''')
                 "{'structural': 'reinsurance1.xml', "
                 "'contents': 'reinsurance1.xml'}"))
         with self.assertRaises(InvalidFile) as ctx:
-            oq = readinput.get_oqparam(self.jobfname)
+            readinput.get_oqparam(self.jobfname)
         self.assertIn(
             "too many loss types in reinsurance ['structural', 'contents']",
             str(ctx.exception))

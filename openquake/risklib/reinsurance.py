@@ -20,7 +20,6 @@ import os
 import logging
 import pandas as pd
 import numpy as np
-from pandas.api.types import is_numeric_dtype
 from openquake.baselib.general import BASE183, fast_agg2
 from openquake.baselib.performance import compile, Monitor
 from openquake.baselib.writers import scientificformat
