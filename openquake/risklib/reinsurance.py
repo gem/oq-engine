@@ -41,21 +41,6 @@ KNOWN_LOSS_TYPES = {
 DEBUG = False
 
 
-def get_ded_lim(losses, policy):
-    """
-    :returns: deductible and liability as arrays of absolute values
-    """
-    if policy.get('deductible_abs', True):
-        ded = policy['deductible']
-    else:
-        ded = losses * policy['deductible']
-    if policy.get('liability_abs', True):
-        lim = policy['liability']
-    else:
-        lim = losses * policy['liability']
-    return ded, lim
-
-
 def check_fields(fields, dframe, idxdict, fname):
     """
     :param fields: fields to check (the first field is the primary key)
@@ -69,9 +54,6 @@ def check_fields(fields, dframe, idxdict, fname):
     for no, field in enumerate(fields):
         if field not in dframe.columns:
             raise InvalidFile(f'{fname}: {field} is missing in the header')
-        elif no > 0:  # for the value fields
-            arr = dframe[field].to_numpy()
-            dframe[field + '_abs'] = np.ones(len(arr))
 
 
 # validate the file policy.csv
@@ -133,8 +115,6 @@ def parse(fname, policy_idx):
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
     check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname)
-    df['deductible_abs'] = np.ones(len(df), bool)
-    df['liability_abs'] = np.ones(len(df), bool)
 
     # validate policy input
     for col in nonprop:
@@ -270,7 +250,7 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
     out = {}
     df = agglosses_df[agglosses_df.agg_id == pol_dict['policy'] - 1]
     losses = df.loss.to_numpy()
-    ded, lim = get_ded_lim(losses, pol_dict)
+    ded, lim = pol_dict['deductible'], pol_dict['liability']
     claim = scientific.insured_losses(losses, ded, lim)
     out['event_id'] = df.event_id.to_numpy()
     out['policy_id'] = np.array([pol_dict['policy']] * len(df), int)
