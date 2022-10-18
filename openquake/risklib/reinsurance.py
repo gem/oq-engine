@@ -190,6 +190,10 @@ def parse(fname, policy_idx):
         check_fractions(colnames, colvalues, policyfname)
     treaty_df = pd.DataFrame(treaty)
     treaty_df['code'] = [BASE183[i] for i in range(len(treaty_df))]
+    missing_treaties = set(df.columns) - set(treaty_df.id) - {
+        'policy', 'deductible', 'liability'}
+    for col in missing_treaties:  # remove missing treaties
+        del df[col]
     return df, treaty_df, fmap
 
 
@@ -220,11 +224,11 @@ def claim_to_cessions(claim, policy, treaty_df):
     cols = treaty_df[treaty_df.type == 'prop'].id
     fractions = [policy[col] for col in cols]
     assert sum(fractions) <= 1
-    out = {'claim': claim, 'retention': claim * (1. - sum(fractions))}
+    out = {'retention': claim * (1. - sum(fractions)), 'claim': claim}
     for col, frac in zip(cols, fractions):
         out[col] = claim * frac
 
-    # wxlr cessions
+    # wxlr cessions, totally independent from the overspill
     wxl = treaty_df[treaty_df.type == 'wxlr']
     for col, deduc, limit in zip(wxl.id, wxl.deductible, wxl.limit):
         out[col] = np.zeros(len(claim))
@@ -245,16 +249,16 @@ def build_policy_grp(policy, treaty_df):
     types = treaty_df.type.to_numpy()
     key = list(codes)
     for c, col in enumerate(cols):
-        if types[c] != 'prop' and policy[col] == 0:
+        if types[c] == 'catxl' and policy[col] == 0:
             key[c] = '.'
     return ''.join(key)
 
 
 def line(row, fmt='%d'):
-    return ''.join(scientificformat(val, fmt).rjust(10) for val in row)
+    return ''.join(scientificformat(val, fmt).rjust(11) for val in row)
 
 
-def clever_agg(ukeys, datalist, treaty_df, idx, overdict):
+def clever_agg(ukeys, datalist, treaty_df, idx, overdict, eids):
     """
     :param ukeys: a list of unique keys
     :param datalist: a list of matrices of the shape (E, 2+T)
@@ -267,9 +271,14 @@ def clever_agg(ukeys, datalist, treaty_df, idx, overdict):
     """
     if DEBUG:
         print()
-        print(line(['treaty_key'] + list(idx)))
+        print(line(['event_id', 'policy_grp'] + list(idx)))
+        rows = []
         for key, data in zip(ukeys, datalist):
-            print(line([key] + list(data[0])))
+            # printing the losses
+            for eid, row in zip(eids, data):
+                rows.append([eid, key] + list(row))
+        for row in sorted(rows):
+            print(line(row))
     if len(ukeys) == 1 and ukeys[0] == '':
         return datalist[0]
     newkeys, newdatalist = [], []
@@ -298,7 +307,7 @@ def clever_agg(ukeys, datalist, treaty_df, idx, overdict):
         newkeys.append(newkey)
         newdatalist.append(data)
     keys, sums = fast_agg2(newkeys, np.array(newdatalist))
-    return clever_agg(keys, sums, treaty_df, idx, overdict)
+    return clever_agg(keys, sums, treaty_df, idx, overdict, eids)
 
 
 # tested in test_reinsurance.py
@@ -339,7 +348,7 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
         dic = dict(event_id=eids)
         keys, datalist = [], []
         for key, grp in rbp.groupby('policy_grp'):
-            logging.info('Processing portfolio %r with %d policies',
+            logging.info('Processing policy group %r with %d rows',
                          key, len(grp))
             data = np.zeros((E, len(outcols)))
             gb = grp[inpcols].groupby('eid').sum()
@@ -357,7 +366,7 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
                         len(keys))
     with mon('reinsurance by event', measuremem=True):
         overspill = {}
-        res = clever_agg(keys, datalist, tdf, idx, overspill)
+        res = clever_agg(keys, datalist, tdf, idx, overspill, eids)
 
         # sanity check on the result
         ret = res[:, 0]
@@ -387,7 +396,8 @@ def by_policy_event(agglosses_df, policy_df, treaty_df, mon=Monitor()):
         df['policy_grp'] = build_policy_grp(policy, treaty_df)
         dfs.append(df)
     rbp = pd.concat(dfs)
-    # print(df)  # when debugging
+    if DEBUG:
+        print(rbp.sort_values('event_id'))
     rbe = _by_event(rbp, treaty_df, mon)
     del rbp['policy_grp']
     return rbp, rbe
