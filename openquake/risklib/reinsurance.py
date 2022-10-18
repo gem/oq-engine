@@ -65,9 +65,12 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
             raise InvalidFile(f'{policyfname}: {treaty} is missing')
     policies_from_exposure = list(idxdict)[1:]  # discard '?'
     policies_from_csv = list(dframe.policy)
-    for policy in policies_from_exposure:
-        if policy not in policies_from_csv:
-            raise InvalidFile(f'{policyfname}: policy "{policy}" is missing')
+    [indices] = np.where(~np.isin(policies_from_exposure, policies_from_csv))
+    if len(indices) > 0:
+        # NOTE: reporting only the first missing policy
+        first_missing_policy = policies_from_exposure[indices[0]]
+        raise InvalidFile(
+            f'{policyfname}: policy "{first_missing_policy}" is missing')
     if not is_numeric_dtype(dframe.liability):
         raise InvalidFile(f'{policyfname}: liabilities must be numeric')
     if not is_numeric_dtype(dframe.deductible):
