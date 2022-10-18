@@ -944,8 +944,6 @@ def multi_index(shape, axis=None):
     (slice(None, None, None), 1, 1)
     (slice(None, None, None), 1, 2)
     """
-    if any(s >= TWO16 for s in shape):
-        raise ValueError('Shape too big: ' + str(shape))
     ranges = (range(s) for s in shape)
     if axis is None:
         yield from itertools.product(*ranges)
