@@ -790,7 +790,8 @@ rur_Ant_1,  9000,500,1,1,0
             csv.write(CSV_NP.replace('VA_region_1', 'VA_region_2'))
         with self.assertRaises(InvalidFile) as ctx:
             reinsurance.parse(self.xmlfname, policy_idx)
-        self.assertIn('policy contains duplicates', str(ctx.exception))
+        self.assertIn('(row 3): a duplicate policy was found: "VA_region_2"',
+                      str(ctx.exception))
 
     def test_negative_liability(self):
         csvfname = general.gettemp('''\

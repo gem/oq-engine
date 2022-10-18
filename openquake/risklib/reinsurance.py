@@ -54,8 +54,12 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
     :param treaty_types: treaty types
     """
     key = fields[0]
-    if len(dframe[key].unique()) < len(dframe):
-        raise InvalidFile(f'{policyfname}: {key} contains duplicates')
+    [indices] = np.where(dframe.duplicated(subset=[key]).to_numpy())
+    if len(indices) > 0:
+        # NOTE: reporting only the first row found
+        raise InvalidFile(
+            '%s (row %d): a duplicate %s was found: "%s"' % (
+                policyfname, indices[0] + 2, key, dframe[key][indices[0]]))
     for treaty in treaties:
         if treaty not in dframe.columns:
             raise InvalidFile(f'{policyfname}: {treaty} is missing')
