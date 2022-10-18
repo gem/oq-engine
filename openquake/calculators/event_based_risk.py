@@ -168,7 +168,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
                 dic[col] = data[idx - start]
         df = pandas.DataFrame(dic)
     max_gmvs = oqparam.max_gmvs_per_task
-    if len(df) < max_gmvs:
+    if len(df) <= max_gmvs:
         yield event_based_risk(df, oqparam, monitor)
     else:
         for s0, s1 in performance.split_slices(df.eid.to_numpy(), max_gmvs):
