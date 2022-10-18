@@ -43,7 +43,8 @@ def assert_ok(got, exp):
             aac(got[col], exp[col], err_msg=col)
         except ValueError:
             sys.exit(f'Wrong column {col} in {got}')
-    
+
+
 policy_idx = {'?': 0, 'VA_region_1': 1, 'VA_region_2': 2, 'rur_Ant_1': 3}
 
 # NB: agg_id starts from 0, policy_id from 1
@@ -151,11 +152,11 @@ prop1,prop,      0,     5000,A
 prop2,prop,      0,     8000,B
 ''')
         bypolicy = _df('''\
-event_id,policy_id,claim,retention,prop1,prop2,policy_grp
-1,       1,        12000,  2400.0,6000.0,3600.0,AB
-1,       2,         5000,  1500.0,2000.0,1500.0,AB
-1,       3,         3000,   600.0,1500.0, 900.0,AB
-1,       4,         6000,  1800.0,2400.0,1800.0,AB''')
+event_id,policy_id,retention,claim,prop1,prop2,policy_grp
+1,       1,        2400, 12000,6000.0,3600.0,AB
+1,       2,        1500, 5000, 2000.0,1500.0,AB
+1,       3,         600, 3000, 1500.0, 900.0,AB
+1,       4,        1800, 6000, 2400.0,1800.0,AB''')
         byevent = reinsurance._by_event(bypolicy, treaty_df)
         assert_ok(byevent, _df('''\
 event_id,retention,claim,prop1,prop2,over_A
@@ -207,11 +208,11 @@ class ReinsuranceTestCase(unittest.TestCase):
                         'liability': 'Limit',
                         'policy': 'Policy'}
         cls.treaty_df = treaty_df
-        
+
     def test_policy1(self):
         # VA_region_1, CatXL_reg(50, 2500)
         expected = _df('''\
-event_id,policy_id,claim,retention,WXLR_metro,WXLR_rural
+event_id,policy_id,retention,claim,WXLR_metro,WXLR_rural
 41,1,1078.0742,1078.0742,0.0,0.0
 40,1,1070.1654,1070.1654,0.0,0.0
 33,1,1017.8770,1017.8770,0.0,0.0
@@ -225,17 +226,17 @@ event_id,policy_id,claim,retention,WXLR_metro,WXLR_rural
         # VA_region_2
         # WXLR_metro(500, 3500) + WXLR_rural(200, 5000) + CatXL_reg(50, 2500)
         expected = _df('''\
-event_id,policy_id,claim,retention,WXLR_metro,WXLR_rural
-0,27,2 ,2941.0974,200.0,2441.0974,300.0
-1,28,2 ,2936.3154,200.0,2436.3154,300.0
-2,26,2 ,2659.9182,200.0,2159.9182,300.0
-3,29,2 ,2403.0217,200.0,1903.0217,300.0
-4,23,2 ,1530.9891,200.0,1030.9891,300.0
-5,41,2 , 978.0742,200.0, 478.0742,300.0
-6,40,2 , 970.1654,200.0, 470.1654,300.0
-7,21,2 , 957.2078,200.0, 457.2078,300.0
-8,13,2 , 564.2781,200.0,  64.2781,300.0
-9, 5,2 , 561.1264,200.0,  61.1264,300.0''')
+event_id,policy_id,retention,claim,WXLR_metro,WXLR_rural
+0,27,2 ,200,2941.0974,2441.0974,300.0
+1,28,2 ,200,2936.3154,2436.3154,300.0
+2,26,2 ,200,2659.9182,2159.9182,300.0
+3,29,2 ,200,2403.0217,1903.0217,300.0
+4,23,2 ,200,1530.9891,1030.9891,300.0
+5,41,2 ,200, 978.0742, 478.0742,300.0
+6,40,2 ,200, 970.1654, 470.1654,300.0
+7,21,2 ,200, 957.2078, 457.2078,300.0
+8,13,2 ,200, 564.2781,  64.2781,300.0
+9, 5,2 ,200, 561.1264,  61.1264,300.0''')
         pol = dict(self.policy_df.loc[1])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
         assert_ok(out, expected)
@@ -243,8 +244,8 @@ event_id,policy_id,claim,retention,WXLR_metro,WXLR_rural
     def test_policy3(self):
         # rur_Ant_1, WXLR_metro(500, 3500) + WXLR_rural(200, 5000)
         expected = _df('''\
-event_id,policy_id,claim,retention,WXLR_metro,WXLR_rural
-25,      3,        8500,700.0, 3000,4800''')
+event_id,policy_id,retention,claim,WXLR_metro,WXLR_rural
+25,      3,        700,8500, 3000,4800''')
         pol = dict(self.policy_df.loc[2])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
         assert_ok(out, expected)
