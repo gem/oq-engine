@@ -71,10 +71,6 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
         first_missing_policy = policies_from_exposure[indices[0]]
         raise InvalidFile(
             f'{policyfname}: policy "{first_missing_policy}" is missing')
-    if not is_numeric_dtype(dframe.liability):
-        raise InvalidFile(f'{policyfname}: liabilities must be numeric')
-    if not is_numeric_dtype(dframe.deductible):
-        raise InvalidFile(f'{policyfname}: deductibles must be numeric')
     [indices] = np.where(dframe.liability.to_numpy() < 0)
     if len(indices) > 0:
         # NOTE: reporting only the first row found
