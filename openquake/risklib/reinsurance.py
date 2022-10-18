@@ -38,7 +38,7 @@ NOLIMIT = 1E100
 KNOWN_LOSS_TYPES = {
     'structural', 'nonstructural', 'contents',
     'value-structural', 'value-nonstructural', 'value-contents'}
-DEBUG = True
+DEBUG = False
 
 
 def check_fields(fields, dframe, idxdict, fname):
@@ -326,7 +326,8 @@ def by_policy_event(agglosses_df, policy_df, treaty_df, mon=Monitor()):
         df['policy_grp'] = build_policy_grp(policy, treaty_df)
         dfs.append(df)
     rbp = pd.concat(dfs)
-    # print(df)  # when debugging
+    if DEBUG:
+        print(rbp[rbp.event_id == rbp.event_id.min()])
     rbe = _by_event(rbp, treaty_df, mon)
     del rbp['policy_grp']
     return rbp, rbe
