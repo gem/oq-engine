@@ -226,7 +226,7 @@ def clever_agg(ukeys, datalist, treaty_df, idx, overdict, eids):
             capacity = tr.limit - tr.deductible
             has_over = False
             if tr.type == 'catxl':
-                overspill = ret - capacity
+                overspill = ret - tr.deductible - capacity
                 has_over = (overspill > 0).any()
                 apply_treaty(cession, ret, tr.deductible, capacity)
             elif tr.type == 'prop':
