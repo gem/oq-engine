@@ -71,20 +71,7 @@ def check_fields(fields, dframe, idxdict, fname):
             raise InvalidFile(f'{fname}: {field} is missing in the header')
         elif no > 0:  # for the value fields
             arr = dframe[field].to_numpy()
-            if isinstance(arr[0], str):  # there was a `%` in the column
-                vals = np.zeros(len(arr), float)
-                _abs = np.zeros(len(arr), bool)
-                for i, x in enumerate(arr):
-                    if x.endswith('%'):
-                        vals[i] = float(x[:-1]) / 100.
-                        _abs[i] = False
-                    else:
-                        vals[i] = float(x)
-                        _abs[i] = True
-                dframe[field] = vals
-                dframe[field + '_abs'] = _abs
-            else:  # assume all absolute
-                dframe[field + '_abs'] = np.ones(len(arr))
+            dframe[field + '_abs'] = np.ones(len(arr))
 
 
 # validate the file policy.csv
