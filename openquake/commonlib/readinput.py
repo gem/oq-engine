@@ -1178,7 +1178,6 @@ def get_reinsurance(oqparam, assetcol=None):
         sitecol, assetcol, discarded = get_sitecol_assetcol(oqparam)
     [(loss_type, fname)] = oqparam.inputs['reinsurance'].items()
     # make sure the first aggregate by is policy
-    # if oqparam.aggregate_by[0] != 'policy':
     if oqparam.aggregate_by[0] != ['policy']:
         raise InvalidFile('%s: aggregate_by=%s' %
                           (fname, oqparam.aggregate_by))
