@@ -848,9 +848,9 @@ rur_Ant_1,10000,100,.1,.2''')
         csvfname = general.gettemp(CSV_NP)
         xmlfname = general.gettemp(
             XML_NP.format(csvfname).replace('catxl', 'wrongtype'))
-        with self.assertRaises(AssertionError) as ctx:
+        with self.assertRaises(InvalidFile) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
-        self.assertIn("Valid treaty types are ('prop', 'wxlr', 'catxl')."
+        self.assertIn("valid treaty types are ('prop', 'wxlr', 'catxl')."
                       " 'wrongtype' was found instead", str(ctx.exception))
 
     def test_deductible_is_negative(self):
@@ -992,14 +992,14 @@ rur_Ant_1,10000,100,.1,.2''')
         with self.assertRaises(InvalidFile) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn(
-            '(row 3): proportional fraction for treaty "surplus" is negative',
-            str(ctx.exception))
+            '(row 3): proportional fraction for treaty "surplus", -0.2, is'
+            ' not >= 0 and <= 1', str(ctx.exception))
 
     def test_toolarge_fraction(self):
         csvfname = general.gettemp('''\
 policy,liability,deductible,qshared,surplus
 VA_region_1,10000,100,.1,.2
-VA_region_2,10000,100,.1,1.2
+VA_region_2,10000,100,.7,.6
 rur_Ant_1,10000,100,.1,.2''')
         xmlfname = general.gettemp(XML_PR.format(csvfname))
         with self.assertRaises(InvalidFile) as ctx:

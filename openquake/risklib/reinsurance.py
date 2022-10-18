@@ -96,20 +96,21 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
     sums = np.zeros(len(dframe))
     for prop_treaty in prop_treaties:
         fractions = dframe[prop_treaty].to_numpy()
-        [indices] = np.where(fractions < 0)
+        [indices] = np.where(np.logical_or(fractions < 0, fractions > 1))
         if len(indices) > 0:
-            # NOTE: there is at least 1 row with negative fraction. The error
+            # NOTE: there is at least 1 row with invalid fraction. The error
             # shows the first of them
             raise InvalidFile(
-                '%s (row %d): proportional fraction for treaty "%s" is'
-                ' negative' % (policyfname, indices[0] + 2, prop_treaty))
+                '%s (row %d): proportional fraction for treaty "%s", %s, is'
+                ' not >= 0 and <= 1' % (policyfname, indices[0] + 2,
+                                        prop_treaty, fractions[indices[0]]))
         sums += dframe[prop_treaty].to_numpy()
     for i, treaty_sum in enumerate(sums):
         if not 0 <= treaty_sum <= 1:
             raise InvalidFile(
                 '%s (row %d): the sum of proportional fractions is %s.'
                 ' It must be >= 0 and <= 1' % (
-                    policyfname, i+2, treaty_sum))
+                    policyfname, i+2, np.round(treaty_sum, 5)))
     idx = [idxdict[name] for name in dframe[key]]  # indices starting from 1
     dframe[key] = idx
     for no, field in enumerate(fields):
@@ -160,9 +161,10 @@ def parse(fname, policy_idx):
             continue
         treaty_type = node.get('type', 'prop')
         valid_treaty_types = ('prop', 'wxlr', 'catxl')
-        assert treaty_type in valid_treaty_types, \
-            "Valid treaty types are %s. '%s' was found instead" % (
-                valid_treaty_types, treaty_type)
+        if treaty_type not in valid_treaty_types:
+            raise InvalidFile(
+                "%s: valid treaty types are %s. '%s' was found instead" % (
+                fname, valid_treaty_types, treaty_type))
         if treaty_type == 'prop':
             limit = node.get('max_cession_event', NOLIMIT)
             deduc = 0
