@@ -1,3 +1,7 @@
+
+  [Prajakta Jadhav, Dharma Wijewickreme]
+  * Added GMPE for Zhang and Zhao(2005)
+    
   [Michele Simionato]
   * Fixed the performance report that failed for NGAEast GMPEs
   * Reduced the memory consumption in large classical calculations
