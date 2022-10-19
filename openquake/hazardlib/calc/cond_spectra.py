@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-import pandas
 from openquake.hazardlib.stats import _truncnorm_sf
 
 
@@ -145,7 +144,6 @@ def get_cs_out(cmaker, ctx, imti, imls, _c=None):
     return out
 
 
-# TODO: missing stddev
 def cond_spectra(cmaker, srcs, sitecol, imt_ref, imls):
     """
     :param cmaker: a ContextMaker with a given TRT
@@ -153,7 +151,8 @@ def cond_spectra(cmaker, srcs, sitecol, imt_ref, imls):
     :param sitecol: a SiteCollection object
     :param imt_ref: reference Intensity Measure Type (as a string)
     :param imls: Intensity Measure Levels corresponding to the poes
-    :returns: conditional spectra for the given imls as an array (G, M, N, P)
+    :returns: conditional spectra and sigmas for the given imls as arrays
+              of shape (G, M, N, P)
     """
     imti = list(cmaker.imtls).index(imt_ref)
     [ctx] = cmaker.from_srcs(srcs, sitecol)
