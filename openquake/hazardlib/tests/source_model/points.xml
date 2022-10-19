@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="PNG Source Model"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Subduction IntraSlab"
+        >
+            <pointSource
+            id="NB_W_110_0_0"
+            name="PNT_110-0-0"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            151.2626 -6.28766
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        57.93521988194712
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    StrasserIntraslab
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.2"
+                minMag="5.1"
+                >
+                    <occurRates>
+                        9.148471180657425e-05 5.141648585197294e-05 2.889723282897371e-05 1.624090116885873e-05 9.12775532306927e-06 5.130005802730592e-06 2.8831797747181847e-06 1.6204125166718749e-06 9.107086374603643e-07 5.118389384256165e-07 2.8766510837014437e-07 1.6167432440396974e-07 9.086464229039235e-08 5.106799270075215e-08 1.640376709496552e-08
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="30.6" probability="0.7" rake="90.0" strike="247.2"/>
+                    <nodalPlane dip="30.6" probability="0.3" rake="-90.0" strike="247.2"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="15.910549255966142" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="NB_W_110_1_1"
+            name="PNT_110-1-1"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            151.2626 -6.28766
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        57.93521988194712
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    StrasserIntraslab
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.2"
+                minMag="5.1"
+                >
+                    <occurRates>
+                        3.920773363138897e-05 2.203563679370269e-05 1.2384528355274447e-05 6.960386215225171e-06 3.911895138458259e-06 2.198573915455968e-06 1.235648474879222e-06 6.944625071450893e-07 3.903037017687276e-07 2.1935954503954992e-07 1.232850464443476e-07 6.928899617312989e-08 3.8941989553025295e-08 2.1886282586036638e-08 7.030185897842366e-09
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="30.6" probability="0.7" rake="90.0" strike="247.2"/>
+                    <nodalPlane dip="30.6" probability="0.3" rake="-90.0" strike="247.2"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="15.910549255966142" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="NB_W_120_0_0"
+            name="PNT_120-0-0"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            150.57406 -6.60505
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        56.50114136853841
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    StrasserIntraslab
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.2"
+                minMag="5.1"
+                >
+                    <occurRates>
+                        9.148471180657425e-05 5.141648585197294e-05 2.889723282897371e-05 1.624090116885873e-05 9.12775532306927e-06 5.130005802730592e-06 2.8831797747181847e-06 1.6204125166718749e-06 9.107086374603643e-07 5.118389384256165e-07 2.8766510837014437e-07 1.6167432440396974e-07 9.086464229039235e-08 5.106799270075215e-08 1.640376709496552e-08
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="30.6" probability="0.7" rake="90.0" strike="247.2"/>
+                    <nodalPlane dip="30.6" probability="0.3" rake="-90.0" strike="247.2"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="15.910549255966142" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="NB_W_120_1_1"
+            name="PNT_120-1-1"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            150.57406 -6.60505
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        56.50114136853841
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    StrasserIntraslab
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.2"
+                minMag="5.1"
+                >
+                    <occurRates>
+                        3.920773363138897e-05 2.203563679370269e-05 1.2384528355274447e-05 6.960386215225171e-06 3.911895138458259e-06 2.198573915455968e-06 1.235648474879222e-06 6.944625071450893e-07 3.903037017687276e-07 2.1935954503954992e-07 1.232850464443476e-07 6.928899617312989e-08 3.8941989553025295e-08 2.1886282586036638e-08 7.030185897842366e-09
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="30.6" probability="0.7" rake="90.0" strike="247.2"/>
+                    <nodalPlane dip="30.6" probability="0.3" rake="-90.0" strike="247.2"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="15.910549255966142" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="NB_W_4310_0_0"
+            name="PNT_4310-0-0"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            151.24837 -6.3836
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        46.01891059600762
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    StrasserIntraslab
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.2"
+                minMag="5.1"
+                >
+                    <occurRates>
+                        9.148471180657425e-05 5.141648585197294e-05 2.889723282897371e-05 1.624090116885873e-05 9.12775532306927e-06 5.130005802730592e-06 2.8831797747181847e-06 1.6204125166718749e-06 9.107086374603643e-07 5.118389384256165e-07 2.8766510837014437e-07 1.6167432440396974e-07 9.086464229039235e-08 5.106799270075215e-08 1.640376709496552e-08
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="30.6" probability="0.7" rake="90.0" strike="247.2"/>
+                    <nodalPlane dip="30.6" probability="0.3" rake="-90.0" strike="247.2"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="27.731647767898426" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="NB_W_4310_1_1"
+            name="PNT_4310-1-1"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            151.24837 -6.3836
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        46.01891059600762
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    StrasserIntraslab
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.2"
+                minMag="5.1"
+                >
+                    <occurRates>
+                        3.920773363138897e-05 2.203563679370269e-05 1.2384528355274447e-05 6.960386215225171e-06 3.911895138458259e-06 2.198573915455968e-06 1.235648474879222e-06 6.944625071450893e-07 3.903037017687276e-07 2.1935954503954992e-07 1.232850464443476e-07 6.928899617312989e-08 3.8941989553025295e-08 2.1886282586036638e-08 7.030185897842366e-09
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="30.6" probability="0.7" rake="90.0" strike="247.2"/>
+                    <nodalPlane dip="30.6" probability="0.3" rake="-90.0" strike="247.2"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="27.731647767898426" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="NB_W_4320_0_0"
+            name="PNT_4320-0-0"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            150.55982 -6.70098
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        46.0065254888986
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    StrasserIntraslab
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.2"
+                minMag="5.1"
+                >
+                    <occurRates>
+                        9.148471180657425e-05 5.141648585197294e-05 2.889723282897371e-05 1.624090116885873e-05 9.12775532306927e-06 5.130005802730592e-06 2.8831797747181847e-06 1.6204125166718749e-06 9.107086374603643e-07 5.118389384256165e-07 2.8766510837014437e-07 1.6167432440396974e-07 9.086464229039235e-08 5.106799270075215e-08 1.640376709496552e-08
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="30.6" probability="0.7" rake="90.0" strike="247.2"/>
+                    <nodalPlane dip="30.6" probability="0.3" rake="-90.0" strike="247.2"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="27.731647767898426" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="NB_W_4320_1_1"
+            name="PNT_4320-1-1"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            150.55982 -6.70098
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        46.0065254888986
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    StrasserIntraslab
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.2"
+                minMag="5.1"
+                >
+                    <occurRates>
+                        3.920773363138897e-05 2.203563679370269e-05 1.2384528355274447e-05 6.960386215225171e-06 3.911895138458259e-06 2.198573915455968e-06 1.235648474879222e-06 6.944625071450893e-07 3.903037017687276e-07 2.1935954503954992e-07 1.232850464443476e-07 6.928899617312989e-08 3.8941989553025295e-08 2.1886282586036638e-08 7.030185897842366e-09
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="30.6" probability="0.7" rake="90.0" strike="247.2"/>
+                    <nodalPlane dip="30.6" probability="0.3" rake="-90.0" strike="247.2"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="27.731647767898426" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="NB_W_8510_0_0"
+            name="PNT_8510-0-0"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            151.24125 -6.43156
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        42.3003034927992
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    StrasserIntraslab
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.2"
+                minMag="5.1"
+                >
+                    <occurRates>
+                        9.148471180657425e-05 5.141648585197294e-05 2.889723282897371e-05 1.624090116885873e-05 9.12775532306927e-06 5.130005802730592e-06 2.8831797747181847e-06 1.6204125166718749e-06 9.107086374603643e-07 5.118389384256165e-07 2.8766510837014437e-07 1.6167432440396974e-07 9.086464229039235e-08 5.106799270075215e-08 1.640376709496552e-08
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="30.6" probability="0.7" rake="90.0" strike="247.2"/>
+                    <nodalPlane dip="30.6" probability="0.3" rake="-90.0" strike="247.2"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="33.64219702386457" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="NB_W_8510_1_1"
+            name="PNT_8510-1-1"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            151.24125 -6.43156
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        42.3003034927992
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    StrasserIntraslab
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.2"
+                minMag="5.1"
+                >
+                    <occurRates>
+                        3.920773363138897e-05 2.203563679370269e-05 1.2384528355274447e-05 6.960386215225171e-06 3.911895138458259e-06 2.198573915455968e-06 1.235648474879222e-06 6.944625071450893e-07 3.903037017687276e-07 2.1935954503954992e-07 1.232850464443476e-07 6.928899617312989e-08 3.8941989553025295e-08 2.1886282586036638e-08 7.030185897842366e-09
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="30.6" probability="0.7" rake="90.0" strike="247.2"/>
+                    <nodalPlane dip="30.6" probability="0.3" rake="-90.0" strike="247.2"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="33.64219702386457" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="NB_W_8520_0_0"
+            name="PNT_8520-0-0"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            150.55269 -6.74895
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        42.270642086006184
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    StrasserIntraslab
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.2"
+                minMag="5.1"
+                >
+                    <occurRates>
+                        9.148471180657425e-05 5.141648585197294e-05 2.889723282897371e-05 1.624090116885873e-05 9.12775532306927e-06 5.130005802730592e-06 2.8831797747181847e-06 1.6204125166718749e-06 9.107086374603643e-07 5.118389384256165e-07 2.8766510837014437e-07 1.6167432440396974e-07 9.086464229039235e-08 5.106799270075215e-08 1.640376709496552e-08
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="30.6" probability="0.7" rake="90.0" strike="247.2"/>
+                    <nodalPlane dip="30.6" probability="0.3" rake="-90.0" strike="247.2"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="33.64219702386457" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

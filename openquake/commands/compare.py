@@ -18,7 +18,6 @@
 import sys
 import collections
 import numpy
-from openquake.baselib.general import rmsdiff
 from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
@@ -39,20 +38,6 @@ def get_diff_idxs(array, rtol, atol):
     return numpy.fromiter(diff_idxs, int)
 
 
-def _print_diff(a1, a2, idx1, idx2, col):
-    if col.endswith('_'):
-        for i, (v1, v2) in enumerate(zip(a1, a2)):
-            idx = numpy.where(numpy.abs(v1-v2) > 1e-5)
-            if len(idx[0]):
-                print(col, v1[idx], v2[idx])
-                break
-    else:
-        i, = numpy.where(numpy.abs(a1-a2) > 1e-5)
-        if len(i):
-            print(col, idx1[i], a1[i])
-            print(col, idx2[i], a2[i])
-
-
 def get_mean(extractor, what, sids, imtls, p):
     mean = extractor.get(what).mean[sids, :, p]  # shape (N, M)
     mu = numpy.array([mean[:, m] for m, imt in enumerate(imtls)
@@ -71,7 +56,7 @@ class Comparator(object):
         for ex in self.extractors:
             time = ex.get('performance_data')['time_sec'].sum()
             data.append((ex.calc_id, time))
-        print(views.text_table(data, ['calc_id', 'time']))
+        print(views.text_table(data, ['calc_id', 'time'], ext='org'))
 
     def getsids(self, samplesites):
         sids = self.sitecol['sids']
@@ -177,28 +162,28 @@ class Comparator(object):
             fdict = {ex.calc_id: open('%s.txt' % ex.calc_id, 'w')
                      for ex in self.extractors}
             for calc_id, f in fdict.items():
-                f.write(views.text_table(rows[calc_id], header))
+                f.write(views.text_table(rows[calc_id], header, ext='org'))
                 print('Generated %s' % f.name)
         else:
-            print(views.text_table(rows['all'], header))
+            print(views.text_table(rows['all'], header, ext='org'))
         return arrays
 
 
 # works only locally for the moment
-def compare_rups(calc_1: int, calc_2: int):
+def compare_rups(calc_1: int, calc_2: int, site_id: int = 0):
     """
-    Compare the ruptures of two calculations as pandas DataFrames
+    Compare the ruptures affecting the given site ID as pandas DataFrames
     """
     with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
-        df1 = ds1.read_df('rup', 'id').sort_index()
-        df2 = ds2.read_df('rup', 'id').sort_index()
-    cols = [col for col in df1.columns if col not in
-            {'probs_occur_', 'clon_', 'clat_'}]
-    for col in cols:
-        a1 = df1[col].to_numpy()
-        a2 = df2[col].to_numpy()
-        assert len(a1) == len(a2), (len(a1), len(a2))
-        _print_diff(a1, a2, df1.index, df2.index, col)
+        df1 = ds1.read_df('rup', sel={'sids': site_id})
+        df2 = ds2.read_df('rup', sel={'sids': site_id})
+    del df1['probs_occur']
+    del df2['probs_occur']
+    lens = len(df1), len(df2)
+    if lens[0] != lens[1]:
+        print('%d != %d ruptures' % lens)
+        return
+    print(df1.compare(df2))
 
 
 def compare_cumtime(calc1: int, calc2: int):
@@ -221,7 +206,8 @@ def compare_uhs(calc_ids: int, files=False, *, poe_id: int = 0,
         delta = numpy.abs(arrays[0] - arrays[1]).max(axis=1)
         amax = delta.argmax()
         row = ('%.5f' % c.oq.poes[poe_id], rms, delta[amax], amax)
-        print(views.text_table([row], ['poe', 'rms-diff', 'max-diff', 'site']))
+        print(views.text_table([row], ['poe', 'rms-diff', 'max-diff', 'site'],
+                               ext='org'))
 
 
 def compare_hmaps(imt, calc_ids: int, files=False, *,
@@ -236,7 +222,8 @@ def compare_hmaps(imt, calc_ids: int, files=False, *,
         maxdiff = numpy.abs(arrays[0] - arrays[1]).max(axis=0)  # P
         rows = [(str(poe), rms, md) for poe, rms, md in zip(
             c.oq.poes, numpy.sqrt(ms), maxdiff)]
-        print(views.text_table(rows, ['poe', 'rms-diff', 'max-diff']))
+        print(views.text_table(rows, ['poe', 'rms-diff', 'max-diff'],
+                               ext='org'))
 
 
 def compare_hcurves(imt, calc_ids: int, files=False, *,
@@ -261,16 +248,40 @@ def compare_avg_gmf(imt, calc_ids: int, files=False, *,
         print('rms-diff =', sigma)
 
 
+# works only locally for the moment
+def compare_risk_by_event(event: int, calc_ids: int, *,
+                          rtol: float = 0, atol: float = 1E-3):
+    """
+    Compare risk_by_event for a given event across two calculations.
+    Raise an error if the GMFs are not compatible.
+    """
+    ds0 = datastore.read(calc_ids[0])
+    ds1 = datastore.read(calc_ids[1])
+    df0 = ds0.read_df('gmf_data', 'sid', sel={'eid': event})
+    df1 = ds1.read_df('gmf_data', 'sid', sel={'eid': event})
+    df = df0.compare(df1)
+    if len(df):
+        print('Not comparable GMFs: %s', df); return
+    df0 = ds0.read_df('risk_by_event', 'agg_id', sel={'event_id': event})
+    df1 = ds1.read_df('risk_by_event', 'agg_id', sel={'event_id': event})
+    print(df0)
+    print(df1)
+
+
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
             uhs=compare_uhs,
             hmaps=compare_hmaps,
             hcurves=compare_hcurves,
-            avg_gmf=compare_avg_gmf)
+            avg_gmf=compare_avg_gmf,
+            risk_by_event=compare_risk_by_event)
 
-for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf):
+for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
+          compare_risk_by_event):
     if f is compare_uhs:
         f.poe_id = 'index of the PoE (or return period)'
+    elif f is compare_risk_by_event:
+        f.event = 'event index'
     else:
         f.imt = 'intensity measure type to compare'
     f.calc_ids = dict(help='calculation IDs', nargs='+')

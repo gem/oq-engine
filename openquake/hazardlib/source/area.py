@@ -17,11 +17,9 @@
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import math
-from copy import deepcopy
 from openquake.hazardlib import geo, mfd
-from openquake.hazardlib.source.point import PointSource, build_planar_surfaces
+from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 
 class AreaSource(ParametricSeismicSource):
@@ -85,58 +83,8 @@ class AreaSource(ParametricSeismicSource):
         The ruptures' occurrence rates are rescaled with respect to number
         of points the polygon discretizes to.
         """
-        shift_hypo = kwargs.get('shift_hypo')
-        polygon_mesh = self.polygon.discretize(self.area_discretization)
-        scaling_rate_factor = 1. / len(polygon_mesh)
-
-        # take the very first point of the polygon mesh
-        [epicenter0] = polygon_mesh[0:1]
-        # generate "reference ruptures" -- all the ruptures that have the same
-        # epicenter location (first point of the polygon's mesh) but different
-        # magnitudes, nodal planes, hypocenters' depths and occurrence rates
-        # NB: all this mumbo-jumbo is done to avoid multiple calls to
-        # PointSource._get_rupture_surface
-        ref_ruptures = []
-        mags, rates = zip(*self.get_annual_occurrence_rates())
-        np_probs, nplanes = zip(*self.nodal_plane_distribution.data)
-        hc_probs, depths = zip(*self.hypocenter_distribution.data)
-        surfin = PointSource.get_surfin(self, mags, nplanes)
-        points = [geo.Point(epicenter0.x, epicenter0.y, depth)
-                  for depth in depths]
-        surfaces = build_planar_surfaces(surfin, points, shift_hypo)
-        for m, mag in enumerate(mags):
-            for n, np in enumerate(nplanes):
-                for d, hc_depth in enumerate(depths):
-                    surface = surfaces[m, n, d]
-                    occurrence_rate = (rates[m] * np_probs[n] * hc_probs[d]
-                                       * scaling_rate_factor)
-                    if kwargs.get('shift_hypo'):
-                        hc_depth = surface.hc.depth
-                    ref_ruptures.append((mag, np.rake, hc_depth,
-                                         surface, occurrence_rate))
-
-        # for each of the epicenter positions generate as many ruptures
-        # as we generated "reference" ones: new ruptures differ only
-        # in hypocenter and surface location
-        for epicenter in polygon_mesh:
-            for mag, rake, hc_depth, surface, occ_rate in ref_ruptures:
-                # translate the surface from first epicenter position
-                # to the target one preserving it's geometry
-                surface = surface.translate(epicenter0, epicenter)
-                hypocenter = deepcopy(epicenter)
-                hypocenter.depth = hc_depth
-                rupture = ParametricProbabilisticRupture(
-                    mag, rake, self.tectonic_region_type, hypocenter,
-                    surface, occ_rate, self.temporal_occurrence_model)
-                yield rupture
-
-    def few_ruptures(self):
-        """
-        Fast version of iter_ruptures used in estimate_weight
-        """
-        for i, ps in enumerate(self):
-            if i % 10 == 0:
-                yield from ps.few_ruptures()
+        for src in self:
+            yield from src.iter_ruptures(**kwargs)
 
     def count_ruptures(self):
         """
@@ -160,7 +108,6 @@ class AreaSource(ParametricSeismicSource):
         mesh = self.polygon.discretize(self.area_discretization)
         num_points = len(mesh)
         area_mfd = self.mfd
-
         if isinstance(area_mfd, mfd.TruncatedGRMFD):
             new_mfd = mfd.TruncatedGRMFD(
                 a_val=area_mfd.a_val - math.log10(num_points),
@@ -185,7 +132,6 @@ class AreaSource(ParametricSeismicSource):
                 area_mfd.char_rate / num_points, area_mfd.bin_width)
         else:
             raise TypeError('Unknown MFD: %s' % area_mfd)
-
         for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
             pt = PointSource(
                 # Generate a new ID and name

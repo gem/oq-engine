@@ -1,0 +1,91 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml>
+	<logicTree logicTreeID="">
+		<logicTreeBranchSet branchSetID="bs_00" uncertaintyType="gmpeModel" applyToTectonicRegionType="Active Shallow Crust">
+			<logicTreeBranch branchID="b_00_00">
+				<uncertaintyModel>
+[ModifiableGMPE]
+gmpe.BooreEtAl2014LowQ = {}
+horiz_comp_to_geom_mean = {}
+</uncertaintyModel>
+				<uncertaintyWeight>0.25000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_00_01">
+				<uncertaintyModel>
+[ModifiableGMPE]
+gmpe.ZhaoEtAl2006Asc = {}
+horiz_comp_to_geom_mean = {}
+</uncertaintyModel>
+				<uncertaintyWeight>0.25000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_00_02">
+				<uncertaintyModel>
+[ModifiableGMPE]
+gmpe.ChiouYoungs2014 = {}
+horiz_comp_to_geom_mean = {}
+</uncertaintyModel>
+				<uncertaintyWeight>0.25000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_00_03">
+				<uncertaintyModel>
+[ModifiableGMPE]
+gmpe.BooreEtAl2014 = {}
+horiz_comp_to_geom_mean = {}
+</uncertaintyModel>
+				<uncertaintyWeight>0.25000</uncertaintyWeight>
+			</logicTreeBranch>
+		</logicTreeBranchSet>
+		<logicTreeBranchSet branchSetID="bs_01" uncertaintyType="gmpeModel" applyToTectonicRegionType="Subduction Interface">
+			<logicTreeBranch branchID="b_01_04">
+				<uncertaintyModel>
+[ModifiableGMPE]
+gmpe.AbrahamsonEtAl2015SInter = {}
+horiz_comp_to_geom_mean = {}
+</uncertaintyModel>
+				<uncertaintyWeight>0.33000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_01_05">
+				<uncertaintyModel>
+[ModifiableGMPE]
+gmpe.ParkerEtAl2020SInter = {}
+horiz_comp_to_geom_mean = {}
+</uncertaintyModel>
+				<uncertaintyWeight>0.33000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_01_06">
+				<uncertaintyModel>
+[ModifiableGMPE]
+gmpe.ZhaoEtAl2006SInter = {}
+horiz_comp_to_geom_mean = {}
+</uncertaintyModel>
+				<uncertaintyWeight>0.34000</uncertaintyWeight>
+			</logicTreeBranch>
+		</logicTreeBranchSet>
+		<logicTreeBranchSet branchSetID="bs_02" uncertaintyType="gmpeModel" applyToTectonicRegionType="Subduction IntraSlab">
+			<logicTreeBranch branchID="b_02_07">
+				<uncertaintyModel>
+[ModifiableGMPE]
+gmpe.AbrahamsonEtAl2015SSlab = {}
+horiz_comp_to_geom_mean = {}
+</uncertaintyModel>
+				<uncertaintyWeight>0.33000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_02_08">
+				<uncertaintyModel>
+[ModifiableGMPE]
+gmpe.ParkerEtAl2020SSlab = {}
+horiz_comp_to_geom_mean = {}
+</uncertaintyModel>
+				<uncertaintyWeight>0.33000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_02_09">
+				<uncertaintyModel>
+[ModifiableGMPE]
+gmpe.ZhaoEtAl2006SSlab = {}
+horiz_comp_to_geom_mean = {}
+</uncertaintyModel>
+				<uncertaintyWeight>0.34000</uncertaintyWeight>
+			</logicTreeBranch>
+		</logicTreeBranchSet>
+	</logicTree>
+</nrml>

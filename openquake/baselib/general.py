@@ -41,6 +41,7 @@ import multiprocessing
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
 from decorator import decorator
+from openquake.baselib import __version__
 from openquake.baselib.python3compat import decode
 
 U8 = numpy.uint8
@@ -48,8 +49,11 @@ U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
-BASE94 = ''.join(chr(i) for i in range(65, 127)) + ''.join(
-    chr(i) for i in range(33, 65))
+BASE183 = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmno"
+           "pqrstuvwxyz{|}!#$%&'()*+-/0123456789:;<=>?@¡¢"
+           "£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑ"
+           "ÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ")
+
 mp = multiprocessing.get_context('spawn')
 
 
@@ -356,7 +360,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
                 assert_close(a[x], b[x], rtol, atol, x)
         return
     if hasattr(a, '__dict__'):  # objects with an attribute dictionary
-        assert_close(vars(a), vars(b), context=a)
+        assert_close(vars(a), vars(b), rtol, atol, context=a)
         return
     if hasattr(a, '__iter__'):  # iterable objects
         xs, ys = list(a), list(b)
@@ -412,18 +416,19 @@ def removetmp():
                 pass
 
 
-def git_suffix(fname):
+def engine_version():
     """
-    :returns: `<short git hash>` if Git repository found
+    :returns: __version__ + `<short git hash>` if Git repository found
     """
     # we assume that the .git folder is two levels above any package
     # i.e. openquake/engine/../../.git
-    git_path = os.path.join(os.path.dirname(fname), '..', '..', '.git')
+    git_path = os.path.join(os.path.dirname(__file__), '..', '..', '.git')
 
     # macOS complains if we try to execute git and it's not available.
     # Code will run, but a pop-up offering to install bloatware (Xcode)
     # is raised. This is annoying in end-users installations, so we check
     # if .git exists before trying to execute the git executable
+    gh = ''
     if os.path.isdir(git_path):
         try:
             gh = subprocess.check_output(
@@ -431,13 +436,12 @@ def git_suffix(fname):
                 stderr=open(os.devnull, 'w'),
                 cwd=os.path.dirname(git_path)).strip()
             gh = "-git" + decode(gh) if gh else ''
-            return gh
         except Exception:
+            pass
             # trapping everything on purpose; git may not be installed or it
             # may not work properly
-            pass
 
-    return ''
+    return __version__ + gh
 
 
 def run_in_process(code, *args):
@@ -940,8 +944,6 @@ def multi_index(shape, axis=None):
     (slice(None, None, None), 1, 1)
     (slice(None, None, None), 1, 2)
     """
-    if any(s >= TWO16 for s in shape):
-        raise ValueError('Shape too big: ' + str(shape))
     ranges = (range(s) for s in shape)
     if axis is None:
         yield from itertools.product(*ranges)
@@ -951,6 +953,7 @@ def multi_index(shape, axis=None):
         yield tuple(lst)
 
 
+# NB: the fast_agg functions are usually faster than pandas
 def fast_agg(indices, values=None, axis=0, factor=None, M=None):
     """
     :param indices: N indices in the range 0 ... M - 1 with M < N
@@ -985,6 +988,7 @@ def fast_agg(indices, values=None, axis=0, factor=None, M=None):
     return res
 
 
+# NB: the fast_agg functions are usually faster than pandas
 def fast_agg2(tags, values=None, axis=0):
     """
     :param tags: N non-unique tags out of M
@@ -1005,6 +1009,7 @@ def fast_agg2(tags, values=None, axis=0):
     return uniq, fast_agg(indices, values, axis)
 
 
+# NB: the fast_agg functions are usually faster than pandas
 def fast_agg3(structured_array, kfield, vfields=None, factor=None):
     """
     Aggregate a structured array with a key field (the kfield)
@@ -1397,12 +1402,12 @@ def add_columns(a, b, on, cols=None):
 def categorize(values, nchars=2):
     """
     Takes an array with duplicate values and categorize it, i.e. replace
-    the values with codes of length nchars in base64. With nchars=2 4096
+    the values with codes of length nchars in BASE183. With nchars=2 33856
     unique values can be encoded, if there are more nchars must be increased
     otherwise a ValueError will be raised.
 
     :param values: an array of V non-unique values
-    :param nchars: number of characters in base64 for each code
+    :param nchars: number of characters in BASE183 for each code
     :returns: an array of V non-unique codes
 
     >>> categorize([1,2,2,3,4,1,1,2]) # 8 values, 4 unique ones
@@ -1410,11 +1415,11 @@ def categorize(values, nchars=2):
           dtype='|S2')
     """
     uvalues = numpy.unique(values)
-    mvalues = 64 ** nchars  # maximum number of unique values
+    mvalues = 184 ** nchars  # maximum number of unique values
     if len(uvalues) > mvalues:
         raise ValueError(
             f'There are too many unique values ({len(uvalues)} > {mvalues})')
-    prod = itertools.product(*[BASE94] * nchars)
+    prod = itertools.product(*[BASE183] * nchars)
     dic = {uvalue: ''.join(chars) for uvalue, chars in zip(uvalues, prod)}
     return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
 

@@ -127,6 +127,7 @@ site_param_dt = {
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
     'siteclass': (numpy.string_, 1),
+    'geohash': (numpy.string_, 6),
     'z1pt4': numpy.float64,
     'backarc': numpy.uint8,  # 0=forearc,1=backarc,2=alongarc
     'xvf': numpy.float64,
@@ -140,6 +141,10 @@ site_param_dt = {
     'h800': numpy.float64,
     'geology': (numpy.string_, 20),
     'amplfactor': numpy.float64,
+    'fpeak': numpy.float64,
+    # Fundamental period and and amplitude of HVRSR spectra
+    'THV': numpy.float64,
+    'PHV': numpy.float64,
 
     # parameters for secondary perils
     'friction_mid': numpy.float64,
@@ -160,7 +165,6 @@ site_param_dt = {
     'dwb': numpy.float64,
     'hwater': numpy.float64,
     'precip': numpy.float64,
-    'fpeak': numpy.float64,
 
     # parameters for YoudEtAl2002
     'freeface_ratio': numpy.float64,
@@ -170,7 +174,7 @@ site_param_dt = {
     'T_eq': numpy.float64,
 
     # other parameters
-    'custom_site_id': (numpy.string_, 6),
+    'custom_site_id': (numpy.string_, 8),
     'region': numpy.uint32,
     'in_cshm': bool  # used in mcverry
 }
@@ -218,7 +222,6 @@ class SiteCollection(object):
         arr['lat'] = shakemap_array['lat']
         arr['depth'] = numpy.zeros(n)
         arr['vs30'] = shakemap_array['vs30']
-        arr.flags.writeable = False
         return self
 
     @classmethod  # this is the method used by the engine
@@ -379,14 +382,6 @@ class SiteCollection(object):
             arr['depth'][i] = sites[i].location.depth
             for p, dt in extra:
                 arr[p][i] = getattr(sites[i], p)
-
-        # protect arrays from being accidentally changed. it is useful
-        # because we pass these arrays directly to a GMPE through
-        # a SiteContext object and if a GMPE is implemented poorly it could
-        # modify the site values, thereby corrupting site and all the
-        # subsequent calculation. note that this doesn't protect arrays from
-        # being changed by calling itemset()
-        arr.flags.writeable = False
 
         # NB: in test_correlation.py we define a SiteCollection with
         # non-unique sites, so we cannot do an

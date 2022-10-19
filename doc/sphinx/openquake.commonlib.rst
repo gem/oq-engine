@@ -9,6 +9,14 @@ openquake.commonlib.datastore module
     :undoc-members:
     :show-inheritance:
 
+openquake.commonlib.dbapi module
+--------------------------------
+
+.. automodule:: openquake.commonlib.dbapi
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 calc module
 ---------------------------------
 

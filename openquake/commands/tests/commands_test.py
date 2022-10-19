@@ -45,12 +45,15 @@ from openquake.qa_tests_data.event_based_risk import (
     case_master, case_1 as case_eb)
 from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
-from openquake.server import manage, dbapi, dbserver
 from openquake.server.tests import data as test_data
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 NRML_DIR = os.path.dirname(tests.__file__)
 MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
+
+
+def setup_module():
+    os.environ['OQ_DATABASE'] = 'local'
 
 
 class Print(object):
@@ -249,7 +252,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             sap.runline('openquake.commands show sitecol %d' % self.calc_id)
-        self.assertIn('sids | lon | lat | depth | vs30  | vs30measured',
+        self.assertIn('sids | lon     | lat | depth | vs30  | vs30measured',
                       str(p))
 
         with Print.patch() as p:
@@ -369,8 +372,8 @@ class ZipTestCase(unittest.TestCase):
                           'Wcrust_med_rhypo.hdf5',
                           'job.ini',
                           'nbc_asc_logic_tree.xml',
+                          'point_source.xml',
                           'source_model_logic_tree.xml',
-                          'vancouver_area_source.xml',
                           'vancouver_school_sites.csv'], names)
         shutil.rmtree(dtemp)
 
@@ -388,14 +391,14 @@ class ZipTestCase(unittest.TestCase):
 
     def test_zip_ebr(self):
         # this is a case with an exposure.csv
-        ini = os.path.join(os.path.dirname(case_eb.__file__), 'job_eb.ini')
+        ini = os.path.join(os.path.dirname(case_eb.__file__), 'job_ins.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
         sap.runline(f'openquake.commands zip {ini} {xzip}')
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(
             ['exposure.csv', 'exposure1.xml', 'gmpe_logic_tree.xml',
-             'job_eb.ini', 'policy.csv', 'source_model.xml',
+             'job_ins.ini', 'policy_ins.csv', 'source_model.xml',
              'source_model_logic_tree.xml',
              'vulnerability_model_nonstco.xml',
              'vulnerability_model_stco.xml'],
@@ -443,18 +446,6 @@ class ZipTestCase(unittest.TestCase):
         names = sorted(zipfile.ZipFile(job_zip).namelist())
         self.assertIn('shakefile/usp000fjta.npy', names)
         shutil.rmtree(dtemp)
-
-
-class DbTestCase(unittest.TestCase):
-    def test_db(self):
-        # the some db commands bypassing the dbserver
-        with Print.patch(), mock.patch(
-                'openquake.commonlib.logs.dbcmd', manage.fakedbcmd):
-            sap.runline('openquake.commands db db_version')
-            try:
-                sap.runline('openquake.commands db calc_info 1')
-            except dbapi.NotFound:  # happens on an empty db
-                pass
 
 
 class EngineRunJobTestCase(unittest.TestCase):
@@ -521,7 +512,7 @@ Source Loss Table'''.splitlines())
         # refactoring of the monitoring and it happened several times)
         with read(log.calc_id) as dstore:
             perf = str(view('performance', dstore))
-            self.assertIn('total event_based_risk', perf)
+            self.assertIn('total ebr_from_gmfs', perf)
 
     def test_oqdata(self):
         # the that the environment variable OQ_DATADIR is honored
@@ -529,7 +520,6 @@ Source Loss Table'''.splitlines())
         dic = get_params(job_ini)
         dic['calculation_mode'] = 'event_based'
         tempdir = tempfile.mkdtemp()
-        dbserver.ensure_on()
         with mock.patch.dict(os.environ, OQ_DATADIR=tempdir):
             [job] = run_jobs(create_jobs([dic], 'error'))
             job = commonlib.logs.dbcmd('get_job', job.calc_id)
@@ -638,3 +628,4 @@ class NRML2CSVTestCase(unittest.TestCase):
 
 def teardown_module():
     parallel.Starmap.shutdown()
+    del os.environ['OQ_DATABASE']

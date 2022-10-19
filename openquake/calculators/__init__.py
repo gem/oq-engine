@@ -19,6 +19,7 @@
 import os
 from openquake.baselib.general import import_all
 
+
 # make sure the `base,calculators` dictionary is populated
 import_all('openquake.calculators')
 

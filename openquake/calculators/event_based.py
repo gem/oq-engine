@@ -38,6 +38,7 @@ from openquake.hazardlib.source.rupture import (
 from openquake.commonlib import (
     calc, util, logs, readinput, logictree, datastore)
 from openquake.risklib.riskinput import str2rsi, rsi2str
+from openquake.commonlib.calc import get_mean_curve
 from openquake.calculators import base, views
 from openquake.calculators.getters import (
     get_rupture_getters, sig_eps_dt, time_dt)
@@ -53,19 +54,6 @@ TWO32 = numpy.float64(2 ** 32)
 
 
 # ######################## GMF calculator ############################ #
-
-def get_mean_curves(dstore, imt):
-    """
-    Extract the mean hazard curves from the datastore, as an array of shape
-    (N, L1)
-    """
-    if 'hcurves-stats' in dstore:  # shape (N, S, M, L1)
-        arr = dstore.sel('hcurves-stats', stat='mean', imt=imt)
-    else:  # there is only 1 realization
-        arr = dstore.sel('hcurves-rlzs', rlz_id=0, imt=imt)
-    return arr[:, 0, 0, :]
-
-# ########################################################################## #
 
 
 def count_ruptures(src):
@@ -95,11 +83,13 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
     cmon = monitor('computing gmfs', measuremem=False)
     with dstore:
         trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
+        sitecol = dstore['sitecol']
+        extra = sitecol.array.dtype.names
         srcfilter = SourceFilter(
-            dstore['sitecol'], oqparam.maximum_distance(trt))
+            sitecol, oqparam.maximum_distance(trt))
         rupgeoms = dstore['rupgeoms']
         rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
-        cmaker = ContextMaker(trt, rlzs_by_gsim, oqparam)
+        cmaker = ContextMaker(trt, rlzs_by_gsim, oqparam, extraparams=extra)
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         for proxy in proxies:
             t0 = time.time()
@@ -232,6 +222,7 @@ class EventBasedCalculator(base.HazardCalculator):
             cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], oq)
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
+        self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
@@ -284,6 +275,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 [task_no] = numpy.unique(times['task_no'])
                 rupids = list(times['rup_id'])
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
+                if self.N >= calc.SLICE_BY_EVENT_NSITES:
+                    sbe = calc.build_slice_by_event(
+                        df.eid.to_numpy(), self.offset)
+                    hdf5.extend(self.datastore['gmf_data/slice_by_event'], sbe)
                 hdf5.extend(dset, df.sid.to_numpy())
                 hdf5.extend(self.datastore['gmf_data/eid'], df.eid.to_numpy())
                 for m in range(len(primary)):
@@ -295,9 +290,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(df)
-        if self.offset >= TWO32:
-            raise RuntimeError(
-                'The gmf_data table has more than %d rows' % TWO32)
         imtls = self.oqparam.imtls
         with agg_mon:
             for key, poes in result.get('hcurves', {}).items():
@@ -369,8 +361,10 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.ground_motion_fields and oq.min_iml.sum() == 0:
             logging.warning('The GMFs are not filtered: '
                             'you may want to set a minimum_intensity')
-        else:
+        elif oq.minimum_intensity:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
+        else:
+            logging.info('min_iml=%s', oq.min_iml)
         self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
             dstore.parent = datastore.read(oq.hazard_calculation_id)
@@ -400,6 +394,8 @@ class EventBasedCalculator(base.HazardCalculator):
             dstore.create_dset('gmf_data/sigma_epsilon', sig_eps_dt(oq.imtls))
             dstore.create_dset('gmf_data/time_by_rup',
                                time_dt, (nrups,), fillvalue=None)
+            if self.N >= calc.SLICE_BY_EVENT_NSITES:
+                dstore.create_dset('gmf_data/slice_by_event', calc.slice_dt)
 
         # event_based in parallel
         nr = len(dstore['ruptures'])
@@ -558,9 +554,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 # the computation
                 self.cl.run()
                 engine.expose_outputs(self.cl.datastore)
+                all = slice(None)
                 for imt in oq.imtls:
-                    cl_mean_curves = get_mean_curves(self.datastore, imt)
-                    eb_mean_curves = get_mean_curves(self.datastore, imt)
+                    cl_mean_curves = get_mean_curve(self.datastore, imt, all)
+                    eb_mean_curves = get_mean_curve(self.datastore, imt, all)
                     self.rdiff, index = util.max_rel_diff_index(
                         cl_mean_curves, eb_mean_curves)
                     logging.warning(

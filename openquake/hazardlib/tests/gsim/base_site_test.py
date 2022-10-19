@@ -55,6 +55,7 @@ class GetPoesSiteTestCase(unittest.TestCase):
         self.mag = 5.5
         rup = Dummy.get_rupture(mag=self.mag)
         ctx = full_context(sites, rup)
+        ctx.rup_id = 0
         ctx.rjb = numpy.array(dsts)
         ctx.rrup = numpy.array(dsts)
         self.rrup = ctx.rrup
@@ -84,7 +85,7 @@ class GetPoesSiteTestCase(unittest.TestCase):
 
         # This function is rather slow at the moment
         ctx = unittest.mock.Mock(mag=[self.mag], rrup=self.rrup, sids=[0],
-                                 ampcode=[sitecode])
+                                 ampcode=[sitecode], src_id=0)
         res = get_poes_site(self.meastd, self.cmaker, ctx)
 
         if False:

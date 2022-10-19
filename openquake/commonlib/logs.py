@@ -26,7 +26,7 @@ import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, dbapi
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -34,7 +34,7 @@ LEVELS = {'debug': logging.DEBUG,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-DATABASE = os.environ.get('OQ_DATABASE') or '%s:%d' % valid.host_port()
+DATABASE = '%s:%d' % valid.host_port()
 
 
 def dbcmd(action, *args):
@@ -44,7 +44,16 @@ def dbcmd(action, *args):
     :param string action: database action to perform
     :param tuple args: arguments
     """
-    sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect')
+    if os.environ.get('OQ_DATABASE') == 'local':
+        from openquake.server.db import actions
+        try:
+            func = getattr(actions, action)
+        except AttributeError:
+            return dbapi.db(action, *args)
+        else:
+            return func(dbapi.db, *args)
+    sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect',
+                         timeout=60)  # when the system is loaded 60 seconds
     with sock:
         res = sock.send((action,) + args)
         if isinstance(res, parallel.Result):
@@ -159,7 +168,7 @@ class LogContext:
     oqparam = None
 
     def __init__(self, job_ini, calc_id, log_level='info', log_file=None,
-                 user_name=None, hc_id=None):
+                 user_name=None, hc_id=None, host=None):
         self.log_level = log_level
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()
@@ -176,21 +185,25 @@ class LogContext:
                 self.params['calculation_mode'],
                 self.params['description'],
                 user_name,
-                hc_id)
+                hc_id,
+                host)
+            self.usedb = True
         elif calc_id == -1:
             # only works in single-user situations
             self.calc_id = get_last_calc_id() + 1
+            self.usedb = False
         else:
             # assume the calc_id was alreay created in the db
             self.calc_id = calc_id
+            self.usedb = True
 
-    def get_oqparam(self):
+    def get_oqparam(self, validate=True):
         """
-        :returns: a validated OqParam instance
+        :returns: an OqParam instance
         """
         if self.oqparam:  # set by submit_job
             return self.oqparam
-        return readinput.get_oqparam(self.params)
+        return readinput.get_oqparam(self.params, validate=validate)
 
     def __enter__(self):
         if not logging.root.handlers:  # first time
@@ -200,7 +213,8 @@ class LogContext:
         for handler in logging.root.handlers:
             fmt = logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S')
             handler.setFormatter(fmt)
-        self.handlers = [LogDatabaseHandler(self.calc_id)]
+        self.handlers = [LogDatabaseHandler(self.calc_id)] \
+            if self.usedb else []
         if self.log_file is None:
             # add a StreamHandler if not already there
             if not any(h for h in logging.root.handlers
@@ -224,7 +238,7 @@ class LogContext:
 
     def __getstate__(self):
         # ensure pickleability
-        return dict(calc_id=self.calc_id, params=self.params,
+        return dict(calc_id=self.calc_id, params=self.params, usedb=self.usedb,
                     log_level=self.log_level, log_file=self.log_file,
                     user_name=self.user_name, oqparam=self.oqparam)
 
@@ -235,7 +249,7 @@ class LogContext:
 
 
 def init(job_or_calc, job_ini, log_level='info', log_file=None,
-         user_name=None, hc_id=None):
+         user_name=None, hc_id=None, host=None):
     """
     :param job_or_calc: the string "job" or "calcXXX"
     :param job_ini: path to the job.ini file or dictionary of parameters
@@ -243,6 +257,7 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
     :param log_file: path to the log file (if any)
     :param user_name: user running the job (None means current user)
     :param hc_id: parent calculation ID (default None)
+    :param host: machine where the calculation is running (default None)
     :returns: a LogContext instance
 
     1. initialize the root logger (if not already initialized)
@@ -258,4 +273,5 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
         calc_id = int(job_or_calc[4:])
     else:
         raise ValueError(job_or_calc)
-    return LogContext(job_ini, calc_id, log_level, log_file, user_name, hc_id)
+    return LogContext(job_ini, calc_id, log_level, log_file,
+                      user_name, hc_id, host)

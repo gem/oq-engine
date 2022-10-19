@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+	<fragilityModel id="1" assetCategory="WSS" lossCategory="structural">
+		<description>Pumping Stations: From HAZUS  8-16, Pumping station 1:Medium pumping plants with unanchored components:Pumpingstations2:small plant with anchored component 
+Wells: HAZUS, Pipelines:HAZUS, without any factorial that differentiate breaks and leaks just for the demo
+</description>
+		<limitStates>slight moderate extensive complete</limitStates>
+		<fragilityFunction id="demand" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="slight">0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0</poes>
+			<poes ls="complete">0 0 0 0</poes>
+		</fragilityFunction>
+		<fragilityFunction id="auxillary_node" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1</imls>
+			<poes ls="slight">0 0 0</poes>
+			<poes ls="moderate">0 0 0</poes>
+			<poes ls="extensive">0 0 0</poes>
+			<poes ls="complete">0 0 0</poes>
+		</fragilityFunction>
+		<fragilityFunction id="pumping_station1" format="continuous" shape="logncdf">
+			<imls imt="PGA" noDamageLimit="0" minIML="0" maxIML="3"/>
+			<params ls="slight" mean="0.13" stddev="0.60"/>
+			<params ls="moderate" mean="0.28" stddev="0.50"/>
+			<params ls="extensive" mean="0.77" stddev="0.65"/>
+			<params ls="complete" mean="1.50" stddev="0.80"/>
+		</fragilityFunction>
+		<fragilityFunction id="pumping_station2" format="continuous" shape="logncdf">
+			<imls imt="PGA" noDamageLimit="0" minIML="0" maxIML="3"/>
+			<params ls="slight" mean="0.15" stddev="0.70"/>
+			<params ls="moderate" mean="0.36" stddev="0.65"/>
+			<params ls="extensive" mean="0.66" stddev="0.65"/>
+			<params ls="complete" mean="1.50" stddev="0.80"/>
+		</fragilityFunction>
+		<fragilityFunction id="well" format="continuous" shape="logncdf">
+			<imls imt="PGA" noDamageLimit="0" minIML="0" maxIML="3"/>
+			<params ls="slight" mean="0.15" stddev="0.75"/>
+			<params ls="moderate" mean="0.36" stddev="0.65"/>
+			<params ls="extensive" mean="0.72" stddev="0.65"/>
+			<params ls="complete" mean="1.50" stddev="0.80"/>
+		</fragilityFunction>
+		<fragilityFunction id="CI_regdia_300" format="discrete">
+			<imls imt="PGV" noDamageLimit="0">0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100</imls>
+			<poes ls="slight">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="complete">0 0.001120883 0.005320633 0.013196088 0.025057623 0.041059524 0.061234324 0.085508402 0.113712252 0.145589669 0.180807431 0.218966109 0.259612092 0.3022507 0.346360053 0.391405284 0.436852633 0.482182936 0.526904061 0.570561876 0.612749418</poes>
+		</fragilityFunction>
+		<fragilityFunction id="CI_regdia_100" format="discrete">
+			<imls imt="PGV" noDamageLimit="0">0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100</imls>
+			<poes ls="slight">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="complete">0 0.000373767 0.001776699 0.004418188 0.008423294 0.013878222 0.020842848 0.029356151 0.039439076 0.051096248 0.064317153 0.079077056 0.095337811 0.113048642 0.132146947 0.152559155 0.174201634 0.196981681 0.220798571 0.245544668 0.271106586</poes>
+		</fragilityFunction>
+		<fragilityFunction id="CI_regdia_500" format="discrete">
+			<imls imt="PGV" noDamageLimit="0">0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100</imls>
+			<poes ls="slight">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="complete">0 0.00186744 0.008851985 0.021896595 0.041412901 0.067491605 0.099959601 0.138412215 0.182242424 0.230673276 0.282794948 0.337605885 0.39405641 0.451092688 0.507698706 0.562934062 0.615965628 0.666091663 0.712757498 0.755562596 0.794259339</poes>
+		</fragilityFunction>
+		<fragilityFunction id="CI_regdia_200" format="discrete">
+			<imls imt="PGV" noDamageLimit="0">0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100</imls>
+			<poes ls="slight">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="complete">0 0.000747395 0.003550242 0.008816855 0.016775635 0.027563839 0.041251271 0.057850519 0.077322712 0.09958167 0.12449761 0.151900931 0.181586324 0.213317288 0.246831079 0.281844014 0.318057058 0.35516158 0.392845134 0.430797151 0.468714391</poes>
+		</fragilityFunction>
+		<fragilityFunction id="CI_regdia_150" format="discrete">
+			<imls imt="PGV" noDamageLimit="0">0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100</imls>
+			<poes ls="slight">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="complete">0 0.000560599 0.002663865 0.006619956 0.012608296 0.020744938 0.031100792 0.043709459 0.058571432 0.075656811 0.094907425 0.116238782 0.139542036 0.164686107 0.191519977 0.219875192 0.249568546 0.280404931 0.3121803 0.344684714 0.37770539</poes>
+		</fragilityFunction>
+		<fragilityFunction id="CI_regdia_250" format="discrete">
+			<imls imt="PGV" noDamageLimit="0">0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100</imls>
+			<poes ls="slight">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</poes>
+			<poes ls="complete">0 0.000934156 0.004435831 0.011008896 0.020925386 0.034335257 0.05129541 0.071782469 0.095700506 0.12288728 0.153120403 0.186124017 0.221576214 0.259117208 0.298358144 0.338890373 0.380294931 0.422151977 0.464049908 0.505593888 0.546413557</poes>
+		</fragilityFunction>
+	</fragilityModel>
+</nrml>

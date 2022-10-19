@@ -23,8 +23,6 @@ Module exports :class:`McVerry2006Asc`, :class:`McVerry2006SInter`,
 :class:`McVerry2006SSlabSC`, :class:`McVerry2006VolcSC`.
 """
 import numpy as np
-import shapely
-
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -409,16 +407,16 @@ class McVerry2006Asc(GMPE):
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: The legacy implementation of the McVerry model takes vs30 and maps
-    #  to New Zealand's categorical site classification scheme
+    #: to New Zealand's categorical site classification scheme
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, and rake and hypocentral
-    # depth rake is for determining fault style flags. Hypo depth is for
-    # subduction GMPEs
+    #: depth rake is for determining fault style flags. Hypo depth is for
+    #: subduction GMPEs
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'hypo_depth'}
 
     #: Required distance measure is RRup (paragraphy 3, page 26) which is
-    # defined as nearest distance to the source.
+    #: defined as nearest distance to the source.
     REQUIRES_DISTANCES = {'rrup'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
@@ -682,25 +680,8 @@ class McVerry2006Chch(McVerry2006AscSC):
 
     kind = "chch"
     additional_sigma = 0
-    REQUIRES_COMPUTED_PARAMETERS = {"in_cshm"}
-
-    def set_parameters(self, rup):
-        """
-        Checks if any part of the rupture surface mesh is located within the
-        intended boundaries of the Canterbury Seismic Hazard Model in
-        Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
-        of Christchurch, Earthquake Spectra, 30(1), 17-29.
-        """
-        lats = np.ravel(rup.surface.mesh.array[1])
-        lons = np.ravel(rup.surface.mesh.array[0])
-        # These coordinates are provided by M Gerstenberger (personal
-        # communication, 10 August 2018)
-        polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
-                                            (173.2, -43.9), (171.6, -43.9)])
-        points_in_polygon = [
-            shapely.geometry.Point(lons[i], lats[i]).within(polygon)
-            for i in np.arange(len(lons))]
-        rup.in_cshm = any(points_in_polygon)
+    REQUIRES_RUPTURE_PARAMETERS = (
+        McVerry2006AscSC.REQUIRES_RUPTURE_PARAMETERS | {"in_cshm"})
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

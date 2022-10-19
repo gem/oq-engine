@@ -42,6 +42,7 @@ class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
         # method should return values equal to the ones obtained by clipping
         # distances at 15 km.
         ctx = RuptureContext()
+        ctx.rup_id = 0
         ctx.sids = [0, 1, 2]
         ctx.vs30 = numpy.array([800.0, 800.0, 800.0])
         ctx.mag = 5.0

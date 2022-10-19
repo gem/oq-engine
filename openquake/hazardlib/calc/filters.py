@@ -26,8 +26,10 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import site
+from openquake.hazardlib.geo.surface.multi import (
+    MultiSurface, _multi_distances, _multi_rx_ry0)
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
+    KM_TO_DEGREES, angular_distance, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
 U32 = numpy.uint32
@@ -44,13 +46,63 @@ def magstr(mag):
     return '%.2f' % numpy.float32(mag)
 
 
-def get_distances(rupture, sites, param):
+def _distances_from_dcache(rup, sites, param, dcache):
+    """
+    Calculates the distances for multi-surfaces using a cache.
+
+    :param rup:
+        An instance of :class:`openquake.hazardlib.source.rupture.BaseRupture`
+    :param sites:
+        A list of sites or a site collection
+    :param param:
+        The required rupture-distance parameter
+    :param dcache:
+        A dictionary with the distances. The first key is the
+        surface ID and the second one is the type of distance. In a traditional
+        calculation dcache is instatianted by in the `get_ctx_iter` method of the
+        :class:`openquake.hazardlib.contexts.ContextMaker`
+    :returns:
+        The computed distances for the rupture in input
+    """
+    # Update the distance cache
+    suids = []  # surface IDs
+    for srf in rup.surface.surfaces:
+        suids.append(srf.suid)
+        if (srf.suid, param) not in dcache:
+            # This function returns the distances that will be added to the
+            # cache. In case of Rx and Ry0, the information cache will
+            # include the ToR of each surface as well as the GC2 t and u
+            # coordinates for each section.
+            for key, val in _multi_distances(srf, sites, param).items():
+                dcache[srf.suid, key] = val
+    # Computing distances using the cache
+    if param in ['rjb', 'rrup']:
+        dcache.hit += 1
+        distances = dcache[suids[0], param]
+        # This is looping over all the surface IDs composing the rupture
+        for suid in suids[1:]:
+            distances = numpy.minimum(distances, dcache[suid, param])
+    elif param in ['rx', 'ry0']:
+        # The computed distances. In this case we are not going to add them to
+        # the cache since they cannot be reused
+        distances = _multi_rx_ry0(dcache, suids, param)
+    else:
+        raise ValueError("Unknown distance measure %r" % param)
+    return distances
+
+
+def get_distances(rupture, sites, param, dcache=None):
     """
     :param rupture: a rupture
     :param sites: a mesh of points or a site collection
     :param param: the kind of distance to compute (default rjb)
+    :param dcache: None or a dictionary (surfaceID, dist_type) -> distances
     :returns: an array of distances from the given sites
     """
+    if (dcache is not None and isinstance(rupture.surface, MultiSurface) and
+            hasattr(rupture.surface.surfaces[0], 'suid')):
+        return _distances_from_dcache(
+            rupture, sites.complete, param, dcache)[sites.sids]
     if not rupture.surface:  # PointRupture
         dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'rrup':
@@ -249,7 +301,7 @@ def split_source(src):
     grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib
     if len(splits) > 1:
         for i, split in enumerate(splits):
-            split.source_id = '%s:%s' % (src.source_id, i)
+            split.source_id = '%s.%s' % (src.source_id, i)
             split.trt_smr = src.trt_smr
             split.grp_id = grp_id
             split.id = src.id
@@ -290,12 +342,11 @@ class SourceFilter(object):
             self.integration_distance = integration_distance
         self.slc = slice(None)
 
-    # not used right now
-    def reduce(self, factor=100):
+    def reduce(self, multiplier=5):
         """
         Reduce the SourceFilter to a subset of sites
         """
-        idxs = numpy.arange(0, len(self.sitecol), factor)
+        idxs = numpy.arange(0, len(self.sitecol), multiplier)
         sc = object.__new__(site.SiteCollection)
         sc.array = self.sitecol[idxs]
         sc.complete = self.sitecol.complete
@@ -320,7 +371,7 @@ class SourceFilter(object):
         except Exception as exc:
             raise
             raise exc.__class__('source %s: %s' % (src.source_id, exc))
-        return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
+        return bbox
 
     def get_rectangle(self, src):
         """

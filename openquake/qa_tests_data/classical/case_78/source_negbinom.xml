@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    investigation_time="1"
+    name="nb"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <pointSource
+            id="00000"
+            name="point00000"
+            tom="NegativeBinomialTOM"
+            mu="0.1"
+            alpha="2.0"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            0.05 0.05
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        30
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="5.0"
+                >
+                    <!--Simple MFD of only one 0.1-bin -->
+                    <occurRates>
+                        0.1
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90" probability="1.0" rake="0.0" strike="0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="15" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="00001"
+            name="point00001"
+            tom="NegativeBinomialTOM"
+            mu="0.11"
+            alpha="2.0"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            0.06 0.10
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        30
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="5.0"
+                >
+                    <!--Simple MFD of only one 0.1-bin -->
+                    <occurRates>
+                        0.1
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90" probability="1.0" rake="0.0" strike="0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="15" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

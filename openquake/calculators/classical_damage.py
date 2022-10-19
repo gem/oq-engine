@@ -50,7 +50,7 @@ def classical_damage(riskinputs, param, monitor):
         for taxo, assets in ri.asset_df.groupby('taxonomy'):
             for rlz in range(R):
                 pcurve = haz.extract(rlz)
-                out = crmodel.get_output(taxo, assets, pcurve, rlz=rlz)
+                out = crmodel.get_output(assets, pcurve)
                 for li, loss_type in enumerate(crmodel.loss_types):
                     for a, frac in zip(assets.ordinal, out[loss_type]):
                         result[a][rlz, li] = frac
@@ -77,7 +77,7 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         for a in result:
             damages[a] = result[a]
         self.datastore['damages-rlzs'] = damages
-        stats.set_rlzs_stats(self.datastore, 'damages',
+        stats.set_rlzs_stats(self.datastore, 'damages-rlzs',
                              assets=self.assetcol['id'],
                              loss_type=self.oqparam.loss_types,
                              dmg_state=self.crmodel.damage_states)

@@ -21,10 +21,10 @@ import logging
 import numpy
 import pandas
 
-from openquake.baselib import hdf5, general, parallel
+from openquake.baselib import hdf5, general
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.risklib import scientific
-from openquake.commonlib import datastore
+from openquake.risklib import scientific, connectivity
+from openquake.commonlib import datastore, calc
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
 from openquake.calculators.post_risk import (
@@ -46,22 +46,46 @@ def zero_dmgcsq(A, R, crmodel):
     return numpy.zeros((A, R, L, Dc), F32)
 
 
-def event_based_damage(df, oqparam, monitor):
+def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
+    """
+    :param gmfslices: an array (S, 3) with S slices (start, stop, weight)
+    :param oqparam: OqParam instance
+    :param dstore: DataStore instance from which to read the GMFs
+    :param monitor: a Monitor instance
+    :returns: a dictionary of arrays, the output of event_based_damage
+    """
+    if dstore.parent:
+        dstore.parent.open('r')
+    dfs = []
+    with dstore, monitor('reading data', measuremem=True):
+        for gmfslice in gmfslices:
+            slc = slice(gmfslice[0], gmfslice[1])
+            dfs.append(dstore.read_df('gmf_data', slc=slc))
+        df = pandas.concat(dfs)
+    return event_based_damage(df, oqparam, dstore, monitor)
+
+
+def event_based_damage(df, oqparam, dstore, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param oqparam: parameters coming from the job.ini
+    :param dstore: a DataStore instance
     :param monitor: a Monitor instance
     :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))
     """
     mon_risk = monitor('computing risk', measuremem=False)
-    dstore = datastore.read(oqparam.hdf5path, parentdir=oqparam.parentdir)
     K = oqparam.K
     with monitor('reading gmf_data'):
-        if hasattr(df, 'start'):  # it is actually a slice
-            df = dstore.read_df('gmf_data', slc=df)
+        if oqparam.parentdir:
+            dstore = datastore.read(
+                oqparam.hdf5path, parentdir=oqparam.parentdir)
+        else:
+            dstore.open('r')
         assetcol = dstore['assetcol']
         if K:
-            aggids, _ = assetcol.build_aggids(oqparam.aggregate_by)
+            # TODO: move this in the controller!
+            aggids, _ = assetcol.build_aggids(
+                oqparam.aggregate_by, oqparam.max_aggregations)
         else:
             aggids = numpy.zeros(len(assetcol), U16)
         crmodel = monitor.read('crmodel')
@@ -75,6 +99,7 @@ def event_based_damage(df, oqparam, monitor):
     if R > 1:
         allrlzs = dstore['events']['rlz_id']
     loss_types = crmodel.oqparam.loss_types
+    assert len(loss_types) == L
     float_dmg_dist = oqparam.float_dmg_dist  # True by default
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
@@ -94,7 +119,7 @@ def event_based_damage(df, oqparam, monitor):
                 if not float_dmg_dist:
                     dprobs = rng.boolean_dist(probs, num_sims).mean(axis=1)
             for taxo, adf in asset_df.groupby('taxonomy'):
-                out = crmodel.get_output(taxo, adf, gmf_df)
+                out = crmodel.get_output(adf, gmf_df)
                 aids = adf.index.to_numpy()
                 assets = adf.to_records()
                 if float_dmg_dist:
@@ -143,18 +168,19 @@ def event_based_damage(df, oqparam, monitor):
                             for kids in aggids:
                                 for a, aid in enumerate(aids):
                                     dddict[eid, kids[aid]][lti] += d3[a, e]
-    return to_dframe(dddict, ci, L), dmgcsq
+    return _dframe(dddict, ci, loss_types), dmgcsq
 
 
-def to_dframe(adic, ci, L):
+def _dframe(adic, ci, loss_types):
+    # convert {eid, kid: dd} into a DataFrame (agg_id, event_id, loss_id)
     dic = general.AccumDict(accum=[])
     for (eid, kid), dd in sorted(adic.items()):
-        for lti in range(L):
-            dic['event_id'].append(eid)
+        for li, lt in enumerate(loss_types):
             dic['agg_id'].append(kid)
-            dic['loss_id'].append(lti)
+            dic['event_id'].append(eid)
+            dic['loss_id'].append(scientific.LOSSID[lt])
             for sname, si in ci.items():
-                dic[sname].append(dd[lti, si])
+                dic[sname].append(dd[li, si])
     fix_dtypes(dic)
     return pandas.DataFrame(dic)
 
@@ -192,12 +218,8 @@ class DamageCalculator(EventBasedRiskCalculator):
             oq.parentdir = os.path.dirname(self.datastore.ppath)
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore)  # check
-        eids = self.datastore['gmf_data/eid'][:]
-        logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
         self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, self.crmodel)
-        self.datastore.swmr_on()
-        smap = parallel.Starmap(
-            event_based_damage, self.gen_args(eids), h5=self.datastore.hdf5)
+        smap = calc.starmap_from_gmfs(damage_from_gmfs, oq, self.datastore)
         smap.monitor.save('assets', self.assetcol.to_dframe('id'))
         smap.monitor.save('crmodel', self.crmodel)
         return smap.reduce(self.combine)
@@ -226,11 +248,16 @@ class DamageCalculator(EventBasedRiskCalculator):
         Store damages-rlzs/stats, aggrisk and aggcurves
         """
         oq = self.oqparam
-        # no damage check
+        # no damage check, perhaps the sites where disjoint from gmf_data
         if self.dmgcsq[:, :, :, 1:].sum() == 0:
-            self.nodamage = True
-            logging.warning(
-                'There is no damage, perhaps the hazard is too small?')
+            haz_sids = self.datastore['gmf_data/sid'][:]
+            count = numpy.isin(haz_sids, self.sitecol.sids).sum()
+            if count == 0:
+                raise ValueError('The sites in gmf_data are disjoint from the '
+                                 'site collection!?')
+            else:
+                logging.warning(
+                    'There is no damage, perhaps the hazard is too small?')
             return
 
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
@@ -252,8 +279,15 @@ class DamageCalculator(EventBasedRiskCalculator):
             self.dmgcsq[:, r] /= ne
         self.datastore['damages-rlzs'] = self.dmgcsq
         set_rlzs_stats(self.datastore,
-                       'damages',
+                       'damages-rlzs',
                        asset_id=self.assetcol['id'],
                        rlz=numpy.arange(self.R),
                        loss_type=oq.loss_types,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
+
+        fields = self.assetcol.array.dtype.names
+        if 'supply_or_demand' in fields:
+            demand_nodes, avg_conn_loss = connectivity.analysis(self.datastore)
+            self.datastore.create_df('functional_demand_nodes', demand_nodes)
+            logging.info('Stored functional_demand_nodes')
+            logging.info('Average connectivity loss: %.4f', avg_conn_loss)

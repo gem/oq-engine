@@ -1368,3 +1368,21 @@ def fix_mesh(msh):
             if not (check_row and check_col):
                 msh[i, j, :] = np.nan
     return msh
+
+
+def kite_to_geom(surface):
+    """
+    :returns: the geometry array describing the KiteSurface
+    """
+    shape_y, shape_z = surface.mesh.array.shape[1:]
+    coords = np.float32(surface.mesh.array.flat)
+    return np.concatenate([np.float32([1, shape_y, shape_z]), coords])
+
+
+def geom_to_kite(geom):
+    """
+    :returns: KiteSurface described by the given geometry array
+    """
+    shape_y, shape_z = int(geom[1]), int(geom[2])
+    array = geom[3:].astype(np.float64).reshape(3, shape_y, shape_z)
+    return KiteSurface(RectangularMesh(*array))

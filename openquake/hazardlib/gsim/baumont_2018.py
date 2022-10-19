@@ -43,7 +43,7 @@ class BaumontEtAl2018High2210IAVGDC30n7(GMPE):
     """
     Implements "Intensity predictive attenuation models
     calibrated in Mw for metropolitan France
-    David Baumont,Kévin Manchuel,Paola Traversa, Christophe Durouchoux,
+    David Baumont,Kevin Manchuel, Paola Traversa, Christophe Durouchoux,
     Emmanuelle Nayman, Gabriele Ameri
     Bull Earthquake Eng (2018) 16:2285–2310
     https://doi.org/10.1007/s10518-018-0344-6
@@ -52,7 +52,7 @@ class BaumontEtAl2018High2210IAVGDC30n7(GMPE):
     Intensity Model:Q Domain:Depth Control:DBMI Data Selection
     given in Table 1:
     Intensity model:
-    (1) Regional geometrical spreading,
+    (1) Regional geometrical spreading
     (2) Geometrical spreading and regional intrinsic attenuation
     Q-domain:(0) France, (1) France and Italy, (2) Q-regions (France and Italy)
     Depth control:
@@ -63,8 +63,8 @@ class BaumontEtAl2018High2210IAVGDC30n7(GMPE):
     Min Dc (km):  30, 50
     Min # intensity classes: 3,5,7
     Intensity metrics: IAVG, RAVG, ROBS, RP50, RP84
-    ################################
-    the model implmented is [2.2.1.0]
+
+    The model implemented is [2.2.1.0]
     for high attenuation, MinDc=30 and Min = 7 int. classes
     and IAVG as the base classes
 
@@ -83,6 +83,7 @@ class BaumontEtAl2018High2210IAVGDC30n7(GMPE):
 
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
+    #: Required distance rhypo
     REQUIRES_DISTANCES = {'rhypo'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):

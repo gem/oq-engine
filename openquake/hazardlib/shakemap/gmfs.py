@@ -19,7 +19,7 @@
 import math
 import logging
 import numpy
-from scipy.stats import truncnorm, norm
+from scipy.stats import truncnorm
 from scipy import interpolate
 
 from openquake.baselib.general import CallableDict

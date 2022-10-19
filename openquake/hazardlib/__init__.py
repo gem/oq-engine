@@ -232,13 +232,17 @@ def read_input(hparams, **extra):
     # fix source attributes
     idx = 0
     num_rlzs = gslt.get_num_paths()
+    mags_by_trt = general.AccumDict(accum=set())
     for grp_id, sg in enumerate(groups):
         assert len(sg)  # sanity check
         for src in sg:
+            if hasattr(src, 'rupture'):
+                mags_by_trt[sg.trt].add('%.2f' % src.rupture.mag)
             src.id = idx
             src.grp_id = grp_id
             src.trt_smr = grp_id
             src.samples = num_rlzs
+            src.smweight = 1. / num_rlzs
             idx += 1
 
     cmakerdict = {}  # trt => cmaker
@@ -246,6 +250,7 @@ def read_input(hparams, **extra):
     n = hparams.get('number_of_logic_tree_samples', 0)
     s = hparams.get('random_seed', 42)
     for trt, rlzs_by_gsim in gslt.get_rlzs_by_gsim_trt(n, s).items():
+        hparams['mags'] = sorted(mags_by_trt[trt] or mags_by_trt['*'])
         cmakerdict[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, hparams)
         cmakerdict[trt].start = start
         start += len(rlzs_by_gsim)

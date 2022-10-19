@@ -42,6 +42,7 @@ import getpass
 import zipfile
 import tempfile
 import argparse
+import platform
 import subprocess
 from urllib.request import urlopen
 try:
@@ -63,6 +64,8 @@ except ImportError:
         else:
             sys.exit('venv is missing! Please see the documentation of your '
                      'Operating System to install it')
+
+CDIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class server:
@@ -182,7 +185,24 @@ PLATFORM = {'linux': ('linux64',),  # from sys.platform to requirements.txt
             'win32': ('win64',)}
 DEMOS = 'https://artifacts.openquake.org/travis/demos-master.zip'
 GITBRANCH = 'https://github.com/gem/oq-engine/archive/%s.zip'
-STANDALONE = 'https://github.com/gem/oq-platform-%s/archive/master.zip'
+URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
+
+def ensure(pip=None, pyvenv=None):
+    """
+    Create venv and install pip
+    """
+    try:
+        if pyvenv:
+            venv.EnvBuilder(with_pip=True).create(pyvenv)
+        else:
+            subprocess.check_call([pip, '-m', 'ensurepip', '--upgrade'])
+    except subprocess.CalledProcessError as exc:
+        if 'died with <Signals.SIGABRT' in str(exc):
+            shutil.rmtree(inst.VENV)
+            raise RuntimeError(
+                'Could not execute ensurepip --upgrade: %s'
+                % ('Probably you are using the system Python (%s)'
+                   % sys.executable))
 
 
 def get_branch(version):
@@ -203,14 +223,23 @@ def install_standalone(venv):
     Install the standalone Django applications if possible
     """
     print("The standalone applications are not installed yet")
-    return
-    for app in 'standalone ipt taxtweb taxonomy'.split():
-        env = {'PYBUILD_NAME': 'oq-taxonomy'} if app == 'taxonomy' else {}
+    if sys.platform == 'win32':
+        if os.path.exists('python\\python._pth.old'):
+            pycmd = inst.VENV + '\\python.exe'
+        else:
+            pycmd = inst.VENV + '\\Scripts\\python.exe'
+    else:
+        pycmd = inst.VENV + '/bin/python3'
+    #
+    for app in 'oq-platform-standalone oq-platform-ipt \
+        oq-platform-taxonomy oq-platform-taxtweb openquake.taxonomy'.split():
         try:
-            subprocess.check_call(['%s/bin/pip' % venv, 'install',
-                                   '--upgrade', STANDALONE % app], env=env)
+            print("Applications " +  app + " are not installed yet \n")
+
+            subprocess.check_call([pycmd, '-m', 'pip', 'install',
+                            '--find-links', URL_STANDALONE, app])
         except Exception as exc:
-            print('%s: could not install %s' % (exc, STANDALONE % app))
+            print('%s: could not install %s' % (exc, app))
 
 
 def before_checks(inst, port, remove, usage):
@@ -297,24 +326,6 @@ def fix_version(commit, venv):
         f.write(''.join(lines))
 
 
-def remove_old_venv(basedir):
-    """
-    Engine versions < 3.14 were installing the venv in /opt/openquake,
-    so we need to remove leftover directories and files
-    """
-    def find(*names):
-        for name in names:
-            path = os.path.join(basedir, name)
-            if os.path.exists(path):
-                yield path
-    for dname in find("bin", "include", "lib"):
-        print('Removing', dname)
-        shutil.rmtree(dname)
-    for fname in find("lib64", "openquake.cfg", "pyvenv.cfg"):
-        print('Removing', fname)
-        os.remove(fname)
-
-
 def install(inst, version):
     """
     Install the engine in one of the three possible modes
@@ -327,7 +338,6 @@ def install(inst, version):
         except KeyError:
             subprocess.check_call(['useradd', '-m', '-U', 'openquake'])
             print('Created user openquake')
-        remove_old_venv(os.path.dirname(inst.VENV))
 
     # create the database
     if not os.path.exists(inst.OQDATA):
@@ -337,8 +347,7 @@ def install(inst, version):
 
     # create the openquake venv if necessary
     if not os.path.exists(inst.VENV) or not os.listdir(inst.VENV):
-        # create venv
-        venv.EnvBuilder(with_pip=True).create(inst.VENV)
+        ensure(pyvenv=inst.VENV)
         print('Created %s' % inst.VENV)
 
     if sys.platform == 'win32':
@@ -351,7 +360,7 @@ def install(inst, version):
 
     # upgrade pip and before check that it is installed in venv
     if sys.platform != 'win32':
-        subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
+        ensure(pip=pycmd)
         subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
                                'pip', 'wheel'])
     else:
@@ -365,13 +374,17 @@ def install(inst, version):
 
     # install the requirements
     branch = get_branch(version)
+    if sys.platform == 'darwin':
+        mac = '_' + platform.machine(),  # x86_64 or arm64
+    else:
+        mac = '',
     req = f'https://raw.githubusercontent.com/gem/oq-engine/{branch}/' \
-        'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
+        'requirements-py%d%d-%s%s.txt' % (PYVER + PLATFORM[sys.platform] + mac)
 
     subprocess.check_call([pycmd, '-m', 'pip', 'install', '-r', req])
 
     if (inst is devel or inst is devel_server):  # install from the local repo
-        subprocess.check_call([pycmd, '-m', 'pip', 'install', '-e', '.'])
+        subprocess.check_call([pycmd, '-m', 'pip', 'install', '-e', CDIR])
     elif version is None:  # install the stable version
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine'])
@@ -405,6 +418,10 @@ def install(inst, version):
     else:
         oqreal = '%s/bin/oq' % inst.VENV
 
+    if inst in (user, devel):  # create/upgrade the db in the default location
+        # do not stop if `oq dbserver upgrade` is missing (versions < 3.15)
+        subprocess.run([oqreal, 'dbserver', 'upgrade'])
+
     if (inst is server and not os.path.exists(inst.OQ) or
        inst is devel_server and not os.path.exists(inst.OQ)):
         os.symlink(oqreal, inst.OQ)
@@ -436,30 +453,31 @@ def install(inst, version):
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
                     srv = SERVICE.format(service=service, OQDATA=inst.OQDATA,
-                                         afterservice=afterservice, 
+                                         afterservice=afterservice,
                                          command=command)
                     f.write(srv)
             subprocess.check_call(
                 ['systemctl', 'enable', '--now', service_name])
             subprocess.check_call(['systemctl', 'start', service_name])
 
-    # download and unzip the demos
-    try:
-        with urlopen(DEMOS) as f:
-            data = f.read()
-    except OSError:
-        msg = 'However, we could not download the demos from %s' % DEMOS
-    else:
-        th, tmp = tempfile.mkstemp(suffix='.zip')
-        with os.fdopen(th, 'wb') as t:
-            t.write(data)
-        zipfile.ZipFile(tmp).extractall(inst.VENV)
-        os.remove(tmp)
-        path = os.path.join(inst.VENV, 'demos', 'hazard',
-                            'AreaSourceClassicalPSHA', 'job.ini')
-        msg = ('You can run a test calculation with the command\n'
-               f'{oqreal} engine --run {path}')
-    print('The engine was installed successfully.\n' + msg)
+    if inst in (user, server):
+        # download and unzip the demos
+        try:
+            with urlopen(DEMOS) as f:
+                data = f.read()
+        except OSError:
+            msg = 'However, we could not download the demos from %s' % DEMOS
+        else:
+            th, tmp = tempfile.mkstemp(suffix='.zip')
+            with os.fdopen(th, 'wb') as t:
+                t.write(data)
+            zipfile.ZipFile(tmp).extractall(inst.VENV)
+            os.remove(tmp)
+            path = os.path.join(inst.VENV, 'demos', 'hazard',
+                                'AreaSourceClassicalPSHA', 'job.ini')
+            msg = ('You can run a test calculation with the command\n'
+                   f'{oqreal} engine --run {path}')
+            print('The engine was installed successfully.\n' + msg)
 
 
 def remove(inst):

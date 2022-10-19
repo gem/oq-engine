@@ -205,16 +205,16 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import config, hdf5, workerpool, version
+from openquake.baselib import config, hdf5, workerpool
 from openquake.baselib.python3compat import decode
 from openquake.baselib.zeromq import zmq, Socket, TimeoutError
 from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp)
+    gettemp, engine_version)
 
-sys.setrecursionlimit(1200)  # raised a bit to make pickle happier
+sys.setrecursionlimit(2000)  # raised to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
 GB = 1024 ** 3
@@ -414,11 +414,11 @@ class Result(object):
         :returns: a new Result instance
         """
         try:
-            if mon.version != version:
+            if mon.version and mon.version != engine_version():
                 raise RuntimeError(
                     'The master is at version %s while the worker %s is at '
                     'version %s' % (mon.version, socket.gethostname(),
-                                    version))
+                                    engine_version()))
             if mon.config.dbserver.host != config.dbserver.host:
                 raise RuntimeError(
                     'The master has dbserver.host=%s while the worker has %s'
@@ -454,7 +454,6 @@ def check_mem_usage(soft_percent=None, hard_percent=None):
 
 
 dummy_mon = Monitor()
-dummy_mon.version = version
 dummy_mon.config = config
 dummy_mon.backurl = None
 
@@ -482,6 +481,8 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
 
     if mon.operation.endswith('_'):
         name = mon.operation[:-1]
+    elif func is split_task:
+        name = args[1].__name__
     else:
         name = func.__name__
     mon = mon.new(operation='total ' + name, measuremem=True)
@@ -581,7 +582,8 @@ class IterResult(object):
                 del self.h5['task_sent']
                 self.h5['task_sent'] = str(task_sent)
                 name = result.mon.operation[6:]  # strip 'total '
-                result.mon.save_task_info(self.h5, result, name, mem_gb)
+                n = self.name + ':' + name if name == 'split_task' else name
+                result.mon.save_task_info(self.h5, result, n, mem_gb)
                 result.mon.flush(self.h5)
             elif not result.func:  # real output
                 yield val
@@ -756,10 +758,13 @@ class Starmap(object):
             self.calc_id = None
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)
-        self.monitor = Monitor(task_func.__name__)
+        if task_func is split_task:
+            self.name = task_args[0][1].__name__
+        else:
+            self.name = task_func.__name__
+        self.monitor = Monitor(self.name)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
-        self.name = self.monitor.operation
         self.task_args = task_args
         self.progress = progress
         self.h5 = h5
@@ -816,7 +821,6 @@ class Starmap(object):
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
                 self.return_ip, self.socket.port)
-            self.monitor.version = version
             self.monitor.config = config
         OQ_TASK_NO = os.environ.get('OQ_TASK_NO')
         if OQ_TASK_NO is not None and self.task_no != int(OQ_TASK_NO):
@@ -843,9 +847,6 @@ class Starmap(object):
         """
         Submit the given arguments to the underlying task
         """
-        if self.num_cores <= 8:  # do not split, use less memory
-            self.submit(args)
-            return
         self.monitor.operation = self.task_func.__name__ + '_'
         self.submit(
             (args[0], self.task_func, args[1:], duration, outs_per_task),

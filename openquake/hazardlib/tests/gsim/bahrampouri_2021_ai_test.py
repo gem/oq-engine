@@ -27,14 +27,12 @@ MEAN_DISCREP = 0.1
 
 class BahrampouriEtAl2021IAAscTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BahrampouriEtAl2021Asc
-
     MEAN_FILE = "BMG20/BMG20_AI_ASC_mean.csv"
     TOTAL_FILE = "BMG20/BMG20_AI_ASC_TOTAL.csv"
     INTRA_FILE = "BMG20/BMG20_AI_ASC_INTRA.csv"
 
     def test_all(self):
-        self.check(self.MEAN_FILE, self.TOTAL_FILE, self.INTRA_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
+        self.check( self.MEAN_FILE, self.TOTAL_FILE,self.INTRA_FILE,  max_discrep_percentage=MEAN_DISCREP)
 
 class BahrampouriEtAl2021IAInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BahrampouriEtAl2021SInter
@@ -44,8 +42,7 @@ class BahrampouriEtAl2021IAInterTestCase(BaseGSIMTestCase):
     INTRA_FILE = "BMG20/BMG20_AI_SInter_INTRA.csv"
 
     def test_all(self):
-        self.check(self.MEAN_FILE, self.TOTAL_FILE, self.INTRA_FILE,
-                   max_discrep_percentage=MEAN_DISCREP) #
+        self.check(self.MEAN_FILE, self.TOTAL_FILE, self.INTRA_FILE, max_discrep_percentage=MEAN_DISCREP)
 
 class BahrampouriEtAl2021IATestSlabCase(BaseGSIMTestCase):
     GSIM_CLASS = BahrampouriEtAl2021SSlab

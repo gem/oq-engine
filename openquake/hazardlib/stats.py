@@ -38,25 +38,20 @@ except ImportError:
 @compile(["float64[:,:](float64, float64[:,:])",
           "float64[:](float64, float64[:])"])
 def _truncnorm_sf(truncation_level, values):
-    """
-    Survival function for truncated normal distribution.
-
-    Assumes zero mean, standard deviation equal to one and symmetric
-    truncation. It is faster than using scipy.stats.truncnorm.sf
-
-    :param truncation_level:
-        Positive float number representing the truncation on both sides
-        around the mean, in units of sigma, or None, for non-truncation
-    :param values:
-        Numpy array of values as input to a survival function for the given
-        distribution.
-    :returns:
-        Numpy array of survival function results in a range between 0 and 1.
-
-    >>> from scipy.stats import truncnorm
-    >>> truncnorm(-3, 3).sf(0.12345) == _truncnorm_sf(3, 0.12345)
-    True
-    """
+    # Fast survival function for truncated normal distribution.
+    # Assumes zero mean, standard deviation equal to one and symmetric
+    # truncation. It is faster than using scipy.stats.truncnorm.sf:
+    #
+    # _truncnorm_sf(sig, x) == truncnorm(-sig, sig).sf(x)
+    #
+    # :param truncation_level:
+    #     Positive float number representing the truncation on both sides
+    #     around the mean, in units of sigma, or None, for non-truncation
+    # :param values:
+    #     Numpy array of values as input to a survival function for the given
+    #     distribution.
+    # :returns:
+    #     Numpy array of survival function results in a range between 0 and 1.
     if truncation_level == 0.:
         return values
 
@@ -113,17 +108,18 @@ def norm_cdf(x, a, s):
 
 def calc_momenta(array, weights):
     """
-    :param array: an array of shape E, ...
+    :param array: an array of shape (E, ...)
     :param weights: an array of length E
-    :returns: an array of shape (2, ...) with the first two statistical moments
+    :returns: an array of shape (3, ...) with the first 3 statistical moments
     """
-    momenta = numpy.zeros((2,) + array.shape[1:])
-    momenta[0] = numpy.einsum('i,i...', weights, array)
-    momenta[1] = numpy.einsum('i,i...', weights, array**2)
+    momenta = numpy.zeros((3,) + array.shape[1:])
+    momenta[0] = weights.sum()
+    momenta[1] = numpy.einsum('i,i...', weights, array)
+    momenta[2] = numpy.einsum('i,i...', weights, array**2)
     return momenta
 
 
-def calc_avg_std(momenta, totweight):
+def calc_avg_std(momenta):
     """
     :param momenta: an array of shape (2, ...) obtained via calc_momenta
     :param totweight: total weight to divide for
@@ -131,13 +127,15 @@ def calc_avg_std(momenta, totweight):
 
     >>> arr = numpy.array([[2, 4, 6], [3, 5, 7]])
     >>> weights = numpy.ones(2)
-    >>> calc_avg_std(calc_momenta(arr, weights), weights.sum())
+    >>> calc_avg_std(calc_momenta(arr, weights))
     array([[2.5, 4.5, 6.5],
            [0.5, 0.5, 0.5]])
     """
-    avgstd = numpy.zeros_like(momenta)
-    avgstd[0] = avg = momenta[0] / totweight
-    avgstd[1] = numpy.sqrt(numpy.maximum(momenta[1] / totweight - avg ** 2, 0))
+    avgstd = numpy.zeros_like(momenta[1:])
+    avgstd[0] = avg = momenta[1] / momenta[0]
+    # make sure the variance is positive (due to numeric errors can be -1E-9)
+    var = numpy.maximum(momenta[2] / momenta[0] - avg ** 2, 0.)
+    avgstd[1] = numpy.sqrt(var)
     return avgstd
 
 
@@ -153,7 +151,7 @@ def avg_std(array, weights=None):
     """
     if weights is None:
         weights = numpy.ones(len(array))
-    return calc_avg_std(calc_momenta(array, weights), weights.sum())
+    return calc_avg_std(calc_momenta(array, weights))
 
 
 def geom_avg_std(array, weights=None):
@@ -367,23 +365,23 @@ def apply_stat(f, arraylist, *extra, **kw):
         return f(arraylist, *extra, **kw)
 
 
-def set_rlzs_stats(dstore, prefix, **attrs):
+def set_rlzs_stats(dstore, name, **attrs):
     """
     :param dstore: a DataStore object
-    :param prefix: dataset prefix, assume <prefix>-rlzs is already stored
+    :param name: dataset name of kind <prefix>-rlzs
     """
-    arrayNR = dstore[prefix + '-rlzs'][()]
+    arrayNR = dstore[name][()]
     R = arrayNR.shape[1]
     pairs = list(attrs.items())
     pairs.insert(1, ('rlz', numpy.arange(R)))
-    dstore.set_shape_descr(prefix + '-rlzs', **dict(pairs))
+    dstore.set_shape_descr(name, **dict(pairs))
     if R > 1:
         stats = dstore['oqparam'].hazard_stats()
         if not stats:
             return
         statnames, statfuncs = zip(*stats.items())
         weights = dstore['weights'][()]
-        name = prefix + '-stats'
+        name = name.replace('-rlzs', '-stats')
         dstore[name] = compute_stats2(arrayNR, statfuncs, weights)
         pairs = list(attrs.items())
         pairs.insert(1, ('stat', statnames))

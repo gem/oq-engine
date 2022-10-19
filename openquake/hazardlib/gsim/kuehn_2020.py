@@ -600,7 +600,6 @@ class KuehnEtAl2020SInter(GMPE):
                       interpolated to the magnitude and distances required
     """
     experimental = True
-    gmpe_table = True  # enable split by mag
 
     #: Supported tectonic region type is subduction interface
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
@@ -645,8 +644,7 @@ class KuehnEtAl2020SInter(GMPE):
                  self.REQUIRES_SITES_PARAMETERS.union({"z2pt5", })
         elif self.region in ("NZL", "TWN"):
             # If region is NZL or TWN then the GMPE needs Z1.0
-            self.REQUIRES_SITES_PARAMETERS = \
-                 self.REQUIRES_SITES_PARAMETERS.union({"z1pt0", })
+            self.REQUIRES_SITES_PARAMETERS |= {"z1pt0"}
         else:
             pass
 
@@ -654,6 +652,7 @@ class KuehnEtAl2020SInter(GMPE):
         # epsilon for epistemic uncertainty
         self.sigma_mu_epsilon = sigma_mu_epsilon
         if self.sigma_mu_epsilon:
+            self.gmpe_table = True  # enable split by mag
             self.sigma_mu_model = _retrieve_sigma_mu_data(
                 self.DEFINED_FOR_TECTONIC_REGION_TYPE, self.region)
         else:
@@ -688,7 +687,7 @@ class KuehnEtAl2020SInter(GMPE):
                 pga_soil = get_mean_values(C_PGA, self.region, trt, m_b,
                                            ctx, pga1100)
                 break
-        [mag] = np.unique(np.round(ctx.mag, 6))
+
         for m, imt in enumerate(imts):
             # Get coefficients for imt
             C = self.COEFFS[imt]
@@ -709,6 +708,7 @@ class KuehnEtAl2020SInter(GMPE):
                                           ctx, pga1100)
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
+                [mag] = np.unique(np.round(ctx.mag, 2))
                 sigma_mu_adjust = get_sigma_mu_adjustment(
                     self.sigma_mu_model, imt, mag, ctx.rrup)
                 mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust

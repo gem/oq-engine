@@ -25,11 +25,11 @@ from openquake.hazardlib.shakemap.parsers import get_array
 
 F32 = numpy.float32
 
-get_sitecol_shakemap = CallableDict()
+get_sitecol_shakemap = CallableDict(keyfunc=lambda dic: dic['kind'])
 
 
 @get_sitecol_shakemap.add('shapefile')
-def get_sitecol_shapefile(kind, uridict, required_imts, sitecol=None,
+def get_sitecol_shapefile(uridict, required_imts, sitecol=None,
                           assoc_dist=None, mode='filter'):
     """
     :param uridict: a dictionary specifying the ShakeMap resource
@@ -39,7 +39,7 @@ def get_sitecol_shapefile(kind, uridict, required_imts, sitecol=None,
     :param mode: 'strict', 'warn' or 'filter'
     :returns: filtered site collection, filtered shakemap, discarded
     """
-    polygons, shakemap = get_array(kind, **uridict)
+    polygons, shakemap = get_array(**uridict)
 
     available_imts = set(shakemap['val'].dtype.names)
 
@@ -64,14 +64,14 @@ def get_sitecol_shapefile(kind, uridict, required_imts, sitecol=None,
 
     sitecol = apply_bounding_box(sitecol, bbox)
 
-    logging.info('Associating %d GMVs to %d sites',
-                 len(shakemap), len(sitecol))
+    logging.info('Associating {:_d} GMVs to {:_d} sites'.format(
+        len(shakemap), len(sitecol)))
 
     return geo.utils.assoc_to_polygons(polygons, shakemap, sitecol, mode)
 
 
 @get_sitecol_shakemap.add('usgs_xml', 'usgs_id', 'file_npy')
-def get_sitecol_usgs(kind, uridict, required_imts, sitecol=None,
+def get_sitecol_usgs(uridict, required_imts, sitecol=None,
                      assoc_dist=None, mode='warn'):
     """
     :param uridict: a dictionary specifying the ShakeMap resource
@@ -81,7 +81,7 @@ def get_sitecol_usgs(kind, uridict, required_imts, sitecol=None,
     :param mode: 'strict', 'warn' or 'filter'
     :returns: filtered site collection, filtered shakemap, discarded
     """
-    shakemap = get_array(kind, **uridict)
+    shakemap = get_array(**uridict)
 
     available_imts = set(shakemap['val'].dtype.names)
 
@@ -98,8 +98,8 @@ def get_sitecol_usgs(kind, uridict, required_imts, sitecol=None,
 
     sitecol = apply_bounding_box(sitecol, bbox)
 
-    logging.info('Associating %d GMVs to %d sites',
-                 len(shakemap), len(sitecol))
+    logging.info('Associating {:_d} GMVs to {:_d} sites'.format(
+        len(shakemap), len(sitecol)))
 
     return geo.utils.assoc(shakemap, sitecol, assoc_dist, mode)
 

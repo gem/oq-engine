@@ -6,13 +6,9 @@ xmlns:gml="http://www.opengis.net/gml"
     <sourceModel>
         <sourceGroup
         name="group 1"
-        tectonicRegion="Active Shallow Crust"
+        tectonicRegion="Stable Continental Crust"
         >
-            <pointSource
-            id="1"
-            name="point"
-            tectonicRegion="Active Shallow Crust"
-            >
+            <pointSource id="1" name="point">
                 <pointGeometry>
                     <gml:Point>
                         <gml:pos>
@@ -46,11 +42,7 @@ xmlns:gml="http://www.opengis.net/gml"
         name="group 2"
         tectonicRegion="Active Shallow Crust"
         >
-            <areaSource
-            id="2"
-            name="area"
-            tectonicRegion="Active Shallow Crust"
-            >
+            <areaSource id="2" name="area">
                 <areaGeometry>
                     <gml:Polygon>
                         <gml:exterior>
@@ -83,11 +75,6 @@ xmlns:gml="http://www.opengis.net/gml"
                     <hypoDepth depth="1.2000000E+01" probability=".5"/>
                 </hypoDepthDist>
             </areaSource>
-        </sourceGroup>
-        <sourceGroup
-        name="group 3"
-        tectonicRegion="Active Shallow Crust"
-        >
             <simpleFaultSource
             id="3"
             name="simple fault"
@@ -120,16 +107,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     9.0000000E+01
                 </rake>
             </simpleFaultSource>
-        </sourceGroup>
-        <sourceGroup
-        name="group 4"
-        tectonicRegion="Active Shallow Crust"
-        >
-            <complexFaultSource
-            id="4"
-            name="complex fault"
-            tectonicRegion="Active Shallow Crust"
-            >
+            <complexFaultSource id="4" name="complex fault">
                 <complexFaultGeometry>
                     <faultTopEdge>
                         <gml:LineString>

@@ -22,7 +22,7 @@ import numpy
 from openquake.baselib.general import gettemp
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib.source.rupture import get_ruptures
-from openquake.commonlib import logs
+from openquake.commonlib import logs, readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
@@ -30,7 +30,8 @@ from openquake.calculators.extract import extract
 from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_5, case_6c, case_master,
-    case_miriam, occupants, case_1f, case_1g, case_7a, case_8, recompute)
+    case_miriam, occupants, case_1f, case_1g, case_7a, case_8,
+    recompute, reinsurance_1, reinsurance_2, reinsurance_3)
 
 aac = numpy.testing.assert_allclose
 
@@ -75,13 +76,31 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                   delta=1E-5)
 
         # test the src_loss_table extractor
-        [fname] = export(('src_loss_table', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
-                              delta=1E-5)
+        fnames = export(('src_loss_table', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
-    def test_case_1_eb(self):
+    def test_case_1_ins(self):
+        # no aggregation
+        self.run_calc(case_1.__file__, 'job2.ini')
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-5)
+
         # this is a case with insured losses and tags
-        self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4')
+        self.run_calc(case_1.__file__, 'job_ins.ini', concurrent_tasks='4')
+
+        # testing the view agg_id
+        agg_id = view('agg_id', self.calc.datastore)
+        self.assertEqual(str(agg_id), '''\
+       policy taxonomy
+agg_id                
+0           B       RM
+1           B        W
+2           B       RC
+3           A       RM
+4           A        W
+5           A       RC''')
 
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
@@ -118,7 +137,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test ct_independence
         loss4 = view('portfolio_losses', self.calc.datastore)
-        self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='0')
+        self.run_calc(case_1.__file__, 'job_ins.ini', concurrent_tasks='0')
         loss0 = view('portfolio_losses', self.calc.datastore)
         self.assertEqual(loss0, loss4)
 
@@ -170,8 +189,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                               delta=1E-5)
         self.assertEqual(len(self.calc.datastore['events']), 22)
 
-        losses0 = self.calc.datastore['avg_losses-stats'][:, 0, 0]  # shape ARL
-        losses1 = self.calc.datastore['avg_losses-stats'][:, 0, 0]  # shape ARL
+        losses0 = self.calc.datastore['avg_losses-stats/structural'][:, 0]
+        losses1 = self.calc.datastore['avg_losses-stats/structural'][:, 0]
         avg = (losses0 + losses1).sum() / 2
 
         # agg_losses
@@ -190,7 +209,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
-        tot = self.calc.datastore['avg_losses-rlzs'][:, 0, 0].sum()  # A1L
+        tot = self.calc.datastore['avg_losses-rlzs/structural'][:, 0].sum()
         aac(avg, tot, rtol=1E-6)
 
         # aggrisk
@@ -218,7 +237,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job_err.ini')
-        self.assertIn('not in the risk model', str(ctx.exception))
+        self.assertIn('not in the fragility/vulnerability/consequence model',
+                      str(ctx.exception))
 
     def test_case_3(self):
         # this is a test with statistics
@@ -251,7 +271,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_5(self):
         # taxonomy mapping, the numbers are different in Ubuntu 20 vs 18
-        self.run_calc(case_5.__file__, 'job_eb.ini')
+        self.run_calc(case_5.__file__, 'job.ini')
         fnames = export(('aggcurves', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
@@ -555,6 +575,108 @@ agg_id
 
     def test_scenario_from_ruptures(self):
         # same files as in test_recompute, but performing a scenario
-        with mock.patch('logging.warning') as warn:
-            self.run_calc(recompute.__file__, 'job_scenario.ini')
-        self.assertIsNone(warn.call_args)  # no inconsistent sums
+        self.run_calc(recompute.__file__, 'job_scenario.ini')
+
+
+class ReinsuranceTestCase(CalculatorTestCase):
+
+    def test_no_reinsurance(self):
+        rf = "{'structural+nonstructural': 'no_reinsurance.xml'}"
+        self.run_calc(reinsurance_1.__file__, 'job.ini', reinsurance_file=rf)
+        [fname] = export(('reinsurance-risk_by_event', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/no_reinsurance-risk_by_event.csv',
+                              fname, delta=1E-5)
+
+    def test_prop(self):
+        rf = "{'structural+nonstructural': 'reinsurance_prop.xml'}"
+        self.run_calc(reinsurance_1.__file__, 'job.ini', reinsurance_file=rf)
+        [fname] = export(('reinsurance-risk_by_event', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-risk_by_event_prop.csv',
+                              fname, delta=1E-5)
+        [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggcurves_prop.csv', fname,
+                              delta=1E-5)
+
+    def test_nonprop(self):
+        rf = "{'structural+nonstructural': 'reinsurance_np.xml'}"
+        self.run_calc(reinsurance_1.__file__, 'job.ini', reinsurance_file=rf)
+        [fname] = export(('reinsurance-risk_by_event', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-risk_by_event_np.csv',
+                              fname, delta=1E-5)
+        [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggcurves_np.csv', fname,
+                              delta=1E-5)
+
+    def test_prop_nonprop(self):
+        self.run_calc(reinsurance_1.__file__, 'job.ini')
+        [fname] = export(('reinsurance-risk_by_event', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-risk_by_event.csv',
+                              fname, delta=1E-5)
+        [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggcurves.csv', fname,
+                              delta=1E-5)
+        [fname] = export(('reinsurance-avg_portfolio', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
+                              fname, delta=1E-5)
+
+    def test_overspill_with_xlwr(self):
+        self.run_calc(reinsurance_3.__file__, 'job.ini')
+        [fname] = export(('reinsurance-risk_by_event', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-risk_by_event.csv',
+                              fname, delta=1E-5)
+
+    def test_many_levels(self):
+        self.run_calc(reinsurance_1.__file__, 'job2.ini')
+        [fname] = export(('reinsurance-risk_by_event', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-risk_by_event2.csv',
+                              fname, delta=1E-5)
+        [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggcurves2.csv', fname,
+                              delta=1E-5)
+        [fname] = export(('reinsurance-avg_portfolio', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-avg_portfolio2.csv',
+                              fname, delta=1E-5)
+        [fname] = export(('reinsurance-avg_policy', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-avg_policy.csv',
+                              fname, delta=1E-5)
+
+    def test_post_risk(self):
+        # calculation from a source model producing 4 events
+        self.run_calc(reinsurance_2.__file__, 'job.ini')
+
+        # make sure oq zip finds all the relevant files
+        files = readinput.get_input_files(self.calc.oqparam)
+        self.assertEqual([os.path.basename(f) for f in files],
+                         ['contents_vulnerability_model.xml',
+                          'exposure_model.csv',
+                          'exposure_model.xml',
+                          'gsim_logic_tree.xml',
+                          'job.ini',
+                          'nonstructural_vulnerability_model.xml',
+                          'policy.csv',
+                          'reinsurance2.xml',
+                          'source_model.xml',
+                          'source_model_logic_tree.xml',
+                          'structural_vulnerability_model.xml'])
+
+        # make sure reaggreate works
+        self.run_calc(reinsurance_2.__file__, 'job.ini',
+                      calculation_mode='post_risk',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id))
+
+        [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggcurves.csv', fname,
+                              delta=4E-4)
+        [fname] = export(('reinsurance-avg_portfolio', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
+                              fname, delta=4E-5)

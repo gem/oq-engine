@@ -22,20 +22,6 @@ import configparser
 # disable OpenBLAS threads before the first numpy import
 # see https://github.com/numpy/numpy/issues/11826
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
-import numpy
-import scipy
-import pandas
-from openquake.baselib.general import git_suffix  # noqa: E402
-
-# the version is managed by packager.sh with a sed
-__version__ = '3.15.0'
-__version__ += git_suffix(__file__)
-
-version = dict(engine=__version__,
-               python='%d.%d' % sys.version_info[:2],
-               numpy=numpy.__version__,
-               scipy=scipy.__version__,
-               pandas=pandas.__version__)
 
 
 class InvalidFile(Exception):
@@ -51,6 +37,21 @@ class DotDict(dict):
             return self[key]
         except KeyError:
             raise AttributeError(key)
+
+
+def positiveint(flag):
+    """
+    Convert string into integer
+    """
+    s = flag.lower()
+    if s in ('1', 'yes', 'true'):
+        return 1
+    elif s in ('0', 'no', 'false'):
+        return 0
+    i = int(s)
+    if i < 0:
+        raise ValueError('Invalid %r' % s)
+    return i
 
 
 config = DotDict()  # global configuration
@@ -106,33 +107,18 @@ def read(*paths, **validators):
 
 
 config.read = read
-
-
-def positiveint(flag):
-    """
-    Convert string into integer
-    """
-    s = flag.lower()
-    if s in ('1', 'yes', 'true'):
-        return 1
-    elif s in ('0', 'no', 'false'):
-        return 0
-    i = int(s)
-    if i < 0:
-        raise ValueError('Invalid %r' % s)
-    return i
-
-
 config.read(limit=int, soft_mem_limit=int, hard_mem_limit=int, port=int,
             serialize_jobs=positiveint, strict=positiveint, code=exec)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
-    os.environ['NUMBA_CACHE_DIR'] = config.directory.custom_tmp
+    # NUMBA_CACHE_DIR is useless since numba is saving on .cache/numba anyway
+    # os.environ['NUMBA_CACHE_DIR'] = config.directory.custom_tmp
 
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
-
+if config.dbserver.host == 'local':
+    os.environ['OQ_DATABASE'] = 'local'
 
 # wether the engine was installed as multi_user (linux root) or not
 if sys.platform in 'win32 darwin':
@@ -141,3 +127,6 @@ else:  # linux
     import pwd
     install_user = pwd.getpwuid(os.stat(__file__).st_uid).pw_name
     config.multi_user = install_user == 'root'
+
+# the version is managed by packager.sh with a sed
+__version__ = '3.16.0'

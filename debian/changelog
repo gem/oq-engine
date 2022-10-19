@@ -1,14 +1,153 @@
+
   [Prajakta Jadhav, Dharma Wijewickreme]
   * Added GMPE for Zhang and Zhao(2005)
     
+  [Michele Simionato]
+  * Fixed the performance report that failed for NGAEast GMPEs
+  * Reduced the memory consumption in large classical calculations
+    (in make_contexts)
+
+  [Marco Pagani, Michele Simionato]
+  * Fixed the calculation of conditional spectra
+
+  [Michele Simionato]
+  * Corner case bug: in the presence of parent site collection and a child
+    site model the engine was associating the site model to the parent
+  * Strongly reduced the slow tasks and memory consumption in event_based_risk
+    calculations and removed the need to keep (a lot of) the gmf_data table
+    in memory
+  * Fixed a performance issue in event based risk calculations, due to the same
+    aggregation IDs being computed for each task
+  * Increased `sys.recursionlimit` to solve a rare pickling issue and made
+    the engine continue even if `_csm` is not stored
+  * Added a parameter `max_aggregations` with a default of 100,000
+  * Changed the risk calculators to reuse the hazard exposure (if any)
+
+  [Antonio Ettorre]
+  * Bumped h5py to version 3.7.0 and added fiona 1.8.21
+
+  [Marco Pagani]
+  * Added the get_dip and get_strike methods to the gridded surface
+
+  [Michele Simionato]
+  * Added calculation of `reinsurance-risk_by_event` and `reinsurance-aggcurves`
+    given a `reinsurance.xml` file
+  * Supported absolute values for `deductible` and `insurance_limit`
+    in insurance calculations (before we supported only fractions)
+  * Reduced precision in the header of the UHS csv files
+  * Managed the case with CoVs = 0 for the beta distribution
+
+python3-oq-engine (3.15.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Added a check on sum(srcs_weights) == 1 for mutex sources
+
+  [Kendra Johnson]
+  * Fixed disaggregation by lon, lat in presence of multiFaultSources
+
+  [Michele Simionato]
+  * Replaced command `oq download_shakemap` with `oq shakemap2gmfs`
+  * Raised an error for missing required IMTs in ShakeMap grid files
+  * Extended the `custom_site_id` to 8 characters
+  * Restricted the accepted characters in risk IDs
+  * Extended `disagg_by_src` to mutually exclusive sources (i.e. Japan)
+    and managed "colon" sources specially
+
+  [Anne Hulsey]
+  * Contributed `Mag_Dist_TRT` and `Mag_Dist_TRT_Eps` disaggregations
+
+  [Michele Simionato]
+  * Internal: added a way to disable the DbServer from openquake.cfg or
+    by setting OQ_DATABASE=local
+  * Implemented `total_losses`, even for insurance calculations
+  * Optimized "computing risk" in the event_based_risk calculator (~30% faster)
+  * Changed the magnitude binning formula, thus fixing some disaggregation
+    calculations (for instance when there is a single magnitude for a TRT)
+  * Changed the aggrisk/aggcurves exporters in presence of insurance losses
+  * Internal: changed how avg_losses, src_loss_table and agg_curves-stats are
+    stored to simplify the management of secondary losses
+  * Internal: we have now repeatable rupture IDs in classical PSHA
+
+  [Pablo Iturrieta]
+  * Added support for negative binomial temporal occurrence models
+
+  [Marco Pagani, Michele Simionato]
+  * Added support for disaggregation in case of mutually exclusive sources
+
+  [Michele Simionato]
+  * Fixed error message when trying to compute disagg_by_src with too many
+    sources: in some cases, it contained a misleading reference to point sources
+  * Reorganized the Advanced Manual; changed the theme to be consistent with
+    the OpenQuake manual
+  * Internal: added command `oq db engine_version`
+  * Added a check for required site parameters not passed correctly
+  * Fixed `ps_grid_spacing` approximation when the grid is degenerate
+  * Logging a warning when starting from an old hazard calculation
+  * The extra fields of the site collection were lost when using --hc
+
+  [Julián Santiago Montejo Espitia]
+  * Implemented the Arteta et al. (2021) subduction model for Colombia
+
+  [Michele Simionato]
+  * Added `host` field to the `job` table (dbserver restart required)
+  * `--exports=csv` was not honored for the realizations output; now it is
+
+  [Paul Henshaw, Sandra Giacomini]
+  * Ported the OpenQuake manual from latex to reStructuredText format
+
+  [Michele Simionato]
+  * Entered automatically in sequential mode if there is not enough memory
+  * Raised an early error for missing risk IDs in the vulnerability files
+  * Changed the definition of `aggrisk` again to ensure consistency with the
+    average losses
+
+  [Tom Son]
+  * Added width and hypo_depth estimation to Campbell and Bozorgnia (2014)
+
+  [Michele Simionato]
+  * Improved the precision of the ps_grid_spacing approximation
+  * Added a check for missing mags when using GMPETables
+  * Fixed a bug in `upgrade_nrml -m` for point sources with different usd/lsd
+  * Automatically discard irrelevant TRTs in disaggregation calculations
+
+  [Astha Poudel, Anirudh Rao, Michele Simionato]
+  * Added the ability to run connectivity analysis in event_based_damage
+    and scenario_damage calculation with an appropriate exposure
+
+  [Tom Son, Michele Simionato]
+  * Added ztor estimation to Campbell and Bozorgnia (2014)
+
+  [Michele Simionato]
+  * Internal: removed REQUIRES_COMPUTED_PARAMETERS
+  * Using PointMSR when the reqv approximation is enabled
+  * Internal: changed the rupture storage for classical calculations
+  * Optimized rupture instantiation for point sources
+  * Optimized distance calculations for point sources
+
+  [Tom Son, Claudio Schill]
+  * Simple performance improvement of Kuehn et al. 2020 model
+
+  [Michele Simionato]
+  * Changed again the string representation of logic tree paths and added
+    an utility `hazardlib.lt.build` to build trees from literal lists
+  * Fixed the field `source_info.trti` in the datastore to point to the
+    correct tectonic region type index and not to zero
+  * Added a check for inconsistent IDs across different kinds of risk functions
+    (i.e. fragility and consequence)
+  * Fixed a logging statement that could run out of memory in large calculations
+  * Optimized `iter_ruptures` for point sources by vectorizing the generation of
+    planar surfaces by magnitude, nodal plane and hypocenter
+
   [Tom Son]
   * Implemented a missing piece in Chiou & Youngs (2014) model
-  Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
-  when it falls below the predicted PGA
+    Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
+    when it falls below the predicted PGA
 
   [Marco Pagani]
   * Added the possibility of disaggregating in terms of epsilon*
   * Added a method to compute the cross-correlation matrix
+  * Added Hassani & Atkinson (2018)
+  * Added Hassani & Atkinson (2020)
 
   [Michele Simionato]
   * Fixed disaggregation returning NaNs in some situations with
@@ -29,6 +168,8 @@
     some GMFs calculations not setting truncation_level can now give
     different results since truncation_level=None is now replaced with
     truncation_level=99
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 12 Sep 2022 07:57:27 +0000
 
 python3-oq-engine (3.14.0-1~xenial01) xenial; urgency=low
 

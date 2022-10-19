@@ -148,13 +148,6 @@ class PointCreationTestCase(unittest.TestCase):
         geo.Point(0.0, 90.0, EARTH_ELEVATION + 0.1)
 
 
-class PointFromVectorTestCase(unittest.TestCase):
-    def test_from_vector(self):
-        point = geo.Point(12.34, -56.78, 91.011)
-        vector = spherical_to_cartesian(point.x, point.y, point.z)
-        self.assertEqual(point, geo.Point.from_vector(vector))
-
-
 class PointToPolygonTestCase(unittest.TestCase):
     def test(self):
         point = geo.Point(10.43, -35.1)

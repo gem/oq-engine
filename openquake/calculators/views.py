@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import ast
 import os.path
 import numbers
@@ -33,9 +34,11 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
+from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util, logictree
-from openquake.risklib.scientific import losses_by_period, return_periods
+from openquake.risklib.scientific import (
+    losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
@@ -175,14 +178,15 @@ def view_worst_sources(token, dstore):
     else:
         step = 1
     data = dstore.read_df('source_data', 'src_id')
-    del data['nsites']
+    del data['impact']
     ser = data.groupby('taskno').ctimes.sum().sort_values().tail(1)
     [[taskno, maxtime]] = ser.to_dict().items()
     data = data[data.taskno == taskno]
-    print('Sources in the slowest task (%d seconds, weight=%d)'
-          % (maxtime, data['weight'].sum()))
+    print('Sources in the slowest task (%d seconds, weight=%d, taskno=%d)'
+          % (maxtime, data['weight'].sum(), taskno))
     data['slow_rate'] = data.ctimes / data.weight
-    df = data.sort_values('slow_rate', ascending=False)
+    del data['taskno']
+    df = data.sort_values('ctimes', ascending=False)
     return df[slice(None, None, step)]
 
 
@@ -192,8 +196,7 @@ def view_slow_sources(token, dstore, maxrows=20):
     Returns the slowest sources
     """
     info = dstore['source_info']['source_id', 'code',
-                                 'calc_time', 'num_sites', 'eff_ruptures']
-    info = info[info['eff_ruptures'] > 0]
+                                 'calc_time', 'num_sites', 'num_ruptures']
     info.sort(order='calc_time')
     data = numpy.zeros(len(info), dt(info.dtype.names))
     for name in info.dtype.names:
@@ -254,6 +257,7 @@ def view_full_lt(token, dstore):
 def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
+    df['slow_factor'] = df.calc_time / df.weight
     del df['grp_id'], df['trti']
     return df
 
@@ -352,7 +356,7 @@ def avglosses_data_transfer(token, dstore):
         '8 bytes x %d tasks = %s' % (N, R, L, ct, humansize(size_bytes)))
 
 
-# for scenario_risk
+# for scenario_risk and classical_risk
 @view.add('totlosses')
 def view_totlosses(token, dstore):
     """
@@ -362,7 +366,15 @@ def view_totlosses(token, dstore):
     sanity check for the correctness of the implementation.
     """
     oq = dstore['oqparam']
-    tot_losses = dstore['avg_losses-rlzs'][()].sum(axis=0)
+    tot_losses = 0
+    for ltype in oq.loss_types:
+        name = 'avg_losses-stats/' + ltype
+        try:
+            tot = dstore[name][()].sum(axis=0)
+        except KeyError:
+            name = 'avg_losses-rlzs/' + ltype
+            tot = dstore[name][()].sum(axis=0)
+        tot_losses += tot
     return text_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
 
 
@@ -375,10 +387,10 @@ def alt_to_many_columns(alt, loss_types):
         dic[ln] = []
     for (eid, kid), df in alt.groupby(['event_id', 'agg_id']):
         dic['event_id'].append(eid)
-        arr = numpy.zeros(len(loss_types))
-        arr[df.loss_id.to_numpy()] = df.loss.to_numpy()
-        for li, ln in enumerate(loss_types):
-            dic[ln].append(arr[li])
+        for ln in loss_types:
+            arr = df[df.loss_id == LOSSID[ln]].loss.to_numpy()
+            loss = 0 if len(arr) == 0 else arr[0]  # arr has size 0 or 1
+            dic[ln].append(loss)
     return pandas.DataFrame(dic)
 
 
@@ -428,8 +440,8 @@ def view_portfolio_loss(token, dstore):
     E = len(rlzs)
     ws = weights[rlzs]
     avgs = []
-    for li, ln in enumerate(oq.loss_types):
-        df = alt_df[alt_df.loss_id == li]
+    for ln in oq.loss_types:
+        df = alt_df[alt_df.loss_id == LOSSID[ln]]
         eids = df.pop('event_id').to_numpy()
         avgs.append(ws[eids] @ df.loss.to_numpy() / ws.sum() * E / R)
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
@@ -598,7 +610,8 @@ def view_required_params_per_trt(token, dstore):
     tbl = []
     for trt in full_lt.trts:
         gsims = full_lt.gsim_lt.values[trt]
-        maker = ContextMaker(trt, gsims, {'imtls': {}})
+        # adding fake mags to the ContextMaker, needed for table-based GMPEs
+        maker = ContextMaker(trt, gsims, {'imtls': {}, 'mags': ['7.00']})
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
@@ -1064,6 +1077,29 @@ def view_event_loss_table(token, dstore):
     return df[:20]
 
 
+@view.add('risk_by_event')
+def view_risk_by_event(token, dstore):
+    """
+    Display the top 20 losses of the aggregate loss table as a TSV.
+    If aggregate_by was missing in the calculation, returns nothing.
+
+    $ oq show risk_by_event:<loss_type>
+    """
+    _, ltype = token.split(':')
+    loss_id = LOSSID[ltype]
+    df = dstore.read_df('risk_by_event', sel=dict(loss_id=loss_id))
+    del df['loss_id']
+    del df['variance']
+    agg_keys = dstore['agg_keys'][:]
+    df = df[df.agg_id < df.agg_id.max()].sort_values('loss', ascending=False)
+    df['agg_key'] = decode(agg_keys[df.agg_id.to_numpy()])
+    del df['agg_id']
+    out = io.StringIO()
+    df[:20].to_csv(out, sep='\t', index=False, float_format='%.1f',
+                   line_terminator='\r\n')
+    return out.getvalue()
+
+
 @view.add('delta_loss')
 def view_delta_loss(token, dstore):
     """
@@ -1234,13 +1270,13 @@ def view_agg_id(token, dstore):
     """
     Show the available aggregations
     """
-    dfa = dstore.read_df('agg_keys')
-    keys = [col for col in dfa.columns if not col.endswith('_')]
-    df = dfa[keys]
-    totdf = pandas.DataFrame({key: ['*total*'] for key in keys})
-    concat = pandas.concat([df, totdf], ignore_index=True)
-    concat.index.name = 'agg_id'
-    return concat
+    [aggby] = dstore['oqparam'].aggregate_by
+    keys = [key.decode('utf8').split(',') for key in dstore['agg_keys'][:]]
+    keys = numpy.array(keys)  # shape (N, A)
+    dic = {aggkey: keys[:, a] for a, aggkey in enumerate(aggby)}
+    df = pandas.DataFrame(dic)
+    df.index.name = 'agg_id'
+    return df
 
 
 @view.add('mean_perils')
@@ -1305,25 +1341,20 @@ def view_collapsible(token, dstore):
     """
     Show how much the ruptures are collapsed for each site
     """
-    def recarray(mag, rrups, vs30s, dtype=dt('mag rrup vs30')):
-        out = [(mag, rrups[sid], vs30) for sid, vs30 in enumerate(vs30s)]
-        return numpy.array(out, dtype).view(numpy.recarray)
-
-    sitecol = dstore['sitecol']
-    rup_arr = dstore['rup/id'][:]
-    mag_arr = dstore['rup/mag'][:]
-    rrup_arr = dstore['rup/rrup_'][:]
-    sids_arr = dstore['rup/sids_'][:]
-    c1 = Collapser(1)
-    dic = dict(rup_id=[], site_id=[], mdvbin=[])
-    for id, mag, rrup, sids in zip(rup_arr, mag_arr, rrup_arr, sids_arr):
-        mdvbin = c1.calc_mdvbin(recarray(mag, rrup, sitecol.vs30[sids]))
-        for sid, mdv in zip(sids, mdvbin):
-            dic['rup_id'].append(id)
-            dic['site_id'].append(sid)
-            dic['mdvbin'].append(mdv)
+    if ':' in token:
+        collapse_level = int(token.split(':')[1])
+    else:
+        collapse_level = 0
+    dist_types = [dt for dt in dstore['rup'] if dt in KNOWN_DISTANCES]
+    vs30 = dstore['sitecol'].vs30
+    ctx_df = dstore.read_df('rup')
+    ctx_df['vs30'] = vs30[ctx_df.sids]
+    has_vs30 = len(numpy.unique(vs30)) > 1
+    c = Collapser(collapse_level, dist_types, has_vs30)
+    ctx_df['mdvbin'] = c.calc_mdvbin(ctx_df)
+    print('cfactor = %d/%d' % (len(ctx_df), len(ctx_df['mdvbin'].unique())))
     out = []
-    for sid, df in pandas.DataFrame(dic).groupby('site_id'):
+    for sid, df in ctx_df.groupby('sids'):
         n, u = len(df), len(df.mdvbin.unique())
         out.append((sid, u, n, n / u))
     return numpy.array(out, dt('site_id eff_rups num_rups cfactor'))

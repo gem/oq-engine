@@ -76,8 +76,8 @@ class MultiPointSource(ParametricSeismicSource):
                 self.magnitude_scaling_relationship,
                 get(self.rupture_aspect_ratio, i),
                 self.temporal_occurrence_model,
-                get(self.upper_seismogenic_depth, i),
-                get(self.lower_seismogenic_depth, i),
+                self.upper_seismogenic_depth,
+                self.lower_seismogenic_depth,
                 point,
                 self.nodal_plane_distribution,
                 self.hypocenter_distribution)
@@ -92,17 +92,10 @@ class MultiPointSource(ParametricSeismicSource):
         """
         Yield the ruptures of the underlying point sources
         """
-        for ps in self:
+        step = kwargs.get('step', 1)
+        for ps in list(self)[::step]:
             for rupture in ps.iter_ruptures(**kwargs):
                 yield rupture
-
-    def few_ruptures(self):
-        """
-        Fast version of iter_ruptures used in estimate_weight
-        """
-        for i, ps in enumerate(self):
-            if i % 10 == 0:
-                yield from ps.few_ruptures()
 
     def count_ruptures(self):
         """

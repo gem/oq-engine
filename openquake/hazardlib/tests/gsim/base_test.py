@@ -162,8 +162,9 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.fake_surface = FakeSurface
 
     def get_ctx(self, rupture, site_collection):
-        return ContextMaker('*', [self.gsim_class], dict(imtls={})).get_ctxs(
-            [rupture], site_collection, 'src_id')[0]
+        cmaker = ContextMaker('*', [self.gsim_class], dict(imtls={}))
+        [ctx] = cmaker.get_ctx_iter([rupture], site_collection, src_id=0)
+        return ctx
 
     def test_unknown_distance_error(self):
         self.gsim_class.REQUIRES_DISTANCES = frozenset(
@@ -183,15 +184,15 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
             'vs30 vs30measured z1pt0 z2pt5 lon lat'.split())
         sites = SiteCollection([self.site1, self.site2])
         ctx = self.get_ctx(self.rupture, sites)
-        self.assertEqual(ctx.mag, 4.5)
-        self.assertEqual(ctx.rake, 123.56)
-        self.assertEqual(ctx.strike, 60.123)
-        self.assertEqual(ctx.dip, 45.4545)
-        self.assertEqual(ctx.ztor, 30)
-        self.assertEqual(ctx.hypo_lon, 2)
-        self.assertEqual(ctx.hypo_lat, 3)
-        self.assertEqual(ctx.hypo_depth, 40)
-        self.assertEqual(ctx.width, 15)
+        aac(ctx.mag, 4.5)
+        aac(ctx.rake, 123.56)
+        aac(ctx.strike, 60.123)
+        aac(ctx.dip, 45.4545)
+        aac(ctx.ztor, 30)
+        aac(ctx.hypo_lon, 2)
+        aac(ctx.hypo_lat, 3)
+        aac(ctx.hypo_depth, 40)
+        aac(ctx.width, 15)
         aac(ctx.vs30, [456, 1456])
         aac(ctx.vs30measured, [False, True])
         aac(ctx.z1pt0, [12.1, 112.1])
@@ -220,9 +221,10 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
             set('vs30 z1pt0 lon'.split())
         sites = SiteCollection([self.site1, self.site2])
         ctx = self.get_ctx(self.rupture, sites)
-        self.assertEqual(
-            (ctx.mag, ctx.rake, ctx.strike, ctx.hypo_lon),
-            (4.5, 123.56, 60.123, 2))
+        aac(ctx.mag, 4.5)
+        aac(ctx.rake, 123.56)
+        aac(ctx.strike, 60.123)
+        aac(ctx.hypo_lon, 2)
         aac(ctx.vs30, (456, 1456))
         aac(ctx.z1pt0, (12.1, 112.1))
         aac(ctx.lon, [1, -2])
@@ -281,6 +283,8 @@ class ContextTestCase(unittest.TestCase):
         imt = PGA()
         gsim = AbrahamsonGulerce2020SInter()
         ctx = RuptureContext()
+        ctx.src_id = 0
+        ctx.rup_id = 0
         ctx.mag = 5.
         ctx.sids = [0, 1]
         ctx.vs30 = [760., 760.]

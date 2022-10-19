@@ -18,7 +18,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <simpleFaultGeometry>
                     <gml:LineString>
                         <gml:posList>
-                            -121.8229 37.7301 -122.0388 37.8771
+                            -121.823 37.73 -122.039 37.877
                         </gml:posList>
                     </gml:LineString>
                     <dip>

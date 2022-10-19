@@ -44,3 +44,35 @@ Engine 3.14
 | postclassical      | 240    | 10.9   | 42%    | 4.16065   | 17.7   |
 | preclassical       | 513    | 15.4   | 229%   | 1.600E-04 | 249.9  |
 | read_source_model  | 20     | 29.1   | 96%    | 0.14567   | 73.2   |
+
+Engine 3.15
+-----------
+
+Doubling the speed by using the improved ps_grid_spacing approximation,
+with ps_grid_spacing=30 km. Also improved `make_contexts` and
+`preclassical`.
+
+| calc_45105, maxmem=141.3 GB | time_sec  | memory_mb | counts      |
+|-----------------------------+-----------+-----------+-------------|
+| total classical             | 5_103_955 | 1_021     | 265         |
+| get_poes                    | 2_285_373 | 0.0       | 463_974_337 |
+| computing mean_std          | 1_794_132 | 0.0       | 23_337_947  |
+| composing pnes              | 811_104   | 0.0       | 463_974_337 |
+| make_contexts               | 140_910   | 0.0       | 16_165_677  |
+| ClassicalCalculator.run     | 52_490    | 24_680    | 1           |
+| total preclassical          | 3_558     | 59.0      | 1_332       |
+| total postclassical         | 1_824     | 95.5      | 240         |
+
+| operation-duration | counts | mean    | stddev | min     | max    | slowfac |
+|--------------------+--------+---------+--------+---------+--------+---------|
+| classical          | 265    | 19_260  | 27%    | 0.00643 | 28_262 | 1.46737 |
+| postclassical      | 240    | 7.59859 | 26%    | 3.84622 | 11.3   | 1.48945 |
+| preclassical       | 678    | 5.24820 | 381%   | 0.01420 | 156.2  | 29.8    |
+| read_source_model  | 20     | 28.6    | 96%    | 0.17278 | 70.1   | 2.45296 |
+
+| task              | sent                                          | received |
+|-------------------+-----------------------------------------------+----------|
+| read_source_model | converter=7.25 KB fname=2.02 KB               | 1.05 GB  |
+| preclassical      | sites=3.06 GB srcs=756.01 MB cmaker=353.94 MB | 1.32 GB  |
+| classical         | srcs=1.33 GB cmaker=137.37 MB sids=1.04 KB    | 94.88 GB |
+| postclassical     | pgetter=39.31 MB hstats=15.23 KB N=3.98 KB    | 94.5 MB  |

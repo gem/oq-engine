@@ -20,7 +20,15 @@
                     applyToTectonicRegionType="Stable Continental Region">
                 <logicTreeBranch branchID="b21">
                     <uncertaintyModel>AllenEtAl2012</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                    <uncertaintyWeight>.6</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b21">
+                    <uncertaintyModel>DowrickRhoades2005Asc</uncertaintyModel>
+                    <uncertaintyWeight>.2</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b21">
+                    <uncertaintyModel>FaccioliCauzzi2006</uncertaintyModel>
+                    <uncertaintyWeight>.2</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>

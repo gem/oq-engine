@@ -161,6 +161,7 @@ def gen_ctxs(df):
         dist_type = 'rrup'
     outs = df.result_type.unique()
     num_outs = len(outs)
+    rup_id = 0
     for rup_params, grp in df.groupby(rrp):
         inputs = [gr[rrp + pars].to_numpy()
                   for _, gr in grp.groupby('result_type')]
@@ -172,6 +173,9 @@ def gen_ctxs(df):
         if len(rrp) == 1:
             rup_params = [rup_params]
         ctx = contexts.RuptureContext()
+        ctx.src_id = 0
+        ctx.rup_id = rup_id
+        rup_id += 1
         for par, rp in zip(rrp, rup_params):
             setattr(ctx, par[4:], rp)
             del grp[par]

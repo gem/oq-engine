@@ -22,7 +22,7 @@ import logging
 from unittest.mock import Mock
 import numpy
 
-from openquake.baselib import parallel
+from openquake.baselib import performance, parallel, hdf5
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
 from openquake.hazardlib.source.rupture import EBRupture, events_dt
@@ -30,6 +30,7 @@ from openquake.commonlib import util
 
 TWO16 = 2 ** 16
 TWO32 = numpy.float64(2 ** 32)
+MAX_NBYTES = 1024**3
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 # in this way even on 32 bit machines Python will not have to convert
 # the generated seed into a long integer
@@ -72,6 +73,27 @@ def convert_to_array(pmap, nsites, imtls, inner_idx=0):
                 curve['%s-%.3f' % (imt, iml)] = pcurve.array[idx, inner_idx]
                 idx += 1
     return curves
+
+
+def get_mean_curve(dstore, imt, site_id=0):
+    """
+    Extract the mean hazard curve from the datastore for the first site.
+    """
+    if 'hcurves-stats' in dstore:  # shape (N, S, M, L1)
+        arr = dstore.sel('hcurves-stats', stat='mean', imt=imt)
+    else:  # there is only 1 realization
+        arr = dstore.sel('hcurves-rlzs', rlz_id=0, imt=imt)
+    return arr[site_id, 0, 0]
+
+
+def get_poe_from_mean_curve(dstore, imt, iml, site_id=0):
+    """
+    Extract the poe corresponding to the given iml by looking at the mean
+    curve for the given imt. `iml` can also be an array.
+    """
+    imls = dstore['oqparam'].imtls[imt]
+    mean_curve = get_mean_curve(dstore, imt, site_id)
+    return numpy.interp(imls, mean_curve)[iml]
 
 
 # ######################### hazard maps ################################### #
@@ -229,7 +251,7 @@ def make_uhs(hmap, info):
     for p, poe in enumerate(info['poes']):
         for m, imt in enumerate(info['imtls']):
             if imt.startswith(('PGA', 'SA')):
-                uhs[str(poe)][imt] = hmap[:, m, p]
+                uhs['%.6f' % poe][imt] = hmap[:, m, p]
     return uhs
 
 
@@ -241,6 +263,10 @@ class RuptureImporter(object):
     def __init__(self, dstore):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
+        try:
+            self.N = len(dstore['sitecol'])
+        except KeyError:  # missing sitecol
+            self.N = 0
 
     def get_eid_rlz(self, proxies, rlzs_by_gsim):
         """
@@ -270,11 +296,13 @@ class RuptureImporter(object):
         seeds, counts = numpy.unique(rup_array['seed'], return_counts=True)
         if len(seeds) != nr:
             dupl = seeds[counts > 1]
-            logging.info('The following %d rupture seeds are duplicated: %s',
-                         len(dupl), dupl)
+            logging.debug('The following %d rupture seeds are duplicated: %s',
+                          len(dupl), dupl)
         rup_array['geom_id'] = rup_array['id']
         rup_array['id'] = numpy.arange(nr)
-        self.datastore['ruptures'] = rup_array
+        if len(self.datastore['ruptures']):
+            self.datastore['ruptures'].resize((0,))
+        hdf5.extend(self.datastore['ruptures'], rup_array)
         rgetters = get_rupture_getters(  # fast
             self.datastore, self.oqparam.concurrent_tasks)
         self._save_events(rup_array, rgetters)
@@ -329,29 +357,73 @@ class RuptureImporter(object):
 
     def check_overflow(self, E):
         """
-        Raise a ValueError if the number of sites is larger than 65,536 or the
-        number of IMTs is larger than 256 or the number of ruptures is larger
-        than 4,294,967,296. The limits are due to the numpy dtype used to
-        store the GMFs (gmv_dt). There also a limit of max_potential_gmfs on
-        the number of sites times the number of events, to avoid producing too
-        many GMFs. In that case split the calculation or be smarter.
+        Raise a ValueError if the number of IMTs is larger than 256 or the
+        number of events is larger than 4,294,967,296. The limits
+        are due to the numpy dtype used to store the GMFs
+        (gmv_dt). There also a limit of `max_potential_gmfs` on the
+        number of sites times the number of events, to avoid producing
+        too many GMFs. In that case split the calculation or be
+        smarter.
         """
         oq = self.oqparam
+        if len(oq.imtls) > 256:
+            raise ValueError('The event_based calculator is restricted '
+                             'to 256 imts, got %d' % len(oq.imtls))
+        if E > TWO32:
+            raise ValueError('The event_based calculator is restricted '
+                             'to 2^32 events, got %d' % E)
         max_ = dict(sites=TWO32, events=TWO32, imts=2**8)
         num_ = dict(events=E, imts=len(self.oqparam.imtls))
-        n = len(getattr(self, 'sitecol', ()) or ())
-        num_['sites'] = n
+        num_['sites'] = self.N
         if oq.calculation_mode == 'event_based' and oq.ground_motion_fields:
-            if n > oq.max_sites_per_gmf:
+            if self.N * E > oq.max_potential_gmfs:
                 raise ValueError(
-                    'You cannot compute the GMFs for %d > %d sites' %
-                    (n, oq.max_sites_per_gmf))
-            elif n * E > oq.max_potential_gmfs:
-                raise ValueError(
-                    'A GMF calculation with %d sites and %d events is '
-                    'impossibly large' % (n, E))
+                    'A GMF calculation with {:_d} sites and {:_d} events is '
+                    'forbidden unless you raise `max_potential_gmfs` to {:_d}'.
+                    format(self.N, int(E), int(self.N * E)))
         for var in num_:
             if num_[var] > max_[var]:
                 raise ValueError(
                     'The %s calculator is restricted to %d %s, got %d' %
                     (oq.calculation_mode, max_[var], var, num_[var]))
+
+
+##############################################################
+# logic for building the GMF slices used in event_based_risk #
+##############################################################
+
+SLICE_BY_EVENT_NSITES = 1000
+
+slice_dt = numpy.dtype([('start', int), ('stop', int), ('eid', U32)])
+
+
+def build_slice_by_event(eids, offset=0):
+    arr = performance.idx_start_stop(eids)
+    sbe = numpy.zeros(len(arr), slice_dt)
+    sbe['eid'] = arr[:, 0]
+    sbe['start'] = arr[:, 1] + offset
+    sbe['stop'] = arr[:, 2] + offset
+    return sbe
+
+
+def starmap_from_gmfs(task_func, oq, dstore):
+    """
+    :param task_func: function or generator with signature (gmf_df, oq, dstore)
+    :param oq: an OqParam instance
+    :param dstore: DataStore instance where the GMFs are stored
+    :returns: a Starmap object used for event based calculations
+    """
+    data = dstore['gmf_data']
+    try:
+        sbe = data['slice_by_event'][:]
+    except KeyError:
+        sbe = build_slice_by_event(data['eid'][:])
+    nrows = sbe[-1]['stop'] - sbe[0]['start']
+    maxweight = numpy.ceil(nrows / (oq.concurrent_tasks or 1))
+    dstore.swmr_on()  # before the Starmap
+    smap = parallel.Starmap.apply(
+        task_func, (sbe, oq, dstore),
+        weight=lambda rec: rec['stop']-rec['start'],
+        maxweight=numpy.clip(maxweight, 1000, 10_000_000),
+        h5=dstore.hdf5)
+    return smap

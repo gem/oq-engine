@@ -53,12 +53,13 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
                                                            dip=90.0,
                                                            rake=0.0))
                 ]),
-                hypocenter_distribution=openquake.hazardlib.pmf.PMF([(1, 10)]),
+                hypocenter_distribution=openquake.hazardlib.pmf.PMF(
+                    [(1, 10.)]),
                 upper_seismogenic_depth=0.0,
                 lower_seismogenic_depth=10.0,
                 magnitude_scaling_relationship=
                 openquake.hazardlib.scalerel.PeerMSR(),
-                rupture_aspect_ratio=2,
+                rupture_aspect_ratio=2.,
                 temporal_occurrence_model=PoissonTOM(1.),
                 rupture_mesh_spacing=1.0,
                 location=Point(10, 10)
@@ -74,12 +75,13 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
                                                            dip=90,
                                                            rake=0.0)),
                 ]),
-                hypocenter_distribution=openquake.hazardlib.pmf.PMF([(1, 10)]),
+                hypocenter_distribution=openquake.hazardlib.pmf.PMF(
+                    [(1, 10.)]),
                 upper_seismogenic_depth=0.0,
                 lower_seismogenic_depth=10.0,
                 magnitude_scaling_relationship=
                 openquake.hazardlib.scalerel.PeerMSR(),
-                rupture_aspect_ratio=2,
+                rupture_aspect_ratio=2.,
                 temporal_occurrence_model=PoissonTOM(1.),
                 rupture_mesh_spacing=1.0,
                 location=Point(10, 11)

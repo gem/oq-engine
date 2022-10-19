@@ -97,6 +97,33 @@ xmlns:gml="http://www.opengis.net/gml"
                         </lowerSeismoDepth>
                     </simpleFaultGeometry>
                 </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.99 0.01"
+                >
+                    <magnitude>
+                        5.8
+                    </magnitude>
+                    <rake>
+                        90
+                    </rake>
+                    <hypocenter depth="9.999999990065518" lat="0.299998700781346" lon="0.168625112400215"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                0 0.3 0.3462868327944276 0.29999452090675666
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            90
+                        </dip>
+                        <upperSeismoDepth>
+                            0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            19.252405580873734
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
             </nonParametricSeismicSource>
         </sourceGroup>
     </sourceModel>
