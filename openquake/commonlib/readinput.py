@@ -1170,6 +1170,7 @@ def get_shapefiles(dirname):
             out.append(os.path.join(dirname, fname))
     return out
 
+
 def get_reinsurance(oqparam, assetcol=None):
     """
     :returns: (policy_df, treaty_df, field_map)

@@ -715,7 +715,7 @@ class WrongInputTestCase(unittest.TestCase):
     """
     @classmethod
     def setUpClass(cls):
-        print('Creating directory with fake input files')
+        # Creating directory with fake input files
         cls.tmpdir = tempfile.mkdtemp()
         cls.jobfname = os.path.join(cls.tmpdir, 'job.ini')
         cls.xmlfname = os.path.join(cls.tmpdir, 'reinsurance.xml')
@@ -930,7 +930,10 @@ rur_Ant_1,10000,100,.1,.2''')
         with open(self.jobfname, 'w') as job:
             job.write(JOB % dict(aggregate_by='policy; taxonomy'))
         oq = readinput.get_oqparam(self.jobfname)
-        readinput.get_reinsurance(oq)
+        pol_df, treaty_df, fmap = readinput.get_reinsurance(oq)
+        self.assertEqual(len(pol_df), 4)
+        self.assertEqual(len(treaty_df), 3)
+        self.assertEqual(len(fmap), 0)
 
     def test_wrong_aggregate_by_taxonomy_semicolon_policy(self):
         with open(self.jobfname, 'w') as job:
@@ -976,7 +979,6 @@ rur_Ant_1,10000,100,.1,.2''')
 
     @classmethod
     def tearDownClass(cls):
-        print('Deleting directory with fake input files')
         shutil.rmtree(cls.tmpdir)
 
 
