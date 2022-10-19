@@ -1,4 +1,4 @@
-rup_mag,rup_hypo_depth,dist_repi,site_slope,site_freeface_ratio,site_T_15,site_F_15,site_D50_15,result_type,PGD
+rup_mag,rup_hypo_depth,dist_repi,site_slope,site_freeface_ratio,site_T_15,site_F_15,site_D50_15,result_type,LSD
 4.5,10,1.00125,6,0,15,5,0.3,MEAN,0.041561227
 4.5,10,1.26744,6,0,15,5,0.3,MEAN,0.029815989
 4.5,10,1.55383,6,0,15,5,0.3,MEAN,0.022317058
