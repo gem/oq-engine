@@ -295,9 +295,6 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
             keys.append(key)
             datalist.append(data)
         del rbp['eid']
-    if len(keys) > 1:
-        logging.warning('Splitting the policies in %d policy groups',
-                        len(keys))
     with mon('reinsurance by event', measuremem=True):
         overspill = {}
         res = clever_agg(keys, datalist, tdf, idx, overspill, eids)
