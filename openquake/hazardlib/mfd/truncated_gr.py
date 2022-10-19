@@ -277,7 +277,8 @@ class TruncatedGRMFD(BaseMFD):
         self.a_val = a_val
 
     @classmethod
-    def from_moment(cls, min_mag, max_mag, bin_width, b_val, moment_rate):
+    def from_moment(cls, min_mag, max_mag, bin_width, b_val, moment_rate,
+                    d_val=9.1):
         """
         :param min_mag:
             The lowest possible magnitude for this MFD. The first bin in the
@@ -294,9 +295,11 @@ class TruncatedGRMFD(BaseMFD):
         :param moment_rate:
             The value of scalar seismic moment per year released by this MFD.
             Unit of measure is N ・m
+        :param d_val:
+            The constant term of the equation used to compute moment from
+            magnitude. Set to 9.1 for backcompatibility.
         """
         c_val = 1.5
-        d_val = 9.1
         tmp = 0
         mou = 10**(c_val * max_mag + d_val)
         beta = b_val * np.log(10.0)
@@ -309,7 +312,7 @@ class TruncatedGRMFD(BaseMFD):
 
     @classmethod
     def from_slip_rate(cls, min_mag, max_mag, bin_width, b_val,
-                       slip_rate, rigidity, area):
+                       slip_rate, rigidity, area, constant_term=9.1):
         """
         Calls .from_moment with moment = slip_rate * rigidity * area
 
@@ -331,10 +334,14 @@ class TruncatedGRMFD(BaseMFD):
             A float defining the rigidity [GPa]
         :param area:
             A float defining the area of the fault surface [km^2]
+        :param constant_term:
+            A float defining the constant term of the equation used to
+            compute the log M0 from magnitude.
         """
         mm = 1E-3  # conversion millimiters -> meters
         moment_rate = (slip_rate * mm) * (rigidity * 1e9) * (area * 1e6)
-        self = cls.from_moment(min_mag, max_mag, bin_width, b_val, moment_rate)
+        self = cls.from_moment(min_mag, max_mag, bin_width, b_val, moment_rate,
+                               constant_term)
         self.slip_rate = slip_rate
         self.rigidity = rigidity
         return self
