@@ -1808,12 +1808,12 @@ indicate the ``deductible`` and ``limit``.
   Euros).
 
 - **liability**: the maximum economic amount that can be covered by
-    the insurance, according to the policy characteristics. The
-    liability is also known as limit or maximum coverage.
+  the insurance, according to the policy characteristics. The
+  liability is also known as limit or maximum coverage.
 
 - **type**: parameter that specifies the type of treaty. There are
-    three supported types: ``prop`` (for proportional treaties),
-    ``wxlr``, or ``catxl``.
+  three supported types: ``prop`` (for proportional treaties),
+  ``wxlr``, or ``catxl``.
 
 - **max_cession_event**: the maximum cession per event is an optional
   parameter for *proportional* reinsurance treaties. It refers to the
@@ -1895,22 +1895,22 @@ calculations::
 **Additional comments:**
 
 - ``aggregate_by``: it is possible to define multiple aggregation keys.
-    However, for reinsurance calculations the ``policy`` key must be present,
-    otherwise an error message will be raised.
+  However, for reinsurance calculations the ``policy`` key must be present,
+  otherwise an error message will be raised.
 
 - ``reinsurance_file``: This dictionary associates the reinsurance information
-    to a given the loss_type (the engine supports structural, nonstructural, 
-    contents or its sum). The insurance and reinsurance calculations are applied 
-    over the indicated loss_types, i.e. to the sum of the ground up losses 
-    associated to the specified loss_types.
+  to a given the loss_type (the engine supports structural, nonstructural, 
+  contents or its sum). The insurance and reinsurance calculations are applied 
+  over the indicated loss_types, i.e. to the sum of the ground up losses 
+  associated to the specified loss_types.
 
-    *NOTE: The current implementation works only with a single reinsurance file.*
+  *NOTE: The current implementation works only with a single reinsurance file.*
 
 - ``total_losses``: (or total exposed value) needs to be specified when the reinsurance
-    needs to be applied over the sum of two or more loss types (e.g. ``structural+contents``).
-    The definition of total losses is also reflected in the risk outputs of the calculation.
-    NB: if there is a single loss type (e.g. ``structural``) there is no need to specify
-    this parameter, just write ``reinsurance_file = {'structural': 'reinsurance.xml'}``
+  needs to be applied over the sum of two or more loss types (e.g. ``structural+contents``).
+  The definition of total losses is also reflected in the risk outputs of the calculation.
+  NB: if there is a single loss type (e.g. ``structural``) there is no need to specify
+  this parameter, just write ``reinsurance_file = {'structural': 'reinsurance.xml'}``
 
 Output files
 ------------
@@ -1919,21 +1919,21 @@ The reinsurance calculations generates estimates of retention and cession under 
 reinsurance treaties. The following output files are produced:
 
     1. ``Reinsurance by event``: aggregated estimated per event for the claim, retention, 
-        cession and overspills under each reinsurance treaty.
+      cession and overspills under each reinsurance treaty.
 
     2. ``Reinsurance curves``: reinsurance loss exceedance curves describe the probabilities
-         of exceeding a set of loss ratios or loss values, within a given time span 
-         (or investigation interval). The curves are generated for the claim, retention, 
-         cession and overspills under each reinsurance treaty.
+       of exceeding a set of loss ratios or loss values, within a given time span 
+       (or investigation interval). The curves are generated for the claim, retention, 
+       cession and overspills under each reinsurance treaty.
 
     3. ``Average reinsurance losses``: the average reinsurance losses
-        indicates the expected value within the time period specified
-        by risk_investigation_time for the claim, retention, and
-        cessions under each reinsurance treaty for all policies in the
-        Exposure Model.
+      indicates the expected value within the time period specified
+      by risk_investigation_time for the claim, retention, and
+      cessions under each reinsurance treaty for all policies in the
+      Exposure Model.
 
     4. ``Aggregated reinsurance by policy``:  the average reinsurance losses
-        for each policy, by ignoring the overspill logic.
+      for each policy, by ignoring the overspill logic.
 
 The parameters indicated in the previous outputs include:
 
@@ -1945,12 +1945,12 @@ The parameters indicated in the previous outputs include:
 - ``retention``: net losses that the insurance company keeps for its own account.
 
 - ``cession_i``: net losses that are ceded by the insurance company to
-    the reinsurer(s) under treaty i. The cession is indicated by the
-    treaty name defined in the reinsurance information.
+  the reinsurer(s) under treaty i. The cession is indicated by the
+  treaty name defined in the reinsurance information.
 
 - ``overspill_treaty_i``: net losses that exceed the maximum cession
-    per event ("max_cession_event") for *proportional* and/or *catxl*
-    treaties.
+  per event ("max_cession_event") for *proportional* and/or *catxl*
+  treaties.
 
 NOTE: The sum of the claim is not equal to the ground up losses, since
 usually the deductible is nonzero. Moreover there could be
