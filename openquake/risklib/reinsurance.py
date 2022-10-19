@@ -362,9 +362,6 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
             keys.append(key)
             datalist.append(data)
         del rbp['eid']
-    if len(keys) > 1:
-        logging.warning('Splitting the policies in %d policy groups',
-                        len(keys))
     with mon('reinsurance by event', measuremem=True):
         overspill = {}
         res = clever_agg(keys, datalist, tdf, idx, overspill, eids)
@@ -390,12 +387,15 @@ def by_policy_event(agglosses_df, policy_df, treaty_df, mon=Monitor()):
     :returns: (risk_by_policy_df, risk_by_event_df)
     """
     dfs = []
+    i = 1
+    logging.info("Processing %d policies", len(policy_df))
     for _, policy in policy_df.iterrows():
-        if policy.policy % 100 == 0:  # starts from 1
-            logging.info("Processed %d policies", policy.policy)
+        if i % 100 == 0:
+            logging.info("Processed %d policies", i)
         df = by_policy(agglosses_df, dict(policy), treaty_df)
         df['policy_grp'] = build_policy_grp(policy, treaty_df)
         dfs.append(df)
+        i += 1
     rbp = pd.concat(dfs)
     if DEBUG:
         print(rbp.sort_values('event_id'))
