@@ -147,12 +147,10 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
         conv_median = 1
         conv_sigma = 0
         rstd = 1
-    else:
+    else:  # convention not applicable
         conv_median = 1
         conv_sigma = 0
         rstd = 1
-        msg = f'Conversion not applicable for {comp}'
-        warnings.warn(msg, UserWarning)
 
     # Original total STD
     total_stddev = getattr(self, const.StdDev.TOTAL)

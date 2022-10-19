@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import time
 import os.path
 import logging
 import operator
@@ -24,12 +25,12 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, parallel, general
+from openquake.baselib import hdf5, performance, parallel, general
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
+from openquake.commonlib.calc import starmap_from_gmfs
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
-from openquake.commonlib.calc import build_gmfslices
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
     PostRiskCalculator, post_aggregate, fix_dtypes)
@@ -43,21 +44,6 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
-
-
-def save_tmp(self, monitor, srcfilter=None):
-    oq = self.oqparam
-    monitor.save('assets', self.assetcol.to_dframe())
-    monitor.save('srcfilter', srcfilter)
-    monitor.save('crmodel', self.crmodel)
-    monitor.save('rlz_id', self.rlzs)
-    monitor.save('weights', self.datastore['weights'][:])
-    if oq.K:
-        aggids, _ = self.assetcol.build_aggids(
-            oq.aggregate_by, oq.max_aggregations)
-    else:
-        aggids = ()
-    monitor.save('aggids', aggids)
 
 
 def fast_agg(keys, values, correl, li, acc):
@@ -148,9 +134,9 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
     return dict(avg=loss_by_AR, alt=df)
 
 
-def ebr_from_gmfs(gmfslices, oqparam, dstore, monitor):
+def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     """
-    :param gmfslices: an array (S, 3) with S slices (start, stop, weight)
+    :param slice_by_event:
     :param oqparam: OqParam instance
     :param dstore: DataStore instance from which to read the GMFs
     :param monitor: a Monitor instance
@@ -158,13 +144,35 @@ def ebr_from_gmfs(gmfslices, oqparam, dstore, monitor):
     """
     if dstore.parent:
         dstore.parent.open('r')
-    dfs = []
+    gmfcols = oqparam.gmf_data_dt().names
+    with dstore:
+        # this is fast compared to reading the GMFs
+        risk_sids = monitor.read('sids')
+        s0, s1 = sbe[0]['start'], sbe[-1]['stop']
+        t0 = time.time()
+        haz_sids = dstore['gmf_data/sid'][s0:s1]
+    dt = time.time() - t0
+    idx, = numpy.where(numpy.isin(haz_sids, risk_sids))
+    if len(idx) == 0:
+        return {}
+    # print('waiting %.1f' % dt)
+    time.sleep(dt)
     with dstore, monitor('reading GMFs', measuremem=True):
-        for gmfslice in gmfslices:
-            slc = slice(gmfslice[0], gmfslice[1])
-            dfs.append(dstore.read_df('gmf_data', slc=slc))
-        df = pandas.concat(dfs)
-    return event_based_risk(df, oqparam, monitor)
+        start, stop = idx.min(), idx.max() + 1
+        dic = {}
+        for col in gmfcols:
+            if col == 'sid':
+                dic[col] = haz_sids[idx]
+            else:
+                data = dstore['gmf_data/' + col][s0+start:s0+stop]
+                dic[col] = data[idx - start]
+        df = pandas.DataFrame(dic)
+    max_gmvs = oqparam.max_gmvs_per_task
+    if len(df) <= max_gmvs:
+        yield event_based_risk(df, oqparam, monitor)
+    else:
+        for s0, s1 in performance.split_slices(df.eid.to_numpy(), max_gmvs):
+            yield event_based_risk, df[s0:s1], oqparam
 
 
 def event_based_risk(df, oqparam, monitor):
@@ -175,15 +183,16 @@ def event_based_risk(df, oqparam, monitor):
     :returns: a dictionary of arrays
     """
     with monitor('reading assets/crmodel', measuremem=True):
-        assets = monitor.read('assets')
+        # can aggregate millions of asset by using few GBs of RAM
+        items = monitor.read('assets').groupby('taxonomy')
+        taxo_assets = [(t, a.set_index('ordinal')) for t, a in items]
         aggids = monitor.read('aggids')
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else monitor.read('weights')
-        # can aggregate millions of asset by using few GBs of RAM
-        taxo_assets = assets.groupby('taxonomy')
 
-    ARK = len(assets), len(weights), oqparam.K
+    ARK = (sum(len(assets) for taxo, assets in taxo_assets),
+           len(weights), oqparam.K)
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
     else:
@@ -192,19 +201,21 @@ def event_based_risk(df, oqparam, monitor):
 
     def outputs():
         mon_risk = monitor('computing risk', measuremem=True)
-        fil_mon = monitor('filtering GMFs', measuremem=True)
-        for taxo, adf in taxo_assets:
-            with fil_mon:
-                # can be a bit slow, but it is *crucial* for the performance
-                # of the next step, 'computing risk'
-                gmf_df = df[numpy.isin(
-                    df.sid.to_numpy(), adf.site_id.to_numpy())]
-            if len(gmf_df) == 0:
-                continue
-            with mon_risk:  # this is using a lot of memory
-                adf = adf.set_index('ordinal')
-                out = crmodel.get_output(adf, gmf_df, oqparam._sec_losses, rng)
-            yield out
+        fil_mon = monitor('filtering GMFs', measuremem=False)
+        for s0, s1 in performance.split_slices(df.eid.to_numpy(), 250_000):
+            grp = df[s0:s1]
+            for taxo, adf in taxo_assets:
+                with fil_mon:
+                    # *crucial* for the performance
+                    # of the next step, 'computing risk'
+                    gmf_df = grp[numpy.isin(
+                        grp.sid.to_numpy(), adf.site_id.to_numpy())]
+                if len(gmf_df) == 0:
+                    continue
+                with mon_risk:  # this is using a lot of memory
+                    out = crmodel.get_output(
+                        adf, gmf_df, oqparam._sec_losses, rng)
+                yield out
 
     return aggreg(outputs(), crmodel, ARK, aggids, rlz_id, monitor)
 
@@ -233,6 +244,24 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     is_stochastic = True
     precalc = 'event_based'
     accept_precalc = ['scenario', 'event_based', 'event_based_risk', 'ebrisk']
+
+    def save_tmp(self, monitor, srcfilter=None):
+        """
+        Save some useful data in the file calc_XXX_tmp.hdf5
+        """
+        oq = self.oqparam
+        monitor.save('sids', self.sitecol.sids)
+        monitor.save('assets', self.assetcol.to_dframe())
+        monitor.save('srcfilter', srcfilter)
+        monitor.save('crmodel', self.crmodel)
+        monitor.save('rlz_id', self.rlzs)
+        monitor.save('weights', self.datastore['weights'][:])
+        if oq.K:
+            aggids, _ = self.assetcol.build_aggids(
+                oq.aggregate_by, oq.max_aggregations)
+        else:
+            aggids = ()
+        monitor.save('aggids', aggids)
 
     def pre_execute(self):
         oq = self.oqparam
@@ -349,7 +378,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 h5=self.datastore.hdf5,
                 duration=oq.time_per_task,
                 outs_per_task=5)
-            save_tmp(self, smap.monitor, srcfilter)
+            self.save_tmp(smap.monitor, srcfilter)
             smap.reduce(self.agg_dicts)
             if self.gmf_bytes == 0:
                 raise RuntimeError(
@@ -358,15 +387,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
-            with self.monitor('getting gmf_data slices', measuremem=True):
-                slice_list = build_gmfslices(
-                    self.datastore, oq.concurrent_tasks or 1)
-                allargs = [(arr, oq, self.datastore) for arr in slice_list]
-            logging.info('Starting ebr_from_gmfs')
-            smap = parallel.Starmap(
-                ebr_from_gmfs, allargs, h5=self.datastore.hdf5)
-            save_tmp(self, smap.monitor)
+            logging.info('Preparing tasks')
+            smap = starmap_from_gmfs(ebr_from_gmfs, oq, self.datastore)
+            self.save_tmp(smap.monitor)
             smap.reduce(self.agg_dicts)
+
         if self.parent_events:
             assert self.parent_events == len(self.datastore['events'])
         return 1
@@ -442,4 +467,3 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             prc.exported = self.exported
         with prc.datastore:
             prc.run(exports='')
-

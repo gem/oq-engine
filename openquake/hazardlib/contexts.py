@@ -29,7 +29,7 @@ import shapely
 from scipy.interpolate import interp1d
 
 from openquake.baselib.general import (
-    AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
+    AccumDict, DictArray, RecordBuilder, gen_slices, kmean, block_splitter)
 from openquake.baselib.performance import Monitor, split_array, compile, numba
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -37,7 +37,6 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import (
     registry, get_pnes, FatedTOM, NegativeBinomialTOM)
 from openquake.hazardlib.site import site_param_dt
-from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
     MINMAG, MAXMAG)
@@ -306,21 +305,6 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def cwdict(M, N, P, start, stop):
-    """
-    :param M: number of IMTs
-    :param N: number of sites
-    :param P: number of IMLs
-    :param start: index
-    :param stop: index > start
-    """
-    ddic = {}
-    for _g in range(start, stop):
-        ddic[_g] = AccumDict({'_c': numpy.zeros((M, N, 2, P)),
-                              '_w': numpy.zeros((N, P))})
-    return ddic
-
-
 def _interp(param, name, trt):
     try:
         mdd = param[name]
@@ -373,6 +357,8 @@ class ContextMaker(object):
                 self.mags = ()
             except KeyError:  # missing TRT but there is only one
                 [(_, self.mags)] = oq.mags_by_trt.items()
+        if 'poes' in param:
+            self.poes = param['poes']
         if 'imtls' in param:
             for imt in param['imtls']:
                 if not isinstance(imt, str):
@@ -477,12 +463,12 @@ class ContextMaker(object):
 
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
-        self.ctx_mon = monitor('make_contexts', measuremem=False)
+        self.ctx_mon = monitor('make_contexts', measuremem=True)
         self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
-        self.ir_mon = monitor('iter_ruptures', measuremem=False)
+        self.ir_mon = monitor('iter_ruptures', measuremem=True)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
@@ -543,6 +529,12 @@ class ContextMaker(object):
             # happens in the oq-risk-tests for NZ
             ctxs = [ctx[nans], ctx[~nans]]
         return ctxs
+
+    def new_ctx(self, size):
+        """
+        :returns: a recarray of the given size full of zeros
+        """
+        return RecordBuilder(**self.defaultdict).zeros(size)
 
     def recarray(self, ctxs, magi=None):
         """
@@ -610,7 +602,7 @@ class ContextMaker(object):
             src.id = i
             sites = srcfilter.get_close_sites(src)
             if sites is not None:
-                ctxs.extend(self.get_ctxs(src, sites))
+                ctxs.extend(self.get_ctx_iter(src, sites))
         return concat(ctxs)
 
     def make_rctx(self, rup):
@@ -668,100 +660,98 @@ class ContextMaker(object):
 
         return ctx
 
-    def get_ctx(self, rup, sites, distances=None):
+    def get_rctx(self, rup, sites, distances=None):
         """
         :returns: a RuptureContext (or None if filtered away)
         """
-        with self.ctx_mon:
-            ctx = self.make_rctx(rup)
-            for name in sites.array.dtype.names:
-                setattr(ctx, name, sites[name])
+        ctx = self.make_rctx(rup)
+        for name in sites.array.dtype.names:
+            setattr(ctx, name, sites[name])
 
-            if distances is None:
-                distances = rup.surface.get_min_distance(sites.mesh)
-            ctx.rrup = distances
-            ctx.sites = sites
-            for param in self.REQUIRES_DISTANCES - {'rrup'}:
-                dists = get_distances(rup, sites, param, self.dcache)
-                setattr(ctx, param, dists)
+        if distances is None:
+            distances = rup.surface.get_min_distance(sites.mesh)
+        ctx.rrup = distances
+        ctx.sites = sites
+        for param in self.REQUIRES_DISTANCES - {'rrup'}:
+            dists = get_distances(rup, sites, param, self.dcache)
+            setattr(ctx, param, dists)
 
-            # Equivalent distances
-            reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
-            if reqv_obj and not rup.surface:  # PointRuptures have no surface
-                reqv = reqv_obj.get(ctx.repi, rup.mag)
-                if 'rjb' in self.REQUIRES_DISTANCES:
-                    ctx.rjb = reqv
-                if 'rrup' in self.REQUIRES_DISTANCES:
-                    ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
+        # Equivalent distances
+        reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
+        if reqv_obj and not rup.surface:  # PointRuptures have no surface
+            reqv = reqv_obj.get(ctx.repi, rup.mag)
+            if 'rjb' in self.REQUIRES_DISTANCES:
+                ctx.rjb = reqv
+            if 'rrup' in self.REQUIRES_DISTANCES:
+                ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
 
         return ctx
 
     def _get_ctx_planar(self, mag, planar, sites, src_id, start_stop, tom):
-        with self.ctx_mon:
-            # computing distances
-            rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
-            if self.fewsites:
-                # get the closest points on the surface
-                closest = project_back(planar, xx, yy)  # (3, U, N)
-            dists = {'rrup': rrup}
-            for par in self.REQUIRES_DISTANCES - {'rrup'}:
-                dists[par] = get_distances_planar(planar, sites, par)
-            for par in dists:
-                dst = dists[par]
-                if self.minimum_distance:
-                    dst[dst < self.minimum_distance] = self.minimum_distance
+        # computing distances
+        rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
+        if self.fewsites:
+            # get the closest points on the surface
+            closest = project_back(planar, xx, yy)  # (3, U, N)
+        dists = {'rrup': rrup}
+        for par in self.REQUIRES_DISTANCES - {'rrup'}:
+            dists[par] = get_distances_planar(planar, sites, par)
+        for par in dists:
+            dst = dists[par]
+            if self.minimum_distance:
+                dst[dst < self.minimum_distance] = self.minimum_distance
 
-            # building contexts; ctx has shape (U, N), ctxt (N, U)
-            ctx = self.build_ctx((len(planar), len(sites)))
-            ctxt = ctx.T  # smart trick taking advantage of numpy magic
-            ctxt['src_id'] = src_id
+        # building contexts; ctx has shape (U, N), ctxt (N, U)
+        ctx = self.build_ctx((len(planar), len(sites)))
+        ctxt = ctx.T  # smart trick taking advantage of numpy magic
+        ctxt['src_id'] = src_id
 
-            if self.fewsites:
-                # the loop below is a bit slow
-                for u, rup_id in enumerate(range(*start_stop)):
-                    ctx[u]['rup_id'] = rup_id
+        if self.fewsites:
+            # the loop below is a bit slow
+            for u, rup_id in enumerate(range(*start_stop)):
+                ctx[u]['rup_id'] = rup_id
 
-            # setting rupture parameters
-            for par in self.ruptparams:
-                if par == 'mag':
-                    ctxt[par] = mag
-                elif par == 'occurrence_rate':
-                    ctxt[par] = planar.wlr[:, 2]  # shape U-> (N, U)
-                elif par == 'width':
-                    ctxt[par] = planar.wlr[:, 0]
-                elif par == 'strike':
-                    ctxt[par] = planar.sdr[:, 0]
-                elif par == 'dip':
-                    ctxt[par] = planar.sdr[:, 1]
-                elif par == 'rake':
-                    ctxt[par] = planar.sdr[:, 2]
-                elif par == 'ztor':  # top edge depth
-                    ctxt[par] = planar.corners[:, 2, 0]
-                elif par == 'zbot':  # bottom edge depth
-                    ctxt[par] = planar.corners[:, 2, 3]
-                elif par == 'hypo_lon':
-                    ctxt[par] = planar.hypo[:, 0]
-                elif par == 'hypo_lat':
-                    ctxt[par] = planar.hypo[:, 1]
-                elif par == 'hypo_depth':
-                    ctxt[par] = planar.hypo[:, 2]
+        # setting rupture parameters
+        for par in self.ruptparams:
+            if par == 'mag':
+                ctxt[par] = mag
+            elif par == 'occurrence_rate':
+                ctxt[par] = planar.wlr[:, 2]  # shape U-> (N, U)
+            elif par == 'width':
+                ctxt[par] = planar.wlr[:, 0]
+            elif par == 'strike':
+                ctxt[par] = planar.sdr[:, 0]
+            elif par == 'dip':
+                ctxt[par] = planar.sdr[:, 1]
+            elif par == 'rake':
+                ctxt[par] = planar.sdr[:, 2]
+            elif par == 'ztor':  # top edge depth
+                ctxt[par] = planar.corners[:, 2, 0]
+            elif par == 'zbot':  # bottom edge depth
+                ctxt[par] = planar.corners[:, 2, 3]
+            elif par == 'hypo_lon':
+                ctxt[par] = planar.hypo[:, 0]
+            elif par == 'hypo_lat':
+                ctxt[par] = planar.hypo[:, 1]
+            elif par == 'hypo_depth':
+                ctxt[par] = planar.hypo[:, 2]
 
-            # setting distance parameters
-            for par in dists:
-                ctx[par] = dists[par]
-            if self.fewsites:
-                ctx['clon'] = closest[0]
-                ctx['clat'] = closest[1]
+        # setting distance parameters
+        for par in dists:
+            ctx[par] = dists[par]
+        if self.fewsites:
+            ctx['clon'] = closest[0]
+            ctx['clat'] = closest[1]
 
-            # setting site parameters
-            for par in self.siteparams:
-                ctx[par] = sites.array[par]  # shape N-> (U, N)
-            if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
-                # read Probability Mass Function from model and reshape it
-                # into predetermined shape of probs_occur
-                pmf = tom.get_pmf(planar.wlr[:, 2],
-                                  n_max=ctx['probs_occur'].shape[2])
-                ctx['probs_occur'] = pmf[:, numpy.newaxis, :]
+        # setting site parameters
+        for par in self.siteparams:
+            ctx[par] = sites.array[par]  # shape N-> (U, N)
+        if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
+            # read Probability Mass Function from model and reshape it
+            # into predetermined shape of probs_occur
+            pmf = tom.get_pmf(planar.wlr[:, 2],
+                              n_max=ctx['probs_occur'].shape[2])
+            ctx['probs_occur'] = pmf[:, numpy.newaxis, :]
 
         return ctx
 
@@ -859,7 +849,30 @@ class ContextMaker(object):
                         quartets.append((m, mag, pla, close))
         return quartets
 
-    def get_ctxs(self, src, sitecol, src_id=0, step=1):
+    # this is called for non-point sources (or point sources in preclassical)
+    def gen_contexts(self, rups_sites, src_id):
+        """
+        :yields: the old-style RuptureContexts generated by the source
+        """
+        for rups, sites in rups_sites:  # ruptures with the same magnitude
+            if len(rups) == 0:  # may happen in case of min_mag/max_mag
+                continue
+            magdist = self.maximum_distance(rups[0].mag)
+            for u, rup in enumerate(rups):
+                dist = get_distances(rup, sites, 'rrup', self.dcache)
+                mask = dist <= magdist
+                if mask.any():
+                    r_sites = sites.filter(mask)
+                    rctx = self.get_rctx(rup, r_sites, dist[mask])
+                    rctx.src_id = src_id
+                    rctx.rup_id = rup.rup_id
+                    if self.fewsites:
+                        c = rup.surface.get_closest_points(sites.complete)
+                        rctx.clon = c.lons[rctx.sids]
+                        rctx.clat = c.lats[rctx.sids]
+                    yield rctx
+
+    def get_ctx_iter(self, src, sitecol, src_id=0, step=1):
         """
         :param src:
             a source object (already split) or a list of ruptures
@@ -870,12 +883,13 @@ class ContextMaker(object):
         :param step:
             > 1 only in preclassical
         :returns:
-            fat RuptureContexts sorted by mag
+            iterator over recarrays
         """
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
-        ctxs = []
         if getattr(src, 'location', None) and step == 1:
-            return self.get_ctxs_planar(src, sitecol)
+            with self.ctx_mon:
+                ctxs = self.get_ctxs_planar(src, sitecol)
+            return iter(ctxs)
         elif hasattr(src, 'source_id'):  # other source
             with self.ir_mon:
                 allrups = numpy.array(list(src.iter_ruptures(
@@ -891,26 +905,9 @@ class ContextMaker(object):
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
             src_id = 0
-        for rups, sites in rups_sites:  # ruptures with the same magnitude
-            if len(rups) == 0:  # may happen in case of min_mag/max_mag
-                continue
-
-            magdist = self.maximum_distance(rups[0].mag)
-            dists = [get_distances(rup, sites, 'rrup', self.dcache)
-                     for rup in rups]
-            for u, rup in enumerate(rups):
-                mask = dists[u] <= magdist
-                if mask.any():
-                    r_sites = sites.filter(mask)
-                    ctx = self.get_ctx(rup, r_sites, dists[u][mask])
-                    ctx.src_id = src_id
-                    ctx.rup_id = rup.rup_id
-                    ctxs.append(ctx)
-                    if self.fewsites:
-                        c = rup.surface.get_closest_points(sites.complete)
-                        ctx.clon = c.lons[ctx.sids]
-                        ctx.clat = c.lats[ctx.sids]
-        return [] if not ctxs else [self.recarray(ctxs)]
+        ctxs = self.gen_contexts(rups_sites, src_id)
+        return self.ctx_mon.iter(
+            (self.recarray(block) for block in block_splitter(ctxs, 100)))
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -1049,118 +1046,6 @@ class ContextMaker(object):
                 raise ValueError('Total StdDev is zero for %s' % gsim)
         return out
 
-    # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-    def get_cs_contrib(self, ctx, imti, imls, cs_poes, _c=None):
-        """
-        Compute the contributions to the conditional spectra, in a form
-        suitable for later composition.
-
-        NB: at the present if works only for poissonian contexts
-
-        :param ctx:
-           a context array
-        :param imti:
-            IMT index in the range 0..M-1
-        :param imls:
-            P intensity measure levels for the IMT specified by the index
-        :param cs_poes:
-            Probabilities of exceedence for which we compute the CMS
-        :param _c:
-            The previously computed _c contribution. This is used for the
-            calculation of the _s contribution. It is a matrix (M, N, 2, P).
-        :returns:
-            a dictionary g -> key -> array where g is an index,
-            key is the string '_c' or '_w',  and the arrays have shape
-            (M, N, 2, P) or (N, P) respectively.
-
-        """
-        assert self.tom
-        sids, counts = numpy.unique(ctx.sids, return_counts=True)
-        assert len(set(counts)) == 1, counts  # must be all equal
-        N = len(sids)
-        U = len(ctx) // N
-        G = len(self.gsims)
-        M = len(self.imtls)
-        P = len(imls)
-
-        # This is the output dictionary as explained above
-        out = cwdict(M, N, P, self.start, self.start + G)
-
-        mean_stds = self.get_mean_stds([ctx])  # (4, G, M, N*C)
-        imt_ref = self.imts[imti]
-        rho = numpy.array([self.cross_correl.get_correlation(imt_ref, imt)
-                           for imt in self.imts])
-        m_range = range(len(self.imts))
-
-        # This computes the probability of at least one occurrence
-        # probs = 1 - exp(-occurrence_rates*time_span). NOTE that we
-        # assume the contexts here are homogenous i.e. they either use
-        # the occurrence rate or the probability of occurrence in the
-        # investigation time
-        if len(ctx.probs_occur[0]):
-            probs = numpy.array([numpy.sum(p[1:]) for p in ctx.probs_occur])
-        else:
-            probs = self.tom.get_probability_one_or_more_occurrences(
-                ctx.occurrence_rate)  # shape N * U
-
-        # For every site
-        for n in range(N):
-            # NB: to understand the code below, consider the case with
-            # N=3 sites and C=2 contexts; then the indices N*C are
-            # 0: first site
-            # 1: second site
-            # 2: third site
-            # 3: first site
-            # 4: second site
-            # 5: third site
-            # i.e. idxs = [0, 3], [1, 4], [2, 5] for sites 0, 1, 2
-            slc = slice(n, N * U, N)  # U indices
-
-            # For every GMM
-            for g in range(G):
-                mu = mean_stds[0, g, :, slc]  # shape (M, U)
-                sig = mean_stds[1, g, :, slc]  # shape (M, U)
-
-                c = out[self.start + g]['_c']
-                w = out[self.start + g]['_w']
-
-                # For each IML
-                for p in range(P):
-
-                    # Calculate the contribution of each rupture to the total
-                    # probability of occurrence for the reference IMT. Both
-                    # `eps` and `poes` have shape U
-                    eps = (numpy.log(imls[p]) - mu[imti]) / sig[imti]
-                    poes = _truncnorm_sf(self.truncation_level, eps)
-
-                    # Converting to rates and dividing by the rate of
-                    # exceedance of the reference IMT and level
-                    ws = -numpy.log(
-                        (1. - probs[slc]) ** poes) / self.investigation_time
-
-                    # Normalizing by the AfE for the investigated IMT and level
-                    ws /= -numpy.log(1. - cs_poes[p])
-
-                    # Populate normalizer array
-                    w[n, p] = ws.sum()  # weights not summing up to 1
-
-                    # For each intensity measure type
-                    for m in m_range:
-
-                        # Equation 14 in Lin et al. (2013)
-                        term1 = (mu[m] + rho[m] * eps * sig[m])
-                        c[m, n, MEA, p] = ws @ term1
-
-                        # This is executed only if we already have the final CS
-                        if _c is not None:
-
-                            # Equation 15 in Lin et al. (2013)
-                            term2 = sig[m] * (1. - rho[m]**2)**0.5
-                            term3 = term1 - _c[m, n, 0, p]
-                            c[m, n, STD, p] = ws @ (term2**2 + term3**2)
-
-        return out
-
     def gen_poes(self, ctx):
         """
         :param ctx: a vectorized context (recarray) of size N
@@ -1234,7 +1119,7 @@ class ContextMaker(object):
                 self.pointsource_distance < 1000):
             esites = self.estimate_sites(src, sites) * multiplier
         else:
-            ctxs = self.get_ctxs(src, sites, step=10)  # reduced number
+            ctxs = list(self.get_ctx_iter(src, sites, step=10))  # reduced
             if not ctxs:
                 return src.num_ruptures if N == 1 else 0
             esites = (len(ctxs[0]) * src.num_ruptures /
@@ -1334,21 +1219,19 @@ class PmapMaker(object):
             nbytes += 8 * dparams * nsites
         return nbytes
 
-    def _get_ctxs(self, src):
+    def gen_ctxs(self, src):
         sites = self.srcfilter.get_close_sites(src)
         if sites is None:
-            return []
-        ctxs = self.cmaker.get_ctxs(src, sites)
-        if hasattr(src, 'mutex_weight'):
-            for ctx in ctxs:
+            return
+        for ctx in self.cmaker.get_ctx_iter(src, sites):
+            if hasattr(src, 'mutex_weight'):
                 if ctx.weight.any():
                     ctx['weight'] *= src.mutex_weight
                 else:
                     ctx['weight'] = src.mutex_weight
-        if self.fewsites:  # keep rupdata in memory (before collapse)
-            for ctx in ctxs:
+            if self.fewsites:  # keep rupdata in memory (before collapse)
                 self.rupdata.append(ctx)
-        return ctxs
+            yield ctx
 
     def _make_src_indep(self):
         # sources with the same ID
@@ -1359,16 +1242,18 @@ class PmapMaker(object):
         totlen = 0
         t0 = time.time()
         for src in self.sources:
-            ctxs = self._get_ctxs(src)
-            ctxs_mb += sum(ctx.nbytes for ctx in ctxs) / TWO20  # TWO20=1MB
-            src.nsites = sum(len(ctx) for ctx in ctxs)
-            totlen += src.nsites
-            allctxs.extend(ctxs)
-            if ctxs_mb > MAX_MB:
-                cm.get_pmap(concat(allctxs), pmap)
-                allctxs.clear()
-                ctxs_mb = 0
+            nsites = 0
+            for ctx in self.gen_ctxs(src):
+                ctxs_mb += ctx.nbytes / TWO20  # TWO20=1MB
+                nsites += len(ctx)
+                allctxs.append(ctx)
+                if ctxs_mb > MAX_MB:
+                    cm.get_pmap(concat(allctxs), pmap)
+                    allctxs.clear()
+                    ctxs_mb = 0
         if allctxs:
+            src.nsites = nsites
+            totlen += nsites
             cm.get_pmap(concat(allctxs), pmap)
             allctxs.clear()
         dt = time.time() - t0
@@ -1392,7 +1277,7 @@ class PmapMaker(object):
         for src in self.sources:
             t0 = time.time()
             pm = ProbabilityMap(cm.imtls.size, len(cm.gsims))
-            ctxs = self._get_ctxs(src)
+            ctxs = list(self.gen_ctxs(src))
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:

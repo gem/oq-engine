@@ -133,7 +133,9 @@ def calc_avg_std(momenta):
     """
     avgstd = numpy.zeros_like(momenta[1:])
     avgstd[0] = avg = momenta[1] / momenta[0]
-    avgstd[1] = numpy.sqrt(momenta[2] / momenta[0] - avg ** 2)
+    # make sure the variance is positive (due to numeric errors can be -1E-9)
+    var = numpy.maximum(momenta[2] / momenta[0] - avg ** 2, 0.)
+    avgstd[1] = numpy.sqrt(var)
     return avgstd
 
 

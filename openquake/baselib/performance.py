@@ -338,6 +338,19 @@ class Monitor(object):
                 return data
             return pickle.loads(data)
 
+    def iter(self, genobj):
+        """
+        :yields: the elements of the generator object
+        """
+        while True:
+            try:
+                with self:
+                    obj = next(genobj)
+            except StopIteration:
+                return
+            else:
+                yield obj
+
     def __repr__(self):
         calc_id = ' #%s ' % self.calc_id if self.calc_id else ' '
         msg = '%s%s%s[%s]' % (self.__class__.__name__, calc_id,
@@ -411,6 +424,24 @@ def idx_start_stop(integers):
             start = i
         prev = val
     out.append((I64(prev), start, i + 1))
+    return numpy.array(out, I64)
+
+
+@compile("int64[:, :](uint32[:], uint32)")
+def split_slices(integers, size):
+    # given an array of integers returns an array int64 of shape (n, 2)
+    out = []
+    start = i = 0
+    prev = integers[0]
+    totsize = 1
+    for i, val in enumerate(integers[1:], 1):
+        totsize += 1
+        if val != prev and totsize >= size:
+            out.append((start, i))
+            totsize = 0
+            start = i
+        prev = val
+    out.append((start, i + 1))
     return numpy.array(out, I64)
 
 

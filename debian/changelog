@@ -1,5 +1,25 @@
+
   [Manuela Villani]
   * Added the Wong et al. (2022) ground motion model
+
+  [Marco Pagani]
+  * Added a `constant_term` attribute to the `faultActivityData` uncertainty
+    model, with a default value of 9.1 for backward compatibility
+
+  [Michele Simionato]
+  * Removed support for Python < 3.8
+
+  [Prajakta Jadhav, Dharma Wijewickreme]
+  * Added GMPE for Zhang and Zhao(2005)
+
+  [Michele Simionato]
+  * Added conditional spectrum calculator in hazardlib
+  * Fixed the performance report that failed for NGAEast GMPEs
+  * Reduced the memory consumption in large classical calculations
+    (in make_contexts)
+
+  [Marco Pagani, Michele Simionato]
+  * Fixed the calculation of conditional spectra
 
   [Michele Simionato]
   * Corner case bug: in the presence of parent site collection and a child
@@ -18,7 +38,6 @@
   * Bumped h5py to version 3.7.0 and added fiona 1.8.21
 
   [Marco Pagani]
-  * Fixed the calculation of conditional spectra
   * Added the get_dip and get_strike methods to the gridded surface
 
   [Michele Simionato]

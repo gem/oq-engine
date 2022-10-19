@@ -19,16 +19,14 @@
 import itertools
 import warnings
 import logging
-import functools
-import operator
 from unittest.mock import Mock
 import numpy
 
-from openquake.baselib import performance, parallel, hdf5, general
+from openquake.baselib import performance, parallel, hdf5
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
 from openquake.hazardlib.source.rupture import EBRupture, events_dt
-from openquake.commonlib import util, datastore
+from openquake.commonlib import util
 
 TWO16 = 2 ** 16
 TWO32 = numpy.float64(2 ** 32)
@@ -75,6 +73,27 @@ def convert_to_array(pmap, nsites, imtls, inner_idx=0):
                 curve['%s-%.3f' % (imt, iml)] = pcurve.array[idx, inner_idx]
                 idx += 1
     return curves
+
+
+def get_mean_curve(dstore, imt, site_id=0):
+    """
+    Extract the mean hazard curve from the datastore for the first site.
+    """
+    if 'hcurves-stats' in dstore:  # shape (N, S, M, L1)
+        arr = dstore.sel('hcurves-stats', stat='mean', imt=imt)
+    else:  # there is only 1 realization
+        arr = dstore.sel('hcurves-rlzs', rlz_id=0, imt=imt)
+    return arr[site_id, 0, 0]
+
+
+def get_poe_from_mean_curve(dstore, imt, iml, site_id=0):
+    """
+    Extract the poe corresponding to the given iml by looking at the mean
+    curve for the given imt. `iml` can also be an array.
+    """
+    imls = dstore['oqparam'].imtls[imt]
+    mean_curve = get_mean_curve(dstore, imt, site_id)
+    return numpy.interp(imls, mean_curve)[iml]
 
 
 # ######################### hazard maps ################################### #
@@ -373,9 +392,9 @@ class RuptureImporter(object):
 # logic for building the GMF slices used in event_based_risk #
 ##############################################################
 
-slice_dt = numpy.dtype([('start', int), ('stop', int), ('eid', U32)])
-START, STOP, WEIGHT = 0, 1, 2
 SLICE_BY_EVENT_NSITES = 1000
+
+slice_dt = numpy.dtype([('start', int), ('stop', int), ('eid', U32)])
 
 
 def build_slice_by_event(eids, offset=0):
@@ -387,141 +406,24 @@ def build_slice_by_event(eids, offset=0):
     return sbe
 
 
-def _concat(acc, slc2):
-    if len(acc) == 0:
-        return [slc2]
-    slc1 = acc[-1]  # last slice
-    if slc2[START] == slc1[STOP]:
-        new = numpy.zeros(3, int)
-        new[START] = slc1[START]
-        new[STOP] = slc2[STOP]
-        new[WEIGHT] = slc1[WEIGHT] + slc2[WEIGHT]
-        return acc[:-1] + [new]
-    return acc + [slc2]
-
-
-def compactify(arrayN3):
+def starmap_from_gmfs(task_func, oq, dstore):
     """
-    :param arrayN3: an array with columns (start, stop, weight)
-    :returns: a shorter array with the same structure
-
-    Here is how it works in an example where the first three slices
-    are compactified into one while the last slice stays as it is:
-
-    >>> arr = numpy.array([[84384702, 84385520, 1308],
-    ...                    [84385520, 84385770, 28],
-    ...                    [84385770, 84386062, 12],
-    ...                    [84387636, 84388028, 183]])
-    >>> compactify(arr)
-    array([[84384702, 84386062,     1348],
-           [84387636, 84388028,      183]])
+    :param task_func: function or generator with signature (gmf_df, oq, dstore)
+    :param oq: an OqParam instance
+    :param dstore: DataStore instance where the GMFs are stored
+    :returns: a Starmap object used for event based calculations
     """
-    if len(arrayN3) == 1:
-        # nothing to compactify
-        return arrayN3
-    out = numpy.array(functools.reduce(_concat, arrayN3, []))
-    # sanity check that the compactification preserves the weight
-    assert out[:, WEIGHT].sum() == arrayN3[:, WEIGHT].sum()
-    return out
-
-
-def ponder_slices(slice_by_event, num_assets, sids_risk, dstore, monitor):
-    """
-    Convert an array `slice_by_event` into an array `slice_by_weight`.
-    If `sids_risk` is not None, it is used to filter the hazard sites
-    and in that case the rows with zero weight are discarded.
-    """
-    slice_by_weight = numpy.zeros((len(slice_by_event), 3), int)
-    start, stop = slice_by_event[0]['start'], slice_by_event[-1]['stop']
-    with dstore.open('r'):
-        haz_sids = dstore['gmf_data/sid'][start:stop]
-    for i, (s1, s2, _e) in enumerate(slice_by_event):
-        sids = haz_sids[s1-start:s2-start]
-        if sids_risk is not None:
-            sids = sids[numpy.isin(sids, sids_risk)]
-        weight = num_assets[sids].sum()
-        slice_by_weight[i] = (s1, s2, weight)
-    if sids_risk is None:
-        return slice_by_weight
-    return slice_by_weight[slice_by_weight[:, WEIGHT] > 0]
-
-
-def build_gmfslices(dstore, hint=None):
-    """
-    :param dstore: a DataStore containing gmf_data in it or its parent
-    :param hint: hint for the number of arrays to generate
-    :returns: a list of slice arrays
-    """
-    df = dstore.read_df('gmf_data', slc=slice(0, 1))
-    nbytes_per_row = df.memory_usage(index=False).sum()
-    maxrows = MAX_NBYTES // nbytes_per_row
-    logging.info('Considering blocks of {:_d} rows'.format(maxrows))
-    tot_nrows = len(dstore['gmf_data/sid'])
-    parent = dstore.parent
-    Np = len(parent['sitecol']) if parent else 0
-    if hint is None:
-        hint = tot_nrows // maxrows or 1
+    data = dstore['gmf_data']
     try:
-        slice_by_event = dstore['gmf_data/slice_by_event'][:]
+        sbe = data['slice_by_event'][:]
     except KeyError:
-        # missing slice_by_event
-        logging.info('Reading the full gmf_data/eid')
-        eids = dstore['gmf_data/eid'][:]
-        if parent and Np >= SLICE_BY_EVENT_NSITES:
-            # try to fix the parent if there are many sites
-            parent.close()
-            with datastore.read(parent.filename, 'r+') as p:
-                slice_by_event = build_slice_by_event(eids)
-                p['gmf_data/slice_by_event'] = slice_by_event
-            parent.open('r')
-        else:
-            # no parent or few sites
-            slice_by_event = build_slice_by_event(eids)
-
-    logging.info('Reading sites and assets')
-    sitecol = dstore['sitecol']
-    assetcol = dstore['assetcol']
-    if parent:
-        # important for oq-risk-tests event_based_risk case_8e
-        filtered = len(sitecol) < Np
-    else:
-        filtered = (sitecol.sids != numpy.arange(len(sitecol))).any()
-    N = sitecol.sids.max() + 1 if filtered else len(sitecol)
-    num_assets = numpy.zeros(N, int)
-    sids_risk, counts = numpy.unique(assetcol['site_id'], return_counts=True)
-    num_assets[sids_risk] = counts
-    logging.info('Building slice_by_event')
-    slice_by_weight = []
-    if not filtered:
-        sids_risk = None
-    dstore.swmr_on()  # crucial!
-    smap = parallel.Starmap(
-        ponder_slices, distribute='processpool', h5=dstore.hdf5)
-    for sbe in numpy.array_split(slice_by_event, hint):
-        if len(sbe):
-            smap.submit((sbe, num_assets, sids_risk, dstore))
-    for sbw in smap:
-        if len(sbw):
-            slice_by_weight.append(sbw)
-    if not slice_by_weight:
-        raise ValueError('The sites in gmf_data are disjoint from the '
-                         'site collection!?')
-    # NB: the sort below is needed for scenario_damage case_12 with
-    # discrete_damage_distribution = true
-    logging.info('Sorting and compactifying slices')
-    slice_by_weight = numpy.sort(numpy.concatenate(slice_by_weight), axis=0)
-    tot_weight = slice_by_weight[:, WEIGHT].sum()
-    max_weight = numpy.clip(tot_weight / hint, 10_000, maxrows)
-    blocks = general.block_splitter(
-        slice_by_weight, max_weight, operator.itemgetter(WEIGHT))
-    gmfslices = [compactify(numpy.array(block)) for block in blocks]
-    ns = sum(len(arr) for arr in gmfslices)
-    logging.info('Built {:d} GMF slices'.format(ns))
-    nrows = sum((arr[:, STOP]-arr[:, START]).sum() for arr in gmfslices)
-    h = general.humansize(nbytes_per_row * nrows)
-    htot = general.humansize(nbytes_per_row * tot_nrows)
-    logging.info('Considering %s of %s of GMFs', h, htot)
-    ws = numpy.array([arr[:, WEIGHT].sum() for arr in gmfslices])
-    logging.info('Slice weights min, mean, max {:_d}, {:_d}, {:_d}'.
-                 format(ws.min(), int(ws.mean()), ws.max()))
-    return gmfslices
+        sbe = build_slice_by_event(data['eid'][:])
+    nrows = sbe[-1]['stop'] - sbe[0]['start']
+    maxweight = numpy.ceil(nrows / (oq.concurrent_tasks or 1))
+    dstore.swmr_on()  # before the Starmap
+    smap = parallel.Starmap.apply(
+        task_func, (sbe, oq, dstore),
+        weight=lambda rec: rec['stop']-rec['start'],
+        maxweight=numpy.clip(maxweight, 1000, 10_000_000),
+        h5=dstore.hdf5)
+    return smap

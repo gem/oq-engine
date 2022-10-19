@@ -23,6 +23,7 @@ import pandas
 from openquake.hazardlib import read_input, valid
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.calc.filters import IntegrationDistance
+from openquake.hazardlib.calc.cond_spectra import get_cs_out, cond_spectra
 
 OVERWRITE_EXPECTED = False
 
@@ -76,23 +77,21 @@ def plot(df, imts):
 
 
 # used to create the expected file the first time
-def cwdic_to_dframe(cwdic, imts, n, p):
+def outdic_to_dframe(outdic, imts, n, p):
     """
-    :param cwdic: a double dictionary g_ -> key -> array
+    :param outdic: a dictionary g_ -> array
     :param imts: M intensity measure types
     :param rlzs: R realization indices
     :param n: an index in the range 0..N-1 where N is the number of sites
     :param p: an index in the range 0..P-1 where P is the number of IMLs
     """
     dic = dict(rlz_id=[], period=[], cs_exp=[], cs_std=[])
-    for r, cs in cwdic.items():
-        c = cs['_c']
-        s = cs['_w']
+    for r, c in outdic.items():
         for m, imt in enumerate(imts):
             dic['rlz_id'].append(r)
             dic['period'].append(imt.period)
-            dic['cs_exp'].append(np.exp(c[m, n, 0, p] / s[n, p]))
-            dic['cs_std'].append(np.sqrt(c[m, n, 1, p] / s[n, p]))
+            dic['cs_exp'].append(np.exp(c[m, n, 1, p] / c[m, n, 0, p]))
+            dic['cs_std'].append(np.sqrt(c[m, n, 2, p] / c[m, n, 0, p]))
     return pandas.DataFrame(dic)
 
 
@@ -110,14 +109,22 @@ class CondSpectraTestCase(unittest.TestCase):
         ctx2 = ctx[50:]
 
         # The hazard for the target IMT and poe
-        poes = [0.000404]
+        cmaker.poes = [0.000404]
         imls = [0.394359437]
 
-        dic1 = cmaker.get_cs_contrib(ctx1, imti, imls, poes)[0]
-        dic2 = cmaker.get_cs_contrib(ctx2, imti, imls, poes)[0]
-        dic = cmaker.get_cs_contrib(ctx, imti, imls, poes)[0]
-        aac((dic1['_c'] + dic2['_c']) / (dic1['_w'] + dic2['_w']),
-            dic['_c'] / dic['_w'])
+        mom1 = get_cs_out(cmaker, ctx1, imti, imls)[0]
+        mom2 = get_cs_out(cmaker, ctx2, imti, imls)[0]
+        mom = get_cs_out(cmaker, ctx, imti, imls)[0]
+        aac(mom1 + mom2, mom)
+
+        spectra, s_sigma = cond_spectra(
+            cmaker, src_group, inp.sitecol, 'SA(0.2)', imls)
+        aac(spectra.flatten(), [0.19236242, 0.23961989, 0.27838065, 0.35216192,
+                                0.39435944, 0.36501786, 0.34676928, 0.23458421,
+                                0.15669297, 0.11154595, 0.0409729])
+        aac(s_sigma.flatten(), [0.327456, 0.368969, 0.388289, 0.270122,
+                                0.006058, 0.235236, 0.319312, 0.463179,
+                                0.556208, 0.596132, 0.70371], atol=1E-5)
 
     def test_2_rlzs(self):
         # test with two GMPEs, 1 TRT
@@ -127,26 +134,23 @@ class CondSpectraTestCase(unittest.TestCase):
         [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
 
         # The hazard for the target IMT and poe=0.002105
-        poes = [0.002105]
+        cmaker.poes = [0.002105]
         imls = [0.238531932]
 
         # Compute mean CS
-        cwdic = cmaker.get_cs_contrib(ctx, imti, imls, poes)
+        outdic = get_cs_out(cmaker, ctx, imti, imls)
+        # 0, 1 -> array (M, N, O, P) = (11, 1, 3, 1)
 
-        # CS container
-        S = cwdic[0]['_c'].shape
-        _c = np.zeros((S[0], S[1], 1, S[3]))
+        # Compute mean across rlzs
         w1 = inp.gsim_lt.branches[0].weight['weight']
         w2 = inp.gsim_lt.branches[1].weight['weight']
-
-        _c[:, 0, 0, 0] = (cwdic[0]['_c'][:, 0, 0, 0] * w1 +
-                          cwdic[0]['_c'][:, 0, 1, 0] * w2)
+        _c = outdic[0] * w1 + outdic[1] * w2
 
         # Compute std
-        cwdic = cmaker.get_cs_contrib(ctx, imti, imls, poes, _c)
+        outdic = get_cs_out(cmaker, ctx, imti, imls, _c)
 
         # Create DF for test
-        df = cwdic_to_dframe(cwdic, cmaker.imts, 0, 0)
+        df = outdic_to_dframe(outdic, cmaker.imts, 0, 0)
 
         # check the result
         expected = os.path.join(CWD, 'expected', 'spectra2.csv')
