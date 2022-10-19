@@ -30,11 +30,8 @@ from openquake import commands
 
 # check for Python version
 PY_VER = sys.version_info[:2]
-if PY_VER < (3, 6):
-    sys.exit('Python 3.6+ is required, you are using %s', sys.executable)
-elif PY_VER == (3, 6):
-    print('Python 3.6 (%s) is not supported; the engine may not work correctly'
-          % sys.executable)
+if PY_VER < (3, 8):
+    sys.exit('Python 3.8+ is required, you are using %s', sys.executable)
 
 
 # sanity check, all display name keys must be exportable

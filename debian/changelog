@@ -1,3 +1,5 @@
+  [Michele Simionato]
+  * Removed support for Python < 3.8
 
   [Prajakta Jadhav, Dharma Wijewickreme]
   * Added GMPE for Zhang and Zhao(2005)
