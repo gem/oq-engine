@@ -1678,11 +1678,11 @@ To run reinsurance calculations, in addition to the required files for
 performing event-based or scenario risk calculations, it is required to adjust
 the exposure information, and to include two additional files:
 
-    1. Insurance and reinsurance information: an ``.xml`` file defining the
-       insurance and reinsurance treaties (e.g., "reinsurance.xml").
-    2. Policy information: a ``.csv`` file with details of each policy
-       indicated in the exposure model and the associated reinsurance
-       treaties (e.g., "policy.csv").
+1. Insurance and reinsurance information: an ``.xml`` file defining the
+   insurance and reinsurance treaties (e.g., "reinsurance.xml").
+2. Policy information: a ``.csv`` file with details of each policy
+   indicated in the exposure model and the associated reinsurance
+   treaties (e.g., "policy.csv").
 
 
 Exposure file
@@ -1918,22 +1918,22 @@ Output files
 The reinsurance calculations generates estimates of retention and cession under the different
 reinsurance treaties. The following output files are produced:
 
-    1. ``Reinsurance by event``: aggregated estimated per event for the claim, retention, 
-      cession and overspills under each reinsurance treaty.
+1. ``Reinsurance by event``: aggregated estimated per event for the claim, retention, 
+   cession and overspills under each reinsurance treaty.
 
-    2. ``Reinsurance curves``: reinsurance loss exceedance curves describe the probabilities
-       of exceeding a set of loss ratios or loss values, within a given time span 
-       (or investigation interval). The curves are generated for the claim, retention, 
-       cession and overspills under each reinsurance treaty.
+2. ``Reinsurance curves``: reinsurance loss exceedance curves describe the probabilities
+   of exceeding a set of loss ratios or loss values, within a given time span 
+   (or investigation interval). The curves are generated for the claim, retention, 
+   cession and overspills under each reinsurance treaty.
 
-    3. ``Average reinsurance losses``: the average reinsurance losses
-      indicates the expected value within the time period specified
-      by risk_investigation_time for the claim, retention, and
-      cessions under each reinsurance treaty for all policies in the
-      Exposure Model.
+3. ``Average reinsurance losses``: the average reinsurance losses
+   indicates the expected value within the time period specified
+   by risk_investigation_time for the claim, retention, and
+   cessions under each reinsurance treaty for all policies in the
+   Exposure Model.
 
-    4. ``Aggregated reinsurance by policy``:  the average reinsurance losses
-      for each policy, by ignoring the overspill logic.
+4. ``Aggregated reinsurance by policy``:  the average reinsurance losses
+   for each policy, by ignoring the overspill logic.
 
 The parameters indicated in the previous outputs include:
 
@@ -1973,9 +1973,9 @@ There are several ways to specify the hazard sites in an engine calculation.
 4. Otherwise the sites can be inferred from the exposure, if any,
    in two different ways:
    
-   1.    if ``region_grid_spacing`` is specified, a grid is implicitly
-         generated from the convex hull of the exposure and used
-   2.    otherwise the locations of the assets are used as hazard sites
+   1. if ``region_grid_spacing`` is specified, a grid is implicitly
+      generated from the convex hull of the exposure and used
+   2. otherwise the locations of the assets are used as hazard sites
    
 5. Otherwise the sites can be inferred from the site model file, if any.
 
