@@ -323,12 +323,15 @@ def by_policy_event(agglosses_df, policy_df, treaty_df, mon=Monitor()):
     :returns: (risk_by_policy_df, risk_by_event_df)
     """
     dfs = []
+    i = 1
     for _, policy in policy_df.iterrows():
-        if policy.policy % 100 == 0:  # starts from 1
-            logging.info("Processed %d policies", policy.policy)
+        if i % 100 == 0:
+            logging.info("Processed %d policies", i)
         df = by_policy(agglosses_df, dict(policy), treaty_df)
         df['policy_grp'] = build_policy_grp(policy, treaty_df)
         dfs.append(df)
+        i += 1
+    logging.info("Processed %d policies", i - 1)
     rbp = pd.concat(dfs)
     if DEBUG:
         print(rbp.sort_values('event_id'))
