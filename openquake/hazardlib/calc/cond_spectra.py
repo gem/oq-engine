@@ -32,7 +32,7 @@ def outdict(M, N, P, start, stop):
 
 
 def _cs_out(mean_stds, probs, rho, imti, imls, cs_poes,
-                trunclevel, invtime, c, _c=None):
+            trunclevel, invtime, c, _c=None):
     M, N, O, P = c.shape
     U = len(probs) // N
 
@@ -142,3 +142,27 @@ def get_cs_out(cmaker, ctx, imti, imls, _c=None):
                 cmaker.truncation_level, cmaker.investigation_time,
                 out[cmaker.start + g], _c if _c is not None else None)
     return out
+
+
+def cond_spectra(cmaker, srcs, sitecol, imt_ref, imls):
+    """
+    :param cmaker: a ContextMaker with a given TRT
+    :param srcs: seismic sources of the given TRT
+    :param sitecol: a SiteCollection object
+    :param imt_ref: reference Intensity Measure Type (as a string)
+    :param imls: Intensity Measure Levels corresponding to the poes
+    :returns: conditional spectra and sigmas for the given imls as arrays
+              of shape (G, M, N, P)
+    """
+    imti = list(cmaker.imtls).index(imt_ref)
+    [ctx] = cmaker.from_srcs(srcs, sitecol)
+    out0 = get_cs_out(cmaker, ctx, imti, imls)  # g -> MNOP
+    mean = numpy.mean([out0[g] for g in out0], axis=0)  # MNOP
+    out = get_cs_out(cmaker, ctx, imti, imls, mean)  # g -> MNOP
+    G, M, N, P = len(cmaker.gsims), len(cmaker.imtls), len(sitecol), len(imls)
+    spectra = numpy.zeros((G, M, N, P))
+    s_sigma = numpy.zeros((G, M, N, P))
+    for g, arr in out.items():
+        spectra[g] = numpy.exp(arr[:, :, 1] / arr[:, :, 0])
+        s_sigma[g] = numpy.sqrt(arr[:, :, 2] / arr[:, :, 0])
+    return spectra, s_sigma
