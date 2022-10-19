@@ -1,9 +1,13 @@
+  [Marco Pagani]
+  * Added a `constant_term` attribute to the `faultActivityData` uncertainty
+    model, with a default value of 9.1 for backward compatibility
+
   [Michele Simionato]
   * Removed support for Python < 3.8
 
   [Prajakta Jadhav, Dharma Wijewickreme]
   * Added GMPE for Zhang and Zhao(2005)
-    
+
   [Michele Simionato]
   * Added conditional spectrum calculator in hazardlib
   * Fixed the performance report that failed for NGAEast GMPEs
