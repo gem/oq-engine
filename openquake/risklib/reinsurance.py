@@ -324,6 +324,7 @@ def by_policy_event(agglosses_df, policy_df, treaty_df, mon=Monitor()):
     """
     dfs = []
     i = 1
+    logging.info("Processing %d policies", len(policy_df))
     for _, policy in policy_df.iterrows():
         if i % 100 == 0:
             logging.info("Processed %d policies", i)
@@ -331,7 +332,6 @@ def by_policy_event(agglosses_df, policy_df, treaty_df, mon=Monitor()):
         df['policy_grp'] = build_policy_grp(policy, treaty_df)
         dfs.append(df)
         i += 1
-    logging.info("Processed %d policies", i - 1)
     rbp = pd.concat(dfs)
     if DEBUG:
         print(rbp.sort_values('event_id'))
