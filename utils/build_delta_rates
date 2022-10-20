@@ -52,7 +52,7 @@ def build_delta_rates(csm, dstore):
     logging.info('Grouping rates by %d src_id', len(num_ruptures))
     for src_id, grp in df.groupby('src_id'):
         assert len(grp) == num_ruptures[src_id]
-        all_rates.extend(F32(grp.rate.to_numpy()))
+        all_rates.append(F32(grp.rate.to_numpy()))
         size += len(grp) * 4
     logging.info('Storing {} inside {}::/delta_rates'.format(
         general.humansize(size), dstore.filename))
