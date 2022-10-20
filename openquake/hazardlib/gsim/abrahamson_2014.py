@@ -211,7 +211,7 @@ def _get_regional_term(region, C, imt, vs30, rrup):
             [150, 250, 350, 450, 600, 850, 1150, 2000],
             [C['a36'], C['a37'], C['a38'], C['a39'], C['a40'], C['a41'],
              C['a42'], C['a42']],
-            kind='linear')
+            kind='linear', fill_value='extrapolate')
         return f3(vs30) + C['a29'] * rrup
     else:  # California
         return 0.
