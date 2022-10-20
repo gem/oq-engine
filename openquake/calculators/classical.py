@@ -604,7 +604,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 logging.info(msg)
         if self.oqparam.disagg_by_src and '_poes' in self.datastore:
             srcids = list(self.csm.source_info)
-            if any(';' in srcid for srcid in srcids):
+            if any(':' in srcid for srcid in srcids):
                 # enable reduction of the array disagg_by_src
                 arr = self.datastore['disagg_by_src'][:]
                 arr, srcids = semicolon_aggregate(arr, srcids)
