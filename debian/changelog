@@ -1,3 +1,6 @@
+  [Guillaume Daniel]
+  * Added the highest magnitude bin to the Stepp (1972) completeness analysis
+    and improved the legend in the plot
 
   [Manuela Villani]
   * Added the Wong et al. (2022) ground motion model
