@@ -242,7 +242,7 @@ class Monitor(object):
         self.exc = exc
         if self.measuremem:
             self.stop_mem = self.measure_mem()
-            self.mem = self.stop_mem - self.start_mem
+            self.mem += self.stop_mem - self.start_mem
         self._stop_time = time.time()
         self.duration += self._stop_time - self._start_time
         self.counts += 1
@@ -344,6 +344,7 @@ class Monitor(object):
         """
         while True:
             try:
+                self.mem = 0
                 with self:
                     obj = next(genobj)
             except StopIteration:
