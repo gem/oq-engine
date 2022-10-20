@@ -1,3 +1,6 @@
+  [C. Bruce Worden]
+  * Extended the AbrahamsonEtAl2014 GMPE to extrapolate the vs30
+
   [Michele Simionato]
   * Reduced the number of warnings when the horizontal component is not
     convertible into geometric mean in ModifiableGMPE
