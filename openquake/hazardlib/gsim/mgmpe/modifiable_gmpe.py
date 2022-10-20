@@ -287,7 +287,6 @@ def set_total_std_as_tau_plus_delta(self, ctx, imt, delta):
     setattr(self, StdDev.TOTAL, total_stddev)
 
 
-# self is an instance of ModifiableGMPE
 def _dict_to_coeffs_table(input_dict, name):
     """
     Transform a dictionary of parameters organised by IMT into a
