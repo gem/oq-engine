@@ -150,7 +150,7 @@ class TestSteppCompleteness(unittest.TestCase):
     def test_stepp_get_magnitudes(self):
         # Tests the stepp private function _get_magnitudes_from_spacing
         magnitudes = np.arange(3.7, 7.8, 0.5)
-        expected = np.arange(3.5, 8.0, 0.5)
+        expected = np.arange(3.5, 8.5, 0.5)
         np.testing.assert_allclose(
             expected,
             self.process._get_magnitudes_from_spacing(magnitudes, 0.5))

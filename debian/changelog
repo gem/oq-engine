@@ -1,3 +1,10 @@
+  [Guillaume Daniel]
+  * Added the highest magnitude bin to the Stepp (1972) completeness analysis
+    and improved the legend in the plot
+
+  [Manuela Villani]
+  * Added the Wong et al. (2022) ground motion model
+
   [Marco Pagani]
   * Added a `constant_term` attribute to the `faultActivityData` uncertainty
     model, with a default value of 9.1 for backward compatibility
