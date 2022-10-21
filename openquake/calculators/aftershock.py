@@ -58,6 +58,7 @@ class AftershockCalculator(preclassical.PreClassicalCalculator):
     Aftershock calculator storing a dataset `delta_rates`
     """
     def post_execute(self, csm):
+        logging.warning('Aftershock calculations are still experimental')
         self.datastore['_csm'] = csm
         sources = csm.get_sources()
         dfs = list(parallel.Starmap.apply(
