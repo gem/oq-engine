@@ -464,7 +464,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id:
             parent = self.datastore.parent
             if '_poes' in parent:
-                self.post_classical()  # repeat post-processing
+                self.build_curves_maps()  # repeat post-processing
                 return {}
             else:  # after preclassical, like in case_36
                 self.csm = parent['_csm']
@@ -507,7 +507,7 @@ class ClassicalCalculator(base.HazardCalculator):
             int(self.cfactor[1]), int(self.cfactor[0]),
             self.cfactor[1] / self.cfactor[0]))
         if '_poes' in self.datastore:
-            self.post_classical()
+            self.build_curves_maps()
         if not oq.hazard_calculation_id:
             self.classical_time = time.time() - t0
         return True
@@ -660,9 +660,9 @@ class ClassicalCalculator(base.HazardCalculator):
         return N, S, M, P, L1, individual_rlzs
 
     # called by execute before post_execute
-    def post_classical(self):
+    def build_curves_maps(self):
         """
-        Store hcurves-rlzs, hcurves-stats, hmaps-rlzs, hmaps-stats
+        Compute and store hcurves-rlzs, hcurves-stats, hmaps-rlzs, hmaps-stats
         """
         oq = self.oqparam
         hstats = oq.hazard_stats()
