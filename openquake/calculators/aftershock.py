@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
-An utility to convert source models into ruptures
+Aftershock calculator
 """
 import logging
 import operator
@@ -57,7 +57,7 @@ def build_rates(srcs):
 @base.calculators.add('aftershock')
 class AftershockCalculator(preclassical.PreClassicalCalculator):
     """
-    Aftershock calculator: a preclassical storing a dataset of delta_rates
+    Aftershock calculator storing a dataset `delta_rates`
     """
     def post_execute(self, csm):
         self.datastore['_csm'] = csm
