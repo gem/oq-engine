@@ -113,8 +113,10 @@ def _compute_mean(C, f0, f1, f2, SC, mag, rrup, idxs, mean, scale_fac):
     """
     if idxs.sum() == 0:  # no effect
         return
+    if np.isinstance(scale_fac, np.ndarray):
+        scale_fac = scale_fac[idxs]
     mag = mag[idxs]
-    sda = _compute_stress_drop_adjustment(SC, mag, scale_fac[idxs])
+    sda = _compute_stress_drop_adjustment(SC, mag, scale_fac)
     mean[idxs] = (C['c1'] +
                   C['c2'] * mag +
                   C['c3'] * (mag ** 2) +
