@@ -506,10 +506,10 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
             int(self.cfactor[1]), int(self.cfactor[0]),
             self.cfactor[1] / self.cfactor[0]))
-        if not oq.hazard_calculation_id:
-            self.classical_time = time.time() - t0
         if '_poes' in self.datastore:
             self.post_classical()
+        if not oq.hazard_calculation_id:
+            self.classical_time = time.time() - t0
         return True
 
     def store_info(self):
@@ -589,7 +589,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def post_execute(self, dummy):
         """
-        Compute the statistical hazard curves
+        Check for slow tasks and fix disagg_by_src if needed
         """
         task_info = self.datastore.read_df('task_info', 'taskname')
         try:
