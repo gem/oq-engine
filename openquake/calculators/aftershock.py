@@ -22,7 +22,7 @@ import logging
 import operator
 import numpy
 import pandas
-from openquake.baselib import sap, parallel, general, hdf5
+from openquake.baselib import parallel, general, hdf5
 from openquake.calculators import base, preclassical
 
 U32 = numpy.uint32
@@ -43,7 +43,11 @@ def build_rates(srcs):
             out['rup_id'].append(src.offset + i)
             # TODO: add the aftershock logic to compute the deltas
             # right now using a fake delta = 10% of the occurrence_rate
-            out['delta'].append(rup.occurrence_rate * .1)
+            try:
+                delta = rup.occurrence_rate * .1
+            except AttributeError:  # nonpoissonian rupture
+                delta = numpy.nan
+            out['delta'].append(delta)
     out['src_id'] = U32(out['src_id'])
     out['rup_id'] = U32(out['rup_id'])
     out['delta'] = F32(out['delta'])
