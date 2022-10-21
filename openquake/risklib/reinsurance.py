@@ -43,7 +43,7 @@ VALID_TREATY_TYPES = 'prop', 'wxlr', 'catxl'
 
 
 def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
-                 treaty_types):
+                 treaty_linenos, treaty_types):
     """
     :param fields: fields to check (the first field is the primary key)
     :param dframe: DataFrame with the contents of fname
@@ -51,6 +51,7 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
     :param fname: file xml containing the fields to check
     :param policyfname: file csv containing the fields to check
     :param treaties: treaty names
+    :param treaty_linenos: line numbers where each treaty was read from xml
     :param treaty_types: treaty types
     """
     key = fields[0]
@@ -60,9 +61,11 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
         raise InvalidFile(
             '%s (row %d): a duplicate %s was found: "%s"' % (
                 policyfname, indices[0] + 2, key, dframe[key][indices[0]]))
-    for treaty in treaties:
+    for lineno, treaty in zip(treaty_linenos, treaties):
         if treaty not in dframe.columns:
-            raise InvalidFile(f'{policyfname}: {treaty} is missing')
+            raise InvalidFile(
+                f'{fname} (line {lineno}): {treaty} is missing'
+                ' in {policyfname}')
     policies_from_exposure = list(idxdict)[1:]  # discard '?'
     policies_from_csv = list(dframe.policy)
     [indices] = np.where(~np.isin(policies_from_exposure, policies_from_csv))
@@ -150,7 +153,7 @@ def parse(fname, policy_idx):
     rmodel = nrml.read(fname).reinsuranceModel
     fieldmap = {}
     fmap = {}  # ex: {'deductible': 'Deductible', 'liability': 'Limit'}
-    treaty = dict(id=[], type=[], deductible=[], limit=[])
+    treaty = dict(id=[], lineno=[], type=[], deductible=[], limit=[])
     nonprop = set()
     colnames = []
     for node in rmodel.fieldMap:
@@ -163,8 +166,9 @@ def parse(fname, policy_idx):
         treaty_type = node.get('type', 'prop')
         if treaty_type not in VALID_TREATY_TYPES:
             raise InvalidFile(
-                "%s: valid treaty types are %s. '%s' was found instead" % (
-                    fname, VALID_TREATY_TYPES, treaty_type))
+                "%s (line %d): valid treaty types are %s."
+                " '%s' was found instead" % (
+                    fname, node.lineno, VALID_TREATY_TYPES, treaty_type))
         if treaty_type == 'prop':
             limit = node.get('max_cession_event', NOLIMIT)
             deduc = 0
@@ -174,6 +178,7 @@ def parse(fname, policy_idx):
             deduc = node['deductible']
             nonprop.add(node['input'])
         treaty['id'].append(node['input'])
+        treaty['lineno'].append(node.lineno)
         treaty['type'].append(treaty_type)
         treaty['deductible'].append(deduc)
         treaty['limit'].append(limit)
@@ -181,7 +186,7 @@ def parse(fname, policy_idx):
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
     check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname,
-                 policyfname, treaty['id'], treaty['type'])
+                 policyfname, treaty['id'], treaty['lineno'], treaty['type'])
 
     # validate policy input
     for col in nonprop:
