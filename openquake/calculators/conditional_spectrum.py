@@ -59,13 +59,6 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
     precalc = 'classical'
     accept_precalc = ['classical', 'disaggregation']
 
-    def pre_checks(self):
-        """
-        Check the number of sites and the absence of atomic groups
-        """
-        assert self.N <= self.oqparam.max_sites_disagg, (
-            self.N, self.oqparam.max_sites_disagg)
-
     def execute(self):
         """
         Compute the conditional spectrum in a sequential way.
@@ -73,6 +66,11 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         sites, there is no point in parallelizing: the computation is dominated
         by the time spent reading the contexts, not by the CPU.
         """
+        assert self.N <= self.oqparam.max_sites_disagg, (
+            self.N, self.oqparam.max_sites_disagg)
+        logging.warning('Conditional spectrum calculations are still '
+                        'experimental')
+
         oq = self.oqparam
         self.full_lt = self.datastore['full_lt']
         self.trts = list(self.full_lt.gsim_lt.values)
