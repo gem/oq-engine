@@ -482,6 +482,7 @@ class ContextMaker(object):
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=True)
+        self.delta_mon = monitor('getting delta_rates', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
@@ -1240,8 +1241,9 @@ class PmapMaker(object):
         for ctx in self.cmaker.get_ctx_iter(src, sites):
             if self.cmaker.deltagetter:
                 # adjust occurrence rates in case of aftershocks
-                delta = self.cmaker.deltagetter(src.id)
-                ctx.occurrence_rate += delta[ctx.rup_id]
+                with self.cmaker.delta_mon:
+                    delta = self.cmaker.deltagetter(src.id)
+                    ctx.occurrence_rate += delta[ctx.rup_id]
             if hasattr(src, 'mutex_weight'):
                 if ctx.weight.any():
                     ctx['weight'] *= src.mutex_weight
