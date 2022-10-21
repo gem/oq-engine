@@ -39,6 +39,7 @@ KNOWN_LOSS_TYPES = {
     'structural', 'nonstructural', 'contents',
     'value-structural', 'value-nonstructural', 'value-contents'}
 DEBUG = False
+VALID_TREATY_TYPES = 'prop', 'wxlr', 'catxl'
 
 
 def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
@@ -160,11 +161,10 @@ def parse(fname, policy_idx):
             fieldmap[node['input']] = col
             continue
         treaty_type = node.get('type', 'prop')
-        valid_treaty_types = ('prop', 'wxlr', 'catxl')
-        if treaty_type not in valid_treaty_types:
+        if treaty_type not in VALID_TREATY_TYPES:
             raise InvalidFile(
                 "%s: valid treaty types are %s. '%s' was found instead" % (
-                fname, valid_treaty_types, treaty_type))
+                    fname, VALID_TREATY_TYPES, treaty_type))
         if treaty_type == 'prop':
             limit = node.get('max_cession_event', NOLIMIT)
             deduc = 0

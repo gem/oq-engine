@@ -258,20 +258,23 @@ event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
         treaty_df = _df('''\
 id,type,deductible,limit,code
 prop1,prop,   0,  90000,A
-cat1,catxl, 200,   4000,B
-cat2,catxl, 500,  10000,C
-cat3,catxl, 200,   4000,D
-cat4,catxl, 500,  10000,E
-cat5,catxl,1000,  50000,F
+prop2,prop,   0,  80000,B
+wxl1,wxlr,  100,    500,C
+wxl2,wxlr,  150,    400,D
+cat1,catxl, 200,   4000,E
+cat2,catxl, 500,  10000,F
+cat3,catxl, 200,   4000,G
+cat4,catxl, 500,  10000,H
+cat5,catxl,1000,  50000,I
 ''')
         pol_df = _df('''\
-policy,liability,deductible,prop1,cat1,cat2,cat3,cat4,cat5
-1,     99000,        0,     .5,      1,   0,   0,   1,   1
-2,     99000,        0,     .4,      1,   0,   0,   1,   1
-3,     99000,        0,     .6,      0,   1,   0,   1,   1
-4,     99000,        0,     .6,      0,   1,   0,   1,   1
-5,     99000,        0,     .0,      0,   0,   1,   0,   1
-6,     99000,        0,     .0,      0,   0,   1,   0,   1
+policy,liability,deductible,prop1,prop2,wxl1,wxl2,cat1,cat2,cat3,cat4,cat5
+1,     99000,        0,     .5,     .1,  0,   1,   1,   0,   0,   1,   1
+2,     99000,        0,     .4,     .2,  0,   1,   1,   0,   0,   1,   1
+3,     99000,        0,     .6,      0,  1,   1,   0,   1,   0,   1,   1
+4,     99000,        0,     .6,      0,  1,   1,   0,   1,   0,   1,   1
+5,     99000,        0,     .0,      .2, 1,   1,   0,   0,   1,   0,   1
+6,     99000,        0,     .0,      .3, 1,   1,   0,   0,   1,   0,   1
 ''')
         # catcomb = '10011', '01011', '00101' = 19, 11, 5
         risk_by_event = _df('''\
@@ -284,8 +287,8 @@ event_id,agg_id,loss
 1,     5,      3000
 ''')
         expected = _df('''\
-event_id,retention,claim,prop1,cat1,cat2,cat3,cat4,cat5,over_B,over_D
-       1,   1000.0,40000.,17000.,3800.,5500.,3800.,5200.,3700.,5000.,4000.''')
+event_id,retention,claim,prop1,prop2,wxl1,wxl2,cat1,cat2,cat3,cat4,cat5,over_E,over_G
+       1,   1000.0,40000.,17000.,4100,1600,1500,3800.,4200.,3800.,2500,500,2300,800''')
         bypolicy, byevent = reinsurance.by_policy_event(
             risk_by_event, pol_df, treaty_df)
         assert_ok(byevent, expected)
