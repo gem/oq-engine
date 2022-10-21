@@ -185,6 +185,7 @@ def parse(fname, policy_idx):
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
+    df.columns = df.columns.str.strip()
     check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname,
                  policyfname, treaty['id'], treaty['lineno'], treaty['type'])
 
