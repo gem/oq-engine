@@ -322,7 +322,7 @@ class ClassicalCalculator(base.HazardCalculator):
     """
     core_task = classical
     precalc = 'preclassical'
-    accept_precalc = ['preclassical', 'classical']
+    accept_precalc = ['preclassical', 'classical', 'aftershock']
     SLOW_TASK_ERROR = False
 
     def agg_dicts(self, acc, dic):
