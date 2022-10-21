@@ -106,8 +106,7 @@ def _compute_magnitude_scaling(ctx, C):
     return _compute_ms(ctx, C)
 
 
-def _compute_mean(C, f0, f1, f2, SC, mag, rrup, idxs, mean,
-                  scale_fac):
+def _compute_mean(C, f0, f1, f2, SC, mag, rrup, idxs, mean, scale_fac):
     """
     Compute mean value (for a set of indexes) without site amplification
     terms. This is equation (5), p. 2191, without S term.
@@ -115,14 +114,14 @@ def _compute_mean(C, f0, f1, f2, SC, mag, rrup, idxs, mean,
     if idxs.sum() == 0:  # no effect
         return
     mag = mag[idxs]
+    sda = _compute_stress_drop_adjustment(SC, mag, scale_fac[idxs])
     mean[idxs] = (C['c1'] +
                   C['c2'] * mag +
                   C['c3'] * (mag ** 2) +
                   (C['c4'] + C['c5'] * mag) * f1[idxs] +
                   (C['c6'] + C['c7'] * mag) * f2[idxs] +
                   (C['c8'] + C['c9'] * mag) * f0[idxs] +
-                  C['c10'] * rrup[idxs] +
-                  _compute_stress_drop_adjustment(SC, mag, scale_fac))
+                  C['c10'] * rrup[idxs] + sda)
 
 
 def _compute_ms(ctx, C):
