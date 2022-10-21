@@ -453,8 +453,12 @@ class HazardCalculator(BaseCalculator):
                 'https://docs.openquake.org/oq-engine/advanced/general.html#'
                 'pointsource-distance')
         elif 'classical' in oq.calculation_mode:
-            logging.info('Using pointsource_distance=%s',
-                         oq.pointsource_distance)
+            if oq.ps_grid_spacing:
+                logging.info('Using pointsource_distance=%s + %d',
+                             oq.pointsource_distance, int(oq.ps_grid_spacing))
+            else:
+                logging.info('Using pointsource_distance=%s',
+                             oq.pointsource_distance)
 
     def read_inputs(self):
         """
