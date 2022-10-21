@@ -34,8 +34,8 @@ class AftershockTestCase(CalculatorTestCase):
 
         # run classical
         hc_id = str(self.calc.datastore.calc_id)
-        self.calc.datastore.close()
         self.run_calc(case_1.__file__, 'job.ini', hazard_calculation_id=hc_id)
 
+        # checking hazard curves
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)
