@@ -22,13 +22,11 @@ import logging
 import operator
 import numpy
 import pandas
-from openquake.baselib import parallel, general, hdf5
+from openquake.baselib import parallel, general
 from openquake.calculators import base, preclassical
 
 U32 = numpy.uint32
 F32 = numpy.float32
-rate_lst = [('src_id', U32), ('num_ruptures', U32), ('rates', hdf5.vfloat32)]
-rate_dt = numpy.dtype(rate_lst)
 
 
 # NB: this is called after a preclassical calculation
