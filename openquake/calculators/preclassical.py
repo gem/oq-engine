@@ -83,9 +83,9 @@ def preclassical(srcs, sites, cmaker, monitor):
     spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
     if sites is None:
-        # in csm2rup just split the sources and count the ruptures
+        # in aftershock calculations just split and count the ruptures
         for src in srcs:
-            ss = split_source(src)
+            ss = split_source(src) if cmaker.split_sources else [src]
             if len(ss) > 1:
                 for ss_ in ss:
                     ss_.nsites = 1
