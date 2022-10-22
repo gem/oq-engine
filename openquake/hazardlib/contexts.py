@@ -955,13 +955,13 @@ class ContextMaker(object):
 
     def get_pmap(self, ctxs, probmap=None):
         """
-        :param ctxs: a list of context arrays
-        :param probmap: if not None, update it
+        :param ctxs: a list of context arrays (only one for poissonian ctxs)
+        :param probmap: if not None, update it (the regular case)
         :returns: a new ProbabilityMap if probmap is None
         """
         if probmap is None:  # create new pmap
             pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
-        else:  # update passed probmap
+        else:  # update passed probmap: this is the common case
             pmap = probmap
         if self.tom is None:
             itime = -1.
@@ -974,11 +974,12 @@ class ContextMaker(object):
                 key_type=t.uint32,
                 value_type=t.float64[:, :])
         else:
-            dic = {}  # sid -> array of shape (L, G)
+            dic = {}  # sid -> array of shape (L, G) sharing the pmap data
+        # allocating probability curves
         for ctx in ctxs:
-            # allocating pmap in advance
             for sid in numpy.unique(ctx.sids):
                 dic[sid] = pmap.setdefault(sid, self.rup_indep).array
+        for ctx in ctxs:
             for poes, ctxt, slcsids in self.gen_poes(ctx):
                 probs_occur = getattr(ctxt, 'probs_occur',
                                       numpy.zeros((len(ctxt), 0)))
@@ -1064,19 +1065,21 @@ class ContextMaker(object):
 
         # split large context arrays to avoid filling the CPU cache
         if ctx.nbytes > maxsize:
-            slices = gen_slices(0, len(ctx), maxsize)
+            bigslices = gen_slices(0, len(ctx), maxsize)
         else:
-            slices = [slice(0, len(ctx))]
+            bigslices = [slice(0, len(ctx))]
 
-        for bigslc in slices:
+        for bigslc in bigslices:
             s = bigslc.start
             with self.gmf_mon:
+                # this is allocating at most 2MB of RAM
                 mean_stdt = self.get_mean_stds([ctx[bigslc]])
             for slc in gen_slices(bigslc.start, bigslc.stop, maxsize // L1):
                 slcsids = allsids[slc]
                 ctxt = ctx[slc]
                 self.slc = slice(slc.start - s, slc.stop - s)  # in get_poes
                 with self.poe_mon:
+                    # this is allocating at most 2MB of RAM
                     poes = numpy.zeros((len(ctxt), M*L1, G))
                     for g, gsim in enumerate(self.gsims):
                         ms = mean_stdt[:2, g, :, self.slc]
