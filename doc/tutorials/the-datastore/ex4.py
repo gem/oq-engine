@@ -5,4 +5,4 @@ dstore = read(-1)  # first run case_1
 cmakers = read_cmakers(dstore)
 for grp_id, cmaker in enumerate(cmakers):
     ctxs = cmaker.read_ctxs(dstore)
-    print(grp_id, len(ctxs), cmaker.get_pmap(ctxs))
+    print(grp_id, len(ctxs), cmaker.set_pmap(ctxs, None))

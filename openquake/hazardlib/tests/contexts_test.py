@@ -204,13 +204,13 @@ class CollapseTestCase(unittest.TestCase):
         numpy.testing.assert_equal(len(ctxs[0]), 60)  # 2sites x 3srcs x 10mags
 
         # compute original curves
-        pmap = cmaker.get_pmap(ctxs)
+        pmap = cmaker.set_pmap(ctxs, None)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [33, 60])
 
         # compute collapsed curves
         cmaker.collapser.cfactor = numpy.zeros(2)
         cmaker.collapser.collapse_level = 1
-        cmap = cmaker.get_pmap(ctxs)
+        cmap = cmaker.set_pmap(ctxs, None)
         self.assertLess(rms(pmap[0].array - cmap[0].array), 3E-4)
         self.assertLess(rms(pmap[1].array - cmap[1].array), 3E-4)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [33, 60])
@@ -232,10 +232,10 @@ class CollapseTestCase(unittest.TestCase):
         [srcs] = inp.groups  # a single area source
         # get the context
         ctxs = cmaker.from_srcs(srcs, inp.sitecol)
-        pcurve0 = cmaker.get_pmap(ctxs)[0]
+        pcurve0 = cmaker.set_pmap(ctxs, None)[0]
         cmaker.collapser.cfactor = numpy.zeros(2)
         cmaker.collapser.collapse_level = 1
-        pcurve1 = cmaker.get_pmap(ctxs)[0]
+        pcurve1 = cmaker.set_pmap(ctxs, None)[0]
         self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [42, 11616])
 

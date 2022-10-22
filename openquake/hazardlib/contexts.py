@@ -951,13 +951,13 @@ class ContextMaker(object):
         self.collapser.cfactor = numpy.zeros(2)
         ctxs = self.from_srcs(srcs, sitecol)
         with patch.object(self.collapser, 'collapse_level', collapse_level):
-            return self.get_pmap(ctxs).array(len(sitecol))
+            return self.set_pmap(ctxs, None).array(len(sitecol))
 
-    def get_pmap(self, ctxs, probmap=None):
+    def set_pmap(self, ctxs, probmap):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
-        :param probmap: if not None, update it (the regular case)
-        :returns: a new ProbabilityMap if probmap is None
+        :param probmap: probability map to update (can be None in notebooks)
+        :returns: None or a new ProbabilityMap if probmap is None
         """
         if probmap is None:  # create new pmap
             pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
@@ -1252,13 +1252,13 @@ class PmapMaker(object):
                 nsites += len(ctx)
                 allctxs.append(ctx)
                 if ctxs_mb > MAX_MB:
-                    cm.get_pmap(concat(allctxs), pmap)
+                    cm.set_pmap(concat(allctxs), pmap)
                     allctxs.clear()
                     ctxs_mb = 0
         if allctxs:
             src.nsites = nsites
             totlen += nsites
-            cm.get_pmap(concat(allctxs), pmap)
+            cm.set_pmap(concat(allctxs), pmap)
             allctxs.clear()
         dt = time.time() - t0
         nsrcs = len(self.sources)
@@ -1285,7 +1285,7 @@ class PmapMaker(object):
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
-                cm.get_pmap(ctxs, pm)
+                cm.set_pmap(ctxs, pm)
 
             p = (~pm if cm.rup_indep else pm) * src.mutex_weight
             if ':' in src.source_id:
