@@ -73,7 +73,7 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
                     f'{fname} (line {lineno}): treaty types must be'
                     f' specified in the order {VALID_TREATY_TYPES}.'
                     f' Treaty "{treaty}" of type "{treaty_type}" was'
-                    f' found after treaty {prev_treaty} of type'
+                    f' found after treaty "{prev_treaty}" of type'
                     f' "{prev_treaty_type}"')
         prev_treaty = treaty
         prev_treaty_type = treaty_type

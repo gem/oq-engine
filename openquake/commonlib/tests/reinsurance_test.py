@@ -857,7 +857,7 @@ rur_Ant_1,10000,100,.1,.2''')
             "(line 12): valid treaty types are ('prop', 'wxlr', 'catxl')."
             " 'wrongtype' was found instead", str(ctx.exception))
 
-    def test_types_in_a_wrong_order_in_reinsurance_xml(self):
+    def test_treaty_types_in_a_wrong_order_in_reinsurance_xml(self):
         csvfname = general.gettemp(CSV_NP)
         xmlfname = general.gettemp('''\
 <?xml version="1.0" encoding="UTF-8"?>
@@ -882,7 +882,7 @@ rur_Ant_1,10000,100,.1,.2''')
         self.assertIn(
             '(line 12): treaty types must be specified in the order'
             ' (\'prop\', \'wxlr\', \'catxl\'). Treaty "WXLR_rural"'
-            ' of type "wxlr" was found after treaty CatXL_reg of'
+            ' of type "wxlr" was found after treaty "CatXL_reg" of'
             ' type "catxl"', str(ctx.exception))
 
     def test_deductible_is_negative(self):
