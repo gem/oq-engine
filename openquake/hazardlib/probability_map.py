@@ -425,3 +425,29 @@ def combine(pmaps):
     for pmap in pmaps:
         res |= pmap
     return res
+
+
+class Pmap(object):
+    def __init__(self, sids, L, G):
+        self.sids = sids
+        self.N = len(sids)
+        self.L = L
+        self.G = G
+
+    def fill(self, value):
+        assert 0 <= value <= 1, value
+        self.array = numpy.empty((self.N, self.L, self.G))
+        self.array.fill(value)
+        self.sidx = numpy.zeros(self.sids.max() + 1, numpy.uint32)
+        for idx, sid in enumerate(self.sids):
+            self.sidx[sid] = idx
+        return self.array
+
+    def __ior__(self, other):
+        if (other.L, other.G) != (self.L, self.G):
+            raise ValueError('%s has inconsistent shape with %s' %
+                             (other, self))
+        arr = self.array
+        for sid, arr2 in zip(other.sids, other.array):
+            arr[sid] = 1. - (1. - arr[sid]) * (1. - arr2)
+        return self

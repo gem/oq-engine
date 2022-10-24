@@ -34,7 +34,7 @@ from openquake.baselib.general import (
     get_nbytes_msg, agg_probs, pprod)
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers, basename
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
-from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
+from openquake.hazardlib.probability_map import ProbabilityMap, Pmap, poes_dt
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, extract
 
@@ -267,11 +267,10 @@ class Hazard:
         :returns: an array of PoEs of shape (N, R, M, L)
         """
         res = numpy.zeros((self.N, self.R, self.imtls.size))
-        for sid, pc in pmap.items():
+        for sid, arr in zip(pmap.sids, pmap.array):
             for gsim_idx, rlzis in enumerate(rlzs_by_gsim.values()):
-                poes = pc.array[:, gsim_idx]
                 for rlz in rlzis:
-                    res[sid, rlz] = agg_probs(res[sid, rlz], poes)
+                    res[sid, rlz] = agg_probs(res[sid, rlz], arr[:, gsim_idx])
         return res.reshape(self.N, self.R, len(self.imtls), -1)
 
     def store_poes(self, grp_id, pmap):
@@ -279,7 +278,7 @@ class Hazard:
         Store the pmap of the given group inside the _poes dataset
         """
         cmaker = self.cmakers[grp_id]
-        arr = pmap.array(self.N)
+        arr = pmap.array
         # arr[arr < 1E-5] = 0.  # minimum_poe
         sids, lids, gids = arr.nonzero()
         hdf5.extend(self.datastore['_poes/sid'], sids)
@@ -288,7 +287,7 @@ class Hazard:
         hdf5.extend(self.datastore['_poes/poe'], arr[sids, lids, gids])
         self.acc[grp_id]['grp_start'] = cmaker.start
         self.acc[grp_id]['avg_poe'] = arr.mean(axis=(0, 2))@self.level_weights
-        self.acc[grp_id]['nsites'] = len(pmap)
+        self.acc[grp_id]['nsites'] = len(pmap.sids)
 
     def store_disagg(self, pmaps=None):
         """
@@ -495,7 +494,8 @@ class ClassicalCalculator(base.HazardCalculator):
             sids = tile.sids if len(tiles) > 1 else None
             smap = self.submit(sids, self.haz.cmakers, max_weight)
             for cm in self.haz.cmakers:
-                acc[cm.grp_id] = ProbabilityMap.build(L, len(cm.gsims))
+                acc[cm.grp_id] = Pmap(self.sitecol.sids, L, len(cm.gsims))
+                acc[cm.grp_id].fill(0)
             smap.reduce(self.agg_dicts, acc)
             if len(tiles) > 1:
                 logging.info('Finished tile %d of %d', t, len(tiles))
