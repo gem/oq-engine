@@ -953,16 +953,22 @@ class ContextMaker(object):
         with patch.object(self.collapser, 'collapse_level', collapse_level):
             return self.set_pmap(ctxs, None).array(len(sitecol))
 
-    def set_pmap(self, ctxs, probmap):
+    def get_pmap(self, ctxs):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
-        :param probmap: probability map to update (can be None in notebooks)
-        :returns: None or a new ProbabilityMap if probmap is None
+        :returns: a ProbabilityMap
         """
-        if probmap is None:  # create new pmap
-            pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
-        else:  # update passed probmap: this is the common case
-            pmap = probmap
+        pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
+        self.set_pmap(ctxs, pmap)
+        if self.rup_indep:
+            return ~pmap
+        return pmap
+
+    def set_pmap(self, ctxs, pmap):
+        """
+        :param ctxs: a list of context arrays (only one for poissonian ctxs)
+        :param probmap: probability map to update
+        """
         if self.tom is None:
             itime = -1.
         elif isinstance(self.tom, FatedTOM):
@@ -1004,12 +1010,6 @@ class ContextMaker(object):
                             sizes.append(len(sids))
                         update_pmap_c(dic, poes, rates, probs_occur,
                                       U32(allsids), U32(sizes), itime)
-
-        if probmap is None:  # return the new pmap
-            if self.rup_indep:
-                for arr in dic.values():
-                    arr[:] = 1. - arr
-            return pmap
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs):
