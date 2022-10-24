@@ -460,3 +460,6 @@ class Pmap(object):
 
     def __invert__(self):
         return self.new(1. - self.array)
+
+    def __pow__(self, n):
+        return self.new(self.array ** n)

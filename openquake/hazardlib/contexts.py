@@ -1310,12 +1310,13 @@ class PmapMaker(object):
         self.source_data = AccumDict(accum=[])
         grp_id = self.sources[0].grp_id
         pmap = Pmap(sids, size(self.imtls), len(self.gsims))
-        pmap.fill(self.cmaker.rup_indep)
         if self.src_mutex:
+            pmap.fill(0)
             pmap_by_src = self._make_src_mutex()
             for source_id, pm in pmap_by_src.items():
                 pmap.array += pm.array
         else:
+            pmap.fill(self.cmaker.rup_indep)
             self._make_src_indep(pmap)
         dic['pmap'] = pmap
         dic['cfactor'] = self.cmaker.collapser.cfactor

@@ -68,10 +68,10 @@ def _cluster(imtls, tom, gsims, pmap):
         ocr = tom.occurrence_rate
         prob_n_occ = tom.get_probability_n_occurrences(ocr, nocc)
         if first:
-            pmapclu = (~pmap)**nocc * prob_n_occ
+            pmapclu = pmap.new((1.-pmap.array)**nocc * prob_n_occ)
             first = False
         else:
-            pmapclu += (~pmap)**nocc * prob_n_occ
+            pmapclu.array += (1.-pmap.array)**nocc * prob_n_occ
     pmap = ~pmapclu
     return pmap
 
