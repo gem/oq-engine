@@ -135,6 +135,30 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
     for no, field in enumerate(fields):
         if field not in dframe.columns:
             raise InvalidFile(f'{fname}: {field} is missing in the header')
+    prev_treaty = None
+    prev_treaty_type = None
+    prev_treaty_type_idx = None
+    prev_treaty_df_col_idx = None
+    for colname in list(dframe.columns):
+        if colname not in treaties:
+            continue
+        treaty = colname
+        treaty_type = treaty_types[treaties.index(treaty)]
+        if prev_treaty is not None:
+            treaty_df_col_idx = dframe.columns.get_loc(treaty)
+            treaty_type_idx = VALID_TREATY_TYPES.index(treaty_type)
+            if (treaty_df_col_idx > prev_treaty_df_col_idx
+                    and treaty_type_idx < prev_treaty_type_idx):
+                raise InvalidFile(
+                    f'{policyfname}: treaty type columns must be'
+                    f' in the order {VALID_TREATY_TYPES}.'
+                    f' Treaty "{treaty}" of type "{treaty_type}" was'
+                    f' found after treaty "{prev_treaty}" of type'
+                    f' "{prev_treaty_type}"')
+        prev_treaty = treaty
+        prev_treaty_type = treaty_type
+        prev_treaty_type_idx = VALID_TREATY_TYPES.index(prev_treaty_type)
+        prev_treaty_df_col_idx = dframe.columns.get_loc(prev_treaty)
 
 
 # validate the file policy.csv

@@ -834,6 +834,19 @@ rur_Ant_1,  9000,500,1,1,0
         self.assertIn('(row 3): values for CatXL_reg must be either 0 or 1',
                       str(ctx.exception))
 
+    def test_treaty_types_in_a_wrong_order_in_policies_csv(self):
+        csvfname = general.gettemp(CSV_NP.replace(
+            'Policy,Limit,Deductible,WXLR_metro,WXLR_rural,CatXL_reg',
+            'Policy,Limit,Deductible,WXLR_metro,CatXL_reg,WXLR_rural'))
+        xmlfname = general.gettemp(XML_NP.format(csvfname))
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn(
+            'treaty type columns must be in the order'
+            ' (\'prop\', \'wxlr\', \'catxl\'). Treaty "WXLR_rural" of'
+            ' type "wxlr" was found after treaty "CatXL_reg" of'
+            ' type "catxl"', str(ctx.exception))
+
     # Checks in the reinsurance file
 
     def test_treaty_in_reinsurancexml_missing_in_policycsv(self):
