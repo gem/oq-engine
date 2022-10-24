@@ -15,10 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib.python3compat import zip
-from openquake.baselib.performance import numba, compile
+import copy
 import numpy
 import pandas
+from openquake.baselib.python3compat import zip
+from openquake.baselib.performance import numba, compile
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -434,6 +435,11 @@ class Pmap(object):
         self.L = L
         self.G = G
 
+    def new(self, array):
+        new = copy.copy(self)
+        new.array = array
+        return new
+
     def fill(self, value):
         assert 0 <= value <= 1, value
         self.array = numpy.empty((self.N, self.L, self.G))
@@ -451,3 +457,6 @@ class Pmap(object):
         for sid, arr2 in zip(other.sids, other.array):
             arr[sid] = 1. - (1. - arr[sid]) * (1. - arr2)
         return self
+
+    def __invert__(self):
+        return self.new(1. - self.array)

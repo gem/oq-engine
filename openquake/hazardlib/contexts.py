@@ -953,11 +953,21 @@ class ContextMaker(object):
         with patch.object(self.collapser, 'collapse_level', collapse_level):
             return self.set_pmap(ctxs, None).array(len(sitecol))
 
+    def get_pmap(self, ctxs):
+        """
+        :param ctxs: a list of context arrays (only one for poissonian ctxs)
+        :returns: a ProbabilityMap
+        """
+        pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
+        self.set_pmap(ctxs, pmap)
+        if self.rup_indep:
+            return ~pmap
+        return pmap
+
     def set_pmap(self, ctxs, pmap):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
-        :param probmap: probability map to update (can be None in notebooks)
-        :returns: None or a new ProbabilityMap if probmap is None
+        :param probmap: probability map to update
         """
         if self.tom is None:
             itime = -1.
@@ -990,7 +1000,7 @@ class ContextMaker(object):
                         for sids in slcsids:
                             allsids.extend(sids)
                             sizes.append(len(sids))
-                        idxs = pmap.idxs[allsids]
+                        idxs = pmap.sidx[allsids]
                         update_pmap_c(arr, poes, rates, probs_occur,
                                       idxs, U32(sizes), itime)
 
@@ -1271,14 +1281,14 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
                 cm.set_pmap(ctxs, pm)
-
-            p = (~pm if cm.rup_indep else pm) * src.mutex_weight
+            arr = 1. - pm.array if cm.rup_indep else pm.array
+            p = pm.new(arr * src.mutex_weight)
             if ':' in src.source_id:
                 srcid = basename(src)
                 if srcid in pmap_by_src:
-                    pmap_by_src[srcid] += p
+                    pmap_by_src[srcid].array += p.array
                 else:
-                    pmap_by_src[srcid] = p
+                    pmap_by_src[srcid].array[:] = p.array
             else:
                 pmap_by_src[src.source_id] = p
             dt = time.time() - t0
