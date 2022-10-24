@@ -857,6 +857,34 @@ rur_Ant_1,10000,100,.1,.2''')
             "(line 12): valid treaty types are ('prop', 'wxlr', 'catxl')."
             " 'wrongtype' was found instead", str(ctx.exception))
 
+    def test_types_in_a_wrong_order_in_reinsurance_xml(self):
+        csvfname = general.gettemp(CSV_NP)
+        xmlfname = general.gettemp('''\
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <reinsuranceModel>
+    <description>reinsurance model</description>
+    <fieldMap>
+      <field oq="policy" input="Policy" />
+      <field oq="deductible" input="Deductible" />
+      <field oq="liability" input="Limit" />
+      <field input="WXLR_metro" type="wxlr" deductible="500" limit="3500" />
+      <field input="CatXL_reg" type="catxl" deductible="50" limit="2500" />
+      <field input="WXLR_rural" type="wxlr" deductible="200" limit="5000" />
+    </fieldMap>
+    <policies>{}</policies>
+  </reinsuranceModel>
+</nrml>
+'''.format(csvfname))
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn(
+            '(line 12): treaty types must be specified in the order'
+            ' (\'prop\', \'wxlr\', \'catxl\'). Treaty "WXLR_rural"'
+            ' of type "wxlr" was found after treaty CatXL_reg of'
+            ' type "catxl"', str(ctx.exception))
+
     def test_deductible_is_negative(self):
         csvfname = general.gettemp(CSV_NP)
         xmlfname = general.gettemp(

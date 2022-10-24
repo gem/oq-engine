@@ -61,7 +61,22 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
         raise InvalidFile(
             '%s (row %d): a duplicate %s was found: "%s"' % (
                 policyfname, indices[0] + 2, key, dframe[key][indices[0]]))
-    for lineno, treaty in zip(treaty_linenos, treaties):
+    prev_treaty = None
+    prev_treaty_type = None
+    for lineno, treaty, treaty_type in zip(
+            treaty_linenos, treaties, treaty_types):
+        if prev_treaty is not None:
+            prev_treaty_type_idx = VALID_TREATY_TYPES.index(prev_treaty_type)
+            curr_treaty_type_idx = VALID_TREATY_TYPES.index(treaty_type)
+            if curr_treaty_type_idx < prev_treaty_type_idx:
+                raise InvalidFile(
+                    f'{fname} (line {lineno}): treaty types must be'
+                    f' specified in the order {VALID_TREATY_TYPES}.'
+                    f' Treaty "{treaty}" of type "{treaty_type}" was'
+                    f' found after treaty {prev_treaty} of type'
+                    f' "{prev_treaty_type}"')
+        prev_treaty = treaty
+        prev_treaty_type = treaty_type
         if treaty not in dframe.columns:
             raise InvalidFile(
                 f'{fname} (line {lineno}): {treaty} is missing'
