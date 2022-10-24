@@ -499,6 +499,7 @@ class ClassicalCalculator(base.HazardCalculator):
             smap.reduce(self.agg_dicts, acc)
             if len(tiles) > 1:
                 logging.info('Finished tile %d of %d', t, len(tiles))
+                parallel.Starmap.shutdown()
         self.store_info()
         self.haz.store_disagg(acc)
         if self.cfactor[0] == 0:
