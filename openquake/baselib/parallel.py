@@ -195,6 +195,7 @@ import traceback
 import collections
 from unittest import mock
 import multiprocessing.dummy
+import multiprocessing.shared_memory as shmem
 import subprocess
 import psutil
 import getpass
@@ -674,6 +675,7 @@ class Starmap(object):
                 cls.pool = multiprocessing.get_context('spawn').Pool(
                     cls.num_cores, init_workers)
                 cls.pids = [proc.pid for proc in cls.pool._pool]
+            cls.pool.shared = []
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine
             signal.signal(signal.SIGTERM, term_handler)
@@ -691,6 +693,8 @@ class Starmap(object):
         # shutting down the pool during the runtime causes mysterious
         # race conditions with errors inside atexit._run_exitfuncs
         if hasattr(cls, 'pool'):
+            for shared in cls.pool.shared:
+                shmem.SharedMemory(shared.name).unlink()
             cls.pool.close()
             cls.pool.terminate()
             cls.pool.join()
@@ -933,6 +937,15 @@ class Starmap(object):
                 'Mean time per core=%ds, std=%.1fs, min=%ds, max=%ds',
                 times.mean(), times.std(), times.min(), times.max())
 
+    def create_shared(self, shape, dtype=float, value=0.):
+        """
+        Create an array backed by a SharedMemory buffer.
+        :returns: an SharedArray instance
+        """
+        shared = SharedArray(numpy.full(shape, value, dtype))
+        self.pool.shared.append(shared)
+        return shared
+
 
 def sequential_apply(task, args, concurrent_tasks=Starmap.CT,
                      maxweight=None, weight=lambda item: 1,
@@ -1098,3 +1111,30 @@ def workers_wait(seconds=30):
         else:
             raise TimeoutError(status)
         return status
+
+
+class SharedArray(object):
+    """
+    Wrapper over a SharedMemory object to be used as a context manager:
+
+    with SharedArray(arr) as arr:
+      print(arr)
+    """
+    def __init__(self, array):
+        sm = shmem.SharedMemory(create=True, size=array.nbytes)
+        self.name = sm.name
+        self.shape = array.shape
+        self.dtype = array.dtype
+        # fill the SharedMemory buffer with a copy of the array
+        arr = numpy.ndarray(array.shape, array.dtype, buffer=sm.buf)
+        arr[:] = array
+
+    def __enter__(self):
+        self.sm = shmem.SharedMemory(self.name)
+        return numpy.ndarray(self.shape, self.dtype, buffer=self.sm.buf)
+
+    def __exit__(self, etype, exc, tb):
+        self.sm.close()
+
+    def unlink(self):
+        shmem.SharedMemory(self.name).unlink()
