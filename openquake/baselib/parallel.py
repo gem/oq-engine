@@ -675,7 +675,7 @@ class Starmap(object):
                 cls.pool = multiprocessing.get_context('spawn').Pool(
                     cls.num_cores, init_workers)
                 cls.pids = [proc.pid for proc in cls.pool._pool]
-            cls.pool.shared = []
+            cls.shared = []
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine
             signal.signal(signal.SIGTERM, term_handler)
@@ -693,7 +693,7 @@ class Starmap(object):
         # shutting down the pool during the runtime causes mysterious
         # race conditions with errors inside atexit._run_exitfuncs
         if hasattr(cls, 'pool'):
-            for shared in cls.pool.shared:
+            for shared in cls.shared:
                 shmem.SharedMemory(shared.name).unlink()
             cls.pool.close()
             cls.pool.terminate()
@@ -943,7 +943,7 @@ class Starmap(object):
         :returns: an SharedArray instance
         """
         shared = SharedArray(numpy.full(shape, value, dtype))
-        self.pool.shared.append(shared)
+        self.shared.append(shared)
         return shared
 
 
