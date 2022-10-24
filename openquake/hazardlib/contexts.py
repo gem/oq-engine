@@ -953,16 +953,22 @@ class ContextMaker(object):
         with patch.object(self.collapser, 'collapse_level', collapse_level):
             return self.get_pmap(ctxs).array(len(sitecol))
 
-    def get_pmap(self, ctxs, probmap=None):
+    def get_pmap(self, ctxs):
         """
-        :param ctxs: a list of context arrays
-        :param probmap: if not None, update it
-        :returns: a new ProbabilityMap if probmap is None
+        :param ctxs: a list of context arrays (only one for poissonian ctxs)
+        :returns: a ProbabilityMap
         """
-        if probmap is None:  # create new pmap
-            pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
-        else:  # update passed probmap
-            pmap = probmap
+        pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
+        self.set_pmap(ctxs, pmap)
+        if self.rup_indep:
+            return ~pmap
+        return pmap
+
+    def set_pmap(self, ctxs, pmap):
+        """
+        :param ctxs: a list of context arrays (only one for poissonian ctxs)
+        :param probmap: probability map to update
+        """
         if self.tom is None:
             itime = -1.
         elif isinstance(self.tom, FatedTOM):
@@ -974,11 +980,12 @@ class ContextMaker(object):
                 key_type=t.uint32,
                 value_type=t.float64[:, :])
         else:
-            dic = {}  # sid -> array of shape (L, G)
+            dic = {}  # sid -> array of shape (L, G) sharing the pmap data
+        # allocating probability curves
         for ctx in ctxs:
-            # allocating pmap in advance
             for sid in numpy.unique(ctx.sids):
                 dic[sid] = pmap.setdefault(sid, self.rup_indep).array
+        for ctx in ctxs:
             for poes, ctxt, slcsids in self.gen_poes(ctx):
                 probs_occur = getattr(ctxt, 'probs_occur',
                                       numpy.zeros((len(ctxt), 0)))
@@ -1003,12 +1010,6 @@ class ContextMaker(object):
                             sizes.append(len(sids))
                         update_pmap_c(dic, poes, rates, probs_occur,
                                       U32(allsids), U32(sizes), itime)
-
-        if probmap is None:  # return the new pmap
-            if self.rup_indep:
-                for arr in dic.values():
-                    arr[:] = 1. - arr
-            return pmap
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs):
@@ -1064,19 +1065,21 @@ class ContextMaker(object):
 
         # split large context arrays to avoid filling the CPU cache
         if ctx.nbytes > maxsize:
-            slices = gen_slices(0, len(ctx), maxsize)
+            bigslices = gen_slices(0, len(ctx), maxsize)
         else:
-            slices = [slice(0, len(ctx))]
+            bigslices = [slice(0, len(ctx))]
 
-        for bigslc in slices:
+        for bigslc in bigslices:
             s = bigslc.start
             with self.gmf_mon:
+                # this is allocating at most 2MB of RAM
                 mean_stdt = self.get_mean_stds([ctx[bigslc]])
             for slc in gen_slices(bigslc.start, bigslc.stop, maxsize // L1):
                 slcsids = allsids[slc]
                 ctxt = ctx[slc]
                 self.slc = slice(slc.start - s, slc.stop - s)  # in get_poes
                 with self.poe_mon:
+                    # this is allocating at most 2MB of RAM
                     poes = numpy.zeros((len(ctxt), M*L1, G))
                     for g, gsim in enumerate(self.gsims):
                         ms = mean_stdt[:2, g, :, self.slc]
@@ -1249,13 +1252,13 @@ class PmapMaker(object):
                 nsites += len(ctx)
                 allctxs.append(ctx)
                 if ctxs_mb > MAX_MB:
-                    cm.get_pmap(concat(allctxs), pmap)
+                    cm.set_pmap(concat(allctxs), pmap)
                     allctxs.clear()
                     ctxs_mb = 0
         if allctxs:
             src.nsites = nsites
             totlen += nsites
-            cm.get_pmap(concat(allctxs), pmap)
+            cm.set_pmap(concat(allctxs), pmap)
             allctxs.clear()
         dt = time.time() - t0
         nsrcs = len(self.sources)
@@ -1282,7 +1285,7 @@ class PmapMaker(object):
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
-                cm.get_pmap(ctxs, pm)
+                cm.set_pmap(ctxs, pm)
 
             p = (~pm if cm.rup_indep else pm) * src.mutex_weight
             if ':' in src.source_id:
