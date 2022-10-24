@@ -951,7 +951,7 @@ class ContextMaker(object):
         self.collapser.cfactor = numpy.zeros(2)
         ctxs = self.from_srcs(srcs, sitecol)
         with patch.object(self.collapser, 'collapse_level', collapse_level):
-            return self.set_pmap(ctxs, None).array(len(sitecol))
+            return self.get_pmap(ctxs).array(len(sitecol))
 
     def get_pmap(self, ctxs):
         """
