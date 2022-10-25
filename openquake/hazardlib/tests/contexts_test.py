@@ -431,7 +431,7 @@ class GetCtxs01TestCase(unittest.TestCase):
         cm = ContextMaker('*', [gmm], param)
 
         # extract magnitude 7 context
-        [ctx] = cm.get_ctxs(self.src, self.sitec)
+        [ctx] = cm.get_ctx_iter(self.src, self.sitec)
         self.ctx = ctx[ctx.mag == 7.0]
 
         # extract magnitude 7 rupture
@@ -488,7 +488,7 @@ class GetCtxs02TestCase(unittest.TestCase):
         cm = ContextMaker('*', [gmm], param)
 
         # extract magnitude 7 context
-        [ctx] = cm.get_ctxs(self.src, self.sitec)
+        [ctx] = cm.get_ctx_iter(self.src, self.sitec)
         self.ctx = ctx[ctx.mag == 7.0]
 
         # extract magnitude 7 rupture
@@ -540,7 +540,7 @@ class PlanarDistancesTestCase(unittest.TestCase):
         cmaker = ContextMaker(
             trt, gsims, dict(imtls=imtls, truncation_level=3.))
         cmaker.tom = tom
-        ctx, = cmaker.get_ctxs(src, sites)
+        ctx, = cmaker.get_ctx_iter(src, sites)
         aac(ctx.rrup, [9.32409196, 20.44343079])
         aac(ctx.rx, [0., 0.])
         aac(ctx.ry0, [9.26597563, 20.38546829])

@@ -10,7 +10,7 @@
     </fieldMap>
     <policies>policy.csv</policies>
     <nonProportional>
-      <treaty id="WXLR" type="wxlr" max_retention="50" limit="350" />
+      <treaty id="WXLR" type="wxlr" deductible="50" limit="350" />
     </nonProportional>
   </reinsuranceModel>
 </nrml>

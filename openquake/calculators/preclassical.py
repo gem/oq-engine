@@ -262,4 +262,9 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         Store the CompositeSourceModel in binary format
         """
-        self.datastore['_csm'] = csm
+        try:
+            self.datastore['_csm'] = csm
+        except RuntimeError as exc:
+            # this happens when setrecursionlimit is too low
+            # we can continue anyway, this is not critical
+            logging.error(str(exc), exc_info=True)

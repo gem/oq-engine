@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <reinsuranceModel>
+    <description>reinsurance model</description>
+
+    <fieldMap>
+      <field input="treaty_1" type="prop" max_cession_event="250" />
+      <field input="treaty_2" type="prop" max_cession_event="500" />
+      <field input="xlr1" type="wxlr" deductible="200" limit="1000" />
+      <field input="CatXL1" type="catxl" deductible="200" limit="1000" />
+      <field input="CatXL2" type="catxl" deductible="100" limit="750" />
+    </fieldMap>
+
+  <policies>policy.csv</policies>
+
+  </reinsuranceModel>
+</nrml>

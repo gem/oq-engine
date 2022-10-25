@@ -194,8 +194,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-4)
 
     def test_case_10(self):
-        self.run_calc(case_10.__file__, 'job.ini')
-        self.assertTrue(self.calc.nodamage)
+        # test with GMVs = 0 on the sites of the exposure
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(case_10.__file__, 'job.ini')
+        self.assertIn('The sites in gmf_data are disjoint', str(ctx.exception))
 
     def test_case_11(self):
         # secondary perils without secondary simulations
