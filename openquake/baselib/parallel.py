@@ -942,7 +942,7 @@ class Starmap(object):
         Create an array backed by a SharedMemory buffer.
         :returns: an SharedArray instance
         """
-        shared = SharedArray(numpy.full(shape, value, dtype))
+        shared = SharedArray(shape, dtype, value)
         self.shared.append(shared)
         return shared
 
@@ -1120,14 +1120,15 @@ class SharedArray(object):
     with SharedArray(arr) as arr:
       print(arr)
     """
-    def __init__(self, array):
-        sm = shmem.SharedMemory(create=True, size=array.nbytes)
+    def __init__(self, shape, dtype, value):
+        nbytes = numpy.zeros(1, dtype).nbytes * numpy.prod(shape)
+        sm = shmem.SharedMemory(create=True, size=nbytes)
         self.name = sm.name
-        self.shape = array.shape
-        self.dtype = array.dtype
-        # fill the SharedMemory buffer with a copy of the array
-        arr = numpy.ndarray(array.shape, array.dtype, buffer=sm.buf)
-        arr[:] = array
+        self.shape = shape
+        self.dtype = dtype
+        # fill the SharedMemory buffer with the value
+        arr = numpy.ndarray(shape, dtype, buffer=sm.buf)
+        arr[:] = value
 
     def __enter__(self):
         self.sm = shmem.SharedMemory(self.name)
