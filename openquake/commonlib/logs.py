@@ -183,7 +183,7 @@ class LogContext:
                 'create_job',
                 get_datadir(),
                 self.params['calculation_mode'],
-                self.params['description'],
+                self.params.get('description', 'test'),
                 user_name,
                 hc_id,
                 host)
