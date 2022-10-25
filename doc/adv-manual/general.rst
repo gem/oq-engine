@@ -586,12 +586,7 @@ example correspond to 1 + 1 + ... + 1 = 705.
 From the mean and standard deviation is possible to compute the
 probabilities of exceedence. The ``ContextMaker`` provides a method
 to compute directly the probability map, which internally calls
-``cmaker.get_mean_stds(ctxs)``:
-
->>> cmaker.get_pmap([ctx]).array
-array([[[0.00507997]]])
-
-This is exactly the result provided by
+```cmaker.get_pmap([ctx])`` which gives exactly the result provided by
 ``calc_hazard_curve(sitecol, src, gsims, oq)`` in the section before.
 
 If you want to know exactly how ``get_pmap`` works you are invited to
