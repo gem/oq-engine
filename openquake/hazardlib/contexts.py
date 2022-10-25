@@ -1289,7 +1289,7 @@ class PmapMaker(object):
                 if srcid in pmap_by_src:
                     pmap_by_src[srcid].array += p.array
                 else:
-                    pmap_by_src[srcid].array[:] = p.array
+                    pmap_by_src[srcid] = p
             else:
                 pmap_by_src[src.source_id] = p
             dt = time.time() - t0
