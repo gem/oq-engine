@@ -673,6 +673,7 @@ class SharedArray(object):
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
+    shared = []  # SharedArrays
     num_cores = int(config.distribution.get('num_cores', '0'))
     if not num_cores:
         # use only the "visible" cores, not the total system cores
