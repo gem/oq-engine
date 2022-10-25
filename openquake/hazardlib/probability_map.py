@@ -453,6 +453,10 @@ class Pmap(object):
         if (other.L, other.G) != (self.L, self.G):
             raise ValueError('%s has inconsistent shape with %s' %
                              (other, self))
+        if (self.sids == other.sids).all():
+            self.array[:] = 1. - (1. - self.array) * (1. - other.array)
+            return self
+        # also assume other.sids are a subset of self.sids
         arr = self.array
         for sid, arr2 in zip(other.sids, other.array):
             arr[sid] = 1. - (1. - arr[sid]) * (1. - arr2)
@@ -463,3 +467,6 @@ class Pmap(object):
 
     def __pow__(self, n):
         return self.new(self.array ** n)
+
+    def __repr__(self):
+        return '<Pmap(%d, %d, %d)>' % (self.N, self.L, self.G)

@@ -280,11 +280,12 @@ class Hazard:
         cmaker = self.cmakers[grp_id]
         arr = pmap.array
         # arr[arr < 1E-5] = 0.  # minimum_poe
-        sids, lids, gids = arr.nonzero()
+        idxs, lids, gids = arr.nonzero()
+        sids = pmap.sids[idxs]
         hdf5.extend(self.datastore['_poes/sid'], sids)
         hdf5.extend(self.datastore['_poes/gid'], gids + cmaker.start)
         hdf5.extend(self.datastore['_poes/lid'], lids)
-        hdf5.extend(self.datastore['_poes/poe'], arr[sids, lids, gids])
+        hdf5.extend(self.datastore['_poes/poe'], arr[idxs, lids, gids])
         self.acc[grp_id]['grp_start'] = cmaker.start
         self.acc[grp_id]['avg_poe'] = arr.mean(axis=(0, 2))@self.level_weights
         self.acc[grp_id]['nsites'] = len(pmap.sids)
@@ -491,10 +492,14 @@ class ClassicalCalculator(base.HazardCalculator):
         t0 = time.time()
         for t, tile in enumerate(tiles, 1):
             self.check_memory(len(tile), L, num_gs)
-            sids = tile.sids if len(tiles) > 1 else None
-            smap = self.submit(sids, self.haz.cmakers, max_weight)
+            if len(tiles) > 1:
+                sids = tile.sids
+                smap = self.submit(sids, self.haz.cmakers, max_weight)
+            else:
+                sids = self.sitecol.sids
+                smap = self.submit(None, self.haz.cmakers, max_weight)
             for cm in self.haz.cmakers:
-                acc[cm.grp_id] = Pmap(self.sitecol.sids, L, len(cm.gsims))
+                acc[cm.grp_id] = Pmap(sids, L, len(cm.gsims))
                 acc[cm.grp_id].fill(0)
             smap.reduce(self.agg_dicts, acc)
             if len(tiles) > 1:
