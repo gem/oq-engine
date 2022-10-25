@@ -959,7 +959,8 @@ class ContextMaker(object):
         :returns: a ProbabilityMap
         """
         sids = numpy.unique(ctxs[0].sids)
-        pmap = Pmap(sids, size(self.imtls), len(self.gsims)).fill(0)
+        pmap = Pmap(sids, size(self.imtls), len(self.gsims))
+        pmap.fill(self.rup_indep)
         self.set_pmap(ctxs, pmap)
         if self.rup_indep:
             return ~pmap

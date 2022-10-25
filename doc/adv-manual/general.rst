@@ -588,9 +588,8 @@ probabilities of exceedence. The ``ContextMaker`` provides a method
 to compute directly the probability map, which internally calls
 ``cmaker.get_mean_stds(ctxs)``:
 
->>> cmaker.get_pmap([ctx])
-{0: <ProbabilityCurve
-[[0.00507997]]>}
+>>> cmaker.get_pmap([ctx]).array
+array([[[0.00507997]]])
 
 This is exactly the result provided by
 ``calc_hazard_curve(sitecol, src, gsims, oq)`` in the section before.
