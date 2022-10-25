@@ -211,8 +211,8 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.collapser.cfactor = numpy.zeros(2)
         cmaker.collapser.collapse_level = 1
         cmap = cmaker.get_pmap(ctxs)
-        self.assertLess(rms(pmap.array[0] - cmap.array[0]), 3E-4)
-        self.assertLess(rms(pmap.array[1] - cmap.array[0]), 3E-4)
+        self.assertLess(rms(pmap.array[0] - cmap.array[0]), 6E-4)
+        self.assertLess(rms(pmap.array[1] - cmap.array[0]), 6E-4)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [33, 60])
 
     def test_collapse_big(self):
