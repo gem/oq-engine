@@ -25,8 +25,8 @@ import pandas
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
-from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.stats import geom_avg_std, compute_pmap_stats
+from openquake.hazardlib.probability_map import Pmap
+from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.calc.filters import nofilter, getdefault, SourceFilter
@@ -68,6 +68,28 @@ def strip_zeros(gmf_df):
     df = gmf_df[gmf_df.columns[3:]]  # strip eid, sid, rlz
     ok = df.to_numpy().sum(axis=1) > 0
     return gmf_df[ok]
+
+
+def make_hmap(sids, array, imtls, poes):
+    """
+    Compute the hazard maps associated to the passed probability map.
+
+    :param pmap: hazard curves in the form of a ProbabilityMap
+    :param imtls: DictArray with M intensity measure types
+    :param poes: P PoEs where to compute the maps
+    :param sid: not None when pmap is actually a ProbabilityCurve
+    :returns: a ProbabilityMap with size (N, M, P)
+    """
+    M, P = len(imtls), len(poes)
+    hmap = Pmap(sids, M, P).fill(0)
+    for i, imt in enumerate(imtls):
+        curves = array[:, imtls(imt), 0]
+        data = calc.compute_hazard_maps(
+            curves, imtls[imt], poes)  # array (N, P)
+        for sid, value in zip(sids, data):
+            for j, val in enumerate(value):
+                hmap.array[sid, i, j] = val
+    return hmap
 
 
 def event_based(proxies, full_lt, oqparam, dstore, monitor):
@@ -188,7 +210,7 @@ class EventBasedCalculator(base.HazardCalculator):
         Initial accumulator, a dictionary rlz -> ProbabilityMap
         """
         self.L = self.oqparam.imtls.size
-        return {r: ProbabilityMap(self.L) for r in range(self.R)}
+        return Pmap(self.sitecol.sids, self.L, self.R).fill(0)
 
     def build_events_from_sources(self):
         """
@@ -294,7 +316,7 @@ class EventBasedCalculator(base.HazardCalculator):
         with agg_mon:
             for key, poes in result.get('hcurves', {}).items():
                 r, sid, imt = str2rsi(key)
-                array = acc[r].setdefault(sid, 0).array[imtls(imt), 0]
+                array = acc.array[sid, imtls(imt), r]
                 array[:] = 1. - (1. - array) * (1. - poes)
         self.datastore.flush()
         return acc
@@ -458,9 +480,9 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore['avg_gmf'] = avg_gmf
         return rel_events
 
-    def post_execute(self, result):
+    def post_execute(self, pmap):
         oq = self.oqparam
-        if (not result or not oq.ground_motion_fields and not
+        if (not pmap or not oq.ground_motion_fields and not
                 oq.hazard_curves_from_gmfs):
             return
         N = len(self.sitecol.complete)
@@ -477,19 +499,13 @@ class EventBasedCalculator(base.HazardCalculator):
             rlzs = self.datastore['full_lt'].get_realizations()
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
-            weights = [rlz.weight for rlz in rlzs]
+            weights = [rlz.weight['weight'] for rlz in rlzs]
             # NB: in the future we may want to save to individual hazard
             # curves if oq.individual_rlzs is set; for the moment we
             # save the statistical curves only
             hstats = oq.hazard_stats()
             S = len(hstats)
-            pmaps = list(result.values())
             R = len(weights)
-            if len(pmaps) != R:
-                # this should never happen, unless I break the
-                # logic tree reduction mechanism during refactoring
-                raise AssertionError('Expected %d pmaps, got %d' %
-                                     (len(weights), len(pmaps)))
             if oq.individual_rlzs:
                 logging.info('Saving individual hazard curves')
                 self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
@@ -504,15 +520,15 @@ class EventBasedCalculator(base.HazardCalculator):
                     self.datastore.set_shape_descr(
                         'hmaps-rlzs', site_id=N, rlz_id=R,
                         imt=list(oq.imtls), poe=oq.poes)
-                for r, pmap in enumerate(pmaps):
+                for r in range(R):
                     arr = numpy.zeros((N, M, L1), F32)
-                    for sid in pmap:
-                        arr[sid] = pmap[sid].array.reshape(M, L1)
+                    for sid in self.sitecol.sids:
+                        arr[sid] = pmap.array[sid, :, r].reshape(M, L1)
                     self.datastore['hcurves-rlzs'][:, r] = arr
                     if oq.poes:
-                        hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
-                        for sid in hmap:
-                            ds[sid, r] = hmap[sid].array
+                        hmap = make_hmap(pmap.sids, pmap.array[:, :, [r]],
+                                         oq.imtls, oq.poes)
+                        ds[:, r] = hmap.array
 
             if S:
                 logging.info('Computing statistical hazard curves')
@@ -528,17 +544,18 @@ class EventBasedCalculator(base.HazardCalculator):
                     self.datastore.set_shape_descr(
                         'hmaps-stats', site_id=N, stat=list(hstats),
                         imt=list(oq.imtls), poes=oq.poes)
+                array = compute_stats(pmap.array.transpose(2, 0, 1),
+                                      hstats.values(), weights) # SNL
                 for s, stat in enumerate(hstats):
-                    pmap = compute_pmap_stats(
-                        pmaps, [hstats[stat]], weights, oq.imtls)
                     arr = numpy.zeros((N, M, L1), F32)
-                    for sid in pmap:
-                        arr[sid] = pmap[sid].array.reshape(M, L1)
+                    for sid in self.sitecol.sids:
+                        arr[sid] = array[s, sid].reshape(M, L1)
                     self.datastore['hcurves-stats'][:, s] = arr
                     if oq.poes:
-                        hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
-                        for sid in hmap:
-                            ds[sid, s] = hmap[sid].array
+                        hmap = make_hmap(
+                            pmap.sids, pmap.array, oq.imtls, oq.poes)
+                        ds[:, s] = hmap.array
+
         if self.datastore.parent:
             self.datastore.parent.open('r')
         if oq.compare_with_classical:  # compute classical curves
