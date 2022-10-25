@@ -466,7 +466,7 @@ class Pmap(object):
         if (other.L, other.G) != (self.L, self.G):
             raise ValueError('%s has inconsistent shape with %s' %
                              (other, self))
-        if (self.sids == other.sids).all():
+        if len(self.sids) == len(other.sids):
             self.array[:] = 1. - (1. - self.array) * (1. - other.array)
             return self
         # also assume other.sids are a subset of self.sids
