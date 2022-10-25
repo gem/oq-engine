@@ -452,10 +452,15 @@ class Pmap(object):
     # used in calc_hazard_curves
     def convert(self, imtls, nsites, idx=0):
         """
-        Convert a probability curve into a record of dtype `imtls.dt`.
+        Convert a probability map into a composite array of length `nsites`
+        and dtype `imtls.dt`.
 
-        :param imtls: DictArray instance
-        :param idx: extract the data corresponding to the given inner index
+        :param imtls:
+            DictArray instance
+        :param nsites:
+            the total number of sites
+        :param idx:
+            index on the z-axis (default 0)
         """
         curves = numpy.zeros(nsites, imtls.dt)
         for imt in curves.dtype.names:
