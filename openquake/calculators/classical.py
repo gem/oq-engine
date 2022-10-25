@@ -279,6 +279,15 @@ class Hazard:
         """
         cmaker = self.cmakers[grp_id]
         arr = pmap.array
+        # Physically, an extremely small intensity measure level can have an
+        # extremely large probability of exceedence, however that probability
+        # cannot be exactly 1 unless the level is exactly 0. Numerically, the
+        # PoE can be 1 and this give issues when calculating the damage (there
+        # is a log(0) in
+        # :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
+        # Here we solve the issue by replacing the unphysical probabilities 1
+        # with .9999999999999999 (the float64 closest to 1).
+        arr[arr == 1.] = .9999999999999999
         # arr[arr < 1E-5] = 0.  # minimum_poe
         idxs, lids, gids = arr.nonzero()
         sids = pmap.sids[idxs]
