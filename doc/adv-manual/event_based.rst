@@ -921,34 +921,34 @@ would be as follows:
 As expected, the variability of the values is rather large, spanning
 more than one order of magnitude:
 
->>> gmvs.min(), np.median(gmvs), gmvs.max()
-(0.026765710489091852, 0.1370582013790309, 0.9290114132955762)
+>>> numpy.round([gmvs.min(), np.median(gmvs), gmvs.max()], 6)
+array([0.026766, 0.137058, 0.929011])
 
 Also mean and standard deviation of the logarithms are very close to
 the expected values :math:`\mu`=-2 and :math:`\sigma`=.5:
 
->>> np.log(gmvs).mean()
--1.9903339720888376
->>> np.log(gmvs).std()
-0.4893631038736771
+>>> round(np.log(gmvs).mean(), 6)
+-1.990334
+>>> round(np.log(gmvs).std(), 6)
+0.489363
 
 The geometric mean of the values (i.e. the exponential of the mean
 of the logarithms) is very close to the median, as expected for a lognormal
 distribution:
 
->>> np.exp(np.log(gmvs).mean())
-0.13664978061122787
+>>> round(np.exp(np.log(gmvs).mean()), 6)
+0.13665
 
 All these properties are broken when the ground motion values
 are truncated below the ``minimum_intensity``::
 
  >> gmvs[gmvs < .05] = .05
- >> np.log(gmvs).mean()
- -1.9876078473466177
- >> np.log(gmvs).std()
- 0.48280630467779523
- >> np.exp(np.log(gmvs).mean())
- 0.13702281319482504
+ >> round(np.log(gmvs).mean(), 6)
+ -1.987608
+ >> round(np.log(gmvs).std(), 6)
+ 0.4828063
+ >> round(np.exp(np.log(gmvs).mean()), 6)
+ 0.137023
 
 In this case the difference is minor, but if the number of simulations
 is small and/or the :math:`\sigma` is large the mean and standard
