@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: [3.9]
+        python-version: ["3.10"]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -34,7 +34,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: [3.8]
+        python-version: ["3.10"]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -46,7 +46,7 @@ jobs:
         python -m pip install --upgrade pip wheel
         pip install pyshp
         pip install pytest
-        pip install -r requirements-py38-linux64.txt && pip install -e .
+        pip install -r requirements-py310-linux64.txt && pip install -e .
     - name: hazardlib tests
       run: |
         oq dbserver start

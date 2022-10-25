@@ -44,7 +44,7 @@ Here is a minimal example of usage:
    input                input file or archive
    output               output archive
  <BLANKLINE>
- optional arguments:
+ options:
    -h, --help           show this help message and exit
    -i, --inplace        convert inplace
    -o /tmp, --out /tmp  output directory
