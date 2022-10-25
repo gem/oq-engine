@@ -499,8 +499,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 sids = self.sitecol.sids
                 smap = self.submit(None, self.haz.cmakers, max_weight)
             for cm in self.haz.cmakers:
-                acc[cm.grp_id] = Pmap(sids, L, len(cm.gsims))
-                acc[cm.grp_id].fill(0)
+                acc[cm.grp_id] = Pmap(sids, L, len(cm.gsims)).fill(0)
             smap.reduce(self.agg_dicts, acc)
             if len(tiles) > 1:
                 logging.info('Finished tile %d of %d', t, len(tiles))
