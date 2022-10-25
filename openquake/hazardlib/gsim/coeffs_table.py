@@ -56,7 +56,7 @@ class CoeffsTable(object):
     >>> CoeffsTable()
     Traceback (most recent call last):
         ...
-    TypeError: __init__() missing 1 required positional argument: 'table'
+    TypeError: CoeffsTable.__init__() missing 1 required positional argument: 'table'
 
     >>> CoeffsTable(table='', foo=1)
     Traceback (most recent call last):
