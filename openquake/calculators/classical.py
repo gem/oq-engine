@@ -447,7 +447,7 @@ class ClassicalCalculator(base.HazardCalculator):
         G = max(num_gs)
         size = G * N * L * 8
         tot = sum(num_gs) * N * L * 8
-        logging.info('Requiring %s of %s for ProbabilityMap (G=%d,N=%d,L=%d)',
+        logging.info('Requiring %s (%s) for ProbabilityMap(G=%d,N=%d,L=%d)',
                      humansize(size), humansize(tot), G, N, L)
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         if avail < size:
