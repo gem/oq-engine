@@ -47,7 +47,7 @@ from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, pmf, gsim_lt)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
-from openquake.risklib import asset, riskmodels, scientific
+from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.source_reader import get_csm
@@ -735,14 +735,13 @@ def _check_csm(csm, oqparam, h5):
         source.check_complex_faults(srcs)
 
     # build a smart SourceFilter
-    try:
-        sitecol = get_site_collection(oqparam, h5)
-    except ValueError:   # already stored (case_66)
-        sitecol = h5['sitecol']
-    csm.sitecol = sitecol
-    if sitecol is None:  # missing sites.csv (test_case_1_ruptures)
+    if h5 and 'sitecol' in h5:
+        csm.sitecol = h5['sitecol']
+    else:
+        csm.sitecol = get_site_collection(oqparam, h5)
+    if csm.sitecol is None:  # missing sites.csv (test_case_1_ruptures)
         return
-    srcfilter = SourceFilter(sitecol, oqparam.maximum_distance)
+    srcfilter = SourceFilter(csm.sitecol, oqparam.maximum_distance)
     logging.info('Checking the sources bounding box')
     lons = []
     lats = []
@@ -760,7 +759,7 @@ def _check_csm(csm, oqparam, h5):
         lats.append(box[1])
         lons.append(box[2])
         lats.append(box[3])
-    if cross_idl(*(list(sitecol.lons) + lons)):
+    if cross_idl(*(list(csm.sitecol.lons) + lons)):
         lons = numpy.array(lons) % 360
     else:
         lons = numpy.array(lons)
@@ -1172,6 +1171,21 @@ def get_shapefiles(dirname):
     return out
 
 
+def get_reinsurance(oqparam, assetcol=None):
+    """
+    :returns: (policy_df, treaty_df, field_map)
+    """
+    if assetcol is None:
+        sitecol, assetcol, discarded = get_sitecol_assetcol(oqparam)
+    [(loss_type, fname)] = oqparam.inputs['reinsurance'].items()
+    # make sure the first aggregate by is policy
+    if oqparam.aggregate_by[0] != ['policy']:
+        raise InvalidFile('%s: aggregate_by=%s' %
+                          (fname, oqparam.aggregate_by))
+    [(key, fname)] = oqparam.inputs['reinsurance'].items()
+    return reinsurance.parse(fname, assetcol.tagcol.policy_idx)
+
+
 def get_input_files(oqparam):
     """
     :param oqparam: an OqParam instance
@@ -1274,4 +1288,3 @@ def get_checksum32(oqparam, h5=None):
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum
-

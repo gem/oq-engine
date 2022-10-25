@@ -74,7 +74,7 @@
         </logicTreeBranch>
         <logicTreeBranch branchID="b92">
             <uncertaintyModel>
-                <faultActivityData slipRate="20.0" rigidity="32" recompute_mmax=""/>
+                <faultActivityData slipRate="20.0" rigidity="32" recompute_mmax="" constant_term="9.05" />
             </uncertaintyModel>
             <uncertaintyWeight>0.7</uncertaintyWeight>
         </logicTreeBranch>

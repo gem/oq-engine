@@ -6,7 +6,7 @@
     <fieldMap>
       <field input="surplus" type="prop" max_cession_event="500" />
       <field input="quota_shared" type="prop" max_cession_event="1000" />
-      <field input="WXLR" type="wxlr" max_retention="50" limit="350" />
+      <field input="WXLR" type="wxlr" deductible="50" limit="350" />
     </fieldMap>
     <policies>policy.csv</policies>
   </reinsuranceModel>

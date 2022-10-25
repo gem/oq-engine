@@ -8,7 +8,7 @@ from openquake.calculators.base import calculators, save_shakemap
 
 
 def main(id, site_model, *, num_gmfs: int = 0, random_seed: int = 42,
-         site_effects: bool = 0, trunclevel: int = 3,
+         site_effects: bool = 0, trunclevel: float = 3,
          spatialcorr='yes', crosscorr='yes', cholesky_limit: int = 10_000):
     """
     Example of usage: oq shakemap2gmfs us2000ar20 site_model.csv -n 10

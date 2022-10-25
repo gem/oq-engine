@@ -10,7 +10,11 @@
 
       <logicTreeBranch branchID="b1">
         <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
-        <uncertaintyWeight>1.0</uncertaintyWeight>
+        <uncertaintyWeight>0.5</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b2">
+        <uncertaintyModel>BooreAtkinson2011</uncertaintyModel>
+        <uncertaintyWeight>0.5</uncertaintyWeight>
       </logicTreeBranch>
 
   </logicTreeBranchSet>
