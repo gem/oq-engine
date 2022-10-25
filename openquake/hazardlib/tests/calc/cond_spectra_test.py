@@ -124,7 +124,7 @@ class CondSpectraTestCase(unittest.TestCase):
                                 0.15669297, 0.11154595, 0.0409729], atol=2E-5)
         aac(s_sigma.flatten(), [0.327456, 0.368969, 0.388289, 0.270122,
                                 0.006058, 0.235236, 0.319312, 0.463179,
-                                0.556208, 0.596132, 0.70371], atol=1E-5)
+                                0.556208, 0.596132, 0.70371], atol=2E-5)
 
     def test_2_rlzs(self):
         # test with two GMPEs, 1 TRT
