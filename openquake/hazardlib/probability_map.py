@@ -447,7 +447,20 @@ class Pmap(object):
         self.sidx = numpy.zeros(self.sids.max() + 1, numpy.uint32)
         for idx, sid in enumerate(self.sids):
             self.sidx[sid] = idx
-        return self.array
+        return self
+
+    # used in calc_hazard_curves
+    def convert(self, imtls, nsites, idx=0):
+        """
+        Convert a probability curve into a record of dtype `imtls.dt`.
+
+        :param imtls: DictArray instance
+        :param idx: extract the data corresponding to the given inner index
+        """
+        curves = numpy.zeros(nsites, imtls.dt)
+        for imt in curves.dtype.names:
+            curves[imt][self.sids] = self.array[:, imtls(imt), idx]
+        return curves
 
     def __ior__(self, other):
         if (other.L, other.G) != (self.L, self.G):

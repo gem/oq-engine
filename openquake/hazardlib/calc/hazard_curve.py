@@ -47,20 +47,19 @@ import numpy
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
-from openquake.hazardlib.probability_map import (
-    ProbabilityMap, ProbabilityCurve)
+from openquake.hazardlib.probability_map import Pmap, ProbabilityCurve
 from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import PoissonTOM, FatedTOM
 
 
-def _cluster(imtls, tom, gsims, pmap):
+def _cluster(sids, imtls, tom, gsims, pmap):
     """
     Computes the probability map in case of a cluster group
     """
     L, G = imtls.size, len(gsims)
-    pmapclu = ProbabilityMap(L, G)
+    pmapclu = Pmap(sids, L, G).fill(0)
     # Get temporal occurrence model
     # Number of occurrences for the cluster
     first = True
@@ -110,7 +109,8 @@ def classical(group, sitecol, cmaker):
     dic = PmapMaker(cmaker, src_filter, group).make(sitecol.sids)
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
-        dic['pmap'] = _cluster(cmaker.imtls, tom, cmaker.gsims, dic['pmap'])
+        dic['pmap'] = _cluster(sitecol.sids, cmaker.imtls, tom, cmaker.gsims,
+                               dic['pmap'])
     return dic
 
 
@@ -173,10 +173,10 @@ def calc_hazard_curves(
     param = dict(imtls=imtls, truncation_level=truncation_level, reqv=reqv,
                  cluster=grp.cluster, shift_hypo=shift_hypo,
                  investigation_time=kwargs.get('investigation_time', span))
-    pmap = ProbabilityMap(imtls.size, 1)
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
     sitecol = getattr(srcfilter, 'sitecol', srcfilter)
+    pmap = Pmap(sitecol.sids, imtls.size, 1).fill(0)
     for group in groups:
         trt = group.trt
         if sitecol is not srcfilter:
@@ -212,4 +212,4 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     if not pmap:  # filtered away
         zero = numpy.zeros((oqparam.imtls.size, len(gsims)))
         return ProbabilityCurve(zero)
-    return pmap[0]  # pcurve with shape (L, G) on site 0
+    return ProbabilityCurve(pmap.array[0])
