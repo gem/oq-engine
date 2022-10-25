@@ -536,14 +536,14 @@ class RectangularMeshGetMeanInclinationAndAzimuthTestCase(unittest.TestCase):
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
         self.assertEqual(dip, 0)
-        self.assertAlmostEqual(strike, 0, delta=0.5)
+        self.assertAlmostEqual(strike, 0, delta=0.5000001)
 
         row1 = [Point(0, 0), Point(0, -1)]
         row2 = [Point(1, 0), Point(1, -1)]
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
         self.assertEqual(dip, 0)
-        self.assertAlmostEqual(strike, 180, delta=0.5)
+        self.assertAlmostEqual(strike, 180, delta=0.5000001)
 
         row1 = [Point(0, 0), Point(1, 1)]
         row2 = [Point(1, 0), Point(2, 1)]
