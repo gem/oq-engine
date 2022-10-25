@@ -41,12 +41,11 @@ jobs:
         ref: ${{ github.event.inputs.git-ref }}
     - name: Set up Python  ${{ matrix.python-version }}
       run: |
+        set -x
         pyver=`echo ${{ matrix.python-version }} | tr -d .`
         dnf update -y
         dnf install -y python${pyver}
         dnf install -y git git-lfs
-        #check version of python
-        echo "check version of python"
         pip3 -V
         python3 -c "import sys; print(sys.version)"
         #
