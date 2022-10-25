@@ -645,6 +645,31 @@ def getargnames(task_func):
         return inspect.getfullargspec(task_func.__call__).args[1:]
 
 
+class SharedArray(object):
+    """
+    Wrapper over a SharedMemory object to be used as a context manager.
+    """
+    def __init__(self, shape, dtype, value):
+        nbytes = numpy.zeros(1, dtype).nbytes * numpy.prod(shape)
+        sm = shmem.SharedMemory(create=True, size=nbytes)
+        self.name = sm.name
+        self.shape = shape
+        self.dtype = dtype
+        # fill the SharedMemory buffer with the value
+        arr = numpy.ndarray(shape, dtype, buffer=sm.buf)
+        arr[:] = value
+
+    def __enter__(self):
+        self.sm = shmem.SharedMemory(self.name)
+        return numpy.ndarray(self.shape, self.dtype, buffer=self.sm.buf)
+
+    def __exit__(self, etype, exc, tb):
+        self.sm.close()
+
+    def unlink(self):
+        shmem.SharedMemory(self.name).unlink()
+
+
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
@@ -690,11 +715,11 @@ class Starmap(object):
 
     @classmethod
     def shutdown(cls):
+        for shared in cls.shared:
+            shmem.SharedMemory(shared.name).unlink()
         # shutting down the pool during the runtime causes mysterious
         # race conditions with errors inside atexit._run_exitfuncs
         if hasattr(cls, 'pool'):
-            for shared in cls.shared:
-                shmem.SharedMemory(shared.name).unlink()
             cls.pool.close()
             cls.pool.terminate()
             cls.pool.join()
@@ -940,7 +965,11 @@ class Starmap(object):
     def create_shared(self, shape, dtype=float, value=0.):
         """
         Create an array backed by a SharedMemory buffer.
-        :returns: an SharedArray instance
+
+        :param shape: shape of the array
+        :param dtype: dtype of the array (default float)
+        :param value: initialization value (default 0.)
+        :returns: a SharedArray instance
         """
         shared = SharedArray(shape, dtype, value)
         self.shared.append(shared)
@@ -1111,31 +1140,3 @@ def workers_wait(seconds=30):
         else:
             raise TimeoutError(status)
         return status
-
-
-class SharedArray(object):
-    """
-    Wrapper over a SharedMemory object to be used as a context manager:
-
-    with SharedArray(arr) as arr:
-      print(arr)
-    """
-    def __init__(self, shape, dtype, value):
-        nbytes = numpy.zeros(1, dtype).nbytes * numpy.prod(shape)
-        sm = shmem.SharedMemory(create=True, size=nbytes)
-        self.name = sm.name
-        self.shape = shape
-        self.dtype = dtype
-        # fill the SharedMemory buffer with the value
-        arr = numpy.ndarray(shape, dtype, buffer=sm.buf)
-        arr[:] = value
-
-    def __enter__(self):
-        self.sm = shmem.SharedMemory(self.name)
-        return numpy.ndarray(self.shape, self.dtype, buffer=self.sm.buf)
-
-    def __exit__(self, etype, exc, tb):
-        self.sm.close()
-
-    def unlink(self):
-        shmem.SharedMemory(self.name).unlink()
