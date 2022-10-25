@@ -37,6 +37,11 @@ from openquake.hazardlib.gsim.nga_east import (
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
 
 
+# List of the horizontal component definitions that can be converted into
+# geometric mean
+OK_COMPONENTS = ['GMRotI50', 'RANDOM_HORIZONTAL',
+                 'GREATER_OF_TWO_HORIZONTAL', 'RotD50']
+
 IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
                       "set_fixed_total_sigma"]
@@ -54,6 +59,7 @@ COEFF_PGA_PGV = {IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
                  IMC.RotD50: [1.009, 0, 1, 1, 0, 1]}
 
 
+# self is an instance of ModifiableGMPE
 def sigma_model_alatik2015(self, ctx, imt, ergodic, tau_model, phi_ss_coetab,
                            tau_coetab):
     """
@@ -71,6 +77,7 @@ def sigma_model_alatik2015(self, ctx, imt, ergodic, tau_model, phi_ss_coetab,
     setattr(self, const.StdDev.INTRA_EVENT, phi)
 
 
+# self is an instance of ModifiableGMPE
 def nrcan15_site_term(self, ctx, imt, kind):
     """
     This function adds a site term to GMMs missing it
@@ -81,6 +88,7 @@ def nrcan15_site_term(self, ctx, imt, kind):
     self.mean = np.log(np.exp(self.mean) * fa)
 
 
+# self is an instance of ModifiableGMPE
 def horiz_comp_to_geom_mean(self, ctx, imt):
     """
     This function converts ground-motion obtained for a given description of
@@ -89,23 +97,16 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
         - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
         - Boore and Kishida (2017): for RotD50
     """
-
-    # Get the definition of the horizontal component using in the original GMM
     horcom = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
 
     # IMT period
     T = imt.period
 
     # Get the string defining the horizontal component
-    comp = str(horcom).split('.')[1]
-
-    # List of the horizontal component definitions that can be converted into
-    # geometric mean
-    tmp = ['GMRotI50', 'RANDOM_HORIZONTAL',
-           'GREATER_OF_TWO_HORIZONTAL', 'RotD50']
+    comp = horcom._name_
 
     # Apply the conversion
-    if comp in tmp:
+    if comp in OK_COMPONENTS:
         # Conversion coefficients
         C = COEFF[horcom]
         C_PGA_PGV = COEFF_PGA_PGV[horcom]
@@ -125,9 +126,9 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
                 term2 = C[3] + (C[5]-C[3]) / np.log(C[4]/C[2])*np.log(T/C[2])
                 term3 = C[5] + (C[7]-C[5]) / np.log(C[6]/C[4])*np.log(T/C[4])
                 term4 = C[8]
-                tmp_max = np.maximum(np.minimum(term1, term2),
-                                     np.minimum(term3, term4))
-                conv_median = np.maximum(C[1], tmp_max)
+                tmax = np.maximum(np.minimum(term1, term2),
+                                  np.minimum(term3, term4))
+                conv_median = np.maximum(C[1], tmax)
                 conv_sigma = 0
                 rstd = 1
             else:
@@ -143,26 +144,25 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
                     conv_sigma = (C[2] + (C[3]-C[2]) *
                                   np.log10(T/0.15)/np.log10(0.8/0.15))
                 rstd = C[4]
-    elif comp in ['GEOMETRIC_MEAN']:
+    elif comp == 'GEOMETRIC_MEAN':
         conv_median = 1
         conv_sigma = 0
         rstd = 1
-    else:
+    else:  # convention not applicable
         conv_median = 1
         conv_sigma = 0
         rstd = 1
-        msg = f'Conversion not applicable for {comp}'
-        warnings.warn(msg, UserWarning)
 
     # Original total STD
     total_stddev = getattr(self, const.StdDev.TOTAL)
 
     # Converted values
-    std = ((total_stddev**2-conv_sigma**2)/rstd**2)**0.5
+    std = ((total_stddev**2 - conv_sigma**2) / rstd**2)**0.5
     self.mean = np.log(np.exp(self.mean)/conv_median)
     setattr(self, const.StdDev.TOTAL, std)
 
 
+# self is an instance of ModifiableGMPE
 def add_between_within_stds(self, ctx, imt, with_betw_ratio):
     """
     This adds the between and within standard deviations to a model which has
@@ -181,6 +181,7 @@ def add_between_within_stds(self, ctx, imt, with_betw_ratio):
     setattr(self, StdDev.INTRA_EVENT, within)
 
 
+# self is an instance of ModifiableGMPE
 def apply_swiss_amplification(self, ctx, imt):
     """
     Adds amplfactor to mean
@@ -188,6 +189,7 @@ def apply_swiss_amplification(self, ctx, imt):
     self.mean += ctx.amplfactor
 
 
+# self is an instance of ModifiableGMPE
 def set_between_epsilon(self, ctx, imt, epsilon_tau):
     """
     :param epsilon_tau:
@@ -204,6 +206,7 @@ def set_between_epsilon(self, ctx, imt, epsilon_tau):
     setattr(self, StdDev.TOTAL, getattr(self, StdDev.INTRA_EVENT))
 
 
+# self is an instance of ModifiableGMPE
 def set_scale_median_scalar(self, ctx, imt, scaling_factor):
     """
     :param scaling_factor:
@@ -213,6 +216,7 @@ def set_scale_median_scalar(self, ctx, imt, scaling_factor):
     self.mean += np.log(scaling_factor)
 
 
+# self is an instance of ModifiableGMPE
 def set_scale_median_vector(self, ctx, imt, scaling_factor):
     """
     :param scaling_factor:
@@ -223,6 +227,7 @@ def set_scale_median_vector(self, ctx, imt, scaling_factor):
     self.mean += np.log(C["scaling_factor"])
 
 
+# self is an instance of ModifiableGMPE
 def set_scale_total_sigma_scalar(self, ctx, imt, scaling_factor):
     """
     Scale the total standard deviations by a constant scalar factor
@@ -234,6 +239,7 @@ def set_scale_total_sigma_scalar(self, ctx, imt, scaling_factor):
     setattr(self, StdDev.TOTAL, total_stddev)
 
 
+# self is an instance of ModifiableGMPE
 def set_scale_total_sigma_vector(self, ctx, imt, scaling_factor):
     """
     Scale the total standard deviations by a IMT-dependent scalar factor
@@ -247,6 +253,7 @@ def set_scale_total_sigma_vector(self, ctx, imt, scaling_factor):
     setattr(self, StdDev.TOTAL, total_stddev)
 
 
+# self is an instance of ModifiableGMPE
 def set_fixed_total_sigma(self, ctx, imt, total_sigma):
     """
     Sets the total standard deviations to a fixed value per IMT
@@ -258,6 +265,7 @@ def set_fixed_total_sigma(self, ctx, imt, total_sigma):
     setattr(self, StdDev.TOTAL, C["total_sigma"] + np.zeros(shp))
 
 
+# self is an instance of ModifiableGMPE
 def add_delta_std_to_total_std(self, ctx, imt, delta):
     """
     :param delta:
@@ -268,6 +276,7 @@ def add_delta_std_to_total_std(self, ctx, imt, delta):
     setattr(self, StdDev.TOTAL, total_stddev)
 
 
+# self is an instance of ModifiableGMPE
 def set_total_std_as_tau_plus_delta(self, ctx, imt, delta):
     """
     :param delta:
@@ -360,6 +369,13 @@ class ModifiableGMPE(GMPE):
                     if isinstance(self.params[key][subkey], dict):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
+
+        # warn for non-applicable components
+        comp = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT._name_
+        if comp == 'GEOMETRIC_MEAN' or comp in OK_COMPONENTS:
+            pass  # all okay
+        else:
+            warnings.warn(f'Conversion not applicable for {comp}', UserWarning)
 
     # called by the ContextMaker
     def set_tables(self, mags, imts):
