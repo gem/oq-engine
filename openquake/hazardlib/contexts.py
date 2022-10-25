@@ -951,14 +951,15 @@ class ContextMaker(object):
         self.collapser.cfactor = numpy.zeros(2)
         ctxs = self.from_srcs(srcs, sitecol)
         with patch.object(self.collapser, 'collapse_level', collapse_level):
-            return self.get_pmap(ctxs).array(len(sitecol))
+            return self.get_pmap(ctxs).array
 
     def get_pmap(self, ctxs):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
         :returns: a ProbabilityMap
         """
-        pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
+        sids = numpy.unique(ctxs[0].sids)
+        pmap = Pmap(sids, size(self.imtls), len(self.gsims)).fill(0)
         self.set_pmap(ctxs, pmap)
         if self.rup_indep:
             return ~pmap
