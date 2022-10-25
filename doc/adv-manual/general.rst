@@ -546,10 +546,10 @@ Then you have
 
 >>> ctx.mag[0]
 4.7
->>> ctx.rrup[0]
-106.4011264574155
->>> ctx.rjb[0]
-105.89632469731306
+>>> round(ctx.rrup[0], 1)
+106.4
+>>> round(ctx.rjb[0], 1)
+105.9
 
 In this example, the GMPE ``ToroEtAl2002SHARE`` does not require site
 parameters, so calling ``ctx.vs30`` will raise an ``AttributeError``
