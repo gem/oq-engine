@@ -446,9 +446,9 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         G = max(num_gs)
         size = G * N * L * 8
-        # for ESHM20 there are 95,000 sites and up to 72,000 can be affected
-        logging.info('Requiring %s for full ProbabilityMap of shape %s',
-                     humansize(size), (G, N, L))
+        tot = sum(num_gs) * N * L * 8
+        logging.info('Requiring %s of %s for ProbabilityMap (G=%d,N=%d,L=%d)',
+                     humansize(size), humansize(tot), G, N, L)
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         if avail < size:
             raise MemoryError(
@@ -499,6 +499,7 @@ class ClassicalCalculator(base.HazardCalculator):
             smap.reduce(self.agg_dicts, acc)
             if len(tiles) > 1:
                 logging.info('Finished tile %d of %d', t, len(tiles))
+                parallel.Starmap.shutdown()
         self.store_info()
         self.haz.store_disagg(acc)
         if self.cfactor[0] == 0:
