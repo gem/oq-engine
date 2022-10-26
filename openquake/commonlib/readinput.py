@@ -45,7 +45,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, pmf, gsim_lt)
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.probability_map import Pmap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
@@ -1012,8 +1012,9 @@ def _taxonomy_mapping(filename, taxonomies):
     taxonomies = taxonomies[1:]  # strip '?'
     missing = set(taxonomies) - set(dic)
     if missing:
-        raise InvalidFile('The taxonomy strings %s are in the exposure but not in '
-                          'the taxonomy mapping file %s' % (missing, filename))
+        raise InvalidFile(
+            'The taxonomy strings %s are in the exposure but not in '
+            'the taxonomy mapping file %s' % (missing, filename))
     lst = [[("?", 1)]]
     for taxo in taxonomies:
         recs = dic[taxo]
@@ -1044,8 +1045,9 @@ def get_pmap_from_csv(oqparam, fnames):
     oqparam.set_risk_imts(get_risk_functions(oqparam))
     array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])
-    num_levels = sum(len(imls) for imls in oqparam.imtls.values())
-    data = numpy.zeros((len(mesh), num_levels))
+    N = len(mesh)
+    L = sum(len(imls) for imls in oqparam.imtls.values())
+    data = numpy.zeros((N, L))
     level = 0
     for im in oqparam.imtls:
         arr = dic[im]
@@ -1054,7 +1056,9 @@ def get_pmap_from_csv(oqparam, fnames):
             level += 1
         for field in ('lon', 'lat', 'depth'):  # sanity check
             numpy.testing.assert_equal(arr[field], array[field])
-    return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
+    pmap = Pmap(numpy.arange(N, dtype=U32), len(data), 1)
+    pmap.array = data.reshape(N, L, 1)
+    return mesh, pmap
 
 
 tag2code = {'multiFaultSource': b'F',

@@ -231,35 +231,6 @@ def make_hmaps(pmaps, imtls, poes):
     return hmaps
 
 
-def make_hmap(pmap, imtls, poes, sid=None):
-    """
-    Compute the hazard maps associated to the passed probability map.
-
-    :param pmap: hazard curves in the form of a ProbabilityMap
-    :param imtls: DictArray with M intensity measure types
-    :param poes: P PoEs where to compute the maps
-    :param sid: not None when pmap is actually a ProbabilityCurve
-    :returns: a ProbabilityMap with size (N, M, P)
-    """
-    if sid is None:
-        sids = pmap.sids
-    else:  # passed a probability curve
-        pmap = {sid: pmap}
-        sids = [sid]
-    M, P = len(imtls), len(poes)
-    hmap = probability_map.ProbabilityMap.build(M, P, sids, dtype=F32)
-    if len(pmap) == 0:
-        return hmap  # empty hazard map
-    for i, imt in enumerate(imtls):
-        curves = numpy.array([pmap[sid].array[imtls(imt), 0] for sid in sids])
-        data = compute_hazard_maps(curves, imtls[imt], poes)  # array (N, P)
-        for sid, value in zip(sids, data):
-            array = hmap[sid].array
-            for j, val in enumerate(value):
-                array[i, j] = val
-    return hmap
-
-
 def make_uhs(hmap, info):
     """
     Make Uniform Hazard Spectra curves for each location.

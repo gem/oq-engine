@@ -481,6 +481,23 @@ class Pmap(object):
         new.array = self.array[ok]
         return new
 
+    # used in classical_risk from CSV
+    def to_dframe(self):
+        """
+        :returns: a DataFrame with fields sid, gid, lid, poe
+        """
+        dic = dict(sid=[], gid=[], lid=[], poe=[])
+        for sid, arr in zip(self.sids, self.array):
+            for (lid, gid), poe in numpy.ndenumerate(arr):
+                dic['sid'].append(sid)
+                dic['gid'].append(gid)
+                dic['lid'].append(lid)
+                dic['poe'].append(poe)
+        for key, dt in poes_dt.items():
+            dic[key] = dt(dic[key])
+        dic['poe'][dic['poe'] == 1.] = .9999999999999999  # avoids log(0)
+        return pandas.DataFrame(dic)
+
     def __ior__(self, other):
         if (other.shape_y, other.shape_z) != (self.shape_y, self.shape_z):
             raise ValueError('%s has inconsistent shape with %s' %
