@@ -28,7 +28,7 @@ try:
     from PIL import Image
 except ImportError:
     Image = None
-from openquake.baselib import performance, parallel, hdf5, config
+from openquake.baselib import performance, parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
     get_nbytes_msg, agg_probs, pprod)
@@ -333,7 +333,7 @@ class ClassicalCalculator(base.HazardCalculator):
     """
     core_task = classical
     precalc = 'preclassical'
-    accept_precalc = ['preclassical', 'classical']
+    accept_precalc = ['preclassical', 'classical', 'aftershock']
     SLOW_TASK_ERROR = False
 
     def agg_dicts(self, acc, dic):
@@ -475,7 +475,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id:
             parent = self.datastore.parent
             if '_poes' in parent:
-                self.post_classical()  # repeat post-processing
+                self.build_curves_maps()  # repeat post-processing
                 return {}
             else:  # after preclassical, like in case_36
                 self.csm = parent['_csm']
@@ -522,6 +522,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
             int(self.cfactor[1]), int(self.cfactor[0]),
             self.cfactor[1] / self.cfactor[0]))
+        if '_poes' in self.datastore:
+            self.build_curves_maps()
         if not oq.hazard_calculation_id:
             self.classical_time = time.time() - t0
         return True
@@ -599,7 +601,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def post_execute(self, dummy):
         """
-        Compute the statistical hazard curves
+        Check for slow tasks and fix disagg_by_src if needed
         """
         task_info = self.datastore.read_df('task_info', 'taskname')
         try:
@@ -614,8 +616,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
             elif slow_tasks:
                 logging.info(msg)
-        if self.oqparam.disagg_by_src and '_poes' in self.datastore:
-            srcids = list(self.csm.source_info)
+        if 'disagg_by_src' in list(self.datastore):
+            srcids = python3compat.decode(
+                self.datastore['source_info']['source_id'])
             if any(';' in srcid for srcid in srcids):
                 # enable reduction of the array disagg_by_src
                 arr = self.datastore['disagg_by_src'][:]
@@ -624,8 +627,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.set_shape_descr(
                     'disagg_by_src', site_id=self.N, rlz_id=self.R,
                     imt=list(self.oqparam.imtls), lvl=self.L1, src_id=srcids)
-        if '_poes' in self.datastore:
-            self.post_classical()
         if 'disagg_by_src' in self.datastore:
             logging.info('Comparing disagg_by_src vs mean curves')
             check_disagg_by_src(self.datastore)
@@ -670,9 +671,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     imt=list(oq.imtls), poe=oq.poes)
         return N, S, M, P, L1, individual_rlzs
 
-    def post_classical(self):
+    # called by execute before post_execute
+    def build_curves_maps(self):
         """
-        Store hcurves-rlzs, hcurves-stats, hmaps-rlzs, hmaps-stats
+        Compute and store hcurves-rlzs, hcurves-stats, hmaps-rlzs, hmaps-stats
         """
         oq = self.oqparam
         hstats = oq.hazard_stats()
@@ -717,7 +719,8 @@ class ClassicalCalculator(base.HazardCalculator):
                      humansize(hcbytes), humansize(hmbytes))
         if not performance.numba:
             logging.info('numba is not installed: using the slow algorithm')
-        self.datastore.swmr_on()  # essential before Starmap
+        if not oq.hazard_calculation_id:
+            self.datastore.swmr_on()  # essential before Starmap
         parallel.Starmap(
             postclassical, allargs,
             distribute='no' if self.few_sites else None,

@@ -157,6 +157,18 @@ def sqrscale(x_min, x_max, n):
     return x_min + (delta * numpy.arange(n))**2
 
 
+class DeltaRatesGetter(object):
+    """
+    Read the delta rates from an aftershock datastore
+    """
+    def __init__(self, dstore):
+        self.dstore = dstore
+
+    def __call__(self, src_id):
+        with self.dstore.open('r') as dstore:
+            return dstore['delta_rates'][src_id]
+
+
 class Collapser(object):
     """
     Class managing the collapsing logic.
@@ -298,6 +310,7 @@ class ContextMaker(object):
     the underlying GSIMs are defined. This is intentional.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
+    deltagetter = None
     fewsites = False
     rup_indep = True
     tom = None
@@ -433,6 +446,7 @@ class ContextMaker(object):
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=True)
+        self.delta_mon = monitor('getting delta_rates', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
@@ -1181,6 +1195,11 @@ class PmapMaker(object):
         if sites is None:
             return
         for ctx in self.cmaker.get_ctx_iter(src, sites):
+            if self.cmaker.deltagetter:
+                # adjust occurrence rates in case of aftershocks
+                with self.cmaker.delta_mon:
+                    delta = self.cmaker.deltagetter(src.id)
+                    ctx.occurrence_rate += delta[ctx.rup_id]
             if hasattr(src, 'mutex_weight'):
                 if ctx.weight.any():
                     ctx['weight'] *= src.mutex_weight
@@ -1584,6 +1603,7 @@ def read_cmakers(dstore, full_lt=None):
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
     start = 0
+    aftershock = 'delta_rates' in dstore
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
         trti = trt_smrs[grp_id][0] // num_eff_rlzs
         trt = trts[trti]
@@ -1596,6 +1616,8 @@ def read_cmakers(dstore, full_lt=None):
         oq.mags_by_trt = {k: decode(v[:])
                           for k, v in dstore['source_mags'].items()}
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
+        if aftershock:
+            cmaker.deltagetter = DeltaRatesGetter(dstore)
         cmaker.tom = valid.occurrence_model(toms[grp_id])
         cmaker.trti = trti
         cmaker.start = start

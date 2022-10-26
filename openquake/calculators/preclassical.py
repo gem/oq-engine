@@ -83,9 +83,9 @@ def preclassical(srcs, sites, cmaker, monitor):
     spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
     if sites is None:
-        # in csm2rup just split the sources and count the ruptures
+        # in aftershock calculations just split and count the ruptures
         for src in srcs:
-            ss = split_source(src)
+            ss = split_source(src) if cmaker.split_sources else [src]
             if len(ss) > 1:
                 for ss_ in ss:
                     ss_.nsites = 1
@@ -151,11 +151,12 @@ class PreClassicalCalculator(base.HazardCalculator):
             [sg.get_tom_toml(self.oqparam.investigation_time)
              for sg in csm.src_groups], hdf5.vstr)
         cmakers = read_cmakers(self.datastore, csm.full_lt)
-        M = len(self.oqparam.imtls)
         G = max(len(cm.gsims) for cm in cmakers)
-        N = get_maxsize(M, G)
-        logging.info('NMG = ({:_d}, {:_d}, {:_d}) = {:.1f} MB'.format(
-            N, M, G, N*M*G*8 / 1024**2))
+        M = len(self.oqparam.imtls)
+        if M:  # M is zero in the afteshock calculator
+            N = get_maxsize(M, G)
+            logging.info('NMG = ({:_d}, {:_d}, {:_d}) = {:.1f} MB'.format(
+                N, M, G, N*M*G*8 / 1024**2))
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
