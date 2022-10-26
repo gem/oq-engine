@@ -280,7 +280,7 @@ class Hazard:
         Store the pmap of the given group inside the _poes dataset
         """
         cmaker = self.cmakers[grp_id]
-        arr = pmap.array
+        arr = 1. - pmap.array
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence, however that probability
         # cannot be exactly 1 unless the level is exactly 0. Numerically, the
@@ -368,7 +368,7 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[source_id] = pm
             pm.grp_id = grp_id
         if pmap:
-            acc[grp_id] |= pmap
+            acc[grp_id].update(pmap)
         self.n_outs[grp_id] -= 1
         if self.n_outs[grp_id] == 0:  # no other tasks for this grp_id
             with self.monitor('storing PoEs', measuremem=True):
@@ -510,7 +510,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 sids = self.sitecol.sids
                 smap = self.submit(None, self.haz.cmakers, max_weight)
             for cm in self.haz.cmakers:
-                acc[cm.grp_id] = ProbabilityMap(sids, L, len(cm.gsims)).fill(0)
+                acc[cm.grp_id] = ProbabilityMap(sids, L, len(cm.gsims)).fill(1)
             smap.reduce(self.agg_dicts, acc)
             if len(tiles) > 1:
                 logging.info('Finished tile %d of %d', t, len(tiles))

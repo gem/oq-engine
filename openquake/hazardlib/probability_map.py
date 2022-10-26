@@ -149,6 +149,12 @@ class ProbabilityMap(object):
         return new
 
     def fill(self, value):
+        """
+        :param value: a scalar probability
+
+        Fill the ProbabilityMap underlying array with the given scalar
+        and build the .sidx array
+        """
         assert 0 <= value <= 1, value
         self.array = numpy.empty((self.shape_x, self.shape_y, self.shape_z))
         self.array.fill(value)
@@ -206,17 +212,20 @@ class ProbabilityMap(object):
         dic['poe'][dic['poe'] == 1.] = .9999999999999999  # avoids log(0)
         return pandas.DataFrame(dic)
 
-    def __ior__(self, other):
+    def update(self, other):
+        """
+        Multiply by the probabilities of no exceedence
+        """
         if (other.shape_y, other.shape_z) != (self.shape_y, self.shape_z):
             raise ValueError('%s has inconsistent shape with %s' %
                              (other, self))
         if len(self.sids) == len(other.sids):
-            self.array[:] = 1. - (1. - self.array) * (1. - other.array)
+            self.array[:] *= 1. - other.array
             return self
         # also assume other.sids are a subset of self.sids
         arr = self.array
         for sid, arr2 in zip(other.sids, other.array):
-            arr[sid] = 1. - (1. - arr[sid]) * (1. - arr2)
+            arr[sid] *= 1. - arr2
         return self
 
     def __invert__(self):
@@ -226,4 +235,5 @@ class ProbabilityMap(object):
         return self.new(self.array ** n)
 
     def __repr__(self):
-        return '<ProbabilityMap(%d, %d, %d)>' % (self.shape_x, self.shape_y, self.shape_z)
+        return '<ProbabilityMap(%d, %d, %d)>' % (
+            self.shape_x, self.shape_y, self.shape_z)
