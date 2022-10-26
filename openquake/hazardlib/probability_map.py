@@ -142,6 +142,14 @@ def update_pmap_i(arr, poes, rates, probs_occur, sids, itime):
 
 
 # numbified below
+def update_pmap_m(arr, poes, rates, probs_occur, weights, sids, itime):
+    for poe, rate, probs, wei, sid in zip(
+            poes, rates, probs_occur, weights, sids):
+        pne = get_pnes(rate, probs, poe, itime)
+        arr[sid] += (1. - pne) * wei
+
+
+# numbified below
 def update_pmap_c(arr, poes, rates, probs_occur, allsids, sizes, itime):
     start = 0
     for poe, rate, probs, size in zip(poes, rates, probs_occur, sizes):
@@ -160,6 +168,15 @@ if numba:
                  t.uint32[:],                            # sids
                  t.float64)                              # itime
     update_pmap_i = compile(sig)(update_pmap_i)
+
+    sig = t.void(t.float64[:, :, :],                     # pmap
+                 t.float64[:, :, :],                     # poes
+                 t.float64[:],                           # rates
+                 t.float64[:, :],                        # probs_occur
+                 t.float64[:],                           # weights
+                 t.uint32[:],                            # sids
+                 t.float64)                              # itime
+    update_pmap_m = compile(sig)(update_pmap_m)
 
     sig = t.void(t.float64[:, :, :],                     # pmap
                  t.float64[:, :, :],                     # poes
@@ -272,6 +289,14 @@ class ProbabilityMap(object):
         """
         idxs = self.sidx[sids]
         update_pmap_i(self.array, poes, rates, probs_occur, idxs, itime)
+
+    def update_m(self, poes, rates, probs_occur, weights, sids, itime):
+        """
+        Updating mutex probabilities
+        """
+        idxs = self.sidx[sids]
+        update_pmap_m(self.array, poes, rates, probs_occur, weights, idxs,
+                      itime)
 
     def update_c(self, poes, rates, probs_occur, allsids, sizes, itime):
         """

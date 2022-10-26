@@ -941,7 +941,6 @@ class ContextMaker(object):
             itime = 0.
         else:
             itime = self.tom.time_span
-        arr = pmap.array
         for ctx in ctxs:
             for poes, ctxt, slcsids in self.gen_poes(ctx):
                 probs_occur = getattr(ctxt, 'probs_occur',
@@ -954,11 +953,8 @@ class ContextMaker(object):
                             pmap.update_i(poes, rates, probs_occur,
                                           ctxt.sids, itime)
                         else:  # USAmodel, New Madrid cluster
-                            z = zip(poes, rates, probs_occur,
-                                    ctxt.weight, ctxt.sids)
-                            for poe, rate, probs, wei, sid in z:
-                                pne = get_pnes(rate, probs, poe, itime)
-                                arr[sid] += (1. - pne) * wei
+                            pmap.update_m(poes, rates, probs_occur,
+                                          ctxt.weight, ctxt.sids, itime)
                     else:  # collapse is possible only for rup_indep
                         allsids = []
                         sizes = []
