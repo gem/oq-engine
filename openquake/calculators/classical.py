@@ -591,7 +591,7 @@ class ClassicalCalculator(base.HazardCalculator):
             else:
                 dset = self.datastore.getitem(kind)
                 array = self.hazard[kind] = numpy.zeros(
-                    dset.shape, dset.dtype)
+                    dset.shape, dset.dtype)  # NSL or NSMP
             for r, pmap in enumerate(pmaps):
                 for s in pmap:
                     if kind.startswith('hmaps'):

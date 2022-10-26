@@ -43,10 +43,8 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip wheel
-        pip install pyshp
-        pip install pytest
-        pip install -r requirements-py310-linux64.txt && pip install -e .
+        python install.py devel
+        pip install pyshp pytest
     - name: hazardlib tests
       run: |
         oq dbserver start
