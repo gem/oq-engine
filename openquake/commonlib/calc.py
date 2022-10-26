@@ -224,9 +224,9 @@ def make_hmaps(pmaps, imtls, poes):
         for m, imt in enumerate(imtls):
             data = compute_hazard_maps(
                 pmap.array[:, m], imtls[imt], poes)  # (N, P)
-            for sid, imls in zip(pmap.sids, data):
+            for idx, imls in enumerate(data):
                 for p, iml in enumerate(imls):
-                    hmap.array[sid, m, p] = iml
+                    hmap.array[idx, m, p] = iml
         hmaps.append(hmap)
     return hmaps
 
