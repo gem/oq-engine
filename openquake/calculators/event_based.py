@@ -25,7 +25,7 @@ import pandas
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
-from openquake.hazardlib.probability_map import Pmap
+from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -188,7 +188,7 @@ class EventBasedCalculator(base.HazardCalculator):
         Initial accumulator, a dictionary rlz -> ProbabilityMap
         """
         self.L = self.oqparam.imtls.size
-        return {r: Pmap(self.sitecol.sids, self.L, 1).fill(0)
+        return {r: ProbabilityMap(self.sitecol.sids, self.L, 1).fill(0)
                 for r in range(self.R)}
 
     def build_events_from_sources(self):
@@ -521,7 +521,7 @@ class EventBasedCalculator(base.HazardCalculator):
                         'hmaps-stats', site_id=N, stat=list(hstats),
                         imt=list(oq.imtls), poes=oq.poes)
                 for s, stat in enumerate(hstats):
-                    smap = Pmap(self.sitecol.sids, L1, M)  # statistical map
+                    smap = ProbabilityMap(self.sitecol.sids, L1, M)  # statistical map
                     [smap.array] = compute_stats(
                         numpy.array([p.array for p in pmaps]),
                         [hstats[stat]], weights)

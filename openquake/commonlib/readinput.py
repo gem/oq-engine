@@ -45,7 +45,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, pmf, gsim_lt)
-from openquake.hazardlib.probability_map import Pmap
+from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
@@ -1056,7 +1056,7 @@ def get_pmap_from_csv(oqparam, fnames):
             level += 1
         for field in ('lon', 'lat', 'depth'):  # sanity check
             numpy.testing.assert_equal(arr[field], array[field])
-    pmap = Pmap(numpy.arange(N, dtype=U32), len(data), 1)
+    pmap = ProbabilityMap(numpy.arange(N, dtype=U32), len(data), 1)
     pmap.array = data.reshape(N, L, 1)
     return mesh, pmap
 

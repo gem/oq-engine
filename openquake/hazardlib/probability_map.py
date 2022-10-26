@@ -136,7 +136,7 @@ class ProbabilityCurve(object):
         return curve[0]
 
 
-class Pmap(object):
+class ProbabilityMap(object):
     def __init__(self, sids, shape_y, shape_z):
         self.sids = sids
         self.shape_x = len(sids)
@@ -226,4 +226,4 @@ class Pmap(object):
         return self.new(self.array ** n)
 
     def __repr__(self):
-        return '<Pmap(%d, %d, %d)>' % (self.shape_x, self.shape_y, self.shape_z)
+        return '<ProbabilityMap(%d, %d, %d)>' % (self.shape_x, self.shape_y, self.shape_z)

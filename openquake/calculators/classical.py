@@ -34,7 +34,7 @@ from openquake.baselib.general import (
     get_nbytes_msg, agg_probs, pprod)
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers, basename
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
-from openquake.hazardlib.probability_map import Pmap, poes_dt
+from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, extract
 
@@ -188,13 +188,13 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     pmap_by_kind = {}
     if R > 1 and individual_rlzs or not hstats:
         pmap_by_kind['hcurves-rlzs'] = [
-            Pmap(sids, M, L1).fill(0) for r in range(R)]
+            ProbabilityMap(sids, M, L1).fill(0) for r in range(R)]
     if hstats:
         pmap_by_kind['hcurves-stats'] = [
-            Pmap(sids, M, L1).fill(0) for r in range(S)]
+            ProbabilityMap(sids, M, L1).fill(0) for r in range(S)]
     combine_mon = monitor('combine pmaps', measuremem=False)
     compute_mon = monitor('compute stats', measuremem=False)
-    sidx = Pmap(sids, 1, 1).fill(0).sidx
+    sidx = ProbabilityMap(sids, 1, 1).fill(0).sidx
     for sid in sids:
         idx = sidx[sid]
         with combine_mon:
@@ -510,7 +510,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 sids = self.sitecol.sids
                 smap = self.submit(None, self.haz.cmakers, max_weight)
             for cm in self.haz.cmakers:
-                acc[cm.grp_id] = Pmap(sids, L, len(cm.gsims)).fill(0)
+                acc[cm.grp_id] = ProbabilityMap(sids, L, len(cm.gsims)).fill(0)
             smap.reduce(self.agg_dicts, acc)
             if len(tiles) > 1:
                 logging.info('Finished tile %d of %d', t, len(tiles))

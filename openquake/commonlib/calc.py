@@ -220,7 +220,7 @@ def make_hmaps(pmaps, imtls, poes):
     M, P = len(imtls), len(poes)
     hmaps = []
     for pmap in pmaps:
-        hmap = probability_map.Pmap(pmaps[0].sids, M, P).fill(0)
+        hmap = probability_map.ProbabilityMap(pmaps[0].sids, M, P).fill(0)
         for m, imt in enumerate(imtls):
             data = compute_hazard_maps(
                 pmap.array[:, m], imtls[imt], poes)  # (N, P)

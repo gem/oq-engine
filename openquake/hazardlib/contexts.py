@@ -40,7 +40,7 @@ from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
     MINMAG, MAXMAG)
-from openquake.hazardlib.probability_map import Pmap
+from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
 
@@ -959,7 +959,7 @@ class ContextMaker(object):
         :returns: a ProbabilityMap
         """
         sids = numpy.unique(ctxs[0].sids)
-        pmap = Pmap(sids, size(self.imtls), len(self.gsims))
+        pmap = ProbabilityMap(sids, size(self.imtls), len(self.gsims))
         pmap.fill(self.rup_indep)
         self.set_pmap(ctxs, pmap)
         if self.rup_indep:
@@ -1276,7 +1276,7 @@ class PmapMaker(object):
         cm = self.cmaker
         for src in self.sources:
             t0 = time.time()
-            pm = Pmap(self.sids, cm.imtls.size, len(cm.gsims))
+            pm = ProbabilityMap(self.sids, cm.imtls.size, len(cm.gsims))
             pm.fill(self.cmaker.rup_indep)
             ctxs = list(self.gen_ctxs(src))
             nctxs = len(ctxs)
@@ -1311,7 +1311,7 @@ class PmapMaker(object):
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
         grp_id = self.sources[0].grp_id
-        pmap = Pmap(sids, size(self.imtls), len(self.gsims))
+        pmap = ProbabilityMap(sids, size(self.imtls), len(self.gsims))
         if self.src_mutex:
             pmap.fill(0)
             pmap_by_src = self._make_src_mutex()
