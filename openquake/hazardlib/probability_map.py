@@ -449,6 +449,12 @@ class Pmap(object):
             self.sidx[sid] = idx
         return self
 
+    def reshape(self, N, M, P):
+        """
+        :returns: a new Pmap associated to a reshaped array
+        """
+        return self.new(self.array.reshape(N, M, P))
+
     # used in calc_hazard_curves
     def convert(self, imtls, nsites, idx=0):
         """

@@ -207,6 +207,30 @@ def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
 
 # ################## utilities for classical calculators ################ #
 
+
+def make_hmaps(pmaps, imtls, poes):
+    """
+    Compute the hazard maps associated to the passed probability maps.
+
+    :param pmaps: a list of Pmaps of shape (N, M, L1)
+    :param imtls: DictArray with M intensity measure types
+    :param poes: P PoEs where to compute the maps
+    :returns: a list of Pmaps with size (N, M, P)
+    """
+    M, P = len(imtls), len(poes)
+    hmaps = []
+    for pmap in pmaps:
+        hmap = probability_map.Pmap(pmaps[0].sids, M, P).fill(0)
+        for m, imt in enumerate(imtls):
+            data = compute_hazard_maps(
+                pmap.array[:, m], imtls[imt], poes)  # (N, P)
+            for sid, imls in zip(pmap.sids, data):
+                for p, iml in enumerate(imls):
+                    hmap.array[sid, m, p] = iml
+        hmaps.append(hmap)
+    return hmaps
+
+
 def make_hmap(pmap, imtls, poes, sid=None):
     """
     Compute the hazard maps associated to the passed probability map.

@@ -70,27 +70,6 @@ def strip_zeros(gmf_df):
     return gmf_df[ok]
 
 
-def make_hmap(pmap, imtls, poes, idx=0):
-    """
-    Compute the hazard maps associated to the passed probability map.
-
-    :param pmap: a Pmap of shape (N, L, R)
-    :param imtls: DictArray with M intensity measure types
-    :param poes: P PoEs where to compute the maps
-    :param idx: index in the range 0..R-1
-    :returns: a Pmap with size (N, M, P)
-    """
-    M, P = len(imtls), len(poes)
-    hmap = Pmap(pmap.sids, M, P).fill(0)
-    for m, imt in enumerate(imtls):
-        curves = pmap.array[:, imtls(imt), idx]
-        data = calc.compute_hazard_maps(curves, imtls[imt], poes)  # (N, P)
-        for sid, imls in zip(pmap.sids, data):
-            for p, iml in enumerate(imls):
-                hmap.array[sid, m, p] = iml
-    return hmap
-
-
 def event_based(proxies, full_lt, oqparam, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
@@ -209,7 +188,8 @@ class EventBasedCalculator(base.HazardCalculator):
         Initial accumulator, a dictionary rlz -> ProbabilityMap
         """
         self.L = self.oqparam.imtls.size
-        return Pmap(self.sitecol.sids, self.L, self.R).fill(0)
+        return {r: Pmap(self.sitecol.sids, self.L, 1).fill(0)
+                for r in range(self.R)}
 
     def build_events_from_sources(self):
         """
@@ -315,7 +295,7 @@ class EventBasedCalculator(base.HazardCalculator):
         with agg_mon:
             for key, poes in result.get('hcurves', {}).items():
                 r, sid, imt = str2rsi(key)
-                array = acc.array[sid, imtls(imt), r]
+                array = acc[r].array[sid, imtls(imt), 0]
                 array[:] = 1. - (1. - array) * (1. - poes)
         self.datastore.flush()
         return acc
@@ -479,9 +459,9 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore['avg_gmf'] = avg_gmf
         return rel_events
 
-    def post_execute(self, pmap):
+    def post_execute(self, pmap_by_rlz):
         oq = self.oqparam
-        if (not pmap or not oq.ground_motion_fields and not
+        if (not pmap_by_rlz or not oq.ground_motion_fields and not
                 oq.hazard_curves_from_gmfs):
             return
         N = len(self.sitecol.complete)
@@ -505,6 +485,7 @@ class EventBasedCalculator(base.HazardCalculator):
             hstats = oq.hazard_stats()
             S = len(hstats)
             R = len(weights)
+            pmaps = [p.reshape(N, M, L1) for p in pmap_by_rlz.values()]
             if oq.individual_rlzs:
                 logging.info('Saving individual hazard curves')
                 self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
@@ -520,10 +501,10 @@ class EventBasedCalculator(base.HazardCalculator):
                         'hmaps-rlzs', site_id=N, rlz_id=R,
                         imt=list(oq.imtls), poe=oq.poes)
                 for r in range(R):
-                    self.datastore['hcurves-rlzs'][:, r] = (
-                        pmap.array[:, :, r].reshape(N, M, L1))
+                    self.datastore['hcurves-rlzs'][:, r] = pmaps[r].array
                     if oq.poes:
-                        ds[:, r] = make_hmap(pmap, oq.imtls, oq.poes, r).array
+                        [hmap] = calc.make_hmaps([pmaps[r]], oq.imtls, oq.poes)
+                        ds[:, r] = hmap.array
 
             if S:
                 logging.info('Computing statistical hazard curves')
@@ -539,15 +520,15 @@ class EventBasedCalculator(base.HazardCalculator):
                     self.datastore.set_shape_descr(
                         'hmaps-stats', site_id=N, stat=list(hstats),
                         imt=list(oq.imtls), poes=oq.poes)
-                smap = Pmap(pmap.sids, L, S)  # statistical map
-                smap.array = compute_stats(
-                    pmap.array.transpose(2, 0, 1), hstats.values(), weights
-                ).transpose(1, 2, 0) # NLS -> SNL -> NLS
                 for s, stat in enumerate(hstats):
-                    self.datastore['hcurves-stats'][:, s] = (
-                        smap.array[:, :, s].reshape(N, M, L1))
+                    smap = Pmap(self.sitecol.sids, L1, M)  # statistical map
+                    [smap.array] = compute_stats(
+                        numpy.array([p.array for p in pmaps]),
+                        [hstats[stat]], weights)
+                    self.datastore['hcurves-stats'][:, s] = smap.array
                     if oq.poes:
-                        ds[:, s] = make_hmap(smap, oq.imtls, oq.poes, s).array
+                        [hmap] = calc.make_hmaps([smap], oq.imtls, oq.poes)
+                        ds[:, s] = hmap.array
 
         if self.datastore.parent:
             self.datastore.parent.open('r')
