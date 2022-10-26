@@ -192,9 +192,10 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
             Pmap(sids, M, L1).fill(0) for r in range(S)]
     combine_mon = monitor('combine pmaps', measuremem=False)
     compute_mon = monitor('compute stats', measuremem=False)
-    sidx = Pmap(sids, 1, 1).fill(0).sidx
+    oksids = []
+    okcurves = []
+    okmaps = []
     for sid in sids:
-        idx = sidx[sid]
         with combine_mon:
             pc = pgetter.get_pcurve(sid)  # shape (L, R)
             if amplifier:
@@ -202,23 +203,33 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
                 # NB: the pcurve have soil levels != IMT levels
         if pc.array.sum() == 0:  # no data
             continue
+        idx = len(oksids)
+        oksids.append(sid)
         with compute_mon:
             if R > 1 and individual_rlzs or not hstats:
                 for r in range(R):
-                    pmap_by_kind['hcurves-rlzs'][r].array[idx] = (
-                        pc.array[:, r].reshape(M, L1))
+                    okcurves.append((r, idx, pc.array[:, r].reshape(M, L1)))
             if hstats:
                 for s, (statname, stat) in enumerate(hstats.items()):
                     sc = getters.build_stat_curve(pc, imtls, stat, weights)
-                    arr = sc.array.reshape(M, L1)
-                    pmap_by_kind['hcurves-stats'][s].array[idx] = arr
-
-    if poes and (R > 1 and individual_rlzs or not hstats):
-        pmap_by_kind['hmaps-rlzs'] = calc.make_hmaps(
-            pmap_by_kind['hcurves-rlzs'], imtls, poes)
-    if poes and hstats:
-        pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
-            pmap_by_kind['hcurves-stats'], imtls, poes)
+                    okmaps.append((s, idx, sc.array.reshape(M, L1)))
+    oksids = U32(oksids)
+    if R > 1 and individual_rlzs or not hstats:
+        pmap_by_kind['hcurves-rlzs'] = pmaps = [
+            Pmap(oksids, M, L1).fill(0) for r in range(R)]
+        for r, idx, arr in okcurves:
+            pmaps[r].array[idx] = arr
+        if poes:
+            pmap_by_kind['hmaps-rlzs'] = calc.make_hmaps(
+                pmap_by_kind['hcurves-rlzs'], imtls, poes)
+    if hstats:
+        pmap_by_kind['hcurves-stats'] = pmaps = [
+            Pmap(oksids, M, L1).fill(0) for r in range(S)]
+        for s, idx, arr in okmaps:
+            pmaps[s].array[idx] = arr
+        if poes:
+            pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
+                pmap_by_kind['hcurves-stats'], imtls, poes)
     return pmap_by_kind
 
 
