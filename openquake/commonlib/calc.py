@@ -207,33 +207,28 @@ def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
 
 # ################## utilities for classical calculators ################ #
 
-def make_hmap(pmap, imtls, poes, sid=None):
-    """
-    Compute the hazard maps associated to the passed probability map.
 
-    :param pmap: hazard curves in the form of a ProbabilityMap
+def make_hmaps(pmaps, imtls, poes):
+    """
+    Compute the hazard maps associated to the passed probability maps.
+
+    :param pmaps: a list of Pmaps of shape (N, M, L1)
     :param imtls: DictArray with M intensity measure types
     :param poes: P PoEs where to compute the maps
-    :param sid: not None when pmap is actually a ProbabilityCurve
-    :returns: a ProbabilityMap with size (N, M, P)
+    :returns: a list of Pmaps with size (N, M, P)
     """
-    if sid is None:
-        sids = pmap.sids
-    else:  # passed a probability curve
-        pmap = {sid: pmap}
-        sids = [sid]
     M, P = len(imtls), len(poes)
-    hmap = probability_map.ProbabilityMap.build(M, P, sids, dtype=F32)
-    if len(pmap) == 0:
-        return hmap  # empty hazard map
-    for i, imt in enumerate(imtls):
-        curves = numpy.array([pmap[sid].array[imtls(imt), 0] for sid in sids])
-        data = compute_hazard_maps(curves, imtls[imt], poes)  # array (N, P)
-        for sid, value in zip(sids, data):
-            array = hmap[sid].array
-            for j, val in enumerate(value):
-                array[i, j] = val
-    return hmap
+    hmaps = []
+    for pmap in pmaps:
+        hmap = probability_map.ProbabilityMap(pmaps[0].sids, M, P).fill(0)
+        for m, imt in enumerate(imtls):
+            data = compute_hazard_maps(
+                pmap.array[:, m], imtls[imt], poes)  # (N, P)
+            for idx, imls in enumerate(data):
+                for p, iml in enumerate(imls):
+                    hmap.array[idx, m, p] = iml
+        hmaps.append(hmap)
+    return hmaps
 
 
 def make_uhs(hmap, info):
