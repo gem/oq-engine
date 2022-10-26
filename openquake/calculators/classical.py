@@ -145,9 +145,11 @@ def classical(srcs, sids, cmaker, monitor):
     """
     cmaker.init_monitoring(monitor)
     sitecol = monitor.read('sitecol')
-    if sids is not None:
+    if sids is not None:  # tiling
         sitecol = sitecol.filter(numpy.isin(sitecol.sids, sids))
     result = hazclassical(srcs, sitecol, cmaker)
+    if sids is None:  # single tile, save memory
+        result['pmap'] = result['pmap'].remove_zeros()
     # print(srcs, sum(src.weight for src in srcs))
     return result
 
@@ -177,26 +179,24 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
                            for imt in pgetter.imtls})
     else:
         imtls = pgetter.imtls
-    poes, weights = pgetter.poes, pgetter.weights
+    poes, weights, sids = pgetter.poes, pgetter.weights, U32(pgetter.sids)
     M = len(imtls)
-    P = len(poes)
     L = imtls.size
+    L1 = L // M
     R = len(weights)
     S = len(hstats)
     pmap_by_kind = {}
     if R > 1 and individual_rlzs or not hstats:
-        pmap_by_kind['hcurves-rlzs'] = [ProbabilityMap(L) for r in range(R)]
-        if poes:
-            pmap_by_kind['hmaps-rlzs'] = [
-                ProbabilityMap(M, P) for r in range(R)]
+        pmap_by_kind['hcurves-rlzs'] = [
+            ProbabilityMap(sids, M, L1).fill(0) for r in range(R)]
     if hstats:
-        pmap_by_kind['hcurves-stats'] = [ProbabilityMap(L) for r in range(S)]
-        if poes:
-            pmap_by_kind['hmaps-stats'] = [
-                ProbabilityMap(M, P) for r in range(S)]
+        pmap_by_kind['hcurves-stats'] = [
+            ProbabilityMap(sids, M, L1).fill(0) for r in range(S)]
     combine_mon = monitor('combine pmaps', measuremem=False)
     compute_mon = monitor('compute stats', measuremem=False)
-    for sid in pgetter.sids:
+    sidx = ProbabilityMap(sids, 1, 1).fill(0).sidx
+    for sid in sids:
+        idx = sidx[sid]
         with combine_mon:
             pc = pgetter.get_pcurve(sid)  # shape (L, R)
             if amplifier:
@@ -205,20 +205,22 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
         if pc.array.sum() == 0:  # no data
             continue
         with compute_mon:
+            if R > 1 and individual_rlzs or not hstats:
+                for r in range(R):
+                    pmap_by_kind['hcurves-rlzs'][r].array[idx] = (
+                        pc.array[:, r].reshape(M, L1))
             if hstats:
                 for s, (statname, stat) in enumerate(hstats.items()):
                     sc = getters.build_stat_curve(pc, imtls, stat, weights)
-                    pmap_by_kind['hcurves-stats'][s][sid] = sc
-                    if poes:
-                        hmap = calc.make_hmap(sc, imtls, poes, sid)
-                        pmap_by_kind['hmaps-stats'][s].update(hmap)
-            if R > 1 and individual_rlzs or not hstats:
-                for r, pmap in enumerate(pmap_by_kind['hcurves-rlzs']):
-                    pmap[sid] = pc.extract(r)
-                if poes:
-                    for r in range(R):
-                        hmap = calc.make_hmap(pc.extract(r), imtls, poes, sid)
-                        pmap_by_kind['hmaps-rlzs'][r].update(hmap)
+                    arr = sc.array.reshape(M, L1)
+                    pmap_by_kind['hcurves-stats'][s].array[idx] = arr
+
+    if poes and (R > 1 and individual_rlzs or not hstats):
+        pmap_by_kind['hmaps-rlzs'] = calc.make_hmaps(
+            pmap_by_kind['hcurves-rlzs'], imtls, poes)
+    if poes and hstats:
+        pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
+            pmap_by_kind['hcurves-stats'], imtls, poes)
     return pmap_by_kind
 
 
@@ -267,11 +269,10 @@ class Hazard:
         :returns: an array of PoEs of shape (N, R, M, L)
         """
         res = numpy.zeros((self.N, self.R, self.imtls.size))
-        for sid, pc in pmap.items():
+        for sid, arr in zip(pmap.sids, pmap.array):
             for gsim_idx, rlzis in enumerate(rlzs_by_gsim.values()):
-                poes = pc.array[:, gsim_idx]
                 for rlz in rlzis:
-                    res[sid, rlz] = agg_probs(res[sid, rlz], poes)
+                    res[sid, rlz] = agg_probs(res[sid, rlz], arr[:, gsim_idx])
         return res.reshape(self.N, self.R, len(self.imtls), -1)
 
     def store_poes(self, grp_id, pmap):
@@ -279,16 +280,26 @@ class Hazard:
         Store the pmap of the given group inside the _poes dataset
         """
         cmaker = self.cmakers[grp_id]
-        arr = pmap.array(self.N)
+        arr = 1. - pmap.array
+        # Physically, an extremely small intensity measure level can have an
+        # extremely large probability of exceedence, however that probability
+        # cannot be exactly 1 unless the level is exactly 0. Numerically, the
+        # PoE can be 1 and this give issues when calculating the damage (there
+        # is a log(0) in
+        # :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
+        # Here we solve the issue by replacing the unphysical probabilities 1
+        # with .9999999999999999 (the float64 closest to 1).
+        arr[arr == 1.] = .9999999999999999
         # arr[arr < 1E-5] = 0.  # minimum_poe
-        sids, lids, gids = arr.nonzero()
+        idxs, lids, gids = arr.nonzero()
+        sids = pmap.sids[idxs]
         hdf5.extend(self.datastore['_poes/sid'], sids)
         hdf5.extend(self.datastore['_poes/gid'], gids + cmaker.start)
         hdf5.extend(self.datastore['_poes/lid'], lids)
-        hdf5.extend(self.datastore['_poes/poe'], arr[sids, lids, gids])
+        hdf5.extend(self.datastore['_poes/poe'], arr[idxs, lids, gids])
         self.acc[grp_id]['grp_start'] = cmaker.start
         self.acc[grp_id]['avg_poe'] = arr.mean(axis=(0, 2))@self.level_weights
-        self.acc[grp_id]['nsites'] = len(pmap)
+        self.acc[grp_id]['nsites'] = len(pmap.sids)
 
     def store_disagg(self, pmaps=None):
         """
@@ -357,7 +368,7 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[source_id] = pm
             pm.grp_id = grp_id
         if pmap:
-            acc[grp_id] |= pmap
+            acc[grp_id].update(pmap)
         self.n_outs[grp_id] -= 1
         if self.n_outs[grp_id] == 0:  # no other tasks for this grp_id
             with self.monitor('storing PoEs', measuremem=True):
@@ -447,7 +458,7 @@ class ClassicalCalculator(base.HazardCalculator):
         G = max(num_gs)
         size = G * N * L * 8
         tot = sum(num_gs) * N * L * 8
-        logging.info('Requiring %s of %s for ProbabilityMap (G=%d,N=%d,L=%d)',
+        logging.info('Requiring %s (%s) for ProbabilityMap(G=%d,N=%d,L=%d)',
                      humansize(size), humansize(tot), G, N, L)
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         if avail < size:
@@ -492,10 +503,14 @@ class ClassicalCalculator(base.HazardCalculator):
         t0 = time.time()
         for t, tile in enumerate(tiles, 1):
             self.check_memory(len(tile), L, num_gs)
-            sids = tile.sids if len(tiles) > 1 else None
-            smap = self.submit(sids, self.haz.cmakers, max_weight)
+            if len(tiles) > 1:
+                sids = tile.sids
+                smap = self.submit(sids, self.haz.cmakers, max_weight)
+            else:
+                sids = self.sitecol.sids
+                smap = self.submit(None, self.haz.cmakers, max_weight)
             for cm in self.haz.cmakers:
-                acc[cm.grp_id] = ProbabilityMap.build(L, len(cm.gsims))
+                acc[cm.grp_id] = ProbabilityMap(sids, L, len(cm.gsims)).fill(1)
             smap.reduce(self.agg_dicts, acc)
             if len(tiles) > 1:
                 logging.info('Finished tile %d of %d', t, len(tiles))
@@ -577,14 +592,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 array = self.hazard[kind]
             else:
                 dset = self.datastore.getitem(kind)
-                array = self.hazard[kind] = numpy.zeros(
-                    dset.shape, dset.dtype)
+                array = self.hazard[kind] = numpy.zeros(dset.shape, dset.dtype)
             for r, pmap in enumerate(pmaps):
-                for s in pmap:
-                    if kind.startswith('hmaps'):
-                        array[s, r] = pmap[s].array  # shape (M, P)
-                    else:  # hcurves
-                        array[s, r] = pmap[s].array.reshape(-1, self.L1)
+                for idx, sid in enumerate(pmap.sids):
+                    array[sid, r] = pmap.array[idx]  # shape (M, P)
 
     def post_execute(self, dummy):
         """
