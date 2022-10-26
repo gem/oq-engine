@@ -18,10 +18,11 @@
 
 from openquake.hazardlib.geo.packager import GeoPackager
 
+
 def main(fname, outfname):
     gp = GeoPackager(fname)
     gp.to_nrml(outfname)
 
+
 main.fname = 'source model in gpkg format (input)'
 main.outfname = 'source model in xml format (output)'
-

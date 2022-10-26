@@ -316,18 +316,15 @@ class StreamingXMLWriter(object):
         if node.text is not None:
             if node.tag == 'posList':
                 # NOTE: by convention, posList must be a flat list of
-                # space-separated coordinates. Here we expect as input a list
-                # of lists of tuples
-                try:
-                    txt = escape(
-                        ' '.join('%s' % coord for coord in
-                                 list(itertools.chain(*node.text[0]))))
-                except TypeError:
-                    # in case it is a list of tuples (not nested in another
-                    # list)
-                    txt = escape(
-                        ' '.join('%s' % coord for coord in
-                                 list(itertools.chain(*node.text))))
+                #       space-separated coordinates.
+                #       Here we expect as input a list of lists of tuples
+                if isinstance(node.text[0], list):
+                    txt = escape(scientificformat(
+                        list(itertools.chain(*node.text[0]))).strip())
+                else:
+                    # if it is a list of tuples (not nested in another list)
+                    txt = escape(scientificformat(
+                        list(itertools.chain(*node.text))).strip())
             else:
                 txt = escape(scientificformat(node.text).strip())
             if txt:

@@ -653,7 +653,6 @@ class GPKG2NRMLTestCase(unittest.TestCase):
         shutil.rmtree(temp_dir)
 
 
-
 def teardown_module():
     parallel.Starmap.shutdown()
     del os.environ['OQ_DATABASE']
