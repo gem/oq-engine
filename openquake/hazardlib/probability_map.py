@@ -43,12 +43,6 @@ else:
             array[:, r] = (1. - (1. - array[:, r]) * (1. - other))
 
 
-class AllEmptyProbabilityMaps(ValueError):
-    """
-    Raised by get_shape(pmaps) if all passed probability maps are empty
-    """
-
-
 class ProbabilityCurve(object):
     """
     This class is a small wrapper over an array of PoEs associated to

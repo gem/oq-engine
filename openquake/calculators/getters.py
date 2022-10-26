@@ -244,7 +244,7 @@ class PmapGetter(object):
                 pcurve.array = array
             return pmap
         L = self.imtls.size
-        pmap = probability_map.ProbabilityMap.build(L, 1, self.sids)
+        pmap = probability_map.Pmap(self.sids, L, 1)
         for sid in self.sids:
             pmap[sid] = build_stat_curve(
                 self.get_pcurve(sid),
