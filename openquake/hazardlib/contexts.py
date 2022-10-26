@@ -1228,13 +1228,13 @@ class PmapMaker(object):
             pmap.array[:] = 1. - pmap.array
         return pmap
 
-    def _make_src_mutex(self):
+    def _make_src_mutex(self, pmap):
         # used in the Japan model, test case_27
         pmap_by_src = {}
         cm = self.cmaker
         for src in self.sources:
             t0 = time.time()
-            pm = ProbabilityMap(self.sids, cm.imtls.size, len(cm.gsims))
+            pm = ProbabilityMap(pmap.sids, cm.imtls.size, len(cm.gsims))
             pm.fill(self.cmaker.rup_indep)
             ctxs = list(self.gen_ctxs(src))
             nctxs = len(ctxs)
@@ -1263,16 +1263,14 @@ class PmapMaker(object):
 
         return pmap_by_src
 
-    def make(self, sids):
-        self.sids = sids
+    def make(self, pmap):
         dic = {}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
         grp_id = self.sources[0].grp_id
-        pmap = ProbabilityMap(sids, size(self.imtls), len(self.gsims))
         if self.src_mutex:
             pmap.fill(0)
-            pmap_by_src = self._make_src_mutex()
+            pmap_by_src = self._make_src_mutex(pmap)
             for source_id, pm in pmap_by_src.items():
                 pmap.array += pm.array
         else:

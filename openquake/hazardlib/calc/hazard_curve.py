@@ -75,7 +75,7 @@ def _cluster(sids, imtls, tom, gsims, pmap):
     return pmap
 
 
-def classical(group, sitecol, cmaker):
+def classical(group, sitecol, cmaker, pmap=None):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -106,7 +106,11 @@ def classical(group, sitecol, cmaker):
         cmaker.tom = PoissonTOM(time_span) if time_span else None
     if cluster:
         cmaker.tom = FatedTOM(time_span=1)
-    dic = PmapMaker(cmaker, src_filter, group).make(sitecol.sids)
+    if pmap is None:
+        pmap = ProbabilityMap(
+            sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
+
+    dic = PmapMaker(cmaker, src_filter, group).make(pmap)
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
         dic['pmap'] = _cluster(sitecol.sids, cmaker.imtls, tom, cmaker.gsims,
@@ -208,7 +212,8 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pmap = PmapMaker(cmaker, srcfilter, [src]).make(site1.sids)['pmap']
+    pmap = ProbabilityMap(site1.sids, oqparam.imtls.size, 1).fill(0)
+    PmapMaker(cmaker, srcfilter, [src]).make(pmap)
     if not pmap:  # filtered away
         zero = numpy.zeros((oqparam.imtls.size, len(gsims)))
         return ProbabilityCurve(zero)
