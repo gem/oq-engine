@@ -183,8 +183,8 @@ class RateGridTestCase(unittest.TestCase):
         """
         Set up limits
         """
-        if os.environ.get('GITHUB_ACTION'):
-            raise unittest.SkipTest('Not working on GitHub')
+        #if os.environ.get('GITHUB_ACTION'):
+        #    raise unittest.SkipTest('Not working on GitHub')
         self.limits = [14.9, 15.1, 0.1, 14.9, 15.1, 0.1, 0., 20., 10.]
 
     def test_instantiation(self):
