@@ -520,13 +520,10 @@ class EventBasedCalculator(base.HazardCalculator):
                         'hmaps-rlzs', site_id=N, rlz_id=R,
                         imt=list(oq.imtls), poe=oq.poes)
                 for r in range(R):
-                    arr = numpy.zeros((N, M, L1), F32)
-                    for sid in self.sitecol.sids:
-                        arr[sid] = pmap.array[sid, :, r].reshape(M, L1)
-                    self.datastore['hcurves-rlzs'][:, r] = arr
+                    self.datastore['hcurves-rlzs'][:, r] = (
+                        pmap.array[:, :, r].reshape(N, M, L1))
                     if oq.poes:
-                        hmap = make_hmap(pmap, oq.imtls, oq.poes, r)
-                        ds[:, r] = hmap.array
+                        ds[:, r] = make_hmap(pmap, oq.imtls, oq.poes, r).array
 
             if S:
                 logging.info('Computing statistical hazard curves')
@@ -542,18 +539,15 @@ class EventBasedCalculator(base.HazardCalculator):
                     self.datastore.set_shape_descr(
                         'hmaps-stats', site_id=N, stat=list(hstats),
                         imt=list(oq.imtls), poes=oq.poes)
-                statmap = Pmap(pmap.sids, L, S)
-                statmap.array = compute_stats(
+                smap = Pmap(pmap.sids, L, S)  # statistical map
+                smap.array = compute_stats(
                     pmap.array.transpose(2, 0, 1), hstats.values(), weights
                 ).transpose(1, 2, 0) # NLS -> SNL -> NLS
                 for s, stat in enumerate(hstats):
-                    arr = numpy.zeros((N, M, L1), F32)
-                    for sid in self.sitecol.sids:
-                        arr[sid] = statmap.array[sid, :, s].reshape(M, L1)
-                    self.datastore['hcurves-stats'][:, s] = arr
+                    self.datastore['hcurves-stats'][:, s] = (
+                        smap.array[:, :, s].reshape(N, M, L1))
                     if oq.poes:
-                        ds[:, s] = make_hmap(
-                            statmap, oq.imtls, oq.poes, s).array
+                        ds[:, s] = make_hmap(smap, oq.imtls, oq.poes, s).array
 
         if self.datastore.parent:
             self.datastore.parent.open('r')
