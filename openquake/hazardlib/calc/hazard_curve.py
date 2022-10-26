@@ -189,7 +189,7 @@ def calc_hazard_curves(
                 classical, (group.sources, sitecol, cmaker),
                 weight=operator.attrgetter('weight'))
         for dic in it:
-            pmap |= dic['pmap']
+            pmap.array[:] = 1. - (1.-pmap.array) * (1. - dic['pmap'].array)
     return pmap.convert(imtls, len(sitecol.complete))
 
 
