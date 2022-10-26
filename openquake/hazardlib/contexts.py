@@ -30,7 +30,7 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, gen_slices, kmean, block_splitter)
-from openquake.baselib.performance import Monitor, split_array, compile, numba
+from openquake.baselib.performance import Monitor, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -109,42 +109,6 @@ def get_maxsize(M, G):
     maxs = TWO20 // (16*M*G)
     assert maxs > 1, maxs
     return maxs
-
-
-# numbified below
-def update_pmap_n(arr, poes, rates, probs_occur, sids, itime):
-    for poe, rate, probs, sid in zip(poes, rates, probs_occur, sids):
-        arr[sid] *= get_pnes(rate, probs, poe, itime)
-
-
-# numbified below
-def update_pmap_c(arr, poes, rates, probs_occur, allsids, sizes, itime):
-    start = 0
-    for poe, rate, probs, size in zip(poes, rates, probs_occur, sizes):
-        pne = get_pnes(rate, probs, poe, itime)
-        for sid in allsids[start:start + size]:
-            arr[sid] *= pne
-        start += size
-
-
-if numba:
-    t = numba.types
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.float64[:, :, :],                     # poes
-                 t.float64[:],                           # rates
-                 t.float64[:, :],                        # probs_occur
-                 t.uint32[:],                            # sids
-                 t.float64)                              # itime
-    update_pmap_n = compile(sig)(update_pmap_n)
-
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.float64[:, :, :],                     # poes
-                 t.float64[:],                           # rates
-                 t.float64[:, :],                        # probs_occur
-                 t.uint32[:],                            # allsids
-                 t.uint32[:],                            # sizes
-                 t.float64)                              # itime
-    update_pmap_c = compile(sig)(update_pmap_c)
 
 
 def size(imtls):
@@ -987,12 +951,11 @@ class ContextMaker(object):
                     if isinstance(slcsids, numpy.ndarray):
                         # no collapse: avoiding an inner loop can give a 25%
                         if self.rup_indep:
-                            update_pmap_n(arr, poes, rates, probs_occur,
-                                          pmap.sidx[ctxt.sids], itime)
+                            pmap.update_i(poes, rates, probs_occur,
+                                          ctxt.sids, itime)
                         else:  # USAmodel, New Madrid cluster
-                            idxs = pmap.sidx[ctxt.sids]
                             z = zip(poes, rates, probs_occur,
-                                    ctxt.weight, idxs)
+                                    ctxt.weight, ctxt.sids)
                             for poe, rate, probs, wei, sid in z:
                                 pne = get_pnes(rate, probs, poe, itime)
                                 arr[sid] += (1. - pne) * wei
@@ -1002,9 +965,8 @@ class ContextMaker(object):
                         for sids in slcsids:
                             allsids.extend(sids)
                             sizes.append(len(sids))
-                        idxs = pmap.sidx[allsids]
-                        update_pmap_c(arr, poes, rates, probs_occur,
-                                      idxs, U32(sizes), itime)
+                        pmap.update_c(poes, rates, probs_occur,
+                                      U32(allsids), U32(sizes), itime)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs):

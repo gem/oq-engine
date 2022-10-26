@@ -18,8 +18,8 @@
 import copy
 import numpy
 import pandas
-from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import numba, compile
+from openquake.hazardlib.tom import get_pnes
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -135,8 +135,46 @@ class ProbabilityCurve(object):
             curve[imt] = self.array[imtls(imt), idx]
         return curve[0]
 
+# numbified below
+def update_pmap_i(arr, poes, rates, probs_occur, sids, itime):
+    for poe, rate, probs, sid in zip(poes, rates, probs_occur, sids):
+        arr[sid] *= get_pnes(rate, probs, poe, itime)
+
+
+# numbified below
+def update_pmap_c(arr, poes, rates, probs_occur, allsids, sizes, itime):
+    start = 0
+    for poe, rate, probs, size in zip(poes, rates, probs_occur, sizes):
+        pne = get_pnes(rate, probs, poe, itime)
+        for sid in allsids[start:start + size]:
+            arr[sid] *= pne
+        start += size
+
+
+if numba:
+    t = numba.types
+    sig = t.void(t.float64[:, :, :],                     # pmap
+                 t.float64[:, :, :],                     # poes
+                 t.float64[:],                           # rates
+                 t.float64[:, :],                        # probs_occur
+                 t.uint32[:],                            # sids
+                 t.float64)                              # itime
+    update_pmap_i = compile(sig)(update_pmap_i)
+
+    sig = t.void(t.float64[:, :, :],                     # pmap
+                 t.float64[:, :, :],                     # poes
+                 t.float64[:],                           # rates
+                 t.float64[:, :],                        # probs_occur
+                 t.uint32[:],                            # allsids
+                 t.uint32[:],                            # sizes
+                 t.float64)                              # itime
+    update_pmap_c = compile(sig)(update_pmap_c)
+
 
 class ProbabilityMap(object):
+    """
+    Thin wrapper over a 3D-array of probabilities.
+    """
     def __init__(self, sids, shape_y, shape_z):
         self.sids = sids
         self.shape_x = len(sids)
@@ -227,6 +265,21 @@ class ProbabilityMap(object):
         for sid, arr2 in zip(other.sids, other.array):
             arr[sid] *= 1. - arr2
         return self
+
+    def update_i(self, poes, rates, probs_occur, sids, itime):
+        """
+        Updating independent probabilities
+        """
+        idxs = self.sidx[sids]
+        update_pmap_i(self.array, poes, rates, probs_occur, idxs, itime)
+
+    def update_c(self, poes, rates, probs_occur, allsids, sizes, itime):
+        """
+        Updating collapsed probabilities
+        """
+        allidxs = self.sidx[allsids]
+        update_pmap_c(self.array, poes, rates, probs_occur, allidxs, sizes,
+                      itime)
 
     def __invert__(self):
         return self.new(1. - self.array)
