@@ -429,11 +429,11 @@ def combine(pmaps):
 
 
 class Pmap(object):
-    def __init__(self, sids, L, G):
+    def __init__(self, sids, shape_y, shape_z):
         self.sids = sids
-        self.N = len(sids)
-        self.L = L
-        self.G = G
+        self.shape_x = len(sids)
+        self.shape_y = shape_y
+        self.shape_z = shape_z
 
     def new(self, array):
         new = copy.copy(self)
@@ -442,7 +442,7 @@ class Pmap(object):
 
     def fill(self, value):
         assert 0 <= value <= 1, value
-        self.array = numpy.empty((self.N, self.L, self.G))
+        self.array = numpy.empty((self.shape_x, self.shape_y, self.shape_z))
         self.array.fill(value)
         self.sidx = numpy.zeros(self.sids.max() + 1, numpy.uint32)
         for idx, sid in enumerate(self.sids):
@@ -473,8 +473,16 @@ class Pmap(object):
             curves[imt][self.sids] = self.array[:, imtls(imt), idx]
         return curves
 
+    def remove_zeros(self):
+        ok = self.array.sum(axis=(1, 2)) > 0
+        if ok.sum() == 0:  # avoid empty array
+            ok = slice(0, 1)
+        new = self.__class__(self.sids[ok], self.shape_y, self.shape_z).fill(0)
+        new.array = self.array[ok]
+        return new
+
     def __ior__(self, other):
-        if (other.L, other.G) != (self.L, self.G):
+        if (other.shape_y, other.shape_z) != (self.shape_y, self.shape_z):
             raise ValueError('%s has inconsistent shape with %s' %
                              (other, self))
         if len(self.sids) == len(other.sids):
@@ -493,4 +501,4 @@ class Pmap(object):
         return self.new(self.array ** n)
 
     def __repr__(self):
-        return '<Pmap(%d, %d, %d)>' % (self.N, self.L, self.G)
+        return '<Pmap(%d, %d, %d)>' % (self.shape_x, self.shape_y, self.shape_z)

@@ -145,9 +145,11 @@ def classical(srcs, sids, cmaker, monitor):
     """
     cmaker.init_monitoring(monitor)
     sitecol = monitor.read('sitecol')
-    if sids is not None:
+    if sids is not None:  # tiling
         sitecol = sitecol.filter(numpy.isin(sitecol.sids, sids))
     result = hazclassical(srcs, sitecol, cmaker)
+    if sids is None:  # single tile, save memory
+        result['pmap'] = result['pmap'].remove_zeros()
     # print(srcs, sum(src.weight for src in srcs))
     return result
 
