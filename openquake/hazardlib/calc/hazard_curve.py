@@ -65,7 +65,6 @@ def _cluster(sids, imtls, tom, gsims, pmap):
             pmapclu = pmap.new(numpy.full(pmap.shape, prob_n_occ))
         else:
             pmapclu.array += (1.-pmap.array)**nocc * prob_n_occ
-    print(pmapclu.array)
     return ~pmapclu
 
 
@@ -79,6 +78,7 @@ def classical(group, sitecol, cmaker, pmap=None):
     :returns:
         a dictionary with keys pmap, source_data, rup_data, extra
     """
+    not_passed_pmap = pmap is None
     src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
     cluster = getattr(group, 'cluster', None)
     cmaker.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
@@ -101,7 +101,7 @@ def classical(group, sitecol, cmaker, pmap=None):
         cmaker.tom = PoissonTOM(time_span) if time_span else None
     if cluster:
         cmaker.tom = FatedTOM(time_span=1)
-    if pmap is None:
+    if not_passed_pmap:
         pmap = ProbabilityMap(
             sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
         pmap.fill(cmaker.rup_indep)
