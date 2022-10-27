@@ -629,7 +629,7 @@ class ReinsuranceTestCase(CalculatorTestCase):
         [fname] = export(('reinsurance-risk_by_event', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-risk_by_event.csv',
-                              fname, delta=1E-5)
+                              fname, delta=3E-5)
 
     def test_many_levels(self):
         self.run_calc(reinsurance_1.__file__, 'job2.ini')
