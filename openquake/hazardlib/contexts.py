@@ -865,6 +865,7 @@ class ContextMaker(object):
         """
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         if getattr(src, 'location', None) and step == 1:
+            self.pla_mon.mem = 0
             with self.pla_mon:
                 ctxs = self.get_ctxs_planar(src, sitecol)
             return iter(ctxs)
