@@ -1,0 +1,2191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    investigation_time="1"
+    name="NMSZ"
+    >
+        <sourceGroup
+        cluster="true"
+        name="1_1, 1_2, 1_3"
+        occurrence_rate="3.6e-05"
+        rup_interdep="mutex"
+        src_interdep="indep"
+        tectonicRegion="Stable Shallow Faults"
+        tom="PoissonTOM"
+        >
+            <nonParametricSeismicSource
+            id="usgs_cl_500_0"
+            name="New Madrid western fault; North seg; 500 yr return time"
+            rup_weights="0.1 0.1 0.5 0.2 0.1"
+            tectonicRegion="Stable Shallow Faults"
+            >
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.6
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.263" lon="-89.323"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.3215009410381 37.26197980378499 -89.88451133357246 36.7329798039648
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.9
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.263" lon="-89.323"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.3215009410381 37.26197980378499 -89.88451133357246 36.7329798039648
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.3
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.263" lon="-89.323"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.3215009410381 37.26197980378499 -89.88451133357246 36.7329798039648
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.5
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.263" lon="-89.323"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.3215009410381 37.26197980378499 -89.88451133357246 36.7329798039648
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.8
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.263" lon="-89.323"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.3215009410381 37.26197980378499 -89.88451133357246 36.7329798039648
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+            <nonParametricSeismicSource
+            id="usgs_cl_500_1"
+            name="New Madrid western fault; central seg.; 38d dip; 500 yr return time"
+            rup_weights="0.1 0.1 0.5 0.2 0.1"
+            tectonicRegion="Stable Shallow Faults"
+            >
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.8
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.734" lon="-89.886"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.88405436351665 36.73418125823491 -89.82806410286317 36.34618125845749
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.1
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.734" lon="-89.886"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.88405436351665 36.73418125823491 -89.82806410286317 36.34618125845749
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.5
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.734" lon="-89.886"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.88405436351665 36.73418125823491 -89.82806410286317 36.34618125845749
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.7
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.734" lon="-89.886"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.88405436351665 36.73418125823491 -89.82806410286317 36.34618125845749
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        8.0
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.734" lon="-89.886"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.88405436351665 36.73418125823491 -89.82806410286317 36.34618125845749
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+            <nonParametricSeismicSource
+            id="usgs_cl_500_2"
+            name="N. New Madrid western fault, S segment; 500 yr return time"
+            rup_weights="0.1 0.1 0.5 0.2 0.1"
+            tectonicRegion="Stable Shallow Faults"
+            >
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.8
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.346" lon="-89.83"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.82864813611991 36.344869272553794 -90.7176600639088 35.64586927274663
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.1
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.346" lon="-89.83"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.82864813611991 36.344869272553794 -90.7176600639088 35.64586927274663
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.5
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.346" lon="-89.83"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.82864813611991 36.344869272553794 -90.7176600639088 35.64586927274663
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.7
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.346" lon="-89.83"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.82864813611991 36.344869272553794 -90.7176600639088 35.64586927274663
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        8.0
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.346" lon="-89.83"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.82864813611991 36.344869272553794 -90.7176600639088 35.64586927274663
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+        </sourceGroup>
+        <sourceGroup
+        cluster="true"
+        name="2_1, 2_2, 2_3"
+        occurrence_rate="7.2e-05"
+        rup_interdep="mutex"
+        src_interdep="indep"
+        tectonicRegion="Stable Shallow Faults"
+        tom="PoissonTOM"
+        >
+            <nonParametricSeismicSource
+            id="usgs_cl_500_3"
+            name="New Madrid mid-western fault;"
+            rup_weights="0.1 0.1 0.5 0.2 0.1"
+            tectonicRegion="Stable Shallow Faults"
+            >
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.6
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.218" lon="-89.193"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.19150237986125 37.21697929727126 -89.73251233917922 36.70897929744363
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.9
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.218" lon="-89.193"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.19150237986125 37.21697929727126 -89.73251233917922 36.70897929744363
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.3
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.218" lon="-89.193"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.19150237986125 37.21697929727126 -89.73251233917922 36.70897929744363
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.5
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.218" lon="-89.193"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.19150237986125 37.21697929727126 -89.73251233917922 36.70897929744363
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.8
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.218" lon="-89.193"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.19150237986125 37.21697929727126 -89.73251233917922 36.70897929744363
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+            <nonParametricSeismicSource
+            id="usgs_cl_500_4"
+            name="New Madrid mid-western fault;"
+            rup_weights="0.1 0.1 0.5 0.2 0.1"
+            tectonicRegion="Stable Shallow Faults"
+            >
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.8
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.71" lon="-89.734"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.67852777820654 36.71574599720164 -89.61182579888082 36.29874619158923
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            63.5
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            23.424015424030376
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.1
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.71" lon="-89.734"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.67852777820654 36.71574599720164 -89.61182579888082 36.29874619158923
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            63.5
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            23.424015424030376
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.5
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.71" lon="-89.734"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.67852777820654 36.71574599720164 -89.61182579888082 36.29874619158923
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            63.5
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            23.424015424030376
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.7
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.71" lon="-89.734"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.67852777820654 36.71574599720164 -89.61182579888082 36.29874619158923
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            63.5
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            23.424015424030376
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        8.0
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.71" lon="-89.734"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.67852777820654 36.71574599720164 -89.61182579888082 36.29874619158923
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            63.5
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            23.424015424030376
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+            <nonParametricSeismicSource
+            id="usgs_cl_500_5"
+            name="New Madrid mid-western fault;"
+            rup_weights="0.1 0.1 0.5 0.2 0.1"
+            tectonicRegion="Stable Shallow Faults"
+            >
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.8
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.293" lon="-89.667"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.66567461915041 36.29184978622884 -90.66568729019092 35.531849786430236
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.1
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.293" lon="-89.667"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.66567461915041 36.29184978622884 -90.66568729019092 35.531849786430236
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.5
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.293" lon="-89.667"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.66567461915041 36.29184978622884 -90.66568729019092 35.531849786430236
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.7
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.293" lon="-89.667"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.66567461915041 36.29184978622884 -90.66568729019092 35.531849786430236
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        8.0
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.293" lon="-89.667"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.66567461915041 36.29184978622884 -90.66568729019092 35.531849786430236
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+        </sourceGroup>
+        <sourceGroup
+        cluster="true"
+        name="3_1, 3_2, 3_3"
+        occurrence_rate="0.000504"
+        rup_interdep="mutex"
+        src_interdep="indep"
+        tectonicRegion="Stable Shallow Faults"
+        tom="PoissonTOM"
+        >
+            <nonParametricSeismicSource
+            id="usgs_cl_500_6"
+            name="New Madrid central fault;"
+            rup_weights="0.1 0.1 0.5 0.2 0.1"
+            tectonicRegion="Stable Shallow Faults"
+            >
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.6
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.165" lon="-89.07"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.06850845373481 37.163974638675725 -89.58151777588257 36.68597463883668
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.9
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.165" lon="-89.07"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.06850845373481 37.163974638675725 -89.58151777588257 36.68597463883668
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.3
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.165" lon="-89.07"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.06850845373481 37.163974638675725 -89.58151777588257 36.68597463883668
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.5
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.165" lon="-89.07"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.06850845373481 37.163974638675725 -89.58151777588257 36.68597463883668
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.8
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.165" lon="-89.07"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.06850845373481 37.163974638675725 -89.58151777588257 36.68597463883668
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+            <nonParametricSeismicSource
+            id="usgs_cl_500_7"
+            name="New Madrid central fault;"
+            rup_weights="0.1 0.1 0.5 0.2 0.1"
+            tectonicRegion="Stable Shallow Faults"
+            >
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.8
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.687" lon="-89.583"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.44087100365603 36.7031959072042 -89.36268672815358 36.25719727153799
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            38.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            19.234922129884872
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.1
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.687" lon="-89.583"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.44087100365603 36.7031959072042 -89.36268672815358 36.25719727153799
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            38.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            19.234922129884872
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.5
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.687" lon="-89.583"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.44087100365603 36.7031959072042 -89.36268672815358 36.25719727153799
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            38.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            19.234922129884872
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.7
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.687" lon="-89.583"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.44087100365603 36.7031959072042 -89.36268672815358 36.25719727153799
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            38.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            19.234922129884872
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        8.0
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.687" lon="-89.583"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.44087100365603 36.7031959072042 -89.36268672815358 36.25719727153799
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            38.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            19.234922129884872
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+            <nonParametricSeismicSource
+            id="usgs_cl_500_8"
+            name="New Madrid central fault;"
+            rup_weights="0.1 0.1 0.5 0.2 0.1"
+            tectonicRegion="Stable Shallow Faults"
+            >
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.8
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.241" lon="-89.504"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.50269560697336 36.23983493578538 -90.61270904859482 35.4178349359962
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.1
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.241" lon="-89.504"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.50269560697336 36.23983493578538 -90.61270904859482 35.4178349359962
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.5
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.241" lon="-89.504"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.50269560697336 36.23983493578538 -90.61270904859482 35.4178349359962
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.7
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.241" lon="-89.504"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.50269560697336 36.23983493578538 -90.61270904859482 35.4178349359962
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        8.0
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.241" lon="-89.504"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.50269560697336 36.23983493578538 -90.61270904859482 35.4178349359962
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+        </sourceGroup>
+        <sourceGroup
+        cluster="true"
+        name="4_1, 4_2, 4_3"
+        occurrence_rate="7.2e-05"
+        rup_interdep="mutex"
+        src_interdep="indep"
+        tectonicRegion="Stable Shallow Faults"
+        tom="PoissonTOM"
+        >
+            <nonParametricSeismicSource
+            id="usgs_cl_500_10"
+            name="New Madrid mid-eastern fault;"
+            rup_weights="0.1 0.1 0.5 0.2 0.1"
+            tectonicRegion="Stable Shallow Faults"
+            >
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.8
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.663" lon="-89.431"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.37574044302504 36.66976575135968 -89.28607756631183 36.19476597092844
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            63.5
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            23.424015424030376
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.1
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.663" lon="-89.431"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.37574044302504 36.66976575135968 -89.28607756631183 36.19476597092844
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            63.5
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            23.424015424030376
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.5
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.663" lon="-89.431"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.37574044302504 36.66976575135968 -89.28607756631183 36.19476597092844
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            63.5
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            23.424015424030376
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.7
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.663" lon="-89.431"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.37574044302504 36.66976575135968 -89.28607756631183 36.19476597092844
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            63.5
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            23.424015424030376
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        8.0
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.663" lon="-89.431"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.37574044302504 36.66976575135968 -89.28607756631183 36.19476597092844
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            63.5
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            23.424015424030376
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+            <nonParametricSeismicSource
+            id="usgs_cl_500_11"
+            name="New Madrid mid-eastern fault;"
+            rup_weights="0.1 0.1 0.5 0.2 0.1"
+            tectonicRegion="Stable Shallow Faults"
+            >
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.8
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.188" lon="-89.341"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.33971565101275 36.18682115560889 -90.50572917519365 35.34482115581819
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.1
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.188" lon="-89.341"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.33971565101275 36.18682115560889 -90.50572917519365 35.34482115581819
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.5
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.188" lon="-89.341"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.33971565101275 36.18682115560889 -90.50572917519365 35.34482115581819
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.7
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.188" lon="-89.341"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.33971565101275 36.18682115560889 -90.50572917519365 35.34482115581819
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        8.0
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.188" lon="-89.341"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.33971565101275 36.18682115560889 -90.50572917519365 35.34482115581819
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+            <nonParametricSeismicSource
+            id="usgs_cl_500_9"
+            name="New Madrid mid-eastern fault;"
+            rup_weights="0.1 0.1 0.5 0.2 0.1"
+            tectonicRegion="Stable Shallow Faults"
+            >
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.6
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.066" lon="-88.996"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -88.99451403872811 37.06497128493299 -89.4295218551454 36.66197128506779
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.9
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.066" lon="-88.996"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -88.99451403872811 37.06497128493299 -89.4295218551454 36.66197128506779
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.3
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.066" lon="-88.996"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -88.99451403872811 37.06497128493299 -89.4295218551454 36.66197128506779
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.5
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.066" lon="-88.996"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -88.99451403872811 37.06497128493299 -89.4295218551454 36.66197128506779
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.8
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="37.066" lon="-88.996"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -88.99451403872811 37.06497128493299 -89.4295218551454 36.66197128506779
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+        </sourceGroup>
+        <sourceGroup
+        cluster="true"
+        name="5_1, 5_2, 5_3"
+        occurrence_rate="3.6e-05"
+        rup_interdep="mutex"
+        src_interdep="indep"
+        tectonicRegion="Stable Shallow Faults"
+        tom="PoissonTOM"
+        >
+            <nonParametricSeismicSource
+            id="usgs_cl_500_12"
+            name="New Madrid eastern fault;"
+            rup_weights="0.1 0.1 0.5 0.2 0.1"
+            tectonicRegion="Stable Shallow Faults"
+            >
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.6
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.96" lon="-88.929"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -88.9275225175133 36.95896541290926 -89.27752869667563 36.63796541301554
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.9
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.96" lon="-88.929"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -88.9275225175133 36.95896541290926 -89.27752869667563 36.63796541301554
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.3
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.96" lon="-88.929"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -88.9275225175133 36.95896541290926 -89.27752869667563 36.63796541301554
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.5
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.96" lon="-88.929"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -88.9275225175133 36.95896541290926 -89.27752869667563 36.63796541301554
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.8
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.96" lon="-88.929"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -88.9275225175133 36.95896541290926 -89.27752869667563 36.63796541301554
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+            <nonParametricSeismicSource
+            id="usgs_cl_500_13"
+            name="New Madrid eastern fault;"
+            rup_weights="0.1 0.1 0.5 0.2 0.1"
+            tectonicRegion="Stable Shallow Faults"
+            >
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.8
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.639" lon="-89.279"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.27706881038598 36.63925080671778 -89.17608128855102 36.13525080700221
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.1
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.639" lon="-89.279"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.27706881038598 36.63925080671778 -89.17608128855102 36.13525080700221
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.5
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.639" lon="-89.279"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.27706881038598 36.63925080671778 -89.17608128855102 36.13525080700221
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.7
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.639" lon="-89.279"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.27706881038598 36.63925080671778 -89.17608128855102 36.13525080700221
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        8.0
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.639" lon="-89.279"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.27706881038598 36.63925080671778 -89.17608128855102 36.13525080700221
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+            <nonParametricSeismicSource
+            id="usgs_cl_500_14"
+            name="New Madrid eastern fault;"
+            rup_weights="0.1 0.1 0.5 0.2 0.1"
+            tectonicRegion="Stable Shallow Faults"
+            >
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        6.8
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.135" lon="-89.178"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.17673270591305 36.1338097874672 -90.4137465354277 35.2588097876789
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.1
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.135" lon="-89.178"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.17673270591305 36.1338097874672 -90.4137465354277 35.2588097876789
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.5
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.135" lon="-89.178"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.17673270591305 36.1338097874672 -90.4137465354277 35.2588097876789
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        7.7
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.135" lon="-89.178"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.17673270591305 36.1338097874672 -90.4137465354277 35.2588097876789
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+                <simpleFaultRupture
+                probs_occur="0.0 1.0"
+                >
+                    <magnitude>
+                        8.0
+                    </magnitude>
+                    <rake>
+                        0
+                    </rake>
+                    <hypocenter depth="10.0" lat="36.135" lon="-89.178"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -89.17673270591305 36.1338097874672 -90.4137465354277 35.2588097876789
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            89.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            24.997715427345867
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
