@@ -1240,8 +1240,6 @@ class PmapMaker(object):
             self.source_data['ctimes'].append(
                 dt * src.nsites / totlen if totlen else dt / nsrcs)
             self.source_data['taskno'].append(cm.task_no)
-        if self.rup_indep:
-            pmap.array[:] = 1. - pmap.array
         return pmap
 
     def _make_src_mutex(self, pmap):
@@ -1291,7 +1289,6 @@ class PmapMaker(object):
                 pmap.array += pm.array
         else:
             self._make_src_indep(pmap)
-        dic['pmap'] = pmap
         dic['cfactor'] = self.cmaker.collapser.cfactor
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data
