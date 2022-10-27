@@ -111,8 +111,8 @@ def classical(group, sitecol, cmaker, pmap=None):
         pmap.array[:] = 1. - pmap.array
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
-        dic['pmap'] = _cluster(sitecol.sids, cmaker.imtls, tom, cmaker.gsims,
-                               dic['pmap'])
+        pmap.array[:] = _cluster(sitecol.sids, cmaker.imtls, tom, cmaker.gsims,
+                                 pmap).array
     return dic
 
 
