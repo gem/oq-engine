@@ -1289,7 +1289,6 @@ class PmapMaker(object):
                 pmap.array += pm.array
         else:
             self._make_src_indep(pmap)
-        dic['pmap'] = pmap
         dic['cfactor'] = self.cmaker.collapser.cfactor
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data

@@ -113,6 +113,8 @@ def classical(group, sitecol, cmaker, pmap=None):
         pmap.array[:] = _cluster(sitecol.sids, cmaker.imtls,
                                  getattr(group, 'temporal_occurrence_model'),
                                  cmaker.gsims, pmap).array
+    if not_passed_pmap:
+        dic['pmap'] = pmap
     return dic
 
 
