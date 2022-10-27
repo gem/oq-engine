@@ -78,8 +78,10 @@ def classical(group, sitecol, cmaker, pmap=None):
     :returns:
         a dictionary with keys pmap, source_data, rup_data, extra
     """
+    not_passed_pmap = pmap is None
     src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
     cluster = getattr(group, 'cluster', None)
+    rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
     trts = set()
     for src in group:
         if not src.num_ruptures:
@@ -99,9 +101,10 @@ def classical(group, sitecol, cmaker, pmap=None):
         cmaker.tom = PoissonTOM(time_span) if time_span else None
     if cluster:
         cmaker.tom = FatedTOM(time_span=1)
-    if pmap is None:
+    if not_passed_pmap:
         pmap = ProbabilityMap(
             sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
+        pmap.fill(rup_indep)
 
     dic = PmapMaker(cmaker, src_filter, group).make(pmap)
     if cluster:
@@ -205,7 +208,7 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pmap = ProbabilityMap(site1.sids, oqparam.imtls.size, 1).fill(0)
+    pmap = ProbabilityMap(site1.sids, oqparam.imtls.size, 1).fill(1)
     PmapMaker(cmaker, srcfilter, [src]).make(pmap)
     if not pmap:  # filtered away
         zero = numpy.zeros((oqparam.imtls.size, len(gsims)))
