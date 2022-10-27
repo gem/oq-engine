@@ -940,9 +940,7 @@ class ContextMaker(object):
         pmap = ProbabilityMap(sids, size(self.imtls), len(self.gsims))
         pmap.fill(self.rup_indep)
         self.set_pmap(ctxs, pmap)
-        if self.rup_indep:
-            return ~pmap
-        return pmap
+        return ~pmap if self.rup_indep else pmap
 
     def set_pmap(self, ctxs, pmap):
         """
