@@ -39,7 +39,7 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
     case_66, case_67, case_68, case_69, case_70, case_71, case_72, case_73,
-    case_74, case_75, case_76, case_77, case_78, case_79)
+    case_74, case_75, case_76, case_77, case_78, case_79, case_80)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -1060,3 +1060,11 @@ hazard_uhs-std.csv
     def test_case_79(self):
         # disagg_by_src with semicolon sources
         self.run_calc(case_79.__file__, 'job.ini')
+
+    def test_case_80(self):
+        # New Madrid cluster with rup_mutex
+        self.run_calc(case_80.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles(
+            'expected/hazard_curve-mean-PGA.csv', f1)
+
