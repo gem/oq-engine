@@ -281,13 +281,10 @@ class ProbabilityMap(object):
         if other.shape[1:] != self.shape[1:]:
             raise ValueError('%s has inconsistent shape with %s' %
                              (other, self))
-        if len(self.sids) == len(other.sids):
-            self.array[:] *= other.array
-            return self
-        # also assume other.sids are a subset of self.sids
+        # assume other.sids are a subset of self.sids
         arr = self.array
-        for sid, arr2 in zip(other.sids, other.array):
-            arr[sid] *= arr2
+        for idx, arr2 in zip(self.sidx[other.sids], other.array):
+            arr[idx] *= arr2
         return self
 
     def update_i(self, poes, rates, probs_occur, sids, itime):

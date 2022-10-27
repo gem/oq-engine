@@ -152,10 +152,7 @@ def classical(srcs, sids, cmaker, monitor):
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
     pmap.fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
-    if sids is None:  # single tile, save memory
-        result['pmap'] = ~result['pmap'].remove_zeros()
-    else:
-        result['pmap'] = ~result['pmap']
+    result['pmap'] = ~result['pmap'].remove_zeros()
     return result
 
 
