@@ -110,11 +110,9 @@ def classical(group, sitecol, cmaker, pmap=None):
     if getattr(group, 'src_interdep', None) != 'mutex' and rup_indep:
         pmap.array[:] = 1. - pmap.array
     if cluster:
-        pmap.array[:] = _cluster(sitecol.sids,
-                                 cmaker.imtls,
+        pmap.array[:] = _cluster(sitecol.sids, cmaker.imtls,
                                  getattr(group, 'temporal_occurrence_model'),
-                                 cmaker.gsims,
-                                 pmap).array
+                                 cmaker.gsims, pmap).array
     return dic
 
 
