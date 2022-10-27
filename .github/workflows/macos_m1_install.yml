@@ -9,7 +9,7 @@ name: MacOS M1 engine with python 3.9
   schedule:
     - cron: "15 12 * * *"
   push:
-    branches: [ ae-fiona ]
+    branches: [ae-fiona]
 
 jobs:
 
@@ -37,7 +37,7 @@ jobs:
           which brew
           brew install python@${{ matrix.python-version }}
       - name: Run Installation of oq-engine in devel mode
-        env: 
+        env:
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
           env
@@ -50,11 +50,11 @@ jobs:
           python3.9 -m pip install -U pip wheel setuptools
           #
           echo "branch to test: ${BRANCH}"
-          if [[ "$BRANCH" != "" ]] 
+          if [[ "$BRANCH" != "" ]]
           then
             python3.9 install.py devel --version ${BRANCH}
           else
-            python3.9 install.py devel 
+            python3.9 install.py devel
           fi
       - name: Run demos to test installation
         run: |
@@ -64,10 +64,10 @@ jobs:
           oq dbserver start
           sleep 5
           # test for engine
-          ls -lrt /Users/runner/actions-runner/_work/oq-engine
-          pytest -vsx --color=yes /Users/runner/actions-runner/_work/oq-engine/oq-engine/openquake/sep
-          pytest -vsx --color=yes /Users/runner/actions-runner/_work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
-          pytest -vsx --color=yes /Users/runner/actions-runner/_work/oq-engine/oq-engine/openquake/calculators
+          pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/sep
+          #
+          pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
+          #
+          pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/calculators
           # Run calc
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
-
