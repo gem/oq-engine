@@ -58,21 +58,14 @@ def _cluster(sids, imtls, tom, gsims, pmap):
     """
     Computes the probability map in case of a cluster group
     """
-    L, G = imtls.size, len(gsims)
-    pmapclu = ProbabilityMap(sids, L, G).fill(0)
-    # Get temporal occurrence model
-    # Number of occurrences for the cluster
-    first = True
     for nocc in range(0, 50):
         ocr = tom.occurrence_rate
         prob_n_occ = tom.get_probability_n_occurrences(ocr, nocc)
-        if first:
-            pmapclu = pmap.new((1.-pmap.array)**nocc * prob_n_occ)
-            first = False
+        if nocc == 0:
+            pmapclu = pmap.new(numpy.full(pmap.shape, prob_n_occ))
         else:
             pmapclu.array += (1.-pmap.array)**nocc * prob_n_occ
-    pmap = ~pmapclu
-    return pmap
+    return ~pmapclu
 
 
 def classical(group, sitecol, cmaker, pmap=None):

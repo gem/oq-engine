@@ -18,6 +18,7 @@
 import copy
 import numpy
 import pandas
+from openquake.baselib.general import cached_property
 from openquake.baselib.performance import numba, compile
 from openquake.hazardlib.tom import get_pnes
 
@@ -194,9 +195,17 @@ class ProbabilityMap(object):
     """
     def __init__(self, sids, shape_y, shape_z):
         self.sids = sids
-        self.shape_x = len(sids)
-        self.shape_y = shape_y
-        self.shape_z = shape_z
+        self.shape = (len(sids), shape_y, shape_z)
+
+    @cached_property
+    def sidx(self):
+        """
+        :returns: an array of length N site_id -> index
+        """
+        idxs = numpy.zeros(self.sids.max() + 1, numpy.uint32)
+        for idx, sid in enumerate(self.sids):
+            idxs[sid] = idx
+        return idxs
 
     def new(self, array):
         new = copy.copy(self)
@@ -211,11 +220,8 @@ class ProbabilityMap(object):
         and build the .sidx array
         """
         assert 0 <= value <= 1, value
-        self.array = numpy.empty((self.shape_x, self.shape_y, self.shape_z))
+        self.array = numpy.empty(self.shape)
         self.array.fill(value)
-        self.sidx = numpy.zeros(self.sids.max() + 1, numpy.uint32)
-        for idx, sid in enumerate(self.sids):
-            self.sidx[sid] = idx
         return self
 
     def reshape(self, N, M, P):
@@ -246,7 +252,8 @@ class ProbabilityMap(object):
         ok = self.array.sum(axis=(1, 2)) > 0
         if ok.sum() == 0:  # avoid empty array
             ok = slice(0, 1)
-        new = self.__class__(self.sids[ok], self.shape_y, self.shape_z).fill(0)
+        new = self.__class__(self.sids[ok], self.shape[1], self.shape[2])
+        new.fill(0)
         new.array = self.array[ok]
         return new
 
@@ -271,7 +278,7 @@ class ProbabilityMap(object):
         """
         Multiply by the probabilities of no exceedence
         """
-        if (other.shape_y, other.shape_z) != (self.shape_y, self.shape_z):
+        if other.shape[1:] != self.shape[1:]:
             raise ValueError('%s has inconsistent shape with %s' %
                              (other, self))
         if len(self.sids) == len(other.sids):
@@ -313,5 +320,4 @@ class ProbabilityMap(object):
         return self.new(self.array ** n)
 
     def __repr__(self):
-        return '<ProbabilityMap(%d, %d, %d)>' % (
-            self.shape_x, self.shape_y, self.shape_z)
+        return '<ProbabilityMap(%d, %d, %d)>' % self.shape
