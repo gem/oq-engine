@@ -45,7 +45,7 @@ jobs:
           which sqlite3
           sqlite3 --version
           export PIP_DEFAULT_TIMEOUT=100
-          python${{ matrix.python-version }} -m pip install -U pip wheel setuptools
+          python${{ matrix.python-version }} -m pip install -U pip wheel
           #
           echo "branch to test: ${BRANCH}"
           if [[ "$BRANCH" != "" ]]
@@ -102,7 +102,7 @@ jobs:
           echo $PATH
           export PATH=/opt/homebrew/bin:/opt/homebrew/sbin:$PATH
           export PIP_DEFAULT_TIMEOUT=100
-          python${{ matrix.python-version }} -m pip install -U pip wheel setuptools
+          python${{ matrix.python-version }} -m pip install -U pip wheel
           #
           echo "branch to test: ${BRANCH}"
           if [[ "$BRANCH" != "" ]]
