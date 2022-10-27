@@ -439,7 +439,8 @@ class ContextMaker(object):
 
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
-        self.ctx_mon = monitor('make_contexts', measuremem=False)
+        self.pla_mon = monitor('planar contexts', measuremem=True)
+        self.ctx_mon = monitor('nonplanar contexts', measuremem=False)
         self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
@@ -864,7 +865,7 @@ class ContextMaker(object):
         """
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         if getattr(src, 'location', None) and step == 1:
-            with self.ctx_mon:
+            with self.pla_mon:
                 ctxs = self.get_ctxs_planar(src, sitecol)
             return iter(ctxs)
         elif hasattr(src, 'source_id'):  # other source
