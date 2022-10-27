@@ -160,6 +160,12 @@ def update_pmap_c(arr, poes, rates, probs_occur, allsids, sizes, itime):
         start += size
 
 
+# numbified below
+def update_pnes(arr, idxs, pnes):
+    for idx, pne in zip(idxs, pnes):
+        arr[idx] *= pne
+
+
 if numba:
     t = numba.types
     sig = t.void(t.float64[:, :, :],                     # pmap
@@ -187,6 +193,11 @@ if numba:
                  t.uint32[:],                            # sizes
                  t.float64)                              # itime
     update_pmap_c = compile(sig)(update_pmap_c)
+
+    sig = t.void(t.float64[:, :, :],                     # pmap
+                 t.uint32[:]       ,                     # idxs
+                 t.float64[:, :, :])                     # pnes
+    update_pnes = compile(sig)(update_pnes)
 
 
 class ProbabilityMap(object):
@@ -281,13 +292,8 @@ class ProbabilityMap(object):
         if other.shape[1:] != self.shape[1:]:
             raise ValueError('%s has inconsistent shape with %s' %
                              (other, self))
-        if len(self.sids) == len(other.sids):
-            self.array[:] *= other.array
-            return self
-        # also assume other.sids are a subset of self.sids
-        arr = self.array
-        for sid, arr2 in zip(other.sids, other.array):
-            arr[sid] *= arr2
+        # assume other.sids are a subset of self.sids
+        update_pnes(self.array, self.sidx[other.sids], other.array)
         return self
 
     def update_i(self, poes, rates, probs_occur, sids, itime):
