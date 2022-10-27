@@ -1172,7 +1172,6 @@ class PmapMaker(object):
         except AttributeError:  # already a list of sources
             self.sources = group
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
-        self.cmaker.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         self.fewsites = self.N <= cmaker.max_sites_disagg
 
     def count_bytes(self, ctxs):
@@ -1291,7 +1290,7 @@ class PmapMaker(object):
             for source_id, pm in pmap_by_src.items():
                 pmap.array += pm.array
         else:
-            pmap.fill(self.cmaker.rup_indep)
+            #pmap.fill(self.cmaker.rup_indep)
             self._make_src_indep(pmap)
         dic['pmap'] = pmap
         dic['cfactor'] = self.cmaker.collapser.cfactor

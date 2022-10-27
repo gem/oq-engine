@@ -65,6 +65,7 @@ def _cluster(sids, imtls, tom, gsims, pmap):
             pmapclu = pmap.new(numpy.full(pmap.shape, prob_n_occ))
         else:
             pmapclu.array += (1.-pmap.array)**nocc * prob_n_occ
+    print(pmapclu.array)
     return ~pmapclu
 
 
@@ -80,6 +81,7 @@ def classical(group, sitecol, cmaker, pmap=None):
     """
     src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
     cluster = getattr(group, 'cluster', None)
+    cmaker.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
     trts = set()
     for src in group:
         if not src.num_ruptures:
@@ -102,6 +104,7 @@ def classical(group, sitecol, cmaker, pmap=None):
     if pmap is None:
         pmap = ProbabilityMap(
             sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
+        pmap.fill(cmaker.rup_indep)
 
     dic = PmapMaker(cmaker, src_filter, group).make(pmap)
     if cluster:
@@ -205,7 +208,7 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pmap = ProbabilityMap(site1.sids, oqparam.imtls.size, 1).fill(0)
+    pmap = ProbabilityMap(site1.sids, oqparam.imtls.size, 1).fill(1)
     PmapMaker(cmaker, srcfilter, [src]).make(pmap)
     if not pmap:  # filtered away
         zero = numpy.zeros((oqparam.imtls.size, len(gsims)))
