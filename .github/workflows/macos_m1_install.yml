@@ -8,8 +8,6 @@ name: MacOS M1 engine with python
         required: true
   schedule:
     - cron: "15 12 * * *"
-  push:
-    branches: [ae-310m1]
 
 jobs:
 
