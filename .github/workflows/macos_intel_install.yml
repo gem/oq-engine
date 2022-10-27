@@ -1,4 +1,4 @@
-name: MacOS Intel test of OpenQuake Engine
+name: MacOS Intel install and test
 'on':
   workflow_dispatch:
     inputs:
