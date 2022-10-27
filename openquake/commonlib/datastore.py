@@ -146,7 +146,7 @@ def new(calc_id, oqparam, datadir=None, mode=None):
     return dstore
 
 
-def build_dstore_log(description, parent=()):
+def build_dstore_log(description='custom calculation', parent=()):
     """
     :returns: DataStore instance associated to the .calc_id
     """
@@ -164,7 +164,7 @@ class DataStore(collections.abc.MutableMapping):
 
     Here is a minimal example of usage:
 
-    >>> dstore, log = build_dstore_log("test")
+    >>> dstore, log = build_dstore_log()
     >>> with dstore, log:
     ...     dstore['example'] = 42
     ...     print(dstore['example'][()])
