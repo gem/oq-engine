@@ -144,13 +144,13 @@ def classical(srcs, sids, cmaker, monitor):
     Read the sitecol and call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
-    cmaker.rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
+    rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
     sitecol = monitor.read('sitecol')
     if sids is not None:  # tiling
         sitecol = sitecol.filter(numpy.isin(sitecol.sids, sids))
     pmap = ProbabilityMap(
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
-    pmap.fill(cmaker.rup_indep)
+    pmap.fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
     if sids is None:  # single tile, save memory
         result['pmap'] = result['pmap'].remove_zeros()

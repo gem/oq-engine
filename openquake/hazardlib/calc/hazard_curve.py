@@ -81,7 +81,7 @@ def classical(group, sitecol, cmaker, pmap=None):
     not_passed_pmap = pmap is None
     src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
     cluster = getattr(group, 'cluster', None)
-    cmaker.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
+    rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
     trts = set()
     for src in group:
         if not src.num_ruptures:
@@ -104,7 +104,7 @@ def classical(group, sitecol, cmaker, pmap=None):
     if not_passed_pmap:
         pmap = ProbabilityMap(
             sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
-        pmap.fill(cmaker.rup_indep)
+        pmap.fill(rup_indep)
 
     dic = PmapMaker(cmaker, src_filter, group).make(pmap)
     if cluster:
