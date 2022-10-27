@@ -151,12 +151,6 @@ class PreClassicalCalculator(base.HazardCalculator):
             [sg.get_tom_toml(self.oqparam.investigation_time)
              for sg in csm.src_groups], hdf5.vstr)
         cmakers = read_cmakers(self.datastore, csm.full_lt)
-        G = max(len(cm.gsims) for cm in cmakers)
-        M = len(self.oqparam.imtls)
-        if M:  # M is zero in the afteshock calculator
-            N = get_maxsize(M, G)
-            logging.info('NMG = ({:_d}, {:_d}, {:_d}) = {:.1f} MB'.format(
-                N, M, G, N*M*G*8 / 1024**2))
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []

@@ -153,7 +153,9 @@ def classical(srcs, sids, cmaker, monitor):
     pmap.fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
     if sids is None:  # single tile, save memory
-        result['pmap'] = result['pmap'].remove_zeros()
+        result['pmap'] = ~result['pmap'].remove_zeros()
+    else:
+        result['pmap'] = ~result['pmap']
     return result
 
 
@@ -362,16 +364,16 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
-        pmap = dic['pmap']
-        pmap.grp_id = grp_id
+        pnemap = dic['pmap']  # probabilities of no exceedence
+        pnemap.grp_id = grp_id
         pmap_by_src = dic.pop('pmap_by_src', {})
         # len(pmap_by_src) > 1 only for mutex sources, see contexts.py
         for source_id, pm in pmap_by_src.items():
             # store the poes for the given source
             acc[source_id] = pm
             pm.grp_id = grp_id
-        if pmap:
-            acc[grp_id].update(pmap)
+        if pnemap:
+            acc[grp_id].update(pnemap)
         self.n_outs[grp_id] -= 1
         if self.n_outs[grp_id] == 0:  # no other tasks for this grp_id
             with self.monitor('storing PoEs', measuremem=True):
@@ -461,8 +463,8 @@ class ClassicalCalculator(base.HazardCalculator):
         G = max(num_gs)
         size = G * N * L * 8
         tot = sum(num_gs) * N * L * 8
-        logging.info('Requiring %s (%s) for ProbabilityMap(G=%d,N=%d,L=%d)',
-                     humansize(size), humansize(tot), G, N, L)
+        logging.info('ProbabilityMap(G=%d,N=%d,L=%d): %s per core + %s',
+                     G, N, L, humansize(size), humansize(tot))
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         if avail < size:
             raise MemoryError(
