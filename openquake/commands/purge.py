@@ -55,12 +55,12 @@ def purge_all(user=None):
 
 def purge_failed():
     """
-    Remove all failed calculations older than 3 days
+    Remove all failed calculations older than 1 day
     """
     rows = logs.dbcmd(
         'SELECT id, ds_calc_dir || ".hdf5" FROM job '
         'WHERE status NOT IN ("complete", "running")'
-        "AND start_time> datetime('now', '-3 days')")
+        "AND start_time < datetime('now', '-1 days')")
     todelete = []
     totsize = 0
     for calc_id, fname in rows:
