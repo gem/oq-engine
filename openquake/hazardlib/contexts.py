@@ -945,8 +945,9 @@ class ContextMaker(object):
 
     def update(self, pmap, ctxs, rup_indep=True):
         """
-        :param ctxs: a list of context arrays (only one for poissonian ctxs)
-        :param probmap: probability map to update
+        :param pmap: probability map to update
+        :param ctxs: a list of context arrays (only one for parametric ctxs)
+        :param rup_indep: False for mutex ruptures, default True
         """
         if self.tom is None:
             itime = -1.
