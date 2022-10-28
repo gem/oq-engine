@@ -1019,6 +1019,11 @@ class ContextMaker(object):
         :param ctx: a vectorized context (recarray) of size N
         :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
         """
+        # NB: we are carefully trying to save memory here
+        # for instance, for the GLD model, the parameters are as follows:
+        # M=6, L1=20, G=3, len(ctx)=7_474_634, ctx.nbytes=513.24 MB
+        # maxsize=3640, #bigslices=2054, mean_stdt.nbytes=2 MB,
+        # poes.nbytes=0.5 MB, allsids.nbytes=ctx.sids.nbytes=28.51 MB
         from openquake.hazardlib.site_amplification import get_poes_site
         (M, L1), G = self.loglevels.array.shape, len(self.gsims)
         maxsize = get_maxsize(M, G)
