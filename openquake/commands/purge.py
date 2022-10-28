@@ -18,6 +18,7 @@
 import os
 import re
 import getpass
+from openquake.baselib.general import humansize
 from openquake.commonlib import logs, datastore
 
 datadir = datastore.get_datadir()
@@ -61,15 +62,19 @@ def purge_failed():
         'WHERE status NOT IN ("complete", "running")'
         "AND start_time> datetime('now', '-3 days')")
     todelete = []
+    totsize = 0
     for calc_id, fname in rows:
         if os.path.exists(fname) and os.access(fname, os.W_OK):
             todelete.append(fname)
-    print('Deleting %d calculations' % len(todelete))
+            totsize += os.getsize(fname)
+            tname = fname.replace('.hdf5', '_tmp.hdf5')
+            if os.path.exists(tname) and os.access(tname, os.W_OK):
+                todelete.append(tname)
+                totsize += os.getsize(tname)
+    size = humansize(totsize)
+    print('Deleting %d files .hdf5, %s' % (len(todelete), size))
     for fname in todelete:
         os.remove(fname)
-        tname = fname.replace('.hdf5', '_tmp.hdf5')
-        if os.path.exists(tname):
-            os.remove(tname)
 
     
 def main(what, force=False):
