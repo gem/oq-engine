@@ -46,17 +46,41 @@ def purge_all(user=None):
         for fname in os.listdir(datadir):
             if fname.endswith('.pik'):
                 os.remove(os.path.join(datadir, fname))
-            mo = re.match(r'(calc_|cache_)(\d+)\.hdf5', fname)
+            mo = re.match(r'calc_(\d+)(_tmp)?\.hdf5', fname)
             if mo is not None:
-                calc_id = int(mo.group(2))
+                calc_id = int(mo.group(1))
                 purge_one(calc_id, user, force=True)
 
 
-def main(calc_id: int, force=False):
+def purge_failed():
     """
-    Remove the given calculation. If you want to remove all calculations,
-    use oq reset.
+    Remove all failed calculations older than 3 days
     """
+    rows = logs.dbcmd(
+        'SELECT id, ds_calc_dir || ".hdf5" FROM job '
+        'WHERE status NOT IN ("complete", "running")'
+        "AND start_time> datetime('now', '-3 days')")
+    todelete = []
+    for calc_id, fname in rows:
+        if os.path.exists(fname) and os.access(fname, os.W_OK):
+            todelete.append(fname)
+    print('Deleting %d calculations' % len(todelete))
+    for fname in todelete:
+        os.remove(fname)
+        tname = fname.replace('.hdf5', '_tmp.hdf5')
+        if os.path.exists(tname):
+            os.remove(tname)
+
+    
+def main(what, force=False):
+    """
+    Remove calculations from the file system.
+    If you want to remove everything,  use oq reset.
+    """
+    if what == 'failed':
+        purge_failed()
+        return
+    calc_id = int(what)
     if calc_id < 0:
         try:
             calc_id = datastore.get_calc_ids(datadir)[calc_id]
@@ -66,5 +90,5 @@ def main(calc_id: int, force=False):
     purge_one(calc_id, getpass.getuser(), force)
 
 
-main.calc_id = 'calculation ID'
+main.what = 'a calculation ID or the string "failed"'
 main.force = 'ignore dependent calculations'
