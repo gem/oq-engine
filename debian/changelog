@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added command `oq purge failed`
   * Fixed memory leak in the tiling calculator by resetting the ProcessPool
   * Fixed an indexing error breaking the GMPE AtkinsonBoore2006 with
     stress drop adjustment
