@@ -940,10 +940,10 @@ class ContextMaker(object):
         sids = numpy.unique(ctxs[0].sids)
         pmap = ProbabilityMap(sids, size(self.imtls), len(self.gsims))
         pmap.fill(rup_indep)
-        self.set_pmap(ctxs, pmap, rup_indep)
+        self.update(pmap, ctxs, rup_indep)
         return ~pmap if rup_indep else pmap
 
-    def set_pmap(self, ctxs, pmap, rup_indep=True):
+    def update(self, pmap, ctxs, rup_indep=True):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
         :param probmap: probability map to update
@@ -1227,13 +1227,13 @@ class PmapMaker(object):
                 nsites += len(ctx)
                 allctxs.append(ctx)
                 if ctxs_mb > MAX_MB:
-                    cm.set_pmap(concat(allctxs), pmap, self.rup_indep)
+                    cm.update(pmap, concat(allctxs), self.rup_indep)
                     allctxs.clear()
                     ctxs_mb = 0
         if allctxs:
             src.nsites = nsites
             totlen += nsites
-            cm.set_pmap(concat(allctxs), pmap, self.rup_indep)
+            cm.update(pmap, concat(allctxs), self.rup_indep)
             allctxs.clear()
         dt = time.time() - t0
         nsrcs = len(self.sources)
@@ -1261,7 +1261,7 @@ class PmapMaker(object):
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
-                cm.set_pmap(ctxs, pm, self.rup_indep)
+                cm.update(pm, ctxs, self.rup_indep)
             arr = 1. - pm.array if self.rup_indep else pm.array
             p = pm.new(arr * src.mutex_weight)
             if ':' in src.source_id:
