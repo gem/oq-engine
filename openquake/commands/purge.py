@@ -53,7 +53,7 @@ def purge_all(user=None):
                 purge_one(calc_id, user, force=True)
 
 
-def purge_failed():
+def purge_failed(force):
     """
     Remove all failed calculations older than 1 day
     """
@@ -72,9 +72,11 @@ def purge_failed():
                 todelete.append(tname)
                 totsize += os.path.getsize(tname)
     size = humansize(totsize)
-    print('Deleting %d files .hdf5, %s' % (len(todelete), size))
     for fname in todelete:
-        os.remove(fname)
+        print(fname)
+        if force:
+            os.remove(fname)
+    print('Processed %d HDF5 files, %s' % (len(todelete), size))
 
     
 def main(what, force=False):
@@ -83,7 +85,7 @@ def main(what, force=False):
     If you want to remove everything,  use oq reset.
     """
     if what == 'failed':
-        purge_failed()
+        purge_failed(force)
         return
     calc_id = int(what)
     if calc_id < 0:
