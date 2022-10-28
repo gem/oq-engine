@@ -66,11 +66,11 @@ def purge_failed():
     for calc_id, fname in rows:
         if os.path.exists(fname) and os.access(fname, os.W_OK):
             todelete.append(fname)
-            totsize += os.getsize(fname)
+            totsize += os.path.getsize(fname)
             tname = fname.replace('.hdf5', '_tmp.hdf5')
             if os.path.exists(tname) and os.access(tname, os.W_OK):
                 todelete.append(tname)
-                totsize += os.getsize(tname)
+                totsize += os.path.getsize(tname)
     size = humansize(totsize)
     print('Deleting %d files .hdf5, %s' % (len(todelete), size))
     for fname in todelete:
