@@ -659,7 +659,10 @@ def node_to_dict(node):
         if 'attrib' in dic:
             dic['text'] = node.text
         else:
-            dic = node.text
+            try:
+                dic['value'] = float(node.text.strip())
+            except AttributeError:
+                dic = node.text
     if node.nodes:
         dic.update(_group([node_to_dict(n) for n in node]))
     return {tag: dic}

@@ -1250,6 +1250,8 @@ class Row:
     lowerseismodepth: float
     nodalplanedist: list
     hypodepthdist: list
+    hypoList: list
+    slipList: list
     geom: str
     coords: list
     wkt: str
@@ -1318,6 +1320,15 @@ class RowConverter(SourceConverter):
             lst.append(dict(probability=w, hypodepth=hd))
         return str(lst)
 
+    def convert_hypolist(self, node):
+        lst = [{'alongStrike': hl['alongStrike'],
+                'downDip': hl['downDip'],
+                'weight': hl['weight']} for hl in node.hypoList]
+        return str(lst)
+
+    def convert_sliplist(self, node):
+        return str([node_to_dict(n)['slip'] for n in node.slipList.nodes])
+
     def convert_areaSource(self, node):
         geom = node.areaGeometry
         coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
@@ -1335,6 +1346,8 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
+            [],
+            [],
             'Polygon', [coords])
 
     def convert_pointSource(self, node):
@@ -1351,6 +1364,8 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
+            [],
+            [],
             'Point', ~geom.Point.pos)
 
     def convert_multiPointSource(self, node):
@@ -1384,6 +1399,8 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             [{'dip': ~geom.dip, 'rake': ~node.rake}],
             [],
+            self.convert_hypolist(node),
+            self.convert_sliplist(node),
             'LineString', [(p.x, p.y) for p in self.geo_line(geom)])
 
     def convert_complexFaultSource(self, node):

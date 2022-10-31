@@ -60,7 +60,19 @@ def build_nodes(props):
     hdd = ast.literal_eval(props['hypodepthdist'])
     hdd = Node('hypoDepthDist', nodes=[Node('hypoDepth', dic)
                                        for dic in hdd])
-    return msr, rar, mfd, npd, hdd
+    hyl = ast.literal_eval(props['hypoList'])
+    hyl = Node('hypoList', nodes=[Node('hypo', dic)
+                                  for dic in hyl])
+
+    sll = ast.literal_eval(props['slipList'])
+    sll = [{k.replace('_', ''): v for k, v in sl.items()}
+           for sl in sll]
+    sll = Node('slipList',
+               nodes=[Node('slip',
+                           {k: v for k, v in sl.items() if k != 'value'},
+                           text=sl['value'])
+                      for sl in sll])
+    return msr, rar, mfd, npd, hdd, hyl, sll
 
 
 def edge(name, coords):
