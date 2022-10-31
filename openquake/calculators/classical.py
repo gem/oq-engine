@@ -504,7 +504,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.check_memory(len(tile), L, num_gs)
             smap = self.submit(tile, self.haz.cmakers, max_weight)
             for cm in self.haz.cmakers:
-                acc[cm.grp_id] = ProbabilityMap(tile.sids, L, len(cm.gsims)).fill(1)
+                acc[cm.grp_id] = ProbabilityMap(
+                    tile.sids, L, len(cm.gsims)).fill(1)
             smap.reduce(self.agg_dicts, acc)
             if len(tiles) > 1:
                 logging.info('Finished tile %d of %d', t, len(tiles))
@@ -539,7 +540,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.create_df('source_data', df)
         self.source_data.clear()  # save a bit of memory
 
-    def submit(self, sids, cmakers, max_weight):
+    def submit(self, tile, cmakers, max_weight):
         """
         :returns: a Starmap instance for the current tile
         """
@@ -551,7 +552,7 @@ class ClassicalCalculator(base.HazardCalculator):
             sg = self.csm.src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups
-                trip = (sg, sids, cmakers[grp_id])
+                trip = (sg, tile, cmakers[grp_id])
                 triples.append(trip)
                 smap.submit(trip)
                 self.n_outs[grp_id] += 1
@@ -565,7 +566,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.debug(
                         'Sending %d source(s) with weight %d',
                         len(block), sum(src.weight for src in block))
-                    trip = (block, sids, cmakers[grp_id])
+                    trip = (block, tile, cmakers[grp_id])
                     triples.append(trip)
                     smap.submit(trip)
                     self.n_outs[grp_id] += 1
