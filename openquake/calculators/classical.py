@@ -366,8 +366,12 @@ class ClassicalCalculator(base.HazardCalculator):
             # store the poes for the given source
             acc[source_id] = pm
             pm.grp_id = grp_id
-        if pnemap:
+        if pnemap and grp_id in acc:
             acc[grp_id].update(pnemap)
+        elif pnemap:
+            with self.monitor('storing PoEs', measuremem=True):
+                self.haz.store_poes(grp_id, pnemap)
+            return acc
         self.n_outs[grp_id] -= 1
         if self.n_outs[grp_id] == 0:  # no other tasks for this grp_id
             with self.monitor('storing PoEs', measuremem=True):
@@ -504,8 +508,10 @@ class ClassicalCalculator(base.HazardCalculator):
             self.check_memory(len(tile), L, num_gs)
             smap = self.submit(tile, self.haz.cmakers, max_weight)
             for cm in self.haz.cmakers:
-                acc[cm.grp_id] = ProbabilityMap(
-                    tile.sids, L, len(cm.gsims)).fill(1)
+                sg = self.csm.src_groups[cm.grp_id]
+                if not (sg.atomic or sg.weight < max_weight):
+                    acc[cm.grp_id] = ProbabilityMap(
+                        tile.sids, L, len(cm.gsims)).fill(1)
             smap.reduce(self.agg_dicts, acc)
             if len(tiles) > 1:
                 logging.info('Finished tile %d of %d', t, len(tiles))
@@ -550,12 +556,11 @@ class ClassicalCalculator(base.HazardCalculator):
         triples = []
         for grp_id in self.grp_ids:
             sg = self.csm.src_groups[grp_id]
-            if sg.atomic:
+            if sg.atomic or sg.weight < max_weight:
                 # do not split atomic groups
                 trip = (sg, tile, cmakers[grp_id])
                 triples.append(trip)
                 smap.submit(trip)
-                self.n_outs[grp_id] += 1
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, basename).values()
                         if oq.disagg_by_src else
