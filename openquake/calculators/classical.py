@@ -484,9 +484,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.csm = parent['_csm']
                 self.full_lt = parent['full_lt']
                 self.datastore['source_info'] = parent['source_info'][:]
-                max_weight = self.csm.get_max_weight(oq)
+                mw = self.csm.get_max_weight(oq)
         else:
-            max_weight = self.max_weight
+            mw = self.max_weight
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
@@ -506,12 +506,22 @@ class ClassicalCalculator(base.HazardCalculator):
         t0 = time.time()
         for t, tile in enumerate(tiles, 1):
             self.check_memory(len(tile), L, num_gs)
-            smap = self.submit(tile, self.haz.cmakers, max_weight)
+            self.datastore.swmr_on()  # must come before the Starmap
+            smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
             for cm in self.haz.cmakers:
                 sg = self.csm.src_groups[cm.grp_id]
-                if not (sg.atomic or sg.weight < max_weight):
+                if sg.atomic or sg.weight <= mw:
+                    smap.submit((sg, tile, cm))
+                else:
                     acc[cm.grp_id] = ProbabilityMap(
                         tile.sids, L, len(cm.gsims)).fill(1)
+                    blks = (groupby(sg, basename).values() if oq.disagg_by_src
+                            else block_splitter(sg, mw, get_weight, sort=True))
+                    for block in blks:
+                        logging.debug('Sending %d source(s) with weight %d',
+                                      len(block), sg.weight)
+                        smap.submit((block, tile, cm))
+                        self.n_outs[cm.grp_id] += 1
             smap.reduce(self.agg_dicts, acc)
             if len(tiles) > 1:
                 logging.info('Finished tile %d of %d', t, len(tiles))
@@ -545,37 +555,6 @@ class ClassicalCalculator(base.HazardCalculator):
         df['impact'] = df.nsites / self.N
         self.datastore.create_df('source_data', df)
         self.source_data.clear()  # save a bit of memory
-
-    def submit(self, tile, cmakers, max_weight):
-        """
-        :returns: a Starmap instance for the current tile
-        """
-        oq = self.oqparam
-        self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        triples = []
-        for grp_id in self.grp_ids:
-            sg = self.csm.src_groups[grp_id]
-            if sg.atomic or sg.weight < max_weight:
-                # do not split atomic groups
-                trip = (sg, tile, cmakers[grp_id])
-                triples.append(trip)
-                smap.submit(trip)
-            else:  # regroup the sources in blocks
-                blks = (groupby(sg, basename).values()
-                        if oq.disagg_by_src else
-                        block_splitter(
-                            sg, max_weight, get_weight, sort=True))
-                blocks = list(blks)
-                for block in blocks:
-                    logging.debug(
-                        'Sending %d source(s) with weight %d',
-                        len(block), sum(src.weight for src in block))
-                    trip = (block, tile, cmakers[grp_id])
-                    triples.append(trip)
-                    smap.submit(trip)
-                    self.n_outs[grp_id] += 1
-        return smap
 
     def collect_hazard(self, acc, pmap_by_kind):
         """
