@@ -834,6 +834,19 @@ rur_Ant_1,  9000,500,1,1,0
         self.assertIn('(row 3): values for CatXL_reg must be either 0 or 1',
                       str(ctx.exception))
 
+    def test_treaty_types_in_a_wrong_order_in_policies_csv(self):
+        csvfname = general.gettemp(CSV_NP.replace(
+            'Policy,Limit,Deductible,WXLR_metro,WXLR_rural,CatXL_reg',
+            'Policy,Limit,Deductible,WXLR_metro,CatXL_reg,WXLR_rural'))
+        xmlfname = general.gettemp(XML_NP.format(csvfname))
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn(
+            'treaty type columns must be in the order'
+            ' (\'prop\', \'wxlr\', \'catxl\'). Treaty "WXLR_rural" of'
+            ' type "wxlr" was found after treaty "CatXL_reg" of'
+            ' type "catxl"', str(ctx.exception))
+
     # Checks in the reinsurance file
 
     def test_treaty_in_reinsurancexml_missing_in_policycsv(self):
@@ -845,7 +858,7 @@ rur_Ant_1,10000,100,.1,.2''')
         xmlfname = general.gettemp(XML_PR.format(csvfname))
         with self.assertRaises(InvalidFile) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
-        self.assertIn('surplus is missing', str(ctx.exception))
+        self.assertIn('(line 8): surplus is missing in', str(ctx.exception))
 
     def test_type_within_prop_wxlr_or_catxl(self):
         csvfname = general.gettemp(CSV_NP)
@@ -853,8 +866,37 @@ rur_Ant_1,10000,100,.1,.2''')
             XML_NP.format(csvfname).replace('catxl', 'wrongtype'))
         with self.assertRaises(InvalidFile) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
-        self.assertIn("valid treaty types are ('prop', 'wxlr', 'catxl')."
-                      " 'wrongtype' was found instead", str(ctx.exception))
+        self.assertIn(
+            "(line 12): valid treaty types are ('prop', 'wxlr', 'catxl')."
+            " 'wrongtype' was found instead", str(ctx.exception))
+
+    def test_treaty_types_in_a_wrong_order_in_reinsurance_xml(self):
+        csvfname = general.gettemp(CSV_NP)
+        xmlfname = general.gettemp('''\
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <reinsuranceModel>
+    <description>reinsurance model</description>
+    <fieldMap>
+      <field oq="policy" input="Policy" />
+      <field oq="deductible" input="Deductible" />
+      <field oq="liability" input="Limit" />
+      <field input="WXLR_metro" type="wxlr" deductible="500" limit="3500" />
+      <field input="CatXL_reg" type="catxl" deductible="50" limit="2500" />
+      <field input="WXLR_rural" type="wxlr" deductible="200" limit="5000" />
+    </fieldMap>
+    <policies>{}</policies>
+  </reinsuranceModel>
+</nrml>
+'''.format(csvfname))
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn(
+            '(line 12): treaty types must be specified in the order'
+            ' (\'prop\', \'wxlr\', \'catxl\'). Treaty "WXLR_rural"'
+            ' of type "wxlr" was found after treaty "CatXL_reg" of'
+            ' type "catxl"', str(ctx.exception))
 
     def test_deductible_is_negative(self):
         csvfname = general.gettemp(CSV_NP)

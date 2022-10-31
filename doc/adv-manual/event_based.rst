@@ -1773,6 +1773,7 @@ input file:
   </nrml>
 
 **reinsurance.xml parameters:**
+
 The reinsurance information must include, at least, a ``<description>`` and  
 a list of files that contain the ``<policies>``. The ``<fieldMap>`` block 
 is used to define the reinsurance treaties and their parameters.
@@ -1794,6 +1795,10 @@ possible to define the ``max_cession_event``.
 *Non-proportional* treaties are identified by the parameter
 ``type="wxlr"`` or ``type="catxl"``. For each treaty it is required to
 indicate the ``deductible`` and ``limit``.
+
+*Note: treaties must be written in a given order, keeping proportional
+ones first, then non-proportional ones of type "wxlr" and finally those
+of type "catxl".*
 
 - **deductible**: the amount (economic value) that the insurer will
   "deduct" from the ground up losses before paying up to its policy
@@ -1873,6 +1878,10 @@ treaties for "pol_1" will be (1 - 0.1 - 0. = 0.9).
 In the case of non-proportional treaties, "pol_1" is allocated to the ``WXLR``
 (an excess of loss per risk) treaty, and to the ``CatXL1`` (a catastrophic excess of
 loss per event) treaty. This policy is not covered by the ``CatXL2`` treaty.
+
+*Note: treaties must be written in a given order, keeping proportional
+ones first, then non-proportional ones of type "wxlr" and finally those
+of type "catxl".*
 
 Configuration file ``job.ini``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
