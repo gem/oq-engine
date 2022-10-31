@@ -94,9 +94,8 @@ def classical(group, sitecol, cmaker, pmap=None):
     [trt] = trts  # there must be a single tectonic region type
     if cmaker.trt != '*':
         assert trt == cmaker.trt, (trt, cmaker.trt)
-    try:
-        cmaker.tom = group.temporal_occurrence_model
-    except AttributeError:  # got a list of sources, not a group
+    cmaker.tom = getattr(group, 'temporal_occurrence_model', None)
+    if cmaker.tom is None:
         time_span = cmaker.investigation_time  # None for nonparametric
         cmaker.tom = PoissonTOM(time_span) if time_span else None
     if cluster:
