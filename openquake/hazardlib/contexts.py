@@ -950,7 +950,7 @@ class ContextMaker(object):
         :param rup_indep: False for mutex ruptures, default True
         """
         if self.tom is None:
-            itime = -1.
+            itime = -1.  # test_hazard_curve_X _
         elif isinstance(self.tom, FatedTOM):
             itime = 0.
         else:

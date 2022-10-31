@@ -139,15 +139,12 @@ def check_disagg_by_src(dstore):
 #  ########################### task functions ############################ #
 
 
-def classical(srcs, sids, cmaker, monitor):
+def classical(srcs, sitecol, cmaker, monitor):
     """
     Read the sitecol and call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
-    sitecol = monitor.read('sitecol')
-    if sids is not None:  # tiling
-        sitecol = sitecol.filter(numpy.isin(sitecol.sids, sids))
     pmap = ProbabilityMap(
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
     pmap.fill(rup_indep)
@@ -505,14 +502,10 @@ class ClassicalCalculator(base.HazardCalculator):
         t0 = time.time()
         for t, tile in enumerate(tiles, 1):
             self.check_memory(len(tile), L, num_gs)
-            if len(tiles) > 1:
-                sids = tile.sids
-                smap = self.submit(sids, self.haz.cmakers, max_weight)
-            else:
-                sids = self.sitecol.sids
-                smap = self.submit(None, self.haz.cmakers, max_weight)
+            smap = self.submit(tile, self.haz.cmakers, max_weight)
             for cm in self.haz.cmakers:
-                acc[cm.grp_id] = ProbabilityMap(sids, L, len(cm.gsims)).fill(1)
+                acc[cm.grp_id] = ProbabilityMap(
+                    tile.sids, L, len(cm.gsims)).fill(1)
             smap.reduce(self.agg_dicts, acc)
             if len(tiles) > 1:
                 logging.info('Finished tile %d of %d', t, len(tiles))
@@ -547,20 +540,19 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.create_df('source_data', df)
         self.source_data.clear()  # save a bit of memory
 
-    def submit(self, sids, cmakers, max_weight):
+    def submit(self, tile, cmakers, max_weight):
         """
         :returns: a Starmap instance for the current tile
         """
         oq = self.oqparam
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        smap.monitor.save('sitecol', self.sitecol)
         triples = []
         for grp_id in self.grp_ids:
             sg = self.csm.src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups
-                trip = (sg, sids, cmakers[grp_id])
+                trip = (sg, tile, cmakers[grp_id])
                 triples.append(trip)
                 smap.submit(trip)
                 self.n_outs[grp_id] += 1
@@ -574,7 +566,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.debug(
                         'Sending %d source(s) with weight %d',
                         len(block), sum(src.weight for src in block))
-                    trip = (block, sids, cmakers[grp_id])
+                    trip = (block, tile, cmakers[grp_id])
                     triples.append(trip)
                     smap.submit(trip)
                     self.n_outs[grp_id] += 1
