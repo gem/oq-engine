@@ -453,8 +453,12 @@ class HazardCalculator(BaseCalculator):
                 'https://docs.openquake.org/oq-engine/advanced/general.html#'
                 'pointsource-distance')
         elif 'classical' in oq.calculation_mode:
-            logging.info('Using pointsource_distance=%s',
-                         oq.pointsource_distance)
+            if oq.ps_grid_spacing:
+                logging.info('Using pointsource_distance=%s + %d',
+                             oq.pointsource_distance, int(oq.ps_grid_spacing))
+            else:
+                logging.info('Using pointsource_distance=%s',
+                             oq.pointsource_distance)
 
     def read_inputs(self):
         """
@@ -779,7 +783,9 @@ class HazardCalculator(BaseCalculator):
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_crmodel()  # must be called first
-        if (not oq.imtls and 'shakemap' not in oq.inputs and 'ins_loss'
+        if oq.calculation_mode == 'aftershock':
+            haz_sitecol = None
+        elif (not oq.imtls and 'shakemap' not in oq.inputs and 'ins_loss'
                 not in oq.inputs and oq.ground_motion_fields):
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
