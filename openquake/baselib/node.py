@@ -661,7 +661,7 @@ def node_to_dict(node):
         else:
             try:
                 dic['value'] = float(node.text.strip())
-            except AttributeError:
+            except (ValueError, AttributeError):
                 dic = node.text
     if node.nodes:
         dic.update(_group([node_to_dict(n) for n in node]))
