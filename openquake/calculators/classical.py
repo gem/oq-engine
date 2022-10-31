@@ -546,7 +546,6 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        smap.monitor.save('sitecol', self.sitecol)
         triples = []
         for grp_id in self.grp_ids:
             sg = self.csm.src_groups[grp_id]
