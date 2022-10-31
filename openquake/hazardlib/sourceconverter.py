@@ -1383,6 +1383,8 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
+            [],
+            [],
             'MultiPoint', coords)
 
     def convert_simpleFaultSource(self, node):
@@ -1420,6 +1422,8 @@ class RowConverter(SourceConverter):
             numpy.nan,
             [{'rake': ~node.rake}],
             [],
+            [],
+            [],
             '3D MultiLineString', edges)
 
     def convert_characteristicFaultSource(self, node):
@@ -1447,6 +1451,8 @@ class RowConverter(SourceConverter):
             numpy.nan,
             numpy.nan,
             [{'rake': ~node.rake}],
+            [],
+            [],
             [],
             geom, coords, '')
 
