@@ -23,7 +23,7 @@ import numpy
 from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby
-from openquake.hazardlib.contexts import read_cmakers, get_maxsize
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup

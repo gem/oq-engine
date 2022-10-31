@@ -482,6 +482,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 return {}
             else:  # after preclassical, like in case_36
                 self.csm = parent['_csm']
+                self.oqparam.mags_by_trt = self.csm.get_mags_by_trt()
                 self.full_lt = parent['full_lt']
                 self.datastore['source_info'] = parent['source_info'][:]
                 mw = self.csm.get_max_weight(oq)
