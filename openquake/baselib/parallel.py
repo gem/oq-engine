@@ -699,7 +699,7 @@ class Starmap(object):
                 cls.pool = Pool(cls.num_cores, init_workers)
             except ImportError:
                 cls.pool = multiprocessing.get_context('spawn').Pool(
-                    cls.num_cores, init_workers)
+                    cls.num_cores, init_workers, maxtasksperchild=1)
                 cls.pids = [proc.pid for proc in cls.pool._pool]
             cls.shared = []
             # after spawning the processes restore the original handlers
