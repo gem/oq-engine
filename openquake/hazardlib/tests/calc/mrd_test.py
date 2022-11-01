@@ -31,7 +31,7 @@ from openquake.commonlib.datastore import read as dstore_read
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 
 PLOT = False
-LOG = True
+LOG = False
 CWD = os.path.dirname(__file__)
 
 
