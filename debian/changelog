@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Added a method to compute the mean rate density of two IMTs
+
   [Michele Simionato]
   * Added command `oq purge failed`
   * Fixed memory leak in the tiling calculator by resetting the ProcessPool
