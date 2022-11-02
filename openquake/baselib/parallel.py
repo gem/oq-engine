@@ -674,6 +674,7 @@ class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
     shared = []  # SharedArrays
+    maxtasksperchild = 1
     num_cores = int(config.distribution.get('num_cores', '0'))
     if not num_cores:
         # use only the "visible" cores, not the total system cores
@@ -699,7 +700,8 @@ class Starmap(object):
                 cls.pool = Pool(cls.num_cores, init_workers)
             except ImportError:
                 cls.pool = multiprocessing.get_context('spawn').Pool(
-                    cls.num_cores, init_workers, maxtasksperchild=1)
+                    cls.num_cores, init_workers,
+                    maxtasksperchild=cls.maxtasksperchild)
                 cls.pids = [proc.pid for proc in cls.pool._pool]
             cls.shared = []
             # after spawning the processes restore the original handlers

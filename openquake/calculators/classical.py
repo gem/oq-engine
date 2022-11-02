@@ -502,6 +502,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             tiles = [self.sitecol]
         if len(tiles) > 1:
+            mw /= 2  # produce more tasks
             sizes = [len(tile) for tile in tiles]
             logging.info('There are %d tiles of sizes %s', len(tiles), sizes)
             assert not oq.disagg_by_src, 'disagg_by_src with tiles'
