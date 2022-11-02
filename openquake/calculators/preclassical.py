@@ -74,7 +74,6 @@ def preclassical(srcs, sites, cmaker, monitor):
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
     """
-    assert sites is not None
     split_sources = []
     spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
