@@ -493,7 +493,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         num_gs = [len(cm.gsims) for cm in self.haz.cmakers]
         L = oq.imtls.size
-        max_gb = max(num_gs) * L * self.N * 8 // 1024**3
+        max_gb = max(num_gs) * L * self.N * 8 / 1024**3
         if max_gb > 1:  # split in tiles
             max_sites = min(numpy.ceil(self.N / max_gb), oq.max_sites_per_tile)
             tiles = self.sitecol.split_max(max_sites)

@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed parallel.Starmap to use maxtasksperchild=1 to fight memory leaks
   * Added command `oq purge failed`
   * Fixed memory leak in the tiling calculator by resetting the ProcessPool
   * Fixed an indexing error breaking the GMPE AtkinsonBoore2006 with
