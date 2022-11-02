@@ -179,11 +179,13 @@ class PreClassicalCalculator(base.HazardCalculator):
                                   if self.oqparam.split_sources else [src])
                 else:
                     others.append(src)
-            if self.oqparam.ps_grid_spacing:  # do not split the pointsources
-                smap.submit((pointsources, sites, cmakers[grp_id]))
-            else:
-                for block in block_splitter(pointsources, 1000):
-                    smap.submit((block, sites, cmakers[grp_id]))
+            if pointsources:
+                if self.oqparam.ps_grid_spacing:
+                    # do not split the pointsources
+                    smap.submit((pointsources, sites, cmakers[grp_id]))
+                else:
+                    for block in block_splitter(pointsources, 1000):
+                        smap.submit((block, sites, cmakers[grp_id]))
             for block in block_splitter(others, 20):
                 smap.submit((block, sites, cmakers[grp_id]))
         normal = smap.reduce()
