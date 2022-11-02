@@ -77,11 +77,15 @@ def preclassical(srcs, sites, cmaker, monitor):
     split_sources = []
     spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
-    multiplier = 1 + len(sites) // 10_000
-    sf = SourceFilter(sites, cmaker.maximum_distance).reduce(multiplier)
+    if sites:
+        multiplier = 1 + len(sites) // 10_000
+        sf = SourceFilter(sites, cmaker.maximum_distance).reduce(multiplier)
     for src in srcs:
-        # NB: this is approximate, since the sites are sampled
-        src.nsites = len(sf.close_sids(src))  # can be 0
+        if sites:
+            # NB: this is approximate, since the sites are sampled
+            src.nsites = len(sf.close_sids(src))  # can be 0
+        else:
+            src.nsites = 1
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
         splits = split_source(src) if (
