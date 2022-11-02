@@ -656,7 +656,7 @@ def node_to_dict(node):
     if isinstance(node.text, str) and node.text.strip() == '':
         pass
     elif node.text is not None:
-        if 'attrib' in dic or not node.nodes:
+        if node.attrib:
             dic['text'] = node.text
         else:
             dic = node.text
