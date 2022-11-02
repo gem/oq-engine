@@ -69,9 +69,25 @@ def collapse_nphc(src):
         src.magnitude_scaling_relationship = PointMSR()
 
 
-# group together consistent point sources (same group, same msr)
-def same_key(src):
-    return (src.grp_id, msr_name(src))
+def count_split(srcs, sites, cmaker, monitor):
+    """
+    Count the ruptures and split the sources if split_sources is true.
+    """
+    assert sites is None
+    split_sources = []
+    grp_id = srcs[0].grp_id
+    # in aftershock calculations just split and count the ruptures
+    for src in srcs:
+        ss = split_source(src) if cmaker.split_sources else [src]
+        if len(ss) > 1:
+            for ss_ in ss:
+                ss_.nsites = 1
+        split_sources.extend(ss)
+        src.num_ruptures = src.count_ruptures()
+    dic = {grp_id: split_sources}
+    dic['before'] = len(srcs)
+    dic['after'] = len(split_sources)
+    return dic
 
 
 def preclassical(srcs, sites, cmaker, monitor):
@@ -79,43 +95,37 @@ def preclassical(srcs, sites, cmaker, monitor):
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
     """
+    assert sites is not None
     split_sources = []
     spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
-    if sites is None:
-        # in aftershock calculations just split and count the ruptures
-        for src in srcs:
-            ss = split_source(src) if cmaker.split_sources else [src]
-            if len(ss) > 1:
-                for ss_ in ss:
-                    ss_.nsites = 1
-            split_sources.extend(ss)
-            src.num_ruptures = src.count_ruptures()
+    multiplier = 1 + len(sites) // 10_000
+    sf = SourceFilter(sites, cmaker.maximum_distance).reduce(multiplier)
+    for src in srcs:
+        # NB: this is approximate, since the sites are sampled
+        src.nsites = len(sf.close_sids(src))  # can be 0
+        # NB: it is crucial to split only the close sources, for
+        # performance reasons (think of Ecuador in SAM)
+        splits = split_source(src) if (
+            cmaker.split_sources and src.nsites) else [src]
+        for ss in splits:
+            ss.num_ruptures = ss.count_ruptures()
+        split_sources.extend(splits)
+    if spacing:
+        for msr, block in groupby(split_sources, msr_name).items():
+            dic = grid_point_sources(block, spacing, monitor)
+            # this is also prefiltering the split sources
+            mon = monitor('weighting sources', measuremem=False)
+            cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
+            # print(mon.duration, [s.source_id for s in dic[grp_id]])
+            dic['before'] = len(block)
+            dic['after'] = len(dic[grp_id])
+            yield dic
+    else:
         dic = {grp_id: split_sources}
         dic['before'] = len(srcs)
-        dic['after'] = len(dic[grp_id])
-        return dic
-
-    sf = SourceFilter(sites, cmaker.maximum_distance)
-    multiplier = 1 + len(sites) // 10_000
-    sf = sf.reduce(multiplier)
-    with monitor('filtering/splitting'):
-        for src in srcs:
-            # NB: this is approximate, since the sites are sampled
-            src.nsites = len(sf.close_sids(src))  # can be 0
-            # NB: it is crucial to split only the close sources, for
-            # performance reasons (think of Ecuador in SAM)
-            splits = split_source(src) if (
-                cmaker.split_sources and src.nsites) else [src]
-            split_sources.extend(splits)
-    dic = grid_point_sources(split_sources, spacing, monitor)
-    # this is also prefiltering the split sources
-    mon = monitor('weighting sources', measuremem=False)
-    cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
-    # print(mon.duration, [s.source_id for s in dic[grp_id]])
-    dic['before'] = len(split_sources)
-    dic['after'] = len(dic[grp_id])
-    return dic
+        dic['after'] = len(split_sources)
+        yield dic
 
 
 @base.calculators.add('preclassical')
@@ -172,12 +182,15 @@ class PreClassicalCalculator(base.HazardCalculator):
                 normal_sources.extend(sg)
 
         # run preclassical for non-atomic sources
-        sources_by_key = groupby(normal_sources, same_key)
+        sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
         self.datastore.hdf5['full_lt'] = csm.full_lt
         logging.info('Starting preclassical')
         self.datastore.swmr_on()
-        smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
-        for (grp_id, msr), srcs in sources_by_key.items():
+        if self.sitecol is None:
+            smap = parallel.Starmap(count_split, h5=self.datastore.hdf5)
+        else:
+            smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
+        for grp_id, srcs in sources_by_key.items():
             pointsources, pointlike, others = [], [], []
             for src in srcs:
                 if hasattr(src, 'location'):
@@ -191,16 +204,15 @@ class PreClassicalCalculator(base.HazardCalculator):
                     others.append(src)
             if self.oqparam.ps_grid_spacing:
                 if pointsources or pointlike:
-                    smap.submit(
-                        (pointsources + pointlike, sites, cmakers[grp_id]))
+                    smap.submit((pointsources + pointlike,
+                                 sites, cmakers[grp_id]))
             else:
                 if pointsources:
-                    smap.submit_split(
-                        (pointsources, sites, cmakers[grp_id]), 10, 160)
+                    smap.submit((pointsources, sites, cmakers[grp_id]))
                 for src in pointlike:  # area, multipoint
                     smap.submit(([src], sites, cmakers[grp_id]))
             if others:
-                smap.submit_split((others, sites, cmakers[grp_id]), 10, 160)
+                smap.submit((others, sites, cmakers[grp_id]))
         normal = smap.reduce()
         if atomic_sources:  # case_35
             n = len(atomic_sources)
