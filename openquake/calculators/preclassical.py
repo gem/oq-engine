@@ -69,27 +69,6 @@ def collapse_nphc(src):
         src.magnitude_scaling_relationship = PointMSR()
 
 
-def count_split(srcs, sites, cmaker, monitor):
-    """
-    Count the ruptures and split the sources if split_sources is true.
-    """
-    assert sites is None
-    split_sources = []
-    grp_id = srcs[0].grp_id
-    # in aftershock calculations just split and count the ruptures
-    for src in srcs:
-        ss = split_source(src) if cmaker.split_sources else [src]
-        if len(ss) > 1:
-            for ss_ in ss:
-                ss_.nsites = 1
-        split_sources.extend(ss)
-        src.num_ruptures = src.count_ruptures()
-    dic = {grp_id: split_sources}
-    dic['before'] = len(srcs)
-    dic['after'] = len(split_sources)
-    return dic
-
-
 def preclassical(srcs, sites, cmaker, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
@@ -111,9 +90,16 @@ def preclassical(srcs, sites, cmaker, monitor):
         for ss in splits:
             ss.num_ruptures = ss.count_ruptures()
         split_sources.extend(splits)
-    if spacing:
+    if sites is None or spacing == 0:
+        dic = {grp_id: split_sources}
+        dic['before'] = len(srcs)
+        dic['after'] = len(split_sources)
+        yield dic
+    else:
         for msr, block in groupby(split_sources, msr_name).items():
             dic = grid_point_sources(block, spacing, monitor)
+            for src in dic[grp_id]:
+                src.num_ruptures = src.count_ruptures()
             # this is also prefiltering the split sources
             mon = monitor('weighting sources', measuremem=False)
             cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
@@ -121,11 +107,6 @@ def preclassical(srcs, sites, cmaker, monitor):
             dic['before'] = len(block)
             dic['after'] = len(dic[grp_id])
             yield dic
-    else:
-        dic = {grp_id: split_sources}
-        dic['before'] = len(srcs)
-        dic['after'] = len(split_sources)
-        yield dic
 
 
 @base.calculators.add('preclassical')
@@ -186,10 +167,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.datastore.hdf5['full_lt'] = csm.full_lt
         logging.info('Starting preclassical')
         self.datastore.swmr_on()
-        if self.sitecol is None:
-            smap = parallel.Starmap(count_split, h5=self.datastore.hdf5)
-        else:
-            smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
+        smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
             pointsources, pointlike, others = [], [], []
             for src in srcs:
