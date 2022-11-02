@@ -22,7 +22,7 @@ import operator
 import numpy
 from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
-from openquake.baselib.general import AccumDict, groupby
+from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
@@ -175,22 +175,12 @@ class PreClassicalCalculator(base.HazardCalculator):
                     pointsources.append(src)
                 elif hasattr(src, 'nodal_plane_distribution'):
                     pointlike.append(src)
-                elif src.code in b'FN':  # multifault, nonparametric
-                    others.extend(split_source(src)
-                                  if self.oqparam.split_sources else [src])
                 else:
                     others.append(src)
-            if self.oqparam.ps_grid_spacing:
-                if pointsources or pointlike:
-                    smap.submit((pointsources + pointlike,
-                                 sites, cmakers[grp_id]))
-            else:
-                if pointsources:
-                    smap.submit((pointsources, sites, cmakers[grp_id]))
-                for src in pointlike:  # area, multipoint
-                    smap.submit(([src], sites, cmakers[grp_id]))
-            if others:
-                smap.submit((others, sites, cmakers[grp_id]))
+            for block in block_splitter(pointsources, 1000):
+                smap.submit((block, sites, cmakers[grp_id]))
+            for src in pointlike + others:  # area, multipoint
+                smap.submit(([src], sites, cmakers[grp_id]))
         normal = smap.reduce()
         if atomic_sources:  # case_35
             n = len(atomic_sources)
