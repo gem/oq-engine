@@ -47,7 +47,7 @@ from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, pmf, gsim_lt)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
-from openquake.risklib import asset, riskmodels, scientific
+from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.source_reader import get_csm
@@ -516,6 +516,8 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
+    if oqparam.calculation_mode == 'aftershock':
+        return
     ss = oqparam.sites_slice  # can be None or (start, stop)
     if h5 and 'sitecol' in h5 and not ss:
         return h5['sitecol']
@@ -1045,8 +1047,9 @@ def _taxonomy_mapping(filename, taxonomies):
     taxonomies = taxonomies[1:]  # strip '?'
     missing = set(taxonomies) - set(dic)
     if missing:
-        raise InvalidFile('The taxonomy strings %s are in the exposure but not in '
-                          'the taxonomy mapping file %s' % (missing, filename))
+        raise InvalidFile(
+            'The taxonomy strings %s are in the exposure but not in '
+            'the taxonomy mapping file %s' % (missing, filename))
     lst = [[("?", 1)]]
     for taxo in taxonomies:
         recs = dic[taxo]
@@ -1077,8 +1080,9 @@ def get_pmap_from_csv(oqparam, fnames):
     oqparam.set_risk_imts(get_risk_functions(oqparam))
     array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])
-    num_levels = sum(len(imls) for imls in oqparam.imtls.values())
-    data = numpy.zeros((len(mesh), num_levels))
+    N = len(mesh)
+    L = sum(len(imls) for imls in oqparam.imtls.values())
+    data = numpy.zeros((N, L))
     level = 0
     for im in oqparam.imtls:
         arr = dic[im]
@@ -1087,7 +1091,9 @@ def get_pmap_from_csv(oqparam, fnames):
             level += 1
         for field in ('lon', 'lat', 'depth'):  # sanity check
             numpy.testing.assert_equal(arr[field], array[field])
-    return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
+    pmap = ProbabilityMap(numpy.arange(N, dtype=U32), len(data), 1)
+    pmap.array = data.reshape(N, L, 1)
+    return mesh, pmap
 
 
 tag2code = {'multiFaultSource': b'F',
@@ -1204,6 +1210,21 @@ def get_shapefiles(dirname):
     return out
 
 
+def get_reinsurance(oqparam, assetcol=None):
+    """
+    :returns: (policy_df, treaty_df, field_map)
+    """
+    if assetcol is None:
+        sitecol, assetcol, discarded = get_sitecol_assetcol(oqparam)
+    [(loss_type, fname)] = oqparam.inputs['reinsurance'].items()
+    # make sure the first aggregate by is policy
+    if oqparam.aggregate_by[0] != ['policy']:
+        raise InvalidFile('%s: aggregate_by=%s' %
+                          (fname, oqparam.aggregate_by))
+    [(key, fname)] = oqparam.inputs['reinsurance'].items()
+    return reinsurance.parse(fname, assetcol.tagcol.policy_idx)
+
+
 def get_input_files(oqparam):
     """
     :param oqparam: an OqParam instance
@@ -1306,4 +1327,3 @@ def get_checksum32(oqparam, h5=None):
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum
-

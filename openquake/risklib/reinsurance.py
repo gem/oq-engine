@@ -41,14 +41,76 @@ KNOWN_LOSS_TYPES = {
 DEBUG = False
 
 
-def check_fields(fields, dframe, idxdict, fname):
+def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
+                 treaty_types):
     """
     :param fields: fields to check (the first field is the primary key)
     :param dframe: DataFrame with the contents of fname
     :param idxdict: dictionary key -> index (starting from 1)
-    :param fname: file containing the fields to check
+    :param fname: file xml containing the fields to check
+    :param policyfname: file csv containing the fields to check
+    :param treaties: treaty names
+    :param treaty_types: treaty types
     """
     key = fields[0]
+    [indices] = np.where(dframe.duplicated(subset=[key]).to_numpy())
+    if len(indices) > 0:
+        # NOTE: reporting only the first row found
+        raise InvalidFile(
+            '%s (row %d): a duplicate %s was found: "%s"' % (
+                policyfname, indices[0] + 2, key, dframe[key][indices[0]]))
+    for treaty in treaties:
+        if treaty not in dframe.columns:
+            raise InvalidFile(f'{policyfname}: {treaty} is missing')
+    policies_from_exposure = list(idxdict)[1:]  # discard '?'
+    policies_from_csv = list(dframe.policy)
+    [indices] = np.where(~np.isin(policies_from_exposure, policies_from_csv))
+    if len(indices) > 0:
+        # NOTE: reporting only the first missing policy
+        first_missing_policy = policies_from_exposure[indices[0]]
+        raise InvalidFile(
+            f'{policyfname}: policy "{first_missing_policy}" is missing')
+    [indices] = np.where(dframe.liability.to_numpy() < 0)
+    if len(indices) > 0:
+        # NOTE: reporting only the first row found
+        raise InvalidFile(
+            '%s (row %d): a negative liability was found' % (
+                policyfname, indices[0] + 2))
+    [indices] = np.where(dframe.deductible.to_numpy() < 0)
+    if len(indices) > 0:
+        # NOTE: reporting only the first row found
+        raise InvalidFile(
+            '%s (row %d): a negative deductible was found' % (
+                policyfname, indices[0] + 2))
+    prop_treaties = []
+    for treaty, treaty_type in zip(treaties, treaty_types):
+        if treaty_type == 'prop':
+            prop_treaties.append(treaty)
+        else:
+            [indices] = np.where(~dframe[treaty].isin([0, 1]).to_numpy())
+            if len(indices) > 0:
+                # NOTE: reporting only the first row found
+                raise InvalidFile(
+                    '%s (row %d): values for %s must be either 0 or 1' % (
+                        policyfname, indices[0] + 2, treaty))
+    sums = np.zeros(len(dframe))
+    for prop_treaty in prop_treaties:
+        fractions = dframe[prop_treaty].to_numpy()
+        [indices] = np.where(np.logical_or(fractions < 0, fractions > 1))
+        if len(indices) > 0:
+            # NOTE: there is at least 1 row with invalid fraction. The error
+            # shows the first of them
+            raise InvalidFile(
+                '%s (row %d): proportional fraction for treaty "%s", %s, is'
+                ' not >= 0 and <= 1' % (policyfname, indices[0] + 2,
+                                        prop_treaty, fractions[indices[0]]))
+        sums += dframe[prop_treaty].to_numpy()
+    for i, treaty_sum in enumerate(sums):
+        if not 0 <= treaty_sum <= 1:
+            raise InvalidFile(
+                '%s (row %d): the sum of proportional fractions is %s.'
+                ' It must be >= 0 and <= 1' % (
+                    policyfname, i+2, np.round(treaty_sum, 5)))
     idx = [idxdict[name] for name in dframe[key]]  # indices starting from 1
     dframe[key] = idx
     for no, field in enumerate(fields):
@@ -78,7 +140,7 @@ def check_fractions(colnames, colvalues, fname):
 
 def parse(fname, policy_idx):
     """
-    :param fname: CSV file containing the policies
+    :param fname: XML file containing the treaties metadata
     :param policy_idx: dictionary policy name -> policy index
 
     Parse a reinsurance.xml file and returns
@@ -98,7 +160,11 @@ def parse(fname, policy_idx):
             fieldmap[node['input']] = col
             continue
         treaty_type = node.get('type', 'prop')
-        assert treaty_type in ('prop', 'wxlr', 'catxl'), treaty_type
+        valid_treaty_types = ('prop', 'wxlr', 'catxl')
+        if treaty_type not in valid_treaty_types:
+            raise InvalidFile(
+                "%s: valid treaty types are %s. '%s' was found instead" % (
+                fname, valid_treaty_types, treaty_type))
         if treaty_type == 'prop':
             limit = node.get('max_cession_event', NOLIMIT)
             deduc = 0
@@ -114,7 +180,8 @@ def parse(fname, policy_idx):
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
-    check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname)
+    check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname,
+                 policyfname, treaty['id'], treaty['type'])
 
     # validate policy input
     for col in nonprop:

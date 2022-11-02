@@ -113,7 +113,6 @@ def main(job_ini,
         job.params['exports'] = ','.join(exports)
     run_jobs(jobs)
 
-
 main.job_ini = dict(help='calculation configuration file '
                     '(or files, space-separated)', nargs='+')
 main.pdb = dict(help='enable post mortem debugging', abbrev='-d')

@@ -754,7 +754,8 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
-ALL_CALCULATORS = ['classical_risk',
+ALL_CALCULATORS = ['aftershock',
+                   'classical_risk',
                    'classical_damage',
                    'classical',
                    'custom',
@@ -1263,8 +1264,9 @@ class OqParam(valid.ParamSet):
             else:
                 imts.add(im.string)
         for gsim in gsims:
-            if hasattr(gsim, 'weight'):  # disable the check
-                continue
+            if (hasattr(gsim, 'weight') or
+                    self.calculation_mode == 'aftershock'):
+                continue  # disable the check
             restrict_imts = gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES
             if restrict_imts:
                 names = set(cls.__name__ for cls in restrict_imts)
@@ -1665,8 +1667,8 @@ class OqParam(valid.ParamSet):
         one of sites, sites_csv, hazard_curves_csv, region is set.
         You did set more than one, or nothing.
         """
-        if self.calculation_mode == 'preclassical':  # disable the check
-            return True
+        if self.calculation_mode in ('preclassical', 'aftershock'):
+            return True  # disable the check
         if 'hazard_curves' in self.inputs and (
                 self.sites is not None or 'sites' in self.inputs
                 or 'site_model' in self.inputs):
@@ -1706,7 +1708,7 @@ class OqParam(valid.ParamSet):
         Invalid maximum_distance={maximum_distance}: {error}
         """
         if 'gsim_logic_tree' not in self.inputs:
-            return True  # don't apply validation
+            return True  # disable the check
         gsim_lt = self.inputs['gsim_logic_tree']
         trts = set(self.maximum_distance)
         unknown = ', '.join(trts - self._trts - {'default'})
@@ -1844,7 +1846,9 @@ class OqParam(valid.ParamSet):
             raise ValueError('aggregate_by = site_id must contain a single tag')
         elif 'reinsurance' in self.inputs:
             if not any(['policy'] == aggby for aggby in self.aggregate_by):
-                raise ValueError('missing aggregate_by=policy')
+                raise InvalidFile(
+                    '%s: expected aggregate_by=policy; got %s' % (
+                        self.inputs['job_ini'], self.aggregate_by))
         return True
 
     def check_reinsurance(self):
@@ -1853,8 +1857,8 @@ class OqParam(valid.ParamSet):
         try:
             [lt] = dic
         except ValueError:
-            raise InvalidFile('%s: invalid reinsurance %s'
-                              % (self.inputs['job_ini'], dic))
+            raise InvalidFile('%s: too many loss types in reinsurance %s'
+                              % (self.inputs['job_ini'], list(dic)))
         if lt not in scientific.LOSSID:
             raise InvalidFile('%s: unknown loss type %s in reinsurance'
                               % (self.inputs['job_ini'], lt))

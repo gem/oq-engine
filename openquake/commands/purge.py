@@ -18,6 +18,7 @@
 import os
 import re
 import getpass
+from openquake.baselib.general import humansize
 from openquake.commonlib import logs, datastore
 
 datadir = datastore.get_datadir()
@@ -46,17 +47,47 @@ def purge_all(user=None):
         for fname in os.listdir(datadir):
             if fname.endswith('.pik'):
                 os.remove(os.path.join(datadir, fname))
-            mo = re.match(r'(calc_|cache_)(\d+)\.hdf5', fname)
+            mo = re.match(r'calc_(\d+)(_tmp)?\.hdf5', fname)
             if mo is not None:
-                calc_id = int(mo.group(2))
+                calc_id = int(mo.group(1))
                 purge_one(calc_id, user, force=True)
 
 
-def main(calc_id: int, force=False):
+def purge_failed(force):
     """
-    Remove the given calculation. If you want to remove all calculations,
-    use oq reset.
+    Remove all failed calculations older than 1 day
     """
+    rows = logs.dbcmd(
+        'SELECT id, ds_calc_dir || ".hdf5" FROM job '
+        'WHERE status NOT IN ("complete", "running")'
+        "AND start_time < datetime('now', '-1 days')")
+    todelete = []
+    totsize = 0
+    for calc_id, fname in rows:
+        if os.path.exists(fname) and os.access(fname, os.W_OK):
+            todelete.append(fname)
+            totsize += os.path.getsize(fname)
+            tname = fname.replace('.hdf5', '_tmp.hdf5')
+            if os.path.exists(tname) and os.access(tname, os.W_OK):
+                todelete.append(tname)
+                totsize += os.path.getsize(tname)
+    size = humansize(totsize)
+    for fname in todelete:
+        print(fname)
+        if force:
+            os.remove(fname)
+    print('Processed %d HDF5 files, %s' % (len(todelete), size))
+
+    
+def main(what, force=False):
+    """
+    Remove calculations from the file system.
+    If you want to remove everything,  use oq reset.
+    """
+    if what == 'failed':
+        purge_failed(force)
+        return
+    calc_id = int(what)
     if calc_id < 0:
         try:
             calc_id = datastore.get_calc_ids(datadir)[calc_id]
@@ -66,5 +97,5 @@ def main(calc_id: int, force=False):
     purge_one(calc_id, getpass.getuser(), force)
 
 
-main.calc_id = 'calculation ID'
+main.what = 'a calculation ID or the string "failed"'
 main.force = 'ignore dependent calculations'
