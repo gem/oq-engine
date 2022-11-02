@@ -169,18 +169,18 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
-            pointsources, pointlike, others = [], [], []
+            pointsources, others = [], []
             for src in srcs:
                 if hasattr(src, 'location'):
                     pointsources.append(src)
-                elif hasattr(src, 'nodal_plane_distribution'):
-                    pointlike.append(src)
                 else:
                     others.append(src)
             for block in block_splitter(pointsources, 1000):
+                print(grp_id, '===', len(block))
                 smap.submit((block, sites, cmakers[grp_id]))
-            for src in pointlike + others:  # area, multipoint
-                smap.submit(([src], sites, cmakers[grp_id]))
+            for block in block_splitter(others, 20):
+                print(grp_id, len(block))
+                smap.submit((block, sites, cmakers[grp_id]))
         normal = smap.reduce()
         if atomic_sources:  # case_35
             n = len(atomic_sources)
