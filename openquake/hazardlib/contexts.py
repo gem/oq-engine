@@ -1113,7 +1113,6 @@ class ContextMaker(object):
         N = len(srcfilter.sitecol)
         G = len(self.gsims)
         for src in sources:
-            src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
                 src.esites = 0

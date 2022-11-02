@@ -420,12 +420,14 @@ class CollapsedPointSource(PointSource):
         return sum(src.count_ruptures() for src in self.pointsources)
 
 
-def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
+def grid_point_sources(sources, ps_grid_spacing, msr, monitor=Monitor()):
     """
     :param sources:
         a list of sources with the same grp_id (point sources and not)
     :param ps_grid_spacing:
         value of the point source grid spacing in km; if None, do nothing
+    :param msr:
+         magnitude scaling relationship as a string
     :returns:
         a dict grp_id -> list of non-point sources and collapsed point sources
     """
@@ -453,7 +455,8 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
     task_no = getattr(monitor, 'task_no', 0)
     for i, idxs in enumerate(grid.values()):
         if len(idxs) > 1:
-            cps = CollapsedPointSource('cps-%d-%d' % (task_no, i), ps[idxs])
+            name = 'cps-%s-%d-%d' % (msr, task_no, i)
+            cps = CollapsedPointSource(name, ps[idxs])
             cps.grp_id = ps[0].grp_id
             cps.trt_smr = ps[0].trt_smr
             cps.ps_grid_spacing = ps_grid_spacing
