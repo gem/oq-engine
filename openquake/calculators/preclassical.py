@@ -170,22 +170,26 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
-            pointsources, others = [], []
+            pointsources, pointlike, others = [], [], []
             for src in srcs:
                 if hasattr(src, 'location'):
                     pointsources.append(src)
+                elif hasattr(src, 'nodal_plane_distribution'):
+                    pointlike.append(src)
                 elif src.code in b'FN':  # split multifault, nonparametric
                     others.extend(split_source(src)
                                   if self.oqparam.split_sources else [src])
                 else:
                     others.append(src)
-            if pointsources:
+            if pointsources or pointlike:
                 if self.oqparam.ps_grid_spacing:
                     # do not split the pointsources
-                    smap.submit((pointsources, sites, cmakers[grp_id]))
+                    smap.submit(
+                        (pointsources + pointlike, sites, cmakers[grp_id]))
                 else:
                     for block in block_splitter(pointsources, 1000):
                         smap.submit((block, sites, cmakers[grp_id]))
+                    others.extend(pointlike)
             for block in block_splitter(others, 20):
                 smap.submit((block, sites, cmakers[grp_id]))
         normal = smap.reduce()
