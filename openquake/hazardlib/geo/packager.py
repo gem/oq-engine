@@ -63,7 +63,6 @@ def build_nodes(props):
     hyl = ast.literal_eval(props['hypoList'])
     hyl = Node('hypoList', nodes=[Node('hypo', dic)
                                   for dic in hyl])
-
     sll = ast.literal_eval(props['slipList'])
     sll_nodes = [
         Node('slip',
