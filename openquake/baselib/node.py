@@ -656,13 +656,10 @@ def node_to_dict(node):
     if isinstance(node.text, str) and node.text.strip() == '':
         pass
     elif node.text is not None:
-        if 'attrib' in dic:
+        if 'attrib' in dic or not node.nodes:
             dic['text'] = node.text
         else:
-            try:
-                dic['value'] = float(node.text.strip())
-            except (ValueError, AttributeError):
-                dic = node.text
+            dic = node.text
     if node.nodes:
         dic.update(_group([node_to_dict(n) for n in node]))
     return {tag: dic}

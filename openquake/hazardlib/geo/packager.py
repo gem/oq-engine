@@ -65,13 +65,12 @@ def build_nodes(props):
                                   for dic in hyl])
 
     sll = ast.literal_eval(props['slipList'])
-    sll = [{k.replace('_', ''): v for k, v in sl.items()}
-           for sl in sll]
-    sll = Node('slipList',
-               nodes=[Node('slip',
-                           {k: v for k, v in sl.items() if k != 'value'},
-                           text=sl['value'])
-                      for sl in sll])
+    sll_nodes = [
+        Node('slip',
+             {k.replace('_', ''): v for k, v in sl.items() if k != 'text'},
+             text=sl['text'])
+        for sl in sll]
+    sll = Node('slipList', nodes=sll_nodes)
     return msr, rar, mfd, npd, hdd, hyl, sll
 
 

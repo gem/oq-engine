@@ -1346,6 +1346,7 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
+            # FIXME: convert_hypolist and convert_sliplist?
             [],
             [],
             'Polygon', [coords])
@@ -1364,6 +1365,7 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
+            # FIXME: convert_hypolist and convert_sliplist?
             [],
             [],
             'Point', ~geom.Point.pos)
@@ -1383,6 +1385,7 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
+            # FIXME: convert_hypolist and convert_sliplist?
             [],
             [],
             'MultiPoint', coords)
@@ -1422,6 +1425,7 @@ class RowConverter(SourceConverter):
             numpy.nan,
             [{'rake': ~node.rake}],
             [],
+            # FIXME: convert_hypolist and convert_sliplist?
             [],
             [],
             '3D MultiLineString', edges)
@@ -1452,6 +1456,7 @@ class RowConverter(SourceConverter):
             numpy.nan,
             [{'rake': ~node.rake}],
             [],
+            # FIXME: convert_hypolist and convert_sliplist?
             [],
             [],
             geom, coords, '')
