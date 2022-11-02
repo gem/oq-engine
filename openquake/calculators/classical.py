@@ -491,10 +491,16 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
-        # only groups generating more than 1 task preallocate memory
-        num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)]
+        num_gs = [len(cm.gsims) for cm in self.haz.cmakers]
         L = oq.imtls.size
-        tiles = self.sitecol.split_max(oq.max_sites_per_tile)
+        max_gb = max(num_gs) * L * self.N * 8 // 1024**3
+        if max_gb > 1:  # split in tiles
+            max_sites = min(numpy.ceil(self.N / max_gb), oq.max_sites_per_tile)
+            tiles = self.sitecol.split_max(max_sites)
+        elif oq.max_sites_per_tile < self.N:
+            tiles = self.sitecol.split_max(oq.max_sites_per_tile)
+        else:
+            tiles = [self.sitecol]
         if len(tiles) > 1:
             sizes = [len(tile) for tile in tiles]
             logging.info('There are %d tiles of sizes %s', len(tiles), sizes)
@@ -513,6 +519,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 if sg.atomic or sg.weight <= mw:
                     smap.submit((sg, tile, cm))
                 else:
+                    # only groups generating more than 1 task preallocate memory
                     acc[cm.grp_id] = ProbabilityMap(
                         tile.sids, L, len(cm.gsims)).fill(1)
                     blks = (groupby(sg, basename).values() if oq.disagg_by_src
@@ -525,7 +532,6 @@ class ClassicalCalculator(base.HazardCalculator):
             smap.reduce(self.agg_dicts, acc)
             if len(tiles) > 1:
                 logging.info('Finished tile %d of %d', t, len(tiles))
-                parallel.Starmap.shutdown()
         self.store_info()
         self.haz.store_disagg(acc)
         if self.cfactor[0] == 0:
