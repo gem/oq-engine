@@ -176,10 +176,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                 else:
                     others.append(src)
             for block in block_splitter(pointsources, 1000):
-                print(grp_id, '===', len(block))
                 smap.submit((block, sites, cmakers[grp_id]))
             for block in block_splitter(others, 20):
-                print(grp_id, len(block))
                 smap.submit((block, sites, cmakers[grp_id]))
         normal = smap.reduce()
         if atomic_sources:  # case_35
