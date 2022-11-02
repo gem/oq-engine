@@ -97,7 +97,7 @@ def preclassical(srcs, sites, cmaker, monitor):
         yield dic
     else:
         for msr, block in groupby(split_sources, msr_name).items():
-            dic = grid_point_sources(block, spacing, monitor)
+            dic = grid_point_sources(block, spacing, msr, monitor)
             for src in dic[grp_id]:
                 src.num_ruptures = src.count_ruptures()
             # this is also prefiltering the split sources
