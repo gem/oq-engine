@@ -495,7 +495,10 @@ class CompositeSourceModel:
         for srcs in general.groupby(self.get_sources(), basename).values():
             offset = 0
             if len(srcs) > 1:  # order by split number
-                srcs.sort(key=fragmentno)
+                try:
+                    srcs.sort(key=fragmentno)
+                except:
+                    import pdb; pdb.set_trace()
             for src in srcs:
                 src.offset = offset
                 offset += src.num_ruptures
