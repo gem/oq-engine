@@ -142,19 +142,20 @@ def example_calc(apply):
         Site(Point(30.4, 30.4), 760., 1.0, 1.0)])
     mfd_1 = TruncatedGRMFD(4.5, 8.0, 0.1, 4.0, 1.0)
     mfd_2 = TruncatedGRMFD(4.5, 7.5, 0.1, 3.5, 1.1)
-    sources = [PointSource('001', 'Point1', 'Active Shallow Crust',
+    trt = 'Active Shallow Crust'
+    sources = [PointSource('001', 'Point1', trt,
                            mfd_1, 1.0, WC1994(), 1.0, PoissonTOM(50.0),
                            0.0, 30.0, Point(30.0, 30.5),
                            PMF([(1.0, NodalPlane(0.0, 90.0, 0.0))]),
                            PMF([(1.0, 10.0)])),
-               PointSource('002', 'Point2', 'Active Shallow Crust',
+               PointSource('002', 'Point2', trt,
                            mfd_2, 1.0, WC1994(), 1.0, PoissonTOM(50.0),
                            0.0, 30.0, Point(30.0, 30.5),
                            PMF([(1.0, NodalPlane(0.0, 90.0, 0.0))]),
                            PMF([(1.0, 10.0)]))]
     imtls = {'PGA': [0.01, 0.1, 0.2, 0.5, 0.8],
              'SA(0.5)': [0.01, 0.1, 0.2, 0.5, 0.8]}
-    gsims = {'Active Shallow Crust': AkkarBommer2010()}
+    gsims = {trt: AkkarBommer2010()}
     return calc_hazard_curves(sources, sitecol, imtls, gsims, apply=apply)
 
 

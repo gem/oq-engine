@@ -11,8 +11,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        python-version: [3.9]
+        os: [ubuntu-22.04]
+        python-version: ["3.10"]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -34,7 +34,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: [3.8]
+        python-version: ["3.10"]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -43,11 +43,10 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip wheel
-        pip install pyshp
-        pip install pytest
-        pip install -r requirements-py38-linux64.txt && pip install -e .
+        python install.py devel
     - name: hazardlib tests
       run: |
+        source ~/openquake/bin/activate
+        pip install pyshp pytest
         oq dbserver start
         cd openquake && pytest -x --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib server commonlib baselib

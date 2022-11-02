@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <logicTree logicTreeID="US14_all_excl_cali">
+    <logicTreeBranchSet
+        applyToTectonicRegionType="Stable Shallow Faults"
+        branchSetID="ceus_flt"
+        uncertaintyType="gmpeModel">
+      <logicTreeBranch branchID="F96f">
+        <uncertaintyModel>FrankelEtAl1996MwNSHMP2008</uncertaintyModel>
+        <uncertaintyWeight>1</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>

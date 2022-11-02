@@ -30,7 +30,7 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, gen_slices, kmean, block_splitter)
-from openquake.baselib.performance import Monitor, split_array, compile, numba
+from openquake.baselib.performance import Monitor, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -51,7 +51,7 @@ TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
-MAX_MB = 512
+MAX_MB = 100
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
@@ -111,42 +111,6 @@ def get_maxsize(M, G):
     return maxs
 
 
-# numbified below
-def update_pmap_n(dic, poes, rates, probs_occur, sids, itime):
-    for poe, rate, probs, sid in zip(poes, rates, probs_occur, sids):
-        dic[sid] *= get_pnes(rate, probs, poe, itime)
-
-
-# numbified below
-def update_pmap_c(dic, poes, rates, probs_occur, allsids, sizes, itime):
-    start = 0
-    for poe, rate, probs, size in zip(poes, rates, probs_occur, sizes):
-        pne = get_pnes(rate, probs, poe, itime)
-        for sid in allsids[start:start + size]:
-            dic[sid] *= pne
-        start += size
-
-
-if numba:
-    t = numba.types
-    sig = t.void(t.DictType(t.uint32, t.float64[:, :]),  # dic
-                 t.float64[:, :, :],                     # poes
-                 t.float64[:],                           # rates
-                 t.float64[:, :],                        # probs_occur
-                 t.uint32[:],                            # sids
-                 t.float64)                              # itime
-    update_pmap_n = compile(sig)(update_pmap_n)
-
-    sig = t.void(t.DictType(t.uint32, t.float64[:, :]),  # dic
-                 t.float64[:, :, :],                     # poes
-                 t.float64[:],                           # rates
-                 t.float64[:, :],                        # probs_occur
-                 t.uint32[:],                            # allsids
-                 t.uint32[:],                            # sizes
-                 t.float64)                              # itime
-    update_pmap_c = compile(sig)(update_pmap_c)
-
-
 def size(imtls):
     """
     :returns: size of the dictionary of arrays imtls
@@ -191,6 +155,18 @@ def sqrscale(x_min, x_max, n):
                          (x_max, x_min))
     delta = numpy.sqrt(x_max - x_min) / (n - 1)
     return x_min + (delta * numpy.arange(n))**2
+
+
+class DeltaRatesGetter(object):
+    """
+    Read the delta rates from an aftershock datastore
+    """
+    def __init__(self, dstore):
+        self.dstore = dstore
+
+    def __call__(self, src_id):
+        with self.dstore.open('r') as dstore:
+            return dstore['delta_rates'][src_id]
 
 
 class Collapser(object):
@@ -334,8 +310,8 @@ class ContextMaker(object):
     the underlying GSIMs are defined. This is intentional.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
+    deltagetter = None
     fewsites = False
-    rup_indep = True
     tom = None
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
@@ -463,12 +439,14 @@ class ContextMaker(object):
 
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
-        self.ctx_mon = monitor('make_contexts', measuremem=False)
+        self.pla_mon = monitor('planar contexts', measuremem=False)
+        self.ctx_mon = monitor('nonplanar contexts', measuremem=False)
         self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=True)
+        self.delta_mon = monitor('getting delta_rates', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
@@ -887,7 +865,8 @@ class ContextMaker(object):
         """
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         if getattr(src, 'location', None) and step == 1:
-            with self.ctx_mon:
+            self.pla_mon.mem = 0
+            with self.pla_mon:
                 ctxs = self.get_ctxs_planar(src, sitecol)
             return iter(ctxs)
         elif hasattr(src, 'source_id'):  # other source
@@ -951,64 +930,52 @@ class ContextMaker(object):
         self.collapser.cfactor = numpy.zeros(2)
         ctxs = self.from_srcs(srcs, sitecol)
         with patch.object(self.collapser, 'collapse_level', collapse_level):
-            return self.get_pmap(ctxs).array(len(sitecol))
+            return self.get_pmap(ctxs).array
 
-    def get_pmap(self, ctxs):
+    def get_pmap(self, ctxs, rup_indep=True):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
         :returns: a ProbabilityMap
         """
-        pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
-        self.set_pmap(ctxs, pmap)
-        if self.rup_indep:
-            return ~pmap
-        return pmap
+        sids = numpy.unique(ctxs[0].sids)
+        pmap = ProbabilityMap(sids, size(self.imtls), len(self.gsims))
+        pmap.fill(rup_indep)
+        self.update(pmap, ctxs, rup_indep)
+        return ~pmap if rup_indep else pmap
 
-    def set_pmap(self, ctxs, pmap):
+    def update(self, pmap, ctxs, rup_indep=True):
         """
-        :param ctxs: a list of context arrays (only one for poissonian ctxs)
-        :param probmap: probability map to update
+        :param pmap: probability map to update
+        :param ctxs: a list of context arrays (only one for parametric ctxs)
+        :param rup_indep: False for mutex ruptures, default True
         """
         if self.tom is None:
-            itime = -1.
+            itime = -1.  # test_hazard_curve_X _
         elif isinstance(self.tom, FatedTOM):
             itime = 0.
         else:
             itime = self.tom.time_span
-        if numba:
-            dic = numba.typed.Dict.empty(
-                key_type=t.uint32,
-                value_type=t.float64[:, :])
-        else:
-            dic = {}  # sid -> array of shape (L, G) sharing the pmap data
-        # allocating probability curves
         for ctx in ctxs:
-            for sid in numpy.unique(ctx.sids):
-                dic[sid] = pmap.setdefault(sid, self.rup_indep).array
-        for ctx in ctxs:
-            for poes, ctxt, slcsids in self.gen_poes(ctx):
+            for poes, ctxt, slcsids in self.gen_poes(ctx, rup_indep):
                 probs_occur = getattr(ctxt, 'probs_occur',
                                       numpy.zeros((len(ctxt), 0)))
                 rates = ctxt.occurrence_rate
                 with self.pne_mon:
                     if isinstance(slcsids, numpy.ndarray):
                         # no collapse: avoiding an inner loop can give a 25%
-                        if self.rup_indep:
-                            update_pmap_n(dic, poes, rates, probs_occur,
+                        if rup_indep:
+                            pmap.update_i(poes, rates, probs_occur,
                                           ctxt.sids, itime)
                         else:  # USAmodel, New Madrid cluster
-                            z = zip(poes, rates, probs_occur,
-                                    ctxt.weight, ctxt.sids)
-                            for poe, rate, probs, wei, sid in z:
-                                pne = get_pnes(rate, probs, poe, itime)
-                                dic[sid] += (1. - pne) * wei
+                            pmap.update_m(poes, rates, probs_occur,
+                                          ctxt.weight, ctxt.sids, itime)
                     else:  # collapse is possible only for rup_indep
                         allsids = []
                         sizes = []
                         for sids in slcsids:
                             allsids.extend(sids)
                             sizes.append(len(sids))
-                        update_pmap_c(dic, poes, rates, probs_occur,
+                        pmap.update_c(poes, rates, probs_occur,
                                       U32(allsids), U32(sizes), itime)
 
     # called by gen_poes and by the GmfComputer
@@ -1048,11 +1015,16 @@ class ContextMaker(object):
                 raise ValueError('Total StdDev is zero for %s' % gsim)
         return out
 
-    def gen_poes(self, ctx):
+    def gen_poes(self, ctx, rup_indep=True):
         """
         :param ctx: a vectorized context (recarray) of size N
         :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
         """
+        # NB: we are carefully trying to save memory here
+        # for instance, for the GLD model, the parameters are as follows:
+        # M=6, L1=20, G=3, len(ctx)=7_474_634, ctx.nbytes=513.24 MB
+        # maxsize=3640, #bigslices=2054, mean_stdt.nbytes=2 MB,
+        # poes.nbytes=0.5 MB, allsids.nbytes=ctx.sids.nbytes=28.51 MB
         from openquake.hazardlib.site_amplification import get_poes_site
         (M, L1), G = self.loglevels.array.shape, len(self.gsims)
         maxsize = get_maxsize(M, G)
@@ -1061,7 +1033,7 @@ class ContextMaker(object):
 
         # collapse if possible
         with self.col_mon:
-            ctx, allsids = self.collapser.collapse(ctx, self.rup_indep)
+            ctx, allsids = self.collapser.collapse(ctx, rup_indep)
 
         # split large context arrays to avoid filling the CPU cache
         if ctx.nbytes > maxsize:
@@ -1207,7 +1179,7 @@ class PmapMaker(object):
         except AttributeError:  # already a list of sources
             self.sources = group
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
-        self.cmaker.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
+        self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         self.fewsites = self.N <= cmaker.max_sites_disagg
 
     def count_bytes(self, ctxs):
@@ -1228,6 +1200,11 @@ class PmapMaker(object):
         if sites is None:
             return
         for ctx in self.cmaker.get_ctx_iter(src, sites):
+            if self.cmaker.deltagetter:
+                # adjust occurrence rates in case of aftershocks
+                with self.cmaker.delta_mon:
+                    delta = self.cmaker.deltagetter(src.id)
+                    ctx.occurrence_rate += delta[ctx.rup_id]
             if hasattr(src, 'mutex_weight'):
                 if ctx.weight.any():
                     ctx['weight'] *= src.mutex_weight
@@ -1237,9 +1214,8 @@ class PmapMaker(object):
                 self.rupdata.append(ctx)
             yield ctx
 
-    def _make_src_indep(self):
+    def _make_src_indep(self, pmap):
         # sources with the same ID
-        pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         cm = self.cmaker
         allctxs = []
         ctxs_mb = 0
@@ -1252,13 +1228,13 @@ class PmapMaker(object):
                 nsites += len(ctx)
                 allctxs.append(ctx)
                 if ctxs_mb > MAX_MB:
-                    cm.set_pmap(concat(allctxs), pmap)
+                    cm.update(pmap, concat(allctxs), self.rup_indep)
                     allctxs.clear()
                     ctxs_mb = 0
         if allctxs:
             src.nsites = nsites
             totlen += nsites
-            cm.set_pmap(concat(allctxs), pmap)
+            cm.update(pmap, concat(allctxs), self.rup_indep)
             allctxs.clear()
         dt = time.time() - t0
         nsrcs = len(self.sources)
@@ -1272,26 +1248,27 @@ class PmapMaker(object):
             self.source_data['ctimes'].append(
                 dt * src.nsites / totlen if totlen else dt / nsrcs)
             self.source_data['taskno'].append(cm.task_no)
-        return ~pmap if cm.rup_indep else pmap
+        return pmap
 
-    def _make_src_mutex(self):
+    def _make_src_mutex(self, pmap):
         # used in the Japan model, test case_27
         pmap_by_src = {}
         cm = self.cmaker
         for src in self.sources:
             t0 = time.time()
-            pm = ProbabilityMap(cm.imtls.size, len(cm.gsims))
+            pm = ProbabilityMap(pmap.sids, cm.imtls.size, len(cm.gsims))
+            pm.fill(self.rup_indep)
             ctxs = list(self.gen_ctxs(src))
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
-                cm.set_pmap(ctxs, pm)
-
-            p = (~pm if cm.rup_indep else pm) * src.mutex_weight
+                cm.update(pm, ctxs, self.rup_indep)
+            arr = 1. - pm.array if self.rup_indep else pm.array
+            p = pm.new(arr * src.mutex_weight)
             if ':' in src.source_id:
                 srcid = basename(src)
                 if srcid in pmap_by_src:
-                    pmap_by_src[srcid] += p
+                    pmap_by_src[srcid].array += p.array
                 else:
                     pmap_by_src[srcid] = p
             else:
@@ -1308,19 +1285,18 @@ class PmapMaker(object):
 
         return pmap_by_src
 
-    def make(self):
+    def make(self, pmap):
         dic = {}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
         grp_id = self.sources[0].grp_id
         if self.src_mutex:
-            pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
-            pmap_by_src = self._make_src_mutex()
+            pmap.fill(0)
+            pmap_by_src = self._make_src_mutex(pmap)
             for source_id, pm in pmap_by_src.items():
-                pmap += pm
+                pmap.array += pm.array
         else:
-            pmap = self._make_src_indep()
-        dic['pmap'] = pmap
+            self._make_src_indep(pmap)
         dic['cfactor'] = self.cmaker.collapser.cfactor
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data
@@ -1628,6 +1604,7 @@ def read_cmakers(dstore, full_lt=None):
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
     start = 0
+    aftershock = 'delta_rates' in dstore
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
         trti = trt_smrs[grp_id][0] // num_eff_rlzs
         trt = trts[trti]
@@ -1640,6 +1617,8 @@ def read_cmakers(dstore, full_lt=None):
         oq.mags_by_trt = {k: decode(v[:])
                           for k, v in dstore['source_mags'].items()}
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
+        if aftershock:
+            cmaker.deltagetter = DeltaRatesGetter(dstore)
         cmaker.tom = valid.occurrence_model(toms[grp_id])
         cmaker.trti = trti
         cmaker.start = start
