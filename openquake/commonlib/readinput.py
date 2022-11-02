@@ -906,6 +906,39 @@ def get_exposure(oqparam):
     return exposure
 
 
+def get_station_data(oqparam):
+    """
+    Read the station data input file and build a list of
+    ground motion stations and recorded ground motion values
+    along with their uncertainty estimates
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns sd:
+        a Pandas dataframe with station ids and coordinates as the index and 
+        IMT names as the first level of column headers and
+        mean, std as the second level of column headers
+    :returns imts:
+        a list of observed intensity measure types
+    """
+    if 'station_data' in oqparam.inputs:
+        fname = oqparam.inputs['station_data']
+        sdata = pandas.read_csv(fname).set_index(["STATION_ID", "LONGITUDE", "LATITUDE"])
+
+        # Identify the columns with IM values
+        # Replace replace() with removesuffix() for pandas ≥ 1.4
+        imt_candidates = sdata.filter(regex="_VALUE$").columns.str.replace("_VALUE", "")
+        imts = [valid.intensity_measure_type(imt) for imt in imt_candidates]
+        im_cols = pandas.MultiIndex.from_product([imts, ["mean", "std"]], names=["IMT", "VALUES"])
+        cols = []
+        for imt in imts:
+            stddev_str = "STDDEV" if imt == "MMI" else "LN_SIGMA"
+            cols.append(imt + '_VALUE')
+            cols.append(imt + '_' + stddev_str)
+        sd = pandas.DataFrame(sdata[cols].values, index=sdata.index, columns=im_cols)
+    return sd, imts
+
+
 def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     """
     :param oqparam: calculation parameters
