@@ -504,6 +504,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if len(tiles) > 1:
             sizes = [len(tile) for tile in tiles]
             logging.info('There are %d tiles of sizes %s', len(tiles), sizes)
+            assert not oq.disagg_by_src, 'disagg_by_src with tiles'
             for size in sizes:
                 assert size > oq.max_sites_disagg, (size, oq.max_sites_disagg)
         self.source_data = AccumDict(accum=[])
