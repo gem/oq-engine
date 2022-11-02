@@ -165,7 +165,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         # run preclassical for non-atomic sources
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
         self.datastore.hdf5['full_lt'] = csm.full_lt
-        logging.info('Starting preclassical')
+        logging.info('Starting preclassical with %d source groups',
+                     len(sources_by_key))
         self.datastore.swmr_on()
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
@@ -173,6 +174,9 @@ class PreClassicalCalculator(base.HazardCalculator):
             for src in srcs:
                 if hasattr(src, 'location'):
                     pointsources.append(src)
+                elif src.code in b'FN':  # split multifault, nonparametric
+                    others.extend(split_source(src)
+                                  if self.oqparam.split_sources else [src])
                 else:
                     others.append(src)
             for block in block_splitter(pointsources, 1000):
