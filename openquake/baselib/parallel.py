@@ -674,7 +674,7 @@ class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
     shared = []  # SharedArrays
-    maxtasksperchild = 1
+    maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
     num_cores = int(config.distribution.get('num_cores', '0'))
     if not num_cores:
         # use only the "visible" cores, not the total system cores
