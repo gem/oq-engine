@@ -16,17 +16,26 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.allen_2012 import Allen2012
+from openquake.hazardlib.gsim.allen_2012 import Allen2012, Allen2012_SS14
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-# Test data generated from EQRM implementation.
+# New test data generated from openquake-engine 3.15 implementation.
 
 
 class Allen2012TestCase(BaseGSIMTestCase):
     GSIM_CLASS = Allen2012
 
     def test_all(self):
-        self.check('A12/ALLEN2012_MEAN.csv',
-                   'A12/ALLEN2012_STD_TOTAL.csv',
+        self.check('A12/Allen2012_MEAN.csv',
+                   'A12/Allen2012_STD_TOTAL.csv',
                    max_discrep_percentage=0.4,
                    std_discrep_percentage=0.1)
+                   
+class Allen2012SS14TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = Allen2012_SS14
+
+    def test_all(self):
+        self.check('A12/Allen2012_SS14_MEAN.csv',
+                   'A12/Allen2012_SS14_STD_TOTAL.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.1)                   
