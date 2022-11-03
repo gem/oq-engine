@@ -24,7 +24,7 @@ from openquake.server import views
 
 GEM_BASEURL = "baseurl/"
 
-urlpatterns_plain = [
+urlpatterns = [
     re_path(r'^v1/engine_version$', views.get_engine_version),
     re_path(r'^v1/engine_latest_version$', views.get_engine_latest_version),
     re_path(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
@@ -38,7 +38,7 @@ urlpatterns_plain = [
 # 'collectstatic' and related configurationis on the reverse proxy
 # are also not required anymore for an API-only usage
 if settings.WEBUI:
-    urlpatterns_plain += [
+    urlpatterns += [
         re_path(r'^$', RedirectView.as_view(url='/engine/', permanent=True)),
         re_path(r'^engine/?$', views.web_engine, name="index"),
         re_path(r'^engine/(\d+)/outputs$',
@@ -48,7 +48,7 @@ if settings.WEBUI:
     ]
     for app in settings.STANDALONE_APPS:
         app_name = app.split('_')[1]
-        urlpatterns_plain.append(re_path(r'^%s/' % app_name, include('%s.urls' % app,
+        urlpatterns.append(re_path(r'^%s/' % app_name, include('%s.urls' % app,
                                namespace='%s' % app_name)))
 
 if settings.LOCKDOWN:
@@ -57,7 +57,7 @@ if settings.LOCKDOWN:
 
     admin.autodiscover()
     urlpatterns_admin = [re_path(r'^admin/', admin.site.urls)]
-    urlpatterns_plain += [
+    urlpatterns += [
         re_path(r'accounts/login/$', LoginView.as_view(
             template_name='account/login.html'), name="login"),
         re_path(r'^accounts/logout/$', LogoutView.as_view(
@@ -67,9 +67,9 @@ if settings.LOCKDOWN:
     ]
 
 if GEM_BASEURL != "":
-    urlpatterns = [path(r'%s' % GEM_BASEURL, include(urlpatterns_plain))]
+    urlpatterns = [path(r'%s' % GEM_BASEURL, include(urlpatterns))]
 else:
-    urlpatterns = urlpatterns_plain
+    urlpatterns = urlpatterns
 
 urlpatterns += urlpatterns_admin
 

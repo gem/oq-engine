@@ -251,4 +251,5 @@ if LOCKDOWN:
     LOGOUT_REDIRECT_URL = '/baseurl/accounts/login/'
     LOGIN_EXEMPT_URLS = ('/baseurl/accounts/ajax_login/', )
     LOGIN_URL = '/baseurl/accounts/login/'
+    GEM_BASEURL='baseurl/'
 

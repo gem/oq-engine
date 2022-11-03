@@ -105,7 +105,9 @@ def oq_server_context_processor(request):
 
     context['oq_engine_server_url'] = ('//' +
                                        request.META.get('HTTP_HOST',
-                                                        'localhost:8800'))
+                                                        'localhost:8800')
+                                       + '/baseurl')
+    print('qui si [%s]' % context['oq_engine_server_url'])
     # this context var is also evaluated by the STANDALONE_APPS to identify
     # the running environment. Keep it as it is
     context['oq_engine_version'] = oqversion
