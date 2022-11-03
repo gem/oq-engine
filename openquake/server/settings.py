@@ -36,6 +36,7 @@ OQSERVER_ROOT = os.path.dirname(__file__)
 DEBUG = True
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
+GEM_BASEURL = os.getenv('GEM_BASEURL', '')
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -247,9 +248,8 @@ if LOCKDOWN:
         },
     ]
 
-    LOGIN_REDIRECT_URL = '/baseurl/engine/'
-    LOGOUT_REDIRECT_URL = '/baseurl/accounts/login/'
-    LOGIN_EXEMPT_URLS = ('/baseurl/accounts/ajax_login/', )
-    LOGIN_URL = '/baseurl/accounts/login/'
-    GEM_BASEURL='baseurl/'
+    LOGIN_REDIRECT_URL = '%s/engine/' % GEM_BASEURL
+    LOGOUT_REDIRECT_URL = '%s/accounts/login/' % GEM_BASEURL
+    LOGIN_EXEMPT_URLS = ('%s/accounts/ajax_login/' % GEM_BASEURL, )
+    LOGIN_URL = '%s/accounts/login/' % GEM_BASEURL
 

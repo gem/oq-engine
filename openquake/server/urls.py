@@ -22,8 +22,6 @@ from django.views.generic.base import RedirectView
 
 from openquake.server import views
 
-GEM_BASEURL = "baseurl/"
-
 urlpatterns = [
     re_path(r'^v1/engine_version$', views.get_engine_version),
     re_path(r'^v1/engine_latest_version$', views.get_engine_latest_version),
@@ -42,14 +40,14 @@ if settings.WEBUI:
         re_path(r'^$', RedirectView.as_view(url='/engine/', permanent=True)),
         re_path(r'^engine/?$', views.web_engine, name="index"),
         re_path(r'^engine/(\d+)/outputs$',
-            views.web_engine_get_outputs, name="outputs"),
+                views.web_engine_get_outputs, name="outputs"),
         re_path(r'^engine/license$', views.license,
-            name="license"),
+                name="license"),
     ]
     for app in settings.STANDALONE_APPS:
         app_name = app.split('_')[1]
-        urlpatterns.append(re_path(r'^%s/' % app_name, include('%s.urls' % app,
-                               namespace='%s' % app_name)))
+        urlpatterns.append(re_path(r'^%s/' % app_name, include(
+            '%s.urls' % app, namespace='%s' % app_name)))
 
 if settings.LOCKDOWN:
     from django.contrib import admin
@@ -66,8 +64,9 @@ if settings.LOCKDOWN:
         re_path(r'^accounts/ajax_logout/$', views.ajax_logout),
     ]
 
-if GEM_BASEURL != "":
-    urlpatterns = [path(r'%s' % GEM_BASEURL, include(urlpatterns))]
+if settings.GEM_BASEURL != "":
+    urlpatterns = [path(r'%s/' % settings.GEM_BASEURL.strip('/'),
+                        include(urlpatterns))]
 else:
     urlpatterns = urlpatterns
 
