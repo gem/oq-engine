@@ -229,9 +229,14 @@ def no_submit(self, func, args, monitor):
 
 @submit.add('spawn')
 def spawn_submit(self, func, args, monitor):
-    mp_context.Process(
-        target=safely_call, args=(func, args, self.task_no, monitor)
-    ).start()
+    proc = mp_context.Process(
+        target=safely_call, args=(func, args, self.task_no, monitor))
+    while True:
+        loadavg = psutil.getloadavg()[0]
+        if loadavg < Starmap.num_cores:
+            proc.start()
+            break
+        time.sleep(10)
 
 
 @submit.add('processpool')
