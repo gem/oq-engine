@@ -55,16 +55,6 @@ TEMPLATES = [
     },
 ]
 
-STATIC_URL = '/static/'
-
-MEDIA_ROOT = '%(mediaroot)s'
-STATIC_ROOT = '%(staticroot)s'
-
-# Additional directories which hold static files
-STATICFILES_DIRS = [
-    os.path.join(OQSERVER_ROOT, 'static'),
-]
-
 DATABASE = {
     'ENGINE': 'django.db.backends.sqlite3',
     'NAME': os.path.expanduser(config.dbserver.file),
@@ -204,6 +194,17 @@ except ImportError:
         # If a local_setting.py does not exist
         # settings in this file only will be used
         pass
+
+STATIC_URL = '%s/static/' % GEM_BASEURL
+# STATIC_URL = '/static/'
+
+MEDIA_ROOT = '%(mediaroot)s'
+STATIC_ROOT = '%(staticroot)s'
+
+# Additional directories which hold static files
+STATICFILES_DIRS = [
+    os.path.join(OQSERVER_ROOT, 'static'),
+]
 
 if LOCKDOWN:
 
