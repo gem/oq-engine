@@ -17,12 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from django.conf import settings
-from django.urls import re_path, include
+from django.urls import re_path, include, path
 from django.views.generic.base import RedirectView
 
 from openquake.server import views
 
-urlpatterns = [
+GEM_BASEURL = "baseurl/"
+
+urlpatterns_plain = [
     re_path(r'^v1/engine_version$', views.get_engine_version),
     re_path(r'^v1/engine_latest_version$', views.get_engine_latest_version),
     re_path(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
@@ -36,7 +38,7 @@ urlpatterns = [
 # 'collectstatic' and related configurationis on the reverse proxy
 # are also not required anymore for an API-only usage
 if settings.WEBUI:
-    urlpatterns += [
+    urlpatterns_plain += [
         re_path(r'^$', RedirectView.as_view(url='/engine/', permanent=True)),
         re_path(r'^engine/?$', views.web_engine, name="index"),
         re_path(r'^engine/(\d+)/outputs$',
@@ -46,7 +48,7 @@ if settings.WEBUI:
     ]
     for app in settings.STANDALONE_APPS:
         app_name = app.split('_')[1]
-        urlpatterns.append(re_path(r'^%s/' % app_name, include('%s.urls' % app,
+        urlpatterns_plain.append(re_path(r'^%s/' % app_name, include('%s.urls' % app,
                                namespace='%s' % app_name)))
 
 if settings.LOCKDOWN:
@@ -54,8 +56,8 @@ if settings.LOCKDOWN:
     from django.contrib.auth.views import LoginView, LogoutView
 
     admin.autodiscover()
-    urlpatterns += [
-        re_path(r'^admin/', admin.site.urls),
+    urlpatterns_admin = [re_path(r'^admin/', admin.site.urls)]
+    urlpatterns_plain += [
         re_path(r'accounts/login/$', LoginView.as_view(
             template_name='account/login.html'), name="login"),
         re_path(r'^accounts/logout/$', LogoutView.as_view(
@@ -63,6 +65,14 @@ if settings.LOCKDOWN:
         re_path(r'^accounts/ajax_login/$', views.ajax_login),
         re_path(r'^accounts/ajax_logout/$', views.ajax_logout),
     ]
+
+if GEM_BASEURL != "":
+    urlpatterns = [path(r'%s' % GEM_BASEURL, include(urlpatterns_plain))]
+else:
+    urlpatterns = urlpatterns_plain
+
+urlpatterns += urlpatterns_admin
+
 
 # To enable gunicorn debug without Nginx (to serve static files)
 # uncomment the following lines

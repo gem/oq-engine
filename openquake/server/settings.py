@@ -247,6 +247,8 @@ if LOCKDOWN:
         },
     ]
 
-    LOGIN_REDIRECT_URL = '/engine'
+    LOGIN_REDIRECT_URL = '/baseurl/engine/'
+    LOGOUT_REDIRECT_URL = '/baseurl/accounts/login/'
+    LOGIN_EXEMPT_URLS = ('/baseurl/accounts/ajax_login/', )
+    LOGIN_URL = '/baseurl/accounts/login/'
 
-    LOGIN_EXEMPT_URLS = ('/accounts/ajax_login/', )
