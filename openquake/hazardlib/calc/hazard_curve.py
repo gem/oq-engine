@@ -94,9 +94,8 @@ def classical(group, sitecol, cmaker, pmap=None):
     [trt] = trts  # there must be a single tectonic region type
     if cmaker.trt != '*':
         assert trt == cmaker.trt, (trt, cmaker.trt)
-    try:
-        cmaker.tom = group.temporal_occurrence_model
-    except AttributeError:  # got a list of sources, not a group
+    cmaker.tom = getattr(group, 'temporal_occurrence_model', None)
+    if cmaker.tom is None:
         time_span = cmaker.investigation_time  # None for nonparametric
         cmaker.tom = PoissonTOM(time_span) if time_span else None
     if cluster:
@@ -168,6 +167,10 @@ def calc_hazard_curves(
             tom = getattr(src, 'temporal_occurrence_model', None)
             if tom:
                 span = tom.time_span
+            else:
+                span = kwargs.get('investigation_time')
+                if span:
+                    tom = PoissonTOM(span)
             src.weight = src.count_ruptures()
             src.grp_id = i
             src.id = idx
@@ -176,7 +179,7 @@ def calc_hazard_curves(
     shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
     param = dict(imtls=imtls, truncation_level=truncation_level, reqv=reqv,
                  cluster=grp.cluster, shift_hypo=shift_hypo,
-                 investigation_time=kwargs.get('investigation_time', span))
+                 investigation_time=span)
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
     sitecol = getattr(srcfilter, 'sitecol', srcfilter)

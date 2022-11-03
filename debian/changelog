@@ -1,5 +1,6 @@
   [Marco Pagani]
   * Added a method to compute the mean rate density of two IMTs
+  * Added the possibility to define the edges of disaggregation bins
 
   [Michele Simionato]
   * Added command `oq purge failed`
