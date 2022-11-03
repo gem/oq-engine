@@ -229,9 +229,15 @@ def no_submit(self, func, args, monitor):
 
 @submit.add('spawn')
 def spawn_submit(self, func, args, monitor):
-    mp_context.Process(
-        target=safely_call, args=(func, args, self.task_no, monitor)
-    ).start()
+    while True:
+        percent = psutil.cpu_percent()
+        if percent <= 99:
+            mp_context.Process(
+                target=safely_call, args=(func, args, self.task_no, monitor)
+            ).start()
+            break
+        logging.debug('CPU=%d%%, waiting', percent)
+        time.sleep(30)
 
 
 @submit.add('processpool')
