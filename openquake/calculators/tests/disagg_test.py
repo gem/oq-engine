@@ -199,6 +199,18 @@ class DisaggregationTestCase(CalculatorTestCase):
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
 
+        # test calculation with uneven user defined magnitude bin edges
+        self.run_calc(case_8.__file__, 'job_a.ini')
+
+        # Test mr results. Comparing against the results of the first
+        # calculation in this test. The first value for magnitude 5.8 remains
+        # the same. The contributions for magnitudes 6.5 and 6.7 are combined
+        # into a single value corresponding to 1 - (1-p1) * (1-p2) and the last
+        # value is also the same provided to magnitude 7 in the first
+        # calculation
+        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/Mag_Dist-0.csv', fname)
+
     def test_case_9(self):
         # test mutex disaggregation. Results checked against hand-computed
         # values by Marco Pagani - 2022.06.28

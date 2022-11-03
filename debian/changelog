@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Added the possibility to define the edges of disaggregation bins
+
   [Michele Simionato]
   * Improved the performance of the preclassical calculator
   * Changed parallel.Starmap to use maxtasksperchild=1 to fight memory leaks
