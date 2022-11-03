@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Added `spawn` distribution
+
   [Marco Pagani]
   * Added the possibility to define the edges of disaggregation bins
 
