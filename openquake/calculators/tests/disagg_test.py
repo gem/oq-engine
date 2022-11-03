@@ -30,7 +30,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
-    case_10, case_11, case_12, case_13, case_master)
+    case_10, case_11, case_12, case_master)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -199,6 +199,18 @@ class DisaggregationTestCase(CalculatorTestCase):
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
 
+        # test calculation with uneven user defined magnitude bin edges
+        self.run_calc(case_8.__file__, 'job_a.ini')
+
+        # Test mr results. Comparing against the results of the first
+        # calculation in this test. The first value for magnitude 5.8 remains
+        # the same. The contributions for magnitudes 6.5 and 6.7 are combined
+        # into a single value corresponding to 1 - (1-p1) * (1-p2) and the last
+        # value is also the same provided to magnitude 7 in the first
+        # calculation
+        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/Mag_Dist-0.csv', fname)
+
     def test_case_9(self):
         # test mutex disaggregation. Results checked against hand-computed
         # values by Marco Pagani - 2022.06.28
@@ -233,24 +245,3 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_12(self):
         # check source IDs with :, . and ;
         self.run_calc(case_12.__file__, 'job.ini')
-
-    def test_case_13(self):
-
-        # test calculation with user defined bin edges as in test_8
-        self.run_calc(case_13.__file__, 'job.ini')
-
-        # test mre results
-        [fname] = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
-
-        # test calculation with uneven user defined magnitude bin edges
-        self.run_calc(case_13.__file__, 'job_a.ini')
-
-        # Test mr results. Comparing against the results of the first
-        # calculation in this test. The first value for magnitude 5.8 remains
-        # the same. The contributions for magnitudes 6.5 and 6.7 are combined
-        # into a single value corresponding to 1 - (1-p1) * (1-p2) and the last
-        # value is also the same provided to magnitude 7 in the first
-        # calculation
-        [fname] = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/Mag_Dist-0.csv', fname)
