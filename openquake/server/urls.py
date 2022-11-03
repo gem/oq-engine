@@ -37,7 +37,8 @@ urlpatterns = [
 # are also not required anymore for an API-only usage
 if settings.WEBUI:
     urlpatterns += [
-        re_path(r'^$', RedirectView.as_view(url='/engine/', permanent=True)),
+        re_path(r'^$', RedirectView.as_view(url='%s/engine/' % settings.GEM_BASEURL,
+                permanent=True)),
         re_path(r'^engine/?$', views.web_engine, name="index"),
         re_path(r'^engine/(\d+)/outputs$',
                 views.web_engine_get_outputs, name="outputs"),
@@ -54,6 +55,7 @@ if settings.LOCKDOWN:
     from django.contrib.auth.views import LoginView, LogoutView
 
     admin.autodiscover()
+    admin.site.site_url = '%s/engine/' % settings.GEM_BASEURL
     urlpatterns += [
         re_path(r'^admin/', admin.site.urls),
         re_path(r'accounts/login/$', LoginView.as_view(
@@ -69,9 +71,6 @@ if settings.GEM_BASEURL != "":
                         include(urlpatterns))]
 else:
     urlpatterns = urlpatterns
-
-urlpatterns += urlpatterns_admin
-
 
 # To enable gunicorn debug without Nginx (to serve static files)
 # uncomment the following lines
