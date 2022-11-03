@@ -85,14 +85,14 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     # build dist_edges
     maxdist = max(oq.maximum_distance.max().values())
     if 'dist' in oq.disagg_bin_edges:
-        dist_edges = oq.disagg_bin_edges.get('dist')
+        dist_edges = oq.disagg_bin_edges['dist']
     else:
         dist_edges = oq.distance_bin_width * numpy.arange(
             0, int(numpy.ceil(maxdist / oq.distance_bin_width) + 1))
 
     # build eps_edges
     if 'eps' in oq.disagg_bin_edges:
-        dist_edges = oq.disagg_bin_edges.get('dist')
+        eps_edges = oq.disagg_bin_edges['eps']
     else:
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
@@ -100,8 +100,8 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     lon_edges, lat_edges = {}, {}  # by sid
     for site in sitecol:
         if 'lon' in oq.disagg_bin_edges and 'lat' in oq.disagg_bin_edges:
-            lon_edges[site.id] = oq.disagg_bin_edges.get('lon')
-            lat_edges[site.id] = oq.disagg_bin_edges.get('lat')
+            lon_edges[site.id] = oq.disagg_bin_edges['lon']
+            lat_edges[site.id] = oq.disagg_bin_edges['lat']
         else:
             loc = site.location
             lon_edges[site.id], lat_edges[site.id] = lon_lat_bins(
@@ -365,7 +365,7 @@ def disaggregation(
         A boolean. When true disaggregations results including epsilon are
         in terms of epsilon star rather then epsilon.
     :param bin_edges:
-        Bine edges provided by the users. These override the ones automatically
+        Bin edges provided by the users. These override the ones automatically
         computed by the OQ Engine.
     :returns:
         A tuple of two items. First is itself a tuple of bin edges information
@@ -388,7 +388,7 @@ def disaggregation(
 
     # Epsilon bins
     if 'eps' in bine:
-        eps_bins = bine.get('eps')
+        eps_bins = bine['eps']
         n_epsilons = len(eps_bins) - 1
     else:
         eps_bins = numpy.linspace(-truncation_level, truncation_level,
@@ -409,7 +409,7 @@ def disaggregation(
 
     # Set the magnitude bins
     if 'mag' in bine:
-        mag_bins = bine.get('mag')
+        mag_bins = bine['mag']
     else:
         mags = numpy.array([r.mag for rs in rups.values() for r in rs])
         mag_bins = mag_bin_width * numpy.arange(
@@ -435,16 +435,16 @@ def disaggregation(
     min_dist = min(bd.dists.min() for bd in bdata.values())
     max_dist = max(bd.dists.max() for bd in bdata.values())
     if 'dist' in bine:
-        dist_bins = bine.get('dist')
+        dist_bins = bine['dist']
     else:
         dist_bins = dist_bin_width * numpy.arange(
             int(numpy.floor(min_dist / dist_bin_width)),
             int(numpy.ceil(max_dist / dist_bin_width) + 1))
 
     # Lon, Lat bins
-    if ('lon' in bine) and ('lat' in bine):
-        lon_bins = bine.get('lon')
-        lat_bins = bine.get('lat')
+    if 'lon' in bine and 'lat' in bine:
+        lon_bins = bine['lon']
+        lat_bins = bine['lat']
     else:
         lon_bins, lat_bins = lon_lat_bins(site.location.x, site.location.y,
                                           max_dist, coord_bin_width)
