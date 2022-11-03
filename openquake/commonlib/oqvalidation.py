@@ -191,6 +191,13 @@ description:
   Example: *description = Test calculation*.
   Default: "no description"
 
+disagg_bin_edges:
+  A dictionary where the keys can be: mag, eps, dist, lon, lat and the
+  values are lists of floats indicating the edges of the bins used to
+  perform the disaggregation.
+  Example: *disagg_bin_edges = {'mag': [5.0, 5.5, 6.0, 6.5]}*.
+  Default: empty dictionary
+
 disagg_by_src:
   Flag used to enable disaggregation by source when possible.
   Example: *disagg_by_src = true*.
@@ -246,8 +253,7 @@ floating_x_step:
 
 floating_y_step:
   Float, used in rupture generation for kite faults. indicates the fraction
-  of fault width used to float ruptures down dip. (i.e. "0.5" floats the
-  ruptures at half the rupture length). Uniform distribution of the ruptures
+  of fault width used to float ruptures down dip. (i.e. "0.5" floats that half the rupture length). Uniform distribution of the ruptures
   is maintained, such that if the mesh spacing and rupture dimensions
   prohibit the defined overlap fraction, the fraction is increased until
   uniform distribution is achieved. The minimum possible value depends on
@@ -858,6 +864,7 @@ class OqParam(valid.ParamSet):
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs,
                                  list(calc.disagg.pmf_map))
+    disagg_bin_edges = valid.Param(valid.dictionary, {})
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
     discrete_damage_distribution = valid.Param(valid.boolean, False)
@@ -1157,9 +1164,11 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile(
                     '%s: iml_disagg and poes_disagg cannot be set '
                     'at the same time' % job_ini)
-            for k in ('mag_bin_width', 'distance_bin_width',
-                      'coordinate_bin_width', 'num_epsilon_bins'):
-                if k not in vars(self):
+            bins = ['mag', 'dst', 'lon', 'eps']
+            for i, k in enumerate(['mag_bin_width', 'distance_bin_width',
+                                   'coordinate_bin_width', 'num_epsilon_bins']):
+                if (k not in vars(self) and
+                    bins[i] not in self.disagg_bin_edges):
                     raise InvalidFile('%s must be set in %s' % (k, job_ini))
             if self.disagg_outputs and not any(
                     'Eps' in out for out in self.disagg_outputs):

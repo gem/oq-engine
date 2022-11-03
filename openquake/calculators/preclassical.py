@@ -22,7 +22,7 @@ import operator
 import numpy
 from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
-from openquake.baselib.general import AccumDict, groupby
+from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
@@ -69,11 +69,6 @@ def collapse_nphc(src):
         src.magnitude_scaling_relationship = PointMSR()
 
 
-# group together consistent point sources (same group, same msr)
-def same_key(src):
-    return (src.grp_id, msr_name(src))
-
-
 def preclassical(srcs, sites, cmaker, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
@@ -82,40 +77,39 @@ def preclassical(srcs, sites, cmaker, monitor):
     split_sources = []
     spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
-    if sites is None:
-        # in aftershock calculations just split and count the ruptures
-        for src in srcs:
-            ss = split_source(src) if cmaker.split_sources else [src]
-            if len(ss) > 1:
-                for ss_ in ss:
-                    ss_.nsites = 1
-            split_sources.extend(ss)
-            src.num_ruptures = src.count_ruptures()
-        dic = {grp_id: split_sources}
-        dic['before'] = len(srcs)
-        dic['after'] = len(dic[grp_id])
-        return dic
-
-    sf = SourceFilter(sites, cmaker.maximum_distance)
-    multiplier = 1 + len(sites) // 10_000
-    sf = sf.reduce(multiplier)
-    with monitor('filtering/splitting'):
-        for src in srcs:
+    if sites:
+        multiplier = 1 + len(sites) // 10_000
+        sf = SourceFilter(sites, cmaker.maximum_distance).reduce(multiplier)
+    for src in srcs:
+        if sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
-            # NB: it is crucial to split only the close sources, for
-            # performance reasons (think of Ecuador in SAM)
-            splits = split_source(src) if (
-                cmaker.split_sources and src.nsites) else [src]
-            split_sources.extend(splits)
-    dic = grid_point_sources(split_sources, spacing, monitor)
-    # this is also prefiltering the split sources
-    mon = monitor('weighting sources', measuremem=False)
-    cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
-    # print(mon.duration, [s.source_id for s in dic[grp_id]])
-    dic['before'] = len(split_sources)
-    dic['after'] = len(dic[grp_id])
-    return dic
+        else:
+            src.nsites = 1
+        # NB: it is crucial to split only the close sources, for
+        # performance reasons (think of Ecuador in SAM)
+        splits = split_source(src) if (
+            cmaker.split_sources and src.nsites) else [src]
+        for ss in splits:
+            ss.num_ruptures = ss.count_ruptures()
+        split_sources.extend(splits)
+    if sites is None or spacing == 0:
+        dic = {grp_id: split_sources}
+        dic['before'] = len(srcs)
+        dic['after'] = len(split_sources)
+        yield dic
+    else:
+        for msr, block in groupby(split_sources, msr_name).items():
+            dic = grid_point_sources(block, spacing, msr, monitor)
+            for src in dic[grp_id]:
+                src.num_ruptures = src.count_ruptures()
+            # this is also prefiltering the split sources
+            mon = monitor('weighting sources', measuremem=False)
+            cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
+            # print(mon.duration, [s.source_id for s in dic[grp_id]])
+            dic['before'] = len(block)
+            dic['after'] = len(dic[grp_id])
+            yield dic
 
 
 @base.calculators.add('preclassical')
@@ -172,35 +166,35 @@ class PreClassicalCalculator(base.HazardCalculator):
                 normal_sources.extend(sg)
 
         # run preclassical for non-atomic sources
-        sources_by_key = groupby(normal_sources, same_key)
+        sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
         self.datastore.hdf5['full_lt'] = csm.full_lt
-        logging.info('Starting preclassical')
+        logging.info('Starting preclassical with %d source groups',
+                     len(sources_by_key))
         self.datastore.swmr_on()
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
-        for (grp_id, msr), srcs in sources_by_key.items():
+        for grp_id, srcs in sources_by_key.items():
             pointsources, pointlike, others = [], [], []
             for src in srcs:
                 if hasattr(src, 'location'):
                     pointsources.append(src)
                 elif hasattr(src, 'nodal_plane_distribution'):
                     pointlike.append(src)
-                elif src.code in b'FN':  # multifault, nonparametric
+                elif src.code in b'FN':  # split multifault, nonparametric
                     others.extend(split_source(src)
                                   if self.oqparam.split_sources else [src])
                 else:
                     others.append(src)
-            if self.oqparam.ps_grid_spacing:
-                if pointsources or pointlike:
+            if pointsources or pointlike:
+                if self.oqparam.ps_grid_spacing:
+                    # do not split the pointsources
                     smap.submit(
                         (pointsources + pointlike, sites, cmakers[grp_id]))
-            else:
-                if pointsources:
-                    smap.submit_split(
-                        (pointsources, sites, cmakers[grp_id]), 10, 160)
-                for src in pointlike:  # area, multipoint
-                    smap.submit(([src], sites, cmakers[grp_id]))
-            if others:
-                smap.submit_split((others, sites, cmakers[grp_id]), 10, 160)
+                else:
+                    for block in block_splitter(pointsources, 1000):
+                        smap.submit((block, sites, cmakers[grp_id]))
+                    others.extend(pointlike)
+            for block in block_splitter(others, 20):
+                smap.submit((block, sites, cmakers[grp_id]))
         normal = smap.reduce()
         if atomic_sources:  # case_35
             n = len(atomic_sources)

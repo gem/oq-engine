@@ -382,6 +382,7 @@ class ContextMaker(object):
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
         self.truncation_level = param.get('truncation_level', 99.)
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
+        self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = param.get('split_sources')
         self.effect = param.get('effect')
@@ -1113,7 +1114,6 @@ class ContextMaker(object):
         N = len(srcfilter.sitecol)
         G = len(self.gsims)
         for src in sources:
-            src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
                 src.esites = 0
