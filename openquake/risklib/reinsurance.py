@@ -192,7 +192,8 @@ def parse(fname, policy_idx):
     rmodel = nrml.read(fname).reinsuranceModel
     fieldmap = {}
     fmap = {}  # ex: {'deductible': 'Deductible', 'liability': 'Limit'}
-    treaty = dict(id=[], lineno=[], type=[], deductible=[], limit=[])
+    treaty = dict(id=[], type=[], deductible=[], limit=[])
+    treaty_linenos = []
     nonprop = set()
     colnames = []
     for node in rmodel.fieldMap:
@@ -217,16 +218,16 @@ def parse(fname, policy_idx):
             deduc = node['deductible']
             nonprop.add(node['input'])
         treaty['id'].append(node['input'])
-        treaty['lineno'].append(node.lineno)
         treaty['type'].append(treaty_type)
         treaty['deductible'].append(deduc)
         treaty['limit'].append(limit)
+        treaty_linenos.append(node.lineno)
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
     df.columns = df.columns.str.strip()
     check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname,
-                 policyfname, treaty['id'], treaty['lineno'], treaty['type'])
+                 policyfname, treaty['id'], treaty_linenos, treaty['type'])
 
     # validate policy input
     for col in nonprop:
