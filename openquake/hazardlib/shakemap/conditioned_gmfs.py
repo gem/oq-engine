@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
 # Copyright (C) 2022 GEM Foundation
 #
@@ -10,28 +9,44 @@
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import logging
 import numpy
 import pandas
-from scipy.stats import truncnorm
-from scipy import interpolate
-
+import sys
 from openquake.commonlib import readinput
-from openquake.hazardlib import imt, correlation
+from openquake.hazardlib import correlation, cross_correlation, imt, valid
+from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.geo.geodetic import geodetic_distance
-from openquake.hazardlib import read_input, valid
-from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.site import SiteCollection
 
-F32 = numpy.float32
+# This module implements the process for conditioning ground motion
+# fields upon recorded strong motion station data or macroseismic
+# intensity observations described in Engler et al. (2022)
+# Engler, D. T., Worden, C. B., Thompson, E. M., & Jaiswal, K. S. (2022).
+# Partitioning Ground Motion Uncertainty When Conditioned on Station Data.
+# Bulletin of the Seismological Society of America, 112(2), 1060–1079.
+# https://doi.org/10.1785/0120210177
+#
+# The USGS ShakeMap implementation of Engler et al. (2022) is described
+# in detail at: https://usgs.github.io/shakemap/manual4_0/tg_processing.html
+# and the bulk of the implementation code resides in the ShakeMap Model module:
+# https://github.com/usgs/shakemap/blob/main/shakemap/coremods/model.py
+#
+# This implementation is intended for generating conditional random
+# ground motion fields for downstream use with the OpenQuake scenario
+# damage and loss calculators, such that users can provide a station
+# data file containing both seismic and macroseismic stations, where
+# and specify a list of target IMTs and list of sites for which the
+# OpenQuake engine will calculate the conditioned mean and covariance
+# of the ground shaking following Engler et al. (2022), and then
+# simulate the requested number of ground motion fields
 
 # Notation:
 # K: number of target sites at which ground motion is to be estimated
@@ -71,7 +86,8 @@ def main(job_params):
     )
     num_station_sites = len(station_sitecol)
 
-    vs30_clustering = oqparam.ground_motion_correlation_params["vs30_clustering"]
+    truncation_level = oqparam.truncation_level
+    num_gmfs = oqparam.number_of_ground_motion_fields
 
     observed_imtls = {
         imt_str: [0] for imt_str in observed_imt_strs if imt_str not in ["MMI", "PGV"]
@@ -82,8 +98,15 @@ def main(job_params):
         [gmm],
         dict(truncation_level=0, imtls=observed_imtls),
     )
-    spatial_correl = oqparam.ground_motion_correlation_model
-    cross_correl = oqparam.cross_correl
+    try:
+        vs30_clustering = oqparam.ground_motion_correlation_params["vs30_clustering"]
+    except KeyError:
+        vs30_clustering = True
+    spatial_correl = (
+        oqparam.ground_motion_correlation_model
+        or correlation.JB2009CorrelationModel(vs30_clustering)
+    )
+    cross_correl = oqparam.cross_correl or cross_correlation.GodaAtkinson2009()
     rupture.rup_id = oqparam.ses_seed
     gc = GmfComputer(rupture, station_sitecol, cmaker)
     mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
@@ -93,6 +116,9 @@ def main(job_params):
         station_data.loc[:, (imt_i.string, "sigma")] = mean_stds[1, i, :]
         station_data.loc[:, (imt_i.string, "tau")] = mean_stds[2, i, :]
         station_data.loc[:, (imt_i.string, "phi")] = mean_stds[3, i, :]
+
+    mu_Y_yD_dict = {target_imt.string: None for target_imt in target_imts}
+    cov_Y_Y_yD_dict = {target_imt.string: None for target_imt in target_imts}
 
     # Proceed with each IMT in the target IMTs one by one
     # select the minimal number of IMTs observed at the stations
@@ -114,7 +140,9 @@ def main(job_params):
         else:
             # Find where the target IMT falls in the list of observed IMTs
             all_imts = sorted(observed_imts + [target_imt])
-            imt_idx = numpy.where(target_imt == numpy.array(all_imts))[0][0]
+            imt_idx = numpy.where(target_imt.string == numpy.array(all_imts)[:, 0])[0][
+                0
+            ]
             if imt_idx == 0:
                 # Target IMT is outside the range of the observed IMT periods
                 # and its period is lower than the lowest available in the observed IMTs
@@ -283,14 +311,42 @@ def main(job_params):
             # of the ground motion at the target sites
             mu_Y_yD = mu_Y + mu_BY_yD + RC @ (zeta_D - mu_BD_yD)
 
-            # And the conditional covariance
+            # And compute the conditional covariance
             # of the ground motion at the target sites
             cov_Y_Y_yD = cov_WY_WY_wD + numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T])
 
-            breakpoint()
+            # Store the results in a dictionary keyed by target IMT
+            mu_Y_yD_dict[target_imt.string] = mu_Y_yD
+            cov_Y_Y_yD_dict[target_imt.string] = cov_Y_Y_yD
+
         else:
             # No native data available at the stations
             continue
+
+    # Ground motion simulation
+    rng = numpy.random.default_rng()
+    if truncation_level == 0:
+        df = pandas.DataFrame(columns=["custom_site_id", "lon", "lat", "vs30", "PGA"])
+        df["custom_site_id"] = numpy.char.decode(target_sitecol.custom_site_id)
+        df["lon"] = target_sitecol.lons
+        df["lat"] = target_sitecol.lats
+        df["vs30"] = target_sitecol.vs30
+        for target_imt in target_imts:
+            df[target_imt.string] = numpy.exp(mu_Y_yD_dict[target_imt.string])
+    else:
+        gmfs = {target_imt.string: None for target_imt in target_imts}
+        for target_imt in target_imts:
+            gmfs[target_imt.string] = rng.multivariate_normal(
+                mu_Y_yD_dict[target_imt.string],
+                cov_Y_Y_yD_dict[target_imt.string],
+                size=num_gmfs,
+                check_valid="warn",
+                tol=1e-5,
+                method="cholesky",
+            )
+
+    # Temporary: write the median gmf dataframe to csv
+    df.set_index("custom_site_id").to_csv("median-gmf.csv")
 
 
 def compute_spatial_cross_correlation_matrix(
@@ -334,17 +390,17 @@ def compute_spatial_cross_correlation_matrix(
         spatial_correlation_matrix = numpy.maximum(
             spatial_correlation_matrix_1, spatial_correlation_matrix_2
         )
-        cross_correlation = BakerJayaram2008.get_cross_correlation(
+        cross_corr_coeff = cross_correlation.BakerJayaram2008.get_cross_correlation(
             imt_list[0], imt_list[1]
         )
         spatial_cross_correlation_matrix = numpy.block(
             [
                 [
                     spatial_correlation_matrix,
-                    spatial_correlation_matrix * cross_correlation,
+                    spatial_correlation_matrix * cross_corr_coeff,
                 ],
                 [
-                    spatial_correlation_matrix * cross_correlation,
+                    spatial_correlation_matrix * cross_corr_coeff,
                     spatial_correlation_matrix,
                 ],
             ]
@@ -353,5 +409,6 @@ def compute_spatial_cross_correlation_matrix(
 
 
 if __name__ == "__main__":
-    job_ini = "examples/puebla/job_rupture_Melgar_et_al_2018.ini"
+    args = sys.argv[1:]
+    job_ini = args[0]
     main(job_ini)
