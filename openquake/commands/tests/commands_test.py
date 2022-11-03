@@ -22,6 +22,7 @@ import unittest.mock as mock
 import shutil
 import zipfile
 import tempfile
+import io
 import unittest
 import numpy
 
@@ -648,8 +649,9 @@ class GPKG2NRMLTestCase(unittest.TestCase):
         # then convert the above gpkg back to nrml
         with Print.patch() as p:
             sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
-        # FIXME: check the consistency between the initial nrml file and the
-        # one that was produced from the gpkg
+        self.assertListEqual(
+            list(io.open(out_path)),
+            list(io.open(os.path.join('data', 'expected_converted_nrml.xml'))))
         shutil.rmtree(temp_dir)
 
 
