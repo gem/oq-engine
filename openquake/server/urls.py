@@ -54,8 +54,8 @@ if settings.LOCKDOWN:
     from django.contrib.auth.views import LoginView, LogoutView
 
     admin.autodiscover()
-    urlpatterns_admin = [re_path(r'^admin/', admin.site.urls)]
     urlpatterns += [
+        re_path(r'^admin/', admin.site.urls),
         re_path(r'accounts/login/$', LoginView.as_view(
             template_name='account/login.html'), name="login"),
         re_path(r'^accounts/logout/$', LogoutView.as_view(
