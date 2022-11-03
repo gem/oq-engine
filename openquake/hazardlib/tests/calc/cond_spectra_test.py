@@ -23,7 +23,7 @@ import pandas
 from openquake.hazardlib import read_input, valid
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.calc.filters import IntegrationDistance
-from openquake.hazardlib.calc.cond_spectra import get_cs_out
+from openquake.hazardlib.calc.cond_spectra import get_cs_out, cond_spectra
 
 OVERWRITE_EXPECTED = False
 
@@ -116,6 +116,15 @@ class CondSpectraTestCase(unittest.TestCase):
         mom2 = get_cs_out(cmaker, ctx2, imti, imls)[0]
         mom = get_cs_out(cmaker, ctx, imti, imls)[0]
         aac(mom1 + mom2, mom)
+
+        spectra, s_sigma = cond_spectra(
+            cmaker, src_group, inp.sitecol, 'SA(0.2)', imls)
+        aac(spectra.flatten(), [0.19236242, 0.23961989, 0.27838065, 0.35216192,
+                                0.39435944, 0.36501786, 0.34676928, 0.23458421,
+                                0.15669297, 0.11154595, 0.0409729], atol=2E-5)
+        aac(s_sigma.flatten(), [0.327456, 0.368969, 0.388289, 0.270122,
+                                0.006058, 0.235236, 0.319312, 0.463179,
+                                0.556208, 0.596132, 0.70371], atol=2E-5)
 
     def test_2_rlzs(self):
         # test with two GMPEs, 1 TRT

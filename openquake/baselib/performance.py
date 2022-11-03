@@ -146,7 +146,10 @@ def memory_rss(pid):
     """
     :returns: the RSS memory allocated by a process
     """
-    return psutil.Process(pid).memory_info().rss
+    try:
+        return psutil.Process(pid).memory_info().rss
+    except psutil.NoSuchProcess:
+        return 0
 
 
 # this is not thread-safe
@@ -344,6 +347,7 @@ class Monitor(object):
         """
         while True:
             try:
+                self.mem = 0
                 with self:
                     obj = next(genobj)
             except StopIteration:
@@ -424,6 +428,24 @@ def idx_start_stop(integers):
             start = i
         prev = val
     out.append((I64(prev), start, i + 1))
+    return numpy.array(out, I64)
+
+
+@compile("int64[:, :](uint32[:], uint32)")
+def split_slices(integers, size):
+    # given an array of integers returns an array int64 of shape (n, 2)
+    out = []
+    start = i = 0
+    prev = integers[0]
+    totsize = 1
+    for i, val in enumerate(integers[1:], 1):
+        totsize += 1
+        if val != prev and totsize >= size:
+            out.append((start, i))
+            totsize = 0
+            start = i
+        prev = val
+    out.append((start, i + 1))
     return numpy.array(out, I64)
 
 

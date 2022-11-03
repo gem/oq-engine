@@ -146,12 +146,12 @@ def new(calc_id, oqparam, datadir=None, mode=None):
     return dstore
 
 
-def build_dstore_log(description, parent=()):
+def build_dstore_log(description='custom calculation', parent=()):
     """
     :returns: DataStore instance associated to the .calc_id
     """
     dic = dict(description=description, calculation_mode='custom')
-    log = init('job', dic)
+    log = init('calc', dic)
     dstore = new(log.calc_id, log.get_oqparam(validate=False))
     dstore.parent = parent
     return dstore, log
@@ -164,12 +164,10 @@ class DataStore(collections.abc.MutableMapping):
 
     Here is a minimal example of usage:
 
-    >>> from openquake.commonlib import logs
-    >>> params = {'calculation_mode': 'scenario', 'sites': '0 0'}
-    >>> with logs.init("calc", params) as log:
-    ...     ds = new(log.calc_id, log.get_oqparam())
-    ...     ds['example'] = 42
-    ...     print(ds['example'][()])
+    >>> dstore, log = build_dstore_log()
+    >>> with dstore, log:
+    ...     dstore['example'] = 42
+    ...     print(dstore['example'][()])
     42
 
     When reading the items, the DataStore will return a generator. The

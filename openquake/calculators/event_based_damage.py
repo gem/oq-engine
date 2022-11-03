@@ -21,7 +21,7 @@ import logging
 import numpy
 import pandas
 
-from openquake.baselib import hdf5, general, parallel
+from openquake.baselib import hdf5, general
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, connectivity
 from openquake.commonlib import datastore, calc
@@ -219,12 +219,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore)  # check
         self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, self.crmodel)
-        with self.monitor('getting gmf_data slices', measuremem=True):
-            slice_list = calc.build_gmfslices(
-                self.datastore, oq.concurrent_tasks or 1)
-            allargs = [(arr, oq, self.datastore) for arr in slice_list]
-        smap = parallel.Starmap(
-            damage_from_gmfs, allargs, h5=self.datastore.hdf5)
+        smap = calc.starmap_from_gmfs(damage_from_gmfs, oq, self.datastore)
         smap.monitor.save('assets', self.assetcol.to_dframe('id'))
         smap.monitor.save('crmodel', self.crmodel)
         return smap.reduce(self.combine)
@@ -253,11 +248,16 @@ class DamageCalculator(EventBasedRiskCalculator):
         Store damages-rlzs/stats, aggrisk and aggcurves
         """
         oq = self.oqparam
-        # no damage check
+        # no damage check, perhaps the sites where disjoint from gmf_data
         if self.dmgcsq[:, :, :, 1:].sum() == 0:
-            self.nodamage = True
-            logging.warning(
-                'There is no damage, perhaps the hazard is too small?')
+            haz_sids = self.datastore['gmf_data/sid'][:]
+            count = numpy.isin(haz_sids, self.sitecol.sids).sum()
+            if count == 0:
+                raise ValueError('The sites in gmf_data are disjoint from the '
+                                 'site collection!?')
+            else:
+                logging.warning(
+                    'There is no damage, perhaps the hazard is too small?')
             return
 
         prc = PostRiskCalculator(oq, self.datastore.calc_id)

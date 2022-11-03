@@ -52,7 +52,8 @@ def dbcmd(action, *args):
             return dbapi.db(action, *args)
         else:
             return func(dbapi.db, *args)
-    sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect')
+    sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect',
+                         timeout=60)  # when the system is loaded 60 seconds
     with sock:
         res = sock.send((action,) + args)
         if isinstance(res, parallel.Result):
@@ -182,7 +183,7 @@ class LogContext:
                 'create_job',
                 get_datadir(),
                 self.params['calculation_mode'],
-                self.params['description'],
+                self.params.get('description', 'test'),
                 user_name,
                 hc_id,
                 host)

@@ -234,10 +234,10 @@ def install_standalone(venv):
     for app in 'oq-platform-standalone oq-platform-ipt \
         oq-platform-taxonomy oq-platform-taxtweb openquake.taxonomy'.split():
         try:
-            print("Applications " +  app + " are not installed yet \n")
+            print("Applications " + app + " are not installed yet \n")
 
             subprocess.check_call([pycmd, '-m', 'pip', 'install',
-                            '--find-links', URL_STANDALONE, app])
+                                   '--find-links', URL_STANDALONE, app])
         except Exception as exc:
             print('%s: could not install %s' % (exc, app))
 
@@ -250,8 +250,8 @@ def before_checks(inst, port, remove, usage):
         inst.DBPORT = int(port)
 
     # check python version
-    if PYVER < (3, 6):
-        sys.exit('Error: you need at least Python 3.6, but you have %s' %
+    if PYVER < (3, 8):
+        sys.exit('Error: you need at least Python 3.8, but you have %s' %
                  '.'.join(map(str, sys.version_info)))
 
     # check platform
