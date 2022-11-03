@@ -146,7 +146,10 @@ def memory_rss(pid):
     """
     :returns: the RSS memory allocated by a process
     """
-    return psutil.Process(pid).memory_info().rss
+    try:
+        return psutil.Process(pid).memory_info().rss
+    except psutil.NoSuchProcess:
+        return 0
 
 
 # this is not thread-safe

@@ -109,6 +109,7 @@ class CalculatorTestCase(unittest.TestCase):
         if OQ_CALC_OUTPUTS:
             writers.write_csv = write_csv
         os.environ['OQ_DATABASE'] = 'local'
+        parallel.Starmap.maxtasksperchild = None
 
     def get_calc(self, testfile, job_ini, **kw):
         """
@@ -255,6 +256,7 @@ class CalculatorTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         parallel.Starmap.shutdown()
+        parallel.Starmap.maxtasksperchild = 1
         builtins.open = orig_open
         export.sanity_check = False
         if OQ_CALC_OUTPUTS:
