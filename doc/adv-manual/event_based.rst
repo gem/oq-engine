@@ -1631,9 +1631,9 @@ non-proportional treaties.
 
 **Proportional treaties (Pro-Rata)**
 
-    - Quota Share
-    - Surplus
-    - Facultative
+- Quota Share
+- Surplus
+- Facultative
 
 NOTE: proportional treaties may have a parameter "max_cession_event"
 limiting the total losses per event that can be ceded to the
@@ -1643,18 +1643,18 @@ is going back to the insurer.
 
 **Non-proportional treaties**
 
-    - Working excess of loss per risk, WXL/R (``wxlr``).
-        The unit of loss under this treaty is the "risk". The engine
-        aggregates the losses per "risk" at the policy level, which
-        can include single or multiple assests.
-    - Catastrophic excess of loss per event, CatXL (``catxl``). 
-        The unit of loss under this treaty is the "event".
+- Working excess of loss per risk, WXL/R (``wxlr``).
+  The unit of loss under this treaty is the "risk". The engine
+  aggregates the losses per "risk" at the policy level, which
+  can include single or multiple assests.
+- Catastrophic excess of loss per event, CatXL (``catxl``).
+  The unit of loss under this treaty is the "event".
 
-    - When combined with *proportional* treaties, the
-        *non-proportional* layers are applied over the net loss
-        retention coming from the proportional layers;
-        first the ``wxlr`` are estimated, and then the successive layers
-        of CatXL are applied over the net loss retention
+- When combined with *proportional* treaties, the
+  *non-proportional* layers are applied over the net loss
+  retention coming from the proportional layers;
+  first the ``wxlr`` are estimated, and then the successive layers
+  of CatXL are applied over the net loss retention
         
 NOTE: The CatXL is applied over the net loss retention per event
 coming from the proportional layers and therefore it includes the
@@ -1718,18 +1718,21 @@ policy information and its associated metadata:
 
 .. code-block:: xml
 
-    <exposureModel id="ex1" category="buildings" taxonomySource="GEM taxonomy">
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+      <exposureModel id="ex1" category="buildings" taxonomySource="GEM taxonomy">
         <description>exposure model</description>
         <conversions>
-        <costTypes>
+          <costTypes>
             <costType name="structural" type="aggregated" unit="USD"/>
-        </costTypes>
+          </costTypes>
         </conversions>
         <tagNames>policy</tagNames>
+        <occupancyPeriods>night</occupancyPeriods>
         <assets>
-        exposure_model.csv
+          exposure_model.csv
         </assets>
-    </exposureModel>
+      </exposureModel>
     </nrml>
 
 This example presents 7 assets (a1 to a7) with 4 associated policies
@@ -1762,7 +1765,7 @@ input file:
         <field input="QuotaShare" type="prop" max_cession_event="250" />
         <field input="Surplus" type="prop" max_cession_event="500" />
 
-        <field input="WXL/R" type="wxlr" deductible="200" limit="1000" />
+        <field input="WXLR" type="wxlr" deductible="200" limit="1000" />
         <field input="CatXL1" type="catxl" deductible="500" limit="2000" />
         <field input="CatXL2" type="catxl" deductible="100" limit="750" />
       </fieldMap>
