@@ -106,7 +106,7 @@ def get_distance_coefficients_1(kind, c3, c3_epsilon, C, imt, sctx):
     """
     if c3:
         # Use the c3 that has been defined on input
-        return c3
+        return c3[imt][0]
     else:
         # Define the c3 as a number of standard deviation multiplied
         # by tau_c3
@@ -155,7 +155,7 @@ def get_distance_coefficients_3(att, c3, delta_c3_epsilon, C, imt, sctx):
     """
     if c3:
 
-        return c3
+        return c3[imt][0]
     
     else:
 
@@ -468,10 +468,6 @@ class KothaEtAl2020(GMPE):
                 extra['GEOLOGICAL_UNITS'] = self.GEOLOGICAL_UNITS
             else:
                 phi_s2s = None
-            # if self.kind == 'regional':
-            #     self.c3 = get_distance_coefficients_3(self.att, self.c3,
-            #                                      self.delta_c3_epsilon,
-            #                                      C, imt, ctx)
 
             fp = get_distance_term(self, self.kind, self.c3, self.c3_epsilon,
                                    C, ctx, imt)
