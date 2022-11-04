@@ -177,19 +177,19 @@ class KothaEtAl2020regionalcoefficientsTestCase(unittest.TestCase):
         np.testing.assert_array_equal(dl2l, expected_val)
     
 
-# class KothaEtAl2020regionalTestCase(BaseGSIMTestCase):
-#     ##Testing the regional version of the GMPE
-#     GSIM_CLASS = KothaEtAl2020regional
-#     ## for a list of pre defined scenarios, the GMPE predictions
-#     ## were calculated in a notebook using the 
-#     ## `KothaEtAl2020regional.get_mean_and_stddevs(ctxs, ctxs, ctxs, i, [StdDev.TOTAL])`
-#     def test_all(self):
-#         self.check("kotha20/KOTHA_2020_REGIONAL_MEAN.csv",
-#                 max_discrep_percentage=MAX_DISCREP)
-#         self.check("kotha20/KOTHA_2020_REGIONAL_STDDEV_INTRA_EVENT.csv",
-#                 "kotha20/KOTHA_2020_REGIONAL_STDDEV_INTER_EVENT.csv",
-#                 "kotha20/KOTHA_2020_REGIONAL_STDDEV_TOTAL.csv",
-#                 max_discrep_percentage=MAX_DISCREP)
+class KothaEtAl2020regionalTestCase(BaseGSIMTestCase):
+    ##Testing the regional version of the GMPE
+    GSIM_CLASS = KothaEtAl2020regional
+    ## for a list of pre defined scenarios, the GMPE predictions
+    ## were calculated in a notebook using the 
+    ## `KothaEtAl2020regional.get_mean_and_stddevs(ctxs, ctxs, ctxs, i, [StdDev.TOTAL])`
+    def test_all(self):
+        self.check("kotha20/KOTHA_2020_REGIONAL_MEAN.csv",
+                max_discrep_percentage=MAX_DISCREP)
+        self.check("kotha20/KOTHA_2020_REGIONAL_STDDEV_INTRA_EVENT.csv",
+                "kotha20/KOTHA_2020_REGIONAL_STDDEV_INTER_EVENT.csv",
+                "kotha20/KOTHA_2020_REGIONAL_STDDEV_TOTAL.csv",
+                max_discrep_percentage=MAX_DISCREP)
 
 class KothaEtAl2020TestCase(BaseGSIMTestCase):
     # Testing the unadjusted version of the original GMPE
