@@ -108,7 +108,7 @@ def oq_server_context_processor(request):
                                        (webui_host if webui_host else
                                         request.META.get('HTTP_HOST',
                                                         'localhost:8800'))
-                                        + settings.GEM_BASEURL)
+                                        + settings.WEBUI_PATHPREFIX)
     # this context var is also evaluated by the STANDALONE_APPS to identify
     # the running environment. Keep it as it is
     context['oq_engine_version'] = oqversion

@@ -36,7 +36,7 @@ OQSERVER_ROOT = os.path.dirname(__file__)
 DEBUG = True
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-GEM_BASEURL = os.getenv('GEM_BASEURL', '')
+WEBUI_PATHPREFIX = os.getenv('WEBUI_PATHPREFIX', '')
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -195,7 +195,7 @@ except ImportError:
         # settings in this file only will be used
         pass
 
-STATIC_URL = '%s/static/' % GEM_BASEURL
+STATIC_URL = '%s/static/' % WEBUI_PATHPREFIX
 # STATIC_URL = '/static/'
 
 MEDIA_ROOT = '%(mediaroot)s'
@@ -249,8 +249,8 @@ if LOCKDOWN:
         },
     ]
 
-    LOGIN_REDIRECT_URL = '%s/engine/' % GEM_BASEURL
-    LOGOUT_REDIRECT_URL = '%s/accounts/login/' % GEM_BASEURL
-    LOGIN_EXEMPT_URLS = ('%s/accounts/ajax_login/' % GEM_BASEURL, )
-    LOGIN_URL = '%s/accounts/login/' % GEM_BASEURL
+    LOGIN_REDIRECT_URL = '%s/engine/' % WEBUI_PATHPREFIX
+    LOGOUT_REDIRECT_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
+    LOGIN_EXEMPT_URLS = ('%s/accounts/ajax_login/' % WEBUI_PATHPREFIX, )
+    LOGIN_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
 

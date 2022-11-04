@@ -37,7 +37,7 @@ urlpatterns = [
 # are also not required anymore for an API-only usage
 if settings.WEBUI:
     urlpatterns += [
-        re_path(r'^$', RedirectView.as_view(url='%s/engine/' % settings.GEM_BASEURL,
+        re_path(r'^$', RedirectView.as_view(url='%s/engine/' % settings.WEBUI_PATHPREFIX,
                 permanent=True)),
         re_path(r'^engine/?$', views.web_engine, name="index"),
         re_path(r'^engine/(\d+)/outputs$',
@@ -55,7 +55,7 @@ if settings.LOCKDOWN:
     from django.contrib.auth.views import LoginView, LogoutView
 
     admin.autodiscover()
-    admin.site.site_url = '%s/engine/' % settings.GEM_BASEURL
+    admin.site.site_url = '%s/engine/' % settings.WEBUI_PATHPREFIX
     urlpatterns += [
         re_path(r'^admin/', admin.site.urls),
         re_path(r'accounts/login/$', LoginView.as_view(
@@ -66,8 +66,8 @@ if settings.LOCKDOWN:
         re_path(r'^accounts/ajax_logout/$', views.ajax_logout),
     ]
 
-if settings.GEM_BASEURL != "":
-    urlpatterns = [path(r'%s/' % settings.GEM_BASEURL.strip('/'),
+if settings.WEBUI_PATHPREFIX != "":
+    urlpatterns = [path(r'%s/' % settings.WEBUI_PATHPREFIX.strip('/'),
                         include(urlpatterns))]
 else:
     urlpatterns = urlpatterns
