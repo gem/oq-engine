@@ -1321,13 +1321,24 @@ class RowConverter(SourceConverter):
         return str(lst)
 
     def convert_hypolist(self, node):
-        lst = [{'alongStrike': hl['alongStrike'],
-                'downDip': hl['downDip'],
-                'weight': hl['weight']} for hl in node.hypoList]
+        try:
+            hypo_list = node.hypoList
+        except AttributeError:
+            lst = []
+        else:
+            lst = [{'alongStrike': hl['alongStrike'],
+                    'downDip': hl['downDip'],
+                    'weight': hl['weight']} for hl in hypo_list]
         return str(lst)
 
     def convert_sliplist(self, node):
-        return str([node_to_dict(n)['slip'] for n in node.slipList.nodes])
+        try:
+            slip_list = node.slipList
+        except AttributeError:
+            lst = []
+        else:
+            lst = [node_to_dict(n)['slip'] for n in slip_list.nodes]
+        return str(lst)
 
     def convert_areaSource(self, node):
         geom = node.areaGeometry
