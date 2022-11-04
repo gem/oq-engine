@@ -62,17 +62,14 @@ def _get_path_scaling(C, rhypo):
     rx = 600. # hinge distance in km
     
     # get far-field term (eqn 2)
-    far_term = np.zeros_like(rhypo)
-    idx = rhypo <= rx
-    far_term[idx] = C["c3"] * np.log10(rhypo[idx])
-    idx = rhypo > rx
-    far_term[idx] = C["c3"] * np.log10(rx) + \
-                           C["c4"] * (np.log10(rhypo[idx]) - np.log10(rx))
+    far_term = np.where(rhypo <= rx,
+                        C["c3"] * np.log10(rhypo),
+                        C["c3"] * np.log10(rx) + C["c4"] * (np.log10(rhypo) - np.log10(rx)))
     
     # get near-field correction (eqn 5)
-    near_term = np.zeros_like(rhypo)
-    idx = rhypo <= rx
-    near_term[idx] = C["n0"] * (np.log10(rhypo[idx]) - np.log10(rx))
+    near_term = np.where(rhypo <= rx,
+                         C["n0"] * (np.log10(rhypo) - np.log10(rx)),
+                         0.)
     
     return near_term + far_term
     
