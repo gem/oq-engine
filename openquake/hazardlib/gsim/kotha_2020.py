@@ -106,7 +106,7 @@ def get_distance_coefficients_1(kind, c3, c3_epsilon, C, imt, sctx):
     """
     if c3:
         # Use the c3 that has been defined on input
-        return c3[imt][0]
+        return c3
     else:
         # Define the c3 as a number of standard deviation multiplied
         # by tau_c3
@@ -155,7 +155,7 @@ def get_distance_coefficients_3(att, c3, delta_c3_epsilon, C, imt, sctx):
     """
     if c3:
 
-        return c3[imt][0]
+        return c3
     
     else:
 
