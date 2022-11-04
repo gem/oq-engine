@@ -387,7 +387,8 @@ class ContextMaker(object):
         self.split_sources = param.get('split_sources')
         self.effect = param.get('effect')
         for req in self.REQUIRES:
-            reqset = set()
+            # make the vs30 always required to make ModifiableGMPE happy
+            reqset = {'vs30'} if req == 'SITES_PARAMETERS' else set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
                 if self.af and req == 'SITES_PARAMETERS':
