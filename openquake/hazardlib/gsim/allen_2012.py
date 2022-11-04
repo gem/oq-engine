@@ -27,7 +27,7 @@ from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.gsim import boore_2014
-    
+
 def _compute_mean(C, mag, rrup):
     """
     Compute mean value according to equation 18, page 32.
@@ -39,11 +39,10 @@ def _compute_mean(C, mag, rrup):
     m_ref = mag - 4
     r1 = R1 + C['c8'] * m_ref
     r2 = R2 + C['c11'] * m_ref
-    assert r1 > 0
-    assert r2 > 0
+    assert (r1 > 0).all()
+    assert (r2 > 0).all()
     g0 = np.log10(
-        np.sqrt(np.minimum(rrup, r1) ** 2 + (1 + C['c5'] * m_ref) ** 2)
-    )
+        np.sqrt(np.minimum(rrup, r1) ** 2 + (1 + C['c5'] * m_ref) ** 2))
     g1 = np.maximum(np.log10(rrup / r1), 0)
     g2 = np.maximum(np.log10(rrup / r2), 0)
 
@@ -83,7 +82,7 @@ class Allen2012(GMPE):
 
     #: No site parameters are needed, the GMPE is calibrated for average South
     #: East Australia site conditions (assumed consistent to Vs30 = 820 m/s)
-    #: see paragraph 'Executive Summary', page VII. (provisionally set to 820
+    #: see paragraph 'Executive Summary', page VII. (provisionally set to 800
     #: for compatibility with SiteTerm class)
     REQUIRES_SITES_PARAMETERS = set()
     DEFINED_FOR_REFERENCE_VELOCITY = 820.
@@ -97,20 +96,17 @@ class Allen2012(GMPE):
     #: 'Regression of Model Coefficients', page 32
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         for m, imt in enumerate(imts):
-            if ctx.hypo_depth < 10:
-                C = self.COEFFS_SHALLOW[imt]
-            else:
-                C = self.COEFFS_DEEP[imt]
-            
+            C = np.where(ctx.hypo_depth < 10,
+                         self.COEFFS_SHALLOW[imt],
+                         self.COEFFS_DEEP[imt])
             mean[m] = _compute_mean(C, ctx.mag, ctx.rrup)
-            
             sig[m] = np.log(10 ** C['sigma'])
             # standard deviation is converted from log10 to ln
 
@@ -166,7 +162,6 @@ class Allen2012(GMPE):
     4.0000  0.320200  1.025000  -0.084500  -1.730700  0.229100  1.570300   0.640300  -0.176500  -2.737500  -2.811400  0.352600  -0.854700  0.309700
     """)
 
-
 class Allen2012_SS14(Allen2012):
     """
     Allen2012 Model updated to apply the linear and non-linear amplification factors of Sayhan & 
@@ -176,17 +171,16 @@ class Allen2012_SS14(Allen2012):
     #: Required site parameters is Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         # get coefficients for rock PGA
-        if ctx.hypo_depth < 10:
-            C_PGA = self.COEFFS_SHALLOW[PGA()]
-        else:
-            C_PGA = self.COEFFS_DEEP[PGA()]
+        C_PGA = np.where(ctx.hypo_depth < 10,
+                         self.COEFFS_SHALLOW[PGA()],
+                         self.COEFFS_DEEP[PGA()])
         BEA14_C_PGA = boore_2014.BooreEtAl2014.COEFFS[PGA()]
         
         # get rock PGA - correct from PGA(820 m/s) to PGA(760 m/s)
@@ -203,10 +197,9 @@ class Allen2012_SS14(Allen2012):
         pga_rock_760 = pga_rock - flin_820_760 - fnl_820_760
         
         for m, imt in enumerate(imts):
-            if ctx.hypo_depth < 10:
-                C = self.COEFFS_SHALLOW[imt]
-            else:
-                C = self.COEFFS_DEEP[imt]
+            C = np.where(ctx.hypo_depth < 10,
+                         self.COEFFS_SHALLOW[imt],
+                         self.COEFFS_DEEP[imt])
             
             # get amplification model coefficients from Boore et al, 2014
             BEA14_C = boore_2014.BooreEtAl2014.COEFFS[imt]
@@ -222,4 +215,3 @@ class Allen2012_SS14(Allen2012):
             mean[m] = _compute_mean(C, ctx.mag, ctx.rrup) - flin_820_760 - fnl_820_760 + flin + fnl 
             
             sig[m] = np.log(10 ** C['sigma'])
-            # standard deviation is converted from log10 to ln
