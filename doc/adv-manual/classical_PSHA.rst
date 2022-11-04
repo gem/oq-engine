@@ -868,6 +868,12 @@ calculation with 250,000 sites showed a 15% slowdown with tiles of
 50,000 sites and a 500% slowdown with tiles of 5,000 sites. Of course
 your mileage may vary, but you get an idea.
 
+To enable tiling you must set the parameter ``max_sites_per_tile`` in the
+job.ini to a value inferior to the total number of sites in your calculation.
+In some versions of the engine the parameter can be automatically set if
+the engine figures out that the calculation would run out of memory.
+
+NB: the tiling calculator is still experimental and subject to changes.
 
 disagg_by_src
 =======================================
