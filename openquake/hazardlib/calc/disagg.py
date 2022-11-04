@@ -71,26 +71,41 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     mags = sorted(mags)
     min_mag = mags[0]
     max_mag = mags[-1]
-    n1 = int(numpy.floor(min_mag / oq.mag_bin_width))
-    n2 = int(numpy.ceil(max_mag / oq.mag_bin_width))
-    if n2 == n1 or max_mag >= round((oq.mag_bin_width * n2), 3):
-        n2 += 1
-    mag_edges = oq.mag_bin_width * numpy.arange(n1, n2+1)
+
+    # build _edges
+    if 'mag' in oq.disagg_bin_edges:
+        mag_edges = oq.disagg_bin_edges.get('mag')
+    else:
+        n1 = int(numpy.floor(min_mag / oq.mag_bin_width))
+        n2 = int(numpy.ceil(max_mag / oq.mag_bin_width))
+        if n2 == n1 or max_mag >= round((oq.mag_bin_width * n2), 3):
+            n2 += 1
+        mag_edges = oq.mag_bin_width * numpy.arange(n1, n2+1)
 
     # build dist_edges
     maxdist = max(oq.maximum_distance.max().values())
-    dist_edges = oq.distance_bin_width * numpy.arange(
-        0, int(numpy.ceil(maxdist / oq.distance_bin_width) + 1))
+    if 'dist' in oq.disagg_bin_edges:
+        dist_edges = oq.disagg_bin_edges['dist']
+    else:
+        dist_edges = oq.distance_bin_width * numpy.arange(
+            0, int(numpy.ceil(maxdist / oq.distance_bin_width) + 1))
 
     # build eps_edges
-    eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
+    if 'eps' in oq.disagg_bin_edges:
+        eps_edges = oq.disagg_bin_edges['eps']
+    else:
+        eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
     # build lon_edges, lat_edges per sid
     lon_edges, lat_edges = {}, {}  # by sid
     for site in sitecol:
-        loc = site.location
-        lon_edges[site.id], lat_edges[site.id] = lon_lat_bins(
-            loc.x, loc.y, maxdist, oq.coordinate_bin_width)
+        if 'lon' in oq.disagg_bin_edges and 'lat' in oq.disagg_bin_edges:
+            lon_edges[site.id] = oq.disagg_bin_edges['lon']
+            lat_edges[site.id] = oq.disagg_bin_edges['lat']
+        else:
+            loc = site.location
+            lon_edges[site.id], lat_edges[site.id] = lon_lat_bins(
+                loc.x, loc.y, maxdist, oq.coordinate_bin_width)
 
     # sanity check: the shapes of the lon lat edges are consistent
     assert_same_shape(list(lon_edges.values()))
@@ -106,11 +121,9 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     shapedic['Z'] = Z
     return bin_edges + [trts], shapedic
 
-
-def _eps3(truncation_level, n_epsilons):
+def _eps3(truncation_level, eps):
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
-    eps = numpy.linspace(-truncation_level, truncation_level, n_epsilons + 1)
     eps_bands = tn.cdf(eps[1:]) - tn.cdf(eps[:-1])
     return tn, eps, eps_bands
 
@@ -291,8 +304,9 @@ def _digitize_lons(lons, lon_bins):
 # this is used in the hazardlib tests, not in the engine
 def disaggregation(
         sources, site, imt, iml, gsim_by_trt, truncation_level,
-        n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
-        source_filter=filters.nofilter, epsstar=False, **kwargs):
+        n_epsilons=None, mag_bin_width=None, dist_bin_width=None,
+        coord_bin_width=None, source_filter=filters.nofilter,
+        epsstar=False, bin_edges={}, **kwargs):
     """
     Compute "Disaggregation" matrix representing conditional probability of an
     intensity measure type ``imt`` exceeding, at least once, an intensity
@@ -347,7 +361,12 @@ def disaggregation(
     :param source_filter:
         Optional source-site filter function. See
         :mod:`openquake.hazardlib.calc.filters`.
-
+    :param epsstar:
+        A boolean. When true disaggregations results including epsilon are
+        in terms of epsilon star rather then epsilon.
+    :param bin_edges:
+        Bin edges provided by the users. These override the ones automatically
+        computed by the OQ Engine.
     :returns:
         A tuple of two items. First is itself a tuple of bin edges information
         for (in specified order) magnitude, distance, longitude, latitude,
@@ -358,6 +377,7 @@ def disaggregation(
         of the result tuple. The matrix can be used directly by pmf-extractor
         functions.
     """
+    bine = bin_edges
     trts = sorted(set(src.tectonic_region_type for src in sources))
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
@@ -365,8 +385,17 @@ def disaggregation(
     bdata = {}  # by trt, magi
     sitecol = SiteCollection([site])
     iml2 = numpy.array([[iml]])
-    eps3 = _eps3(truncation_level, n_epsilons)
 
+    # Epsilon bins
+    if 'eps' in bine:
+        eps_bins = bine['eps']
+        n_epsilons = len(eps_bins) - 1
+    else:
+        eps_bins = numpy.linspace(-truncation_level, truncation_level,
+                                  n_epsilons + 1)
+    eps3 = _eps3(truncation_level, eps_bins)
+
+    # Create contexts
     rups = AccumDict(accum=[])
     cmaker = {}  # trt -> cmaker
     for trt, srcs in by_trt.items():
@@ -377,11 +406,17 @@ def disaggregation(
              'imtls': {str(imt): [iml]}})
         cm.tom = srcs[0].temporal_occurrence_model
         rups[trt].extend(cm.from_srcs(srcs, sitecol))
-    mags = numpy.array([r.mag for rs in rups.values() for r in rs])
-    mag_bins = mag_bin_width * numpy.arange(
-        int(numpy.floor(mags.min() / mag_bin_width)),
-        int(numpy.ceil(mags.max() / mag_bin_width) + 1))
 
+    # Set the magnitude bins
+    if 'mag' in bine:
+        mag_bins = bine['mag']
+    else:
+        mags = numpy.array([r.mag for rs in rups.values() for r in rs])
+        mag_bins = mag_bin_width * numpy.arange(
+            int(numpy.floor(mags.min() / mag_bin_width)),
+            int(numpy.ceil(mags.max() / mag_bin_width) + 1))
+
+    # Compute disaggregation per TRT
     for trt, cm in cmaker.items():
         [ctx] = rups[trt]
         ctx.magi = numpy.searchsorted(mag_bins, ctx.mag) - 1
@@ -392,19 +427,29 @@ def disaggregation(
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(
-            'No ruptures have contributed to the hazard at site %s'
-            % site, RuntimeWarning)
+            f'No ruptures have contributed to the hazard at site {site}',
+            RuntimeWarning)
         return None, None
 
+    # Distance bins
     min_dist = min(bd.dists.min() for bd in bdata.values())
     max_dist = max(bd.dists.max() for bd in bdata.values())
-    dist_bins = dist_bin_width * numpy.arange(
-        int(numpy.floor(min_dist / dist_bin_width)),
-        int(numpy.ceil(max_dist / dist_bin_width) + 1))
-    lon_bins, lat_bins = lon_lat_bins(site.location.x, site.location.y,
-                                      max_dist, coord_bin_width)
-    eps_bins = numpy.linspace(-truncation_level, truncation_level,
-                              n_epsilons + 1)
+    if 'dist' in bine:
+        dist_bins = bine['dist']
+    else:
+        dist_bins = dist_bin_width * numpy.arange(
+            int(numpy.floor(min_dist / dist_bin_width)),
+            int(numpy.ceil(max_dist / dist_bin_width) + 1))
+
+    # Lon, Lat bins
+    if 'lon' in bine and 'lat' in bine:
+        lon_bins = bine['lon']
+        lat_bins = bine['lat']
+    else:
+        lon_bins, lat_bins = lon_lat_bins(site.location.x, site.location.y,
+                                          max_dist, coord_bin_width)
+
+    # Bin edges
     bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins)
     matrix = numpy.zeros((len(mag_bins) - 1, len(dist_bins) - 1,
                           len(lon_bins) - 1, len(lat_bins) - 1,
