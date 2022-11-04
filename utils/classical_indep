@@ -17,14 +17,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import logging
 import operator
 from openquake.baselib import sap, parallel, general
-from openquake.hazardlib import contexts, calc, probability_map
+from openquake.hazardlib import contexts, calc
 from openquake.commonlib import datastore
 
 TWO20 = 2**20
-MAX_MB = 200
+MAX_MB = 500
+
+'''Using shared memory
+
+import logging
+from openquake.hazardlib import probability_map
 
 def classical(srcs, srcfilter, cmaker, pmap, monitor):
     ctxs_mb = 0
@@ -75,8 +79,8 @@ def classical_indep(calc_id: int):
                 smap.submit((block, srcfilter, cmakers[grp_id], pmap))
         smap.reduce()
 classical_indep.calc_id = 'parent calculation'
+'''
 
-'''# original version
 def classical(srcs, srcfilter, cmaker, monitor):
     ctxs_mb = 0
     allctxs = []
@@ -107,6 +111,7 @@ def classical_indep(calc_id: int):
         sitecol = dstore.parent['sitecol']
         srcfilter = calc.filters.SourceFilter(sitecol, oq.maximum_distance)
         cmakers = contexts.read_cmakers(dstore.parent)
+        dstore.swmr_on()
         smap = parallel.Starmap(classical, h5=dstore)
         csm = dstore['_csm']
         maxw = csm.get_max_weight(oq)
@@ -116,6 +121,6 @@ def classical_indep(calc_id: int):
                 smap.submit((block, srcfilter, cmakers[grp_id]))
         smap.reduce()
 classical_indep.calc_id = 'parent calculation'
-'''
+
 if __name__ == '__main__':
     sap.run(classical_indep)
