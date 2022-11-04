@@ -933,9 +933,11 @@ class ContextMaker(object):
         with patch.object(self.collapser, 'collapse_level', collapse_level):
             return self.get_pmap(ctxs).array
 
-    def get_pmap(self, ctxs, rup_indep=True):
+    def get_pmap(self, ctxs, monitor=Monitor(), rup_indep=True):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
+        :param monitor: not used, useful for API compatibility
+        :param rup_indep: default True
         :returns: a ProbabilityMap
         """
         sids = numpy.unique(ctxs[0].sids)
