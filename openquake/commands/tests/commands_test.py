@@ -613,6 +613,9 @@ class NRML2CSVTestCase(unittest.TestCase):
         self.assertIn('Point', out)
         shutil.rmtree(temp_dir)
 
+
+class NRML2GPKGTestCase(unittest.TestCase):
+
     def test_nrml_to_gpkg(self):
         try:
             import fiona
@@ -637,17 +640,14 @@ class GPKG2NRMLTestCase(unittest.TestCase):
         except ImportError:
             raise unittest.SkipTest('fiona is missing')
         temp_dir = tempfile.mkdtemp()
-        # first convert nrml to gpkg
-        with Print.patch() as p:
-            sap.runline(f'openquake.commands nrml_to gpkg {MIXED_SRC_MODEL}')
-        # FIXME: setting the outdir does not work when producing gpkg
+        with Print.patch():
+            sap.runline(f'openquake.commands nrml_to gpkg {MIXED_SRC_MODEL} '
+                        f'--outdir={temp_dir} --chatty')
         gpkg_path = os.path.join(
-            Path(MIXED_SRC_MODEL).stem + '.gpkg')
-            # temp_dir, Path(MIXED_SRC_MODEL).stem + '.gpkg')
+            temp_dir, Path(MIXED_SRC_MODEL).stem + '.gpkg')
         out_path = os.path.join(
             temp_dir, Path(MIXED_SRC_MODEL).stem + '_converted.xml')
-        # then convert the above gpkg back to nrml
-        with Print.patch() as p:
+        with Print.patch():
             sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
         datadir = os.path.join(os.path.dirname(__file__), 'data')
         self.assertListEqual(
