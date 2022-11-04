@@ -1346,9 +1346,8 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
-            # FIXME: convert_hypolist and convert_sliplist?
-            [],
-            [],
+            self.convert_hypolist(node),
+            self.convert_sliplist(node),
             'Polygon', [coords])
 
     def convert_pointSource(self, node):
@@ -1365,9 +1364,8 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
-            # FIXME: convert_hypolist and convert_sliplist?
-            [],
-            [],
+            self.convert_hypolist(node),
+            self.convert_sliplist(node),
             'Point', ~geom.Point.pos)
 
     def convert_multiPointSource(self, node):
@@ -1385,9 +1383,8 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
-            # FIXME: convert_hypolist and convert_sliplist?
-            [],
-            [],
+            self.convert_hypolist(node),
+            self.convert_sliplist(node),
             'MultiPoint', coords)
 
     def convert_simpleFaultSource(self, node):
@@ -1425,9 +1422,8 @@ class RowConverter(SourceConverter):
             numpy.nan,
             [{'rake': ~node.rake}],
             [],
-            # FIXME: convert_hypolist and convert_sliplist?
-            [],
-            [],
+            self.convert_hypolist(node),
+            self.convert_sliplist(node),
             '3D MultiLineString', edges)
 
     def convert_characteristicFaultSource(self, node):
@@ -1456,9 +1452,8 @@ class RowConverter(SourceConverter):
             numpy.nan,
             [{'rake': ~node.rake}],
             [],
-            # FIXME: convert_hypolist and convert_sliplist?
-            [],
-            [],
+            self.convert_hypolist(node),
+            self.convert_sliplist(node),
             geom, coords, '')
 
     def convert_nonParametricSeismicSource(self, node):
