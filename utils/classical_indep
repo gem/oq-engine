@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2018-2022 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import operator
+from openquake.baselib import sap, parallel, general
+from openquake.hazardlib import contexts, calc
+from openquake.commonlib import datastore
+
+TWO20 = 2**20
+MAX_MB = 200
+
+def classical(srcs, srcfilter, cmaker, monitor):
+    ctxs_mb = 0
+    allctxs = []
+    for src in srcs:
+        sites = srcfilter.get_close_sites(src)
+        if sites is None:
+            continue
+        for ctx in cmaker.get_ctx_iter(src, sites):
+            allctxs.append(ctx)
+            ctxs_mb += ctx.nbytes / TWO20  # TWO20=1MB
+            if ctxs_mb > MAX_MB:
+                yield cmaker.get_pmap(contexts.concat(allctxs))
+                allctxs.clear()
+                ctxs_mb = 0
+    if ctxs_mb:
+        yield cmaker.get_pmap(contexts.concat(allctxs))
+
+
+def classical_indep(calc_id: int):
+    """
+    Classical calculator as postprocessor; works only for independent
+    sources and ruptures.
+    """
+    parent = None if calc_id is None else datastore.read(calc_id)
+    dstore, log = datastore.build_dstore_log(parent=parent)
+    with dstore, log:
+        oq = dstore.parent['oqparam']
+        sitecol = dstore.parent['sitecol']
+        srcfilter = calc.filters.SourceFilter(sitecol, oq.maximum_distance)
+        cmakers = contexts.read_cmakers(dstore.parent)
+        smap = parallel.Starmap(classical, h5=dstore)
+        csm = dstore['_csm']
+        maxw = csm.get_max_weight(oq)
+        for grp_id, sg in enumerate(csm.src_groups):
+            for block in general.block_splitter(
+                    sg, maxw, operator.attrgetter('weight'), sort=True):
+                smap.submit((block, srcfilter, cmakers[grp_id]))
+        smap.reduce()
+classical_indep.calc_id = 'parent calculation'
+
+if __name__ == '__main__':
+    sap.run(classical_indep)
