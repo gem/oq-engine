@@ -63,6 +63,7 @@ def classical_indep(calc_id: int):
             len(cm.gsims) for cm in cmakers)
         logging.info(f'{N=}, {L=}, {G=}, {general.humansize(N*L*G*8)=}')
         pmap = probability_map.ProbabilityMap(sitecol.sids, L, G)
+        dstore.swmr_on()
         smap = parallel.Starmap(classical, h5=dstore)
         pmap.shared = smap.create_shared((N, L, G), value=1.)
         csm = dstore['_csm']
