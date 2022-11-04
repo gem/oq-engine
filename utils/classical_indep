@@ -84,7 +84,6 @@ classical_indep.calc_id = 'parent calculation'
 def classical(srcs, srcfilter, cmaker, monitor):
     ctxs_mb = 0
     allctxs = []
-    imtls = cmaker.imtls
     for src in srcs:
         sites = srcfilter.get_close_sites(src)
         if sites is None:
@@ -93,15 +92,13 @@ def classical(srcs, srcfilter, cmaker, monitor):
             allctxs.append(ctx)
             ctxs_mb += ctx.nbytes / TWO20  # TWO20=1MB
             if ctxs_mb > MAX_MB:
-                for imt in imtls:
-                    cmaker.imtls = {imt: imtls[imt]}
-                    yield cmaker.get_pmap(contexts.concat(allctxs))
+                yield {'ctxs_mb': ctxs_mb,
+                       'pmap': cmaker.get_pmap(contexts.concat(allctxs))}
                 allctxs.clear()
                 ctxs_mb = 0
     if ctxs_mb:
-        for imt in imtls:
-            cmaker.imtls = {imt: imtls[imt]}
-            yield cmaker.get_pmap(contexts.concat(allctxs))
+        yield {'ctxs_mb': ctxs_mb,
+               'pmap': cmaker.get_pmap(contexts.concat(allctxs))}
 
 
 def classical_indep(calc_id: int):
@@ -124,7 +121,11 @@ def classical_indep(calc_id: int):
             for block in general.block_splitter(
                     sg, maxw, operator.attrgetter('weight'), sort=True):
                 smap.submit((block, srcfilter, cmakers[grp_id]))
-        smap.reduce()
+        ctxs_mb = 0
+        for res in smap:
+            ctxs_mb += res['ctxs_mb']
+        print(f'{ctxs_mb=}')
+
 classical_indep.calc_id = 'parent calculation'
 
 if __name__ == '__main__':
