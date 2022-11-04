@@ -444,7 +444,7 @@ class ContextMaker(object):
         # instantiating child monitors, may be called in the workers
         self.pla_mon = monitor('planar contexts', measuremem=False)
         self.ctx_mon = monitor('nonplanar contexts', measuremem=False)
-        self.col_mon = monitor('collapsing contexts', measuremem=False)
+        self.col_mon = monitor('collapsing contexts', measuremem=True)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
