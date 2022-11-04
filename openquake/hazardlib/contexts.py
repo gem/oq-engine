@@ -387,13 +387,13 @@ class ContextMaker(object):
         self.split_sources = param.get('split_sources')
         self.effect = param.get('effect')
         for req in self.REQUIRES:
-            # make the vs30 always required to make ModifiableGMPE happy
-            reqset = {'vs30'} if req == 'SITES_PARAMETERS' else set()
+            reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
                 if self.af and req == 'SITES_PARAMETERS':
                     reqset.add('ampcode')
                 if is_modifiable(gsim) and req == 'SITES_PARAMETERS':
+                    reqset.add('vs30')  # required by the ModifiableGMPE
                     reqset.update(gsim.gmpe.REQUIRES_SITES_PARAMETERS)
                     if 'apply_swiss_amplification' in gsim.params:
                         reqset.add('amplfactor')
