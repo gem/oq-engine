@@ -1,3 +1,12 @@
+  [Trevor Allen]
+  * Added class Allen2012_SS14 to Allen (2012) GMM to incorporate Vs30 scaling 
+    based on Seyhan & Stewart (2014) amplification factors
+  * Added classes SomervilleEtAl2009NonCratonic_SS14 and SomervilleEtAl2009YilgarnCraton_SS14
+    to Somerville et al (2009) GMM to incorporate Vs30 scaling based on Seyhan
+    & Stewart (2014) amplification factors
+  * Added Allen (2022) GMM for Banda Sea earthquakes observed in the North
+    Australian Craton
+
   [Michele Simionato]
   * Added `spawn` distribution
 
