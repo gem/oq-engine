@@ -23,3 +23,9 @@ STATIC_ROOT = ''
 
 # WEBUI config uncomment and set properly if needed
 # WEBUIURL = 'http://localhost:8800/'
+
+# turn on USE_X_FORWARDED_HOST to expose the webui via a proxy server
+# USE_X_FORWARDED_HOST = True
+
+# enable GEM_BASEURL to place webui pages below a specific path
+# GEM_BASEURL='/path/prefix'
