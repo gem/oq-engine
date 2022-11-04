@@ -30,7 +30,8 @@ def classical(srcs, srcfilter, cmaker, pmap, monitor):
     ctxs_mb = 0
     allctxs = []
     with pmap.shared as array:
-        pmap.array = array
+        slc = slice(cmaker.start, cmaker.start + len(cmaker.gsims))
+        pmap.array = array[:, :, slc]
         for src in srcs:
             sites = srcfilter.get_close_sites(src)
             if sites is None:
@@ -39,7 +40,6 @@ def classical(srcs, srcfilter, cmaker, pmap, monitor):
                 allctxs.append(ctx)
                 ctxs_mb += ctx.nbytes / TWO20  # TWO20=1MB
                 if ctxs_mb > MAX_MB:
-                    print('----------', monitor.task_no)
                     yield cmaker.update(pmap, contexts.concat(allctxs))
                     allctxs.clear()
                     ctxs_mb = 0
