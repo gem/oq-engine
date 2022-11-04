@@ -649,9 +649,11 @@ class GPKG2NRMLTestCase(unittest.TestCase):
         # then convert the above gpkg back to nrml
         with Print.patch() as p:
             sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
+        datadir = os.path.join(os.path.dirname(__file__), 'data')
         self.assertListEqual(
             list(io.open(out_path)),
-            list(io.open(os.path.join('data', 'expected_converted_nrml.xml'))))
+            list(io.open(
+                os.path.join(datadir, 'expected_converted_nrml.xml'))))
         shutil.rmtree(temp_dir)
 
 
