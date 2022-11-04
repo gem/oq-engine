@@ -215,6 +215,7 @@ from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
     gettemp, engine_version)
 
+mp_context = multiprocessing.get_context('spawn')
 sys.setrecursionlimit(2000)  # raised to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
@@ -224,6 +225,19 @@ GB = 1024 ** 3
 @submit.add('no')
 def no_submit(self, func, args, monitor):
     return safely_call(func, args, self.task_no, monitor)
+
+
+@submit.add('spawn')
+def spawn_submit(self, func, args, monitor):
+    while True:
+        percent = psutil.cpu_percent()
+        if percent <= 99:
+            mp_context.Process(
+                target=safely_call, args=(func, args, self.task_no, monitor)
+            ).start()
+            break
+        logging.debug('CPU=%d%%, waiting', percent)
+        time.sleep(30)
 
 
 @submit.add('processpool')
@@ -270,7 +284,7 @@ def oq_distribute(task=None):
     :returns: the value of OQ_DISTRIBUTE or config.distribution.oq_distribute
     """
     dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
-    if dist not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
+    if dist not in ('no', 'spawn', 'processpool', 'threadpool', 'celery', 'zmq',
                     'dask', 'ipp'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
     return dist
@@ -699,7 +713,7 @@ class Starmap(object):
                 from ray.util.multiprocessing import Pool
                 cls.pool = Pool(cls.num_cores, init_workers)
             except ImportError:
-                cls.pool = multiprocessing.get_context('spawn').Pool(
+                cls.pool = mp_context.Pool(
                     cls.num_cores, init_workers,
                     maxtasksperchild=cls.maxtasksperchild)
                 cls.pids = [proc.pid for proc in cls.pool._pool]

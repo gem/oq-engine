@@ -996,6 +996,70 @@ GMFs it is a geometric mean - which is the same as the median since the
 distribution is lognormal - so you can also call this the hazardlib
 *median* ground motion field.
 
+Case study: GMFs for California
+-----------------------------------------
+
+We had an user asking for the GMFs of California on 707,920 hazard sites,
+using the UCERF mean model and an investigation time of 100,000 years.
+Is this feasible or not? Some back of the envelope calculations
+suggests that it is unfeasible, but reality can be different.
+
+The relevant parameters are the following::
+
+ N = 707,920 hazard sites
+ E = 10^5 estimated events of magnitude greater then 5.5 in the investigation
+     time of 100,000 years
+ B = 1 number of branches in the UCERF logic tree
+ G = 5 number of GSIMS in the GMPE logic tree
+ I = 6 number of intensity measure types
+ S1 = 13 number of bytes used by the engine to store a single GMV
+
+The maximum size of generated GMFs is
+
+``N * E * B * G * I * S1 = 25 TB (terabytes)``
+
+Storing and sharing 25 TB of data is a big issue, so the problem seems
+without solution. However, most of the ground motion values are zero,
+because there is a maximum distance of 300 km and a rupture cannot
+affect all of the sites. So the size of the GMFs should be less than
+25 TB. Moreover, if you want to use such GMFs for a damage analysis,
+you may want to discard very small shaking that will not cause any
+damage to your buildings. The engine has a parameter to discard all
+GMFs below a minimum threshold, the ``minimum_intensity`` parameter. The
+higher the threshold, the smaller the size of the GMFs. By playing
+with that parameter you can reduce the size of the output by orders of
+magnitudes. Terabytes could easily become gigabytes with a well chosen
+threshold.
+
+In practice, we were able to run the full 707,920 sites by
+splitting the sites in 70 tiles and by using a minimum intensity of 0.1 g. This
+was the limit configuration for our cluster which has 5 machines with
+128 GB of RAM each. 
+
+The full calculation was completed in only 4 hours because our calculators
+are highly optimized. The total size of the generated HDF5 files was
+of 400 GB. This is a lot less than 25 TB, but still too large for sharing
+purposes.
+
+Another way to reduce the output is to reduce the number of intensity
+measure types. Currently in your calculations there are 6 of them
+(PGA, SA(0.1), SA(0.2), SA(0.5), SA(1.0), SA(2.0)) but if you restrict
+yourself to only PGA the computation and the output will become 6
+times smaller. Also, there are 5 GMPEs: if you restrict yourself to 1 GMPE
+you gain a factor of 5. Similarly, you can reduce the investigation period
+from 100,000 year to 10,000 years, thus gaining another order of magnitude.
+Also, raising the minimum magnitude reduces the number of events significantly.
+
+But the best approach is to be smart. For instance, we know from experience
+that if the final goal is to estimate the total loss for a given exposure, the
+correct way to do that is to aggregate the exposure on a smaller number of
+hazard sites. For instance, instead of the original 707,920 hazard sites
+we could aggregate on only ~7,000 hazard sites and we would a calculation
+which is 100 times faster, produces 100 times less GMFs and still produces
+a good estimate for the total loss.
+
+In short, risk calculations for the mean field UCERF model are routines
+now, in spite of what the naive expectations could be.
 
 Extended consequences
 =====================
@@ -1631,9 +1695,9 @@ non-proportional treaties.
 
 **Proportional treaties (Pro-Rata)**
 
-    - Quota Share
-    - Surplus
-    - Facultative
+- Quota Share
+- Surplus
+- Facultative
 
 NOTE: proportional treaties may have a parameter "max_cession_event"
 limiting the total losses per event that can be ceded to the
@@ -1643,18 +1707,18 @@ is going back to the insurer.
 
 **Non-proportional treaties**
 
-    - Working excess of loss per risk, WXL/R (``wxlr``).
-        The unit of loss under this treaty is the "risk". The engine
-        aggregates the losses per "risk" at the policy level, which
-        can include single or multiple assests.
-    - Catastrophic excess of loss per event, CatXL (``catxl``). 
-        The unit of loss under this treaty is the "event".
+- Working excess of loss per risk, WXL/R (``wxlr``).
+  The unit of loss under this treaty is the "risk". The engine
+  aggregates the losses per "risk" at the policy level, which
+  can include single or multiple assests.
+- Catastrophic excess of loss per event, CatXL (``catxl``).
+  The unit of loss under this treaty is the "event".
 
-    - When combined with *proportional* treaties, the
-        *non-proportional* layers are applied over the net loss
-        retention coming from the proportional layers;
-        first the ``wxlr`` are estimated, and then the successive layers
-        of CatXL are applied over the net loss retention
+- When combined with *proportional* treaties, the
+  *non-proportional* layers are applied over the net loss
+  retention coming from the proportional layers;
+  first the ``wxlr`` are estimated, and then the successive layers
+  of CatXL are applied over the net loss retention
         
 NOTE: The CatXL is applied over the net loss retention per event
 coming from the proportional layers and therefore it includes the
@@ -1696,44 +1760,49 @@ policy information and its associated metadata:
 
 ``exposure_model.csv``
 
-    +-----+-----------+---------+-----------+---------+-------------+---------+
-    | id  | lon       | lat     | taxonomy  | number  | structural  | policy  |
-    +=====+===========+=========+===========+=========+=============+=========+
-    | a1  | -122      | 38.113  | tax1      | 1       | 15000       | pol_1   |
-    +-----+-----------+---------+-----------+---------+-------------+---------+
-    | a2  | -122.114  | 38.113  | tax1      | 1       | 10000       | pol_2   |
-    +-----+-----------+---------+-----------+---------+-------------+---------+
-    | a3  | -122.57   | 38.113  | tax2      | 1       | 30000       | pol_3   |
-    +-----+-----------+---------+-----------+---------+-------------+---------+
-    | a4  | -122      | 38      | tax1      | 1       | 85000       | pol_4   |
-    +-----+-----------+---------+-----------+---------+-------------+---------+
-    | a5  | -122      | 37.91   | tax3      | 1       | 50700       | pol_4   |
-    +-----+-----------+---------+-----------+---------+-------------+---------+
-    | a6  | -122      | 38.225  | tax4      | 1       | 20800       | pol_4   |
-    +-----+-----------+---------+-----------+---------+-------------+---------+
-    | a7  | -121.886  | 38.113  | tax1      | 1       | 77000       | pol_4   |
-    +-----+-----------+---------+-----------+---------+-------------+---------+
+    +----+----------+--------+----------+--------+------------+----------+---------------+-----------------------+-------+--------+--------+
+    | id | lon      | lat    | taxonomy | number | structural | contents | nonstructural | business_interruption | night | tag_1  | policy |
+    +====+==========+========+==========+========+============+==========+===============+=======================+=======+========+========+
+    | a1 | -122     | 38.113 | tax1     | 1      | 10000      | 5000     | 15000         | 2000                  | 6     | zone_1 | p1_a1  |
+    +----+----------+--------+----------+--------+------------+----------+---------------+-----------------------+-------+--------+--------+
+    | a2 | -122.114 | 38.113 | tax1     | 1      | 10000      | 5000     | 15000         | 2000                  | 6     | zone_1 | p1_a2  |
+    +----+----------+--------+----------+--------+------------+----------+---------------+-----------------------+-------+--------+--------+
+    | a3 | -122.57  | 38.113 | tax1     | 1      | 10000      | 5000     | 15000         | 2000                  | 6     | zone_1 | p1_a3  |
+    +----+----------+--------+----------+--------+------------+----------+---------------+-----------------------+-------+--------+--------+
+    | a4 | -122     | 38     | tax1     | 1      | 10000      | 5000     | 15000         | 2000                  | 6     | zone_2 | p2     |
+    +----+----------+--------+----------+--------+------------+----------+---------------+-----------------------+-------+--------+--------+
+    | a5 | -122     | 37.91  | tax1     | 1      | 10000      | 5000     | 15000         | 2000                  | 6     | zone_2 | p2     |
+    +----+----------+--------+----------+--------+------------+----------+---------------+-----------------------+-------+--------+--------+
+    | a6 | -122     | 38.225 | tax1     | 1      | 10000      | 5000     | 15000         | 2000                  | 6     | zone_2 | p2     |
+    +----+----------+--------+----------+--------+------------+----------+---------------+-----------------------+-------+--------+--------+
+    | a7 | -121.886 | 38.113 | tax1     | 1      | 10000      | 5000     | 15000         | 2000                  | 6     | zone_2 | p2     |
+    +----+----------+--------+----------+--------+------------+----------+---------------+-----------------------+-------+--------+--------+
 
 ``exposure.xml``
 
 .. code-block:: xml
 
-    <exposureModel id="ex1" category="buildings" taxonomySource="GEM taxonomy">
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+      <exposureModel id="ex1" category="buildings" taxonomySource="GEM taxonomy">
         <description>exposure model</description>
         <conversions>
-        <costTypes>
+          <costTypes>
             <costType name="structural" type="aggregated" unit="USD"/>
-        </costTypes>
+            <costType name="nonstructural" type="aggregated" unit="USD"/>
+            <costType name="contents" type="aggregated" unit="USD"/>
+          </costTypes>
         </conversions>
-        <tagNames>policy</tagNames>
+        <tagNames>tag_1 policy</tagNames>
+        <occupancyPeriods>night </occupancyPeriods>
         <assets>
-        exposure_model.csv
+          exposure_model.csv
         </assets>
-    </exposureModel>
+      </exposureModel>
     </nrml>
 
-This example presents 7 assets (a1 to a7) with 4 associated policies
-(pol_1 to pol_4).  Notice that the column ``policy`` is mandatory, as
+This example presents 7 assets (a1 to a7) with 4 associated policies.
+Notice that the column ``policy`` is mandatory, as
 well as the line ``<tagNames>policy</tagNames>`` in
 the xml. Additional tags can be included as needed.
 
@@ -1749,30 +1818,22 @@ input file:
 
 .. code-block:: xml
 
-  <?xml version="1.0" encoding="UTF-8"?>
-  <nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
-        xmlns:gml="http://www.opengis.net/gml">
-    <reinsuranceModel>
-      <description>reinsurance model</description>
-
-      <fieldMap>
-        <field oq="deductible" input="Deductible" />
-        <field oq="liability" input="Limit" />
-        
-        <field input="QuotaShare" type="prop" max_cession_event="250" />
-        <field input="Surplus" type="prop" max_cession_event="500" />
-
-        <field input="WXL/R" type="wxlr" deductible="200" limit="1000" />
-        <field input="CatXL1" type="catxl" deductible="500" limit="2000" />
-        <field input="CatXL2" type="catxl" deductible="100" limit="750" />
-      </fieldMap>
-
-    <policies>policy.csv</policies>
-
-    </reinsuranceModel>
-  </nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+          xmlns:gml="http://www.opengis.net/gml">
+      <reinsuranceModel>
+        <description>reinsurance model</description>
+        <fieldMap>
+          <field input="treaty_1" type="prop" max_cession_event="400" />
+          <field input="treaty_2" type="prop" max_cession_event="400" />
+          <field input="xlr1" type="wxlr" deductible="200" limit="1000" />
+        </fieldMap>
+      <policies>policy.csv</policies>
+      </reinsuranceModel>
+    </nrml>
 
 **reinsurance.xml parameters:**
+
 The reinsurance information must include, at least, a ``<description>`` and  
 a list of files that contain the ``<policies>``. The ``<fieldMap>`` block 
 is used to define the reinsurance treaties and their parameters.
@@ -1794,6 +1855,10 @@ possible to define the ``max_cession_event``.
 *Non-proportional* treaties are identified by the parameter
 ``type="wxlr"`` or ``type="catxl"``. For each treaty it is required to
 indicate the ``deductible`` and ``limit``.
+
+*Note: treaties must be written in a given order, keeping proportional
+ones first, then non-proportional ones of type "wxlr" and finally those
+of type "catxl".*
 
 - **deductible**: the amount (economic value) that the insurer will
   "deduct" from the ground up losses before paying up to its policy
@@ -1847,17 +1912,17 @@ of the exposure model and the reinsurance presented above:
 
 ``policy.csv``
 
-    +---------+------------+-------------+------------+-----------+-------+---------+---------+
-    | policy  | Limit      | Deductible  | QuotaShare | Surplus   | WXLR  | CatXL1  | CatXL2  |
-    +=========+============+=============+============+===========+=======+=========+=========+
-    | pol_1   | 2000       | 400         | 0.1        | 0         | 1     | 1       | 0       |
-    +---------+------------+-------------+------------+-----------+-------+---------+---------+
-    | pol_2   | 1000       | 200         | 0.3        | 0         | 1     | 1       | 0       |
-    +---------+------------+-------------+------------+-----------+-------+---------+---------+
-    | pol_3   | 1000       | 100         | 0          | 0         | 1     | 1       | 0       |
-    +---------+------------+-------------+------------+-----------+-------+---------+---------+
-    | pol_4   | 2000       | 500         | 0          | 0.5       | 0     | 0       | 1       |
-    +---------+------------+-------------+------------+-----------+-------+---------+---------+
+    +--------+-----------+------------+----------+----------+------+
+    | policy | liability | deductible | treaty_1 | treaty_2 | xlr1 |
+    +========+===========+============+==========+==========+======+
+    | p1_a1  | 2000      | 400        | 0.1      | 0.2      | 1    |
+    +--------+-----------+------------+----------+----------+------+
+    | p1_a2  | 1000      | 200        | 0.3      | 0.1      | 1    |
+    +--------+-----------+------------+----------+----------+------+
+    | p1_a3  | 1000      | 100        | 0        | 0.7      | 1    |
+    +--------+-----------+------------+----------+----------+------+
+    | p2     | 2000      | 500        | 0        | .4       | 1    |
+    +--------+-----------+------------+----------+----------+------+
 
 The ``policy`` column must contain the same identifiers as the ones specified
 by the ``policy`` field in the exposure model.
@@ -1873,6 +1938,10 @@ treaties for "pol_1" will be (1 - 0.1 - 0. = 0.9).
 In the case of non-proportional treaties, "pol_1" is allocated to the ``WXLR``
 (an excess of loss per risk) treaty, and to the ``CatXL1`` (a catastrophic excess of
 loss per event) treaty. This policy is not covered by the ``CatXL2`` treaty.
+
+*Note: treaties must be written in a given order, keeping proportional
+ones first, then non-proportional ones of type "wxlr" and finally those
+of type "catxl".*
 
 Configuration file ``job.ini``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1916,10 +1985,32 @@ reinsurance treaties. The following output files are produced:
 1. ``Reinsurance by event``: aggregated estimated per event for the claim, retention, 
    cession and overspills under each reinsurance treaty.
 
+   +----------+-----------+---------+----------+----------+---------+--------------------+------+
+   | event_id | retention | claim   | treaty_1 | treaty_2 | xlr1    | overspill_treaty_2 | year |
+   +==========+===========+=========+==========+==========+=========+====================+======+
+   | 0        | 738.429   | 1833.73 | 142.206  | 400.000  | 553.096 | 180.819            | 1    |
+   +----------+-----------+---------+----------+----------+---------+--------------------+------+
+   | 1        | 319.755   | 701.219 | 51.7092  | 179.292  | 150.463 | 0.00000            | 1    |
+   +----------+-----------+---------+----------+----------+---------+--------------------+------+
+   | 2        | 1226.97   | 3210.91 | 282.622  | 400.000  | 1301.32 | 474.357            | 1    |
+   +----------+-----------+---------+----------+----------+---------+--------------------+------+
+   | 3        | 1318.88   | 3600.81 | 294.502  | 400.000  | 1587.42 | 629.187            | 1    |
+   +----------+-----------+---------+----------+----------+---------+--------------------+------+
+
 2. ``Reinsurance curves``: reinsurance loss exceedance curves describe the probabilities
    of exceeding a set of loss ratios or loss values, within a given time span 
    (or investigation interval). The curves are generated for the claim, retention, 
    cession and overspills under each reinsurance treaty.
+
+   +--------+---------------+-----------+---------+----------+----------+---------+--------------------+
+   | rlz_id | return_period | retention | claim   | treaty_1 | treaty_2 | xlr1    | overspill_treaty_2 |
+   +========+===============+===========+=========+==========+==========+=========+====================+
+   | 0      | 50.0000       | 319.755   | 701.219 | 51.7092  | 179.292  | 150.463 | 0.00000            |
+   +--------+---------------+-----------+---------+----------+----------+---------+--------------------+
+   | 0      | 100.000       | 1226.97   | 3210.91 | 282.622  | 400.000  | 1301.32 | 474.357            |
+   +--------+---------------+-----------+---------+----------+----------+---------+--------------------+
+   | 0      | 200.000       | 1318.88   | 3600.81 | 294.502  | 400.000  | 1587.42 | 629.187            |
+   +--------+---------------+-----------+---------+----------+----------+---------+--------------------+
 
 3. ``Average reinsurance losses``: the average reinsurance losses
    indicates the expected value within the time period specified
@@ -1927,8 +2018,26 @@ reinsurance treaties. The following output files are produced:
    cessions under each reinsurance treaty for all policies in the
    Exposure Model.
 
+   +--------+-------------+-------------+-------------+-------------+-------------+--------------------+
+   | rlz_id | retention   | claim       | treaty_1    | treaty_2    | xlr1        | overspill_treaty_2 |
+   +========+=============+=============+=============+=============+=============+====================+
+   | 0      | 1.80202E+01 | 4.67333E+01 | 3.85520E+00 | 6.89646E+00 | 1.79615E+01 | 6.42181E+00        |
+   +--------+-------------+-------------+-------------+-------------+-------------+--------------------+
+
 4. ``Aggregated reinsurance by policy``:  the average reinsurance losses
    for each policy, by ignoring the overspill logic.
+
+   +--------+-----------+-----------+---------+----------+----------+----------+
+   | rlz_id | policy_id | retention | claim   | treaty_1 | treaty_2 | xlr1     |
+   +========+===========+===========+=========+==========+==========+==========+
+   | 0      | p1_a1     | 4.61304   | 19.0934 | 1.90934  | 3.81867  | 8.75232  |
+   +--------+-----------+-----------+---------+----------+----------+----------+
+   | 0      | p1_a2     | 3.01643   | 6.48621 | 1.94586  | 0.648621 | 0.875298 |
+   +--------+-----------+-----------+---------+----------+----------+----------+
+   | 0      | p1_a3     | 38.9468   | 1.29823 | 0.00000  | 0.908759 | 0.00000  |
+   +--------+-----------+-----------+---------+----------+----------+----------+
+   | 0      | p2        | 3.57945   | 19.8555 | 0.00000  | 7.94221  | 8.33388  |
+   +--------+-----------+-----------+---------+----------+----------+----------+
 
 The parameters indicated in the previous outputs include:
 

@@ -51,7 +51,7 @@ TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
-MAX_MB = 100
+MAX_MB = 200
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
@@ -382,6 +382,7 @@ class ContextMaker(object):
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
         self.truncation_level = param.get('truncation_level', 99.)
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
+        self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = param.get('split_sources')
         self.effect = param.get('effect')
@@ -391,9 +392,11 @@ class ContextMaker(object):
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
                 if self.af and req == 'SITES_PARAMETERS':
                     reqset.add('ampcode')
-                if (is_modifiable(gsim) and req == 'SITES_PARAMETERS' and
-                        'apply_swiss_amplification' in gsim.params):
-                    reqset.add('amplfactor')
+                if is_modifiable(gsim) and req == 'SITES_PARAMETERS':
+                    reqset.add('vs30')  # required by the ModifiableGMPE
+                    reqset.update(gsim.gmpe.REQUIRES_SITES_PARAMETERS)
+                    if 'apply_swiss_amplification' in gsim.params:
+                        reqset.add('amplfactor')
             setattr(self, 'REQUIRES_' + req, reqset)
         try:
             self.min_iml = param['min_iml']
@@ -441,7 +444,7 @@ class ContextMaker(object):
         # instantiating child monitors, may be called in the workers
         self.pla_mon = monitor('planar contexts', measuremem=False)
         self.ctx_mon = monitor('nonplanar contexts', measuremem=False)
-        self.col_mon = monitor('collapsing contexts', measuremem=False)
+        self.col_mon = monitor('collapsing contexts', measuremem=True)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
@@ -935,6 +938,7 @@ class ContextMaker(object):
     def get_pmap(self, ctxs, rup_indep=True):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
+        :param rup_indep: default True
         :returns: a ProbabilityMap
         """
         sids = numpy.unique(ctxs[0].sids)
