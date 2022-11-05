@@ -736,11 +736,11 @@ class ContextMaker(object):
 
         return ctx
 
-    def get_ctxs_planar(self, src, sitecol):
+    def gen_ctxs_planar(self, src, sitecol):
         """
         :param src: a (Collapsed)PointSource
         :param sitecol: a filtered SiteCollection
-        :returns: a list with 0 or 1 context array
+        :yields: context arrays
         """
         dd = self.defaultdict.copy()
         tom = src.temporal_occurrence_model
@@ -773,7 +773,6 @@ class ContextMaker(object):
         magdist = {mag: self.maximum_distance(mag)
                    for mag, rate in src.get_annual_occurrence_rates()}
         maxmag = max(magdist)
-        ctxs = []
         max_radius = src.max_radius()
         cdist = sitecol.get_cdist(src.location)
         mask = cdist <= magdist[maxmag] + max_radius
@@ -794,10 +793,10 @@ class ContextMaker(object):
             start_stop = offset, offset + len(pla)
             ctx = self._get_ctx_planar(
                 mag, pla, sites, src.id, start_stop, tom).flatten()
+            # print('%.2f' % mag, sites, ctx.nbytes / 1024**2)
             ctxt = ctx[ctx.rrup < magdist[mag]]
             if len(ctxt):
-                ctxs.append(ctxt)
-        return concat(ctxs)
+                yield ctxt
 
     def _quartets(self, src, sitecol, cdist, planardict):
         # splitting by magnitude
@@ -868,10 +867,7 @@ class ContextMaker(object):
         """
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         if getattr(src, 'location', None) and step == 1:
-            self.pla_mon.mem = 0
-            with self.pla_mon:
-                ctxs = self.get_ctxs_planar(src, sitecol)
-            return iter(ctxs)
+            return self.ctx_mon.iter(self.gen_ctxs_planar(src, sitecol))
         elif hasattr(src, 'source_id'):  # other source
             with self.ir_mon:
                 allrups = numpy.array(list(src.iter_ruptures(
