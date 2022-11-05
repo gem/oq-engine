@@ -347,6 +347,7 @@ class PointSource(ParametricSeismicSource):
         """
         Bounding box of the point, enlarged by the maximum distance
         """
+        self.max_radius()  # set .radius by side effect
         delta = self.ps_grid_spacing * .707  # ps_grid * sqrt(2)/2
         return get_bounding_box([self.location], maxdist + delta)
 
