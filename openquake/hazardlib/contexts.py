@@ -867,7 +867,7 @@ class ContextMaker(object):
         """
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         if getattr(src, 'location', None) and step == 1:
-            return self.ctx_mon.iter(self.gen_ctxs_planar(src, sitecol))
+            return self.pla_mon.iter(self.gen_ctxs_planar(src, sitecol))
         elif hasattr(src, 'source_id'):  # other source
             with self.ir_mon:
                 allrups = numpy.array(list(src.iter_ruptures(
