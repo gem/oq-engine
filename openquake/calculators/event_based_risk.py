@@ -131,7 +131,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
                         dic[col].append(arr[li, c])
         fix_dtypes(dic)
         df = pandas.DataFrame(dic)
-    return dict(avg=loss_by_AR, alt=df)
+    return loss_by_AR, df
 
 
 def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
@@ -217,7 +217,8 @@ def event_based_risk(df, oqparam, monitor):
                         adf, gmf_df, oqparam._sec_losses, rng)
                 yield out
 
-    return aggreg(outputs(), crmodel, ARK, aggids, rlz_id, monitor)
+    avg, alt = aggreg(outputs(), crmodel, ARK, aggids, rlz_id, monitor)
+    return dict(avg=avg, alt=alt)
 
 
 def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
