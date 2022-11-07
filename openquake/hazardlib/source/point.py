@@ -347,8 +347,7 @@ class PointSource(ParametricSeismicSource):
         """
         Bounding box of the point, enlarged by the maximum distance
         """
-        # delta = 2. is need to not break classical case_48
-        delta = 2. + self.ps_grid_spacing * .707  # ps_grid * sqrt(2)/2
+        delta = min(self.max_radius(), maxdist)
         return get_bounding_box([self.location], maxdist + delta)
 
     def wkt(self):

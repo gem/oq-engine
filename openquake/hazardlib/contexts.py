@@ -794,7 +794,6 @@ class ContextMaker(object):
             start_stop = offset, offset + len(pla)
             ctx = self._get_ctx_planar(
                 mag, pla, sites, src.id, start_stop, tom).flatten()
-            # print('%.2f' % mag, sites, ctx.nbytes / 1024**2)
             ctxt = ctx[ctx.rrup < magdist[mag]]
             if len(ctxt):
                 yield ctxt
