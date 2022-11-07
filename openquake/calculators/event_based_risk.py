@@ -117,7 +117,20 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
                     aids = alt.aid.to_numpy()
                     for kids in aggids[:, aids]:
                         fast_agg(eids + U64(kids), values, correl, li, acc)
-    return loss_by_AR, acc
+    lis = range(len(xtypes))
+    with monitor('building event loss table', measuremem=True):
+        dic = general.AccumDict(accum=[])
+        for ukey, arr in acc.items():
+            eid, kid = divmod(ukey, TWO32)
+            for li in lis:
+                if arr[li].any():
+                    dic['event_id'].append(eid)
+                    dic['agg_id'].append(kid)
+                    dic['loss_id'].append(LOSSID[xtypes[li]])
+                    for c, col in enumerate(['variance', 'loss']):
+                        dic[col].append(arr[li, c])
+        fix_dtypes(dic)
+    return loss_by_AR, pandas.DataFrame(dic)
 
 
 def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
@@ -204,23 +217,9 @@ def event_based_risk(df, oqparam, monitor):
         rng = MultiEventRNG(oqparam.master_seed, df.eid.unique(),
                             int(oqparam.asset_correlation))
 
-    avg, acc = aggreg(outputs(taxo_assets, df, crmodel, rng, monitor),
+    avg, alt = aggreg(outputs(taxo_assets, df, crmodel, rng, monitor),
                       crmodel, ARK, aggids, rlz_id, monitor)
-    xtypes = oqparam.ext_loss_types
-    lis = range(len(xtypes))
-    with monitor('building event loss table', measuremem=True):
-        dic = general.AccumDict(accum=[])
-        for ukey, arr in acc.items():
-            eid, kid = divmod(ukey, TWO32)
-            for li in lis:
-                if arr[li].any():
-                    dic['event_id'].append(eid)
-                    dic['agg_id'].append(kid)
-                    dic['loss_id'].append(LOSSID[xtypes[li]])
-                    for c, col in enumerate(['variance', 'loss']):
-                        dic[col].append(arr[li, c])
-        fix_dtypes(dic)
-    return dict(avg=avg, alt=pandas.DataFrame(dic))
+    return dict(avg=avg, alt=alt)
 
 
 def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
