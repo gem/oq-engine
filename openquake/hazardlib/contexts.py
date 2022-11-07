@@ -772,7 +772,8 @@ class ContextMaker(object):
 
         magdist = {mag: self.maximum_distance(mag)
                    for mag, rate in src.get_annual_occurrence_rates()}
-        maxmag = max(magdist)
+        # self.maximum_distance(mag) can be 0 if outside the mag range
+        maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
         max_radius = src.max_radius()
         cdist = sitecol.get_cdist(src.location)
         mask = cdist <= magdist[maxmag] + max_radius
@@ -799,15 +800,18 @@ class ContextMaker(object):
                 yield ctxt
 
     def _quartets(self, src, sitecol, cdist, planardict):
+        minmag, maxmag = self.maximum_distance.x
         # splitting by magnitude
-        quartets = []
         if src.count_nphc() == 1:
             # one rupture per magnitude
             for m, (mag, pla) in enumerate(planardict.items()):
-                quartets.append((m, mag, pla, sitecol))
+                if minmag < mag < maxmag:
+                    yield m, mag, pla, sitecol
         else:
             for m, rup in enumerate(src.iruptures()):
                 mag = rup.mag
+                if mag > maxmag or mag < minmag:
+                    continue
                 arr = [rup.surface.array.reshape(-1, 3)]
                 pla = planardict[mag]
                 psdist = (self.pointsource_distance + src.ps_grid_spacing +
@@ -816,18 +820,17 @@ class ContextMaker(object):
                 far = sitecol.filter(cdist > psdist)
                 if self.fewsites:
                     if close is None:  # all is far, common for small mag
-                        quartets.append((m, mag, arr, sitecol))
+                        yield m, mag, arr, sitecol
                     else:  # something is close
-                        quartets.append((m, mag, pla, sitecol))
+                        yield m, mag, pla, sitecol
                 else:  # many sites
                     if close is None:  # all is far
-                        quartets.append((m, mag, arr, far))
+                        yield m, mag, arr, far
                     elif far is None:  # all is close
-                        quartets.append((m, mag, pla, close))
+                        yield m, mag, pla, close
                     else:  # some sites are far, some are close
-                        quartets.append((m, mag, arr, far))
-                        quartets.append((m, mag, pla, close))
-        return quartets
+                        yield m, mag, arr, far
+                        yield m, mag, pla, close
 
     # this is called for non-point sources (or point sources in preclassical)
     def gen_contexts(self, rups_sites, src_id):
@@ -867,18 +870,20 @@ class ContextMaker(object):
         """
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         if getattr(src, 'location', None) and step == 1:
-            return self.ctx_mon.iter(self.gen_ctxs_planar(src, sitecol))
+            return self.pla_mon.iter(self.gen_ctxs_planar(src, sitecol))
         elif hasattr(src, 'source_id'):  # other source
+            minmag, maxmag = self.maximum_distance.x
             with self.ir_mon:
-                allrups = numpy.array(list(src.iter_ruptures(
-                    shift_hypo=self.shift_hypo, step=step)))
+                allrups = [rup for rup in src.iter_ruptures(
+                    shift_hypo=self.shift_hypo, step=step)
+                           if minmag < rup.mag < maxmag]
                 for i, rup in enumerate(allrups):
                     rup.rup_id = src.offset + i
                 self.num_rups = len(allrups)
                 # sorted by mag by construction
                 u32mags = U32([rup.mag * 100 for rup in allrups])
-                rups_sites = [(rups, sitecol)
-                              for rups in split_array(allrups, u32mags)]
+                rups_sites = [(rups, sitecol) for rups in split_array(
+                    numpy.array(allrups), u32mags)]
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
