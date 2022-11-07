@@ -773,12 +773,10 @@ class ContextMaker(object):
         magdist = {mag: self.maximum_distance(mag)
                    for mag, rate in src.get_annual_occurrence_rates()}
         # self.maximum_distance(mag) can be 0 if outside the mag range
-        magdist = {mag: dist for mag, dist in magdist.items() if dist > 0}
-        maxmag = max(magdist)
+        maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
         max_radius = src.max_radius()
         cdist = sitecol.get_cdist(src.location)
         mask = cdist <= magdist[maxmag] + max_radius
-        # print(src.source_id, magdist[maxmag], max_radius)
         sitecol = sitecol.filter(mask)
         if sitecol is None:
             return []
@@ -874,16 +872,18 @@ class ContextMaker(object):
         if getattr(src, 'location', None) and step == 1:
             return self.pla_mon.iter(self.gen_ctxs_planar(src, sitecol))
         elif hasattr(src, 'source_id'):  # other source
+            minmag, maxmag = self.maximum_distance.x
             with self.ir_mon:
-                allrups = numpy.array(list(src.iter_ruptures(
-                    shift_hypo=self.shift_hypo, step=step)))
+                allrups = [rup for rup in src.iter_ruptures(
+                    shift_hypo=self.shift_hypo, step=step)
+                           if minmag < rup.mag < maxmag]
                 for i, rup in enumerate(allrups):
                     rup.rup_id = src.offset + i
                 self.num_rups = len(allrups)
                 # sorted by mag by construction
                 u32mags = U32([rup.mag * 100 for rup in allrups])
-                rups_sites = [(rups, sitecol)
-                              for rups in split_array(allrups, u32mags)]
+                rups_sites = [(rups, sitecol) for rups in split_array(
+                    numpy.array(allrups), u32mags)]
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
