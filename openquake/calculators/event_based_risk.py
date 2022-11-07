@@ -421,6 +421,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 for name in alt.columns:
                     dset = self.datastore['risk_by_event/' + name]
                     hdf5.extend(dset, alt[name].to_numpy())
+        with self.monitor('saving avg_losses'):
             for ln, ls in dic['avg'].items():
                 for coo in ls:
                     self.avg_losses[ln][coo.row, coo.col] += coo.data
