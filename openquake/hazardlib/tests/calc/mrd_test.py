@@ -193,3 +193,44 @@ class MRD01TestCase(unittest.TestCase):
 
         if LOG:
             print(f"--- {time.time() - start_time} seconds ---")
+
+    def test_compare(self):
+
+        # Bin edges
+        lefts = [-3, -2, 1, 2]
+        numb = [80, 80, 10]
+        be_mea = get_uneven_bins_edges(lefts, numb)
+        be_sig = np.arange(0.50, 0.70, 0.01)
+
+        # Set params
+        imls1 = self.oqp.hazard_imtls[self.imts[0]]
+        imls2 = self.oqp.hazard_imtls[self.imts[1]]
+        len1 = len(imls1)-1
+        len2 = len(imls2)-1
+        nsites = len(self.oqp.sites)
+
+        # Compute the MRD: indirect
+        mrdi = np.zeros((len1, len2, nsites, len(self.cmaker.gsims)))
+        update_mrd_indirect(
+            self.ctxs, self.cmaker, self.crosscorr, mrdi, be_mea, be_sig)
+
+        # Compute the MRD: direct
+        mrdd = np.zeros((len1, len2, nsites, len(self.cmaker.gsims)))
+        update_mrd(self.ctxs, self.cmaker, self.crosscorr, mrdd)
+
+        np.testing.assert_almost_equal(mrdi, mrdd)
+
+        if PLOT:
+            imlc1 = np.diff(imls1)/2 + imls1[:-1]
+            imlc2 = np.diff(imls2)/2 + imls2[:-1]
+
+            fig, axs = plt.subplots(1, 1)
+            fig.set_size_inches(9, 6)
+            plt1 = plt.contourf(np.log(imlc1), np.log(imlc2), mrdd[:, :, 0, 0])
+            _ = plt.contour(np.log(imlc1), np.log(imlc2), mrdi[:, :, 0, 0],
+                            colors='orange', linestyles='dashed')
+            _ = plt.colorbar(mappable=plt1)
+            _ = plt.title('MRD')
+            axs.set_xlabel(f'{self.imts[0]}')
+            axs.set_ylabel(f'{self.imts[1]}')
+            plt.show()
