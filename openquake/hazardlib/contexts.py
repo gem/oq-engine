@@ -800,7 +800,8 @@ class ContextMaker(object):
                 yield ctxt
 
     def _quartets(self, src, sitecol, cdist, planardict):
-        minmag, maxmag = self.maximum_distance.x
+        minmag = self.maximum_distance.x[0]
+        maxmag = self.maximum_distance.x[-1]
         # splitting by magnitude
         if src.count_nphc() == 1:
             # one rupture per magnitude
@@ -872,7 +873,8 @@ class ContextMaker(object):
         if getattr(src, 'location', None) and step == 1:
             return self.pla_mon.iter(self.gen_ctxs_planar(src, sitecol))
         elif hasattr(src, 'source_id'):  # other source
-            minmag, maxmag = self.maximum_distance.x
+            minmag = self.maximum_distance.x[0]
+            maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:
                 allrups = [rup for rup in src.iter_ruptures(
                     shift_hypo=self.shift_hypo, step=step)
