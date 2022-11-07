@@ -772,10 +772,13 @@ class ContextMaker(object):
 
         magdist = {mag: self.maximum_distance(mag)
                    for mag, rate in src.get_annual_occurrence_rates()}
+        # self.maximum_distance(mag) can be 0 if outside the mag range
+        magdist = {mag: dist for mag, dist in magdist.items() if dist > 0}
         maxmag = max(magdist)
         max_radius = src.max_radius()
         cdist = sitecol.get_cdist(src.location)
         mask = cdist <= magdist[maxmag] + max_radius
+        # print(src.source_id, magdist[maxmag], max_radius)
         sitecol = sitecol.filter(mask)
         if sitecol is None:
             return []
@@ -799,14 +802,18 @@ class ContextMaker(object):
                 yield ctxt
 
     def _quartets(self, src, sitecol, cdist, planardict):
+        minmag, maxmag = self.maximum_distance.x
         # splitting by magnitude
         if src.count_nphc() == 1:
             # one rupture per magnitude
             for m, (mag, pla) in enumerate(planardict.items()):
-                yield m, mag, pla, sitecol
+                if minmag < mag < maxmag:
+                    yield m, mag, pla, sitecol
         else:
             for m, rup in enumerate(src.iruptures()):
                 mag = rup.mag
+                if mag > maxmag or mag < minmag:
+                    continue
                 arr = [rup.surface.array.reshape(-1, 3)]
                 pla = planardict[mag]
                 psdist = (self.pointsource_distance + src.ps_grid_spacing +
