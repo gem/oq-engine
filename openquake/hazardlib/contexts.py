@@ -775,13 +775,13 @@ class ContextMaker(object):
         maxmag = max(magdist)
         max_radius = src.max_radius()
         cdist = sitecol.get_cdist(src.location)
-        mask = cdist <= magdist[maxmag] + max_radius
+        mask = cdist <= magdist[maxmag] + min(max_radius, magdist[maxmag])
         sitecol = sitecol.filter(mask)
         if sitecol is None:
             return []
 
         for magi, mag, planarlist, sites in self._quartets(
-                src, sitecol, cdist[mask], planardict):
+                src, sitecol, magdist, cdist[mask], planardict):
             if not planarlist:
                 continue
             elif len(planarlist) > 1:  # when using ps_grid_spacing
@@ -793,12 +793,11 @@ class ContextMaker(object):
             start_stop = offset, offset + len(pla)
             ctx = self._get_ctx_planar(
                 mag, pla, sites, src.id, start_stop, tom).flatten()
-            # print('%.2f' % mag, sites, ctx.nbytes / 1024**2)
             ctxt = ctx[ctx.rrup < magdist[mag]]
             if len(ctxt):
                 yield ctxt
 
-    def _quartets(self, src, sitecol, cdist, planardict):
+    def _quartets(self, src, sitecol, magdist, cdist, planardict):
         # splitting by magnitude
         if src.count_nphc() == 1:
             # one rupture per magnitude
@@ -810,7 +809,7 @@ class ContextMaker(object):
                 arr = [rup.surface.array.reshape(-1, 3)]
                 pla = planardict[mag]
                 psdist = (self.pointsource_distance + src.ps_grid_spacing +
-                          src.radius[m])
+                          min(src.radius[m], magdist[mag]))
                 close = sitecol.filter(cdist <= psdist)
                 far = sitecol.filter(cdist > psdist)
                 if self.fewsites:
