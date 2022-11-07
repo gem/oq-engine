@@ -106,7 +106,7 @@ def get_distance_coefficients_1(kind, c3, c3_epsilon, C, imt, sctx):
     """
     if c3:
         # Use the c3 that has been defined on input
-        return c3
+        return c3[imt]["c3"]
     else:
         # Define the c3 as a number of standard deviation multiplied
         # by tau_c3
@@ -153,9 +153,10 @@ def get_distance_coefficients_3(att, c3, delta_c3_epsilon, C, imt, sctx):
     added to the generic coefficient 'c3' from the GMPE. A delta_c3_epsilon
     value of +/- 1.6 gives the 95% confidence interval for delta_c3.
     """
+
     if c3:
 
-        return c3
+        return c3[imt]["c3"]
     
     else:
 
@@ -177,7 +178,6 @@ def get_distance_term(self, kind, c3, c3_epsilon, C, ctx, imt):
     """
     Returns the distance attenuation factor
     """
-
     h = _get_h(C, ctx.hypo_depth)
     rval = np.sqrt(ctx.rjb ** 2. + h ** 2.)
     rref_val = np.sqrt(CONSTANTS["Rref"] ** 2. + h ** 2.)
@@ -421,7 +421,6 @@ class KothaEtAl2020(GMPE):
         self.sigma_mu_epsilon = sigma_mu_epsilon
         self.c3_epsilon = c3_epsilon
         self.ergodic = ergodic
-        
         if dl2l:
             # Check that the input is a dictionary and p
             if not isinstance(dl2l, dict):

@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+ <sourceModel name="as_model eshm20">
+<areaSource id="maina_hi_lowESAS123" name="maina_hi_lowpESAS123" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>-2.0965 43.4862 -1.9377 43.1016 -2.4901 42.5343 -5.2962 43.7139 -5.3406 43.9717 -2.9762 43.6460 -2.0965 43.4862</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>0.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="2.7759 " bValue="1.0119" minMag="4.5" maxMag="6.3"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="0.00" dip="90.00" rake="-90" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="13.2" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowESAS124" name="maina_hi_lowpESAS124" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>-0.5225 42.7503 -0.8486 42.2141 -2.4901 42.5343 -1.9377 43.1016 -1.6450 42.9917 -0.7975 42.9962 -0.7565 42.8582 -0.6059 42.7888 -0.5225 42.7503</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>0.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="3.0665 " bValue="1.0251" minMag="4.5" maxMag="6.3"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="0.00" dip="90.00" rake="0" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="13.2" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowESAS125" name="maina_hi_lowpESAS125" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>3.4379 42.5097 4.2103 41.8769 3.8264 41.4949 3.0940 41.2292 2.3068 42.1968 3.4379 42.5097</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>0.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="2.3091 " bValue="0.9119" minMag="4.5" maxMag="6.3"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="2.27" dip="60.52" rake="0" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="13.2" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowESAS126" name="maina_hi_lowpESAS126" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>1.3003 42.2850 -0.5225 42.7503 -0.6059 42.7888 -0.7565 42.8582 -0.7975 42.9962 0.2607 42.8232 2.3800 42.6054 1.3003 42.2850</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>0.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="2.3929 " bValue="0.9119" minMag="4.5" maxMag="6.5"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="240.70" dip="57.84" rake="0" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="13.2" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowESAS133" name="maina_hi_lowpESAS133" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>-1.0594 39.3867 0.1238 40.8452 0.9831 41.6551 1.7402 42.0753 2.3068 42.1968 3.0940 41.2292 1.3990 40.6836 0.2694 39.4799 -0.7004 39.4891 -1.0594 39.3867</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>0.0</upperSeismoDepth>
+ <lowerSeismoDepth>12.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="3.2328 " bValue="1.0222" minMag="4.5" maxMag="6.3"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="29.65" dip="57.99" rake="-90" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="8.4" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowESAS142" name="maina_hi_lowpESAS142" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>0.9831 41.6551 0.1238 40.8452 -0.8930 41.4815 -1.6503 41.9599 -2.4901 42.5343 -0.8486 42.2141 -0.5225 42.7503 1.3003 42.2850 2.3068 42.1968 1.7402 42.0753 0.9831 41.6551</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>0.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="2.1217 " bValue="1.0585" minMag="4.5" maxMag="6.3"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="0.00" dip="90.00" rake="0" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="13.2" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowESAS151" name="maina_hi_lowpESAS151" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>-3.9931 42.1781 -4.7176 42.4495 -5.6509 42.7690 -6.7568 42.7173 -7.0318 43.1835 -9.5475 43.9736 -9.0682 44.3450 -7.9249 44.3725 -6.9195 44.2166 -5.3406 43.9717 -5.2962 43.7139 -2.4901 42.5343 -3.9931 42.1781</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>1.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="3.2850 " bValue="1.0119" minMag="4.5" maxMag="6.3"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="0.00" dip="90.00" rake="-90" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="11.6" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowESAS154" name="maina_hi_lowpESAS154" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>-0.8930 41.4815 0.1238 40.8452 -1.0594 39.3867 -2.2912 40.2232 -2.7169 41.0084 -2.5451 41.1749 -1.6503 41.9599 -0.8930 41.4815</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>1.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="3.2298 " bValue="1.0222" minMag="4.5" maxMag="6.3"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="149.05" dip="67.40" rake="-90" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="11.6" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowESAS157" name="maina_hi_lowpESAS157" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>-1.6503 41.9599 -2.5451 41.1749 -3.9931 42.1781 -2.4901 42.5343 -1.6503 41.9599</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>1.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="2.8333 " bValue="1.0331" minMag="4.5" maxMag="6.3"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="149.05" dip="67.40" rake="-90" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="11.6" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowFRAS171" name="maina_hi_lowpFRAS171" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>0.7065 43.2338 1.0212 43.1639 0.9720 43.1352 0.6236 43.1472 0.2164 43.1046 -0.0692 43.1954 -0.2053 43.1332 -0.3243 43.1327 -0.5823 43.2095 -0.9483 43.4108 -1.0934 43.6538 -1.3243 43.6708 -1.5432 43.6227 -1.7139 43.5443 -2.0965 43.4862 -2.1229 43.6879 -1.9195 43.6986 -1.7905 43.6910 -1.5416 43.7581 -1.1661 43.7792 -0.7184 43.7539 -0.4628 43.7476 -0.3179 43.6890 -0.2101 43.5481 0.3813 43.3547 0.6056 43.3095 0.7065 43.2338</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>0.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="2.1052 " bValue="0.9119" minMag="4.5" maxMag="6.5"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="0.00" dip="90.00" rake="0" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="13.2" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowFRAS172" name="maina_hi_lowpFRAS172" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>1.0212 43.1639 1.4288 43.1358 1.7318 43.0563 1.8450 43.0866 2.3809 43.0513 2.8061 43.0202 3.0896 42.8772 2.3800 42.6054 0.2607 42.8232 0.3175 42.9347 0.2164 43.1046 0.6236 43.1472 0.9720 43.1352 1.0212 43.1639</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>0.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="2.4228 " bValue="0.8919" minMag="4.5" maxMag="6.5"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="0.00" dip="90.00" rake="0" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="13.2" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowFRAS177" name="maina_hi_lowpFRAS177" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>5.1424 44.2605 4.3804 43.8442 3.9654 43.5825 3.6418 43.1809 3.0896 42.8772 2.8061 43.0202 2.3809 43.0513 2.8541 43.3557 3.1052 43.4772 3.3890 43.5716 3.4237 43.7017 4.1491 44.2440 4.1441 44.3725 4.2433 44.5024 4.3006 44.6048 4.4043 44.7256 4.5218 44.7603 4.6256 44.7626 4.6906 44.7790 4.8033 44.8401 4.8650 44.8617 4.9320 44.8323 5.1630 44.7155 5.1864 44.6391 5.1959 44.5513 5.1606 44.4384 5.1355 44.3181 5.1424 44.2605</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>5.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="2.3556 " bValue="0.9519" minMag="4.5" maxMag="6.3"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="0.00" dip="90.00" rake="0" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="14.600000000000001" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowFRAS179" name="maina_hi_lowpFRAS179" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>-2.1229 43.6879 -2.0428 44.2218 -2.6104 44.7662 -2.8030 45.0307 -1.8626 44.9445 -1.3929 44.9618 -0.9592 44.8909 -0.4979 44.5755 -0.3867 44.2078 -0.2565 44.1224 -0.0523 44.0844 0.2020 43.9135 0.5988 43.8592 0.8657 43.7558 1.0734 43.6057 1.2019 43.3948 1.3063 43.3547 1.0212 43.1639 0.7065 43.2338 0.6056 43.3095 0.3813 43.3547 -0.2101 43.5481 -0.3179 43.6890 -0.4628 43.7476 -0.7184 43.7539 -1.1661 43.7792 -1.5416 43.7581 -1.7905 43.6910 -1.9195 43.6986 -2.1229 43.6879</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>5.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="1.3657 " bValue="1.0030" minMag="4.5" maxMag="6.3"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="0.00" dip="90.00" rake="0" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="14.600000000000001" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowFRAS180" name="maina_hi_lowpFRAS180" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>2.3324 46.1314 2.7273 46.0278 2.5066 45.5443 2.2415 45.1113 2.2413 44.9768 2.1275 44.5606 1.9282 44.1384 1.5586 43.6507 1.3528 43.7526 1.1309 43.9017 1.0447 44.0852 1.1221 44.3481 1.2691 44.7184 1.1929 45.0549 0.8876 45.3497 0.9962 45.8316 1.3052 46.1913 2.3324 46.1314</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>5.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="1.9272 " bValue="1.0785" minMag="4.5" maxMag="6.3"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="0.00" dip="90.00" rake="0" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="14.600000000000001" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowFRAS181" name="maina_hi_lowpFRAS181" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>1.3063 43.3547 1.5586 43.6507 1.9282 44.1384 2.1275 44.5606 2.2413 44.9768 4.2433 44.5024 4.1441 44.3725 4.1491 44.2440 3.4237 43.7017 3.3890 43.5716 3.1052 43.4772 2.8541 43.3557 2.3809 43.0513 1.8450 43.0866 1.7318 43.0563 1.4288 43.1358 1.0212 43.1639 1.3063 43.3547</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>5.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="2.5033 " bValue="1.0219" minMag="4.5" maxMag="6.3"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="0.00" dip="90.00" rake="0" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="14.600000000000001" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowFRAS187" name="maina_hi_lowpFRAS187" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>-2.8030 45.0307 -3.2954 45.3571 -4.1936 46.2689 -5.4254 47.2258 -5.5334 47.9963 -3.8565 47.5197 -3.4802 47.4524 -2.4437 46.7285 -1.8554 46.4584 -1.0521 46.3017 0.1993 45.8041 0.8876 45.3497 1.1929 45.0549 1.2691 44.7184 1.1221 44.3481 1.0447 44.0852 1.1309 43.9017 1.3528 43.7526 1.5586 43.6507 1.3063 43.3547 1.2019 43.3948 1.0734 43.6057 0.8657 43.7558 0.5988 43.8592 0.2020 43.9135 -0.0523 44.0844 -0.2565 44.1224 -0.3867 44.2078 -0.4979 44.5755 -0.9592 44.8909 -1.3929 44.9618 -1.8626 44.9445 -2.8030 45.0307</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>5.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="2.6876 " bValue="1.0030" minMag="4.5" maxMag="6.3"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="0.00" dip="90.00" rake="0" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="14.600000000000001" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowFRAS188" name="maina_hi_lowpFRAS188" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>0.1134 50.1361 0.6800 50.8000 1.3335 50.7085 1.9271 50.0003 2.2294 49.8807 2.5910 49.8620 3.0956 49.8117 2.8743 48.1710 2.8766 46.6638 2.2600 47.2045 1.6095 47.0134 1.2179 47.0656 0.5813 47.1419 0.3102 47.2765 -0.4048 47.4965 -0.2890 47.7430 0.3878 48.4047 0.2166 48.7609 -0.1551 49.1125 -0.1249 49.4774 0.1932 49.8859 0.1134 50.1361</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>5.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="2.7292 " bValue="1.0919" minMag="4.5" maxMag="6.3"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="0.00" dip="90.00" rake="0" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="13.2" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+<areaSource id="maina_hi_lowFRAS189" name="maina_hi_lowpFRAS189" tectonicRegion="Shallow Default">
+<areaGeometry>
+ <gml:Polygon>
+  <gml:exterior>
+   <gml:LinearRing>
+    <gml:posList>-0.9483 43.4108 -0.7975 42.9962 -1.6450 42.9917 -1.9377 43.1016 -2.0965 43.4862 -1.7139 43.5443 -1.5432 43.6227 -1.3243 43.6708 -1.0934 43.6538 -0.9483 43.4108</gml:posList>
+   </gml:LinearRing>
+  </gml:exterior>
+ </gml:Polygon>
+ <upperSeismoDepth>0.0</upperSeismoDepth>
+ <lowerSeismoDepth>20.0</lowerSeismoDepth>
+</areaGeometry>
+   <magScaleRel>PointMSR</magScaleRel>
+   <ruptAspectRatio>1.0</ruptAspectRatio>
+<truncGutenbergRichterMFD aValue="2.0359 " bValue="0.9069" minMag="4.5" maxMag="6.5"/>
+    <nodalPlaneDist>
+
+<nodalPlane strike="0.00" dip="90.00" rake="0" probability="1.00" />
+    </nodalPlaneDist>
+    <hypoDepthDist>
+      <hypoDepth depth="13.2" probability="1.0" />
+    </hypoDepthDist>
+</areaSource>
+ </sourceModel>
+</nrml>
