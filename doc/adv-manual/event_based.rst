@@ -118,14 +118,19 @@ Using ``collect_rlzs=true`` in the risk calculation
 ---------------------------------------------------
 
 Since version 3.12 the engine recognizes a flag ``collect_rlzs`` in
-the risk configuration file, which by default is false. When the flag
-is set to true, then the hazard realizations are collected together
-when computing the risk results and considered as one. This is
+the risk configuration file. When the flag is set to true, then the
+hazard realizations are collected together *when computing the risk
+results* and considered as one.
+
+Setting ``collect_rlzs=true`` is
 possible only when the weights of the realizations are all equal,
 otherwise, the engine raises an error. Collecting the realizations
-makes the calculation of the losses and the loss curves much faster and
-more memory efficient. It is the recommended way to proceed when you
-are interested only in mean results.
+makes the calculation of the average losses and loss curves much
+faster and more memory efficient. It is the recommended way to proceed
+when you are interested only in mean results. When you have a large
+exposure and many realizations (say 5 million assets and 1000
+realizations, as it is the case for Chile) setting ``collect_rlzs=true``
+can make possible a calculation that otherwise would run out of memory.
 
 Note 1: when using sampling, ``collect_rlzs`` is implicitly set to
 ``True``, so if you want to export the individual results per
