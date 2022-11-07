@@ -1075,6 +1075,7 @@ class ContextMaker(object):
         dists = sites.get_cdist(src.location)
         planardict = src.get_planar(iruptures=True)
         esites = 0
+        src.max_radius()  # sets radius[m]
         for m, (mag, [planar]) in enumerate(planardict.items()):
             rrup = dists[dists < self.maximum_distance(mag) + src.radius[m]]
             nclose = (rrup < self.pointsource_distance + src.ps_grid_spacing +
