@@ -116,7 +116,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     :param magidx:
         magnitude bin indices
     :param bin_egdes:
-        a quartet (dist_edges, lon_edges, lat_edges, eps_edges)
+        a sextet (mag dist lon lat eps trt) edges
     :param monitor:
         monitor of the currently running job
     :returns:
@@ -137,7 +137,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
         for (s, z), r in numpy.ndenumerate(hmap4.rlzs):
             if r in rlzs:
                 g_by_z[s][z] = g
-    eps3 = disagg._eps3(cmaker.truncation_level, cmaker.num_epsilon_bins)
+    eps3 = disagg._eps3(cmaker.truncation_level, bin_edges[4])  # eps edges
     imts = [from_string(im) for im in cmaker.imtls]
     for magi in numpy.unique(magidx):
         for ctxt in ctxs:

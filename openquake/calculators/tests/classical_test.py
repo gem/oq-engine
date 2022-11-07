@@ -1062,11 +1062,8 @@ hazard_uhs-std.csv
         self.run_calc(case_79.__file__, 'job.ini')
 
     def test_case_80(self):
-        # test to check the instantiation of user defined non ergodic adjustments 
-        # to kothaEtAl2020regional
+        # New Madrid cluster with rup_mutex
         self.run_calc(case_80.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
-            'expected/hcurve-mean-PGA.csv', f1)
-
-
+            'expected/hazard_curve-mean-PGA.csv', f1)

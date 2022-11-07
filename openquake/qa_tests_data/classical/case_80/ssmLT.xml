@@ -1,17 +1,29 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
-    <logicTree logicTreeID="simple_lt">
-        <logicTreeBranchingLevel branchingLevelID="sourceModel">
-            <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
-                <logicTreeBranch branchID="as">
-			<uncertaintyModel>
-				asm.xml
-			</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="US14_all_excl_cali"
+    >
+        <logicTreeBranchingLevel
+        branchingLevelID="US14_ALL"
+        >
+            <logicTreeBranchSet
+            branchSetID="US14ALLSources"
+            uncertaintyType="sourceModel"
+            >
+                <logicTreeBranch
+                branchID="2014USAll"
+                >
+                    <uncertaintyModel>
+                        ssm/NMFZfaults/newmad2014_500_cluster.xml
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        1.0
+                    </uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
     </logicTree>
 </nrml>
-

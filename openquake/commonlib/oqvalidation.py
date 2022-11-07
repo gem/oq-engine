@@ -191,6 +191,13 @@ description:
   Example: *description = Test calculation*.
   Default: "no description"
 
+disagg_bin_edges:
+  A dictionary where the keys can be: mag, eps, dist, lon, lat and the
+  values are lists of floats indicating the edges of the bins used to
+  perform the disaggregation.
+  Example: *disagg_bin_edges = {'mag': [5.0, 5.5, 6.0, 6.5]}*.
+  Default: empty dictionary
+
 disagg_by_src:
   Flag used to enable disaggregation by source when possible.
   Example: *disagg_by_src = true*.
@@ -246,8 +253,7 @@ floating_x_step:
 
 floating_y_step:
   Float, used in rupture generation for kite faults. indicates the fraction
-  of fault width used to float ruptures down dip. (i.e. "0.5" floats the
-  ruptures at half the rupture length). Uniform distribution of the ruptures
+  of fault width used to float ruptures down dip. (i.e. "0.5" floats that half the rupture length). Uniform distribution of the ruptures
   is maintained, such that if the mesh spacing and rupture dimensions
   prohibit the defined overlap fraction, the fraction is increased until
   uniform distribution is achieved. The minimum possible value depends on
@@ -412,6 +418,11 @@ max_aggregations:
 
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
+
+max_gmvs_per_task:
+  Maximum number of rows of the gmf_data table per task.
+  Example: *max_gmvs_per_task = 100_000*
+  Default: 1_000_0000
 
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
@@ -749,7 +760,8 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
-ALL_CALCULATORS = ['classical_risk',
+ALL_CALCULATORS = ['aftershock',
+                   'classical_risk',
                    'classical_damage',
                    'classical',
                    'custom',
@@ -852,6 +864,7 @@ class OqParam(valid.ParamSet):
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs,
                                  list(calc.disagg.pmf_map))
+    disagg_bin_edges = valid.Param(valid.dictionary, {})
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
     discrete_damage_distribution = valid.Param(valid.boolean, False)
@@ -895,6 +908,7 @@ class OqParam(valid.ParamSet):
     max = valid.Param(valid.boolean, False)
     max_aggregations = valid.Param(valid.positivefloat, 100_000)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
+    max_gmvs_per_task = valid.Param(valid.positiveint, 1_000_000)
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_per_tile = valid.Param(valid.positiveint, 500_000)
@@ -1150,9 +1164,11 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile(
                     '%s: iml_disagg and poes_disagg cannot be set '
                     'at the same time' % job_ini)
-            for k in ('mag_bin_width', 'distance_bin_width',
-                      'coordinate_bin_width', 'num_epsilon_bins'):
-                if k not in vars(self):
+            bins = ['mag', 'dst', 'lon', 'eps']
+            for i, k in enumerate(['mag_bin_width', 'distance_bin_width',
+                                   'coordinate_bin_width', 'num_epsilon_bins']):
+                if (k not in vars(self) and
+                    bins[i] not in self.disagg_bin_edges):
                     raise InvalidFile('%s must be set in %s' % (k, job_ini))
             if self.disagg_outputs and not any(
                     'Eps' in out for out in self.disagg_outputs):
@@ -1257,8 +1273,9 @@ class OqParam(valid.ParamSet):
             else:
                 imts.add(im.string)
         for gsim in gsims:
-            if hasattr(gsim, 'weight'):  # disable the check
-                continue
+            if (hasattr(gsim, 'weight') or
+                    self.calculation_mode == 'aftershock'):
+                continue  # disable the check
             restrict_imts = gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES
             if restrict_imts:
                 names = set(cls.__name__ for cls in restrict_imts)
@@ -1659,8 +1676,8 @@ class OqParam(valid.ParamSet):
         one of sites, sites_csv, hazard_curves_csv, region is set.
         You did set more than one, or nothing.
         """
-        if self.calculation_mode == 'preclassical':  # disable the check
-            return True
+        if self.calculation_mode in ('preclassical', 'aftershock'):
+            return True  # disable the check
         if 'hazard_curves' in self.inputs and (
                 self.sites is not None or 'sites' in self.inputs
                 or 'site_model' in self.inputs):
@@ -1700,7 +1717,7 @@ class OqParam(valid.ParamSet):
         Invalid maximum_distance={maximum_distance}: {error}
         """
         if 'gsim_logic_tree' not in self.inputs:
-            return True  # don't apply validation
+            return True  # disable the check
         gsim_lt = self.inputs['gsim_logic_tree']
         trts = set(self.maximum_distance)
         unknown = ', '.join(trts - self._trts - {'default'})
@@ -1838,7 +1855,9 @@ class OqParam(valid.ParamSet):
             raise ValueError('aggregate_by = site_id must contain a single tag')
         elif 'reinsurance' in self.inputs:
             if not any(['policy'] == aggby for aggby in self.aggregate_by):
-                raise ValueError('missing aggregate_by=policy')
+                raise InvalidFile(
+                    '%s: expected aggregate_by=policy; got %s' % (
+                        self.inputs['job_ini'], self.aggregate_by))
         return True
 
     def check_reinsurance(self):
@@ -1847,8 +1866,8 @@ class OqParam(valid.ParamSet):
         try:
             [lt] = dic
         except ValueError:
-            raise InvalidFile('%s: invalid reinsurance %s'
-                              % (self.inputs['job_ini'], dic))
+            raise InvalidFile('%s: too many loss types in reinsurance %s'
+                              % (self.inputs['job_ini'], list(dic)))
         if lt not in scientific.LOSSID:
             raise InvalidFile('%s: unknown loss type %s in reinsurance'
                               % (self.inputs['job_ini'], lt))

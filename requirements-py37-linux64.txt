@@ -28,9 +28,9 @@ https://wheelhouse.openquake.org/v3/linux/py/Django-3.2.12-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/asgiref-3.4.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/django_pam-2.0.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/python_pam-1.8.4-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/linux/py/setuptools-56.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/pytz-2019.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/networkx-2.6.3-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/setuptools-59.8.0-py3-none-any.whl
 
 ### Plotting ###
 # comment the following lines to skip installation
@@ -42,4 +42,5 @@ https://wheelhouse.openquake.org/v3/linux/py37/kiwisolver-1.1.0-cp37-cp37m-manyl
 https://wheelhouse.openquake.org/v3/linux/py37/matplotlib-3.1.2-cp37-cp37m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py37/pyproj-2.5.0-cp37-cp37m-manylinux1_x86_64.whl
 #
-https://wheelhouse.openquake.org/v3/linux/py37/GDAL-3.2.2-cp37-cp37m-manylinux1_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py37/GDAL-3.3.3-cp37-cp37m-manylinux_2_5_x86_64.manylinux1_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py37/Fiona-1.8.21-cp37-cp37m-manylinux2014_x86_64.whl

@@ -16,19 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import itertools
 import warnings
 import logging
-import functools
 from unittest.mock import Mock
 import numpy
 
-from openquake.baselib import performance, parallel, hdf5, general
+from openquake.baselib import performance, parallel, hdf5
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
 from openquake.hazardlib.source.rupture import EBRupture, events_dt
-from openquake.commonlib import util, datastore
+from openquake.commonlib import util
 
 TWO16 = 2 ** 16
 TWO32 = numpy.float64(2 ** 32)
@@ -209,33 +207,28 @@ def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
 
 # ################## utilities for classical calculators ################ #
 
-def make_hmap(pmap, imtls, poes, sid=None):
-    """
-    Compute the hazard maps associated to the passed probability map.
 
-    :param pmap: hazard curves in the form of a ProbabilityMap
+def make_hmaps(pmaps, imtls, poes):
+    """
+    Compute the hazard maps associated to the passed probability maps.
+
+    :param pmaps: a list of Pmaps of shape (N, M, L1)
     :param imtls: DictArray with M intensity measure types
     :param poes: P PoEs where to compute the maps
-    :param sid: not None when pmap is actually a ProbabilityCurve
-    :returns: a ProbabilityMap with size (N, M, P)
+    :returns: a list of Pmaps with size (N, M, P)
     """
-    if sid is None:
-        sids = pmap.sids
-    else:  # passed a probability curve
-        pmap = {sid: pmap}
-        sids = [sid]
     M, P = len(imtls), len(poes)
-    hmap = probability_map.ProbabilityMap.build(M, P, sids, dtype=F32)
-    if len(pmap) == 0:
-        return hmap  # empty hazard map
-    for i, imt in enumerate(imtls):
-        curves = numpy.array([pmap[sid].array[imtls(imt), 0] for sid in sids])
-        data = compute_hazard_maps(curves, imtls[imt], poes)  # array (N, P)
-        for sid, value in zip(sids, data):
-            array = hmap[sid].array
-            for j, val in enumerate(value):
-                array[i, j] = val
-    return hmap
+    hmaps = []
+    for pmap in pmaps:
+        hmap = probability_map.ProbabilityMap(pmaps[0].sids, M, P).fill(0)
+        for m, imt in enumerate(imtls):
+            data = compute_hazard_maps(
+                pmap.array[:, m], imtls[imt], poes)  # (N, P)
+            for idx, imls in enumerate(data):
+                for p, iml in enumerate(imls):
+                    hmap.array[idx, m, p] = iml
+        hmaps.append(hmap)
+    return hmaps
 
 
 def make_uhs(hmap, info):
@@ -394,18 +387,9 @@ class RuptureImporter(object):
 # logic for building the GMF slices used in event_based_risk #
 ##############################################################
 
-slice_dt = numpy.dtype([('start', int), ('stop', int), ('eid', U32)])
-START, STOP, WEIGHT = 0, 1, 2
 SLICE_BY_EVENT_NSITES = 1000
 
-
-def slc_weight(slc):
-    """
-    :returns: the weight a slice array
-    """
-    if len(slc.shape) == 1:
-        return slc[1] - slc[0] + slc[2]
-    return (slc[:, 1] - slc[:, 0] + slc[:, 2]).sum()
+slice_dt = numpy.dtype([('start', int), ('stop', int), ('eid', U32)])
 
 
 def build_slice_by_event(eids, offset=0):
@@ -417,137 +401,24 @@ def build_slice_by_event(eids, offset=0):
     return sbe
 
 
-def _concat(acc, slc2):
-    if len(acc) == 0:
-        return [slc2]
-    slc1 = acc[-1]  # last slice
-    if slc2[START] == slc1[STOP]:
-        new = numpy.zeros(3, int)
-        new[START] = slc1[START]
-        new[STOP] = slc2[STOP]
-        new[WEIGHT] = slc1[WEIGHT] + slc2[WEIGHT]
-        return acc[:-1] + [new]
-    return acc + [slc2]
-
-
-def compactify(arrayN3):
+def starmap_from_gmfs(task_func, oq, dstore):
     """
-    :param arrayN3: an array with columns (start, stop, weight)
-    :returns: a shorter array with the same structure
-
-    Here is how it works in an example where the first three slices
-    are compactified into one while the last slice stays as it is:
-
-    >>> arr = numpy.array([[84384702, 84385520, 1308],
-    ...                    [84385520, 84385770, 28],
-    ...                    [84385770, 84386062, 12],
-    ...                    [84387636, 84388028, 183]])
-    >>> compactify(arr)
-    array([[84384702, 84386062,     1348],
-           [84387636, 84388028,      183]])
+    :param task_func: function or generator with signature (gmf_df, oq, dstore)
+    :param oq: an OqParam instance
+    :param dstore: DataStore instance where the GMFs are stored
+    :returns: a Starmap object used for event based calculations
     """
-    if len(arrayN3) == 1:
-        # nothing to compactify
-        return arrayN3
-    out = numpy.array(functools.reduce(_concat, arrayN3, []))
-    return out
-
-
-def ponder_slices(slice_by_event, num_assets, sids_risk, dstore, monitor):
-    """
-    Convert an array `slice_by_event` into an array `slice_by_weight`.
-    If `sids_risk` is not None, it is used to filter the hazard sites
-    and in that case the rows with zero weight are discarded.
-    """
-    start, stop = slice_by_event[0]['start'], slice_by_event[-1]['stop']
-    with dstore.open('r'):
-        haz_sids = dstore['gmf_data/sid'][start:stop]
-    out = []
-    for s1, s2, _e in slice_by_event:
-        sids = haz_sids[s1-start:s2-start]
-        if sids_risk is not None:
-            sids = sids[numpy.isin(sids, sids_risk)]
-        na = num_assets[sids].sum()
-        if na:
-            out.append((s1, s2, 0))
-    return numpy.array(out, int)
-
-
-def build_gmfslices(dstore, hint=None):
-    """
-    :param dstore: a DataStore containing gmf_data in it or its parent
-    :param hint: hint for the number of arrays to generate
-    :returns: a list of slice arrays
-    """
-    df = dstore.read_df('gmf_data', slc=slice(0, 1))
-    nbytes_per_row = df.memory_usage(index=False).sum()
-    maxrows = MAX_NBYTES // nbytes_per_row
-    logging.info('Considering blocks of {:_d} rows'.format(maxrows))
-    tot_nrows = len(dstore['gmf_data/sid'])
-    parent = dstore.parent
-    Np = len(parent['sitecol']) if parent else 0
-    if hint is None:
-        hint = tot_nrows // maxrows or 1
+    data = dstore['gmf_data']
     try:
-        slice_by_event = dstore['gmf_data/slice_by_event'][:]
+        sbe = data['slice_by_event'][:]
     except KeyError:
-        # missing slice_by_event
-        logging.info('Reading the full gmf_data/eid')
-        eids = dstore['gmf_data/eid'][:]
-        if parent and Np >= SLICE_BY_EVENT_NSITES:
-            # try to fix the parent if there are many sites
-            parent.close()
-            with datastore.read(parent.filename, 'r+') as p:
-                slice_by_event = build_slice_by_event(eids)
-                p['gmf_data/slice_by_event'] = slice_by_event
-            parent.open('r')
-        else:
-            # no parent or few sites
-            slice_by_event = build_slice_by_event(eids)
-
-    logging.info('Reading sites and assets')
-    sitecol = dstore['sitecol']
-    assetcol = dstore['assetcol']
-    if parent:
-        # important for oq-risk-tests event_based_risk case_8e
-        filtered = len(sitecol) < Np
-    else:
-        filtered = (sitecol.sids != numpy.arange(len(sitecol))).any()
-    N = sitecol.sids.max() + 1 if filtered else len(sitecol)
-    num_assets = numpy.zeros(N, int)
-    sids_risk, counts = numpy.unique(assetcol['site_id'], return_counts=True)
-    num_assets[sids_risk] = counts
-    logging.info('Building slice_by_event')
-    slice_by_weight = []
-    if not filtered:
-        sids_risk = None
-    dstore.swmr_on()  # crucial!
-    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
-    smap = parallel.Starmap(ponder_slices, distribute=dist, h5=dstore.hdf5)
-    for sbe in numpy.array_split(slice_by_event, hint):
-        if len(sbe):
-            smap.submit((sbe, num_assets, sids_risk, dstore))
-    for sbw in smap:
-        if len(sbw):
-            slice_by_weight.append(sbw)
-    if not slice_by_weight:
-        raise ValueError('The sites in gmf_data are disjoint from the '
-                         'site collection!?')
-    # NB: the sort below is needed for scenario_damage case_12 with
-    # discrete_damage_distribution = true
-    logging.info('Sorting and compactifying slices')
-    slice_by_weight = numpy.sort(numpy.concatenate(slice_by_weight), axis=0)
-    tot_weight = slc_weight(slice_by_weight)
-    max_weight = numpy.clip(tot_weight / hint, 1_000, 1_000_000)
-    blocks = general.block_splitter(slice_by_weight, max_weight, slc_weight)
-    gmfslices = [compactify(numpy.array(block)) for block in blocks]
-    ns = sum(len(arr) for arr in gmfslices)
-    logging.info('Built {:d} GMF slices'.format(ns))
-    nrows = sum((arr[:, STOP]-arr[:, START]).sum() for arr in gmfslices)
-    h = general.humansize(nbytes_per_row * nrows)
-    htot = general.humansize(nbytes_per_row * tot_nrows)
-    logging.info('Considering %s of %s of GMFs', h, htot)
-    ws = numpy.array([slc_weight(arr) for arr in gmfslices])
-    logging.info('Slice weights min, mean, max {:_d}, {:_d}, {:_d}'.
-                 format(int(ws.min()), int(ws.mean()), int(ws.max())))
-    return gmfslices
+        sbe = build_slice_by_event(data['eid'][:])
+    nrows = sbe[-1]['stop'] - sbe[0]['start']
+    maxweight = numpy.ceil(nrows / (oq.concurrent_tasks or 1))
+    dstore.swmr_on()  # before the Starmap
+    smap = parallel.Starmap.apply(
+        task_func, (sbe, oq, dstore),
+        weight=lambda rec: rec['stop']-rec['start'],
+        maxweight=numpy.clip(maxweight, 1000, 10_000_000),
+        h5=dstore.hdf5)
+    return smap

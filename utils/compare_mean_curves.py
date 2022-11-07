@@ -20,7 +20,7 @@
 import numpy
 import matplotlib.pyplot as plt
 from openquake.baselib import sap, datastore
-from openquake.calculators.getters import PmapGetter
+from openquake.calculators.getters import ProbabilityMapGetter
 
 
 def compare_mean_curves(calc_ref: int, calc: int, nsigma: float = 3):

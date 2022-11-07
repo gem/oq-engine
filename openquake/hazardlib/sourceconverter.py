@@ -22,10 +22,7 @@ import pickle
 import toml
 import copy
 import logging
-try:
-    from dataclasses import dataclass
-except ImportError:  # in Python 3.6
-    from openquake.baselib.python3compat import dataclass
+from dataclasses import dataclass
 import numpy
 
 from openquake.hazardlib.source.multi_fault import MultiFaultSource

@@ -195,6 +195,7 @@ import traceback
 import collections
 from unittest import mock
 import multiprocessing.dummy
+import multiprocessing.shared_memory as shmem
 import subprocess
 import psutil
 import getpass
@@ -214,6 +215,7 @@ from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
     gettemp, engine_version)
 
+mp_context = multiprocessing.get_context('spawn')
 sys.setrecursionlimit(2000)  # raised to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
@@ -223,6 +225,19 @@ GB = 1024 ** 3
 @submit.add('no')
 def no_submit(self, func, args, monitor):
     return safely_call(func, args, self.task_no, monitor)
+
+
+@submit.add('spawn')
+def spawn_submit(self, func, args, monitor):
+    while True:
+        percent = psutil.cpu_percent()
+        if percent <= 99:
+            mp_context.Process(
+                target=safely_call, args=(func, args, self.task_no, monitor)
+            ).start()
+            break
+        logging.debug('CPU=%d%%, waiting', percent)
+        time.sleep(30)
 
 
 @submit.add('processpool')
@@ -269,7 +284,7 @@ def oq_distribute(task=None):
     :returns: the value of OQ_DISTRIBUTE or config.distribution.oq_distribute
     """
     dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
-    if dist not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
+    if dist not in ('no', 'spawn', 'processpool', 'threadpool', 'celery', 'zmq',
                     'dask', 'ipp'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
     return dist
@@ -644,9 +659,36 @@ def getargnames(task_func):
         return inspect.getfullargspec(task_func.__call__).args[1:]
 
 
+class SharedArray(object):
+    """
+    Wrapper over a SharedMemory object to be used as a context manager.
+    """
+    def __init__(self, shape, dtype, value):
+        nbytes = numpy.zeros(1, dtype).nbytes * numpy.prod(shape)
+        sm = shmem.SharedMemory(create=True, size=nbytes)
+        self.name = sm.name
+        self.shape = shape
+        self.dtype = dtype
+        # fill the SharedMemory buffer with the value
+        arr = numpy.ndarray(shape, dtype, buffer=sm.buf)
+        arr[:] = value
+
+    def __enter__(self):
+        self.sm = shmem.SharedMemory(self.name)
+        return numpy.ndarray(self.shape, self.dtype, buffer=self.sm.buf)
+
+    def __exit__(self, etype, exc, tb):
+        self.sm.close()
+
+    def unlink(self):
+        shmem.SharedMemory(self.name).unlink()
+
+
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
+    shared = []  # SharedArrays
+    maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
     num_cores = int(config.distribution.get('num_cores', '0'))
     if not num_cores:
         # use only the "visible" cores, not the total system cores
@@ -671,9 +713,11 @@ class Starmap(object):
                 from ray.util.multiprocessing import Pool
                 cls.pool = Pool(cls.num_cores, init_workers)
             except ImportError:
-                cls.pool = multiprocessing.get_context('spawn').Pool(
-                    cls.num_cores, init_workers)
+                cls.pool = mp_context.Pool(
+                    cls.num_cores, init_workers,
+                    maxtasksperchild=cls.maxtasksperchild)
                 cls.pids = [proc.pid for proc in cls.pool._pool]
+            cls.shared = []
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine
             signal.signal(signal.SIGTERM, term_handler)
@@ -688,6 +732,8 @@ class Starmap(object):
 
     @classmethod
     def shutdown(cls):
+        for shared in cls.shared:
+            shmem.SharedMemory(shared.name).unlink()
         # shutting down the pool during the runtime causes mysterious
         # race conditions with errors inside atexit._run_exitfuncs
         if hasattr(cls, 'pool'):
@@ -932,6 +978,19 @@ class Starmap(object):
             logging.info(
                 'Mean time per core=%ds, std=%.1fs, min=%ds, max=%ds',
                 times.mean(), times.std(), times.min(), times.max())
+
+    def create_shared(self, shape, dtype=float, value=0.):
+        """
+        Create an array backed by a SharedMemory buffer.
+
+        :param shape: shape of the array
+        :param dtype: dtype of the array (default float)
+        :param value: initialization value (default 0.)
+        :returns: a SharedArray instance
+        """
+        shared = SharedArray(shape, dtype, value)
+        self.shared.append(shared)
+        return shared
 
 
 def sequential_apply(task, args, concurrent_tasks=Starmap.CT,

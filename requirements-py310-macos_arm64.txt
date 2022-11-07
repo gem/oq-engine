@@ -3,12 +3,10 @@
 
 # GEM Mirror
 #
-https://wheelhouse.openquake.org/macos/arm64/py310/pandas-1.3.5-cp310-cp310-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py310/pandas-1.4.2-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/scipy-1.8.1-cp310-cp310-macosx_12_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/h5py-3.7.0-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/Pillow-9.2.0-cp310-cp310-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py310/pyproj-3.3.1-cp310-cp310-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py310/GDAL-3.4.3-cp310-cp310-macosx_12_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/kiwisolver-1.4.4-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/matplotlib-3.5.3-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/setproctitle-1.3.2-cp310-cp310-macosx_10_9_universal2.whl
@@ -17,6 +15,9 @@ https://wheelhouse.openquake.org/macos/arm64/py310/Shapely-1.8.4-cp310-cp310-mac
 https://wheelhouse.openquake.org/macos/arm64/py310/llvmlite-0.39.1-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/numba-0.56.2-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/numpy-1.23.3-cp310-cp310-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py310/Fiona-1.8.21-cp310-cp310-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py310/GDAL-3.4.3-cp310-cp310-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py310/pyproj-3.4.0-cp310-cp310-macosx_11_0_arm64.whl
 #python
 https://wheelhouse.openquake.org/v3/linux/py/docutils-0.14-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/decorator-4.4.2-py2.py3-none-any.whl
@@ -39,4 +40,3 @@ https://wheelhouse.openquake.org/v3/py/networkx-2.8.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/pyparsing-2.4.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/cycler-0.10.0-py2.py3-none-any.whl
-

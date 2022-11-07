@@ -408,13 +408,9 @@ def make_figure_sources(extractors, what):
         if not wkt:
             logging.warning('No geometries for source id %s', srcid)
             continue
-        if rec['eff_ruptures']:  # not filtered out
-            color = 'green'
-            alpha = .3
-            n += 1
-        else:
-            color = 'yellow'
-            alpha = .1
+        color = 'green'
+        alpha = .3
+        n += 1
         if wkt.startswith('POINT'):
             psources.append(shapely.wkt.loads(wkt))
         else:

@@ -114,6 +114,19 @@ class DisaggregateTestCase(unittest.TestCase):
         aaae(matrix.shape, (2, 27, 2, 2, 3, 1))
         aaae(matrix.sum(), 6.14179818e-11)
 
+    def test_with_bins(self):
+
+        bine = {'mag': numpy.arange(3, 9+0.01, 3),
+                'dist': numpy.array([0, 5, 10, 20, 40, 80, 160]),
+                'eps': numpy.array([-3, -1, 0, 1, 3])}
+
+        _, matrix = disagg.disaggregation(
+            self.sources, self.site, self.imt, self.iml, self.gsims,
+            self.truncation_level, coord_bin_width=2.4, bin_edges=bine)
+
+        aaae = numpy.testing.assert_array_almost_equal
+        aaae(matrix.sum(), 6.14179818e-11)
+
 
 class PMFExtractorsTestCase(unittest.TestCase):
     def setUp(self):

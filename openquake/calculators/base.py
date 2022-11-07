@@ -69,7 +69,7 @@ def check_imtls(this, parent):
     Fix the hazard_imtls of two calculations if possible
     """
     for imt, imls in this.items():
-        if (imls != parent[imt]).any():
+        if len(imls) != len(parent[imt]) or (imls != parent[imt]).any():
             raise ValueError('The intensity measure levels %s are different '
                              'from the parent levels %s for %s' % (
                                  imls, parent[imt], imt))
@@ -453,8 +453,12 @@ class HazardCalculator(BaseCalculator):
                 'https://docs.openquake.org/oq-engine/advanced/general.html#'
                 'pointsource-distance')
         elif 'classical' in oq.calculation_mode:
-            logging.info('Using pointsource_distance=%s',
-                         oq.pointsource_distance)
+            if oq.ps_grid_spacing:
+                logging.info('Using pointsource_distance=%s + %d',
+                             oq.pointsource_distance, int(oq.ps_grid_spacing))
+            else:
+                logging.info('Using pointsource_distance=%s',
+                             oq.pointsource_distance)
 
     def read_inputs(self):
         """
@@ -711,23 +715,25 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         policy_acc = general.AccumDict(accum=[])
         # here is an example of policy_idx: {'?': 0, 'B': 1, 'A': 2}
-        policy_idx = self.assetcol.tagcol.policy_idx
-        for loss_type, fname in lt_fnames:
-            if 'reinsurance' in oq.inputs:
-                assert len(lt_fnames) == 1, lt_fnames
-                policy_df, treaty_df, fieldmap = reinsurance.parse(
-                    fname, policy_idx)
-                treaties = set(treaty_df.id)
-                assert len(treaties) == len(treaty_df), 'Not unique treaties'
-                self.datastore.create_df('treaty_df', treaty_df,
-                                         field_map=json.dumps(fieldmap))
-                self.treaty_df = treaty_df
-                # add policy_grp column
-                for _, pol in policy_df.iterrows():
-                    grp = reinsurance.build_policy_grp(pol, treaty_df)
-                    policy_acc['policy_grp'].append(grp)
-
-            else:  # insurance
+        if 'reinsurance' in oq.inputs:
+            loss_type = list(lt_fnames)[0][0]
+            policy_df, treaty_df, fieldmap = readinput.get_reinsurance(
+                oq, self.assetcol)
+            treaties = set(treaty_df.id)
+            assert len(treaties) == len(treaty_df), 'Not unique treaties'
+            self.datastore.create_df('treaty_df', treaty_df,
+                                     field_map=json.dumps(fieldmap))
+            self.treaty_df = treaty_df
+            # add policy_grp column
+            for _, pol in policy_df.iterrows():
+                grp = reinsurance.build_policy_grp(pol, treaty_df)
+                policy_acc['policy_grp'].append(grp)
+            for col in policy_df.columns:
+                policy_acc[col].extend(policy_df[col])
+            policy_acc['loss_type'].extend([loss_type] * len(policy_df))
+        else:  # insurance
+            policy_idx = self.assetcol.tagcol.policy_idx
+            for loss_type, fname in lt_fnames:
                 #  `deductible` and `insurance_limit` as fractions
                 policy_df = pandas.read_csv(fname, keep_default_na=False)
                 policy_df['policy'] = [
@@ -735,9 +741,9 @@ class HazardCalculator(BaseCalculator):
                 for col in ['deductible', 'insurance_limit']:
                     reinsurance.check_fractions(
                         [col], [policy_df[col].to_numpy()], fname)
-            for col in policy_df.columns:
-                policy_acc[col].extend(policy_df[col])
-            policy_acc['loss_type'].extend([loss_type] * len(policy_df))
+                for col in policy_df.columns:
+                    policy_acc[col].extend(policy_df[col])
+                policy_acc['loss_type'].extend([loss_type] * len(policy_df))
         assert policy_acc
         self.policy_df = pandas.DataFrame(policy_acc)
         self.datastore.create_df('policy', self.policy_df)
@@ -777,7 +783,9 @@ class HazardCalculator(BaseCalculator):
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_crmodel()  # must be called first
-        if (not oq.imtls and 'shakemap' not in oq.inputs and 'ins_loss'
+        if oq.calculation_mode == 'aftershock':
+            haz_sitecol = None
+        elif (not oq.imtls and 'shakemap' not in oq.inputs and 'ins_loss'
                 not in oq.inputs and oq.ground_motion_fields):
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
