@@ -794,7 +794,6 @@ class ContextMaker(object):
             start_stop = offset, offset + len(pla)
             ctx = self._get_ctx_planar(
                 mag, pla, sites, src.id, start_stop, tom).flatten()
-            # print('%.2f' % mag, sites, ctx.nbytes / 1024**2)
             ctxt = ctx[ctx.rrup < magdist[mag]]
             if len(ctxt):
                 yield ctxt
@@ -1077,6 +1076,7 @@ class ContextMaker(object):
         dists = sites.get_cdist(src.location)
         planardict = src.get_planar(iruptures=True)
         esites = 0
+        src.max_radius()  # sets radius[m]
         for m, (mag, [planar]) in enumerate(planardict.items()):
             rrup = dists[dists < self.maximum_distance(mag) + src.radius[m]]
             nclose = (rrup < self.pointsource_distance + src.ps_grid_spacing +
