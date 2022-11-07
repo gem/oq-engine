@@ -800,11 +800,10 @@ class ContextMaker(object):
 
     def _quartets(self, src, sitecol, cdist, planardict):
         # splitting by magnitude
-        quartets = []
         if src.count_nphc() == 1:
             # one rupture per magnitude
             for m, (mag, pla) in enumerate(planardict.items()):
-                quartets.append((m, mag, pla, sitecol))
+                yield m, mag, pla, sitecol
         else:
             for m, rup in enumerate(src.iruptures()):
                 mag = rup.mag
@@ -816,18 +815,17 @@ class ContextMaker(object):
                 far = sitecol.filter(cdist > psdist)
                 if self.fewsites:
                     if close is None:  # all is far, common for small mag
-                        quartets.append((m, mag, arr, sitecol))
+                        yield m, mag, arr, sitecol
                     else:  # something is close
-                        quartets.append((m, mag, pla, sitecol))
+                        yield m, mag, pla, sitecol
                 else:  # many sites
                     if close is None:  # all is far
-                        quartets.append((m, mag, arr, far))
+                        yield m, mag, arr, far
                     elif far is None:  # all is close
-                        quartets.append((m, mag, pla, close))
+                        yield m, mag, pla, close
                     else:  # some sites are far, some are close
-                        quartets.append((m, mag, arr, far))
-                        quartets.append((m, mag, pla, close))
-        return quartets
+                        yield m, mag, arr, far
+                        yield m, mag, pla, close
 
     # this is called for non-point sources (or point sources in preclassical)
     def gen_contexts(self, rups_sites, src_id):
