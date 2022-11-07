@@ -480,19 +480,18 @@ def get_delta_c1(rrup, imt, mag):
             # Equations 3b, 3c and 3d
             s1 = 0.2704 - 0.0694 * np.maximum(mag[idx]-7, 0)
             s2 = -0.1342 + 0.0716 * np.maximum(mag[idx]-7, 0)
-            s3 = 0.2513 + 0.0419 * np.maximum(mag[idx]-7, 0)
+            s3 = 0.2513 - 0.0419 * np.maximum(mag[idx]-7, 0)
 
-            # Equations 3a
-            s = s1 + s2 / np.cosh(s3 * rrup[idx])
+            # Equation 3a - Note that we add a capping to rrup to avoid an
+            # overflow
+            dst = rrup[idx]
+            dst[dst>100] = 100
+            s = s1 + s2 / np.cosh(s3 * dst)
 
             # Equation 2
-            try:
-                delta_c1[idx] = s * np.maximum(
-                        np.log(float(imt.period)/tb[idx]), 0)**2
-            except ValueError:
-                breakpoint()
-                exit()
-    
+            delta_c1[idx] = s * np.maximum(
+                np.log(float(imt.period)/tb[idx]), 0)**2
+
     return delta_c1
 
 
