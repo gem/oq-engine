@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Bug fix: min_mag and max_mag were not honored when using a
+    magnitude-dependent maximum distance
   * Reduced the memory consumption when using the ps_grid_spacing approximation
   * Added `spawn` distribution mechanism for testing purposes
 
