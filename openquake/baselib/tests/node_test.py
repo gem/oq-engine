@@ -170,7 +170,7 @@ param=yyy
         dic = n.node_to_dict(node)
         self.assertEqual(dic, {
             'nonParametric':
-            {'singlePlaneRupture': '3', 'multiPlanesRupture': '2'}})
+            {'singlePlaneRupture': 3, 'multiPlanesRupture': 2}})
 
     def test_duplicates_ok(self):
         # sequential duplicate tags
@@ -185,7 +185,7 @@ param=yyy
         dic = n.node_to_dict(node)
         self.assertEqual(dic, {
             'nonParametric':
-            {'singlePlaneRupture': ['1', '3'], 'multiPlanesRupture': '2'}})
+            {'singlePlaneRupture': [1, 3], 'multiPlanesRupture': 2}})
 
     def test_can_pickle(self):
         node = n.Node('tag')
