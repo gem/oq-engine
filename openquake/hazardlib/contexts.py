@@ -774,9 +774,9 @@ class ContextMaker(object):
                    for mag, rate in src.get_annual_occurrence_rates()}
         # self.maximum_distance(mag) can be 0 if outside the mag range
         maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
-        max_radius = src.max_radius()
+        maxdist = magdist[maxmag]
         cdist = sitecol.get_cdist(src.location)
-        mask = cdist <= magdist[maxmag] + max_radius
+        mask = cdist <= maxdist + src.max_radius(maxdist)
         sitecol = sitecol.filter(mask)
         if sitecol is None:
             return []
