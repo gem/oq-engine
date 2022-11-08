@@ -776,6 +776,7 @@ class ContextMaker(object):
         maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
         maxdist = magdist[maxmag]
         cdist = sitecol.get_cdist(src.location)
+        # NB: having a decent max_radius is essential for performance!
         mask = cdist <= maxdist + src.max_radius(maxdist)
         sitecol = sitecol.filter(mask)
         if sitecol is None:
@@ -814,6 +815,7 @@ class ContextMaker(object):
                     continue
                 arr = [rup.surface.array.reshape(-1, 3)]
                 pla = planardict[mag]
+                # NB: having a good psdist is essential for performance!
                 psdist = src.get_psdist(m, mag, self.pointsource_distance,
                                         magdist)
                 close = sitecol.filter(cdist <= psdist)
