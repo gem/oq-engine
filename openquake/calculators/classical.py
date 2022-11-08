@@ -548,17 +548,18 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc[cm.grp_id] = ProbabilityMap(
                     tile.sids, oq.imtls.size, len(cm.gsims)).fill(1)
                 # send the multiFaultSources first
-                multifaults = [src for src in sg if src.code == b'F']
-                for src in multifaults:
-                    smap.submit(([src], tile, cm))
+                for src in sg:
+                    if src.code == b'F':
+                        self.n_outs[cm.grp_id] += 1
+                        smap.submit(([src], tile, cm))
                 srcs = [src for src in sg if src.code != b'F']
                 blks = (groupby(srcs, basename).values() if oq.disagg_by_src
                         else block_splitter(srcs, mw, get_weight, sort=True))
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
-                    smap.submit((block, tile, cm))
                     self.n_outs[cm.grp_id] += 1
+                    smap.submit((block, tile, cm))
         smap.reduce(self.agg_dicts, acc)
 
     def store_info(self):
