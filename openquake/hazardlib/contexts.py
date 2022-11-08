@@ -782,7 +782,7 @@ class ContextMaker(object):
             return []
 
         for magi, mag, planarlist, sites in self._quartets(
-                src, sitecol, cdist[mask], planardict):
+                src, sitecol, cdist[mask], magdist, planardict):
             if not planarlist:
                 continue
             elif len(planarlist) > 1:  # when using ps_grid_spacing
@@ -798,7 +798,7 @@ class ContextMaker(object):
             if len(ctxt):
                 yield ctxt
 
-    def _quartets(self, src, sitecol, cdist, planardict):
+    def _quartets(self, src, sitecol, cdist, magdist, planardict):
         minmag = self.maximum_distance.x[0]
         maxmag = self.maximum_distance.x[-1]
         # splitting by magnitude
@@ -814,8 +814,8 @@ class ContextMaker(object):
                     continue
                 arr = [rup.surface.array.reshape(-1, 3)]
                 pla = planardict[mag]
-                psdist = (self.pointsource_distance + src.ps_grid_spacing +
-                          src.radius[m])
+                psdist = src.get_psdist(m, mag, self.pointsource_distance,
+                                        magdist)
                 close = sitecol.filter(cdist <= psdist)
                 far = sitecol.filter(cdist > psdist)
                 if self.fewsites:

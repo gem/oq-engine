@@ -221,6 +221,13 @@ class PointSource(ParametricSeismicSource):
         max_rp_radius = self._get_max_rupture_projection_radius()
         return self.ps_grid_spacing * .707 + max_rp_radius
 
+    def get_psdist(self, m, mag, psdist, magdist):
+        """
+        :returns: the effective pointsource distance for the given magnitude
+        """
+        eff_radius = min(self.radius[m], magdist[mag] / 2)
+        return eff_radius + self.ps_grid_spacing * .707 + psdist
+
     def _get_max_rupture_projection_radius(self):
         """
         Find a maximum radius of a circle on Earth surface enveloping a rupture
