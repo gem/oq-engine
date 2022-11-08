@@ -485,9 +485,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.oqparam.mags_by_trt = self.csm.get_mags_by_trt()
                 self.full_lt = parent['full_lt']
                 self.datastore['source_info'] = parent['source_info'][:]
-                mw = self.csm.get_max_weight(oq)
+                maxw = self.csm.get_max_weight(oq)
         else:
-            mw = self.max_weight
+            maxw = self.max_weight
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
@@ -503,7 +503,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             tiles = [self.sitecol]
         if len(tiles) > 1:
-            mw /= 2  # produce more tasks
+            maxw /= 2  # produce more tasks
             sizes = [len(tile) for tile in tiles]
             logging.info('There are %d tiles of sizes %s', len(tiles), sizes)
             assert not oq.disagg_by_src, 'disagg_by_src with tiles'
@@ -514,7 +514,7 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = {}
         t0 = time.time()
         for t, tile in enumerate(tiles, 1):
-            self.run_tile(tile, mw, num_gs, acc)
+            self.run_tile(tile, maxw, num_gs, acc)
             if len(tiles) > 1:
                 parallel.Starmap.shutdown()
                 logging.info('Finished tile %d of %d', t, len(tiles))
@@ -531,7 +531,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.classical_time = time.time() - t0
         return True
 
-    def run_tile(self, tile, mw, num_gs, acc):
+    def run_tile(self, tile, maxw, num_gs, acc):
         """
         Run a subset of sites and update the accumulator
         """
@@ -541,7 +541,7 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         for cm in self.haz.cmakers:
             sg = self.csm.src_groups[cm.grp_id]
-            if sg.atomic or sg.weight <= mw:
+            if sg.atomic or sg.weight <= maxw:
                 smap.submit((sg, tile, cm))
             else:
                 # only groups generating more than 1 task preallocate memory
@@ -554,7 +554,7 @@ class ClassicalCalculator(base.HazardCalculator):
                         smap.submit(([src], tile, cm))
                 srcs = [src for src in sg if src.code != b'F']
                 blks = (groupby(srcs, basename).values() if oq.disagg_by_src
-                        else block_splitter(srcs, mw, get_weight, sort=True))
+                        else block_splitter(srcs, maxw, get_weight, sort=True))
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
