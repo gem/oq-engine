@@ -21,7 +21,7 @@ https://wheelhouse.openquake.org/v3/macos/py39/Fiona-1.8.21-cp39-cp39-macosx_10_
 https://wheelhouse.openquake.org/v3/macos/py39/GDAL-3.4.3-cp39-cp39-macosx_10_10_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py39/pyproj-3.4.0-cp39-cp39-macosx_10_10_x86_64.whl
 #
-https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-2.4.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/cycler-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/docutils-0.14-py3-none-any.whl
