@@ -1136,8 +1136,9 @@ def extract_disagg(dstore, what):
     # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))
     axis = [bins[k] for k in disag_tup]
+
     # compute axis mid points
-    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
+    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype != object
             else ax for ax in axis]
     if len(axis) == 1:  # i.e. Mag or Dist
         values = numpy.array([axis[0]] + list(matrix.T))  # i.e. shape (2, 3)
