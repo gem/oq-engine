@@ -7,6 +7,11 @@ on:
         description: Git Ref
         default: master
         required: true
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
   schedule:
     - cron: "0 4 * * *"
 
@@ -42,7 +47,9 @@ jobs:
     # You can test your matrix by printing the current Python version
     - name: Display Python version
       run: python -c "import sys; print(sys.version)"
-   # Use script to install engine and not the pip install .
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
     - name: Install engine with install script
       env:
         BRANCH: ${{ github.event.inputs.git-ref }}
