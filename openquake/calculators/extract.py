@@ -1137,7 +1137,7 @@ def extract_disagg(dstore, what):
     disag_tup = tuple(label.split('_'))
     axis = [bins[k] for k in disag_tup]
 
-    # compute axis mid points
+    # compute axis mid points, except for the TRT axis
     axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype != object
             else ax for ax in axis]
     if len(axis) == 1:  # i.e. Mag or Dist
