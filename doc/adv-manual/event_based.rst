@@ -1865,14 +1865,14 @@ indicate the ``deductible`` and ``limit``.
 ones first, then non-proportional ones of type "wxlr" and finally those
 of type "catxl".*
 
-- **deductible**: the amount (economic value) that the insurer will
+- **insurance deductible**: the amount (economic value) that the insurer will
   "deduct" from the ground up losses before paying up to its policy
   limits. The claim is calculated as ``claim = ground_up_loss -
   deductible`` The units of the deductible must be compatible with
   the units indicated in the exposure model (e.g. USD dollars or
   Euros).
 
-- **liability**: the maximum economic amount that can be covered by
+- **insurance liability**: the maximum economic amount that can be covered by
   the insurance, according to the policy characteristics. The
   liability is also known as limit or maximum coverage.
 
@@ -1887,15 +1887,15 @@ of type "catxl".*
   losses exceed this threshold, then the cession in excess is reported
   as an ``overspill``.
 
-- **deductible**: only applicable to *non-proportional* treaties, the
-  maximum retention (also known as "first loss") is
-  the limit above which the reinsurer becomes liable for losses up
-  to the upper limit of cover.
+- **reinsurance deductible**: only applicable to *non-proportional*
+  treaties, the maximum retention (also known as "first loss") is the
+  limit above which the reinsurer becomes liable for losses up to the
+  upper limit of cover.
 
-- **limit**: in *non-proportional* treaties it refers to the upper
-  limit of cover or ceiling.  The *reinsurance_cover* is the amount
-  between the ``deductible`` (deductible) and the upper limit of
-  cover.
+- **reinsurance limit**: in *non-proportional* treaties it refers to
+  the upper limit of cover or ceiling.  The *reinsurance_cover* is the
+  amount between the ``deductible`` (deductible) and the upper limit
+  of cover.
 
 *Note: the current engine implementation does not support an "annual
 aggregate limit" for non-proportional reinsurance treaties.*
