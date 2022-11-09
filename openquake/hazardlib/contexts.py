@@ -1072,16 +1072,20 @@ class ContextMaker(object):
 
     def estimate_sites(self, src, sites):
         """
+        :param src: a (Collapsed)PointSource
+        :param sites: a filtered SiteCollection
         :returns: how many sites are impacted overall
         """
+        magdist = {mag: self.maximum_distance(mag)
+                   for mag, rate in src.get_annual_occurrence_rates()}
         nphc = src.count_nphc()
         dists = sites.get_cdist(src.location)
         planardict = src.get_planar(iruptures=True)
         esites = 0
         for m, (mag, [planar]) in enumerate(planardict.items()):
-            rrup = dists[dists < self.maximum_distance(mag) + src.radius[m]]
-            nclose = (rrup < self.pointsource_distance + src.ps_grid_spacing +
-                      src.radius[m]).sum()
+            rrup = dists[dists < magdist[mag]]
+            nclose = (rrup < src.get_psdist(m, mag, self.pointsource_distance,
+                                            magdist)).sum()
             nfar = len(rrup) - nclose
             esites += nclose * nphc + nfar
         return esites
@@ -1226,18 +1230,17 @@ class PmapMaker(object):
         totlen = 0
         t0 = time.time()
         for src in self.sources:
-            nsites = 0
+            src.nsites = 0
             for ctx in self.gen_ctxs(src):
                 ctxs_mb += ctx.nbytes / TWO20  # TWO20=1MB
-                nsites += len(ctx)
+                src.nsites += len(ctx)
+                totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxs_mb > MAX_MB:
                     cm.update(pmap, concat(allctxs), self.rup_indep)
                     allctxs.clear()
                     ctxs_mb = 0
         if allctxs:
-            src.nsites = nsites
-            totlen += nsites
             cm.update(pmap, concat(allctxs), self.rup_indep)
             allctxs.clear()
         dt = time.time() - t0
