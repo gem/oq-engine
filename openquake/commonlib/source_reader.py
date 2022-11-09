@@ -164,8 +164,6 @@ def get_csm(oq, full_lt, h5=None):
     allargs = []
     for fname in full_lt.source_model_lt.info.smpaths:
         allargs.append((fname, converter))
-    if os.environ.get('OQ_REDUCE'):
-        allargs = [allargs[0]]
     smdict = parallel.Starmap(read_source_model, allargs, distribute=dist,
                               h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel

@@ -51,21 +51,17 @@ class WorkerMaster(object):
     :param host_cores: names of the remote hosts and number of cores to use
     :param remote_python: path of the Python executable on the remote hosts
     """
-    def __init__(self, ctrl_port=config.zworkers.ctrl_port,
-                 host_cores=config.zworkers.host_cores,
-                 remote_user=config.zworkers.remote_user,
-                 remote_python=config.zworkers.remote_python,
-                 receiver_ports=None):
+    def __init__(self, zworkers=config.zworkers, receiver_ports=None):
         # NB: receiver_ports is not used but needed for compliance
-        self.ctrl_port = int(ctrl_port)
-        self.host_cores = ([hc.split() for hc in host_cores.split(',')]
-                           if host_cores else [])
+        self.ctrl_port = int(zworkers.ctrl_port)
+        self.host_cores = ([hc.split() for hc in zworkers.host_cores.split(',')]
+                           if zworkers.host_cores else [])
         for host, cores in self.host_cores:
             if int(cores) < -1:
                 raise InvalidFile('openquake.cfg: found %s %s' %
                                   (host, cores))
-        self.remote_python = remote_python or sys.executable
-        self.remote_user = remote_user or getpass.getuser()
+        self.remote_python = zworkers.remote_python or sys.executable
+        self.remote_user = zworkers.remote_user or getpass.getuser()
         self.popens = []
 
     def start(self):

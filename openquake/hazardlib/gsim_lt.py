@@ -406,6 +406,9 @@ class GsimLogicTree(object):
                     branches.append(bt)
                     self.shortener[branch_id] = keyno(
                         branch_id, bsno, brno, self.filename)
+                if os.environ.get('OQ_REDUCE'):  # take the first branch only
+                    bt.weight.dic['weight'] = 1.
+                    break
             tot = sum(weights)
             assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
             if duplicated(branch_ids):

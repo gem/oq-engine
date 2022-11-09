@@ -1164,7 +1164,7 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile(
                     '%s: iml_disagg and poes_disagg cannot be set '
                     'at the same time' % job_ini)
-            bins = ['mag', 'dst', 'lon', 'eps']
+            bins = ['mag', 'dist', 'lon', 'eps']
             for i, k in enumerate(['mag_bin_width', 'distance_bin_width',
                                    'coordinate_bin_width', 'num_epsilon_bins']):
                 if (k not in vars(self) and

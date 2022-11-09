@@ -229,9 +229,15 @@ def no_submit(self, func, args, monitor):
 
 @submit.add('spawn')
 def spawn_submit(self, func, args, monitor):
-    mp_context.Process(
-        target=safely_call, args=(func, args, self.task_no, monitor)
-    ).start()
+    while True:
+        percent = psutil.cpu_percent()
+        if percent <= 99:
+            mp_context.Process(
+                target=safely_call, args=(func, args, self.task_no, monitor)
+            ).start()
+            break
+        logging.debug('CPU=%d%%, waiting', percent)
+        time.sleep(30)
 
 
 @submit.add('processpool')
@@ -829,7 +835,8 @@ class Starmap(object):
         self.t0 = time.time()
         if self.distribute in 'zmq dask celery':  # add a check
             errors = ['The workerpool on %s is down' % host
-                      for host, run, tot in workers_status() if tot == 0]
+                      for host, run, tot in workers_status(config.zworkers)
+                      if tot == 0]
             if errors:
                 raise RuntimeError('\n'.join(errors))
 
@@ -1046,10 +1053,10 @@ def split_task(elements, func, args, duration, outs_per_task, monitor):
 OQDIST = oq_distribute()
 
 
-def ssh_args():
-    remote_python = config.zworkers.remote_python or sys.executable
-    remote_user = config.zworkers.remote_user or getpass.getuser()
-    if config.zworkers.host_cores.strip():
+def ssh_args(zworkers):
+    remote_python = zworkers.remote_python or sys.executable
+    remote_user = zworkers.remote_user or getpass.getuser()
+    if zworkers.host_cores.strip():
         for hostcores in config.zworkers.host_cores.split(','):
             host, cores = hostcores.split()
             if host == '127.0.0.1':  # localhost
@@ -1059,13 +1066,13 @@ def ssh_args():
                     'ssh', '-f', '-T', remote_user + '@' + host, remote_python]
 
 
-def workers_start():
+def workers_start(zworkers):
     """
     Start the remote workers with ssh
     """
     if OQDIST in 'no processpool':
         return
-    for host, cores, args in ssh_args():
+    for host, cores, args in ssh_args(zworkers):
         if OQDIST == 'dask':
             sched = config.distribution.dask_scheduler
             args += ['-m', 'distributed.cli.dask_worker', sched,
@@ -1082,7 +1089,7 @@ def workers_start():
         logging.info(args)
 
 
-def workers_stop():
+def workers_stop(zworkers):
     """
     Stop all the workers with a shutdown
     """
@@ -1091,11 +1098,11 @@ def workers_stop():
     elif OQDIST == 'celery':
         app.control.shutdown()
     elif OQDIST == 'zmq':
-        workerpool.WorkerMaster().stop()
+        workerpool.WorkerMaster(zworkers).stop()
     return 'stopped'
 
 
-def workers_kill():
+def workers_kill(zworkers):
     """
     Kill all the workers
     """
@@ -1104,11 +1111,11 @@ def workers_kill():
     elif OQDIST == 'celery':
         app.control.shutdown()
     elif OQDIST == 'zmq':
-        workerpool.WorkerMaster().kill()
+        workerpool.WorkerMaster(zworkers).kill()
     return 'killed'
 
 
-def workers_status():
+def workers_status(zworkers):
     """
     :returns: a list [(host name, running, total), ...]
     """
@@ -1131,7 +1138,7 @@ def workers_status():
         return out
 
     elif OQDIST == 'zmq':
-        return workerpool.WorkerMaster().status()
+        return workerpool.WorkerMaster(zworkers).status()
 
     return []
 
@@ -1144,7 +1151,7 @@ def workers_wait(seconds=30):
         num_hosts = len(config.zworkers.host_cores.split(','))
         for _ in range(seconds):
             time.sleep(1)
-            status = workers_status()
+            status = workers_status(config.zworkers)
             if len(status) == num_hosts and all(
                     total for host, running, total in status):
                 break

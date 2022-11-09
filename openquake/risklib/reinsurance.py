@@ -39,10 +39,11 @@ KNOWN_LOSS_TYPES = {
     'structural', 'nonstructural', 'contents',
     'value-structural', 'value-nonstructural', 'value-contents'}
 DEBUG = False
+VALID_TREATY_TYPES = 'prop', 'wxlr', 'catxl'
 
 
 def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
-                 treaty_types):
+                 treaty_linenos, treaty_types):
     """
     :param fields: fields to check (the first field is the primary key)
     :param dframe: DataFrame with the contents of fname
@@ -50,6 +51,7 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
     :param fname: file xml containing the fields to check
     :param policyfname: file csv containing the fields to check
     :param treaties: treaty names
+    :param treaty_linenos: line numbers where each treaty was read from xml
     :param treaty_types: treaty types
     """
     key = fields[0]
@@ -59,9 +61,26 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
         raise InvalidFile(
             '%s (row %d): a duplicate %s was found: "%s"' % (
                 policyfname, indices[0] + 2, key, dframe[key][indices[0]]))
-    for treaty in treaties:
+    prev_treaty = None
+    prev_treaty_type = None
+    for lineno, treaty, treaty_type in zip(
+            treaty_linenos, treaties, treaty_types):
+        if prev_treaty is not None:
+            prev_treaty_type_idx = VALID_TREATY_TYPES.index(prev_treaty_type)
+            curr_treaty_type_idx = VALID_TREATY_TYPES.index(treaty_type)
+            if curr_treaty_type_idx < prev_treaty_type_idx:
+                raise InvalidFile(
+                    f'{fname} (line {lineno}): treaty types must be'
+                    f' specified in the order {VALID_TREATY_TYPES}.'
+                    f' Treaty "{treaty}" of type "{treaty_type}" was'
+                    f' found after treaty "{prev_treaty}" of type'
+                    f' "{prev_treaty_type}"')
+        prev_treaty = treaty
+        prev_treaty_type = treaty_type
         if treaty not in dframe.columns:
-            raise InvalidFile(f'{policyfname}: {treaty} is missing')
+            raise InvalidFile(
+                f'{fname} (line {lineno}): {treaty} is missing'
+                ' in {policyfname}')
     policies_from_exposure = list(idxdict)[1:]  # discard '?'
     policies_from_csv = list(dframe.policy)
     [indices] = np.where(~np.isin(policies_from_exposure, policies_from_csv))
@@ -116,6 +135,30 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
     for no, field in enumerate(fields):
         if field not in dframe.columns:
             raise InvalidFile(f'{fname}: {field} is missing in the header')
+    prev_treaty = None
+    prev_treaty_type = None
+    prev_treaty_type_idx = None
+    prev_treaty_df_col_idx = None
+    for colname in list(dframe.columns):
+        if colname not in treaties:
+            continue
+        treaty = colname
+        treaty_type = treaty_types[treaties.index(treaty)]
+        if prev_treaty is not None:
+            treaty_df_col_idx = dframe.columns.get_loc(treaty)
+            treaty_type_idx = VALID_TREATY_TYPES.index(treaty_type)
+            if (treaty_df_col_idx > prev_treaty_df_col_idx
+                    and treaty_type_idx < prev_treaty_type_idx):
+                raise InvalidFile(
+                    f'{policyfname}: treaty type columns must be'
+                    f' in the order {VALID_TREATY_TYPES}.'
+                    f' Treaty "{treaty}" of type "{treaty_type}" was'
+                    f' found after treaty "{prev_treaty}" of type'
+                    f' "{prev_treaty_type}"')
+        prev_treaty = treaty
+        prev_treaty_type = treaty_type
+        prev_treaty_type_idx = VALID_TREATY_TYPES.index(prev_treaty_type)
+        prev_treaty_df_col_idx = dframe.columns.get_loc(prev_treaty)
 
 
 # validate the file policy.csv
@@ -150,6 +193,7 @@ def parse(fname, policy_idx):
     fieldmap = {}
     fmap = {}  # ex: {'deductible': 'Deductible', 'liability': 'Limit'}
     treaty = dict(id=[], type=[], deductible=[], limit=[])
+    treaty_linenos = []
     nonprop = set()
     colnames = []
     for node in rmodel.fieldMap:
@@ -160,11 +204,11 @@ def parse(fname, policy_idx):
             fieldmap[node['input']] = col
             continue
         treaty_type = node.get('type', 'prop')
-        valid_treaty_types = ('prop', 'wxlr', 'catxl')
-        if treaty_type not in valid_treaty_types:
+        if treaty_type not in VALID_TREATY_TYPES:
             raise InvalidFile(
-                "%s: valid treaty types are %s. '%s' was found instead" % (
-                fname, valid_treaty_types, treaty_type))
+                "%s (line %d): valid treaty types are %s."
+                " '%s' was found instead" % (
+                    fname, node.lineno, VALID_TREATY_TYPES, treaty_type))
         if treaty_type == 'prop':
             limit = node.get('max_cession_event', NOLIMIT)
             deduc = 0
@@ -177,11 +221,13 @@ def parse(fname, policy_idx):
         treaty['type'].append(treaty_type)
         treaty['deductible'].append(deduc)
         treaty['limit'].append(limit)
+        treaty_linenos.append(node.lineno)
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
+    df.columns = df.columns.str.strip()
     check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname,
-                 policyfname, treaty['id'], treaty['type'])
+                 policyfname, treaty['id'], treaty_linenos, treaty['type'])
 
     # validate policy input
     for col in nonprop:
