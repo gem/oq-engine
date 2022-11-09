@@ -7,6 +7,11 @@ on:
         description: Git Ref
         default: master
         required: true
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
   schedule:
     - cron: "0 4 * * *"
 
@@ -42,12 +47,15 @@ jobs:
     # You can test your matrix by printing the current Python version
     - name: Display Python version
       run: python -c "import sys; print(sys.version)"
-   # Use script to install engine and not the pip install .
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      timeout-minutes: 15
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
     - name: Install engine with install script
-      env: 
+      env:
         BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
-        #PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
+        #PY_VER=`echo py${{ matrix.python-version }} | tr -d .`
         #echo $PY_VER
         #https://pip.pypa.io/en/stable/user_guide/
         export PIP_DEFAULT_TIMEOUT=100
@@ -56,7 +64,7 @@ jobs:
         #pip3 install -r requirements-$PY_VER-linux64.txt
         #pip3 install -e .\[osgeo\]
         echo "branch to test: ${BRANCH}"
-        if [[ "$BRANCH" != "" ]] 
+        if [[ "$BRANCH" != "" ]]
         then
           python install.py devel --version ${BRANCH}
         else
@@ -67,9 +75,19 @@ jobs:
         source ~/openquake/bin/activate
         pip install pytest
         oq dbserver start
-        pytest -vsx --color=yes ~/work/oq-engine/oq-engine/openquake/baselib
-        pytest -vsx --color=yes ~/work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
-        pytest -vsx --color=yes ~/work/oq-engine/oq-engine/openquake/sep/tests/test_utils.py
-        pytest -vsx --color=yes ~/work/oq-engine/oq-engine/openquake/sep
-        pytest -vsx --color=yes ~/work/oq-engine/oq-engine/openquake/calculators
+        cd ~/work/oq-engine/oq-engine
+        #
+        pytest -vsx --color=yes --doctest-modules openquake/baselib
+        export MPLBACKEND=Agg; pytest -vsx --color=yes --doctest-modules openquake/hmtk
+        pytest -vsx --color=yes --doctest-modules openquake/engine
+        pytest -vsx --color=yes --doctest-modules openquake/server
+        pytest -vsx --color=yes --doctest-modules openquake/calculators
+        pytest -vsx --color=yes --doctest-modules openquake/risklib
+        pytest -vsx --color=yes --doctest-modules openquake/commonlib
+        pytest -vsx --color=yes --doctest-modules openquake/commands
+        export MPLBACKEND=Agg; pytest -vsx --color=yes -n 4 --doctest-modules -v openquake/hazardlib
+        pytest -vsx --color=yes openquake/hazardlib/tests/gsim/kotha_2020_test.py
+        pytest -vsx --color=yes openquake/sep/tests/test_utils.py
+        pytest -vsx --color=yes openquake/sep
+        #
         oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
