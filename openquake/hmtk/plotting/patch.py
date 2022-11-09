@@ -84,8 +84,8 @@ def PolygonPatch(polygon, **kwargs):
 
     vertices, codes = [], []
     for t in polygon:
-        vertices.append(concatenate([asarray(t.exterior)[:, :2]] +
-                            [asarray(r)[:, :2] for r in t.interiors]))
+        vertices.append(concatenate([asarray(t.exterior.coords)[:, :2]] +
+                            [asarray(r.coords)[:, :2] for r in t.interiors]))
         codes.append(concatenate([coding(t.exterior)] +
                                  [coding(r) for r in t.interiors]))
     return PathPatch(Path(concatenate(vertices), concatenate(codes)),
