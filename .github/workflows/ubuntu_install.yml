@@ -85,7 +85,7 @@ jobs:
         pytest -vsx --color=yes --doctest-modules openquake/risklib
         pytest -vsx --color=yes --doctest-modules openquake/commonlib
         pytest -vsx --color=yes --doctest-modules openquake/commands
-        export MPLBACKEND=Agg; pytest -vsx --color=yes -n 4 --doctest-modules -v openquake/hazardlib
+        export MPLBACKEND=Agg; pytest -vsx --color=yes -n 4 --doctest-modules openquake/hazardlib
         pytest -vsx --color=yes openquake/hazardlib/tests/gsim/kotha_2020_test.py
         pytest -vsx --color=yes openquake/sep/tests/test_utils.py
         pytest -vsx --color=yes openquake/sep
