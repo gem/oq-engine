@@ -82,15 +82,14 @@ def PolygonPatch(polygon, **kwargs):
             raise ValueError(
                 "A polygon or multi-polygon representation is required")
 
-    vertices = concatenate([
-        concatenate([asarray(t.exterior)[:, :2]] +
-                    [asarray(r)[:, :2] for r in t.interiors])
-        for t in polygon])
-    codes = concatenate([
-        concatenate([coding(t.exterior)] +
-                    [coding(r) for r in t.interiors]) for t in polygon])
+    vertices = [concatenate([asarray(t.exterior)[:, :2]] +
+                            [asarray(r)[:, :2] for r in t.interiors])
+                for t in polygon]
+    codes = [concatenate([coding(t.exterior)] +
+                         [coding(r) for r in t.interiors]) for t in polygon]
 
-    return PathPatch(Path(vertices, codes),  **kwargs)
+    return PathPatch(Path(concatenate(vertices), concatenate(codes)),
+                     **kwargs)
 
 
 def debug_plot(*polygons):
