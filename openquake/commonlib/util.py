@@ -182,6 +182,8 @@ def get_assets(dstore):
     """
     assetcol = dstore['assetcol']
     tagnames = sorted(tn for tn in assetcol.tagnames if tn != 'id')
+    if 'site_id' in tagnames:  # special case, starts from 1 and not from 0
+        assetcol.array['site_id'] += 1
     tag = {t: getattr(assetcol.tagcol, t) for t in tagnames}
     dtlist = [('id', '<S100')]
     for tagname in tagnames:

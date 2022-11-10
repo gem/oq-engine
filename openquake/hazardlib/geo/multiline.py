@@ -231,22 +231,15 @@ def get_tus(lines: list, mesh: Mesh):
         An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
         sites location.
     """
-
-    # Initialising
     uupps = []
     tupps = []
     weis = []
-
-    # Process lines and compute the T and U coordinates
     for line in lines:
-
         tupp, uupp, wei = line.get_tu(mesh)
         wei_sum = np.squeeze(np.sum(wei, axis=0))
-
         uupps.append(uupp)
         tupps.append(tupp)
         weis.append(wei_sum)
-
     return tupps, uupps, weis
 
 
@@ -257,10 +250,7 @@ def get_lengths(lines: list) -> np.ndarray:
     :returns:
         A :class:`numpy.ndarray` instance
     """
-    llenghts = []
-    for line in lines:
-        llenghts.append(line.get_length())
-    return np.array(llenghts)
+    return np.array([line.get_length() for line in lines])
 
 
 def get_average_azimuths(lines: list) -> np.ndarray:
@@ -270,10 +260,7 @@ def get_average_azimuths(lines: list) -> np.ndarray:
     :returns:
         A :class:`numpy.ndarray` instance
     """
-    avgazims = []
-    for line in lines:
-        avgazims.append(line.average_azimuth())
-    return np.array(avgazims)
+    return np.array([line.average_azimuth() for line in lines])
 
 
 def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
@@ -321,7 +308,7 @@ def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
         avgazims_corr[i] = lines[i].average_azimuth()
     avg_azim = get_average_azimuth(avgazims_corr, llens)
 
-    strike_to_east = True if ((avg_azim > 0) & (avg_azim <= 180)) else False
+    strike_to_east = (avg_azim > 0) & (avg_azim <= 180)
 
     return revert, strike_to_east, avg_azim, lines
 
@@ -343,8 +330,7 @@ def get_origin(lines: list, strike_to_east: bool, avg_strike: float):
     endp = np.array(endp)
 
     # Project the endpoints
-    oprj = utils.OrthographicProjection
-    proj = oprj.from_lons_lats(endp[:, 0], endp[:, 1])
+    proj = utils.OrthographicProjection.from_lons_lats(endp[:, 0], endp[:, 1])
     px, py = proj(endp[:, 0], endp[:, 1])
 
     # Find the index of the eastmost (or westmost) point depending on the
@@ -385,17 +371,14 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
         A :class:`np.ndarray`instance with cardinality equal to the number of
         sections (i.e. the length of the lines list in input)
     """
-
     # For each line in the multi line, get the distance along the average
     # strike between the origin of the multiline and the first endnode
     origins = np.array([[lin.coo[0, 0], lin.coo[0, 1]] for lin in lines])
 
     # Distances and azimuths between the origin of the multiline and the
     # first endpoint
-    ggdst = geodetic_distance
-    ggazi = azimuth
-    distances = ggdst(olon, olat, origins[:, 0], origins[:, 1])
-    azimuths = ggazi(olon, olat, origins[:, 0], origins[:, 1])
+    distances = geodetic_distance(olon, olat, origins[:, 0], origins[:, 1])
+    azimuths = azimuth(olon, olat, origins[:, 0], origins[:, 1])
 
     # Calculate the shift along the average strike direction
     return np.cos(np.radians(overall_strike - azimuths))*distances
@@ -405,19 +388,15 @@ def get_tu(shifts, tupps, uupps, weis):
     """
     Given a mesh, computes the T and U coordinates for the multiline
     """
-
-    # Processing
-    arg = zip(shifts, tupps, uupps, weis)
-    for i, (shift, tupp, uupp, wei_sum) in enumerate(arg):
+    for i, (shift, tupp, uupp, wei_sum) in enumerate(
+            zip(shifts, tupps, uupps, weis)):
         if len(wei_sum.shape) > 1:
             wei_sum = np.squeeze(wei_sum)
-
-        # Update the uupp values
-        if i == 0:
+        if i == 0:  # initialize
             uut = (uupp + shift) * wei_sum
             tut = tupp * wei_sum
             wet = copy.copy(wei_sum)
-        else:
+        else:  # update the values
             uut += (uupp + shift) * wei_sum
             tut += tupp * wei_sum
             wet += wei_sum
