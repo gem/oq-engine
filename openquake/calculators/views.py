@@ -697,11 +697,11 @@ def view_task_hazard(token, dstore):
     sdata = dstore.read_df('source_data', 'taskno').loc[taskno]
     num_ruptures = sdata.nrupts.sum()
     eff_sites = sdata.nsites.sum()
-    templ = ('taskno=%d, fragments=%d, num_ruptures={:_d}, eff_sites={:_d}, '
-             'weight=%d, duration=%d s')
-    res = (templ % (taskno, len(sdata), rec['weight'], rec['duration'])
-           ).format(num_ruptures, eff_sites)
-    return res
+    msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
+             'eff_sites={:_d}, weight={:.1f}, duration={:.1f} s').format(
+                 taskno, len(sdata), num_ruptures, eff_sites,
+                 rec['weight'], rec['duration'])
+    return msg
 
 
 @view.add('source_data')
