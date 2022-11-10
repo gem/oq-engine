@@ -1126,7 +1126,6 @@ class ContextMaker(object):
         G = len(self.gsims)
         for src in sources:
             if src.nsites == 0:  # was discarded by the prefiltering
-                src.weight = .001
                 src.esites = 0
             else:
                 with mon:
