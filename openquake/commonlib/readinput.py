@@ -76,11 +76,6 @@ class Global:
     exposure = None
     # set as side effect when the user reads the site mesh; this hack is
     # necessary, otherwise we would have to parse the exposure twice
-
-    gmfs = None
-    eids = None
-    # set as a sided effect when reading gmfs.xml
-    # this hack is necessary, otherwise we would have to parse the file twice
     
     gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
     # populated when reading the gsim_logic_tree file; otherwise we would
@@ -90,8 +85,6 @@ class Global:
     def reset(cls):
         cls.pmap = None
         cls.exposure = None
-        cls.gmfs = None
-        cls.eids = None
         cls.gsim_lt_cache.clear()
 
 
