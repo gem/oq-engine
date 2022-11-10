@@ -145,9 +145,9 @@ of first computing the individual branch results and then getting the
 weighted average results from the branch results. Whereas the 
 ``individual_rlzs`` flag indicates to the engine that the user is
 interested in storing and exporting the hazard (or risk) results for
-every realiazation. Setting ``individual_rlzs`` to False means that
-the engine will expose only the statistics (mean and quantile results)
-to the datastore.
+every realization. Setting ``individual_rlzs`` to ``false`` means that
+the engine will store only the statistics (mean and quantile results)
+in the datastore.
 
 Note 3: ``collect_rlzs`` is completely ignored in the hazard part of
 the calculation, i.e. it does not affect at all the computation of the GMFs,
