@@ -18,6 +18,8 @@
 
 import numpy
 import scipy.stats as sts
+from openquake.baselib.general import AccumDict
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.imt import from_string
 
 
@@ -35,43 +37,42 @@ def get_uneven_bins_edges(lefts, num_bins):
     for i, (left, numb) in enumerate(zip(lefts[:-1], num_bins)):
         low = 0 if i == 0 else 1
         nu = numb if i == len(num_bins) else numb + 1
-        tmp.extend(list(numpy.linspace(left, lefts[i+1], nu)[low:]))
+        tmp.extend(numpy.linspace(left, lefts[i+1], nu)[low:])
     return numpy.array(tmp)
 
 
-def update_mrd(allctxs, cm, crosscorr, mrd):
+def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd):
     """
     This computes the mean rate density by means of the multivariate
     normal function available in scipy.
 
-    :param allctxs:
-        A context
+    :param ctx:
+        A context array
     :param cm:
-        The context maker
+        A ContextMaker
     :param crosscorr:
         A cross correlation model
     :param mrd:
         An array with shape |imls| x |imls| x |sites| x |gmms|
     """
-
     # Correlation matrix
-    keys = list(cm.imtls.keys())
-    imts = [from_string(k) for k in keys]
+    im1, im2 = cm.imtls
+    imts = [from_string(im1), from_string(im2)]
     corrm = crosscorr.get_cross_correlation_mtx(imts)
 
     # Compute mean and standard deviation
-    [mea, sig, _, _] = cm.get_mean_stds(allctxs)
+    [mea, sig, _, _] = cm.get_mean_stds([ctx])
 
-    # Get the IMLs
-    im1 = numpy.log(cm.imtls[keys[0]])
-    im2 = numpy.log(cm.imtls[keys[1]])
+    # Get the logarithmic IMLs
+    ll1 = numpy.log(cm.imtls[im1])
+    ll2 = numpy.log(cm.imtls[im2])
 
     # Update the MRD matrix. mea and sig have shape: G x L x N where G is
     # the number of GMMs, L is the number of intensity measure types and N
     # is the number of sites
     trate = 0
     for g, _ in enumerate(cm.gsims):
-        for i, ctx in enumerate(allctxs[0]):
+        for i, ctx in enumerate(ctx):
 
             # The the site ID
             sid = ctx.sids
@@ -84,7 +85,7 @@ def update_mrd(allctxs, cm, crosscorr, mrd):
             comtx = numpy.array([[sig[slc1]**2, cov], [cov, sig[slc2]**2]])
 
             # Compute the MRD for the current rupture
-            partial = _get_mrd_one_rupture(mea[slc0], comtx, im1, im2)
+            partial = _get_mrd_one_rupture(mea[slc0], comtx, ll1, ll2)
 
             # Check
             msg = f'{numpy.max(partial):.8f}'
@@ -95,7 +96,7 @@ def update_mrd(allctxs, cm, crosscorr, mrd):
             # rupture. TODO address the case where we have the poes
             # instead of rates. MRD has shape: |imls| x |imls| x
             # |sites| x |gmms|
-            mrd[:, :, sid, g] += (ctx.occurrence_rate * partial)
+            mrd[:, :, sid, g] += ctx.occurrence_rate * partial
             trate += ctx.occurrence_rate
 
 
@@ -112,8 +113,7 @@ def _get_mrd_one_rupture(means, comtx, im1, im2):
     #     A 2D array
 
     # Create bivariate gaussian distribution.
-    tmp = numpy.squeeze(means)
-    mvn = sts.multivariate_normal(tmp, comtx)
+    mvn = sts.multivariate_normal(means, comtx)
 
     # Lower-left
     x1, x2 = numpy.meshgrid(im1[:-1], im2[:-1], sparse=False)
@@ -137,17 +137,18 @@ def _get_mrd_one_rupture(means, comtx, im1, im2):
     return partial
 
 
-def update_mrd_indirect(allctxs, cm, crosscorr, mrd, be_mea, be_sig):
+def update_mrd_indirect(ctx, cm, crosscorr, mrd, be_mea, be_sig,
+                        monitor=Monitor()):
     """
     This computes the mean rate density by means of the multivariate
     normal function available in scipy. Compared to the function `update_mrd`
     in this case we create a 4D matrix (very sparse) where we store the
     mean and std for the IMTs considered.
 
-    :param allctxs:
-        A context
+    :param ctx:
+        A context array
     :param cm:
-        The context maker
+        A ContextMaker instance
     :param crosscorr:
         A cross correlation model
     :param mrd:
@@ -157,88 +158,73 @@ def update_mrd_indirect(allctxs, cm, crosscorr, mrd, be_mea, be_sig):
     :param be_sig:
         Bin edges std
     """
+    len_be_mea = len(be_mea)
+    len_be_sig = len(be_sig)
 
     # Correlation matrix
-    keys = list(cm.imtls.keys())
+    keys = list(cm.imtls)
     imts = [from_string(k) for k in keys]
     corrm = crosscorr.get_cross_correlation_mtx(imts)
 
     # Compute mean and standard deviation
-    [mea, sig, _, _] = cm.get_mean_stds(allctxs)
+    [mea, sig, _, _] = cm.get_mean_stds([ctx])
 
-    # Get the IMLs
-    im1 = numpy.log(cm.imtls[keys[0]])
-    im2 = numpy.log(cm.imtls[keys[1]])
+    # Get the logarithmic IMLs
+    ll1 = numpy.log(cm.imtls[keys[0]])
+    ll2 = numpy.log(cm.imtls[keys[1]])
 
     # Unique site IDs
-    sit_i = numpy.unique(allctxs[0].sids)
+    unique_sids = numpy.unique(ctx.sids)  # the test has a single site
 
     # mea and sig shape: G x L x N where G is the number of GMMs, L is the
     # number of intensity measure types and N is the number of sites
-    ctx0 = allctxs[0]
+    R, M1, M2, S1, S2 = 0, 1, 2, 3, 4
     for gid, _ in enumerate(cm.gsims):
-        for sid in sit_i:
+        for sid in unique_sids:
+            rates = AccumDict(accum=numpy.zeros(5))
+            mask = ctx.sids == sid
 
-            rates = {}
-            binm1 = {}
-            binm2 = {}
-            bins1 = {}
-            bins2 = {}
-
-            idx = ctx0.sids == sid
-
-            # Slices - slc0: mean log gm; slc1: mean log gm2;
-            slc_imt1 = numpy.index_exp[gid, 0, idx]
-            slc_imt2 = numpy.index_exp[gid, 1, idx]
-            slc_sig1 = numpy.index_exp[gid, 0, idx]
-            slc_sig2 = numpy.index_exp[gid, 1, idx]
+            # Slices
+            slc1 = numpy.index_exp[gid, 0, mask]
+            slc2 = numpy.index_exp[gid, 1, mask]
 
             # Find indexes needed for binning the results
-            i_mea1 = numpy.searchsorted(be_mea, mea[slc_imt1])
-            i_mea2 = numpy.searchsorted(be_mea, mea[slc_imt2])
-            i_sig1 = numpy.searchsorted(be_sig, sig[slc_sig1])
-            i_sig2 = numpy.searchsorted(be_sig, sig[slc_sig2])
+            i_mea1 = numpy.searchsorted(be_mea, mea[slc1])
+            i_mea2 = numpy.searchsorted(be_mea, mea[slc2])
+            i_sig1 = numpy.searchsorted(be_sig, sig[slc1])
+            i_sig2 = numpy.searchsorted(be_sig, sig[slc2])
 
             # Fix the last index
-            i_mea1[i_mea1 == len(be_mea)] = len(be_mea) - 1
-            i_mea2[i_mea2 == len(be_mea)] = len(be_mea) - 1
-            i_sig1[i_sig1 == len(be_sig)] = len(be_sig) - 1
-            i_sig2[i_sig2 == len(be_sig)] = len(be_sig) - 1
+            i_mea1[i_mea1 == len_be_mea] = len_be_mea - 1
+            i_mea2[i_mea2 == len_be_mea] = len_be_mea - 1
+            i_sig1[i_sig1 == len_be_sig] = len_be_sig - 1
+            i_sig2[i_sig2 == len_be_sig] = len_be_sig - 1
 
             # Stacking results
-            tidx = numpy.where(idx)[0]
-            for i, m1, m2, s1, s2 in zip(tidx, i_mea1, i_mea2, i_sig1, i_sig2):
-                tmp = str([m1, m2, s1, s2])
-                if tmp in rates:
-                    rates[tmp] += ctx0.occurrence_rate[i]
-                    binm1[tmp] += ctx0.occurrence_rate[i] * mea[gid, 0, i]
-                    binm2[tmp] += ctx0.occurrence_rate[i] * mea[gid, 1, i]
-                    bins1[tmp] += ctx0.occurrence_rate[i] * sig[gid, 0, i]
-                    bins2[tmp] += ctx0.occurrence_rate[i] * sig[gid, 1, i]
-                else:
-                    rates[tmp] = ctx0.occurrence_rate[i]
-                    binm1[tmp] = ctx0.occurrence_rate[i] * mea[gid, 0, i]
-                    binm2[tmp] = ctx0.occurrence_rate[i] * mea[gid, 1, i]
-                    bins1[tmp] = ctx0.occurrence_rate[i] * sig[gid, 0, i]
-                    bins2[tmp] = ctx0.occurrence_rate[i] * sig[gid, 1, i]
+            idx, = numpy.where(mask)
+            for i, m1, m2, s1, s2 in zip(idx, i_mea1, i_mea2, i_sig1, i_sig2):
+                key = (m1, m2, s1, s2)
+                rate = rates[key]
+                rate[R] += ctx.occurrence_rate[i]
+                rate[M1] += ctx.occurrence_rate[i] * mea[gid, 0, i]
+                rate[M2] += ctx.occurrence_rate[i] * mea[gid, 1, i]
+                rate[S1] += ctx.occurrence_rate[i] * sig[gid, 0, i]
+                rate[S2] += ctx.occurrence_rate[i] * sig[gid, 1, i]
 
             # Compute MRD for all the combinations of GM and STD
-            for key in rates:
-
-                # Indexes
-                tmp = [int(k) for k in key[1:-1].split(',')]
-
-                # Covariance matrix. bc_sig[tmp[2]] bc_sig[tmp[3]]
-                tsig1 = bins1[key] / rates[key]
-                tsig2 = bins2[key] / rates[key]
-                cov = corrm[0, 1] * (tsig1 * tsig2)
+            for key, rate in rates.items():
+                # Covariance matrix
+                tsig1 = rate[S1] / rate[R]
+                tsig2 = rate[S2] / rate[R]
+                cov = corrm[0, 1] * tsig1 * tsig2
                 comtx = numpy.array([[tsig1**2, cov], [cov, tsig2**2]])
 
                 # Get the MRD. The mean GM representing each bin is a weighted
                 # mean (based on the rate of occurrence) of the GM from each
                 # rupture
-                means = [binm1[key] / rates[key], binm2[key] / rates[key]]
-                partial = _get_mrd_one_rupture(means, comtx, im1, im2)
+                with monitor:
+                    means = [rate[M1] / rate[R], rate[M2] / rate[R]]
+                    partial = _get_mrd_one_rupture(means, comtx, ll1, ll2)
 
                 # Updating the MRD for site sid and ground motion model gid
-                mrd[:, :, sid, gid] += (rates[key] * partial)
+                mrd[:, :, sid, gid] += rate[R] * partial

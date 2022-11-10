@@ -20,18 +20,16 @@ import os
 import time
 import unittest
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-from openquake.hazardlib import valid
 from openquake.baselib.general import DictArray
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.mrd import (
     update_mrd, update_mrd_indirect, get_uneven_bins_edges)
-from openquake.hazardlib.contexts import ContextMaker
-from openquake.commonlib.datastore import read as dstore_read
+from openquake.hazardlib.contexts import read_cmakers
+from openquake.commonlib import datastore
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 
 PLOT = False
-LOG = False
 CWD = os.path.dirname(__file__)
 
 
@@ -42,47 +40,33 @@ class MRD01TestCase(unittest.TestCase):
 
         # Settings
         fname = os.path.join(CWD, 'data', 'mrd', 'calc_934.hdf5')
-        self.imts = ['SA(0.2)', 'SA(1.0)']
+        self.imts = ['SA(0.2)', 'SA(1.0)']  # subset of the parent IMTs
 
         # Load datastore
-        self.dstore = dstore_read(fname)
+        self.dstore = datastore.read(fname)
         self.oqp = self.dstore['oqparam']
 
-        # Only 1 TRT in this example
-        gmm_lt = self.dstore.read_df('full_lt/gsim_lt')
-        trts = list(pd.unique(gmm_lt.trt))
-        trt = trts[0].decode('UTF-8')
-
-        # Define the GMM
-        tmps = gmm_lt.iloc[0].uncertainty.decode('UTF-8')
-        gmm = valid.gsim(tmps)
-
-        # Create the context maker and set the IMTLS
-        self.cmaker = ContextMaker(trt, [gmm], self.oqp)
-        self.cmaker.grp_id = 0
-        self.cmaker.imtls = \
-            DictArray({k: self.oqp.imtls[k] for k in self.imts})
+        # Read the context maker and set the IMTLS
+        [self.cmaker] = read_cmakers(self.dstore)
+        self.cmaker.imtls = DictArray({k: self.oqp.imtls[k] for k in self.imts})
 
         # Read contexts
-        self.ctxs = self.cmaker.read_ctxs(self.dstore)
+        [self.ctx] = self.cmaker.read_ctxs(self.dstore)
 
         # Set the cross correlation model
         self.crosscorr = BakerJayaram2008()
 
     def test_direct(self):
-        """ test the direct method """
-
-        if LOG:
-            start_time = time.time()
+        start_time = time.time()
 
         # Compute the MRD
         imls1 = self.oqp.hazard_imtls[self.imts[0]]
         imls2 = self.oqp.hazard_imtls[self.imts[1]]
-        len1 = len(imls1)-1
-        len2 = len(imls2)-1
+        len1 = len(imls1) - 1
+        len2 = len(imls2) - 1
         nsites = len(self.oqp.sites)
         mrd = np.zeros((len1, len2, nsites, len(self.cmaker.gsims)))
-        update_mrd(self.ctxs, self.cmaker, self.crosscorr, mrd)
+        update_mrd(self.ctx, self.cmaker, self.crosscorr, mrd)
 
         # Loading Hazard Curves.
         # The poes array is 4D: |sites| x || x |IMTs| x |IMLs|
@@ -125,15 +109,9 @@ class MRD01TestCase(unittest.TestCase):
             plt.grid(which='major', ls='--', color='grey')
             plt.show()
 
-        if LOG:
-            print(f"--- {time.time() - start_time} seconds ---")
+        print(f"--- {time.time() - start_time} seconds ---")
 
     def test_indirect(self):
-        """ test the indirect method """
-
-        if LOG:
-            start_time = time.time()
-
         # Bin edges
         lefts = [-3, -2, 1, 2]
         numb = [80, 80, 10]
@@ -141,14 +119,17 @@ class MRD01TestCase(unittest.TestCase):
         be_sig = np.arange(0.50, 0.70, 0.01)
 
         # Compute the MRD
-        imls1 = self.oqp.hazard_imtls[self.imts[0]]
-        imls2 = self.oqp.hazard_imtls[self.imts[1]]
-        len1 = len(imls1)-1
-        len2 = len(imls2)-1
+        imls1 = self.oqp.imtls[self.imts[0]]
+        imls2 = self.oqp.imtls[self.imts[1]]
+        len1 = len(imls1) - 1
         nsites = len(self.oqp.sites)
-        mrd = np.zeros((len1, len2, nsites, len(self.cmaker.gsims)))
+        mrd = np.zeros((len1, len1, nsites, len(self.cmaker.gsims)))
+        start_time = time.time()
+        mon = Monitor('multivariate')
         update_mrd_indirect(
-            self.ctxs, self.cmaker, self.crosscorr, mrd, be_mea, be_sig)
+            self.ctx, self.cmaker, self.crosscorr, mrd, be_mea, be_sig, mon)
+        print(f"--- {time.time() - start_time} seconds ---")
+        print(mon)
 
         # Loading Hazard Curves.
         # The poes array is 4D: |sites| x || x |IMTs| x |IMLs|
@@ -191,11 +172,7 @@ class MRD01TestCase(unittest.TestCase):
             plt.grid(which='major', ls='--', color='grey')
             plt.show()
 
-        if LOG:
-            print(f"--- {time.time() - start_time} seconds ---")
-
     def test_compare(self):
-
         # Bin edges
         lefts = [-3, -2, 1, 2]
         numb = [80, 80, 10]
@@ -212,11 +189,11 @@ class MRD01TestCase(unittest.TestCase):
         # Compute the MRD: indirect
         mrdi = np.zeros((len1, len2, nsites, len(self.cmaker.gsims)))
         update_mrd_indirect(
-            self.ctxs, self.cmaker, self.crosscorr, mrdi, be_mea, be_sig)
+            self.ctx, self.cmaker, self.crosscorr, mrdi, be_mea, be_sig)
 
         # Compute the MRD: direct
         mrdd = np.zeros((len1, len2, nsites, len(self.cmaker.gsims)))
-        update_mrd(self.ctxs, self.cmaker, self.crosscorr, mrdd)
+        update_mrd(self.ctx, self.cmaker, self.crosscorr, mrdd)
 
         np.testing.assert_almost_equal(mrdi, mrdd)
 

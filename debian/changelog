@@ -14,6 +14,7 @@
   * Added the possibility to define the edges of disaggregation bins
 
   [Michele Simionato]
+  * Introduced automatic tiling for extra-large calculations
   * Added command `oq purge failed`
   * Fixed memory leak in the tiling calculator by resetting the ProcessPool
   * Fixed an indexing error breaking the GMPE AtkinsonBoore2006 with
