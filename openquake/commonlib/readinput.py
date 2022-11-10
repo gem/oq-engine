@@ -60,7 +60,39 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
-gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
+
+
+class Global:
+    """
+    Global variables to be reset at the end of each calculation/test
+    """
+    pmap = None
+    # set as side effect when the user reads hazard_curves from a file
+    # the hazard curves format does not split the site locations from the data
+    # (an unhappy legacy design choice that I fixed in the GMFs CSV format
+    # only) thus this hack is necessary, otherwise we would have to parse the
+    # file twice
+
+    exposure = None
+    # set as side effect when the user reads the site mesh; this hack is
+    # necessary, otherwise we would have to parse the exposure twice
+
+    gmfs = None
+    eids = None
+    # set as a sided effect when reading gmfs.xml
+    # this hack is necessary, otherwise we would have to parse the file twice
+    
+    gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
+    # populated when reading the gsim_logic_tree file; otherwise we would
+    # have to parse the file multiple times
+
+    @classmethod
+    def reset(cls):
+        cls.pmap = None
+        cls.exposure = None
+        cls.gmfs = None
+        cls.eids = None
+        cls.gsim_lt_cache.clear()
 
 
 class DuplicatedPoint(Exception):
@@ -305,18 +337,6 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     return oqparam
 
 
-pmap = None  # set as side effect when the user reads hazard_curves from a file
-# the hazard curves format does not split the site locations from the data (an
-# unhappy legacy design choice that I fixed in the GMFs CSV format only) thus
-# this hack is necessary, otherwise we would have to parse the file twice
-
-exposure = None  # set as side effect when the user reads the site mesh
-# this hack is necessary, otherwise we would have to parse the exposure twice
-
-gmfs, eids = None, None  # set as a sided effect when reading gmfs.xml
-# this hack is necessary, otherwise we would have to parse the file twice
-
-
 def get_csv_header(fname, sep=','):
     """
     :param fname: a CSV file
@@ -335,10 +355,9 @@ def get_mesh(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    global pmap, exposure, gmfs, eids
-    if 'exposure' in oqparam.inputs and exposure is None:
+    if 'exposure' in oqparam.inputs and Global.exposure is None:
         # read it only once
-        exposure = get_exposure(oqparam)
+        Global.exposure = get_exposure(oqparam)
     if oqparam.sites:
         return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
@@ -378,17 +397,17 @@ def get_mesh(oqparam, h5=None):
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if isinstance(fname, list):  # for csv
-            mesh, pmap = get_pmap_from_csv(oqparam, fname)
+            mesh, Global.pmap = get_pmap_from_csv(oqparam, fname)
         else:
             raise NotImplementedError('Reading from %s' % fname)
         return mesh
     elif oqparam.region_grid_spacing:
         if oqparam.region:
             poly = geo.Polygon.from_wkt(oqparam.region)
-        elif exposure:
+        elif Global.exposure:
             # in case of implicit grid the exposure takes precedence over
             # the site model
-            poly = exposure.mesh.get_convex_hull()
+            poly = Global.exposure.mesh.get_convex_hull()
         elif 'site_model' in oqparam.inputs:
             # this happens in event_based/case_19, where there is an implicit
             # grid over the site model
@@ -417,7 +436,7 @@ def get_mesh(oqparam, h5=None):
         mesh = geo.Mesh(sm['lon'], sm['lat'])
         return mesh
     elif 'exposure' in oqparam.inputs:
-        return exposure.mesh
+        return Global.exposure.mesh
 
 
 def get_site_model(oqparam):
@@ -592,8 +611,8 @@ def get_gsim_lt(oqparam, trts=('*',)):
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
     key = (gsim_file,) + tuple(sorted(trts))
-    if key in gsim_lt_cache:
-        return gsim_lt_cache[key]
+    if key in Global.gsim_lt_cache:
+        return Global.gsim_lt_cache[key]
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
     gmfcorr = oqparam.correl_model
     for trt, gsims in gsim_lt.values.items():
@@ -622,7 +641,7 @@ def get_gsim_lt(oqparam, trts=('*',)):
     if oqparam.collapse_gsim_logic_tree:
         logging.info('Collapsing the gsim logic tree')
         gsim_lt = gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
-    gsim_lt_cache[key] = gsim_lt
+    Global.gsim_lt_cache[key] = gsim_lt
     if trts != ('*',):  # not in get_input_files
         no_vect = get_no_vect(gsim_lt)
         if no_vect:
@@ -914,9 +933,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     :param cost_types: the expected cost types
     :returns: (site collection, asset collection, discarded)
     """
-    global exposure
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
-    exposure = get_exposure(oqparam)
+    Global.exposure = exposure = get_exposure(oqparam)
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam)
     if oqparam.region_grid_spacing:
@@ -1055,9 +1073,9 @@ def get_pmap_from_csv(oqparam, fnames):
             level += 1
         for field in ('lon', 'lat', 'depth'):  # sanity check
             numpy.testing.assert_equal(arr[field], array[field])
-    pmap = ProbabilityMap(numpy.arange(N, dtype=U32), len(data), 1)
-    pmap.array = data.reshape(N, L, 1)
-    return mesh, pmap
+    Global.pmap = ProbabilityMap(numpy.arange(N, dtype=U32), len(data), 1)
+    Global.pmap.array = data.reshape(N, L, 1)
+    return mesh, Global.pmap
 
 
 tag2code = {'multiFaultSource': b'F',
