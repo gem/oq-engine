@@ -69,7 +69,7 @@ def check_imtls(this, parent):
     Fix the hazard_imtls of two calculations if possible
     """
     for imt, imls in this.items():
-        if (imls != parent[imt]).any():
+        if len(imls) != len(parent[imt]) or (imls != parent[imt]).any():
             raise ValueError('The intensity measure levels %s are different '
                              'from the parent levels %s for %s' % (
                                  imls, parent[imt], imt))

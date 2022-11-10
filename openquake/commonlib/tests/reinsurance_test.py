@@ -258,20 +258,23 @@ event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
         treaty_df = _df('''\
 id,type,deductible,limit,code
 prop1,prop,   0,  90000,A
-cat1,catxl, 200,   4000,B
-cat2,catxl, 500,  10000,C
-cat3,catxl, 200,   4000,D
-cat4,catxl, 500,  10000,E
-cat5,catxl,1000,  50000,F
+prop2,prop,   0,  80000,B
+wxl1,wxlr,  100,    500,C
+wxl2,wxlr,  150,    400,D
+cat1,catxl, 200,   4000,E
+cat2,catxl, 500,  10000,F
+cat3,catxl, 200,   4000,G
+cat4,catxl, 500,  10000,H
+cat5,catxl,1000,  50000,I
 ''')
         pol_df = _df('''\
-policy,liability,deductible,prop1,cat1,cat2,cat3,cat4,cat5
-1,     99000,        0,     .5,      1,   0,   0,   1,   1
-2,     99000,        0,     .4,      1,   0,   0,   1,   1
-3,     99000,        0,     .6,      0,   1,   0,   1,   1
-4,     99000,        0,     .6,      0,   1,   0,   1,   1
-5,     99000,        0,     .0,      0,   0,   1,   0,   1
-6,     99000,        0,     .0,      0,   0,   1,   0,   1
+policy,liability,deductible,prop1,prop2,wxl1,wxl2,cat1,cat2,cat3,cat4,cat5
+1,     99000,        0,     .5,     .1,  0,   1,   1,   0,   0,   1,   1
+2,     99000,        0,     .4,     .2,  0,   1,   1,   0,   0,   1,   1
+3,     99000,        0,     .6,      0,  1,   1,   0,   1,   0,   1,   1
+4,     99000,        0,     .6,      0,  1,   1,   0,   1,   0,   1,   1
+5,     99000,        0,     .0,      .2, 1,   1,   0,   0,   1,   0,   1
+6,     99000,        0,     .0,      .3, 1,   1,   0,   0,   1,   0,   1
 ''')
         # catcomb = '10011', '01011', '00101' = 19, 11, 5
         risk_by_event = _df('''\
@@ -284,8 +287,8 @@ event_id,agg_id,loss
 1,     5,      3000
 ''')
         expected = _df('''\
-event_id,retention,claim,prop1,cat1,cat2,cat3,cat4,cat5,over_B,over_D
-       1,   1000.0,40000.,17000.,3800.,5500.,3800.,5200.,3700.,5000.,4000.''')
+event_id,retention,claim,prop1,prop2,wxl1,wxl2,cat1,cat2,cat3,cat4,cat5,over_E,over_G
+       1,   1000.0,40000.,17000.,4100,1600,1500,3800.,4200.,3800.,2500,500,2300,800''')
         bypolicy, byevent = reinsurance.by_policy_event(
             risk_by_event, pol_df, treaty_df)
         assert_ok(byevent, expected)
@@ -770,6 +773,7 @@ class WrongInputTestCase(unittest.TestCase):
             xml.write(REINSURANCE)
         with open(cls.policyfname, 'w') as csv:
             csv.write(POLICY)
+        readinput.exposure = None  # for independence from other tests
 
     # Checks in the policy file
 
@@ -831,6 +835,19 @@ rur_Ant_1,  9000,500,1,1,0
         self.assertIn('(row 3): values for CatXL_reg must be either 0 or 1',
                       str(ctx.exception))
 
+    def test_treaty_types_in_a_wrong_order_in_policies_csv(self):
+        csvfname = general.gettemp(CSV_NP.replace(
+            'Policy,Limit,Deductible,WXLR_metro,WXLR_rural,CatXL_reg',
+            'Policy,Limit,Deductible,WXLR_metro,CatXL_reg,WXLR_rural'))
+        xmlfname = general.gettemp(XML_NP.format(csvfname))
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn(
+            'treaty type columns must be in the order'
+            ' (\'prop\', \'wxlr\', \'catxl\'). Treaty "WXLR_rural" of'
+            ' type "wxlr" was found after treaty "CatXL_reg" of'
+            ' type "catxl"', str(ctx.exception))
+
     # Checks in the reinsurance file
 
     def test_treaty_in_reinsurancexml_missing_in_policycsv(self):
@@ -842,7 +859,7 @@ rur_Ant_1,10000,100,.1,.2''')
         xmlfname = general.gettemp(XML_PR.format(csvfname))
         with self.assertRaises(InvalidFile) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
-        self.assertIn('surplus is missing', str(ctx.exception))
+        self.assertIn('(line 8): surplus is missing in', str(ctx.exception))
 
     def test_type_within_prop_wxlr_or_catxl(self):
         csvfname = general.gettemp(CSV_NP)
@@ -850,8 +867,37 @@ rur_Ant_1,10000,100,.1,.2''')
             XML_NP.format(csvfname).replace('catxl', 'wrongtype'))
         with self.assertRaises(InvalidFile) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
-        self.assertIn("valid treaty types are ('prop', 'wxlr', 'catxl')."
-                      " 'wrongtype' was found instead", str(ctx.exception))
+        self.assertIn(
+            "(line 12): valid treaty types are ('prop', 'wxlr', 'catxl')."
+            " 'wrongtype' was found instead", str(ctx.exception))
+
+    def test_treaty_types_in_a_wrong_order_in_reinsurance_xml(self):
+        csvfname = general.gettemp(CSV_NP)
+        xmlfname = general.gettemp('''\
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <reinsuranceModel>
+    <description>reinsurance model</description>
+    <fieldMap>
+      <field oq="policy" input="Policy" />
+      <field oq="deductible" input="Deductible" />
+      <field oq="liability" input="Limit" />
+      <field input="WXLR_metro" type="wxlr" deductible="500" limit="3500" />
+      <field input="CatXL_reg" type="catxl" deductible="50" limit="2500" />
+      <field input="WXLR_rural" type="wxlr" deductible="200" limit="5000" />
+    </fieldMap>
+    <policies>{}</policies>
+  </reinsuranceModel>
+</nrml>
+'''.format(csvfname))
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn(
+            '(line 12): treaty types must be specified in the order'
+            ' (\'prop\', \'wxlr\', \'catxl\'). Treaty "WXLR_rural"'
+            ' of type "wxlr" was found after treaty "CatXL_reg" of'
+            ' type "catxl"', str(ctx.exception))
 
     def test_deductible_is_negative(self):
         csvfname = general.gettemp(CSV_NP)
@@ -927,8 +973,6 @@ rur_Ant_1,10000,100,.1,.2''')
                       str(ctx.exception))
 
     def test_correct_aggregate_by_policy_semicolon_taxonomy(self):
-        if os.environ.get('GITHUB_ACTION'):
-            raise unittest.SkipTest('Not working on GitHub')
         with open(self.jobfname, 'w') as job:
             job.write(JOB % dict(aggregate_by='policy; taxonomy'))
         oq = readinput.get_oqparam(self.jobfname)
