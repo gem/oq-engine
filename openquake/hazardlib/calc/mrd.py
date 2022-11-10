@@ -180,7 +180,7 @@ def update_mrd_indirect(ctx, cm, crosscorr, mrd, be_mea, be_sig,
     # Unique site IDs
     unique_sids = numpy.unique(ctx.sids)  # the test has a single site
 
-    # mea and sig shape: G x L x N where G is the number of GMMs, L is the
+    # mea and sig shape: G x M x N where G is the number of GMMs, M is the
     # number of intensity measure types and N is the number of sites
     R, M1, M2, S1, S2 = 0, 1, 2, 3, 4
     for gid, _ in enumerate(cm.gsims):
