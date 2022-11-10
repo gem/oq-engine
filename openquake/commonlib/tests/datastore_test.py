@@ -27,9 +27,12 @@ from openquake.commonlib import logs
 
 
 class DataStoreTestCase(unittest.TestCase):
+    """
+    Testing the complex interaction between datastore and database
+    """
     def setUp(self):
-        log = logs.init("calc", {'calculation_mode': 'scenario',
-                                 'sites': '0 0'})
+        log = logs.init("job", {'calculation_mode': 'scenario',
+                                'sites': '0 0'})
         self.dstore = new(log.calc_id, log.get_oqparam())
 
     def tearDown(self):

@@ -259,11 +259,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                         del os.environ['OQ_DISTRIBUTE']
                     else:
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
-                readinput.pmap = None
-                readinput.exposure = None
-                readinput.gmfs = None
-                readinput.eids = None
-                readinput.gsim_lt_cache.clear()
+                readinput.Global.reset()
 
                 # remove temporary hdf5 file, if any (currently none)
                 if os.path.exists(self.datastore.tempname) and remove:
@@ -572,7 +568,7 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            self.datastore.create_df('_poes', readinput.pmap.to_dframe())
+            self.datastore.create_df('_poes', readinput.Global.pmap.to_dframe())
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.datastore['rlzs_by_g'] = sum(
@@ -706,7 +702,7 @@ class HazardCalculator(BaseCalculator):
             self.load_insurance_data(oq.inputs['insurance'].items())
         elif 'reinsurance' in oq.inputs:
             self.load_insurance_data(oq.inputs['reinsurance'].items())
-        return readinput.exposure
+        return readinput.Global.exposure
 
     def load_insurance_data(self, lt_fnames):
         """
@@ -813,7 +809,7 @@ class HazardCalculator(BaseCalculator):
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['cost_calculator'] = exposure.cost_calculator
-            if hasattr(readinput.exposure, 'exposures'):
+            if hasattr(readinput.Global.exposure, 'exposures'):
                 self.datastore.getitem('assetcol')['exposures'] = numpy.array(
                     exposure.exposures, hdf5.vstr)
         elif 'assetcol' in self.datastore.parent:

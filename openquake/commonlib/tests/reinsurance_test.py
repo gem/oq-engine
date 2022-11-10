@@ -773,7 +773,7 @@ class WrongInputTestCase(unittest.TestCase):
             xml.write(REINSURANCE)
         with open(cls.policyfname, 'w') as csv:
             csv.write(POLICY)
-        readinput.exposure = None  # for independence from other tests
+        readinput.Global.reset()  # for independence from other tests
 
     # Checks in the policy file
 
