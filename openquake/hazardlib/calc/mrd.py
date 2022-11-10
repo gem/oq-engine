@@ -185,7 +185,7 @@ def update_mrd_indirect(ctx, cm, crosscorr, mrd, be_mea, be_sig,
     R, M1, M2, S1, S2 = 0, 1, 2, 3, 4
     for gid, _ in enumerate(cm.gsims):
         for sid in unique_sids:
-            rates = AccumDict(accum=numpy.zeros(5))
+            acc = AccumDict(accum=numpy.zeros(5))
             mask = ctx.sids == sid
 
             # Slices
@@ -208,18 +208,18 @@ def update_mrd_indirect(ctx, cm, crosscorr, mrd, be_mea, be_sig,
             idx, = numpy.where(mask)
             for i, m1, m2, s1, s2 in zip(idx, i_mea1, i_mea2, i_sig1, i_sig2):
                 key = (m1, m2, s1, s2)
-                rate = rates[key]
-                rate[R] += ctx.occurrence_rate[i]
-                rate[M1] += ctx.occurrence_rate[i] * mea[gid, 0, i]
-                rate[M2] += ctx.occurrence_rate[i] * mea[gid, 1, i]
-                rate[S1] += ctx.occurrence_rate[i] * sig[gid, 0, i]
-                rate[S2] += ctx.occurrence_rate[i] * sig[gid, 1, i]
+                arr = acc[key]
+                arr[R] += ctx.occurrence_rate[i]
+                arr[M1] += ctx.occurrence_rate[i] * mea[gid, 0, i]
+                arr[M2] += ctx.occurrence_rate[i] * mea[gid, 1, i]
+                arr[S1] += ctx.occurrence_rate[i] * sig[gid, 0, i]
+                arr[S2] += ctx.occurrence_rate[i] * sig[gid, 1, i]
 
             # Compute MRD for all the combinations of GM and STD
-            for key, rate in rates.items():
+            for key, arr in acc.items():
                 # Covariance matrix
-                tsig1 = rate[S1] / rate[R]
-                tsig2 = rate[S2] / rate[R]
+                tsig1 = arr[S1] / arr[R]
+                tsig2 = arr[S2] / arr[R]
                 cov = corrm[0, 1] * tsig1 * tsig2
                 comtx = numpy.array([[tsig1**2, cov], [cov, tsig2**2]])
 
@@ -227,8 +227,8 @@ def update_mrd_indirect(ctx, cm, crosscorr, mrd, be_mea, be_sig,
                 # mean (based on the rate of occurrence) of the GM from each
                 # rupture
                 with monitor:
-                    means = [rate[M1] / rate[R], rate[M2] / rate[R]]
+                    means = [arr[M1] / arr[R], arr[M2] / arr[R]]
                     partial = _get_mrd_one_rupture(means, comtx, ll1, ll2, rng)
 
                 # Updating the MRD for site sid and ground motion model gid
-                mrd[:, :, sid, gid] += rate[R] * partial
+                mrd[:, :, sid, gid] += arr[R] * partial
