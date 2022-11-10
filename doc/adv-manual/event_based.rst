@@ -2,12 +2,12 @@ Event Based and Scenarios
 =========================
 
 Scenario risk calculations usually do not pose a performance problem,
-since they involve a single rupture and limited geography for analysis. 
+since they involve a single rupture and limited geographical region for analysis. 
 Some event-based risk calculations, however, may involve millions of ruptures
-and exposures spanning entire countries or even larger regions. This section
+and exposures spanning entire countries or even continents. This section
 offers some practical tips for running large event-based risk calculations, 
 especially ones involving large logic trees, and proposes techniques that might
-be used to make an intractable calculation tractable.
+be used to make an otherwise intractable calculation tractable.
 
 Understanding the hazard
 ------------------------
@@ -62,7 +62,7 @@ compute the hazard at the sites of the exposure. The issue is that it
 is possible to have exposures with millions of assets on millions of
 distinct hazard sites. Computing the GMFs for millions of sites is
 hard or even impossible (there is a limit of 4 billion rows on the
-size of the GMF table in the datastore).  Even in the cases when
+size of the GMF table in the datastore). Even in the cases when
 computing the hazard is possible, then computing the risk starting
 from an extremely large amount of GMFs will likely be impossible, due
 to memory/runtime constraints.
@@ -89,7 +89,7 @@ and discarding sites in the region where there are no assets (i.e. more
 distant than ``region_grid_spacing * sqrt(2)``). The precise logic
 is encoded in the function
 ``openquake.commonlib.readinput.get_sitecol_assetcol``, if you want
-to know the nitty-gritty details.
+to know the specific implementation details.
 
 Our recommendation is to use the command ``oq prepare_site_model`` to
 apply such logic before starting a calculation and thus producing a
@@ -136,13 +136,22 @@ Note 1: when using sampling, ``collect_rlzs`` is implicitly set to
 ``True``, so if you want to export the individual results per
 realization you must set explicitly ``collect_rlzs=false``.
 
-Note 2: ``collect_rlzs`` is not the inverse of the ``individual rlsz``
-flag. The two flags are completely independent, one refers to risk
-and the other to hazard calculations.
+Note 2: ``collect_rlzs`` is not the inverse of the ``individual_rlzs``
+flag. The ``collect_rlzs`` flag indicates to
+the engine that it should pool together the hazard realizations into a
+single collective bucket that will then be used to approximate the 
+branch-averaged risk metrics directly, without going through the process
+of first computing the individual branch results and then getting the 
+weighted average results from the branch results. Whereas the 
+``individual_rlzs`` flag indicates to the engine that the user is
+interested in storing and exporting the hazard (or risk) results for
+every realization. Setting ``individual_rlzs`` to ``false`` means that
+the engine will store only the statistics (mean and quantile results)
+in the datastore.
 
 Note 3: ``collect_rlzs`` is completely ignored in the hazard part of
 the calculation, i.e. it does not affect at all the computation of the GMFs,
-only the computation of the risk curves.
+only the computation of the risk metrics.
 
 Splitting the calculation into subregions
 -----------------------------------------
@@ -1865,14 +1874,14 @@ indicate the ``deductible`` and ``limit``.
 ones first, then non-proportional ones of type "wxlr" and finally those
 of type "catxl".*
 
-- **deductible**: the amount (economic value) that the insurer will
+- **insurance deductible**: the amount (economic value) that the insurer will
   "deduct" from the ground up losses before paying up to its policy
   limits. The claim is calculated as ``claim = ground_up_loss -
   deductible`` The units of the deductible must be compatible with
   the units indicated in the exposure model (e.g. USD dollars or
   Euros).
 
-- **liability**: the maximum economic amount that can be covered by
+- **insurance liability**: the maximum economic amount that can be covered by
   the insurance, according to the policy characteristics. The
   liability is also known as limit or maximum coverage.
 
@@ -1887,15 +1896,15 @@ of type "catxl".*
   losses exceed this threshold, then the cession in excess is reported
   as an ``overspill``.
 
-- **deductible**: only applicable to *non-proportional* treaties, the
-  maximum retention (also known as "first loss") is
-  the limit above which the reinsurer becomes liable for losses up
-  to the upper limit of cover.
+- **reinsurance deductible**: only applicable to *non-proportional*
+  treaties, the maximum retention (also known as "first loss") is the
+  limit above which the reinsurer becomes liable for losses up to the
+  upper limit of cover.
 
-- **limit**: in *non-proportional* treaties it refers to the upper
-  limit of cover or ceiling.  The *reinsurance_cover* is the amount
-  between the ``deductible`` (deductible) and the upper limit of
-  cover.
+- **reinsurance limit**: in *non-proportional* treaties it refers to
+  the upper limit of cover or ceiling.  The *reinsurance_cover* is the
+  amount between the ``deductible`` (deductible) and the upper limit
+  of cover.
 
 *Note: the current engine implementation does not support an "annual
 aggregate limit" for non-proportional reinsurance treaties.*

@@ -86,6 +86,11 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
 
+        # checking avg_losses-stats with collect_rlzs
+        [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-5)
+
         # checking aggrisk
         for fname in export(('aggrisk', 'csv'), self.calc.datastore):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
