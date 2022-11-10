@@ -655,15 +655,10 @@ def node_to_dict(node):
         pass
     elif node.text is not None:
         if node.attrib:
-            try:
-                dic['text'] = float(node.text)
-            except (TypeError, ValueError):
-                dic['text'] = node.text
+            dic['text'] = node.text
         else:
-            try:
-                dic = float(node.text)
-            except (TypeError, ValueError):
-                dic = node.text
+            # TODO: ugly, dic sometimes is a dic and sometimes a scalar??
+            dic = node.text
     if node.nodes:
         dic.update(_group([node_to_dict(n) for n in node]))
     return {tag: dic}
