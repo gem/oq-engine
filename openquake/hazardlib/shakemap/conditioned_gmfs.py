@@ -64,6 +64,65 @@ from openquake.hazardlib.site import SiteCollection
 # δB = between-event residual, or bias
 
 
+class ConditionedGmfComputer(GmfComputer):
+    """
+    Given an earthquake rupture, and intensity observations from
+    recording station data, the conditioned ground motion field computer
+    computes ground shaking over a set of sites, by randomly sampling a
+    ground shaking intensity model whose mean and within-event and
+    between-event terms have been conditioned upon the observations
+
+    :param rupture:
+        Rupture to calculate ground motion fields radiated from.
+
+    :param :class:`openquake.hazardlib.site.SiteCollection` sitecol:
+        a complete SiteCollection
+
+    :param cmaker:
+        a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
+
+    :param correlation_model:
+        Instance of a spatial correlation model object. See
+        :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which
+        case non-correlated ground motion fields are calculated.
+        Correlation model is not used if ``truncation_level`` is zero.
+
+    :param cross_correl:
+        Instance of a cross correlation model object. See
+        :mod:`openquake.hazardlib.cross_correlation`. Can be ``None``, in which
+        case non-cross-correlated ground motion fields are calculated.
+
+    :param amplifier:
+        None or an instance of Amplifier
+
+    :param sec_perils:
+        Tuple of secondary perils. See
+        :mod:`openquake.hazardlib.sep`. Can be ``None``, in which
+        case no secondary perils need to be evaluated.
+    """
+
+    def __init__(
+        self,
+        rupture,
+        sitecol,
+        cmaker,
+        correlation_model=None,
+        cross_correl=None,
+        amplifier=None,
+        sec_perils=(),
+    ):
+        GmfComputer.__init__(
+            self,
+            rupture,
+            sitecol,
+            cmaker,
+            correlation_model,
+            cross_correl,
+            amplifier,
+            sec_perils,
+        )
+
+
 def main(job_params):
     oqparam = readinput.get_oqparam(job_ini)
     rupture = readinput.get_rupture(oqparam)
