@@ -55,9 +55,9 @@ class MRD01TestCase(unittest.TestCase):
 
         # Set the cross correlation model
         self.crosscorr = BakerJayaram2008()
+        self.rng = np.random.default_rng(42)
 
     def test_direct(self):
-        start_time = time.time()
 
         # Compute the MRD
         imls1 = self.oqp.hazard_imtls[self.imts[0]]
@@ -66,7 +66,7 @@ class MRD01TestCase(unittest.TestCase):
         len2 = len(imls2) - 1
         nsites = len(self.oqp.sites)
         mrd = np.zeros((len1, len2, nsites, len(self.cmaker.gsims)))
-        update_mrd(self.ctx, self.cmaker, self.crosscorr, mrd)
+        update_mrd(self.ctx, self.cmaker, self.crosscorr, mrd, self.rng)
 
         # Loading Hazard Curves.
         # The poes array is 4D: |sites| x || x |IMTs| x |IMLs|
@@ -109,8 +109,6 @@ class MRD01TestCase(unittest.TestCase):
             plt.grid(which='major', ls='--', color='grey')
             plt.show()
 
-        print(f"--- {time.time() - start_time} seconds ---")
-
     def test_indirect(self):
         # Bin edges
         lefts = [-3, -2, 1, 2]
@@ -124,11 +122,10 @@ class MRD01TestCase(unittest.TestCase):
         len1 = len(imls1) - 1
         nsites = len(self.oqp.sites)
         mrd = np.zeros((len1, len1, nsites, len(self.cmaker.gsims)))
-        start_time = time.time()
         mon = Monitor('multivariate')
         update_mrd_indirect(
-            self.ctx, self.cmaker, self.crosscorr, mrd, be_mea, be_sig, mon)
-        print(f"--- {time.time() - start_time} seconds ---")
+            self.ctx, self.cmaker, self.crosscorr, mrd, be_mea, be_sig,
+            self.rng, mon)
         print(mon)
 
         # Loading Hazard Curves.
@@ -189,11 +186,12 @@ class MRD01TestCase(unittest.TestCase):
         # Compute the MRD: indirect
         mrdi = np.zeros((len1, len2, nsites, len(self.cmaker.gsims)))
         update_mrd_indirect(
-            self.ctx, self.cmaker, self.crosscorr, mrdi, be_mea, be_sig)
+            self.ctx, self.cmaker, self.crosscorr, mrdi, be_mea, be_sig,
+            self.rng)
 
         # Compute the MRD: direct
         mrdd = np.zeros((len1, len2, nsites, len(self.cmaker.gsims)))
-        update_mrd(self.ctx, self.cmaker, self.crosscorr, mrdd)
+        update_mrd(self.ctx, self.cmaker, self.crosscorr, mrdd, self.rng)
 
         np.testing.assert_almost_equal(mrdi, mrdd)
 

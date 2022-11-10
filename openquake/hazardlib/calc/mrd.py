@@ -41,7 +41,7 @@ def get_uneven_bins_edges(lefts, num_bins):
     return numpy.array(tmp)
 
 
-def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd):
+def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, rng):
     """
     This computes the mean rate density by means of the multivariate
     normal function available in scipy.
@@ -54,6 +54,8 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd):
         A cross correlation model
     :param mrd:
         An array with shape |imls| x |imls| x |sites| x |gmms|
+    :param rng:
+        Random number generator used in multivariate_normal
     """
     # Correlation matrix
     im1, im2 = cm.imtls
@@ -85,7 +87,7 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd):
             comtx = numpy.array([[sig[slc1]**2, cov], [cov, sig[slc2]**2]])
 
             # Compute the MRD for the current rupture
-            partial = _get_mrd_one_rupture(mea[slc0], comtx, ll1, ll2)
+            partial = _get_mrd_one_rupture(mea[slc0], comtx, ll1, ll2, rng)
 
             # Check
             msg = f'{numpy.max(partial):.8f}'
@@ -100,7 +102,7 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd):
             trate += ctx.occurrence_rate
 
 
-def _get_mrd_one_rupture(means, comtx, im1, im2):
+def _get_mrd_one_rupture(means, comtx, im1, im2, rng):
     # :param means:
     #     The two values of the mean
     # :param comtx:
@@ -113,7 +115,7 @@ def _get_mrd_one_rupture(means, comtx, im1, im2):
     #     A 2D array
 
     # Create bivariate gaussian distribution.
-    mvn = sts.multivariate_normal(means, comtx)
+    mvn = sts.multivariate_normal(means, comtx, seed=rng)
 
     # Lower-left
     x1, x2 = numpy.meshgrid(im1[:-1], im2[:-1], sparse=False)
@@ -138,7 +140,7 @@ def _get_mrd_one_rupture(means, comtx, im1, im2):
 
 
 def update_mrd_indirect(ctx, cm, crosscorr, mrd, be_mea, be_sig,
-                        monitor=Monitor()):
+                        rng, monitor=Monitor()):
     """
     This computes the mean rate density by means of the multivariate
     normal function available in scipy. Compared to the function `update_mrd`
@@ -157,6 +159,8 @@ def update_mrd_indirect(ctx, cm, crosscorr, mrd, be_mea, be_sig,
         Bin edges mean
     :param be_sig:
         Bin edges std
+    :param rng:
+        Random number generator used in multivariate_normal
     """
     len_be_mea = len(be_mea)
     len_be_sig = len(be_sig)
@@ -224,7 +228,7 @@ def update_mrd_indirect(ctx, cm, crosscorr, mrd, be_mea, be_sig,
                 # rupture
                 with monitor:
                     means = [rate[M1] / rate[R], rate[M2] / rate[R]]
-                    partial = _get_mrd_one_rupture(means, comtx, ll1, ll2)
+                    partial = _get_mrd_one_rupture(means, comtx, ll1, ll2, rng)
 
                 # Updating the MRD for site sid and ground motion model gid
                 mrd[:, :, sid, gid] += rate[R] * partial
