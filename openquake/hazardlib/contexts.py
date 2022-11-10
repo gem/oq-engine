@@ -1105,6 +1105,7 @@ class ContextMaker(object):
         N = len(srcfilter.sitecol.complete)  # total sites
         if (hasattr(src, 'location') and src.count_nphc() > 1 and
                 self.pointsource_distance < 1000):
+            # cps or pointsource with nontrivial nphc
             esites = self.estimate_sites(src, sites) * multiplier
         else:
             ctxs = list(self.get_ctx_iter(src, sites, step=10))  # reduced
