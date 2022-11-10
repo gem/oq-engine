@@ -64,6 +64,22 @@ OQ_ADMIN_EMAIL
 
 This environment variable sets the superuser admin email for webui
 
+WEBUI_PATHPREFIX
+
+This variable ovverides the default prefix path (/engine) for the webui 
+
 ```bash
-$ docker run -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=example -e OQ_ADMIN_PASSWORD=example -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:nightly
+$ docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=example -e OQ_ADMIN_PASSWORD=example -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:nightly
 ```
+
+This example runs a container named openquake using the openquake/engine:nightly image and set the value for the environment variables. 
+
+This binds port 8800 of the container to TCP port 8800 on 127.0.0.1 of the host machine, so the webui is reachable from host machine using the url: http://127.0.0.1:8800/engine
+
+```bash
+$ docker run --name openquake -p 127.0.0.1:8080:8800 -e LOCKDOWN=True -e WEBUI_PATHPREFIX='/path' openquake/engine:nightly
+```
+
+This example runs a container named openquake using the openquake/engine:nightly image and set the value for the environment variables. 
+
+This binds port 8800 of the container to TCP port 8080 on 127.0.0.1 of the host machine, so the webui is reachable from host machine using the url: http://127.0.0.1:8080/path
