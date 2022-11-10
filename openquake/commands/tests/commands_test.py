@@ -22,7 +22,6 @@ import unittest.mock as mock
 import shutil
 import zipfile
 import tempfile
-import io
 import unittest
 import numpy
 
@@ -651,8 +650,8 @@ class GPKG2NRMLTestCase(unittest.TestCase):
             sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
         datadir = os.path.join(os.path.dirname(__file__), 'data')
         self.assertListEqual(
-            list(io.open(out_path)),
-            list(io.open(
+            list(open(out_path)),
+            list(open(
                 os.path.join(datadir, 'expected_converted_nrml.xml'))))
         shutil.rmtree(temp_dir)
 
