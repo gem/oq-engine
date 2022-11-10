@@ -914,11 +914,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     :param cost_types: the expected cost types
     :returns: (site collection, asset collection, discarded)
     """
-    global exposure
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
-    if exposure is None:
-        # haz_sitecol not extracted from the exposure
-        exposure = get_exposure(oqparam)
+    exposure = get_exposure(oqparam)
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam)
     if oqparam.region_grid_spacing:
