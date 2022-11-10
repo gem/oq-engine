@@ -1095,26 +1095,26 @@ class ContextMaker(object):
         """
         :param src: a source object
         :param srcfilter: a SourceFilter instance
-        :returns: the weight of the source (num_ruptures * <num_sites/N>)
+        :returns: (weight, estimate_sites)
         """
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return 0
+            return 0, 0
         src.nsites = len(sites)
         N = len(srcfilter.sitecol.complete)  # total sites
         if (hasattr(src, 'location') and src.count_nphc() > 1 and
                 self.pointsource_distance < 1000):
+            # cps or pointsource with nontrivial nphc
             esites = self.estimate_sites(src, sites) * multiplier
         else:
             ctxs = list(self.get_ctx_iter(src, sites, step=10))  # reduced
             if not ctxs:
-                return src.num_ruptures if N == 1 else 0
+                return src.num_ruptures if N == 1 else 0, 0
             esites = (len(ctxs[0]) * src.num_ruptures /
                       self.num_rups * multiplier)
         weight = esites / N  # the weight is the effective number of ruptures
-        src.esites = int(esites)
-        return weight
+        return weight, int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
         """
@@ -1125,19 +1125,19 @@ class ContextMaker(object):
         G = len(self.gsims)
         for src in sources:
             if src.nsites == 0:  # was discarded by the prefiltering
-                src.weight = .001
                 src.esites = 0
             else:
                 with mon:
-                    src.esites = 0  # overridden inside estimate_weight
-                    src.weight = self.estimate_weight(
-                        src, srcfilter, multiplier) * G
+                    src.weight, src.esites = self.estimate_weight(
+                        src, srcfilter, multiplier)
+                    src.weight *= G
                     if src.code == b'P':
                         src.weight += .1
                     elif src.code == b'C':
                         src.weight += 10.
                     else:
                         src.weight += 1.
+                    
 
 
 # see contexts_tests.py for examples of collapse

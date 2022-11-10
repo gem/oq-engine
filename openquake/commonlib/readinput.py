@@ -906,7 +906,7 @@ def get_exposure(oqparam):
         logging.info('Reading %s', fname)
         with open(fname, 'rb') as f:
             return pickle.load(f)
-    exposure = asset.Exposure.read(
+    exposure = Global.exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs,
         by_country='country' in asset.tagset(oqparam.aggregate_by),
@@ -927,7 +927,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     :returns: (site collection, asset collection, discarded)
     """
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
-    Global.exposure = exposure = get_exposure(oqparam)
+    if Global.exposure is None:
+        # haz_sitecol not extracted from the exposure
+        Global.exposure = get_exposure(oqparam)
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam)
     if oqparam.region_grid_spacing:
@@ -938,10 +940,10 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     else:
         haz_distance = asset_hazard_distance
 
-    if haz_sitecol.mesh != exposure.mesh:
+    if haz_sitecol.mesh != Global.exposure.mesh:
         # associate the assets to the hazard sites
         sitecol, assets_by, discarded = geo.utils.assoc(
-            exposure.assets_by_site, haz_sitecol, haz_distance, 'filter')
+            Global.exposure.assets_by_site, haz_sitecol, haz_distance, 'filter')
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
         for sid, assets in zip(sitecol.sids, assets_by):
@@ -952,18 +954,19 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
-        assets_by_site = exposure.assets_by_site
+        assets_by_site = Global.exposure.assets_by_site
         discarded = []
         logging.info('Read {:_d} sites and {:_d} assets from the exposure'.
                      format(len(sitecol), sum(len(a) for a in assets_by_site)))
 
     assetcol = asset.AssetCollection(
-        exposure, assets_by_site, oqparam.time_event, oqparam.aggregate_by)
+        Global.exposure, assets_by_site, oqparam.time_event,
+        oqparam.aggregate_by)
     if assetcol.occupancy_periods:
-        missing = set(cost_types) - set(exposure.cost_types['name']) - set(
-            ['occupants'])
+        missing = set(cost_types) - set(
+            Global.exposure.cost_types['name']) - set(['occupants'])
     else:
-        missing = set(cost_types) - set(exposure.cost_types['name'])
+        missing = set(cost_types) - set(Global.exposure.cost_types['name'])
     if missing and not oqparam.calculation_mode.endswith('damage'):
         raise InvalidFile('The exposure %s is missing %s' %
                           (oqparam.inputs['exposure'], missing))
