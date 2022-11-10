@@ -36,6 +36,9 @@ OQSERVER_ROOT = os.path.dirname(__file__)
 DEBUG = True
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
+WEBUI_PATHPREFIX = os.getenv('WEBUI_PATHPREFIX', '')
+USE_X_FORWARDED_HOST = os.getenv('USE_X_FORWARDED_HOST', False)
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -52,16 +55,6 @@ TEMPLATES = [
             ],
         },
     },
-]
-
-STATIC_URL = '/static/'
-
-MEDIA_ROOT = '%(mediaroot)s'
-STATIC_ROOT = '%(staticroot)s'
-
-# Additional directories which hold static files
-STATICFILES_DIRS = [
-    os.path.join(OQSERVER_ROOT, 'static'),
 ]
 
 DATABASE = {
@@ -204,6 +197,17 @@ except ImportError:
         # settings in this file only will be used
         pass
 
+STATIC_URL = '%s/static/' % WEBUI_PATHPREFIX
+# STATIC_URL = '/static/'
+
+MEDIA_ROOT = '%(mediaroot)s'
+STATIC_ROOT = '%(staticroot)s'
+
+# Additional directories which hold static files
+STATICFILES_DIRS = [
+    os.path.join(OQSERVER_ROOT, 'static'),
+]
+
 if LOCKDOWN:
 
     AUTHENTICATION_BACKENDS += (
@@ -247,6 +251,8 @@ if LOCKDOWN:
         },
     ]
 
-    LOGIN_REDIRECT_URL = '/engine'
+    LOGIN_REDIRECT_URL = '%s/engine/' % WEBUI_PATHPREFIX
+    LOGOUT_REDIRECT_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
+    LOGIN_EXEMPT_URLS = ('%s/accounts/ajax_login/' % WEBUI_PATHPREFIX, )
+    LOGIN_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
 
-    LOGIN_EXEMPT_URLS = ('/accounts/ajax_login/', )
