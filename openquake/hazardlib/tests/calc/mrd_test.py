@@ -64,8 +64,8 @@ class MRD01TestCase(unittest.TestCase):
         imls2 = self.oqp.hazard_imtls[self.imts[1]]
         len1 = len(imls1) - 1
         len2 = len(imls2) - 1
-        nsites = len(self.oqp.sites)
-        mrd = np.zeros((len1, len2, nsites, len(self.cmaker.gsims)))
+        assert len(self.oqp.sites) == 1
+        mrd = np.zeros((len1, len2, len(self.cmaker.gsims)))
         update_mrd(self.ctx, self.cmaker, self.crosscorr, mrd, self.rng)
 
         # Loading Hazard Curves.
@@ -186,10 +186,10 @@ class MRD01TestCase(unittest.TestCase):
                                    imt1, imt2, be_mea, be_sig, self.rng)
 
         # Compute the MRD: direct
-        mrdd = np.zeros((len1, len2, nsites, len(self.cmaker.gsims)))
+        mrdd = np.zeros((len1, len2, len(self.cmaker.gsims)))
         update_mrd(self.ctx, self.cmaker, self.crosscorr, mrdd, self.rng)
 
-        np.testing.assert_almost_equal(mrdi, mrdd)
+        np.testing.assert_almost_equal(mrdi[:,:, 0], mrdd)
 
         if PLOT:
             imlc1 = np.diff(imls1)/2 + imls1[:-1]

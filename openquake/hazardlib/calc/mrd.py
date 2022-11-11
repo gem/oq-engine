@@ -53,7 +53,7 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, rng):
     :param crosscorr:
         A cross correlation model
     :param mrd:
-        An array with shape |imls| x |imls| x |sites| x |gmms|
+        An array with shape |imls| x |imls| x |gmms|
     :param rng:
         Random number generator used in multivariate_normal
     """
@@ -76,9 +76,6 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, rng):
     for g, _ in enumerate(cm.gsims):
         for i, ctx in enumerate(ctx):
 
-            # The the site ID
-            sid = ctx.sids
-
             # Covariance and correlation mtxs
             slc0 = numpy.index_exp[g, :, i]
             slc1 = numpy.index_exp[g, 0, i]
@@ -98,7 +95,7 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, rng):
             # rupture. TODO address the case where we have the poes
             # instead of rates. MRD has shape: |imls| x |imls| x
             # |sites| x |gmms|
-            mrd[:, :, sid, g] += ctx.occurrence_rate * partial
+            mrd[:, :, g] += ctx.occurrence_rate * partial
             trate += ctx.occurrence_rate
 
 
