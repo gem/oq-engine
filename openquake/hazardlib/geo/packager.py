@@ -168,8 +168,8 @@ class GeoPackager(object):
 
     def to_nrml(self, out=None):
         out = out or self.fname.replace('.gpkg', '.xml')
-        nodes = [geodic2node(dic) for dic in self.read_all()
-                 if geodic2node(dic) is not None]
+        nodes = [geodic2node(dic) for dic in self.read_all()]
+        nodes = [node for node in nodes if node is not None]
         smodel = Node("sourceModel", {}, nodes=nodes)
         with open(out, 'wb') as f:
             nrml.write([smodel], f, '%s')
