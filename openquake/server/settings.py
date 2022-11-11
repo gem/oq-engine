@@ -57,6 +57,14 @@ TEMPLATES = [
     },
 ]
 
+MEDIA_ROOT = '%(mediaroot)s'
+STATIC_ROOT = '%(staticroot)s'
+
+# Additional directories which hold static files
+STATICFILES_DIRS = [
+    os.path.join(OQSERVER_ROOT, 'static'),
+]
+
 DATABASE = {
     'ENGINE': 'django.db.backends.sqlite3',
     'NAME': os.path.expanduser(config.dbserver.file),
@@ -198,15 +206,6 @@ except ImportError:
         pass
 
 STATIC_URL = '%s/static/' % WEBUI_PATHPREFIX
-# STATIC_URL = '/static/'
-
-MEDIA_ROOT = '%(mediaroot)s'
-STATIC_ROOT = '%(staticroot)s'
-
-# Additional directories which hold static files
-STATICFILES_DIRS = [
-    os.path.join(OQSERVER_ROOT, 'static'),
-]
 
 if LOCKDOWN:
 
