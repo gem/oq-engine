@@ -485,9 +485,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.oqparam.mags_by_trt = self.csm.get_mags_by_trt()
                 self.full_lt = parent['full_lt']
                 self.datastore['source_info'] = parent['source_info'][:]
-                mw = self.csm.get_max_weight(oq)
+                maxw = self.csm.get_max_weight(oq)
         else:
-            mw = self.max_weight
+            maxw = self.max_weight
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
@@ -495,7 +495,7 @@ class ClassicalCalculator(base.HazardCalculator):
         num_gs = [len(cm.gsims) for cm in self.haz.cmakers]
         L = oq.imtls.size
         max_gb = max(num_gs) * L * self.N * 8 / 1024**3
-        if max_gb > 0.5:  # split in tiles
+        if max_gb > 1:  # split in tiles
             max_sites = min(numpy.ceil(self.N / max_gb), oq.max_sites_per_tile)
             tiles = self.sitecol.split_max(max_sites)
         elif oq.max_sites_per_tile < self.N:
@@ -503,7 +503,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             tiles = [self.sitecol]
         if len(tiles) > 1:
-            mw /= 2  # produce more tasks
+            maxw /= 2  # produce more tasks
             sizes = [len(tile) for tile in tiles]
             logging.info('There are %d tiles of sizes %s', len(tiles), sizes)
             assert not oq.disagg_by_src, 'disagg_by_src with tiles'
@@ -514,25 +514,7 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = {}
         t0 = time.time()
         for t, tile in enumerate(tiles, 1):
-            self.check_memory(len(tile), L, num_gs)
-            self.datastore.swmr_on()  # must come before the Starmap
-            smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-            for cm in self.haz.cmakers:
-                sg = self.csm.src_groups[cm.grp_id]
-                if sg.atomic or sg.weight <= mw:
-                    smap.submit((sg, tile, cm))
-                else:
-                    # only groups generating more than 1 task preallocate memory
-                    acc[cm.grp_id] = ProbabilityMap(
-                        tile.sids, L, len(cm.gsims)).fill(1)
-                    blks = (groupby(sg, basename).values() if oq.disagg_by_src
-                            else block_splitter(sg, mw, get_weight, sort=True))
-                    for block in blks:
-                        logging.debug('Sending %d source(s) with weight %d',
-                                      len(block), sg.weight)
-                        smap.submit((block, tile, cm))
-                        self.n_outs[cm.grp_id] += 1
-            smap.reduce(self.agg_dicts, acc)
+            self.run_tile(tile, maxw, num_gs, acc)
             if len(tiles) > 1:
                 parallel.Starmap.shutdown()
                 logging.info('Finished tile %d of %d', t, len(tiles))
@@ -548,6 +530,37 @@ class ClassicalCalculator(base.HazardCalculator):
         if not oq.hazard_calculation_id:
             self.classical_time = time.time() - t0
         return True
+
+    def run_tile(self, tile, maxw, num_gs, acc):
+        """
+        Run a subset of sites and update the accumulator
+        """
+        oq = self.oqparam
+        self.check_memory(len(tile), oq.imtls.size, num_gs)
+        self.datastore.swmr_on()  # must come before the Starmap
+        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        for cm in self.haz.cmakers:
+            sg = self.csm.src_groups[cm.grp_id]
+            if sg.atomic or sg.weight <= maxw:
+                smap.submit((sg, tile, cm))
+            else:
+                # only groups generating more than 1 task preallocate memory
+                acc[cm.grp_id] = ProbabilityMap(
+                    tile.sids, oq.imtls.size, len(cm.gsims)).fill(1)
+                # send the multiFaultSources first
+                for src in sg:
+                    if src.code == b'F':
+                        self.n_outs[cm.grp_id] += 1
+                        smap.submit(([src], tile, cm))
+                srcs = [src for src in sg if src.code != b'F']
+                blks = (groupby(srcs, basename).values() if oq.disagg_by_src
+                        else block_splitter(srcs, maxw, get_weight, sort=True))
+                for block in blks:
+                    logging.debug('Sending %d source(s) with weight %d',
+                                  len(block), sg.weight)
+                    self.n_outs[cm.grp_id] += 1
+                    smap.submit((block, tile, cm))
+        smap.reduce(self.agg_dicts, acc)
 
     def store_info(self):
         """

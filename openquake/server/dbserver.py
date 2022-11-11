@@ -46,7 +46,7 @@ class DbServer(object):
         self.num_workers = num_workers
         self.pid = os.getpid()
         if p.OQDIST == 'zmq':
-            self.zmaster = w.WorkerMaster(**config.zworkers)
+            self.zmaster = w.WorkerMaster(config.zworkers)
         else:
             self.zmaster = None
 
@@ -60,7 +60,7 @@ class DbServer(object):
                     continue
                 elif cmd.startswith('workers_'):
                     # engine.run_jobs calls logs.dbcmd(cmd)
-                    msg = getattr(p, cmd)()
+                    msg = getattr(p, cmd)(*args)
                     logging.info(msg)
                     sock.send(msg)
                     continue

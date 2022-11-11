@@ -736,11 +736,11 @@ class ContextMaker(object):
 
         return ctx
 
-    def get_ctxs_planar(self, src, sitecol):
+    def gen_ctxs_planar(self, src, sitecol):
         """
         :param src: a (Collapsed)PointSource
         :param sitecol: a filtered SiteCollection
-        :returns: a list with 0 or 1 context array
+        :yields: context arrays
         """
         dd = self.defaultdict.copy()
         tom = src.temporal_occurrence_model
@@ -772,17 +772,18 @@ class ContextMaker(object):
 
         magdist = {mag: self.maximum_distance(mag)
                    for mag, rate in src.get_annual_occurrence_rates()}
-        maxmag = max(magdist)
-        ctxs = []
-        max_radius = src.max_radius()
+        # self.maximum_distance(mag) can be 0 if outside the mag range
+        maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
+        maxdist = magdist[maxmag]
         cdist = sitecol.get_cdist(src.location)
-        mask = cdist <= magdist[maxmag] + max_radius
+        # NB: having a decent max_radius is essential for performance!
+        mask = cdist <= maxdist + src.max_radius(maxdist)
         sitecol = sitecol.filter(mask)
         if sitecol is None:
             return []
 
         for magi, mag, planarlist, sites in self._quartets(
-                src, sitecol, cdist[mask], planardict):
+                src, sitecol, cdist[mask], magdist, planardict):
             if not planarlist:
                 continue
             elif len(planarlist) > 1:  # when using ps_grid_spacing
@@ -796,39 +797,42 @@ class ContextMaker(object):
                 mag, pla, sites, src.id, start_stop, tom).flatten()
             ctxt = ctx[ctx.rrup < magdist[mag]]
             if len(ctxt):
-                ctxs.append(ctxt)
-        return concat(ctxs)
+                yield ctxt
 
-    def _quartets(self, src, sitecol, cdist, planardict):
+    def _quartets(self, src, sitecol, cdist, magdist, planardict):
+        minmag = self.maximum_distance.x[0]
+        maxmag = self.maximum_distance.x[-1]
         # splitting by magnitude
-        quartets = []
         if src.count_nphc() == 1:
             # one rupture per magnitude
             for m, (mag, pla) in enumerate(planardict.items()):
-                quartets.append((m, mag, pla, sitecol))
+                if minmag < mag < maxmag:
+                    yield m, mag, pla, sitecol
         else:
             for m, rup in enumerate(src.iruptures()):
                 mag = rup.mag
+                if mag > maxmag or mag < minmag:
+                    continue
                 arr = [rup.surface.array.reshape(-1, 3)]
                 pla = planardict[mag]
-                psdist = (self.pointsource_distance + src.ps_grid_spacing +
-                          src.radius[m])
+                # NB: having a good psdist is essential for performance!
+                psdist = src.get_psdist(m, mag, self.pointsource_distance,
+                                        magdist)
                 close = sitecol.filter(cdist <= psdist)
                 far = sitecol.filter(cdist > psdist)
                 if self.fewsites:
                     if close is None:  # all is far, common for small mag
-                        quartets.append((m, mag, arr, sitecol))
+                        yield m, mag, arr, sitecol
                     else:  # something is close
-                        quartets.append((m, mag, pla, sitecol))
+                        yield m, mag, pla, sitecol
                 else:  # many sites
                     if close is None:  # all is far
-                        quartets.append((m, mag, arr, far))
+                        yield m, mag, arr, far
                     elif far is None:  # all is close
-                        quartets.append((m, mag, pla, close))
+                        yield m, mag, pla, close
                     else:  # some sites are far, some are close
-                        quartets.append((m, mag, arr, far))
-                        quartets.append((m, mag, pla, close))
-        return quartets
+                        yield m, mag, arr, far
+                        yield m, mag, pla, close
 
     # this is called for non-point sources (or point sources in preclassical)
     def gen_contexts(self, rups_sites, src_id):
@@ -868,21 +872,21 @@ class ContextMaker(object):
         """
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         if getattr(src, 'location', None) and step == 1:
-            self.pla_mon.mem = 0
-            with self.pla_mon:
-                ctxs = self.get_ctxs_planar(src, sitecol)
-            return iter(ctxs)
+            return self.pla_mon.iter(self.gen_ctxs_planar(src, sitecol))
         elif hasattr(src, 'source_id'):  # other source
+            minmag = self.maximum_distance.x[0]
+            maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:
-                allrups = numpy.array(list(src.iter_ruptures(
-                    shift_hypo=self.shift_hypo, step=step)))
+                allrups = [rup for rup in src.iter_ruptures(
+                    shift_hypo=self.shift_hypo, step=step)
+                           if minmag < rup.mag < maxmag]
                 for i, rup in enumerate(allrups):
                     rup.rup_id = src.offset + i
                 self.num_rups = len(allrups)
                 # sorted by mag by construction
                 u32mags = U32([rup.mag * 100 for rup in allrups])
-                rups_sites = [(rups, sitecol)
-                              for rups in split_array(allrups, u32mags)]
+                rups_sites = [(rups, sitecol) for rups in split_array(
+                    numpy.array(allrups), u32mags)]
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
@@ -1068,16 +1072,20 @@ class ContextMaker(object):
 
     def estimate_sites(self, src, sites):
         """
+        :param src: a (Collapsed)PointSource
+        :param sites: a filtered SiteCollection
         :returns: how many sites are impacted overall
         """
+        magdist = {mag: self.maximum_distance(mag)
+                   for mag, rate in src.get_annual_occurrence_rates()}
         nphc = src.count_nphc()
         dists = sites.get_cdist(src.location)
         planardict = src.get_planar(iruptures=True)
         esites = 0
         for m, (mag, [planar]) in enumerate(planardict.items()):
-            rrup = dists[dists < self.maximum_distance(mag) + src.radius[m]]
-            nclose = (rrup < self.pointsource_distance + src.ps_grid_spacing +
-                      src.radius[m]).sum()
+            rrup = dists[dists < magdist[mag]]
+            nclose = (rrup < src.get_psdist(m, mag, self.pointsource_distance,
+                                            magdist)).sum()
             nfar = len(rrup) - nclose
             esites += nclose * nphc + nfar
         return esites
@@ -1087,26 +1095,26 @@ class ContextMaker(object):
         """
         :param src: a source object
         :param srcfilter: a SourceFilter instance
-        :returns: the weight of the source (num_ruptures * <num_sites/N>)
+        :returns: (weight, estimate_sites)
         """
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return 0
+            return 0, 0
         src.nsites = len(sites)
         N = len(srcfilter.sitecol.complete)  # total sites
         if (hasattr(src, 'location') and src.count_nphc() > 1 and
                 self.pointsource_distance < 1000):
+            # cps or pointsource with nontrivial nphc
             esites = self.estimate_sites(src, sites) * multiplier
         else:
             ctxs = list(self.get_ctx_iter(src, sites, step=10))  # reduced
             if not ctxs:
-                return src.num_ruptures if N == 1 else 0
+                return src.num_ruptures if N == 1 else 0, 0
             esites = (len(ctxs[0]) * src.num_ruptures /
                       self.num_rups * multiplier)
         weight = esites / N  # the weight is the effective number of ruptures
-        src.esites = int(esites)
-        return weight
+        return weight, int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
         """
@@ -1114,23 +1122,22 @@ class ContextMaker(object):
         """
         if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
             srcfilter = SourceFilter(srcfilter, self.maximum_distance)
-        N = len(srcfilter.sitecol)
         G = len(self.gsims)
         for src in sources:
             if src.nsites == 0:  # was discarded by the prefiltering
-                src.weight = .001
                 src.esites = 0
             else:
                 with mon:
-                    src.esites = 0  # overridden inside estimate_weight
-                    src.weight = .1 + self.estimate_weight(
-                        src, srcfilter, multiplier) * G
-                    if src.code == b'F' and N <= self.max_sites_disagg:
-                        src.weight *= 20  # test ucerf
-                    elif src.code == b'S':
-                        src.weight += .9
+                    src.weight, src.esites = self.estimate_weight(
+                        src, srcfilter, multiplier)
+                    src.weight *= G
+                    if src.code == b'P':
+                        src.weight += .1
                     elif src.code == b'C':
-                        src.weight += 9.9
+                        src.weight += 10.
+                    else:
+                        src.weight += 1.
+                    
 
 
 # see contexts_tests.py for examples of collapse
@@ -1225,18 +1232,17 @@ class PmapMaker(object):
         totlen = 0
         t0 = time.time()
         for src in self.sources:
-            nsites = 0
+            src.nsites = 0
             for ctx in self.gen_ctxs(src):
                 ctxs_mb += ctx.nbytes / TWO20  # TWO20=1MB
-                nsites += len(ctx)
+                src.nsites += len(ctx)
+                totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxs_mb > MAX_MB:
                     cm.update(pmap, concat(allctxs), self.rup_indep)
                     allctxs.clear()
                     ctxs_mb = 0
         if allctxs:
-            src.nsites = nsites
-            totlen += nsites
             cm.update(pmap, concat(allctxs), self.rup_indep)
             allctxs.clear()
         dt = time.time() - t0

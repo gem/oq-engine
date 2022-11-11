@@ -176,18 +176,18 @@ def manage_signals(signum, _stack):
         signal.signal(signal.SIGINT, inhibitSigInt)
 
     if signum == signal.SIGINT:
-        parallel.workers_stop()
+        parallel.workers_stop(config.zworkers)
         raise MasterKilled('The openquake master process was killed manually')
 
     if signum == signal.SIGTERM:
-        parallel.workers_stop()
+        parallel.workers_stop(config.zworkers)
         raise SystemExit('Terminated')
 
     if hasattr(signal, 'SIGHUP'):  # there is no SIGHUP on Windows
         # kill the calculation only if os.getppid() != _PPID, i.e. the
         # controlling terminal died; in the workers, do nothing
         if signum == signal.SIGHUP and os.getppid() != _PPID:
-            parallel.workers_stop()
+            parallel.workers_stop(config.zworkers)
             raise MasterKilled(
                 'The openquake master lost its controlling terminal')
 
@@ -350,13 +350,13 @@ def cleanup(kind):
     if OQ_DISTRIBUTE != 'zmq' or config.distribution.serialize_jobs > 1:
         return  # do nothing
     if kind == 'stop':
-        # called in the regular case
+        # called in the regular case, does not require ssh access
         print('Stopping the workers')
-        parallel.workers_stop()
+        parallel.workers_stop(config.zworkers)
     elif kind == 'kill':
-        # called in case of exceptions (including out of memory)
+        # called in case of exceptions (or out of memory), requires ssh
         print('Asking the DbServer to kill the workers')
-        logs.dbcmd('workers_kill')
+        logs.dbcmd('workers_kill', config.zworkers)
 
 
 def run_jobs(jobs):
@@ -393,9 +393,11 @@ def run_jobs(jobs):
             dic = {'status': 'executing', 'pid': _PID}
             logs.dbcmd('update_job', job.calc_id, dic)
     try:
-        if OQ_DISTRIBUTE == 'zmq' and parallel.workers_status() == []:
-            print('Asking the DbServer to start the workers')
-            logs.dbcmd('workers_start')  # start the workers
+        if OQ_DISTRIBUTE == 'zmq' and parallel.workers_status(
+                config.zworkers) == []:
+            print('Asking the DbServer to start the workers %s' %
+                  config.zworkers.host_cores)
+            logs.dbcmd('workers_start', config.zworkers)  # start the workers
         allargs = [(job,) for job in jobs]
         if jobarray and OQ_DISTRIBUTE != 'no':
             procs = []

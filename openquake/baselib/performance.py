@@ -415,6 +415,7 @@ else:
 
 # used when reading _poes/sid
 @compile(["int64[:, :](uint8[:])",
+          "int64[:, :](uint16[:])",
           "int64[:, :](uint32[:])",
           "int64[:, :](int64[:])"])
 def idx_start_stop(integers):
@@ -471,7 +472,8 @@ def get_slices(uint32s):
 
 # this is used in split_array and it may dominate the performance
 # of classical calculations, so it has to be fast
-@compile("uint32[:](uint32[:], int64[:], int64[:], int64[:])")
+@compile(["uint32[:](uint32[:], int64[:], int64[:], int64[:])",
+          "uint32[:](uint16[:], int64[:], int64[:], int64[:])"])
 def _split(uint32s, indices, counts, cumcounts):
     n = len(uint32s)
     assert len(indices) == n
