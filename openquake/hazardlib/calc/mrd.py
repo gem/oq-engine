@@ -68,6 +68,7 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, rng):
     # Get the logarithmic IMLs
     ll1 = numpy.log(cm.imtls[im1])
     ll2 = numpy.log(cm.imtls[im2])
+    grids = make_grids(ll1, ll2)
 
     # Update the MRD matrix. mea and sig have shape: G x L x N where G is
     # the number of GMMs, L is the number of intensity measure types and N
@@ -84,7 +85,7 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, rng):
             comtx = numpy.array([[sig[slc1]**2, cov], [cov, sig[slc2]**2]])
 
             # Compute the MRD for the current rupture
-            partial = _get_mrd_one_rupture(mea[slc0], comtx, ll1, ll2, rng)
+            partial = _get_mrd_one_rupture(mea[slc0], comtx, grids, rng)
 
             # Check
             msg = f'{numpy.max(partial):.8f}'
@@ -99,35 +100,33 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, rng):
             trate += ctx.occurrence_rate
 
 
-def _get_mrd_one_rupture(means, comtx, im1, im2, rng):
+def make_grids(ll1, ll2):
+    # from two arrays of length L+1 to 4 arrays of shape (L, L, 2)
+    lst = [(ll1[:-1], ll2[:-1]), (ll1[1:], ll2[:-1]),
+           (ll1[:-1], ll2[1:]), (ll1[1:], ll2[1:])]
+    grids = []
+    for i, (ll1, ll2) in enumerate(lst):
+        grid = numpy.meshgrid(ll1, ll2)
+        grids.append(numpy.dstack(grid))  # shape LL2->LL
+    return grids
+
+
+def _get_mrd_one_rupture(means, comtx, grids, rng):
     # :param means:
     #     The two values of the mean
     # :param comtx:
     #     The covariance matrix
-    # :param im1:
-    #     The intensity measure levels for the first IMT
-    # :param im2:
-    #     The intensity measure levels for the second IMT
+    # :param grids:
+    #     A list of 4 arrays of shape (L, L)
     # :returns:
     #     A 2D array
-
-    # Create bivariate gaussian distribution.
     mvn = sts.multivariate_normal(means, comtx, seed=rng)
-    len1 = len(im1) - 1
-    LL, LR, UL, UR = 0, 1, 2, 3  # lower-left lower-right upper-left upper-right
-    vals = numpy.zeros((4, len1, len1))
-    lst = [(im1[:-1], im2[:-1]), (im1[1:], im2[:-1]),
-           (im1[:-1], im2[1:]), (im1[1:], im2[1:])]
-    for i, (ll1, ll2) in enumerate(lst):
-        grid = numpy.meshgrid(ll1, ll2)
-        vals[i] = mvn.cdf(numpy.dstack(grid))  # shape LL2->LL
-
+    vals = mvn.cdf(grids)  # shape (4, L, L)
     # Compute the values in each cell
+    LL, LR, UL, UR = 0, 1, 2, 3  # lower-left lower-right upper-left upper-right
     partial = vals[UR] - vals[UL] - vals[LR] + vals[LL]
-
     # Remove values that go below zero (mostly numerical errors)
     partial[partial < 0] = 0.0
-
     return partial
 
 
@@ -164,6 +163,7 @@ def update_mrd_indirect(ctx, cm, corrm, imt1, imt2, be_mea, be_sig,
     # Get the logarithmic IMLs
     ll1 = numpy.log(cm.imtls[imt1])
     ll2 = numpy.log(cm.imtls[imt2])
+    grids = make_grids(ll1, ll2)
 
     # mea and sig shape: G x M x N where G is the number of GMMs, M is the
     # number of intensity measure types and N is the number ruptures
@@ -210,7 +210,7 @@ def update_mrd_indirect(ctx, cm, corrm, imt1, imt2, be_mea, be_sig,
             # rupture
             with monitor:
                 means = [arr[M1] / arr[R], arr[M2] / arr[R]]
-                partial = _get_mrd_one_rupture(means, comtx, ll1, ll2, rng)
+                partial = _get_mrd_one_rupture(means, comtx, grids, rng)
 
             # Updating the MRD for site sid and ground motion model gid
             mrd[:, :, gid] += arr[R] * partial
