@@ -38,14 +38,17 @@ def main(parent_id: int, mbins=100, dbins=100):
     magbins = numpy.linspace(2, 10.2, mbins)
     dstbins = contexts.sqrscale(0, 1000., dbins)
     with dstore, log:
+        ct = parent['oqparam'].concurrent_tasks
         cmakers = contexts.read_cmakers(parent)
         grp_ids = dstore.parent['rup/grp_id'][:]
+        blocksize = numpy.ceil(len(grp_ids) / ct)
         dstore.swmr_on()
         smap = parallel.Starmap(compute_hist, h5=dstore)
         for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
             for s0, s1 in slices:
-                smap.submit((parent, slice(s0, s1), cmaker, magbins, dstbins))
+                for slc in general.gen_slices(s0, s1, blocksize):
+                    smap.submit((parent, slc, cmaker, magbins, dstbins))
         acc = smap.reduce()
         counts = numpy.zeros((mbins, dbins), int)
         for k, v in acc.items():
