@@ -85,7 +85,7 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, rng):
             comtx = numpy.array([[sig[slc1]**2, cov], [cov, sig[slc2]**2]])
 
             # Compute the MRD for the current rupture
-            partial = _get_mrd_one_rupture(mea[slc0], comtx, grids, rng)
+            partial = _get_mrd(mea[slc0], comtx, grids, rng)
 
             # Check
             msg = f'{numpy.max(partial):.8f}'
@@ -111,7 +111,7 @@ def make_grids(ll1, ll2):
     return grids
 
 
-def _get_mrd_one_rupture(means, comtx, grids, rng):
+def _get_mrd(means, comtx, grids, rng):
     # :param means:
     #     The two values of the mean
     # :param comtx:
@@ -168,26 +168,26 @@ def update_mrd_indirect(ctx, cm, corrm, imt1, imt2, be_mea, be_sig,
     # mea and sig shape: G x M x N where G is the number of GMMs, M is the
     # number of intensity measure types and N is the number ruptures
     R, M1, M2, S1, S2 = 0, 1, 2, 3, 4
-    for gid, _ in enumerate(cm.gsims):
+    for gid in range(len(cm.gsims)):
         acc = AccumDict(accum=numpy.zeros(5))
 
         # Slices
         slc1 = numpy.index_exp[gid, 0]
         slc2 = numpy.index_exp[gid, 1]
 
-        # Find indexes needed for binning the results
+        # Find indexes needed for binning the results (fast)
         i_mea1 = numpy.searchsorted(be_mea, mea[slc1])
         i_mea2 = numpy.searchsorted(be_mea, mea[slc2])
         i_sig1 = numpy.searchsorted(be_sig, sig[slc1])
         i_sig2 = numpy.searchsorted(be_sig, sig[slc2])
 
-        # Fix the last index
+        # Fix the last index (fast)
         i_mea1[i_mea1 == len_be_mea] = len_be_mea - 1
         i_mea2[i_mea2 == len_be_mea] = len_be_mea - 1
         i_sig1[i_sig1 == len_be_sig] = len_be_sig - 1
         i_sig2[i_sig2 == len_be_sig] = len_be_sig - 1
 
-        # Stacking results
+        # Stacking results (fast)
         for i, m1, m2, s1, s2 in zip(range(C), i_mea1, i_mea2, i_sig1, i_sig2):
             key = (m1, m2, s1, s2)
             arr = acc[key]
@@ -208,9 +208,9 @@ def update_mrd_indirect(ctx, cm, corrm, imt1, imt2, be_mea, be_sig,
             # Get the MRD. The mean GM representing each bin is a weighted
             # mean (based on the rate of occurrence) of the GM from each
             # rupture
-            with monitor:
-                means = [arr[M1] / arr[R], arr[M2] / arr[R]]
-                partial = _get_mrd_one_rupture(means, comtx, grids, rng)
+            means = [arr[M1] / arr[R], arr[M2] / arr[R]]
+            with monitor:  # this is ultra-slow!
+                partial = _get_mrd(means, comtx, grids, rng)
 
             # Updating the MRD for site sid and ground motion model gid
             mrd[:, :, gid] += arr[R] * partial
