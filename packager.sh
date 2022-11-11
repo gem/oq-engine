@@ -834,7 +834,7 @@ _pkgtest_innervm_run () {
     ssh "$lxc_ip" sudo apt-get install -y ${GEM_DEB_PACKAGE}
     ssh "$lxc_ip" sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}
 
-    celery_bin=/opt/openquake/bin/celery
+    # celery_bin=/opt/openquake/bin/celery
 
     # configure the machine to run tests
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
@@ -862,7 +862,7 @@ _pkgtest_innervm_run () {
 
         sudo apt-get install -y python3-oq-engine-master python3-oq-engine-worker
         # Switch to celery mode
-        sudo sed -i 's/oq_distribute = processpool/oq_distribute = celery/;' /etc/openquake/openquake.cfg
+        # sudo sed -i 's/oq_distribute = processpool/oq_distribute = celery/;' /etc/openquake/openquake.cfg
 
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
 celery_wait() {
@@ -893,14 +893,16 @@ celery_wait() {
 sudo systemctl start openquake-dbserver
 sleep 10
 # Restart openquake-celery after the changes made to openquake.cfg
-sudo systemctl start openquake-celery
-sleep 10
-sudo systemctl status openquake-dbserver openquake-celery
+# sudo systemctl start openquake-celery
+# sleep 10
+# sudo systemctl status openquake-dbserver openquake-celery
+sudo systemctl status openquake-dbserver
 
-celery_wait $GEM_MAXLOOP
+# celery_wait $GEM_MAXLOOP
 
-        oq celery status
-        oq engine --run risk/EventBasedRisk/job.ini || echo \"distribution with celery not supported without master and/or worker packages\"
+#         oq celery status
+#         oq engine --run risk/EventBasedRisk/job.ini || echo \"distribution with celery not supported without master and/or worker packages\"
+        oq engine --run risk/EventBasedRisk/job.ini || echo \"EventBasedRisk job fails\"
 
         # Try to export a set of results AFTER the calculation
         # automatically creates a directory called out
