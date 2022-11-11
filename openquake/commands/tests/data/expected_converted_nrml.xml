@@ -169,8 +169,5 @@ xmlns:gml="http://www.opengis.net/gml"
                 </slip>
             </slipList>
         </simpleFaultSource>
-        <NotImplemented id="5" name="characteristic source, simple fault" tectonicRegion="Volcanic"/>
-        <NotImplemented id="6" name="characteristic source, complex fault" tectonicRegion="Volcanic"/>
-        <NotImplemented id="7" name="characteristic source, multi surface" tectonicRegion="Volcanic"/>
     </sourceModel>
 </nrml>
