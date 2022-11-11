@@ -169,8 +169,6 @@ def update_mrd_indirect(ctx, cm, corrm, imt1, imt2, be_mea, be_sig,
     # number of intensity measure types and N is the number ruptures
     R, M1, M2, S1, S2 = 0, 1, 2, 3, 4
     for gid in range(len(cm.gsims)):
-        acc = AccumDict(accum=numpy.zeros(5))
-
         # Slices
         slc1 = numpy.index_exp[gid, 0]
         slc2 = numpy.index_exp[gid, 1]
@@ -188,6 +186,7 @@ def update_mrd_indirect(ctx, cm, corrm, imt1, imt2, be_mea, be_sig,
         i_sig2[i_sig2 == len_be_sig] = len_be_sig - 1
 
         # Stacking results (fast)
+        acc = AccumDict(accum=numpy.zeros(5))
         for i, m1, m2, s1, s2 in zip(range(C), i_mea1, i_mea2, i_sig1, i_sig2):
             key = (m1, m2, s1, s2)
             arr = acc[key]
