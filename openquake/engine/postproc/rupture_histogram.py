@@ -10,18 +10,20 @@ def compute_hist(dstore, slc, cmaker, magbins, dstbins):
     :param cmaker: a ContextMaker instance
     :param magbins: array of magnitude bins
     :param magbins: array of distance bins
-    :returns: a dictionary (mag_index, dst_index) -> counts
+    :returns: a dictionary (site_index, mag_index, dist_index) -> counts
     """
     dic = general.AccumDict(accum=0)  # (magi, dsti) -> counts
     with dstore:
-        [ctxt] = cmaker.read_ctxs(dstore, slc)
-        ctxt.magi = numpy.searchsorted(magbins, ctxt.mag)
-        for magi in numpy.unique(ctxt.magi):
-            ctx = ctxt[ctxt.magi == magi]
-            dstbin = numpy.searchsorted(dstbins, ctx.rrup)
-            d_idx, d_counts = numpy.unique(dstbin, return_counts=True)
-            for dsti, counts in zip(d_idx, d_counts):
-                dic[magi, dsti] += counts
+        [fullctxt] = cmaker.read_ctxs(dstore, slc)
+        for sid in numpy.unique(fullctxt.sids):
+            ctxt = fullctxt[fullctxt.sids == sid]
+            ctxt.magi = numpy.searchsorted(magbins, ctxt.mag)
+            for magi in numpy.unique(ctxt.magi):
+                ctx = ctxt[ctxt.magi == magi]
+                dstbin = numpy.searchsorted(dstbins, ctx.rrup)
+                d_idx, d_counts = numpy.unique(dstbin, return_counts=True)
+                for dsti, counts in zip(d_idx, d_counts):
+                    dic[sid, magi, dsti] += counts
     return dic
 
 
@@ -38,6 +40,7 @@ def main(parent_id: int, mbins=100, dbins=100):
     magbins = numpy.linspace(2, 10.2, mbins)
     dstbins = contexts.sqrscale(0, 1000., dbins)
     with dstore, log:
+        N = len(parent['sitecol'])
         ct = parent['oqparam'].concurrent_tasks
         cmakers = contexts.read_cmakers(parent)
         grp_ids = dstore.parent['rup/grp_id'][:]
@@ -50,7 +53,7 @@ def main(parent_id: int, mbins=100, dbins=100):
                 for slc in general.gen_slices(s0, s1, blocksize):
                     smap.submit((parent, slc, cmaker, magbins, dstbins))
         acc = smap.reduce()
-        counts = numpy.zeros((mbins, dbins), int)
+        counts = numpy.zeros((N, mbins, dbins), int)
         for k, v in acc.items():
             counts[k] = v
         dstore['counts'] = counts
