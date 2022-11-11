@@ -395,7 +395,8 @@ def run_jobs(jobs):
     try:
         if OQ_DISTRIBUTE == 'zmq' and parallel.workers_status(
                 config.zworkers) == []:
-            print('Asking the DbServer to start the workers')
+            print('Asking the DbServer to start the workers %s' %
+                  config.zworkers.host_cores)
             logs.dbcmd('workers_start', config.zworkers)  # start the workers
         allargs = [(job,) for job in jobs]
         if jobarray and OQ_DISTRIBUTE != 'no':
