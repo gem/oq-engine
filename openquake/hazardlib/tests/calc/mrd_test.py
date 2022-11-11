@@ -17,14 +17,14 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import time
 import unittest
 import numpy as np
 import matplotlib.pyplot as plt
 from openquake.baselib.general import DictArray
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.mrd import (
-    update_mrd, update_mrd_indirect, get_uneven_bins_edges)
+    update_mrd, update_mrd_indirect, get_uneven_bins_edges,
+    calc_mean_rate_dist)
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.commonlib import datastore
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
@@ -115,17 +115,12 @@ class MRD01TestCase(unittest.TestCase):
         numb = [80, 80, 10]
         be_mea = get_uneven_bins_edges(lefts, numb)
         be_sig = np.arange(0.50, 0.70, 0.01)
+        imt1, imt2 = self.imts
 
         # Compute the MRD
-        imls1 = self.oqp.imtls[self.imts[0]]
-        imls2 = self.oqp.imtls[self.imts[1]]
-        len1 = len(imls1) - 1
-        nsites = len(self.oqp.sites)
-        mrd = np.zeros((len1, len1, nsites, len(self.cmaker.gsims)))
         mon = Monitor('multivariate')
-        update_mrd_indirect(
-            self.ctx, self.cmaker, self.crosscorr, mrd, be_mea, be_sig,
-            self.rng, mon)
+        mrd = calc_mean_rate_dist(self.ctx, self.cmaker, self.crosscorr,
+                                  imt1, imt2, be_mea, be_sig, self.rng, mon)
         print(mon)
 
         # Loading Hazard Curves.
@@ -134,19 +129,21 @@ class MRD01TestCase(unittest.TestCase):
         afe = - np.log(1-poes)
         afo = afe[:, :, :, :-1] - afe[:, :, :, 1:]
 
-        imts = list(self.oqp.hazard_imtls)
+        imts = list(self.oqp.imtls)
         idx1 = imts.index(self.imts[0])
         idx2 = imts.index(self.imts[1])
 
         afo1 = afo[0, 0, idx1, :]
         afo2 = afo[0, 0, idx2, :]
 
-        tmp = self.oqp.hazard_imtls[self.imts[0]]
+        tmp = self.oqp.imtls[self.imts[0]]
         c1 = tmp[:-1] + np.diff(tmp) / 2
-        tmp = self.oqp.hazard_imtls[self.imts[1]]
+        tmp = self.oqp.imtls[self.imts[1]]
         c2 = tmp[:-1] + np.diff(tmp) / 2
 
         # Compute marginal
+        imls1 = self.oqp.imtls[self.imts[0]]
+        imls2 = self.oqp.imtls[self.imts[1]]
         cm1 = imls1[:-1] + np.diff(imls1) / 2
         marg1 = np.squeeze(np.sum(mrd, axis=0))
         cm2 = imls2[:-1] + np.diff(imls2) / 2
@@ -177,17 +174,16 @@ class MRD01TestCase(unittest.TestCase):
         be_sig = np.arange(0.50, 0.70, 0.01)
 
         # Set params
-        imls1 = self.oqp.hazard_imtls[self.imts[0]]
-        imls2 = self.oqp.hazard_imtls[self.imts[1]]
+        imls1 = self.oqp.imtls[self.imts[0]]
+        imls2 = self.oqp.imtls[self.imts[1]]
         len1 = len(imls1)-1
         len2 = len(imls2)-1
         nsites = len(self.oqp.sites)
 
         # Compute the MRD: indirect
-        mrdi = np.zeros((len1, len2, nsites, len(self.cmaker.gsims)))
-        update_mrd_indirect(
-            self.ctx, self.cmaker, self.crosscorr, mrdi, be_mea, be_sig,
-            self.rng)
+        imt1, imt2 = self.imts
+        mrdi = calc_mean_rate_dist(self.ctx, self.cmaker, self.crosscorr,
+                                   imt1, imt2, be_mea, be_sig, self.rng)
 
         # Compute the MRD: direct
         mrdd = np.zeros((len1, len2, nsites, len(self.cmaker.gsims)))

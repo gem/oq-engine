@@ -19,7 +19,7 @@
 import numpy
 import scipy.stats as sts
 from openquake.baselib.general import AccumDict
-from openquake.baselib.performance import Monitor
+from openquake.baselib.performance import Monitor, split_array
 from openquake.hazardlib.imt import from_string
 
 
@@ -47,7 +47,7 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, rng):
     normal function available in scipy.
 
     :param ctx:
-        A context array
+        A context array for a single site
     :param cm:
         A ContextMaker
     :param crosscorr:
@@ -139,8 +139,8 @@ def _get_mrd_one_rupture(means, comtx, im1, im2, rng):
     return partial
 
 
-def update_mrd_indirect(ctx, cm, crosscorr, mrd, be_mea, be_sig,
-                        rng, monitor=Monitor()):
+def update_mrd_indirect(ctx, cm, corrm, imt1, imt2, be_mea, be_sig,
+                        rng, mrd, monitor=Monitor()):
     """
     This computes the mean rate density by means of the multivariate
     normal function available in scipy. Compared to the function `update_mrd`
@@ -148,13 +148,13 @@ def update_mrd_indirect(ctx, cm, crosscorr, mrd, be_mea, be_sig,
     mean and std for the IMTs considered.
 
     :param ctx:
-        A context array
+        A context array for a single site
     :param cm:
         A ContextMaker instance
-    :param crosscorr:
-        A cross correlation model
+    :param corrm:
+        A cross correlation matrix
     :param mrd:
-        An array with shape |imls| x |imls| x |sites| x |gmms|
+        An array with shape |imls| x |imls| x |gmms|
     :param be_mea:
         Bin edges mean
     :param be_sig:
@@ -162,73 +162,92 @@ def update_mrd_indirect(ctx, cm, crosscorr, mrd, be_mea, be_sig,
     :param rng:
         Random number generator used in multivariate_normal
     """
+    C = len(ctx)
     len_be_mea = len(be_mea)
     len_be_sig = len(be_sig)
-
-    # Correlation matrix
-    keys = list(cm.imtls)
-    imts = [from_string(k) for k in keys]
-    corrm = crosscorr.get_cross_correlation_mtx(imts)
 
     # Compute mean and standard deviation
     [mea, sig, _, _] = cm.get_mean_stds([ctx])
 
     # Get the logarithmic IMLs
-    ll1 = numpy.log(cm.imtls[keys[0]])
-    ll2 = numpy.log(cm.imtls[keys[1]])
-
-    # Unique site IDs
-    unique_sids = numpy.unique(ctx.sids)  # the test has a single site
+    ll1 = numpy.log(cm.imtls[imt1])
+    ll2 = numpy.log(cm.imtls[imt2])
 
     # mea and sig shape: G x M x N where G is the number of GMMs, M is the
-    # number of intensity measure types and N is the number of sites
+    # number of intensity measure types and N is the number ruptures
     R, M1, M2, S1, S2 = 0, 1, 2, 3, 4
     for gid, _ in enumerate(cm.gsims):
-        for sid in unique_sids:
-            acc = AccumDict(accum=numpy.zeros(5))
-            mask = ctx.sids == sid
+        acc = AccumDict(accum=numpy.zeros(5))
 
-            # Slices
-            slc1 = numpy.index_exp[gid, 0, mask]
-            slc2 = numpy.index_exp[gid, 1, mask]
+        # Slices
+        slc1 = numpy.index_exp[gid, 0]
+        slc2 = numpy.index_exp[gid, 1]
 
-            # Find indexes needed for binning the results
-            i_mea1 = numpy.searchsorted(be_mea, mea[slc1])
-            i_mea2 = numpy.searchsorted(be_mea, mea[slc2])
-            i_sig1 = numpy.searchsorted(be_sig, sig[slc1])
-            i_sig2 = numpy.searchsorted(be_sig, sig[slc2])
+        # Find indexes needed for binning the results
+        i_mea1 = numpy.searchsorted(be_mea, mea[slc1])
+        i_mea2 = numpy.searchsorted(be_mea, mea[slc2])
+        i_sig1 = numpy.searchsorted(be_sig, sig[slc1])
+        i_sig2 = numpy.searchsorted(be_sig, sig[slc2])
 
-            # Fix the last index
-            i_mea1[i_mea1 == len_be_mea] = len_be_mea - 1
-            i_mea2[i_mea2 == len_be_mea] = len_be_mea - 1
-            i_sig1[i_sig1 == len_be_sig] = len_be_sig - 1
-            i_sig2[i_sig2 == len_be_sig] = len_be_sig - 1
+        # Fix the last index
+        i_mea1[i_mea1 == len_be_mea] = len_be_mea - 1
+        i_mea2[i_mea2 == len_be_mea] = len_be_mea - 1
+        i_sig1[i_sig1 == len_be_sig] = len_be_sig - 1
+        i_sig2[i_sig2 == len_be_sig] = len_be_sig - 1
 
-            # Stacking results
-            idx, = numpy.where(mask)
-            for i, m1, m2, s1, s2 in zip(idx, i_mea1, i_mea2, i_sig1, i_sig2):
-                key = (m1, m2, s1, s2)
-                arr = acc[key]
-                arr[R] += ctx.occurrence_rate[i]
-                arr[M1] += ctx.occurrence_rate[i] * mea[gid, 0, i]
-                arr[M2] += ctx.occurrence_rate[i] * mea[gid, 1, i]
-                arr[S1] += ctx.occurrence_rate[i] * sig[gid, 0, i]
-                arr[S2] += ctx.occurrence_rate[i] * sig[gid, 1, i]
+        # Stacking results
+        for i, m1, m2, s1, s2 in zip(range(C), i_mea1, i_mea2, i_sig1, i_sig2):
+            key = (m1, m2, s1, s2)
+            arr = acc[key]
+            arr[R] += ctx.occurrence_rate[i]
+            arr[M1] += ctx.occurrence_rate[i] * mea[gid, 0, i]
+            arr[M2] += ctx.occurrence_rate[i] * mea[gid, 1, i]
+            arr[S1] += ctx.occurrence_rate[i] * sig[gid, 0, i]
+            arr[S2] += ctx.occurrence_rate[i] * sig[gid, 1, i]
 
-            # Compute MRD for all the combinations of GM and STD
-            for key, arr in acc.items():
-                # Covariance matrix
-                tsig1 = arr[S1] / arr[R]
-                tsig2 = arr[S2] / arr[R]
-                cov = corrm[0, 1] * tsig1 * tsig2
-                comtx = numpy.array([[tsig1**2, cov], [cov, tsig2**2]])
+        # Compute MRD for all the combinations of GM and STD
+        for key, arr in acc.items():
+            # Covariance matrix
+            tsig1 = arr[S1] / arr[R]
+            tsig2 = arr[S2] / arr[R]
+            cov = corrm[0, 1] * tsig1 * tsig2
+            comtx = numpy.array([[tsig1**2, cov], [cov, tsig2**2]])
 
-                # Get the MRD. The mean GM representing each bin is a weighted
-                # mean (based on the rate of occurrence) of the GM from each
-                # rupture
-                with monitor:
-                    means = [arr[M1] / arr[R], arr[M2] / arr[R]]
-                    partial = _get_mrd_one_rupture(means, comtx, ll1, ll2, rng)
+            # Get the MRD. The mean GM representing each bin is a weighted
+            # mean (based on the rate of occurrence) of the GM from each
+            # rupture
+            with monitor:
+                means = [arr[M1] / arr[R], arr[M2] / arr[R]]
+                partial = _get_mrd_one_rupture(means, comtx, ll1, ll2, rng)
 
-                # Updating the MRD for site sid and ground motion model gid
-                mrd[:, :, sid, gid] += arr[R] * partial
+            # Updating the MRD for site sid and ground motion model gid
+            mrd[:, :, gid] += arr[R] * partial
+
+
+def calc_mean_rate_dist(ctxt, cmaker, crosscorr, imt1, imt2,
+                        bins_mea, bins_sig, rng, mon=Monitor()):
+    """
+    :param srcs: a sequence of parametric sources
+    :param sitecol: a SiteCollection with few sites
+    :param cmaker: a ContextMaker instance
+    :param crosscorr: a CrossCorrelation instance
+    :param str imt1: first IMT to consider (must be inside cmaker.imtls)
+    :param str imt2: second IMT to consider (must be inside cmaker.imtls)
+    :param bins_mea: bins for the mean
+    :param bins_sig: bins for the standard deviation
+    :param rng: random number generator to use
+    """
+    G = len(cmaker.gsims)
+    imts = list(cmaker.imtls)
+    len1 = len(cmaker.imtls[imt1]) - 1
+    assert imt1 in cmaker.imtls, (imt1, imts)
+    assert imt2 in cmaker.imtls, (imt1, imts)
+    imts = [from_string(imt1), from_string(imt2)]
+    corrm = crosscorr.get_cross_correlation_mtx(imts)
+    sids = numpy.unique(ctxt.sids)
+    mrd = numpy.zeros((len1, len1, len(sids), G))
+    for i, sid in enumerate(sids):
+        update_mrd_indirect(
+            ctxt[ctxt.sids == sid], cmaker, corrm, imt1, imt2,
+            bins_mea, bins_sig, rng, mrd[:, :, i], mon)
+    return mrd
