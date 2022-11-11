@@ -116,22 +116,17 @@ def _get_mrd_one_rupture(means, comtx, im1, im2, rng):
 
     # Create bivariate gaussian distribution.
     mvn = sts.multivariate_normal(means, comtx, seed=rng)
-
-    # Lower-left
-    x1, x2 = numpy.meshgrid(im1[:-1], im2[:-1], sparse=False)
-    vals_ll = mvn.cdf(numpy.dstack((x1, x2)))
-    # Lower-right
-    x1, x2 = numpy.meshgrid(im1[1:], im2[:-1], sparse=False)
-    vals_lr = mvn.cdf(numpy.dstack((x1, x2)))
-    # Upper-left
-    x1, x2 = numpy.meshgrid(im1[:-1], im2[1:], sparse=False)
-    vals_ul = mvn.cdf(numpy.dstack((x1, x2)))
-    # Upper-right
-    x1, x2 = numpy.meshgrid(im1[1:], im2[1:], sparse=False)
-    vals_ur = mvn.cdf(numpy.dstack((x1, x2)))
+    len1 = len(im1) - 1
+    LL, LR, UL, UR = 0, 1, 2, 3  # lower-left lower-right upper-left upper-right
+    vals = numpy.zeros((4, len1, len1))
+    lst = [(im1[:-1], im2[:-1]), (im1[1:], im2[:-1]),
+           (im1[:-1], im2[1:]), (im1[1:], im2[1:])]
+    for i, (ll1, ll2) in enumerate(lst):
+        grid = numpy.meshgrid(ll1, ll2)
+        vals[i] = mvn.cdf(numpy.dstack(grid))  # shape LL2->LL
 
     # Compute the values in each cell
-    partial = vals_ur - vals_ul - vals_lr + vals_ll
+    partial = vals[UR] - vals[UL] - vals[LR] + vals[LL]
 
     # Remove values that go below zero (mostly numerical errors)
     partial[partial < 0] = 0.0
