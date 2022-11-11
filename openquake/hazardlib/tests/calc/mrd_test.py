@@ -177,8 +177,6 @@ class MRD01TestCase(unittest.TestCase):
         imls1 = self.oqp.imtls[self.imts[0]]
         imls2 = self.oqp.imtls[self.imts[1]]
         len1 = len(imls1)-1
-        len2 = len(imls2)-1
-        nsites = len(self.oqp.sites)
 
         # Compute the MRD: indirect
         imt1, imt2 = self.imts
@@ -186,7 +184,7 @@ class MRD01TestCase(unittest.TestCase):
                                    imt1, imt2, be_mea, be_sig, self.rng)
 
         # Compute the MRD: direct
-        mrdd = np.zeros((len1, len2, len(self.cmaker.gsims)))
+        mrdd = np.zeros((len1, len1, len(self.cmaker.gsims)))
         update_mrd(self.ctx, self.cmaker, self.crosscorr, mrdd, self.rng)
 
         np.testing.assert_almost_equal(mrdi[:,:, 0], mrdd)
