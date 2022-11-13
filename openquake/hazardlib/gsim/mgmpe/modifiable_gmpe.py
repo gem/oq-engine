@@ -392,7 +392,7 @@ class ModifiableGMPE(GMPE):
                 else:
                     g[methname](ctx, imt, mean_stds[:, m], **kw)
 
-            mean[m] = mean_stds[0]
-            sig[m] = mean_stds[1]
-            tau[m] = mean_stds[2]
-            phi[m] = mean_stds[3]
+        mean[:] = mean_stds[0]
+        sig[:] = mean_stds[1]
+        tau[:] = mean_stds[2]
+        phi[:] = mean_stds[3]
