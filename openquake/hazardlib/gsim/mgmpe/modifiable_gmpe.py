@@ -381,15 +381,14 @@ class ModifiableGMPE(GMPE):
         mean_stds = get_mean_stds(self.gmpe, ctx_rock, imts, mags=self.mags)
 
         g = globals()
-        horcom = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT 
-        for m, imt in enumerate(imts):
-            # Apply sequentially the modifications
-            for methname, kw in self.params.items():
-                if methname == 'horiz_comp_to_geom_mean':
-                    kw['horcom'] = horcom
-                    g[methname](ctx, imt, mean_stds[:, m], **kw)
-                    del kw['horcom']
-                else:
+        horcom = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
+        # Apply sequentially the modifications
+        for methname, kw in self.params.items():
+            if methname == 'horiz_comp_to_geom_mean':
+                for m, imt in enumerate(imts):
+                    g[methname](ctx, imt, mean_stds[:, m], horcom, **kw)
+            else:
+                for m, imt in enumerate(imts):
                     g[methname](ctx, imt, mean_stds[:, m], **kw)
 
         mean[:] = mean_stds[0]
