@@ -25,7 +25,6 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.contexts import get_mean_stds
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib import const
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.const import IMC
 from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
@@ -59,8 +58,9 @@ COEFF_PGA_PGV = {IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
                  IMC.RotD50: [1.009, 0, 1, 1, 0, 1]}
 
 
-# self is an instance of ModifiableGMPE
-def sigma_model_alatik2015(self, ctx, imt, mean_stds,
+# ################ BEGIN FUNCTIONS MODIFYING mean_stds ################## #
+
+def sigma_model_alatik2015(ctx, imt, mean_stds,
                            ergodic, tau_model, phi_ss_coetab, tau_coetab):
     """
     This function uses the sigma model of Al Atik (2015) as the standard
@@ -76,8 +76,7 @@ def sigma_model_alatik2015(self, ctx, imt, mean_stds,
     mean_stds[3] = phi
 
 
-# self is an instance of ModifiableGMPE
-def nrcan15_site_term(self, ctx, imt, mean_stds, kind):
+def nrcan15_site_term(ctx, imt, mean_stds, kind):
     """
     This function adds a site term to GMMs missing it
     """
@@ -87,8 +86,7 @@ def nrcan15_site_term(self, ctx, imt, mean_stds, kind):
     mean_stds[0] = np.log(np.exp(mean_stds[0]) * fa)
 
 
-# self is an instance of ModifiableGMPE
-def horiz_comp_to_geom_mean(self, ctx, imt, mean_stds):
+def horiz_comp_to_geom_mean(ctx, imt, mean_stds, horcom):
     """
     This function converts ground-motion obtained for a given description of
     horizontal component into ground-motion values for geometric_mean.
@@ -96,8 +94,6 @@ def horiz_comp_to_geom_mean(self, ctx, imt, mean_stds):
         - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
         - Boore and Kishida (2017): for RotD50
     """
-    horcom = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
-
     # IMT period
     T = imt.period
 
@@ -157,8 +153,7 @@ def horiz_comp_to_geom_mean(self, ctx, imt, mean_stds):
     mean_stds[1] = ((mean_stds[1]**2 - conv_sigma**2) / rstd**2)**0.5
 
 
-# self is an instance of ModifiableGMPE
-def add_between_within_stds(self, ctx, imt, mean_stds, with_betw_ratio):
+def add_between_within_stds(ctx, imt, mean_stds, with_betw_ratio):
     """
     This adds the between and within standard deviations to a model which has
     only the total standatd deviation. This function requires a ratio between
@@ -167,8 +162,6 @@ def add_between_within_stds(self, ctx, imt, mean_stds, with_betw_ratio):
     :param with_betw_ratio:
         The ratio between the within and between-event standard deviations
     """
-    setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
-            {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
     total = mean_stds[1]
     between = (total**2 / (1 + with_betw_ratio**2))**0.5
     within = with_betw_ratio * between
@@ -176,16 +169,14 @@ def add_between_within_stds(self, ctx, imt, mean_stds, with_betw_ratio):
     mean_stds[3] = within
 
 
-# self is an instance of ModifiableGMPE
-def apply_swiss_amplification(self, ctx, imt, mean_stds):
+def apply_swiss_amplification(ctx, imt, mean_stds):
     """
     Adds amplfactor to mean
     """
     mean_stds[0] += ctx.amplfactor
 
 
-# self is an instance of ModifiableGMPE
-def set_between_epsilon(self, ctx, imt, mean_stds, epsilon_tau):
+def set_between_epsilon(ctx, imt, mean_stds, epsilon_tau):
     """
     :param epsilon_tau:
         the epsilon value used to constrain the between event variability
@@ -200,8 +191,7 @@ def set_between_epsilon(self, ctx, imt, mean_stds, epsilon_tau):
     mean_stds[1] = mean_stds[3]
 
 
-# self is an instance of ModifiableGMPE
-def set_scale_median_scalar(self, ctx, imt, mean_stds, scaling_factor):
+def set_scale_median_scalar(ctx, imt, mean_stds, scaling_factor):
     """
     :param scaling_factor:
         Simple scaling factor (in linear space) to increase/decrease median
@@ -211,7 +201,7 @@ def set_scale_median_scalar(self, ctx, imt, mean_stds, scaling_factor):
 
 
 # self is an instance of ModifiableGMPE
-def set_scale_median_vector(self, ctx, imt, mean_stds, scaling_factor):
+def set_scale_median_vector(ctx, imt, mean_stds, scaling_factor):
     """
     :param scaling_factor:
         IMT-dependent median scaling factors (in linear space) as
@@ -222,7 +212,7 @@ def set_scale_median_vector(self, ctx, imt, mean_stds, scaling_factor):
 
 
 # self is an instance of ModifiableGMPE
-def set_scale_total_sigma_scalar(self, ctx, imt, mean_stds, scaling_factor):
+def set_scale_total_sigma_scalar(ctx, imt, mean_stds, scaling_factor):
     """
     Scale the total standard deviations by a constant scalar factor
     :param scaling_factor:
@@ -231,8 +221,7 @@ def set_scale_total_sigma_scalar(self, ctx, imt, mean_stds, scaling_factor):
     mean_stds[1] *= scaling_factor
 
 
-# self is an instance of ModifiableGMPE
-def set_scale_total_sigma_vector(self, ctx, imt, mean_stds, scaling_factor):
+def set_scale_total_sigma_vector(ctx, imt, mean_stds, scaling_factor):
     """
     Scale the total standard deviations by a IMT-dependent scalar factor
     :param scaling_factor:
@@ -243,8 +232,7 @@ def set_scale_total_sigma_vector(self, ctx, imt, mean_stds, scaling_factor):
     mean_stds[1] *= C["scaling_factor"]
 
 
-# self is an instance of ModifiableGMPE
-def set_fixed_total_sigma(self, ctx, imt, mean_stds, total_sigma):
+def set_fixed_total_sigma(ctx, imt, mean_stds, total_sigma):
     """
     Sets the total standard deviations to a fixed value per IMT
     :param total_sigma:
@@ -253,8 +241,7 @@ def set_fixed_total_sigma(self, ctx, imt, mean_stds, total_sigma):
     mean_stds[1] = total_sigma[imt]["total_sigma"]
 
 
-# self is an instance of ModifiableGMPE
-def add_delta_std_to_total_std(self, ctx, imt, mean_stds, delta):
+def add_delta_std_to_total_std(ctx, imt, mean_stds, delta):
     """
     :param delta:
         A delta std e.g. a phi S2S to be removed from total
@@ -262,13 +249,15 @@ def add_delta_std_to_total_std(self, ctx, imt, mean_stds, delta):
     mean_stds[1] = (mean_stds[1]**2 + np.sign(delta) * delta**2)**0.5
 
 
-# self is an instance of ModifiableGMPE
-def set_total_std_as_tau_plus_delta(self, ctx, imt, mean_stds, delta):
+def set_total_std_as_tau_plus_delta(ctx, imt, mean_stds, delta):
     """
     :param delta:
         A delta std e.g. a phi SS to be combined with between std, tau.
     """
     mean_stds[1] = (mean_stds[2]**2 + np.sign(delta) * delta**2)**0.5
+
+
+# ################ END OF FUNCTIONS MODIFYING mean_stds ################## #
 
 
 def _dict_to_coeffs_table(input_dict, name):
@@ -290,14 +279,7 @@ class ModifiableGMPE(GMPE):
         The name of a GMPE class used for the calculation.
     :param params:
         A dictionary where the key defines the required modification and the
-        value is a list with the required parameters. The modifications
-        currently supported are:
-        - 'set_between_epsilon' This sets the epsilon of the between event
-           variability i.e. the returned mean is the original + tau * episilon
-           and sigma tot is equal to sigma_within
-        - 'apply_swiss_amplification' This applies intensity amplification
-           factors to the mean intensity returned by the parent GMPE/IPE based
-           on the input 'amplfactor' site parameter
+        value is a list with the required parameters.
     """
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
@@ -317,6 +299,10 @@ class ModifiableGMPE(GMPE):
         self.params = kwargs  # non-gmpe parameters
         self.gmpe = registry[gmpe_name](**kw)
         self.set_parameters()
+
+        if 'add_between_within_stds' in self.params:
+            setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
+                    {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
 
         # This is required by the `sigma_model_alatik2015` function
         key = 'sigma_model_alatik2015'
@@ -378,7 +364,6 @@ class ModifiableGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-
         if ('set_between_epsilon' in self.params or
             'set_total_std_as_tau_plus_delta' in self.params) and (
                 StdDev.INTER_EVENT not in
@@ -396,10 +381,16 @@ class ModifiableGMPE(GMPE):
         mean_stds = get_mean_stds(self.gmpe, ctx_rock, imts, mags=self.mags)
 
         g = globals()
+        horcom = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT 
         for m, imt in enumerate(imts):
             # Apply sequentially the modifications
             for methname, kw in self.params.items():
-                g[methname](self, ctx, imt, mean_stds[:, m], **kw)
+                if methname == 'horiz_comp_to_geom_mean':
+                    kw['horcom'] = horcom
+                    g[methname](ctx, imt, mean_stds[:, m], **kw)
+                    del kw['horcom']
+                else:
+                    g[methname](ctx, imt, mean_stds[:, m], **kw)
 
             mean[m] = mean_stds[0]
             sig[m] = mean_stds[1]
