@@ -378,21 +378,22 @@ class ModifiableGMPE(GMPE):
         if 'nrcan15_site_term' in self.params:
             ctx_copy.vs30 = np.full_like(ctx.vs30, 760.)  # rock
 
-        # Compute the original mean and standard deviations, shape (4, M, N)
-        mean_stds = get_mean_stds(self.gmpe, ctx_copy, imts, mags=self.mags)
-
         g = globals()
         horcom = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
-        # Apply sequentially the modifications
-        for methname, kw in self.params.items():
-            if methname == 'horiz_comp_to_geom_mean':
-                for m, imt in enumerate(imts):
-                    g[methname](ctx, imt, mean_stds[:, m], horcom, **kw)
-            else:
-                for m, imt in enumerate(imts):
-                    g[methname](ctx, imt, mean_stds[:, m], **kw)
+        for m, imt in enumerate(imts):
 
-        mean[:] = mean_stds[0]
-        sig[:] = mean_stds[1]
-        tau[:] = mean_stds[2]
-        phi[:] = mean_stds[3]
+            # Compute the original mean and standard deviations, shape (4, N)
+            mean_stds = get_mean_stds(
+                self.gmpe, ctx_copy, [imt], mags=self.mags)
+
+            # Apply sequentially the modifications
+            for methname, kw in self.params.items():
+                if methname == 'horiz_comp_to_geom_mean':
+                    g[methname](ctx, imt, mean_stds, horcom, **kw)
+                else:
+                    g[methname](ctx, imt, mean_stds, **kw)
+
+            mean[m] = mean_stds[0]
+            sig[m] = mean_stds[1]
+            tau[m] = mean_stds[2]
+            phi[m] = mean_stds[3]
