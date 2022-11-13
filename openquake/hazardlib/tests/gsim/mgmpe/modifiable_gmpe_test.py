@@ -129,14 +129,9 @@ class ModifiableGMPETest(unittest.TestCase):
 
     def test_set_between_epsilon_raises_error(self):
         """ Check that error is raised for GMPEs with only total std """
-
-        stds_types = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
-                      const.StdDev.INTRA_EVENT]
-        gmm = ModifiableGMPE(gmpe={'Campbell2003': {}},
-                             set_between_epsilon={'epsilon_tau': 0.5})
         with self.assertRaises(ValueError):
-            gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                     self.imt, stds_types)
+            ModifiableGMPE(gmpe={'Campbell2003': {}},
+                           set_between_epsilon={'epsilon_tau': 0.5})
 
     def test_get_mean_std(self):
         """ Check calculation of mean and stds """

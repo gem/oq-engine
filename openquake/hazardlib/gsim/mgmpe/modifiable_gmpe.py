@@ -300,6 +300,12 @@ class ModifiableGMPE(GMPE):
         self.gmpe = registry[gmpe_name](**kw)
         self.set_parameters()
 
+        if ('set_between_epsilon' in self.params or
+            'set_total_std_as_tau_plus_delta' in self.params) and (
+                StdDev.INTER_EVENT not in
+                self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
+            raise ValueError('%s does not have between event std' % self.gmpe)
+
         if 'apply_swiss_amplification' in self.params:
             self.gmpe.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
 
@@ -367,11 +373,6 @@ class ModifiableGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        if ('set_between_epsilon' in self.params or
-            'set_total_std_as_tau_plus_delta' in self.params) and (
-                StdDev.INTER_EVENT not in
-                self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
-            raise ValueError('The GMPE does not have between event std')
 
         ctx_copy = copy.copy(ctx)
         if 'nrcan15_site_term' in self.params:
