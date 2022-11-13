@@ -373,12 +373,12 @@ class ModifiableGMPE(GMPE):
         if 'apply_swiss_amplification' in self.params:
             self.gmpe.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
 
-        ctx_rock = copy.copy(ctx)
+        ctx_copy = copy.copy(ctx)
         if 'nrcan15_site_term' in self.params:
-            ctx_rock.vs30 = np.full_like(ctx.vs30, 760.)
+            ctx_copy.vs30 = np.full_like(ctx.vs30, 760.)  # rock
 
         # Compute the original mean and standard deviations, shape (4, M, N)
-        mean_stds = get_mean_stds(self.gmpe, ctx_rock, imts, mags=self.mags)
+        mean_stds = get_mean_stds(self.gmpe, ctx_copy, imts, mags=self.mags)
 
         g = globals()
         horcom = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
