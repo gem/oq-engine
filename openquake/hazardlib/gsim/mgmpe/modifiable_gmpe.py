@@ -300,6 +300,9 @@ class ModifiableGMPE(GMPE):
         self.gmpe = registry[gmpe_name](**kw)
         self.set_parameters()
 
+        if 'apply_swiss_amplification' in self.params:
+            self.gmpe.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
+
         if 'add_between_within_stds' in self.params:
             setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
                     {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
@@ -369,9 +372,6 @@ class ModifiableGMPE(GMPE):
                 StdDev.INTER_EVENT not in
                 self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
             raise ValueError('The GMPE does not have between event std')
-
-        if 'apply_swiss_amplification' in self.params:
-            self.gmpe.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
 
         ctx_copy = copy.copy(ctx)
         if 'nrcan15_site_term' in self.params:
