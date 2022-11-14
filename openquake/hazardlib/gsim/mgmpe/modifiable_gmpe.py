@@ -380,20 +380,18 @@ class ModifiableGMPE(GMPE):
 
         g = globals()
         horcom = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
-        for m, imt in enumerate(imts):
+        # Compute the original mean and standard deviations, shape (4, M, N)
+        mean_stds = get_mean_stds(self.gmpe, ctx_copy, imts, mags=self.mags)
 
-            # Compute the original mean and standard deviations, shape (4, N)
-            mean_stds = get_mean_stds(
-                self.gmpe, ctx_copy, [imt], mags=self.mags)
-
-            # Apply sequentially the modifications
-            for methname, kw in self.params.items():
+        # Apply sequentially the modifications
+        for methname, kw in self.params.items():
+            for m, imt in enumerate(imts):
                 if methname == 'horiz_comp_to_geom_mean':
-                    g[methname](ctx, imt, mean_stds, horcom, **kw)
+                    g[methname](ctx, imt, mean_stds[:, m], horcom, **kw)
                 else:
-                    g[methname](ctx, imt, mean_stds, **kw)
+                    g[methname](ctx, imt, mean_stds[:, m], **kw)
 
-            mean[m] = mean_stds[0]
-            sig[m] = mean_stds[1]
-            tau[m] = mean_stds[2]
-            phi[m] = mean_stds[3]
+        mean[:] = mean_stds[0]
+        sig[:] = mean_stds[1]
+        tau[:] = mean_stds[2]
+        phi[:] = mean_stds[3]
