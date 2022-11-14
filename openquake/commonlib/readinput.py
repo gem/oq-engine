@@ -936,20 +936,24 @@ def get_station_data(oqparam):
     """
     if 'station_data' in oqparam.inputs:
         fname = oqparam.inputs['station_data']
-        sdata = pandas.read_csv(fname).set_index(["STATION_ID", "LONGITUDE", "LATITUDE"])
+        sdata = pandas.read_csv(fname)
 
         # Identify the columns with IM values
         # Replace replace() with removesuffix() for pandas ≥ 1.4
         imt_candidates = sdata.filter(regex="_VALUE$").columns.str.replace("_VALUE", "")
         imts = [valid.intensity_measure_type(imt) for imt in imt_candidates]
-        im_cols = pandas.MultiIndex.from_product([imts, ["mean", "std"]], names=["IMT", "VALUES"])
+        im_cols = [imt + '_' + stat for imt in imts for stat in ["mean", "std"]]
+        station_cols = ["STATION_ID", "LONGITUDE", "LATITUDE"]
         cols = []
         for imt in imts:
             stddev_str = "STDDEV" if imt == "MMI" else "LN_SIGMA"
             cols.append(imt + '_VALUE')
             cols.append(imt + '_' + stddev_str)
-        sd = pandas.DataFrame(sdata[cols].values, index=sdata.index, columns=im_cols)
-    return sd, imts
+        station_data = pandas.DataFrame(sdata[cols].values, columns=im_cols)
+        station_sites = pandas.DataFrame(
+            sdata[station_cols].values, columns=["station_id", "lon", "lat"]
+        ).astype({"station_id": str, "lon": F64, "lat": F64})
+    return station_data, station_sites, imts
 
 
 def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
