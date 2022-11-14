@@ -33,14 +33,17 @@ except ImportError:
         "Do nothing"
 
 
-def _streamer():
+def _streamer(ctrl_port):
     # streamer for zmq workers running on the master node
-    port = int(config.zworkers.ctrl_port)
-    task_input_url = 'tcp://0.0.0.0:%d' % (port + 2)
-    task_output_url = 'tcp://%s:%s' % (config.dbserver.listen, port + 1)
+    task_input_url = 'tcp://0.0.0.0:%d' % (ctrl_port + 2)
+    task_output_url = 'tcp://%s:%s' % (config.dbserver.listen, ctrl_port + 1)
+    if (general.socket_ready(('0.0.0.0', ctrl_port + 1)) or
+        general.socket_ready(('0.0.0.0', ctrl_port + 2))):
+        return  # already started
+    sock_in = z.bind(task_input_url, z.zmq.PULL)
+    sock_out = z.bind(task_output_url, z.zmq.PUSH)
     try:
-        z.zmq.proxy(z.bind(task_input_url, z.zmq.PULL),
-                    z.bind(task_output_url, z.zmq.PUSH))
+        z.zmq.proxy(sock_in, sock_out)
     except (KeyboardInterrupt, z.zmq.ContextTerminated):
         pass  # killed cleanly by SIGINT/SIGTERM
 
