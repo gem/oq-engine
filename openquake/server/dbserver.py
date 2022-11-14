@@ -79,11 +79,6 @@ class DbServer(object):
             dworkers.append(sock)
         logging.warning('DB server started with %s on %s, pid %d',
                         sys.executable, self.frontend, self.pid)
-        if p.OQDIST == 'zmq':
-            # start task_in->task_server streamer thread
-            threading.Thread(target=w._streamer, daemon=True).start()
-            logging.warning('Task streamer started on port %d',
-                            int(config.zworkers.ctrl_port) + 1)
         # start frontend->backend proxy for the database workers
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),

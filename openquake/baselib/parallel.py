@@ -198,7 +198,7 @@ import multiprocessing.dummy
 import multiprocessing.shared_memory as shmem
 import subprocess
 import psutil
-import getpass
+import threading
 import numpy
 try:
     from setproctitle import setproctitle
@@ -1059,6 +1059,15 @@ def workers_start(zworkers):
     """
     if OQDIST in 'no processpool':
         return
+    if OQDIST == 'zmq':
+        # start task_in->task_server streamer thread
+        port = int(zworkers.ctrl_port)
+        threading.Thread(
+            target=workerpool._streamer, args=(port,), daemon=True
+        ).start()
+        logging.warning('Task streamer started on port %d',
+                        int(zworkers.ctrl_port) + 1)
+
     for host, cores, args in workerpool.ssh_args(zworkers):
         if OQDIST == 'dask':
             sched = config.distribution.dask_scheduler
@@ -1071,7 +1080,8 @@ def workers_start(zworkers):
             if cores != '-1':
                 args += ['-c', cores]
         elif OQDIST == 'zmq':
-            args += ['-m', 'openquake.baselib.workerpool', '-n', cores]
+            url = 'tcp://0.0.0.0:%s' % zworkers.ctrl_port
+            args += ['-m', 'openquake.baselib.workerpool', url, '-n', cores]
         subprocess.Popen(args, start_new_session=True)
         logging.info(args)
 
