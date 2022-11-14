@@ -198,7 +198,7 @@ import multiprocessing.dummy
 import multiprocessing.shared_memory as shmem
 import subprocess
 import psutil
-import getpass
+import threading
 import numpy
 try:
     from setproctitle import setproctitle
@@ -1053,26 +1053,22 @@ def split_task(elements, func, args, duration, outs_per_task, monitor):
 OQDIST = oq_distribute()
 
 
-def ssh_args(zworkers):
-    remote_python = zworkers.remote_python or sys.executable
-    remote_user = zworkers.remote_user or getpass.getuser()
-    if zworkers.host_cores.strip():
-        for hostcores in config.zworkers.host_cores.split(','):
-            host, cores = hostcores.split()
-            if host == '127.0.0.1':  # localhost
-                yield host, cores, [sys.executable]
-            else:
-                yield host, cores, [
-                    'ssh', '-f', '-T', remote_user + '@' + host, remote_python]
-
-
 def workers_start(zworkers):
     """
     Start the remote workers with ssh
     """
     if OQDIST in 'no processpool':
         return
-    for host, cores, args in ssh_args(zworkers):
+    if OQDIST == 'zmq':
+        # start task_in->task_server streamer thread
+        port = int(zworkers.ctrl_port)
+        threading.Thread(
+            target=workerpool._streamer, args=(port,), daemon=True
+        ).start()
+        logging.warning('Task streamer started on port %d',
+                        int(zworkers.ctrl_port) + 1)
+
+    for host, cores, args in workerpool.ssh_args(zworkers):
         if OQDIST == 'dask':
             sched = config.distribution.dask_scheduler
             args += ['-m', 'distributed.cli.dask_worker', sched,
@@ -1084,7 +1080,8 @@ def workers_start(zworkers):
             if cores != '-1':
                 args += ['-c', cores]
         elif OQDIST == 'zmq':
-            args += ['-m', 'openquake.baselib.workerpool', '-n', cores]
+            url = 'tcp://0.0.0.0:%s' % zworkers.ctrl_port
+            args += ['-m', 'openquake.baselib.workerpool', url, '-n', cores]
         subprocess.Popen(args, start_new_session=True)
         logging.info(args)
 
