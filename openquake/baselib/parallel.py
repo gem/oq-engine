@@ -1053,26 +1053,13 @@ def split_task(elements, func, args, duration, outs_per_task, monitor):
 OQDIST = oq_distribute()
 
 
-def ssh_args(zworkers):
-    remote_python = zworkers.remote_python or sys.executable
-    remote_user = zworkers.remote_user or getpass.getuser()
-    if zworkers.host_cores.strip():
-        for hostcores in config.zworkers.host_cores.split(','):
-            host, cores = hostcores.split()
-            if host == '127.0.0.1':  # localhost
-                yield host, cores, [sys.executable]
-            else:
-                yield host, cores, [
-                    'ssh', '-f', '-T', remote_user + '@' + host, remote_python]
-
-
 def workers_start(zworkers):
     """
     Start the remote workers with ssh
     """
     if OQDIST in 'no processpool':
         return
-    for host, cores, args in ssh_args(zworkers):
+    for host, cores, args in workerpool.ssh_args(zworkers):
         if OQDIST == 'dask':
             sched = config.distribution.dask_scheduler
             args += ['-m', 'distributed.cli.dask_worker', sched,

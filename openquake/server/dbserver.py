@@ -29,7 +29,6 @@ from openquake.baselib import (
 from openquake.baselib.general import socket_ready, detach_process
 from openquake.hazardlib import valid
 from openquake.commonlib import logs
-from openquake.engine import __version__
 from openquake.server.db import actions
 from openquake.commonlib.dbapi import db
 from openquake.server import __file__ as server_path
@@ -45,10 +44,6 @@ class DbServer(object):
         self.backend = 'inproc://dbworkers'
         self.num_workers = num_workers
         self.pid = os.getpid()
-        if p.OQDIST == 'zmq':
-            self.zmaster = w.WorkerMaster(config.zworkers)
-        else:
-            self.zmaster = None
 
     def dworker(self, sock):
         # a database worker responding to commands
@@ -59,9 +54,8 @@ class DbServer(object):
                     sock.send(self.pid)
                     continue
                 elif cmd.startswith('workers_'):
-                    # engine.run_jobs calls logs.dbcmd(cmd)
+                    # call parallel.workers_start et similar routines
                     msg = getattr(p, cmd)(*args)
-                    logging.info(msg)
                     sock.send(msg)
                     continue
                 try:
@@ -90,9 +84,6 @@ class DbServer(object):
             threading.Thread(target=w._streamer, daemon=True).start()
             logging.warning('Task streamer started on port %d',
                             int(config.zworkers.ctrl_port) + 1)
-            if 'git' not in __version__:
-                # in production installations start the zworkers
-                self.zmaster.start()
         # start frontend->backend proxy for the database workers
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
@@ -107,10 +98,9 @@ class DbServer(object):
             self.stop()
 
     def stop(self):
-        """Stop the DbServer and the zworkers if any"""
-        if p.OQDIST == 'zmq':
-            self.zmaster.stop()
-            z.context.term()
+        """
+        Stop the DbServer
+        """
         self.db.close()
 
 
