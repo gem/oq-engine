@@ -55,7 +55,6 @@ class DbServer(object):
                     continue
                 elif cmd.startswith('workers_'):
                     # call parallel.workers_start et similar routines
-                    logging.info('Calling %s', cmd_)
                     msg = getattr(p, cmd)(*args)
                     sock.send(msg)
                     continue
