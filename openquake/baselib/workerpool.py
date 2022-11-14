@@ -52,7 +52,7 @@ def ssh_args(zworkers):
     remote_python = zworkers.remote_python or sys.executable
     remote_user = zworkers.remote_user or getpass.getuser()
     if zworkers.host_cores.strip():
-        for hostcores in config.zworkers.host_cores.split(','):
+        for hostcores in zworkers.host_cores.split(','):
             host, cores = hostcores.split()
             if host == '127.0.0.1':  # localhost
                 yield host, cores, [sys.executable]
