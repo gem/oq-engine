@@ -897,7 +897,7 @@ sleep 10
 # sudo systemctl status openquake-dbserver openquake-celery
 sudo systemctl status openquake-dbserver
 
-celery_wait $GEM_MAXLOOP
+# celery_wait $GEM_MAXLOOP
 
         # oq celery status
         oq engine --run risk/EventBasedRisk/job.ini || echo \"distribution with celery not supported without master and/or worker packages\"
