@@ -71,6 +71,18 @@ F32 = numpy.float32
 # Η (capital Greek η, not Latin H) = normalized between-event residual
 # δB = between-event residual, or bias
 
+class NoInterIntraStdDevs(Exception):
+    def __init__(self, gsim):
+        self.gsim = gsim
+
+    def __str__(self):
+        return '''\
+You cannot use the conditioned ground shaking module with the GSIM %s, \
+that defines only the total standard deviation. If you wish to use the \
+conditioned ground shaking module you have to select a GSIM that provides \
+the inter and intra event standard deviations, or use the ModifiableGMPE \
+with `add_between_within_stds.with_betw_ratio`.''' % (
+            self.gsim.__class__.__name__)
 
 class ConditionedGmfComputer(GmfComputer):
     """
@@ -299,6 +311,13 @@ def get_conditioned_mean_and_covariance(
     gmm_name = gmm.__class__.__name__
     if gmm_name == 'ModifiableGMPE':
         gmm_name = gmm.gmpe.__class__.__name__
+
+    if gmm.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
+        modifications = list(gmm.kwargs.keys())
+        if not (type(gmm).__name__ == 'ModifiableGMPE' and
+                'add_between_within_stds' in modifications):
+            raise NoInterIntraStdDevs(gmm)
+
     num_target_sites = len(target_sitecol)
     num_station_sites = len(station_sitecol)
 
