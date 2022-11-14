@@ -861,7 +861,7 @@ _pkgtest_innervm_run () {
 
         sudo apt-get install -y python3-oq-engine-master python3-oq-engine-worker
         # Switch to celery mode
-        sudo sed -i 's/oq_distribute = processpool/oq_distribute = celery/;' /etc/openquake/openquake.cfg
+        # sudo sed -i 's/oq_distribute = processpool/oq_distribute = celery/;' /etc/openquake/openquake.cfg
 
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
 celery_wait() {
@@ -899,7 +899,7 @@ sudo systemctl status openquake-dbserver
 
 celery_wait $GEM_MAXLOOP
 
-        oq celery status
+        # oq celery status
         oq engine --run risk/EventBasedRisk/job.ini || echo \"distribution with celery not supported without master and/or worker packages\"
 
         # Try to export a set of results AFTER the calculation
