@@ -45,6 +45,22 @@ def _streamer():
         pass  # killed cleanly by SIGINT/SIGTERM
 
 
+def ssh_args(zworkers):
+    """
+    :yields: triples (hostIP, num_cores, [ssh remote python command])
+    """
+    remote_python = zworkers.remote_python or sys.executable
+    remote_user = zworkers.remote_user or getpass.getuser()
+    if zworkers.host_cores.strip():
+        for hostcores in config.zworkers.host_cores.split(','):
+            host, cores = hostcores.split()
+            if host == '127.0.0.1':  # localhost
+                yield host, cores, [sys.executable]
+            else:
+                yield host, cores, [
+                    'ssh', '-f', '-T', remote_user + '@' + host, remote_python]
+
+
 class WorkerMaster(object):
     """
     :param ctrl_port: port on which the worker pools listen
@@ -52,6 +68,7 @@ class WorkerMaster(object):
     :param remote_python: path of the Python executable on the remote hosts
     """
     def __init__(self, zworkers=config.zworkers, receiver_ports=None):
+        self.zworkers = zworkers
         # NB: receiver_ports is not used but needed for compliance
         self.ctrl_port = int(zworkers.ctrl_port)
         self.host_cores = ([hc.split() for hc in zworkers.host_cores.split(',')]
@@ -70,16 +87,11 @@ class WorkerMaster(object):
         assuming there is an active streamer.
         """
         starting = []
-        for host, cores in self.host_cores:
+        for host, cores, args in ssh_args(self.zworkers):
             if general.socket_ready((host, self.ctrl_port)):
                 print('%s:%s already running' % (host, self.ctrl_port))
                 continue
             ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
-            if host == '127.0.0.1':  # localhost
-                args = [sys.executable]
-            else:
-                args = ['ssh', '-f', '-T', f'{self.remote_user}@{host}',
-                        self.remote_python]
             args += ['-m', 'openquake.baselib.workerpool', ctrl_url,
                      '-n', cores]
             if host != '127.0.0.1':
@@ -116,9 +128,8 @@ class WorkerMaster(object):
         in case of hard out of memory situations
         """
         killed = []
-        for host, _ in self.host_cores:
-            args = ['ssh', '-f', '-T', f'{self.remote_user}@{host}',
-                    'killall', '-u', 'openquake']
+        for host, cores, args in ssh_args(self.zworkers):
+            args = args[:-1] + ['killall', '-u', 'openquake']
             if host != '127.0.0.1':
                 print(' '.join(args))
             subprocess.run(args)
