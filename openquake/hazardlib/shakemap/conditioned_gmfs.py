@@ -297,6 +297,8 @@ def get_conditioned_mean_and_covariance(
     cross_correl_within,
 ):
     gmm_name = gmm.__class__.__name__
+    if gmm_name == 'ModifiableGMPE':
+        gmm_name = gmm.gmpe.__class__.__name__
     num_target_sites = len(target_sitecol)
     num_station_sites = len(station_sitecol)
 
