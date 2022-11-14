@@ -31,6 +31,7 @@ from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.calc.filters import nofilter, getdefault, SourceFilter
 from openquake.hazardlib.calc.gmf import GmfComputer
+from openquake.hazardlib.shakemap.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
@@ -101,13 +102,26 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                     continue
                 proxy.geom = rupgeoms[proxy['geom_id']]
                 ebr = proxy.to_ebr(cmaker.trt)  # after the geometry is set
-                try:
-                    computer = GmfComputer(
-                        ebr, srcfilter.sitecol.filtered(sids), cmaker,
-                        oqparam.correl_model, oqparam.cross_correl,
-                        oqparam._amplifier, oqparam._sec_perils)
-                except FarAwayRupture:
-                    continue
+                if "station_data" in oqparam.inputs:
+                    station_sites = dstore.read_df('station_sites')
+                    station_data = dstore.read_df('station_data')
+                    try:
+                        computer = ConditionedGmfComputer(
+                            ebr, srcfilter.sitecol.filtered(sids), 
+                            station_sites, station_data, oqparam.observed_imts,
+                            cmaker, oqparam.correl_model, oqparam.cross_correl,
+                            oqparam.ground_motion_correlation_params,
+                            oqparam._amplifier, oqparam._sec_perils)
+                    except FarAwayRupture:
+                        continue
+                else:
+                    try:
+                        computer = GmfComputer(
+                            ebr, srcfilter.sitecol.filtered(sids), cmaker,
+                            oqparam.correl_model, oqparam.cross_correl,
+                            oqparam._amplifier, oqparam._sec_perils)
+                    except FarAwayRupture:
+                        continue
             with cmon:
                 data = computer.compute_all(sig_eps)
             dt = time.time() - t0
