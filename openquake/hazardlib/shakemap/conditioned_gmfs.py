@@ -571,7 +571,9 @@ def get_conditioned_mean_and_covariance(
 
         # Store the results in a dictionary keyed by target IMT
         # The four arrays below have different dimensions, so
-        # a numpy
+        # unlike the regular gsim get_mean_std, a numpy ndarray
+        # won't work well as the 4 components will be non-
+        # homogeneous
         mu_Y_yD_dict[target_imt.string] = mu_Y_yD
         cov_Y_Y_yD_dict[target_imt.string] = cov_Y_Y_yD
         cov_WY_WY_wD_dict[target_imt.string] = cov_WY_WY_wD
