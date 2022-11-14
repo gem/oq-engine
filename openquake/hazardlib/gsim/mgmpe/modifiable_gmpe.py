@@ -36,8 +36,8 @@ from openquake.hazardlib.gsim.nga_east import (
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
 
 
-# List of the horizontal component definitions that can be converted into
-# geometric mean
+# #### horizontal components that can be converted into geometric means #### #
+
 OK_COMPONENTS = ['GMRotI50', 'RANDOM_HORIZONTAL',
                  'GREATER_OF_TWO_HORIZONTAL', 'RotD50']
 
@@ -82,8 +82,9 @@ def nrcan15_site_term(ctx, imt, mean_stds, kind):
     """
     C = NRCan15SiteTerm.COEFFS_BA08[imt]
     C2 = NRCan15SiteTerm.COEFFS_AB06r[imt]
-    fa = BA08_AB06(kind, C, C2, ctx.vs30, imt, np.exp(mean_stds[0]))
-    mean_stds[0] = np.log(np.exp(mean_stds[0]) * fa)
+    exp_mean = np.exp(mean_stds[0])
+    fa = BA08_AB06(kind, C, C2, ctx.vs30, imt, exp_mean)
+    mean_stds[0] = np.log(exp_mean * fa)
 
 
 def horiz_comp_to_geom_mean(ctx, imt, mean_stds, horcom):
@@ -94,10 +95,7 @@ def horiz_comp_to_geom_mean(ctx, imt, mean_stds, horcom):
         - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
         - Boore and Kishida (2017): for RotD50
     """
-    # IMT period
     T = imt.period
-
-    # Get the string defining the horizontal component
     comp = horcom._name_
 
     # Apply the conversion
@@ -185,7 +183,7 @@ def set_between_epsilon(ctx, imt, mean_stds, epsilon_tau):
     mean_stds[0] += epsilon_tau * mean_stds[2]
 
     # set between event variability to 0
-    mean_stds[2] = np.zeros_like(mean_stds[0])
+    mean_stds[2] = 0
 
     # set total variability equal to the within-event one
     mean_stds[1] = mean_stds[3]
@@ -207,8 +205,7 @@ def set_scale_median_vector(ctx, imt, mean_stds, scaling_factor):
         IMT-dependent median scaling factors (in linear space) as
         a CoeffsTable
     """
-    C = scaling_factor[imt]
-    mean_stds[0] += np.log(C["scaling_factor"])
+    mean_stds[0] += np.log(scaling_factor[imt]["scaling_factor"])
 
 
 # self is an instance of ModifiableGMPE
@@ -228,8 +225,7 @@ def set_scale_total_sigma_vector(ctx, imt, mean_stds, scaling_factor):
         IMT-dependent total standard deviation scaling factors as a
         CoeffsTable
     """
-    C = scaling_factor[imt]
-    mean_stds[1] *= C["scaling_factor"]
+    mean_stds[1] *= scaling_factor[imt]["scaling_factor"]
 
 
 def set_fixed_total_sigma(ctx, imt, mean_stds, total_sigma):
