@@ -37,10 +37,10 @@ sids,mag,rrup
 
 
 def test_compute_histogram():
-    aw = hdf5.read_csv(general.gettemp(rupdata),
-                       {'sids': numpy.uint32, None: float})
-    ctx = aw.array.view(numpy.recarray)
-    #import pdb; pdb.set_trace()
+    ctx = hdf5.read_csv(
+        general.gettemp(rupdata),
+        {'sids': numpy.uint32, 'mag': float, 'rrup': float}
+    ).array.view(numpy.recarray)
     params = {'mag': numpy.unique(ctx.mag), 'imtls': {'PGA': [.1, .2]}}
     cmaker = ContextMaker('*', [], params)
     
