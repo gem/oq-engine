@@ -698,7 +698,7 @@ def view_task_hazard(token, dstore):
     num_ruptures = sdata.nrupts.sum()
     eff_sites = sdata.nsites.sum()
     msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
-             'eff_sites={:_d}, weight={:.1f}, duration={:.1f} s').format(
+             'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
                  taskno, len(sdata), num_ruptures, eff_sites,
                  rec['weight'], rec['duration'])
     return msg
