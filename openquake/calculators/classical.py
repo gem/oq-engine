@@ -25,6 +25,7 @@ import operator
 import numpy
 import pandas
 try:
+    import tkinter
     from PIL import Image
 except ImportError:
     Image = None
