@@ -71,18 +71,21 @@ F32 = numpy.float32
 # Η (capital Greek η, not Latin H) = normalized between-event residual
 # δB = between-event residual, or bias
 
+
 class NoInterIntraStdDevs(Exception):
     def __init__(self, gsim):
         self.gsim = gsim
 
     def __str__(self):
-        return '''\
+        return """\
 You cannot use the conditioned ground shaking module with the GSIM %s, \
 that defines only the total standard deviation. If you wish to use the \
 conditioned ground shaking module you have to select a GSIM that provides \
 the inter and intra event standard deviations, or use the ModifiableGMPE \
-with `add_between_within_stds.with_betw_ratio`.''' % (
-            self.gsim.__class__.__name__)
+with `add_between_within_stds.with_betw_ratio`.""" % (
+            self.gsim.__class__.__name__
+        )
+
 
 class ConditionedGmfComputer(GmfComputer):
     """
@@ -191,6 +194,7 @@ class ConditionedGmfComputer(GmfComputer):
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
+        rng = numpy.random.default_rng()
 
         for g, (gmm, rlzs) in enumerate(rlzs_by_gsim.items()):
             num_events = sum(len(eids_by_rlz[rlz]) for rlz in rlzs)
@@ -212,7 +216,7 @@ class ConditionedGmfComputer(GmfComputer):
                 self.cross_correl_within,
             )
 
-            array, sig, eps = self.compute(gmm, num_events, mean_covs)
+            array, sig, eps = self.compute(gmm, num_events, mean_covs, rng)
             M, N, E = array.shape  # sig and eps have shapes (M, E) instead
             for n in range(N):
                 for e in range(E):
@@ -249,7 +253,7 @@ class ConditionedGmfComputer(GmfComputer):
                 n += len(eids)
         return data
 
-    def compute(self, gsim, num_events, mean_covs):
+    def compute(self, gsim, num_events, mean_covs, rng):
         """
         :param gsim: GSIM used to compute mean_stds
         :param num_events: the number of seismic events
@@ -265,8 +269,7 @@ class ConditionedGmfComputer(GmfComputer):
         sig = numpy.zeros((M, num_events), F32)  # same for all events
         eps = numpy.zeros((M, num_events), F32)  # not the same
         numpy.random.seed(self.seed)
-        rng = numpy.random.default_rng()
-        
+
         for m, imt in enumerate(self.imts):
             mu_Y_yD = mean_covs[0][imt.string]
             # cov_Y_Y_yD = mean_covs[1][imt.string]
@@ -274,7 +277,7 @@ class ConditionedGmfComputer(GmfComputer):
             cov_BY_BY_yD = mean_covs[3][imt.string]
             try:
                 result[m], sig[m], eps[m] = self._compute(
-                   mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, imt, num_events
+                    mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, imt, num_events, rng
                 )
             except Exception as exc:
                 raise RuntimeError(
@@ -285,14 +288,26 @@ class ConditionedGmfComputer(GmfComputer):
             self.amplifier.amplify_gmfs(self.ctx.ampcode, result, self.imts, self.seed)
         return result, sig, eps
 
-    def _compute(self, mu_Y, cov_WY_WY, cov_BY_BY, imt, num_events):
+    def _compute(self, mu_Y, cov_WY_WY, cov_BY_BY, imt, num_events, rng):
         if self.cmaker.truncation_level == 0:
             gmf = exp(mu_Y, imt)
             gmf = gmf.repeat(num_events, axis=1)
             inter_sig = 0
             inter_eps = [numpy.zeros(num_events)]
         else:
-            return
+            gmf = exp(
+                rng.multivariate_normal(
+                    mu_Y,
+                    cov_WY_WY + cov_BY_BY,
+                    size=num_events,
+                    check_valid="warn",
+                    tol=1e-5,
+                    method="cholesky",
+                ),
+                imt,
+            )
+            inter_sig = 0
+            inter_eps = [numpy.zeros(num_events)]
         return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
 
 
@@ -309,13 +324,15 @@ def get_conditioned_mean_and_covariance(
     cross_correl_within,
 ):
     gmm_name = gmm.__class__.__name__
-    if gmm_name == 'ModifiableGMPE':
+    if gmm_name == "ModifiableGMPE":
         gmm_name = gmm.gmpe.__class__.__name__
 
     if gmm.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
         modifications = list(gmm.kwargs.keys())
-        if not (type(gmm).__name__ == 'ModifiableGMPE' and
-                'add_between_within_stds' in modifications):
+        if not (
+            type(gmm).__name__ == "ModifiableGMPE"
+            and "add_between_within_stds" in modifications
+        ):
             raise NoInterIntraStdDevs(gmm)
 
     num_target_sites = len(target_sitecol)
