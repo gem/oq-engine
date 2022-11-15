@@ -222,10 +222,6 @@ def apply_conversion(horcomp, imt):
     :param imt: intensity measure type instance
     :returns: conversion coefficients conv_median, conv_sigma, rstd
     """
-    if horcomp._name_ not in OK_COMPONENTS:
-        # do not convert
-        return 1, 0, 1
-
     C = COEFF[horcomp]
     C_PGA_PGV = COEFF_PGA_PGV[horcomp]
     if imt.string == 'PGA':
@@ -345,7 +341,8 @@ class ModifiableGMPE(GMPE):
         self.horcomp = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
         comp = self.horcomp._name_
         self.conv = {}  # IMT -> (conv_median, conv_sigma, rstd)
-        if comp == 'GEOMETRIC_MEAN' or comp in OK_COMPONENTS:
+        self.convertible = comp in OK_COMPONENTS
+        if comp == 'GEOMETRIC_MEAN' or self.convertible:
             pass  # all okay
         else:
             warnings.warn(f'Conversion not applicable for {comp}', UserWarning)
@@ -380,7 +377,7 @@ class ModifiableGMPE(GMPE):
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
             for m, imt in enumerate(imts):
-                if methname == 'horiz_comp_to_geom_mean':
+                if methname == 'horiz_comp_to_geom_mean' and self.convertible:
                     try:
                         conv = self.conv[imt]
                     except KeyError:
