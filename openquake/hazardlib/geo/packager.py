@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import ast
 import json
+import logging
 try:
     import fiona
     from fiona import crs
@@ -60,7 +61,18 @@ def build_nodes(props):
     hdd = ast.literal_eval(props['hypodepthdist'])
     hdd = Node('hypoDepthDist', nodes=[Node('hypoDepth', dic)
                                        for dic in hdd])
-    return msr, rar, mfd, npd, hdd
+    hyl = ast.literal_eval(props['hypoList'])
+    nodes = [msr, rar, mfd, npd, hdd]
+    if hyl:
+        nodes.append(Node('hypoList', nodes=[Node('hypo', dic) for dic in hyl]))
+    sll = ast.literal_eval(props['slipList'])
+    if sll:
+        sll_nodes = [
+            Node('slip',
+                 {k.replace('_', ''): v for k, v in sl.items() if k != 'text'},
+                 text=sl['text']) for sl in sll]
+        nodes.append(Node('slipList', nodes=sll_nodes))
+    return tuple(nodes)
 
 
 def edge(name, coords):
@@ -111,7 +123,9 @@ def geodic2node(geodic):
         nodes = (splx,) + build_nodes(props)
         return Node('simpleFaultSource', attr, nodes=nodes)
     else:
-        return Node('NotImplemented', attr)
+        logging.error(f'Skipping source of code "{code}" and attributes '
+                      f'"{attr}" (the converter is not implemented yet)')
+        return None
 
 
 class GeoPackager(object):
@@ -156,6 +170,7 @@ class GeoPackager(object):
     def to_nrml(self, out=None):
         out = out or self.fname.replace('.gpkg', '.xml')
         nodes = [geodic2node(dic) for dic in self.read_all()]
+        nodes = [node for node in nodes if node is not None]
         smodel = Node("sourceModel", {}, nodes=nodes)
         with open(out, 'wb') as f:
             nrml.write([smodel], f, '%s')

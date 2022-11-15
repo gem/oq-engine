@@ -134,7 +134,13 @@ _downDip = 0.75
 _weight = 0.7
 
 [simpleFaultSource.slipList]
-slip = [ "90.0", "135.0",]
+[[simpleFaultSource.slipList.slip]]
+_weight = 0.7
+text = 90.0
+
+[[simpleFaultSource.slipList.slip]]
+_weight = 0.3
+text = 135.0
 
 [simpleFaultSource.simpleFaultGeometry."gml:LineString"]
 "gml:posList" = [ -121.823, 37.73, -122.039, 37.877,]

@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
-from openquake.hazardlib import nrml, sourceconverter, pmf
+from openquake.hazardlib import nrml, sourceconverter, pmf, valid
 from openquake.hazardlib.source import (
     NonParametricSeismicSource, check_complex_fault, PointSource)
 from openquake.hazardlib.tom import NegativeBinomialTOM
@@ -820,7 +820,7 @@ def tomldump(obj, fileobj=None):
     """
     Write a generic serializable object in TOML format
     """
-    dic = node_to_dict(obj_to_node(obj))
+    dic = valid._fix_toml(node_to_dict(obj_to_node(obj)))
     if fileobj is None:
         return toml.dumps(dic)
     toml.dump(dic, fileobj)
