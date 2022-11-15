@@ -17,29 +17,13 @@
 Module :mod:`openquake.hazardlib.const` defines various constants.
 """
 from enum import Enum
-
-
-class TRT(Enum):
-    """
-    Container for constants that define some of the common Tectonic Region
-    Types.
-    """
-    # Constant values correspond to the NRML schema definition.
-    ACTIVE_SHALLOW_CRUST = 'Active Shallow Crust'
-    STABLE_CONTINENTAL = 'Stable Shallow Crust'
-    SUBDUCTION_INTERFACE = 'Subduction Interface'
-    SUBDUCTION_INTRASLAB = 'Subduction IntraSlab'
-    UPPER_MANTLE = "Upper Mantle"
-    VOLCANIC = 'Volcanic'
-    GEOTHERMAL = 'Geothermal'
-    INDUCED = 'Induced'
+import numpy as np
 
 
 class IMC(Enum):
     """
-    The intensity measure component is the component of interest
-    of ground shaking for an
-    :mod:`intensity measure <openquake.hazardlib.imt>`.
+    The intensity measure component is the component of interest of
+    ground shaking for an :mod:`intensity measure <openquake.hazardlib.imt>`
     """
     #: The horizontal component.
     HORIZONTAL = 'Horizontal'
@@ -82,6 +66,71 @@ class IMC(Enum):
     VERTICAL_TO_HORIZONTAL_RATIO = 'Vertical-to-Horizontal Ratio'
 
 
+# #### horizontal components that can be converted into geometric means #### #
+
+OK_COMPONENTS = ['GMRotI50', 'RANDOM_HORIZONTAL',
+                 'GREATER_OF_TWO_HORIZONTAL', 'RotD50']
+
+IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
+                      "set_scale_total_sigma_vector",
+                      "set_fixed_total_sigma"]
+
+COEFF = {IMC.GMRotI50: [1, 1, 0.03, 0.04, 1],
+         IMC.RANDOM_HORIZONTAL: [1, 1, 0.07, 0.11, 1.05],
+         IMC.GREATER_OF_TWO_HORIZONTAL: [0.1, 1.117, 0.53, 1.165, 4.48, 1.195,
+                                         8.70, 1.266, 1.266],
+         IMC.RotD50: [0.09, 1.009, 0.58, 1.028, 4.59, 1.042, 8.93, 1.077,
+                      1.077]}
+
+COEFF_PGA_PGV = {IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
+                 IMC.RANDOM_HORIZONTAL: [1, 0.07, 1.03],
+                 IMC.GREATER_OF_TWO_HORIZONTAL: [1.117, 0, 1, 1, 0, 1],
+                 IMC.RotD50: [1.009, 0, 1, 1, 0, 1]}
+
+
+def apply_conversion(horcomp, imt):
+    """
+    :param imt: intensity measure type instance
+    :returns: conversion coefficients conv_median, conv_sigma, rstd
+    """
+    C = COEFF[horcomp]
+    C_PGA_PGV = COEFF_PGA_PGV[horcomp]
+    if imt.string == 'PGA':
+        conv_median = C_PGA_PGV[0]
+        conv_sigma = C_PGA_PGV[1]
+        rstd = C_PGA_PGV[2]
+    elif imt.string == 'PGV':
+        conv_median = C_PGA_PGV[3]
+        conv_sigma = C_PGA_PGV[4]
+        rstd = C_PGA_PGV[5]
+    else:
+        T = imt.period
+        if horcomp._name_ in ['RotD50', 'GREATER_OF_TWO_HORIZONTAL']:
+            term1 = C[1] + (C[3]-C[1]) / np.log(C[2]/C[0]) * np.log(T/C[0])
+            term2 = C[3] + (C[5]-C[3]) / np.log(C[4]/C[2]) * np.log(T/C[2])
+            term3 = C[5] + (C[7]-C[5]) / np.log(C[6]/C[4]) * np.log(T/C[4])
+            term4 = C[8]
+            tmax = np.maximum(
+                np.minimum(term1, term2), np.minimum(term3, term4))
+            conv_median = np.maximum(C[1], tmax)
+            conv_sigma = 0
+            rstd = 1
+        else:
+            if T <= 0.15:
+                conv_median = C[0]
+                conv_sigma = C[2]
+            elif T > 0.8:
+                conv_median = C[1]
+                conv_sigma = C[3]
+            else:
+                conv_median = (C[0] + (C[1]-C[0]) *
+                               np.log10(T/0.15) / np.log10(0.8/0.15))
+                conv_sigma = (C[2] + (C[3]-C[2]) *
+                              np.log10(T/0.15) / np.log10(0.8/0.15))
+            rstd = C[4]
+    return conv_median, conv_sigma, rstd
+
+
 # NB: cannot be an enum because it would break the Strong Motion Toolkit :-(
 class StdDev(object):
     """
@@ -107,3 +156,19 @@ class StdDev(object):
 
 
 StdDev.idx = {StdDev.TOTAL: 0, StdDev.INTER_EVENT: 1, StdDev.INTRA_EVENT: 2}
+
+
+class TRT(Enum):
+    """
+    Container for constants that define some of the common Tectonic Region
+    Types.
+    """
+    # Constant values correspond to the NRML schema definition.
+    ACTIVE_SHALLOW_CRUST = 'Active Shallow Crust'
+    STABLE_CONTINENTAL = 'Stable Shallow Crust'
+    SUBDUCTION_INTERFACE = 'Subduction Interface'
+    SUBDUCTION_INTRASLAB = 'Subduction IntraSlab'
+    UPPER_MANTLE = "Upper Mantle"
+    VOLCANIC = 'Volcanic'
+    GEOTHERMAL = 'Geothermal'
+    INDUCED = 'Induced'
