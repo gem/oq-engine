@@ -365,12 +365,13 @@ class ModifiableGMPE(GMPE):
         for spec of input and result values.
         """
         if 'nrcan15_site_term' in self.params:
-            ctx = copy.copy(ctx)
-            ctx.vs30 = np.full_like(ctx.vs30, 760.)  # rock
-
+            ctx_copy = copy.copy(ctx)
+            ctx_copy.vs30 = np.full_like(ctx.vs30, 760.)  # rock
+        else:
+            ctx_copy = ctx
         g = globals()
         # Compute the original mean and standard deviations, shape (4, M, N)
-        mean_stds = get_mean_stds(self.gmpe, ctx, imts, mags=self.mags)
+        mean_stds = get_mean_stds(self.gmpe, ctx_copy, imts, mags=self.mags)
 
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
