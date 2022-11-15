@@ -22,8 +22,8 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 import copy
 import warnings
 import numpy as np
+from openquake.baselib.performance import get_slices
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
-from openquake.hazardlib.contexts import get_mean_stds
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.const import IMC
@@ -60,7 +60,7 @@ COEFF_PGA_PGV = {IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
 
 # ################ BEGIN FUNCTIONS MODIFYING mean_stds ################## #
 
-def sigma_model_alatik2015(ctx, imt, mean_stds,
+def sigma_model_alatik2015(ctx, imt, me, si, ta, ph,
                            ergodic, tau_model, phi_ss_coetab, tau_coetab):
     """
     This function uses the sigma model of Al Atik (2015) as the standard
@@ -71,23 +71,23 @@ def sigma_model_alatik2015(ctx, imt, mean_stds,
         phi_s2s = get_stewart_2019_phis2s(imt, ctx.vs30)
         phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
     tau = TAU_EXECUTION[tau_model](imt, ctx.mag, tau_coetab)
-    mean_stds[1] = np.sqrt(tau ** 2. + phi ** 2.)
-    mean_stds[2] = tau
-    mean_stds[3] = phi
+    si[:] = np.sqrt(tau ** 2. + phi ** 2.)
+    ta[:] = tau
+    ph[:] = phi
 
 
-def nrcan15_site_term(ctx, imt, mean_stds, kind):
+def nrcan15_site_term(ctx, imt, me, si, ta, ph, kind):
     """
     This function adds a site term to GMMs missing it
     """
     C = NRCan15SiteTerm.COEFFS_BA08[imt]
     C2 = NRCan15SiteTerm.COEFFS_AB06r[imt]
-    exp_mean = np.exp(mean_stds[0])
+    exp_mean = np.exp(me)
     fa = BA08_AB06(kind, C, C2, ctx.vs30, imt, exp_mean)
-    mean_stds[0] = np.log(exp_mean * fa)
+    me[:] = np.log(exp_mean * fa)
 
 
-def horiz_comp_to_geom_mean(ctx, imt, mean_stds, conv=None):
+def horiz_comp_to_geom_mean(ctx, imt, me, si, ta, ph, conv=None):
     """
     This function converts ground-motion obtained for a given description of
     horizontal component into ground-motion values for geometric_mean.
@@ -98,11 +98,11 @@ def horiz_comp_to_geom_mean(ctx, imt, mean_stds, conv=None):
     if conv is None:
         return
     conv_median, conv_sigma, rstd = conv
-    mean_stds[0] = np.log(np.exp(mean_stds[0]) / conv_median)
-    mean_stds[1] = ((mean_stds[1]**2 - conv_sigma**2) / rstd**2)**0.5
+    me[:] = np.log(np.exp(me) / conv_median)
+    si[:] = ((si**2 - conv_sigma**2) / rstd**2)**0.5
 
 
-def add_between_within_stds(ctx, imt, mean_stds, with_betw_ratio):
+def add_between_within_stds(ctx, imt, me, si, ta, ph, with_betw_ratio):
     """
     This adds the between and within standard deviations to a model which has
     only the total standatd deviation. This function requires a ratio between
@@ -111,97 +111,94 @@ def add_between_within_stds(ctx, imt, mean_stds, with_betw_ratio):
     :param with_betw_ratio:
         The ratio between the within and between-event standard deviations
     """
-    total = mean_stds[1]
-    between = (total**2 / (1 + with_betw_ratio**2))**0.5
-    within = with_betw_ratio * between
-    mean_stds[2] = between
-    mean_stds[3] = within
+    ta[:] = (si**2 / (1 + with_betw_ratio**2))**0.5
+    ph[:] = with_betw_ratio * ta
 
 
-def apply_swiss_amplification(ctx, imt, mean_stds):
+def apply_swiss_amplification(ctx, imt, me, si, ta, ph):
     """
     Adds amplfactor to mean
     """
-    mean_stds[0] += ctx.amplfactor
+    me[:] += ctx.amplfactor
 
 
-def set_between_epsilon(ctx, imt, mean_stds, epsilon_tau):
+def set_between_epsilon(ctx, imt, me, si, ta, ph, epsilon_tau):
     """
     :param epsilon_tau:
         the epsilon value used to constrain the between event variability
     """
     # index for the between event standard deviation
-    mean_stds[0] += epsilon_tau * mean_stds[2]
+    me[:] += epsilon_tau * ta
 
     # set between event variability to 0
-    mean_stds[2] = 0
+    ta[:] = 0
 
     # set total variability equal to the within-event one
-    mean_stds[1] = mean_stds[3]
+    si[:] = ph
 
 
-def set_scale_median_scalar(ctx, imt, mean_stds, scaling_factor):
+def set_scale_median_scalar(ctx, imt, me, si, ta, ph, scaling_factor):
     """
     :param scaling_factor:
         Simple scaling factor (in linear space) to increase/decrease median
         ground motion, which applies to all IMTs
     """
-    mean_stds[0] += np.log(scaling_factor)
+    me[:] += np.log(scaling_factor)
 
 
 # self is an instance of ModifiableGMPE
-def set_scale_median_vector(ctx, imt, mean_stds, scaling_factor):
+def set_scale_median_vector(ctx, imt, me, si, ta, ph, scaling_factor):
     """
     :param scaling_factor:
         IMT-dependent median scaling factors (in linear space) as
         a CoeffsTable
     """
-    mean_stds[0] += np.log(scaling_factor[imt]["scaling_factor"])
+    me[:] += np.log(scaling_factor[imt]["scaling_factor"])
 
 
 # self is an instance of ModifiableGMPE
-def set_scale_total_sigma_scalar(ctx, imt, mean_stds, scaling_factor):
+def set_scale_total_sigma_scalar(ctx, imt, me, si, ta, ph, scaling_factor):
     """
     Scale the total standard deviations by a constant scalar factor
     :param scaling_factor:
         Factor to scale the standard deviations
     """
-    mean_stds[1] *= scaling_factor
+    si[:] *= scaling_factor
 
 
-def set_scale_total_sigma_vector(ctx, imt, mean_stds, scaling_factor):
+def set_scale_total_sigma_vector(ctx, imt, me, si, ta, ph, scaling_factor):
     """
     Scale the total standard deviations by a IMT-dependent scalar factor
     :param scaling_factor:
         IMT-dependent total standard deviation scaling factors as a
         CoeffsTable
     """
-    mean_stds[1] *= scaling_factor[imt]["scaling_factor"]
+    si[:] *= scaling_factor[imt]["scaling_factor"]
 
 
-def set_fixed_total_sigma(ctx, imt, mean_stds, total_sigma):
+def set_fixed_total_sigma(ctx, imt, me, si, ta, ph, total_sigma):
     """
     Sets the total standard deviations to a fixed value per IMT
     :param total_sigma:
         IMT-dependent total standard deviation as a CoeffsTable
     """
-    mean_stds[1] = total_sigma[imt]["total_sigma"]
+    si[:] = total_sigma[imt]["total_sigma"]
 
 
-def add_delta_std_to_total_std(ctx, imt, mean_stds, delta):
+def add_delta_std_to_total_std(ctx, imt, me, si, ta, ph, delta):
     """
     :param delta:
         A delta std e.g. a phi S2S to be removed from total
     """
-    mean_stds[1] = (mean_stds[1]**2 + np.sign(delta) * delta**2)**0.5
+    si[:] = (si**2 + np.sign(delta) * delta**2)**0.5
 
 
-def set_total_std_as_tau_plus_delta(ctx, imt, mean_stds, delta):
+def set_total_std_as_tau_plus_delta(ctx, imt, me, si, ta, ph, delta):
     """
     :param delta:
         A delta std e.g. a phi SS to be combined with between std, tau.
     """
-    mean_stds[1] = (mean_stds[2]**2 + np.sign(delta) * delta**2)**0.5
+    si[:] = (ta[2]**2 + np.sign(delta) * delta**2)**0.5
 
 
 # ################ END OF FUNCTIONS MODIFYING mean_stds ################## #
@@ -373,23 +370,35 @@ class ModifiableGMPE(GMPE):
         else:
             ctx_copy = ctx
         g = globals()
-        # Compute the original mean and standard deviations, shape (4, M, N)
-        mean_stds = get_mean_stds(self.gmpe, ctx_copy, imts, mags=self.mags)
+
+        # Compute the original mean and standard deviations
+        compute(self.gmpe, ctx_copy, imts, mean, sig, tau, phi)
 
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
             for m, imt in enumerate(imts):
+                me, si, ta, ph = mean[m], sig[m], tau[m], phi[m]
                 if methname == 'horiz_comp_to_geom_mean' and self.convertible:
                     try:
                         conv = self.conv[imt]
                     except KeyError:
                         conv = self.conv[imt] = apply_conversion(
                             self.horcomp, imt)
-                    g[methname](ctx, imt, mean_stds[:, m], conv, **kw)
+                    g[methname](ctx, imt, me, si, ta, ph, conv, **kw)
                 else:
-                    g[methname](ctx, imt, mean_stds[:, m], **kw)
+                    g[methname](ctx, imt, me, si, ta, ph, **kw)
 
-        mean[:] = mean_stds[0]
-        sig[:] = mean_stds[1]
-        tau[:] = mean_stds[2]
-        phi[:] = mean_stds[3]
+
+def compute(gmpe, ctx, imts, mean, sig, tau, phi):
+    """
+    Smart compute functions splitting the arrays in slices of constant
+    magnitude if there are underlying GMPETables.
+    """
+    if hasattr(gmpe, 'gmpe_table'):
+        for slices in get_slices(np.uint32(ctx.mag*100)).values():
+            for s0, s1 in slices:
+                s = slice(s0, s1)
+                gmpe.compute(ctx[s], imts,
+                             mean[:, s], sig[:, s], tau[:, s], phi[:, s])
+    else:
+        gmpe.compute(ctx, imts, mean, sig, tau, phi)
