@@ -87,7 +87,7 @@ def nrcan15_site_term(ctx, imt, mean_stds, kind):
     mean_stds[0] = np.log(exp_mean * fa)
 
 
-def horiz_comp_to_geom_mean(ctx, imt, mean_stds, conv):
+def horiz_comp_to_geom_mean(ctx, imt, mean_stds, conv=(1, 0, 1)):
     """
     This function converts ground-motion obtained for a given description of
     horizontal component into ground-motion values for geometric_mean.
