@@ -909,8 +909,7 @@ sudo systemctl status openquake-dbserver
         echo \"Exporting calculation #2\"
         oq engine --eos 2 /tmp/out/eos_2
 
-        oq info --report risk --param export_dir=$HOME || true
-        oq info --param export_dir=$HOME --report risk || true
+        # oq info --report risk
         echo 'Listing hazard calculations'
         oq engine --lhc
         echo 'Listing risk calculations'
