@@ -1006,7 +1006,7 @@ class ContextMaker(object):
         if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
             assert len(recarrays) == 1, len(recarrays)
             recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
-        self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014 adjustments
+        self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
@@ -1462,9 +1462,8 @@ def get_mean_stds(gsim, ctx, imts, **kw):
         an array of shape (4, M, N) obtained by applying the
         given GSIM, ctx amd imts, or an array of shape (G, 4, M, N)
     """
-    imtls = {imt.string: [0] for imt in imts}
     single = hasattr(gsim, 'compute')
-    kw['imtls'] = imtls
+    kw['imtls'] = {imt.string: [0] for imt in imts}
     cmaker = ContextMaker('*', [gsim] if single else gsim, kw)
     out = cmaker.get_mean_stds([ctx])  # (4, G, M, N)
     return out[:, 0] if single else out

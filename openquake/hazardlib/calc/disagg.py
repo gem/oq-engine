@@ -276,6 +276,20 @@ def _build_disagg_matrix(bdata, bins):
     return 1. - mat7D
 
 
+def uniform_bins(min_value, max_value, bin_width):
+    """
+    Returns an array of bins including all values:
+
+    >>> uniform_bins(1, 10, 1.)
+    array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
+    >>> uniform_bins(1, 10, 1.1)
+    array([ 0. ,  1.1,  2.2,  3.3,  4.4,  5.5,  6.6,  7.7,  8.8,  9.9, 11. ])
+    """
+    return bin_width * numpy.arange(
+        int(numpy.floor(min_value/ bin_width)),
+        int(numpy.ceil(max_value / bin_width) + 1))
+
+
 def _digitize_lons(lons, lon_bins):
     """
     Return indices of the bins to which each value in lons belongs.
@@ -412,9 +426,7 @@ def disaggregation(
         mag_bins = bine['mag']
     else:
         mags = numpy.array([r.mag for rs in rups.values() for r in rs])
-        mag_bins = mag_bin_width * numpy.arange(
-            int(numpy.floor(mags.min() / mag_bin_width)),
-            int(numpy.ceil(mags.max() / mag_bin_width) + 1))
+        mag_bins = uniform_bins(mags.min(), mags.max(), mag_bin_width)
 
     # Compute disaggregation per TRT
     for trt, cm in cmaker.items():
@@ -437,9 +449,7 @@ def disaggregation(
     if 'dist' in bine:
         dist_bins = bine['dist']
     else:
-        dist_bins = dist_bin_width * numpy.arange(
-            int(numpy.floor(min_dist / dist_bin_width)),
-            int(numpy.ceil(max_dist / dist_bin_width) + 1))
+        dist_bins = uniform_bins(min_dist, max_dist, dist_bin_width)
 
     # Lon, Lat bins
     if 'lon' in bine and 'lat' in bine:

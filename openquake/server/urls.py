@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from django.conf import settings
-from django.urls import re_path, include
+from django.urls import re_path, include, path
 from django.views.generic.base import RedirectView
 
 from openquake.server import views
@@ -37,23 +37,25 @@ urlpatterns = [
 # are also not required anymore for an API-only usage
 if settings.WEBUI:
     urlpatterns += [
-        re_path(r'^$', RedirectView.as_view(url='/engine/', permanent=True)),
+        re_path(r'^$', RedirectView.as_view(url='%s/engine/' % settings.WEBUI_PATHPREFIX,
+                permanent=True)),
         re_path(r'^engine/?$', views.web_engine, name="index"),
         re_path(r'^engine/(\d+)/outputs$',
-            views.web_engine_get_outputs, name="outputs"),
+                views.web_engine_get_outputs, name="outputs"),
         re_path(r'^engine/license$', views.license,
-            name="license"),
+                name="license"),
     ]
     for app in settings.STANDALONE_APPS:
         app_name = app.split('_')[1]
-        urlpatterns.append(re_path(r'^%s/' % app_name, include('%s.urls' % app,
-                               namespace='%s' % app_name)))
+        urlpatterns.append(re_path(r'^%s/' % app_name, include(
+            '%s.urls' % app, namespace='%s' % app_name)))
 
 if settings.LOCKDOWN:
     from django.contrib import admin
     from django.contrib.auth.views import LoginView, LogoutView
 
     admin.autodiscover()
+    admin.site.site_url = '%s/engine/' % settings.WEBUI_PATHPREFIX
     urlpatterns += [
         re_path(r'^admin/', admin.site.urls),
         re_path(r'accounts/login/$', LoginView.as_view(
@@ -63,6 +65,12 @@ if settings.LOCKDOWN:
         re_path(r'^accounts/ajax_login/$', views.ajax_login),
         re_path(r'^accounts/ajax_logout/$', views.ajax_logout),
     ]
+
+if settings.WEBUI_PATHPREFIX != "":
+    urlpatterns = [path(r'%s/' % settings.WEBUI_PATHPREFIX.strip('/'),
+                        include(urlpatterns))]
+else:
+    urlpatterns = urlpatterns
 
 # To enable gunicorn debug without Nginx (to serve static files)
 # uncomment the following lines

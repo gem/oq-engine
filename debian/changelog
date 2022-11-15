@@ -1,4 +1,10 @@
   [Michele Simionato]
+  * Rewritten ModifiableGMPE to avoid a subtle memory leak
+
+  [Matteo Nastasi]
+  * Add WEBUI_PATHPREFIX variable to add a prefix to usual webui web path
+
+  [Michele Simionato]
   * Fixed the exporter of `avg_losses-stats` when using `collect_rlzs=true`
   * Changed the distribution of multiFaultSources to send one fragment per task
   * Mitigate the issue of ultra-long planar ruptures affecting many models
