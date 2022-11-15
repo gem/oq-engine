@@ -222,6 +222,10 @@ def apply_conversion(horcomp, imt):
     :param imt: intensity measure type instance
     :returns: conversion coefficients conv_median, conv_sigma, rstd
     """
+    if horcomp._name_ not in OK_COMPONENTS:
+        # do not convert
+        return 1, 0, 1
+
     C = COEFF[horcomp]
     C_PGA_PGV = COEFF_PGA_PGV[horcomp]
     if imt.string == 'PGA':
