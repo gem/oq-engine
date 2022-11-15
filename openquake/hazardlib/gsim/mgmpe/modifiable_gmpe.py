@@ -87,7 +87,7 @@ def nrcan15_site_term(ctx, imt, mean_stds, kind):
     mean_stds[0] = np.log(exp_mean * fa)
 
 
-def horiz_comp_to_geom_mean(ctx, imt, mean_stds, horcom):
+def horiz_comp_to_geom_mean(ctx, imt, mean_stds, conv):
     """
     This function converts ground-motion obtained for a given description of
     horizontal component into ground-motion values for geometric_mean.
@@ -95,19 +95,7 @@ def horiz_comp_to_geom_mean(ctx, imt, mean_stds, horcom):
         - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
         - Boore and Kishida (2017): for RotD50
     """
-    # Apply the conversion
-    if horcom._name_ in OK_COMPONENTS:
-        conv_median, conv_sigma, rstd = apply_conversion(imt, horcom)
-    elif horcom._name_ == 'GEOMETRIC_MEAN':
-        conv_median = 1
-        conv_sigma = 0
-        rstd = 1
-    else:  # convention not applicable
-        conv_median = 1
-        conv_sigma = 0
-        rstd = 1
-
-    # update mean and sigma
+    conv_median, conv_sigma, rstd = conv
     mean_stds[0] = np.log(np.exp(mean_stds[0]) / conv_median)
     mean_stds[1] = ((mean_stds[1]**2 - conv_sigma**2) / rstd**2)**0.5
 
@@ -228,10 +216,10 @@ def _dict_to_coeffs_table(input_dict, name):
     return {name: CoeffsTable.fromdict(coeff_dict)}
 
 
-def apply_conversion(imt, horcom):
+def apply_conversion(horcomp, imt):
     # Conversion coefficients
-    C = COEFF[horcom]
-    C_PGA_PGV = COEFF_PGA_PGV[horcom]
+    C = COEFF[horcomp]
+    C_PGA_PGV = COEFF_PGA_PGV[horcomp]
     if imt.string == 'PGA':
         conv_median = C_PGA_PGV[0]
         conv_sigma = C_PGA_PGV[1]
@@ -242,7 +230,7 @@ def apply_conversion(imt, horcom):
         rstd = C_PGA_PGV[5]
     else:
         T = imt.period
-        if horcom._name_ in ['RotD50', 'GREATER_OF_TWO_HORIZONTAL']:
+        if horcomp._name_ in ['RotD50', 'GREATER_OF_TWO_HORIZONTAL']:
             term1 = C[1] + (C[3]-C[1]) / np.log(C[2]/C[0]) * np.log(T/C[0])
             term2 = C[3] + (C[5]-C[3]) / np.log(C[4]/C[2]) * np.log(T/C[2])
             term3 = C[5] + (C[7]-C[5]) / np.log(C[6]/C[4]) * np.log(T/C[4])
@@ -345,9 +333,10 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
-        # warn for non-applicable components
-        horcom = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
-        comp = horcom._name_
+        # Apply conversion
+        self.horcomp = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
+        comp = self.horcomp._name_
+        self.conv = {}  # IMT -> (conv_median, conv_sigma, rstd)
         if comp == 'GEOMETRIC_MEAN' or comp in OK_COMPONENTS:
             pass  # all okay
         else:
@@ -371,13 +360,11 @@ class ModifiableGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-
         ctx_copy = copy.copy(ctx)
         if 'nrcan15_site_term' in self.params:
             ctx_copy.vs30 = np.full_like(ctx.vs30, 760.)  # rock
 
         g = globals()
-        horcom = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
         # Compute the original mean and standard deviations, shape (4, M, N)
         mean_stds = get_mean_stds(self.gmpe, ctx_copy, imts, mags=self.mags)
 
@@ -385,7 +372,12 @@ class ModifiableGMPE(GMPE):
         for methname, kw in self.params.items():
             for m, imt in enumerate(imts):
                 if methname == 'horiz_comp_to_geom_mean':
-                    g[methname](ctx, imt, mean_stds[:, m], horcom, **kw)
+                    try:
+                        conv = self.conv[imt]
+                    except KeyError:
+                        self.conv[imt] = conv = apply_conversion(
+                            self.horcomp, imt)
+                    g[methname](ctx, imt, mean_stds[:, m], conv, **kw)
                 else:
                     g[methname](ctx, imt, mean_stds[:, m], **kw)
 
