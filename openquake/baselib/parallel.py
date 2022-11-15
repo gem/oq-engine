@@ -222,6 +222,14 @@ submit = CallableDict()
 GB = 1024 ** 3
 
 
+def wait_if_loaded(monitor, sleep):
+    while True:
+        percent = psutil.cpu_percent()
+        if percent <= 99:
+            break
+        time.sleep(sleep)
+
+
 @submit.add('no')
 def no_submit(self, func, args, monitor):
     return safely_call(func, args, self.task_no, monitor)
@@ -229,15 +237,10 @@ def no_submit(self, func, args, monitor):
 
 @submit.add('spawn')
 def spawn_submit(self, func, args, monitor):
-    while True:
-        percent = psutil.cpu_percent()
-        if percent <= 99:
-            mp_context.Process(
-                target=safely_call, args=(func, args, self.task_no, monitor)
-            ).start()
-            break
-        logging.debug('CPU=%d%%, waiting', percent)
-        time.sleep(30)
+    wait_if_loaded(monitor, 1.)
+    mp_context.Process(
+        target=safely_call, args=(func, args, self.task_no, monitor)
+    ).start()
 
 
 @submit.add('processpool')
@@ -493,7 +496,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon is dummy_mon:  # in the DbServer
         assert not isgenfunc, func
         return Result.new(func, args, mon)
-
     if mon.operation.endswith('_'):
         name = mon.operation[:-1]
     elif func is split_task:
@@ -505,6 +507,8 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     mon.task_no = task_no
     if mon.inject:
         args += (mon,)
+    if OQDIST == 'spawn':
+        wait_if_loaded(mon, 30.)
     sentbytes = 0
     with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
         msg = check_mem_usage()  # warn if too much memory is used
