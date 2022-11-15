@@ -360,13 +360,13 @@ class ModifiableGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        ctx_copy = copy.copy(ctx)
         if 'nrcan15_site_term' in self.params:
-            ctx_copy.vs30 = np.full_like(ctx.vs30, 760.)  # rock
+            ctx = copy.copy(ctx)
+            ctx.vs30 = np.full_like(ctx.vs30, 760.)  # rock
 
         g = globals()
         # Compute the original mean and standard deviations, shape (4, M, N)
-        mean_stds = get_mean_stds(self.gmpe, ctx_copy, imts, mags=self.mags)
+        mean_stds = get_mean_stds(self.gmpe, ctx, imts, mags=self.mags)
 
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
@@ -375,7 +375,7 @@ class ModifiableGMPE(GMPE):
                     try:
                         conv = self.conv[imt]
                     except KeyError:
-                        self.conv[imt] = conv = apply_conversion(
+                        conv = self.conv[imt] = apply_conversion(
                             self.horcomp, imt)
                     g[methname](ctx, imt, mean_stds[:, m], conv, **kw)
                 else:

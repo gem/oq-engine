@@ -1462,9 +1462,8 @@ def get_mean_stds(gsim, ctx, imts, **kw):
         an array of shape (4, M, N) obtained by applying the
         given GSIM, ctx amd imts, or an array of shape (G, 4, M, N)
     """
-    imtls = {imt.string: [0] for imt in imts}
     single = hasattr(gsim, 'compute')
-    kw['imtls'] = imtls
+    kw['imtls'] = {imt.string: [0] for imt in imts}
     cmaker = ContextMaker('*', [gsim] if single else gsim, kw)
     out = cmaker.get_mean_stds([ctx])  # (4, G, M, N)
     return out[:, 0] if single else out
