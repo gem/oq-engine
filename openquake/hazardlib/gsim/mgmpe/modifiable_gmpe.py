@@ -217,7 +217,11 @@ def _dict_to_coeffs_table(input_dict, name):
 
 
 def apply_conversion(horcomp, imt):
-    # Conversion coefficients
+    """
+    :param horcomp: horizontal component instance
+    :param imt: intensity measure type instance
+    :returns: conversion coefficients conv_median, conv_sigma, rstd
+    """
     C = COEFF[horcomp]
     C_PGA_PGV = COEFF_PGA_PGV[horcomp]
     if imt.string == 'PGA':
