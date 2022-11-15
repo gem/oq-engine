@@ -37,8 +37,6 @@ xmlns:gml="http://www.opengis.net/gml"
                 <hypoDepth hypodepth="4.0" probability="0.5"/>
                 <hypoDepth hypodepth="8.0" probability="0.5"/>
             </hypoDepthDist>
-            <hypoList />
-            <slipList />
         </pointSource>
         <complexFaultSource
         id="4"
@@ -86,8 +84,6 @@ xmlns:gml="http://www.opengis.net/gml"
                 <nodalPlane rake="30.0"/>
             </nodalPlaneDist>
             <hypoDepthDist />
-            <hypoList />
-            <slipList />
         </complexFaultSource>
         <areaSource
         id="1"
@@ -126,8 +122,6 @@ xmlns:gml="http://www.opengis.net/gml"
                 <hypoDepth hypodepth="4.0" probability="0.5"/>
                 <hypoDepth hypodepth="8.0" probability="0.5"/>
             </hypoDepthDist>
-            <hypoList />
-            <slipList />
         </areaSource>
         <simpleFaultSource
         id="3"

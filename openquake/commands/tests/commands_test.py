@@ -651,8 +651,7 @@ class GPKG2NRMLTestCase(unittest.TestCase):
         datadir = os.path.join(os.path.dirname(__file__), 'data')
         self.assertListEqual(
             list(open(out_path)),
-            list(open(
-                os.path.join(datadir, 'expected_converted_nrml.xml'))))
+            list(open(os.path.join(datadir, 'expected_converted_nrml.xml'))))
         shutil.rmtree(temp_dir)
 
 
