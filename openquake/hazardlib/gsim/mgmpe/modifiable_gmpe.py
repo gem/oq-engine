@@ -87,7 +87,7 @@ def nrcan15_site_term(ctx, imt, mean_stds, kind):
     mean_stds[0] = np.log(exp_mean * fa)
 
 
-def horiz_comp_to_geom_mean(ctx, imt, mean_stds, horcom):
+def horiz_comp_to_geom_mean(ctx, imt, mean_stds, conv=None):
     """
     This function converts ground-motion obtained for a given description of
     horizontal component into ground-motion values for geometric_mean.
@@ -95,58 +95,9 @@ def horiz_comp_to_geom_mean(ctx, imt, mean_stds, horcom):
         - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
         - Boore and Kishida (2017): for RotD50
     """
-    T = imt.period
-    comp = horcom._name_
-
-    # Apply the conversion
-    if comp in OK_COMPONENTS:
-        # Conversion coefficients
-        C = COEFF[horcom]
-        C_PGA_PGV = COEFF_PGA_PGV[horcom]
-
-        imt_name = imt.__repr__()
-        if imt_name == 'PGA':
-            conv_median = C_PGA_PGV[0]
-            conv_sigma = C_PGA_PGV[1]
-            rstd = C_PGA_PGV[2]
-        elif imt_name == 'PGV':
-            conv_median = C_PGA_PGV[3]
-            conv_sigma = C_PGA_PGV[4]
-            rstd = C_PGA_PGV[5]
-        else:
-            if comp in ['RotD50', 'GREATER_OF_TWO_HORIZONTAL']:
-                term1 = C[1] + (C[3]-C[1]) / np.log(C[2]/C[0])*np.log(T/C[0])
-                term2 = C[3] + (C[5]-C[3]) / np.log(C[4]/C[2])*np.log(T/C[2])
-                term3 = C[5] + (C[7]-C[5]) / np.log(C[6]/C[4])*np.log(T/C[4])
-                term4 = C[8]
-                tmax = np.maximum(np.minimum(term1, term2),
-                                  np.minimum(term3, term4))
-                conv_median = np.maximum(C[1], tmax)
-                conv_sigma = 0
-                rstd = 1
-            else:
-                if T <= 0.15:
-                    conv_median = C[0]
-                    conv_sigma = C[2]
-                elif T > 0.8:
-                    conv_median = C[1]
-                    conv_sigma = C[3]
-                else:
-                    conv_median = (C[0] + (C[1]-C[0]) *
-                                   np.log10(T/0.15)/np.log10(0.8/0.15))
-                    conv_sigma = (C[2] + (C[3]-C[2]) *
-                                  np.log10(T/0.15)/np.log10(0.8/0.15))
-                rstd = C[4]
-    elif comp == 'GEOMETRIC_MEAN':
-        conv_median = 1
-        conv_sigma = 0
-        rstd = 1
-    else:  # convention not applicable
-        conv_median = 1
-        conv_sigma = 0
-        rstd = 1
-
-    # update mean and sigma
+    if conv is None:
+        return
+    conv_median, conv_sigma, rstd = conv
     mean_stds[0] = np.log(np.exp(mean_stds[0]) / conv_median)
     mean_stds[1] = ((mean_stds[1]**2 - conv_sigma**2) / rstd**2)**0.5
 
@@ -267,6 +218,50 @@ def _dict_to_coeffs_table(input_dict, name):
     return {name: CoeffsTable.fromdict(coeff_dict)}
 
 
+def apply_conversion(horcomp, imt):
+    """
+    :param horcomp: horizontal component instance
+    :param imt: intensity measure type instance
+    :returns: conversion coefficients conv_median, conv_sigma, rstd
+    """
+    C = COEFF[horcomp]
+    C_PGA_PGV = COEFF_PGA_PGV[horcomp]
+    if imt.string == 'PGA':
+        conv_median = C_PGA_PGV[0]
+        conv_sigma = C_PGA_PGV[1]
+        rstd = C_PGA_PGV[2]
+    elif imt.string == 'PGV':
+        conv_median = C_PGA_PGV[3]
+        conv_sigma = C_PGA_PGV[4]
+        rstd = C_PGA_PGV[5]
+    else:
+        T = imt.period
+        if horcomp._name_ in ['RotD50', 'GREATER_OF_TWO_HORIZONTAL']:
+            term1 = C[1] + (C[3]-C[1]) / np.log(C[2]/C[0]) * np.log(T/C[0])
+            term2 = C[3] + (C[5]-C[3]) / np.log(C[4]/C[2]) * np.log(T/C[2])
+            term3 = C[5] + (C[7]-C[5]) / np.log(C[6]/C[4]) * np.log(T/C[4])
+            term4 = C[8]
+            tmax = np.maximum(
+                np.minimum(term1, term2), np.minimum(term3, term4))
+            conv_median = np.maximum(C[1], tmax)
+            conv_sigma = 0
+            rstd = 1
+        else:
+            if T <= 0.15:
+                conv_median = C[0]
+                conv_sigma = C[2]
+            elif T > 0.8:
+                conv_median = C[1]
+                conv_sigma = C[3]
+            else:
+                conv_median = (C[0] + (C[1]-C[0]) *
+                               np.log10(T/0.15) / np.log10(0.8/0.15))
+                conv_sigma = (C[2] + (C[3]-C[2]) *
+                              np.log10(T/0.15) / np.log10(0.8/0.15))
+            rstd = C[4]
+    return conv_median, conv_sigma, rstd
+
+
 class ModifiableGMPE(GMPE):
     """
     This is a fully configurable GMPE
@@ -344,9 +339,12 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
-        # warn for non-applicable components
-        comp = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT._name_
-        if comp == 'GEOMETRIC_MEAN' or comp in OK_COMPONENTS:
+        # Apply conversion
+        self.horcomp = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
+        comp = self.horcomp._name_
+        self.conv = {}  # IMT -> (conv_median, conv_sigma, rstd)
+        self.convertible = comp in OK_COMPONENTS
+        if comp == 'GEOMETRIC_MEAN' or self.convertible:
             pass  # all okay
         else:
             warnings.warn(f'Conversion not applicable for {comp}', UserWarning)
@@ -369,21 +367,25 @@ class ModifiableGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-
-        ctx_copy = copy.copy(ctx)
         if 'nrcan15_site_term' in self.params:
+            ctx_copy = copy.copy(ctx)
             ctx_copy.vs30 = np.full_like(ctx.vs30, 760.)  # rock
-
+        else:
+            ctx_copy = ctx
         g = globals()
-        horcom = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
         # Compute the original mean and standard deviations, shape (4, M, N)
         mean_stds = get_mean_stds(self.gmpe, ctx_copy, imts, mags=self.mags)
 
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
             for m, imt in enumerate(imts):
-                if methname == 'horiz_comp_to_geom_mean':
-                    g[methname](ctx, imt, mean_stds[:, m], horcom, **kw)
+                if methname == 'horiz_comp_to_geom_mean' and self.convertible:
+                    try:
+                        conv = self.conv[imt]
+                    except KeyError:
+                        conv = self.conv[imt] = apply_conversion(
+                            self.horcomp, imt)
+                    g[methname](ctx, imt, mean_stds[:, m], conv, **kw)
                 else:
                     g[methname](ctx, imt, mean_stds[:, m], **kw)
 
