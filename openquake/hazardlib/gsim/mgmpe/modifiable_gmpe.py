@@ -22,6 +22,7 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 import copy
 import warnings
 import numpy as np
+from openquake.baselib.performance import get_slices
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
@@ -371,7 +372,7 @@ class ModifiableGMPE(GMPE):
         g = globals()
 
         # Compute the original mean and standard deviations
-        self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
+        compute(self.gmpe, ctx_copy, imts, mean, sig, tau, phi)
 
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
@@ -387,3 +388,17 @@ class ModifiableGMPE(GMPE):
                 else:
                     g[methname](ctx, imt, me, si, ta, ph, **kw)
 
+
+def compute(gmpe, ctx, imts, mean, sig, tau, phi):
+    """
+    Smart compute functions splitting the arrays in slices of constant
+    magnitude if there are underlying GMPETables.
+    """
+    if hasattr(gmpe, 'gmpe_table'):
+        for slices in get_slices(np.uint32(ctx.mag*100)).values():
+            for s0, s1 in slices:
+                s = slice(s0, s1)
+                gmpe.compute(ctx[s], imts,
+                             mean[:, s], sig[:, s], tau[:, s], phi[:, s])
+    else:
+        gmpe.compute(ctx, imts, mean, sig, tau, phi)
