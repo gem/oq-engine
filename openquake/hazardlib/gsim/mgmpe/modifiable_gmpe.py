@@ -87,7 +87,7 @@ def nrcan15_site_term(ctx, imt, mean_stds, kind):
     mean_stds[0] = np.log(exp_mean * fa)
 
 
-def horiz_comp_to_geom_mean(ctx, imt, mean_stds, conv=(1, 0, 1)):
+def horiz_comp_to_geom_mean(ctx, imt, mean_stds, conv=None):
     """
     This function converts ground-motion obtained for a given description of
     horizontal component into ground-motion values for geometric_mean.
@@ -95,6 +95,8 @@ def horiz_comp_to_geom_mean(ctx, imt, mean_stds, conv=(1, 0, 1)):
         - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
         - Boore and Kishida (2017): for RotD50
     """
+    if conv is None:
+        return
     conv_median, conv_sigma, rstd = conv
     mean_stds[0] = np.log(np.exp(mean_stds[0]) / conv_median)
     mean_stds[1] = ((mean_stds[1]**2 - conv_sigma**2) / rstd**2)**0.5
