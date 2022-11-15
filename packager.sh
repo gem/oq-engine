@@ -922,6 +922,7 @@ sudo systemctl status openquake-dbserver
 
         # WebUI command check
         ssh "$lxc_ip" "webui_fail_msg=\"This command must be run by the proper user: see the documentation for details\"
+        set -x
         webui_fail=\$(oq webui migrate 2>&1 || true)
         if [ \"\$webui_fail\" != \"\$webui_fail_msg\" ]; then
             echo \"The 'oq webui' command is broken: it reports\n\t\$webui_fail\ninstead of\n\t\$webui_fail_msg\"
