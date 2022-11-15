@@ -33,7 +33,7 @@ from openquake.baselib.general import (
 from openquake.baselib.performance import Monitor, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
-from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.const import StdDev, apply_conversion
 from openquake.hazardlib.tom import (
     registry, get_pnes, FatedTOM, NegativeBinomialTOM)
 from openquake.hazardlib.site import site_param_dt
@@ -293,6 +293,25 @@ def _interp(param, name, trt):
     return mdd
 
 
+def horiz_comp_to_geom_mean(ctx, imts, conv, mean_stds):
+    """
+    This function converts ground-motion obtained for a given description of
+    horizontal component into ground-motion values for geometric_mean.
+    The conversion equations used are from:
+        - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
+        - Boore and Kishida (2017): for RotD50
+
+    :param ctx: a context array
+    :param imts: a list of IMTs
+    :param conv: a dictionary imt -> (conv_median, conv_sigma, rstd)
+    :param mean_stds: an array of shape (4, M, N)
+    """
+    for m, imt in enumerate(imts):
+        conv_median, conv_sigma, rstd = conv[imt]
+        mean_stds[0, m] = numpy.log(numpy.exp(mean_stds[0, m]) / conv_median)
+        mean_stds[1, m] = ((mean_stds[1, m]**2 - conv_sigma**2) / rstd**2)**0.5
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
@@ -438,6 +457,15 @@ class ContextMaker(object):
             for imt, imls in self.imtls.items():
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
+
+        self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
+
+        # horizontal component conversion
+        if any(getattr(gsim, 'horiz_comp_to_geom_mean', False)
+               for gsim in self.gsims):
+            self.conv = [{imt: apply_conversion(gsim.gmpe, imt)
+                         for imt in self.imts} for gsim in self.gsims]
+        
         self.init_monitoring(monitor)
 
     def init_monitoring(self, monitor):
@@ -992,8 +1020,6 @@ class ContextMaker(object):
         :param ctxs: a list of contexts with N=sum(len(ctx) for ctx in ctxs)
         :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
-        if not hasattr(self, 'imts'):
-            self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imtls)
         G = len(self.gsims)
@@ -1012,7 +1038,11 @@ class ContextMaker(object):
             start = 0
             for ctx in recarrays:
                 slc = slice(start, start + len(ctx))
-                adj = compute(gsim, ctx, self.imts, *out[:, g, :, slc])
+                mean_stds = out[:, g, :, slc]
+                adj = compute(gsim, ctx, self.imts, *mean_stds)
+                if hasattr(self, 'conv'):
+                    horiz_comp_to_geom_mean(
+                        ctx, self.imts, self.conv[g], mean_stds)
                 if adj is not None:
                     self.adj[gsim].append(adj)
                 start = slc.stop

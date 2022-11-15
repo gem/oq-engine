@@ -88,11 +88,12 @@ COEFF_PGA_PGV = {IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
                  IMC.RotD50: [1.009, 0, 1, 1, 0, 1]}
 
 
-def apply_conversion(horcomp, imt):
+def apply_conversion(gmpe, imt):
     """
     :param imt: intensity measure type instance
     :returns: conversion coefficients conv_median, conv_sigma, rstd
     """
+    horcomp = gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
     C = COEFF[horcomp]
     C_PGA_PGV = COEFF_PGA_PGV[horcomp]
     if imt.string == 'PGA':

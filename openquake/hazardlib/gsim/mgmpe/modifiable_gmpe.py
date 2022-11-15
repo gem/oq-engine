@@ -65,21 +65,6 @@ def nrcan15_site_term(ctx, imt, mean_stds, kind):
     mean_stds[0] = np.log(exp_mean * fa)
 
 
-def horiz_comp_to_geom_mean(ctx, imt, mean_stds, conv=None):
-    """
-    This function converts ground-motion obtained for a given description of
-    horizontal component into ground-motion values for geometric_mean.
-    The conversion equations used are from:
-        - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
-        - Boore and Kishida (2017): for RotD50
-    """
-    if conv is None:
-        return
-    conv_median, conv_sigma, rstd = conv
-    mean_stds[0] = np.log(np.exp(mean_stds[0]) / conv_median)
-    mean_stds[1] = ((mean_stds[1]**2 - conv_sigma**2) / rstd**2)**0.5
-
-
 def add_between_within_stds(ctx, imt, mean_stds, with_betw_ratio):
     """
     This adds the between and within standard deviations to a model which has
@@ -225,6 +210,16 @@ class ModifiableGMPE(GMPE):
         self.gmpe = registry[gmpe_name](**kw)
         self.set_parameters()
 
+        if 'horiz_comp_to_geom_mean' in self.params:
+            del self.params['horiz_comp_to_geom_mean']
+            imc = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
+            self.horiz_comp_to_geom_mean = imc._name_ in OK_COMPONENTS
+            if imc._name_ == 'GEOMETRIC_MEAN' or self.horiz_comp_to_geom_mean:
+                pass  # all okay
+            else:
+                warnings.warn(f'Conversion not applicable for {imc._name_}',
+                              UserWarning)
+
         if ('set_between_epsilon' in self.params or
             'set_total_std_as_tau_plus_delta' in self.params) and (
                 StdDev.INTER_EVENT not in
@@ -273,16 +268,6 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
-        # Apply conversion
-        self.horcomp = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
-        comp = self.horcomp._name_
-        self.conv = {}  # IMT -> (conv_median, conv_sigma, rstd)
-        self.convertible = comp in OK_COMPONENTS
-        if comp == 'GEOMETRIC_MEAN' or self.convertible:
-            pass  # all okay
-        else:
-            warnings.warn(f'Conversion not applicable for {comp}', UserWarning)
-
     # called by the ContextMaker
     def set_tables(self, mags, imts):
         """
@@ -301,6 +286,9 @@ class ModifiableGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        if not self.params:
+            return self.gmpe.compute(ctx, imts, mean, sig, tau, phi)
+
         if 'nrcan15_site_term' in self.params:
             ctx_copy = copy.copy(ctx)
             ctx_copy.vs30 = np.full_like(ctx.vs30, 760.)  # rock
@@ -313,15 +301,7 @@ class ModifiableGMPE(GMPE):
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
             for m, imt in enumerate(imts):
-                if methname == 'horiz_comp_to_geom_mean' and self.convertible:
-                    try:
-                        conv = self.conv[imt]
-                    except KeyError:
-                        conv = self.conv[imt] = apply_conversion(
-                            self.horcomp, imt)
-                    g[methname](ctx, imt, mean_stds[:, m], conv, **kw)
-                else:
-                    g[methname](ctx, imt, mean_stds[:, m], **kw)
+                g[methname](ctx, imt, mean_stds[:, m], **kw)
 
         mean[:] = mean_stds[0]
         sig[:] = mean_stds[1]
