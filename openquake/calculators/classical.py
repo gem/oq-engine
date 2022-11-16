@@ -453,16 +453,15 @@ class ClassicalCalculator(base.HazardCalculator):
         if not self.oqparam.hazard_calculation_id:
             self.datastore.swmr_on()
 
-    def check_memory(self, N, L, num_gs):
+    def check_memory(self, N, L, max_gs, num_gs):
         """
         Log the memory required to receive the largest ProbabilityMap,
         assuming all sites are affected (upper limit)
         """
-        G = max(num_gs)
-        size = G * N * L * 8
+        size = max_gs * N * L * 8
         tot = sum(num_gs) * N * L * 8
         logging.info('ProbabilityMap(G=%d,N=%d,L=%d): %s per core + %s',
-                     G, N, L, humansize(size), humansize(tot))
+                     max_gs, N, L, humansize(size), humansize(tot))
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         if avail < size:
             raise MemoryError(
@@ -492,9 +491,18 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
-        num_gs = [len(cm.gsims) for cm in self.haz.cmakers]
+        num_gs = []
+        max_gs = 0
+        for cm in self.haz.cmakers:
+            gs = len(cm.gsims)
+            sg = self.csm.src_groups[cm.grp_id]
+            if sg.atomic or sg.weight <= maxw:
+                pass  # no need to keep the group in memory
+            else:
+                num_gs.append(gs)
+            max_gs = max(max_gs, gs)
         L = oq.imtls.size
-        max_gb = max(num_gs) * L * self.N * 8 / 1024**3
+        max_gb = max_gs * L * self.N * 8 / 1024**3
         if max_gb > 1:  # split in tiles
             max_sites = min(numpy.ceil(self.N / max_gb), oq.max_sites_per_tile)
             tiles = self.sitecol.split_max(max_sites)
@@ -508,6 +516,7 @@ class ClassicalCalculator(base.HazardCalculator):
             assert not oq.disagg_by_src, 'disagg_by_src with tiles'
             for size in sizes:
                 assert size > oq.max_sites_disagg, (size, oq.max_sites_disagg)
+        self.check_memory(len(tiles[0]), oq.imtls.size, max_gs, num_gs)
         self.source_data = AccumDict(accum=[])
         self.n_outs = AccumDict(accum=0)
         acc = {}
@@ -535,7 +544,6 @@ class ClassicalCalculator(base.HazardCalculator):
         Run a subset of sites and update the accumulator
         """
         oq = self.oqparam
-        self.check_memory(len(tile), oq.imtls.size, num_gs)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         for cm in self.haz.cmakers:
