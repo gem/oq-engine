@@ -419,6 +419,8 @@ class EventBasedCalculator(base.HazardCalculator):
         scenario = 'scenario' in oq.calculation_mode
         proxies = [RuptureProxy(rec, scenario)
                    for rec in dstore['ruptures'][:]]
+        if "station_data" in oq.inputs:
+            proxies = proxies[0:1]
         full_lt = self.datastore['full_lt']
         dstore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap.apply_split(
