@@ -323,10 +323,10 @@ class ConditionedGmfComputer(GmfComputer):
                     method="eigh",
                 ),
                 imt,
-            )
+            ).T
             inter_sig = 0
             inter_eps = 0
-        return gmf.T, inter_sig, inter_eps  # shapes (N, E), 1, E
+        return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
 
 
 def get_conditioned_mean_and_covariance(
