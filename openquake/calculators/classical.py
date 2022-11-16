@@ -564,6 +564,7 @@ class ClassicalCalculator(base.HazardCalculator):
                         self.n_outs[cm.grp_id] += 1
                         smap.submit(([src], tile, cm))
                 srcs = [src for src in sg if src.code != b'F']
+                # NB: disagg_by_src is disabled in case of tiling
                 blks = (groupby(srcs, basename).values() if oq.disagg_by_src
                         else block_splitter(srcs, maxw, get_weight, sort=True))
                 for block in blks:
