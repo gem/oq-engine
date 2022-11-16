@@ -487,7 +487,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.build_curves_maps()  # repeat post-processing
                 return {}
             else:  # after preclassical, like in case_36
-                logging.info('Reading from the parent')
+                logging.info('Reading from parent calculation')
                 self.csm = parent['_csm']
                 self.oqparam.mags_by_trt = {
                     trt: python3compat.decode(dset[:])
@@ -503,9 +503,11 @@ class ClassicalCalculator(base.HazardCalculator):
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
         L = oq.imtls.size
+        # maximum size of the pmap array in GB
         max_gb = max_gs * L * self.N * 8 / 1024**3
-        if max_gb > 1:  # split in tiles
-            max_sites = min(numpy.ceil(self.N / max_gb), oq.max_sites_per_tile)
+        if max_gb > oq.pmap_max_gb:  # split in tiles
+            max_sites = min(numpy.ceil(self.N / max_gb * oq.pmap_max_gb),
+                            oq.max_sites_per_tile)
             tiles = self.sitecol.split_max(max_sites)
         elif oq.max_sites_per_tile < self.N:
             tiles = self.sitecol.split_max(oq.max_sites_per_tile)
