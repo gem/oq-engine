@@ -395,10 +395,11 @@ def compute(gmpe, ctx, imts, mean, sig, tau, phi):
     magnitude if there are underlying GMPETables.
     """
     if hasattr(gmpe, 'gmpe_table'):
-        for slices in get_slices(np.uint32(ctx.mag*100)).values():
-            for s0, s1 in slices:
-                s = slice(s0, s1)
-                gmpe.compute(ctx[s], imts,
-                             mean[:, s], sig[:, s], tau[:, s], phi[:, s])
+        # ctx.mag is ordered by mag by construction (see contexts.py)
+        # therefore there is a single slice per magnitude
+        for [(s0, s1)] in get_slices(np.uint32(ctx.mag*100)).values():
+            s = slice(s0, s1)
+            gmpe.compute(ctx[s], imts,
+                         mean[:, s], sig[:, s], tau[:, s], phi[:, s])
     else:
         gmpe.compute(ctx, imts, mean, sig, tau, phi)
