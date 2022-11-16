@@ -207,6 +207,7 @@ class ConditionedGmfComputer(GmfComputer):
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng()
         num_events = self.num_events
+        num_gmms = len(rlzs_by_gsim)
 
         for g, (gmm, rlzs) in enumerate(rlzs_by_gsim.items()):
             if num_events == 0:  # it may happen
@@ -238,7 +239,7 @@ class ConditionedGmfComputer(GmfComputer):
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
             n = 0
             for rlz in rlzs:
-                eids = eids_by_rlz[rlz]
+                eids = eids_by_rlz[rlz][0] + numpy.arange(num_events) * num_gmms
                 for ei, eid in enumerate(eids):
                     gmfa = array[:, :, n + ei]  # shape (N, M)
                     if sig_eps is not None:
@@ -251,6 +252,8 @@ class ConditionedGmfComputer(GmfComputer):
                         o = sp.compute(mag, zip(self.imts, gmfa.T), self.ctx)
                         for outkey, outarr in zip(sp.outputs, o):
                             items.append((outkey, outarr))
+                    print(gmm, "rlz: ", rlz, "eid: ", eid)
+                    breakpoint()
                     for i, gmv in enumerate(gmfa):
                         if gmv.sum() == 0:
                             continue
