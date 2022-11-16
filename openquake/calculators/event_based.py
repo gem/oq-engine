@@ -111,6 +111,7 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                             station_sites, station_data, oqparam.observed_imts,
                             cmaker, oqparam.correl_model, oqparam.cross_correl,
                             oqparam.ground_motion_correlation_params,
+                            oqparam.number_of_ground_motion_fields,
                             oqparam._amplifier, oqparam._sec_perils)
                     except FarAwayRupture:
                         continue
