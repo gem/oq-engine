@@ -505,8 +505,8 @@ class ClassicalCalculator(base.HazardCalculator):
         L = oq.imtls.size
         # maximum size of the pmap array in GB
         max_gb = max_gs * L * self.N * 8 / 1024**3
-        if max_gb > oq.max_size_gb:  # split in tiles
-            max_sites = min(numpy.ceil(self.N / max_gb * oq.max_size_gb),
+        if max_gb > oq.pmap_max_gb:  # split in tiles
+            max_sites = min(numpy.ceil(self.N / max_gb * oq.pmap_max_gb),
                             oq.max_sites_per_tile)
             tiles = self.sitecol.split_max(max_sites)
         elif oq.max_sites_per_tile < self.N:

@@ -448,7 +448,7 @@ max_sites_per_tile:
   Example: *max_sites_per_tile = 50_000*
   Default: 5_000_000
 
-max_size_db:
+pmap_max_gb:
    Maximum size of the ProbabilityMaps in classical calculations, should be
    less than 4 GB to avoid pickling errors. This is also used to split the
    calculation in tiles if max_sites_per_tile is not given.
@@ -920,7 +920,7 @@ class OqParam(valid.ParamSet):
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_per_tile = valid.Param(valid.positiveint, 5_000_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
-    max_size_gb = valid.Param(valid.positivefloat, 1.)
+    pmap_max_gb = valid.Param(valid.positivefloat, 1.)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
