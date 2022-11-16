@@ -480,8 +480,11 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.build_curves_maps()  # repeat post-processing
                 return {}
             else:  # after preclassical, like in case_36
+                logging.info('Reading from the parent')
                 self.csm = parent['_csm']
-                self.oqparam.mags_by_trt = self.csm.get_mags_by_trt()
+                self.oqparam.mags_by_trt = {
+                    trt: python3compat.decode(dset[:])
+                    for trt, dset in parent['source_mags'].items()}
                 self.full_lt = parent['full_lt']
                 self.datastore['source_info'] = parent['source_info'][:]
                 maxw = self.csm.get_max_weight(oq)
