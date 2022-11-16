@@ -252,8 +252,6 @@ class ConditionedGmfComputer(GmfComputer):
                         o = sp.compute(mag, zip(self.imts, gmfa.T), self.ctx)
                         for outkey, outarr in zip(sp.outputs, o):
                             items.append((outkey, outarr))
-                    print(gmm, "rlz: ", rlz, "eid: ", eid)
-                    breakpoint()
                     for i, gmv in enumerate(gmfa):
                         if gmv.sum() == 0:
                             continue
