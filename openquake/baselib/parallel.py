@@ -713,14 +713,10 @@ class Starmap(object):
             # we use spawn here to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
-            try:
-                from ray.util.multiprocessing import Pool
-                cls.pool = Pool(cls.num_cores, init_workers)
-            except ImportError:
-                cls.pool = mp_context.Pool(
-                    cls.num_cores, init_workers,
-                    maxtasksperchild=cls.maxtasksperchild)
-                cls.pids = [proc.pid for proc in cls.pool._pool]
+            cls.pool = mp_context.Pool(
+                cls.num_cores, init_workers,
+                maxtasksperchild=cls.maxtasksperchild)
+            cls.pids = [proc.pid for proc in cls.pool._pool]
             cls.shared = []
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine

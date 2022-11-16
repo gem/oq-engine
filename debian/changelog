@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Rewritten ModifiableGMPE to avoid a subtle memory leak
+
   [Matteo Nastasi]
   * Add WEBUI_PATHPREFIX variable to add a prefix to usual webui web path
 

@@ -175,7 +175,7 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
                           if a not in 'geom coords']
                 write_csv(dest, map(to_tuple, rows), header=header)
         else:  # gpkg
-            gpkg = GeoPackager(name + '.gpkg')
+            gpkg = GeoPackager(os.path.join(outdir, name + '.gpkg'))
             for kind, rows in srcs.items():
                 logging.info('Saving %d sources on layer %s', len(rows), kind)
                 gpkg.save_layer(kind, rows)
