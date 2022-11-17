@@ -112,8 +112,9 @@ def geodic2node(geodic):
     elif code == 'A':
         pol = Node('Polygon', nodes=[
             Node('exterior', nodes=[
-                Node('LinearRing', nodes=[
-                    Node('{%s}posList' % nrml.GML_NAMESPACE, text=coords)])])])
+                Node('{%s}LinearRing' % nrml.GML_NAMESPACE,
+                     nodes=[Node('{%s}posList' % nrml.GML_NAMESPACE,
+                            text=coords)])])])
         usd = Node('upperSeismoDepth', text=props['upperseismodepth'])
         lsd = Node('lowerSeismoDepth', text=props['lowerseismodepth'])
         area = Node('areaGeometry', nodes=[pol, usd, lsd])

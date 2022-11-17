@@ -314,7 +314,7 @@ class StreamingXMLWriter(object):
             return
         self.start_tag(tag, node.attrib)
         if node.text is not None:
-            if node.tag == 'posList':
+            if striptag(node.tag) == 'posList':
                 # NOTE: by convention, posList must be a flat list of
                 #   space-separated coordinates, so we need to flatten any
                 #   nested lists or tuples, producing a single list of values
