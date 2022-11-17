@@ -1148,6 +1148,7 @@ class ContextMaker(object):
         for g, gsim in enumerate(self.gsims):
             cm = object.__new__(self.__class__)
             vars(cm).update(vars(self))
+            cm.gsims = [gsim]
             cm.start = self.start + g
             cm.stop = self.start + g + 1
             cm.gsim_idx = g

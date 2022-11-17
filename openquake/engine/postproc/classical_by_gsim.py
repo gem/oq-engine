@@ -19,7 +19,7 @@
 
 import logging
 import numpy
-from openquake.baselib import sap, parallel
+from openquake.baselib import sap, hdf5, parallel
 from openquake.hazardlib import contexts, probability_map
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.commonlib import datastore
@@ -36,11 +36,30 @@ def classical_task(srcs, sitecol, cmaker, monitor):
     pmap.fill(rup_indep)
     result = classical(srcs, sitecol, cmaker, pmap)
     result['pnemap'] = pnemap = ~pmap.remove_zeros()
-    try:
-        pnemap.g = cmaker.gsim_idx
-    except AttributeError:  # cmaker does not come from a split
-        pass
+    pnemap.start = cmaker.start
     return result
+
+
+def store_poes(dstore, pnemap):
+    """
+    Store the pnemap of the given group inside the _poes dataset
+    """
+    arr = 1. - pnemap.array
+    # Physically, an extremely small intensity measure level can have an
+    # extremely large probability of exceedence, however that probability
+    # cannot be exactly 1 unless the level is exactly 0. Numerically, the
+    # PoE can be 1 and this give issues when calculating the damage (there
+    # is a log(0) in
+    # :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
+    # Here we solve the issue by replacing the unphysical probabilities 1
+    # with .9999999999999999 (the float64 closest to 1).
+    arr[arr == 1.] = .9999999999999999
+    idxs, lids, gids = arr.nonzero()
+    sids = pnemap.sids[idxs]
+    hdf5.extend(dstore['_poes/sid'], sids)
+    hdf5.extend(dstore['_poes/gid'], gids + pnemap.start)
+    hdf5.extend(dstore['_poes/lid'], lids)
+    hdf5.extend(dstore['_poes/poe'], arr[idxs, lids, gids])
 
 
 def classical_by_gsim(calc_id: int, concurrent_tasks: int=0):
@@ -66,6 +85,7 @@ def classical_by_gsim(calc_id: int, concurrent_tasks: int=0):
             tiles = sitecol.split_max(max_sites)
         else:
             tiles = [sitecol]
+        dstore.create_df('_poes', probability_map.poes_dt.items())
         dstore.swmr_on()
         smap = parallel.Starmap(classical_task, h5=dstore)
         csm = dstore['_csm']
@@ -82,12 +102,13 @@ def classical_by_gsim(calc_id: int, concurrent_tasks: int=0):
                 for tile in tiles:
                     smap.submit((grp, tile, cmaker))
             else:
-                logging.info('Sending[%s] %s', len(cmaker.gsims), grp)
+                logging.info('Sending [%s] %s', len(cmaker.gsims), grp)
                 for cm in cmaker.split_by_gsim():
                     for tile in tiles:
                         smap.submit((grp, tile, cm))
         for res in smap:
-            pass
+            store_poes(dstore, res.pop('pnemap'))
+
 
 classical_by_gsim.calc_id = 'parent calculation'
 
