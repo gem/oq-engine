@@ -136,7 +136,7 @@ class ConditionedGmfComputer(GmfComputer):
         self,
         rupture,
         sitecol,
-        station_sites,
+        station_sitecol,
         station_data,
         observed_imt_strs,
         cmaker,
@@ -179,20 +179,9 @@ class ConditionedGmfComputer(GmfComputer):
         )
         self.rupture = rupture
         self.target_sitecol = sitecol
+        self.station_sitecol = station_sitecol
         self.station_data = station_data
         self.observed_imt_strs = observed_imt_strs
-
-        station_sites = SiteCollection.from_points(
-            lons=station_sites.lon.values,
-            lats=station_sites.lat.values,
-        )
-        station_sitemodel = station_sites.assoc(sitecol, assoc_dist=0.1)
-        self.station_sitecol = SiteCollection.from_points(
-            lons=station_sites.lon,
-            lats=station_sites.lat,
-            sitemodel=station_sitemodel,
-        )
-
         self.num_events = number_of_ground_motion_fields
 
     def compute_all(self, sig_eps=None):
@@ -366,18 +355,24 @@ def get_conditioned_mean_and_covariance(
         rupture.tectonic_region_type,
         [gmm],
         dict(
-            truncation_level=0, imtls=observed_imtls, maximum_distance=maximum_distance
+            truncation_level=0,
+            imtls=observed_imtls,
+            maximum_distance=maximum_distance,
         ),
     )
 
     gc_D = GmfComputer(rupture, station_sitecol, cmaker_D)
     mean_stds = cmaker_D.get_mean_stds([gc_D.ctx])[:, 0]
+    filtered_station_locs = (
+        numpy.argwhere(numpy.isin(station_sitecol.sids, gc_D.ctx.sids)).ravel().tolist()
+    )
+    station_data_filtered = station_data.iloc[filtered_station_locs]
     # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT; G gsims, M IMTs, N sites/distances
     for i, imt_i in enumerate(observed_imts):
-        station_data[imt_i.string + "_" + "median"] = mean_stds[0, i, :]
-        station_data[imt_i.string + "_" + "sigma"] = mean_stds[1, i, :]
-        station_data[imt_i.string + "_" + "tau"] = mean_stds[2, i, :]
-        station_data[imt_i.string + "_" + "phi"] = mean_stds[3, i, :]
+        station_data_filtered[imt_i.string + "_" + "median"] = mean_stds[0, i, :]
+        station_data_filtered[imt_i.string + "_" + "sigma"] = mean_stds[1, i, :]
+        station_data_filtered[imt_i.string + "_" + "tau"] = mean_stds[2, i, :]
+        station_data_filtered[imt_i.string + "_" + "phi"] = mean_stds[3, i, :]
 
     mu_Y_yD_dict = {target_imt.string: None for target_imt in target_imts}
     cov_Y_Y_yD_dict = {target_imt.string: None for target_imt in target_imts}
@@ -425,7 +420,7 @@ def get_conditioned_mean_and_covariance(
         # Check if the station data for the IMTs shortlisted for conditioning contains NaNs
         for conditioning_imt in conditioning_imts:
             num_null_values = (
-                station_data[conditioning_imt.string + "_mean"].isna().sum()
+                station_data_filtered[conditioning_imt.string + "_mean"].isna().sum()
             )
             if num_null_values:
                 raise ValueError(
@@ -436,28 +431,30 @@ def get_conditioned_mean_and_covariance(
 
         # Observations (recorded values at the stations)
         yD = numpy.log(
-            station_data[[c_imt.string + "_mean" for c_imt in conditioning_imts]]
+            station_data_filtered[
+                [c_imt.string + "_mean" for c_imt in conditioning_imts]
+            ]
         ).values.reshape((-1, 1), order="F")
         # Additional sigma for the observations that are uncertain
         # These arise if the values for this particular IMT were not
         # directly recorded, but obtained by conversion equations or
         # cross-correlation functions
         var_addon_D = (
-            station_data[
+            station_data_filtered[
                 [c_imt.string + "_std" for c_imt in conditioning_imts]
             ].values.reshape((-1, 1), order="F")
             ** 2
         )
 
         # Predicted mean at the observation points, from GMM(s)
-        mu_yD = station_data[
+        mu_yD = station_data_filtered[
             [c_imt.string + "_median" for c_imt in conditioning_imts]
         ].values.reshape((-1, 1), order="F")
         # Predicted uncertainty components at the observation points, from GMM(s)
-        phi_D = station_data[
+        phi_D = station_data_filtered[
             [c_imt.string + "_phi" for c_imt in conditioning_imts]
         ].values.reshape((-1, 1), order="F")
-        tau_D = station_data[
+        tau_D = station_data_filtered[
             [c_imt.string + "_tau" for c_imt in conditioning_imts]
         ].values.reshape((-1, 1), order="F")
 
