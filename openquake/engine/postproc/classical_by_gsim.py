@@ -62,6 +62,8 @@ def classical_by_gsim(calc_id: int):
             max_sites = min(numpy.ceil(N / max_gb * oq.pmap_max_gb),
                             oq.max_sites_per_tile)
             tiles = sitecol.split_max(max_sites)
+        else:
+            tiles = [sitecol]
         dstore.swmr_on()
         smap = parallel.Starmap(classical_task, h5=dstore)
         csm = dstore['_csm']
