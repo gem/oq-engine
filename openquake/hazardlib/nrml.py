@@ -379,6 +379,10 @@ def read(source, stop=None):
     xmlns = nrml.tag.split('}')[0][1:]
     nrml['xmlns'] = xmlns
     nrml['xmlns:gml'] = GML_NAMESPACE
+    nrml.nsmap = {
+        xmlns: '',
+        GML_NAMESPACE: 'gml:'
+    }
     return nrml
 
 
