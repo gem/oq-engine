@@ -588,6 +588,7 @@ class Node(object):
         new.text = copy.copy(self.text)
         new.nodes = [copy.deepcopy(n, memo) for n in self.nodes]
         new.lineno = self.lineno
+        new.nsmap = self.nsmap
         return new
 
     def __getstate__(self):
