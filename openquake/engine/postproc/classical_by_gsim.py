@@ -43,7 +43,7 @@ def classical_task(srcs, sitecol, cmaker, monitor):
     return result
 
 
-def classical_by_gsim(calc_id: int):
+def classical_by_gsim(calc_id: int, concurrent_tasks: int=0):
     """
     Classical calculator as postprocessor; works only for independent
     sources and ruptures.
@@ -52,6 +52,8 @@ def classical_by_gsim(calc_id: int):
     dstore, log = datastore.build_dstore_log(parent=parent)
     with dstore, log:
         oq = dstore.parent['oqparam']
+        if concurrent_tasks:
+            oq.concurrent_tasks = concurrent_tasks
         sitecol = dstore.parent['sitecol']
         N, L = len(sitecol), oq.imtls.size
         cmakers = contexts.read_cmakers(dstore.parent)
@@ -67,18 +69,23 @@ def classical_by_gsim(calc_id: int):
         dstore.swmr_on()
         smap = parallel.Starmap(classical_task, h5=dstore)
         csm = dstore['_csm']
-        maxw = int(csm.get_max_weight(oq) * max_gs)
+        maxw = csm.get_max_weight(oq) * len(tiles)
+        logging.info('num_tiles=%d, maxw=%d', len(tiles), int(maxw))
+        groups = []
         for grp_id, sg in enumerate(csm.src_groups):
-            print(grp_id, int(sg.weight), maxw)
-            if sg.weight <= maxw:
-                logging.info('Sending light group %d', grp_id)
+            sg.grp_id = grp_id
+            groups.append(sg)
+        for grp in sorted(groups, key=lambda grp: grp.weight):
+            cmaker = cmakers[grp.grp_id]
+            if grp.weight <= maxw:
+                logging.info('Sending %s', grp)
                 for tile in tiles:
-                    smap.submit((sg, tile, cmakers[grp_id]))
+                    smap.submit((grp, tile, cmaker))
             else:
-                logging.info('Sending heavy group %d', grp_id)
-                for tile in tiles:
-                    for cm in cmakers[grp_id].split_by_gsim():
-                        smap.submit((sg, tile, cm))
+                logging.info('Sending[%s] %s', len(cmaker.gsims), grp)
+                for cm in cmaker.split_by_gsim():
+                    for tile in tiles:
+                        smap.submit((grp, tile, cm))
         for res in smap:
             pass
 
