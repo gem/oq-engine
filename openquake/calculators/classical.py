@@ -821,7 +821,7 @@ class ClassicalBigCalculator(ClassicalCalculator):
                 cmakers = self.haz.cmakers[grp.grp_id].split_by_gsim()
                 logging.info('Sending [%d] %s', len(cmakers), grp)
                 for cmaker in cmakers:
-                        smap.submit((grp, self.sitecol, cmaker))
+                    smap.submit((grp, self.sitecol, cmaker))
         smap.reduce(self.agg_dicts)
         self.store_info()
         if '_poes' in self.datastore:
