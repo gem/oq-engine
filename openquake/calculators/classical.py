@@ -150,6 +150,7 @@ def classical(srcs, sitecol, cmaker, monitor):
     pmap.fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
     result['pnemap'] = pnemap = ~pmap.remove_zeros()
+    pnemap.start = cmaker.start
     return result
 
 
@@ -407,8 +408,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = F32
                 descr.append((param, dt))
             self.datastore.create_df('rup', descr, 'gzip')
-        self.cfactor = numpy.zeros(2)
-        self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         # NB: the relevant ruptures are less than the effective ruptures,
         # which are a preclassical concept
         if self.oqparam.disagg_by_src:
@@ -436,6 +435,8 @@ class ClassicalCalculator(base.HazardCalculator):
         return sources
 
     def init_poes(self):
+        self.cfactor = numpy.zeros(2)
+        self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         if self.oqparam.hazard_calculation_id:
             full_lt = self.datastore.parent['full_lt']
             trt_smrs = self.datastore.parent['trt_smrs'][:]
@@ -771,3 +772,57 @@ class ClassicalCalculator(base.HazardCalculator):
             smap = parallel.Starmap(make_hmap_png, allargs)
             for dic in smap:
                 self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
+
+
+@base.calculators.add('classical_big')
+class ClassicalBigCalculator(ClassicalCalculator):
+    """
+    Classical calculator to be used only when there are many sites
+    """
+    def execute(self):
+        """
+        Run in parallel `core_task(sources, sitecol, monitor)`, by
+        parallelizing on the sources according to their weight and
+        tectonic region type.
+        """
+        oq = self.oqparam
+        if oq.hazard_calculation_id:
+            parent = self.datastore.parent
+            if '_poes' in parent:
+                self.build_curves_maps()  # repeat post-processing
+                return {}
+            else:  # after preclassical, like in case_36
+                logging.info('Reading from parent calculation')
+                self.csm = parent['_csm']
+                self.oqparam.mags_by_trt = {
+                    trt: python3compat.decode(dset[:])
+                    for trt, dset in parent['source_mags'].items()}
+                self.full_lt = parent['full_lt']
+                self.datastore['source_info'] = parent['source_info'][:]
+        maxw = self.csm.get_max_weight(oq)
+        self.haz = Hazard(self.datastore, self.full_lt, {})
+        self.init_poes()
+
+        #max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
+        groups = []
+        for grp_id, sg in enumerate(self.csm.src_groups):
+            sg.grp_id = grp_id
+            groups.append(sg)
+        self.datastore.swmr_on()  # must come before the Starmap
+        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        tiles = self.sitecol.split_max(self.N / 5)
+        self.source_data = AccumDict(accum=[])
+        for grp in sorted(groups, key=lambda grp: grp.weight, reverse=True):
+            for cmaker in self.haz.cmakers[grp.grp_id].split_by_gsim():
+                if grp.weight <= maxw:
+                    smap.submit((grp, self.sitecol, cmaker))
+                else:
+                    for tile in tiles:
+                        smap.submit((grp, tile, cmaker))
+        smap.reduce(self.agg_dicts)
+        self.store_info()
+        if '_poes' in self.datastore:
+            self.build_curves_maps()
+        return True
+
+    post_execute = ClassicalCalculator.post_execute
