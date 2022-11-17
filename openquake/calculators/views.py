@@ -34,7 +34,7 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib.contexts import KNOWN_DISTANCES
+from openquake.hazardlib.contexts import KNOWN_DISTANCES, read_cmakers
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import (
@@ -1309,6 +1309,27 @@ def view_mean_perils(token, dstore):
             weights = ev_weights[dstore['gmf_data/eid'][:]]
             out[peril] = fast_agg(sid, data * weights) / totw
     return out
+
+@view.add('heavy_light_groups')
+def view_heavy_light_groups(token, dstore):
+    ct = int(token.split(':')[1])
+    cmakers = read_cmakers(dstore)
+    L = cmakers[0].imtls.size
+    N = len(dstore['sitecol'])
+    gb = L * N * 8
+    df = dstore.read_df('source_info')[
+        ['grp_id', 'weight']].groupby('grp_id').sum()
+    maxw = df.weight.sum() / ct
+    heavy = list(df[df.weight >= maxw].index)
+    light = list(df[df.weight < maxw].index)
+    n_heavy = [len(cmakers[g].gsims) for g in heavy]
+    n_light = [len(cmakers[g].gsims) for g in light]
+    header = ['kind', 'num_groups', 'num_gsims', 'size']
+    tbl = [['heavy', len(heavy), sum(n_heavy), humansize(sum(n_heavy)*gb)],
+           ['light', len(light), sum(n_light), humansize(sum(n_light)*gb)]]
+    tbl.append(['total', len(heavy + light), sum(n_heavy + n_light),
+                humansize(sum(n_heavy + n_light)*gb)])
+    return text_table(tbl, header, ext='org')
 
 
 @view.add('src_groups')
