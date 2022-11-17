@@ -405,7 +405,7 @@ def _display(node, indent, expandattrs, expandvals, output,
     if shortentags and nsmap is not None:
         if tag.startswith('{'):
             ns, _tag = tag.rsplit('}')
-            tag = nsmap.get(ns[1:], '') + _tag
+            tag = '{' + nsmap.get(ns[1:], '') + '}' + _tag
     output.write(encode(indent + tag + attrs + val + '\n'))
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output,

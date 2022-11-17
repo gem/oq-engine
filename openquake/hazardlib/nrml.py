@@ -381,7 +381,7 @@ def read(source, stop=None):
     nrml['xmlns:gml'] = GML_NAMESPACE
     nrml.nsmap = {
         xmlns: '',
-        GML_NAMESPACE: 'gml:'
+        GML_NAMESPACE: 'gml'
     }
     return nrml
 
