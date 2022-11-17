@@ -398,14 +398,13 @@ def _display(node, indent, expandattrs, expandvals, output,
         val = ' %s' % repr(node.text.strip())
     else:
         val = ' %s' % repr(node.text)  # node.text can be a tuple
-    if striptags:
-        tag = striptag(node.tag)
-    else:
-        tag = node.tag
+    tag = node.tag
     if shortentags and nsmap is not None:
         if tag.startswith('{'):
             ns, _tag = tag.rsplit('}')
             tag = '{' + nsmap.get(ns[1:], '') + '}' + _tag
+    elif striptags:
+        tag = striptag(node.tag)
     output.write(encode(indent + tag + attrs + val + '\n'))
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output,
@@ -426,6 +425,7 @@ def node_display(root, expandattrs=False, expandvals=False, output=sys.stdout,
     :param output: stream where to write the string representation of the node
     :param bool striptags: do not display fully qualified tag names
     :param bool shortentags: display a shorter representation of the namespace
+                             (overriding the striptags parameter)
     :param dict nsmap: map of namespaces (keys are full names, values are the
                        corresponding aliases)
     """
@@ -509,7 +509,7 @@ class Node(object):
           print the values if True, else print only the tag names
         :param bool striptags: do not display fully qualified tag names
         :param bool shortentags: display a shorter representation of the
-                                 namespace
+                                 namespace (overriding the striptags parameter)
         """
         out = io.BytesIO()
         node_display(self, expandattrs, expandvals, out, striptags,
