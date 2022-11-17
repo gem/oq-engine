@@ -299,8 +299,8 @@ class SourceGroup(collections.abc.Sequence):
         return toml.dumps(dic)
 
     def __repr__(self):
-        return '<%s %s, %d source(s)>' % (
-            self.__class__.__name__, self.trt, len(self.sources))
+        return '<%s %s, %d source(s), weight=%d>' % (
+            self.__class__.__name__, self.trt, len(self.sources), self.weight)
 
     def __lt__(self, other):
         """

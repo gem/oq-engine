@@ -149,7 +149,7 @@ def classical(srcs, sitecol, cmaker, monitor):
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
     pmap.fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
-    result['pmap'] = ~pmap.remove_zeros()
+    result['pnemap'] = pnemap = ~pmap.remove_zeros()
     return result
 
 
@@ -358,7 +358,7 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
-        pnemap = dic['pmap']  # probabilities of no exceedence
+        pnemap = dic['pnemap']  # probabilities of no exceedence
         pnemap.grp_id = grp_id
         pmap_by_src = dic.pop('pmap_by_src', {})
         # len(pmap_by_src) > 1 only for mutex sources, see contexts.py
@@ -564,6 +564,7 @@ class ClassicalCalculator(base.HazardCalculator):
                         self.n_outs[cm.grp_id] += 1
                         smap.submit(([src], tile, cm))
                 srcs = [src for src in sg if src.code != b'F']
+                # NB: disagg_by_src is disabled in case of tiling
                 blks = (groupby(srcs, basename).values() if oq.disagg_by_src
                         else block_splitter(srcs, maxw, get_weight, sort=True))
                 for block in blks:
