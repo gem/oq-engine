@@ -267,7 +267,7 @@ class ConditionedGmfComputer(GmfComputer):
             and eps for the random part
         """
         M = len(self.imts)
-        num_sids = len(self.target_sitecol)
+        num_sids = mean_covs[0][self.imts[0].string].size
         result = numpy.zeros((M, num_sids, num_events), F32)
         sig = numpy.zeros((M, num_events), F32)  # same for all events
         eps = numpy.zeros((M, num_events), F32)  # not the same
@@ -344,9 +344,6 @@ def get_conditioned_mean_and_covariance(
         ):
             raise NoInterIntraStdDevs(gmm)
 
-    num_target_sites = len(target_sitecol)
-    num_station_sites = len(station_sitecol)
-
     observed_imtls = {
         imt_str: [0] for imt_str in observed_imt_strs if imt_str not in ["MMI", "PGV"]
     }
@@ -363,16 +360,19 @@ def get_conditioned_mean_and_covariance(
 
     gc_D = GmfComputer(rupture, station_sitecol, cmaker_D)
     mean_stds = cmaker_D.get_mean_stds([gc_D.ctx])[:, 0]
-    filtered_station_locs = (
+    station_locs_filtered = (
         numpy.argwhere(numpy.isin(station_sitecol.sids, gc_D.ctx.sids)).ravel().tolist()
     )
-    station_data_filtered = station_data.iloc[filtered_station_locs]
+    station_sitecol_filtered = station_sitecol.filtered(station_locs_filtered)
+    station_data_filtered = station_data.iloc[station_locs_filtered]
+    num_station_sites = len(station_sitecol_filtered)
+
     # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT; G gsims, M IMTs, N sites/distances
     for i, imt_i in enumerate(observed_imts):
-        station_data_filtered[imt_i.string + "_" + "median"] = mean_stds[0, i, :]
-        station_data_filtered[imt_i.string + "_" + "sigma"] = mean_stds[1, i, :]
-        station_data_filtered[imt_i.string + "_" + "tau"] = mean_stds[2, i, :]
-        station_data_filtered[imt_i.string + "_" + "phi"] = mean_stds[3, i, :]
+        station_data_filtered.loc[:, imt_i.string + "_" + "median"] = mean_stds[0, i, :]
+        station_data_filtered.loc[:, imt_i.string + "_" + "sigma"] = mean_stds[1, i, :]
+        station_data_filtered.loc[:, imt_i.string + "_" + "tau"] = mean_stds[2, i, :]
+        station_data_filtered.loc[:, imt_i.string + "_" + "phi"] = mean_stds[3, i, :]
 
     mu_Y_yD_dict = {target_imt.string: None for target_imt in target_imts}
     cov_Y_Y_yD_dict = {target_imt.string: None for target_imt in target_imts}
@@ -407,7 +407,7 @@ def get_conditioned_mean_and_covariance(
                 # Target IMT is outside the range of the observed IMT periods
                 # and its period is lower than the lowest available in the observed IMTs
                 conditioning_imts = [all_imts[1]]
-            elif imt_idx == len(all_imts):
+            elif imt_idx == len(all_imts) - 1:
                 # Target IMT is outside the range of the observed IMT periods
                 # and its period is higher than the highest available in the observed IMTs
                 conditioning_imts = [all_imts[-2]]
@@ -473,8 +473,8 @@ def get_conditioned_mean_and_covariance(
 
         # Compute the station data within-event covariance matrix
         rho_WD_WD = compute_spatial_cross_correlation_matrix(
-            station_sitecol,
-            station_sitecol,
+            station_sitecol_filtered,
+            station_sitecol_filtered,
             conditioning_imts,
             conditioning_imts,
             spatial_correl,
@@ -546,6 +546,13 @@ def get_conditioned_mean_and_covariance(
 
         gc_Y = GmfComputer(rupture, target_sitecol, cmaker_Y)
         mean_stds = cmaker_Y.get_mean_stds([gc_Y.ctx])[:, 0]
+        target_sites_filtered = (
+            numpy.argwhere(numpy.isin(target_sitecol.sids, gc_Y.ctx.sids))
+            .ravel()
+            .tolist()
+        )
+        target_sitecol_filtered = target_sitecol.filtered(target_sites_filtered)
+        num_target_sites = len(target_sitecol_filtered)
         # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT; G gsims, M IMTs, N sites/distances
 
         # Predicted mean at the target sites, from GMM(s)
@@ -564,8 +571,8 @@ def get_conditioned_mean_and_covariance(
         # Compute the within-event covariance matrix for the
         # target sites and observation sites
         rho_WY_WD = compute_spatial_cross_correlation_matrix(
-            target_sitecol,
-            station_sitecol,
+            target_sitecol_filtered,
+            station_sitecol_filtered,
             [target_imt],
             conditioning_imts,
             spatial_correl,
@@ -576,8 +583,8 @@ def get_conditioned_mean_and_covariance(
         )
 
         rho_WD_WY = compute_spatial_cross_correlation_matrix(
-            station_sitecol,
-            target_sitecol,
+            station_sitecol_filtered,
+            target_sitecol_filtered,
             conditioning_imts,
             [target_imt],
             spatial_correl,
@@ -590,8 +597,8 @@ def get_conditioned_mean_and_covariance(
         # Compute the within-event covariance matrix for the
         # target sites (apriori)
         rho_WY_WY = compute_spatial_cross_correlation_matrix(
-            target_sitecol,
-            target_sitecol,
+            target_sitecol_filtered,
+            target_sitecol_filtered,
             [target_imt],
             [target_imt],
             spatial_correl,
