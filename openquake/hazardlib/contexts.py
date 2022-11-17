@@ -1138,6 +1138,22 @@ class ContextMaker(object):
                     else:
                         src.weight += 1.
                     
+    def split_by_gsim(self):
+        """
+        Split the ContextMaker in multiple context makers, one per GSIM
+        """
+        if len(self.gsims) == 1:
+            return [self]
+        cmakers = []
+        for g, gsim in enumerate(self.gsims):
+            cm = object.__new__(self.__class__)
+            vars(cm).update(vars(self))
+            cm.gsims = [gsim]
+            cm.start = self.start + g
+            cm.stop = self.start + g + 1
+            cm.gsim_idx = g
+            cmakers.append(cm)
+        return cmakers
 
 
 # see contexts_tests.py for examples of collapse
