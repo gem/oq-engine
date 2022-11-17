@@ -75,7 +75,7 @@ def classical_by_gsim(calc_id: int, concurrent_tasks: int=0):
         for grp_id, sg in enumerate(csm.src_groups):
             sg.grp_id = grp_id
             groups.append(sg)
-        for grp in sorted(groups, key=lambda grp: grp.weight):
+        for grp in sorted(groups, key=lambda grp: grp.weight, reverse=True):
             cmaker = cmakers[grp.grp_id]
             if grp.weight <= maxw:
                 logging.info('Sending %s', grp)
