@@ -810,13 +810,16 @@ class ClassicalBigCalculator(ClassicalCalculator):
             groups.append(sg)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        tiles = self.sitecol.split_max(self.N / 5)
+        tiles = self.sitecol.split_max(numpy.ceil(self.N / 5))
         self.source_data = AccumDict(accum=[])
         for grp in sorted(groups, key=lambda grp: grp.weight, reverse=True):
-            for cmaker in self.haz.cmakers[grp.grp_id].split_by_gsim():
-                if grp.weight <= maxw:
+            cmakers = self.haz.cmakers[grp.grp_id].split_by_gsim()
+            logging.info('Sending %s', grp)
+            if grp.weight <= maxw:
+                for cmaker in cmakers:
                     smap.submit((grp, self.sitecol, cmaker))
-                else:
+            else:  # heavy source group
+                for cmaker in cmakers:
                     for tile in tiles:
                         smap.submit((grp, tile, cmaker))
         smap.reduce(self.agg_dicts)
