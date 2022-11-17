@@ -813,7 +813,7 @@ class ClassicalBigCalculator(ClassicalCalculator):
         tiles = self.sitecol.split_max(numpy.ceil(self.N / 3))
         self.source_data = AccumDict(accum=[])
         for grp in sorted(groups, key=lambda grp: grp.weight, reverse=True):
-            cmaker = self.haz.cmakers[grp_id]
+            cmaker = self.haz.cmakers[grp.grp_id]
             if grp.weight <= maxw:
                 # light group
                 logging.info('Sending [%d] %s', len(tiles), grp)
