@@ -813,15 +813,25 @@ class ClassicalBigCalculator(ClassicalCalculator):
         tiles = self.sitecol.split_max(numpy.ceil(self.N / 3))
         self.source_data = AccumDict(accum=[])
         for grp in sorted(groups, key=lambda grp: grp.weight, reverse=True):
+            cmaker = self.haz.cmakers[grp_id]
             if grp.weight <= maxw:
+                # light group
                 logging.info('Sending [%d] %s', len(tiles), grp)
                 for tile in tiles:
-                    smap.submit((grp, tile, self.haz.cmakers[grp_id]))
-            else:  # heavy source group
-                cmakers = self.haz.cmakers[grp.grp_id].split_by_gsim()
+                    smap.submit((grp, tile, cmaker))
+            elif grp.weight > maxw * len(cmaker.gsims):
+                # heavy group
+                cmakers = cmaker.split_by_gsim()
+                logging.info('Sending [%d] %s', len(cmakers) * len(tiles), grp)
+                for cm in cmakers:
+                    for tile in tiles:
+                        smap.submit((grp, tile, cm))
+            else:
+                # medium group
+                cmakers = cmaker.split_by_gsim()
                 logging.info('Sending [%d] %s', len(cmakers), grp)
-                for cmaker in cmakers:
-                    smap.submit((grp, self.sitecol, cmaker))
+                for cm in cmakers:
+                    smap.submit((grp, self.sitecol, cm))
         smap.reduce(self.agg_dicts)
         self.store_info()
         if '_poes' in self.datastore:
