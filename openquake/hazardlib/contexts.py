@@ -1143,7 +1143,7 @@ class ContextMaker(object):
         Split the ContextMaker in multiple context makers, one per GSIM
         """
         if len(self.gsims) == 1:
-            return self
+            return [self]
         cmakers = []
         for g, gsim in enumerate(self.gsims):
             cm = object.__new__(self.__class__)
