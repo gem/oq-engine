@@ -194,9 +194,9 @@ if numba:
                  t.float64)                              # itime
     update_pmap_c = compile(sig)(update_pmap_c)
 
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.uint32[:]       ,                     # idxs
-                 t.float64[:, :, :])                     # pnes
+    sig = t.void(t.float64[:, :],                        # pmap
+                 t.uint32[:],                            # idxs
+                 t.float64[:, :])                        # pnes
     update_pnes = compile(sig)(update_pnes)
 
 
@@ -288,11 +288,17 @@ class ProbabilityMap(object):
         """
         Multiply by the probabilities of no exceedence
         """
-        if other.shape[1:] != self.shape[1:]:
+        # other has shape (N, L, G)
+        if other.shape[1] != self.shape[1]:
             raise ValueError('%s has inconsistent shape with %s' %
                              (other, self))
         # assume other.sids are a subset of self.sids
-        update_pnes(self.array, self.sidx[other.sids], other.array)
+        sids = self.sidx[other.sids]
+        if hasattr(other, 'g'):  # other has shape (N, L, 1)
+            update_pnes(self.array[:, :, other.g], sids, other.array[:, :, 0])
+        else:
+            for g in range(other.shape[2]):
+                update_pnes(self.array[:, :, g], sids, other.array[:, :, g])
         return self
 
     def update_i(self, poes, rates, probs_occur, sids, itime):

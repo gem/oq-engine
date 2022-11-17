@@ -149,7 +149,11 @@ def classical(srcs, sitecol, cmaker, monitor):
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
     pmap.fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
-    result['pmap'] = ~pmap.remove_zeros()
+    result['pnemap'] = pnemap = ~pmap.remove_zeros()
+    try:
+        pnemap.g = cmaker.gsim_idx
+    except AttributeError:  # cmaker does not come from a split
+        pass
     return result
 
 
@@ -358,7 +362,7 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
-        pnemap = dic['pmap']  # probabilities of no exceedence
+        pnemap = dic['pnemap']  # probabilities of no exceedence
         pnemap.grp_id = grp_id
         pmap_by_src = dic.pop('pmap_by_src', {})
         # len(pmap_by_src) > 1 only for mutex sources, see contexts.py
