@@ -810,7 +810,7 @@ class ClassicalBigCalculator(ClassicalCalculator):
             groups.append(sg)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        tiles = self.sitecol.split_max(numpy.ceil(self.N / 5))
+        tiles = self.sitecol.split_max(numpy.ceil(self.N / 3))
         self.source_data = AccumDict(accum=[])
         for grp in sorted(groups, key=lambda grp: grp.weight, reverse=True):
             logging.info('Sending %s', grp)
