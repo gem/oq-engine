@@ -150,10 +150,6 @@ def classical(srcs, sitecol, cmaker, monitor):
     pmap.fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
     result['pnemap'] = pnemap = ~pmap.remove_zeros()
-    try:
-        pnemap.g = cmaker.gsim_idx
-    except AttributeError:  # cmaker does not come from a split
-        pass
     return result
 
 
