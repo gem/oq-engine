@@ -300,7 +300,7 @@ class StreamingXMLWriter(object):
             # this looks like a bug of ElementTree: comments are stored as
             # functions!?? see https://hg.python.org/sandbox/python2.7/file/tip/Lib/xml/etree/ElementTree.py#l458
             return
-        if self.nsmap:
+        if self.nsmap is not None:
             tag = self.shorten(node.tag)
         else:
             tag = node.tag
