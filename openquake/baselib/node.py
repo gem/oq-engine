@@ -300,7 +300,7 @@ class StreamingXMLWriter(object):
             # this looks like a bug of ElementTree: comments are stored as
             # functions!?? see https://hg.python.org/sandbox/python2.7/file/tip/Lib/xml/etree/ElementTree.py#l458
             return
-        if self.nsmap is not None:
+        if self.nsmap:
             tag = self.shorten(node.tag)
         else:
             tag = node.tag
@@ -399,7 +399,7 @@ def _display(node, indent, expandattrs, expandvals, output,
     else:
         val = ' %s' % repr(node.text)  # node.text can be a tuple
     tag = node.tag
-    if shortentags and nsmap is not None:
+    if shortentags and nsmap:
         if tag.startswith('{'):
             ns, _tag = tag.rsplit('}')
             tag = '{' + nsmap.get(ns[1:], '') + '}' + _tag
@@ -471,7 +471,7 @@ class Node(object):
         self.text = text
         self.nodes = [] if nodes is None else nodes
         self.lineno = lineno
-        self.nsmap = nsmap
+        self.nsmap = {} if nsmap is None else nsmap
         if self.nodes and self.text is not None:
             raise ValueError(
                 'A branch node cannot have a value, got %r' % self.text)
@@ -485,6 +485,10 @@ class Node(object):
                 return node
         raise AttributeError("No subnode named '%s' found in '%s'" %
                              (name, striptag(self.tag)))
+
+    def add_namespace(self, full_name, alias):
+        self.nsmap[full_name] = alias
+        self[alias] = full_name
 
     def getnodes(self, name):
         "Return the direct subnodes with name 'name'"
