@@ -150,6 +150,7 @@ def classical(srcs, sitecol, cmaker, monitor):
     pmap.fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
     result['pnemap'] = pnemap = ~pmap.remove_zeros()
+    pnemap.start = cmaker.start
     return result
 
 
@@ -278,7 +279,7 @@ class Hazard:
         """
         Store the pmap of the given group inside the _poes dataset
         """
-        cmaker = self.cmakers[grp_id]
+        start = pmap.start
         arr = 1. - pmap.array
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence, however that probability
@@ -293,10 +294,10 @@ class Hazard:
         idxs, lids, gids = arr.nonzero()
         sids = pmap.sids[idxs]
         hdf5.extend(self.datastore['_poes/sid'], sids)
-        hdf5.extend(self.datastore['_poes/gid'], gids + cmaker.start)
+        hdf5.extend(self.datastore['_poes/gid'], gids + start)
         hdf5.extend(self.datastore['_poes/lid'], lids)
         hdf5.extend(self.datastore['_poes/poe'], arr[idxs, lids, gids])
-        self.acc[grp_id]['grp_start'] = cmaker.start
+        self.acc[grp_id]['grp_start'] = start
         self.acc[grp_id]['avg_poe'] = arr.mean(axis=(0, 2))@self.level_weights
         self.acc[grp_id]['nsites'] = len(pmap.sids)
 
@@ -382,7 +383,6 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Store some empty datasets in the datastore
         """
-        self.init_poes()
         params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
                   'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
@@ -407,8 +407,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = F32
                 descr.append((param, dt))
             self.datastore.create_df('rup', descr, 'gzip')
-        self.cfactor = numpy.zeros(2)
-        self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         # NB: the relevant ruptures are less than the effective ruptures,
         # which are a preclassical concept
         if self.oqparam.disagg_by_src:
@@ -436,6 +434,8 @@ class ClassicalCalculator(base.HazardCalculator):
         return sources
 
     def init_poes(self):
+        self.cfactor = numpy.zeros(2)
+        self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         if self.oqparam.hazard_calculation_id:
             full_lt = self.datastore.parent['full_lt']
             trt_smrs = self.datastore.parent['trt_smrs'][:]
@@ -480,8 +480,7 @@ class ClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        oq = self.oqparam
-        if oq.hazard_calculation_id:
+        if self.oqparam.hazard_calculation_id:
             parent = self.datastore.parent
             if '_poes' in parent:
                 self.build_curves_maps()  # repeat post-processing
@@ -494,13 +493,36 @@ class ClassicalCalculator(base.HazardCalculator):
                     for trt, dset in parent['source_mags'].items()}
                 self.full_lt = parent['full_lt']
                 self.datastore['source_info'] = parent['source_info'][:]
-                maxw = self.csm.get_max_weight(oq)
+                maxw = self.csm.get_max_weight(self.oqparam)
         else:
             maxw = self.max_weight
-        self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
+        self.init_poes()
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
+        t0 = time.time()
+        if self.oqparam.save_memory:
+            self.execute_large(maxw)
+        else:
+            self.execute_small(maxw)
+        self.store_info()
+        if self.cfactor[0] == 0:
+            raise RuntimeError('Filtered away all ruptures??')
+        logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
+            int(self.cfactor[1]), int(self.cfactor[0]),
+            self.cfactor[1] / self.cfactor[0]))
+        if '_poes' in self.datastore:
+            self.build_curves_maps()
+        if not self.oqparam.hazard_calculation_id:
+            self.classical_time = time.time() - t0
+        return True
+
+    def execute_small(self, maxw):
+        """
+        Method called when save_memory=False
+        """
+        oq = self.oqparam
+        self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
         L = oq.imtls.size
         # maximum size of the pmap array in GB
@@ -524,24 +546,47 @@ class ClassicalCalculator(base.HazardCalculator):
         self.source_data = AccumDict(accum=[])
         self.n_outs = AccumDict(accum=0)
         acc = {}
-        t0 = time.time()
         for t, tile in enumerate(tiles, 1):
             self.run_tile(tile, maxw, acc)
             if len(tiles) > 1:
                 parallel.Starmap.shutdown()
                 logging.info('Finished tile %d of %d', t, len(tiles))
-        self.store_info()
         self.haz.store_disagg(acc)
-        if self.cfactor[0] == 0:
-            raise RuntimeError('Filtered away all ruptures??')
-        logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
-            int(self.cfactor[1]), int(self.cfactor[0]),
-            self.cfactor[1] / self.cfactor[0]))
-        if '_poes' in self.datastore:
-            self.build_curves_maps()
-        if not oq.hazard_calculation_id:
-            self.classical_time = time.time() - t0
-        return True
+
+    def execute_large(self, maxw):
+        """
+        Method called when save_memory=True
+        """
+        max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
+        groups = []
+        for grp_id, sg in enumerate(self.csm.src_groups):
+            sg.grp_id = grp_id
+            groups.append(sg)
+        self.datastore.swmr_on()  # must come before the Starmap
+        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        tiles = self.sitecol.split_max(numpy.ceil(self.N / 4))
+        self.source_data = AccumDict(accum=[])
+        for grp in sorted(groups, key=lambda grp: grp.weight, reverse=True):
+            cmaker = self.haz.cmakers[grp.grp_id]
+            if grp.weight <= maxw:
+                # lightweight group
+                logging.info('Light [%d] %s', len(tiles), grp)
+                for tile in tiles:
+                    smap.submit((grp, tile, cmaker))
+            elif grp.weight > maxw * max_gs:
+                # heavyweight group
+                cmakers = cmaker.split_by_gsim()
+                logging.info('Heavy [%d] %s', len(cmakers) * len(tiles), grp)
+                for cm in cmakers:
+                    for tile in tiles:
+                        smap.submit((grp, tile, cm))
+            else:
+                # middleweight group
+                cmakers = cmaker.split_by_gsim()
+                logging.info('Middle [%d] %s', len(cmakers), grp)
+                for cm in cmakers:
+                    smap.submit((grp, self.sitecol, cm))
+        smap.reduce(self.agg_dicts)
 
     def run_tile(self, tile, maxw, acc):
         """
@@ -558,6 +603,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 # only groups generating more than 1 task preallocate memory
                 acc[cm.grp_id] = ProbabilityMap(
                     tile.sids, oq.imtls.size, len(cm.gsims)).fill(1)
+                acc[cm.grp_id].start = cm.start
                 # send the multiFaultSources first
                 for src in sg:
                     if src.code == b'F':
@@ -713,8 +759,9 @@ class ClassicalCalculator(base.HazardCalculator):
         # disposed in 2 groups and we want to produce 2 tasks we can use
         # 012345012345 // 3 = 000111000111 and the slices are
         # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
-        slicedic = performance.get_slices(
-            dstore['_poes/sid'][:] // sites_per_task)
+        with self.monitor('building _poes slices', measuremem=True):
+            slicedic = performance.get_slices(
+                dstore['_poes/sid'][:] // sites_per_task)
         if not slicedic:
             # no hazard, nothing to do, happens in case_60
             return
