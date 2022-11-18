@@ -383,7 +383,6 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Store some empty datasets in the datastore
         """
-        self.init_poes()
         params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
                   'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
@@ -481,8 +480,7 @@ class ClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        oq = self.oqparam
-        if oq.hazard_calculation_id:
+        if self.oqparam.hazard_calculation_id:
             parent = self.datastore.parent
             if '_poes' in parent:
                 self.build_curves_maps()  # repeat post-processing
@@ -495,13 +493,36 @@ class ClassicalCalculator(base.HazardCalculator):
                     for trt, dset in parent['source_mags'].items()}
                 self.full_lt = parent['full_lt']
                 self.datastore['source_info'] = parent['source_info'][:]
-                maxw = self.csm.get_max_weight(oq)
+                maxw = self.csm.get_max_weight(self.oqparam)
         else:
             maxw = self.max_weight
-        self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
+        self.init_poes()
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
+        t0 = time.time()
+        if self.oqparam.save_memory:
+            self.execute_large(maxw)
+        else:
+            self.execute_small(maxw)
+        self.store_info()
+        if self.cfactor[0] == 0:
+            raise RuntimeError('Filtered away all ruptures??')
+        logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
+            int(self.cfactor[1]), int(self.cfactor[0]),
+            self.cfactor[1] / self.cfactor[0]))
+        if '_poes' in self.datastore:
+            self.build_curves_maps()
+        if not self.oqparam.hazard_calculation_id:
+            self.classical_time = time.time() - t0
+        return True
+
+    def execute_small(self, maxw):
+        """
+        Method called when save_memory=False
+        """
+        oq = self.oqparam
+        self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
         L = oq.imtls.size
         # maximum size of the pmap array in GB
@@ -525,24 +546,47 @@ class ClassicalCalculator(base.HazardCalculator):
         self.source_data = AccumDict(accum=[])
         self.n_outs = AccumDict(accum=0)
         acc = {}
-        t0 = time.time()
         for t, tile in enumerate(tiles, 1):
             self.run_tile(tile, maxw, acc)
             if len(tiles) > 1:
                 parallel.Starmap.shutdown()
                 logging.info('Finished tile %d of %d', t, len(tiles))
-        self.store_info()
         self.haz.store_disagg(acc)
-        if self.cfactor[0] == 0:
-            raise RuntimeError('Filtered away all ruptures??')
-        logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
-            int(self.cfactor[1]), int(self.cfactor[0]),
-            self.cfactor[1] / self.cfactor[0]))
-        if '_poes' in self.datastore:
-            self.build_curves_maps()
-        if not oq.hazard_calculation_id:
-            self.classical_time = time.time() - t0
-        return True
+
+    def execute_large(self, maxw):
+        """
+        Method called when save_memory=True
+        """
+        max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
+        groups = []
+        for grp_id, sg in enumerate(self.csm.src_groups):
+            sg.grp_id = grp_id
+            groups.append(sg)
+        self.datastore.swmr_on()  # must come before the Starmap
+        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        tiles = self.sitecol.split_max(numpy.ceil(self.N / 4))
+        self.source_data = AccumDict(accum=[])
+        for grp in sorted(groups, key=lambda grp: grp.weight, reverse=True):
+            cmaker = self.haz.cmakers[grp.grp_id]
+            if grp.weight <= maxw:
+                # light group
+                logging.info('Light [%d] %s', len(tiles), grp)
+                for tile in tiles:
+                    smap.submit((grp, tile, cmaker))
+            elif grp.weight > maxw * max_gs:
+                # heavy group
+                cmakers = cmaker.split_by_gsim()
+                logging.info('Heavy [%d] %s', len(cmakers) * len(tiles), grp)
+                for cm in cmakers:
+                    for tile in tiles:
+                        smap.submit((grp, tile, cm))
+            else:
+                # medium group
+                cmakers = cmaker.split_by_gsim()
+                logging.info('Middle [%d] %s', len(cmakers), grp)
+                for cm in cmakers:
+                    smap.submit((grp, self.sitecol, cm))
+        smap.reduce(self.agg_dicts)
 
     def run_tile(self, tile, maxw, acc):
         """
@@ -559,6 +603,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 # only groups generating more than 1 task preallocate memory
                 acc[cm.grp_id] = ProbabilityMap(
                     tile.sids, oq.imtls.size, len(cm.gsims)).fill(1)
+                acc[cm.grp_id].start = cm.start
                 # send the multiFaultSources first
                 for src in sg:
                     if src.code == b'F':
@@ -772,69 +817,3 @@ class ClassicalCalculator(base.HazardCalculator):
             smap = parallel.Starmap(make_hmap_png, allargs)
             for dic in smap:
                 self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
-
-
-@base.calculators.add('classical_big')
-class ClassicalBigCalculator(ClassicalCalculator):
-    """
-    Classical calculator to be used only when there are many sites
-    """
-    def execute(self):
-        """
-        Run one source group at the time with an algorithm saving memory
-        """
-        oq = self.oqparam
-        assert self.N > oq.max_sites_disagg, self.N
-        if oq.hazard_calculation_id:
-            parent = self.datastore.parent
-            if '_poes' in parent:
-                self.build_curves_maps()  # repeat post-processing
-                return {}
-            else:  # after preclassical, like in case_36
-                logging.info('Reading from parent calculation')
-                self.csm = parent['_csm']
-                self.oqparam.mags_by_trt = {
-                    trt: python3compat.decode(dset[:])
-                    for trt, dset in parent['source_mags'].items()}
-                self.full_lt = parent['full_lt']
-                self.datastore['source_info'] = parent['source_info'][:]
-        maxw = self.csm.get_max_weight(oq)
-        self.haz = Hazard(self.datastore, self.full_lt, {})
-        self.init_poes()
-
-        max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
-        groups = []
-        for grp_id, sg in enumerate(self.csm.src_groups):
-            sg.grp_id = grp_id
-            groups.append(sg)
-        self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        tiles = self.sitecol.split_max(numpy.ceil(self.N / 4))
-        self.source_data = AccumDict(accum=[])
-        for grp in sorted(groups, key=lambda grp: grp.weight, reverse=True):
-            cmaker = self.haz.cmakers[grp.grp_id]
-            if grp.weight <= maxw:
-                # light group
-                logging.info('Light [%d] %s', len(tiles), grp)
-                for tile in tiles:
-                    smap.submit((grp, tile, cmaker))
-            elif grp.weight > maxw * max_gs:
-                # heavy group
-                cmakers = cmaker.split_by_gsim()
-                logging.info('Heavy [%d] %s', len(cmakers) * len(tiles), grp)
-                for cm in cmakers:
-                    for tile in tiles:
-                        smap.submit((grp, tile, cm))
-            else:
-                # medium group
-                cmakers = cmaker.split_by_gsim()
-                logging.info('Middle [%d] %s', len(cmakers), grp)
-                for cm in cmakers:
-                    smap.submit((grp, self.sitecol, cm))
-        smap.reduce(self.agg_dicts)
-        self.store_info()
-        if '_poes' in self.datastore:
-            self.build_curves_maps()
-        return True
-
-    post_execute = ClassicalCalculator.post_execute

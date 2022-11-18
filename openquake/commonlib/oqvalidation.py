@@ -620,6 +620,12 @@ sampling_method:
   Example: *sampling_method = early_latin*.
   Default: 'early_weights'
 
+save_memory:
+   Use an approach that saves memory in large classical calculations, possibly
+   with a performance penalty.
+   Example: *save_memory = true*
+   Default: false
+
 sec_peril_params:
   INTERNAL
 
@@ -771,7 +777,6 @@ ALL_CALCULATORS = ['aftershock',
                    'classical_risk',
                    'classical_damage',
                    'classical',
-                   'classical_big',
                    'custom',
                    'event_based',
                    'scenario',
@@ -959,6 +964,7 @@ class OqParam(valid.ParamSet):
     sampling_method = valid.Param(
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
+    save_memory = valid.Param(valid.boolean, False)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})
