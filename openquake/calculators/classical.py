@@ -781,11 +781,10 @@ class ClassicalBigCalculator(ClassicalCalculator):
     """
     def execute(self):
         """
-        Run in parallel `core_task(sources, sitecol, monitor)`, by
-        parallelizing on the sources according to their weight and
-        tectonic region type.
+        Run one source group at the time with an algorithm saving memory
         """
         oq = self.oqparam
+        assert self.N > oq.max_sites_disagg, self.N
         if oq.hazard_calculation_id:
             parent = self.datastore.parent
             if '_poes' in parent:
@@ -803,14 +802,14 @@ class ClassicalBigCalculator(ClassicalCalculator):
         self.haz = Hazard(self.datastore, self.full_lt, {})
         self.init_poes()
 
-        #max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
+        max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
         groups = []
         for grp_id, sg in enumerate(self.csm.src_groups):
             sg.grp_id = grp_id
             groups.append(sg)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        tiles = self.sitecol.split_max(numpy.ceil(self.N / 3))
+        tiles = self.sitecol.split_max(numpy.ceil(self.N / 4))
         self.source_data = AccumDict(accum=[])
         for grp in sorted(groups, key=lambda grp: grp.weight, reverse=True):
             cmaker = self.haz.cmakers[grp.grp_id]
@@ -819,7 +818,7 @@ class ClassicalBigCalculator(ClassicalCalculator):
                 logging.info('Sending [%d] %s', len(tiles), grp)
                 for tile in tiles:
                     smap.submit((grp, tile, cmaker))
-            elif grp.weight > maxw * len(cmaker.gsims):
+            elif grp.weight > maxw * max_gs:
                 # heavy group
                 cmakers = cmaker.split_by_gsim()
                 logging.info('Sending [%d] %s', len(cmakers) * len(tiles), grp)
