@@ -377,8 +377,8 @@ def read(source, stop=None):
                          (source, nrml.tag))
     # extract the XML namespace URL ('http://openquake.org/xmlns/nrml/0.5')
     xmlns = nrml.tag.split('}')[0][1:]
-    nrml.add_namespace(xmlns, 'xmlns')
-    nrml.add_namespace(GML_NAMESPACE, 'xmlns:gml')
+    nrml['xmlns'] = xmlns
+    nrml['xmlns:gml'] = GML_NAMESPACE
     return nrml
 
 

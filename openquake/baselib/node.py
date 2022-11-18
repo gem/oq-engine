@@ -453,25 +453,22 @@ class Node(object):
     is that subnodes can be lazily generated and that they can be accessed
     with the dot notation.
     """
-    __slots__ = ('tag', 'attrib', 'text', 'nodes', 'lineno', 'nsmap')
+    __slots__ = ('tag', 'attrib', 'text', 'nodes', 'lineno')
 
     def __init__(self, fulltag, attrib=None, text=None,
-                 nodes=None, lineno=None, nsmap=None):
+                 nodes=None, lineno=None):
         """
         :param str tag: the Node name
         :param dict attrib: the Node attributes
         :param str text: the Node text (default None)
         :param nodes: an iterable of subnodes (default empty list)
         :param lineno: line number where the tag was read in the source xml
-        :param dict nsmap: map of namespaces (keys are full names,
-                           values are the corresponding aliases)
         """
         self.tag = fulltag
         self.attrib = {} if attrib is None else attrib
         self.text = text
         self.nodes = [] if nodes is None else nodes
         self.lineno = lineno
-        self.nsmap = {} if nsmap is None else nsmap
         if self.nodes and self.text is not None:
             raise ValueError(
                 'A branch node cannot have a value, got %r' % self.text)
@@ -486,10 +483,6 @@ class Node(object):
         raise AttributeError("No subnode named '%s' found in '%s'" %
                              (name, striptag(self.tag)))
 
-    def add_namespace(self, full_name, alias):
-        self.nsmap[full_name] = alias
-        self[alias] = full_name
-
     def getnodes(self, name):
         "Return the direct subnodes with name 'name'"
         for node in self.nodes:
@@ -501,6 +494,9 @@ class Node(object):
         if not isinstance(node, self.__class__):
             raise TypeError('Expected Node instance, got %r' % node)
         self.nodes.append(node)
+
+    def get_nsmap(self):
+        return {v: k for k, v in self.attrib.items() if k.startswith('xmlns')}
 
     def to_str(self, expandattrs=True, expandvals=True, striptags=True,
                shortentags=False):
@@ -517,7 +513,7 @@ class Node(object):
         """
         out = io.BytesIO()
         node_display(self, expandattrs, expandvals, out, striptags,
-                     shortentags, self.nsmap)
+                     shortentags, self.get_nsmap())
         return decode(out.getvalue())
 
     def __iter__(self):
@@ -592,7 +588,6 @@ class Node(object):
         new.text = copy.copy(self.text)
         new.nodes = [copy.deepcopy(n, memo) for n in self.nodes]
         new.lineno = self.lineno
-        new.nsmap = self.nsmap
         return new
 
     def __getstate__(self):
