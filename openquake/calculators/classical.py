@@ -279,7 +279,7 @@ class Hazard:
         """
         Store the pmap of the given group inside the _poes dataset
         """
-        cmaker = self.cmakers[grp_id]
+        start = pmap.start
         arr = 1. - pmap.array
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence, however that probability
@@ -294,10 +294,10 @@ class Hazard:
         idxs, lids, gids = arr.nonzero()
         sids = pmap.sids[idxs]
         hdf5.extend(self.datastore['_poes/sid'], sids)
-        hdf5.extend(self.datastore['_poes/gid'], gids + cmaker.start)
+        hdf5.extend(self.datastore['_poes/gid'], gids + start)
         hdf5.extend(self.datastore['_poes/lid'], lids)
         hdf5.extend(self.datastore['_poes/poe'], arr[idxs, lids, gids])
-        self.acc[grp_id]['grp_start'] = cmaker.start
+        self.acc[grp_id]['grp_start'] = start
         self.acc[grp_id]['avg_poe'] = arr.mean(axis=(0, 2))@self.level_weights
         self.acc[grp_id]['nsites'] = len(pmap.sids)
 
@@ -815,20 +815,20 @@ class ClassicalBigCalculator(ClassicalCalculator):
             cmaker = self.haz.cmakers[grp.grp_id]
             if grp.weight <= maxw:
                 # light group
-                logging.info('Sending [%d] %s', len(tiles), grp)
+                logging.info('Light [%d] %s', len(tiles), grp)
                 for tile in tiles:
                     smap.submit((grp, tile, cmaker))
             elif grp.weight > maxw * max_gs:
                 # heavy group
                 cmakers = cmaker.split_by_gsim()
-                logging.info('Sending [%d] %s', len(cmakers) * len(tiles), grp)
+                logging.info('Heavy [%d] %s', len(cmakers) * len(tiles), grp)
                 for cm in cmakers:
                     for tile in tiles:
                         smap.submit((grp, tile, cm))
             else:
                 # medium group
                 cmakers = cmaker.split_by_gsim()
-                logging.info('Sending [%d] %s', len(cmakers), grp)
+                logging.info('Middle [%d] %s', len(cmakers), grp)
                 for cm in cmakers:
                     smap.submit((grp, self.sitecol, cm))
         smap.reduce(self.agg_dicts)
