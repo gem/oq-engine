@@ -569,19 +569,19 @@ class ClassicalCalculator(base.HazardCalculator):
         for grp in sorted(groups, key=lambda grp: grp.weight, reverse=True):
             cmaker = self.haz.cmakers[grp.grp_id]
             if grp.weight <= maxw:
-                # light group
+                # lightweight group
                 logging.info('Light [%d] %s', len(tiles), grp)
                 for tile in tiles:
                     smap.submit((grp, tile, cmaker))
             elif grp.weight > maxw * max_gs:
-                # heavy group
+                # heavyweight group
                 cmakers = cmaker.split_by_gsim()
                 logging.info('Heavy [%d] %s', len(cmakers) * len(tiles), grp)
                 for cm in cmakers:
                     for tile in tiles:
                         smap.submit((grp, tile, cm))
             else:
-                # medium group
+                # middleweight group
                 cmakers = cmaker.split_by_gsim()
                 logging.info('Middle [%d] %s', len(cmakers), grp)
                 for cm in cmakers:
