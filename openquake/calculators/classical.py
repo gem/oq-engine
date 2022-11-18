@@ -759,8 +759,9 @@ class ClassicalCalculator(base.HazardCalculator):
         # disposed in 2 groups and we want to produce 2 tasks we can use
         # 012345012345 // 3 = 000111000111 and the slices are
         # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
-        slicedic = performance.get_slices(
-            dstore['_poes/sid'][:] // sites_per_task)
+        with self.monitor('building _poes slices', measuremem=True):
+            slicedic = performance.get_slices(
+                dstore['_poes/sid'][:] // sites_per_task)
         if not slicedic:
             # no hazard, nothing to do, happens in case_60
             return
