@@ -427,9 +427,10 @@ class SiteCollection(object):
 
     def split(self, ntiles):
         """
-        Split a SiteCollection into SiteCollection instances
+        :param ntiles: number of tiles to generate (rounded if float)
+        :returns: self if there are <=1 tiles, otherwise the tiles
         """
-        ntiles = int(ntiles)
+        ntiles = int(round(ntiles))
         if ntiles <= 1:
             return [self]
         tiles = []

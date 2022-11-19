@@ -1315,7 +1315,8 @@ def view_mean_perils(token, dstore):
 @view.add('num_tasks')
 def view_num_tasks(token, dstore):
     ct = int(token.split(':')[1])
-    return decide_num_tasks(dstore, ct)
+    arr = decide_num_tasks(dstore, ct)
+    return (arr['cmakers'] * arr['tiles']).sum()
 
     
 @view.add('group_summary')
