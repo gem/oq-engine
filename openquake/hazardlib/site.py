@@ -423,13 +423,13 @@ class SiteCollection(object):
         """
         Split a SiteCollection into SiteCollection instances
         """
-        return self.split(len(self) / max_sites)
+        return self.split(numpy.ceil(len(self) / max_sites))
 
     def split(self, ntiles):
         """
         Split a SiteCollection into SiteCollection instances
         """
-        ntiles = int(numpy.ceil(ntiles))
+        ntiles = int(ntiles)
         if ntiles <= 1:
             return [self]
         tiles = []
