@@ -326,6 +326,31 @@ class Hazard:
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
+def decide_num_tasks(dstore, concurrent_tasks):
+    """
+    :param dstore: DataStore
+    :param concurrent_tasks: hint for the number of tasks to generate
+    """
+    cmakers = read_cmakers(dstore)
+    weight = dstore.read_df('source_info')[
+        ['grp_id', 'weight']].groupby('grp_id').sum().weight.to_numpy()
+    maxw = weight.sum() / concurrent_tasks
+    dtlist = [('light', U16), ('heavy', U16)]
+    ntasks = numpy.zeros(1, dtlist).view(numpy.recarray)
+    maxtiles = 0
+    for cm in cmakers:
+        ng = len(cm.gsims)
+        w = weight[cm.grp_id]
+        if w <= maxw:
+            ntasks.light += 1
+        else:
+            ntiles = int(numpy.ceil(w / (maxw * ng)))
+            maxtiles = max(maxtiles, ntiles)
+            ntasks.heavy += ng * ntiles
+    print(f'{maxtiles=}')
+    return ntasks
+
+
 @base.calculators.add('classical', 'ucerf_classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
@@ -502,7 +527,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         t0 = time.time()
         if self.oqparam.save_memory:
-            self.execute_large(maxw)
+            self.execute_large(maxw / 2.5)  # produce more tasks
         else:
             self.execute_small(maxw)
         self.store_info()
@@ -557,35 +582,25 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Method called when save_memory=True
         """
-        max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
         groups = []
         for grp_id, sg in enumerate(self.csm.src_groups):
             sg.grp_id = grp_id
             groups.append(sg)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        tiles = self.sitecol.split_max(numpy.ceil(self.N / 4))
         self.source_data = AccumDict(accum=[])
         for grp in sorted(groups, key=lambda grp: grp.weight, reverse=True):
             cmaker = self.haz.cmakers[grp.grp_id]
-            if grp.weight <= maxw:
-                # lightweight group
-                logging.info('Light [%d] %s', len(tiles), grp)
-                for tile in tiles:
-                    smap.submit((grp, tile, cmaker))
-            elif grp.weight > maxw * max_gs:
-                # heavyweight group
+            if grp.weight <= maxw:  # lightweight group
+                logging.info('Light [1] %s', grp)
+                smap.submit((grp, self.sitecol, cmaker))
+            else:  # heavyweight group
                 cmakers = cmaker.split_by_gsim()
+                tiles = self.sitecol.split(grp.weight / maxw / len(cmakers))
                 logging.info('Heavy [%d] %s', len(cmakers) * len(tiles), grp)
                 for cm in cmakers:
                     for tile in tiles:
                         smap.submit((grp, tile, cm))
-            else:
-                # middleweight group
-                cmakers = cmaker.split_by_gsim()
-                logging.info('Middle [%d] %s', len(cmakers), grp)
-                for cm in cmakers:
-                    smap.submit((grp, self.sitecol, cm))
         smap.reduce(self.agg_dicts)
 
     def run_tile(self, tile, maxw, acc):

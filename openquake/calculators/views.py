@@ -40,6 +40,7 @@ from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
+from openquake.calculators.classical import decide_num_tasks
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
 
@@ -1310,6 +1311,13 @@ def view_mean_perils(token, dstore):
             out[peril] = fast_agg(sid, data * weights) / totw
     return out
 
+
+@view.add('num_tasks')
+def view_num_tasks(token, dstore):
+    ct = int(token.split(':')[1])
+    return decide_num_tasks(dstore, ct)
+
+    
 @view.add('group_summary')
 def view_group_summary(token, dstore):
     ct = int(token.split(':')[1])

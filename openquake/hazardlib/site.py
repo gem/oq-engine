@@ -423,15 +423,20 @@ class SiteCollection(object):
         """
         Split a SiteCollection into SiteCollection instances
         """
-        N = len(self)
-        if N < max_sites:  # do not split
+        return self.split(len(self) / max_sites)
+
+    def split(self, ntiles):
+        """
+        Split a SiteCollection into SiteCollection instances
+        """
+        ntiles = int(numpy.ceil(ntiles))
+        if ntiles <= 1:
             return [self]
-        hint = int(numpy.ceil(N / max_sites))
         tiles = []
-        for i in range(hint):
+        for i in range(ntiles):
             sc = SiteCollection.__new__(SiteCollection)
             # smart trick to split in "homogenous" tiles
-            sc.array = self.array[self.sids % hint == i]
+            sc.array = self.array[self.sids % ntiles == i]
             sc.complete = self
             tiles.append(sc)
         return tiles
