@@ -334,7 +334,7 @@ def decide_num_tasks(dstore, concurrent_tasks):
     cmakers = read_cmakers(dstore)
     weight = dstore.read_df('source_info')[
         ['grp_id', 'weight']].groupby('grp_id').sum().weight.to_numpy()
-    maxw = weight.sum() / concurrent_tasks
+    maxw = weight.sum() / concurrent_tasks / 2
     dtlist = [('cmakers', U16), ('tiles', U16)]
     ntasks = numpy.zeros(len(weight), dtlist).view(numpy.recarray)
     for cm in cmakers:
@@ -580,7 +580,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         self.source_data = AccumDict(accum=[])
         decide = decide_num_tasks(
-            self.datastore, self.oqparam.concurrent_tasks*2)
+            self.datastore, self.oqparam.concurrent_tasks)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         for grp_id, (num_cmakers, num_tiles) in enumerate(decide):
