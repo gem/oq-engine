@@ -335,16 +335,16 @@ def decide_num_tasks(dstore, concurrent_tasks):
     weight = dstore.read_df('source_info')[
         ['grp_id', 'weight']].groupby('grp_id').sum().weight.to_numpy()
     maxw = weight.sum() / concurrent_tasks / 2
-    dtlist = [('cmakers', U16), ('tiles', U16)]
-    ntasks = numpy.zeros(len(weight), dtlist).view(numpy.recarray)
-    for cm in cmakers:
+    dtlist = [('grp_id', U16), ('cmakers', U16), ('tiles', U16)]
+    ntasks = []
+    for cm in sorted(cmakers, key=lambda cm: weight[cm.grp_id], reverse=True):
         w = weight[cm.grp_id]
         if w <= maxw:
-            ntasks[cm.grp_id] = (1, 1)
+            ntasks.append((cm.grp_id, 1, 1))
         else:
             ng = len(cm.gsims)
-            ntasks[cm.grp_id] = (ng, round(w / maxw / ng) or 1)
-    return ntasks
+            ntasks.append((cm.grp_id, ng, round(w / maxw / ng) or 1))
+    return numpy.array(ntasks, dtlist)
 
 
 @base.calculators.add('classical', 'ucerf_classical')
@@ -583,7 +583,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore, self.oqparam.concurrent_tasks)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        for grp_id, (num_cmakers, num_tiles) in enumerate(decide):
+        for grp_id, num_cmakers, num_tiles in decide:
             cmaker = self.haz.cmakers[grp_id]
             grp = self.csm.src_groups[grp_id]
             logging.info('Sending [%d] %s', num_cmakers * num_tiles, grp)
