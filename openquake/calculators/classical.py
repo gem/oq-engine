@@ -343,7 +343,7 @@ def decide_num_tasks(dstore, concurrent_tasks):
             ntasks.append((cm.grp_id, 1, 1))
         else:
             ng = len(cm.gsims)
-            nt = numpy.clip(round(w / maxw / ng), 1, 10)
+            nt = numpy.clip(round(w / maxw / ng), 1, 50)
             ntasks.append((cm.grp_id, ng, nt))
     return numpy.array(ntasks, dtlist)
 
