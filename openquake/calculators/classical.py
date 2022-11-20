@@ -340,12 +340,9 @@ def decide_num_tasks(dstore, concurrent_tasks):
     ntasks = []
     for cm in sorted(cmakers, key=lambda cm: weight[cm.grp_id], reverse=True):
         w = weight[cm.grp_id]
-        if w <= maxw:
-            ntasks.append((cm.grp_id, 1, 1))
-        else:
-            ng = len(cm.gsims)
-            nt = numpy.ceil(w / maxw / ng)
-            ntasks.append((cm.grp_id, ng, nt))
+        ng = len(cm.gsims)
+        nt = numpy.ceil(w / maxw / ng)
+        ntasks.append((cm.grp_id, ng, nt))
     return numpy.array(ntasks, dtlist)
 
 
