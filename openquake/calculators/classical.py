@@ -591,11 +591,8 @@ class ClassicalCalculator(base.HazardCalculator):
             grp = self.csm.src_groups[grp_id]
             logging.info('Sending [%d] %s', num_cmakers * num_tiles, grp)
             for tile in self.sitecol.split(num_tiles):
-                if num_cmakers == 1:
-                    smap.submit((grp, tile, cmaker))
-                else:
-                    for cm in cmaker.split_by_gsim():
-                        smap.submit((grp, tile, cm))
+                for cm in cmaker.split_by_gsim():
+                    smap.submit((grp, tile, cm))
         smap.reduce(self.agg_dicts)
 
     def run_tile(self, tile, maxw, acc):
