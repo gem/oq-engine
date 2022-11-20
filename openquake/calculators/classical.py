@@ -559,7 +559,8 @@ class ClassicalCalculator(base.HazardCalculator):
         t0 = time.time()
         if oq.keep_source_groups is None:
             # enable keep_source_groups if the pmaps would take 30+ GB
-            oq.keep_source_groups = get_pmaps_gb(self.datastore) > 30.
+            oq.keep_source_groups = get_pmaps_gb(
+                self.datastore, oq.concurrent_tasks) > 30.
         if oq.keep_source_groups:
             self.execute_keep_groups()  # produce more tasks
         else:
