@@ -361,7 +361,8 @@ def decide_num_tasks(dstore, concurrent_tasks):
     for cm in sorted(cmakers, key=lambda cm: weight[cm.grp_id], reverse=True):
         w = weight[cm.grp_id]
         ng = len(cm.gsims)
-        nt = numpy.ceil(w / maxw / ng)
+        nt = int(numpy.ceil(w / maxw / ng))
+        assert ng and nt
         ntasks.append((cm.grp_id, ng, nt))
     return numpy.array(ntasks, dtlist)
 
@@ -544,7 +545,8 @@ class ClassicalCalculator(base.HazardCalculator):
         t0 = time.time()
         if oq.keep_source_groups is None:
             # enable keep_source_groups when there are enough gsims
-            oq.keep_source_groups = self.haz.totgsims > oq.concurrent_tasks/10
+            oq.keep_source_groups = (self.N > oq.max_sites_disagg and
+                                     self.haz.totgsims > oq.concurrent_tasks/10)
         if oq.keep_source_groups:
             self.execute_keep_groups()  # produce more tasks
         else:
