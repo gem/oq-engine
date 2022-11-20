@@ -40,6 +40,7 @@ from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
+from openquake.calculators.classical import decide_num_tasks
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
 
@@ -1310,33 +1311,23 @@ def view_mean_perils(token, dstore):
             out[peril] = fast_agg(sid, data * weights) / totw
     return out
 
+    
 @view.add('group_summary')
 def view_group_summary(token, dstore):
-    ct = int(token.split(':')[1])
-    cmakers = read_cmakers(dstore)
-    L = cmakers[0].imtls.size
+    if ':' not in token:
+        ct = 1
+    else:
+        ct = int(token.split(':')[1])
+    L = dstore['oqparam'].imtls.size
     N = len(dstore['sitecol'])
     gb = L * N * 8
-    max_gs = max(len(cm.gsims) for cm in cmakers)
-    df = dstore.read_df('source_info')[
-        ['grp_id', 'weight']].groupby('grp_id').sum()
-    maxw = df.weight.sum() / ct
-    heavy = df.weight > maxw * max_gs
-    mid = (df.weight > maxw) & (df.weight <= maxw * max_gs)
-    light = df.weight <= maxw
-    heavy_ls = list(df[heavy].index)
-    mid_ls = list(df[mid].index)
-    light_ls = list(df[light].index)
-    n_heavy = [len(cmakers[g].gsims) for g in heavy_ls]
-    n_mid = [len(cmakers[g].gsims) for g in mid_ls]
-    n_light = [len(cmakers[g].gsims) for g in light_ls]
-    header = ['kind', 'num_groups', 'num_gsims', 'size']
-    tbl = [['heavy', len(heavy_ls), sum(n_heavy), humansize(sum(n_heavy)*gb)],
-           ['middle', len(mid_ls), sum(n_mid), humansize(sum(n_mid)*gb)],
-           ['light', len(light_ls), sum(n_light), humansize(sum(n_light)*gb)]]
-    tbl.append(['total', len(heavy_ls + mid_ls + light_ls),
-                sum(n_heavy + n_mid + n_light),
-                humansize(sum(n_heavy + n_mid + n_light)*gb)])
+    header = ['grp_id', 'ntasks', 'maxsize']
+    arr = decide_num_tasks(dstore, ct)
+    tbl = [(grp_id, gsims * tiles, humansize(gsims * gb))
+           for grp_id, gsims, tiles in arr]
+    totsize = arr['cmakers'].sum()
+    numtasks = (arr['cmakers'] * arr['tiles']).sum()
+    tbl.append(['tot', numtasks, humansize(totsize * gb)])
     return text_table(tbl, header, ext='org')
 
 
