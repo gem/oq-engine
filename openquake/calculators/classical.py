@@ -18,7 +18,9 @@
 
 import io
 import os
+import gzip
 import time
+import pickle
 import psutil
 import logging
 import operator
@@ -149,6 +151,24 @@ def classical(srcs, sitecol, cmaker, monitor):
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
     pmap.fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
+    result['pnemap'] = pnemap = ~pmap.remove_zeros()
+    pnemap.start = cmaker.start
+    return result
+
+
+def classical_(dstore, sitecol, cmaker, monitor):
+    """
+    Read the sitecol and call the classical calculator in hazardlib
+    """
+    cmaker.init_monitoring(monitor)
+    with dstore:
+        dset = dstore['_csm/grp-%03d' % cmaker.grp_id]
+        sg = pickle.loads(gzip.decompress(dset[()]))
+    rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
+    pmap = ProbabilityMap(
+        sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
+    pmap.fill(rup_indep)
+    result = hazclassical(sg, sitecol, cmaker, pmap)
     result['pnemap'] = pnemap = ~pmap.remove_zeros()
     pnemap.start = cmaker.start
     return result
@@ -585,17 +605,14 @@ class ClassicalCalculator(base.HazardCalculator):
         decide = decide_num_tasks(
             self.datastore, self.oqparam.concurrent_tasks)
         self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        smap = parallel.Starmap(classical_, h5=self.datastore.hdf5)
         for grp_id, num_cmakers, num_tiles in decide:
             cmaker = self.haz.cmakers[grp_id]
-            grp = self.csm.src_groups[grp_id]
-            logging.info('Sending [%d] %s', num_cmakers * num_tiles, grp)
+            logging.info('Sending [%d] %s', num_cmakers * num_tiles,
+                         self.datastore)
             for tile in self.sitecol.split(num_tiles):
-                if num_cmakers == 1:
-                    smap.submit((grp, tile, cmaker))
-                else:
-                    for cm in cmaker.split_by_gsim():
-                        smap.submit((grp, tile, cm))
+                for cm in cmaker.split_by_gsim():
+                    smap.submit((self.datastore, tile, cm))
         smap.reduce(self.agg_dicts)
 
     def run_tile(self, tile, maxw, acc):
