@@ -812,6 +812,8 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
 
     # read and process the composite source model from the input files
     csm = get_csm(oqparam, full_lt, h5)
+    ngsims = sum(len(cm.gsims) for cm in csm._get_cmakers(oqparam))
+    logging.info('There are %d gsims in the CompositeSourceModel', ngsims)
     if oqparam.cachedir:
         logging.info('Saving %s', fname)
         with open(fname, 'wb') as f:
