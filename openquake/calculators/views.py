@@ -1314,7 +1314,10 @@ def view_mean_perils(token, dstore):
     
 @view.add('group_summary')
 def view_group_summary(token, dstore):
-    ct = int(token.split(':')[1])
+    if ':' not in token:
+        ct = 1
+    else:
+        ct = int(token.split(':')[1])
     L = dstore['oqparam'].imtls.size
     N = len(dstore['sitecol'])
     gb = L * N * 8
