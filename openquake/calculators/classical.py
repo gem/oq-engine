@@ -335,7 +335,7 @@ def decide_num_tasks(dstore, concurrent_tasks):
     cmakers = read_cmakers(dstore)
     weight = dstore.read_df('source_info')[
         ['grp_id', 'weight']].groupby('grp_id').sum().weight.to_numpy()
-    maxw = weight.sum() / concurrent_tasks / 2
+    maxw = weight.sum() / concurrent_tasks / 2.5
     dtlist = [('grp_id', U16), ('cmakers', U16), ('tiles', U16)]
     ntasks = []
     for cm in sorted(cmakers, key=lambda cm: weight[cm.grp_id], reverse=True):
