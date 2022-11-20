@@ -558,9 +558,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         t0 = time.time()
         if oq.keep_source_groups is None:
-            # enable keep_source_groups when there are enough gsims
-            oq.keep_source_groups = (self.N > oq.max_sites_disagg and
-                                     self.haz.totgsims > oq.concurrent_tasks/10)
+            # enable keep_source_groups if the pmaps would take 30+ GB
+            oq.keep_source_groups = get_pmaps_gb(self.datastore) > 30.
         if oq.keep_source_groups:
             self.execute_keep_groups()  # produce more tasks
         else:
