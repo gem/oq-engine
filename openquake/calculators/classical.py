@@ -347,7 +347,7 @@ class Hazard:
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
-def get_pmaps_size(dstore, ct):
+def get_pmaps_gb(dstore, ct):
     """
     :returns: memory required on the master node to keep the pmaps
     """
@@ -358,7 +358,7 @@ def get_pmaps_size(dstore, ct):
         ['grp_id', 'weight']].groupby('grp_id').sum().weight.to_numpy()
     maxw = weights.sum() / ct
     num_gs = [len(cm.gsims) for cm, wei in zip(cmakers, weights) if wei > maxw]
-    return sum(num_gs) * N * L * 8
+    return sum(num_gs) * N * L * 8 / 1024**3
 
 
 def decide_num_tasks(dstore, concurrent_tasks):
