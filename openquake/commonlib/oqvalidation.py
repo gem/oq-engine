@@ -621,10 +621,11 @@ sampling_method:
   Default: 'early_weights'
 
 keep_source_groups:
-   Use an approach that saves memory in large classical calculations, possibly
-   with a performance penalty.
+   Set an approach that saves memory in large classical calculations, possibly
+   with a performance penalty. When left unspecified (None), the engine will
+   automatically decide when to use it (i.e. if there are enough gsims).
    Example: *keep_source_groups = true*
-   Default: false
+   Default: None
 
 sec_peril_params:
   INTERNAL
@@ -964,7 +965,7 @@ class OqParam(valid.ParamSet):
     sampling_method = valid.Param(
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
-    keep_source_groups = valid.Param(valid.boolean, False)
+    keep_source_groups = valid.Param(valid.boolean, None)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})

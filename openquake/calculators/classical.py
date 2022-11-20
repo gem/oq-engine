@@ -254,6 +254,7 @@ class Hazard:
         self.datastore = dstore
         self.full_lt = full_lt
         self.cmakers = read_cmakers(dstore, full_lt)
+        self.totgsims = sum(len(cm.gsims) for cm in self.cmakers)
         self.imtls = imtls = dstore['oqparam'].imtls
         self.level_weights = imtls.array.flatten() / imtls.array.sum()
         self.sids = dstore['sitecol/sids'][:]
@@ -502,7 +503,8 @@ class ClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        if self.oqparam.hazard_calculation_id:
+        oq = self.oqparam
+        if oq.hazard_calculation_id:
             parent = self.datastore.parent
             if '_poes' in parent:
                 self.build_curves_maps()  # repeat post-processing
@@ -510,12 +512,12 @@ class ClassicalCalculator(base.HazardCalculator):
             else:  # after preclassical, like in case_36
                 logging.info('Reading from parent calculation')
                 self.csm = parent['_csm']
-                self.oqparam.mags_by_trt = {
+                oq.mags_by_trt = {
                     trt: python3compat.decode(dset[:])
                     for trt, dset in parent['source_mags'].items()}
                 self.full_lt = parent['full_lt']
                 self.datastore['source_info'] = parent['source_info'][:]
-                maxw = self.csm.get_max_weight(self.oqparam)
+                maxw = self.csm.get_max_weight(oq)
         else:
             maxw = self.max_weight
         self.init_poes()
@@ -523,10 +525,13 @@ class ClassicalCalculator(base.HazardCalculator):
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         t0 = time.time()
-        if self.oqparam.keep_source_groups:
-            self.execute_large()  # produce more tasks
+        if oq.keep_source_groups is None:
+            # enable keep_source_groups when there are enough gsims
+            oq.keep_source_groups = self.haz.totgsims > oq.concurrent_tasks/10
+        if oq.keep_source_groups:
+            self.execute_keep_groups()  # produce more tasks
         else:
-            self.execute_small(maxw)
+            self.execute_split_groups(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
             raise RuntimeError('Filtered away all ruptures??')
@@ -535,11 +540,11 @@ class ClassicalCalculator(base.HazardCalculator):
             self.cfactor[1] / self.cfactor[0]))
         if '_poes' in self.datastore:
             self.build_curves_maps()
-        if not self.oqparam.hazard_calculation_id:
+        if not oq.hazard_calculation_id:
             self.classical_time = time.time() - t0
         return True
 
-    def execute_small(self, maxw):
+    def execute_split_groups(self, maxw):
         """
         Method called when keep_source_groups=False
         """
@@ -575,7 +580,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 logging.info('Finished tile %d of %d', t, len(tiles))
         self.haz.store_disagg(acc)
 
-    def execute_large(self):
+    def execute_keep_groups(self):
         """
         Method called when keep_source_groups=True
         """
