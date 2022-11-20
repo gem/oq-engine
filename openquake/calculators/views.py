@@ -40,7 +40,7 @@ from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
-from openquake.calculators.classical import decide_num_tasks
+from openquake.calculators.classical import decide_num_tasks, get_pmaps_size
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
 
@@ -1310,6 +1310,32 @@ def view_mean_perils(token, dstore):
             weights = ev_weights[dstore['gmf_data/eid'][:]]
             out[peril] = fast_agg(sid, data * weights) / totw
     return out
+
+
+@view.add('pmaps_size')
+def view_pmaps_size(token, dstore):
+    if ':' not in token:
+        ct = 1
+    else:
+        ct = int(token.split(':')[1])
+    return get_pmaps_size(dstore, ct)
+
+
+@view.add('num_tasks')
+def view_num_tasks(token, dstore):
+    if ':' not in token:
+        ct = 1
+    else:
+        ct = int(token.split(':')[1])
+    L = dstore['oqparam'].imtls.size
+    N = len(dstore['sitecol'])
+    gb = L * N * 8
+    weight = dstore.read_df('source_info')[
+        ['grp_id', 'weight']].groupby('grp_id').sum().weight.to_numpy()
+    maxw = weight.sum() / ct
+    ws = numpy.ceil(weight / maxw)
+    ws = ws[ws > 1]
+    return ws.sum(), humansize(ws.sum() * gb)
 
     
 @view.add('group_summary')

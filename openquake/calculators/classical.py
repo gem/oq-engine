@@ -347,6 +347,20 @@ class Hazard:
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
+def get_pmaps_size(dstore, ct):
+    """
+    :returns: memory required on the master node to keep the pmaps
+    """
+    N = len(dstore['sitecol'])
+    L = dstore['oqparam'].imtls.size
+    cmakers = read_cmakers(dstore)
+    weights = dstore.read_df('source_info')[
+        ['grp_id', 'weight']].groupby('grp_id').sum().weight.to_numpy()
+    maxw = weights.sum() / ct
+    num_gs = [len(cm.gsims) for cm, wei in zip(cmakers, weights) if wei > maxw]
+    return sum(num_gs) * N * L * 8
+
+
 def decide_num_tasks(dstore, concurrent_tasks):
     """
     :param dstore: DataStore
