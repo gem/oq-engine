@@ -523,7 +523,7 @@ class ClassicalCalculator(base.HazardCalculator):
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         t0 = time.time()
-        if self.oqparam.save_memory:
+        if self.oqparam.keep_source_groups:
             self.execute_large()  # produce more tasks
         else:
             self.execute_small(maxw)
@@ -541,7 +541,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def execute_small(self, maxw):
         """
-        Method called when save_memory=False
+        Method called when keep_source_groups=False
         """
         oq = self.oqparam
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
@@ -577,7 +577,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def execute_large(self):
         """
-        Method called when save_memory=True
+        Method called when keep_source_groups=True
         """
         self.source_data = AccumDict(accum=[])
         decide = decide_num_tasks(

@@ -620,10 +620,10 @@ sampling_method:
   Example: *sampling_method = early_latin*.
   Default: 'early_weights'
 
-save_memory:
+keep_source_groups:
    Use an approach that saves memory in large classical calculations, possibly
    with a performance penalty.
-   Example: *save_memory = true*
+   Example: *keep_source_groups = true*
    Default: false
 
 sec_peril_params:
@@ -964,7 +964,7 @@ class OqParam(valid.ParamSet):
     sampling_method = valid.Param(
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
-    save_memory = valid.Param(valid.boolean, False)
+    keep_source_groups = valid.Param(valid.boolean, False)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})
