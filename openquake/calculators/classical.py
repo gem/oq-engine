@@ -326,7 +326,7 @@ class Hazard:
                         self.get_hcurves(pmap, rlzs_by_gsim))
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
-def get_pmaps_gb(dstore, ct):
+def get_pmaps_size(dstore, ct):
     """
     :returns: memory required on the master node to keep the pmaps
     """
@@ -335,7 +335,7 @@ def get_pmaps_gb(dstore, ct):
     cmakers = read_cmakers(dstore)
     maxw = sum(cm.weight for cm in cmakers) / ct
     num_gs = [len(cm.gsims) for cm in cmakers if cm.weight > maxw]
-    return sum(num_gs) * N * L * 8 / 1024**3
+    return sum(num_gs) * N * L * 8
 
 
 def decide_num_tasks(dstore, concurrent_tasks):
@@ -535,8 +535,8 @@ class ClassicalCalculator(base.HazardCalculator):
         t0 = time.time()
         if oq.keep_source_groups is None:
             # enable keep_source_groups if the pmaps would take 30+ GB
-            oq.keep_source_groups = get_pmaps_gb(
-		self.datastore, oq.concurrent_tasks) > 30.
+            oq.keep_source_groups = get_pmaps_size(
+		self.datastore, oq.concurrent_tasks) > 30 * 1024**3
         if oq.keep_source_groups:
             self.execute_keep_groups()  # produce more tasks
         else:
