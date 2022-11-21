@@ -326,6 +326,17 @@ class Hazard:
                         self.get_hcurves(pmap, rlzs_by_gsim))
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
+def get_pmaps_size(dstore, ct):
+    """
+    :returns: memory required on the master node to keep the pmaps
+    """
+    N = len(dstore['sitecol'])
+    L = dstore['oqparam'].imtls.size
+    cmakers = read_cmakers(dstore)
+    maxw = sum(cm.weight for cm in cmakers) / ct
+    num_gs = [len(cm.gsims) for cm in cmakers if cm.weight > maxw]
+    return sum(num_gs) * N * L * 8
+
 
 def decide_num_tasks(dstore, concurrent_tasks):
     """
@@ -333,13 +344,12 @@ def decide_num_tasks(dstore, concurrent_tasks):
     :param concurrent_tasks: hint for the number of tasks to generate
     """
     cmakers = read_cmakers(dstore)
-    weight = dstore.read_df('source_info')[
-        ['grp_id', 'weight']].groupby('grp_id').sum().weight.to_numpy()
-    maxw = weight.sum() / concurrent_tasks / 2.5
+    weights = [cm.weight for cm in cmakers]
+    maxw = sum(weights) / concurrent_tasks / 2.5
     dtlist = [('grp_id', U16), ('cmakers', U16), ('tiles', U16)]
     ntasks = []
-    for cm in sorted(cmakers, key=lambda cm: weight[cm.grp_id], reverse=True):
-        w = weight[cm.grp_id]
+    for cm in sorted(cmakers, key=lambda cm: weights[cm.grp_id], reverse=True):
+        w = weights[cm.grp_id]
         ng = len(cm.gsims)
         nt = int(numpy.ceil(w / maxw / ng))
         assert ng and nt
@@ -522,13 +532,14 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
+        self.source_data = AccumDict(accum=[])
         t0 = time.time()
         if oq.keep_source_groups is None:
-            # enable keep_source_groups when there are enough gsims
-            oq.keep_source_groups = (self.N > oq.max_sites_disagg and
-                                     self.haz.totgsims > oq.concurrent_tasks/10)
+            # enable keep_source_groups if the pmaps would take 30+ GB
+            oq.keep_source_groups = get_pmaps_size(
+		self.datastore, oq.concurrent_tasks) > 30 * 1024**3
         if oq.keep_source_groups:
-            self.execute_keep_groups()  # produce more tasks
+            self.execute_keep_groups()
         else:
             self.execute_split_groups(maxw)
         self.store_info()
@@ -562,28 +573,20 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             tiles = [self.sitecol]
         if len(tiles) > 1:
-            maxw /= 1.35  # producing a bit more tasks (~2.7 x num_cores)
-            sizes = [len(tile) for tile in tiles]
-            logging.info('There are %d tiles of sizes %s', len(tiles), sizes)
+            logging.info('Using parallel tiling with %d tiles', len(tiles))
             assert not oq.disagg_by_src, 'disagg_by_src with tiles'
-            for size in sizes:
+            for size in map(len, tiles):
                 assert size > oq.max_sites_disagg, (size, oq.max_sites_disagg)
-        self.check_memory(len(tiles[0]), oq.imtls.size, max_gs, maxw)
-        self.source_data = AccumDict(accum=[])
+        self.check_memory(len(self.sitecol), oq.imtls.size, max_gs, maxw)
         self.n_outs = AccumDict(accum=0)
-        acc = {}
-        for t, tile in enumerate(tiles, 1):
-            self.run_tile(tile, maxw, acc)
-            if len(tiles) > 1:
-                parallel.Starmap.shutdown()
-                logging.info('Finished tile %d of %d', t, len(tiles))
+        acc = self.run_tiles(tiles, maxw)
         self.haz.store_disagg(acc)
 
     def execute_keep_groups(self):
         """
         Method called when keep_source_groups=True
         """
-        self.source_data = AccumDict(accum=[])
+        assert self.N > self.oqparam.max_sites_disagg, self.N
         decide = decide_num_tasks(
             self.datastore, self.oqparam.concurrent_tasks)
         self.datastore.swmr_on()  # must come before the Starmap
@@ -597,27 +600,28 @@ class ClassicalCalculator(base.HazardCalculator):
                     smap.submit((grp, tile, cm))
         smap.reduce(self.agg_dicts)
 
-    def run_tile(self, tile, maxw, acc):
+    def run_tiles(self, tiles, maxw):
         """
         Run a subset of sites and update the accumulator
         """
+        acc = {}
         oq = self.oqparam
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         for cm in self.haz.cmakers:
             sg = self.csm.src_groups[cm.grp_id]
             if sg.atomic or sg.weight <= maxw:
-                smap.submit((sg, tile, cm))
+                smap.submit((sg, self.sitecol, cm))
             else:
                 # only groups generating more than 1 task preallocate memory
                 acc[cm.grp_id] = ProbabilityMap(
-                    tile.sids, oq.imtls.size, len(cm.gsims)).fill(1)
+                    self.sitecol.sids, oq.imtls.size, len(cm.gsims)).fill(1)
                 acc[cm.grp_id].start = cm.start
                 # send the multiFaultSources first
                 for src in sg:
                     if src.code == b'F':
                         self.n_outs[cm.grp_id] += 1
-                        smap.submit(([src], tile, cm))
+                        smap.submit(([src], self.sitecol, cm))
                 srcs = [src for src in sg if src.code != b'F']
                 # NB: disagg_by_src is disabled in case of tiling
                 blks = (groupby(srcs, basename).values() if oq.disagg_by_src
@@ -625,9 +629,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
-                    self.n_outs[cm.grp_id] += 1
-                    smap.submit((block, tile, cm))
-        smap.reduce(self.agg_dicts, acc)
+                    for tile in tiles:
+                        self.n_outs[cm.grp_id] += 1
+                        smap.submit((block, tile, cm))
+        return smap.reduce(self.agg_dicts, acc)
 
     def store_info(self):
         """

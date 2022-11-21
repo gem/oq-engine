@@ -33,14 +33,15 @@ from openquake.baselib.general import (
     get_array, group_array, fast_agg)
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
+from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib.contexts import KNOWN_DISTANCES, read_cmakers
+from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
-from openquake.calculators.classical import decide_num_tasks
+from openquake.calculators.classical import decide_num_tasks, get_pmaps_size
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
 
@@ -1329,6 +1330,15 @@ def view_group_summary(token, dstore):
     numtasks = (arr['cmakers'] * arr['tiles']).sum()
     tbl.append(['tot', numtasks, humansize(totsize * gb)])
     return text_table(tbl, header, ext='org')
+
+
+@view.add('pmaps_size')
+def view_pmaps_size(token, dstore):
+    if ':' not in token:
+        ct = Starmap.num_cores * 2
+    else:
+        ct = int(token.split(':')[1])
+    return humansize(get_pmaps_size(dstore, ct))
 
 
 @view.add('src_groups')
