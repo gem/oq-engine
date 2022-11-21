@@ -611,7 +611,8 @@ class ClassicalCalculator(base.HazardCalculator):
         for cm in self.haz.cmakers:
             sg = self.csm.src_groups[cm.grp_id]
             if sg.atomic or sg.weight <= maxw:
-                smap.submit((sg, self.sitecol, cm))
+                for tile in tiles:
+                    smap.submit((sg, tile, cm))
             else:
                 # only groups generating more than 1 task preallocate memory
                 acc[cm.grp_id] = ProbabilityMap(
@@ -620,8 +621,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 # send the multiFaultSources first
                 for src in sg:
                     if src.code == b'F':
-                        self.n_outs[cm.grp_id] += 1
-                        smap.submit(([src], self.sitecol, cm))
+                        for tile in tiles:
+                            self.n_outs[cm.grp_id] += 1
+                            smap.submit(([src], tile, cm))
                 srcs = [src for src in sg if src.code != b'F']
                 # NB: disagg_by_src is disabled in case of tiling
                 blks = (groupby(srcs, basename).values() if oq.disagg_by_src
