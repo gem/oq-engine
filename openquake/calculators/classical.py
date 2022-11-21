@@ -481,8 +481,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 rlzs_by_g.append(rlzs)
         self.datastore.create_df('_poes', poes_dt.items())
         # NB: compressing the dataset causes a big slowdown in writing :-(
-        if not self.oqparam.hazard_calculation_id:
-            self.datastore.swmr_on()
+        #if not self.oqparam.hazard_calculation_id:
+        #    self.datastore.swmr_on()
 
     def check_memory(self, N, L, max_gs, maxw):
         """
