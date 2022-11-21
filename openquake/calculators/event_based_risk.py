@@ -316,7 +316,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq.maxweight = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_types)
-        if A * self.R > 1_000_000 and oq.avg_losses and not oq.collect_rlzs:
+        if (oq.calculation_mode == 'event_based_risk' and
+                A * self.R > 1_000_000 and oq.avg_losses
+                and not oq.collect_rlzs):
             raise ValueError('For large exposures you must set '
                              'collect_rlzs=true or avg_losses=false')
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and

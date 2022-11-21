@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Introduced `keep_source_groups` mode in classical calculations
   * Rewritten ModifiableGMPE to avoid a subtle memory leak
 
   [Matteo Nastasi]

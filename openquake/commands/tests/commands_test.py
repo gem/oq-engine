@@ -25,6 +25,8 @@ import tempfile
 import unittest
 import numpy
 
+from pathlib import Path
+
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp
 from openquake.baselib import parallel, sap
@@ -610,6 +612,9 @@ class NRML2CSVTestCase(unittest.TestCase):
         self.assertIn('Point', out)
         shutil.rmtree(temp_dir)
 
+
+class NRML2GPKGTestCase(unittest.TestCase):
+
     def test_nrml_to_gpkg(self):
         try:
             import fiona
@@ -623,6 +628,45 @@ class NRML2CSVTestCase(unittest.TestCase):
         self.assertIn('3D MultiPolygon', out)
         self.assertIn('3D MultiLineString', out)
         self.assertIn('Point', out)
+        shutil.rmtree(temp_dir)
+
+
+class GPKG2NRMLTestCase(unittest.TestCase):
+
+    def test_nrml_from_gpkg(self):
+        try:
+            import fiona
+        except ImportError:
+            raise unittest.SkipTest('fiona is missing')
+        temp_dir = tempfile.mkdtemp()
+        with Print.patch():
+            sap.runline(f'openquake.commands nrml_to gpkg {MIXED_SRC_MODEL} '
+                        f'--outdir={temp_dir} --chatty')
+        gpkg_path = os.path.join(
+            temp_dir, Path(MIXED_SRC_MODEL).stem + '.gpkg')
+        out_path = os.path.join(
+            temp_dir, Path(MIXED_SRC_MODEL).stem + '_converted.xml')
+        with self.assertLogs('root', level='ERROR') as cm:
+            sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
+        expected_log_outputs = [
+            'ERROR:root:Skipping source of code "X" and attributes'
+            ' "{\'id\': \'5\', \'name\': \'characteristic source,'
+            ' simple fault\', \'tectonicRegion\': \'Volcanic\'}"'
+            ' (the converter is not implemented yet)',
+            'ERROR:root:Skipping source of code "X" and attributes'
+            ' "{\'id\': \'6\', \'name\': \'characteristic source,'
+            ' complex fault\', \'tectonicRegion\': \'Volcanic\'}"'
+            ' (the converter is not implemented yet)',
+            'ERROR:root:Skipping source of code "X" and attributes'
+            ' "{\'id\': \'7\', \'name\': \'characteristic source,'
+            ' multi surface\', \'tectonicRegion\': \'Volcanic\'}"'
+            ' (the converter is not implemented yet)']
+        for line in expected_log_outputs:
+            self.assertIn(line, cm.output)
+        datadir = os.path.join(os.path.dirname(__file__), 'data')
+        self.assertListEqual(
+            list(open(out_path)),
+            list(open(os.path.join(datadir, 'expected_converted_nrml.xml'))))
         shutil.rmtree(temp_dir)
 
 
