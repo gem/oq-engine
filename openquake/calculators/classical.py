@@ -326,6 +326,17 @@ class Hazard:
                         self.get_hcurves(pmap, rlzs_by_gsim))
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
+def get_pmaps_gb(dstore, ct):
+    """
+    :returns: memory required on the master node to keep the pmaps
+    """
+    N = len(dstore['sitecol'])
+    L = dstore['oqparam'].imtls.size
+    cmakers = read_cmakers(dstore)
+    maxw = sum(cm.weight for cm in cmakers) / ct
+    num_gs = [len(cm.gsims) for cm in cmakers if cm.weight > maxw]
+    return sum(num_gs) * N * L * 8 / 1024**3
+
 
 def decide_num_tasks(dstore, concurrent_tasks):
     """
@@ -333,13 +344,12 @@ def decide_num_tasks(dstore, concurrent_tasks):
     :param concurrent_tasks: hint for the number of tasks to generate
     """
     cmakers = read_cmakers(dstore)
-    weight = dstore.read_df('source_info')[
-        ['grp_id', 'weight']].groupby('grp_id').sum().weight.to_numpy()
-    maxw = weight.sum() / concurrent_tasks / 2.5
+    weights = [cm.weight for cm in cmakers]
+    maxw = sum(weights) / concurrent_tasks / 2.5
     dtlist = [('grp_id', U16), ('cmakers', U16), ('tiles', U16)]
     ntasks = []
-    for cm in sorted(cmakers, key=lambda cm: weight[cm.grp_id], reverse=True):
-        w = weight[cm.grp_id]
+    for cm in sorted(cmakers, key=lambda cm: weights[cm.grp_id], reverse=True):
+        w = weights[cm.grp_id]
         ng = len(cm.gsims)
         nt = int(numpy.ceil(w / maxw / ng))
         assert ng and nt
@@ -524,9 +534,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         t0 = time.time()
         if oq.keep_source_groups is None:
-            # enable keep_source_groups when there are enough gsims
-            oq.keep_source_groups = (self.N > oq.max_sites_disagg and
-                                     self.haz.totgsims > oq.concurrent_tasks/10)
+            # enable keep_source_groups if the pmaps would take 30+ GB
+            oq.keep_source_groups = get_pmaps_gb(
+		self.datastore, oq.concurrent_tasks) > 30.
         if oq.keep_source_groups:
             self.execute_keep_groups()  # produce more tasks
         else:
