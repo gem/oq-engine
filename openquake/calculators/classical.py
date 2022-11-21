@@ -581,12 +581,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.check_memory(len(tiles[0]), oq.imtls.size, max_gs, maxw)
         self.source_data = AccumDict(accum=[])
         self.n_outs = AccumDict(accum=0)
-        acc = {}
-        for t, tile in enumerate(tiles, 1):
-            self.run_tile(tile, maxw, acc)
-            if len(tiles) > 1:
-                parallel.Starmap.shutdown()
-                logging.info('Finished tile %d of %d', t, len(tiles))
+        acc = self.run_tiles(tiles, maxw)
         self.haz.store_disagg(acc)
 
     def execute_keep_groups(self):
@@ -607,27 +602,28 @@ class ClassicalCalculator(base.HazardCalculator):
                     smap.submit((grp, tile, cm))
         smap.reduce(self.agg_dicts)
 
-    def run_tile(self, tile, maxw, acc):
+    def run_tiles(self, tiles, maxw):
         """
         Run a subset of sites and update the accumulator
         """
+        acc = {}
         oq = self.oqparam
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         for cm in self.haz.cmakers:
             sg = self.csm.src_groups[cm.grp_id]
             if sg.atomic or sg.weight <= maxw:
-                smap.submit((sg, tile, cm))
+                smap.submit((sg, self.sitecol, cm))
             else:
                 # only groups generating more than 1 task preallocate memory
                 acc[cm.grp_id] = ProbabilityMap(
-                    tile.sids, oq.imtls.size, len(cm.gsims)).fill(1)
+                    self.sitecol.sids, oq.imtls.size, len(cm.gsims)).fill(1)
                 acc[cm.grp_id].start = cm.start
                 # send the multiFaultSources first
                 for src in sg:
                     if src.code == b'F':
                         self.n_outs[cm.grp_id] += 1
-                        smap.submit(([src], tile, cm))
+                        smap.submit(([src], self.sitecol, cm))
                 srcs = [src for src in sg if src.code != b'F']
                 # NB: disagg_by_src is disabled in case of tiling
                 blks = (groupby(srcs, basename).values() if oq.disagg_by_src
@@ -635,9 +631,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
-                    self.n_outs[cm.grp_id] += 1
-                    smap.submit((block, tile, cm))
-        smap.reduce(self.agg_dicts, acc)
+                    for tile in tiles:
+                        self.n_outs[cm.grp_id] += 1
+                        smap.submit((block, tile, cm))
+        return smap.reduce(self.agg_dicts, acc)
 
     def store_info(self):
         """
