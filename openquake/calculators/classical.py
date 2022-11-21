@@ -532,13 +532,14 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
+        self.source_data = AccumDict(accum=[])
         t0 = time.time()
         if oq.keep_source_groups is None:
             # enable keep_source_groups if the pmaps would take 30+ GB
             oq.keep_source_groups = get_pmaps_size(
 		self.datastore, oq.concurrent_tasks) > 30 * 1024**3
         if oq.keep_source_groups:
-            self.execute_keep_groups()  # produce more tasks
+            self.execute_keep_groups()
         else:
             self.execute_split_groups(maxw)
         self.store_info()
@@ -577,7 +578,6 @@ class ClassicalCalculator(base.HazardCalculator):
             for size in map(len, tiles):
                 assert size > oq.max_sites_disagg, (size, oq.max_sites_disagg)
         self.check_memory(len(self.sitecol), oq.imtls.size, max_gs, maxw)
-        self.source_data = AccumDict(accum=[])
         self.n_outs = AccumDict(accum=0)
         acc = self.run_tiles(tiles, maxw)
         self.haz.store_disagg(acc)
@@ -586,7 +586,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Method called when keep_source_groups=True
         """
-        self.source_data = AccumDict(accum=[])
+        assert self.N > self.oqparam.max_sites_disagg, self.N
         decide = decide_num_tasks(
             self.datastore, self.oqparam.concurrent_tasks)
         self.datastore.swmr_on()  # must come before the Starmap
