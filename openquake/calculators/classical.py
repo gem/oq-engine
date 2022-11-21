@@ -572,13 +572,11 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             tiles = [self.sitecol]
         if len(tiles) > 1:
-            maxw /= 1.35  # producing a bit more tasks (~2.7 x num_cores)
-            sizes = [len(tile) for tile in tiles]
-            logging.info('There are %d tiles of sizes %s', len(tiles), sizes)
+            logging.info('Using parallel tiling with %d tiles', len(tiles))
             assert not oq.disagg_by_src, 'disagg_by_src with tiles'
-            for size in sizes:
+            for size in map(len, tiles):
                 assert size > oq.max_sites_disagg, (size, oq.max_sites_disagg)
-        self.check_memory(len(tiles[0]), oq.imtls.size, max_gs, maxw)
+        self.check_memory(len(self.sitecol), oq.imtls.size, max_gs, maxw)
         self.source_data = AccumDict(accum=[])
         self.n_outs = AccumDict(accum=0)
         acc = self.run_tiles(tiles, maxw)
