@@ -238,7 +238,8 @@ class StreamingXMLWriter(object):
                 writer.serialize(node)
             writer.end_tag('root')
     """
-    def __init__(self, bytestream, indent=4, encoding='utf-8', nsmap=None):
+    def __init__(self, bytestream, indent=4, encoding='utf-8', nsmap=None,
+                 expandtag=None):
         """
         :param bytestream: the stream or file where to write the XML
         :param int indent: the indentation to use in the XML (default 4 spaces)
@@ -251,6 +252,7 @@ class StreamingXMLWriter(object):
         self.encoding = encoding
         self.indentlevel = 0
         self.nsmap = nsmap
+        self.expandtag = expandtag
 
     def shorten(self, tag):
         """
@@ -273,12 +275,16 @@ class StreamingXMLWriter(object):
 
     def emptyElement(self, name, attrs):
         """Add an empty element (may have attributes)"""
+        if self.expandtag:
+            name = self.expandtag(name)
         attr = ' '.join('%s=%s' % (n, quoteattr(scientificformat(v)))
                         for n, v in sorted(attrs.items()))
         self._write('<%s %s/>' % (name, attr))
 
     def start_tag(self, name, attrs=None):
         """Open an XML tag"""
+        if self.expandtag:
+            name = self.expandtag(name)
         if not attrs:
             self._write('<%s>' % name)
         else:
@@ -291,6 +297,8 @@ class StreamingXMLWriter(object):
 
     def end_tag(self, name):
         """Close an XML tag"""
+        if self.expandtag:
+            name = self.expandtag(name)
         self.indentlevel -= 1
         self._write('</%s>' % name)
 
@@ -740,7 +748,7 @@ def node_from_xml(xmlfile, nodefactory=Node):
     return node_from_elem(root, nodefactory)
 
 
-def node_to_xml(node, output, nsmap=None):
+def node_to_xml(node, output, nsmap=None, expandtag=None):
     """
     Convert a Node object into a pretty .xml file without keeping
     everything in memory. If you just want the string representation
@@ -757,7 +765,7 @@ def node_to_xml(node, output, nsmap=None):
                 node['xmlns:' + prefix[:-1]] = ns
             else:
                 node['xmlns'] = ns
-    with StreamingXMLWriter(output, nsmap=nsmap) as w:
+    with StreamingXMLWriter(output, nsmap=nsmap, expandtag=expandtag) as w:
         w.serialize(node)
 
 

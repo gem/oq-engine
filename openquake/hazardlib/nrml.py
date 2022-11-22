@@ -91,7 +91,8 @@ NRML05 = 'http://openquake.org/xmlns/nrml/0.5'
 GML_NAMESPACE = 'http://www.opengis.net/gml'
 SERIALIZE_NS_MAP = {None: NAMESPACE, 'gml': GML_NAMESPACE}
 PARSE_NS_MAP = {'nrml': NAMESPACE, 'gml': GML_NAMESPACE}
-
+GML_TAG = {tag: 'gml:' + tag for tag in
+           'Point pos posList LineString LinearRing Polygon exterior'.split()}
 
 class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
@@ -399,8 +400,12 @@ def write(nodes, output=sys.stdout, fmt='%.7E', gml=True, xmlns=None):
     namespaces = {xmlns or NRML05: ''}
     if gml:
         namespaces[GML_NAMESPACE] = 'gml:'
+        def expandtag(name):
+            return GML_TAG.get(name, name)
+    else:
+        expandtag = None
     with floatformat(fmt):
-        node_to_xml(root, output, namespaces)
+        node_to_xml(root, output, namespaces, expandtag=expandtag)
     if hasattr(output, 'mode') and '+' in output.mode:  # read-write mode
         output.seek(0)
         read(output)  # validate the written file

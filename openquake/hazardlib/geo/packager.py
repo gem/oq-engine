@@ -173,7 +173,7 @@ class GeoPackager(object):
         nodes = [node for node in nodes if node is not None]
         smodel = Node("sourceModel", {}, nodes=nodes)
         with open(out, 'wb') as f:
-            nrml.write([smodel], f, '%s')
+            nrml.write([smodel], f, '%s', gml=True)
 
     def _save(self, name, dic):
         # Useful for debugging. Example:
