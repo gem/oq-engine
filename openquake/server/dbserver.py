@@ -33,6 +33,10 @@ from openquake.server.db import actions
 from openquake.commonlib.dbapi import db
 from openquake.server import __file__ as server_path
 
+def ssh(fname, host):
+    return ['ssh', '-f', '-T', host, '/opt/openquake/venv/bin/oq',
+            'engine', '--run', fname]
+
 
 class DbServer(object):
     """
@@ -55,13 +59,12 @@ class DbServer(object):
                     continue
                 elif cmd == 'submit':
                     if len(args) == 2:
-                        fname, host = args
-                        ssh = ['ssh', '-f', '-T', host,
-                               '/opt/openquake/venv/bin/oq', fname]
-                        subprocess.Popen(ssh, start_new_session=True,
+                        subprocess.Popen(ssh(args), start_new_session=True,
                                          env={'NUMBA_CACHE_DIR': '/tmp'})
+                        sock.send('Sent %s to %s' % args)
                     else:
-                        sock.end('Unknown %s', cmd_)
+                        sock.send('Unknown %s', cmd_)
+                    continue
                 elif cmd.startswith('workers_'):
                     # call parallel.workers_start et similar routines
                     msg = getattr(p, cmd)(*args)
