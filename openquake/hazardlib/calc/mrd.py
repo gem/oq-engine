@@ -107,7 +107,7 @@ def make_grids(ll1, ll2):
     grids = []
     for i, (ll1, ll2) in enumerate(lst):
         grid = numpy.meshgrid(ll1, ll2)
-        grids.append(numpy.dstack(grid))  # shape LL2->LL
+        grids.append(numpy.dstack(grid))  # shape (L, L, 2) -> (L, L)
     return grids
 
 

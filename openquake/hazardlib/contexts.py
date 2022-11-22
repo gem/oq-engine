@@ -453,6 +453,10 @@ class ContextMaker(object):
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
+    @property
+    def stop(self):
+        return self.start + len(self.gsims)
+
     def dcache_size(self):
         """
         :returns: the size in bytes of the distance cache

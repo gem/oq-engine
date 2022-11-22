@@ -41,8 +41,19 @@ def compute_mrd(dstore, slc, cmaker, crosscorr, imt1, imt2,
     with dstore:
         [ctx] = cmaker.read_ctxs(dstore, slc)
     mrd = calc_mean_rate_dist(ctx, cmaker, crosscorr,
-                              imt1, imt2, meabins, sigbins, rng)
-    return mrd
+                              imt1, imt2, meabins, sigbins)
+    return {g: mrd[:, :, :, g - cmaker.start]
+            for g in range(cmaker.start, cmaker.stop)}
+
+
+def combine_mrds(acc, rlzs_by_g, rlz_weight):
+    g = next(iter(acc))  # first key
+    out = numpy.zeros(acc[g].shape)  # shape (L1, L1, N)
+    for g in acc:
+        value = acc[g]
+        for rlz in rlzs_by_g[g]:
+            out += rlz_weight[rlz] * value
+    return out
 
 
 def main(parent_id:int, config):
@@ -62,13 +73,15 @@ def main(parent_id:int, config):
     meabins = dic['meabins']
     sigbins = dic['sigbins']
     with dstore, log:
+        oq = parent['oqparam']
         N = len(parent['sitecol'])
+        L1 = oq.imtls.size // len(oq.imtls) - 1
+        assert L1 <= 24, 'Too many levels: %d' % L1
         assert N <= 10, 'Too many sites: %d' % N
-        ct = parent['oqparam'].concurrent_tasks
         cmakers = contexts.read_cmakers(parent)
         grp_ids = dstore.parent['rup/grp_id'][:]
         logging.info('Read {:_d} contexts'.format(len(grp_ids)))
-        blocksize = numpy.ceil(len(grp_ids) / ct)
+        blocksize = numpy.ceil(len(grp_ids) / oq.concurrent_tasks)
         dstore.swmr_on()
         smap = parallel.Starmap(compute_mrd, h5=dstore)
         for grp_id, slices in performance.get_slices(grp_ids).items():
@@ -77,9 +90,10 @@ def main(parent_id:int, config):
                 for slc in general.gen_slices(s0, s1, blocksize):
                     smap.submit((parent, slc, cmaker, crosscorr, imt1, imt2,
                                  meabins, sigbins))
-        for array in smap:
-            pass
-        
+        acc = smap.reduce()
+        mrd = dstore.create_dset('_mrd', float, (L1, L1, N))
+        mrd[:] = combine_mrds(
+            acc, dstore['rlzs_by_g'][:], dstore['weights'][:])
 
 
 if __name__ == '__main__':
