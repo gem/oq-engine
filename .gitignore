@@ -21,3 +21,4 @@ demos/*/*.zip
 venv
 *.whl
 .vscode/
+.ipynb_checkpoints/
