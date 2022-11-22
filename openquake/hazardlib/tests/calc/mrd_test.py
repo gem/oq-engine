@@ -55,7 +55,6 @@ class MRD01TestCase(unittest.TestCase):
 
         # Set the cross correlation model
         self.crosscorr = BakerJayaram2008()
-        self.rng = np.random.default_rng(42)
 
     def test_direct(self):
 
@@ -66,7 +65,7 @@ class MRD01TestCase(unittest.TestCase):
         len2 = len(imls2) - 1
         assert len(self.oqp.sites) == 1
         mrd = np.zeros((len1, len2, len(self.cmaker.gsims)))
-        update_mrd(self.ctx, self.cmaker, self.crosscorr, mrd, self.rng)
+        update_mrd(self.ctx, self.cmaker, self.crosscorr, mrd)
 
         # Loading Hazard Curves.
         # The poes array is 4D: |sites| x || x |IMTs| x |IMLs|
@@ -120,7 +119,7 @@ class MRD01TestCase(unittest.TestCase):
         # Compute the MRD
         mon = Monitor('multivariate')
         mrd = calc_mean_rate_dist(self.ctx, self.cmaker, self.crosscorr,
-                                  imt1, imt2, be_mea, be_sig, self.rng, mon)
+                                  imt1, imt2, be_mea, be_sig, mon)
         print(mon)
 
         # Loading Hazard Curves.
@@ -179,11 +178,11 @@ class MRD01TestCase(unittest.TestCase):
         # Compute the MRD: indirect
         imt1, imt2 = self.imts
         mrdi = calc_mean_rate_dist(self.ctx, self.cmaker, self.crosscorr,
-                                   imt1, imt2, be_mea, be_sig, self.rng)
+                                   imt1, imt2, be_mea, be_sig)
 
         # Compute the MRD: direct
         mrdd = np.zeros((len1, len1, len(self.cmaker.gsims)))
-        update_mrd(self.ctx, self.cmaker, self.crosscorr, mrdd, self.rng)
+        update_mrd(self.ctx, self.cmaker, self.crosscorr, mrdd)
 
         np.testing.assert_almost_equal(mrdi[:,:, 0], mrdd)
 

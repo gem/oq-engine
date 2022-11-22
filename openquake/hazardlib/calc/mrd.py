@@ -42,7 +42,7 @@ def get_uneven_bins_edges(lefts, num_bins):
     return numpy.array(tmp)
 
 
-def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, rng):
+def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd):
     """
     This computes the mean rate density by means of the multivariate
     normal function available in scipy.
@@ -55,8 +55,6 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, rng):
         A cross correlation model
     :param mrd:
         An array with shape |imls| x |imls| x |gmms|
-    :param rng:
-        Random number generator used in multivariate_normal
     """
     # Correlation matrix
     im1, im2 = cm.imtls
@@ -86,7 +84,8 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, rng):
             comtx = numpy.array([[sig[slc1]**2, cov], [cov, sig[slc2]**2]])
 
             # Compute the MRD for the current rupture
-            partial = _get_mrd(mea[slc0], comtx, grids, rng)
+            mvn  = sts.multivariate_normal(mea[slc0], comtx)
+            partial = get_mrd(mvn, grids)
 
             # Check
             msg = f'{numpy.max(partial):.8f}'
@@ -112,27 +111,23 @@ def make_grids(ll1, ll2):
     return grids
 
 
-def _get_mrd(means, comtx, grids, rng):
-    # :param means:
-    #     The two values of the mean
-    # :param comtx:
-    #     The covariance matrix
-    # :param grids:
-    #     A list of 4 arrays of shape (L, L)
-    # :returns:
-    #     A 2D array
-    mvn = sts.multivariate_normal(means, comtx, seed=rng)
+def get_mrd(mvn, grids):
+    """
+    :param mvn: a multivariate normal instance
+    :param grids: a list of 4 arrays of shape (L, L)
+    :returns: an array of shape (L, L)
+    """
+    # compute lower-left lower-right upper-left upper-right values
+    LL, LR, UL, UR = 0, 1, 2, 3
     vals = mvn.cdf(grids)  # shape (4, L, L)
-    # Compute the values in each cell
-    LL, LR, UL, UR = 0, 1, 2, 3  # lower-left lower-right upper-left upper-right
     partial = vals[UR] - vals[UL] - vals[LR] + vals[LL]
-    # Remove values that go below zero (mostly numerical errors)
+    # remove values below zero (mostly numerical errors)
     partial[partial < 0] = 0.0
     return partial
 
 
 def update_mrd_indirect(ctx, cm, corrm, imt1, imt2, be_mea, be_sig,
-                        rng, mrd, monitor=Monitor()):
+                        mrd, monitor=Monitor()):
     """
     This computes the mean rate density by means of the multivariate
     normal function available in scipy. Compared to the function `update_mrd`
@@ -151,8 +146,6 @@ def update_mrd_indirect(ctx, cm, corrm, imt1, imt2, be_mea, be_sig,
         Bin edges mean
     :param be_sig:
         Bin edges std
-    :param rng:
-        Random number generator used in multivariate_normal
     """
     C = len(ctx)
     len_be_mea = len(be_mea)
@@ -197,8 +190,6 @@ def update_mrd_indirect(ctx, cm, corrm, imt1, imt2, be_mea, be_sig,
             arr[S1] += ctx.occurrence_rate[i] * sig[gid, 0, i]
             arr[S2] += ctx.occurrence_rate[i] * sig[gid, 1, i]
 
-        print(f'{len(acc)=}')
-
         # Compute MRD for all the combinations of GM and STD
         for key, arr in acc.items():
             # Covariance matrix
@@ -211,15 +202,16 @@ def update_mrd_indirect(ctx, cm, corrm, imt1, imt2, be_mea, be_sig,
             # mean (based on the rate of occurrence) of the GM from each
             # rupture
             means = [arr[M1] / arr[R], arr[M2] / arr[R]]
+            mvn = sts.multivariate_normal(means, comtx)
             with monitor:  # this is ultra-slow!
-                partial = _get_mrd(means, comtx, grids, rng)
+                partial = get_mrd(mvn, grids)
 
             # Updating the MRD for site sid and ground motion model gid
             mrd[:, :, gid] += arr[R] * partial
 
 
 def calc_mean_rate_dist(ctxt, cmaker, crosscorr, imt1, imt2,
-                        bins_mea, bins_sig, rng, mon=Monitor()):
+                        bins_mea, bins_sig, mon=Monitor()):
     """
     :param srcs: a sequence of parametric sources
     :param sitecol: a SiteCollection with few sites
@@ -229,7 +221,6 @@ def calc_mean_rate_dist(ctxt, cmaker, crosscorr, imt1, imt2,
     :param str imt2: second IMT to consider (must be inside cmaker.imtls)
     :param bins_mea: bins for the mean
     :param bins_sig: bins for the standard deviation
-    :param rng: random number generator to use
     """
     G = len(cmaker.gsims)
     imts = list(cmaker.imtls)
@@ -243,5 +234,5 @@ def calc_mean_rate_dist(ctxt, cmaker, crosscorr, imt1, imt2,
     for i, sid in enumerate(sids):
         update_mrd_indirect(
             ctxt[ctxt.sids == sid], cmaker, corrm, imt1, imt2,
-            bins_mea, bins_sig, rng, mrd[:, :, i], mon)
+            bins_mea, bins_sig, mrd[:, :, i], mon)
     return mrd

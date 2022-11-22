@@ -26,7 +26,7 @@ from openquake.commonlib import datastore
 
 
 def compute_mrd(dstore, slc, cmaker, crosscorr, imt1, imt2,
-                meabins, sigbins, rng, monitor):
+                meabins, sigbins, monitor):
     """
     :param dstore: parent datastore
     :param slc: a slice object referring to a slice of contexts
@@ -59,7 +59,6 @@ def main(parent_id:int, config):
     imt1 = dic['imt1']
     imt2 = dic['imt2']
     crosscorr = getattr(cross_correlation, dic['cross_correlation'])()
-    rng = numpy.random.default_rng(dic['seed'])
     meabins = dic['meabins']
     sigbins = dic['sigbins']
     with dstore, log:
@@ -77,7 +76,7 @@ def main(parent_id:int, config):
             for s0, s1 in slices:
                 for slc in general.gen_slices(s0, s1, blocksize):
                     smap.submit((parent, slc, cmaker, crosscorr, imt1, imt2,
-                                 meabins, sigbins, rng))
+                                 meabins, sigbins))
         for array in smap:
             pass
         
