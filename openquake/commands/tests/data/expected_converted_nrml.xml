@@ -91,7 +91,7 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Active Shallow Crust"
         >
             <areaGeometry>
-                <Polygon>
+                <gml:Polygon>
                     <gml:exterior>
                         <gml:LinearRing>
                             <gml:posList>
@@ -99,7 +99,7 @@ xmlns:gml="http://www.opengis.net/gml"
                             </gml:posList>
                         </gml:LinearRing>
                     </gml:exterior>
-                </Polygon>
+                </gml:Polygon>
                 <upperSeismoDepth>
                     0.0
                 </upperSeismoDepth>
