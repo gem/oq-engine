@@ -111,7 +111,7 @@ def geodic2node(geodic):
         return Node('complexFaultSource', attr, nodes=nodes)
     elif code == 'A':
         pol = Node('Polygon', nodes=[
-            Node('exterior', nodes=[
+            Node('{%s}exterior' % nrml.GML_NAMESPACE, nodes=[
                 Node('{%s}LinearRing' % nrml.GML_NAMESPACE,
                      nodes=[Node('{%s}posList' % nrml.GML_NAMESPACE,
                             text=coords)])])])

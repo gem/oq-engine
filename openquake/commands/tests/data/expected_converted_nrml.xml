@@ -92,13 +92,13 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <areaGeometry>
                 <Polygon>
-                    <exterior>
+                    <gml:exterior>
                         <gml:LinearRing>
                             <gml:posList>
                                 -122.5 37.5 -121.5 37.5 -121.5 38.5 -122.5 38.5 -122.5 37.5
                             </gml:posList>
                         </gml:LinearRing>
-                    </exterior>
+                    </gml:exterior>
                 </Polygon>
                 <upperSeismoDepth>
                     0.0
