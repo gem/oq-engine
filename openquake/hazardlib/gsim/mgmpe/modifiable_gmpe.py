@@ -22,7 +22,6 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 import copy
 import warnings
 import numpy as np
-from openquake.baselib.performance import get_slices
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
@@ -280,12 +279,12 @@ class ModifiableGMPE(GMPE):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.mags = ()  # used in GMPETables
-
+ 
         # Create the original GMPE
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
         self.params = kwargs  # non-gmpe parameters
         self.gmpe = registry[gmpe_name](**kw)
+        self.gmpe_table = hasattr(self.gmpe, 'gmpe_table')
         self.set_parameters()
 
         if ('set_between_epsilon' in self.params or
@@ -356,7 +355,6 @@ class ModifiableGMPE(GMPE):
         """
         if hasattr(self.gmpe, 'set_tables'):
             self.gmpe.set_tables(mags, imts)
-            self.mags = mags
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -372,7 +370,7 @@ class ModifiableGMPE(GMPE):
         g = globals()
 
         # Compute the original mean and standard deviations
-        compute(self.gmpe, ctx_copy, imts, mean, sig, tau, phi)
+        self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
 
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
@@ -387,18 +385,3 @@ class ModifiableGMPE(GMPE):
                     g[methname](ctx, imt, me, si, ta, ph, conv, **kw)
                 else:
                     g[methname](ctx, imt, me, si, ta, ph, **kw)
-
-
-def compute(gmpe, ctx, imts, mean, sig, tau, phi):
-    """
-    Smart compute functions splitting the arrays in slices of constant
-    magnitude if there are underlying GMPETables.
-    """
-    if hasattr(gmpe, 'gmpe_table'):
-        for slices in get_slices(np.uint32(ctx.mag*100)).values():
-            for s0, s1 in slices:
-                s = slice(s0, s1)
-                gmpe.compute(ctx[s], imts,
-                             mean[:, s], sig[:, s], tau[:, s], phi[:, s])
-    else:
-        gmpe.compute(ctx, imts, mean, sig, tau, phi)

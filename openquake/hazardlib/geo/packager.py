@@ -128,8 +128,8 @@ def geodic2node(geodic):
         nodes = (splx,) + build_nodes(props)
         return Node('simpleFaultSource', attr, nodes=nodes)
     else:
-        logging.error(f'Skipping source of code "{code}" and attributes '
-                      f'"{attr}" (the converter is not implemented yet)')
+        logging.warning(f'Skipping source of code "{code}" and attributes '
+                        f'"{attr}" (the converter is not implemented yet)')
         return None
 
 

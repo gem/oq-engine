@@ -1003,6 +1003,7 @@ class ContextMaker(object):
             recarrays = ctxs
         else:  # vectorize the contexts
             recarrays = [self.recarray(ctxs)]
+        # split by magnitude in case of GMPETable gsims
         if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
             assert len(recarrays) == 1, len(recarrays)
             recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
@@ -1627,6 +1628,11 @@ def read_cmakers(dstore, full_lt=None):
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
+    if 'source_info' in dstore:
+        weight = dstore.read_df('source_info')[
+            ['grp_id', 'weight']].groupby('grp_id').sum().weight.to_numpy()
+    else:
+        weight = [1] * len(rlzs_by_gsim_list)
     start = 0
     aftershock = 'delta_rates' in dstore
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
@@ -1647,6 +1653,7 @@ def read_cmakers(dstore, full_lt=None):
         cmaker.trti = trti
         cmaker.start = start
         cmaker.grp_id = grp_id
+        cmaker.weight = weight[grp_id]
         start += len(rlzs_by_gsim)
         cmakers.append(cmaker)
     return cmakers
