@@ -19,7 +19,7 @@
 import numpy
 import scipy.stats as sts
 from openquake.baselib.general import AccumDict
-from openquake.baselib.performance import Monitor, split_array
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.imt import from_string
 
 
@@ -29,10 +29,11 @@ def get_uneven_bins_edges(lefts, num_bins):
     :param lefts:
         The left edge of each bin + the largest right edge
     :param num_bins:
-        The number of bins in each interval. Cardinality |lefts| - 1
+        The number of bins in each interval. Cardinality num(lefts) - 1
     :returns:
         A :class:`numpy.ndarray` instance
     """
+    assert len(lefts) == len(num_bins) + 1, (len(lefts), len(num_bins))
     tmp = []
     for i, (left, numb) in enumerate(zip(lefts[:-1], num_bins)):
         low = 0 if i == 0 else 1
@@ -195,6 +196,8 @@ def update_mrd_indirect(ctx, cm, corrm, imt1, imt2, be_mea, be_sig,
             arr[M2] += ctx.occurrence_rate[i] * mea[gid, 1, i]
             arr[S1] += ctx.occurrence_rate[i] * sig[gid, 0, i]
             arr[S2] += ctx.occurrence_rate[i] * sig[gid, 1, i]
+
+        print(f'{len(acc)=}')
 
         # Compute MRD for all the combinations of GM and STD
         for key, arr in acc.items():

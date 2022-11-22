@@ -168,9 +168,7 @@ class MRD01TestCase(unittest.TestCase):
 
     def test_compare(self):
         # Bin edges
-        lefts = [-3, -2, 1, 2]
-        numb = [80, 80, 10]
-        be_mea = get_uneven_bins_edges(lefts, numb)
+        be_mea = get_uneven_bins_edges([-3, -2, 1, 2], [80, 80, 10])
         be_sig = np.arange(0.50, 0.70, 0.01)
 
         # Set params
