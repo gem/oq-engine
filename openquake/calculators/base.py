@@ -509,10 +509,10 @@ class HazardCalculator(BaseCalculator):
                     interp = oq.maximum_distance(trt)
                     if min_mag < interp.x[0]:
                         logging.warning(
-                            'discarding magnitudes < %.2f', interp.x[0])
+                            '%s: discarding mags < %.2f', trt, interp.x[0])
                     if max_mag > interp.x[-1]:
                         logging.warning(
-                            'discarding magnitudes > %.2f', interp.x[-1])
+                            '%s: discarding mags > %.2f', trt, interp.x[-1])
                     if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (
                             interp.x[0], interp.y[0],
