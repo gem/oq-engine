@@ -708,7 +708,6 @@ _devtest_innervm_run () {
                  export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  cd oq-engine
 
-                 /opt/openquake/bin/pytest --doctest-modules -v openquake/baselib
                  export MPLBACKEND=Agg; /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-hmtk.xml -v openquake/hmtk
                  /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-engine.xml -v openquake/engine
                  /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-server.xml -v openquake/server
@@ -862,7 +861,7 @@ _pkgtest_innervm_run () {
 
         sudo apt-get install -y python3-oq-engine-master python3-oq-engine-worker
         # Switch to celery mode
-        sudo sed -i 's/oq_distribute = processpool/oq_distribute = celery/;' /etc/openquake/openquake.cfg
+        # sudo sed -i 's/oq_distribute = processpool/oq_distribute = celery/;' /etc/openquake/openquake.cfg
 
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
 celery_wait() {
@@ -893,13 +892,14 @@ celery_wait() {
 sudo systemctl start openquake-dbserver
 sleep 10
 # Restart openquake-celery after the changes made to openquake.cfg
-sudo systemctl start openquake-celery
+# sudo systemctl start openquake-celery
 sleep 10
-sudo systemctl status openquake-dbserver openquake-celery
+# sudo systemctl status openquake-dbserver openquake-celery
+sudo systemctl status openquake-dbserver
 
-celery_wait $GEM_MAXLOOP
+# celery_wait $GEM_MAXLOOP
 
-        oq celery status
+        # oq celery status
         oq engine --run risk/EventBasedRisk/job.ini || echo \"distribution with celery not supported without master and/or worker packages\"
 
         # Try to export a set of results AFTER the calculation
@@ -909,7 +909,7 @@ celery_wait $GEM_MAXLOOP
         echo \"Exporting calculation #2\"
         oq engine --eos 2 /tmp/out/eos_2
 
-        oq info --report risk
+        # oq info --report risk
         echo 'Listing hazard calculations'
         oq engine --lhc
         echo 'Listing risk calculations'
@@ -921,6 +921,7 @@ celery_wait $GEM_MAXLOOP
 
         # WebUI command check
         ssh "$lxc_ip" "webui_fail_msg=\"This command must be run by the proper user: see the documentation for details\"
+        set -x
         webui_fail=\$(oq webui migrate 2>&1 || true)
         if [ \"\$webui_fail\" != \"\$webui_fail_msg\" ]; then
             echo \"The 'oq webui' command is broken: it reports\n\t\$webui_fail\ninstead of\n\t\$webui_fail_msg\"

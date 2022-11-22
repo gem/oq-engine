@@ -22,7 +22,6 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 import copy
 import warnings
 import numpy as np
-from openquake.baselib.performance import get_slices
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
