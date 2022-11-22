@@ -1337,7 +1337,7 @@ class RowConverter(SourceConverter):
         except AttributeError:
             lst = []
         else:
-            lst = [list(node_to_dict(n).values())[0] for n in slip_list.nodes]
+            lst = [node_to_dict(n)['slip'] for n in slip_list.nodes]
         return str(lst)
 
     def convert_areaSource(self, node):
