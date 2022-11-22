@@ -34,6 +34,7 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.shakemap.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
+from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
 from openquake.commonlib import (
@@ -105,10 +106,28 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                 if "station_data" in oqparam.inputs:
                     station_sites = dstore.read_df('station_sites')
                     station_data = dstore.read_df('station_data')
+                    station_sites = SiteCollection.from_points(
+                        lons=station_sites.lon.values,
+                        lats=station_sites.lat.values,
+                    )
+                    station_sitemodel = station_sites.assoc(sitecol, assoc_dist=None)
+                    station_sitecol = SiteCollection.from_points(
+                        lons=station_sites.lon,
+                        lats=station_sites.lat,
+                        sitemodel=station_sitemodel,
+                    )
+                    stnfilter = SourceFilter(
+                        station_sitecol, oqparam.maximum_distance(trt))
+                    stnids = stnfilter.close_sids(proxy, trt)
+                    if len(stnids) < len(station_sites):
+                        logging.warning('%d stations filtered away', len(station_sites) - len(stnids))
+                    if len(stnids) == 0:  # all stations filtered away
+                        continue
                     try:
                         computer = ConditionedGmfComputer(
                             ebr, srcfilter.sitecol.filtered(sids), 
-                            station_sites, station_data, oqparam.observed_imts,
+                            stnfilter.sitecol.filtered(stnids), 
+                            station_data.loc[stnids], oqparam.observed_imts,
                             cmaker, oqparam.correl_model, oqparam.cross_correl,
                             oqparam.ground_motion_correlation_params,
                             oqparam.number_of_ground_motion_fields,
