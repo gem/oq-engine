@@ -23,7 +23,7 @@ def main(job_ini, hostname):
     """
     Submit a calculation to a remote host
     """
-    logs.dbcmd('submit', os.path.abspath(job_ini), hostname)
+    print(logs.dbcmd('submit', os.path.abspath(job_ini), hostname))
 
 main.job_ini = 'calculation configuration file'
 main.hostname = 'IP or name of an accessible remote host'
