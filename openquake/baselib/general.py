@@ -292,6 +292,7 @@ def gen_slices(start, stop, blocksize):
     >>> list(gen_slices(1, 6, 2))
     [slice(1, 3, None), slice(3, 5, None), slice(5, 6, None)]
     """
+    blocksize = int(blocksize)
     assert start <= stop, (start, stop)
     assert blocksize > 0, blocksize
     while True:

@@ -314,7 +314,17 @@ class StreamingXMLWriter(object):
             return
         self.start_tag(tag, node.attrib)
         if node.text is not None:
-            txt = escape(scientificformat(node.text).strip())
+            if node.tag == 'posList':
+                # NOTE: by convention, posList must be a flat list of
+                #   space-separated coordinates, so we need to flatten any
+                #   nested lists or tuples, producing a single list of values
+                obj = node.text
+                while (isinstance(obj, (list, tuple))
+                       and isinstance(obj[0], (list, tuple))):
+                    obj = list(itertools.chain(*obj))
+                txt = escape(scientificformat(obj).strip())
+            else:
+                txt = escape(scientificformat(node.text).strip())
             if txt:
                 self._write(txt)
         for subnode in node:
@@ -644,9 +654,10 @@ def node_to_dict(node):
     if isinstance(node.text, str) and node.text.strip() == '':
         pass
     elif node.text is not None:
-        if 'attrib' in dic:
+        if node.attrib:
             dic['text'] = node.text
         else:
+            # TODO: ugly, dic sometimes is a dic and sometimes a scalar??
             dic = node.text
     if node.nodes:
         dic.update(_group([node_to_dict(n) for n in node]))

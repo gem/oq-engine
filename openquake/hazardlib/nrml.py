@@ -285,6 +285,7 @@ validators = {
     'alongStrike': valid.probability,
     'downDip': valid.probability,
     'slipRate': valid.positivefloat,
+    'slip': valid.positivefloat,
     'rigidity': valid.positivefloat,
     'totalMomentRate': valid.positivefloat,
     'characteristicRate': valid.positivefloat,

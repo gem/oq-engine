@@ -198,7 +198,7 @@ import multiprocessing.dummy
 import multiprocessing.shared_memory as shmem
 import subprocess
 import psutil
-import getpass
+import threading
 import numpy
 try:
     from setproctitle import setproctitle
@@ -222,6 +222,14 @@ submit = CallableDict()
 GB = 1024 ** 3
 
 
+def wait_if_loaded(monitor, sleep):
+    while True:
+        percent = psutil.cpu_percent()
+        if percent <= 99:
+            break
+        time.sleep(sleep)
+
+
 @submit.add('no')
 def no_submit(self, func, args, monitor):
     return safely_call(func, args, self.task_no, monitor)
@@ -229,15 +237,10 @@ def no_submit(self, func, args, monitor):
 
 @submit.add('spawn')
 def spawn_submit(self, func, args, monitor):
-    while True:
-        percent = psutil.cpu_percent()
-        if percent <= 99:
-            mp_context.Process(
-                target=safely_call, args=(func, args, self.task_no, monitor)
-            ).start()
-            break
-        logging.debug('CPU=%d%%, waiting', percent)
-        time.sleep(30)
+    wait_if_loaded(monitor, 1.)
+    mp_context.Process(
+        target=safely_call, args=(func, args, self.task_no, monitor)
+    ).start()
 
 
 @submit.add('processpool')
@@ -260,8 +263,9 @@ def celery_submit(self, func, args, monitor):
 @submit.add('zmq')
 def zmq_submit(self, func, args, monitor):
     if not hasattr(self, 'sender'):
+        dbhost = config.dbserver.host
         port = int(config.zworkers.ctrl_port) + 2
-        task_input_url = 'tcp://0.0.0.0:%d' % port
+        task_input_url = 'tcp://%s:%d' % (dbhost, port)
         self.sender = Socket(
             task_input_url, zmq.PUSH, 'connect').__enter__()
     return self.sender.send((func, args, self.task_no, monitor))
@@ -493,7 +497,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon is dummy_mon:  # in the DbServer
         assert not isgenfunc, func
         return Result.new(func, args, mon)
-
     if mon.operation.endswith('_'):
         name = mon.operation[:-1]
     elif func is split_task:
@@ -505,6 +508,8 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     mon.task_no = task_no
     if mon.inject:
         args += (mon,)
+    if OQDIST == 'spawn':
+        wait_if_loaded(mon, 30.)
     sentbytes = 0
     with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
         msg = check_mem_usage()  # warn if too much memory is used
@@ -709,14 +714,10 @@ class Starmap(object):
             # we use spawn here to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
-            try:
-                from ray.util.multiprocessing import Pool
-                cls.pool = Pool(cls.num_cores, init_workers)
-            except ImportError:
-                cls.pool = mp_context.Pool(
-                    cls.num_cores, init_workers,
-                    maxtasksperchild=cls.maxtasksperchild)
-                cls.pids = [proc.pid for proc in cls.pool._pool]
+            cls.pool = mp_context.Pool(
+                cls.num_cores, init_workers,
+                maxtasksperchild=cls.maxtasksperchild)
+            cls.pids = [proc.pid for proc in cls.pool._pool]
             cls.shared = []
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine
@@ -1053,26 +1054,22 @@ def split_task(elements, func, args, duration, outs_per_task, monitor):
 OQDIST = oq_distribute()
 
 
-def ssh_args(zworkers):
-    remote_python = zworkers.remote_python or sys.executable
-    remote_user = zworkers.remote_user or getpass.getuser()
-    if zworkers.host_cores.strip():
-        for hostcores in config.zworkers.host_cores.split(','):
-            host, cores = hostcores.split()
-            if host == '127.0.0.1':  # localhost
-                yield host, cores, [sys.executable]
-            else:
-                yield host, cores, [
-                    'ssh', '-f', '-T', remote_user + '@' + host, remote_python]
-
-
 def workers_start(zworkers):
     """
     Start the remote workers with ssh
     """
     if OQDIST in 'no processpool':
         return
-    for host, cores, args in ssh_args(zworkers):
+    if OQDIST == 'zmq':
+        # start task_in->task_server streamer thread
+        port = int(zworkers.ctrl_port)
+        threading.Thread(
+            target=workerpool._streamer, args=(port,), daemon=True
+        ).start()
+        logging.warning('Task streamer started on port %d',
+                        int(zworkers.ctrl_port) + 1)
+
+    for host, cores, args in workerpool.ssh_args(zworkers):
         if OQDIST == 'dask':
             sched = config.distribution.dask_scheduler
             args += ['-m', 'distributed.cli.dask_worker', sched,
@@ -1084,7 +1081,8 @@ def workers_start(zworkers):
             if cores != '-1':
                 args += ['-c', cores]
         elif OQDIST == 'zmq':
-            args += ['-m', 'openquake.baselib.workerpool', '-n', cores]
+            url = 'tcp://0.0.0.0:%s' % zworkers.ctrl_port
+            args += ['-m', 'openquake.baselib.workerpool', url, '-n', cores]
         subprocess.Popen(args, start_new_session=True)
         logging.info(args)
 

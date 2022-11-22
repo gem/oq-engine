@@ -446,7 +446,14 @@ max_sites_per_tile:
   available memory. This effectively splits the calculation in homogeneous
   tiles with less than `max_sites_per_tile`. To be used as last resort.
   Example: *max_sites_per_tile = 50_000*
-  Default: 500_000
+  Default: 5_000_000
+
+pmap_max_gb:
+   Maximum size of the ProbabilityMaps in classical calculations, should be
+   less than 4 GB to avoid pickling errors. This is also used to split the
+   calculation in tiles if max_sites_per_tile is not given.
+   Example: *max_size_db = 2*
+   Default: 1
 
 max_weight:
   INTERNAL
@@ -612,6 +619,13 @@ sampling_method:
   One of early_weights, late_weights, early_latin, late_latin)
   Example: *sampling_method = early_latin*.
   Default: 'early_weights'
+
+keep_source_groups:
+   Set an approach that saves memory in large classical calculations, possibly
+   with a performance penalty. When left unspecified (None), the engine will
+   automatically decide when to use it (i.e. if there are enough gsims).
+   Example: *keep_source_groups = true*
+   Default: None
 
 sec_peril_params:
   INTERNAL
@@ -911,8 +925,9 @@ class OqParam(valid.ParamSet):
     max_gmvs_per_task = valid.Param(valid.positiveint, 1_000_000)
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
-    max_sites_per_tile = valid.Param(valid.positiveint, 500_000)
+    max_sites_per_tile = valid.Param(valid.positiveint, 5_000_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
+    pmap_max_gb = valid.Param(valid.positivefloat, 1.)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
@@ -950,6 +965,7 @@ class OqParam(valid.ParamSet):
     sampling_method = valid.Param(
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
+    keep_source_groups = valid.Param(valid.boolean, None)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})
