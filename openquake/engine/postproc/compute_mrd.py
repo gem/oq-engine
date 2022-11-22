@@ -39,8 +39,9 @@ def compute_mrd(dstore, slc, cmaker, crosscorr, imt1, imt2,
     :returns: 4D-matrix with shape (L1, L1, N, G)
     """
     with dstore:
+        N = len(dstore['sitecol'])
         [ctx] = cmaker.read_ctxs(dstore, slc)
-    mrd = calc_mean_rate_dist(ctx, cmaker, crosscorr,
+    mrd = calc_mean_rate_dist(ctx, N, cmaker, crosscorr,
                               imt1, imt2, meabins, sigbins)
     return {g: mrd[:, :, :, g - cmaker.start]
             for g in range(cmaker.start, cmaker.stop)}
@@ -56,13 +57,17 @@ def combine_mrds(acc, rlzs_by_g, rlz_weight):
     return out
 
 
-def main(parent_id:int, config):
+def main(parent_id, config):
     """
-    :param parent_id: ID of the parent calculation with the contexts
+    :param parent_id: filename or ID of the parent calculation
     :param config: name of a .toml file with parameters imt1, imt2, crosscorr
 
     NB: this is meant to work only for parametric ruptures!
     """
+    try:
+        parent_id = int(parent_id)
+    except ValueError:
+        pass
     parent = datastore.read(parent_id)
     dstore, log = datastore.build_dstore_log(parent=parent)
     with open(config) as f:
@@ -94,6 +99,7 @@ def main(parent_id:int, config):
         mrd = dstore.create_dset('_mrd', float, (L1, L1, N))
         mrd[:] = combine_mrds(
             acc, dstore['rlzs_by_g'][:], dstore['weights'][:])
+        return mrd[:]
 
 
 if __name__ == '__main__':

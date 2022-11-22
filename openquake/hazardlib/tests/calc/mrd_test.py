@@ -118,7 +118,7 @@ class MRD01TestCase(unittest.TestCase):
 
         # Compute the MRD
         mon = Monitor('multivariate')
-        mrd = calc_mean_rate_dist(self.ctx, self.cmaker, self.crosscorr,
+        mrd = calc_mean_rate_dist(self.ctx, 1, self.cmaker, self.crosscorr,
                                   imt1, imt2, be_mea, be_sig, mon)
         print(mon)
 
@@ -177,7 +177,7 @@ class MRD01TestCase(unittest.TestCase):
 
         # Compute the MRD: indirect
         imt1, imt2 = self.imts
-        mrdi = calc_mean_rate_dist(self.ctx, self.cmaker, self.crosscorr,
+        mrdi = calc_mean_rate_dist(self.ctx, 1, self.cmaker, self.crosscorr,
                                    imt1, imt2, be_mea, be_sig)
 
         # Compute the MRD: direct

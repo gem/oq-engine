@@ -210,11 +210,11 @@ def update_mrd_indirect(ctx, cm, corrm, imt1, imt2, be_mea, be_sig,
             mrd[:, :, gid] += arr[R] * partial
 
 
-def calc_mean_rate_dist(ctxt, cmaker, crosscorr, imt1, imt2,
+def calc_mean_rate_dist(ctxt, nsites, cmaker, crosscorr, imt1, imt2,
                         bins_mea, bins_sig, mon=Monitor()):
     """
-    :param srcs: a sequence of parametric sources
-    :param sitecol: a SiteCollection with few sites
+    :param ctxt: a sequence of parametric sources
+    :param num_sites: total number of sites (small)
     :param cmaker: a ContextMaker instance
     :param crosscorr: a CrossCorrelation instance
     :param str imt1: first IMT to consider (must be inside cmaker.imtls)
@@ -229,10 +229,9 @@ def calc_mean_rate_dist(ctxt, cmaker, crosscorr, imt1, imt2,
     assert imt2 in cmaker.imtls, (imt1, imts)
     imts = [from_string(imt1), from_string(imt2)]
     corrm = crosscorr.get_cross_correlation_mtx(imts)
-    sids = numpy.unique(ctxt.sids)
-    mrd = numpy.zeros((len1, len1, len(sids), G))
-    for i, sid in enumerate(sids):
+    mrd = numpy.zeros((len1, len1, nsites, G))
+    for sid in range(nsites):
         update_mrd_indirect(
             ctxt[ctxt.sids == sid], cmaker, corrm, imt1, imt2,
-            bins_mea, bins_sig, mrd[:, :, i], mon)
+            bins_mea, bins_sig, mrd[:, :, sid], mon)
     return mrd
