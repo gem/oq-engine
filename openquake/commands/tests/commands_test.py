@@ -646,18 +646,18 @@ class GPKG2NRMLTestCase(unittest.TestCase):
             temp_dir, Path(MIXED_SRC_MODEL).stem + '.gpkg')
         out_path = os.path.join(
             temp_dir, Path(MIXED_SRC_MODEL).stem + '_converted.xml')
-        with self.assertLogs('root', level='ERROR') as cm:
+        with self.assertLogs('root', level='WARNING') as cm:
             sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
         expected_log_outputs = [
-            'ERROR:root:Skipping source of code "X" and attributes'
+            'WARNING:root:Skipping source of code "X" and attributes'
             ' "{\'id\': \'5\', \'name\': \'characteristic source,'
             ' simple fault\', \'tectonicRegion\': \'Volcanic\'}"'
             ' (the converter is not implemented yet)',
-            'ERROR:root:Skipping source of code "X" and attributes'
+            'WARNING:root:Skipping source of code "X" and attributes'
             ' "{\'id\': \'6\', \'name\': \'characteristic source,'
             ' complex fault\', \'tectonicRegion\': \'Volcanic\'}"'
             ' (the converter is not implemented yet)',
-            'ERROR:root:Skipping source of code "X" and attributes'
+            'WARNING:root:Skipping source of code "X" and attributes'
             ' "{\'id\': \'7\', \'name\': \'characteristic source,'
             ' multi surface\', \'tectonicRegion\': \'Volcanic\'}"'
             ' (the converter is not implemented yet)']
