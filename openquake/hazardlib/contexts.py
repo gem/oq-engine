@@ -1007,7 +1007,6 @@ class ContextMaker(object):
         if any(hasattr(gsim, 'gmpe_table') or hasattr(gsim, 'mags')
                for gsim in self.gsims):
             assert len(recarrays) == 1, len(recarrays)
-            recarrays[0].sort(order='mag')
             recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
         self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
         for g, gsim in enumerate(self.gsims):
