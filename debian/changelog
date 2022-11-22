@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Bug fix: ModifiableGMPEs with underlying tables were not receiving a
+    single magnitude when calling the `compute` method
   * Introduced `keep_source_groups` mode in classical calculations
   * Rewritten ModifiableGMPE to avoid a subtle memory leak
 
