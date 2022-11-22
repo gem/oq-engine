@@ -53,6 +53,15 @@ class DbServer(object):
                 if cmd == 'getpid':
                     sock.send(self.pid)
                     continue
+                elif cmd == 'submit':
+                    if len(args) == 2:
+                        fname, host = args
+                        ssh = ['ssh', '-f', '-T', host,
+                               '/opt/openquake/venv/bin/oq', fname]
+                        subprocess.Popen(ssh, start_new_session=True,
+                                         env={'NUMBA_CACHE_DIR': '/tmp'})
+                    else:
+                        sock.end('Unknown %s', cmd_)
                 elif cmd.startswith('workers_'):
                     # call parallel.workers_start et similar routines
                     msg = getattr(p, cmd)(*args)
