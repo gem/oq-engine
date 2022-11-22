@@ -128,22 +128,25 @@ class RecurrenceTableTestCase(unittest.TestCase):
         fake_completeness_table = 0.0
         catalogue = Catalogue.make_from_dict({'year': [1900]})
         config = {}
-        rec_utils.input_checks(catalogue, config, fake_completeness_table)
+        _, _, ref_mag, dmag, _ = rec_utils.input_checks(
+            catalogue, config, fake_completeness_table)
+        self.assertEqual(0.0, ref_mag)
+        self.assertEqual(0.1, dmag)
 
     def test_input_checks_use_reference_magnitude(self):
         fake_completeness_table = 0.0
         catalogue = Catalogue.make_from_dict({'year': [1900]})
         config = {'reference_magnitude': 3.0}
-        cmag, ctime, ref_mag, dmag, _ = rec_utils.input_checks(catalogue,
-                                                               config, fake_completeness_table)
+        cmag, ctime, ref_mag, dmag, _ = rec_utils.input_checks(
+            catalogue, config, fake_completeness_table)
         self.assertEqual(3.0, ref_mag)
 
     def test_input_checks_sets_magnitude_interval(self):
         fake_completeness_table = 0.0
         catalogue = Catalogue.make_from_dict({'year': [1900]})
         config = {'magnitude_interval': 0.1}
-        cmag, ctime, ref_mag, dmag, _ = rec_utils.input_checks(catalogue,
-                                                               config, fake_completeness_table)
+        cmag, ctime, ref_mag, dmag, _ = rec_utils.input_checks(
+            catalogue, config, fake_completeness_table)
         self.assertEqual(0.1, dmag)
 
 
