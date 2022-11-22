@@ -68,7 +68,7 @@ class Weichert(SeismicityOccurrence):
         '''Calculates recurrence using the Weichert (1980) method'''
         bval, sigma_b, rate, sigma_rate, aval, sigma_a = self._calculate(
             catalogue, config, completeness)
-        return bval, sigma_b, rate, sigma_rate
+        return bval, sigma_b, aval, sigma_a
 
     def _calculate(self, catalogue, config, completeness=None):
 
