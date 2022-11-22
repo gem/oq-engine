@@ -1004,8 +1004,7 @@ class ContextMaker(object):
         else:  # vectorize the contexts
             recarrays = [self.recarray(ctxs)]
         # split by magnitude in case of GMPETable gsims
-        if any(hasattr(gsim, 'gmpe_table') or hasattr(gsim, 'mags')
-               for gsim in self.gsims):
+        if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
             assert len(recarrays) == 1, len(recarrays)
             recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
         self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
