@@ -9,7 +9,7 @@ def analysis(dstore):
 
     :returns:  (functional_demand_nodes, avg_connectivity_loss)
     """
-    import networkx as nx  # import only if needed
+    import networkx as nx  # imported only if used
 
     oq = dstore["oqparam"]
     calculation_mode = oq.calculation_mode
@@ -109,14 +109,19 @@ def analysis(dstore):
         {'id': demand_nodes_is_functional.index,
          'number': list(demand_nodes_is_functional)}
     ).sort_values('id')
-    sum_connectivity_loss = sum(
-        1
-        - full_damage_df.loc[full_damage_df.supply_or_demand == "demand"]
-        .groupby("event_id")
-        .sum()
-        .is_functional
-        / len(demand_nodes)
-    )
+    #sum_connectivity_loss = sum(
+    #    1
+    #    - full_damage_df.loc[full_damage_df.supply_or_demand == "demand"]
+    #    .groupby("event_id")
+    #    .sum()
+    #    .is_functional
+    #    / len(demand_nodes)
+    #)
+    event_connectivity_loss = 1 - full_damage_df.loc[
+        full_damage_df.supply_or_demand == "demand"
+        ].groupby("event_id").sum().is_functional / len(demand_nodes)
+    event_connectivity_loss.to_csv("event_connectivity_loss.csv")
+    sum_connectivity_loss = sum(event_connectivity_loss)
     if calculation_mode == "event_based_damage":
         inv_time = oq.investigation_time
         ses_per_ltp = oq.ses_per_logic_tree_path
