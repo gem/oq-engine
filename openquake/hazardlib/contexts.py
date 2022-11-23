@@ -484,7 +484,7 @@ class ContextMaker(object):
                 dic = {imt: imc.apply_conversion(imt) for imt in self.imts}
                 self.conv[gsim].update(dic)
             else:
-                logging.warning(f'Conversion from {imc.name} not applicable to'
+                logging.warning(f'Conversion from {imc.name} not applicable to '
                                 f'{gsim.__class__.__name__}')
 
     def horiz_comp_to_geom_mean(self, mean_stds):
