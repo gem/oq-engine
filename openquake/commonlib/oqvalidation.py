@@ -626,11 +626,11 @@ sampling_method:
   Example: *sampling_method = early_latin*.
   Default: 'early_weights'
 
-keep_source_groups:
+split_source_groups:
    Set an approach that saves memory in large classical calculations, possibly
    with a performance penalty. When left unspecified (None), the engine will
    automatically decide when to use it (i.e. if there are enough gsims).
-   Example: *keep_source_groups = true*
+   Example: *split_source_groups = true*
    Default: None
 
 sec_peril_params:
@@ -972,7 +972,7 @@ class OqParam(valid.ParamSet):
     sampling_method = valid.Param(
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
-    keep_source_groups = valid.Param(valid.boolean, None)
+    split_source_groups = valid.Param(valid.boolean, None)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})
@@ -991,7 +991,7 @@ class OqParam(valid.ParamSet):
     source_nodes = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
-    split_sources = valid.Param(valid.boolean, True)
+    split_sources = valid.Param(valid.boolean, False)
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, None)

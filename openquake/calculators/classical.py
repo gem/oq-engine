@@ -534,14 +534,14 @@ class ClassicalCalculator(base.HazardCalculator):
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         self.source_data = AccumDict(accum=[])
         t0 = time.time()
-        if oq.keep_source_groups is None:
-            # enable keep_source_groups if the pmaps would take 30+ GB
-            oq.keep_source_groups = get_pmaps_size(
-		self.datastore, oq.concurrent_tasks) > 30 * 1024**3
-        if oq.keep_source_groups:
-            self.execute_keep_groups()
-        else:
+        if oq.split_source_groups is None:
+            # enable split_source_groups if the pmaps would take 30+ GB
+            oq.split_source_groups = get_pmaps_size(
+		self.datastore, oq.concurrent_tasks) < 30 * 1024**3
+        if oq.split_source_groups:
             self.execute_split_groups(maxw)
+        else:
+            self.execute_keep_groups()
         self.store_info()
         if self.cfactor[0] == 0:
             raise RuntimeError('Filtered away all ruptures??')
@@ -556,7 +556,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def execute_split_groups(self, maxw):
         """
-        Method called when keep_source_groups=False
+        Method called when split_source_groups=True
         """
         oq = self.oqparam
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
@@ -584,7 +584,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def execute_keep_groups(self):
         """
-        Method called when keep_source_groups=True
+        Method called when split_source_groups
         """
         assert self.N > self.oqparam.max_sites_disagg, self.N
         decide = decide_num_tasks(

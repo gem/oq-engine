@@ -1,19 +1,20 @@
   [Trevor Allen]
-  * Added class Allen2012_SS14 to Allen (2012) GMM to incorporate Vs30 scaling 
+  * Added class Allen2012_SS14 to Allen (2012) GMM to incorporate Vs30 scaling
     based on Seyhan & Stewart (2014) amplification factors
-  * Added classes SomervilleEtAl2009NonCratonic_SS14 and SomervilleEtAl2009YilgarnCraton_SS14
-    to Somerville et al (2009) GMM to incorporate Vs30 scaling based on Seyhan
-    & Stewart (2014) amplification factors
+  * Added classes SomervilleEtAl2009NonCratonic_SS14 and
+    SomervilleEtAl2009YilgarnCraton_SS14 to Somerville et al (2009) GMM to
+    incorporate Vs30 scaling based on Seyhan & Stewart (2014) amplification
+    factors
   * Added Allen (2022) GMM for Banda Sea earthquakes observed in the North
     Australian Craton
 
   [Michele Simionato]
-    * Moved the `horiz_comp_to_geom_mean` functionality from the gsim logic tree
+  * Moved the `horiz_comp_to_geom_mean` functionality from the gsim logic tree
     to the job.ini
   * Optimized the parsing of XML files (35x for the Alaska model)
   * Bug fix: ModifiableGMPEs with underlying tables were not receiving a
     single magnitude when calling the `compute` method
-  * Introduced `keep_source_groups` mode in classical calculations
+  * Introduced `split_source_groups` mode in classical calculations
   * Rewritten ModifiableGMPE to avoid a subtle memory leak
 
   [Matteo Nastasi]
