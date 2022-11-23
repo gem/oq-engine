@@ -37,6 +37,14 @@ will see 10x2 = 20 cores; running parallel computations may easily consume
 disabled you will still have 5 GB of available RAM. We recommend to ALWAYS
 disable hyperthreading from the BIOS.
 
+### Help! My windows server with 32/64 or more cores hangs!
+
+Some users reported this issue. It is due to a limitation of Python
+multiprocessing module on Windows. In all cases we have seen, the
+problem was solved by disabling hyperthreading. Otherwise you can
+reduce the number of used cores by setting the parameter `num_cores`
+in the file openquake.cfg as explained below.
+
 ### Help! I want to limit the number of cores used by the engine
 
 This is another way to save memory. If you are on a single machine,
