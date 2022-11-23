@@ -153,12 +153,38 @@ class WeichertTestCase(unittest.TestCase):
         """
         Tests the Weichert function for the synthetic catalogue
         """
-        raise unittest.SkipTest('Marco Pagani has to fix this')
         wchrt = Weichert()
-        bval, sigmab, rate, sigma_rate = wchrt.calculate(self.catalogue,
-                                                         self.config,
-                                                         self.completeness)
+        bval, sigmab, aval, sigmaa = wchrt.calc(self.catalogue,
+                                                self.config,
+                                                self.completeness)
+        self.assertAlmostEqual(bval, 0.890, 3)
+        self.assertAlmostEqual(sigmab, 0.015, 3)
+        self.assertAlmostEqual(aval, 4.6708, 4)
+        self.assertAlmostEqual(sigmaa, 0.009108, 5)
+
+    def test_weichert_calc(self):
+        """
+        Tests the Weichert function for the synthetic catalogue
+        """
+        wchrt = Weichert()
+        bval, sigmab, rate, sigma_rate, = wchrt.calculate(self.catalogue,
+                                                          self.config,
+                                                          self.completeness)
         self.assertAlmostEqual(bval, 0.890, 3)
         self.assertAlmostEqual(sigmab, 0.015, 3)
         self.assertAlmostEqual(rate, 100.1078, 4)
         self.assertAlmostEqual(sigma_rate, 2.1218, 4)
+
+    def test_weichert_calculate(self):
+        """
+        Tests the Weichert function for the synthetic catalogue
+        """
+        wchrt = Weichert()
+        bval, sigmab, rate, sigma_rate, aval, sigmaa = wchrt._calculate(
+            self.catalogue, self.config, self.completeness)
+        self.assertAlmostEqual(bval, 0.890, 3)
+        self.assertAlmostEqual(sigmab, 0.015, 3)
+        self.assertAlmostEqual(rate, 100.1078, 4)
+        self.assertAlmostEqual(sigma_rate, 2.1218, 4)
+        self.assertAlmostEqual(aval, 4.6708, 4)
+        self.assertAlmostEqual(sigmaa, 0.009108, 5)
