@@ -6,9 +6,12 @@ A general rule is the more GB of RAM and the more GHz you have, the better it is
 
 Small to medium hazard calculations and small risk calculations can run on a laptop or an equivalent cloud server: 8GB of RAM and 4  physical cores with several GB of disk space. Using >= 7.2k RPM disks or solid-state drives (SSD) will improve the overall performance.
 
-It is very important to disable hyperthreading to save memory and to have a better performance. On some systems (for instance virtual CPUs in cloud machines) it may be impossible to disable hyperthreading. In such situations please follow the recommendations of your cloud provider for best performance.
+It is very important to disable hyperthreading to save memory and to have a better performance. On some systems (for instance virtual CPUs in cloud machines) it may be impossible to disable hyperthreading. In such situations please follow the recommendations of your cloud provider for best performance. Here a couple of links you may find useful:
 
-More serious calculations would be better handled by a powerful server. In spring 2022 we bought a single server "cole" with 128 AMD Epyc Rome CPUs and 512 GB of RAM. This is the best machine we have. Even half of such specs are enough for running most hazard models.
+https://aws.amazon.com/blogs/compute/disabling-intel-hyper-threading-technology-on-amazon-linux/
+https://learn.microsoft.com/en-us/azure/virtual-machines/acu
+
+More serious calculations would be better handled by a powerful server. In spring 2022 we bought a single server with 128 AMD Epyc Rome CPUs and 512 GB of RAM. This is the best machine we have. Even half of such specs are enough for running most hazard models.
 
 ### Multi-node configuration
 
