@@ -1,6 +1,7 @@
   [Michele Simionato]
-  * Moved the `horiz_comp_to_geom_mean` functionality from the gsim logic tree
+    * Moved the `horiz_comp_to_geom_mean` functionality from the gsim logic tree
     to the job.ini
+  * Optimized the parsing of XML files (35x for the Alaska model)
   * Bug fix: ModifiableGMPEs with underlying tables were not receiving a
     single magnitude when calling the `compute` method
   * Introduced `keep_source_groups` mode in classical calculations
