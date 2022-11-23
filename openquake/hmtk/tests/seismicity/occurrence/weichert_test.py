@@ -149,7 +149,7 @@ class WeichertTestCase(unittest.TestCase):
                                       [1930., 6.0],
                                       [1910., 7.0]])
 
-    def test_weichert_full(self):
+    def test_weichert_calc(self):
         """
         Tests the Weichert function for the synthetic catalogue
         """
@@ -162,7 +162,7 @@ class WeichertTestCase(unittest.TestCase):
         self.assertAlmostEqual(aval, 4.6708, 4)
         self.assertAlmostEqual(sigmaa, 0.009108, 5)
 
-    def test_weichert_calc(self):
+    def test_weichert_calculate(self):
         """
         Tests the Weichert function for the synthetic catalogue
         """
@@ -175,7 +175,7 @@ class WeichertTestCase(unittest.TestCase):
         self.assertAlmostEqual(rate, 100.1078, 4)
         self.assertAlmostEqual(sigma_rate, 2.1218, 4)
 
-    def test_weichert_calculate(self):
+    def test_weichert_calculate_all(self):
         """
         Tests the Weichert function for the synthetic catalogue
         """
