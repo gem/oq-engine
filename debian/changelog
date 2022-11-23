@@ -24,6 +24,7 @@
   [Marco Pagani]
   * Added a method to compute the mean rate density of two IMTs
   * Added the possibility to define the edges of disaggregation bins
+  * Added a couple of utility methods to the weichert module
 
   [Michele Simionato]
   * Introduced automatic tiling for extra-large calculations
