@@ -193,10 +193,10 @@ class Bradley2012(CrossCorrelationBetween):
         :returns: a scalar in the range 0..1
         """
 
-        if from_imt.string != 'PGV' and to_imt.string != 'PGV':
-            return 0
         if from_imt == to_imt:
             return 1
+        if from_imt.string != 'PGV' and to_imt.string != 'PGV':
+            return 0
 
         if from_imt.string == 'PGV':
             T = to_imt.period
