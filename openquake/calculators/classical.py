@@ -588,7 +588,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         assert self.N > self.oqparam.max_sites_disagg, self.N
         decide = decide_num_tasks(
-            self.datastore, self.oqparam.concurrent_tasks)
+            self.datastore, self.oqparam.concurrent_tasks or 1)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         for grp_id, num_cmakers, num_tiles in decide:

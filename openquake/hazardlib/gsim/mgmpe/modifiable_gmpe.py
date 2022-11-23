@@ -20,12 +20,10 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.ModifiableGMPE`
 """
 import copy
-import warnings
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.const import IMC
 from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
     NRCan15SiteTerm, BA08_AB06)
 
@@ -34,27 +32,9 @@ from openquake.hazardlib.gsim.nga_east import (
     get_phi_ss_at_quantile)
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
 
-
-# #### horizontal components that can be converted into geometric means #### #
-
-OK_COMPONENTS = ['GMRotI50', 'RANDOM_HORIZONTAL',
-                 'GREATER_OF_TWO_HORIZONTAL', 'RotD50']
-
 IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
                       "set_fixed_total_sigma"]
-
-COEFF = {IMC.GMRotI50: [1, 1, 0.03, 0.04, 1],
-         IMC.RANDOM_HORIZONTAL: [1, 1, 0.07, 0.11, 1.05],
-         IMC.GREATER_OF_TWO_HORIZONTAL: [0.1, 1.117, 0.53, 1.165, 4.48, 1.195,
-                                         8.70, 1.266, 1.266],
-         IMC.RotD50: [0.09, 1.009, 0.58, 1.028, 4.59, 1.042, 8.93, 1.077,
-                      1.077]}
-
-COEFF_PGA_PGV = {IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
-                 IMC.RANDOM_HORIZONTAL: [1, 0.07, 1.03],
-                 IMC.GREATER_OF_TWO_HORIZONTAL: [1.117, 0, 1, 1, 0, 1],
-                 IMC.RotD50: [1.009, 0, 1, 1, 0, 1]}
 
 
 # ################ BEGIN FUNCTIONS MODIFYING mean_stds ################## #
@@ -84,21 +64,6 @@ def nrcan15_site_term(ctx, imt, me, si, ta, ph, kind):
     exp_mean = np.exp(me)
     fa = BA08_AB06(kind, C, C2, ctx.vs30, imt, exp_mean)
     me[:] = np.log(exp_mean * fa)
-
-
-def horiz_comp_to_geom_mean(ctx, imt, me, si, ta, ph, conv=None):
-    """
-    This function converts ground-motion obtained for a given description of
-    horizontal component into ground-motion values for geometric_mean.
-    The conversion equations used are from:
-        - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
-        - Boore and Kishida (2017): for RotD50
-    """
-    if conv is None:
-        return
-    conv_median, conv_sigma, rstd = conv
-    me[:] = np.log(np.exp(me) / conv_median)
-    si[:] = ((si**2 - conv_sigma**2) / rstd**2)**0.5
 
 
 def add_between_within_stds(ctx, imt, me, si, ta, ph, with_betw_ratio):
@@ -145,7 +110,6 @@ def set_scale_median_scalar(ctx, imt, me, si, ta, ph, scaling_factor):
     me[:] += np.log(scaling_factor)
 
 
-# self is an instance of ModifiableGMPE
 def set_scale_median_vector(ctx, imt, me, si, ta, ph, scaling_factor):
     """
     :param scaling_factor:
@@ -155,7 +119,6 @@ def set_scale_median_vector(ctx, imt, me, si, ta, ph, scaling_factor):
     me[:] += np.log(scaling_factor[imt]["scaling_factor"])
 
 
-# self is an instance of ModifiableGMPE
 def set_scale_total_sigma_scalar(ctx, imt, me, si, ta, ph, scaling_factor):
     """
     Scale the total standard deviations by a constant scalar factor
@@ -214,50 +177,6 @@ def _dict_to_coeffs_table(input_dict, name):
     return {name: CoeffsTable.fromdict(coeff_dict)}
 
 
-def apply_conversion(horcomp, imt):
-    """
-    :param horcomp: horizontal component instance
-    :param imt: intensity measure type instance
-    :returns: conversion coefficients conv_median, conv_sigma, rstd
-    """
-    C = COEFF[horcomp]
-    C_PGA_PGV = COEFF_PGA_PGV[horcomp]
-    if imt.string == 'PGA':
-        conv_median = C_PGA_PGV[0]
-        conv_sigma = C_PGA_PGV[1]
-        rstd = C_PGA_PGV[2]
-    elif imt.string == 'PGV':
-        conv_median = C_PGA_PGV[3]
-        conv_sigma = C_PGA_PGV[4]
-        rstd = C_PGA_PGV[5]
-    else:
-        T = imt.period
-        if horcomp._name_ in ['RotD50', 'GREATER_OF_TWO_HORIZONTAL']:
-            term1 = C[1] + (C[3]-C[1]) / np.log(C[2]/C[0]) * np.log(T/C[0])
-            term2 = C[3] + (C[5]-C[3]) / np.log(C[4]/C[2]) * np.log(T/C[2])
-            term3 = C[5] + (C[7]-C[5]) / np.log(C[6]/C[4]) * np.log(T/C[4])
-            term4 = C[8]
-            tmax = np.maximum(
-                np.minimum(term1, term2), np.minimum(term3, term4))
-            conv_median = np.maximum(C[1], tmax)
-            conv_sigma = 0
-            rstd = 1
-        else:
-            if T <= 0.15:
-                conv_median = C[0]
-                conv_sigma = C[2]
-            elif T > 0.8:
-                conv_median = C[1]
-                conv_sigma = C[3]
-            else:
-                conv_median = (C[0] + (C[1]-C[0]) *
-                               np.log10(T/0.15) / np.log10(0.8/0.15))
-                conv_sigma = (C[2] + (C[3]-C[2]) *
-                              np.log10(T/0.15) / np.log10(0.8/0.15))
-            rstd = C[4]
-    return conv_median, conv_sigma, rstd
-
-
 class ModifiableGMPE(GMPE):
     """
     This is a fully configurable GMPE
@@ -283,6 +202,10 @@ class ModifiableGMPE(GMPE):
         # Create the original GMPE
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
         self.params = kwargs  # non-gmpe parameters
+        g = globals()
+        for k in self.params:
+            if k not in g:
+                raise ValueError('Unknown %r in ModifiableGMPE' % k)
         self.gmpe = registry[gmpe_name](**kw)
         self.gmpe_table = hasattr(self.gmpe, 'gmpe_table')
         self.set_parameters()
@@ -335,16 +258,6 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
-        # Apply conversion
-        self.horcomp = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
-        comp = self.horcomp._name_
-        self.conv = {}  # IMT -> (conv_median, conv_sigma, rstd)
-        self.convertible = comp in OK_COMPONENTS
-        if comp == 'GEOMETRIC_MEAN' or self.convertible:
-            pass  # all okay
-        else:
-            warnings.warn(f'Conversion not applicable for {comp}', UserWarning)
-
     # called by the ContextMaker
     def set_tables(self, mags, imts):
         """
@@ -376,12 +289,4 @@ class ModifiableGMPE(GMPE):
         for methname, kw in self.params.items():
             for m, imt in enumerate(imts):
                 me, si, ta, ph = mean[m], sig[m], tau[m], phi[m]
-                if methname == 'horiz_comp_to_geom_mean' and self.convertible:
-                    try:
-                        conv = self.conv[imt]
-                    except KeyError:
-                        conv = self.conv[imt] = apply_conversion(
-                            self.horcomp, imt)
-                    g[methname](ctx, imt, me, si, ta, ph, conv, **kw)
-                else:
-                    g[methname](ctx, imt, me, si, ta, ph, **kw)
+                g[methname](ctx, imt, me, si, ta, ph, **kw)

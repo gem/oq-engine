@@ -899,6 +899,8 @@ class ValidatingXmlParser(object):
 
     def _end_element(self, name):
         node = self._ancestors[-1]
+        if isinstance(node.text, list):
+            node.text = ''.join(node.text)
         with context(self.filename, node):
             self._root = self._literalnode(node)
         del self._ancestors[-1]
@@ -909,9 +911,9 @@ class ValidatingXmlParser(object):
         if data:
             parent = self._ancestors[-1]
             if parent.text is None:
-                parent.text = data
+                parent.text = [data]
             else:
-                parent.text += data
+                parent.text.append(data)
 
     def _set_text(self, node, text, tag):
         if text is None:

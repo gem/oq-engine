@@ -1,4 +1,7 @@
   [Michele Simionato]
+    * Moved the `horiz_comp_to_geom_mean` functionality from the gsim logic tree
+    to the job.ini
+  * Optimized the parsing of XML files (35x for the Alaska model)
   * Bug fix: ModifiableGMPEs with underlying tables were not receiving a
     single magnitude when calling the `compute` method
   * Introduced `keep_source_groups` mode in classical calculations
@@ -19,12 +22,11 @@
   * Added `spawn` distribution mechanism for testing purposes
 
   [Marco Pagani]
+  * Added a method to compute the mean rate density of two IMTs
   * Added the possibility to define the edges of disaggregation bins
 
   [Michele Simionato]
-  * Improved the performance of the preclassical calculator
-  * Changed parallel.Starmap to use maxtasksperchild=1 to fight memory leaks
-    and introduced automatic tiling for extra-large calculations
+  * Introduced automatic tiling for extra-large calculations
   * Added command `oq purge failed`
   * Fixed memory leak in the tiling calculator by resetting the ProcessPool
   * Fixed an indexing error breaking the GMPE AtkinsonBoore2006 with

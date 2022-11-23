@@ -326,6 +326,12 @@ hazard_maps:
   Example: *hazard_maps = true*.
   Default: False
 
+horiz_comp_to_geom_mean:
+  Apply the correction to the geometric mean when possible,
+  depending on the GMPE and the Intensity Measure Component
+  Example: *horiz_comp_to_geom_mean = true*.
+  Default: False
+
 ignore_covs:
   Used in risk calculations to set all the coefficients of variation of the
   vulnerability functions to zero.
@@ -901,6 +907,7 @@ class OqParam(valid.ParamSet):
     hazard_curves = valid.Param(valid.boolean, True)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_maps = valid.Param(valid.boolean, False)
+    horiz_comp_to_geom_mean = valid.Param(valid.boolean, False)
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
