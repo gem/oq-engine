@@ -360,7 +360,6 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src')
         self.collapse_level = int(param.get('collapse_level', -1))
         self.disagg_by_src = param.get('disagg_by_src', False)
-        self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         self.trt = trt
         self.gsims = gsims
         for gsim in gsims:
@@ -370,7 +369,7 @@ class ContextMaker(object):
                         'You must supply a list of magnitudes as 2-digit '
                         'strings, like mags=["6.00", "6.10", "6.20"]')
                 gsim.set_tables(self.mags, self.imtls)
-        self.set_conv(param.get('horiz_comp_to_geom_mean', False))
+        self.horiz_comp = param.get('horiz_comp_to_geom_mean', False)
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
         if 'pointsource_distance' not in param:
             self.pointsource_distance = 1000.
@@ -433,14 +432,8 @@ class ContextMaker(object):
         self.defaultdict = dic
         self.collapser = Collapser(
             self.collapse_level, REQUIRES_DISTANCES, 'vs30' in dic)
-        self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
-        with warnings.catch_warnings():
-            # avoid RuntimeWarning: divide by zero encountered in log
-            warnings.simplefilter("ignore")
-            for imt, imls in self.imtls.items():
-                if imt != 'MMI':
-                    self.loglevels[imt] = numpy.log(imls)
+        self.set_imts_conv()
         self.init_monitoring(monitor)
 
     def init_monitoring(self, monitor):
@@ -456,13 +449,31 @@ class ContextMaker(object):
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
-    def set_conv(self, horiz_comp_to_geom_mean: bool):
+    def restrict(self, imts):
         """
-        Set the .conv dictionary for the horizontal component conversion
-        (if any).
+        :param imts: a list of IMT strings subset of the full list
+        :returns: a new ContextMaker involving less IMTs
         """
+        new = copy.copy(self)
+        new.imtls = DictArray({imt: self.imtls[imt] for imt in imts})
+        new.set_imts_conv()
+        return new
+
+    def set_imts_conv(self):
+        """
+        Set the .imts list and .conv dictionary for the horizontal component
+        conversion (if any).
+        """
+        self.loglevels = DictArray(self.imtls) if self.imtls else {}
+        with warnings.catch_warnings():
+            # avoid RuntimeWarning: divide by zero encountered in log
+            warnings.simplefilter("ignore")
+            for imt, imls in self.imtls.items():
+                if imt != 'MMI':
+                    self.loglevels[imt] = numpy.log(imls)
+        self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         self.conv = {}  # gsim -> imt -> (conv_median, conv_sigma, rstd)
-        if not horiz_comp_to_geom_mean:
+        if not self.horiz_comp:
             return  # do not convert
         for gsim in self.gsims:
             self.conv[gsim] = {}
