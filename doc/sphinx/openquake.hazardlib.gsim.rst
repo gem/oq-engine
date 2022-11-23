@@ -116,6 +116,14 @@ allen_2012_ipe
     :undoc-members:
     :show-inheritance:
 
+allen_2022
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.allen_2022
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ameri_2017
 ---------------------------------------------------
 
