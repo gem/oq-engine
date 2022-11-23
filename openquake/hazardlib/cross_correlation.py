@@ -176,7 +176,7 @@ class GodaAtkinson2009(CrossCorrelationBetween):
         return corma
 
 
-class Bradley2009(CrossCorrelationBetween):
+class Bradley2012(CrossCorrelationBetween):
     """
     Implements the correlation model for total residuals
     between Peak Ground Velocity and Spectrum-Based 
