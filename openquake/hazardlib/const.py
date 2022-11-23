@@ -128,6 +128,7 @@ COEFF_PGA_PGV = {IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
                  IMC.RotD50: [1.009, 0, 1, 1, 0, 1]}
 
 
+# used in ContextMaker.set_conv to build the conversion coefficients
 def apply_conversion(imc, imt):
     """
     :param imc: IMC instance

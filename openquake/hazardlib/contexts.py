@@ -66,7 +66,7 @@ STD = 1
 cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
 
-    
+
 def is_modifiable(gsim):
     """
     :returns: True if it is a ModifiableGMPE
@@ -473,7 +473,8 @@ class ContextMaker(object):
                 dic = {imt: imc.apply_conversion(imt) for imt in self.imts}
                 self.conv[gsim].update(dic)
             else:
-                logging.warning(f'Conversion not applicable for {imc.name}')
+                logging.warning(f'Conversion from {imc.name} not applicable to'
+                                f'{gsim.__class__.__name__}')
 
     def horiz_comp_to_geom_mean(self, mean_stds):
         """
