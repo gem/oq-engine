@@ -20,6 +20,7 @@ import re
 import abc
 import copy
 import time
+import logging
 import warnings
 import itertools
 import collections
@@ -33,7 +34,7 @@ from openquake.baselib.general import (
 from openquake.baselib.performance import Monitor, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
-from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.const import StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import (
     registry, get_pnes, FatedTOM, NegativeBinomialTOM)
 from openquake.hazardlib.site import site_param_dt
@@ -65,7 +66,7 @@ STD = 1
 cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
 
-
+    
 def is_modifiable(gsim):
     """
     :returns: True if it is a ModifiableGMPE
@@ -359,6 +360,7 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src')
         self.collapse_level = int(param.get('collapse_level', -1))
         self.disagg_by_src = param.get('disagg_by_src', False)
+        self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         self.trt = trt
         self.gsims = gsims
         for gsim in gsims:
@@ -368,6 +370,7 @@ class ContextMaker(object):
                         'You must supply a list of magnitudes as 2-digit '
                         'strings, like mags=["6.00", "6.10", "6.20"]')
                 gsim.set_tables(self.mags, self.imtls)
+        self.set_conv(param.get('horiz_comp_to_geom_mean', False))
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
         if 'pointsource_distance' not in param:
             self.pointsource_distance = 1000.
@@ -452,6 +455,43 @@ class ContextMaker(object):
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
+
+    def set_conv(self, horiz_comp_to_geom_mean: bool):
+        """
+        Set the .conv dictionary for the horizontal component conversion
+        (if any).
+        """
+        self.conv = {}  # gsim -> imt -> (conv_median, conv_sigma, rstd)
+        if not horiz_comp_to_geom_mean:
+            return  # do not convert
+        for gsim in self.gsims:
+            self.conv[gsim] = {}
+            imc = gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
+            if imc.name == 'GEOMETRIC_MEAN':
+                pass  # nothing to do
+            elif imc.name in OK_COMPONENTS:
+                dic = {imt: imc.apply_conversion(imt) for imt in self.imts}
+                self.conv[gsim].update(dic)
+            else:
+                logging.warning(f'Conversion not applicable for {imc.name}')
+
+    def horiz_comp_to_geom_mean(self, mean_stds):
+        """
+        This function converts ground-motion obtained for a given description of
+        horizontal component into ground-motion values for geometric_mean.
+
+        The conversion equations used are from:
+            - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
+            - Boore and Kishida (2017): for RotD50
+        """
+        for g, gsim in enumerate(self.gsims):
+            if not self.conv[gsim]:
+                continue
+            for m, imt in enumerate(self.imts):
+                me, si, ta, ph = mean_stds[:, g, m]
+                conv_median, conv_sigma, rstd = self.conv[gsim][imt]
+                me[:] = numpy.log(numpy.exp(me) / conv_median)
+                si[:] = ((si**2 - conv_sigma**2) / rstd**2)**0.5
 
     @property
     def stop(self):
@@ -996,8 +1036,6 @@ class ContextMaker(object):
         :param ctxs: a list of contexts with N=sum(len(ctx) for ctx in ctxs)
         :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
-        if not hasattr(self, 'imts'):
-            self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imtls)
         G = len(self.gsims)
@@ -1026,6 +1064,8 @@ class ContextMaker(object):
             if self.truncation_level not in (0, 99.) and (
                     out[1, g] == 0.).any():
                 raise ValueError('Total StdDev is zero for %s' % gsim)
+        if self.conv:  # apply horizontal component conversion
+            self.horiz_comp_to_geom_mean(out)
         return out
 
     def gen_poes(self, ctx, rup_indep=True):
