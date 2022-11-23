@@ -6,11 +6,10 @@ xmlns="http://openquake.org/xmlns/nrml/0.4">
                       applyToTectonicRegionType="Active Shallow Crust">
     <logicTreeBranch branchID="b1">
       <uncertaintyModel>
-        [ModifiableGMPE]
-        gmpe.NBCC2015_AA13.gmpe_table = "WcrustFRjb_low_clC.hdf5"
-        gmpe.NBCC2015_AA13.REQUIRES_DISTANCES = ["rjb"]
-        gmpe.NBCC2015_AA13.DEFINED_FOR_TECTONIC_REGION_TYPE = "activecrustFR"
-        horiz_comp_to_geom_mean = {}
+        [NBCC2015_AA13]
+        gmpe_table = "WcrustFRjb_low_clC.hdf5"
+        REQUIRES_DISTANCES = ["rjb"]
+        DEFINED_FOR_TECTONIC_REGION_TYPE = "activecrustFR"
       </uncertaintyModel>
       <uncertaintyWeight>1.0</uncertaintyWeight>
     </logicTreeBranch>

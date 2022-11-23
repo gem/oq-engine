@@ -23,8 +23,7 @@ import matplotlib.pyplot as plt
 from openquake.baselib.general import DictArray
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.mrd import (
-    update_mrd, update_mrd_indirect, get_uneven_bins_edges,
-    calc_mean_rate_dist)
+    update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.commonlib import datastore
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
@@ -47,8 +46,8 @@ class MRD01TestCase(unittest.TestCase):
         self.oqp = self.dstore['oqparam']
 
         # Read the context maker and set the IMTLS
-        [self.cmaker] = read_cmakers(self.dstore)
-        self.cmaker.imtls = DictArray({k: self.oqp.imtls[k] for k in self.imts})
+        [cmaker] = read_cmakers(self.dstore)
+        self.cmaker = cmaker.restrict(self.imts)
 
         # Read contexts
         [self.ctx] = self.cmaker.read_ctxs(self.dstore)
@@ -184,11 +183,11 @@ class MRD01TestCase(unittest.TestCase):
         mrdd = np.zeros((len1, len1, len(self.cmaker.gsims)))
         update_mrd(self.ctx, self.cmaker, self.crosscorr, mrdd)
 
-        np.testing.assert_almost_equal(mrdi[:,:, 0], mrdd)
+        np.testing.assert_almost_equal(mrdi[:, :, 0], mrdd)
 
         if PLOT:
-            imlc1 = np.diff(imls1)/2 + imls1[:-1]
-            imlc2 = np.diff(imls2)/2 + imls2[:-1]
+            imlc1 = np.diff(imls1) / 2 + imls1[:-1]
+            imlc2 = np.diff(imls2) / 2 + imls2[:-1]
 
             fig, axs = plt.subplots(1, 1)
             fig.set_size_inches(9, 6)

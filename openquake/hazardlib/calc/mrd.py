@@ -126,8 +126,7 @@ def get_mrd(mvn, grids):
     return partial
 
 
-def update_mrd_indirect(ctx, cm, corrm, imt1, imt2, be_mea, be_sig,
-                        mrd, monitor=Monitor()):
+def update_mrd_indirect(ctx, cm, corrm, be_mea, be_sig, mrd, monitor=Monitor()):
     """
     This computes the mean rate density by means of the multivariate
     normal function available in scipy. Compared to the function `update_mrd`
@@ -155,8 +154,9 @@ def update_mrd_indirect(ctx, cm, corrm, imt1, imt2, be_mea, be_sig,
     [mea, sig, _, _] = cm.get_mean_stds([ctx])
 
     # Get the logarithmic IMLs
-    ll1 = numpy.log(cm.imtls[imt1])
-    ll2 = numpy.log(cm.imtls[imt2])
+    imt1, imt2 = cm.imtls
+    ll1 = cm.loglevels[imt1]
+    ll2 = cm.loglevels[imt2]
     grids = make_grids(ll1, ll2)
 
     # mea and sig shape: G x M x N where G is the number of GMMs, M is the
@@ -222,16 +222,13 @@ def calc_mean_rate_dist(ctxt, nsites, cmaker, crosscorr, imt1, imt2,
     :param bins_mea: bins for the mean
     :param bins_sig: bins for the standard deviation
     """
-    G = len(cmaker.gsims)
-    imts = list(cmaker.imtls)
-    len1 = len(cmaker.imtls[imt1]) - 1
-    assert imt1 in cmaker.imtls, (imt1, imts)
-    assert imt2 in cmaker.imtls, (imt1, imts)
-    imts = [from_string(imt1), from_string(imt2)]
-    corrm = crosscorr.get_cross_correlation_mtx(imts)
+    cm = cmaker.restrict([imt1, imt2])
+    G = len(cm.gsims)
+    len1 = len(cm.imtls[imt1]) - 1
+    corrm = crosscorr.get_cross_correlation_mtx(cm.imts)
     mrd = numpy.zeros((len1, len1, nsites, G))
     for sid in range(nsites):
         update_mrd_indirect(
-            ctxt[ctxt.sids == sid], cmaker, corrm, imt1, imt2,
+            ctxt[ctxt.sids == sid], cmaker, corrm,
             bins_mea, bins_sig, mrd[:, :, sid], mon)
     return mrd
