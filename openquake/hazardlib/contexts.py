@@ -1207,7 +1207,6 @@ class ContextMaker(object):
             vars(cm).update(vars(self))
             cm.gsims = [gsim]
             cm.start = self.start + g
-            cm.stop = self.start + g + 1
             cm.gsim_idx = g
             cmakers.append(cm)
         return cmakers
