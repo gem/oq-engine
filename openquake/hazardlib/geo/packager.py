@@ -24,7 +24,7 @@ try:
     from fiona import crs
 except ImportError:
     fiona = None
-from openquake.baselib.node import Node
+from openquake.baselib.node import Node, node_from_dict
 from openquake.hazardlib import nrml
 
 
@@ -50,22 +50,37 @@ def fiona_type(value):
     return 'str'
 
 
+def build_geom_nodes(geomprops, coords):
+    geom_nodes = []
+    geom_nodes.append(
+        Node('{%s}LineString' % nrml.GML_NAMESPACE,
+             nodes=[Node('{%s}posList' % nrml.GML_NAMESPACE, text=coords)]))
+    geomdict = ast.literal_eval(geomprops)
+    geom_nodes.extend([node_from_dict(dic) for dic in geomdict])
+    return geom_nodes
+
+
 def build_nodes(props):
     [(mfd, dic)] = ast.literal_eval(props['mfd']).items()
     mfd_dic = {k.replace('_', ''): v for k, v in dic.items()}
     msr = Node('magScaleRel', text=props['magscalerel'])
     rar = Node('ruptAspectRatio', text=props['ruptaspectratio'])
     mfd = Node(mfd, mfd_dic)
+    nodes = [msr, rar, mfd]
     npd = ast.literal_eval(props['nodalplanedist'])
-    npd = Node('nodalPlaneDist', nodes=[Node('nodalPlane', dic)
-                                        for dic in npd])
+    if npd:
+        nodes.append(
+            Node('nodalPlaneDist', nodes=[Node('nodalPlane', dic)
+                                          for dic in npd]))
     hdd = ast.literal_eval(props['hypodepthdist'])
-    hdd = Node('hypoDepthDist', nodes=[Node('hypoDepth', dic)
-                                       for dic in hdd])
+    if hdd:
+        nodes.append(
+            Node('hypoDepthDist', nodes=[Node('hypoDepth', dic)
+                                         for dic in hdd]))
     hyl = ast.literal_eval(props['hypoList'])
-    nodes = [msr, rar, mfd, npd, hdd]
     if hyl:
-        nodes.append(Node('hypoList', nodes=[Node('hypo', dic) for dic in hyl]))
+        nodes.append(
+            Node('hypoList', nodes=[Node('hypo', dic) for dic in hyl]))
     sll = ast.literal_eval(props['slipList'])
     if sll:
         sll_nodes = [
@@ -73,6 +88,8 @@ def build_nodes(props):
                  {k.replace('_', ''): v for k, v in sl.items() if k != 'text'},
                  text=sl['text']) for sl in sll]
         nodes.append(Node('slipList', nodes=sll_nodes))
+    if 'rake' in props:
+        nodes.append(Node('rake', text=props['rake']))
     return tuple(nodes)
 
 
@@ -122,10 +139,8 @@ def geodic2node(geodic):
         nodes = (area,) + build_nodes(props)
         return Node('areaSource', attr, nodes=nodes)
     elif code == 'S':
-        splx = Node('simpleFaultGeometry', nodes=[
-            Node('{%s}LineString' % nrml.GML_NAMESPACE,
-                 nodes=[Node('{%s}posList' % nrml.GML_NAMESPACE,
-                        text=coords)])])
+        geom_nodes = build_geom_nodes(props['geomprops'], coords)
+        splx = Node('simpleFaultGeometry', nodes=geom_nodes)
         nodes = (splx,) + build_nodes(props)
         return Node('simpleFaultSource', attr, nodes=nodes)
     else:

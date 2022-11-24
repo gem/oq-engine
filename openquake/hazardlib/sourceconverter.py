@@ -44,6 +44,9 @@ KNOWN_MFDS = ('incrementalMFD', 'truncGutenbergRichterMFD',
               'arbitraryMFD', 'YoungsCoppersmithMFD', 'multiMFD',
               'taperedGutenbergRichterMFD')
 
+GEOM_TYPES = ('Polygon', 'Point', 'MultiPoint', 'LineString',
+              '3D MultiLineString', '3D MultiPolygon')
+
 
 def extract_dupl(values):
     """
@@ -1252,6 +1255,8 @@ class Row:
     hypodepthdist: list
     hypoList: list
     slipList: list
+    rake: float
+    geomprops: list
     geom: str
     coords: list
     wkt: str
@@ -1340,6 +1345,11 @@ class RowConverter(SourceConverter):
             lst = [node_to_dict(n)['slip'] for n in slip_list.nodes]
         return str(lst)
 
+    def convert_geomprops(self, node):
+        lst = [node_to_dict(n) for n in node.nodes
+               if striptag(n.tag) not in GEOM_TYPES]
+        return str(lst)
+
     def convert_areaSource(self, node):
         geom = node.areaGeometry
         coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
@@ -1359,6 +1369,8 @@ class RowConverter(SourceConverter):
             self.convert_hddist(node),
             self.convert_hypolist(node),
             self.convert_sliplist(node),
+            ~node.rake,
+            self.convert_geomprops(geom),
             'Polygon', [coords])
 
     def convert_pointSource(self, node):
@@ -1377,6 +1389,8 @@ class RowConverter(SourceConverter):
             self.convert_hddist(node),
             self.convert_hypolist(node),
             self.convert_sliplist(node),
+            ~node.rake,
+            self.convert_geomprops(geom),
             'Point', ~geom.Point.pos)
 
     def convert_multiPointSource(self, node):
@@ -1396,6 +1410,8 @@ class RowConverter(SourceConverter):
             self.convert_hddist(node),
             self.convert_hypolist(node),
             self.convert_sliplist(node),
+            ~node.rake,
+            self.convert_geomprops(geom),
             'MultiPoint', coords)
 
     def convert_simpleFaultSource(self, node):
@@ -1410,10 +1426,12 @@ class RowConverter(SourceConverter):
             ~node.ruptAspectRatio,
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
-            [{'dip': ~geom.dip, 'rake': ~node.rake}],
+            [],
             [],
             self.convert_hypolist(node),
             self.convert_sliplist(node),
+            ~node.rake,
+            self.convert_geomprops(geom),
             'LineString', [(p.x, p.y) for p in self.geo_line(geom)])
 
     def convert_complexFaultSource(self, node):
@@ -1435,6 +1453,8 @@ class RowConverter(SourceConverter):
             [],
             self.convert_hypolist(node),
             self.convert_sliplist(node),
+            ~node.rake,
+            self.convert_geomprops(geom),
             '3D MultiLineString', edges)
 
     def convert_characteristicFaultSource(self, node):
@@ -1465,6 +1485,8 @@ class RowConverter(SourceConverter):
             [],
             self.convert_hypolist(node),
             self.convert_sliplist(node),
+            ~node.rake,
+            self.convert_geomprops(node.surface),
             geom, coords, '')
 
     def convert_nonParametricSeismicSource(self, node):
