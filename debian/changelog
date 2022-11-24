@@ -1,3 +1,5 @@
+  [Michele Simionato]
+  * Bug fix: the `avg_losses-rlzs` output in classical risk was stored incorrectly
   * Speed up preclassical calculations in presence of complex fault sources and
     similar; for instance there is a 3x speedup for the SAM model
 
