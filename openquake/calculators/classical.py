@@ -345,7 +345,7 @@ def decide_num_tasks(dstore, concurrent_tasks):
     """
     cmakers = read_cmakers(dstore)
     weights = [cm.weight for cm in cmakers]
-    maxw = sum(weights) / concurrent_tasks / 2.5
+    maxw = sum(weights) / concurrent_tasks / 2
     dtlist = [('grp_id', U16), ('cmakers', U16), ('tiles', U16)]
     ntasks = []
     for cm in sorted(cmakers, key=lambda cm: weights[cm.grp_id], reverse=True):
@@ -594,7 +594,7 @@ class ClassicalCalculator(base.HazardCalculator):
         for grp_id, num_cmakers, num_tiles in decide:
             cmaker = self.haz.cmakers[grp_id]
             grp = self.csm.src_groups[grp_id]
-            logging.info('Sending [%d] %s', num_cmakers * num_tiles, grp)
+            logging.info('Sending [%d*%d] %s', num_cmakers, num_tiles, grp)
             for tile in self.sitecol.split(num_tiles):
                 for cm in cmaker.split_by_gsim():
                     smap.submit((grp, tile, cm))
