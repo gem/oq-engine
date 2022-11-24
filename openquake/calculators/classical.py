@@ -606,13 +606,12 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         acc = {}
         oq = self.oqparam
-        self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        allargs = []
         for cm in self.haz.cmakers:
             sg = self.csm.src_groups[cm.grp_id]
             if sg.atomic or sg.weight <= maxw:
                 for tile in tiles:
-                    smap.submit((sg, tile, cm))
+                    allargs.append((sg, tile, cm))
             else:
                 # only groups generating more than 1 task preallocate memory
                 acc[cm.grp_id] = ProbabilityMap(
@@ -623,17 +622,20 @@ class ClassicalCalculator(base.HazardCalculator):
                     if src.code == b'F':
                         for tile in tiles:
                             self.n_outs[cm.grp_id] += 1
-                            smap.submit(([src], tile, cm))
+                            allargs.append(([src], tile, cm))
                 srcs = [src for src in sg if src.code != b'F']
                 # NB: disagg_by_src is disabled in case of tiling
                 blks = (groupby(srcs, basename).values() if oq.disagg_by_src
-                        else block_splitter(srcs, maxw, get_weight, sort=True))
+                        else block_splitter(srcs, maxw, get_weight))
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
                     for tile in tiles:
                         self.n_outs[cm.grp_id] += 1
-                        smap.submit((block, tile, cm))
+                        allargs.append((block, tile, cm))
+        allargs.sort(key=lambda tup: sum(src.weight for src in tup[0]), reverse=True)
+        self.datastore.swmr_on()  # must come before the Starmap
+        smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         return smap.reduce(self.agg_dicts, acc)
 
     def store_info(self):
