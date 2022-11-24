@@ -260,7 +260,7 @@ def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
     df['slow_factor'] = df.calc_time / df.weight
-    del df['grp_id'], df['trti']
+    del df['grp_id'], df['trti'], df['mutex_weight']
     return df
 
 
