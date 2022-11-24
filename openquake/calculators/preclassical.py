@@ -179,9 +179,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                     pointsources.append(src)
                 elif hasattr(src, 'nodal_plane_distribution'):
                     pointlike.append(src)
-                elif src.code in b'FN':  # split multifault, nonparametric
-                    others.extend(split_source(src)
-                                  if self.oqparam.split_sources else [src])
+                elif src.code in b'CFN':  # send the heavy sources
+                    smap.submit(([src], sites, cmakers[grp_id]))
                 else:
                     others.append(src)
             if pointsources or pointlike:
