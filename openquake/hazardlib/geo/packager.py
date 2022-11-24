@@ -18,6 +18,7 @@
 import ast
 import json
 import logging
+import time
 try:
     import fiona
     from fiona import crs
@@ -173,12 +174,15 @@ class GeoPackager(object):
         return data
 
     def to_nrml(self, out=None):
+        t0 = time.time()
         out = out or self.fname.replace('.gpkg', '.xml')
         nodes = [geodic2node(dic) for dic in self.read_all()]
         nodes = [node for node in nodes if node is not None]
         smodel = Node("sourceModel", {}, nodes=nodes)
         with open(out, 'wb') as f:
             nrml.write([smodel], f, '%s')
+        logging.info('%s was created' % out)
+        logging.info('Finished in %d seconds', time.time() - t0)
 
     def _save(self, name, dic):
         # Useful for debugging. Example:
