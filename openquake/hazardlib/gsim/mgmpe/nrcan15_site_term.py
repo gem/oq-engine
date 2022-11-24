@@ -171,7 +171,7 @@ class NRCan15SiteTerm(GMPE):
 
         # Check compatibility of reference velocity
         if hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY'):
-            ok = 760 <= self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY <= 800
+            ok = 760 <= self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY <= 820
             if not ok:
                 name = self.gmpe.__class__.__name__
                 raise ValueError(f'{name}.DEFINED_FOR_REFERENCE_VELOCITY '
