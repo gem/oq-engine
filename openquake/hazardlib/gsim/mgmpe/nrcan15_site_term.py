@@ -173,7 +173,8 @@ class NRCan15SiteTerm(GMPE):
         if hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY'):
             ok = 760 <= self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY <= 800
             if not ok:
-                raise ValueError(f'{self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY=} '
+                name = self.gmpe.__class__.__name__
+                raise ValueError(f'{name}.DEFINED_FOR_REFERENCE_VELOCITY '
                                  'is not in the range 760..800')
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
