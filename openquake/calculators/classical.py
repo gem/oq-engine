@@ -626,7 +626,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 srcs = [src for src in sg if src.code != b'F']
                 # NB: disagg_by_src is disabled in case of tiling
                 blks = (groupby(srcs, basename).values() if oq.disagg_by_src
-                        else block_splitter(srcs, maxw, get_weight))
+                        else block_splitter(srcs, maxw, get_weight, sort=True))
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
