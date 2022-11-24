@@ -145,8 +145,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 avg_losses[a, r, li] = avg
                 base.set_array(lc['losses'], losses)
                 base.set_array(lc['poes'], poes)
-            self.datastore['avg_losses-rlzs'] = avg_losses
-            self.datastore.set_shape_descr(
-                'avg_losses-rlzs', asset_id=self.assetcol['id'],
-                rlz=numpy.arange(self.R), loss_type=self.oqparam.loss_types)
+            for li, lt in enumerate(ltypes):
+                self.datastore['avg_losses-rlzs/' + lt] = avg_losses[:, :, li]
+                self.datastore.set_shape_descr(
+                    'avg_losses-rlzs/' + lt,
+                    asset_id=self.assetcol['id'], rlz=numpy.arange(self.R))
             self.datastore['loss_curves-rlzs'] = loss_curves
