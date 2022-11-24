@@ -1,3 +1,6 @@
+  * Speed up preclassical calculations in presence of complex fault sources and
+    similar; for instance there is a 3x speedup for the SAM model
+
   [Trevor Allen]
   * Added class Allen2012_SS14 to Allen (2012) GMM to incorporate Vs30 scaling
     based on Seyhan & Stewart (2014) amplification factors
