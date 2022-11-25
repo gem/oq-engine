@@ -93,7 +93,8 @@ def build_nodes(props):
                  text=sl['text']) for sl in sll]
         nodes.append(Node('slipList', nodes=sll_nodes))
     if 'rake' in props:
-        nodes.append(Node('rake', text=props['rake']))
+        nodes.append(Node('rake',
+                     text=scientificformat(props['rake'])))
     return tuple(nodes)
 
 
@@ -122,8 +123,10 @@ def geodic2node(geodic):
     if code == 'P':
         point = Node('{%s}Point' % nrml.GML_NAMESPACE,
                      nodes=[Node('{%s}pos' % nrml.GML_NAMESPACE, text=coords)])
-        usd = Node('upperSeismoDepth', text=props['upperseismodepth'])
-        lsd = Node('lowerSeismoDepth', text=props['lowerseismodepth'])
+        usd = Node('upperSeismoDepth',
+                   text=scientificformat(props['upperseismodepth']))
+        lsd = Node('lowerSeismoDepth',
+                   text=scientificformat(props['lowerseismodepth']))
         nodes = [Node('pointGeometry', nodes=[point, usd, lsd])]
         nodes.extend(build_nodes(props))
         return Node('pointSource', attr, nodes=nodes)
@@ -137,8 +140,10 @@ def geodic2node(geodic):
                 Node('{%s}LinearRing' % nrml.GML_NAMESPACE,
                      nodes=[Node('{%s}posList' % nrml.GML_NAMESPACE,
                             text=coords)])])])
-        usd = Node('upperSeismoDepth', text=props['upperseismodepth'])
-        lsd = Node('lowerSeismoDepth', text=props['lowerseismodepth'])
+        usd = Node('upperSeismoDepth',
+                   text=scientificformat(props['upperseismodepth']))
+        lsd = Node('lowerSeismoDepth',
+                   text=scientificformat(props['lowerseismodepth']))
         area = Node('areaGeometry', nodes=[pol, usd, lsd])
         nodes = (area,) + build_nodes(props)
         return Node('areaSource', attr, nodes=nodes)
