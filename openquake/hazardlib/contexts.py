@@ -1168,8 +1168,8 @@ class ContextMaker(object):
             ctxs = list(self.get_ctx_iter(src, sites, step=10))  # reduced
             if not ctxs:
                 return src.num_ruptures if N == 1 else 0, 0
-            esites = (len(ctxs[0]) * src.num_ruptures /
-                      self.num_rups * multiplier)
+            esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
+                      self.num_rups * multiplier)  # num_rups from get_ctx_iter
         weight = esites / N  # the weight is the effective number of ruptures
         return weight, int(esites)
 
