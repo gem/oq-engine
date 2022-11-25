@@ -24,7 +24,7 @@ try:
     from fiona import crs
 except ImportError:
     fiona = None
-from openquake.baselib.node import Node, node_from_dict
+from openquake.baselib.node import Node, node_from_dict, scientificformat
 from openquake.hazardlib import nrml
 
 
@@ -62,10 +62,14 @@ def build_geom_nodes(geomprops, coords):
 
 def build_nodes(props):
     [(mfd, dic)] = ast.literal_eval(props['mfd']).items()
-    mfd_dic = {k.replace('_', ''): v for k, v in dic.items()}
+    mfd_attrs = {k[1:]: scientificformat(v)
+                 for k, v in dic.items() if k.startswith('_')}
+    mfd_subnodes = [Node(tag, {}, scientificformat(dic[tag]))
+                    for tag in dic.keys() if not tag.startswith('_')]
     msr = Node('magScaleRel', text=props['magscalerel'])
-    rar = Node('ruptAspectRatio', text=props['ruptaspectratio'])
-    mfd = Node(mfd, mfd_dic)
+    rar = Node('ruptAspectRatio',
+               text=scientificformat(props['ruptaspectratio']))
+    mfd = Node(mfd, mfd_attrs, nodes=mfd_subnodes)
     nodes = [msr, rar, mfd]
     npd = ast.literal_eval(props['nodalplanedist'])
     if npd:
