@@ -1345,6 +1345,13 @@ class RowConverter(SourceConverter):
             lst = [node_to_dict(n)['slip'] for n in slip_list.nodes]
         return str(lst)
 
+    def convert_rake(self, node):
+        try:
+            rake = ~node.rake
+        except AttributeError:
+            rake = numpy.nan
+        return rake
+
     def convert_geomprops(self, node):
         lst = [node_to_dict(n) for n in node.nodes
                if striptag(n.tag) not in GEOM_TYPES]
@@ -1369,7 +1376,7 @@ class RowConverter(SourceConverter):
             self.convert_hddist(node),
             self.convert_hypolist(node),
             self.convert_sliplist(node),
-            ~node.rake,
+            self.convert_rake(node),
             self.convert_geomprops(geom),
             'Polygon', [coords])
 
@@ -1389,7 +1396,7 @@ class RowConverter(SourceConverter):
             self.convert_hddist(node),
             self.convert_hypolist(node),
             self.convert_sliplist(node),
-            ~node.rake,
+            self.convert_rake(node),
             self.convert_geomprops(geom),
             'Point', ~geom.Point.pos)
 
@@ -1410,7 +1417,7 @@ class RowConverter(SourceConverter):
             self.convert_hddist(node),
             self.convert_hypolist(node),
             self.convert_sliplist(node),
-            ~node.rake,
+            self.convert_rake(node),
             self.convert_geomprops(geom),
             'MultiPoint', coords)
 
@@ -1430,7 +1437,7 @@ class RowConverter(SourceConverter):
             [],
             self.convert_hypolist(node),
             self.convert_sliplist(node),
-            ~node.rake,
+            self.convert_rake(node),
             self.convert_geomprops(geom),
             'LineString', [(p.x, p.y) for p in self.geo_line(geom)])
 
@@ -1453,7 +1460,7 @@ class RowConverter(SourceConverter):
             [],
             self.convert_hypolist(node),
             self.convert_sliplist(node),
-            ~node.rake,
+            self.convert_rake(node),
             self.convert_geomprops(geom),
             '3D MultiLineString', edges)
 
@@ -1485,7 +1492,7 @@ class RowConverter(SourceConverter):
             [],
             self.convert_hypolist(node),
             self.convert_sliplist(node),
-            ~node.rake,
+            self.convert_rake(node),
             self.convert_geomprops(node.surface),
             geom, coords, '')
 
