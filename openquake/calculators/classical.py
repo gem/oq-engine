@@ -633,7 +633,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     for tile in tiles:
                         self.n_outs[cm.grp_id] += 1
                         allargs.append((block, tile, cm))
-        allargs.sort(key=lambda tup: sum(src.weight for src in tup[0]), reverse=True)
+        allargs.sort(key=lambda tup: sum(src.weight for src in tup[0]),
+                     reverse=True)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         return smap.reduce(self.agg_dicts, acc)
