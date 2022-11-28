@@ -247,7 +247,7 @@ def before_checks(inst, venv, port, remove, usage):
     Checks to perform before the installation
     """
     if venv:
-        inst.VENV = os.path.abspath(venv)
+        inst.VENV = os.path.abspath(os.path.expanduser(venv))
     if port:
         inst.DBPORT = int(port)
 
