@@ -357,6 +357,18 @@ def decide_num_tasks(dstore, concurrent_tasks):
     return numpy.array(ntasks, dtlist)
 
 
+class Block(object):
+    def __init__(self, sources):
+        self.sources = sources
+        self.weight = sum(src.weight for src in sources)
+
+    def __iter__(self):
+        yield from self.sources
+
+    def __len__(self):
+        return len(self.sources)
+
+
 @base.calculators.add('classical', 'ucerf_classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
@@ -595,14 +607,16 @@ class ClassicalCalculator(base.HazardCalculator):
         for cm in self.haz.cmakers:
             G = len(cm.gsims)
             sg = self.csm.src_groups[cm.grp_id]
+
             # maximum size of the pmap array in GB
             size_gb = G * L * self.N * 8 / 1024**3
-            ntiles = size_gb // oq.pmap_max_gb + 1
+            ntiles = numpy.ceil(size_gb / oq.pmap_max_gb)
             # NB: disagg_by_src is disabled in case of tiling
             assert not (ntiles > 1 and oq.disagg_by_src)
             # NB: tiling only works with many sites
             assert ntiles == 1 or self.N > oq.max_sites_disagg * ntiles
             tiles = self.sitecol.split(ntiles)
+
             if sg.atomic or sg.weight <= maxw * ntiles:
                 for tile in tiles:
                     allargs.append((sg, tile, cm))
@@ -618,16 +632,18 @@ class ClassicalCalculator(base.HazardCalculator):
                             self.n_outs[cm.grp_id] += 1
                             allargs.append(([src], tile, cm))
                 srcs = [src for src in sg if src.code != b'F']
-                blks = (groupby(srcs, basename).values() if oq.disagg_by_src
-                        else block_splitter(srcs, maxw * ntiles, get_weight))
+                if oq.disagg_by_src:
+                    blks = map(Block, groupby(srcs, basename).values())
+                else:
+                    blks = block_splitter(srcs, maxw * ntiles, get_weight)
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
                     for tile in tiles:
                         self.n_outs[cm.grp_id] += 1
+                        block.weight /= ntiles
                         allargs.append((block, tile, cm))
-        allargs.sort(key=lambda tup: sum(src.weight for src in tup[0]),
-                     reverse=True)
+        allargs.sort(key=lambda tup: tup[0].weight, reverse=True)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         return smap.reduce(self.agg_dicts, acc)
