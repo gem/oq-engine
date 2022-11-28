@@ -630,9 +630,9 @@ class ClassicalCalculator(base.HazardCalculator):
                     if src.code == b'F':
                         for tile in tiles:
                             self.n_outs[cm.grp_id] += 1
-                            allargs.append(([src], tile, cm))
+                            allargs.append((Block([src]), tile, cm))
                 srcs = [src for src in sg if src.code != b'F']
-                if oq.disagg_by_src:
+                if oq.disagg_by_src:  # possible only with a single tile
                     blks = map(Block, groupby(srcs, basename).values())
                 else:
                     blks = block_splitter(srcs, maxw * ntiles, get_weight)
