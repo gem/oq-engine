@@ -447,17 +447,10 @@ max_sites_disagg:
   Example: *max_sites_disagg = 100*
   Default: 10
 
-max_sites_per_tile:
-  Used in classical calculations which are to big to run within the
-  available memory. This effectively splits the calculation in homogeneous
-  tiles with less than `max_sites_per_tile`. To be used as last resort.
-  Example: *max_sites_per_tile = 50_000*
-  Default: 5_000_000
-
 pmap_max_gb:
    Maximum size of the ProbabilityMaps in classical calculations, should be
    less than 4 GB to avoid pickling errors. This is also used to split the
-   calculation in tiles if max_sites_per_tile is not given.
+   calculation in tiles.
    Example: *max_size_db = 2*
    Default: 1
 
@@ -932,7 +925,6 @@ class OqParam(valid.ParamSet):
     max_gmvs_per_task = valid.Param(valid.positiveint, 1_000_000)
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
-    max_sites_per_tile = valid.Param(valid.positiveint, 5_000_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     pmap_max_gb = valid.Param(valid.positivefloat, 1.)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
@@ -1163,12 +1155,6 @@ class OqParam(valid.ParamSet):
         if self.return_periods and not self.poes and self.investigation_time:
             self.poes = 1 - numpy.exp(
                 - self.investigation_time / numpy.array(self.return_periods))
-
-        # check for tiling
-        if self.max_sites_disagg > self.max_sites_per_tile:
-            raise ValueError(
-                'max_sites_disagg is larger than max_sites_per_tile! (%d>%d)'
-                % (self.max_sites_disagg, self.max_sites_per_tile))
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':

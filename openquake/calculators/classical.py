@@ -598,13 +598,16 @@ class ClassicalCalculator(base.HazardCalculator):
             # maximum size of the pmap array in GB
             size_gb = G * L * self.N * 8 / 1024**3
             ntiles = size_gb // oq.pmap_max_gb + 1
+            # NB: disagg_by_src is disabled in case of tiling
             assert not (ntiles > 1 and oq.disagg_by_src)
+            # NB: tiling only works with many sites
+            assert ntiles == 1 or self.N > oq.max_sites_disagg * ntiles
             tiles = self.sitecol.split(ntiles)
-            if sg.atomic or sg.weight <= ntiles * maxw:
+            if sg.atomic or sg.weight <= maxw * ntiles:
                 for tile in tiles:
                     allargs.append((sg, tile, cm))
             else:
-                # only groups generating more than 1 task preallocate memory
+                # only heavy groups preallocate memory
                 acc[cm.grp_id] = ProbabilityMap(
                     self.sitecol.sids, oq.imtls.size, len(cm.gsims)).fill(1)
                 acc[cm.grp_id].start = cm.start
@@ -615,7 +618,6 @@ class ClassicalCalculator(base.HazardCalculator):
                             self.n_outs[cm.grp_id] += 1
                             allargs.append(([src], tile, cm))
                 srcs = [src for src in sg if src.code != b'F']
-                # NB: disagg_by_src is disabled in case of tiling
                 blks = (groupby(srcs, basename).values() if oq.disagg_by_src
                         else block_splitter(srcs, maxw * ntiles, get_weight))
                 for block in blks:

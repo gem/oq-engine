@@ -355,7 +355,6 @@ class ContextMaker(object):
             self.dcache = None  # disabled
         self.af = param.get('af')
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
-        self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
         self.time_per_task = param.get('time_per_task', 60)
         self.disagg_by_src = param.get('disagg_by_src')
         self.collapse_level = int(param.get('collapse_level', -1))
