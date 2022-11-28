@@ -561,25 +561,9 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
-        L = oq.imtls.size
-        # maximum size of the pmap array in GB
-        max_gb = max_gs * L * self.N * 8 / 1024**3
-        if max_gb > oq.pmap_max_gb:  # split in tiles
-            max_sites = min(numpy.ceil(self.N / max_gb * oq.pmap_max_gb),
-                            oq.max_sites_per_tile)
-            tiles = self.sitecol.split_max(max_sites)
-        elif oq.max_sites_per_tile < self.N:
-            tiles = self.sitecol.split_max(oq.max_sites_per_tile)
-        else:
-            tiles = [self.sitecol]
-        if len(tiles) > 1:
-            logging.info('Using parallel tiling with %d tiles', len(tiles))
-            assert not oq.disagg_by_src, 'disagg_by_src with tiles'
-            for size in map(len, tiles):
-                assert size > oq.max_sites_disagg, (size, oq.max_sites_disagg)
         self.check_memory(len(self.sitecol), oq.imtls.size, max_gs, maxw)
         self.n_outs = AccumDict(accum=0)
-        acc = self.run_tiles(tiles, maxw)
+        acc = self.run_tiles(maxw)
         self.haz.store_disagg(acc)
 
     def execute_keep_groups(self):
@@ -600,16 +584,23 @@ class ClassicalCalculator(base.HazardCalculator):
                     smap.submit((grp, tile, cm))
         smap.reduce(self.agg_dicts)
 
-    def run_tiles(self, tiles, maxw):
+    def run_tiles(self, maxw):
         """
         Run a subset of sites and update the accumulator
         """
         acc = {}
         oq = self.oqparam
+        L = oq.imtls.size
         allargs = []
         for cm in self.haz.cmakers:
+            G = len(cm.gsims)
             sg = self.csm.src_groups[cm.grp_id]
-            if sg.atomic or sg.weight <= maxw:
+            # maximum size of the pmap array in GB
+            size_gb = G * L * self.N * 8 / 1024**3
+            ntiles = size_gb // oq.pmap_max_gb + 1
+            assert not (ntiles > 1 and oq.disagg_by_src)
+            tiles = self.sitecol.split(ntiles)
+            if sg.atomic or sg.weight <= ntiles * maxw:
                 for tile in tiles:
                     allargs.append((sg, tile, cm))
             else:
@@ -626,7 +617,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 srcs = [src for src in sg if src.code != b'F']
                 # NB: disagg_by_src is disabled in case of tiling
                 blks = (groupby(srcs, basename).values() if oq.disagg_by_src
-                        else block_splitter(srcs, maxw, get_weight))
+                        else block_splitter(srcs, maxw * ntiles, get_weight))
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
