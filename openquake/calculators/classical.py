@@ -613,17 +613,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc[cm.grp_id] = ProbabilityMap(
                     self.sitecol.sids, oq.imtls.size, len(cm.gsims)).fill(1)
                 acc[cm.grp_id].start = cm.start
-                # send the multiFaultSources first
-                for src in sg:
-                    if src.code == b'F':
-                        for tile in tiles:
-                            self.n_outs[cm.grp_id] += 1
-                            allargs.append(([src], tile, cm))
-                srcs = [src for src in sg if src.code != b'F']
                 if oq.disagg_by_src:  # possible only with a single tile
-                    blks = groupby(srcs, basename).values()
+                    blks = groupby(sg, basename).values()
                 else:
-                    blks = block_splitter(srcs, maxw, get_weight)
+                    blks = block_splitter(sg, maxw, get_weight)
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)

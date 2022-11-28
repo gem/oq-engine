@@ -29,7 +29,6 @@
 
   [Michele Simionato]
   * Fixed the exporter of `avg_losses-stats` when using `collect_rlzs=true`
-  * Changed the distribution of multiFaultSources to send one fragment per task
   * Mitigate the issue of ultra-long planar ruptures affecting many models
   * Forced the usage of `collect_rlzs` for large exposures when computing
     avg_losses with many realizations
