@@ -333,7 +333,7 @@ def get_pmaps_size(dstore, ct):
     N = len(dstore['sitecol'])
     L = dstore['oqparam'].imtls.size
     cmakers = read_cmakers(dstore)
-    maxw = sum(cm.weight for cm in cmakers) / ct
+    maxw = sum(cm.weight for cm in cmakers) / (ct or 1)
     num_gs = [len(cm.gsims) for cm in cmakers if cm.weight > maxw]
     return sum(num_gs) * N * L * 8
 
