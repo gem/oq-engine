@@ -150,6 +150,7 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
         name, _ext = os.path.splitext(os.path.basename(fname))
         root = nrml.read(fname)
         srcs = collections.defaultdict(list)  # geom_index -> rows
+        srcgroups_attribs = []
         if fname == geometry:
             for srcnode in root.geometryModel:
                 sec = converter.convert_node(srcnode)
@@ -162,12 +163,15 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
                 appendrow(row, srcs, chatty, sections, s2i)
         else:  # nrml/0.5
             for srcgroup in root.sourceModel:
+                srcgroups_attribs.append(srcgroup.attrib)
                 trt = srcgroup['tectonicRegion']
                 for srcnode in srcgroup:
+                    srcnode['groupname'] = srcgroup.attrib['name']
                     srcnode['tectonicRegion'] = trt
                     row = converter.convert_node(srcnode)
                     appendrow(row, srcs, chatty, sections, s2i)
         if fmt == 'csv':
+            # TODO: save source groups table as a separate csv file
             for kind, rows in srcs.items():
                 dest = os.path.join(outdir, '%s_%s.csv' % (name, kind))
                 logging.info('Saving %d sources on %s', len(rows), dest)
@@ -180,5 +184,8 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
             for kind, rows in srcs.items():
                 logging.info('Saving %d sources on layer %s', len(rows), kind)
                 gpkg.save_layer(kind, rows)
+            if srcgroups_attribs:
+                logging.info('Saving source groups information')
+                gpkg.save_table('source_groups', srcgroups_attribs)
         logging.info('%s was created' % dest)
     logging.info('Finished in %d seconds', time.time() - t0)

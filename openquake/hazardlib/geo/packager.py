@@ -41,6 +41,12 @@ def geodict(row):
                          'coordinates': row.coords},
             'properties': prop}
 
+def nogeomdict(row):
+    prop = {}
+    for k, v in row.items():
+        prop[k] = json.dumps(v) if isinstance(v, list) else v
+    return {'geometry': None,
+            'properties': prop}
 
 def fiona_type(value):
     if isinstance(value, int):
@@ -184,6 +190,21 @@ class GeoPackager(object):
         with fiona.open(self.fname, 'w', 'GPKG', schema,
                         self.crs, 'utf8', layer=name) as f:
             recs = [geodict(row) for row in rows]
+            f.writerecords(recs)
+
+    def save_table(self, name, dicts):
+        """
+        :param name: table name
+        :param dicts: a non-empty list of dicts
+        """
+        row = dicts[0]
+        properties = [(k, fiona_type(v))
+                      for k, v in row.items()]
+        schema = {'geometry': None,
+                  'properties': properties}
+        with fiona.open(self.fname, 'w', 'GPKG', schema,
+                        self.crs, 'utf8', layer=name) as f:
+            recs = [nogeomdict(dic) for dic in dicts]
             f.writerecords(recs)
 
     def read_all(self):

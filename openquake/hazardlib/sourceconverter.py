@@ -1245,6 +1245,7 @@ class Row:
     id: str
     name: str
     code: str
+    groupname: str
     tectonicregion: str
     mfd: str
     magscalerel: str
@@ -1357,6 +1358,12 @@ class RowConverter(SourceConverter):
                if striptag(n.tag) not in GEOM_TYPES]
         return str(lst)
 
+    def convert_groupname(self, node):
+        try:
+            return str(node['groupname'])
+        except KeyError:
+            return ''
+
     def convert_areaSource(self, node):
         geom = node.areaGeometry
         coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
@@ -1366,6 +1373,7 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'A',
+            self.convert_groupname(node),
             node['tectonicRegion'],
             self.convert_mfdist(node),
             str(~node.magScaleRel),
@@ -1386,6 +1394,7 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'P',
+            self.convert_groupname(node),
             node['tectonicRegion'],
             self.convert_mfdist(node),
             str(~node.magScaleRel),
@@ -1407,6 +1416,7 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'M',
+            self.convert_groupname(node),
             node['tectonicRegion'],
             self.convert_mfdist(node),
             str(~node.magScaleRel),
@@ -1427,6 +1437,7 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'S',
+            self.convert_groupname(node),
             node['tectonicRegion'],
             self.convert_mfdist(node),
             str(~node.magScaleRel),
@@ -1450,6 +1461,7 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'C',
+            self.convert_groupname(node),
             node['tectonicRegion'],
             self.convert_mfdist(node),
             str(~node.magScaleRel),
@@ -1482,6 +1494,7 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'X',
+            self.convert_groupname(node),
             node['tectonicRegion'],
             self.convert_mfdist(node),
             numpy.nan,
