@@ -1323,7 +1323,7 @@ class RowConverter(SourceConverter):
     def convert_hddist(self, node):
         lst = []
         for w, hd in super().convert_hddist(node).data:
-            lst.append(dict(probability=w, hypodepth=hd))
+            lst.append(dict(probability=w, depth=hd))
         return str(lst)
 
     def convert_hypolist(self, node):
