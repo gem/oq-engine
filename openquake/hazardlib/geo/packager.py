@@ -232,16 +232,24 @@ class GeoPackager(object):
                     smodel_attrs = dic['properties']
                     smodel_attrs.pop('kind', None)
                 elif kind == 'sourceGroup':
-                    groupname = dic['properties']['name']
+                    try:
+                        groupname = dic['properties']['name']
+                    except KeyError:
+                        groupname = ''
                     src_group_attrs = dic['properties']
                     src_group_attrs.pop('kind', None)
                     src_groups_attrs[groupname] = src_group_attrs
             else:
-                groupname = dic['properties']['groupname']
                 try:
-                    srcs_by_grp[groupname].append(geodic2node(dic))
+                    groupname = dic['properties']['groupname']
                 except KeyError:
-                    srcs_by_grp[groupname] = [geodic2node(dic)]
+                    groupname = ''
+                node = geodic2node(dic)
+                if node is not None:
+                    try:
+                        srcs_by_grp[groupname].append(node)
+                    except KeyError:
+                        srcs_by_grp[groupname] = [node]
         all_sgroups = []
         for src_group_name in srcs_by_grp:
             src_group_attrs = src_groups_attrs[src_group_name]

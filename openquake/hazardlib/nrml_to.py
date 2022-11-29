@@ -167,12 +167,19 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
                     appendrow(row, srcs, chatty, sections, s2i)
             else:  # nrml/0.5
                 for srcgroup in root.sourceModel:
+                    trt = srcgroup['tectonicRegion']
                     attrib = srcgroup.attrib
                     attrib['kind'] = 'sourceGroup'
+                    # NOTE: in some cases the source group has no name and it
+                    #       is identified by its tectonic region type
+                    if 'name' not in attrib:
+                        attrib['name'] = trt
                     srcgroups_attribs.append(attrib)
-                    trt = srcgroup['tectonicRegion']
                     for srcnode in srcgroup:
-                        srcnode['groupname'] = srcgroup.attrib['name']
+                        try:
+                            srcnode['groupname'] = srcgroup.attrib['name']
+                        except KeyError:
+                            srcnode['groupname'] = ''
                         srcnode['tectonicRegion'] = trt
                         row = converter.convert_node(srcnode)
                         appendrow(row, srcs, chatty, sections, s2i)
