@@ -1179,6 +1179,7 @@ class ContextMaker(object):
         if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
             srcfilter = SourceFilter(srcfilter, self.maximum_distance)
         G = len(self.gsims)
+        N = len(srcfilter.sitecol)
         for src in sources:
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.esites = 0
@@ -1192,7 +1193,10 @@ class ContextMaker(object):
                     elif src.code == b'C':
                         src.weight += 10.
                     elif src.code == b'F':
-                        src.weight += 30.
+                        if N <= self.max_sites_disagg:
+                            src.weight *= 100  # superheavy
+                        else:
+                            src.weight += 30.
                     else:
                         src.weight += 1.
                     
