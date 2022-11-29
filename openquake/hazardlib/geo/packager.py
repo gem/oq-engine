@@ -221,9 +221,35 @@ class GeoPackager(object):
     def to_nrml(self, out=None):
         t0 = time.time()
         out = out or self.fname.replace('.gpkg', '.xml')
-        nodes = [geodic2node(dic) for dic in self.read_all()]
-        nodes = [node for node in nodes if node is not None]
-        smodel = Node("sourceModel", {}, nodes=nodes)
+        all = self.read_all()
+        src_groups_attrs = {}
+        srcs_by_grp = {}
+        smodel_attrs = {}
+        for dic in all:
+            if dic['geometry'] is None:
+                kind = dic['properties']['kind']
+                if kind == 'sourceModel':
+                    smodel_attrs = dic['properties']
+                    smodel_attrs.pop('kind', None)
+                elif kind == 'sourceGroup':
+                    groupname = dic['properties']['name']
+                    src_group_attrs = dic['properties']
+                    src_group_attrs.pop('kind', None)
+                    src_groups_attrs[groupname] = src_group_attrs
+            else:
+                groupname = dic['properties']['groupname']
+                try:
+                    srcs_by_grp[groupname].append(geodic2node(dic))
+                except KeyError:
+                    srcs_by_grp[groupname] = [geodic2node(dic)]
+        all_sgroups = []
+        for src_group_name in srcs_by_grp:
+            src_group_attrs = src_groups_attrs[src_group_name]
+            src_group_nodes = srcs_by_grp[src_group_name]
+            sgroup = Node(
+                'sourceGroup', src_group_attrs, nodes=src_group_nodes)
+            all_sgroups.append(sgroup)
+        smodel = Node("sourceModel", smodel_attrs, nodes=all_sgroups)
         with open(out, 'wb') as f:
             nrml.write([smodel], f, '%s')
         logging.info('%s was created' % out)

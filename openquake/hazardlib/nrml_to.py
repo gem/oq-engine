@@ -151,27 +151,34 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
         root = nrml.read(fname)
         srcs = collections.defaultdict(list)  # geom_index -> rows
         srcgroups_attribs = []
+        srcmodel_attrib = {}
         if fname == geometry:
             for srcnode in root.geometryModel:
                 sec = converter.convert_node(srcnode)
                 sections.append(sec)
                 s2i[srcnode['id']] = i
                 i += 1
-        elif 'nrml/0.4' in root['xmlns']:
-            for srcnode in root.sourceModel:
-                row = converter.convert_node(srcnode)
-                appendrow(row, srcs, chatty, sections, s2i)
-        else:  # nrml/0.5
-            for srcgroup in root.sourceModel:
-                srcgroups_attribs.append(srcgroup.attrib)
-                trt = srcgroup['tectonicRegion']
-                for srcnode in srcgroup:
-                    srcnode['groupname'] = srcgroup.attrib['name']
-                    srcnode['tectonicRegion'] = trt
+        else:
+            srcmodel_attrib = root.sourceModel.attrib
+            srcmodel_attrib['kind'] = 'sourceModel'
+            if 'nrml/0.4' in root['xmlns']:
+                for srcnode in root.sourceModel:
                     row = converter.convert_node(srcnode)
                     appendrow(row, srcs, chatty, sections, s2i)
+            else:  # nrml/0.5
+                for srcgroup in root.sourceModel:
+                    attrib = srcgroup.attrib
+                    attrib['kind'] = 'sourceGroup'
+                    srcgroups_attribs.append(attrib)
+                    trt = srcgroup['tectonicRegion']
+                    for srcnode in srcgroup:
+                        srcnode['groupname'] = srcgroup.attrib['name']
+                        srcnode['tectonicRegion'] = trt
+                        row = converter.convert_node(srcnode)
+                        appendrow(row, srcs, chatty, sections, s2i)
         if fmt == 'csv':
-            # TODO: save source groups table as a separate csv file
+            # TODO: save source groups table and source model table
+            #       as separate csv files
             for kind, rows in srcs.items():
                 dest = os.path.join(outdir, '%s_%s.csv' % (name, kind))
                 logging.info('Saving %d sources on %s', len(rows), dest)
@@ -184,6 +191,9 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
             for kind, rows in srcs.items():
                 logging.info('Saving %d sources on layer %s', len(rows), kind)
                 gpkg.save_layer(kind, rows)
+            if srcmodel_attrib:
+                logging.info('Saving source model information')
+                gpkg.save_table('source_model', [srcmodel_attrib])
             if srcgroups_attribs:
                 logging.info('Saving source groups information')
                 gpkg.save_table('source_groups', srcgroups_attribs)
