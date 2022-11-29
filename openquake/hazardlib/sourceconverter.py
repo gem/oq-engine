@@ -1348,10 +1348,9 @@ class RowConverter(SourceConverter):
 
     def convert_rake(self, node):
         try:
-            rake = ~node.rake
+            return ~node.rake
         except AttributeError:
-            rake = numpy.nan
-        return rake
+            return ''
 
     def convert_geomprops(self, node):
         lst = [node_to_dict(n) for n in node.nodes
@@ -1468,7 +1467,7 @@ class RowConverter(SourceConverter):
             ~node.ruptAspectRatio,
             numpy.nan,
             numpy.nan,
-            [{'rake': ~node.rake}],
+            [],
             [],
             self.convert_hypolist(node),
             self.convert_sliplist(node),

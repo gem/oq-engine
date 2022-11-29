@@ -98,7 +98,7 @@ def build_nodes(props):
                  {k.replace('_', ''): v for k, v in sl.items() if k != 'text'},
                  text=sl['text']) for sl in sll]
         nodes.append(Node('slipList', nodes=sll_nodes))
-    if 'rake' in props:
+    if 'rake' in props and props['rake']:
         nodes.append(Node('rake',
                      text=scientificformat(props['rake'])))
     return tuple(nodes)
