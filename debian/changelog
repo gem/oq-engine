@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed bug introduced in engine 3.9 producing wrong numbers in the case of
+    mutex ruptures (i.e. the New Madrid cluster in the USA model)
   * Added `--venv` option to the universal installer to install in custom places
   * Bug fix: the `avg_losses-rlzs` output in classical risk was stored
     incorrectly

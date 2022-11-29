@@ -1349,8 +1349,11 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
                 cm.update(pm, ctxs, self.rup_indep)
-            arr = 1. - pm.array if self.rup_indep else pm.array
-            p = pm.new(arr * src.mutex_weight)
+            if hasattr(src, 'mutex_weight'):
+                arr = 1. - pm.array if self.rup_indep else pm.array
+                p = pm.new(arr * src.mutex_weight)
+            else:
+                p = pm
             if ':' in src.source_id:
                 srcid = basename(src)
                 if srcid in pmap_by_src:
@@ -1376,11 +1379,14 @@ class PmapMaker(object):
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
         grp_id = self.sources[0].grp_id
-        if self.src_mutex:
+        if self.src_mutex or not self.rup_indep:
             pmap.fill(0)
             pmap_by_src = self._make_src_mutex(pmap)
             for source_id, pm in pmap_by_src.items():
-                pmap.array += pm.array
+                if self.src_mutex:
+                    pmap.array += pm.array
+                else:
+                    pmap.array = 1. - (1-pmap.array) * (1-pm.array)
         else:
             self._make_src_indep(pmap)
         dic['cfactor'] = self.cmaker.collapser.cfactor
