@@ -296,7 +296,8 @@ def build_reinsurance(dstore, num_events):
         rbe_df['rlz_id'] = rlz_id[rbe_df.index.to_numpy()]
     else:
         rbe_df['rlz_id'] = 0
-    builder = get_loss_builder(dstore, num_events=num_events)
+    if oq.investigation_time:
+        builder = get_loss_builder(dstore, num_events=num_events)
     avg = general.AccumDict(accum=[])
     dic = general.AccumDict(accum=[])
     for rlzid, df in rbe_df.groupby('rlz_id'):
