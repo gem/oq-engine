@@ -983,7 +983,7 @@ class ContextMaker(object):
         return gmv
 
     # not used by the engine, is is meant for notebooks
-    def get_poes(self, srcs, sitecol, collapse_level=-1):
+    def get_poes(self, srcs, sitecol, rup_indep=True, collapse_level=-1):
         """
         :param srcs: a list of sources with the same TRT
         :param sitecol: a SiteCollection instance with N sites
@@ -992,7 +992,7 @@ class ContextMaker(object):
         self.collapser.cfactor = numpy.zeros(2)
         ctxs = self.from_srcs(srcs, sitecol)
         with patch.object(self.collapser, 'collapse_level', collapse_level):
-            return self.get_pmap(ctxs).array
+            return self.get_pmap(ctxs, rup_indep).array
 
     def get_pmap(self, ctxs, rup_indep=True):
         """
@@ -1179,6 +1179,7 @@ class ContextMaker(object):
         if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
             srcfilter = SourceFilter(srcfilter, self.maximum_distance)
         G = len(self.gsims)
+        N = len(srcfilter.sitecol)
         for src in sources:
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.esites = 0
@@ -1192,7 +1193,10 @@ class ContextMaker(object):
                     elif src.code == b'C':
                         src.weight += 10.
                     elif src.code == b'F':
-                        src.weight += 30.
+                        if N <= self.max_sites_disagg:
+                            src.weight *= 100  # superheavy
+                        else:
+                            src.weight += 30.
                     else:
                         src.weight += 1.
                     
