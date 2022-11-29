@@ -1349,8 +1349,11 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
                 cm.update(pm, ctxs, self.rup_indep)
-            arr = 1. - pm.array if self.rup_indep else pm.array
-            p = pm.new(arr * getattr(src, 'mutex_weight', 1))
+            if hasattr(src, 'mutex_weight'):
+                arr = 1. - pm.array if self.rup_indep else pm.array
+                p = pm.new(arr * src.mutex_weight)
+            else:
+                p = pm
             if ':' in src.source_id:
                 srcid = basename(src)
                 if srcid in pmap_by_src:
