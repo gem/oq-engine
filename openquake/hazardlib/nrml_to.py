@@ -166,21 +166,19 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
                     row = converter.convert_node(srcnode)
                     appendrow(row, srcs, chatty, sections, s2i)
             else:  # nrml/0.5
-                for srcgroup in root.sourceModel:
-                    trt = srcgroup['tectonicRegion']
+                for idx, srcgroup in enumerate(root.sourceModel):
                     attrib = srcgroup.attrib
                     attrib['kind'] = 'sourceGroup'
-                    # NOTE: in some cases the source group has no name and it
-                    #       is identified by its tectonic region type
+                    # NOTE: in some cases the source group has no name, so we
+                    #       need to assign it a unique name
                     if 'name' not in attrib:
-                        attrib['name'] = trt
+                        attrib['name'] = str(idx)  # let name always be a str
                     srcgroups_attribs.append(attrib)
                     for srcnode in srcgroup:
                         try:
                             srcnode['groupname'] = srcgroup.attrib['name']
                         except KeyError:
                             srcnode['groupname'] = ''
-                        srcnode['tectonicRegion'] = trt
                         row = converter.convert_node(srcnode)
                         appendrow(row, srcs, chatty, sections, s2i)
         if fmt == 'csv':

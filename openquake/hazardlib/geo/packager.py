@@ -126,8 +126,9 @@ def geodic2node(geodic):
     coords = geodic['geometry']['coordinates']
     props = geodic['properties']
     code = props['code']
-    attr = dict(id=props['id'], name=props['name'],
-                tectonicRegion=props['tectonicregion'])
+    attr = dict(id=props['id'], name=props['name'])
+    if props['tectonicregion']:
+        attr['tectonicRegion'] = props['tectonicregion']
     if code == 'P':
         point = Node('{%s}Point' % nrml.GML_NAMESPACE,
                      nodes=[Node('{%s}pos' % nrml.GML_NAMESPACE, text=coords)])
