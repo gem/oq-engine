@@ -10,11 +10,11 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Stable Continental Crust"
         >
             <pointGeometry>
-                <Point>
-                    <pos>
+                <gml:Point>
+                    <gml:pos>
                         -122.0 38.0
-                    </pos>
-                </Point>
+                    </gml:pos>
+                </gml:Point>
                 <upperSeismoDepth>
                     0.0
                 </upperSeismoDepth>
@@ -45,32 +45,32 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <complexFaultGeometry>
                 <faultTopEdge>
-                    <LineString>
-                        <posList>
+                    <gml:LineString>
+                        <gml:posList>
                             -124.704 40.363 5.493 -124.977 41.214 4.989 -125.14 42.096 4.897
-                        </posList>
-                    </LineString>
+                        </gml:posList>
+                    </gml:LineString>
                 </faultTopEdge>
                 <intermediateEdge>
-                    <LineString>
-                        <posList>
+                    <gml:LineString>
+                        <gml:posList>
                             -124.704 40.363 5.593 -124.977 41.214 5.089 -125.14 42.096 4.997
-                        </posList>
-                    </LineString>
+                        </gml:posList>
+                    </gml:LineString>
                 </intermediateEdge>
                 <intermediateEdge>
-                    <LineString>
-                        <posList>
+                    <gml:LineString>
+                        <gml:posList>
                             -124.704 40.363 5.693 -124.977 41.214 5.189 -125.14 42.096 5.097
-                        </posList>
-                    </LineString>
+                        </gml:posList>
+                    </gml:LineString>
                 </intermediateEdge>
                 <faultBottomEdge>
-                    <LineString>
-                        <posList>
+                    <gml:LineString>
+                        <gml:posList>
                             -123.829 40.347 20.385 -124.137 41.218 17.414 -124.252 42.115 17.527
-                        </posList>
-                    </LineString>
+                        </gml:posList>
+                    </gml:LineString>
                 </faultBottomEdge>
             </complexFaultGeometry>
             <magScaleRel>
@@ -91,15 +91,15 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Active Shallow Crust"
         >
             <areaGeometry>
-                <Polygon>
-                    <exterior>
-                        <LinearRing>
-                            <posList>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
                                 -122.5 37.5 -121.5 37.5 -121.5 38.5 -122.5 38.5 -122.5 37.5
-                            </posList>
-                        </LinearRing>
-                    </exterior>
-                </Polygon>
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
                 <upperSeismoDepth>
                     0.0
                 </upperSeismoDepth>
@@ -129,11 +129,11 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Active Shallow Crust"
         >
             <simpleFaultGeometry>
-                <LineString>
-                    <posList>
+                <gml:LineString>
+                    <gml:posList>
                         -121.823 37.73 -122.039 37.877
-                    </posList>
-                </LineString>
+                    </gml:posList>
+                </gml:LineString>
             </simpleFaultGeometry>
             <magScaleRel>
                 WC1994

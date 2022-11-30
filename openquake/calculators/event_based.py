@@ -264,6 +264,8 @@ class EventBasedCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param result: an AccumDict with events, ruptures, gmfs and hcurves
         """
+        if result is None:  # instead of a dict
+            raise MemoryError('You ran out of memory!')
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         primary = self.oqparam.get_primary_imtls()

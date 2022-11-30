@@ -158,15 +158,15 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
                 i += 1
         elif 'nrml/0.4' in root['xmlns']:
             for srcnode in root.sourceModel:
-                appendrow(converter.convert_node(srcnode),
-                          srcs, chatty, sections, s2i)
+                row = converter.convert_node(srcnode)
+                appendrow(row, srcs, chatty, sections, s2i)
         else:  # nrml/0.5
             for srcgroup in root.sourceModel:
                 trt = srcgroup['tectonicRegion']
                 for srcnode in srcgroup:
                     srcnode['tectonicRegion'] = trt
-                    appendrow(converter.convert_node(srcnode),
-                              srcs, chatty, sections, s2i)
+                    row = converter.convert_node(srcnode)
+                    appendrow(row, srcs, chatty, sections, s2i)
         if fmt == 'csv':
             for kind, rows in srcs.items():
                 dest = os.path.join(outdir, '%s_%s.csv' % (name, kind))
