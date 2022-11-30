@@ -192,6 +192,7 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
                 header = [a for a in rows[0].__class__.__annotations__
                           if a not in 'geom coords']
                 write_csv(dest, map(to_tuple, rows), header=header)
+                logging.info('%s was created' % dest)
         else:  # gpkg
             dest = os.path.join(outdir, name + '.gpkg')
             gpkg = GeoPackager(dest)
@@ -204,5 +205,5 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
             if srcgroups_attribs:
                 logging.info('Saving source groups information')
                 gpkg.save_table('source_groups', srcgroups_attribs)
-        logging.info('%s was created' % dest)
+            logging.info('%s was created' % dest)
     logging.info('Finished in %d seconds', time.time() - t0)
