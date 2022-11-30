@@ -812,6 +812,9 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
 
     # read and process the composite source model from the input files
     csm = get_csm(oqparam, full_lt, h5)
+    rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(csm.get_trt_smrs())
+    ngsims = sum(len(rbg) for rbg in rlzs_by_gsim_list)
+    logging.info('There are %d gsims in the CompositeSourceModel', ngsims)
     if oqparam.cachedir:
         logging.info('Saving %s', fname)
         with open(fname, 'wb') as f:
@@ -1230,11 +1233,8 @@ def get_input_files(oqparam):
         if key == 'gsim_logic_tree':
             fnames.update(gsim_lt.collect_files(fname))
             fnames.add(fname)
-        elif key == 'source_model':  # UCERF
-            f = oqparam.inputs['source_model']
-            fnames.add(f)
-            fname = nrml.read(f).sourceModel.UCERFSource['filename']
-            fnames.add(os.path.join(os.path.dirname(f), fname))
+        elif key == 'source_model':
+            fnames.add(oqparam.inputs['source_model'])
         elif key == 'exposure':  # fname is a list
             for exp in asset.Exposure.read_headers(fname):
                 fnames.update(exp.datafiles)

@@ -153,6 +153,11 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b2-gsimltp_b1.csv'],
             case_7.__file__)
 
+        # check the weights of the sources, a simple fault and a complex fault
+        info = self.calc.datastore.read_df('source_info', 'source_id')
+        self.assertEqual(info.loc[b'1'].weight, 184)
+        self.assertEqual(info.loc[b'2'].weight, 118)
+
         # checking the individual hazard maps are nonzero
         iml = self.calc.datastore.sel(
             'hmaps-rlzs', imt="PGA", site_id=0).squeeze()

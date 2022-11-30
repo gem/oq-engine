@@ -27,7 +27,7 @@ have a look at [FAQ related to cluster deployments](faq-cluster.md).
 ### Help! Should I disable hyperthreading?
 
 Yes. Disabling hyperthreading will save memory and will make the engine
-faster. Suppose for instance that you have a machine with a powerful
+faster. Suppose for instance that you have a laptop with a powerful
 i9 processor and 16 GB of RAM. It seems a lot. In reality it is not.
 The operating system will consume some memory, the browser will consume a
 lot of memory, you may have other applications open and you may end up with
@@ -36,6 +36,17 @@ will see 10x2 = 20 cores; running parallel computations may easily consume
 0.5 GB per core, i.e. 10 GB, so you will run out of memory. With hyperthreading
 disabled you will still have 5 GB of available RAM. We recommend to ALWAYS
 disable hyperthreading from the BIOS.
+
+Note: on a linux machine you can disable hyperthreading
+temporarily with the command `sudo echo off > /sys/devices/system/cpu/smt/control`: however, this setting will not survive a reboot.
+
+### Help! My windows server with 32/64 or more cores hangs!
+
+Some users reported this issue. It is due to a limitation of Python
+multiprocessing module on Windows. In all cases we have seen, the
+problem was solved by disabling hyperthreading. Otherwise you can
+reduce the number of used cores by setting the parameter `num_cores`
+in the file openquake.cfg as explained below.
 
 ### Help! I want to limit the number of cores used by the engine
 

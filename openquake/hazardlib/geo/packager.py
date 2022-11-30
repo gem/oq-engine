@@ -77,7 +77,8 @@ def build_nodes(props):
 
 def edge(name, coords):
     return Node(name + 'Edge', nodes=[
-        Node('LineString', nodes=[Node('posList', text=coords)])])
+        Node('{%s}LineString' % nrml.GML_NAMESPACE,
+             nodes=[Node('{%s}posList' % nrml.GML_NAMESPACE, text=coords)])])
 
 
 def build_edges(coords):
@@ -97,7 +98,8 @@ def geodic2node(geodic):
     attr = dict(id=props['id'], name=props['name'],
                 tectonicRegion=props['tectonicregion'])
     if code == 'P':
-        point = Node('Point', nodes=[Node('pos', text=coords)])
+        point = Node('{%s}Point' % nrml.GML_NAMESPACE,
+                     nodes=[Node('{%s}pos' % nrml.GML_NAMESPACE, text=coords)])
         usd = Node('upperSeismoDepth', text=props['upperseismodepth'])
         lsd = Node('lowerSeismoDepth', text=props['lowerseismodepth'])
         nodes = [Node('pointGeometry', nodes=[point, usd, lsd])]
@@ -108,10 +110,11 @@ def geodic2node(geodic):
         nodes = (cplx,) + build_nodes(props)
         return Node('complexFaultSource', attr, nodes=nodes)
     elif code == 'A':
-        pol = Node('Polygon', nodes=[
-            Node('exterior', nodes=[
-                Node('LinearRing', nodes=[
-                    Node('posList', text=coords)])])])
+        pol = Node('{%s}Polygon' % nrml.GML_NAMESPACE, nodes=[
+            Node('{%s}exterior' % nrml.GML_NAMESPACE, nodes=[
+                Node('{%s}LinearRing' % nrml.GML_NAMESPACE,
+                     nodes=[Node('{%s}posList' % nrml.GML_NAMESPACE,
+                            text=coords)])])])
         usd = Node('upperSeismoDepth', text=props['upperseismodepth'])
         lsd = Node('lowerSeismoDepth', text=props['lowerseismodepth'])
         area = Node('areaGeometry', nodes=[pol, usd, lsd])
@@ -119,12 +122,14 @@ def geodic2node(geodic):
         return Node('areaSource', attr, nodes=nodes)
     elif code == 'S':
         splx = Node('simpleFaultGeometry', nodes=[
-            Node('LineString', nodes=[Node('posList', text=coords)])])
+            Node('{%s}LineString' % nrml.GML_NAMESPACE,
+                 nodes=[Node('{%s}posList' % nrml.GML_NAMESPACE,
+                        text=coords)])])
         nodes = (splx,) + build_nodes(props)
         return Node('simpleFaultSource', attr, nodes=nodes)
     else:
-        logging.error(f'Skipping source of code "{code}" and attributes '
-                      f'"{attr}" (the converter is not implemented yet)')
+        logging.warning(f'Skipping source of code "{code}" and attributes '
+                        f'"{attr}" (the converter is not implemented yet)')
         return None
 
 

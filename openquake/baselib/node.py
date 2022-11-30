@@ -314,7 +314,7 @@ class StreamingXMLWriter(object):
             return
         self.start_tag(tag, node.attrib)
         if node.text is not None:
-            if node.tag == 'posList':
+            if striptag(node.tag) == 'posList':
                 # NOTE: by convention, posList must be a flat list of
                 #   space-separated coordinates, so we need to flatten any
                 #   nested lists or tuples, producing a single list of values
@@ -388,7 +388,8 @@ def _displayattrs(attrib, expandattrs):
     return '{%s}' % ', '.join(alist)
 
 
-def _display(node, indent, expandattrs, expandvals, output):
+def _display(node, indent, expandattrs, expandvals, output,
+             striptags=True, shortentags=False, nsmap=None):
     """Core function to display a Node object"""
     attrs = _displayattrs(node.attrib, expandattrs)
     if node.text is None or not expandvals:
@@ -397,12 +398,21 @@ def _display(node, indent, expandattrs, expandvals, output):
         val = ' %s' % repr(node.text.strip())
     else:
         val = ' %s' % repr(node.text)  # node.text can be a tuple
-    output.write(encode(indent + striptag(node.tag) + attrs + val + '\n'))
+    tag = node.tag
+    if shortentags and nsmap:
+        if tag.startswith('{'):
+            ns, _tag = tag.rsplit('}')
+            tag = '{' + nsmap.get(ns[1:], '') + '}' + _tag
+    elif striptags:
+        tag = striptag(node.tag)
+    output.write(encode(indent + tag + attrs + val + '\n'))
     for sub_node in node:
-        _display(sub_node, indent + '  ', expandattrs, expandvals, output)
+        _display(sub_node, indent + '  ', expandattrs, expandvals, output,
+                 striptags, shortentags, nsmap)
 
 
-def node_display(root, expandattrs=False, expandvals=False, output=sys.stdout):
+def node_display(root, expandattrs=False, expandvals=False, output=sys.stdout,
+                 striptags=True, shortentags=False, nsmap=None):
     """
     Write an indented representation of the Node object on the output;
     this is intended for testing/debugging purposes.
@@ -413,8 +423,14 @@ def node_display(root, expandattrs=False, expandvals=False, output=sys.stdout):
     :param bool expandvals: if True, the values of the tags are also printed,
                             not only the names.
     :param output: stream where to write the string representation of the node
+    :param bool striptags: do not display fully qualified tag names
+    :param bool shortentags: display a shorter representation of the namespace
+                             (overriding the striptags parameter)
+    :param dict nsmap: map of namespaces (keys are full names, values are the
+                       corresponding aliases)
     """
-    _display(root, '', expandattrs, expandvals, output)
+    _display(root, '', expandattrs, expandvals, output, striptags,
+             shortentags, nsmap)
 
 
 def striptag(tag):
@@ -446,6 +462,7 @@ class Node(object):
         :param dict attrib: the Node attributes
         :param str text: the Node text (default None)
         :param nodes: an iterable of subnodes (default empty list)
+        :param lineno: line number where the tag was read in the source xml
         """
         self.tag = fulltag
         self.attrib = {} if attrib is None else attrib
@@ -478,7 +495,11 @@ class Node(object):
             raise TypeError('Expected Node instance, got %r' % node)
         self.nodes.append(node)
 
-    def to_str(self, expandattrs=True, expandvals=True):
+    def get_nsmap(self):
+        return {v: k for k, v in self.attrib.items() if k.startswith('xmlns')}
+
+    def to_str(self, expandattrs=True, expandvals=True, striptags=True,
+               shortentags=False):
         """
         Convert the node into a string, intended for testing/debugging purposes
 
@@ -486,9 +507,13 @@ class Node(object):
           print the values of the attributes if True, else print only the names
         :param expandvals:
           print the values if True, else print only the tag names
+        :param bool striptags: do not display fully qualified tag names
+        :param bool shortentags: display a shorter representation of the
+                                 namespace (overriding the striptags parameter)
         """
         out = io.BytesIO()
-        node_display(self, expandattrs, expandvals, out)
+        node_display(self, expandattrs, expandvals, out, striptags,
+                     shortentags, self.get_nsmap())
         return decode(out.getvalue())
 
     def __iter__(self):
@@ -899,6 +924,8 @@ class ValidatingXmlParser(object):
 
     def _end_element(self, name):
         node = self._ancestors[-1]
+        if isinstance(node.text, list):
+            node.text = ''.join(node.text)
         with context(self.filename, node):
             self._root = self._literalnode(node)
         del self._ancestors[-1]
@@ -909,9 +936,9 @@ class ValidatingXmlParser(object):
         if data:
             parent = self._ancestors[-1]
             if parent.text is None:
-                parent.text = data
+                parent.text = [data]
             else:
-                parent.text += data
+                parent.text.append(data)
 
     def _set_text(self, node, text, tag):
         if text is None:
