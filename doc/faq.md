@@ -26,19 +26,22 @@ have a look at [FAQ related to cluster deployments](faq-cluster.md).
 
 ### Help! Should I disable hyperthreading?
 
-Yes. Disabling hyperthreading will save memory and will make the engine
-faster. Suppose for instance that you have a laptop with a powerful
-i9 processor and 16 GB of RAM. It seems a lot. In reality it is not.
-The operating system will consume some memory, the browser will consume a
-lot of memory, you may have other applications open and you may end up with
-less than 10 GB of available memory. If hyperthreading is enabled the engine
-will see 10x2 = 20 cores; running parallel computations may easily consume
-0.5 GB per core, i.e. 10 GB, so you will run out of memory. With hyperthreading
-disabled you will still have 5 GB of available RAM. We recommend to ALWAYS
-disable hyperthreading from the BIOS.
+Disabling hyperthreading is recommended since it will save
+memory. Suppose for instance that you have a laptop with a powerful i9
+processor and 16 GB of RAM. It seems a lot. In reality it is not.  The
+operating system will consume some memory, the browser will consume a
+lot of memory, you may have other applications open and you may end up
+with less than 10 GB of available memory. If hyperthreading is enabled
+the engine will see 10x2 = 20 cores; running parallel computations may
+easily consume 0.5 GB per core, i.e. 10 GB, so you will run out of
+memory. With hyperthreading disabled you will still have 5 GB of
+available RAM.
 
-Note: on a linux machine you can disable hyperthreading
-temporarily with the command `sudo echo off > /sys/devices/system/cpu/smt/control`: however, this setting will not survive a reboot.
+Note: on a linux machine you can try disable hyperthreading
+temporarily with the command `sudo echo off > /sys/devices/system/cpu/smt/control`: however, this setting will not survive a reboot. Also, on some
+systems this command will not work. If you cannot disable hyperthreading
+just make sure that if you have enough memory: we recommend 4 GB per
+real core or 2 GB per thread.
 
 ### Help! My windows server with 32/64 or more cores hangs!
 

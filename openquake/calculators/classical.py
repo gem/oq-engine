@@ -18,10 +18,13 @@
 
 import io
 import os
+import gzip
 import time
+import pickle
 import psutil
 import logging
 import operator
+import h5py
 import numpy
 import pandas
 try:
@@ -35,7 +38,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers, basename
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
-from openquake.commonlib import calc
+from openquake.commonlib import calc, datastore
 from openquake.calculators import base, getters, extract
 
 U16 = numpy.uint16
@@ -141,16 +144,19 @@ def check_disagg_by_src(dstore):
 
 def classical(srcs, sitecol, cmaker, monitor):
     """
-    Read the sitecol and call the classical calculator in hazardlib
+    Call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
+    if isinstance(srcs, datastore.DataStore):  # keep_source_groups=true
+        with srcs:
+            arr = h5py.File.__getitem__(srcs.hdf5, '_csm')[cmaker.grp_id]
+            srcs =  pickle.loads(gzip.decompress(arr.tobytes()))
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
     pmap = ProbabilityMap(
-        sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
-    pmap.fill(rup_indep)
+        sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
-    result['pnemap'] = pnemap = ~pmap.remove_zeros()
-    pnemap.start = cmaker.start
+    result['pnemap'] = ~pmap.remove_zeros()
+    result['pnemap'].start = cmaker.start
     return result
 
 
@@ -350,10 +356,9 @@ def decide_num_tasks(dstore, concurrent_tasks):
     ntasks = []
     for cm in sorted(cmakers, key=lambda cm: weights[cm.grp_id], reverse=True):
         w = weights[cm.grp_id]
-        ng = len(cm.gsims)
-        nt = int(numpy.ceil(w / maxw / ng))
-        assert ng and nt
-        ntasks.append((cm.grp_id, ng, nt))
+        nt = int(numpy.ceil(w / maxw / len(cm.gsims)))
+        assert nt
+        ntasks.append((cm.grp_id, len(cm.gsims), nt))
     return numpy.array(ntasks, dtlist)
 
 
@@ -481,8 +486,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 rlzs_by_g.append(rlzs)
         self.datastore.create_df('_poes', poes_dt.items())
         # NB: compressing the dataset causes a big slowdown in writing :-(
-        #if not self.oqparam.hazard_calculation_id:
-        #    self.datastore.swmr_on()
 
     def check_memory(self, N, L, max_gs, maxw):
         """
@@ -578,10 +581,11 @@ class ClassicalCalculator(base.HazardCalculator):
         for grp_id, ngsims, ntiles in decide:
             cmaker = self.haz.cmakers[grp_id]
             grp = self.csm.src_groups[grp_id]
-            logging.info('Sending %s, %d gsims * %d tiles', grp, ngsims, ntiles)
+            logging.info('Sending %s, %d gsims * %d tiles',
+                         grp, len(cmaker.gsims), ntiles)
             for tile in self.sitecol.split(ntiles):
                 for cm in cmaker.split_by_gsim():
-                    smap.submit((grp, tile, cm))
+                    smap.submit((self.datastore, tile, cm))
         smap.reduce(self.agg_dicts)
 
     def run_tiles(self, maxw):
