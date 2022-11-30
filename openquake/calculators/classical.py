@@ -18,7 +18,9 @@
 
 import io
 import os
+import gzip
 import time
+import pickle
 import psutil
 import logging
 import operator
@@ -35,7 +37,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers, basename
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
-from openquake.commonlib import calc
+from openquake.commonlib import calc, datastore
 from openquake.calculators import base, getters, extract
 
 U16 = numpy.uint16
@@ -141,9 +143,13 @@ def check_disagg_by_src(dstore):
 
 def classical(srcs, sitecol, cmaker, monitor):
     """
-    Read the sitecol and call the classical calculator in hazardlib
+    Call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
+    if isinstance(srcs, datastore.DataStore):
+        with srcs:
+            dset = srcs['_csm/grp-%03d' % cmaker.grp_id]
+            srcs =  pickle.loads(gzip.decompress(dset[()]))
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
     pmap = ProbabilityMap(
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
@@ -481,8 +487,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 rlzs_by_g.append(rlzs)
         self.datastore.create_df('_poes', poes_dt.items())
         # NB: compressing the dataset causes a big slowdown in writing :-(
-        #if not self.oqparam.hazard_calculation_id:
-        #    self.datastore.swmr_on()
 
     def check_memory(self, N, L, max_gs, maxw):
         """
@@ -581,7 +585,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Sending %s, %d gsims * %d tiles', grp, ngsims, ntiles)
             for tile in self.sitecol.split(ntiles):
                 for cm in cmaker.split_by_gsim():
-                    smap.submit((grp, tile, cm))
+                    smap.submit((self.datastore, tile, cm))
         smap.reduce(self.agg_dicts)
 
     def run_tiles(self, maxw):
