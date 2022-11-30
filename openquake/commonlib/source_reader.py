@@ -56,7 +56,8 @@ def gzpik(obj):
     """
     gzip and pickle a python object
     """
-    return gzip.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+    gz = gzip.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+    return numpy.frombuffer(gz, numpy.uint8)
 
 
 def fragmentno(src):
@@ -538,24 +539,21 @@ class CompositeSourceModel:
         return max_weight
 
     def __toh5__(self):
-        dic = dict(info=gzpik(self.source_info))
+        G1 = len(self.src_groups) + 1
+        arr = numpy.zeros(G1, hdf5.vuint8)
         for grp_id, grp in enumerate(self.src_groups):
-            grp.grp_id = grp_id
-            dic['grp-%03d' % grp_id] = gzpik(grp)
-        size = sum(len(val) for val in dic.values())
+            arr[grp_id] = gzpik(grp)
+        arr[grp_id + 1] = gzpik(self.source_info)
+        size = sum(len(val) for val in arr)
         logging.info(f'Storing {general.humansize(size)} '
                      'of CompositeSourceModel')
-        return dic, {}
+        return arr, {}
 
-    def __fromh5__(self, dic, attrs):
-        sg = {}
-        for key, dset in dic.items():
-            obj = pickle.loads(gzip.decompress(dset[()]))
-            if key == 'info':
-                self.source_info = obj
-            else:
-                sg[obj.grp_id] = obj
-        self.src_groups = [sg[grp_id] for grp_id in sorted(sg)]
+    # tested in case_36
+    def __fromh5__(self, arr, attrs):
+        objs = [pickle.loads(gzip.decompress(a.tobytes())) for a in arr]
+        self.src_groups = objs[:-1]
+        self.source_info = objs[-1]
 
     def __repr__(self):
         """

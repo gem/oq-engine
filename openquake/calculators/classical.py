@@ -24,6 +24,7 @@ import pickle
 import psutil
 import logging
 import operator
+import h5py
 import numpy
 import pandas
 try:
@@ -148,8 +149,8 @@ def classical(srcs, sitecol, cmaker, monitor):
     cmaker.init_monitoring(monitor)
     if isinstance(srcs, datastore.DataStore):
         with srcs:
-            dset = srcs['_csm/grp-%03d' % cmaker.grp_id]
-            srcs =  pickle.loads(gzip.decompress(dset[()]))
+            arr = h5py.File.__getitem__(srcs.hdf5, '_csm')[cmaker.grp_id]
+            srcs =  pickle.loads(gzip.decompress(arr.tobytes()))
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
     pmap = ProbabilityMap(
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
