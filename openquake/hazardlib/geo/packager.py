@@ -41,12 +41,14 @@ def geodict(row):
                          'coordinates': row.coords},
             'properties': prop}
 
+
 def nogeomdict(row):
     prop = {}
     for k, v in row.items():
         prop[k] = json.dumps(v) if isinstance(v, list) else v
     return {'geometry': None,
             'properties': prop}
+
 
 def fiona_type(value):
     if isinstance(value, int):

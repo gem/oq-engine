@@ -667,7 +667,8 @@ class GPKG2NRMLTestCase(unittest.TestCase):
             ' (the converter is not implemented yet)']
         with self._caplog.at_level(logging.ERROR):
             sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
-            errors = [self._caplog.records[i].message for i in range(len(self._caplog.records))]
+            errors = [self._caplog.records[i].message
+                      for i in range(len(self._caplog.records))]
             for line in expected_log_outputs:
                 self.assertIn(line, errors)
         datadir = os.path.join(os.path.dirname(__file__), 'data')
