@@ -539,11 +539,11 @@ class CompositeSourceModel:
         return max_weight
 
     def __toh5__(self):
-        G1 = len(self.src_groups) + 1
-        arr = numpy.zeros(G1, hdf5.vuint8)
+        G = len(self.src_groups)
+        arr = numpy.zeros(G + 1, hdf5.vuint8)
         for grp_id, grp in enumerate(self.src_groups):
             arr[grp_id] = gzpik(grp)
-        arr[grp_id + 1] = gzpik(self.source_info)
+        arr[G] = gzpik(self.source_info)
         size = sum(len(val) for val in arr)
         logging.info(f'Storing {general.humansize(size)} '
                      'of CompositeSourceModel')
