@@ -850,10 +850,12 @@ _pkgtest_innervm_run () {
             exit 1
         fi
 
+        sudo systemctl start openquake-dbserver
         # dbserver should be already started by systemd. Let's have a check
         # FIXME instead of using a 'sleep' we should use a better way to check that
         # the dbserver is alive
-        sleep 10; systemctl status openquake-dbserver
+        sleep 10
+        systemctl status openquake-dbserver
 
         if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
             export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
