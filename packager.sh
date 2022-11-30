@@ -933,7 +933,8 @@ sudo systemctl status openquake-dbserver
             echo \"The 'oq webui' command is broken: it reports\n\t\$webui_fail\ninstead of\n\t\$webui_fail_msg\"
             exit 1
         fi
-        sudo -u openquake oq webui migrate"
+        # FIXME: this directory must be discussed
+        sudo NUMBA_CACHE_DIR=/tmp -u openquake oq webui migrate"
     fi
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
