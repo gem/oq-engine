@@ -618,10 +618,6 @@ class NRML2CSVTestCase(unittest.TestCase):
 class NRML2GPKGTestCase(unittest.TestCase):
 
     def test_nrml_to_gpkg(self):
-        try:
-            import fiona
-        except ImportError:
-            raise unittest.SkipTest('fiona is missing')
         temp_dir = tempfile.mkdtemp()
         with Print.patch() as p:
             sap.runline(f'openquake.commands nrml_to gpkg {MIXED_SRC_MODEL} '
@@ -637,13 +633,9 @@ class GPKG2NRMLTestCase(unittest.TestCase):
 
     @pytest.fixture(autouse=True)
     def inject_fixtures(self, caplog):
-        self._caplog = caplog
+        self._caplog = caplog  # _pytest.logging.LogCaptureFixture
 
     def test_nrml_from_gpkg(self):
-        try:
-            import fiona
-        except ImportError:
-            raise unittest.SkipTest('fiona is missing')
         temp_dir = tempfile.mkdtemp()
         with Print.patch():
             sap.runline(f'openquake.commands nrml_to gpkg {MIXED_SRC_MODEL} '
@@ -667,7 +659,8 @@ class GPKG2NRMLTestCase(unittest.TestCase):
             ' (the converter is not implemented yet)']
         with self._caplog.at_level(logging.ERROR):
             sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
-            errors = [self._caplog.records[i].message for i in range(len(self._caplog.records))]
+            errors = [self._caplog.records[i].message
+                      for i in range(len(self._caplog.records))]
             for line in expected_log_outputs:
                 self.assertIn(line, errors)
         datadir = os.path.join(os.path.dirname(__file__), 'data')
