@@ -675,8 +675,9 @@ _devtest_innervm_run () {
 
     ssh "$lxc_ip" "rm -f ssh.log"
 
-    ssh "$lxc_ip" sudo cp /etc/apt/sources.list /etc/apt/sources.list.orig
-    ssh "$lxc_ip" sudo grep -v 'file:/home/ubuntu/repo' /etc/apt/sources.list.orig | sudo tee /etc/apt/sources.list
+    # disabled buggy sources.list cleanup
+    # ssh "$lxc_ip" sudo cp /etc/apt/sources.list /etc/apt/sources.list.orig
+    # ssh "$lxc_ip" sudo grep -v 'file:/home/ubuntu/repo' /etc/apt/sources.list.orig | sudo tee /etc/apt/sources.list
     ssh "$lxc_ip" "sudo apt-get update"
     ssh "$lxc_ip" "sudo apt-get -y upgrade"
     gpg -a --export | ssh "$lxc_ip" "sudo apt-key add -"
