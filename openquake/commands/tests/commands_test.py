@@ -23,7 +23,9 @@ import shutil
 import zipfile
 import tempfile
 import unittest
+import pytest
 import numpy
+import logging
 
 from pathlib import Path
 
@@ -633,6 +635,10 @@ class NRML2GPKGTestCase(unittest.TestCase):
 
 class GPKG2NRMLTestCase(unittest.TestCase):
 
+    @pytest.fixture(autouse=True)
+    def inject_fixtures(self, caplog):
+        self._caplog = caplog
+
     def test_nrml_from_gpkg(self):
         try:
             import fiona
@@ -646,23 +652,24 @@ class GPKG2NRMLTestCase(unittest.TestCase):
             temp_dir, Path(MIXED_SRC_MODEL).stem + '.gpkg')
         out_path = os.path.join(
             temp_dir, Path(MIXED_SRC_MODEL).stem + '_converted.xml')
-        with self.assertLogs('root', level='WARNING') as cm:
-            sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
         expected_log_outputs = [
-            'WARNING:root:Skipping source of code "X" and attributes'
+            'Skipping source of code "X" and attributes'
             ' "{\'id\': \'5\', \'name\': \'characteristic source,'
             ' simple fault\', \'tectonicRegion\': \'Volcanic\'}"'
             ' (the converter is not implemented yet)',
-            'WARNING:root:Skipping source of code "X" and attributes'
+            'Skipping source of code "X" and attributes'
             ' "{\'id\': \'6\', \'name\': \'characteristic source,'
             ' complex fault\', \'tectonicRegion\': \'Volcanic\'}"'
             ' (the converter is not implemented yet)',
-            'WARNING:root:Skipping source of code "X" and attributes'
+            'Skipping source of code "X" and attributes'
             ' "{\'id\': \'7\', \'name\': \'characteristic source,'
             ' multi surface\', \'tectonicRegion\': \'Volcanic\'}"'
             ' (the converter is not implemented yet)']
-        for line in expected_log_outputs:
-            self.assertIn(line, cm.output)
+        with self._caplog.at_level(logging.ERROR):
+            sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
+            errors = [self._caplog.records[i].message for i in range(len(self._caplog.records))]
+            for line in expected_log_outputs:
+                self.assertIn(line, errors)
         datadir = os.path.join(os.path.dirname(__file__), 'data')
         self.assertListEqual(
             list(open(out_path)),
