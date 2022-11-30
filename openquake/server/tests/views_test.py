@@ -91,8 +91,7 @@ class EngineServerTestCase(unittest.TestCase):
     @classmethod
     def wait(cls):
         # wait until all calculations stop
-        # for i in range(30):  # 30 seconds of timeout
-        for i in range(300):  # 300 seconds of timeout (FIXME: just for test)
+        for i in range(300):  # 300 seconds of timeout
             time.sleep(1)
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
@@ -125,30 +124,21 @@ class EngineServerTestCase(unittest.TestCase):
         # we need to set LOGNAME on Linux and USERNAME on Windows
         env['LOGNAME'] = env['USERNAME'] = 'openquake'
         cls.c = Client()
-        c = dbcmd('SELECT count(*) FROM job WHERE status=?x', 'complete')[0][0]
-        print('IN SETUPCLASS, c = %s' % c)
 
     @classmethod
     def tearDownClass(cls):
         c = dbcmd('SELECT count(*) FROM job WHERE status=?x', 'complete')[0][0]
-        print('IN TEARDOWNCLASS, c = %s' % c)
         assert c > 0, 'There are no jobs??'
         cls.wait()
-
-    def tearDown(self):
-        c = dbcmd('SELECT count(*) FROM job WHERE status=?x', 'complete')[0][0]
-        print('IN TEARDOWN, c = %s' % c)
 
     # tests
 
     def test_404(self):
-        print('test_404')
         # looking for a missing calc_id
         resp = self.c.get('/v1/calc/0')
         assert resp.status_code == 404, resp
 
     def test_ok(self):
-        print('test_ok')
         job_id = self.postzip('archive_ok.zip')
         self.wait()
         log = self.get('%s/log/:' % job_id)
@@ -260,7 +250,6 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(list(got), ['agg_id', 'loss_type', 'loss', 'stat'])
 
     def test_classical(self):
-        print('test_classical')
         job_id = self.postzip('classical.zip')
         self.wait()
         # check that we get at least the following 4 outputs
@@ -294,12 +283,10 @@ class EngineServerTestCase(unittest.TestCase):
         engine.del_calculation(job_id, True)
 
     def test_abort(self):
-        print('test_abort')
         resp = self.c.post('/v1/calc/0/abort')  # 0 is a non-existing job
         print(resp.content.decode('utf8'))
 
     def test_err_1(self):
-        print('test_err_1')
         # the rupture XML file has a syntax error
         job_id = self.postzip('archive_err_1.zip')
         self.wait()
@@ -318,31 +305,26 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertFalse(job_id in job_ids)
 
     def test_err_2(self):
-        print('test_err_2')
         # the file logic-tree-source-model.xml is missing
         tb_str = self.postzip('archive_err_2.zip')
         self.assertIn('No such file', tb_str)
 
     def test_err_3(self):
-        print('test_err_3')
         # there is no file job.ini, job_hazard.ini or job_risk.ini
         tb_str = self.postzip('archive_err_3.zip')
         self.assertIn('There are no .ini files in the archive', tb_str)
 
     def test_available_gsims(self):
-        print('test_available_gsims')
         resp = self.c.get('/v1/available_gsims')
         self.assertIn(b'ChiouYoungs2014PEER', resp.content)
 
     def test_ini_defaults(self):
-        print('test_ini_defaults')
         resp = self.c.get('/v1/ini_defaults')
         self.assertEqual(resp.status_code, 200)
         # make sure an old name still works
         self.assertIn(b'individual_curves', resp.content)
 
     def test_validate_zip(self):
-        print('test_validate_zip')
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', dict(archive=a))
         dic = json.loads(resp.content.decode('utf8'))
@@ -354,7 +336,6 @@ class EngineServerTestCase(unittest.TestCase):
     # tests for nrml validation
 
     def test_validate_nrml_valid(self):
-        print('test_validate_nrml_valid')
         valid_file = os.path.join(self.datadir, 'vulnerability_model.xml')
         with open(valid_file) as vf:
             valid_content = vf.read()
@@ -366,7 +347,6 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertIsNone(resp_text_dict['error_line'])
 
     def test_validate_nrml_invalid(self):
-        print('test_validate_nrml_invalid')
         invalid_file = os.path.join(self.datadir,
                                     'vulnerability_model_invalid.xml')
         with open(invalid_file) as vf:
@@ -381,7 +361,6 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(resp_text_dict['error_line'], 7)
 
     def test_validate_nrml_unclosed_tag(self):
-        print('test_validate_nrml_unclosed_tag')
         invalid_file = os.path.join(self.datadir,
                                     'vulnerability_model_unclosed_tag.xml')
         with open(invalid_file) as vf:
@@ -394,7 +373,6 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(resp_text_dict['error_line'], 9)
 
     def test_validate_nrml_missing_parameter(self):
-        print('test_validate_nrml_missing_parameter')
         # passing a wrong parameter, instead of the required 'xml_text'
         resp = self.c.post('/v1/valid/', foo='bar')
         self.assertEqual(resp.status_code, 400)
@@ -402,7 +380,6 @@ class EngineServerTestCase(unittest.TestCase):
                          b'Please provide the "xml_text" parameter')
 
     def test_check_fs_access(self):
-        print('test_check_fs_access')
         with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
             filename = f.name
             content = bytes(''.join(random.choice(
@@ -417,7 +394,6 @@ class EngineServerTestCase(unittest.TestCase):
             self.assertTrue(resp_text_dict['success'])
 
     def test_check_fs_access_fail(self):
-        print('test_check_fs_access_fail')
         with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
             filename = f.name
             content = bytes(''.join(random.choice(
