@@ -406,7 +406,7 @@ def run_jobs(jobs):
                     proc = general.mp.Process(target=run_calc, args=args)
                     proc.start()
                     logging.info('Started %s' % str(args))
-                    time.sleep(2)
+                    time.sleep(10)
                     procs.append(proc)
             finally:
                 for proc in procs:
@@ -416,6 +416,9 @@ def run_jobs(jobs):
                 run_calc(job)
         cleanup('stop')
     except Exception:
+        for job in jobs:
+            if job.status in ('created', 'executing'):
+                logs.dbcmd('finish', job.calc_id, 'failed')
         cleanup('kill')
         raise
     return jobs
