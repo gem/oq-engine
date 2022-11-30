@@ -285,9 +285,10 @@ def build_reinsurance(dstore, num_events):
     size = dstore.getsize('reinsurance-risk_by_event')
     logging.info('Building reinsurance-aggcurves from %s of '
                  'reinsurance-risk_by_event', general.humansize(size))
-    tr = oq.time_ratio  # risk_invtime / (haz_invtime * num_ses)
-    if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
-        tr /= len(dstore['weights'])
+    if oq.investigation_time:
+        tr = oq.time_ratio  # risk_invtime / (haz_invtime * num_ses)
+        if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
+            tr /= len(dstore['weights'])
     rlz_id = dstore['events']['rlz_id']
     rbe_df = dstore.read_df('reinsurance-risk_by_event', 'event_id')
     columns = rbe_df.columns
@@ -295,7 +296,8 @@ def build_reinsurance(dstore, num_events):
         rbe_df['rlz_id'] = rlz_id[rbe_df.index.to_numpy()]
     else:
         rbe_df['rlz_id'] = 0
-    builder = get_loss_builder(dstore, num_events=num_events)
+    if oq.investigation_time:
+        builder = get_loss_builder(dstore, num_events=num_events)
     avg = general.AccumDict(accum=[])
     dic = general.AccumDict(accum=[])
     for rlzid, df in rbe_df.groupby('rlz_id'):

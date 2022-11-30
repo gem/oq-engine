@@ -575,11 +575,11 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore, self.oqparam.concurrent_tasks or 1)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        for grp_id, num_cmakers, num_tiles in decide:
+        for grp_id, ngsims, ntiles in decide:
             cmaker = self.haz.cmakers[grp_id]
             grp = self.csm.src_groups[grp_id]
-            logging.info('Sending [%d*%d] %s', num_cmakers, num_tiles, grp)
-            for tile in self.sitecol.split(num_tiles):
+            logging.info('Sending %s, %d gsims * %d tiles', grp, ngsims, ntiles)
+            for tile in self.sitecol.split(ntiles):
                 for cm in cmaker.split_by_gsim():
                     smap.submit((grp, tile, cm))
         smap.reduce(self.agg_dicts)
