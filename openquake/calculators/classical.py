@@ -356,10 +356,9 @@ def decide_num_tasks(dstore, concurrent_tasks):
     ntasks = []
     for cm in sorted(cmakers, key=lambda cm: weights[cm.grp_id], reverse=True):
         w = weights[cm.grp_id]
-        ng = len(cm.gsims) if w > maxw else 1
         nt = int(numpy.ceil(w / maxw / len(cm.gsims)))
-        assert ng and nt
-        ntasks.append((cm.grp_id, ng, nt))
+        assert nt
+        ntasks.append((cm.grp_id, len(cm.gsims), nt))
     return numpy.array(ntasks, dtlist)
 
 
@@ -585,11 +584,8 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Sending %s, %d gsims * %d tiles',
                          grp, len(cmaker.gsims), ntiles)
             for tile in self.sitecol.split(ntiles):
-                if ngsims == 1:
-                    smap.submit((self.datastore, tile, cmaker))
-                else:
-                    for cm in cmaker.split_by_gsim():
-                        smap.submit((self.datastore, tile, cm))
+                for cm in cmaker.split_by_gsim():
+                    smap.submit((self.datastore, tile, cm))
         smap.reduce(self.agg_dicts)
 
     def run_tiles(self, maxw):
