@@ -147,17 +147,16 @@ def classical(srcs, sitecol, cmaker, monitor):
     Call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
-    if isinstance(srcs, datastore.DataStore):
+    if isinstance(srcs, datastore.DataStore):  # keep_source_groups=true
         with srcs:
             arr = h5py.File.__getitem__(srcs.hdf5, '_csm')[cmaker.grp_id]
             srcs =  pickle.loads(gzip.decompress(arr.tobytes()))
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
     pmap = ProbabilityMap(
-        sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
-    pmap.fill(rup_indep)
+        sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
-    result['pnemap'] = pnemap = ~pmap.remove_zeros()
-    pnemap.start = cmaker.start
+    result['pnemap'] = ~pmap.remove_zeros()
+    result['pnemap'].start = cmaker.start
     return result
 
 
@@ -357,7 +356,7 @@ def decide_num_tasks(dstore, concurrent_tasks):
     ntasks = []
     for cm in sorted(cmakers, key=lambda cm: weights[cm.grp_id], reverse=True):
         w = weights[cm.grp_id]
-        ng = len(cm.gsims)
+        ng = len(cm.gsims) if w > maxw else 1
         nt = int(numpy.ceil(w / maxw / ng))
         assert ng and nt
         ntasks.append((cm.grp_id, ng, nt))
@@ -583,10 +582,14 @@ class ClassicalCalculator(base.HazardCalculator):
         for grp_id, ngsims, ntiles in decide:
             cmaker = self.haz.cmakers[grp_id]
             grp = self.csm.src_groups[grp_id]
-            logging.info('Sending %s, %d gsims * %d tiles', grp, ngsims, ntiles)
+            logging.info('Sending %s, %d gsims * %d tiles',
+                         grp, len(cmaker.gsims), ntiles)
             for tile in self.sitecol.split(ntiles):
-                for cm in cmaker.split_by_gsim():
-                    smap.submit((self.datastore, tile, cm))
+                if ngsims == 1:
+                    smap.submit((self.datastore, tile, cmaker))
+                else:
+                    for cm in cmaker.split_by_gsim():
+                        smap.submit((self.datastore, tile, cm))
         smap.reduce(self.agg_dicts)
 
     def run_tiles(self, maxw):
