@@ -630,16 +630,11 @@ class NRML2GPKGTestCase(unittest.TestCase):
 
 class GPKG2NRMLTestCase(unittest.TestCase):
 
-    #@pytest.fixture(autouse=True)
-    def inject_fixtures(self, caplog):
-        self._caplog = caplog  # _pytest.logging.LogCaptureFixture
-
     def test_nrml_from_gpkg(self):
         temp_dir = tempfile.mkdtemp()
         with Print.patch():
             sap.runline(f'openquake.commands nrml_to gpkg {MIXED_SRC_MODEL} '
                         f'--outdir={temp_dir} --chatty')
-        raise unittest.SkipTest('TODO: remove pytest dependency')
         gpkg_path = os.path.join(
             temp_dir, Path(MIXED_SRC_MODEL).stem + '.gpkg')
         out_path = os.path.join(
@@ -657,10 +652,10 @@ class GPKG2NRMLTestCase(unittest.TestCase):
             ' "{\'id\': \'7\', \'name\': \'characteristic source,'
             ' multi surface\'}"'
             ' (the converter is not implemented yet)']
-        with self._caplog.at_level(logging.ERROR):
+        with mock.patch('logging.error') as error:
             sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
-            errors = [self._caplog.records[i].message
-                      for i in range(len(self._caplog.records))]
+            errors = [error.call_args_list[i].args[0]
+                      for i in range(len(error.call_args_list))]
             for line in expected_log_outputs:
                 self.assertIn(line, errors)
         datadir = os.path.join(os.path.dirname(__file__), 'data')
