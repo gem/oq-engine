@@ -151,7 +151,7 @@ def classical(srcs, sitecol, cmaker, monitor):
         with srcs:
             if sitecol is None:
                 sitecol = srcs['sitecol']
-            f = srcs.parent.hdf5 if srcs.parent else srcs
+            f = srcs.parent.hdf5 if srcs.parent else srcs.hdf5
             arr = h5py.File.__getitem__(f, '_csm')[cmaker.grp_id]
             srcs =  pickle.loads(gzip.decompress(arr.tobytes()))
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
