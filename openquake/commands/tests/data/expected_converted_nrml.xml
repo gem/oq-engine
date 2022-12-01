@@ -7,7 +7,7 @@ xmlns:gml="http://www.opengis.net/gml"
     name="Test Source Model"
     >
         <sourceGroup
-        name="Stable Continental Crust"
+        name="0"
         rup_interdep="indep"
         src_interdep="indep"
         tectonicRegion="Stable Continental Crust"
@@ -15,7 +15,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <pointSource
             id="2"
             name="point"
-            tectonicRegion="Stable Continental Crust"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -48,7 +47,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </pointSource>
         </sourceGroup>
         <sourceGroup
-        name="Subduction Interface"
+        name="1"
         rup_interdep="indep"
         src_interdep="indep"
         tectonicRegion="Subduction Interface"
@@ -56,7 +55,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <complexFaultSource
             id="4"
             name="Cascadia Megathrust"
-            tectonicRegion="Subduction Interface"
             >
                 <complexFaultGeometry>
                     <faultTopEdge>
@@ -101,7 +99,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </complexFaultSource>
         </sourceGroup>
         <sourceGroup
-        name="Active Shallow Crust"
+        name="2"
         rup_interdep="indep"
         src_interdep="indep"
         tectonicRegion="Active Shallow Crust"
@@ -109,7 +107,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <areaSource
             id="1"
             name="Quito"
-            tectonicRegion="Active Shallow Crust"
             >
                 <areaGeometry>
                     <gml:Polygon>
@@ -154,7 +151,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <simpleFaultSource
             id="3"
             name="Mount Diablo Thrust"
-            tectonicRegion="Active Shallow Crust"
             >
                 <simpleFaultGeometry>
                     <gml:LineString>
