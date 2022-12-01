@@ -416,9 +416,9 @@ def run_jobs(jobs):
                 run_calc(job)
         cleanup('stop')
     except Exception:
-        for job in jobs:
-            if job.status in ('created', 'executing'):
-                logs.dbcmd('finish', job.calc_id, 'failed')
+        #for job in jobs:
+        #    if job.status in ('created', 'executing'):
+        #        logs.dbcmd('finish', job.calc_id, 'failed')
         cleanup('kill')
         raise
     return jobs

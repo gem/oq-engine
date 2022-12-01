@@ -23,7 +23,6 @@ import shutil
 import zipfile
 import tempfile
 import unittest
-import pytest
 import numpy
 import logging
 
@@ -631,7 +630,7 @@ class NRML2GPKGTestCase(unittest.TestCase):
 
 class GPKG2NRMLTestCase(unittest.TestCase):
 
-    @pytest.fixture(autouse=True)
+    #@pytest.fixture(autouse=True)
     def inject_fixtures(self, caplog):
         self._caplog = caplog  # _pytest.logging.LogCaptureFixture
 
