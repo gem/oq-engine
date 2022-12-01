@@ -1372,7 +1372,8 @@ class RowConverter(SourceConverter):
     def convert_areaSource(self, node):
         geom = node.areaGeometry
         coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
-        coords += [coords[0]]  # close the polygon
+        if coords[0] != coords[-1]:
+            coords += [coords[0]]  # close the polygon
         # TODO: area_discretization = geom.attrib.get('discretization')
         return Row(
             node['id'],
