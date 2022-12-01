@@ -174,11 +174,17 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
                     if 'name' not in attrib:
                         attrib['name'] = str(idx)  # let name always be a str
                     srcgroups_attribs.append(attrib)
+                    try:
+                        grp_trt = attrib['tectonicRegion']
+                    except KeyError:
+                        grp_trt = None
                     for srcnode in srcgroup:
                         try:
                             srcnode['groupname'] = srcgroup.attrib['name']
                         except KeyError:
                             srcnode['groupname'] = ''
+                        if grp_trt and not srcnode.get('tectonicRegion'):
+                            srcnode['tectonicRegion'] = grp_trt
                         row = converter.convert_node(srcnode)
                         appendrow(row, srcs, chatty, sections, s2i)
         if fmt == 'csv':
