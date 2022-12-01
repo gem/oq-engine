@@ -149,7 +149,10 @@ def classical(srcs, sitecol, cmaker, monitor):
     cmaker.init_monitoring(monitor)
     if isinstance(srcs, datastore.DataStore):  # keep_source_groups=true
         with srcs:
-            arr = h5py.File.__getitem__(srcs.hdf5, '_csm')[cmaker.grp_id]
+            if sitecol is None:
+                sitecol = srcs['sitecol']
+            f = srcs.parent.hdf5 if srcs.parent else srcs.hdf5
+            arr = h5py.File.__getitem__(f, '_csm')[cmaker.grp_id]
             srcs =  pickle.loads(gzip.decompress(arr.tobytes()))
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
     pmap = ProbabilityMap(
@@ -585,7 +588,7 @@ class ClassicalCalculator(base.HazardCalculator):
                          grp, len(cmaker.gsims), ntiles)
             for tile in self.sitecol.split(ntiles):
                 for cm in cmaker.split_by_gsim():
-                    smap.submit((self.datastore, tile, cm))
+                    smap.submit((self.datastore, None if ntiles == 1 else tile, cm))
         smap.reduce(self.agg_dicts)
 
     def run_tiles(self, maxw):
