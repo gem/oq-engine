@@ -639,6 +639,7 @@ class GPKG2NRMLTestCase(unittest.TestCase):
         with Print.patch():
             sap.runline(f'openquake.commands nrml_to gpkg {MIXED_SRC_MODEL} '
                         f'--outdir={temp_dir} --chatty')
+        raise unittest.SkipTest('TODO: remove pytest dependency')
         gpkg_path = os.path.join(
             temp_dir, Path(MIXED_SRC_MODEL).stem + '.gpkg')
         out_path = os.path.join(
