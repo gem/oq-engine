@@ -113,7 +113,7 @@ xmlns:gml="http://www.opengis.net/gml"
                         <gml:exterior>
                             <gml:LinearRing>
                                 <gml:posList>
-                                    -122.5 37.5 -121.5 37.5 -121.5 38.5 -122.5 38.5
+                                    -122.5 37.5 -121.5 37.5 -121.5 38.5 -122.5 38.5 -122.5 37.5
                                 </gml:posList>
                             </gml:LinearRing>
                         </gml:exterior>
