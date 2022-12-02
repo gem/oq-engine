@@ -71,6 +71,70 @@ def _site_amplification(ctx, C):
     v0[ctx.vs30 < 1500] = ctx.vs30
     return C['k'] * np.log10(v0/800)
 
+def _gen2ref_rock_scaling(ctx, int, kappa = 0.02):
+    """
+    TODO (I'm not sure what the best way to do this): - link kappa to the input file.
+    - call this function in the main class to apply the delta to the mean.
+
+    Compute a empirical generic-toreference rock scaling factor as presented in:
+    Lanzano, G., C. Felicetta, F. Pacor, D. Spallarossa, and P. Traversa
+    (2022). Generic-To-Reference Rock Scaling Factors for Seismic Ground Motion
+    in Italy, Bull. Seismol. Soc. Am. 112, 1583–1606, doi: 10.1785/0120210063
+
+    The scaling factor is empiricaly based and developed in Italy and takes
+    into account the reduction of ground motion for hard rock site comparted to
+    reference cite (Vs30 aroun 800ms-1). This factor isto be applied to the
+    mean predicted value. See equation 5 of the publication.
+
+    The coefficients are from table S2.
+    """
+
+    Vs30 = ctx.vs30
+
+    c_table = CoeffsTable(sa_damping=5, table="""
+    IMT     a       b       c
+    0.01	0.107	-0.394	-11.775
+    0.025	0.137	-0.381	-12.812
+    0.04	0.168	-0.343	-14.276
+    0.05	0.182	-0.320	-15.012
+    0.07	0.180	-0.278	-15.428
+    0.10	0.162	-0.269	-15.014
+    0.15	0.119	-0.321	-13.081
+    0.20	0.084	-0.377	-11.228
+    0.25	0.057	-0.428	-9.620
+    0.30	0.042	-0.477	-8.360
+    0.35	0.030	-0.531	-7.276
+    0.40	0.018	-0.557	-6.266
+    0.45	0.009	-0.595	-5.563
+    0.50	0.002	-0.617	-5.174
+    0.60	-0.006	-0.651	-4.621
+    0.70	-0.010	-0.677	-4.184
+    0.75	-0.010	-0.677	-3.968
+    0.80	-0.009	-0.681	-3.756
+    0.90	-0.007	-0.690	-3.473
+    1.00	-0.008	-0.701	-3.298
+    1.20	-0.010	-0.721	-2.947
+    1.40	-0.012	-0.730	-2.630
+    1.60	-0.015	-0.739	-2.337
+    1.80	-0.021	-0.754	-2.054
+    2.00	-0.024	-0.747	-1.685
+    2.50	-0.026	-0.733	-0.954
+    3.00	-0.024	-0.691	-0.632
+    3.50	-0.020	-0.657	-0.499
+    4.00	-0.016	-0.636	-0.444
+    4.50	-0.016	-0.621	-0.437
+    5.00	-0.022	-0.600	-0.349
+    6.00	-0.034	-0.558	-0.409
+    7.00	-0.043	-0.529	-0.519
+    8.00	-0.048	-0.505	-0.601
+    9.00	-0.052	-0.502	-0.493
+    10.0	-0.055	-0.487	-0.414
+    """)
+
+    C = c_table[imt]
+
+    return C['a'] + C['b'] * np.log10(Vs30/800.0) + C['c'] * k
+
 
 def _get_mechanism(ctx, C):
     """
