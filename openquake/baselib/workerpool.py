@@ -20,7 +20,9 @@ import sys
 import signal
 import shutil
 import getpass
+import logging
 import tempfile
+import threading
 import subprocess
 import multiprocessing
 import psutil
@@ -87,8 +89,15 @@ class WorkerMaster(object):
     def start(self):
         """
         Start multiple workerpools, possibly on remote servers via ssh,
-        assuming there is an active streamer.
+        and a streamer.
         """
+        # start task_in->task_server streamer thread
+        port = int(self.zworkers.ctrl_port)
+        threading.Thread(
+            target=workerpool._streamer, args=(port,), daemon=True
+        ).start()
+        logging.warning('Task streamer started on ports %d->%d',
+                        port + 2, port + 1)
         starting = []
         for host, cores, args in ssh_args(self.zworkers):
             if general.socket_ready((host, self.ctrl_port)):

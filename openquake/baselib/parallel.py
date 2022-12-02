@@ -196,9 +196,7 @@ import collections
 from unittest import mock
 import multiprocessing.dummy
 import multiprocessing.shared_memory as shmem
-import subprocess
 import psutil
-import threading
 import numpy
 try:
     from setproctitle import setproctitle
@@ -433,11 +431,6 @@ class Result(object):
         :returns: a new Result instance
         """
         try:
-            if mon.version and mon.version != engine_version():
-                raise RuntimeError(
-                    'The master is at version %s while the worker %s is at '
-                    'version %s' % (mon.version, socket.gethostname(),
-                                    engine_version()))
             if mon.config.dbserver.host != config.dbserver.host:
                 raise RuntimeError(
                     'The master has dbserver.host=%s while the worker has %s'
@@ -1061,30 +1054,8 @@ def workers_start(zworkers):
     if OQDIST in 'no processpool':
         return
     if OQDIST == 'zmq':
-        # start task_in->task_server streamer thread
-        port = int(zworkers.ctrl_port)
-        threading.Thread(
-            target=workerpool._streamer, args=(port,), daemon=True
-        ).start()
-        logging.warning('Task streamer started on port %d',
-                        int(zworkers.ctrl_port) + 1)
-
-    for host, cores, args in workerpool.ssh_args(zworkers):
-        if OQDIST == 'dask':
-            sched = config.distribution.dask_scheduler
-            args += ['-m', 'distributed.cli.dask_worker', sched,
-                     '--nprocs', cores, '--nthreads', '1',
-                     '--memory-limit', '1e11']
-        elif OQDIST == 'celery':
-            args += ['-m', 'celery', 'worker', '--purge', '-O', 'fair',
-                     '--config', 'openquake.engine.celeryconfig']
-            if cores != '-1':
-                args += ['-c', cores]
-        elif OQDIST == 'zmq':
-            url = 'tcp://0.0.0.0:%s' % zworkers.ctrl_port
-            args += ['-m', 'openquake.baselib.workerpool', url, '-n', cores]
-        subprocess.Popen(args, start_new_session=True)
-        logging.info(args)
+        workerpool.WorkerMaster(zworkers).start()
+    return 'started'
 
 
 def workers_stop(zworkers):
