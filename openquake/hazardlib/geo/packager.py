@@ -272,11 +272,14 @@ class GeoPackager(object):
                         srcs_by_grp[groupname] = [node]
         all_sgroups = []
         for src_group_name in srcs_by_grp:
-            src_group_attrs = src_groups_attrs[src_group_name]
             src_group_nodes = srcs_by_grp[src_group_name]
-            sgroup = Node(
-                'sourceGroup', src_group_attrs, nodes=src_group_nodes)
-            all_sgroups.append(sgroup)
+            if src_group_name:
+                src_group_attrs = src_groups_attrs[src_group_name]
+                sgroup = Node(
+                    'sourceGroup', src_group_attrs, nodes=src_group_nodes)
+                all_sgroups.append(sgroup)
+            else:
+                all_sgroups.extend(src_group_nodes)
         smodel = Node("sourceModel", smodel_attrs, nodes=all_sgroups)
         with open(out, 'wb') as f:
             nrml.write([smodel], f, '%s')
