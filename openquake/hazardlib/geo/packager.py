@@ -58,11 +58,23 @@ def fiona_type(value):
     return 'str'
 
 
-def build_geom_nodes(geomprops, coords):
+def build_sfg_geom_nodes(geomprops, coords):
     geom_nodes = []
     geom_nodes.append(
         Node('{%s}LineString' % nrml.GML_NAMESPACE,
              nodes=[Node('{%s}posList' % nrml.GML_NAMESPACE, text=coords)]))
+    geomdict = ast.literal_eval(geomprops)
+    geom_nodes.extend([node_from_dict(dic) for dic in geomdict])
+    return geom_nodes
+
+
+def build_mpg_geom_nodes(geomprops, coords):
+    geom_nodes = []
+    # NOTE: posList could also be taken from geomprops, but losing the
+    #       namespace
+    # FIXME: we can have a mismatch in number of digits in coords and geomprops
+    geom_nodes.append(
+        Node('{%s}posList' % nrml.GML_NAMESPACE, text=coords))
     geomdict = ast.literal_eval(geomprops)
     geom_nodes.extend([node_from_dict(dic) for dic in geomdict])
     return geom_nodes
@@ -157,10 +169,15 @@ def geodic2node(geodic):
         nodes = (area,) + build_nodes(props)
         return Node('areaSource', attr, nodes=nodes)
     elif code == 'S':
-        geom_nodes = build_geom_nodes(props['geomprops'], coords)
+        geom_nodes = build_sfg_geom_nodes(props['geomprops'], coords)
         splx = Node('simpleFaultGeometry', nodes=geom_nodes)
         nodes = (splx,) + build_nodes(props)
         return Node('simpleFaultSource', attr, nodes=nodes)
+    elif code == 'M':
+        geom_nodes = build_mpg_geom_nodes(props['geomprops'], coords)
+        mpg = Node('multiPointGeometry', nodes=geom_nodes)
+        nodes = (mpg,) + build_nodes(props)
+        return Node('multiPointSource', attr, nodes=nodes)
     else:
         logging.error(f'Skipping source of code "{code}" and attributes '
                       f'"{attr}" (the converter is not implemented yet)')

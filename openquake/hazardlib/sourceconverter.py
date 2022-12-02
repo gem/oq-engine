@@ -44,8 +44,9 @@ KNOWN_MFDS = ('incrementalMFD', 'truncGutenbergRichterMFD',
               'arbitraryMFD', 'YoungsCoppersmithMFD', 'multiMFD',
               'taperedGutenbergRichterMFD')
 
-GEOM_TYPES = ('Polygon', 'Point', 'MultiPoint', 'LineString',
-              '3D MultiLineString', '3D MultiPolygon')
+EXCLUDE_FROM_GEOM_PROPS = (
+    'Polygon', 'Point', 'MultiPoint', 'LineString', '3D MultiLineString',
+    '3D MultiPolygon', 'posList')
 
 
 def extract_dupl(values):
@@ -1354,7 +1355,7 @@ class RowConverter(SourceConverter):
 
     def convert_geomprops(self, node):
         lst = [node_to_dict(n) for n in node.nodes
-               if striptag(n.tag) not in GEOM_TYPES]
+               if striptag(n.tag) not in EXCLUDE_FROM_GEOM_PROPS]
         return str(lst)
 
     def convert_groupname(self, node):
