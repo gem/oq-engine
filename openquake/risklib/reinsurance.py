@@ -42,12 +42,12 @@ DEBUG = False
 VALID_TREATY_TYPES = 'prop', 'wxlr', 'catxl'
 
 
-def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
+def check_fields(fields, dframe, policyidx, fname, policyfname, treaties,
                  treaty_linenos, treaty_types):
     """
     :param fields: fields to check (the first field is the primary key)
     :param dframe: DataFrame with the contents of fname
-    :param idxdict: dictionary key -> index (starting from 1)
+    :param policyidx: dictionary key -> index (starting from 1)
     :param fname: file xml containing the fields to check
     :param policyfname: file csv containing the fields to check
     :param treaties: treaty names
@@ -81,7 +81,7 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
             raise InvalidFile(
                 f'{fname} (line {lineno}): {treaty} is missing'
                 ' in {policyfname}')
-    policies_from_exposure = list(idxdict)[1:]  # discard '?'
+    policies_from_exposure = list(policyidx)[1:]  # discard '?'
     policies_from_csv = list(dframe.policy)
     [indices] = np.where(~np.isin(policies_from_exposure, policies_from_csv))
     if len(indices) > 0:
@@ -130,8 +130,8 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
                 '%s (row %d): the sum of proportional fractions is %s.'
                 ' It must be >= 0 and <= 1' % (
                     policyfname, i+2, np.round(treaty_sum, 5)))
-    idx = [idxdict[name] for name in dframe[key]]  # indices starting from 1
-    dframe[key] = idx
+    # replace policy names with policy indices starting from 1
+    dframe[key] = [policyidx[pol] for pol in dframe[key]]
     for no, field in enumerate(fields):
         if field not in dframe.columns:
             raise InvalidFile(f'{fname}: {field} is missing in the header')
@@ -226,6 +226,10 @@ def parse(fname, policy_idx):
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
     df.columns = df.columns.str.strip()
+    all_policies = df.policy.to_numpy()
+    exp_policies = np.array(list(policy_idx))
+    # reduce the policy dataframe to the policies actually in the exposure
+    df = df[np.isin(all_policies, exp_policies)]
     check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname,
                  policyfname, treaty['id'], treaty_linenos, treaty['type'])
 
