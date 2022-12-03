@@ -359,14 +359,14 @@ def cleanup(kind):
         logs.dbcmd('workers_kill', config.zworkers)
 
 
-def run_jobs(jobs):
+def run_jobs(jobctxs):
     """
     Run jobs using the specified config file and other options.
 
-    :param jobs:
+    :param jobctxs:
         List of LogContexts
     """
-    hc_id = jobs[-1].params['hazard_calculation_id']
+    hc_id = jobctxs[-1].params['hazard_calculation_id']
     if hc_id:
         job = logs.dbcmd('get_job', hc_id)
         ppath = job.ds_calc_dir + '.hdf5'
@@ -379,17 +379,17 @@ def run_jobs(jobs):
                     print('Starting from a hazard (%d) computed with'
                           ' an obsolete version of the engine: %s' %
                           (hc_id, version))
-    jobarray = len(jobs) > 1 and jobs[0].multi
+    jobarray = len(jobctxs) > 1 and jobctxs[0].multi
     try:
-        poll_queue(jobs[0].calc_id, poll_time=15)
+        poll_queue(jobctxs[0].calc_id, poll_time=15)
         # wait for an empty slot or a CTRL-C
     except BaseException:
         # the job aborted even before starting
-        for job in jobs:
+        for job in jobctxs:
             logs.dbcmd('finish', job.calc_id, 'aborted')
-        return jobs
+        return jobctxs
     else:
-        for job in jobs:
+        for job in jobctxs:
             dic = {'status': 'executing', 'pid': _PID}
             logs.dbcmd('update_job', job.calc_id, dic)
     try:
@@ -398,7 +398,7 @@ def run_jobs(jobs):
             print('Asking the DbServer to start the workers %s' %
                   config.zworkers.host_cores)
             logs.dbcmd('workers_start', config.zworkers)  # start the workers
-        allargs = [(job,) for job in jobs]
+        allargs = [(job,) for job in jobctxs]
         if jobarray and OQ_DISTRIBUTE != 'no':
             procs = []
             try:
@@ -412,16 +412,16 @@ def run_jobs(jobs):
                 for proc in procs:
                     proc.join()
         else:
-            for job in jobs:
+            for job in jobctxs:
                 run_calc(job)
         cleanup('stop')
     except Exception:
-        #for job in jobs:
-        #    if job.status in ('created', 'executing'):
-        #        logs.dbcmd('finish', job.calc_id, 'failed')
+        for ctx in jobctxs:
+            logs.dbcmd("""UPDATE job SET status='failed' WHERE id=%d AND
+            status IN ('created', 'executing')""" % ctx.calc_id)
         cleanup('kill')
         raise
-    return jobs
+    return jobctxs
 
 
 def version_triple(tag):

@@ -1066,8 +1066,7 @@ def workers_start(zworkers):
         threading.Thread(
             target=workerpool._streamer, args=(port,), daemon=True
         ).start()
-        logging.warning('Task streamer started on port %d',
-                        int(zworkers.ctrl_port) + 1)
+        logging.warning('Task streamer started on ports %d->%d', port+2, port+1)
 
     for host, cores, args in workerpool.ssh_args(zworkers):
         if OQDIST == 'dask':
