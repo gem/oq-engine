@@ -31,15 +31,15 @@ jobs:
     steps:
   # This Checkout use git-ref keyword from dispatch
     - name: Clone Repository (Master)
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       if: github.event.inputs.git-ref == ''
     - name: Clone Repository (Custom Ref)
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       if: github.event.inputs.git-ref != ''
       with:
         ref: ${{ github.event.inputs.git-ref }}
     - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
        # You can test your matrix by printing the current Python version
@@ -49,8 +49,8 @@ jobs:
     - name: Install engine with install script and version 3.11
       run: |
         pwd
-        python -m pip install --default-timeout=100 pip wheel setuptools --upgrade
-        sudo -H python install.py server --version=3.11.4
+        python3.8 -m pip install --default-timeout=100 pip wheel setuptools --upgrade
+        sudo -H python3.8 install.py server --version=3.11.4
       shell: bash
     - name: Run demos to test installation
       run: |
