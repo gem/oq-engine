@@ -29,7 +29,7 @@ jobs:
         python-version: [3.8]
     #
     steps:
-  # This Checkout use git-ref keyword from dispatch
+    # This Checkout use git-ref keyword from dispatch
     - name: Clone Repository (Master)
       uses: actions/checkout@v3
       if: github.event.inputs.git-ref == ''
@@ -38,21 +38,26 @@ jobs:
       if: github.event.inputs.git-ref != ''
       with:
         ref: ${{ github.event.inputs.git-ref }}
+    - name: remove python3.10 from system
+      run: |
+        pwd
+        sudo apt remove -y python3
+      shell: bash
     - name: Set up Python  ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-       # You can test your matrix by printing the current Python version
+    # You can test your matrix by printing the current Python version
     - name: Display Python version
       run: python -c "import sys; print(sys.version)"
-      # Use script to install engine and not the pip install .
+    # Use script to install engine and not the pip install .
     - name: Install engine with install script and version 3.11
       run: |
         pwd
         python -m pip install --default-timeout=100 pip wheel setuptools --upgrade
         which python
         sudo -H which python
-        sudo -H python install.py server --version=3.11.4
+        sudo -H python install.py server --version=3.11.5
       shell: bash
     - name: Run demos to test installation
       run: |
