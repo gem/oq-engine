@@ -1366,7 +1366,7 @@ class RowConverter(SourceConverter):
 
     def convert_tectonicregion(self, node):
         try:
-            return str(node['tectonicregion'])
+            return str(node['tectonicRegion'])
         except KeyError:
             return ''
 
