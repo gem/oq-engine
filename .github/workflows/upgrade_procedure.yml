@@ -38,11 +38,6 @@ jobs:
       if: github.event.inputs.git-ref != ''
       with:
         ref: ${{ github.event.inputs.git-ref }}
-    - name: remove python3.10 from system
-      run: |
-        pwd
-        sudo apt remove -y python3
-      shell: bash
     - name: Set up Python  ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
@@ -56,8 +51,8 @@ jobs:
         pwd
         python -m pip install --default-timeout=100 pip wheel setuptools --upgrade
         which python
-        sudo -H which python
-        sudo -H python install.py server --version=3.11.5
+        sudo -E which python
+        sudo -E python install.py server --version=3.11.5
       shell: bash
     - name: Run demos to test installation
       run: |
