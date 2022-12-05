@@ -642,15 +642,15 @@ class GPKG2NRMLTestCase(unittest.TestCase):
         expected_log_outputs = [
             'Skipping source of code "X" and attributes'
             ' "{\'id\': \'5\', \'name\': \'characteristic source,'
-            ' simple fault\', \'tectonicRegion\': \'Volcanic\'}"'
+            ' simple fault\'}"'
             ' (the converter is not implemented yet)',
             'Skipping source of code "X" and attributes'
             ' "{\'id\': \'6\', \'name\': \'characteristic source,'
-            ' complex fault\', \'tectonicRegion\': \'Volcanic\'}"'
+            ' complex fault\'}"'
             ' (the converter is not implemented yet)',
             'Skipping source of code "X" and attributes'
             ' "{\'id\': \'7\', \'name\': \'characteristic source,'
-            ' multi surface\', \'tectonicRegion\': \'Volcanic\'}"'
+            ' multi surface\'}"'
             ' (the converter is not implemented yet)']
         with mock.patch('logging.error') as error:
             sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
