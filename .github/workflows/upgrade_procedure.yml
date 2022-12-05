@@ -24,7 +24,7 @@ jobs:
       GITHUB_BS_REF:  ${{ github.base_ref }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-1804]
           #os: [macos-latest, windows-latest, ubuntu-latest]
         python-version: [3.8]
     #
@@ -51,8 +51,7 @@ jobs:
         pwd
         python -m pip install --default-timeout=100 pip wheel setuptools --upgrade
         which python
-        sudo -E which python
-        sudo -E python install.py server --version=3.11.5
+        sudo -H python install.py server --version=3.11.5
       shell: bash
     - name: Run demos to test installation
       run: |
