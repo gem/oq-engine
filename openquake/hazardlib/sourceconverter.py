@@ -1528,7 +1528,7 @@ class RowConverter(SourceConverter):
     def convert_multiFaultSource(self, node):
         mfs = super().convert_multiFaultSource(node)
         return NPRow(node['id'], node['name'], 'F',
-                     node['tectonicRegion'], 'Polygon', mfs, '')
+                     self.convert_tectonicregion(node), 'Polygon', mfs, '')
 
 # ################### MultiPointSource conversion ######################## #
 
