@@ -183,7 +183,8 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
                             srcnode['groupname'] = srcgroup.attrib['name']
                         except KeyError:
                             srcnode['groupname'] = ''
-                        if grp_trt and not srcnode.get('tectonicRegion'):
+                        if (not srcnode['groupname'] and
+                                grp_trt and not srcnode.get('tectonicRegion')):
                             srcnode['tectonicRegion'] = grp_trt
                         row = converter.convert_node(srcnode)
                         appendrow(row, srcs, chatty, sections, s2i)
