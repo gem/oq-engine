@@ -133,7 +133,7 @@ def _gen2ref_rock_scaling(ctx, int, kappa = 0.02):
 
     C = c_table[imt]
 
-    return C['a'] + C['b'] * np.log10(Vs30/800.0) + C['c'] * k
+    return C['a'] + C['b'] * np.log10(Vs30/800.0) + C['c'] * kappa
 
 
 def _get_mechanism(ctx, C):
