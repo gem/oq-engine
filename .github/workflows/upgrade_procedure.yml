@@ -49,8 +49,10 @@ jobs:
     - name: Install engine with install script and version 3.11
       run: |
         pwd
-        python3.8 -m pip install --default-timeout=100 pip wheel setuptools --upgrade
-        sudo -H python3.8 install.py server --version=3.11.4
+        python -m pip install --default-timeout=100 pip wheel setuptools --upgrade
+        which python
+        sudo -H which python
+        sudo -H python install.py server --version=3.11.4
       shell: bash
     - name: Run demos to test installation
       run: |
