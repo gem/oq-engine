@@ -519,7 +519,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
             if res.msg == 'TASK_ENDED':
                 break
 
-elif oq_distribute() == 'ipp':
+if oq_distribute() == 'ipp':
     from ipyparallel import Cluster
 
 
