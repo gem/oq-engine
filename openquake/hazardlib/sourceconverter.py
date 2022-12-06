@@ -1358,18 +1358,6 @@ class RowConverter(SourceConverter):
                if striptag(n.tag) not in EXCLUDE_FROM_GEOM_PROPS]
         return str(lst)
 
-    def convert_groupname(self, node):
-        try:
-            return str(node['groupname'])
-        except KeyError:
-            return ''
-
-    def convert_tectonicregion(self, node):
-        try:
-            return str(node['tectonicRegion'])
-        except KeyError:
-            return ''
-
     def convert_areaSource(self, node):
         geom = node.areaGeometry
         coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
@@ -1380,8 +1368,8 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'A',
-            self.convert_groupname(node),
-            self.convert_tectonicregion(node),
+            node.get('groupname', ''),
+            node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
             ~node.ruptAspectRatio,
@@ -1401,8 +1389,8 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'P',
-            self.convert_groupname(node),
-            self.convert_tectonicregion(node),
+            node.get('groupname', ''),
+            node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
             ~node.ruptAspectRatio,
@@ -1423,8 +1411,8 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'M',
-            self.convert_groupname(node),
-            self.convert_tectonicregion(node),
+            node.get('groupname', ''),
+            node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
             ~node.ruptAspectRatio,
@@ -1444,8 +1432,8 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'S',
-            self.convert_groupname(node),
-            self.convert_tectonicregion(node),
+            node.get('groupname', ''),
+            node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
             ~node.ruptAspectRatio,
@@ -1468,8 +1456,8 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'C',
-            self.convert_groupname(node),
-            self.convert_tectonicregion(node),
+            node.get('groupname', ''),
+            node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
             ~node.ruptAspectRatio,
@@ -1501,8 +1489,8 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'X',
-            self.convert_groupname(node),
-            self.convert_tectonicregion(node),
+            node.get('groupname', ''),
+            node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             numpy.nan,
             numpy.nan,
@@ -1528,7 +1516,7 @@ class RowConverter(SourceConverter):
     def convert_multiFaultSource(self, node):
         mfs = super().convert_multiFaultSource(node)
         return NPRow(node['id'], node['name'], 'F',
-                     self.convert_tectonicregion(node), 'Polygon', mfs, '')
+                     node.get('tectonicRegion', ''), 'Polygon', mfs, '')
 
 # ################### MultiPointSource conversion ######################## #
 
