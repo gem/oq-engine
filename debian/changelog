@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Improved `oq engine --multi` to run at most 5 jobs at the time
   * Fixed bug introduced in engine 3.9 producing wrong numbers in the case of
     mutex ruptures (i.e. the New Madrid cluster in the USA model)
   * Added `--venv` option to the universal installer to install in custom places
