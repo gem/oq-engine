@@ -264,12 +264,6 @@ def zmq_submit(self, func, args, monitor):
     return self.sender.send((func, args, self.task_no, monitor))
 
 
-@submit.add('dask')
-def dask_submit(self, func, args, monitor):
-    return self.dask_client.submit(
-        safely_call, func, args, self.task_no, monitor)
-
-
 @submit.add('ipp')
 def ipp_submit(self, func, args, monitor):
     return self.executor.submit(
@@ -282,7 +276,7 @@ def oq_distribute(task=None):
     """
     dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
     if dist not in ('no', 'spawn', 'processpool', 'threadpool', 'zmq',
-                    'dask', 'ipp'):
+                    'ipp'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
     return dist
 
@@ -525,9 +519,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
             if res.msg == 'TASK_ENDED':
                 break
 
-if oq_distribute() == 'dask':
-    from dask.distributed import Client
-
 elif oq_distribute() == 'ipp':
     from ipyparallel import Cluster
 
@@ -707,8 +698,6 @@ class Starmap(object):
             signal.signal(signal.SIGINT, int_handler)
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(cls.num_cores)
-        elif cls.distribute == 'dask':
-            cls.dask_client = Client(config.distribution.dask_scheduler)
         elif cls.distribute == 'ipp' and not hasattr(cls, 'executor'):
             rc = Cluster(n=cls.num_cores).start_and_connect_sync()
             cls.executor = rc.executor()
@@ -725,8 +714,6 @@ class Starmap(object):
             cls.pool.join()
             del cls.pool
             cls.pids = []
-        if hasattr(cls, 'dask_client'):
-            del cls.dask_client
         elif hasattr(cls, 'executor'):
             cls.executor.shutdown()
 
