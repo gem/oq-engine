@@ -218,7 +218,7 @@ def poll_queue(job_id, poll_time):
         first_time = True
         while True:
             running = logs.dbcmd(GET_JOBS, host)
-            previous = [job for job in running if job.id < job_id - offset]
+            previous = [job.id for job in running if job.id < job_id - offset]
             if previous:
                 if first_time:
                     logs.dbcmd('update_job', job_id,
@@ -231,7 +231,7 @@ def poll_queue(job_id, poll_time):
                 break
 
 
-def run_calc(log):
+def run_calc(log, return_=True):
     """
     Run a calculation.
 
@@ -286,7 +286,8 @@ def run_calc(log):
         if (log.log_file and log.log_file != os.devnull and
                 getsize(log.log_file) == 0):
             logging.warning('The log file %s is empty!?' % log.log_file)
-    return calc
+    if return_:
+        return calc
 
 
 def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
@@ -394,19 +395,11 @@ def run_jobs(jobctxs):
             print('Asking the DbServer to start the workers %s' %
                   config.zworkers.host_cores)
             logs.dbcmd('workers_start', config.zworkers)  # start the workers
-        allargs = [(job,) for job in jobctxs]
+        allargs = [(job, False) for job in jobctxs]
         if jobarray and OQ_DISTRIBUTE != 'no':
-            procs = []
-            try:
-                for args in allargs:
-                    proc = general.mp.Process(target=run_calc, args=args)
-                    proc.start()
-                    logging.info('Started %s' % str(args))
-                    time.sleep(10)
-                    procs.append(proc)
-            finally:
-                for proc in procs:
-                    proc.join()
+            smap = parallel.Starmap(run_calc, allargs, distribute='spawn')
+            smap.num_cores = 5  # send at most 5 jobs at the same time
+            smap.reduce()
         else:
             for job in jobctxs:
                 run_calc(job)
