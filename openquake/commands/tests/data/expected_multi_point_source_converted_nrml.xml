@@ -21,10 +21,10 @@ xmlns:gml="http://www.opengis.net/gml"
                         0.0 1.0 0.5 1.0
                     </gml:posList>
                     <upperSeismoDepth>
-                        10.0
+                        1.000000000E+01
                     </upperSeismoDepth>
                     <lowerSeismoDepth>
-                        20.0
+                        2.000000000E+01
                     </lowerSeismoDepth>
                 </multiPointGeometry>
                 <magScaleRel>
@@ -67,10 +67,10 @@ xmlns:gml="http://www.opengis.net/gml"
                         0.1 1.1
                     </gml:posList>
                     <upperSeismoDepth>
-                        5.0
+                        5.000000000E+00
                     </upperSeismoDepth>
                     <lowerSeismoDepth>
-                        10.0
+                        1.000000000E+01
                     </lowerSeismoDepth>
                 </multiPointGeometry>
                 <magScaleRel>

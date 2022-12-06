@@ -1354,9 +1354,13 @@ class RowConverter(SourceConverter):
             return ''
 
     def convert_geomprops(self, node):
-        lst = [node_to_dict(n) for n in node.nodes
-               if striptag(n.tag) not in EXCLUDE_FROM_GEOM_PROPS]
-        return str(lst)
+        # NOTE: node_to_dict(node) returns a dict having the geometry type as
+        # key and the corresponding properties as value, so we get the first
+        # value to retrieve the information we need
+        full_geom_props = list(node_to_dict(node).values())[0]
+        geom_props = {k: full_geom_props[k] for k in full_geom_props
+                      if k not in EXCLUDE_FROM_GEOM_PROPS}
+        return str(geom_props)
 
     def convert_areaSource(self, node):
         geom = node.areaGeometry

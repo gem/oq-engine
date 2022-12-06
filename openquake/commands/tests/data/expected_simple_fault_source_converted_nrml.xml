@@ -22,13 +22,13 @@ xmlns:gml="http://www.opengis.net/gml"
                         </gml:posList>
                     </gml:LineString>
                     <dip>
-                        45.0
+                        4.500000000E+01
                     </dip>
                     <upperSeismoDepth>
-                        10.0
+                        1.000000000E+01
                     </upperSeismoDepth>
                     <lowerSeismoDepth>
-                        20.0
+                        2.000000000E+01
                     </lowerSeismoDepth>
                 </simpleFaultGeometry>
                 <magScaleRel>

@@ -24,7 +24,7 @@ try:
     from fiona import crs
 except ImportError:
     fiona = None
-from openquake.baselib.node import Node, node_from_dict, scientificformat
+from openquake.baselib.node import Node, scientificformat
 from openquake.hazardlib import nrml
 
 
@@ -63,8 +63,10 @@ def build_sfg_geom_nodes(geomprops, coords):
     geom_nodes.append(
         Node('{%s}LineString' % nrml.GML_NAMESPACE,
              nodes=[Node('{%s}posList' % nrml.GML_NAMESPACE, text=coords)]))
-    geomdict = ast.literal_eval(geomprops)
-    geom_nodes.extend([node_from_dict(dic) for dic in geomdict])
+    other_nodes = [Node(k, {}, text=scientificformat(v))
+                   for (k, v) in geomprops.items()
+                   if not k.startswith('_')]
+    geom_nodes.extend(other_nodes)
     return geom_nodes
 
 
@@ -75,8 +77,10 @@ def build_mpg_geom_nodes(geomprops, coords):
     # FIXME: we can have a mismatch in number of digits in coords and geomprops
     geom_nodes.append(
         Node('{%s}posList' % nrml.GML_NAMESPACE, text=coords))
-    geomdict = ast.literal_eval(geomprops)
-    geom_nodes.extend([node_from_dict(dic) for dic in geomdict])
+    other_nodes = [Node(k, {}, text=scientificformat(v))
+                   for (k, v) in geomprops.items()
+                   if not k.startswith('_')]
+    geom_nodes.extend(other_nodes)
     return geom_nodes
 
 
@@ -141,6 +145,9 @@ def geodic2node(geodic):
     attr = dict(id=props['id'], name=props['name'])
     if props['tectonicregion']:
         attr['tectonicRegion'] = props['tectonicregion']
+    geomprops = ast.literal_eval(props['geomprops'])
+    geomattrs = {k[1:]: scientificformat(v) for (k, v) in geomprops.items()
+                 if k.startswith('_')}
     if code == 'P':
         point = Node('{%s}Point' % nrml.GML_NAMESPACE,
                      nodes=[Node('{%s}pos' % nrml.GML_NAMESPACE, text=coords)])
@@ -148,11 +155,12 @@ def geodic2node(geodic):
                    text=scientificformat(props['upperseismodepth']))
         lsd = Node('lowerSeismoDepth',
                    text=scientificformat(props['lowerseismodepth']))
-        nodes = [Node('pointGeometry', nodes=[point, usd, lsd])]
+        nodes = [Node('pointGeometry', geomattrs, nodes=[point, usd, lsd])]
         nodes.extend(build_nodes(props))
         return Node('pointSource', attr, nodes=nodes)
     elif code == 'C':
-        cplx = Node('complexFaultGeometry', nodes=build_edges(coords))
+        cplx = Node(
+            'complexFaultGeometry', geomattrs, nodes=build_edges(coords))
         nodes = (cplx,) + build_nodes(props)
         return Node('complexFaultSource', attr, nodes=nodes)
     elif code == 'A':
@@ -165,17 +173,17 @@ def geodic2node(geodic):
                    text=scientificformat(props['upperseismodepth']))
         lsd = Node('lowerSeismoDepth',
                    text=scientificformat(props['lowerseismodepth']))
-        area = Node('areaGeometry', nodes=[pol, usd, lsd])
+        area = Node('areaGeometry', geomattrs, nodes=[pol, usd, lsd])
         nodes = (area,) + build_nodes(props)
         return Node('areaSource', attr, nodes=nodes)
     elif code == 'S':
-        geom_nodes = build_sfg_geom_nodes(props['geomprops'], coords)
-        splx = Node('simpleFaultGeometry', nodes=geom_nodes)
+        geom_nodes = build_sfg_geom_nodes(geomprops, coords)
+        splx = Node('simpleFaultGeometry', geomattrs, nodes=geom_nodes)
         nodes = (splx,) + build_nodes(props)
         return Node('simpleFaultSource', attr, nodes=nodes)
     elif code == 'M':
-        geom_nodes = build_mpg_geom_nodes(props['geomprops'], coords)
-        mpg = Node('multiPointGeometry', nodes=geom_nodes)
+        geom_nodes = build_mpg_geom_nodes(geomprops, coords)
+        mpg = Node('multiPointGeometry', geomattrs, nodes=geom_nodes)
         nodes = (mpg,) + build_nodes(props)
         return Node('multiPointSource', attr, nodes=nodes)
     else:
