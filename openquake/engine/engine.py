@@ -416,9 +416,11 @@ def run_jobs(jobctxs):
                 run_calc(job)
         cleanup('stop')
     except Exception:
-        for ctx in jobctxs:
-            logs.dbcmd("""UPDATE job SET status='failed' WHERE id=%d AND
-            status IN ('created', 'executing')""" % ctx.calc_id)
+        ids = [jc.calc_id for jc in jobctxs]
+        rows = logs.dbcmd("SELECT id FROM job WHERE id IN (?X) "
+                          "AND status IN ('created', 'executing')", ids)
+        for job_id, in rows:
+            logs.dbcmd("set_status", job_id, 'failed')
         cleanup('kill')
         raise
     return jobctxs
