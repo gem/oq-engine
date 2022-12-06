@@ -1367,7 +1367,6 @@ class RowConverter(SourceConverter):
         coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
         if coords[0] != coords[-1]:
             coords += [coords[0]]  # close the polygon
-        # TODO: area_discretization = geom.attrib.get('discretization')
         return Row(
             node['id'],
             node['name'],
