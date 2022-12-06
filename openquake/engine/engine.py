@@ -81,7 +81,7 @@ def set_concurrent_tasks_default(calc):
         return
 
     num_workers = sum(total for host, running, total
-                      in parallel.workers_wait())
+                      in parallel.workers_wait(config.zworkers))
     if num_workers == 0:
         logging.critical("No live compute nodes, aborting calculation")
         logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
@@ -171,10 +171,6 @@ def manage_signals(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
-    # Disable further CTRL-C to allow tasks revocation when Celery is used
-    if OQ_DISTRIBUTE == 'celery':
-        signal.signal(signal.SIGINT, inhibitSigInt)
-
     if signum == signal.SIGINT:
         parallel.workers_stop(config.zworkers)
         raise MasterKilled('The openquake master process was killed manually')
