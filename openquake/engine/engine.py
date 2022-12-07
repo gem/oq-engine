@@ -49,6 +49,7 @@ from openquake.commonlib import readinput
 from openquake.calculators import base, export
 from openquake.commonlib import logs
 
+USER = getpass.getuser()
 OQ_API = 'https://api.openquake.org'
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
@@ -93,7 +94,7 @@ def set_concurrent_tasks_default(calc):
     logging.warning('Using %d %s workers', num_workers, OQ_DISTRIBUTE)
 
 
-def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
+def expose_outputs(dstore, owner=USER, status='complete'):
     """
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
@@ -256,7 +257,7 @@ def run_calc(log):
         except Exception:  # gaierror
             hostname = 'localhost'
         logging.info('%s@%s running %s [--hc=%s]',
-                     getpass.getuser(),
+                     USER,
                      hostname,
                      calc.oqparam.inputs['job_ini'],
                      calc.oqparam.hazard_calculation_id)
@@ -290,7 +291,7 @@ def run_calc(log):
 
 
 def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
-                user_name=None, hc_id=None, multi=False, host=None):
+                user_name=USER, hc_id=None, multi=False, host=None):
     """
     Create job records on the database.
 
