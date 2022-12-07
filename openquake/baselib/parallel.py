@@ -236,9 +236,10 @@ def no_submit(self, func, args, monitor):
 @submit.add('spawn')
 def spawn_submit(self, func, args, monitor):
     wait_if_loaded(monitor, 1.)
-    mp_context.Process(
-        target=safely_call, args=(func, args, self.task_no, monitor)
-    ).start()
+    proc = mp_context.Process(
+        target=safely_call, args=(func, args, self.task_no, monitor))
+    proc.start()
+    return proc
 
 
 @submit.add('processpool')
