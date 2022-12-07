@@ -220,26 +220,9 @@ submit = CallableDict()
 GB = 1024 ** 3
 
 
-def wait_if_loaded(monitor, sleep):
-    while True:
-        percent = psutil.cpu_percent()
-        if percent <= 99:
-            break
-        time.sleep(sleep)
-
-
 @submit.add('no')
 def no_submit(self, func, args, monitor):
     return safely_call(func, args, self.task_no, monitor)
-
-
-@submit.add('spawn')
-def spawn_submit(self, func, args, monitor):
-    wait_if_loaded(monitor, 1.)
-    proc = mp_context.Process(
-        target=safely_call, args=(func, args, self.task_no, monitor))
-    proc.start()
-    return proc
 
 
 @submit.add('processpool')
@@ -276,8 +259,7 @@ def oq_distribute(task=None):
     :returns: the value of OQ_DISTRIBUTE or config.distribution.oq_distribute
     """
     dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
-    if dist not in ('no', 'spawn', 'processpool', 'threadpool', 'zmq',
-                    'ipp'):
+    if dist not in ('no', 'processpool', 'threadpool', 'zmq', 'ipp'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
     return dist
 
@@ -494,8 +476,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     mon.task_no = task_no
     if mon.inject:
         args += (mon,)
-    if OQDIST == 'spawn':
-        wait_if_loaded(mon, 30.)
     sentbytes = 0
     with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
         msg = check_mem_usage()  # warn if too much memory is used
