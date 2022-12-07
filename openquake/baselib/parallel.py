@@ -194,6 +194,7 @@ import collections
 from unittest import mock
 import multiprocessing.dummy
 import multiprocessing.shared_memory as shmem
+from multiprocessing.connection import wait
 import subprocess
 import psutil
 import threading
@@ -211,9 +212,8 @@ from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp, engine_version)
+    gettemp, engine_version, mp as mp_context)
 
-mp_context = multiprocessing.get_context('spawn')
 sys.setrecursionlimit(2000)  # raised to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
@@ -1017,6 +1017,25 @@ def split_task(elements, func, args, duration, outs_per_task, monitor):
                 ls.weight = sum(getattr(el, 'weight', 1.) for el in els)
                 yield (func, ls) + args
             break
+
+
+def multispawn(func, allargs, num_cores=Starmap.num_cores):
+    """
+    Spawn processes with the given arguments
+    """
+    procs = {} # sentinel -> process
+    while allargs:
+        args = allargs.pop()
+        proc = mp_context.Process(target=func, args=args)
+        proc.start()
+        procs[proc.sentinel] = proc
+        while len(procs) > num_cores:  # wait for something to finish
+            for finished in wait(procs):
+                del procs[finished]
+    while procs:
+        for finished in wait(procs):
+            del procs[finished]
+
 
 #                             start/stop workers                             #
 
