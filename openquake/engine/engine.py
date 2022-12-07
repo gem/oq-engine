@@ -403,7 +403,6 @@ def run_jobs(jobctxs):
                     proc = general.mp.Process(target=run_calc, args=args)
                     proc.start()
                     logging.info('Started %s' % str(args))
-                    time.sleep(10)
                     procs.append(proc)
             finally:
                 for proc in procs:

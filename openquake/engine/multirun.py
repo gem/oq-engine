@@ -1,0 +1,47 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# 
+# Copyright (C) 2022, GEM Foundation
+# 
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import sys
+import time
+from openquake.baselib import sap
+from openquake.engine.engine import create_jobs, run_jobs
+from openquake.server import dbserver
+
+# for instance, to run the demos in parallel:
+# python -m openquake.engine.multirun demos/hazard
+def main(dirname, job_ini='job.ini'):
+    assert os.path.exists(dirname), dirname
+    inis = []
+    for cwd, dirs, files in os.walk(dirname):
+        for f in files:
+            if f == job_ini:
+                inis.append(os.path.join(cwd, f))
+    if not inis:
+        sys.exit('No %s files found' % job_ini)
+    print('running ' + ' '.join(inis))
+
+    dbserver.ensure_on()
+    t0 = time.time()
+    ctxs = run_jobs(create_jobs(inis, multi=True))
+    dt = time.time() - t0
+    print([ctx.calc_id for ctx in ctxs])
+    print('Total time: %d minutes' % round(dt/60))
+
+if __name__ == '__main__':
+    sap.run(main)
