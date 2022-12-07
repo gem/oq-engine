@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Some Source Model"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <simpleFaultSource
+            id="1"
+            name="Mount Diablo Thrust"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            -121.8229 37.7301 -122.0388 37.8771
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        4.500000000E+01
+                    </dip>
+                    <upperSeismoDepth>
+                        1.000000000E+01
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        2.000000000E+01
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.500000000E+00
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="1.000000000E-01"
+                minMag="5.000000000E+00"
+                >
+                    <occurRates>
+                        1.061498900E-03 8.829162700E-04 7.343777700E-04 6.108288000E-04 5.080653000E-04
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    3.000000000E+01
+                </rake>
+            </simpleFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
