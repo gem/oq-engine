@@ -1029,7 +1029,7 @@ def multispawn(func, allargs, num_cores=Starmap.num_cores):
         proc = mp_context.Process(target=func, args=args)
         proc.start()
         procs[proc.sentinel] = proc
-        while len(procs) > num_cores:  # wait for something to finish
+        while len(procs) >= num_cores:  # wait for something to finish
             for finished in wait(procs):
                 del procs[finished]
     while procs:

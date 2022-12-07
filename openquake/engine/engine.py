@@ -397,7 +397,7 @@ def run_jobs(jobctxs):
             logs.dbcmd('workers_start', config.zworkers)  # start the workers
         allargs = [(ctx,) for ctx in jobctxs]
         if jobarray and OQ_DISTRIBUTE != 'no':
-            parallel.multispawn(run_calc, allargs, num_cores=5)
+            parallel.multispawn(run_calc, allargs, num_cores=3)
         else:
             for job in jobctxs:
                 run_calc(job)
