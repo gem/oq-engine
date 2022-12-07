@@ -49,6 +49,7 @@ from openquake.commonlib import readinput
 from openquake.calculators import base, export
 from openquake.commonlib import logs
 
+USER = getpass.getuser()
 OQ_API = 'https://api.openquake.org'
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
@@ -81,7 +82,7 @@ def set_concurrent_tasks_default(calc):
         return
 
     num_workers = sum(total for host, running, total
-                      in parallel.workers_wait())
+                      in parallel.workers_wait(config.zworkers))
     if num_workers == 0:
         logging.critical("No live compute nodes, aborting calculation")
         logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
@@ -93,7 +94,7 @@ def set_concurrent_tasks_default(calc):
     logging.warning('Using %d %s workers', num_workers, OQ_DISTRIBUTE)
 
 
-def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
+def expose_outputs(dstore, owner=USER, status='complete'):
     """
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
@@ -171,10 +172,6 @@ def manage_signals(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
-    # Disable further CTRL-C to allow tasks revocation when Celery is used
-    if OQ_DISTRIBUTE == 'celery':
-        signal.signal(signal.SIGINT, inhibitSigInt)
-
     if signum == signal.SIGINT:
         parallel.workers_stop(config.zworkers)
         raise MasterKilled('The openquake master process was killed manually')
@@ -222,7 +219,7 @@ def poll_queue(job_id, poll_time):
         first_time = True
         while True:
             running = logs.dbcmd(GET_JOBS, host)
-            previous = [job for job in running if job.id < job_id - offset]
+            previous = [job.id for job in running if job.id < job_id - offset]
             if previous:
                 if first_time:
                     logs.dbcmd('update_job', job_id,
@@ -260,7 +257,7 @@ def run_calc(log):
         except Exception:  # gaierror
             hostname = 'localhost'
         logging.info('%s@%s running %s [--hc=%s]',
-                     getpass.getuser(),
+                     USER,
                      hostname,
                      calc.oqparam.inputs['job_ini'],
                      calc.oqparam.hazard_calculation_id)
@@ -294,7 +291,7 @@ def run_calc(log):
 
 
 def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
-                user_name=None, hc_id=None, multi=False, host=None):
+                user_name=USER, hc_id=None, multi=False, host=None):
     """
     Create job records on the database.
 
@@ -398,7 +395,7 @@ def run_jobs(jobctxs):
             print('Asking the DbServer to start the workers %s' %
                   config.zworkers.host_cores)
             logs.dbcmd('workers_start', config.zworkers)  # start the workers
-        allargs = [(job,) for job in jobctxs]
+        allargs = [(ctx,) for ctx in jobctxs]
         if jobarray and OQ_DISTRIBUTE != 'no':
             procs = []
             try:
@@ -416,9 +413,11 @@ def run_jobs(jobctxs):
                 run_calc(job)
         cleanup('stop')
     except Exception:
-        for ctx in jobctxs:
-            logs.dbcmd("""UPDATE job SET status='failed' WHERE id=%d AND
-            status IN ('created', 'executing')""" % ctx.calc_id)
+        ids = [jc.calc_id for jc in jobctxs]
+        rows = logs.dbcmd("SELECT id FROM job WHERE id IN (?X) "
+                          "AND status IN ('created', 'executing')", ids)
+        for job_id, in rows:
+            logs.dbcmd("set_status", job_id, 'failed')
         cleanup('kill')
         raise
     return jobctxs
@@ -475,8 +474,8 @@ def check_obsolete_version(calculation_mode='WebUI'):
 
 if __name__ == '__main__':
     from openquake.server import dbserver
-    # run a job object stored in a pickle file, called by job.yaml
+    # run a LogContext object stored in a pickle file, called by job.yaml
     with open(sys.argv[1], 'rb') as f:
-        job = pickle.load(f)
+        jobctx = pickle.load(f)
     dbserver.ensure_on()
-    run_jobs([job])
+    run_jobs([jobctx])
