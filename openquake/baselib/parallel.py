@@ -1003,6 +1003,7 @@ def multispawn(func, allargs, num_cores=Starmap.num_cores):
     """
     Spawn processes with the given arguments
     """
+    allargs = allargs[::-1]  # so that the first argument is submitted first
     procs = {} # sentinel -> process
     while allargs:
         args = allargs.pop()
