@@ -40,9 +40,8 @@ def main(dirname, job_ini='job.ini'):
     t0 = time.time()
     ctxs = run_jobs(create_jobs(inis, multi=True))
     dt = time.time() - t0
-    print(' '.join(str(ctx.calc_id) for ctx in ctxs))
     print('Total time: %.1f minutes' % (dt/60))
-
+    return [(ctx.calc_id, ini) for ctx, ini in zip(ctxs, inis)]
 
 if __name__ == '__main__':
     sap.run(main)
