@@ -386,6 +386,7 @@ def export_cond_spectra(ekey, dstore):
     return fnames
 
 
+# TODO: see if I can remove this
 def _extract(hmap, imt, j):
     # hmap[imt] can be a tuple or a scalar if j=0
     tup = hmap[imt]

@@ -82,6 +82,11 @@ This feature is available on _Linux only_ and the WebUI process owner must be me
 
 Mapping of unix groups isn't supported at the moment.
 
+#### Add a web path prefix to webui
+
+To add a web path prefix to the usual webui web path set ``WEBUI_PATHPREFIX`` variable into ``openquake/server/local_settings.py`` to a prefix path starting with ``/`` and ending without it (e.g. ``'/path/prefix'``); the same variable should be set as environment variable.
+
+
 ## Running in production
 
 On a production system [nginx](http://nginx.org/en/) + [gunicorn](http://gunicorn.org/) is the recommended software stack to run the WebUI.

@@ -234,24 +234,26 @@ def install_standalone(venv):
     for app in 'oq-platform-standalone oq-platform-ipt \
         oq-platform-taxonomy oq-platform-taxtweb openquake.taxonomy'.split():
         try:
-            print("Applications " +  app + " are not installed yet \n")
+            print("Applications " + app + " are not installed yet \n")
 
             subprocess.check_call([pycmd, '-m', 'pip', 'install',
-                            '--find-links', URL_STANDALONE, app])
+                                   '--find-links', URL_STANDALONE, app])
         except Exception as exc:
             print('%s: could not install %s' % (exc, app))
 
 
-def before_checks(inst, port, remove, usage):
+def before_checks(inst, venv, port, remove, usage):
     """
     Checks to perform before the installation
     """
+    if venv:
+        inst.VENV = os.path.abspath(os.path.expanduser(venv))
     if port:
         inst.DBPORT = int(port)
 
     # check python version
-    if PYVER < (3, 6):
-        sys.exit('Error: you need at least Python 3.6, but you have %s' %
+    if PYVER < (3, 8):
+        sys.exit('Error: you need at least Python 3.8, but you have %s' %
                  '.'.join(map(str, sys.version_info)))
 
     # check platform
@@ -511,6 +513,7 @@ if __name__ == '__main__':
                         choices=['server', 'user', 'devel', 'devel_server'],
                         nargs='?',
                         help='the kind of installation you want')
+    parser.add_argument("--venv", help="venv directory")
     parser.add_argument("--remove",  action="store_true",
                         help="disinstall the engine")
     parser.add_argument("--version",
@@ -520,7 +523,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.inst:
         inst = globals()[args.inst]
-        before_checks(inst, args.dbport, args.remove, parser.format_usage())
+        before_checks(inst, args.venv, args.dbport, args.remove,
+                      parser.format_usage())
         if args.remove:
             remove(inst)
         else:

@@ -22,10 +22,7 @@ import pickle
 import toml
 import copy
 import logging
-try:
-    from dataclasses import dataclass
-except ImportError:  # in Python 3.6
-    from openquake.baselib.python3compat import dataclass
+from dataclasses import dataclass
 import numpy
 
 from openquake.hazardlib.source.multi_fault import MultiFaultSource
@@ -46,6 +43,10 @@ source_dt = numpy.dtype([('source_id', U32), ('num_ruptures', U32),
 KNOWN_MFDS = ('incrementalMFD', 'truncGutenbergRichterMFD',
               'arbitraryMFD', 'YoungsCoppersmithMFD', 'multiMFD',
               'taperedGutenbergRichterMFD')
+
+EXCLUDE_FROM_GEOM_PROPS = (
+    'Polygon', 'Point', 'MultiPoint', 'LineString', '3D MultiLineString',
+    '3D MultiPolygon', 'posList')
 
 
 def extract_dupl(values):
@@ -302,8 +303,8 @@ class SourceGroup(collections.abc.Sequence):
         return toml.dumps(dic)
 
     def __repr__(self):
-        return '<%s %s, %d source(s)>' % (
-            self.__class__.__name__, self.trt, len(self.sources))
+        return '<%s %s, %d source(s), weight=%d>' % (
+            self.__class__.__name__, self.trt, len(self.sources), self.weight)
 
     def __lt__(self, other):
         """
@@ -1245,6 +1246,7 @@ class Row:
     id: str
     name: str
     code: str
+    groupname: str
     tectonicregion: str
     mfd: str
     magscalerel: str
@@ -1253,6 +1255,10 @@ class Row:
     lowerseismodepth: float
     nodalplanedist: list
     hypodepthdist: list
+    hypoList: list
+    slipList: list
+    rake: float
+    geomprops: list
     geom: str
     coords: list
     wkt: str
@@ -1318,19 +1324,55 @@ class RowConverter(SourceConverter):
     def convert_hddist(self, node):
         lst = []
         for w, hd in super().convert_hddist(node).data:
-            lst.append(dict(probability=w, hypodepth=hd))
+            lst.append(dict(probability=w, depth=hd))
         return str(lst)
+
+    def convert_hypolist(self, node):
+        try:
+            hypo_list = node.hypoList
+        except AttributeError:
+            lst = []
+        else:
+            lst = [{'alongStrike': hl['alongStrike'],
+                    'downDip': hl['downDip'],
+                    'weight': hl['weight']} for hl in hypo_list]
+        return str(lst)
+
+    def convert_sliplist(self, node):
+        try:
+            slip_list = node.slipList
+        except AttributeError:
+            lst = []
+        else:
+            lst = [node_to_dict(n)['slip'] for n in slip_list.nodes]
+        return str(lst)
+
+    def convert_rake(self, node):
+        try:
+            return ~node.rake
+        except AttributeError:
+            return ''
+
+    def convert_geomprops(self, node):
+        # NOTE: node_to_dict(node) returns a dict having the geometry type as
+        # key and the corresponding properties as value, so we get the first
+        # value to retrieve the information we need
+        full_geom_props = list(node_to_dict(node).values())[0]
+        geom_props = {k: full_geom_props[k] for k in full_geom_props
+                      if k not in EXCLUDE_FROM_GEOM_PROPS}
+        return str(geom_props)
 
     def convert_areaSource(self, node):
         geom = node.areaGeometry
         coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
-        coords += [coords[0]]  # close the polygon
-        # TODO: area_discretization = geom.attrib.get('discretization')
+        if coords[0] != coords[-1]:
+            coords += [coords[0]]  # close the polygon
         return Row(
             node['id'],
             node['name'],
             'A',
-            node['tectonicRegion'],
+            node.get('groupname', ''),
+            node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
             ~node.ruptAspectRatio,
@@ -1338,6 +1380,10 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
+            self.convert_hypolist(node),
+            self.convert_sliplist(node),
+            self.convert_rake(node),
+            self.convert_geomprops(geom),
             'Polygon', [coords])
 
     def convert_pointSource(self, node):
@@ -1346,7 +1392,8 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'P',
-            node['tectonicRegion'],
+            node.get('groupname', ''),
+            node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
             ~node.ruptAspectRatio,
@@ -1354,6 +1401,10 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
+            self.convert_hypolist(node),
+            self.convert_sliplist(node),
+            self.convert_rake(node),
+            self.convert_geomprops(geom),
             'Point', ~geom.Point.pos)
 
     def convert_multiPointSource(self, node):
@@ -1363,7 +1414,8 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'M',
-            node['tectonicRegion'],
+            node.get('groupname', ''),
+            node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
             ~node.ruptAspectRatio,
@@ -1371,6 +1423,10 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
+            self.convert_hypolist(node),
+            self.convert_sliplist(node),
+            self.convert_rake(node),
+            self.convert_geomprops(geom),
             'MultiPoint', coords)
 
     def convert_simpleFaultSource(self, node):
@@ -1379,14 +1435,19 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'S',
-            node['tectonicRegion'],
+            node.get('groupname', ''),
+            node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
-            [{'dip': ~geom.dip, 'rake': ~node.rake}],
             [],
+            [],
+            self.convert_hypolist(node),
+            self.convert_sliplist(node),
+            self.convert_rake(node),
+            self.convert_geomprops(geom),
             'LineString', [(p.x, p.y) for p in self.geo_line(geom)])
 
     def convert_complexFaultSource(self, node):
@@ -1398,14 +1459,19 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'C',
-            node['tectonicRegion'],
+            node.get('groupname', ''),
+            node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             numpy.nan,
             numpy.nan,
-            [{'rake': ~node.rake}],
             [],
+            [],
+            self.convert_hypolist(node),
+            self.convert_sliplist(node),
+            self.convert_rake(node),
+            self.convert_geomprops(geom),
             '3D MultiLineString', edges)
 
     def convert_characteristicFaultSource(self, node):
@@ -1426,7 +1492,8 @@ class RowConverter(SourceConverter):
             node['id'],
             node['name'],
             'X',
-            node['tectonicRegion'],
+            node.get('groupname', ''),
+            node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             numpy.nan,
             numpy.nan,
@@ -1434,6 +1501,10 @@ class RowConverter(SourceConverter):
             numpy.nan,
             [{'rake': ~node.rake}],
             [],
+            self.convert_hypolist(node),
+            self.convert_sliplist(node),
+            self.convert_rake(node),
+            self.convert_geomprops(node.surface),
             geom, coords, '')
 
     def convert_nonParametricSeismicSource(self, node):
@@ -1448,7 +1519,7 @@ class RowConverter(SourceConverter):
     def convert_multiFaultSource(self, node):
         mfs = super().convert_multiFaultSource(node)
         return NPRow(node['id'], node['name'], 'F',
-                     node['tectonicRegion'], 'Polygon', mfs, '')
+                     node.get('tectonicRegion', ''), 'Polygon', mfs, '')
 
 # ################### MultiPointSource conversion ######################## #
 

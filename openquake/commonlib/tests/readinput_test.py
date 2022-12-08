@@ -508,8 +508,8 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
 class SitecolAssetcolTestCase(unittest.TestCase):
 
     def setUp(self):
-        # cleanup evil global
-        readinput.exposure = None
+        # cleanup evil globals
+        readinput.Global.reset()
 
     def test_grid_site_model_exposure(self):
         oq = readinput.get_oqparam('job.ini', case_16)

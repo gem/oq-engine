@@ -51,12 +51,7 @@ class CoeffsTable(object):
         ...
     KeyError: 'PGX'
 
-    Note that :class:`CoeffsTable` only accepts keyword arguments:
-
-    >>> CoeffsTable()
-    Traceback (most recent call last):
-        ...
-    TypeError: __init__() missing 1 required positional argument: 'table'
+    Note that :class:`CoeffsTable` requires passing the arguments explicitly.
 
     >>> CoeffsTable(table='', foo=1)
     Traceback (most recent call last):

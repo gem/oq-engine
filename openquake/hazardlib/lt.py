@@ -89,7 +89,8 @@ def incMFD(utype, node, filename):
 def trucMFDFromSlip_absolute(utype, node, filename):
     slip_rate, rigidity = (node.faultActivityData["slipRate"],
                            node.faultActivityData["rigidity"])
-    return slip_rate, rigidity
+    const_term = float(node.faultActivityData.get("constant_term", 9.1))
+    return slip_rate, rigidity, const_term
 
 
 @parse_uncertainty.add('setMSRAbsolute')
@@ -287,9 +288,10 @@ def _incMFD_absolute(utype, source, value):
 
 @apply_uncertainty.add('truncatedGRFromSlipAbsolute')
 def _trucMFDFromSlip_absolute(utype, source, value):
-    slip_rate, rigidity = value
+    slip_rate, rigidity, const_term = value
     source.modify('adjust_mfd_from_slip', dict(slip_rate=slip_rate,
-                                               rigidity=rigidity))
+                                               rigidity=rigidity,
+                                               constant_term=const_term))
 
 
 @apply_uncertainty.add('setMSRAbsolute')
