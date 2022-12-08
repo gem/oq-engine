@@ -98,8 +98,8 @@ def _set_poes(mean_std, loglevels, phi_b, out):
             if phi_b == 0.5:
                 out[mL1 + lvl] = iml <= mea  # shape N
             else:
-                truncnorm_sf = (phi_b - ndtr((iml - mea) / std)) / z
-                out[mL1 + lvl] = truncnorm_sf.clip(0, 1)
+                norm_sf = (phi_b - ndtr((iml - mea) / std)) / z
+                out[mL1 + lvl] = norm_sf.clip(0, 1)
 
 
 def _get_poes(mean_std, loglevels, phi_b):
