@@ -31,7 +31,7 @@ import numpy
 from openquake.baselib.general import DeprecationWarning
 from openquake.baselib.performance import compile
 from openquake.hazardlib import const
-from openquake.hazardlib.stats import _truncnorm_sf
+from openquake.hazardlib.stats import ndtr
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, full_context, ContextMaker)
@@ -88,24 +88,25 @@ class AdaptedWarning(UserWarning):
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then _truncnorm_sf will be called less times
 @compile("(float64[:,:,:], float64[:,:], float64, float64[:,:])")
-def _set_poes(mean_std, loglevels, truncation_level, out):
+def _set_poes(mean_std, loglevels, phi_b, out):
+    z = phi_b * 2. - 1.
     L1 = loglevels.size // len(loglevels)
     for m, levels in enumerate(loglevels):
         mL1 = m * L1
         mea, std = mean_std[:, m]  # shape N
         for lvl, iml in enumerate(levels):
-            if truncation_level == 0.:
+            if phi_b == 0.5:
                 out[mL1 + lvl] = iml <= mea  # shape N
             else:
-                out[mL1 + lvl] = _truncnorm_sf(  # shape N
-                    truncation_level, (iml - mea) / std)
+                truncnorm_sf = (phi_b - ndtr((iml - mea) / std)) / z
+                out[mL1 + lvl] = truncnorm_sf.clip(0, 1)
 
 
-def _get_poes(mean_std, loglevels, truncation_level):
+def _get_poes(mean_std, loglevels, phi_b):
     # returns a matrix of shape (N, L)
     N = mean_std.shape[2]  # shape (2, M, N)
     out = numpy.zeros((loglevels.size, N))  # shape (L, N)
-    _set_poes(mean_std, loglevels, truncation_level, out)
+    _set_poes(mean_std, loglevels, phi_b, out)
     return out.T
     
 
@@ -472,11 +473,8 @@ class GMPE(GroundShakingIntensityModel):
             unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         """
         loglevels = cmaker.loglevels.array
-        truncation_level = cmaker.truncation_level
+        phi_b = cmaker.phi_b
         M, L1 = loglevels.shape
-        if truncation_level is not None and truncation_level < 0:
-            raise ValueError('truncation level must be zero, positive number '
-                             'or None')
         if hasattr(self, 'weights_signs'):  # for nshmp_2014, case_72
             outs = []
             weights, signs = zip(*self.weights_signs)
@@ -484,16 +482,16 @@ class GMPE(GroundShakingIntensityModel):
                 ms = numpy.array(mean_std)  # make a copy
                 for m in range(len(loglevels)):
                     ms[0, m] += s * cmaker.adj[self][cmaker.slc]
-                outs.append(_get_poes(ms, loglevels, truncation_level))
+                outs.append(_get_poes(ms, loglevels, phi_b))
             out[:] = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):
             for f, w in zip(self.mixture_model["factors"],
                             self.mixture_model["weights"]):
                 mean_stdi = numpy.array(mean_std)  # a copy
                 mean_stdi[1] *= f  # multiply stddev by factor
-                out[:] += w * _get_poes(mean_stdi, loglevels, truncation_level)
+                out[:] += w * _get_poes(mean_stdi, loglevels, phi_b)
         else:  # regular case
-            _set_poes(mean_std, loglevels, truncation_level, out.T)
+            _set_poes(mean_std, loglevels, phi_b, out.T)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
         for m, imt in enumerate(cmaker.imtls):
             mL1 = m * L1
