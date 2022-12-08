@@ -106,7 +106,7 @@ def _get_poes(mean_std, loglevels, truncation_level):
     return out.T
 
 
-OK_METHODS = ('compute', 'get_mean_and_stddevs', 'get_poes',
+OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes',
               'set_parameters', 'set_tables')
 
 
@@ -448,7 +448,7 @@ class GMPE(GroundShakingIntensityModel):
         """
         raise NotImplementedError
 
-    def get_poes(self, mean_std, cmaker, ctx):
+    def set_poes(self, mean_std, cmaker, ctx, arr):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -461,8 +461,8 @@ class GMPE(GroundShakingIntensityModel):
             A ContextMaker instance, used only in nhsm_2014
         :param ctx:
             A recarray used only in  avg_poe_gmpe
-        :returns:
-            array of PoEs of shape (N, L)
+        :param arr:
+            An array of PoEs of shape (N, L) to be filled
         :raises ValueError:
             If truncation level is not ``None`` and neither non-negative
             float number, and if ``imts`` dictionary contain wrong or
@@ -470,9 +470,7 @@ class GMPE(GroundShakingIntensityModel):
         """
         loglevels = cmaker.loglevels.array
         truncation_level = cmaker.truncation_level
-        N = mean_std.shape[2]  # 2, M, N
         M, L1 = loglevels.shape
-        arr = numpy.zeros((N, M*L1))
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
@@ -500,4 +498,3 @@ class GMPE(GroundShakingIntensityModel):
                 # set by the engine when parsing the gsim logictree
                 # when 0 ignore the contribution: see _build_trts_branches
                 arr[:, mL1:mL1 + L1] = 0
-        return arr

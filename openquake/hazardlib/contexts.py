@@ -1123,7 +1123,7 @@ class ContextMaker(object):
                         if self.af:  # kernel amplification method
                             poes[:, :, g] = get_poes_site(ms, self, ctxt)
                         else:  # regular case
-                            poes[:, :, g] = gsim.get_poes(ms, self, ctxt)
+                            gsim.set_poes(ms, self, ctxt, poes[:, :, g])
                 yield poes, ctxt, slcsids
 
     def estimate_sites(self, src, sites):
