@@ -107,7 +107,7 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fit in the CPU cache
     """
-    maxs = TWO20 // (16*M*G)
+    maxs = TWO20 // (8*M*G)
     assert maxs > 1, maxs
     return maxs
 
@@ -1085,10 +1085,7 @@ class ContextMaker(object):
         :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
         """
         # NB: we are carefully trying to save memory here
-        # for instance, for the GLD model, the parameters are as follows:
-        # M=6, L1=20, G=3, len(ctx)=7_474_634, ctx.nbytes=513.24 MB
-        # maxsize=3640, #bigslices=2054, mean_stdt.nbytes=2 MB,
-        # poes.nbytes=0.5 MB, allsids.nbytes=ctx.sids.nbytes=28.51 MB
+        # see case_39
         from openquake.hazardlib.site_amplification import get_poes_site
         (M, L1), G = self.loglevels.array.shape, len(self.gsims)
         maxsize = get_maxsize(M, G)
@@ -1108,14 +1105,13 @@ class ContextMaker(object):
         for bigslc in bigslices:
             s = bigslc.start
             with self.gmf_mon:
-                # this is allocating at most 2MB of RAM
                 mean_stdt = self.get_mean_stds([ctx[bigslc]])
             for slc in gen_slices(bigslc.start, bigslc.stop, maxsize // L1):
                 slcsids = allsids[slc]
                 ctxt = ctx[slc]
                 self.slc = slice(slc.start - s, slc.stop - s)  # in get_poes
                 with self.poe_mon:
-                    # this is allocating at most 2MB of RAM
+                    # this is allocating at most 4MB of RAM
                     poes = numpy.zeros((len(ctxt), M*L1, G))
                     for g, gsim in enumerate(self.gsims):
                         ms = mean_stdt[:2, g, :, self.slc]
