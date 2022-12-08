@@ -92,13 +92,13 @@ def _set_poes(mean_std, loglevels, truncation_level, out):
     L1 = loglevels.size // len(loglevels)
     for m, levels in enumerate(loglevels):
         mL1 = m * L1
-        mean, std = mean_std[:, m]  # shape N
-        for n, mea in enumerate(mean):
+        mea, std = mean_std[:, m]  # shape N
+        for lvl, iml in enumerate(levels):
             if truncation_level == 0.:
-                out[mL1:mL1 + L1, n] = levels <= mea  # shape L1
+                out[mL1 + lvl] = iml <= mea  # shape N
             else:
-                out[mL1:mL1 + L1, n] = _truncnorm_sf(  # shape L1
-                    truncation_level, (levels - mea) / std[n])
+                out[mL1 + lvl] = _truncnorm_sf(  # shape N
+                    truncation_level, (iml - mea) / std)
 
 
 def _get_poes(mean_std, loglevels, truncation_level):
