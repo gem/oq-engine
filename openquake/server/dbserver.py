@@ -61,7 +61,8 @@ class DbServer(object):
                     if len(args) == 2:
                         arglist = ssh(*args)
                         subprocess.Popen(arglist, start_new_session=True,
-                                         env={'NUMBA_CACHE_DIR': '/tmp'})
+                                         env={'NUMBA_CACHE_DIR': '/tmp',
+                                              'OQ_DATADIR': '/tmp'})
                         sock.send('Sent %s' % ' '.join(arglist))
                     else:
                         sock.send('Unknown %s', cmd_)
