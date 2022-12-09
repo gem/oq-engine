@@ -203,7 +203,9 @@ class Collapser(object):
         :param collapse_level: if None, use .collapse_level
         :returns: the collapsed array and a list of arrays with site IDs
         """
-        ctx['mdbin'] = self.calc_mdbin(ctx)
+        ctx.mdbin = self.calc_mdbin(ctx)
+        #u, c = numpy.unique(ctx.mdbin, return_counts=True)
+        #print('---------', c.mean())
         clevel = (collapse_level if collapse_level is not None
                   else self.collapse_level)
         if not rup_indep or clevel < 0:
