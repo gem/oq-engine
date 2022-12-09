@@ -49,6 +49,8 @@ task_info_dt = numpy.dtype(
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
 
+F16= numpy.float16
+F64= numpy.float64
 I64 = numpy.int64
 
 PStatData = collections.namedtuple(
@@ -519,7 +521,7 @@ def kmean(array, kfields, mfields, afield=''):
     for kfield in kfields:
         assert kfield in allnames, kfield
         dt = array.dtype[kfield]
-        klist.append((kfield, dt if dt != numpy.float64 else numpy.float16))
+        klist.append((kfield, dt if dt != F64 else F16))
     for mfield in mfields:
         assert mfield in allnames, mfield
         dt = array.dtype[mfield]
@@ -529,7 +531,8 @@ def kmean(array, kfields, mfields, afield=''):
         k_array[kfield] = array[kfield]
     uniq, indices, counts = numpy.unique(
         k_array, return_inverse=True, return_counts=True)
-    res = numpy.zeros(len(uniq), klist)
+    res = numpy.zeros(len(uniq), [(k, F64 if dt == F16 else dt)
+                                  for (k, dt) in klist])
     for kfield in kfields:
         res[kfield] = uniq[kfield]
     for mfield in mfields:
