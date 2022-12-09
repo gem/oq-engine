@@ -1108,12 +1108,12 @@ class ContextMaker(object):
             s = bigslc.start
             with self.gmf_mon:
                 mean_stdt = self.get_mean_stds([ctx[bigslc]])
-            for slc in gen_slices(bigslc.start, bigslc.stop, maxsize // L1):
+            for slc in gen_slices(bigslc.start, bigslc.stop, maxsize // (4*L1)):
                 slcsids = allsids[slc]
                 ctxt = ctx[slc]
                 self.slc = slice(slc.start - s, slc.stop - s)  # in get_poes
                 with self.poe_mon:
-                    # this is allocating at most 4MB of RAM
+                    # this is allocating at most 1MB of RAM
                     poes = numpy.zeros((len(ctxt), M*L1, G))
                     for g, gsim in enumerate(self.gsims):
                         ms = mean_stdt[:2, g, :, self.slc]
