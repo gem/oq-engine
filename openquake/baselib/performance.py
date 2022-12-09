@@ -508,30 +508,29 @@ def split_array(arr, indices, counts=None):
 
 
 # this is fast
-def kmean(structured_array, kfield, uniq_indices_counts=()):
+def kmean(array, kfield, afield=''):
     """
     Given a structured array of N elements with a discrete kfield with
     K <= N unique values, returns a structured array of K elements
     obtained by averaging the values associated to the kfield.
     """
-    allnames = structured_array.dtype.names
+    allnames = array.dtype.names
     assert kfield in allnames, kfield
-    if uniq_indices_counts:
-        uniq, indices, counts = uniq_indices_counts
-    else:
-        uniq, indices, counts = numpy.unique(
-            structured_array[kfield], return_inverse=True, return_counts=True)
+    uniq, indices, counts = numpy.unique(
+        array[kfield], return_inverse=True, return_counts=True)
     dic = {}
     dtlist = []
     for name in allnames:
         if name == kfield:
             dic[kfield] = uniq
         else:
-            values = structured_array[name]
+            values = array[name]
             dic[name] = fast_agg(indices, values) / (
                 counts if len(values.shape) == 1 else counts.reshape(-1, 1))
-        dtlist.append((name, structured_array.dtype[name]))
+        dtlist.append((name, array.dtype[name]))
     res = numpy.zeros(len(uniq), dtlist)
     for name in dic:
         res[name] = dic[name]
+    if afield:
+        return res, split_array(array[afield], indices, counts)
     return res

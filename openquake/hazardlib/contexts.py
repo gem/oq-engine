@@ -204,8 +204,6 @@ class Collapser(object):
         :returns: the collapsed array and a list of arrays with site IDs
         """
         ctx.mdbin = self.calc_mdbin(ctx)
-        #u, c = numpy.unique(ctx.mdbin, return_counts=True)
-        #print('---------', c.mean())
         clevel = (collapse_level if collapse_level is not None
                   else self.collapse_level)
         if not rup_indep or clevel < 0:
@@ -214,34 +212,9 @@ class Collapser(object):
             self.cfactor[1] += len(ctx)
             return ctx, ctx.sids.reshape(-1, 1)
 
-        # names are mag, rake, vs30, rjb, mdbin, sids, ...
-        relevant = set(ctx.dtype.names) - IGNORE_PARAMS
-        if all(trivial(ctx, param) for param in relevant):
-            # collapse all
-            far = ctx
-            close = numpy.zeros(0, ctx.dtype)
-            self.nfull += 1
-        else:
-            # collapse far away ruptures
-            dst = ctx.mag * 10 * self.collapse_level
-            far = ctx[ctx.rrup >= dst]
-            close = ctx[ctx.rrup < dst]
-            self.npartial += 1
-        C = len(close)
-        if len(far):
-            uic = numpy.unique(  # this is fast
-                far['mdbin'], return_inverse=True, return_counts=True)
-            mean = kmean(far, 'mdbin', uic)
-        else:
-            mean = numpy.zeros(0, ctx.dtype)
-        self.cfactor[0] += len(close) + len(mean)
+        out, allsids = kmean(ctx, 'mdbin', 'sids')
+        self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
-        out = numpy.zeros(len(close) + len(mean), ctx.dtype)
-        out[:C] = close
-        out[C:] = mean
-        allsids = [[sid] for sid in close['sids']]
-        if len(far):  # this is slow
-            allsids.extend(split_array(far['sids'], uic[1], uic[2]))
         # print(len(out), len(ctx))
         return out.view(numpy.recarray), allsids
 
