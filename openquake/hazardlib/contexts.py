@@ -37,6 +37,7 @@ from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import (
     registry, get_pnes, FatedTOM, NegativeBinomialTOM)
+from openquake.hazardlib.stats import ndtr
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
@@ -107,7 +108,7 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fit in the CPU cache
     """
-    maxs = TWO20 // (16*M*G)
+    maxs = TWO20 // (8*M*G)
     assert maxs > 1, maxs
     return maxs
 
@@ -382,6 +383,7 @@ class ContextMaker(object):
         self.ses_seed = param.get('ses_seed', 42)
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
         self.truncation_level = param.get('truncation_level', 99.)
+        self.phi_b = ndtr(self.truncation_level)
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
@@ -1085,10 +1087,7 @@ class ContextMaker(object):
         :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
         """
         # NB: we are carefully trying to save memory here
-        # for instance, for the GLD model, the parameters are as follows:
-        # M=6, L1=20, G=3, len(ctx)=7_474_634, ctx.nbytes=513.24 MB
-        # maxsize=3640, #bigslices=2054, mean_stdt.nbytes=2 MB,
-        # poes.nbytes=0.5 MB, allsids.nbytes=ctx.sids.nbytes=28.51 MB
+        # see case_39
         from openquake.hazardlib.site_amplification import get_poes_site
         (M, L1), G = self.loglevels.array.shape, len(self.gsims)
         maxsize = get_maxsize(M, G)
@@ -1108,14 +1107,13 @@ class ContextMaker(object):
         for bigslc in bigslices:
             s = bigslc.start
             with self.gmf_mon:
-                # this is allocating at most 2MB of RAM
                 mean_stdt = self.get_mean_stds([ctx[bigslc]])
             for slc in gen_slices(bigslc.start, bigslc.stop, maxsize // L1):
                 slcsids = allsids[slc]
                 ctxt = ctx[slc]
                 self.slc = slice(slc.start - s, slc.stop - s)  # in get_poes
                 with self.poe_mon:
-                    # this is allocating at most 2MB of RAM
+                    # this is allocating at most 4MB of RAM
                     poes = numpy.zeros((len(ctxt), M*L1, G))
                     for g, gsim in enumerate(self.gsims):
                         ms = mean_stdt[:2, g, :, self.slc]
@@ -1123,7 +1121,7 @@ class ContextMaker(object):
                         if self.af:  # kernel amplification method
                             poes[:, :, g] = get_poes_site(ms, self, ctxt)
                         else:  # regular case
-                            poes[:, :, g] = gsim.get_poes(ms, self, ctxt)
+                            gsim.set_poes(ms, self, ctxt, poes[:, :, g])
                 yield poes, ctxt, slcsids
 
     def estimate_sites(self, src, sites):
