@@ -58,7 +58,7 @@ KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
 # the following is used in the collapse method
-IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
+IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdbin'}
 MEA = 0
 STD = 1
 
@@ -132,15 +132,6 @@ def trivial(ctx, name):
     return len(numpy.unique(numpy.float32(ctx[name]))) == 1
 
 
-def expand_mdvbin(mdvbin):
-    """
-    :returns: a triple of integers (magbin, distbin, vs30bin)
-    """
-    magbin, rest = numpy.divmod(mdvbin, TWO24)
-    distbin, vs30bin = numpy.divmod(rest, TWO16)
-    return magbin, distbin, vs30bin
-
-
 def sqrscale(x_min, x_max, n):
     """
     :param x_min: minumum value
@@ -176,8 +167,7 @@ class Collapser(object):
     Class managing the collapsing logic.
     """
     mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
-    dist_bins = sqrscale(1, 600, 255)
-    vs30_bins = numpy.linspace(0, 32767, 65536)
+    dist_bins = sqrscale(1, 1000, 65536)
 
     def __init__(self, collapse_level, dist_types, has_vs30=False):
         self.collapse_level = collapse_level
@@ -187,7 +177,7 @@ class Collapser(object):
         self.npartial = 0
         self.nfull = 0
 
-    def calc_mdvbin(self, ctx):
+    def calc_mdbin(self, ctx):
         """
         :param ctx: a RuptureContext or a context array
         :return: an array of dtype numpy.uint32
@@ -195,38 +185,34 @@ class Collapser(object):
         dist = numpy.mean([getattr(ctx, dt) for dt in self.dist_types], axis=0)
         magbin = numpy.searchsorted(self.mag_bins, ctx.mag)
         distbin = numpy.searchsorted(self.dist_bins, dist)
-        if self.has_vs30:
-            vs30bin = numpy.searchsorted(self.vs30_bins, ctx.vs30)
-            return magbin * TWO24 + distbin * TWO16 + vs30bin
-        else:  # in test_collapse_area
-            return magbin * TWO24 + distbin * TWO16
+        return magbin * TWO16 + distbin
 
-    def expand(self, mdvbin):
+    def expand(self, mdbin):
         """
-        :returns: mag, dist and vs30 corresponding to mdvbin
+        :returns: mag and dist corresponding to mdbin
         """
-        mbin, dbin, vbin = expand_mdvbin(mdvbin)
-        return self.mag_bins[mbin], self.dist_bins[dbin], self.vs30bins[vbin]
+        mbin, dbin = numpy.divmod(mdbin, TWO16)
+        return self.mag_bins[mbin], self.dist_bins[dbin]
 
     def collapse(self, ctx, rup_indep, collapse_level=None):
         """
         Collapse a context recarray if possible.
 
-        :param ctx: a recarray with fields "mdvbin" and "sids"
+        :param ctx: a recarray with fields "mdbin" and "sids"
         :param rup_indep: False if the ruptures are mutually exclusive
         :param collapse_level: if None, use .collapse_level
         :returns: the collapsed array and a list of arrays with site IDs
         """
-        ctx['mdvbin'] = self.calc_mdvbin(ctx)
+        ctx['mdbin'] = self.calc_mdbin(ctx)
         clevel = (collapse_level if collapse_level is not None
                   else self.collapse_level)
         if not rup_indep or clevel < 0:
             # no collapse
-            self.cfactor[0] += len(numpy.unique(ctx.mdvbin))
+            self.cfactor[0] += len(numpy.unique(ctx.mdbin))
             self.cfactor[1] += len(ctx)
             return ctx, ctx.sids.reshape(-1, 1)
 
-        # names are mag, rake, vs30, rjb, mdvbin, sids, ...
+        # names are mag, rake, vs30, rjb, mdbin, sids, ...
         relevant = set(ctx.dtype.names) - IGNORE_PARAMS
         if all(trivial(ctx, param) for param in relevant):
             # collapse all
@@ -242,8 +228,8 @@ class Collapser(object):
         C = len(close)
         if len(far):
             uic = numpy.unique(  # this is fast
-                far['mdvbin'], return_inverse=True, return_counts=True)
-            mean = kmean(far, 'mdvbin', uic)
+                far['mdbin'], return_inverse=True, return_counts=True)
+            mean = kmean(far, 'mdbin', uic)
         else:
             mean = numpy.zeros(0, ctx.dtype)
         self.cfactor[0] += len(close) + len(mean)
@@ -425,7 +411,7 @@ class ContextMaker(object):
                 dic[req] = 0.
         dic['src_id'] = U32(0)
         dic['rup_id'] = U32(0)
-        dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
+        dic['mdbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
         dic['weight'] = numpy.float64(0)
@@ -606,7 +592,7 @@ class ContextMaker(object):
                     val = getattr(ctx, par)
                 elif par == 'magi':  # in disaggregation
                     val = magi
-                elif par == 'mdvbin':
+                elif par == 'mdbin':
                     val = 0  # overridden later
                 elif par == 'weight':
                     val = getattr(ctx, par, 0.)

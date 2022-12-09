@@ -65,16 +65,16 @@ class MonitorTestCase(unittest.TestCase):
 class SplitArrayTestCase(unittest.TestCase):
     def test(self):
         # build a small structured array
-        dtlist = [('mdvbin', numpy.uint32), ('rake', numpy.float64),
+        dtlist = [('mdbin', numpy.uint32), ('rake', numpy.float64),
                   ('sids', numpy.uint32)]
         N = 10
         arr = numpy.zeros(N, dtlist)
         rng = numpy.random.default_rng(42)
-        arr['mdvbin'] = rng.integers(50, size=N)
+        arr['mdbin'] = rng.integers(50, size=N)
         arr['rake'] = rng.random(N) * 360
         arr['sids'] = rng.integers(1000, size=N)
         uniq, indices, counts = numpy.unique(
-            arr['mdvbin'], return_inverse=True, return_counts=True)
+            arr['mdbin'], return_inverse=True, return_counts=True)
         sids = split_array(arr['sids'], indices, counts)
         expected_sids = [[631, 858, 450], [276], [887, 554], [92],
                          [827], [227], [63]]

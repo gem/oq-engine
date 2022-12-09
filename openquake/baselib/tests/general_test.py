@@ -209,36 +209,36 @@ class CompressTestCase(unittest.TestCase):
 class KmeanTestCase(unittest.TestCase):
     def test_small(self):
         # build a small structured array
-        dtlist = [('mdvbin', numpy.uint32), ('rake', numpy.float64),
+        dtlist = [('mdbin', numpy.uint32), ('rake', numpy.float64),
                   ('sids', numpy.uint32)]
         N = 10
         arr = numpy.zeros(N, dtlist)
         rng = numpy.random.default_rng(42)
-        arr['mdvbin'] = rng.integers(50, size=N)
+        arr['mdbin'] = rng.integers(50, size=N)
         arr['rake'] = rng.random(N) * 360
         arr['sids'] = rng.integers(1000, size=N)
         sids = []
-        for rec in kmean(arr, 'mdvbin'):
-            sids.append(arr['sids'][arr['mdvbin'] == rec['mdvbin']])
+        for rec in kmean(arr, 'mdbin'):
+            sids.append(arr['sids'][arr['mdbin'] == rec['mdbin']])
         expected_sids = [[450, 858, 631], [276], [554, 887], [92],
                          [827], [227], [63]]
         numpy.testing.assert_equal(sids, expected_sids)
 
     def test_big(self):
         # build a very large structured array
-        dtlist = [('mdvbin', numpy.uint32), ('rake', numpy.float64),
+        dtlist = [('mdbin', numpy.uint32), ('rake', numpy.float64),
                   ('sids', numpy.uint32)]
         N = 10_000_000
         arr = numpy.zeros(N, dtlist)
         rng = numpy.random.default_rng(42)
-        arr['mdvbin'] = rng.integers(50, size=N)
+        arr['mdbin'] = rng.integers(50, size=N)
         arr['rake'] = rng.random(N) * 360
         arr['sids'] = rng.integers(1000, size=N)
         t0 = time.time()
-        mean = kmean(arr, 'mdvbin')
+        mean = kmean(arr, 'mdbin')
         sids = []
-        for mdvbin in mean['mdvbin']:
-            sids.append(arr['sids'][arr['mdvbin'] == mdvbin])
+        for mdbin in mean['mdbin']:
+            sids.append(arr['sids'][arr['mdbin'] == mdbin])
         print([len(s) for s in sids])
         dt = time.time() - t0
         print('Grouped %d elements in %.1f seconds' % (N, dt))
