@@ -18,6 +18,7 @@
 
 import io
 import ast
+import html
 import os.path
 import numbers
 import operator
@@ -107,6 +108,56 @@ def dt(names):
         names = names.split()
     return numpy.dtype([(name, object) for name in names])
 
+class HtmlTable(object):
+    """
+    Convert a sequence header+body into a HTML table.
+    """
+    css = """\
+    tr.evenRow { background-color: lightgreen }
+    tr.oddRow { }
+    th { background-color: lightblue }
+    """
+    maxrows = 5000
+    border = "1"
+    summary = ""
+
+    def __init__(self, header_plus_body, name='noname',
+                 empty_table='Empty table'):
+        header, body = header_plus_body[0], header_plus_body[1:]
+        self.name = name
+        self.empty_table = empty_table
+        rows = []  # rows is a finite sequence of tuples
+        for i, row in enumerate(body):
+            if i == self.maxrows:
+                rows.append(
+                    ["Table truncated because too big: more than %s rows" % i])
+                break
+            rows.append(row)
+        self.rows = rows
+        self.header = tuple(header)  # horizontal header
+
+    def render(self, dummy_ctxt=None):
+        out = "\n%s\n" % "".join(list(self._gen_table()))
+        if not self.rows:
+            out += '<em>%s</em>' % html.escape(self.empty_table, quote=True)
+        return out
+
+    def _gen_table(self):
+        yield '<table id="%s" border="%s" summary="%s" class="tablesorter">\n'\
+              % (self.name, self.border, self.summary)
+        yield '<thead>\n'
+        yield '<tr>%s</tr>\n' % ''.join(
+            '<th>%s</th>\n' % h for h in self.header)
+        yield '</thead>\n'
+        yield '<tbody\n>'
+        for r, row in enumerate(self.rows):
+            yield '<tr class="%s">\n' % ["even", "odd"][r % 2]
+            for col in row:
+                yield '<td>%s</td>\n' % col
+            yield '</tr>\n'
+        yield '</tbody>\n'
+        yield '</table>\n'
+
 
 def text_table(data, header=None, fmt=None, ext='rst'):
     """
@@ -122,7 +173,7 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     | b    | 2     |
     +------+-------+
     """
-    assert ext in 'rst org', ext
+    assert ext in 'rst org html', ext
     if isinstance(data, pandas.DataFrame):
         if data.index.name:
             data = data.reset_index()
@@ -153,6 +204,8 @@ def text_table(data, header=None, fmt=None, ext='rst'):
             raise ValueError('The header has %d fields but the row %d fields!'
                              % (len(col_sizes), len(tup)))
         body.append(tup)
+    if ext == 'html':
+        return HtmlTable([header] + body).render()
 
     wrap = '+-%s-+' if ext == 'rst' else '|-%s-|'
     sepline = wrap % '-+-'.join('-' * size for size in col_sizes)
@@ -260,7 +313,7 @@ def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
     df['slow_factor'] = df.calc_time / df.weight
-    del df['grp_id'], df['trti']
+    del df['grp_id'], df['trti'], df['mutex_weight']
     return df
 
 
@@ -548,7 +601,7 @@ def view_fullreport(token, dstore):
     """
     # avoid circular imports
     from openquake.calculators.reportwriter import ReportWriter
-    return ReportWriter(dstore).make_report()
+    return ReportWriter(dstore).make_report(show_inputs=False)
 
 
 @view.add('performance')

@@ -20,6 +20,7 @@ import re
 import abc
 import copy
 import time
+import logging
 import warnings
 import itertools
 import collections
@@ -33,7 +34,7 @@ from openquake.baselib.general import (
 from openquake.baselib.performance import Monitor, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
-from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.const import StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import (
     registry, get_pnes, FatedTOM, NegativeBinomialTOM)
 from openquake.hazardlib.site import site_param_dt
@@ -354,7 +355,6 @@ class ContextMaker(object):
             self.dcache = None  # disabled
         self.af = param.get('af')
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
-        self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
         self.time_per_task = param.get('time_per_task', 60)
         self.disagg_by_src = param.get('disagg_by_src')
         self.collapse_level = int(param.get('collapse_level', -1))
@@ -368,6 +368,7 @@ class ContextMaker(object):
                         'You must supply a list of magnitudes as 2-digit '
                         'strings, like mags=["6.00", "6.10", "6.20"]')
                 gsim.set_tables(self.mags, self.imtls)
+        self.horiz_comp = param.get('horiz_comp_to_geom_mean', False)
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
         if 'pointsource_distance' not in param:
             self.pointsource_distance = 1000.
@@ -430,14 +431,8 @@ class ContextMaker(object):
         self.defaultdict = dic
         self.collapser = Collapser(
             self.collapse_level, REQUIRES_DISTANCES, 'vs30' in dic)
-        self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
-        with warnings.catch_warnings():
-            # avoid RuntimeWarning: divide by zero encountered in log
-            warnings.simplefilter("ignore")
-            for imt, imls in self.imtls.items():
-                if imt != 'MMI':
-                    self.loglevels[imt] = numpy.log(imls)
+        self.set_imts_conv()
         self.init_monitoring(monitor)
 
     def init_monitoring(self, monitor):
@@ -452,6 +447,66 @@ class ContextMaker(object):
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
+
+    def restrict(self, imts):
+        """
+        :param imts: a list of IMT strings subset of the full list
+        :returns: a new ContextMaker involving less IMTs
+        """
+        new = copy.copy(self)
+        new.imtls = DictArray({imt: self.imtls[imt] for imt in imts})
+        new.set_imts_conv()
+        return new
+
+    def set_imts_conv(self):
+        """
+        Set the .imts list and .conv dictionary for the horizontal component
+        conversion (if any).
+        """
+        self.loglevels = DictArray(self.imtls) if self.imtls else {}
+        with warnings.catch_warnings():
+            # avoid RuntimeWarning: divide by zero encountered in log
+            warnings.simplefilter("ignore")
+            for imt, imls in self.imtls.items():
+                if imt != 'MMI':
+                    self.loglevels[imt] = numpy.log(imls)
+        self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
+        self.conv = {}  # gsim -> imt -> (conv_median, conv_sigma, rstd)
+        if not self.horiz_comp:
+            return  # do not convert
+        for gsim in self.gsims:
+            self.conv[gsim] = {}
+            imc = gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
+            if imc.name == 'GEOMETRIC_MEAN':
+                pass  # nothing to do
+            elif imc.name in OK_COMPONENTS:
+                dic = {imt: imc.apply_conversion(imt) for imt in self.imts}
+                self.conv[gsim].update(dic)
+            else:
+                logging.warning(f'Conversion from {imc.name} not applicable to '
+                                f'{gsim.__class__.__name__}')
+
+    def horiz_comp_to_geom_mean(self, mean_stds):
+        """
+        This function converts ground-motion obtained for a given description of
+        horizontal component into ground-motion values for geometric_mean.
+
+        The conversion equations used are from:
+            - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
+            - Boore and Kishida (2017): for RotD50
+        """
+        for g, gsim in enumerate(self.gsims):
+            if not self.conv[gsim]:
+                continue
+            for m, imt in enumerate(self.imts):
+                me, si, ta, ph = mean_stds[:, g, m]
+                conv_median, conv_sigma, rstd = self.conv[gsim][imt]
+                me[:] = numpy.log(numpy.exp(me) / conv_median)
+                si[:] = ((si**2 - conv_sigma**2) / rstd**2)**0.5
+
+    @property
+    def stop(self):
+        return self.start + len(self.gsims)
 
     def dcache_size(self):
         """
@@ -928,7 +983,7 @@ class ContextMaker(object):
         return gmv
 
     # not used by the engine, is is meant for notebooks
-    def get_poes(self, srcs, sitecol, collapse_level=-1):
+    def get_poes(self, srcs, sitecol, rup_indep=True, collapse_level=-1):
         """
         :param srcs: a list of sources with the same TRT
         :param sitecol: a SiteCollection instance with N sites
@@ -937,7 +992,7 @@ class ContextMaker(object):
         self.collapser.cfactor = numpy.zeros(2)
         ctxs = self.from_srcs(srcs, sitecol)
         with patch.object(self.collapser, 'collapse_level', collapse_level):
-            return self.get_pmap(ctxs).array
+            return self.get_pmap(ctxs, rup_indep).array
 
     def get_pmap(self, ctxs, rup_indep=True):
         """
@@ -992,8 +1047,6 @@ class ContextMaker(object):
         :param ctxs: a list of contexts with N=sum(len(ctx) for ctx in ctxs)
         :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
-        if not hasattr(self, 'imts'):
-            self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imtls)
         G = len(self.gsims)
@@ -1022,6 +1075,8 @@ class ContextMaker(object):
             if self.truncation_level not in (0, 99.) and (
                     out[1, g] == 0.).any():
                 raise ValueError('Total StdDev is zero for %s' % gsim)
+        if self.conv:  # apply horizontal component conversion
+            self.horiz_comp_to_geom_mean(out)
         return out
 
     def gen_poes(self, ctx, rup_indep=True):
@@ -1112,8 +1167,8 @@ class ContextMaker(object):
             ctxs = list(self.get_ctx_iter(src, sites, step=10))  # reduced
             if not ctxs:
                 return src.num_ruptures if N == 1 else 0, 0
-            esites = (len(ctxs[0]) * src.num_ruptures /
-                      self.num_rups * multiplier)
+            esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
+                      self.num_rups * multiplier)  # num_rups from get_ctx_iter
         weight = esites / N  # the weight is the effective number of ruptures
         return weight, int(esites)
 
@@ -1124,6 +1179,7 @@ class ContextMaker(object):
         if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
             srcfilter = SourceFilter(srcfilter, self.maximum_distance)
         G = len(self.gsims)
+        N = len(srcfilter.sitecol)
         for src in sources:
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.esites = 0
@@ -1136,6 +1192,11 @@ class ContextMaker(object):
                         src.weight += .1
                     elif src.code == b'C':
                         src.weight += 10.
+                    elif src.code == b'F':
+                        if N <= self.max_sites_disagg:
+                            src.weight *= 100  # superheavy
+                        else:
+                            src.weight += 30.
                     else:
                         src.weight += 1.
                     
@@ -1151,7 +1212,6 @@ class ContextMaker(object):
             vars(cm).update(vars(self))
             cm.gsims = [gsim]
             cm.start = self.start + g
-            cm.stop = self.start + g + 1
             cm.gsim_idx = g
             cmakers.append(cm)
         return cmakers
@@ -1289,8 +1349,11 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
                 cm.update(pm, ctxs, self.rup_indep)
-            arr = 1. - pm.array if self.rup_indep else pm.array
-            p = pm.new(arr * src.mutex_weight)
+            if hasattr(src, 'mutex_weight'):
+                arr = 1. - pm.array if self.rup_indep else pm.array
+                p = pm.new(arr * src.mutex_weight)
+            else:
+                p = pm
             if ':' in src.source_id:
                 srcid = basename(src)
                 if srcid in pmap_by_src:
@@ -1316,11 +1379,14 @@ class PmapMaker(object):
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
         grp_id = self.sources[0].grp_id
-        if self.src_mutex:
+        if self.src_mutex or not self.rup_indep:
             pmap.fill(0)
             pmap_by_src = self._make_src_mutex(pmap)
             for source_id, pm in pmap_by_src.items():
-                pmap.array += pm.array
+                if self.src_mutex:
+                    pmap.array += pm.array
+                else:
+                    pmap.array = 1. - (1-pmap.array) * (1-pm.array)
         else:
             self._make_src_indep(pmap)
         dic['cfactor'] = self.cmaker.collapser.cfactor

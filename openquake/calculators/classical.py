@@ -18,10 +18,13 @@
 
 import io
 import os
+import gzip
 import time
+import pickle
 import psutil
 import logging
 import operator
+import h5py
 import numpy
 import pandas
 try:
@@ -35,7 +38,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers, basename
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
-from openquake.commonlib import calc
+from openquake.commonlib import calc, datastore
 from openquake.calculators import base, getters, extract
 
 U16 = numpy.uint16
@@ -141,16 +144,22 @@ def check_disagg_by_src(dstore):
 
 def classical(srcs, sitecol, cmaker, monitor):
     """
-    Read the sitecol and call the classical calculator in hazardlib
+    Call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
+    if isinstance(srcs, datastore.DataStore):  # keep_source_groups=true
+        with srcs:
+            if sitecol is None:
+                sitecol = srcs['sitecol']
+            f = srcs.parent.hdf5 if srcs.parent else srcs.hdf5
+            arr = h5py.File.__getitem__(f, '_csm')[cmaker.grp_id]
+            srcs =  pickle.loads(gzip.decompress(arr.tobytes()))
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
     pmap = ProbabilityMap(
-        sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
-    pmap.fill(rup_indep)
+        sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
-    result['pnemap'] = pnemap = ~pmap.remove_zeros()
-    pnemap.start = cmaker.start
+    result['pnemap'] = ~pmap.remove_zeros()
+    result['pnemap'].start = cmaker.start
     return result
 
 
@@ -333,7 +342,7 @@ def get_pmaps_size(dstore, ct):
     N = len(dstore['sitecol'])
     L = dstore['oqparam'].imtls.size
     cmakers = read_cmakers(dstore)
-    maxw = sum(cm.weight for cm in cmakers) / ct
+    maxw = sum(cm.weight for cm in cmakers) / (ct or 1)
     num_gs = [len(cm.gsims) for cm in cmakers if cm.weight > maxw]
     return sum(num_gs) * N * L * 8
 
@@ -345,15 +354,14 @@ def decide_num_tasks(dstore, concurrent_tasks):
     """
     cmakers = read_cmakers(dstore)
     weights = [cm.weight for cm in cmakers]
-    maxw = sum(weights) / concurrent_tasks / 2.5
+    maxw = sum(weights) / concurrent_tasks
     dtlist = [('grp_id', U16), ('cmakers', U16), ('tiles', U16)]
     ntasks = []
     for cm in sorted(cmakers, key=lambda cm: weights[cm.grp_id], reverse=True):
         w = weights[cm.grp_id]
-        ng = len(cm.gsims)
-        nt = int(numpy.ceil(w / maxw / ng))
-        assert ng and nt
-        ntasks.append((cm.grp_id, ng, nt))
+        nt = int(numpy.ceil(w / maxw / len(cm.gsims)))
+        assert nt
+        ntasks.append((cm.grp_id, len(cm.gsims), nt))
     return numpy.array(ntasks, dtlist)
 
 
@@ -481,8 +489,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 rlzs_by_g.append(rlzs)
         self.datastore.create_df('_poes', poes_dt.items())
         # NB: compressing the dataset causes a big slowdown in writing :-(
-        #if not self.oqparam.hazard_calculation_id:
-        #    self.datastore.swmr_on()
 
     def check_memory(self, N, L, max_gs, maxw):
         """
@@ -561,25 +567,9 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
-        L = oq.imtls.size
-        # maximum size of the pmap array in GB
-        max_gb = max_gs * L * self.N * 8 / 1024**3
-        if max_gb > oq.pmap_max_gb:  # split in tiles
-            max_sites = min(numpy.ceil(self.N / max_gb * oq.pmap_max_gb),
-                            oq.max_sites_per_tile)
-            tiles = self.sitecol.split_max(max_sites)
-        elif oq.max_sites_per_tile < self.N:
-            tiles = self.sitecol.split_max(oq.max_sites_per_tile)
-        else:
-            tiles = [self.sitecol]
-        if len(tiles) > 1:
-            logging.info('Using parallel tiling with %d tiles', len(tiles))
-            assert not oq.disagg_by_src, 'disagg_by_src with tiles'
-            for size in map(len, tiles):
-                assert size > oq.max_sites_disagg, (size, oq.max_sites_disagg)
         self.check_memory(len(self.sitecol), oq.imtls.size, max_gs, maxw)
         self.n_outs = AccumDict(accum=0)
-        acc = self.run_tiles(tiles, maxw)
+        acc = self.run_tiles(maxw)
         self.haz.store_disagg(acc)
 
     def execute_keep_groups(self):
@@ -588,52 +578,62 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         assert self.N > self.oqparam.max_sites_disagg, self.N
         decide = decide_num_tasks(
-            self.datastore, self.oqparam.concurrent_tasks)
+            self.datastore, self.oqparam.concurrent_tasks or 1)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        for grp_id, num_cmakers, num_tiles in decide:
+        for grp_id, ngsims, ntiles in decide:
             cmaker = self.haz.cmakers[grp_id]
             grp = self.csm.src_groups[grp_id]
-            logging.info('Sending [%d] %s', num_cmakers * num_tiles, grp)
-            for tile in self.sitecol.split(num_tiles):
+            logging.info('Sending %s, %d gsims * %d tiles',
+                         grp, len(cmaker.gsims), ntiles)
+            for tile in self.sitecol.split(ntiles):
                 for cm in cmaker.split_by_gsim():
-                    smap.submit((grp, tile, cm))
+                    smap.submit((self.datastore, None if ntiles == 1 else tile, cm))
         smap.reduce(self.agg_dicts)
 
-    def run_tiles(self, tiles, maxw):
+    def run_tiles(self, maxw):
         """
         Run a subset of sites and update the accumulator
         """
         acc = {}
         oq = self.oqparam
-        self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        L = oq.imtls.size
+        allargs = []
         for cm in self.haz.cmakers:
+            G = len(cm.gsims)
             sg = self.csm.src_groups[cm.grp_id]
+
+            # maximum size of the pmap array in GB
+            size_gb = G * L * self.N * 8 / 1024**3
+            ntiles = numpy.ceil(size_gb / oq.pmap_max_gb)
+            # NB: disagg_by_src is disabled in case of tiling
+            assert not (ntiles > 1 and oq.disagg_by_src)
+            # NB: tiling only works with many sites
+            assert ntiles == 1 or self.N > oq.max_sites_disagg * ntiles
+            tiles = self.sitecol.split(ntiles)
+
             if sg.atomic or sg.weight <= maxw:
                 for tile in tiles:
-                    smap.submit((sg, tile, cm))
+                    allargs.append((sg, tile, cm))
             else:
-                # only groups generating more than 1 task preallocate memory
+                # only heavy groups preallocate memory
                 acc[cm.grp_id] = ProbabilityMap(
                     self.sitecol.sids, oq.imtls.size, len(cm.gsims)).fill(1)
                 acc[cm.grp_id].start = cm.start
-                # send the multiFaultSources first
-                for src in sg:
-                    if src.code == b'F':
-                        for tile in tiles:
-                            self.n_outs[cm.grp_id] += 1
-                            smap.submit(([src], tile, cm))
-                srcs = [src for src in sg if src.code != b'F']
-                # NB: disagg_by_src is disabled in case of tiling
-                blks = (groupby(srcs, basename).values() if oq.disagg_by_src
-                        else block_splitter(srcs, maxw, get_weight, sort=True))
+                if oq.disagg_by_src:  # possible only with a single tile
+                    blks = groupby(sg, basename).values()
+                else:
+                    blks = block_splitter(sg, maxw, get_weight)
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
                     for tile in tiles:
                         self.n_outs[cm.grp_id] += 1
-                        smap.submit((block, tile, cm))
+                        allargs.append((block, tile, cm))
+        allargs.sort(key=lambda tup: sum(src.weight for src in tup[0]),
+                     reverse=True)
+        self.datastore.swmr_on()  # must come before the Starmap
+        smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         return smap.reduce(self.agg_dicts, acc)
 
     def store_info(self):

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <logicTree logicTreeID='lt1'>
+        <logicTreeBranchingLevel branchingLevelID="b101">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs01"
+                    applyToTectonicRegionType="Active Shallow Crust LAN">
+                <logicTreeBranch branchID="AbrahamsonEtAl2014">
+                    <uncertaintyModel>AbrahamsonEtAl2014</uncertaintyModel>
+                    <uncertaintyWeight>0.211</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="CauzziEtAl2014">
+                    <uncertaintyModel>CauzziEtAl2014</uncertaintyModel>
+                    <uncertaintyWeight>0.390</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="Idriss2014">
+                    <uncertaintyModel>Idriss2014</uncertaintyModel>
+                    <uncertaintyWeight>0.399</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>

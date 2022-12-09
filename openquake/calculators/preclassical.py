@@ -106,7 +106,7 @@ def preclassical(srcs, sites, cmaker, monitor):
             # this is also prefiltering the split sources
             mon = monitor('weighting sources', measuremem=False)
             cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
-            # print(mon.duration, [s.source_id for s in dic[grp_id]])
+            # print(f'{mon.task_no=}, {mon.duration=}')
             dic['before'] = len(block)
             dic['after'] = len(dic[grp_id])
             yield dic
@@ -179,9 +179,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                     pointsources.append(src)
                 elif hasattr(src, 'nodal_plane_distribution'):
                     pointlike.append(src)
-                elif src.code in b'FN':  # split multifault, nonparametric
-                    others.extend(split_source(src)
-                                  if self.oqparam.split_sources else [src])
+                elif src.code in b'CFN':  # send the heavy sources
+                    smap.submit(([src], sites, cmakers[grp_id]))
                 else:
                     others.append(src)
             if pointsources or pointlike:
