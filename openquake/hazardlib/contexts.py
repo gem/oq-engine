@@ -58,7 +58,8 @@ KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
 # the following is used in the collapse method
-IGNORE_PARAMS = {'mag', 'rrup', 'occurrence_rate', 'sids', 'mdbin'}
+IGNORE_PARAMS = {'rup_id', 'src_id', 'weight', 'occurrence_rate', 'probs_occur',
+                 'clon', 'clat', 'sids', 'mdbin'}
 MEA = 0
 STD = 1
 
@@ -212,7 +213,8 @@ class Collapser(object):
             self.cfactor[1] += len(ctx)
             return ctx, ctx.sids.reshape(-1, 1)
 
-        out, allsids = kmean(ctx, 'mdbin', 'sids')
+        kfields = [n for n in ctx.dtype.names if n not in IGNORE_PARAMS]
+        out, allsids = kmean(ctx, kfields, ['occurrence_rate'], 'sids')
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
         # print(len(out), len(ctx))

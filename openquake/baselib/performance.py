@@ -508,29 +508,34 @@ def split_array(arr, indices, counts=None):
 
 
 # this is fast
-def kmean(array, kfield, afield=''):
+def kmean(array, kfields, mfields, afield=''):
     """
     Given a structured array of N elements with a discrete kfield with
     K <= N unique values, returns a structured array of K elements
     obtained by averaging the values associated to the kfield.
     """
     allnames = array.dtype.names
-    assert kfield in allnames, kfield
+    klist = []
+    for kfield in kfields:
+        assert kfield in allnames, kfield
+        dt = array.dtype[kfield]
+        klist.append((kfield, dt if dt != numpy.float64 else numpy.float16))
+    for mfield in mfields:
+        assert mfield in allnames, mfield
+        dt = array.dtype[mfield]
+        klist.append((mfield, dt))
+    k_array = numpy.zeros(len(array), klist)  # convert to half precision
+    for kfield in kfields:
+        k_array[kfield] = array[kfield]
     uniq, indices, counts = numpy.unique(
-        array[kfield], return_inverse=True, return_counts=True)
-    dic = {}
-    dtlist = []
-    for name in allnames:
-        if name == kfield:
-            dic[kfield] = uniq
-        else:
-            values = array[name]
-            dic[name] = fast_agg(indices, values) / (
-                counts if len(values.shape) == 1 else counts.reshape(-1, 1))
-        dtlist.append((name, array.dtype[name]))
-    res = numpy.zeros(len(uniq), dtlist)
-    for name in dic:
-        res[name] = dic[name]
+        k_array, return_inverse=True, return_counts=True)
+    res = numpy.zeros(len(uniq), klist)
+    for kfield in kfields:
+        res[kfield] = uniq[kfield]
+    for mfield in mfields:
+        values = array[mfield]
+        res[mfield] = fast_agg(indices, values) / (
+            counts if len(values.shape) == 1 else counts.reshape(-1, 1))
     if afield:
         return res, split_array(array[afield], indices, counts)
     return res
