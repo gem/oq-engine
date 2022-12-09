@@ -30,8 +30,8 @@ import shapely
 from scipy.interpolate import interp1d
 
 from openquake.baselib.general import (
-    AccumDict, DictArray, RecordBuilder, gen_slices, kmean, block_splitter)
-from openquake.baselib.performance import Monitor, split_array
+    AccumDict, DictArray, RecordBuilder, gen_slices, block_splitter)
+from openquake.baselib.performance import Monitor, split_array, kmean
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS

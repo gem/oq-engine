@@ -34,7 +34,7 @@ try:
 except ImportError:
     numba = None
 
-from openquake.baselib.general import humansize
+from openquake.baselib.general import humansize, fast_agg
 from openquake.baselib import hdf5
 
 # NB: one can use vstr fields in extensible datasets, but then reading
@@ -505,3 +505,33 @@ def split_array(arr, indices, counts=None):
     cumcounts = counts.cumsum()
     out = _split(arr, indices, counts, cumcounts)
     return [out[s1:s2] for s1, s2 in zip(cumcounts, cumcounts + counts)]
+
+
+# this is fast
+def kmean(structured_array, kfield, uniq_indices_counts=()):
+    """
+    Given a structured array of N elements with a discrete kfield with
+    K <= N unique values, returns a structured array of K elements
+    obtained by averaging the values associated to the kfield.
+    """
+    allnames = structured_array.dtype.names
+    assert kfield in allnames, kfield
+    if uniq_indices_counts:
+        uniq, indices, counts = uniq_indices_counts
+    else:
+        uniq, indices, counts = numpy.unique(
+            structured_array[kfield], return_inverse=True, return_counts=True)
+    dic = {}
+    dtlist = []
+    for name in allnames:
+        if name == kfield:
+            dic[kfield] = uniq
+        else:
+            values = structured_array[name]
+            dic[name] = fast_agg(indices, values) / (
+                counts if len(values.shape) == 1 else counts.reshape(-1, 1))
+        dtlist.append((name, structured_array.dtype[name]))
+    res = numpy.zeros(len(uniq), dtlist)
+    for name in dic:
+        res[name] = dic[name]
+    return res
