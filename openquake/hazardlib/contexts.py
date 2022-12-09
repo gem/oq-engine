@@ -1104,25 +1104,23 @@ class ContextMaker(object):
         else:
             bigslices = [slice(0, len(ctx))]
 
-        for bigslc in bigslices:
-            s = bigslc.start
+        for slc in bigslices:
+            s = slc.start
             with self.gmf_mon:
-                mean_stdt = self.get_mean_stds([ctx[bigslc]])
-            for slc in gen_slices(bigslc.start, bigslc.stop, maxsize // L1):
-                slcsids = allsids[slc]
-                ctxt = ctx[slc]
-                self.slc = slice(slc.start - s, slc.stop - s)  # in get_poes
-                with self.poe_mon:
-                    # this is allocating at most 4MB of RAM
-                    poes = numpy.zeros((len(ctxt), M*L1, G))
-                    for g, gsim in enumerate(self.gsims):
-                        ms = mean_stdt[:2, g, :, self.slc]
-                        # builds poes of shape (n, L, G)
-                        if self.af:  # kernel amplification method
-                            poes[:, :, g] = get_poes_site(ms, self, ctxt)
-                        else:  # regular case
-                            gsim.set_poes(ms, self, ctxt, poes[:, :, g])
-                yield poes, ctxt, slcsids
+                mean_stdt = self.get_mean_stds([ctx[slc]])
+            slcsids = allsids[slc]
+            ctxt = ctx[slc]
+            self.slc = slc  # used in get_poes
+            with self.poe_mon:
+                poes = numpy.zeros((slc.stop - s, M*L1, G))
+                for g, gsim in enumerate(self.gsims):
+                    ms = mean_stdt[:2, g]
+                    # builds poes of shape (n, L, G)
+                    if self.af:  # kernel amplification method
+                        poes[:, :, g] = get_poes_site(ms, self, ctxt)
+                    else:  # regular case
+                        gsim.set_poes(ms, self, ctxt, poes[:, :, g])
+            yield poes, ctxt, slcsids
 
     def estimate_sites(self, src, sites):
         """
