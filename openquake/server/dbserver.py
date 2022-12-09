@@ -37,6 +37,9 @@ def ssh(fname, host):
     return ['ssh', '-f', '-T', host, '/opt/openquake/venv/bin/oq',
             'engine', '--run', fname]
 
+BASIC_ENV = {'OQ_DISTRIBUTE': 'processpool',
+             'OQ_DATADIR': '/tmp',
+             'NUMBA_CACHE_DIR': '/tmp'}
 
 class DbServer(object):
     """
@@ -60,10 +63,8 @@ class DbServer(object):
                 elif cmd == 'submit':
                     if len(args) == 2:
                         arglist = ssh(*args)
-                        subprocess.Popen(arglist, start_new_session=True,
-                                         env={'NUMBA_CACHE_DIR': '/tmp',
-                                              'OQ_DATADIR': '/tmp'})
-                        sock.send('Sent %s' % ' '.join(arglist))
+                        subprocess.Popen(arglist, start_new_session=True, env=BASIC_ENV)
+                        sock.send(' '.join(arglist))
                     else:
                         sock.send('Unknown %s', cmd_)
                     continue
