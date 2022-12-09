@@ -397,17 +397,7 @@ def run_jobs(jobctxs):
             logs.dbcmd('workers_start', config.zworkers)  # start the workers
         allargs = [(ctx,) for ctx in jobctxs]
         if jobarray and OQ_DISTRIBUTE != 'no':
-            procs = []
-            try:
-                for args in allargs:
-                    proc = general.mp.Process(target=run_calc, args=args)
-                    proc.start()
-                    logging.info('Started %s' % str(args))
-                    time.sleep(10)
-                    procs.append(proc)
-            finally:
-                for proc in procs:
-                    proc.join()
+            parallel.multispawn(run_calc, allargs, num_cores=3)
         else:
             for job in jobctxs:
                 run_calc(job)

@@ -172,12 +172,6 @@ def normalize(key, fnames, base_path):
     for val in fnames:
         if isinstance(val, list):
             val = normpath(val, base_path)
-        elif '://' in val:
-            # get the data from an URL
-            resp = requests.get(val)
-            _, val = val.rsplit('/', 1)
-            with open(os.path.join(base_path, val), 'wb') as f:
-                f.write(resp.content)
         elif os.path.isabs(val):
             raise ValueError('%s=%s is an absolute path' % (key, val))
         elif val.endswith('.zip'):
@@ -252,7 +246,13 @@ def get_params(job_ini, kw={}):
     if isinstance(job_ini, pathlib.Path):
         job_ini = str(job_ini)
     if job_ini.startswith(('http://', 'https://')):
-        resp = requests.get(job_ini)
+        if '://gitlab' in job_ini:
+            # TODO: this is not working even if curl works
+            token = os.environ['GITLAB_TOKEN']
+            auth = {'Authorization': 'PRIVATE-TOKEN ' + token}
+            resp = requests.get(job_ini, headers=auth)
+        else:
+            resp = requests.get(job_ini)
         job_ini = gettemp(suffix='.zip')
         with open(job_ini, 'wb') as f:
             f.write(resp.content)
