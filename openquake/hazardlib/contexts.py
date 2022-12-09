@@ -58,7 +58,7 @@ KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
 # the following is used in the collapse method
-IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdbin'}
+IGNORE_PARAMS = {'mag', 'rrup', 'occurrence_rate', 'sids', 'mdbin'}
 MEA = 0
 STD = 1
 
