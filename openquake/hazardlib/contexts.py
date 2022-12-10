@@ -217,7 +217,7 @@ class Collapser(object):
                                 ['occurrence_rate'], 'sids')
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
-        print(len(out), len(ctx))
+        print(kfields, len(ctx), len(out), '(%.1f)' % (len(ctx)/len(out)))
         return out.view(numpy.recarray), allsids
 
 
