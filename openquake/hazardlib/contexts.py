@@ -162,37 +162,25 @@ def kround(ctx, kfields):
     return out
 
 
+def kround2(ctx, kfields):
+    out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
+    for kfield in kfields:
+        kval = ctx[kfield]
+        if kval.dtype == F64:
+            out[kfield] = F16(kval)
+        else:
+            out[kfield] = ctx[kfield]
+    return out
+
+
 class Collapser(object):
     """
     Class managing the collapsing logic.
     """
-    mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
-    dist_bins = sqrscale(1, 1000, 65536)
-
-    def __init__(self, collapse_level, dist_types, has_vs30=False):
+    def __init__(self, collapse_level, kfields, has_vs30=False):
         self.collapse_level = collapse_level
-        self.dist_types = dist_types
-        self.has_vs30 = has_vs30
+        self.kfields = kfields
         self.cfactor = numpy.zeros(2)
-        self.npartial = 0
-        self.nfull = 0
-
-    def calc_mdbin(self, ctx):
-        """
-        :param ctx: a RuptureContext or a context array
-        :return: an array of dtype numpy.uint32
-        """
-        dist = numpy.mean([getattr(ctx, dt) for dt in self.dist_types], axis=0)
-        magbin = numpy.searchsorted(self.mag_bins, ctx.mag)
-        distbin = numpy.searchsorted(self.dist_bins, dist)
-        return magbin * TWO16 + distbin
-
-    def expand(self, mdbin):
-        """
-        :returns: mag and dist corresponding to mdbin
-        """
-        mbin, dbin = numpy.divmod(mdbin, TWO16)
-        return self.mag_bins[mbin], self.dist_bins[dbin]
 
     def collapse(self, ctx, rup_indep, collapse_level=None):
         """
@@ -212,12 +200,11 @@ class Collapser(object):
             self.cfactor[1] += len(ctx)
             return ctx, ctx.sids.reshape(-1, 1)
 
-        kfields = [n for n in ctx.dtype.names if n not in IGNORE_PARAMS]
-        out, allsids = kollapse(ctx, kround, kfields,
+        out, allsids = kollapse(ctx, kround, self.kfields,
                                 ['occurrence_rate'], 'sids')
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
-        print(kfields, len(ctx), len(out), '(%.1f)' % (len(ctx)/len(out)))
+        print(self.kfields, len(ctx), len(out), '(%.1f)' % (len(ctx)/len(out)))
         return out.view(numpy.recarray), allsids
 
 
@@ -325,6 +312,7 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
+        self.oq = oq
         for gsim in gsims:
             if hasattr(gsim, 'set_tables'):
                 if not self.mags and not is_modifiable(gsim):
@@ -394,8 +382,10 @@ class ContextMaker(object):
         dic['weight'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
-        self.collapser = Collapser(
-            self.collapse_level, REQUIRES_DISTANCES, 'vs30' in dic)
+        kfields = (self.REQUIRES_DISTANCES |
+                   self.REQUIRES_RUPTURE_PARAMETERS |
+                   self.REQUIRES_SITES_PARAMETERS)
+        self.collapser = Collapser(self.collapse_level, kfields)
         self.shift_hypo = param.get('shift_hypo')
         self.set_imts_conv()
         self.init_monitoring(monitor)
@@ -1169,9 +1159,7 @@ class ContextMaker(object):
             return [self]
         cmakers = []
         for g, gsim in enumerate(self.gsims):
-            cm = object.__new__(self.__class__)
-            vars(cm).update(vars(self))
-            cm.gsims = [gsim]
+            cm = self.__class__(self.trt, [gsim], self.oq)
             cm.start = self.start + g
             cm.gsim_idx = g
             cmakers.append(cm)

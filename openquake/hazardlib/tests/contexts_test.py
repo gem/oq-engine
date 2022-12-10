@@ -211,9 +211,9 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.collapser.cfactor = numpy.zeros(2)
         cmaker.collapser.collapse_level = 1
         cmap = cmaker.get_pmap(ctxs)
-        self.assertLess(rms(pmap.array[0] - cmap.array[0]), 6E-4)
-        self.assertLess(rms(pmap.array[1] - cmap.array[0]), 6E-4)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [60, 60])
+        self.assertLess(rms(pmap.array[0] - cmap.array[0]), 7E-4)
+        self.assertLess(rms(pmap.array[1] - cmap.array[0]), 7E-4)
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [47, 60])
 
     def test_collapse_big(self):
         smpath = os.path.join(os.path.dirname(__file__),
@@ -236,8 +236,8 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.collapser.cfactor = numpy.zeros(2)
         cmaker.collapser.collapse_level = 1
         pcurve1 = cmaker.get_pmap(ctxs).array[0]
-        self.assertLess(numpy.abs(pcurve0 - pcurve1).sum(), 1E-6)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [4962, 11616])
+        self.assertLess(numpy.abs(pcurve0 - pcurve1).sum(), 1E-10)
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [1230, 11616])
 
     def test_collapse_azimuth(self):
         # YuEtAl2013Ms has an azimuth distance causing a lower precision
@@ -384,17 +384,9 @@ class CollapseTestCase(unittest.TestCase):
             plt.show()
         maxdiff = numpy.abs(newpoes - poes).max(axis=(1, 2))  # shape NLG => N
         print('maxdiff =', maxdiff)
-        self.assertLess(maxdiff[0], 5E-2)
-        self.assertLess(maxdiff[1], 7E-3)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [311, 312])
-
-        # with collapse_level = 4 the precision is worse!?
-        newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol, collapse_level=4)
-        maxdiff = numpy.abs(newpoes - poes).max(axis=(1, 2))  # shape NLG => N
-        print('maxdiff =', maxdiff)
-        self.assertLess(maxdiff[0], .77)
-        self.assertLess(maxdiff[1], .75)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [311, 312])
+        self.assertLess(maxdiff[0], 2E-3)
+        self.assertLess(maxdiff[1], 5E-4)
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [312, 312])
 
 
 class GetCtxs01TestCase(unittest.TestCase):
