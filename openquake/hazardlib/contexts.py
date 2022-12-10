@@ -47,6 +47,7 @@ from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
 
 U32 = numpy.uint32
+F16 = numpy.float16
 F64 = numpy.float64
 TWO20 = 2**20  # used when collapsing
 TWO16 = 2**16

@@ -516,23 +516,18 @@ def kollapse(array, kfields, mfields, afield=''):
     K <= N unique values, returns a structured array of K elements
     obtained by averaging the values associated to the kfield.
     """
-    allnames = array.dtype.names
     klist = []
     for kfield in kfields:
-        assert kfield in allnames, kfield
-        dt = array.dtype[kfield]
-        klist.append((kfield, dt if dt != F64 else F16))
+        klist.append((kfield, array.dtype[kfield]))
     for mfield in mfields:
-        assert mfield in allnames, mfield
-        dt = array.dtype[mfield]
-        klist.append((mfield, dt))
-    k_array = numpy.zeros(len(array), klist)  # convert to half precision
+        klist.append((mfield, array.dtype[kfield]))
+    k_array = numpy.zeros(len(array), klist)
     for kfield in kfields:
-        k_array[kfield] = array[kfield]
+        val = array[kfield]
+        k_array[kfield] = F16(val) if val.dtype == F64 else val
     uniq, indices, counts = numpy.unique(
         k_array, return_inverse=True, return_counts=True)
-    res = numpy.zeros(len(uniq), [(k, F64 if dt == F16 else dt)
-                                  for (k, dt) in klist])
+    res = numpy.zeros(len(uniq), klist)
     for kfield in kfields:
         res[kfield] = uniq[kfield]
     for mfield in mfields:
