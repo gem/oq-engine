@@ -30,8 +30,8 @@ import shapely
 from scipy.interpolate import interp1d
 
 from openquake.baselib.general import (
-    AccumDict, DictArray, RecordBuilder, gen_slices, block_splitter)
-from openquake.baselib.performance import Monitor, split_array, kmean
+    AccumDict, DictArray, RecordBuilder, gen_slices, block_splitter, sqrscale)
+from openquake.baselib.performance import Monitor, split_array, kollapse
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
@@ -57,6 +57,7 @@ MAX_MB = 200
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
+DIST_BINS = sqrscale(1, 1000, 65536)
 # the following is used in the collapse method
 IGNORE_PARAMS = {'rup_id', 'src_id', 'weight', 'occurrence_rate', 'probs_occur',
                  'clon', 'clat', 'sids', 'mdbin'}
@@ -133,24 +134,6 @@ def trivial(ctx, name):
     return len(numpy.unique(numpy.float32(ctx[name]))) == 1
 
 
-def sqrscale(x_min, x_max, n):
-    """
-    :param x_min: minumum value
-    :param x_max: maximum value
-    :param n: number of steps
-    :returns: an array of n values from x_min to x_max in a quadratic scale
-    """
-    if not (isinstance(n, int) and n > 0):
-        raise ValueError('n must be a positive integer, got %s' % n)
-    if x_min < 0:
-        raise ValueError('x_min must be positive, got %s' % x_min)
-    if x_max <= x_min:
-        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
-                         (x_max, x_min))
-    delta = numpy.sqrt(x_max - x_min) / (n - 1)
-    return x_min + (delta * numpy.arange(n))**2
-
-
 class DeltaRatesGetter(object):
     """
     Read the delta rates from an aftershock datastore
@@ -204,17 +187,17 @@ class Collapser(object):
         :param collapse_level: if None, use .collapse_level
         :returns: the collapsed array and a list of arrays with site IDs
         """
-        ctx.mdbin = self.calc_mdbin(ctx)
+        #ctx.mdbin = self.calc_mdbin(ctx)
         clevel = (collapse_level if collapse_level is not None
                   else self.collapse_level)
         if not rup_indep or clevel < 0:
             # no collapse
-            self.cfactor[0] += len(numpy.unique(ctx.mdbin))
+            self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
             return ctx, ctx.sids.reshape(-1, 1)
 
         kfields = [n for n in ctx.dtype.names if n not in IGNORE_PARAMS]
-        out, allsids = kmean(ctx, kfields, ['occurrence_rate'], 'sids')
+        out, allsids = kollapse(ctx, kfields, ['occurrence_rate'], 'sids')
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
         # print(len(out), len(ctx))

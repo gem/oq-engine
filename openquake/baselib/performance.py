@@ -510,7 +510,7 @@ def split_array(arr, indices, counts=None):
 
 
 # this is fast
-def kmean(array, kfields, mfields, afield=''):
+def kollapse(array, kfields, mfields, afield=''):
     """
     Given a structured array of N elements with a discrete kfield with
     K <= N unique values, returns a structured array of K elements

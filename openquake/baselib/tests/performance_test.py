@@ -19,7 +19,7 @@ import time
 import unittest
 import pickle
 import numpy
-from openquake.baselib.performance import Monitor, split_array, kmean
+from openquake.baselib.performance import Monitor, split_array, kollapse
 
 
 class MonitorTestCase(unittest.TestCase):
@@ -93,7 +93,7 @@ class KmeanTestCase(unittest.TestCase):
         arr['rake'] = rng.random(N) * 360
         arr['sids'] = rng.integers(1000, size=N)
         sids = []
-        for rec in kmean(arr, 'mdbin'):
+        for rec in kollapse(arr, 'mdbin'):
             sids.append(arr['sids'][arr['mdbin'] == rec['mdbin']])
         expected_sids = [[450, 858, 631], [276], [554, 887], [92],
                          [827], [227], [63]]
@@ -110,7 +110,7 @@ class KmeanTestCase(unittest.TestCase):
         arr['rake'] = rng.random(N) * 360
         arr['sids'] = rng.integers(1000, size=N)
         t0 = time.time()
-        mean = kmean(arr, 'mdbin')
+        mean = kollapse(arr, 'mdbin')
         sids = []
         for mdbin in mean['mdbin']:
             sids.append(arr['sids'][arr['mdbin'] == mdbin])
