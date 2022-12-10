@@ -510,23 +510,18 @@ def split_array(arr, indices, counts=None):
 
 
 # this is fast
-def kollapse(array, kfields, mfields, afield=''):
+def kollapse(array, kround, kfields, mfields, afield=''):
     """
     Given a structured array of N elements with a discrete kfield with
     K <= N unique values, returns a structured array of K elements
     obtained by averaging the values associated to the kfield.
     """
-    klist = []
-    for kfield in kfields:
-        klist.append((kfield, array.dtype[kfield]))
-    for mfield in mfields:
-        klist.append((mfield, array.dtype[kfield]))
-    k_array = numpy.zeros(len(array), klist)
-    for kfield in kfields:
-        val = array[kfield]
-        k_array[kfield] = F16(val) if val.dtype == F64 else val
+    k_array = kround(array, kfields)
     uniq, indices, counts = numpy.unique(
         k_array, return_inverse=True, return_counts=True)
+    klist = [(k, k_array.dtype[k]) for k in kfields]
+    for mfield in mfields:
+        klist.append((mfield, array.dtype[mfield]))
     res = numpy.zeros(len(uniq), klist)
     for kfield in kfields:
         res[kfield] = uniq[kfield]
