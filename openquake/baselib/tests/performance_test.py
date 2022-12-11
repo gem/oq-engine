@@ -63,25 +63,6 @@ class MonitorTestCase(unittest.TestCase):
         pickle.loads(pickle.dumps(self.mon))
 
 
-class SplitArrayTestCase(unittest.TestCase):
-    def test(self):
-        # build a small structured array
-        dtlist = [('mdbin', numpy.uint32), ('rake', numpy.float64),
-                  ('sids', numpy.uint32)]
-        N = 10
-        arr = numpy.zeros(N, dtlist)
-        rng = numpy.random.default_rng(42)
-        arr['mdbin'] = rng.integers(50, size=N)
-        arr['rake'] = rng.random(N) * 360
-        arr['sids'] = rng.integers(1000, size=N)
-        uniq, indices, counts = numpy.unique(
-            arr['mdbin'], return_inverse=True, return_counts=True)
-        sids = split_array(arr['sids'], indices, counts)
-        expected_sids = [[631, 858, 450], [276], [887, 554], [92],
-                         [827], [227], [63]]
-        numpy.testing.assert_equal(sids, expected_sids)
-
-
 class KollapseTestCase(unittest.TestCase):
     def test_small(self):
         # build a small structured array
@@ -99,6 +80,10 @@ class KollapseTestCase(unittest.TestCase):
         expected_sids = [[450, 858, 631], [276], [554, 887], [92],
                          [827], [227], [63]]
         numpy.testing.assert_equal(sids, expected_sids)
+
+        # now test kollapse with an aggregate field afield='sids'
+        out, allsids = kollapse(arr, kround, ['mdbin'], afield='sids')
+        numpy.testing.assert_equal(allsids, expected_sids)
 
     def test_big(self):
         # build a very large structured array

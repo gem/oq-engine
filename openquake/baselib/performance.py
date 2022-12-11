@@ -506,7 +506,7 @@ def split_array(arr, indices, counts=None):
     # this part can be slow, but it is still 10x faster than pandas for EUR!
     cumcounts = counts.cumsum()
     out = _split(arr, indices, counts, cumcounts)
-    return [out[s1:s2] for s1, s2 in zip(cumcounts, cumcounts + counts)]
+    return [out[s1:s2][::-1] for s1, s2 in zip(cumcounts, cumcounts + counts)]
 
 
 def kround(ctx, kfields):
