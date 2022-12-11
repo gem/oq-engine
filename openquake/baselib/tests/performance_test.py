@@ -19,7 +19,8 @@ import time
 import unittest
 import pickle
 import numpy
-from openquake.baselib.performance import Monitor, split_array, kollapse
+from openquake.baselib.performance import (
+    Monitor, split_array, kollapse, kround)
 
 
 class MonitorTestCase(unittest.TestCase):
@@ -81,7 +82,7 @@ class SplitArrayTestCase(unittest.TestCase):
         numpy.testing.assert_equal(sids, expected_sids)
 
 
-class KmeanTestCase(unittest.TestCase):
+class KollapseTestCase(unittest.TestCase):
     def test_small(self):
         # build a small structured array
         dtlist = [('mdbin', numpy.uint32), ('rake', numpy.float64),
@@ -93,7 +94,7 @@ class KmeanTestCase(unittest.TestCase):
         arr['rake'] = rng.random(N) * 360
         arr['sids'] = rng.integers(1000, size=N)
         sids = []
-        for rec in kollapse(arr, 'mdbin'):
+        for rec in kollapse(arr, kround, ['mdbin']):
             sids.append(arr['sids'][arr['mdbin'] == rec['mdbin']])
         expected_sids = [[450, 858, 631], [276], [554, 887], [92],
                          [827], [227], [63]]
@@ -110,7 +111,7 @@ class KmeanTestCase(unittest.TestCase):
         arr['rake'] = rng.random(N) * 360
         arr['sids'] = rng.integers(1000, size=N)
         t0 = time.time()
-        mean = kollapse(arr, 'mdbin')
+        mean = kollapse(arr, kround, ['mdbin'])
         sids = []
         for mdbin in mean['mdbin']:
             sids.append(arr['sids'][arr['mdbin'] == mdbin])

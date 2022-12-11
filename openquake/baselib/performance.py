@@ -509,8 +509,19 @@ def split_array(arr, indices, counts=None):
     return [out[s1:s2] for s1, s2 in zip(cumcounts, cumcounts + counts)]
 
 
+def kround(ctx, kfields):
+    out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
+    for kfield in kfields:
+        kval = ctx[kfield]
+        if kval.dtype == F64:
+            out[kfield] = F16(kval)
+        else:
+            out[kfield] = ctx[kfield]
+    return out
+
+
 # this is fast
-def kollapse(array, kround, kfields, mfields, afield=''):
+def kollapse(array, kround, kfields, mfields=(), afield=''):
     """
     Given a structured array of N elements with a discrete kfield with
     K <= N unique values, returns a structured array of K elements

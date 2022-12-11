@@ -162,17 +162,6 @@ def kround(ctx, kfields):
     return out
 
 
-def kround2(ctx, kfields):
-    out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
-    for kfield in kfields:
-        kval = ctx[kfield]
-        if kval.dtype == F64:
-            out[kfield] = F16(kval)
-        else:
-            out[kfield] = ctx[kfield]
-    return out
-
-
 class Collapser(object):
     """
     Class managing the collapsing logic.
