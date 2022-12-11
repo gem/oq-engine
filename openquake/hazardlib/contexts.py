@@ -154,7 +154,7 @@ def kround(ctx, kfields):
     out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
     for kfield in kfields:
         kval = ctx[kfield]
-        if kval.dtype == F64:
+        if kval.dtype == F64 and kfield != 'mag':
             out[kfield][close] = F16(kval[close])  # round less
             out[kfield][far] = numpy.round(kval[far])  # round more
         else:
@@ -180,7 +180,6 @@ class Collapser(object):
         :param collapse_level: if None, use .collapse_level
         :returns: the collapsed array and a list of arrays with site IDs
         """
-        #ctx.mdbin = self.calc_mdbin(ctx)
         clevel = (collapse_level if collapse_level is not None
                   else self.collapse_level)
         if not rup_indep or clevel < 0:
