@@ -588,7 +588,8 @@ class ClassicalCalculator(base.HazardCalculator):
                          grp, len(cmaker.gsims), ntiles)
             for tile in self.sitecol.split(ntiles):
                 for cm in cmaker.split_by_gsim():
-                    smap.submit((self.datastore, None if ntiles == 1 else tile, cm))
+                    smap.submit(
+                        (self.datastore, None if ntiles == 1 else tile, cm))
         smap.reduce(self.agg_dicts)
 
     def run_tiles(self, maxw):
@@ -632,6 +633,8 @@ class ClassicalCalculator(base.HazardCalculator):
                         allargs.append((block, tile, cm))
         allargs.sort(key=lambda tup: sum(src.weight for src in tup[0]),
                      reverse=True)
+        if not performance.numba:
+            logging.warning('numba is not installed: using the slow algorithm')
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         return smap.reduce(self.agg_dicts, acc)
@@ -794,7 +797,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Producing %s of hazard curves and %s of hazard maps',
                      humansize(hcbytes), humansize(hmbytes))
         if not performance.numba:
-            logging.info('numba is not installed: using the slow algorithm')
+            logging.warning('numba is not installed: using the slow algorithm')
         if not oq.hazard_calculation_id:
             self.datastore.swmr_on()  # essential before Starmap
         parallel.Starmap(
