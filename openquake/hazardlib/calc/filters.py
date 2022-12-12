@@ -29,7 +29,7 @@ from openquake.hazardlib import site
 from openquake.hazardlib.geo.surface.multi import (
     MultiSurface, _multi_distances, _multi_rx_ry0)
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
+    KM_TO_DEGREES, angular_distance, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
 U32 = numpy.uint32
@@ -59,7 +59,7 @@ def _distances_from_dcache(rup, sites, param, dcache):
     :param dcache:
         A dictionary with the distances. The first key is the
         surface ID and the second one is the type of distance. In a traditional
-        calculation dcache is instatianted by in the `get_ctxs` method of the
+        calculation dcache is instatianted by in the `get_ctx_iter` method of the
         :class:`openquake.hazardlib.contexts.ContextMaker`
     :returns:
         The computed distances for the rupture in input
@@ -301,7 +301,7 @@ def split_source(src):
     grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib
     if len(splits) > 1:
         for i, split in enumerate(splits):
-            split.source_id = '%s:%s' % (src.source_id, i)
+            split.source_id = '%s.%s' % (src.source_id, i)
             split.trt_smr = src.trt_smr
             split.grp_id = grp_id
             split.id = src.id
@@ -371,7 +371,7 @@ class SourceFilter(object):
         except Exception as exc:
             raise
             raise exc.__class__('source %s: %s' % (src.source_id, exc))
-        return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
+        return bbox
 
     def get_rectangle(self, src):
         """

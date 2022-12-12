@@ -122,7 +122,7 @@ def export_hcurves_by_imt_csv(
         lst.append(('poe-%.7f' % iml, F32))
     custom = 'custom_site_id' in sitecol.array.dtype.names
     if custom:
-        lst.insert(0, ('custom_site_id', 'S6'))
+        lst.insert(0, ('custom_site_id', 'S8'))
     hcurves = numpy.zeros(nsites, lst)
     if custom:
         for sid, csi, lon, lat, dep in zip(
@@ -268,7 +268,7 @@ def export_uhs_xml(ekey, dstore):
                 investigation_time=oq.investigation_time, **metadata)
             data = []
             for site, curve in zip(sitemesh, uhs):
-                data.append(UHS(curve[str(poe)], Location(site)))
+                data.append(UHS(curve['%.6f' % poe], Location(site)))
             writer.serialize(data)
             fnames.append(fname)
     return sorted(fnames)
@@ -386,6 +386,7 @@ def export_cond_spectra(ekey, dstore):
     return fnames
 
 
+# TODO: see if I can remove this
 def _extract(hmap, imt, j):
     # hmap[imt] can be a tuple or a scalar if j=0
     tup = hmap[imt]

@@ -301,15 +301,12 @@ class BahrampouriEtAl2021SInter(GMPE):
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are Vs30 and coordinates of the site
-
     REQUIRES_SITES_PARAMETERS = {'lon', 'lat', 'vs30'}
 
     #: Required rupture parameters are magnitude,ztor
-
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor', 'hypo_lon', 'hypo_lat'}
 
     #: Required distance measures are rrup (see Table 2, page 1031).
-
     REQUIRES_DISTANCES = {'rrup'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
@@ -361,7 +358,6 @@ class BahrampouriEtAl2021SSlab(GMPE):
     REQUIRES_SITES_PARAMETERS = {'lon', 'lat', 'vs30'}
 
     #: Required rupture parameters are magnitude,ztor
-
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor', 'hypo_lon', 'hypo_lat'}
 
     #: Required distance measures are rrup (see Table 2, page 1031).

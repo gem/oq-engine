@@ -47,7 +47,7 @@ from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, pmf, gsim_lt)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
-from openquake.risklib import asset, riskmodels, scientific
+from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.source_reader import get_csm
@@ -60,7 +60,32 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
-gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
+
+
+class Global:
+    """
+    Global variables to be reset at the end of each calculation/test
+    """
+    pmap = None
+    # set as side effect when the user reads hazard_curves from a file
+    # the hazard curves format does not split the site locations from the data
+    # (an unhappy legacy design choice that I fixed in the GMFs CSV format
+    # only) thus this hack is necessary, otherwise we would have to parse the
+    # file twice
+
+    exposure = None
+    # set as side effect when the user reads the site mesh; this hack is
+    # necessary, otherwise we would have to parse the exposure twice
+    
+    gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
+    # populated when reading the gsim_logic_tree file; otherwise we would
+    # have to parse the file multiple times
+
+    @classmethod
+    def reset(cls):
+        cls.pmap = None
+        cls.exposure = None
+        cls.gsim_lt_cache.clear()
 
 
 class DuplicatedPoint(Exception):
@@ -147,12 +172,6 @@ def normalize(key, fnames, base_path):
     for val in fnames:
         if isinstance(val, list):
             val = normpath(val, base_path)
-        elif '://' in val:
-            # get the data from an URL
-            resp = requests.get(val)
-            _, val = val.rsplit('/', 1)
-            with open(os.path.join(base_path, val), 'wb') as f:
-                f.write(resp.content)
         elif os.path.isabs(val):
             raise ValueError('%s=%s is an absolute path' % (key, val))
         elif val.endswith('.zip'):
@@ -227,7 +246,13 @@ def get_params(job_ini, kw={}):
     if isinstance(job_ini, pathlib.Path):
         job_ini = str(job_ini)
     if job_ini.startswith(('http://', 'https://')):
-        resp = requests.get(job_ini)
+        if '://gitlab' in job_ini:
+            # TODO: this is not working even if curl works
+            token = os.environ['GITLAB_TOKEN']
+            auth = {'Authorization': 'PRIVATE-TOKEN ' + token}
+            resp = requests.get(job_ini, headers=auth)
+        else:
+            resp = requests.get(job_ini)
         job_ini = gettemp(suffix='.zip')
         with open(job_ini, 'wb') as f:
             f.write(resp.content)
@@ -288,7 +313,6 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
         # reduce the sites by a factor of `re`
         # reduce the ses by a factor of `re`
         os.environ['OQ_SAMPLE_SITES'] = re
-        job_ini['number_of_logic_tree_samples'] = '1'
         ses = job_ini.get('ses_per_logic_tree_path')
         if ses:
             ses = str(int(numpy.ceil(int(ses) * float(re))))
@@ -304,18 +328,6 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     if validate:  # always true except from oqzip
         oqparam.validate()
     return oqparam
-
-
-pmap = None  # set as side effect when the user reads hazard_curves from a file
-# the hazard curves format does not split the site locations from the data (an
-# unhappy legacy design choice that I fixed in the GMFs CSV format only) thus
-# this hack is necessary, otherwise we would have to parse the file twice
-
-exposure = None  # set as side effect when the user reads the site mesh
-# this hack is necessary, otherwise we would have to parse the exposure twice
-
-gmfs, eids = None, None  # set as a sided effect when reading gmfs.xml
-# this hack is necessary, otherwise we would have to parse the file twice
 
 
 def get_csv_header(fname, sep=','):
@@ -336,10 +348,9 @@ def get_mesh(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    global pmap, exposure, gmfs, eids
-    if 'exposure' in oqparam.inputs and exposure is None:
+    if 'exposure' in oqparam.inputs and Global.exposure is None:
         # read it only once
-        exposure = get_exposure(oqparam)
+        Global.exposure = get_exposure(oqparam)
     if oqparam.sites:
         return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
@@ -379,17 +390,17 @@ def get_mesh(oqparam, h5=None):
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if isinstance(fname, list):  # for csv
-            mesh, pmap = get_pmap_from_csv(oqparam, fname)
+            mesh, Global.pmap = get_pmap_from_csv(oqparam, fname)
         else:
             raise NotImplementedError('Reading from %s' % fname)
         return mesh
     elif oqparam.region_grid_spacing:
         if oqparam.region:
             poly = geo.Polygon.from_wkt(oqparam.region)
-        elif exposure:
+        elif Global.exposure:
             # in case of implicit grid the exposure takes precedence over
             # the site model
-            poly = exposure.mesh.get_convex_hull()
+            poly = Global.exposure.mesh.get_convex_hull()
         elif 'site_model' in oqparam.inputs:
             # this happens in event_based/case_19, where there is an implicit
             # grid over the site model
@@ -418,7 +429,7 @@ def get_mesh(oqparam, h5=None):
         mesh = geo.Mesh(sm['lon'], sm['lat'])
         return mesh
     elif 'exposure' in oqparam.inputs:
-        return exposure.mesh
+        return Global.exposure.mesh
 
 
 def get_site_model(oqparam):
@@ -516,6 +527,8 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
+    if oqparam.calculation_mode == 'aftershock':
+        return
     ss = oqparam.sites_slice  # can be None or (start, stop)
     if h5 and 'sitecol' in h5 and not ss:
         return h5['sitecol']
@@ -536,6 +549,10 @@ def get_site_collection(oqparam, h5=None):
             req_site_params.add('ampcode')
         if h5 and 'site_model' in h5:  # comes from a site_model.csv
             sm = h5['site_model'][:]
+        elif (not h5 and 'site_model' in oqparam.inputs and
+              'exposure' not in oqparam.inputs):
+            # tested in test_with_site_model
+            sm = get_site_model(oqparam)
         else:
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
@@ -567,7 +584,7 @@ def get_site_collection(oqparam, h5=None):
         dt = site.site_param_dt[param]
         if dt is F64 and (sitecol.array[param] == 0.).all():
             raise ValueError('The site parameter %s is always zero: please '
-                             'check the site nodel' % param)
+                             'check the site model' % param)
     return sitecol
 
 
@@ -587,8 +604,8 @@ def get_gsim_lt(oqparam, trts=('*',)):
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
     key = (gsim_file,) + tuple(sorted(trts))
-    if key in gsim_lt_cache:
-        return gsim_lt_cache[key]
+    if key in Global.gsim_lt_cache:
+        return Global.gsim_lt_cache[key]
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
     gmfcorr = oqparam.correl_model
     for trt, gsims in gsim_lt.values.items():
@@ -617,7 +634,7 @@ def get_gsim_lt(oqparam, trts=('*',)):
     if oqparam.collapse_gsim_logic_tree:
         logging.info('Collapsing the gsim logic tree')
         gsim_lt = gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
-    gsim_lt_cache[key] = gsim_lt
+    Global.gsim_lt_cache[key] = gsim_lt
     if trts != ('*',):  # not in get_input_files
         no_vect = get_no_vect(gsim_lt)
         if no_vect:
@@ -731,14 +748,13 @@ def _check_csm(csm, oqparam, h5):
         source.check_complex_faults(srcs)
 
     # build a smart SourceFilter
-    try:
-        sitecol = get_site_collection(oqparam, h5)
-    except ValueError:   # already stored (case_66)
-        sitecol = h5['sitecol']
-    csm.sitecol = sitecol
-    if sitecol is None:  # missing sites.csv (test_case_1_ruptures)
+    if h5 and 'sitecol' in h5:
+        csm.sitecol = h5['sitecol']
+    else:
+        csm.sitecol = get_site_collection(oqparam, h5)
+    if csm.sitecol is None:  # missing sites.csv (test_case_1_ruptures)
         return
-    srcfilter = SourceFilter(sitecol, oqparam.maximum_distance)
+    srcfilter = SourceFilter(csm.sitecol, oqparam.maximum_distance)
     logging.info('Checking the sources bounding box')
     lons = []
     lats = []
@@ -756,7 +772,7 @@ def _check_csm(csm, oqparam, h5):
         lats.append(box[1])
         lons.append(box[2])
         lats.append(box[3])
-    if cross_idl(*(list(sitecol.lons) + lons)):
+    if cross_idl(*(list(csm.sitecol.lons) + lons)):
         lons = numpy.array(lons) % 360
     else:
         lons = numpy.array(lons)
@@ -796,6 +812,9 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
 
     # read and process the composite source model from the input files
     csm = get_csm(oqparam, full_lt, h5)
+    rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(csm.get_trt_smrs())
+    ngsims = sum(len(rbg) for rbg in rlzs_by_gsim_list)
+    logging.info('There are %d gsims in the CompositeSourceModel', ngsims)
     if oqparam.cachedir:
         logging.info('Saving %s', fname)
         with open(fname, 'wb') as f:
@@ -890,7 +909,7 @@ def get_exposure(oqparam):
         logging.info('Reading %s', fname)
         with open(fname, 'rb') as f:
             return pickle.load(f)
-    exposure = asset.Exposure.read(
+    exposure = Global.exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs,
         by_country='country' in asset.tagset(oqparam.aggregate_by),
@@ -910,11 +929,10 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     :param cost_types: the expected cost types
     :returns: (site collection, asset collection, discarded)
     """
-    global exposure
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
-    if exposure is None:
+    if Global.exposure is None:
         # haz_sitecol not extracted from the exposure
-        exposure = get_exposure(oqparam)
+        Global.exposure = get_exposure(oqparam)
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam)
     if oqparam.region_grid_spacing:
@@ -925,10 +943,10 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     else:
         haz_distance = asset_hazard_distance
 
-    if haz_sitecol.mesh != exposure.mesh:
+    if haz_sitecol.mesh != Global.exposure.mesh:
         # associate the assets to the hazard sites
         sitecol, assets_by, discarded = geo.utils.assoc(
-            exposure.assets_by_site, haz_sitecol, haz_distance, 'filter')
+            Global.exposure.assets_by_site, haz_sitecol, haz_distance, 'filter')
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
         for sid, assets in zip(sitecol.sids, assets_by):
@@ -939,18 +957,19 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
-        assets_by_site = exposure.assets_by_site
+        assets_by_site = Global.exposure.assets_by_site
         discarded = []
         logging.info('Read {:_d} sites and {:_d} assets from the exposure'.
                      format(len(sitecol), sum(len(a) for a in assets_by_site)))
 
     assetcol = asset.AssetCollection(
-        exposure, assets_by_site, oqparam.time_event, oqparam.aggregate_by)
+        Global.exposure, assets_by_site, oqparam.time_event,
+        oqparam.aggregate_by)
     if assetcol.occupancy_periods:
-        missing = set(cost_types) - set(exposure.cost_types['name']) - set(
-            ['occupants'])
+        missing = set(cost_types) - set(
+            Global.exposure.cost_types['name']) - set(['occupants'])
     else:
-        missing = set(cost_types) - set(exposure.cost_types['name'])
+        missing = set(cost_types) - set(Global.exposure.cost_types['name'])
     if missing and not oqparam.calculation_mode.endswith('damage'):
         raise InvalidFile('The exposure %s is missing %s' %
                           (oqparam.inputs['exposure'], missing))
@@ -961,6 +980,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         # you can in other cases, typically with a grid which is mostly empty
         # (i.e. there are many hazard sites with no assets)
         assetcol.reduce_also(sitecol)
+    if 'custom_site_id' not in sitecol.array.dtype.names:
+        gh = sitecol.geohash(8)
+        if len(numpy.unique(gh)) < len(gh):
+            logging.error('geohashes are not unique')
+        sitecol.add_col('custom_site_id', 'S8', gh)
     return sitecol, assetcol, discarded
 
 
@@ -1004,8 +1028,9 @@ def _taxonomy_mapping(filename, taxonomies):
     taxonomies = taxonomies[1:]  # strip '?'
     missing = set(taxonomies) - set(dic)
     if missing:
-        raise InvalidFile('The taxonomies %s are in the exposure but not in '
-                          'the taxonomy mapping %s' % (missing, filename))
+        raise InvalidFile(
+            'The taxonomy strings %s are in the exposure but not in '
+            'the taxonomy mapping file %s' % (missing, filename))
     lst = [[("?", 1)]]
     for taxo in taxonomies:
         recs = dic[taxo]
@@ -1036,8 +1061,9 @@ def get_pmap_from_csv(oqparam, fnames):
     oqparam.set_risk_imts(get_risk_functions(oqparam))
     array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])
-    num_levels = sum(len(imls) for imls in oqparam.imtls.values())
-    data = numpy.zeros((len(mesh), num_levels))
+    N = len(mesh)
+    L = sum(len(imls) for imls in oqparam.imtls.values())
+    data = numpy.zeros((N, L))
     level = 0
     for im in oqparam.imtls:
         arr = dic[im]
@@ -1046,7 +1072,9 @@ def get_pmap_from_csv(oqparam, fnames):
             level += 1
         for field in ('lon', 'lat', 'depth'):  # sanity check
             numpy.testing.assert_equal(arr[field], array[field])
-    return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
+    Global.pmap = ProbabilityMap(numpy.arange(N, dtype=U32), len(data), 1)
+    Global.pmap.array = data.reshape(N, L, 1)
+    return mesh, Global.pmap
 
 
 tag2code = {'multiFaultSource': b'F',
@@ -1163,6 +1191,21 @@ def get_shapefiles(dirname):
     return out
 
 
+def get_reinsurance(oqparam, assetcol=None):
+    """
+    :returns: (policy_df, treaty_df, field_map)
+    """
+    if assetcol is None:
+        sitecol, assetcol, discarded = get_sitecol_assetcol(oqparam)
+    [(loss_type, fname)] = oqparam.inputs['reinsurance'].items()
+    # make sure the first aggregate by is policy
+    if oqparam.aggregate_by[0] != ['policy']:
+        raise InvalidFile('%s: aggregate_by=%s' %
+                          (fname, oqparam.aggregate_by))
+    [(key, fname)] = oqparam.inputs['reinsurance'].items()
+    return reinsurance.parse(fname, assetcol.tagcol.policy_idx)
+
+
 def get_input_files(oqparam):
     """
     :param oqparam: an OqParam instance
@@ -1190,15 +1233,18 @@ def get_input_files(oqparam):
         if key == 'gsim_logic_tree':
             fnames.update(gsim_lt.collect_files(fname))
             fnames.add(fname)
-        elif key == 'source_model':  # UCERF
-            f = oqparam.inputs['source_model']
-            fnames.add(f)
-            fname = nrml.read(f).sourceModel.UCERFSource['filename']
-            fnames.add(os.path.join(os.path.dirname(f), fname))
+        elif key == 'source_model':
+            fnames.add(oqparam.inputs['source_model'])
         elif key == 'exposure':  # fname is a list
             for exp in asset.Exposure.read_headers(fname):
                 fnames.update(exp.datafiles)
             fnames.update(fname)
+        elif key == 'reinsurance':
+            [xml] = fname.values()
+            node = nrml.read(xml)
+            csv = ~node.reinsuranceModel.policies
+            fnames.add(xml)
+            fnames.add(os.path.join(os.path.dirname(xml), csv))
         elif isinstance(fname, dict):
             for key, val in fname.items():
                 if isinstance(val, list):  # list of files

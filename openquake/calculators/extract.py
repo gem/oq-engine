@@ -1136,8 +1136,9 @@ def extract_disagg(dstore, what):
     # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))
     axis = [bins[k] for k in disag_tup]
-    # compute axis mid points
-    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
+
+    # compute axis mid points, except for the TRT axis
+    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype != object
             else ax for ax in axis]
     if len(axis) == 1:  # i.e. Mag or Dist
         values = numpy.array([axis[0]] + list(matrix.T))  # i.e. shape (2, 3)
@@ -1197,7 +1198,7 @@ def extract_disagg_by_src(dstore, what):
         f['site_id'], f['rlz_id'], f['imt_id'], f['lvl_id']]
     arr = numpy.zeros(len(src_id), [('src_id', '<S16'), ('poe', '<f8')])
     arr['src_id'] = src_id
-    arr['poe'] = poe
+    arr['poe'] = poe[:len(src_id)]
     arr.sort(order='poe')
     return ArrayWrapper(arr[::-1], dict(json=hdf5.dumps(f)))
 

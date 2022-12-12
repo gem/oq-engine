@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import re
 import copy
 import os.path
 import pickle
@@ -36,7 +38,7 @@ TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
 by_id = operator.attrgetter('source_id')
 
-CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT = 3, 4, 5, 6
+CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -49,6 +51,19 @@ source_info_dt = numpy.dtype([
     ('mutex_weight', numpy.float64),   # 7
     ('trti', numpy.uint8),             # 8
 ])
+
+def gzpik(obj):
+    """
+    gzip and pickle a python object
+    """
+    gz = gzip.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+    return numpy.frombuffer(gz, numpy.uint8)
+
+
+def fragmentno(src):
+    "Postfix after :.; as an integer"
+    fragment = re.split('[:.;]', src.source_id, 1)[1]
+    return int(fragment.replace('.', '').replace(';', ''))
 
 
 def mutex_by_grp(src_groups):
@@ -68,15 +83,9 @@ def create_source_info(csm, h5):
     data = {}  # src_id -> row
     wkts = []
     lens = []
-    for srcid, srcs in general.groupby(csm.get_sources(), basename).items():
+    for srcid, srcs in general.groupby(
+            csm.get_sources(), basename).items():
         src = srcs[0]
-        # check all fragments have the same group ID
-        for newsrc in srcs[1:]:
-            if newsrc.grp_id != src.grp_id:
-                raise RuntimeError(
-                    'Fragments %s and %s belongs to different groups' %
-                    (newsrc.source_id, src.source_id))
-
         num_ruptures = sum(src.num_ruptures for src in srcs)
         mutex = getattr(src, 'mutex_weight', 0)
         trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
@@ -466,10 +475,12 @@ class CompositeSourceModel:
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         assert len(source_data) < TWO32, len(source_data)
-        for src_id, nsites, weight, ctimes in zip(
-                source_data['src_id'], source_data['nsites'],
+        for src_id, grp_id, nsites, weight, ctimes in zip(
+                source_data['src_id'], source_data['grp_id'],
+                source_data['nsites'],
                 source_data['weight'], source_data['ctimes']):
-            row = self.source_info[src_id.split(':')[0]]
+            baseid = basename(src_id)
+            row = self.source_info[baseid]
             row[CALC_TIME] += ctimes
             row[WEIGHT] += weight
             row[NUM_SITES] += nsites
@@ -490,7 +501,7 @@ class CompositeSourceModel:
         for srcs in general.groupby(self.get_sources(), basename).values():
             offset = 0
             if len(srcs) > 1:  # order by split number
-                srcs.sort(key=lambda src: int(src.source_id.split(':')[1]))
+                srcs.sort(key=fragmentno)
             for src in srcs:
                 src.offset = offset
                 offset += src.num_ruptures
@@ -528,14 +539,21 @@ class CompositeSourceModel:
         return max_weight
 
     def __toh5__(self):
-        data = gzip.compress(pickle.dumps(self, pickle.HIGHEST_PROTOCOL))
-        logging.info(f'Storing {general.humansize(len(data))} '
+        G = len(self.src_groups)
+        arr = numpy.zeros(G + 1, hdf5.vuint8)
+        for grp_id, grp in enumerate(self.src_groups):
+            arr[grp_id] = gzpik(grp)
+        arr[G] = gzpik(self.source_info)
+        size = sum(len(val) for val in arr)
+        logging.info(f'Storing {general.humansize(size)} '
                      'of CompositeSourceModel')
-        return numpy.void(data), {}
+        return arr, {}
 
-    def __fromh5__(self, blob, attrs):
-        other = pickle.loads(gzip.decompress(blob))
-        vars(self).update(vars(other))
+    # tested in case_36
+    def __fromh5__(self, arr, attrs):
+        objs = [pickle.loads(gzip.decompress(a.tobytes())) for a in arr]
+        self.src_groups = objs[:-1]
+        self.source_info = objs[-1]
 
     def __repr__(self):
         """

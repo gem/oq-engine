@@ -211,8 +211,8 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.collapser.cfactor = numpy.zeros(2)
         cmaker.collapser.collapse_level = 1
         cmap = cmaker.get_pmap(ctxs)
-        self.assertLess(rms(pmap[0].array - cmap[0].array), 3E-4)
-        self.assertLess(rms(pmap[1].array - cmap[1].array), 3E-4)
+        self.assertLess(rms(pmap.array[0] - cmap.array[0]), 6E-4)
+        self.assertLess(rms(pmap.array[1] - cmap.array[0]), 6E-4)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [33, 60])
 
     def test_collapse_big(self):
@@ -232,11 +232,11 @@ class CollapseTestCase(unittest.TestCase):
         [srcs] = inp.groups  # a single area source
         # get the context
         ctxs = cmaker.from_srcs(srcs, inp.sitecol)
-        pcurve0 = cmaker.get_pmap(ctxs)[0]
+        pcurve0 = cmaker.get_pmap(ctxs).array[0]
         cmaker.collapser.cfactor = numpy.zeros(2)
         cmaker.collapser.collapse_level = 1
-        pcurve1 = cmaker.get_pmap(ctxs)[0]
-        self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
+        pcurve1 = cmaker.get_pmap(ctxs).array[0]
+        self.assertLess(numpy.abs(pcurve0 - pcurve1).sum(), 1E-6)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [42, 11616])
 
     def test_collapse_azimuth(self):
@@ -431,7 +431,7 @@ class GetCtxs01TestCase(unittest.TestCase):
         cm = ContextMaker('*', [gmm], param)
 
         # extract magnitude 7 context
-        [ctx] = cm.get_ctxs(self.src, self.sitec)
+        [ctx] = cm.get_ctx_iter(self.src, self.sitec)
         self.ctx = ctx[ctx.mag == 7.0]
 
         # extract magnitude 7 rupture
@@ -488,7 +488,7 @@ class GetCtxs02TestCase(unittest.TestCase):
         cm = ContextMaker('*', [gmm], param)
 
         # extract magnitude 7 context
-        [ctx] = cm.get_ctxs(self.src, self.sitec)
+        [ctx] = cm.get_ctx_iter(self.src, self.sitec)
         self.ctx = ctx[ctx.mag == 7.0]
 
         # extract magnitude 7 rupture
@@ -540,7 +540,7 @@ class PlanarDistancesTestCase(unittest.TestCase):
         cmaker = ContextMaker(
             trt, gsims, dict(imtls=imtls, truncation_level=3.))
         cmaker.tom = tom
-        ctx, = cmaker.get_ctxs(src, sites)
+        ctx, = cmaker.get_ctx_iter(src, sites)
         aac(ctx.rrup, [9.32409196, 20.44343079])
         aac(ctx.rx, [0., 0.])
         aac(ctx.ry0, [9.26597563, 20.38546829])

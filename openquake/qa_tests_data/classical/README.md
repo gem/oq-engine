@@ -21,7 +21,7 @@
 | case_19 | Test AvgGMPE | 
 | case_20 | | 
 | case_21 | | 
-| case_22 | | 
+| case_22 | Test tiling|
 | case_23 | | 
 | case_24 | Test collapsing rjb-independent GMPE |
 | case_25 | |

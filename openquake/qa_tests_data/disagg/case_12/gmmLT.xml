@@ -1,0 +1,71 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml>
+  <logicTree logicTreeID="">
+    <logicTreeBranchSet branchSetID="bs_00" uncertaintyType="gmpeModel" applyToTectonicRegionType="Active Shallow Crust">
+      <logicTreeBranch branchID="b_00_00">
+	<uncertaintyModel>
+          [BooreEtAl2014LowQ]
+        </uncertaintyModel>
+	<uncertaintyWeight>0.25000</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_00_01">
+	<uncertaintyModel>
+          [ZhaoEtAl2006Asc]
+        </uncertaintyModel>
+	<uncertaintyWeight>0.25000</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_00_02">
+	<uncertaintyModel>
+          [ChiouYoungs2014]
+        </uncertaintyModel>
+	<uncertaintyWeight>0.25000</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_00_03">
+	<uncertaintyModel>
+          [BooreEtAl2014]
+        </uncertaintyModel>
+	<uncertaintyWeight>0.25000</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet branchSetID="bs_01" uncertaintyType="gmpeModel" applyToTectonicRegionType="Subduction Interface">
+      <logicTreeBranch branchID="b_01_04">
+	<uncertaintyModel>
+          [AbrahamsonEtAl2015SInter]
+        </uncertaintyModel>
+	<uncertaintyWeight>0.33000</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_01_05">
+	<uncertaintyModel>
+          [ParkerEtAl2020SInter]
+        </uncertaintyModel>
+	<uncertaintyWeight>0.33000</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_01_06">
+	<uncertaintyModel>
+          [ZhaoEtAl2006SInter]
+        </uncertaintyModel>
+	<uncertaintyWeight>0.34000</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet branchSetID="bs_02" uncertaintyType="gmpeModel" applyToTectonicRegionType="Subduction IntraSlab">
+      <logicTreeBranch branchID="b_02_07">
+	<uncertaintyModel>
+          [AbrahamsonEtAl2015SSlab]
+        </uncertaintyModel>
+	<uncertaintyWeight>0.33000</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_02_08">
+	<uncertaintyModel>
+          [ParkerEtAl2020SSlab]
+        </uncertaintyModel>
+	<uncertaintyWeight>0.33000</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_02_09">
+	<uncertaintyModel>
+          [ZhaoEtAl2006SSlab]
+        </uncertaintyModel>
+	<uncertaintyWeight>0.34000</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>

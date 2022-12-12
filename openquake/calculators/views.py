@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import ast
+import html
 import os.path
 import numbers
 import operator
@@ -32,12 +34,15 @@ from openquake.baselib.general import (
     get_array, group_array, fast_agg)
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
+from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util, logictree
-from openquake.risklib.scientific import losses_by_period, return_periods, LTI
+from openquake.risklib.scientific import (
+    losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
+from openquake.calculators.classical import decide_num_tasks, get_pmaps_size
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
 
@@ -103,6 +108,56 @@ def dt(names):
         names = names.split()
     return numpy.dtype([(name, object) for name in names])
 
+class HtmlTable(object):
+    """
+    Convert a sequence header+body into a HTML table.
+    """
+    css = """\
+    tr.evenRow { background-color: lightgreen }
+    tr.oddRow { }
+    th { background-color: lightblue }
+    """
+    maxrows = 5000
+    border = "1"
+    summary = ""
+
+    def __init__(self, header_plus_body, name='noname',
+                 empty_table='Empty table'):
+        header, body = header_plus_body[0], header_plus_body[1:]
+        self.name = name
+        self.empty_table = empty_table
+        rows = []  # rows is a finite sequence of tuples
+        for i, row in enumerate(body):
+            if i == self.maxrows:
+                rows.append(
+                    ["Table truncated because too big: more than %s rows" % i])
+                break
+            rows.append(row)
+        self.rows = rows
+        self.header = tuple(header)  # horizontal header
+
+    def render(self, dummy_ctxt=None):
+        out = "\n%s\n" % "".join(list(self._gen_table()))
+        if not self.rows:
+            out += '<em>%s</em>' % html.escape(self.empty_table, quote=True)
+        return out
+
+    def _gen_table(self):
+        yield '<table id="%s" border="%s" summary="%s" class="tablesorter">\n'\
+              % (self.name, self.border, self.summary)
+        yield '<thead>\n'
+        yield '<tr>%s</tr>\n' % ''.join(
+            '<th>%s</th>\n' % h for h in self.header)
+        yield '</thead>\n'
+        yield '<tbody\n>'
+        for r, row in enumerate(self.rows):
+            yield '<tr class="%s">\n' % ["even", "odd"][r % 2]
+            for col in row:
+                yield '<td>%s</td>\n' % col
+            yield '</tr>\n'
+        yield '</tbody>\n'
+        yield '</table>\n'
+
 
 def text_table(data, header=None, fmt=None, ext='rst'):
     """
@@ -118,7 +173,7 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     | b    | 2     |
     +------+-------+
     """
-    assert ext in 'rst org', ext
+    assert ext in 'rst org html', ext
     if isinstance(data, pandas.DataFrame):
         if data.index.name:
             data = data.reset_index()
@@ -149,6 +204,8 @@ def text_table(data, header=None, fmt=None, ext='rst'):
             raise ValueError('The header has %d fields but the row %d fields!'
                              % (len(col_sizes), len(tup)))
         body.append(tup)
+    if ext == 'html':
+        return HtmlTable([header] + body).render()
 
     wrap = '+-%s-+' if ext == 'rst' else '|-%s-|'
     sepline = wrap % '-+-'.join('-' * size for size in col_sizes)
@@ -256,7 +313,7 @@ def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
     df['slow_factor'] = df.calc_time / df.weight
-    del df['grp_id'], df['trti']
+    del df['grp_id'], df['trti'], df['mutex_weight']
     return df
 
 
@@ -354,7 +411,7 @@ def avglosses_data_transfer(token, dstore):
         '8 bytes x %d tasks = %s' % (N, R, L, ct, humansize(size_bytes)))
 
 
-# for scenario_risk
+# for scenario_risk and classical_risk
 @view.add('totlosses')
 def view_totlosses(token, dstore):
     """
@@ -364,7 +421,15 @@ def view_totlosses(token, dstore):
     sanity check for the correctness of the implementation.
     """
     oq = dstore['oqparam']
-    tot_losses = dstore['avg_losses-rlzs/structural'][()].sum(axis=0)
+    tot_losses = 0
+    for ltype in oq.loss_types:
+        name = 'avg_losses-stats/' + ltype
+        try:
+            tot = dstore[name][()].sum(axis=0)
+        except KeyError:
+            name = 'avg_losses-rlzs/' + ltype
+            tot = dstore[name][()].sum(axis=0)
+        tot_losses += tot
     return text_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
 
 
@@ -378,7 +443,7 @@ def alt_to_many_columns(alt, loss_types):
     for (eid, kid), df in alt.groupby(['event_id', 'agg_id']):
         dic['event_id'].append(eid)
         for ln in loss_types:
-            arr = df[df.loss_id == LTI[ln]].loss.to_numpy()
+            arr = df[df.loss_id == LOSSID[ln]].loss.to_numpy()
             loss = 0 if len(arr) == 0 else arr[0]  # arr has size 0 or 1
             dic[ln].append(loss)
     return pandas.DataFrame(dic)
@@ -430,10 +495,14 @@ def view_portfolio_loss(token, dstore):
     E = len(rlzs)
     ws = weights[rlzs]
     avgs = []
+    if oq.investigation_time:
+        factor = oq.time_ratio * E / R
+    else:
+        factor = 1 / R
     for ln in oq.loss_types:
-        df = alt_df[alt_df.loss_id == LTI[ln]]
+        df = alt_df[alt_df.loss_id == LOSSID[ln]]
         eids = df.pop('event_id').to_numpy()
-        avgs.append(ws[eids] @ df.loss.to_numpy() / ws.sum() * E / R)
+        avgs.append(ws[eids] @ df.loss.to_numpy() / ws.sum() * factor)
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
 
 
@@ -532,7 +601,7 @@ def view_fullreport(token, dstore):
     """
     # avoid circular imports
     from openquake.calculators.reportwriter import ReportWriter
-    return ReportWriter(dstore).make_report()
+    return ReportWriter(dstore).make_report(show_inputs=False)
 
 
 @view.add('performance')
@@ -600,7 +669,8 @@ def view_required_params_per_trt(token, dstore):
     tbl = []
     for trt in full_lt.trts:
         gsims = full_lt.gsim_lt.values[trt]
-        maker = ContextMaker(trt, gsims, {'imtls': {}})
+        # adding fake mags to the ContextMaker, needed for table-based GMPEs
+        maker = ContextMaker(trt, gsims, {'imtls': {}, 'mags': ['7.00']})
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
@@ -683,12 +753,14 @@ def view_task_hazard(token, dstore):
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['task_no']
-    sdata = dstore.read_df('source_data', 'taskno')
-    eff_ruptures = sdata.loc[taskno].nrupts.sum()
-    eff_sites = sdata.loc[taskno].nsites.sum()
-    res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, weight=%d, duration=%d s'
-           % (taskno, eff_ruptures, eff_sites, rec['weight'], rec['duration']))
-    return res
+    sdata = dstore.read_df('source_data', 'taskno').loc[taskno]
+    num_ruptures = sdata.nrupts.sum()
+    eff_sites = sdata.nsites.sum()
+    msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
+             'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
+                 taskno, len(sdata), num_ruptures, eff_sites,
+                 rec['weight'], rec['duration'])
+    return msg
 
 
 @view.add('source_data')
@@ -1066,6 +1138,29 @@ def view_event_loss_table(token, dstore):
     return df[:20]
 
 
+@view.add('risk_by_event')
+def view_risk_by_event(token, dstore):
+    """
+    Display the top 20 losses of the aggregate loss table as a TSV.
+    If aggregate_by was missing in the calculation, returns nothing.
+
+    $ oq show risk_by_event:<loss_type>
+    """
+    _, ltype = token.split(':')
+    loss_id = LOSSID[ltype]
+    df = dstore.read_df('risk_by_event', sel=dict(loss_id=loss_id))
+    del df['loss_id']
+    del df['variance']
+    agg_keys = dstore['agg_keys'][:]
+    df = df[df.agg_id < df.agg_id.max()].sort_values('loss', ascending=False)
+    df['agg_key'] = decode(agg_keys[df.agg_id.to_numpy()])
+    del df['agg_id']
+    out = io.StringIO()
+    df[:20].to_csv(out, sep='\t', index=False, float_format='%.1f',
+                   line_terminator='\r\n')
+    return out.getvalue()
+
+
 @view.add('delta_loss')
 def view_delta_loss(token, dstore):
     """
@@ -1269,6 +1364,34 @@ def view_mean_perils(token, dstore):
             weights = ev_weights[dstore['gmf_data/eid'][:]]
             out[peril] = fast_agg(sid, data * weights) / totw
     return out
+
+    
+@view.add('group_summary')
+def view_group_summary(token, dstore):
+    if ':' not in token:
+        ct = 1
+    else:
+        ct = int(token.split(':')[1])
+    L = dstore['oqparam'].imtls.size
+    N = len(dstore['sitecol'])
+    gb = L * N * 8
+    header = ['grp_id', 'ntasks', 'maxsize']
+    arr = decide_num_tasks(dstore, ct)
+    tbl = [(grp_id, gsims * tiles, humansize(gsims * gb))
+           for grp_id, gsims, tiles in arr]
+    totsize = arr['cmakers'].sum()
+    numtasks = (arr['cmakers'] * arr['tiles']).sum()
+    tbl.append(['tot', numtasks, humansize(totsize * gb)])
+    return text_table(tbl, header, ext='org')
+
+
+@view.add('pmaps_size')
+def view_pmaps_size(token, dstore):
+    if ':' not in token:
+        ct = Starmap.num_cores * 2
+    else:
+        ct = int(token.split(':')[1])
+    return humansize(get_pmaps_size(dstore, ct))
 
 
 @view.add('src_groups')

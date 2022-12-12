@@ -214,12 +214,20 @@ class PointSource(ParametricSeismicSource):
             arr['dims'] = get_rupdims(areas, np.dip, width, rar)
         return planin
 
-    def max_radius(self):
+    def max_radius(self, maxdist):
         """
         :returns: max radius + ps_grid_spacing * sqrt(2)/2
         """
-        max_rp_radius = self._get_max_rupture_projection_radius()
-        return self.ps_grid_spacing * .707 + max_rp_radius
+        self._get_max_rupture_projection_radius()
+        eff_radius = min(self.radius[-1], maxdist / 2)
+        return eff_radius + self.ps_grid_spacing * .707
+
+    def get_psdist(self, m, mag, psdist, magdist):
+        """
+        :returns: the effective pointsource distance for the given magnitude
+        """
+        eff_radius = min(self.radius[m], magdist[mag] / 2)
+        return eff_radius + self.ps_grid_spacing * .707 + psdist
 
     def _get_max_rupture_projection_radius(self):
         """
@@ -347,7 +355,8 @@ class PointSource(ParametricSeismicSource):
         """
         Bounding box of the point, enlarged by the maximum distance
         """
-        return get_bounding_box([self.location], maxdist + self.max_radius())
+        radius = self.max_radius(maxdist)
+        return get_bounding_box([self.location], maxdist + radius)
 
     def wkt(self):
         """
@@ -420,12 +429,14 @@ class CollapsedPointSource(PointSource):
         return sum(src.count_ruptures() for src in self.pointsources)
 
 
-def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
+def grid_point_sources(sources, ps_grid_spacing, msr, monitor=Monitor()):
     """
     :param sources:
         a list of sources with the same grp_id (point sources and not)
     :param ps_grid_spacing:
         value of the point source grid spacing in km; if None, do nothing
+    :param msr:
+         magnitude scaling relationship as a string
     :returns:
         a dict grp_id -> list of non-point sources and collapsed point sources
     """
@@ -453,7 +464,8 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
     task_no = getattr(monitor, 'task_no', 0)
     for i, idxs in enumerate(grid.values()):
         if len(idxs) > 1:
-            cps = CollapsedPointSource('cps-%d-%d' % (task_no, i), ps[idxs])
+            name = 'cps-%s-%d-%d' % (msr, task_no, i)
+            cps = CollapsedPointSource(name, ps[idxs])
             cps.grp_id = ps[0].grp_id
             cps.trt_smr = ps[0].trt_smr
             cps.ps_grid_spacing = ps_grid_spacing

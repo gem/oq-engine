@@ -26,7 +26,7 @@ exports
 import numpy as np
 
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGD
+from openquake.hazardlib.imt import LSD
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
 
@@ -69,7 +69,7 @@ class YoudEtAl2002(GMPE):
 
     #: Supported intensity measure types are Permanent ground deformation (m)
     #: from lateral spread
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGD}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {LSD}
 
     #: Supported intensity measure component is the horizontal
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
@@ -97,7 +97,11 @@ class YoudEtAl2002(GMPE):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
+            #Adjustment done by Prajakta Jadhav and Dharma Wijewickreme: 
+            #To adopt epicentral distance of 5km for deep sources (depth>50km)
+            #and within epicentral distance of 5km
             ctx.repi[(ctx.repi < 5.) & (ctx.hypo_depth >= 50.)] = 5.0
+            
             R = (10 ** ((0.89 * ctx.mag) - 5.64)) + ctx.repi
             zslope = ctx.slope == 0.0
             ctx.slope[zslope] = ctx.freeface_ratio[zslope]
@@ -115,10 +119,10 @@ class YoudEtAl2002(GMPE):
             sig[m] = np.log(10.0 ** self.COEFFS_SLOPE[imt]["sigma"])
 
     COEFFS_SLOPE = CoeffsTable(table="""\
-    IMT      c0     c1       c2      c3     c4     c5     c6      c7     sigma
-    PGD -16.213  1.532   -1.406  -0.012  0.338   0.54  3.413  -0.795     0.464
+    IMT                c0     c1       c2      c3     c4     c5     c6      c7     sigma
+    LSD           -16.213  1.532   -1.406  -0.012  0.338   0.54  3.413  -0.795     0.197
     """)
     COEFFS_FREEFACE = CoeffsTable(table="""\
-    IMT      c0     c1       c2      c3     c4     c5     c6      c7     sigma
-    PGD -16.713  1.532   -1.406  -0.012  0.592   0.54  3.413  -0.795     0.464
+    IMT                c0     c1       c2      c3     c4     c5     c6      c7     sigma
+    LSD           -16.713  1.532   -1.406  -0.012  0.592   0.54  3.413  -0.795     0.197
     """)

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <reinsuranceModel>
+    <description>Test reinsurance model</description>
+    <fieldMap>
+      <field input="surplus" type="prop" max_cession_event="500" />
+      <field input="quota_shared" type="prop" max_cession_event="1000" />
+      <field input="WXLR" type="wxlr" deductible="50" limit="350" />
+    </fieldMap>
+    <policies>policy.csv</policies>
+  </reinsuranceModel>
+</nrml>

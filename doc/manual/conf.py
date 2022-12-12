@@ -50,7 +50,24 @@ master_doc = 'index'
 # General information about the project.
 project = u'OpenQuake Engine Manual'
 copyright = u'2018-2022, GEM Foundation'
-author = u'Marco Pagani, Vitor Silva, Anirudh Rao, Michele Simionato, Robin Gee, Kendra Johnson'
+
+# 'author' variable must be aligned with authors section in 'index_contents.rst_part' file
+author = u'M. Pagani, V. Silva, A. Rao, M. Simionato,\\\\K. Johnson'
+
+
+try:
+    import subprocess
+    import re
+    vcs_branch = subprocess.run(['git', 'branch', '--show-current'], stdout=subprocess.PIPE)
+    vcs_branch = vcs_branch.stdout.decode('utf-8').rstrip()
+    # vcs_branch = 'engine-3.15'
+    if re.compile('engine-[0-9]+\.[0-9]+.*').match(vcs_branch):
+        branch = ''
+    else:
+        branch = " (%s)" % vcs_branch
+except Exception:
+    vcs_branch = None
+    branch = ''
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -59,7 +76,8 @@ author = u'Marco Pagani, Vitor Silva, Anirudh Rao, Michele Simionato, Robin Gee,
 # The short X.Y.Z version.
 version = engine.__version__.split('-')[0]
 # The full version, including alpha/beta/rc tags.
-release = engine.__version__
+release = "%s%s" % (engine.__version__, branch)
+
 rst_epilog = """
 .. |VERSION| replace:: %s
 """ % release
@@ -129,7 +147,8 @@ html_theme = 'pydata_sphinx_theme'
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = "OpenQuake Engine Manual"
+html_title = 'OpenQuake Engine Manual %s%s' % (version, branch)
+
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None
@@ -299,7 +318,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'OpenQuakeEngineManual.tex', u'OpenQuake Engine Manual',
+    (master_doc, 'OpenQuakeEngineManual.tex',
+     u'OpenQuake Engine Manual',
      author, 'manual'),
 ]
 

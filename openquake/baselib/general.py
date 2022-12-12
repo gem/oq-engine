@@ -292,6 +292,7 @@ def gen_slices(start, stop, blocksize):
     >>> list(gen_slices(1, 6, 2))
     [slice(1, 3, None), slice(3, 5, None), slice(5, 6, None)]
     """
+    blocksize = int(blocksize)
     assert start <= stop, (start, stop)
     assert blocksize > 0, blocksize
     while True:
@@ -360,7 +361,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
                 assert_close(a[x], b[x], rtol, atol, x)
         return
     if hasattr(a, '__dict__'):  # objects with an attribute dictionary
-        assert_close(vars(a), vars(b), context=a)
+        assert_close(vars(a), vars(b), rtol, atol, context=a)
         return
     if hasattr(a, '__iter__'):  # iterable objects
         xs, ys = list(a), list(b)
@@ -944,8 +945,6 @@ def multi_index(shape, axis=None):
     (slice(None, None, None), 1, 1)
     (slice(None, None, None), 1, 2)
     """
-    if any(s >= TWO16 for s in shape):
-        raise ValueError('Shape too big: ' + str(shape))
     ranges = (range(s) for s in shape)
     if axis is None:
         yield from itertools.product(*ranges)
@@ -955,6 +954,7 @@ def multi_index(shape, axis=None):
         yield tuple(lst)
 
 
+# NB: the fast_agg functions are usually faster than pandas
 def fast_agg(indices, values=None, axis=0, factor=None, M=None):
     """
     :param indices: N indices in the range 0 ... M - 1 with M < N
@@ -989,6 +989,7 @@ def fast_agg(indices, values=None, axis=0, factor=None, M=None):
     return res
 
 
+# NB: the fast_agg functions are usually faster than pandas
 def fast_agg2(tags, values=None, axis=0):
     """
     :param tags: N non-unique tags out of M
@@ -1009,6 +1010,7 @@ def fast_agg2(tags, values=None, axis=0):
     return uniq, fast_agg(indices, values, axis)
 
 
+# NB: the fast_agg functions are usually faster than pandas
 def fast_agg3(structured_array, kfield, vfields=None, factor=None):
     """
     Aggregate a structured array with a key field (the kfield)

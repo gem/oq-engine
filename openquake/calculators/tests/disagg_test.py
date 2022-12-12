@@ -18,6 +18,7 @@
 import os
 import re
 import sys
+import platform
 import unittest
 import numpy
 from openquake.baselib import hdf5
@@ -27,10 +28,9 @@ from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
-from openquake.calculators.tests.classical_test import check_disagg_by_src
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
-    case_10, case_master)
+    case_10, case_11, case_12, case_master)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -71,8 +71,6 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_2(self):
         # this is a case with disagg_outputs = Mag and 4 realizations
         # site #0 is partially discarded
-        if sys.platform == 'darwin':
-            raise unittest.SkipTest('MacOSX')
         self.assert_curves_ok(['Mag-0.csv', 'Mag-1.csv'], case_2.__file__)
 
         # check we can read the exported files and compute the mean
@@ -154,8 +152,6 @@ class DisaggregationTestCase(CalculatorTestCase):
         aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
         self.assertEqual(aw.trt, [b'Active Shallow Crust'])
 
-        check_disagg_by_src(self.calc.datastore, lvl=0)
-
     def test_case_7(self):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
         self.run_calc(case_7.__file__, 'job.ini')
@@ -195,8 +191,6 @@ class DisaggregationTestCase(CalculatorTestCase):
                 self.assertEqualFiles(
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
-        check_disagg_by_src(self.calc.datastore)
-
     def test_case_8(self):
         # test epsilon star
         self.run_calc(case_8.__file__, 'job.ini')
@@ -205,15 +199,49 @@ class DisaggregationTestCase(CalculatorTestCase):
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
 
+        # test calculation with uneven user defined magnitude bin edges
+        self.run_calc(case_8.__file__, 'job_a.ini')
+
+        # Test mr results. Comparing against the results of the first
+        # calculation in this test. The first value for magnitude 5.8 remains
+        # the same. The contributions for magnitudes 6.5 and 6.7 are combined
+        # into a single value corresponding to 1 - (1-p1) * (1-p2) and the last
+        # value is also the same provided to magnitude 7 in the first
+        # calculation
+        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/Mag_Dist-0.csv', fname)
+
     def test_case_9(self):
         # test mutex disaggregation. Results checked against hand-computed
-        # values (mp - 2022.06.28)
-        self.run_calc(case_9.__file__, 'job.ini')
-        [fname] = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
+        # values by Marco Pagani - 2022.06.28
+        self.run_calc(case_9.__file__, 'job.ini', concurrent_tasks='2')
+        [f1, f2] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/Mag-0.csv', f1)
+        self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', f2)
+
+        # checking that the right number of sources appear in dsg_by_src
+        dstore = self.calc.datastore.open('r')
+        self.assertEqual(dstore['disagg_by_src'].shape[-1], 6)
 
     def test_case_10(self):
         # test single magnitude
         self.run_calc(case_10.__file__, 'job.ini')
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag-0.csv', fname)
+
+    def test_case_11(self):
+        # test mutex disagg by src when sources grouped by prefix
+        # MDE results use same values as test_case_9
+        self.run_calc(case_11.__file__, 'job.ini')
+        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        #if platform.machine() == 'arm64':
+        #    raise unittest.SkipTest('Temporarily skipped')
+        self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
+
+        # checking that the right number of sources appear in dsg_by_src
+        dstore = self.calc.datastore.open('r')
+        self.assertEqual(dstore['disagg_by_src'].shape[-1], 3)
+
+    def test_case_12(self):
+        # check source IDs with :, . and ;
+        self.run_calc(case_12.__file__, 'job.ini')

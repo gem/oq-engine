@@ -127,8 +127,8 @@ spatial correlation with a lot of sites. Assuming the parameters of the
 calculation are in a `job.ini` file you can run the following lines in
 the notebook:
 ```python
-In[1]: from openquake.commands.run import run
-In[2]: calc = run(['job.ini'])
+In[1]: from openquake.calculators.base import run_calc
+In[2]: calc = run_calc('job.ini')
 ```
 Then you can inspect the contents of the datastore and perform your
 postprocessing:

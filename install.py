@@ -65,6 +65,8 @@ except ImportError:
             sys.exit('venv is missing! Please see the documentation of your '
                      'Operating System to install it')
 
+CDIR = os.path.dirname(os.path.abspath(__file__))
+
 
 class server:
     """
@@ -183,7 +185,24 @@ PLATFORM = {'linux': ('linux64',),  # from sys.platform to requirements.txt
             'win32': ('win64',)}
 DEMOS = 'https://artifacts.openquake.org/travis/demos-master.zip'
 GITBRANCH = 'https://github.com/gem/oq-engine/archive/%s.zip'
-STANDALONE = 'https://github.com/gem/oq-platform-%s/archive/master.zip'
+URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
+
+def ensure(pip=None, pyvenv=None):
+    """
+    Create venv and install pip
+    """
+    try:
+        if pyvenv:
+            venv.EnvBuilder(with_pip=True).create(pyvenv)
+        else:
+            subprocess.check_call([pip, '-m', 'ensurepip', '--upgrade'])
+    except subprocess.CalledProcessError as exc:
+        if 'died with <Signals.SIGABRT' in str(exc):
+            shutil.rmtree(inst.VENV)
+            raise RuntimeError(
+                'Could not execute ensurepip --upgrade: %s'
+                % ('Probably you are using the system Python (%s)'
+                   % sys.executable))
 
 
 def get_branch(version):
@@ -204,26 +223,37 @@ def install_standalone(venv):
     Install the standalone Django applications if possible
     """
     print("The standalone applications are not installed yet")
-    return
-    for app in 'standalone ipt taxtweb taxonomy'.split():
-        env = {'PYBUILD_NAME': 'oq-taxonomy'} if app == 'taxonomy' else {}
+    if sys.platform == 'win32':
+        if os.path.exists('python\\python._pth.old'):
+            pycmd = inst.VENV + '\\python.exe'
+        else:
+            pycmd = inst.VENV + '\\Scripts\\python.exe'
+    else:
+        pycmd = inst.VENV + '/bin/python3'
+    #
+    for app in 'oq-platform-standalone oq-platform-ipt \
+        oq-platform-taxonomy oq-platform-taxtweb openquake.taxonomy'.split():
         try:
-            subprocess.check_call(['%s/bin/pip' % venv, 'install',
-                                   '--upgrade', STANDALONE % app], env=env)
+            print("Applications " + app + " are not installed yet \n")
+
+            subprocess.check_call([pycmd, '-m', 'pip', 'install',
+                                   '--find-links', URL_STANDALONE, app])
         except Exception as exc:
-            print('%s: could not install %s' % (exc, STANDALONE % app))
+            print('%s: could not install %s' % (exc, app))
 
 
-def before_checks(inst, port, remove, usage):
+def before_checks(inst, venv, port, remove, usage):
     """
     Checks to perform before the installation
     """
+    if venv:
+        inst.VENV = os.path.abspath(os.path.expanduser(venv))
     if port:
         inst.DBPORT = int(port)
 
     # check python version
-    if PYVER < (3, 6):
-        sys.exit('Error: you need at least Python 3.6, but you have %s' %
+    if PYVER < (3, 8):
+        sys.exit('Error: you need at least Python 3.8, but you have %s' %
                  '.'.join(map(str, sys.version_info)))
 
     # check platform
@@ -319,8 +349,7 @@ def install(inst, version):
 
     # create the openquake venv if necessary
     if not os.path.exists(inst.VENV) or not os.listdir(inst.VENV):
-        # create venv
-        venv.EnvBuilder(with_pip=True).create(inst.VENV)
+        ensure(pyvenv=inst.VENV)
         print('Created %s' % inst.VENV)
 
     if sys.platform == 'win32':
@@ -333,7 +362,7 @@ def install(inst, version):
 
     # upgrade pip and before check that it is installed in venv
     if sys.platform != 'win32':
-        subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
+        ensure(pip=pycmd)
         subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
                                'pip', 'wheel'])
     else:
@@ -357,7 +386,7 @@ def install(inst, version):
     subprocess.check_call([pycmd, '-m', 'pip', 'install', '-r', req])
 
     if (inst is devel or inst is devel_server):  # install from the local repo
-        subprocess.check_call([pycmd, '-m', 'pip', 'install', '-e', '.'])
+        subprocess.check_call([pycmd, '-m', 'pip', 'install', '-e', CDIR])
     elif version is None:  # install the stable version
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine'])
@@ -390,6 +419,8 @@ def install(inst, version):
         oqreal = '%s\\Scripts\\oq' % inst.VENV
     else:
         oqreal = '%s/bin/oq' % inst.VENV
+    print('Compiling numba modules')
+    subprocess.run([oqreal, '--version'])  # compile numba
 
     if inst in (user, devel):  # create/upgrade the db in the default location
         # do not stop if `oq dbserver upgrade` is missing (versions < 3.15)
@@ -484,6 +515,7 @@ if __name__ == '__main__':
                         choices=['server', 'user', 'devel', 'devel_server'],
                         nargs='?',
                         help='the kind of installation you want')
+    parser.add_argument("--venv", help="venv directory")
     parser.add_argument("--remove",  action="store_true",
                         help="disinstall the engine")
     parser.add_argument("--version",
@@ -493,7 +525,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.inst:
         inst = globals()[args.inst]
-        before_checks(inst, args.dbport, args.remove, parser.format_usage())
+        before_checks(inst, args.venv, args.dbport, args.remove,
+                      parser.format_usage())
         if args.remove:
             remove(inst)
         else:

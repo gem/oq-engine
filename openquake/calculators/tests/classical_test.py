@@ -39,39 +39,10 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
     case_66, case_67, case_68, case_69, case_70, case_71, case_72, case_73,
-    case_74, case_75, case_76, case_77, case_78)
+    case_74, case_75, case_76, case_77, case_78, case_79, case_80)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
-
-
-def check_disagg_by_src(dstore, lvl=-1):
-    """
-    Make sure that by composing disagg_by_src one gets the hazard curves
-    """
-    info = dstore['source_info'][:]
-    mutex = info['mutex_weight'] > 0
-    mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
-    dbs = dstore.sel('disagg_by_src')  # N, R, M, L, Ns
-    if mutex.sum():
-        dbs_indep = dbs[:, :, :, :, ~mutex]
-        dbs_mutex = dbs[:, :, :, :, mutex]
-        poes_indep = general.pprod(dbs_indep, axis=4)  # N, R, M, L
-        poes_mutex = dbs_mutex.sum(axis=4)  # N, R, M, L
-        poes = poes_indep + poes_mutex - poes_indep * poes_mutex
-    else:
-        poes = general.pprod(dbs, axis=4)  # N, R, M, L
-    rlz_weights = dstore['weights'][:]
-    mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L
-    aac(mean, mean2, atol=1E-7)
-
-    # considering a level for which the mean is nonzero
-    assert mean[:, :, lvl].any(), mean[:, :, lvl]
-    # print('mean =', mean[:, :, lvl])
-
-    # check the extract call is not broken
-    aw = extract(dstore, 'disagg_by_src?lvl_id=%d' % lvl)
-    assert aw.array.dtype.names == ('src_id', 'poe')
 
 
 def get_dists(dstore):
@@ -151,9 +122,6 @@ class ClassicalTestCase(CalculatorTestCase):
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve.csv', fname)
 
-        # check disagg_by_src for a single realization
-        check_disagg_by_src(self.calc.datastore, lvl=0)
-
     def test_case_3(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
@@ -184,6 +152,11 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b1-gsimltp_b1.csv',
              'hazard_curve-smltp_b2-gsimltp_b1.csv'],
             case_7.__file__)
+
+        # check the weights of the sources, a simple fault and a complex fault
+        info = self.calc.datastore.read_df('source_info', 'source_id')
+        self.assertEqual(info.loc[b'1'].weight, 184)
+        self.assertEqual(info.loc[b'2'].weight, 118)
 
         # checking the individual hazard maps are nonzero
         iml = self.calc.datastore.sel(
@@ -265,9 +238,6 @@ class ClassicalTestCase(CalculatorTestCase):
                           '0.0269', '0.0376', '0.0527', '0.0738', '0.103',
                           '0.145', '0.203', '0.284'))
 
-        # test disagg_by_src in a complex case with duplicated sources
-        check_disagg_by_src(self.calc.datastore)
-
     def test_case_14(self):
         # test classical with 2 gsims and 1 sample
         self.assert_curves_ok(['hazard_curve-rlz-000_PGA.csv'],
@@ -297,7 +267,8 @@ hazard_uhs-std.csv
         self.assertEqual(arr['mean'].dtype.names, ('PGA',))
         [fname] = export(('uhs', 'npz'), self.calc.datastore)
         arr = numpy.load(fname)['all']
-        self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
+        self.assertEqual(arr['mean'].dtype.names,
+                         ('0.010000', '0.100000', '0.200000'))
 
         # check deserialization of source_model_lt
         r0, r1, r2 = self.calc.datastore['full_lt/source_model_lt']
@@ -485,9 +456,6 @@ hazard_uhs-std.csv
         tot_probs_occur = sum(len(po) for po in probs_occur)
         self.assertEqual(tot_probs_occur, 4)  # 2 x 2
 
-        # check disagg_by_src
-        check_disagg_by_src(self.calc.datastore, lvl=-1)
-
         # make sure the disaggregation works
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_27.__file__, 'job.ini',
@@ -618,6 +586,10 @@ hazard_uhs-std.csv
             'hazard_curve-mean-PGV.csv', 'hazard_map-mean.csv'],
                               case_40.__file__, delta=1E-6)
 
+        # checking fullreport can be exported, see https://
+        # groups.google.com/g/openquake-users/c/m5vH4rGMWNc/m/8bcBexXNAQAJ
+        [fname] = export(('fullreport', 'rst'), self.calc.datastore)
+
     def test_case_41(self):
         # SERA Site Amplification Models including EC8 Site Classes and Geology
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
@@ -667,7 +639,6 @@ hazard_uhs-std.csv
     def test_case_45(self):
         # this is a test for MMI with disagg_by_src and sampling
         self.assert_curves_ok(["hazard_curve-mean-MMI.csv"], case_45.__file__)
-        check_disagg_by_src(self.calc.datastore, lvl=0)
 
     def test_case_46(self):
         # SMLT with applyToBranches
@@ -1088,5 +1059,17 @@ hazard_uhs-std.csv
         # test calculation for modifiable GMPE with original tabular GMM
         self.run_calc(case_78.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hazard_curve-mean-PGA_NegBinomTest.csv', f1)
+        self.assertEqualFiles(
+            'expected/hazard_curve-mean-PGA_NegBinomTest.csv', f1)
+
+    def test_case_79(self):
+        # disagg_by_src with semicolon sources
+        self.run_calc(case_79.__file__, 'job.ini')
+
+    def test_case_80(self):
+        # New Madrid cluster with rup_mutex
+        self.run_calc(case_80.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles(
+            'expected/hazard_curve-mean-PGA.csv', f1)
 

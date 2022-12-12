@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <reinsuranceModel>
+    <description>Reinsurance model - Colombia</description>
+
+    <fieldMap>
+
+      <field oq="deductible" input="Deductible" />
+      <field oq="liability" input="Limit" />
+
+      <field input="Ces_Col" type="prop" max_cession_event="2100000000000" />
+      <field input="Fac_Col" type="prop" max_cession_event="9100000000000" />
+      <field input="Cat_Col" type="catxl" deductible="3000000000" limit="30000000000" />
+    
+    </fieldMap>
+
+    <policies>policy.csv</policies>
+
+  </reinsuranceModel>
+</nrml>

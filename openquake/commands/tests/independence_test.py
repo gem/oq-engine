@@ -66,4 +66,4 @@ class CaseConsistencyTestCase(unittest.TestCase):
         for key, counts in cnt.items():
             if counts > 1:
                 raise RuntimeError('There are case-inconsistent files %s' %
-                                   key)
+                                   [f for f in fnames if f.lower() == key])
