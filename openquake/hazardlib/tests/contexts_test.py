@@ -385,7 +385,7 @@ class CollapseTestCase(unittest.TestCase):
         maxdiff = numpy.abs(newpoes - poes).max(axis=(1, 2))  # shape NLG => N
         print('maxdiff =', maxdiff)
         self.assertLess(maxdiff[0], 2E-3)
-        self.assertLess(maxdiff[1], 5E-4)
+        self.assertLess(maxdiff[1], 6E-4)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [312, 312])
 
 

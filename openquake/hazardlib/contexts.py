@@ -61,7 +61,7 @@ KNOWN_DISTANCES = frozenset(
 DIST_BINS = sqrscale(1, 1000, 65536)
 # the following is used in the collapse method
 IGNORE_PARAMS = {'rup_id', 'src_id', 'weight', 'occurrence_rate', 'probs_occur',
-                 'clon', 'clat', 'sids', 'mdbin'}
+                 'clon', 'clat', 'sids'}
 MEA = 0
 STD = 1
 
@@ -175,7 +175,7 @@ class Collapser(object):
         """
         Collapse a context recarray if possible.
 
-        :param ctx: a recarray with fields "mdbin" and "sids"
+        :param ctx: a recarray with "sids"
         :param rup_indep: False if the ruptures are mutually exclusive
         :param collapse_level: if None, use .collapse_level
         :returns: the collapsed array and a list of arrays with site IDs
@@ -364,7 +364,6 @@ class ContextMaker(object):
                 dic[req] = 0.
         dic['src_id'] = U32(0)
         dic['rup_id'] = U32(0)
-        dic['mdbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
         dic['weight'] = numpy.float64(0)
@@ -547,8 +546,6 @@ class ContextMaker(object):
                     val = getattr(ctx, par)
                 elif par == 'magi':  # in disaggregation
                     val = magi
-                elif par == 'mdbin':
-                    val = 0  # overridden later
                 elif par == 'weight':
                     val = getattr(ctx, par, 0.)
                 else:
