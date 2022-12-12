@@ -1147,6 +1147,7 @@ class ContextMaker(object):
             cm = self.__class__(self.trt, [gsim], self.oq)
             cm.start = self.start + g
             cm.gsim_idx = g
+            cm.grp_id = self.grp_id
             cmakers.append(cm)
         return cmakers
 
