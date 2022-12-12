@@ -316,14 +316,15 @@ class Hazard:
         arr[arr == 1.] = .9999999999999999
         # arr[arr < 1E-5] = 0.  # minimum_poe
         idxs, lids, gids = arr.nonzero()
-        sids = pmap.sids[idxs]
-        hdf5.extend(self.datastore['_poes/sid'], sids)
-        hdf5.extend(self.datastore['_poes/gid'], gids + start)
-        hdf5.extend(self.datastore['_poes/lid'], lids)
-        hdf5.extend(self.datastore['_poes/poe'], arr[idxs, lids, gids])
-        sbs = build_slice_by_sid(sids, self.offset)
-        hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
-        self.offset += len(sids)
+        if len(idxs):
+            sids = pmap.sids[idxs]
+            hdf5.extend(self.datastore['_poes/sid'], sids)
+            hdf5.extend(self.datastore['_poes/gid'], gids + start)
+            hdf5.extend(self.datastore['_poes/lid'], lids)
+            hdf5.extend(self.datastore['_poes/poe'], arr[idxs, lids, gids])
+            sbs = build_slice_by_sid(sids, self.offset)
+            hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
+            self.offset += len(sids)
         self.acc[grp_id]['grp_start'] = start
         self.acc[grp_id]['avg_poe'] = arr.mean(axis=(0, 2))@self.level_weights
         self.acc[grp_id]['nsites'] = len(pmap.sids)
