@@ -91,6 +91,7 @@ def _gen2ref_rock_scaling(vs30, kappa, imt):
 
     c_table = CoeffsTable(sa_damping=5, table="""
     IMT     a       b       c
+    PGA	    0.107	-0.394	-11.775
     0.01	0.107	-0.394	-11.775
     0.025	0.137	-0.381	-12.812
     0.04	0.168	-0.343	-14.276
