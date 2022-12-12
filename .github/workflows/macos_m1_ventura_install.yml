@@ -1,4 +1,4 @@
-name: MacOS M1 install and test
+name: MacOS Ventura M1 install and test
 'on':
   workflow_dispatch:
     inputs:
