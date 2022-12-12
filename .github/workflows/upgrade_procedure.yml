@@ -9,8 +9,8 @@ on:
         required: true
   schedule:
     - cron: "33 12 * * *"
-#  push:
-#    branches: [ test_os ]
+  push:
+    branches: [ ae-upgrade ]
 
 jobs:
 
@@ -24,7 +24,7 @@ jobs:
       GITHUB_BS_REF:  ${{ github.base_ref }}
     strategy:
       matrix:
-        os: [ubuntu-2204]
+        os: [ubuntu-latest]
           #os: [macos-latest, windows-latest, ubuntu-latest]
         python-version: [3.8]
     #
@@ -39,9 +39,10 @@ jobs:
       with:
         ref: ${{ github.event.inputs.git-ref }}
     - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+        update-environment: true
     # You can test your matrix by printing the current Python version
     - name: Display Python version
       run: python -c "import sys; print(sys.version)"
