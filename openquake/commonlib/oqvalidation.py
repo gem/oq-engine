@@ -993,7 +993,8 @@ class OqParam(valid.ParamSet):
                      'structural+contents',
                      'nonstructural+contents',
                      'structural+nonstructural+contents'), None)
-    truncation_level = valid.Param(valid.positivefloat, 99.)
+    truncation_level = valid.Param(
+        lambda s: valid.positivefloat(s) or 1E-9, 99.)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
