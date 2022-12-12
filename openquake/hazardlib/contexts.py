@@ -1052,7 +1052,7 @@ class ContextMaker(object):
             for slc in gen_slices(bigslc.start, bigslc.stop, maxsize // (4*L1)):
                 slcsids = allsids[slc]
                 ctxt = ctx[slc]
-                self.slc = slice(slc.start - s, slc.stop - s)  # in get_poes
+                self.slc = slice(slc.start - s, slc.stop - s)  # in set_poes
                 with self.poe_mon:
                     # this is allocating at most 1MB of RAM
                     poes = numpy.zeros((len(ctxt), M*L1, G))
