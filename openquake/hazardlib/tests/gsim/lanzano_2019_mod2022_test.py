@@ -37,7 +37,7 @@ class Lanzano2019Modified2022Test(unittest.TestCase):
         ctx.occurrence_rate = .001
         ctx.rrup = np.array([1., 10., 30., 70.])
         ctx.rjb = np.array([1., 10., 30., 70.])
-
+        self.ctx = ctx
 
         # manually computed correction coefficients
         # iml, Vs30, kappa, coef
@@ -58,7 +58,7 @@ class Lanzano2019Modified2022Test(unittest.TestCase):
         for i_test in range(len(self.manual_coef)):
             sites = Dummy.get_site_collection(4, vs30=self.manual_coef[i_test][1])
             for name in sites.array.dtype.names:
-                setattr(ctx, name, sites[name])
+                setattr(self.ctx, name, sites[name])
             self.imt = self.manual_coef[i_test][0]
 
             stds_types = [const.StdDev.TOTAL, const.StdDev.INTRA_EVENT,
