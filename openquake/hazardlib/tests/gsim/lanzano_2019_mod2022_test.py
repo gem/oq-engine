@@ -35,15 +35,17 @@ class Lanzano2019Modified2022Test(unittest.TestCase):
         ctx.rake = 0.
         ctx.hypo_depth = 10.
         ctx.occurrence_rate = .001
+        ctx.rrup = np.array([1., 10., 30., 70.])
+        ctx.rjb = np.array([1., 10., 30., 70.])
+
+    def test_adjustement_to_ref_1(self):
+        """ Checks that the modified GMM provides the expected values """
+
         sites = Dummy.get_site_collection(4, vs30=760.)
         for name in sites.array.dtype.names:
             setattr(ctx, name, sites[name])
-        ctx.rrup = np.array([1., 10., 30., 70.])
-        ctx.rjb = np.array([1., 10., 30., 70.])
         self.imt = PGA()
 
-    def test_adjustement_to_ref(self):
-        """ Checks that the modified GMM provides the expected values """
         stds_types = [const.StdDev.TOTAL, const.StdDev.INTRA_EVENT,
                       const.StdDev.INTER_EVENT]
         gmm = LanzanoEtAl2019_RJB_OMO(kappa0=0.02)
@@ -56,6 +58,32 @@ class Lanzano2019Modified2022Test(unittest.TestCase):
                                  self.imt, stds_types)
         # Correction for PGA Vs30 780 and kappa 0.02
         c = -0.124167819
+        expected = np.exp(out_no_correction[0]) + c
+
+        aae = np.testing.assert_array_almost_equal
+        aae(expected, np.exp(out[0]))
+
+
+    def test_adjustement_to_ref_2(self):
+        """ Checks that the modified GMM provides the expected values """
+
+        sites = Dummy.get_site_collection(4, vs30=1500.)
+        for name in sites.array.dtype.names:
+            setattr(ctx, name, sites[name])
+        self.imt = PGA()
+
+        stds_types = [const.StdDev.TOTAL, const.StdDev.INTRA_EVENT,
+                      const.StdDev.INTER_EVENT]
+        gmm = LanzanoEtAl2019_RJB_OMO(kappa0=0.02)
+        out = gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
+                                       self.imt, stds_types)
+        # Expected results hand computed
+        breakpoint()
+        gmm_no_correction = LanzanoEtAl2019_RJB_OMO(kappa0=None)
+        out_no_correction = gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
+                                 self.imt, stds_types)
+        # Correction for PGA Vs30 1500 and kappa 0.02
+        c = -0.236062501
         expected = np.exp(out_no_correction[0]) + c
 
         aae = np.testing.assert_array_almost_equal
