@@ -41,7 +41,7 @@ class Lanzano2019Modified2022Test(unittest.TestCase):
 
         # manually computed correction coefficients
         # iml, Vs30, kappa, coef
-        self.manual_coef = [[PGA(), 760., 0.02, -0.124167819],
+        self.manual_coef = [[PGA(), 760., 0.02, -0.1197231],
                             [PGA(), 1500., 0.02, -0.236062501],
                             [PGA(), 900., 0.02, -0.148654094],
                             [PGA(), 900., 0.04, -0.384154094],
