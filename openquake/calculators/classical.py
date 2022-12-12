@@ -55,6 +55,19 @@ get_weight = operator.attrgetter('weight')
 disagg_grp_dt = numpy.dtype([
     ('grp_start', U16), ('grp_trt', hdf5.vstr), ('avg_poe', F32),
     ('nsites', U32)])
+slice_dt = numpy.dtype([('sid', U32), ('start', int), ('stop', int)])
+
+
+def build_slice_by_sid(sids, offset=0):
+    """
+    Convert an array of site IDs (with repetitions) into an array slice_dt
+    """
+    arr = performance.idx_start_stop(sids)
+    sbs = numpy.zeros(len(arr), slice_dt)
+    sbs['sid'] = arr[:, 0]
+    sbs['start'] = arr[:, 1] + offset
+    sbs['stop'] = arr[:, 2] + offset
+    return sbs
 
 
 class Set(set):
@@ -271,6 +284,7 @@ class Hazard:
         self.N = len(dstore['sitecol/sids'])
         self.R = full_lt.get_num_paths()
         self.acc = AccumDict(accum={})
+        self.offset = 0
 
     def get_hcurves(self, pmap, rlzs_by_gsim):  # used in in disagg_by_src
         """
@@ -307,6 +321,9 @@ class Hazard:
         hdf5.extend(self.datastore['_poes/gid'], gids + start)
         hdf5.extend(self.datastore['_poes/lid'], lids)
         hdf5.extend(self.datastore['_poes/poe'], arr[idxs, lids, gids])
+        sbs = build_slice_by_sid(sids, self.offset)
+        hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
+        self.offset += len(sids)
         self.acc[grp_id]['grp_start'] = start
         self.acc[grp_id]['avg_poe'] = arr.mean(axis=(0, 2))@self.level_weights
         self.acc[grp_id]['nsites'] = len(pmap.sids)
@@ -488,6 +505,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for rlzs in rlzs_by_gsim.values():
                 rlzs_by_g.append(rlzs)
         self.datastore.create_df('_poes', poes_dt.items())
+        self.datastore.create_dset('_poes/slice_by_sid', slice_dt)
         # NB: compressing the dataset causes a big slowdown in writing :-(
 
     def check_memory(self, N, L, max_gs, maxw):
@@ -768,19 +786,11 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             dstore = self.datastore.parent
         sites_per_task = int(numpy.ceil(self.N / ct))
-        nbytes = len(dstore['_poes/sid']) * 4
-        logging.info('Reading %s of _poes/sid', humansize(nbytes))
-        # NB: there is a genious idea here, to split in tasks by using
-        # the formula ``taskno = sites_ids // sites_per_task`` and then
-        # extracting a dictionary of slices for each taskno. This works
-        # since by construction the site_ids are sequential and there are
-        # at most G slices per task. For instance if there are 6 sites
-        # disposed in 2 groups and we want to produce 2 tasks we can use
-        # 012345012345 // 3 = 000111000111 and the slices are
-        # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
-        with self.monitor('building _poes slices', measuremem=True):
-            slicedic = performance.get_slices(
-                dstore['_poes/sid'][:] // sites_per_task)
+        sbs = dstore['_poes/slice_by_sid'][:]
+        sbs['sid'] //= sites_per_task
+        slicedic = AccumDict(accum=[])
+        for idx, start, stop in sbs:
+            slicedic[idx].append((start, stop))
         if not slicedic:
             # no hazard, nothing to do, happens in case_60
             return
