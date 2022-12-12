@@ -71,7 +71,7 @@ def _site_amplification(ctx, C):
     v0[ctx.vs30 < 1500] = ctx.vs30
     return C['k'] * np.log10(v0/800)
 
-def _gen2ref_rock_scaling(ctx, int, kappa = 0.02):
+def _gen2ref_rock_scaling(vs30, kappa, imt):
     """
     TODO (I'm not sure what the best way to do this): - link kappa to the input file.
     - call this function in the main class to apply the delta to the mean.
@@ -88,8 +88,6 @@ def _gen2ref_rock_scaling(ctx, int, kappa = 0.02):
 
     The coefficients are from table S2.
     """
-
-    Vs30 = ctx.vs30
 
     c_table = CoeffsTable(sa_damping=5, table="""
     IMT     a       b       c
@@ -132,8 +130,7 @@ def _gen2ref_rock_scaling(ctx, int, kappa = 0.02):
     """)
 
     C = c_table[imt]
-
-    return C['a'] + C['b'] * np.log10(Vs30/800.0) + C['c'] * kappa
+    return C['a'] + C['b'] * np.log10(vs30/800.0) + C['c'] * kappa
 
 
 def _get_mechanism(ctx, C):
@@ -185,6 +182,10 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
     #: Required distance measure is R Joyner-Boore distance (eq. 1).
     REQUIRES_DISTANCES = {'rjb'}
 
+    def __init__(self, kappa0=None):
+        super().__init__(kappa0=kappa0)
+        self.kappa0 = kappa0
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -211,6 +212,17 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
             # Return stddevs in terms of natural log scaling
             sig[m], tau[m], phi[m] = np.log(10.0 ** np.array(istddevs))
             # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
+
+            # Apply correction to reference according to Lanzano et al.
+            # (2022; BSSA)
+            k0 = None
+            if hasattr(ctx, 'kappa0'):
+                k0 = ctx.kappa0
+            elif self.kappa0 is not None:
+                k0 = np.ones_like(ctx.vs30)
+
+            if k0 is not None:
+                mean[m] += _gen2ref_rock_scaling(ctx.vs30, k0, imt)
 
     #: Coefficients from SA PGA and PGV from esupp Table S2
 
