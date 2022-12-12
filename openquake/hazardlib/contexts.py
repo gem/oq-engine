@@ -166,7 +166,7 @@ class Collapser(object):
     """
     Class managing the collapsing logic.
     """
-    def __init__(self, collapse_level, kfields, has_vs30=False):
+    def __init__(self, collapse_level, kfields):
         self.collapse_level = collapse_level
         self.kfields = kfields
         self.cfactor = numpy.zeros(2)

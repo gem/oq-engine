@@ -213,7 +213,7 @@ class CollapseTestCase(unittest.TestCase):
         cmap = cmaker.get_pmap(ctxs)
         self.assertLess(rms(pmap.array[0] - cmap.array[0]), 7E-4)
         self.assertLess(rms(pmap.array[1] - cmap.array[0]), 7E-4)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [47, 60])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [56, 60])
 
     def test_collapse_big(self):
         smpath = os.path.join(os.path.dirname(__file__),
@@ -237,7 +237,7 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.collapser.collapse_level = 1
         pcurve1 = cmaker.get_pmap(ctxs).array[0]
         self.assertLess(numpy.abs(pcurve0 - pcurve1).sum(), 1E-10)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [1230, 11616])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [401, 11616])
 
     def test_collapse_azimuth(self):
         # YuEtAl2013Ms has an azimuth distance causing a lower precision
@@ -292,7 +292,7 @@ class CollapseTestCase(unittest.TestCase):
         self.assertEqual(len(grp.sources), 1)  # not splittable source
         poes = cmaker.get_poes(grp, inp.sitecol)
         cmaker.collapser = Collapser(
-            collapse_level=1, dist_types=cmaker.REQUIRES_DISTANCES)
+            collapse_level=1, kfields=cmaker.REQUIRES_DISTANCES)
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
         if PLOTTING:
             import matplotlib.pyplot as plt
@@ -303,13 +303,6 @@ class CollapseTestCase(unittest.TestCase):
             plt.plot(imls, newpoes[1, :, 0], '-', label='1-new')
             plt.legend()
             plt.show()
-        maxdiff = numpy.abs(newpoes - poes).max(axis=(1, 2))
-        print('maxdiff =', maxdiff, cmaker.collapser.cfactor)
-
-        # collapse_level=2
-        cmaker.collapser = Collapser(
-            collapse_level=2, dist_types=cmaker.REQUIRES_DISTANCES)
-        newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
         maxdiff = numpy.abs(newpoes - poes).max(axis=(1, 2))
         print('maxdiff =', maxdiff, cmaker.collapser.cfactor)
 
