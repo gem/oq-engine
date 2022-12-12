@@ -412,6 +412,8 @@ class PostRiskCalculator(base.RiskCalculator):
                         'src_loss_table/' + loss_type, source=source_ids)
         K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
         rbe_df = self.datastore.read_df('risk_by_event')
+        if len(rbe_df) == 0:
+            raise SystemExit('The risk_by_event table is empty!')
         if self.reaggreate:
             idxs = numpy.concatenate([
                 reagg_idxs(self.num_tags, oq.aggregate_by),
