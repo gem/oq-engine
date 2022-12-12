@@ -24,6 +24,7 @@ import pickle
 import psutil
 import logging
 import operator
+import functools
 import h5py
 import numpy
 import pandas
@@ -68,6 +69,39 @@ def build_slice_by_sid(sids, offset=0):
     sbs['start'] = arr[:, 1] + offset
     sbs['stop'] = arr[:, 2] + offset
     return sbs
+
+
+def _concat(acc, slc2):
+    if len(acc) == 0:
+        return [slc2]
+    slc1 = acc[-1]  # last slice
+    if slc2[0] == slc1[1]:
+        new = numpy.array([slc1[0], slc2[1]])
+        return acc[:-1] + [new]
+    return acc + [slc2]
+
+
+def compactify(arrayN2):
+    """
+    :param arrayN2: an array with columns (start, stop)
+    :returns: a shorter array with the same structure
+
+    Here is how it works in an example where the first three slices
+    are compactified into one while the last slice stays as it is:
+
+    >>> arr = numpy.array([[84384702, 84385520],
+    ...                    [84385520, 84385770],
+    ...                    [84385770, 84386062],
+    ...                    [84387636, 84388028]])
+    >>> compactify(arr)
+    array([[84384702, 84386062],
+           [84387636, 84388028]])
+    """
+    if len(arrayN2) == 1:
+        # nothing to compactify
+        return arrayN2
+    out = numpy.array(functools.reduce(_concat, arrayN2, []))
+    return out
 
 
 class Set(set):
@@ -795,13 +829,15 @@ class ClassicalCalculator(base.HazardCalculator):
         if not slicedic:
             # no hazard, nothing to do, happens in case_60
             return
-        nslices = sum(len(slices) for slices in slicedic.values())
+
+        allslices = [compactify(slices) for slices in slicedic.values()]
+        nslices = sum(len(slices) for slices in allslices)
         logging.info('There are %d slices of poes [%.1f per task]',
                      nslices, nslices / len(slicedic))
         allargs = [
             (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
-            for slices in slicedic.values()]
+            for slices in allslices]
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1
         hmbytes = 8 * N * S * M * P if oq.poes else 0
