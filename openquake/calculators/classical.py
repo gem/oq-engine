@@ -823,6 +823,14 @@ class ClassicalCalculator(base.HazardCalculator):
         sites_per_task = int(numpy.ceil(self.N / ct))
         sbs = dstore['_poes/slice_by_sid'][:]
         sbs['sid'] //= sites_per_task
+        # NB: there is a genious idea here, to split in tasks by using
+        # the formula ``taskno = sites_ids // sites_per_task`` and then
+        # extracting a dictionary of slices for each taskno. This works
+        # since by construction the site_ids are sequential and there are
+        # at most G slices per task. For instance if there are 6 sites	
+        # disposed in 2 groups and we want to produce 2 tasks we can use	
+        # 012345012345 // 3 = 000111000111 and the slices are	
+        # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
         slicedic = AccumDict(accum=[])
         for idx, start, stop in sbs:
             slicedic[idx].append((start, stop))
