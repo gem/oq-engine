@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimized postclassical, both in terms of memory in the master node
+    performance and reading performance from the workers
   * Added `parallel.multispawn` facility in `oq engine --multi --run`
   * Improved `oq engine --multi` to run at most 5 jobs at the time
   * Fixed bug introduced in engine 3.9 producing wrong numbers in the case of

@@ -830,6 +830,8 @@ class ClassicalCalculator(base.HazardCalculator):
             # no hazard, nothing to do, happens in case_60
             return
 
+        # using compactify improves the performance of `read PoEs`;
+        # I have measured a 3.5x in the AUS model with 1 rlz
         allslices = [compactify(slices) for slices in slicedic.values()]
         nslices = sum(len(slices) for slices in allslices)
         logging.info('There are %d slices of poes [%.1f per task]',
