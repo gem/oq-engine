@@ -24,6 +24,7 @@ from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.lanzano_2019 import LanzanoEtAl2019_RJB_OMO
+from openquake.hazardlib.gsim.lanzano_2019 import LanzanoEtAl2019_RJB_OMO
 
 
 class Lanzano2019Modified2022Test(unittest.TestCase):
@@ -50,6 +51,12 @@ class Lanzano2019Modified2022Test(unittest.TestCase):
                                        self.imt, stds_types)
         # Expected results hand computed
         breakpoint()
-        expected = np.array([0.001, 0.02, 0.003, 0.004])
+        gmm_no_correction = LanzanoEtAl2019_RJB_OMO(kappa0=None)
+        out_no_correction = gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
+                                 self.imt, stds_types)
+        # Correction for PGA Vs30 780 and kappa 0.02
+        c = -0.124167819
+        expected = np.exp(out_no_correction[0]) + c
+
         aae = np.testing.assert_array_almost_equal
         aae(expected, np.exp(out[0]))
