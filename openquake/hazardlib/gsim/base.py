@@ -31,7 +31,7 @@ import numpy
 from openquake.baselib.general import DeprecationWarning
 from openquake.baselib.performance import compile
 from openquake.hazardlib import const
-from openquake.hazardlib.stats import ndtr
+from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, full_context, ContextMaker)
@@ -86,20 +86,15 @@ class AdaptedWarning(UserWarning):
 # the performance is dominated by the CPU cache, i.e. large arrays are slow
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
-# collapse the ruptures, then _truncnorm_sf will be called less times
+# collapse the ruptures, then truncnorm_sf will be called less times
 @compile("(float64[:,:,:], float64[:,:], float64, float64[:,:])")
 def _set_poes(mean_std, loglevels, phi_b, out):
-    z = phi_b * 2. - 1.
     L1 = loglevels.size // len(loglevels)
     for m, levels in enumerate(loglevels):
         mL1 = m * L1
         mea, std = mean_std[:, m]  # shape N
         for lvl, iml in enumerate(levels):
-            if phi_b == 0.5:
-                out[mL1 + lvl] = iml <= mea  # shape N
-            else:
-                norm_sf = (phi_b - ndtr((iml - mea) / std)) / z
-                out[mL1 + lvl] = norm_sf.clip(0, 1)
+            out[mL1 + lvl] = truncnorm_sf(phi_b, (iml - mea) / std)
 
 
 def _get_poes(mean_std, loglevels, phi_b):
