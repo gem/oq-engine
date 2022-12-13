@@ -147,6 +147,7 @@ class DeltaRatesGetter(object):
             return dstore['delta_rates'][src_id]
 
 
+# same speed as performance.kround, round more
 def kround(ctx, kfields):
     kdist = 5. * ctx.mag**2  # heuristic collapse distance from 80 to 500 km
     close = ctx.rrup < kdist
@@ -168,7 +169,7 @@ class Collapser(object):
     """
     def __init__(self, collapse_level, kfields):
         self.collapse_level = collapse_level
-        self.kfields = kfields
+        self.kfields = sorted(kfields)
         self.cfactor = numpy.zeros(2)
 
     def collapse(self, ctx, rup_indep, collapse_level=None):
@@ -188,7 +189,7 @@ class Collapser(object):
             self.cfactor[1] += len(ctx)
             return ctx, ctx.sids.reshape(-1, 1)
 
-        out, allsids = kollapse(ctx, self.kfields,
+        out, allsids = kollapse(ctx, self.kfields, kround,
                                 mfields=['occurrence_rate', 'probs_occur'],
                                 afield='sids')
         self.cfactor[0] += len(out)
