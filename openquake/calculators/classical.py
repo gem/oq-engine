@@ -411,9 +411,9 @@ def decide_num_tasks(dstore, concurrent_tasks):
     ntasks = []
     for cm in sorted(cmakers, key=lambda cm: weights[cm.grp_id], reverse=True):
         w = weights[cm.grp_id]
-        nt = int(numpy.ceil(w / maxw / len(cm.gsims)))
+        nt = int(numpy.ceil(w / maxw))
         assert nt
-        ntasks.append((cm.grp_id, len(cm.gsims), nt))
+        ntasks.append((cm.grp_id, nt))
     return numpy.array(ntasks, dtlist)
 
 
@@ -634,15 +634,14 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore, self.oqparam.concurrent_tasks or 1)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        for grp_id, ngsims, ntiles in decide:
+        for grp_id, ntiles in decide:
             cmaker = self.haz.cmakers[grp_id]
             grp = self.csm.src_groups[grp_id]
             logging.info('Sending %s, %d gsims * %d tiles',
                          grp, len(cmaker.gsims), ntiles)
             for tile in self.sitecol.split(ntiles):
-                for cm in cmaker.split_by_gsim():
-                    smap.submit(
-                        (self.datastore, None if ntiles == 1 else tile, cm))
+                smap.submit(
+                    (self.datastore, None if ntiles == 1 else tile, cmaker))
         smap.reduce(self.agg_dicts)
 
     def run_tiles(self, maxw):
