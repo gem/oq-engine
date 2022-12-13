@@ -1,4 +1,4 @@
-name: MacOS M1 install and test
+name: MacOS Monterey M1
 'on':
   workflow_dispatch:
     inputs:
@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [M1]
+        os: [monterey]
         python-version: [3.9, "3.10"]
     steps:
     # This Checkout use git-ref keyword from dispatch
