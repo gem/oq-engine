@@ -189,9 +189,16 @@ class Collapser(object):
             self.cfactor[1] += len(ctx)
             return ctx, ctx.sids.reshape(-1, 1)
 
-        out, allsids = kollapse(ctx, self.kfields, kround,
-                                mfields=['occurrence_rate', 'probs_occur'],
-                                afield='sids')
+        out, allsids = [], []
+        kfields = [k for k in self.kfields if k != 'mag']
+        for mag in numpy.unique(ctx.mag):
+            ctxt = ctx[ctx.mag == mag]
+            o, a = kollapse(ctxt, kfields, kround,
+                            mfields=['mag', 'occurrence_rate', 'probs_occur'],
+                            afield='sids')
+            out.append(o)
+            allsids.extend(a)
+        out = numpy.concatenate(out).view(numpy.recarray)
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
         print(self.kfields, len(ctx), len(out), '(%.1f)' % (len(ctx)/len(out)))
