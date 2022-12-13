@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [ventura]
-        python-version: [3.9, "3.10"]
+        python-version: [3.9.13, "3.10.9"]
     steps:
     # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
@@ -27,34 +27,55 @@ jobs:
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
-      - name: Set up Python3 with brew
+      - name: Set up Python3 with Installer
         run: |
           env
+          macpython_py_prefix=/Library/Frameworks/Python.framework/Versions
+          macpython_url=https://www.python.org/ftp/python
+          downloads_dir=/tmp
+          py_version=${{ matrix.python-version }}
+          py_inst=$py_version.pkg
+          inst_path=$downloads_dir/$py_inst
+          retval=""
+          # exit early on curl errors, but don't let it exit the shell
+          # https://www.python.org/ftp/python/3.9.13/python-3.9.13-macos11.pkg
+          macpy_download=$macpython_url/$py_version/python-$py_version-macos11.pkg
+          curl -f $macpy_download > $inst_path || retval=$?
+          if [ ${retval:-0} -ne 0 ]; then
+            echo "Python download failed! "
+            exit $retval
+          fi
+          #
+          sudo installer -pkg $inst_path -target /
+          py_mm=${py_version%.*}
+          python=$macpython_py_prefix/$py_mm/bin/python$py_mm
+          # Install certificates for Python
+          inst_cmd="/Applications/Python ${py_mm}/Install Certificates.command"
+          if [ -e "$inst_cmd" ]; then
+              sh "$inst_cmd"
+          fi
           echo $PATH
-          export PATH=/opt/homebrew/bin:/opt/homebrew/sbin:$PATH
-          which brew
-          brew install python@${{ matrix.python-version }}
+
       - name: Run Installation of oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
           set -x
           env
-          echo $PATH
-          export PATH=/opt/homebrew/bin:/opt/homebrew/sbin:$PATH
-          echo "sqlite3 version"
-          which sqlite3
-          sqlite3 --version
           export PIP_DEFAULT_TIMEOUT=100
-          python${{ matrix.python-version }} -V
-          python${{ matrix.python-version }} -m pip install -U pip wheel
+          macpython_py_prefix=/Library/Frameworks/Python.framework/Versions
+          py_mm=${py_version%.*}
+          python=$macpython_py_prefix/$py_mm/bin/python$py_mm
+          $python -V
+          $python -m pip install -U pip wheel
+          #python${{ matrix.python-version }} -m pip install -U pip wheel
           #
           echo "branch to test: ${BRANCH}"
           if [[ "$BRANCH" != "" ]]
           then
-            python${{ matrix.python-version }} install.py devel --version ${BRANCH}
+            $python install.py devel --version ${BRANCH}
           else
-            python${{ matrix.python-version }} install.py devel
+            $python install.py devel
           fi
       - name: Run demos to test installation
         run: |
@@ -73,7 +94,7 @@ jobs:
           sleep 20
           #
           pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/calculators
-          sleep 20 
+          sleep 20
           # Run calc
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
           # shutdown the VM to have new runner and wait
