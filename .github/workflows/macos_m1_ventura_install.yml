@@ -64,6 +64,7 @@ jobs:
           env
           export PIP_DEFAULT_TIMEOUT=100
           macpython_py_prefix=/Library/Frameworks/Python.framework/Versions
+          py_version=${{ matrix.python-version }}
           py_mm=${py_version%.*}
           python=$macpython_py_prefix/$py_mm/bin/python$py_mm
           $python -V
