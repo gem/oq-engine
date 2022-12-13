@@ -24,6 +24,7 @@ import pickle
 import psutil
 import logging
 import operator
+import functools
 import h5py
 import numpy
 import pandas
@@ -55,6 +56,52 @@ get_weight = operator.attrgetter('weight')
 disagg_grp_dt = numpy.dtype([
     ('grp_start', U16), ('grp_trt', hdf5.vstr), ('avg_poe', F32),
     ('nsites', U32)])
+slice_dt = numpy.dtype([('sid', U32), ('start', int), ('stop', int)])
+
+
+def build_slice_by_sid(sids, offset=0):
+    """
+    Convert an array of site IDs (with repetitions) into an array slice_dt
+    """
+    arr = performance.idx_start_stop(sids)
+    sbs = numpy.zeros(len(arr), slice_dt)
+    sbs['sid'] = arr[:, 0]
+    sbs['start'] = arr[:, 1] + offset
+    sbs['stop'] = arr[:, 2] + offset
+    return sbs
+
+
+def _concat(acc, slc2):
+    if len(acc) == 0:
+        return [slc2]
+    slc1 = acc[-1]  # last slice
+    if slc2[0] == slc1[1]:
+        new = numpy.array([slc1[0], slc2[1]])
+        return acc[:-1] + [new]
+    return acc + [slc2]
+
+
+def compactify(arrayN2):
+    """
+    :param arrayN2: an array with columns (start, stop)
+    :returns: a shorter array with the same structure
+
+    Here is how it works in an example where the first three slices
+    are compactified into one while the last slice stays as it is:
+
+    >>> arr = numpy.array([[84384702, 84385520],
+    ...                    [84385520, 84385770],
+    ...                    [84385770, 84386062],
+    ...                    [84387636, 84388028]])
+    >>> compactify(arr)
+    array([[84384702, 84386062],
+           [84387636, 84388028]])
+    """
+    if len(arrayN2) == 1:
+        # nothing to compactify
+        return arrayN2
+    out = numpy.array(functools.reduce(_concat, arrayN2, []))
+    return out
 
 
 class Set(set):
@@ -271,6 +318,7 @@ class Hazard:
         self.N = len(dstore['sitecol/sids'])
         self.R = full_lt.get_num_paths()
         self.acc = AccumDict(accum={})
+        self.offset = 0
 
     def get_hcurves(self, pmap, rlzs_by_gsim):  # used in in disagg_by_src
         """
@@ -302,11 +350,15 @@ class Hazard:
         arr[arr == 1.] = .9999999999999999
         # arr[arr < 1E-5] = 0.  # minimum_poe
         idxs, lids, gids = arr.nonzero()
-        sids = pmap.sids[idxs]
-        hdf5.extend(self.datastore['_poes/sid'], sids)
-        hdf5.extend(self.datastore['_poes/gid'], gids + start)
-        hdf5.extend(self.datastore['_poes/lid'], lids)
-        hdf5.extend(self.datastore['_poes/poe'], arr[idxs, lids, gids])
+        if len(idxs):
+            sids = pmap.sids[idxs]
+            hdf5.extend(self.datastore['_poes/sid'], sids)
+            hdf5.extend(self.datastore['_poes/gid'], gids + start)
+            hdf5.extend(self.datastore['_poes/lid'], lids)
+            hdf5.extend(self.datastore['_poes/poe'], arr[idxs, lids, gids])
+            sbs = build_slice_by_sid(sids, self.offset)
+            hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
+            self.offset += len(sids)
         self.acc[grp_id]['grp_start'] = start
         self.acc[grp_id]['avg_poe'] = arr.mean(axis=(0, 2))@self.level_weights
         self.acc[grp_id]['nsites'] = len(pmap.sids)
@@ -354,7 +406,7 @@ def decide_num_tasks(dstore, concurrent_tasks):
     """
     cmakers = read_cmakers(dstore)
     weights = [cm.weight for cm in cmakers]
-    maxw = sum(weights) / concurrent_tasks
+    maxw = 2*sum(weights) / concurrent_tasks
     dtlist = [('grp_id', U16), ('cmakers', U16), ('tiles', U16)]
     ntasks = []
     for cm in sorted(cmakers, key=lambda cm: weights[cm.grp_id], reverse=True):
@@ -488,6 +540,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for rlzs in rlzs_by_gsim.values():
                 rlzs_by_g.append(rlzs)
         self.datastore.create_df('_poes', poes_dt.items())
+        self.datastore.create_dset('_poes/slice_by_sid', slice_dt)
         # NB: compressing the dataset causes a big slowdown in writing :-(
 
     def check_memory(self, N, L, max_gs, maxw):
@@ -588,7 +641,8 @@ class ClassicalCalculator(base.HazardCalculator):
                          grp, len(cmaker.gsims), ntiles)
             for tile in self.sitecol.split(ntiles):
                 for cm in cmaker.split_by_gsim():
-                    smap.submit((self.datastore, None if ntiles == 1 else tile, cm))
+                    smap.submit(
+                        (self.datastore, None if ntiles == 1 else tile, cm))
         smap.reduce(self.agg_dicts)
 
     def run_tiles(self, maxw):
@@ -632,6 +686,8 @@ class ClassicalCalculator(base.HazardCalculator):
                         allargs.append((block, tile, cm))
         allargs.sort(key=lambda tup: sum(src.weight for src in tup[0]),
                      reverse=True)
+        if not performance.numba:
+            logging.warning('numba is not installed: using the slow algorithm')
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         return smap.reduce(self.agg_dicts, acc)
@@ -765,36 +821,40 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             dstore = self.datastore.parent
         sites_per_task = int(numpy.ceil(self.N / ct))
-        nbytes = len(dstore['_poes/sid']) * 4
-        logging.info('Reading %s of _poes/sid', humansize(nbytes))
+        sbs = dstore['_poes/slice_by_sid'][:]
+        sbs['sid'] //= sites_per_task
         # NB: there is a genious idea here, to split in tasks by using
         # the formula ``taskno = sites_ids // sites_per_task`` and then
         # extracting a dictionary of slices for each taskno. This works
         # since by construction the site_ids are sequential and there are
-        # at most G slices per task. For instance if there are 6 sites
-        # disposed in 2 groups and we want to produce 2 tasks we can use
-        # 012345012345 // 3 = 000111000111 and the slices are
+        # at most G slices per task. For instance if there are 6 sites	
+        # disposed in 2 groups and we want to produce 2 tasks we can use	
+        # 012345012345 // 3 = 000111000111 and the slices are	
         # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
-        with self.monitor('building _poes slices', measuremem=True):
-            slicedic = performance.get_slices(
-                dstore['_poes/sid'][:] // sites_per_task)
+        slicedic = AccumDict(accum=[])
+        for idx, start, stop in sbs:
+            slicedic[idx].append((start, stop))
         if not slicedic:
             # no hazard, nothing to do, happens in case_60
             return
-        nslices = sum(len(slices) for slices in slicedic.values())
+
+        # using compactify improves the performance of `read PoEs`;
+        # I have measured a 3.5x in the AUS model with 1 rlz
+        allslices = [compactify(slices) for slices in slicedic.values()]
+        nslices = sum(len(slices) for slices in allslices)
         logging.info('There are %d slices of poes [%.1f per task]',
                      nslices, nslices / len(slicedic))
         allargs = [
             (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
-            for slices in slicedic.values()]
+            for slices in allslices]
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1
         hmbytes = 8 * N * S * M * P if oq.poes else 0
         logging.info('Producing %s of hazard curves and %s of hazard maps',
                      humansize(hcbytes), humansize(hmbytes))
         if not performance.numba:
-            logging.info('numba is not installed: using the slow algorithm')
+            logging.warning('numba is not installed: using the slow algorithm')
         if not oq.hazard_calculation_id:
             self.datastore.swmr_on()  # essential before Starmap
         parallel.Starmap(

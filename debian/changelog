@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Optimised postclassical, both in terms of memory in the master node
+    and reading performance in the workers
+  * Added `parallel.multispawn` facility in `oq engine --multi --run`
   * Improved `oq engine --multi` to run at most 5 jobs at the time
   * Fixed bug introduced in engine 3.9 producing wrong numbers in the case of
     mutex ruptures (i.e. the New Madrid cluster in the USA model)
@@ -38,7 +41,6 @@
   * Bug fix: min_mag and max_mag were not honored when using a
     magnitude-dependent maximum distance
   * Reduced the memory consumption when using the ps_grid_spacing approximation
-  * Added `spawn` distribution mechanism for testing purposes
 
   [Marco Pagani]
   * Added a method to compute the mean rate density of two IMTs

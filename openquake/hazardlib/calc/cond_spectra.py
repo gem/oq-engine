@@ -17,7 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-from openquake.hazardlib.stats import _truncnorm_sf
+from openquake.hazardlib.stats import truncnorm_sf
 
 
 def outdict(M, N, P, start, stop):
@@ -32,7 +32,7 @@ def outdict(M, N, P, start, stop):
 
 
 def _cs_out(mean_stds, probs, rho, imti, imls, cs_poes,
-            trunclevel, invtime, c, _c=None):
+            phi_b, invtime, c, _c=None):
     M, N, O, P = c.shape
     U = len(probs) // N
 
@@ -58,7 +58,7 @@ def _cs_out(mean_stds, probs, rho, imti, imls, cs_poes,
             # probability of occurrence for the reference IMT. Both
             # `eps` and `poes` have shape U
             eps = (numpy.log(iml) - mu[imti]) / sig[imti]
-            poes = _truncnorm_sf(trunclevel, eps)
+            poes = truncnorm_sf(phi_b, eps)
 
             # Converting to rates and dividing by the rate of
             # exceedance of the reference IMT and level
@@ -139,7 +139,7 @@ def get_cs_out(cmaker, ctx, imti, imls, _c=None):
     # For every GMM
     for g in range(G):
         _cs_out(mean_stds[:, g], probs, rho, imti, imls, cmaker.poes,
-                cmaker.truncation_level, cmaker.investigation_time,
+                cmaker.phi_b, cmaker.investigation_time,
                 out[cmaker.start + g], _c if _c is not None else None)
     return out
 

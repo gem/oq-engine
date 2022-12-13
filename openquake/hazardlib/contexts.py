@@ -30,13 +30,14 @@ import shapely
 from scipy.interpolate import interp1d
 
 from openquake.baselib.general import (
-    AccumDict, DictArray, RecordBuilder, gen_slices, kmean, block_splitter)
-from openquake.baselib.performance import Monitor, split_array
+    AccumDict, DictArray, RecordBuilder, gen_slices, block_splitter, sqrscale)
+from openquake.baselib.performance import Monitor, split_array, kollapse
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import (
     registry, get_pnes, FatedTOM, NegativeBinomialTOM)
+from openquake.hazardlib.stats import ndtr
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
@@ -46,6 +47,7 @@ from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
 
 U32 = numpy.uint32
+F16 = numpy.float16
 F64 = numpy.float64
 TWO20 = 2**20  # used when collapsing
 TWO16 = 2**16
@@ -56,8 +58,10 @@ MAX_MB = 200
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
+DIST_BINS = sqrscale(1, 1000, 65536)
 # the following is used in the collapse method
-IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
+IGNORE_PARAMS = {'rup_id', 'src_id', 'weight', 'occurrence_rate', 'probs_occur',
+                 'clon', 'clat', 'sids'}
 MEA = 0
 STD = 1
 
@@ -107,7 +111,7 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fit in the CPU cache
     """
-    maxs = TWO20 // (16*M*G)
+    maxs = TWO20 // (8*M*G)
     assert maxs > 1, maxs
     return maxs
 
@@ -131,33 +135,6 @@ def trivial(ctx, name):
     return len(numpy.unique(numpy.float32(ctx[name]))) == 1
 
 
-def expand_mdvbin(mdvbin):
-    """
-    :returns: a triple of integers (magbin, distbin, vs30bin)
-    """
-    magbin, rest = numpy.divmod(mdvbin, TWO24)
-    distbin, vs30bin = numpy.divmod(rest, TWO16)
-    return magbin, distbin, vs30bin
-
-
-def sqrscale(x_min, x_max, n):
-    """
-    :param x_min: minumum value
-    :param x_max: maximum value
-    :param n: number of steps
-    :returns: an array of n values from x_min to x_max in a quadratic scale
-    """
-    if not (isinstance(n, int) and n > 0):
-        raise ValueError('n must be a positive integer, got %s' % n)
-    if x_min < 0:
-        raise ValueError('x_min must be positive, got %s' % x_min)
-    if x_max <= x_min:
-        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
-                         (x_max, x_min))
-    delta = numpy.sqrt(x_max - x_min) / (n - 1)
-    return x_min + (delta * numpy.arange(n))**2
-
-
 class DeltaRatesGetter(object):
     """
     Read the delta rates from an aftershock datastore
@@ -170,90 +147,61 @@ class DeltaRatesGetter(object):
             return dstore['delta_rates'][src_id]
 
 
+# same speed as performance.kround, round more
+def kround(ctx, kfields):
+    kdist = 5. * ctx.mag**2  # heuristic collapse distance from 80 to 500 km
+    close = ctx.rrup < kdist
+    far = ~close
+    out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
+    for kfield in kfields:
+        kval = ctx[kfield]
+        if kval.dtype == F64 and kfield != 'mag':
+            out[kfield][close] = F16(kval[close])  # round less
+            out[kfield][far] = numpy.round(kval[far])  # round more
+        else:
+            out[kfield] = ctx[kfield]
+    return out
+
+
 class Collapser(object):
     """
     Class managing the collapsing logic.
     """
-    mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
-    dist_bins = sqrscale(1, 600, 255)
-    vs30_bins = numpy.linspace(0, 32767, 65536)
-
-    def __init__(self, collapse_level, dist_types, has_vs30=False):
+    def __init__(self, collapse_level, kfields):
         self.collapse_level = collapse_level
-        self.dist_types = dist_types
-        self.has_vs30 = has_vs30
+        self.kfields = sorted(kfields)
         self.cfactor = numpy.zeros(2)
-        self.npartial = 0
-        self.nfull = 0
-
-    def calc_mdvbin(self, ctx):
-        """
-        :param ctx: a RuptureContext or a context array
-        :return: an array of dtype numpy.uint32
-        """
-        dist = numpy.mean([getattr(ctx, dt) for dt in self.dist_types], axis=0)
-        magbin = numpy.searchsorted(self.mag_bins, ctx.mag)
-        distbin = numpy.searchsorted(self.dist_bins, dist)
-        if self.has_vs30:
-            vs30bin = numpy.searchsorted(self.vs30_bins, ctx.vs30)
-            return magbin * TWO24 + distbin * TWO16 + vs30bin
-        else:  # in test_collapse_area
-            return magbin * TWO24 + distbin * TWO16
-
-    def expand(self, mdvbin):
-        """
-        :returns: mag, dist and vs30 corresponding to mdvbin
-        """
-        mbin, dbin, vbin = expand_mdvbin(mdvbin)
-        return self.mag_bins[mbin], self.dist_bins[dbin], self.vs30bins[vbin]
 
     def collapse(self, ctx, rup_indep, collapse_level=None):
         """
         Collapse a context recarray if possible.
 
-        :param ctx: a recarray with fields "mdvbin" and "sids"
+        :param ctx: a recarray with "sids"
         :param rup_indep: False if the ruptures are mutually exclusive
         :param collapse_level: if None, use .collapse_level
         :returns: the collapsed array and a list of arrays with site IDs
         """
-        ctx['mdvbin'] = self.calc_mdvbin(ctx)
         clevel = (collapse_level if collapse_level is not None
                   else self.collapse_level)
         if not rup_indep or clevel < 0:
             # no collapse
-            self.cfactor[0] += len(numpy.unique(ctx.mdvbin))
+            self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
             return ctx, ctx.sids.reshape(-1, 1)
 
-        # names are mag, rake, vs30, rjb, mdvbin, sids, ...
-        relevant = set(ctx.dtype.names) - IGNORE_PARAMS
-        if all(trivial(ctx, param) for param in relevant):
-            # collapse all
-            far = ctx
-            close = numpy.zeros(0, ctx.dtype)
-            self.nfull += 1
-        else:
-            # collapse far away ruptures
-            dst = ctx.mag * 10 * self.collapse_level
-            far = ctx[ctx.rrup >= dst]
-            close = ctx[ctx.rrup < dst]
-            self.npartial += 1
-        C = len(close)
-        if len(far):
-            uic = numpy.unique(  # this is fast
-                far['mdvbin'], return_inverse=True, return_counts=True)
-            mean = kmean(far, 'mdvbin', uic)
-        else:
-            mean = numpy.zeros(0, ctx.dtype)
-        self.cfactor[0] += len(close) + len(mean)
+        out, allsids = [], []
+        kfields = [k for k in self.kfields if k != 'mag']
+        for mag in numpy.unique(ctx.mag):
+            ctxt = ctx[ctx.mag == mag]
+            o, a = kollapse(ctxt, kfields, kround,
+                            mfields=['mag', 'occurrence_rate', 'probs_occur'],
+                            afield='sids')
+            out.append(o)
+            allsids.extend(a)
+        out = numpy.concatenate(out).view(numpy.recarray)
+        self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
-        out = numpy.zeros(len(close) + len(mean), ctx.dtype)
-        out[:C] = close
-        out[C:] = mean
-        allsids = [[sid] for sid in close['sids']]
-        if len(far):  # this is slow
-            allsids.extend(split_array(far['sids'], uic[1], uic[2]))
-        # print(len(out), len(ctx))
+        print(self.kfields, len(ctx), len(out), '(%.1f)' % (len(ctx)/len(out)))
         return out.view(numpy.recarray), allsids
 
 
@@ -361,6 +309,7 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
+        self.oq = oq
         for gsim in gsims:
             if hasattr(gsim, 'set_tables'):
                 if not self.mags and not is_modifiable(gsim):
@@ -382,6 +331,7 @@ class ContextMaker(object):
         self.ses_seed = param.get('ses_seed', 42)
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
         self.truncation_level = param.get('truncation_level', 99.)
+        self.phi_b = ndtr(self.truncation_level)
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
@@ -423,14 +373,15 @@ class ContextMaker(object):
                 dic[req] = 0.
         dic['src_id'] = U32(0)
         dic['rup_id'] = U32(0)
-        dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
         dic['weight'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
-        self.collapser = Collapser(
-            self.collapse_level, REQUIRES_DISTANCES, 'vs30' in dic)
+        kfields = (self.REQUIRES_DISTANCES |
+                   self.REQUIRES_RUPTURE_PARAMETERS |
+                   self.REQUIRES_SITES_PARAMETERS)
+        self.collapser = Collapser(self.collapse_level, kfields)
         self.shift_hypo = param.get('shift_hypo')
         self.set_imts_conv()
         self.init_monitoring(monitor)
@@ -604,8 +555,6 @@ class ContextMaker(object):
                     val = getattr(ctx, par)
                 elif par == 'magi':  # in disaggregation
                     val = magi
-                elif par == 'mdvbin':
-                    val = 0  # overridden later
                 elif par == 'weight':
                     val = getattr(ctx, par, 0.)
                 else:
@@ -1085,10 +1034,7 @@ class ContextMaker(object):
         :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
         """
         # NB: we are carefully trying to save memory here
-        # for instance, for the GLD model, the parameters are as follows:
-        # M=6, L1=20, G=3, len(ctx)=7_474_634, ctx.nbytes=513.24 MB
-        # maxsize=3640, #bigslices=2054, mean_stdt.nbytes=2 MB,
-        # poes.nbytes=0.5 MB, allsids.nbytes=ctx.sids.nbytes=28.51 MB
+        # see case_39
         from openquake.hazardlib.site_amplification import get_poes_site
         (M, L1), G = self.loglevels.array.shape, len(self.gsims)
         maxsize = get_maxsize(M, G)
@@ -1108,14 +1054,13 @@ class ContextMaker(object):
         for bigslc in bigslices:
             s = bigslc.start
             with self.gmf_mon:
-                # this is allocating at most 2MB of RAM
                 mean_stdt = self.get_mean_stds([ctx[bigslc]])
-            for slc in gen_slices(bigslc.start, bigslc.stop, maxsize // L1):
+            for slc in gen_slices(bigslc.start, bigslc.stop, maxsize // (4*L1)):
                 slcsids = allsids[slc]
                 ctxt = ctx[slc]
-                self.slc = slice(slc.start - s, slc.stop - s)  # in get_poes
+                self.slc = slice(slc.start - s, slc.stop - s)  # in set_poes
                 with self.poe_mon:
-                    # this is allocating at most 2MB of RAM
+                    # this is allocating at most 1MB of RAM
                     poes = numpy.zeros((len(ctxt), M*L1, G))
                     for g, gsim in enumerate(self.gsims):
                         ms = mean_stdt[:2, g, :, self.slc]
@@ -1123,7 +1068,7 @@ class ContextMaker(object):
                         if self.af:  # kernel amplification method
                             poes[:, :, g] = get_poes_site(ms, self, ctxt)
                         else:  # regular case
-                            poes[:, :, g] = gsim.get_poes(ms, self, ctxt)
+                            gsim.set_poes(ms, self, ctxt, poes[:, :, g])
                 yield poes, ctxt, slcsids
 
     def estimate_sites(self, src, sites):
@@ -1208,11 +1153,10 @@ class ContextMaker(object):
             return [self]
         cmakers = []
         for g, gsim in enumerate(self.gsims):
-            cm = object.__new__(self.__class__)
-            vars(cm).update(vars(self))
-            cm.gsims = [gsim]
+            cm = self.__class__(self.trt, [gsim], self.oq)
             cm.start = self.start + g
             cm.gsim_idx = g
+            cm.grp_id = self.grp_id
             cmakers.append(cm)
         return cmakers
 

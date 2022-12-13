@@ -1,4 +1,4 @@
-name: MacOS M1 install and test
+name: MacOS Ventura M1 install and test
 'on':
   workflow_dispatch:
     inputs:
@@ -7,7 +7,7 @@ name: MacOS M1 install and test
         default: master
         required: true
   schedule:
-    - cron: "15 12 * * *"
+    - cron: "15 02 * * *"
 
 jobs:
 
@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [M1]
+        os: [ventura]
         python-version: [3.9, "3.10"]
     steps:
     # This Checkout use git-ref keyword from dispatch

@@ -151,11 +151,11 @@ def update_pmap_m(arr, poes, rates, probs_occur, weights, sids, itime):
 
 
 # numbified below
-def update_pmap_c(arr, poes, rates, probs_occur, allsids, sizes, itime):
+def update_pmap_c(arr, poes, rates, probs_occur, sids, sizes, itime):
     start = 0
     for poe, rate, probs, size in zip(poes, rates, probs_occur, sizes):
         pne = get_pnes(rate, probs, poe, itime)
-        for sid in allsids[start:start + size]:
+        for sid in sids[start:start + size]:
             arr[sid] *= pne
         start += size
 
@@ -310,13 +310,12 @@ class ProbabilityMap(object):
         update_pmap_m(self.array, poes, rates, probs_occur, weights, idxs,
                       itime)
 
-    def update_c(self, poes, rates, probs_occur, allsids, sizes, itime):
+    def update_c(self, poes, rates, probs_occur, sids, sizes, itime):
         """
         Updating collapsed probabilities
         """
-        allidxs = self.sidx[allsids]
-        update_pmap_c(self.array, poes, rates, probs_occur, allidxs, sizes,
-                      itime)
+        update_pmap_c(self.array, poes, rates, probs_occur,
+                      self.sidx[sids], sizes, itime)
 
     def __invert__(self):
         return self.new(1. - self.array)

@@ -194,6 +194,7 @@ import collections
 from unittest import mock
 import multiprocessing.dummy
 import multiprocessing.shared_memory as shmem
+from multiprocessing.connection import wait
 import subprocess
 import psutil
 import threading
@@ -211,35 +212,17 @@ from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp, engine_version)
+    gettemp, engine_version, mp as mp_context)
 
-mp_context = multiprocessing.get_context('spawn')
 sys.setrecursionlimit(2000)  # raised to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
 GB = 1024 ** 3
 
 
-def wait_if_loaded(monitor, sleep):
-    while True:
-        percent = psutil.cpu_percent()
-        if percent <= 99:
-            break
-        time.sleep(sleep)
-
-
 @submit.add('no')
 def no_submit(self, func, args, monitor):
     return safely_call(func, args, self.task_no, monitor)
-
-
-@submit.add('spawn')
-def spawn_submit(self, func, args, monitor):
-    wait_if_loaded(monitor, 1.)
-    proc = mp_context.Process(
-        target=safely_call, args=(func, args, self.task_no, monitor))
-    proc.start()
-    return proc
 
 
 @submit.add('processpool')
@@ -276,8 +259,7 @@ def oq_distribute(task=None):
     :returns: the value of OQ_DISTRIBUTE or config.distribution.oq_distribute
     """
     dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
-    if dist not in ('no', 'spawn', 'processpool', 'threadpool', 'zmq',
-                    'ipp'):
+    if dist not in ('no', 'processpool', 'threadpool', 'zmq', 'ipp'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
     return dist
 
@@ -494,8 +476,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     mon.task_no = task_no
     if mon.inject:
         args += (mon,)
-    if OQDIST == 'spawn':
-        wait_if_loaded(mon, 30.)
     sentbytes = 0
     with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
         msg = check_mem_usage()  # warn if too much memory is used
@@ -1017,6 +997,26 @@ def split_task(elements, func, args, duration, outs_per_task, monitor):
                 ls.weight = sum(getattr(el, 'weight', 1.) for el in els)
                 yield (func, ls) + args
             break
+
+
+def multispawn(func, allargs, num_cores=Starmap.num_cores):
+    """
+    Spawn processes with the given arguments
+    """
+    allargs = allargs[::-1]  # so that the first argument is submitted first
+    procs = {} # sentinel -> process
+    while allargs:
+        args = allargs.pop()
+        proc = mp_context.Process(target=func, args=args)
+        proc.start()
+        procs[proc.sentinel] = proc
+        while len(procs) >= num_cores:  # wait for something to finish
+            for finished in wait(procs):
+                del procs[finished]
+    while procs:
+        for finished in wait(procs):
+            del procs[finished]
+
 
 #                             start/stop workers                             #
 

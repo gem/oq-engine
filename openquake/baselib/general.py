@@ -1042,36 +1042,6 @@ def fast_agg3(structured_array, kfield, vfields=None, factor=None):
     return res
 
 
-# this is fast
-def kmean(structured_array, kfield, uniq_indices_counts=()):
-    """
-    Given a structured array of N elements with a discrete kfield with
-    K <= N unique values, returns a structured array of K elements
-    obtained by averaging the values associated to the kfield.
-    """
-    allnames = structured_array.dtype.names
-    assert kfield in allnames, kfield
-    if uniq_indices_counts:
-        uniq, indices, counts = uniq_indices_counts
-    else:
-        uniq, indices, counts = numpy.unique(
-            structured_array[kfield], return_inverse=True, return_counts=True)
-    dic = {}
-    dtlist = []
-    for name in allnames:
-        if name == kfield:
-            dic[kfield] = uniq
-        else:
-            values = structured_array[name]
-            dic[name] = fast_agg(indices, values) / (
-                counts if len(values.shape) == 1 else counts.reshape(-1, 1))
-        dtlist.append((name, structured_array.dtype[name]))
-    res = numpy.zeros(len(uniq), dtlist)
-    for name in dic:
-        res[name] = dic[name]
-    return res
-
-
 def count(groupiter):
     return sum(1 for row in groupiter)
 
@@ -1520,6 +1490,24 @@ def rmsdiff(a, b):
     axis = tuple(range(1, len(a.shape)))
     rms = numpy.sqrt(((a - b)**2).mean(axis=axis))
     return rms
+
+
+def sqrscale(x_min, x_max, n):
+    """
+    :param x_min: minumum value
+    :param x_max: maximum value
+    :param n: number of steps
+    :returns: an array of n values from x_min to x_max in a quadratic scale
+    """
+    if not (isinstance(n, int) and n > 0):
+        raise ValueError('n must be a positive integer, got %s' % n)
+    if x_min < 0:
+        raise ValueError('x_min must be positive, got %s' % x_min)
+    if x_max <= x_min:
+        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
+                         (x_max, x_min))
+    delta = numpy.sqrt(x_max - x_min) / (n - 1)
+    return x_min + (delta * numpy.arange(n))**2
 
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 

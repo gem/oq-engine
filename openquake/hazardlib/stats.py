@@ -37,36 +37,27 @@ except ImportError:
 
 @compile(["float64[:,:](float64, float64[:,:])",
           "float64[:](float64, float64[:])"])
-def _truncnorm_sf(truncation_level, values):
-    # Fast survival function for truncated normal distribution.
-    # Assumes zero mean, standard deviation equal to one and symmetric
-    # truncation. It is faster than using scipy.stats.truncnorm.sf:
-    #
-    # _truncnorm_sf(sig, x) == truncnorm(-sig, sig).sf(x)
-    #
-    # :param truncation_level:
-    #     Positive float number representing the truncation on both sides
-    #     around the mean, in units of sigma, or None, for non-truncation
-    # :param values:
-    #     Numpy array of values as input to a survival function for the given
-    #     distribution.
-    # :returns:
-    #     Numpy array of survival function results in a range between 0 and 1.
-    if truncation_level == 0.:
-        return values
-
+def truncnorm_sf(phi_b, values):
+    """
+    Fast survival function for truncated normal distribution.
+    Assumes zero mean, standard deviation equal to one and symmetric
+    truncation. It is faster than using scipy.stats.truncnorm.sf.
+    
+    :param phi_b:
+         ndtr(truncation_level); assume phi_b > .5
+    :param values:
+         Numpy array of values as input to a survival function for the given
+         distribution.
+    :returns:
+         Numpy array of survival function results in a range between 0 and 1.
+         For phi_b close to .5 returns a step function 1 1 1 1 .5 0 0 0 0 0.
+    """
     # notation from http://en.wikipedia.org/wiki/Truncated_normal_distribution.
     # given that mu = 0 and sigma = 1, we have alpha = a and beta = b.
-
     # "CDF" in comments refers to cumulative distribution function
     # of non-truncated distribution with that mu and sigma values.
-
     # assume symmetric truncation, that is ``a = - truncation_level``
     # and ``b = + truncation_level``.
-
-    # calculate CDF of b
-    phi_b = ndtr(truncation_level)
-
     # calculate Z as ``Z = CDF(b) - CDF(a)``, here we assume that
     # ``CDF(a) == CDF(- truncation_level) == 1 - CDF(b)``
     z = phi_b * 2. - 1.

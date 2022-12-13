@@ -1440,11 +1440,11 @@ def view_collapsible(token, dstore):
     ctx_df['vs30'] = vs30[ctx_df.sids]
     has_vs30 = len(numpy.unique(vs30)) > 1
     c = Collapser(collapse_level, dist_types, has_vs30)
-    ctx_df['mdvbin'] = c.calc_mdvbin(ctx_df)
-    print('cfactor = %d/%d' % (len(ctx_df), len(ctx_df['mdvbin'].unique())))
+    ctx_df['mdbin'] = c.calc_mdbin(ctx_df)
+    print('cfactor = %d/%d' % (len(ctx_df), len(ctx_df['mdbin'].unique())))
     out = []
     for sid, df in ctx_df.groupby('sids'):
-        n, u = len(df), len(df.mdvbin.unique())
+        n, u = len(df), len(df.mdbin.unique())
         out.append((sid, u, n, n / u))
     return numpy.array(out, dt('site_id eff_rups num_rups cfactor'))
 
