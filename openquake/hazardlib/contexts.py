@@ -188,8 +188,9 @@ class Collapser(object):
             self.cfactor[1] += len(ctx)
             return ctx, ctx.sids.reshape(-1, 1)
 
-        out, allsids = kollapse(ctx, kround, self.kfields,
-                                ['occurrence_rate', 'probs_occur'], 'sids')
+        out, allsids = kollapse(ctx, self.kfields,
+                                mfields=['occurrence_rate', 'probs_occur'],
+                                afield='sids')
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
         print(self.kfields, len(ctx), len(out), '(%.1f)' % (len(ctx)/len(out)))

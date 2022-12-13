@@ -521,7 +521,7 @@ def kround(ctx, kfields):
 
 
 # this is fast
-def kollapse(array, kround, kfields, mfields=(), afield=''):
+def kollapse(array, kfields, kround=kround, mfields=(), afield=''):
     """
     Given a structured array of N elements with a discrete kfield with
     K <= N unique values, returns a structured array of K elements
