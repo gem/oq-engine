@@ -1,4 +1,4 @@
-name: MacOS Ventura M1 install and test
+name: MacOS Ventura M1
 'on':
   workflow_dispatch:
     inputs:
@@ -27,9 +27,8 @@ jobs:
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
-      - name: Set up Python3 with Installer
+      - name: Set up Python3 with installer from python.org
         run: |
-          env
           macpython_py_prefix=/Library/Frameworks/Python.framework/Versions
           macpython_url=https://www.python.org/ftp/python
           downloads_dir=/tmp
@@ -54,14 +53,11 @@ jobs:
           if [ -e "$inst_cmd" ]; then
               sh "$inst_cmd"
           fi
-          echo $PATH
-
       - name: Run Installation of oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
           set -x
-          env
           export PIP_DEFAULT_TIMEOUT=100
           macpython_py_prefix=/Library/Frameworks/Python.framework/Versions
           py_version=${{ matrix.python-version }}
@@ -69,7 +65,6 @@ jobs:
           python=$macpython_py_prefix/$py_mm/bin/python$py_mm
           $python -V
           $python -m pip install -U pip wheel
-          #python${{ matrix.python-version }} -m pip install -U pip wheel
           #
           echo "branch to test: ${BRANCH}"
           if [[ "$BRANCH" != "" ]]
@@ -81,21 +76,15 @@ jobs:
       - name: Run demos to test installation
         run: |
           source ~/openquake/bin/activate
-          pip3 install pytest``
+          pip3 install pytest
           oq --version
           oq dbserver start
           sleep 10
           # test for engine
           pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/sep
           #
-          sleep 20
-          #
           pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
           #
-          sleep 20
-          #
           pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/calculators
-          sleep 20
           # Run calc
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
-          # shutdown the VM to have new runner and wait
