@@ -927,7 +927,12 @@ def group_array(array, *kfields):
     """
     Convert an array into a dict kfields -> array
     """
-    return groupby(array, operator.itemgetter(*kfields), _reducerecords)
+    kfields = list(kfields)
+    k_array = array[kfields]
+    dic = {}
+    for k in numpy.unique(k_array):
+        dic[tuple(k)] = array[array[kfields] == k]
+    return dic
 
 
 def multi_index(shape, axis=None):
