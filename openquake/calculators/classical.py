@@ -387,6 +387,7 @@ class Hazard:
                         self.get_hcurves(pmap, rlzs_by_gsim))
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
+
 def get_pmaps_size(dstore, ct):
     """
     :returns: memory required on the master node to keep the pmaps
@@ -406,7 +407,7 @@ def decide_num_tasks(dstore, concurrent_tasks):
     """
     cmakers = read_cmakers(dstore)
     weights = [cm.weight for cm in cmakers]
-    maxw = 1.5*sum(weights) / concurrent_tasks
+    maxw = sum(weights) / (concurrent_tasks / 2)
     dtlist = [('grp_id', U16), ('tiles', U16)]
     ntasks = []
     for cm in sorted(cmakers, key=lambda cm: weights[cm.grp_id], reverse=True):
