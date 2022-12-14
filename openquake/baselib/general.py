@@ -927,6 +927,8 @@ def group_array(array, *kfields):
     """
     Convert an array into a dict kfields -> array
     """
+    if len(array) == 0:
+        return {}
     kfields = list(kfields)
     k_array = array[kfields]
     dic = {}
