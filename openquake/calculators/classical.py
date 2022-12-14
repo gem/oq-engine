@@ -642,10 +642,9 @@ class ClassicalCalculator(base.HazardCalculator):
         for grp_id, ntiles in decide:
             cmaker = self.haz.cmakers[grp_id]
             grp = self.csm.src_groups[grp_id]
-            logging.info('Sending %s, %d gsims * %d tiles',
-                         grp, len(cmaker.gsims), ntiles)
+            logging.info('Sending %s, %d tiles', grp, ntiles)
             for tile in self.sitecol.split(ntiles):
-                if self.oqparam.collapse_level:
+                if self.oqparam.collapse_level > -1:
                     # splitting by gsim allows for better collapsing
                     for cm in cmaker.split_by_gsim():
                         smap.submit((ds, None if ntiles == 1 else tile, cm))
