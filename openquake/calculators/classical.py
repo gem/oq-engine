@@ -198,9 +198,12 @@ def classical(srcs, sitecol, cmaker, monitor):
         with srcs:
             if sitecol is None:
                 sitecol = srcs['sitecol']
-            f = srcs.parent.hdf5 if srcs.parent else srcs.hdf5
-            arr = h5py.File.__getitem__(f, '_csm')[cmaker.grp_id]
-            srcs =  pickle.loads(gzip.decompress(arr.tobytes()))
+            if srcs.parent:
+                with srcs.parent.open('r').hdf5 as h5:
+                    arr = h5py.File.__getitem__(h5, '_csm')[cmaker.grp_id]
+            else:
+                arr = h5py.File.__getitem__(srcs.hdf5, '_csm')[cmaker.grp_id]
+            srcs = pickle.loads(gzip.decompress(arr.tobytes()))
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
     pmap = ProbabilityMap(
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
@@ -387,6 +390,7 @@ class Hazard:
                         self.get_hcurves(pmap, rlzs_by_gsim))
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
+
 def get_pmaps_size(dstore, ct):
     """
     :returns: memory required on the master node to keep the pmaps
@@ -406,14 +410,14 @@ def decide_num_tasks(dstore, concurrent_tasks):
     """
     cmakers = read_cmakers(dstore)
     weights = [cm.weight for cm in cmakers]
-    maxw = 2*sum(weights) / concurrent_tasks
-    dtlist = [('grp_id', U16), ('cmakers', U16), ('tiles', U16)]
+    maxw = 1.5*sum(weights) / concurrent_tasks
+    dtlist = [('grp_id', U16), ('tiles', U16)]
     ntasks = []
     for cm in sorted(cmakers, key=lambda cm: weights[cm.grp_id], reverse=True):
         w = weights[cm.grp_id]
-        nt = int(numpy.ceil(w / maxw / len(cm.gsims)))
+        nt = int(numpy.ceil(w / maxw))
         assert nt
-        ntasks.append((cm.grp_id, len(cm.gsims), nt))
+        ntasks.append((cm.grp_id, nt))
     return numpy.array(ntasks, dtlist)
 
 
@@ -632,17 +636,20 @@ class ClassicalCalculator(base.HazardCalculator):
         assert self.N > self.oqparam.max_sites_disagg, self.N
         decide = decide_num_tasks(
             self.datastore, self.oqparam.concurrent_tasks or 1)
-        self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        for grp_id, ngsims, ntiles in decide:
+        ds = self.datastore
+        ds.swmr_on()  # must come before the Starmap
+        smap = parallel.Starmap(classical, h5=ds.hdf5)
+        for grp_id, ntiles in decide:
             cmaker = self.haz.cmakers[grp_id]
             grp = self.csm.src_groups[grp_id]
-            logging.info('Sending %s, %d gsims * %d tiles',
-                         grp, len(cmaker.gsims), ntiles)
+            logging.info('Sending %s, %d tiles', grp, ntiles)
             for tile in self.sitecol.split(ntiles):
-                for cm in cmaker.split_by_gsim():
-                    smap.submit(
-                        (self.datastore, None if ntiles == 1 else tile, cm))
+                if self.oqparam.collapse_level > -1:
+                    # splitting by gsim allows for better collapsing
+                    for cm in cmaker.split_by_gsim():
+                        smap.submit((ds, None if ntiles == 1 else tile, cm))
+                else:
+                    smap.submit((ds, None if ntiles == 1 else tile, cmaker))
         smap.reduce(self.agg_dicts)
 
     def run_tiles(self, maxw):
