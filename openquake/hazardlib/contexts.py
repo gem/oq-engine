@@ -35,8 +35,7 @@ from openquake.baselib.performance import Monitor, split_array, kollapse
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
-from openquake.hazardlib.tom import (
-    registry, get_pnes, FatedTOM, NegativeBinomialTOM)
+from openquake.hazardlib.tom import registry, FatedTOM, NegativeBinomialTOM
 from openquake.hazardlib.stats import ndtr
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.calc.filters import (
@@ -962,7 +961,7 @@ class ContextMaker(object):
         :param rup_indep: False for mutex ruptures, default True
         """
         if self.tom is None:
-            itime = -1.  # test_hazard_curve_X _
+            itime = -1.  # test_hazard_curve_X
         elif isinstance(self.tom, FatedTOM):
             itime = 0.
         else:
@@ -1055,7 +1054,7 @@ class ContextMaker(object):
             s = bigslc.start
             with self.gmf_mon:
                 mean_stdt = self.get_mean_stds([ctx[bigslc]])
-            for slc in gen_slices(bigslc.start, bigslc.stop, maxsize // (4*L1)):
+            for slc in gen_slices(bigslc.start, bigslc.stop, maxsize//(4*L1)):
                 slcsids = allsids[slc]
                 ctxt = ctx[slc]
                 self.slc = slice(slc.start - s, slc.stop - s)  # in set_poes

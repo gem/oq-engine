@@ -103,7 +103,7 @@ def _get_poes(mean_std, loglevels, phi_b):
     out = numpy.zeros((loglevels.size, N))  # shape (L, N)
     _set_poes(mean_std, loglevels, phi_b, out)
     return out.T
-    
+
 
 OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes',
               'set_parameters', 'set_tables')
