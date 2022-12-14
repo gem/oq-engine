@@ -136,27 +136,28 @@ class ProbabilityCurve(object):
             curve[imt] = self.array[imtls(imt), idx]
         return curve[0]
 
+
 # numbified below
-def update_pmap_i(arr, poes, rates, probs_occur, sids, itime):
-    for poe, rate, probs, sid in zip(poes, rates, probs_occur, sids):
-        arr[sid] *= get_pnes(rate, probs, poe, itime)
+def update_pmap_i(arr, poes, rates, probs_occur, idxs, itime):
+    for poe, rate, probs, idx in zip(poes, rates, probs_occur, idxs):
+        arr[idx] *= get_pnes(rate, probs, poe, itime)
 
 
 # numbified below
-def update_pmap_m(arr, poes, rates, probs_occur, weights, sids, itime):
-    for poe, rate, probs, wei, sid in zip(
-            poes, rates, probs_occur, weights, sids):
+def update_pmap_m(arr, poes, rates, probs_occur, weights, idxs, itime):
+    for poe, rate, probs, wei, idx in zip(
+            poes, rates, probs_occur, weights, idxs):
         pne = get_pnes(rate, probs, poe, itime)
-        arr[sid] += (1. - pne) * wei
+        arr[idx] += (1. - pne) * wei
 
 
 # numbified below
-def update_pmap_c(arr, poes, rates, probs_occur, sids, sizes, itime):
+def update_pmap_c(arr, poes, rates, probs_occur, idxs, sizes, itime):
     start = 0
     for poe, rate, probs, size in zip(poes, rates, probs_occur, sizes):
         pne = get_pnes(rate, probs, poe, itime)
-        for sid in sids[start:start + size]:
-            arr[sid] *= pne
+        for idx in idxs[start:start + size]:
+            arr[idx] *= pne
         start += size
 
 
@@ -195,7 +196,7 @@ if numba:
     update_pmap_c = compile(sig)(update_pmap_c)
 
     sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.uint32[:]       ,                     # idxs
+                 t.uint32[:],                            # idxs
                  t.float64[:, :, :])                     # pnes
     update_pnes = compile(sig)(update_pnes)
 
