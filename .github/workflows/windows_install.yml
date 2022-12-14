@@ -10,7 +10,7 @@ on:
   schedule:
     - cron: "00 22 * * *"
   push:
-    branches: [ test_os ]
+    branches: [ ae-win_numba ]
 
 jobs:
   install_and_test:
