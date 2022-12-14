@@ -199,11 +199,11 @@ def classical(srcs, sitecol, cmaker, monitor):
             if sitecol is None:
                 sitecol = srcs['sitecol']
             if srcs.parent:
-                h5 = srcs.parent.open('r').hdf5
-                dset = h5py.File.__getitem__(h5, '_csm')
+                with srcs.parent.open('r').hdf5 as h5:
+                    arr = h5py.File.__getitem__(h5, '_csm')[cmaker.grp_id]
             else:
-                dset = h5py.File.__getitem__(srcs.hdf5, '_csm')
-            srcs =  pickle.loads(gzip.decompress(dset[cmaker.grp_id].tobytes()))
+                arr = h5py.File.__getitem__(srcs.hdf5, '_csm')[cmaker.grp_id]
+            srcs =  pickle.loads(gzip.decompress(arr.tobytes()))
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
     pmap = ProbabilityMap(
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
