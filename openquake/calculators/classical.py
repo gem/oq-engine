@@ -410,7 +410,7 @@ def decide_num_tasks(dstore, concurrent_tasks):
     """
     cmakers = read_cmakers(dstore)
     weights = [cm.weight for cm in cmakers]
-    maxw = sum(weights) / (concurrent_tasks / 2)
+    maxw = 1.5*sum(weights) / concurrent_tasks
     dtlist = [('grp_id', U16), ('tiles', U16)]
     ntasks = []
     for cm in sorted(cmakers, key=lambda cm: weights[cm.grp_id], reverse=True):
