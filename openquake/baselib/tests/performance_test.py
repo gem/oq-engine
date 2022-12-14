@@ -20,7 +20,7 @@ import unittest
 import pickle
 import numpy
 from openquake.baselib.performance import (
-    Monitor, split_array, kollapse, kround)
+    Monitor, split_array, kollapse)
 
 
 class MonitorTestCase(unittest.TestCase):
@@ -75,14 +75,14 @@ class KollapseTestCase(unittest.TestCase):
         arr['rake'] = rng.random(N) * 360
         arr['sids'] = rng.integers(1000, size=N)
         sids = []
-        for rec in kollapse(arr, kround, ['mdbin']):
+        for rec in kollapse(arr, ['mdbin']):
             sids.append(arr['sids'][arr['mdbin'] == rec['mdbin']])
         expected_sids = [[450, 858, 631], [276], [554, 887], [92],
                          [827], [227], [63]]
         numpy.testing.assert_equal(sids, expected_sids)
 
         # now test kollapse with an aggregate field afield='sids'
-        out, allsids = kollapse(arr, kround, ['mdbin'], afield='sids')
+        out, allsids = kollapse(arr, ['mdbin'], afield='sids')
         numpy.testing.assert_equal(allsids, expected_sids)
 
     def test_big(self):
@@ -96,7 +96,7 @@ class KollapseTestCase(unittest.TestCase):
         arr['rake'] = rng.random(N) * 360
         arr['sids'] = rng.integers(1000, size=N)
         t0 = time.time()
-        mean = kollapse(arr, kround, ['mdbin'])
+        mean = kollapse(arr, ['mdbin'])
         sids = []
         for mdbin in mean['mdbin']:
             sids.append(arr['sids'][arr['mdbin'] == mdbin])
