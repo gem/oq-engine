@@ -200,7 +200,7 @@ def classical(srcs, sitecol, cmaker, monitor):
                 sitecol = srcs['sitecol']
             f = srcs.parent.hdf5 if srcs.parent else srcs.hdf5
             arr = h5py.File.__getitem__(f, '_csm')[cmaker.grp_id]
-            srcs =  pickle.loads(gzip.decompress(arr.tobytes()))
+            srcs = pickle.loads(gzip.decompress(arr.tobytes()))
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
     pmap = ProbabilityMap(
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
@@ -632,16 +632,21 @@ class ClassicalCalculator(base.HazardCalculator):
         assert self.N > self.oqparam.max_sites_disagg, self.N
         decide = decide_num_tasks(
             self.datastore, self.oqparam.concurrent_tasks or 1)
-        self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        ds = self.datastore
+        ds.swmr_on()  # must come before the Starmap
+        smap = parallel.Starmap(classical, h5=ds.hdf5)
         for grp_id, ntiles in decide:
             cmaker = self.haz.cmakers[grp_id]
             grp = self.csm.src_groups[grp_id]
             logging.info('Sending %s, %d gsims * %d tiles',
                          grp, len(cmaker.gsims), ntiles)
             for tile in self.sitecol.split(ntiles):
-                smap.submit(
-                    (self.datastore, None if ntiles == 1 else tile, cmaker))
+                if self.oqparam.collapse_level:
+                    # splitting by gsim allows for better collapsing
+                    for cm in cmaker.split_by_gsim():
+                        smap.submit((ds, None if ntiles == 1 else tile, cm))
+                else:
+                    smap.submit((ds, None if ntiles == 1 else tile, cmaker))
         smap.reduce(self.agg_dicts)
 
     def run_tiles(self, maxw):
