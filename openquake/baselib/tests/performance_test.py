@@ -19,8 +19,7 @@ import time
 import unittest
 import pickle
 import numpy
-from openquake.baselib.performance import (
-    Monitor, split_array, kollapse)
+from openquake.baselib.performance import Monitor, kollapse
 
 
 class MonitorTestCase(unittest.TestCase):

@@ -32,7 +32,7 @@ from scipy.interpolate import interp1d
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
     sqrscale)
-from openquake.baselib.performance import Monitor, split_array
+from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
@@ -174,7 +174,7 @@ class DeltaRatesGetter(object):
 
 
 # same speed as performance.kround, round more
-def kround(ctx, kfields):
+def kround1(ctx, kfields):
     kdist = 5. * ctx.mag**2  # heuristic collapse distance from 80 to 500 km
     close = ctx.rrup < kdist
     far = ~close
@@ -184,6 +184,21 @@ def kround(ctx, kfields):
         if kval.dtype == F64 and kfield != 'mag':
             out[kfield][close] = F16(kval[close])  # round less
             out[kfield][far] = numpy.round(kval[far])  # round more
+        else:
+            out[kfield] = ctx[kfield]
+    return out
+
+
+def kround2(ctx, kfields):
+    kdist = 5. * ctx.mag**2  # heuristic collapse distance from 80 to 500 km
+    close = ctx.rrup < kdist
+    far = ~close
+    out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
+    for kfield in kfields:
+        kval = ctx[kfield]
+        if kval.dtype == F64 and kfield != 'mag':
+            out[kfield][close] = F16(kval[close])  # round less
+            out[kfield][far] = numpy.round(kval[far], 1)  # round more
         else:
             out[kfield] = ctx[kfield]
     return out
@@ -215,6 +230,7 @@ class Collapser(object):
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
             return func(ctx, cmaker, rup_indep)
+        kround = kround1 if collapse_level == 1 else kround2
         with self.mon:
             krounded = kround(ctx, self.kfields)
             out, inv = numpy.unique(krounded, return_inverse=True)
