@@ -146,7 +146,7 @@ def calc_poes(ctx, cmaker, gsim):
     with cmaker.gmf_mon:
         mean_stdt = cmaker._get_mean_stds([ctx], gsim)  # shape (4, M, N)
     poes = numpy.zeros((len(ctx), M*L1))
-    for slc in split_in_slices(len(ctx), 500):
+    for slc in split_in_slices(len(ctx), 200):
         ctxt = ctx[slc]
         cmaker.slc = slc  # used in gsim/base.py
         with cmaker.poe_mon:
@@ -1044,6 +1044,7 @@ class ContextMaker(object):
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
             for g, gsim in enumerate(self.gsims):
+                self.g = g
                 poes = self.collapser.apply(
                     calc_poes, (ctxt, self, gsim), rup_indep)
                 yield poes, ctxt, g
@@ -1229,7 +1230,7 @@ class PmapMaker(object):
         ctxlen = 0
         totlen = 0
         M = len(self.loglevels)
-        maxsize = get_maxsize(M) * 500
+        maxsize = get_maxsize(M) * 200
         t0 = time.time()
         for src in self.sources:
             src.nsites = 0

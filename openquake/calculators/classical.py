@@ -410,7 +410,7 @@ def decide_num_tasks(dstore, concurrent_tasks):
     """
     cmakers = read_cmakers(dstore)
     weights = [cm.weight for cm in cmakers]
-    maxw = 1.5*sum(weights) / concurrent_tasks
+    maxw = sum(weights) / concurrent_tasks
     dtlist = [('grp_id', U16), ('tiles', U16)]
     ntasks = []
     for cm in sorted(cmakers, key=lambda cm: weights[cm.grp_id], reverse=True):
@@ -600,7 +600,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.keep_source_groups is None:
             # enable keep_source_groups if the pmaps would take 30+ GB
             oq.keep_source_groups = get_pmaps_size(
-		self.datastore, oq.concurrent_tasks) > 30 * 1024**3
+                self.datastore, oq.concurrent_tasks) > 30 * 1024**3
         if oq.keep_source_groups:
             self.execute_keep_groups()
         else:
@@ -644,12 +644,7 @@ class ClassicalCalculator(base.HazardCalculator):
             grp = self.csm.src_groups[grp_id]
             logging.info('Sending %s, %d tiles', grp, ntiles)
             for tile in self.sitecol.split(ntiles):
-                if self.oqparam.collapse_level > -1:
-                    # splitting by gsim allows for better collapsing
-                    for cm in cmaker.split_by_gsim():
-                        smap.submit((ds, None if ntiles == 1 else tile, cm))
-                else:
-                    smap.submit((ds, None if ntiles == 1 else tile, cmaker))
+                smap.submit((ds, None if ntiles == 1 else tile, cmaker))
         smap.reduce(self.agg_dicts)
 
     def run_tiles(self, maxw):
