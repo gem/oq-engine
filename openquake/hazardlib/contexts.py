@@ -186,22 +186,13 @@ class Collapser(object):
             # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
-            return ctx, ctx.sids.reshape(-1, 1)
+            return ctx
 
-        out, allsids = [], []
-        kfields = [k for k in self.kfields if k != 'mag']
-        for mag in numpy.unique(ctx.mag):
-            ctxt = ctx[ctx.mag == mag]
-            o, a = kollapse(ctxt, kfields, kround,
-                            mfields=['mag', 'occurrence_rate', 'probs_occur'],
-                            afield='sids')
-            out.append(o)
-            allsids.extend(a)
-        out = numpy.concatenate(out).view(numpy.recarray)
+        out, inv = numpy.unique(ctx, return_inverse=True)
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
         print(self.kfields, len(ctx), len(out), '(%.1f)' % (len(ctx)/len(out)))
-        return out.view(numpy.recarray), allsids
+        return out[inv].view(numpy.recarray)
 
 
 class FarAwayRupture(Exception):
@@ -967,27 +958,17 @@ class ContextMaker(object):
         else:
             itime = self.tom.time_span
         for ctx in ctxs:
-            for poes, ctxt, slcsids in self.gen_poes(ctx, rup_indep):
+            for poes, ctxt in self.gen_poes(ctx, rup_indep):
                 probs_occur = getattr(ctxt, 'probs_occur',
                                       numpy.zeros((len(ctxt), 0)))
                 rates = ctxt.occurrence_rate
                 with self.pne_mon:
-                    if isinstance(slcsids, numpy.ndarray):
-                        # no collapse: avoiding an inner loop can give a 25%
-                        if rup_indep:
-                            pmap.update_i(poes, rates, probs_occur,
-                                          ctxt.sids, itime)
-                        else:  # USAmodel, New Madrid cluster
-                            pmap.update_m(poes, rates, probs_occur,
-                                          ctxt.weight, ctxt.sids, itime)
-                    else:  # collapse is possible only for rup_indep
-                        allsids = []
-                        sizes = []
-                        for sids in slcsids:
-                            allsids.extend(sids)
-                            sizes.append(len(sids))
-                        pmap.update_c(poes, rates, probs_occur,
-                                      U32(allsids), U32(sizes), itime)
+                    if rup_indep:
+                        pmap.update_i(poes, rates, probs_occur,
+                                      ctxt.sids, itime)
+                    else:  # USAmodel, New Madrid cluster
+                        pmap.update_m(poes, rates, probs_occur,
+                                      ctxt.weight, ctxt.sids, itime)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs):
@@ -1042,7 +1023,7 @@ class ContextMaker(object):
 
         # collapse if possible
         with self.col_mon:
-            ctx, allsids = self.collapser.collapse(ctx, rup_indep)
+            ctx = self.collapser.collapse(ctx, rup_indep)
 
         # split large context arrays to avoid filling the CPU cache
         if ctx.nbytes > maxsize:
@@ -1055,7 +1036,6 @@ class ContextMaker(object):
             with self.gmf_mon:
                 mean_stdt = self.get_mean_stds([ctx[bigslc]])
             for slc in gen_slices(bigslc.start, bigslc.stop, maxsize//(4*L1)):
-                slcsids = allsids[slc]
                 ctxt = ctx[slc]
                 self.slc = slice(slc.start - s, slc.stop - s)  # in set_poes
                 with self.poe_mon:
@@ -1068,7 +1048,7 @@ class ContextMaker(object):
                             poes[:, :, g] = get_poes_site(ms, self, ctxt)
                         else:  # regular case
                             gsim.set_poes(ms, self, ctxt, poes[:, :, g])
-                yield poes, ctxt, slcsids
+                yield poes, ctxt
 
     def estimate_sites(self, src, sites):
         """
