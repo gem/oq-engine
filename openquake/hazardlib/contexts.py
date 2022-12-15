@@ -148,7 +148,7 @@ def calc_poes(ctx, cmaker, rup_indep=True):
     poes = numpy.zeros((len(ctx), M*L1, G))
     for slc in split_in_slices(len(ctx), 500):
         ctxt = ctx[slc]
-        cmaker.slc = slc
+        cmaker.slc = slc  # used in gsim/base.py
         with cmaker.poe_mon:
             # this is allocating at most 1MB of RAM
             for g, gsim in enumerate(cmaker.gsims):
@@ -401,9 +401,7 @@ class ContextMaker(object):
         kfields = (self.REQUIRES_DISTANCES |
                    self.REQUIRES_RUPTURE_PARAMETERS |
                    self.REQUIRES_SITES_PARAMETERS)
-        self.collapser = Collapser(
-            self.collapse_level, kfields,
-            monitor('collapsing contexts', measuremem=True))
+        self.collapser = Collapser(self.collapse_level, kfields)
         self.shift_hypo = param.get('shift_hypo')
         self.set_imts_conv()
         self.init_monitoring(monitor)
@@ -417,6 +415,7 @@ class ContextMaker(object):
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=True)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
+        self.collapser.mon = monitor('collapsing contexts', measuremem=True)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
@@ -1016,10 +1015,6 @@ class ContextMaker(object):
             recarrays = ctxs
         else:  # vectorize the contexts
             recarrays = [self.recarray(ctxs)]
-        # split by magnitude in case of GMPETable gsims
-        if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
-            assert len(recarrays) == 1, len(recarrays)
-            recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
         self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
@@ -1032,7 +1027,7 @@ class ContextMaker(object):
                 start = slc.stop
             if self.adj[gsim]:
                 self.adj[gsim] = numpy.concatenate(self.adj[gsim])
-            if self.truncation_level not in (0, 99.) and (
+            if self.truncation_level not in (0, 1E-9, 99.) and (
                     out[1, g] == 0.).any():
                 raise ValueError('Total StdDev is zero for %s' % gsim)
         if self.conv:  # apply horizontal component conversion
