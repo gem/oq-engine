@@ -1044,8 +1044,10 @@ class ContextMaker(object):
         """
         # collapse if possible
         self.collapser.mon = self.col_mon
-        poes = self.collapser.apply(calc_poes, ctx, self, rup_indep)
-        yield poes, ctx
+        for mag in numpy.unique(ctx.mag):
+            ctxt = ctx[ctx.mag == mag]
+            poes = self.collapser.apply(calc_poes, ctxt, self, rup_indep)
+            yield poes, ctxt
 
     def estimate_sites(self, src, sites):
         """
