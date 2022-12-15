@@ -198,7 +198,7 @@ class ClusterPoissonTOM(PoissonTOM):
 
 
 @compile(["(float64, float64[:], float64[:,:], float64)",
-          "(float64, float64[:], float64[:,:,:,:], float64)"])
+          "(float64, float64[:], float64[:], float64)"])
 def get_pnes(rate, probs, poes, time_span):
     """
     :param rate: occurrence rate in case of a poissonian rupture

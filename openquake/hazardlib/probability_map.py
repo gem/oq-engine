@@ -159,16 +159,16 @@ def update_pnes(arr, idxs, pnes):
 
 if numba:
     t = numba.types
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.float64[:, :, :],                     # poes
+    sig = t.void(t.float64[:, :],                        # pmap
+                 t.float64[:, :],                        # poes
                  t.float64[:],                           # rates
                  t.float64[:, :],                        # probs_occur
                  t.uint32[:],                            # sids
                  t.float64)                              # itime
     update_pmap_i = compile(sig)(update_pmap_i)
 
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.float64[:, :, :],                     # poes
+    sig = t.void(t.float64[:, :],                        # pmap
+                 t.float64[:, :],                        # poes
                  t.float64[:],                           # rates
                  t.float64[:, :],                        # probs_occur
                  t.float64[:],                           # weights
@@ -277,20 +277,21 @@ class ProbabilityMap(object):
         update_pnes(self.array, self.sidx[other.sids], other.array)
         return self
 
-    def update_i(self, poes, rates, probs_occur, sids, itime):
+    def update_i(self, poes, rates, probs_occur, sids, itime, g):
         """
         Updating independent probabilities
         """
         idxs = self.sidx[sids]
-        update_pmap_i(self.array, poes, rates, probs_occur, idxs, itime)
+        update_pmap_i(self.array[:, :, g], poes, rates, probs_occur,
+                      idxs, itime)
 
-    def update_m(self, poes, rates, probs_occur, weights, sids, itime):
+    def update_m(self, poes, rates, probs_occur, weights, sids, itime, g):
         """
         Updating mutex probabilities
         """
         idxs = self.sidx[sids]
-        update_pmap_m(self.array, poes, rates, probs_occur, weights, idxs,
-                      itime)
+        update_pmap_m(self.array[:, :, g], poes, rates, probs_occur, weights,
+                      idxs, itime)
 
     def __invert__(self):
         return self.new(1. - self.array)

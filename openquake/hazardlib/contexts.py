@@ -134,30 +134,29 @@ def trivial(ctx, name):
     return len(numpy.unique(numpy.float32(ctx[name]))) == 1
 
 
-def calc_poes(ctx, cmaker, rup_indep=True):
+def calc_poes(ctx, cmaker, gsim, rup_indep=True):
     """
     :param ctx: a vectorized context (recarray) of size N
     :returns: poes of shape (N, L, G)
     """
     from openquake.hazardlib.site_amplification import get_poes_site
-    (M, L1), G = cmaker.loglevels.array.shape, len(cmaker.gsims)
+    M, L1 = cmaker.loglevels.array.shape
 
     # split large context arrays to avoid filling the CPU cache
     with cmaker.gmf_mon:
-        mean_stdt = cmaker.get_mean_stds([ctx])
-    poes = numpy.zeros((len(ctx), M*L1, G))
+        mean_stdt = cmaker._get_mean_stds([ctx], gsim)  # shape (4, M, N)
+    poes = numpy.zeros((len(ctx), M*L1))
     for slc in split_in_slices(len(ctx), 500):
         ctxt = ctx[slc]
         cmaker.slc = slc  # used in gsim/base.py
         with cmaker.poe_mon:
             # this is allocating at most 1MB of RAM
-            for g, gsim in enumerate(cmaker.gsims):
-                ms = mean_stdt[:2, g, :, slc]
-                # builds poes of shape (n, L, G)
-                if cmaker.af:  # kernel amplification method
-                    poes[slc, :, g] = get_poes_site(ms, cmaker, ctxt)
-                else:  # regular case
-                    gsim.set_poes(ms, cmaker, ctxt, poes[slc, :, g])
+            ms = mean_stdt[:2, :, slc]
+            # builds poes of shape (n, L, G)
+            if cmaker.af:  # kernel amplification method
+                poes[slc] = get_poes_site(ms, cmaker, ctxt)
+            else:  # regular case
+                gsim.set_poes(ms, cmaker, ctxt, poes[slc])
     return poes
 
 
@@ -988,19 +987,41 @@ class ContextMaker(object):
         else:
             itime = self.tom.time_span
         for ctx in ctxs:
-            for poes, ctxt in self.gen_poes(ctx, rup_indep):
+            for poes, ctxt, g in self.gen_poes(ctx, rup_indep):
+                print('******************', poes, g)
                 probs_occur = getattr(ctxt, 'probs_occur',
                                       numpy.zeros((len(ctxt), 0)))
                 rates = ctxt.occurrence_rate
                 with self.pne_mon:
                     if rup_indep:
                         pmap.update_i(poes, rates, probs_occur,
-                                      ctxt.sids, itime)
+                                      ctxt.sids, itime, g)
                     else:  # USAmodel, New Madrid cluster
                         pmap.update_m(poes, rates, probs_occur,
-                                      ctxt.weight, ctxt.sids, itime)
+                                      ctxt.weight, ctxt.sids, itime, g)
 
-    # called by gen_poes and by the GmfComputer
+    def _get_mean_stds(self, ctxs, gsim):
+        # returns array of shape (4, M, N)
+        N = sum(len(ctx) for ctx in ctxs)
+        M = len(self.imtls)
+        out = numpy.zeros((4, M, N))
+        compute = gsim.__class__.compute
+        start = 0
+        for ctx in ctxs:
+            slc = slice(start, start + len(ctx))
+            adj = compute(gsim, ctx, self.imts, *out[:, :, slc])
+            if adj is not None:
+                self.adj[gsim].append(adj)
+            start = slc.stop
+        if hasattr(self, 'adj') and self.adj[gsim]:
+            self.adj[gsim] = numpy.concatenate(self.adj[gsim])
+        if self.truncation_level not in (0, 1E-9, 99.) and (
+                out[1] == 0.).any():
+            raise ValueError('Total StdDev is zero for %s' % gsim)
+        if self.conv:  # apply horizontal component conversion
+            self.horiz_comp_to_geom_mean(out)
+        return out
+
     def get_mean_stds(self, ctxs):
         """
         :param ctxs: a list of contexts with N=sum(len(ctx) for ctx in ctxs)
@@ -1010,40 +1031,22 @@ class ContextMaker(object):
         M = len(self.imtls)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
-        if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
-            # contexts already vectorized
-            recarrays = ctxs
-        else:  # vectorize the contexts
-            recarrays = [self.recarray(ctxs)]
         self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
         for g, gsim in enumerate(self.gsims):
-            compute = gsim.__class__.compute
-            start = 0
-            for ctx in recarrays:
-                slc = slice(start, start + len(ctx))
-                adj = compute(gsim, ctx, self.imts, *out[:, g, :, slc])
-                if adj is not None:
-                    self.adj[gsim].append(adj)
-                start = slc.stop
-            if self.adj[gsim]:
-                self.adj[gsim] = numpy.concatenate(self.adj[gsim])
-            if self.truncation_level not in (0, 1E-9, 99.) and (
-                    out[1, g] == 0.).any():
-                raise ValueError('Total StdDev is zero for %s' % gsim)
-        if self.conv:  # apply horizontal component conversion
-            self.horiz_comp_to_geom_mean(out)
+            out[:, g] = self._get_mean_stds(ctxs, gsim)
         return out
 
     def gen_poes(self, ctx, rup_indep=True):
         """
         :param ctx: a vectorized context (recarray) of size N
-        :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
+        :yields: poes, ctxt, g with poes of shape (N, L)
         """
-        # collapse if possible
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
-            poes = self.collapser.apply(calc_poes, ctxt, self, rup_indep)
-            yield poes, ctxt
+            for g, gsim in enumerate(self.gsims):
+                poes = self.collapser.apply(
+                    calc_poes, ctxt, self, gsim, rup_indep)
+                yield poes, ctxt, g
 
     def estimate_sites(self, src, sites):
         """
