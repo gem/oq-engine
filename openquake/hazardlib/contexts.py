@@ -188,11 +188,13 @@ class Collapser(object):
             self.cfactor[1] += len(ctx)
             return ctx
 
-        out, inv = numpy.unique(ctx, return_inverse=True)
+        out, inv = numpy.unique(kround(ctx, self.kfields), return_inverse=True)
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
         print(self.kfields, len(ctx), len(out), '(%.1f)' % (len(ctx)/len(out)))
-        return out[inv].view(numpy.recarray)
+        for k in self.kfields:
+            ctx[k] = out[k][inv]
+        return ctx
 
 
 class FarAwayRupture(Exception):
