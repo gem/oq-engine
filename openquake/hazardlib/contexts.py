@@ -30,8 +30,9 @@ import shapely
 from scipy.interpolate import interp1d
 
 from openquake.baselib.general import (
-    AccumDict, DictArray, RecordBuilder, gen_slices, block_splitter, sqrscale)
-from openquake.baselib.performance import Monitor, split_array, kollapse
+    AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
+    sqrscale)
+from openquake.baselib.performance import Monitor, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
@@ -53,7 +54,6 @@ TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
-MAX_MB = 200
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
@@ -132,6 +132,36 @@ def trivial(ctx, name):
     if name not in ctx.dtype.names:
         return True
     return len(numpy.unique(numpy.float32(ctx[name]))) == 1
+
+
+def calc_poes(ctx, cmaker, rup_indep=True):
+    """
+    :param ctx: a vectorized context (recarray) of size N
+    :returns: poes of shape (N, L, G)
+    """
+    from openquake.hazardlib.site_amplification import get_poes_site
+    (M, L1), G = cmaker.loglevels.array.shape, len(cmaker.gsims)
+    # collapse if possible
+    with cmaker.col_mon:
+        ctx = cmaker.collapser.collapse(ctx, rup_indep)
+
+    # split large context arrays to avoid filling the CPU cache
+    with cmaker.gmf_mon:
+        mean_stdt = cmaker.get_mean_stds([ctx])
+    poes = numpy.zeros((len(ctx), M*L1, G))
+    for slc in split_in_slices(len(ctx), 500):
+        ctxt = ctx[slc]
+        cmaker.slc = slc
+        with cmaker.poe_mon:
+            # this is allocating at most 1MB of RAM
+            for g, gsim in enumerate(cmaker.gsims):
+                ms = mean_stdt[:2, g, :, slc]
+                # builds poes of shape (n, L, G)
+                if cmaker.af:  # kernel amplification method
+                    poes[slc, :, g] = get_poes_site(ms, cmaker, ctxt)
+                else:  # regular case
+                    gsim.set_poes(ms, cmaker, ctxt, poes[slc, :, g])
+    return poes
 
 
 class DeltaRatesGetter(object):
@@ -1015,42 +1045,8 @@ class ContextMaker(object):
         :param ctx: a vectorized context (recarray) of size N
         :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
         """
-        # NB: we are carefully trying to save memory here
-        # see case_39
-        from openquake.hazardlib.site_amplification import get_poes_site
-        (M, L1), G = self.loglevels.array.shape, len(self.gsims)
-        maxsize = get_maxsize(M, G)
-        # L1 is the reduction factor such that the NLG arrays have
-        # the same size as the GMN array and fit in the CPU cache
-
-        # collapse if possible
-        with self.col_mon:
-            ctx = self.collapser.collapse(ctx, rup_indep)
-
-        # split large context arrays to avoid filling the CPU cache
-        if ctx.nbytes > maxsize:
-            bigslices = gen_slices(0, len(ctx), maxsize)
-        else:
-            bigslices = [slice(0, len(ctx))]
-
-        for bigslc in bigslices:
-            s = bigslc.start
-            with self.gmf_mon:
-                mean_stdt = self.get_mean_stds([ctx[bigslc]])
-            for slc in gen_slices(bigslc.start, bigslc.stop, maxsize//(4*L1)):
-                ctxt = ctx[slc]
-                self.slc = slice(slc.start - s, slc.stop - s)  # in set_poes
-                with self.poe_mon:
-                    # this is allocating at most 1MB of RAM
-                    poes = numpy.zeros((len(ctxt), M*L1, G))
-                    for g, gsim in enumerate(self.gsims):
-                        ms = mean_stdt[:2, g, :, self.slc]
-                        # builds poes of shape (n, L, G)
-                        if self.af:  # kernel amplification method
-                            poes[:, :, g] = get_poes_site(ms, self, ctxt)
-                        else:  # regular case
-                            gsim.set_poes(ms, self, ctxt, poes[:, :, g])
-                yield poes, ctxt
+        poes = calc_poes(ctx, self, rup_indep)
+        yield poes, ctx
 
     def estimate_sites(self, src, sites):
         """
@@ -1230,20 +1226,22 @@ class PmapMaker(object):
         # sources with the same ID
         cm = self.cmaker
         allctxs = []
-        ctxs_mb = 0
+        ctxlen = 0
         totlen = 0
+        (M, _), G = self.loglevels.array.shape, len(self.gsims)
+        maxsize = get_maxsize(M, G) * 500
         t0 = time.time()
         for src in self.sources:
             src.nsites = 0
             for ctx in self.gen_ctxs(src):
-                ctxs_mb += ctx.nbytes / TWO20  # TWO20=1MB
+                ctxlen += len(ctx)
                 src.nsites += len(ctx)
                 totlen += len(ctx)
                 allctxs.append(ctx)
-                if ctxs_mb > MAX_MB:
+                if ctxlen > maxsize:
                     cm.update(pmap, concat(allctxs), self.rup_indep)
                     allctxs.clear()
-                    ctxs_mb = 0
+                    ctxlen = 0
         if allctxs:
             cm.update(pmap, concat(allctxs), self.rup_indep)
             allctxs.clear()
