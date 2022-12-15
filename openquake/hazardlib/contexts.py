@@ -58,9 +58,7 @@ KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
 DIST_BINS = sqrscale(1, 1000, 65536)
-# the following is used in the collapse method
-IGNORE_PARAMS = {'rup_id', 'src_id', 'weight', 'occurrence_rate', 'probs_occur',
-                 'clon', 'clat', 'sids'}
+MULTIPLIER = 250  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
 
@@ -146,7 +144,7 @@ def calc_poes(ctx, cmaker, rup_indep=True):
     with cmaker.gmf_mon:
         mean_stdt = cmaker.get_mean_stds([ctx])
     poes = numpy.zeros((len(ctx), M*L1, G))
-    for slc in split_in_slices(len(ctx), 250):
+    for slc in split_in_slices(len(ctx), MULTIPLIER):
         ctxt = ctx[slc]
         cmaker.slc = slc  # used in gsim/base.py
         with cmaker.poe_mon:
@@ -198,10 +196,13 @@ def kround2(ctx, kfields):
         kval = ctx[kfield]
         if kval.dtype == F64 and kfield != 'mag':
             out[kfield][close] = F16(kval[close])  # round less
-            out[kfield][far] = numpy.round(kval[far], 1)  # round more
+            out[kfield][far] = numpy.round(kval[far], -1)  # round more
         else:
             out[kfield] = ctx[kfield]
     return out
+
+
+kround = {0: kround0, 1: kround1, 2: kround2}
 
 
 class Collapser(object):
@@ -230,9 +231,8 @@ class Collapser(object):
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
             return func(ctx, cmaker, rup_indep)
-        kround = kround1 if collapse_level == 1 else kround2
         with self.mon:
-            krounded = kround(ctx, self.kfields)
+            krounded = kround[clevel](ctx, self.kfields)
             out, inv = numpy.unique(krounded, return_inverse=True)
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
@@ -1242,7 +1242,7 @@ class PmapMaker(object):
         ctxlen = 0
         totlen = 0
         (M, _), G = self.loglevels.array.shape, len(self.gsims)
-        maxsize = get_maxsize(M, G) * 250
+        maxsize = get_maxsize(M, G) * MULTIPLIER
         t0 = time.time()
         for src in self.sources:
             src.nsites = 0
