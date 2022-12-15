@@ -141,9 +141,6 @@ def calc_poes(ctx, cmaker, rup_indep=True):
     """
     from openquake.hazardlib.site_amplification import get_poes_site
     (M, L1), G = cmaker.loglevels.array.shape, len(cmaker.gsims)
-    # collapse if possible
-    with cmaker.col_mon:
-        ctx = cmaker.collapser.collapse(ctx, rup_indep)
 
     # split large context arrays to avoid filling the CPU cache
     with cmaker.gmf_mon:
@@ -201,7 +198,7 @@ class Collapser(object):
         self.kfields = sorted(kfields)
         self.cfactor = numpy.zeros(2)
 
-    def collapse(self, ctx, rup_indep, collapse_level=None):
+    def apply(self, func, ctx, cmaker, rup_indep=True, collapse_level=None):
         """
         Collapse a context recarray if possible.
 
@@ -216,15 +213,15 @@ class Collapser(object):
             # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
-            return ctx
-
-        out, inv = numpy.unique(kround(ctx, self.kfields), return_inverse=True)
+            return func(ctx, cmaker, rup_indep)
+        with self.mon:
+            krounded = kround(ctx, self.kfields)
+            out, inv = numpy.unique(krounded, return_inverse=True)
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
         print(self.kfields, len(ctx), len(out), '(%.1f)' % (len(ctx)/len(out)))
-        for k in self.kfields:
-            ctx[k] = out[k][inv]
-        return ctx
+        res = func(out.view(numpy.recarray), cmaker, rup_indep)
+        return res[inv]
 
 
 class FarAwayRupture(Exception):
@@ -1045,7 +1042,9 @@ class ContextMaker(object):
         :param ctx: a vectorized context (recarray) of size N
         :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
         """
-        poes = calc_poes(ctx, self, rup_indep)
+        # collapse if possible
+        self.collapser.mon = self.col_mon
+        poes = self.collapser.apply(calc_poes, ctx, self, rup_indep)
         yield poes, ctx
 
     def estimate_sites(self, src, sites):
