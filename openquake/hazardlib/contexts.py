@@ -143,7 +143,7 @@ def calc_poes(ctx, cmaker, rup_indep=True):
     # split large context arrays to avoid filling the CPU cache
     with cmaker.gmf_mon:
         mean_stdt = cmaker.get_mean_stds([ctx])
-    poes = numpy.empty((len(ctx), M*L1, G))
+    poes = numpy.zeros((len(ctx), M*L1, G))
     for slc in split_in_slices(len(ctx), MULTIPLIER):
         ctxt = ctx[slc]
         cmaker.slc = slc  # used in gsim/base.py
