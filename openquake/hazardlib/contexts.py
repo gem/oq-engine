@@ -32,7 +32,7 @@ from scipy.interpolate import interp1d
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
     sqrscale)
-from openquake.baselib.performance import Monitor, split_array
+from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
@@ -58,9 +58,7 @@ KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
 DIST_BINS = sqrscale(1, 1000, 65536)
-# the following is used in the collapse method
-IGNORE_PARAMS = {'rup_id', 'src_id', 'weight', 'occurrence_rate', 'probs_occur',
-                 'clon', 'clat', 'sids'}
+MULTIPLIER = 250  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
 
@@ -146,7 +144,7 @@ def calc_poes(ctx, cmaker, rup_indep=True):
     with cmaker.gmf_mon:
         mean_stdt = cmaker.get_mean_stds([ctx])
     poes = numpy.zeros((len(ctx), M*L1, G))
-    for slc in split_in_slices(len(ctx), 500):
+    for slc in split_in_slices(len(ctx), MULTIPLIER):
         ctxt = ctx[slc]
         cmaker.slc = slc  # used in gsim/base.py
         with cmaker.poe_mon:
@@ -174,7 +172,7 @@ class DeltaRatesGetter(object):
 
 
 # same speed as performance.kround, round more
-def kround(ctx, kfields):
+def kround1(ctx, kfields):
     kdist = 5. * ctx.mag**2  # heuristic collapse distance from 80 to 500 km
     close = ctx.rrup < kdist
     far = ~close
@@ -187,6 +185,24 @@ def kround(ctx, kfields):
         else:
             out[kfield] = ctx[kfield]
     return out
+
+
+def kround2(ctx, kfields):
+    kdist = 5. * ctx.mag**2  # heuristic collapse distance from 80 to 500 km
+    close = ctx.rrup < kdist
+    far = ~close
+    out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
+    for kfield in kfields:
+        kval = ctx[kfield]
+        if kval.dtype == F64 and kfield != 'mag':
+            out[kfield][close] = F16(kval[close])  # round less
+            out[kfield][far] = numpy.round(kval[far], -1)  # round more
+        else:
+            out[kfield] = ctx[kfield]
+    return out
+
+
+kround = {0: kround0, 1: kround1, 2: kround2}
 
 
 class Collapser(object):
@@ -216,11 +232,10 @@ class Collapser(object):
             self.cfactor[1] += len(ctx)
             return func(ctx, cmaker, rup_indep)
         with self.mon:
-            krounded = kround(ctx, self.kfields)
+            krounded = kround[clevel](ctx, self.kfields)
             out, inv = numpy.unique(krounded, return_inverse=True)
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
-        print(self.kfields, len(ctx), len(out), '(%.1f)' % (len(ctx)/len(out)))
         res = func(out.view(numpy.recarray), cmaker, rup_indep)
         return res[inv]
 
@@ -454,8 +469,8 @@ class ContextMaker(object):
                 dic = {imt: imc.apply_conversion(imt) for imt in self.imts}
                 self.conv[gsim].update(dic)
             else:
-                logging.warning(f'Conversion from {imc.name} not applicable to '
-                                f'{gsim.__class__.__name__}')
+                logging.warning(f'Conversion from {imc.name} not applicable to'
+                                f' {gsim.__class__.__name__}')
 
     def horiz_comp_to_geom_mean(self, mean_stds):
         """
@@ -1226,7 +1241,7 @@ class PmapMaker(object):
         ctxlen = 0
         totlen = 0
         (M, _), G = self.loglevels.array.shape, len(self.gsims)
-        maxsize = get_maxsize(M, G) * 500
+        maxsize = get_maxsize(M, G) * MULTIPLIER
         t0 = time.time()
         for src in self.sources:
             src.nsites = 0
