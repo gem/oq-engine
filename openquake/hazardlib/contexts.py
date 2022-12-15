@@ -106,11 +106,11 @@ def concat(ctxs):
     return out
 
 
-def get_maxsize(M, G):
+def get_maxsize(M):
     """
     :returns: an integer N such that arrays N*M*G fit in the CPU cache
     """
-    maxs = TWO20 // (8*M*G)
+    maxs = TWO20 // (8*M)
     assert maxs > 1, maxs
     return maxs
 
@@ -1228,8 +1228,8 @@ class PmapMaker(object):
         allctxs = []
         ctxlen = 0
         totlen = 0
-        (M, _), G = self.loglevels.array.shape, len(self.gsims)
-        maxsize = get_maxsize(M, G) * 500
+        M = len(self.loglevels)
+        maxsize = get_maxsize(M) * 500
         t0 = time.time()
         for src in self.sources:
             src.nsites = 0
