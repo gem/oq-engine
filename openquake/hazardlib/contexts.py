@@ -132,29 +132,30 @@ def trivial(ctx, name):
     return len(numpy.unique(numpy.float32(ctx[name]))) == 1
 
 
-def calc_poes(ctx, cmaker, gsim):
+def calc_poes(ctx, cmaker, rup_indep=True):
     """
     :param ctx: a vectorized context (recarray) of size N
     :returns: poes of shape (N, L, G)
     """
     from openquake.hazardlib.site_amplification import get_poes_site
-    M, L1 = cmaker.loglevels.array.shape
+    (M, L1), G = cmaker.loglevels.array.shape, len(cmaker.gsims)
 
-    with cmaker.gmf_mon:
-        mean_stdt = cmaker._get_mean_stds([ctx], gsim)
-    poes = numpy.zeros((len(ctx), M*L1))
     # split large context arrays to avoid filling the CPU cache
+    with cmaker.gmf_mon:
+        mean_stdt = cmaker.get_mean_stds([ctx])
+    poes = numpy.zeros((len(ctx), M*L1, G))
     for slc in split_in_slices(len(ctx), MULTIPLIER):
         ctxt = ctx[slc]
         cmaker.slc = slc  # used in gsim/base.py
         with cmaker.poe_mon:
             # this is allocating at most 1MB of RAM
-            ms = mean_stdt[:2, :, slc]
-            # builds poes of shape (n, L, G)
-            if cmaker.af:  # kernel amplification method
-                poes[slc] = get_poes_site(ms, cmaker, ctxt)
-            else:  # regular case
-                gsim.set_poes(ms, cmaker, ctxt, poes[slc])
+            for g, gsim in enumerate(cmaker.gsims):
+                ms = mean_stdt[:2, g, :, slc]
+                # builds poes of shape (n, L, G)
+                if cmaker.af:  # kernel amplification method
+                    poes[slc, :, g] = get_poes_site(ms, cmaker, ctxt)
+                else:  # regular case
+                    gsim.set_poes(ms, cmaker, ctxt, poes[slc, :, g])
     return poes
 
 
@@ -208,15 +209,16 @@ class Collapser(object):
     """
     Class managing the collapsing logic.
     """
-    def __init__(self, collapse_level, mon=Monitor()):
+    def __init__(self, collapse_level, kfields, mon=Monitor()):
         self.collapse_level = collapse_level
+        self.kfields = sorted(kfields)
         self.cfactor = numpy.zeros(2)
         self.mon = mon
 
-    def calc_poes(self, ctx, cmaker, gsim, rup_indep=True,
-                  collapse_level=None):
+    def apply(self, func, ctx, cmaker, rup_indep=True, collapse_level=None):
         """
         Collapse a context recarray if possible.
+
         :param ctx: a recarray with "sids"
         :param rup_indep: False if the ruptures are mutually exclusive
         :param collapse_level: if None, use .collapse_level
@@ -228,13 +230,13 @@ class Collapser(object):
             # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
-            return calc_poes(ctx, cmaker, gsim)
+            return func(ctx, cmaker, rup_indep)
         with self.mon:
-            krounded = kround[clevel](ctx, gsim.requires())
+            krounded = kround[clevel](ctx, self.kfields)
             out, inv = numpy.unique(krounded, return_inverse=True)
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
-        res = calc_poes(out.view(numpy.recarray), cmaker, gsim)
+        res = func(out.view(numpy.recarray), cmaker, rup_indep)
         return res[inv]
 
 
@@ -411,7 +413,10 @@ class ContextMaker(object):
         dic['weight'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
-        self.collapser = Collapser(self.collapse_level)
+        kfields = (self.REQUIRES_DISTANCES |
+                   self.REQUIRES_RUPTURE_PARAMETERS |
+                   self.REQUIRES_SITES_PARAMETERS)
+        self.collapser = Collapser(self.collapse_level, kfields)
         self.shift_hypo = param.get('shift_hypo')
         self.set_imts_conv()
         self.init_monitoring(monitor)
@@ -467,22 +472,23 @@ class ContextMaker(object):
                 logging.warning(f'Conversion from {imc.name} not applicable to'
                                 f' {gsim.__class__.__name__}')
 
-    def horiz_comp_to_geom_mean(self, mean_stds, gsim):
+    def horiz_comp_to_geom_mean(self, mean_stds):
         """
-        This function converts ground-motion obtained for a given description
-        of horizontal component into ground-motion values for geometric_mean.
+        This function converts ground-motion obtained for a given description of
+        horizontal component into ground-motion values for geometric_mean.
 
         The conversion equations used are from:
             - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
             - Boore and Kishida (2017): for RotD50
         """
-        if not self.conv[gsim]:
-            return
-        for m, imt in enumerate(self.imts):
-            me, si, ta, ph = mean_stds[:, m]
-            conv_median, conv_sigma, rstd = self.conv[gsim][imt]
-            me[:] = numpy.log(numpy.exp(me) / conv_median)
-            si[:] = ((si**2 - conv_sigma**2) / rstd**2)**0.5
+        for g, gsim in enumerate(self.gsims):
+            if not self.conv[gsim]:
+                continue
+            for m, imt in enumerate(self.imts):
+                me, si, ta, ph = mean_stds[:, g, m]
+                conv_median, conv_sigma, rstd = self.conv[gsim][imt]
+                me[:] = numpy.log(numpy.exp(me) / conv_median)
+                si[:] = ((si**2 - conv_sigma**2) / rstd**2)**0.5
 
     @property
     def stop(self):
@@ -1009,26 +1015,7 @@ class ContextMaker(object):
                         pmap.update_m(poes, rates, probs_occur,
                                       ctxt.weight, ctxt.sids, itime)
 
-    def _get_mean_stds(self, ctxs, gsim):
-        # returns array of shape (4, M, N)
-        N = sum(len(ctx) for ctx in ctxs)
-        M = len(self.imtls)
-        out = numpy.zeros((4, M, N))
-        compute = gsim.__class__.compute
-        start = 0
-        for ctx in ctxs:
-            slc = slice(start, start + len(ctx))
-            adj = compute(gsim, ctx, self.imts, *out[:, :, slc])
-            if adj is not None:
-                self.adj[gsim].append(adj)
-            start = slc.stop
-        if self.truncation_level not in (0, 1E-9, 99.) and (
-                out[1] == 0.).any():
-            raise ValueError('Total StdDev is zero for %s' % gsim)
-        if self.conv:  # apply horizontal component conversion
-            self.horiz_comp_to_geom_mean(out, gsim)
-        return out
-
+    # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs):
         """
         :param ctxs: a list of contexts with N=sum(len(ctx) for ctx in ctxs)
@@ -1038,9 +1025,28 @@ class ContextMaker(object):
         M = len(self.imtls)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
+        if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
+            # contexts already vectorized
+            recarrays = ctxs
+        else:  # vectorize the contexts
+            recarrays = [self.recarray(ctxs)]
         self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
         for g, gsim in enumerate(self.gsims):
-            out[:, g] = self._get_mean_stds(ctxs, gsim)
+            compute = gsim.__class__.compute
+            start = 0
+            for ctx in recarrays:
+                slc = slice(start, start + len(ctx))
+                adj = compute(gsim, ctx, self.imts, *out[:, g, :, slc])
+                if adj is not None:
+                    self.adj[gsim].append(adj)
+                start = slc.stop
+            if self.adj[gsim]:
+                self.adj[gsim] = numpy.concatenate(self.adj[gsim])
+            if self.truncation_level not in (0, 1E-9, 99.) and (
+                    out[1, g] == 0.).any():
+                raise ValueError('Total StdDev is zero for %s' % gsim)
+        if self.conv:  # apply horizontal component conversion
+            self.horiz_comp_to_geom_mean(out)
         return out
 
     def gen_poes(self, ctx, rup_indep=True):
@@ -1048,15 +1054,10 @@ class ContextMaker(object):
         :param ctx: a vectorized context (recarray) of size N
         :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
         """
-        L = self.loglevels.array.size
-        G = len(self.gsims)
-        self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
+        # collapse if possible
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
-            poes = numpy.empty((len(ctxt), L, G))
-            for g, gsim in enumerate(self.gsims):
-                poes[:, :, g] = self.collapser.calc_poes(
-                    ctxt, self, gsim, rup_indep)
+            poes = self.collapser.apply(calc_poes, ctxt, self, rup_indep)
             yield poes, ctxt
 
     def estimate_sites(self, src, sites):
