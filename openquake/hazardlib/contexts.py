@@ -1016,7 +1016,28 @@ class ContextMaker(object):
                         pmap.update_m(poes, rates, probs_occur,
                                       ctxt.weight, ctxt.sids, itime)
 
-    # called by gen_poes and by the GmfComputer
+    def _get_mean_stds(self, ctxs, gsim):
+        # returns array of shape (4, M, N)
+        N = sum(len(ctx) for ctx in ctxs)
+        M = len(self.imtls)
+        out = numpy.zeros((4, M, N))
+        compute = gsim.__class__.compute
+        start = 0
+        for ctx in ctxs:
+            slc = slice(start, start + len(ctx))
+            adj = compute(gsim, ctx, self.imts, *out[:, :, slc])
+            if adj is not None:
+                self.adj[gsim].append(adj)
+            start = slc.stop
+        if hasattr(self, 'adj') and self.adj[gsim]:
+            self.adj[gsim] = numpy.concatenate(self.adj[gsim])
+        if self.truncation_level not in (0, 1E-9, 99.) and (
+                out[1] == 0.).any():
+            raise ValueError('Total StdDev is zero for %s' % gsim)
+        if self.conv:  # apply horizontal component conversion
+            self.horiz_comp_to_geom_mean(out)
+        return out
+
     def get_mean_stds(self, ctxs):
         """
         :param ctxs: a list of contexts with N=sum(len(ctx) for ctx in ctxs)
@@ -1026,28 +1047,9 @@ class ContextMaker(object):
         M = len(self.imtls)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
-        if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
-            # contexts already vectorized
-            recarrays = ctxs
-        else:  # vectorize the contexts
-            recarrays = [self.recarray(ctxs)]
         self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
         for g, gsim in enumerate(self.gsims):
-            compute = gsim.__class__.compute
-            start = 0
-            for ctx in recarrays:
-                slc = slice(start, start + len(ctx))
-                adj = compute(gsim, ctx, self.imts, *out[:, g, :, slc])
-                if adj is not None:
-                    self.adj[gsim].append(adj)
-                start = slc.stop
-            if self.adj[gsim]:
-                self.adj[gsim] = numpy.concatenate(self.adj[gsim])
-            if self.truncation_level not in (0, 1E-9, 99.) and (
-                    out[1, g] == 0.).any():
-                raise ValueError('Total StdDev is zero for %s' % gsim)
-        if self.conv:  # apply horizontal component conversion
-            self.horiz_comp_to_geom_mean(out)
+            out[:, g] = self._get_mean_stds(ctxs, gsim)
         return out
 
     def gen_poes(self, ctx, rup_indep=True):
