@@ -480,7 +480,7 @@ class GMPE(GroundShakingIntensityModel):
         phi_b = cmaker.phi_b
         M, L1 = loglevels.shape
         if hasattr(self, 'weights_signs'):  # for nshmp_2014, case_72
-            adj = numpy.concatenate(cmaker.adj[self])[cmaker.slc]
+            adj = cmaker.adj[self][cmaker.slc]
             outs = []
             weights, signs = zip(*self.weights_signs)
             for s in signs:
