@@ -105,7 +105,7 @@ def _get_poes(mean_std, loglevels, phi_b):
     return out.T
 
 
-OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes',
+OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes', 'requires',
               'set_parameters', 'set_tables')
 
 
@@ -269,6 +269,15 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
                 if not attr.startswith('COEFFS'):
                     raise NameError('%s does not start with COEFFS' % attr)
         registry[cls.__name__] = cls
+
+    def requires(self):
+        """
+        :returns: ordered tuple with the required parameters except the mag
+        """
+        tot = set(self.REQUIRES_DISTANCES |
+                  self.REQUIRES_RUPTURE_PARAMETERS |
+                  self.REQUIRES_SITES_PARAMETERS)
+        return tuple(sorted(tot))
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
@@ -471,12 +480,13 @@ class GMPE(GroundShakingIntensityModel):
         phi_b = cmaker.phi_b
         M, L1 = loglevels.shape
         if hasattr(self, 'weights_signs'):  # for nshmp_2014, case_72
+            adj = numpy.concatenate(cmaker.adj[self])[cmaker.slc]
             outs = []
             weights, signs = zip(*self.weights_signs)
             for s in signs:
                 ms = numpy.array(mean_std)  # make a copy
                 for m in range(len(loglevels)):
-                    ms[0, m] += s * cmaker.adj[self][cmaker.slc]
+                    ms[0, m] += s * adj
                 outs.append(_get_poes(ms, loglevels, phi_b))
             out[:] = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):
