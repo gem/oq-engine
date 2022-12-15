@@ -30,8 +30,9 @@ import shapely
 from scipy.interpolate import interp1d
 
 from openquake.baselib.general import (
-    AccumDict, DictArray, RecordBuilder, gen_slices, block_splitter, sqrscale)
-from openquake.baselib.performance import Monitor, split_array, kollapse
+    AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
+    sqrscale)
+from openquake.baselib.performance import Monitor, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
@@ -53,7 +54,6 @@ TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
-MAX_MB = 200
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
@@ -134,6 +134,33 @@ def trivial(ctx, name):
     return len(numpy.unique(numpy.float32(ctx[name]))) == 1
 
 
+def calc_poes(ctx, cmaker, rup_indep=True):
+    """
+    :param ctx: a vectorized context (recarray) of size N
+    :returns: poes of shape (N, L, G)
+    """
+    from openquake.hazardlib.site_amplification import get_poes_site
+    (M, L1), G = cmaker.loglevels.array.shape, len(cmaker.gsims)
+
+    # split large context arrays to avoid filling the CPU cache
+    with cmaker.gmf_mon:
+        mean_stdt = cmaker.get_mean_stds([ctx])
+    poes = numpy.zeros((len(ctx), M*L1, G))
+    for slc in split_in_slices(len(ctx), 500):
+        ctxt = ctx[slc]
+        cmaker.slc = slc  # used in gsim/base.py
+        with cmaker.poe_mon:
+            # this is allocating at most 1MB of RAM
+            for g, gsim in enumerate(cmaker.gsims):
+                ms = mean_stdt[:2, g, :, slc]
+                # builds poes of shape (n, L, G)
+                if cmaker.af:  # kernel amplification method
+                    poes[slc, :, g] = get_poes_site(ms, cmaker, ctxt)
+                else:  # regular case
+                    gsim.set_poes(ms, cmaker, ctxt, poes[slc, :, g])
+    return poes
+
+
 class DeltaRatesGetter(object):
     """
     Read the delta rates from an aftershock datastore
@@ -166,12 +193,13 @@ class Collapser(object):
     """
     Class managing the collapsing logic.
     """
-    def __init__(self, collapse_level, kfields):
+    def __init__(self, collapse_level, kfields, mon=Monitor()):
         self.collapse_level = collapse_level
         self.kfields = sorted(kfields)
         self.cfactor = numpy.zeros(2)
+        self.mon = mon
 
-    def collapse(self, ctx, rup_indep, collapse_level=None):
+    def apply(self, func, ctx, cmaker, rup_indep=True, collapse_level=None):
         """
         Collapse a context recarray if possible.
 
@@ -186,22 +214,15 @@ class Collapser(object):
             # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
-            return ctx, ctx.sids.reshape(-1, 1)
-
-        out, allsids = [], []
-        kfields = [k for k in self.kfields if k != 'mag']
-        for mag in numpy.unique(ctx.mag):
-            ctxt = ctx[ctx.mag == mag]
-            o, a = kollapse(ctxt, kfields, kround,
-                            mfields=['mag', 'occurrence_rate', 'probs_occur'],
-                            afield='sids')
-            out.append(o)
-            allsids.extend(a)
-        out = numpy.concatenate(out).view(numpy.recarray)
+            return func(ctx, cmaker, rup_indep)
+        with self.mon:
+            krounded = kround(ctx, self.kfields)
+            out, inv = numpy.unique(krounded, return_inverse=True)
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
         print(self.kfields, len(ctx), len(out), '(%.1f)' % (len(ctx)/len(out)))
-        return out.view(numpy.recarray), allsids
+        res = func(out.view(numpy.recarray), cmaker, rup_indep)
+        return res[inv]
 
 
 class FarAwayRupture(Exception):
@@ -389,12 +410,12 @@ class ContextMaker(object):
         # instantiating child monitors, may be called in the workers
         self.pla_mon = monitor('planar contexts', measuremem=False)
         self.ctx_mon = monitor('nonplanar contexts', measuremem=False)
-        self.col_mon = monitor('collapsing contexts', measuremem=True)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=True)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
+        self.collapser.mon = monitor('collapsing contexts', measuremem=True)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
@@ -967,27 +988,17 @@ class ContextMaker(object):
         else:
             itime = self.tom.time_span
         for ctx in ctxs:
-            for poes, ctxt, slcsids in self.gen_poes(ctx, rup_indep):
+            for poes, ctxt in self.gen_poes(ctx, rup_indep):
                 probs_occur = getattr(ctxt, 'probs_occur',
                                       numpy.zeros((len(ctxt), 0)))
                 rates = ctxt.occurrence_rate
                 with self.pne_mon:
-                    if isinstance(slcsids, numpy.ndarray):
-                        # no collapse: avoiding an inner loop can give a 25%
-                        if rup_indep:
-                            pmap.update_i(poes, rates, probs_occur,
-                                          ctxt.sids, itime)
-                        else:  # USAmodel, New Madrid cluster
-                            pmap.update_m(poes, rates, probs_occur,
-                                          ctxt.weight, ctxt.sids, itime)
-                    else:  # collapse is possible only for rup_indep
-                        allsids = []
-                        sizes = []
-                        for sids in slcsids:
-                            allsids.extend(sids)
-                            sizes.append(len(sids))
-                        pmap.update_c(poes, rates, probs_occur,
-                                      U32(allsids), U32(sizes), itime)
+                    if rup_indep:
+                        pmap.update_i(poes, rates, probs_occur,
+                                      ctxt.sids, itime)
+                    else:  # USAmodel, New Madrid cluster
+                        pmap.update_m(poes, rates, probs_occur,
+                                      ctxt.weight, ctxt.sids, itime)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs):
@@ -1004,10 +1015,6 @@ class ContextMaker(object):
             recarrays = ctxs
         else:  # vectorize the contexts
             recarrays = [self.recarray(ctxs)]
-        # split by magnitude in case of GMPETable gsims
-        if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
-            assert len(recarrays) == 1, len(recarrays)
-            recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
         self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
@@ -1020,7 +1027,7 @@ class ContextMaker(object):
                 start = slc.stop
             if self.adj[gsim]:
                 self.adj[gsim] = numpy.concatenate(self.adj[gsim])
-            if self.truncation_level not in (0, 99.) and (
+            if self.truncation_level not in (0, 1E-9, 99.) and (
                     out[1, g] == 0.).any():
                 raise ValueError('Total StdDev is zero for %s' % gsim)
         if self.conv:  # apply horizontal component conversion
@@ -1032,43 +1039,11 @@ class ContextMaker(object):
         :param ctx: a vectorized context (recarray) of size N
         :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
         """
-        # NB: we are carefully trying to save memory here
-        # see case_39
-        from openquake.hazardlib.site_amplification import get_poes_site
-        (M, L1), G = self.loglevels.array.shape, len(self.gsims)
-        maxsize = get_maxsize(M, G)
-        # L1 is the reduction factor such that the NLG arrays have
-        # the same size as the GMN array and fit in the CPU cache
-
         # collapse if possible
-        with self.col_mon:
-            ctx, allsids = self.collapser.collapse(ctx, rup_indep)
-
-        # split large context arrays to avoid filling the CPU cache
-        if ctx.nbytes > maxsize:
-            bigslices = gen_slices(0, len(ctx), maxsize)
-        else:
-            bigslices = [slice(0, len(ctx))]
-
-        for bigslc in bigslices:
-            s = bigslc.start
-            with self.gmf_mon:
-                mean_stdt = self.get_mean_stds([ctx[bigslc]])
-            for slc in gen_slices(bigslc.start, bigslc.stop, maxsize//(4*L1)):
-                slcsids = allsids[slc]
-                ctxt = ctx[slc]
-                self.slc = slice(slc.start - s, slc.stop - s)  # in set_poes
-                with self.poe_mon:
-                    # this is allocating at most 1MB of RAM
-                    poes = numpy.zeros((len(ctxt), M*L1, G))
-                    for g, gsim in enumerate(self.gsims):
-                        ms = mean_stdt[:2, g, :, self.slc]
-                        # builds poes of shape (n, L, G)
-                        if self.af:  # kernel amplification method
-                            poes[:, :, g] = get_poes_site(ms, self, ctxt)
-                        else:  # regular case
-                            gsim.set_poes(ms, self, ctxt, poes[:, :, g])
-                yield poes, ctxt, slcsids
+        for mag in numpy.unique(ctx.mag):
+            ctxt = ctx[ctx.mag == mag]
+            poes = self.collapser.apply(calc_poes, ctxt, self, rup_indep)
+            yield poes, ctxt
 
     def estimate_sites(self, src, sites):
         """
@@ -1248,20 +1223,22 @@ class PmapMaker(object):
         # sources with the same ID
         cm = self.cmaker
         allctxs = []
-        ctxs_mb = 0
+        ctxlen = 0
         totlen = 0
+        (M, _), G = self.loglevels.array.shape, len(self.gsims)
+        maxsize = get_maxsize(M, G) * 500
         t0 = time.time()
         for src in self.sources:
             src.nsites = 0
             for ctx in self.gen_ctxs(src):
-                ctxs_mb += ctx.nbytes / TWO20  # TWO20=1MB
+                ctxlen += len(ctx)
                 src.nsites += len(ctx)
                 totlen += len(ctx)
                 allctxs.append(ctx)
-                if ctxs_mb > MAX_MB:
+                if ctxlen > maxsize:
                     cm.update(pmap, concat(allctxs), self.rup_indep)
                     allctxs.clear()
-                    ctxs_mb = 0
+                    ctxlen = 0
         if allctxs:
             cm.update(pmap, concat(allctxs), self.rup_indep)
             allctxs.clear()

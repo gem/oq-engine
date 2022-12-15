@@ -204,7 +204,7 @@ class Monitor(object):
     @property
     def mem(self):
         """Mean memory allocation"""
-        return self._mem / self.counts
+        return self._mem / (self.counts or 1)
 
     @property
     def dt(self):

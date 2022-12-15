@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed context collapsing in the multi-site case
   * Optimised postclassical, both in terms of memory in the master node
     and reading performance in the workers
   * Added `parallel.multispawn` facility in `oq engine --multi --run`
