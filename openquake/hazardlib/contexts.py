@@ -193,10 +193,11 @@ class Collapser(object):
     """
     Class managing the collapsing logic.
     """
-    def __init__(self, collapse_level, kfields):
+    def __init__(self, collapse_level, kfields, mon=Monitor()):
         self.collapse_level = collapse_level
         self.kfields = sorted(kfields)
         self.cfactor = numpy.zeros(2)
+        self.mon = mon
 
     def apply(self, func, ctx, cmaker, rup_indep=True, collapse_level=None):
         """
@@ -400,7 +401,9 @@ class ContextMaker(object):
         kfields = (self.REQUIRES_DISTANCES |
                    self.REQUIRES_RUPTURE_PARAMETERS |
                    self.REQUIRES_SITES_PARAMETERS)
-        self.collapser = Collapser(self.collapse_level, kfields)
+        self.collapser = Collapser(
+            self.collapse_level, kfields,
+            monitor('collapsing contexts', measuremem=True))
         self.shift_hypo = param.get('shift_hypo')
         self.set_imts_conv()
         self.init_monitoring(monitor)
@@ -409,7 +412,6 @@ class ContextMaker(object):
         # instantiating child monitors, may be called in the workers
         self.pla_mon = monitor('planar contexts', measuremem=False)
         self.ctx_mon = monitor('nonplanar contexts', measuremem=False)
-        self.col_mon = monitor('collapsing contexts', measuremem=True)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
@@ -1043,7 +1045,6 @@ class ContextMaker(object):
         :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
         """
         # collapse if possible
-        self.collapser.mon = self.col_mon
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
             poes = self.collapser.apply(calc_poes, ctxt, self, rup_indep)
