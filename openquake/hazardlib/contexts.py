@@ -146,7 +146,7 @@ def calc_poes(ctx, cmaker, rup_indep=True):
     with cmaker.gmf_mon:
         mean_stdt = cmaker.get_mean_stds([ctx])
     poes = numpy.zeros((len(ctx), M*L1, G))
-    for slc in split_in_slices(len(ctx), 500):
+    for slc in split_in_slices(len(ctx), 250):
         ctxt = ctx[slc]
         cmaker.slc = slc  # used in gsim/base.py
         with cmaker.poe_mon:
@@ -1242,7 +1242,7 @@ class PmapMaker(object):
         ctxlen = 0
         totlen = 0
         (M, _), G = self.loglevels.array.shape, len(self.gsims)
-        maxsize = get_maxsize(M, G) * 500
+        maxsize = get_maxsize(M, G) * 250
         t0 = time.time()
         for src in self.sources:
             src.nsites = 0
