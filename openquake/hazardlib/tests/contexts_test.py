@@ -291,7 +291,8 @@ class CollapseTestCase(unittest.TestCase):
         [grp] = inp.groups
         self.assertEqual(len(grp.sources), 1)  # not splittable source
         poes = cmaker.get_poes(grp, inp.sitecol)
-        cmaker.collapser = Collapser(collapse_level=1)
+        cmaker.collapser = Collapser(
+            collapse_level=1, kfields=cmaker.REQUIRES_DISTANCES)
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
         if PLOTTING:
             import matplotlib.pyplot as plt
