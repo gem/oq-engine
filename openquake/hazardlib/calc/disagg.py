@@ -121,6 +121,7 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     shapedic['Z'] = Z
     return bin_edges + [trts], shapedic
 
+
 def _eps3(truncation_level, eps):
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
