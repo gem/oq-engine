@@ -1371,7 +1371,7 @@ def view_pmaps_size(token, dstore):
         ct = Starmap.num_cores * 2
     else:
         ct = int(token.split(':')[1])
-    return humansize(get_pmaps_size(dstore, ct))
+    return humansize(get_pmaps_gb(dstore, ct))
 
 
 @view.add('src_groups')

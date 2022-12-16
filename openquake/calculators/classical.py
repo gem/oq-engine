@@ -60,7 +60,7 @@ disagg_grp_dt = numpy.dtype([
 slice_dt = numpy.dtype([('sid', U32), ('start', int), ('stop', int)])
 
 
-def get_pmaps_size(dstore, ct):
+def get_pmaps_gb(dstore, ct):
     """
     :returns: memory required on the master node to keep the pmaps
     """
@@ -69,7 +69,7 @@ def get_pmaps_size(dstore, ct):
     cmakers = read_cmakers(dstore)
     maxw = sum(cm.weight for cm in cmakers) / (ct or 1)
     num_gs = [len(cm.gsims) for cm in cmakers if cm.weight > maxw]
-    return sum(num_gs) * N * L * 8
+    return sum(num_gs) * N * L * 8 / 1024**3
 
 
 def build_slice_by_sid(sids, offset=0):
@@ -605,13 +605,14 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
-        req = self.check_memory(len(self.sitecol), oq.imtls.size, max_gs, maxw)
+        req = get_pmaps_gb(self.datastore, oq.concurrent_tasks)
         ntiles = 1 + int(req / (oq.pmap_max_gb * 30))  # 30 GB
         self.n_outs = AccumDict(accum=0)
         if ntiles > 1:
             self.execute_seq(maxw, ntiles)
-        else:
+        else:  # regular case
+            max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
+            self.check_memory(len(self.sitecol), oq.imtls.size, max_gs, maxw)
             self.execute_par(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
