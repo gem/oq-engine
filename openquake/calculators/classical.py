@@ -243,7 +243,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     used to specify the kind of output.
     """
     if monitor.task_no > 60:
-        time.sleep(10 * random.random())  # give time to the other tasks
+        time.sleep(100 * random.random())  # give time to the other tasks
     with monitor('read PoEs', measuremem=True):
         pgetter.init()
 
