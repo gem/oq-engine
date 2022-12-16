@@ -96,7 +96,8 @@ class ESHM20ShallowAliasesTestCase(unittest.TestCase):
                 alias = "ESHM20Iceland{:s}Stress{:s}Atten".format(stress,
                                                                   atten)
                 alias = gsim_aliases[alias]
-                alias_gmm = valid.gsim(alias.replace(":", " ="))
+                #alias_gmm = valid.gsim(alias.replace(":", " ="))
+                alias_gmm = valid.gsim(alias)
                 gmm = KothaEtAl2020ESHM20(dl2l=dl2l, c3_epsilon=atten_adj)
                 compare_gmms(alias_gmm, gmm, self.ctx, self.imts)
 
