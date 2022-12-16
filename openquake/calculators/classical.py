@@ -639,7 +639,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         assert self.N > self.oqparam.max_sites_disagg, self.N
         logging.info('Running %d tiles', ntiles)
-        for n, tile in enumerate(self.sitecol.split_in_tiles(ntiles)):
+        for n, tile in enumerate(self.sitecol.split(ntiles)):
             self.run_one(tile, maxw)
             logging.info('Finished tile %d of %d', n+1, ntiles)
 
