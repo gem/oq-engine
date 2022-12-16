@@ -241,7 +241,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    time.sleep(monitor.task_no)  # give time to the other tasks
+    time.sleep(monitor.task_no * 2)  # give time to the other tasks
     with monitor('read PoEs', measuremem=True):
         pgetter.init()
 
@@ -814,7 +814,7 @@ class ClassicalCalculator(base.HazardCalculator):
             return
         N, S, M, P, L1, individual = self._create_hcurves_maps()
         poes_gb = self.datastore.getsize('_poes') / 1024**3
-        ct = int(poes_gb) + 1  # number of tasks =~ number of GB
+        ct = 2 * int(poes_gb) + 1  # number of tasks = twice the number of GB
         if ct > 1:
             logging.info('Producing %d postclassical tasks', ct)
         self.weights = ws = [rlz.weight for rlz in self.realizations]
