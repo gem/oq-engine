@@ -814,6 +814,8 @@ class ClassicalCalculator(base.HazardCalculator):
         N, S, M, P, L1, individual = self._create_hcurves_maps()
         poes_gb = self.datastore.getsize('_poes') / 1024**3
         ct = int(poes_gb) + 1  # number of tasks =~ number of GB
+        if ct > 1:
+            logging.info('Producing %d postclassical tasks')
         self.weights = ws = [rlz.weight for rlz in self.realizations]
         if '_poes' in set(self.datastore):
             dstore = self.datastore
