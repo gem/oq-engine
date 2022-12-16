@@ -447,7 +447,10 @@ class ClassicalCalculator(base.HazardCalculator):
         self.source_data += sdata
         grp_id = dic.pop('grp_id')
         self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
-        self.cfactor += dic.pop('cfactor')
+        cfactor = dic.pop('cfactor')
+        if cfactor[1] != cfactor[0]:
+            print('cfactor = %.1f' % (cfactor[1] / cfactor[0]))
+        self.cfactor += cfactor
 
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']):
@@ -644,12 +647,7 @@ class ClassicalCalculator(base.HazardCalculator):
             grp = self.csm.src_groups[grp_id]
             logging.info('Sending %s, %d tiles', grp, ntiles)
             for tile in self.sitecol.split(ntiles):
-                if self.oqparam.collapse_level > -1:
-                    # splitting by gsim allows for better collapsing
-                    for cm in cmaker.split_by_gsim():
-                        smap.submit((ds, None if ntiles == 1 else tile, cm))
-                else:
-                    smap.submit((ds, None if ntiles == 1 else tile, cmaker))
+                smap.submit((ds, None if ntiles == 1 else tile, cmaker))
         smap.reduce(self.agg_dicts)
 
     def run_tiles(self, maxw):
@@ -834,9 +832,9 @@ class ClassicalCalculator(base.HazardCalculator):
         # the formula ``taskno = sites_ids // sites_per_task`` and then
         # extracting a dictionary of slices for each taskno. This works
         # since by construction the site_ids are sequential and there are
-        # at most G slices per task. For instance if there are 6 sites	
-        # disposed in 2 groups and we want to produce 2 tasks we can use	
-        # 012345012345 // 3 = 000111000111 and the slices are	
+        # at most G slices per task. For instance if there are 6 sites
+        # disposed in 2 groups and we want to produce 2 tasks we can use
+        # 012345012345 // 3 = 000111000111 and the slices are
         # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
         slicedic = AccumDict(accum=[])
         for idx, start, stop in sbs:
