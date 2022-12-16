@@ -32,7 +32,8 @@ try:
     from PIL import Image
 except ImportError:
     Image = None
-from openquake.baselib import performance, parallel, hdf5, config, python3compat
+from openquake.baselib import (
+    performance, parallel, hdf5, config, python3compat)
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
     get_nbytes_msg, agg_probs, pprod)
@@ -57,6 +58,18 @@ disagg_grp_dt = numpy.dtype([
     ('grp_start', U16), ('grp_trt', hdf5.vstr), ('avg_poe', F32),
     ('nsites', U32)])
 slice_dt = numpy.dtype([('sid', U32), ('start', int), ('stop', int)])
+
+
+def get_pmaps_size(dstore, ct):
+    """
+    :returns: memory required on the master node to keep the pmaps
+    """
+    N = len(dstore['sitecol'])
+    L = dstore['oqparam'].imtls.size
+    cmakers = read_cmakers(dstore)
+    maxw = sum(cm.weight for cm in cmakers) / (ct or 1)
+    num_gs = [len(cm.gsims) for cm in cmakers if cm.weight > maxw]
+    return sum(num_gs) * N * L * 8
 
 
 def build_slice_by_sid(sids, offset=0):
@@ -194,7 +207,7 @@ def classical(srcs, sitecol, cmaker, monitor):
     Call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
-    if isinstance(srcs, datastore.DataStore):  # keep_source_groups=true
+    if isinstance(srcs, datastore.DataStore):
         with srcs:
             if sitecol is None:
                 sitecol = srcs['sitecol']
@@ -391,18 +404,6 @@ class Hazard:
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
-def get_pmaps_size(dstore, ct):
-    """
-    :returns: memory required on the master node to keep the pmaps
-    """
-    N = len(dstore['sitecol'])
-    L = dstore['oqparam'].imtls.size
-    cmakers = read_cmakers(dstore)
-    maxw = sum(cm.weight for cm in cmakers) / (ct or 1)
-    num_gs = [len(cm.gsims) for cm in cmakers if cm.weight > maxw]
-    return sum(num_gs) * N * L * 8
-
-
 def decide_num_tasks(dstore, concurrent_tasks):
     """
     :param dstore: DataStore
@@ -570,6 +571,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if avail < size:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
+        return tot / 1024**3  # memory in GB
 
     def execute(self):
         """
@@ -599,15 +601,17 @@ class ClassicalCalculator(base.HazardCalculator):
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         self.source_data = AccumDict(accum=[])
+        if not performance.numba:
+            logging.warning('numba is not installed: using the slow algorithm')
+
         t0 = time.time()
-        if oq.keep_source_groups is None:
-            # enable keep_source_groups if the pmaps would take 30+ GB
-            oq.keep_source_groups = get_pmaps_size(
-		self.datastore, oq.concurrent_tasks) > 30 * 1024**3
-        if oq.keep_source_groups:
-            self.execute_keep_groups()
+        max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
+        req = self.check_memory(len(self.sitecol), oq.imtls.size, max_gs, maxw)
+        ntiles = 1 + int(req / oq.pmap_max_gb)
+        if ntiles > 1:
+            self.execute_seq(maxw, ntiles)
         else:
-            self.execute_split_groups(maxw)
+            self.execute_par(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
             raise RuntimeError('Filtered away all ruptures??')
@@ -620,37 +624,26 @@ class ClassicalCalculator(base.HazardCalculator):
             self.classical_time = time.time() - t0
         return True
 
-    def execute_split_groups(self, maxw):
+    def execute_par(self, maxw):
         """
-        Method called when keep_source_groups=False
+        Regular case
         """
-        oq = self.oqparam
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
-        max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
-        self.check_memory(len(self.sitecol), oq.imtls.size, max_gs, maxw)
         self.n_outs = AccumDict(accum=0)
-        acc = self.run_tiles(maxw)
+        acc = self.run_one(self.sitecol, maxw)
         self.haz.store_disagg(acc)
 
-    def execute_keep_groups(self):
+    def execute_seq(self, maxw, ntiles):
         """
-        Method called when keep_source_groups=True
+        Use sequential tiling
         """
         assert self.N > self.oqparam.max_sites_disagg, self.N
-        decide = decide_num_tasks(
-            self.datastore, self.oqparam.concurrent_tasks or 1)
-        ds = self.datastore
-        ds.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, h5=ds.hdf5)
-        for grp_id, ntiles in decide:
-            cmaker = self.haz.cmakers[grp_id]
-            grp = self.csm.src_groups[grp_id]
-            logging.info('Sending %s, %d tiles', grp, ntiles)
-            for tile in self.sitecol.split(ntiles):
-                smap.submit((ds, None if ntiles == 1 else tile, cmaker))
-        smap.reduce(self.agg_dicts)
+        logging.info('Running %d tiles', ntiles)
+        for n, tile in enumerate(self.sitecol.split_in_tiles(ntiles)):
+            self.run_one(tile, maxw)
+            logging.info('Finished tile %d of %d', n+1, ntiles)
 
-    def run_tiles(self, maxw):
+    def run_one(self, sitecol, maxw):
         """
         Run a subset of sites and update the accumulator
         """
@@ -669,7 +662,7 @@ class ClassicalCalculator(base.HazardCalculator):
             assert not (ntiles > 1 and oq.disagg_by_src)
             # NB: tiling only works with many sites
             assert ntiles == 1 or self.N > oq.max_sites_disagg * ntiles
-            tiles = self.sitecol.split(ntiles)
+            tiles = sitecol.split(ntiles)
 
             if sg.atomic or sg.weight <= maxw:
                 for tile in tiles:
@@ -677,7 +670,7 @@ class ClassicalCalculator(base.HazardCalculator):
             else:
                 # only heavy groups preallocate memory
                 acc[cm.grp_id] = ProbabilityMap(
-                    self.sitecol.sids, oq.imtls.size, len(cm.gsims)).fill(1)
+                    sitecol.sids, oq.imtls.size, len(cm.gsims)).fill(1)
                 acc[cm.grp_id].start = cm.start
                 if oq.disagg_by_src:  # possible only with a single tile
                     blks = groupby(sg, basename).values()
@@ -691,8 +684,6 @@ class ClassicalCalculator(base.HazardCalculator):
                         allargs.append((block, tile, cm))
         allargs.sort(key=lambda tup: sum(src.weight for src in tup[0]),
                      reverse=True)
-        if not performance.numba:
-            logging.warning('numba is not installed: using the slow algorithm')
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         return smap.reduce(self.agg_dicts, acc)
