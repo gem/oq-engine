@@ -449,7 +449,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
         cfactor = dic.pop('cfactor')
         if cfactor[1] != cfactor[0]:
-            print(cfactor, '(%.1f)' % (cfactor[1] / cfactor[0]))
+            print('cfactor = %.1f' % (cfactor[1] / cfactor[0]))
         self.cfactor += cfactor
 
         # store rup_data if there are few sites
