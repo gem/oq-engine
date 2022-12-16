@@ -26,6 +26,7 @@ import abc
 import inspect
 import warnings
 import functools
+import toml
 import numpy
 
 from openquake.baselib.general import DeprecationWarning
@@ -57,8 +58,7 @@ def add_alias(name, cls, **kw):
     """
     Add a GSIM alias to both gsim_aliases and the registry.
     """
-    text = '\n'.join('%s = %r' % it for it in kw.items())
-    gsim_aliases[name] = '[%s]\n%s' % (cls.__name__, text)
+    gsim_aliases[name] = toml.dumps({cls.__name__: kw})
     registry[name] = cls
 
 
