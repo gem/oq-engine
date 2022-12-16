@@ -241,6 +241,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
+    time.sleep(monitor.task_no)  # give time to the other tasks
     with monitor('read PoEs', measuremem=True):
         pgetter.init()
 
