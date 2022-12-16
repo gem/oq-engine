@@ -22,6 +22,7 @@ import gzip
 import time
 import pickle
 import psutil
+import random
 import logging
 import operator
 import functools
@@ -241,6 +242,8 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
+    if monitor.task_no > 60:
+        time.sleep(100 * random.random())  # give time to the other tasks
     with monitor('read PoEs', measuremem=True):
         pgetter.init()
 
@@ -812,9 +815,10 @@ class ClassicalCalculator(base.HazardCalculator):
         if not oq.hazard_curves:  # do nothing
             return
         N, S, M, P, L1, individual = self._create_hcurves_maps()
-        ct = oq.concurrent_tasks or 1
-        if 1 < ct < 80:  # saving memory on small machines
-            ct = 80
+        poes_gb = self.datastore.getsize('_poes') / 1024**3
+        ct = 2 * int(poes_gb) + 1  # number of tasks = twice the number of GB
+        if ct > 1:
+            logging.info('Producing %d postclassical tasks', ct)
         self.weights = ws = [rlz.weight for rlz in self.realizations]
         if '_poes' in set(self.datastore):
             dstore = self.datastore
