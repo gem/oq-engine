@@ -42,6 +42,7 @@ from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
+from openquake.calculators.classical import get_pmaps_gb
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
 

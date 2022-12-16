@@ -663,7 +663,10 @@ class ClassicalCalculator(base.HazardCalculator):
             assert not (ntiles > 1 and oq.disagg_by_src)
             # NB: tiling only works with many sites
             assert ntiles == 1 or self.N > oq.max_sites_disagg * ntiles
-            tiles = sitecol.split(ntiles)
+            if sitecol is sitecol.complete:
+                tiles = sitecol.split(ntiles)
+            else:
+                tiles = [sitecol]  # do not split
 
             if sg.atomic or sg.weight <= maxw:
                 for tile in tiles:

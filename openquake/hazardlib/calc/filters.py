@@ -340,6 +340,7 @@ class SourceFilter(object):
             self.integration_distance = default
         else:
             self.integration_distance = integration_distance
+            assert len(sitecol), sitecol
         self.slc = slice(None)
 
     def reduce(self, multiplier=5):
