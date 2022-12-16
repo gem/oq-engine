@@ -607,7 +607,8 @@ class ClassicalCalculator(base.HazardCalculator):
         t0 = time.time()
         max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
         req = self.check_memory(len(self.sitecol), oq.imtls.size, max_gs, maxw)
-        ntiles = 1 + int(req / oq.pmap_max_gb)
+        ntiles = 1 + int(req / (oq.pmap_max_gb * 30))  # 30 GB
+        self.n_outs = AccumDict(accum=0)
         if ntiles > 1:
             self.execute_seq(maxw, ntiles)
         else:
@@ -629,7 +630,6 @@ class ClassicalCalculator(base.HazardCalculator):
         Regular case
         """
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
-        self.n_outs = AccumDict(accum=0)
         acc = self.run_one(self.sitecol, maxw)
         self.haz.store_disagg(acc)
 
