@@ -571,7 +571,6 @@ class ClassicalCalculator(base.HazardCalculator):
         if avail < size:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
-        return tot / 1024**3  # memory in GB
 
     def execute(self):
         """
@@ -659,13 +658,14 @@ class ClassicalCalculator(base.HazardCalculator):
             # maximum size of the pmap array in GB
             size_gb = G * L * self.N * 8 / 1024**3
             ntiles = numpy.ceil(size_gb / oq.pmap_max_gb)
-            # NB: disagg_by_src is disabled in case of tiling
-            assert not (ntiles > 1 and oq.disagg_by_src)
-            # NB: tiling only works with many sites
-            assert ntiles == 1 or self.N > oq.max_sites_disagg * ntiles
             if sitecol is sitecol.complete:
+                # NB: disagg_by_src is disabled in case of tiling
+                assert not (ntiles > 1 and oq.disagg_by_src)
+                # NB: tiling only works with many sites
                 tiles = sitecol.split(ntiles)
+                assert ntiles == 1 or self.N > oq.max_sites_disagg * ntiles
             else:
+                ntiles = 1
                 tiles = [sitecol]  # do not split
 
             if sg.atomic or sg.weight <= maxw:
