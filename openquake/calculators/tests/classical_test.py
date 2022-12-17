@@ -1077,5 +1077,4 @@ hazard_uhs-std.csv
         # collapse_level=2
         self.run_calc(case_81.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles(
-            'expected/hazard_curve-mean-PGA.csv', f1)
+        self.assertEqualFiles('expected/hazard_curve-mean.csv', f1)

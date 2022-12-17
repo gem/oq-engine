@@ -57,7 +57,7 @@ STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
-DIST_BINS = sqrscale(1, 1000, 5000)
+DIST_BINS = sqrscale(1, 1000, 1000)
 MULTIPLIER = 250  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
