@@ -1004,16 +1004,8 @@ class ContextMaker(object):
             itime = self.tom.time_span
         for ctx in ctxs:
             for poes, ctxt in self.gen_poes(ctx, rup_indep):
-                probs_occur = getattr(ctxt, 'probs_occur',
-                                      numpy.zeros((len(ctxt), 0)))
-                rates = ctxt.occurrence_rate
                 with self.pne_mon:
-                    if rup_indep:
-                        pmap.update_i(poes, rates, probs_occur,
-                                      ctxt.sids, itime)
-                    else:  # USAmodel, New Madrid cluster
-                        pmap.update_m(poes, rates, probs_occur,
-                                      ctxt.weight, ctxt.sids, itime)
+                    pmap.update_(poes, ctxt, itime, rup_indep)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs):

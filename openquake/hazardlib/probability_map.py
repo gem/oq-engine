@@ -277,20 +277,19 @@ class ProbabilityMap(object):
         update_pnes(self.array, self.sidx[other.sids], other.array)
         return self
 
-    def update_i(self, poes, rates, probs_occur, sids, itime):
+    def update_(self, poes, ctxt, itime, rup_indep):
         """
-        Updating independent probabilities
+        Update probabilities
         """
-        idxs = self.sidx[sids]
-        update_pmap_i(self.array, poes, rates, probs_occur, idxs, itime)
-
-    def update_m(self, poes, rates, probs_occur, weights, sids, itime):
-        """
-        Updating mutex probabilities
-        """
-        idxs = self.sidx[sids]
-        update_pmap_m(self.array, poes, rates, probs_occur, weights, idxs,
-                      itime)
+        rates = ctxt.occurrence_rate
+        probs_occur = getattr(ctxt, 'probs_occur',
+                              numpy.zeros((len(ctxt), 0)))
+        idxs = self.sidx[ctxt.sids]
+        if rup_indep:
+            update_pmap_i(self.array, poes, rates, probs_occur, idxs, itime)
+        else:  # mutex
+            update_pmap_m(self.array, poes, rates, probs_occur, ctxt.weight,
+                          idxs, itime)
 
     def __invert__(self):
         return self.new(1. - self.array)
