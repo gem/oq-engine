@@ -192,7 +192,7 @@ def kround2(ctx, kfields):
     for kfield in kfields:
         kval = ctx[kfield]
         if kfield in KNOWN_DISTANCES:
-            out[kfield] == DIST_BINS[numpy.searchsorted(DIST_BINS, kval)]
+            out[kfield] = DIST_BINS[numpy.searchsorted(DIST_BINS, kval)]
         elif kfield == 'vs30':
             out[kfield] = numpy.round(kval, -1)
         elif kval.dtype == F64 and kfield != 'mag':
