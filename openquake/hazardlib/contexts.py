@@ -188,17 +188,17 @@ def kround1(ctx, kfields):
 
 
 def kround2(ctx, kfields):
-    kdist = 5. * ctx.mag**2  # heuristic collapse distance from 80 to 500 km
-    close = ctx.rrup < kdist
-    far = ~close
     out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
     for kfield in kfields:
         kval = ctx[kfield]
-        if kval.dtype == F64 and kfield != 'mag':
-            out[kfield][close] = F16(kval[close])  # round less
-            out[kfield][far] = numpy.round(kval[far], -1)  # round more
+        if kfield in KNOWN_DISTANCES:
+            out[kfield] == DIST_BINS[numpy.searchsorted(DIST_BINS, kval)]
+        elif kfield == 'vs30':
+            out[kfield] = numpy.round(kval, -1)
+        elif kval.dtype == F64 and kfield != 'mag':
+            out[kfield] = F16(kval)
         else:
-            out[kfield] = ctx[kfield]
+            out[kfield] = kval
     return out
 
 
