@@ -670,15 +670,15 @@ def view_required_params_per_trt(token, dstore):
     for trt in full_lt.trts:
         gsims = full_lt.gsim_lt.values[trt]
         # adding fake mags to the ContextMaker, needed for table-based GMPEs
-        maker = ContextMaker(trt, gsims, {'imtls': {}, 'mags': ['7.00']})
-        distances = sorted(maker.REQUIRES_DISTANCES)
-        siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
-        ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((trt, ' '.join(map(repr, gsims)).replace('\n', '\\n'),
-                    distances, siteparams, ruptparams))
-    return text_table(
-        tbl, header='trt_smr gsims distances siteparams ruptparams'.split(),
-        fmt=scientificformat)
+        cmaker = ContextMaker(trt, gsims, {'imtls': {}, 'mags': ['7.00']})
+        req = set()
+        for gsim in cmaker.gsims:
+            req.update(gsim.requires())
+        req_params = sorted(req - {'mag'})
+        gsim_str = ' '.join(map(repr, gsims)).replace('\n', '\\n')
+        tbl.append((trt, gsim_str, req_params))
+    return text_table(tbl, header='trt gsims req_params'.split(),
+                      fmt=scientificformat)
 
 
 @view.add('task_info')
