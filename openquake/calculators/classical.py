@@ -242,8 +242,9 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    if monitor.task_no > 60:
-        time.sleep(100 * random.random())  # give time to the other tasks
+    if monitor.task_no > 30:
+        # give time to the other tasks
+        time.sleep(pgetter.ntasks * random.random())
     with monitor('read PoEs', measuremem=True):
         pgetter.init()
 
@@ -849,7 +850,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('There are %d slices of poes [%.1f per task]',
                      nslices, nslices / len(slicedic))
         allargs = [
-            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
+            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes, ct),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in allslices]
         self.hazard = {}  # kind -> array
