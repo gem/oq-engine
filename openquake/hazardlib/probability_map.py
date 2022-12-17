@@ -159,7 +159,7 @@ def update_pnes(arr, idxs, pnes):
 
 if numba:
     t = numba.types
-    sig = t.void(t.float64[:, :, :],                     # pmap
+    sig = t.void(t.float32[:, :, :],                     # pmap
                  t.float32[:, :, :],                     # poes
                  t.float32[:],                           # rates
                  t.float32[:, :],                        # probs_occur
@@ -176,9 +176,9 @@ if numba:
                  t.float32)                              # itime
     update_pmap_m = compile(sig)(update_pmap_m)
 
-    sig = t.void(t.float64[:, :, :],                     # pmap
+    sig = t.void(t.float32[:, :, :],                     # pmap
                  t.uint32[:],                            # idxs
-                 t.float64[:, :, :])                     # pnes
+                 t.float32[:, :, :])                     # pnes
     update_pnes = compile(sig)(update_pnes)
 
 
@@ -213,7 +213,7 @@ class ProbabilityMap(object):
         and build the .sidx array
         """
         assert 0 <= value <= 1, value
-        self.array = numpy.empty(self.shape)
+        self.array = numpy.empty(self.shape, F32)
         self.array.fill(value)
         return self
 
