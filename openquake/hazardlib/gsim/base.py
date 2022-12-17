@@ -49,6 +49,7 @@ ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
                            'REQUIRES_SITES_PARAMETERS',
                            'REQUIRES_RUPTURE_PARAMETERS']
 
+F32 = numpy.float32
 F64 = numpy.float64
 registry = {}  # GSIM name -> GSIM class
 gsim_aliases = {}  # GSIM alias -> TOML representation
@@ -87,7 +88,7 @@ class AdaptedWarning(UserWarning):
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then truncnorm_sf will be called less times
-@compile("(float64[:,:,:], float64[:,:], float64, float64[:,:])")
+@compile("(float64[:,:,:], float64[:,:], float64, float32[:,:])")
 def _set_poes(mean_std, loglevels, phi_b, out):
     L1 = loglevels.size // len(loglevels)
     for m, levels in enumerate(loglevels):
@@ -100,7 +101,7 @@ def _set_poes(mean_std, loglevels, phi_b, out):
 def _get_poes(mean_std, loglevels, phi_b):
     # returns a matrix of shape (N, L)
     N = mean_std.shape[2]  # shape (2, M, N)
-    out = numpy.zeros((loglevels.size, N))  # shape (L, N)
+    out = numpy.zeros((loglevels.size, N), F32)  # shape (L, N)
     _set_poes(mean_std, loglevels, phi_b, out)
     return out.T
 

@@ -26,6 +26,7 @@ import scipy.stats
 from openquake.baselib.performance import compile
 
 registry = {}
+F32 = numpy.float32
 F64 = numpy.float64
 
 
@@ -197,8 +198,8 @@ class ClusterPoissonTOM(PoissonTOM):
         self.occurrence_rate = occurrence_rate
 
 
-@compile(["(float64, float64[:], float64[:,:], float64)",
-          "(float64, float64[:], float64[:,:,:,:], float64)"])
+@compile(["(float32, float32[:], float32[:,:], float32)",
+          "(float32, float32[:], float32[:,:,:,:], float32)"])
 def get_pnes(rate, probs, poes, time_span):
     """
     :param rate: occurrence rate in case of a poissonian rupture
@@ -210,7 +211,7 @@ def get_pnes(rate, probs, poes, time_span):
     of PoEs and some parameter.
     """
     if time_span == 0.:  # FatedTOM
-        return 1. - poes
+        return (1. - poes).astype(F32)
     elif len(probs) == 0:  # poissonian
         return numpy.exp(-rate * time_span * poes)
     else:
@@ -227,7 +228,7 @@ def get_pnes(rate, probs, poes, time_span):
         # `p(X<x|rup)` is computed as ``1 - poes``.
         pnes = numpy.full_like(poes, probs[0])
         for p, prob in enumerate(probs[1:], 1):
-            pnes[:] += prob * (1 - poes) ** p
+            pnes[:] += prob * (1. - poes) ** p
         return pnes.clip(0., 1.)  # avoid numeric issues
 
 

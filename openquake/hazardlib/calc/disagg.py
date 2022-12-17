@@ -38,6 +38,7 @@ from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
 from openquake.hazardlib.contexts import ContextMaker
 
+F32 = numpy.float32
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
 
@@ -167,8 +168,8 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
     # M - Number of IMTs
     # G - Number of gsims
     mean_std = cmaker.get_mean_stds([ctx])[:2]  # (2, G, M, U)
-    poes = numpy.zeros((U, E, M, P, Z))
-    pnes = numpy.ones((U, E, M, P, Z))
+    poes = numpy.zeros((U, E, M, P, Z), F32)
+    pnes = numpy.ones((U, E, M, P, Z), F32)
     # Multi-dimensional iteration
     min_eps, max_eps = epsilons.min(), epsilons.max()
     for (m, p, z), iml in numpy.ndenumerate(iml3):
@@ -196,9 +197,9 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
     z0 = numpy.zeros(0)
     time_span = cmaker.tom.time_span
     for u, rec in enumerate(ctx):
-        pnes[u] *= get_pnes(rec.occurrence_rate,
-                            getattr(rec, 'probs_occur', z0),
-                            poes[u], time_span)
+        pnes[u] *= get_pnes(F32(rec.occurrence_rate),
+                            getattr(rec, 'probs_occur', z0).astype(F32),
+                            poes[u], F32(time_span))
     bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
     if not bin_edges:
         return bindata

@@ -160,20 +160,20 @@ def update_pnes(arr, idxs, pnes):
 if numba:
     t = numba.types
     sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.float64[:, :, :],                     # poes
-                 t.float64[:],                           # rates
-                 t.float64[:, :],                        # probs_occur
+                 t.float32[:, :, :],                     # poes
+                 t.float32[:],                           # rates
+                 t.float32[:, :],                        # probs_occur
                  t.uint32[:],                            # sids
-                 t.float64)                              # itime
+                 t.float32)                              # itime
     update_pmap_i = compile(sig)(update_pmap_i)
 
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.float64[:, :, :],                     # poes
-                 t.float64[:],                           # rates
-                 t.float64[:, :],                        # probs_occur
-                 t.float64[:],                           # weights
+    sig = t.void(t.float32[:, :, :],                     # pmap
+                 t.float32[:, :, :],                     # poes
+                 t.float32[:],                           # rates
+                 t.float32[:, :],                        # probs_occur
+                 t.float32[:],                           # weights
                  t.uint32[:],                            # sids
-                 t.float64)                              # itime
+                 t.float32)                              # itime
     update_pmap_m = compile(sig)(update_pmap_m)
 
     sig = t.void(t.float64[:, :, :],                     # pmap
@@ -281,15 +281,16 @@ class ProbabilityMap(object):
         """
         Update probabilities
         """
-        rates = ctxt.occurrence_rate
+        rates = ctxt.occurrence_rate.astype(F32)
         probs_occur = getattr(ctxt, 'probs_occur',
-                              numpy.zeros((len(ctxt), 0)))
+                              numpy.zeros((len(ctxt), 0))).astype(F32)
         idxs = self.sidx[ctxt.sids]
         if rup_indep:
-            update_pmap_i(self.array, poes, rates, probs_occur, idxs, itime)
+            update_pmap_i(self.array, poes, rates, probs_occur,
+                          idxs, F32(itime))
         else:  # mutex
-            update_pmap_m(self.array, poes, rates, probs_occur, ctxt.weight,
-                          idxs, itime)
+            update_pmap_m(self.array, poes, rates, probs_occur,
+                          ctxt.weight.astyp(F32), idxs, F32(itime))
 
     def __invert__(self):
         return self.new(1. - self.array)

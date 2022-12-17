@@ -48,6 +48,7 @@ from openquake.hazardlib.geo.surface.planar import (
 
 U32 = numpy.uint32
 F16 = numpy.float16
+F32 = numpy.float32
 F64 = numpy.float64
 TWO20 = 2**20  # used when collapsing
 TWO16 = 2**16
@@ -143,7 +144,7 @@ def calc_poes(ctx, cmaker, rup_indep=True):
     # split large context arrays to avoid filling the CPU cache
     with cmaker.gmf_mon:
         mean_stdt = cmaker.get_mean_stds([ctx])
-    poes = numpy.zeros((len(ctx), M*L1, G))
+    poes = numpy.zeros((len(ctx), M*L1, G), F32)
     for slc in split_in_slices(len(ctx), MULTIPLIER):
         ctxt = ctx[slc]
         cmaker.slc = slc  # used in gsim/base.py
