@@ -1,109 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
-<!--
-OpenQuake-engine PSHA input model for Alaska
-Version v1.0.0, 2015-01-21
-
-Copyright (C) 2015-2018 GEM Foundation 
- 
-THE WORK IS PROTECTED BY COPYRIGHT AND/OR OTHER APPLICABLE LAW. INSOFAR AS THIS
-WORK IS PROTECTED BY LAWS THAT NEIGHBOUR OR ARE SIMILARLY RELATED TO COPYRIGHT, 
-SUCH AS DATABASE RIGHTS AS INTRODUCED IN EUROPE BY THE  DIRECTIVE 96/9/EC, YOU
-ALSO MAY USE THIS WORK UNDER THE TERMS OF CC BY-NC-SA 3.0 (unported).
-
-ANY USE OF THE WORK OTHER THAN AS AUTHORIZED UNDER THIS LICENSE OR
-DIRECTLY ALLOWED BY THE APPLICABLE LAW IS PROHIBITED.
-
-If you have any questions or if you wish to seek permission to use this data
-beyond what is offered by CC BY-NC-SA 3.0 (unported), including use in
-commercial/for-profit contexts, please contact the GEM Foundation at
-licensing@globalquakemodel.org
-
-DISCLAIMER:
- 
-The MODEL provided herein represents GEM's interpretation of the original model
-proposed by Wesson et al. (2007)  (hereafter indicated as the ORIGINAL MODEL).
-It was created by GEM, in the attempt of reproducing in the most faithful way
-possible the ORIGINAL MODEL but IT IS NOT intended to be an alternative nor a
-replacement implementation of the ORIGINAL MODEL. 
- 
-The MODEL is released as an OpenQuake-engine tailored implementation on behalf
-of scientists and engineers working within the GEM Foundation (Global
-Earthquake Model).
- 
-GEM provides it recognizing importance, authoritativeness and, transparency of
-the ORIGINAL MODEL, for the purpose of open collaboration and in the hope that
-it will be useful to the scientific, engineering, disaster risk and software
-design communities.
- 
-The MODEL is therefore provided WITHOUT ANY WARRANTY; without even the implied 
-warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
-The GEM Foundation, and the authors of the MODEL, assume no liability for  its use.
-
-For additional information, material and documentation about the ORIGINAL MODEL 
-we warmly invite the user to consult publications and website of the United 
-States Geological Survey (http://earthquake.usgs.gov/)  
--->
-
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.5">
+xmlns="http://openquake.org/xmlns/nrml/0.5">
     <logicTree logicTreeID='lt1'>
-
-        <logicTreeBranchingLevel branchingLevelID="bl1">
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                     applyToTectonicRegionType="Active Shallow Crust">
-<!--
-    GMPEs and weights for Alaska active shallow crust fault model as
-    defined in NSHMP input files available from
-    http://earthquake.usgs.gov/hazards/products/ak/2007/software/
-    and described at page 22 in Open File Report 2007-1043.pdf
-    (http://earthquake.usgs.gov/hazards/products/ak/2007/documentation/ofr2007-1043.pdf)
--->
-
                 <logicTreeBranch branchID="Campbell_Bozorgnia_2003">
                     <uncertaintyModel>CampbellBozorgnia2003NSHMP2007</uncertaintyModel>
                     <uncertaintyWeight>1</uncertaintyWeight>
                 </logicTreeBranch>
-
             </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
 
-        <logicTreeBranchingLevel branchingLevelID="bl2">
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
                     applyToTectonicRegionType="Subduction Interface">
-<!--
-    GMPEs and weights for Alaska subduction interface model as
-    defined in NSHMP input files available from
-    http://earthquake.usgs.gov/hazards/products/ak/2007/software/
-    and described at page 22 in Open File Report 2007-1043.pdf
-    (http://earthquake.usgs.gov/hazards/products/ak/2007/documentation/ofr2007-1043.pdf)
--->
                 <logicTreeBranch branchID="Sadigh_et_al_1997_sinter">
                     <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
                     <uncertaintyWeight>1</uncertaintyWeight>
                 </logicTreeBranch>
 
             </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-
-        <logicTreeBranchingLevel branchingLevelID="bl3">
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs3"
                     applyToTectonicRegionType="Subduction IntraSlab">
-<!--
-    GMPEs and weights for Alaska subduction intraslab grid model as
-    defined in NSHMP input files available from
-    http://earthquake.usgs.gov/hazards/products/ak/2007/software/
-    and described at page 22 in Open File Report 2007-1043.pdf
-    (http://earthquake.usgs.gov/hazards/products/ak/2007/documentation/ofr2007-1043.pdf)
--->
-                <!--Same as USA 2008 model -->
                 <logicTreeBranch branchID="Atkinson_Boore_2003SSlab">
                     <uncertaintyModel>AtkinsonBoore2003SSlabNSHMP2008</uncertaintyModel>
                     <uncertaintyWeight>1</uncertaintyWeight>
                 </logicTreeBranch>
-
             </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-
     </logicTree>
 </nrml>
