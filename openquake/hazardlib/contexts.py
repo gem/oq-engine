@@ -132,7 +132,7 @@ def trivial(ctx, name):
     return len(numpy.unique(numpy.float32(ctx[name]))) == 1
 
 
-def calc_poes(ctx, cmaker, rup_indep=True):
+def calc_poes(ctx, cmaker):
     """
     :param ctx: a vectorized context (recarray) of size N
     :returns: poes of shape (N, L, G)
@@ -215,14 +215,14 @@ class Collapser(object):
         self.cfactor = numpy.zeros(2)
         self.mon = mon
 
-    def apply(self, func, ctx, cmaker, rup_indep=True, collapse_level=None):
+    def collapse(self, ctx, rup_indep=True, collapse_level=None):
         """
         Collapse a context recarray if possible.
 
         :param ctx: a recarray with "sids"
         :param rup_indep: False if the ruptures are mutually exclusive
         :param collapse_level: if None, use .collapse_level
-        :returns: the collapsed array and a list of arrays with site IDs
+        :returns: the collapsed array and the inverting indices
         """
         clevel = (collapse_level if collapse_level is not None
                   else self.collapse_level)
@@ -230,14 +230,13 @@ class Collapser(object):
             # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
-            return func(ctx, cmaker, rup_indep)
+            return ctx, numpy.arange(len(ctx))
         with self.mon:
             krounded = kround[clevel](ctx, self.kfields)
             out, inv = numpy.unique(krounded, return_inverse=True)
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
-        res = func(out.view(numpy.recarray), cmaker, rup_indep)
-        return res[inv]
+        return out.view(numpy.recarray), inv
 
 
 class FarAwayRupture(Exception):
@@ -1003,9 +1002,9 @@ class ContextMaker(object):
         else:
             itime = self.tom.time_span
         for ctx in ctxs:
-            for poes, ctxt in self.gen_poes(ctx, rup_indep):
+            for poes, ctxt, invs in self.gen_poes(ctx, rup_indep):
                 with self.pne_mon:
-                    pmap.update_(poes, ctxt, itime, rup_indep)
+                    pmap.update_(poes, invs, ctxt, itime, rup_indep)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs):
@@ -1049,8 +1048,8 @@ class ContextMaker(object):
         # collapse if possible
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
-            poes = self.collapser.apply(calc_poes, ctxt, self, rup_indep)
-            yield poes, ctxt
+            kctx, invs = self.collapser.collapse(ctxt, rup_indep)
+            yield calc_poes(kctx, self), ctxt, invs
 
     def estimate_sites(self, src, sites):
         """
