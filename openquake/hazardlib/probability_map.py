@@ -138,16 +138,16 @@ class ProbabilityCurve(object):
 
 
 # numbified below
-def update_pmap_i(arr, poes, rates, probs_occur, idxs, itime):
-    for poe, rate, probs, idx in zip(poes, rates, probs_occur, idxs):
-        arr[idx] *= get_pnes(rate, probs, poe, itime)
+def update_pmap_i(arr, poes, invs, rates, probs_occur, idxs, itime):
+    for inv, rate, probs, idx in zip(invs, rates, probs_occur, idxs):
+        arr[idx] *= get_pnes(rate, probs, poes[inv], itime)
 
 
 # numbified below
-def update_pmap_m(arr, poes, rates, probs_occur, weights, idxs, itime):
-    for poe, rate, probs, wei, idx in zip(
-            poes, rates, probs_occur, weights, idxs):
-        pne = get_pnes(rate, probs, poe, itime)
+def update_pmap_m(arr, poes, invs, rates, probs_occur, weights, idxs, itime):
+    for inv, rate, probs, wei, idx in zip(
+            invs, rates, probs_occur, weights, idxs):
+        pne = get_pnes(rate, probs, poes[inv], itime)
         arr[idx] += (1. - pne) * wei
 
 
@@ -161,6 +161,7 @@ if numba:
     t = numba.types
     sig = t.void(t.float64[:, :, :],                     # pmap
                  t.float64[:, :, :],                     # poes
+                 t.int64[:],                             # invs
                  t.float64[:],                           # rates
                  t.float64[:, :],                        # probs_occur
                  t.uint32[:],                            # sids
@@ -169,6 +170,7 @@ if numba:
 
     sig = t.void(t.float64[:, :, :],                     # pmap
                  t.float64[:, :, :],                     # poes
+                 t.int64[:],                             # invs
                  t.float64[:],                           # rates
                  t.float64[:, :],                        # probs_occur
                  t.float64[:],                           # weights
@@ -281,19 +283,16 @@ class ProbabilityMap(object):
         """
         Update probabilities
         """
-        arr = self.array
         rates = ctxt.occurrence_rate
         probs_occur = getattr(ctxt, 'probs_occur',
                               numpy.zeros((len(ctxt), 0)))
         idxs = self.sidx[ctxt.sids]
         if rup_indep:
-            for inv, rate, probs, idx in zip(invs, rates, probs_occur, idxs):
-                arr[idx] *= get_pnes(rate, probs, poes[inv], itime)
+            update_pmap_i(self.array, poes, invs, rates,
+                          probs_occur, idxs, itime)
         else:  # mutex
-            for inv, rate, probs, wei, idx in zip(
-                    invs, rates, probs_occur, ctxt.weight, idxs):
-                pne = get_pnes(rate, probs, poes[inv], itime)
-                arr[idx] += (1. - pne) * wei
+            update_pmap_m(self.array, poes, invs, rates, probs_occur,
+                          ctxt.weight, idxs, itime)
 
     def __invert__(self):
         return self.new(1. - self.array)
