@@ -242,7 +242,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    if monitor.task_no > 30:
+    if 20 < monitor.task_no < pgetter.ntasks - 20:
         # give time to the other tasks
         time.sleep(pgetter.ntasks * random.random())
     with monitor('read PoEs', measuremem=True):
