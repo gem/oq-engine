@@ -57,7 +57,8 @@ STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
-DIST_BINS = sqrscale(1, 1000, 1000)
+NUM_DIST_BINS = 1000
+DIST_BINS = sqrscale(1, 1000, NUM_DIST_BINS)
 MULTIPLIER = 250  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
@@ -192,7 +193,10 @@ def kround2(ctx, kfields):
     for kfield in kfields:
         kval = ctx[kfield]
         if kfield in KNOWN_DISTANCES:
-            out[kfield] = DIST_BINS[numpy.searchsorted(DIST_BINS, kval)]
+            bins = numpy.searchsorted(DIST_BINS, kval)
+            # avoid running out of bounds
+            bins[bins == NUM_DIST_BINS] -= 1
+            out[kfield] = DIST_BINS[bins]
         elif kfield == 'vs30':
             out[kfield] = numpy.round(kval, -1)
         elif kval.dtype == F64 and kfield != 'mag':
