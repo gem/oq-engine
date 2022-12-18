@@ -955,10 +955,6 @@ class ContextMaker(object):
             return self.get_pmap(ctxs, rup_indep).array
 
     def _gen_poes(self, ctx):
-        """
-        :param ctx: a vectorized context (recarray) of size N
-        :returns: poes of shape (N, L, G)
-        """
         from openquake.hazardlib.site_amplification import get_poes_site
         (M, L1), G = self.loglevels.array.shape, len(self.gsims)
 
@@ -978,12 +974,13 @@ class ContextMaker(object):
                         poes[:, :, g] = get_poes_site(ms, self, ctxt)
                     else:  # regular case
                         gsim.set_poes(ms, self, ctxt, poes[:, :, g])
-                yield poes
+            yield poes
 
     def gen_poes(self, ctx, rup_indep=True):
         """
         :param ctx: a vectorized context (recarray) of size N
-        :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
+        :param rup_indep: rupture flag (false for mutex ruptures)
+        :yields: poes, ctxt, invs with poes of shape (N, L, G)
         """
         # collapse if possible
         for mag in numpy.unique(ctx.mag):
