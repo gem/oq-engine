@@ -57,7 +57,7 @@ STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
-DIST_BINS = sqrscale(1, 1001, 1000)
+DIST_BINS = sqrscale(1, 1000, 1000)
 MULTIPLIER = 250  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
@@ -1048,8 +1048,8 @@ class ContextMaker(object):
         # collapse if possible
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
-            ctxt, invs = self.collapser.collapse(ctxt, rup_indep)
-            yield calc_poes(ctxt, self), ctxt, invs
+            kctx, invs = self.collapser.collapse(ctxt, rup_indep)
+            yield calc_poes(kctx, self), ctxt, invs
 
     def estimate_sites(self, src, sites):
         """
