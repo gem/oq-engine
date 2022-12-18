@@ -57,7 +57,7 @@ STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
-DIST_BINS = sqrscale(1, 1000, 1000)
+DIST_BINS = sqrscale(1, 1001, 1000)
 MULTIPLIER = 250  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
@@ -230,14 +230,14 @@ class Collapser(object):
             # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
-            return func(ctx, cmaker, rup_indep)
+            return func(ctx, cmaker, rup_indep), numpy.arange(len(ctx))
         with self.mon:
             krounded = kround[clevel](ctx, self.kfields)
             out, inv = numpy.unique(krounded, return_inverse=True)
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
         res = func(out.view(numpy.recarray), cmaker, rup_indep)
-        return res[inv]
+        return res, inv
 
 
 class FarAwayRupture(Exception):
@@ -1003,9 +1003,9 @@ class ContextMaker(object):
         else:
             itime = self.tom.time_span
         for ctx in ctxs:
-            for poes, ctxt in self.gen_poes(ctx, rup_indep):
+            for poes, invs, ctxt in self.gen_poes(ctx, rup_indep):
                 with self.pne_mon:
-                    pmap.update_(poes, ctxt, itime, rup_indep)
+                    pmap.update_(poes, invs, ctxt, itime, rup_indep)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs):
@@ -1049,8 +1049,8 @@ class ContextMaker(object):
         # collapse if possible
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
-            poes = self.collapser.apply(calc_poes, ctxt, self, rup_indep)
-            yield poes, ctxt
+            poes, invs = self.collapser.apply(calc_poes, ctxt, self, rup_indep)
+            yield poes, invs, ctxt
 
     def estimate_sites(self, src, sites):
         """
