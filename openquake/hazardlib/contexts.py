@@ -967,6 +967,7 @@ class ContextMaker(object):
             with self.poe_mon:
                 # this is allocating at most 1MB of RAM
                 poes = numpy.zeros((len(ctxt), M*L1, G))
+                # NB: using .empty would break the MixtureModelGMPETestCase
                 for g, gsim in enumerate(self.gsims):
                     ms = mean_stdt[:2, g, :, slc]
                     # builds poes of shape (n, L, G)
