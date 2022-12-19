@@ -226,7 +226,8 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertIn('gmf-data_', fname)
 
     def test_case_2(self):
-        out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
+        out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
+                            concurrent_tasks='4')
 
         [gmfs, sig_eps, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', gmfs)

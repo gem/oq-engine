@@ -59,7 +59,7 @@ KNOWN_DISTANCES = frozenset(
     .split())
 NUM_DIST_BINS = 1000
 DIST_BINS = sqrscale(1, 1000, NUM_DIST_BINS)
-MULTIPLIER = 250  # len(mean_stds arrays) / len(poes arrays)
+MULTIPLIER = 150  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
 
@@ -109,9 +109,9 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fit in the CPU cache
     """
-    maxs = TWO20 // (8*M*G)
+    maxs = TWO20 // (4*M*G)
     assert maxs > 1, maxs
-    return maxs
+    return maxs * MULTIPLIER
 
 
 def size(imtls):
@@ -131,33 +131,6 @@ def trivial(ctx, name):
     if name not in ctx.dtype.names:
         return True
     return len(numpy.unique(numpy.float32(ctx[name]))) == 1
-
-
-def calc_poes(ctx, cmaker):
-    """
-    :param ctx: a vectorized context (recarray) of size N
-    :returns: poes of shape (N, L, G)
-    """
-    from openquake.hazardlib.site_amplification import get_poes_site
-    (M, L1), G = cmaker.loglevels.array.shape, len(cmaker.gsims)
-
-    # split large context arrays to avoid filling the CPU cache
-    with cmaker.gmf_mon:
-        mean_stdt = cmaker.get_mean_stds([ctx])
-    poes = numpy.zeros((len(ctx), M*L1, G))
-    for slc in split_in_slices(len(ctx), MULTIPLIER):
-        ctxt = ctx[slc]
-        cmaker.slc = slc  # used in gsim/base.py
-        with cmaker.poe_mon:
-            # this is allocating at most 1MB of RAM
-            for g, gsim in enumerate(cmaker.gsims):
-                ms = mean_stdt[:2, g, :, slc]
-                # builds poes of shape (n, L, G)
-                if cmaker.af:  # kernel amplification method
-                    poes[slc, :, g] = get_poes_site(ms, cmaker, ctxt)
-                else:  # regular case
-                    gsim.set_poes(ms, cmaker, ctxt, poes[slc, :, g])
-    return poes
 
 
 class DeltaRatesGetter(object):
@@ -234,7 +207,7 @@ class Collapser(object):
             # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
-            return ctx, numpy.arange(len(ctx))
+            return ctx, None
         with self.mon:
             krounded = kround[clevel](ctx, self.kfields)
             out, inv = numpy.unique(krounded, return_inverse=True)
@@ -477,8 +450,8 @@ class ContextMaker(object):
 
     def horiz_comp_to_geom_mean(self, mean_stds):
         """
-        This function converts ground-motion obtained for a given description of
-        horizontal component into ground-motion values for geometric_mean.
+        This function converts ground-motion obtained for a given description
+        of horizontal component into ground-motion values for geometric_mean.
 
         The conversion equations used are from:
             - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
@@ -636,7 +609,7 @@ class ContextMaker(object):
         vars(ctx).update(vars(rup))
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             if param == 'mag':
-                value = numpy.round(rup.mag, 6)
+                value = numpy.round(rup.mag, 3)
             elif param == 'strike':
                 value = rup.surface.get_strike()
             elif param == 'dip':
@@ -981,6 +954,46 @@ class ContextMaker(object):
         with patch.object(self.collapser, 'collapse_level', collapse_level):
             return self.get_pmap(ctxs, rup_indep).array
 
+    def _gen_poes(self, ctx):
+        from openquake.hazardlib.site_amplification import get_poes_site
+        (M, L1), G = self.loglevels.array.shape, len(self.gsims)
+
+        # split large context arrays to avoid filling the CPU cache
+        with self.gmf_mon:
+            mean_stdt = self.get_mean_stds([ctx])
+        for slc in split_in_slices(len(ctx), MULTIPLIER):
+            ctxt = ctx[slc]
+            self.slc = slc  # used in gsim/base.py
+            with self.poe_mon:
+                # this is allocating at most 2MB of RAM
+                poes = numpy.zeros((len(ctxt), M*L1, G))
+                # NB: using .empty would break the MixtureModelGMPETestCase
+                for g, gsim in enumerate(self.gsims):
+                    ms = mean_stdt[:2, g, :, slc]
+                    # builds poes of shape (n, L, G)
+                    if self.af:  # kernel amplification method
+                        poes[:, :, g] = get_poes_site(ms, self, ctxt)
+                    else:  # regular case
+                        gsim.set_poes(ms, self, ctxt, poes[:, :, g])
+            yield poes
+
+    def gen_poes(self, ctx, rup_indep=True):
+        """
+        :param ctx: a vectorized context (recarray) of size N
+        :param rup_indep: rupture flag (false for mutex ruptures)
+        :yields: poes, ctxt, invs with poes of shape (N, L, G)
+        """
+        ctx.mag = numpy.round(ctx.mag, 3)
+        for mag in numpy.unique(ctx.mag):
+            ctxt = ctx[ctx.mag == mag]
+            kctx, invs = self.collapser.collapse(ctxt, rup_indep)
+            if invs is None:  # no collapse
+                for poes in self._gen_poes(ctxt):
+                    yield poes, ctxt[self.slc], numpy.arange(len(poes))
+            else:  # collapse
+                poes = numpy.concatenate(list(self._gen_poes(kctx)))
+                yield poes, ctxt, invs
+
     def get_pmap(self, ctxs, rup_indep=True):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
@@ -1043,17 +1056,6 @@ class ContextMaker(object):
         if self.conv:  # apply horizontal component conversion
             self.horiz_comp_to_geom_mean(out)
         return out
-
-    def gen_poes(self, ctx, rup_indep=True):
-        """
-        :param ctx: a vectorized context (recarray) of size N
-        :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
-        """
-        # collapse if possible
-        for mag in numpy.unique(ctx.mag):
-            ctxt = ctx[ctx.mag == mag]
-            kctx, invs = self.collapser.collapse(ctxt, rup_indep)
-            yield calc_poes(kctx, self), ctxt, invs
 
     def estimate_sites(self, src, sites):
         """
@@ -1128,7 +1130,7 @@ class ContextMaker(object):
                             src.weight += 30.
                     else:
                         src.weight += 1.
-                    
+
     def split_by_gsim(self):
         """
         Split the ContextMaker in multiple context makers, one per GSIM
@@ -1235,8 +1237,8 @@ class PmapMaker(object):
         allctxs = []
         ctxlen = 0
         totlen = 0
-        (M, _), G = self.loglevels.array.shape, len(self.gsims)
-        maxsize = get_maxsize(M, G) * MULTIPLIER
+        M, G = len(self.imtls), len(self.gsims)
+        maxsize = get_maxsize(M, G)
         t0 = time.time()
         for src in self.sources:
             src.nsites = 0
