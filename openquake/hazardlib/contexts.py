@@ -59,7 +59,7 @@ KNOWN_DISTANCES = frozenset(
     .split())
 NUM_DIST_BINS = 1000
 DIST_BINS = sqrscale(1, 1000, NUM_DIST_BINS)
-MULTIPLIER = 250  # len(mean_stds arrays) / len(poes arrays)
+MULTIPLIER = 150  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
 
@@ -109,7 +109,7 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fit in the CPU cache
     """
-    maxs = TWO20 // (8*M*G)
+    maxs = TWO20 // (4*M*G)
     assert maxs > 1, maxs
     return maxs * MULTIPLIER
 
@@ -965,7 +965,7 @@ class ContextMaker(object):
             ctxt = ctx[slc]
             self.slc = slc  # used in gsim/base.py
             with self.poe_mon:
-                # this is allocating at most 1MB of RAM
+                # this is allocating at most 2MB of RAM
                 poes = numpy.zeros((len(ctxt), M*L1, G))
                 # NB: using .empty would break the MixtureModelGMPETestCase
                 for g, gsim in enumerate(self.gsims):
@@ -983,7 +983,7 @@ class ContextMaker(object):
         :param rup_indep: rupture flag (false for mutex ruptures)
         :yields: poes, ctxt, invs with poes of shape (N, L, G)
         """
-        # collapse if possible
+        ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
             kctx, invs = self.collapser.collapse(ctxt, rup_indep)
