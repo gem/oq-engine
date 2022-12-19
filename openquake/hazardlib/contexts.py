@@ -1237,7 +1237,7 @@ class PmapMaker(object):
         allctxs = []
         ctxlen = 0
         totlen = 0
-        (M, _), G = self.loglevels.array.shape, len(self.gsims)
+        M, G = len(self.imtls), len(self.gsims)
         maxsize = get_maxsize(M, G)
         t0 = time.time()
         for src in self.sources:
