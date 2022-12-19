@@ -223,6 +223,8 @@ def classical(srcs, sitecol, cmaker, monitor):
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
     pmap = ProbabilityMap(
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
+    if not cmaker.disagg_by_src:
+        srcs = split_by_mag(srcs)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
     result['pnemap'] = ~pmap.remove_zeros()
     result['pnemap'].start = cmaker.start
@@ -662,9 +664,6 @@ class ClassicalCalculator(base.HazardCalculator):
         for cm in self.haz.cmakers:
             G = len(cm.gsims)
             sg = self.csm.src_groups[cm.grp_id]
-            if not oq.disagg_by_src:
-                sg.sources = split_by_mag(sg)
-                logging.info('Processed %s', sg)
             # maximum size of the pmap array in GB
             size_gb = G * L * self.N * 8 / 1024**3
             ntiles = numpy.ceil(size_gb / oq.pmap_max_gb)
