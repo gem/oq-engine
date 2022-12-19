@@ -938,7 +938,10 @@ class HazardCalculator(BaseCalculator):
             self.realizations = self.full_lt.get_realizations()
             if not self.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
-            self.datastore['full_lt'] = self.full_lt
+            # if full_lt is stored in the parent, do not store it again
+            # this avoids breaking case_18 when starting from a preclassical
+            if self.oqparam.hazard_calculation_id is None:
+                self.datastore['full_lt'] = self.full_lt
         else:  # scenario
             self.full_lt = self.datastore['full_lt']
 
