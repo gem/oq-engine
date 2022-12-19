@@ -59,7 +59,7 @@ KNOWN_DISTANCES = frozenset(
     .split())
 NUM_DIST_BINS = 1000
 DIST_BINS = sqrscale(1, 1000, NUM_DIST_BINS)
-MULTIPLIER = 150  # len(mean_stds arrays) / len(poes arrays)
+MULTIPLIER = 200  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
 
