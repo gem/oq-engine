@@ -40,6 +40,7 @@ from openquake.baselib.general import (
     get_nbytes_msg, agg_probs, pprod)
 from openquake.hazardlib.contexts import (
     ContextMaker, read_cmakers, basename, get_maxsize)
+from openquake.hazardlib.source.point import split_by_mag
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
 from openquake.commonlib import calc, datastore
@@ -686,7 +687,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 if oq.disagg_by_src:  # possible only with a single tile
                     blks = groupby(sg, basename).values()
                 else:
-                    blks = block_splitter(sg, maxw, get_weight)
+                    blks = block_splitter(split_by_mag(sg), maxw, get_weight)
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)

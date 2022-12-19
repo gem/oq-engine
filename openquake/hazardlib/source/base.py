@@ -297,6 +297,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         If either rupture aspect ratio or rupture mesh spacing is not positive
         (if not None).
     """
+    uniq_mag = 0
 
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
@@ -331,10 +332,13 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
             A list of two-item tuples -- magnitudes and occurrence rates.
         """
         scaling_rate = getattr(self, 'scaling_rate', 1)
-        return [(mag, occ_rate * scaling_rate)
-                for (mag, occ_rate) in self.mfd.get_annual_occurrence_rates()
-                if (min_rate is None or occ_rate > min_rate) and
-                mag >= self.min_mag]
+        mag_rates = []
+        for (mag, occ_rate) in self.mfd.get_annual_occurrence_rates():
+            if ((min_rate is None or occ_rate > min_rate) and
+                    mag >= self.min_mag):
+                if self.uniq_mag in (0, mag):
+                    mag_rates.append((mag, occ_rate * scaling_rate))
+        return mag_rates
 
     def get_min_max_mag(self):
         """

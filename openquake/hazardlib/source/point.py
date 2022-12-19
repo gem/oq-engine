@@ -18,8 +18,9 @@ Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
 import copy
+import operator
 import numpy
-from openquake.baselib.general import AccumDict, groupby_grid
+from openquake.baselib.general import AccumDict, groupby_grid, groupby
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -31,6 +32,8 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
+
+by_uniq_mag = operator.attrgetter('uniq_mag')
 
 
 # this is fast
@@ -427,6 +430,40 @@ class CollapsedPointSource(PointSource):
         :returns: the total number of underlying ruptures
         """
         return sum(src.count_ruptures() for src in self.pointsources)
+
+
+def _split_by_mag(src):
+    out = []
+    if hasattr(src, 'pointsources'):
+        dic = groupby(split_by_mag(src.pointsources), by_uniq_mag)
+        for i, (mag, sources) in enumerate(dic.items()):
+            new = copy.copy(src)
+            new.source_id = '%s:%d' % (new.source_id, i)
+            new.pointsources = sources
+            new.uniq_mag = mag
+            new.num_ruptures = new.count_ruptures()
+            out.append(new)
+    elif hasattr(src, 'location'):
+        for i, (mag, rate) in enumerate(src.get_annual_occurrence_rates()):
+            new = copy.copy(src)
+            new.source_id = '%s:%d' % (new.source_id, i)
+            new.uniq_mag = mag
+            new.num_ruptures = new.count_ruptures()
+            out.append(new)
+    else:
+        raise NotImplementedError(
+            'split_by_mag for %s' % src.__class__.__name__)
+    return out
+
+
+def split_by_mag(sources):
+    out = []
+    for src in sources:
+        if hasattr(src, 'location'):
+            out.extend(_split_by_mag(src))
+        else:
+            out.append(src)
+    return sorted(out, key=by_uniq_mag)
 
 
 def grid_point_sources(sources, ps_grid_spacing, msr, monitor=Monitor()):
