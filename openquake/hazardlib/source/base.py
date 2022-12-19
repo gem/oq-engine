@@ -60,6 +60,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     weight = 0.001  # set in contexts
     esites = 0  # updated in estimate_weight
     offset = 0  # set in fix_src_offset
+    uniq_mag = 0
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
@@ -297,8 +298,6 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         If either rupture aspect ratio or rupture mesh spacing is not positive
         (if not None).
     """
-    uniq_mag = 0
-
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
                  rupture_aspect_ratio, temporal_occurrence_model):
