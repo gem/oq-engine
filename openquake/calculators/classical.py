@@ -664,6 +664,7 @@ class ClassicalCalculator(base.HazardCalculator):
             sg = self.csm.src_groups[cm.grp_id]
             if not oq.disagg_by_src:
                 sg.sources = split_by_mag(sg)
+                logging.info('Processed %s', sg)
             # maximum size of the pmap array in GB
             size_gb = G * L * self.N * 8 / 1024**3
             ntiles = numpy.ceil(size_gb / oq.pmap_max_gb)
