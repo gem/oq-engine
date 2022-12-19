@@ -609,7 +609,7 @@ class ContextMaker(object):
         vars(ctx).update(vars(rup))
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             if param == 'mag':
-                value = numpy.round(rup.mag, 6)
+                value = numpy.round(rup.mag, 3)
             elif param == 'strike':
                 value = rup.surface.get_strike()
             elif param == 'dip':
