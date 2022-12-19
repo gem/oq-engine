@@ -662,7 +662,8 @@ class ClassicalCalculator(base.HazardCalculator):
         for cm in self.haz.cmakers:
             G = len(cm.gsims)
             sg = self.csm.src_groups[cm.grp_id]
-
+            if not oq.disagg_by_src:
+                sg.sources = split_by_mag(sg)
             # maximum size of the pmap array in GB
             size_gb = G * L * self.N * 8 / 1024**3
             ntiles = numpy.ceil(size_gb / oq.pmap_max_gb)
@@ -687,7 +688,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 if oq.disagg_by_src:  # possible only with a single tile
                     blks = groupby(sg, basename).values()
                 else:
-                    blks = block_splitter(split_by_mag(sg), maxw, get_weight)
+                    blks = block_splitter(sg, maxw, get_weight)
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
