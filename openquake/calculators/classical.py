@@ -38,7 +38,8 @@ from openquake.baselib import (
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
     get_nbytes_msg, agg_probs, pprod)
-from openquake.hazardlib.contexts import ContextMaker, read_cmakers, basename
+from openquake.hazardlib.contexts import (
+    ContextMaker, read_cmakers, basename, get_maxsize)
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
 from openquake.commonlib import calc, datastore
@@ -567,6 +568,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 pass  # no need to keep the group in memory
             else:
                 num_gs.append(len(cm.gsims))
+        maxsize = get_maxsize(len(self.oqparam.imtls), max_gs)
+        logging.info('Considering {:_d} contexts at once'.format(maxsize))
         size = max_gs * N * L * 8
         tot = sum(num_gs) * N * L * 8
         logging.info('ProbabilityMap(G=%d,N=%d,L=%d): %s per core + %s',

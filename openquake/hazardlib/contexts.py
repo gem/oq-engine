@@ -111,7 +111,7 @@ def get_maxsize(M, G):
     """
     maxs = TWO20 // (8*M*G)
     assert maxs > 1, maxs
-    return maxs
+    return maxs * MULTIPLIER
 
 
 def size(imtls):
@@ -1238,7 +1238,7 @@ class PmapMaker(object):
         ctxlen = 0
         totlen = 0
         (M, _), G = self.loglevels.array.shape, len(self.gsims)
-        maxsize = get_maxsize(M, G) * MULTIPLIER
+        maxsize = get_maxsize(M, G)
         t0 = time.time()
         for src in self.sources:
             src.nsites = 0
