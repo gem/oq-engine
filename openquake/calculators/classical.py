@@ -820,7 +820,12 @@ class ClassicalCalculator(base.HazardCalculator):
             return
         N, S, M, P, L1, individual = self._create_hcurves_maps()
         poes_gb = self.datastore.getsize('_poes') / 1024**3
-        ct = int(poes_gb) + 1  # number of tasks = number of GB
+        if poes_gb < .1:
+            ct = 1
+        elif poes_gb < 4:
+            ct = 2 * int(poes_gb) + 2
+        else:
+            ct = int(poes_gb) + 4  # number of tasks > number of GB
         if ct > 1:
             logging.info('Producing %d postclassical tasks', ct)
         self.weights = ws = [rlz.weight for rlz in self.realizations]
@@ -863,8 +868,7 @@ class ClassicalCalculator(base.HazardCalculator):
                      humansize(hcbytes), humansize(hmbytes))
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
-        if not oq.hazard_calculation_id:
-            self.datastore.swmr_on()  # essential before Starmap
+        self.datastore.swmr_on()  # essential before Starmap
         parallel.Starmap(
             postclassical, allargs,
             distribute='no' if self.few_sites else None,
