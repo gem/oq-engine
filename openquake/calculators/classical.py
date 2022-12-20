@@ -455,7 +455,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
         cfactor = dic.pop('cfactor')
         if cfactor[1] != cfactor[0]:
-            print('ctxs_per_task = {:.0f}, cfactor_per_task = {:.1f}'.format(
+            print('ctxs_per_mag = {:.0f}, cfactor_per_task = {:.1f}'.format(
                 cfactor[1] / cfactor[2], cfactor[1] / cfactor[0]))
         self.cfactor += cfactor
 
