@@ -444,6 +444,8 @@ def get_source_attributes(source):
     """
     attrs = {"id": source.source_id, "name": source.name}
     if isinstance(source, NonParametricSeismicSource):
+        if not hasattr(source.data[0][0], 'weight'):
+            return attrs
         if source.data[0][0].weight is not None:
             weights = []
             for data in source.data:
