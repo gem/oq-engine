@@ -145,15 +145,18 @@ class DeltaRatesGetter(object):
 
 # same speed as performance.kround, round more
 def kround1(ctx, kfields):
-    kdist = 5. * ctx.mag**2  # heuristic collapse distance from 80 to 500 km
+    kdist = 2. * ctx.mag**2  # heuristic collapse distance from 32 to 200 km
     close = ctx.rrup < kdist
     far = ~close
     out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
     for kfield in kfields:
         kval = ctx[kfield]
-        if kval.dtype == F64 and kfield != 'mag':
+        if kfield in ('vs30', 'z1pt0'):
+            out[kfield][close] = numpy.round(kval[close])  # round less
+            out[kfield][far] = numpy.round(kval[far], 1)  # round more
+        elif kval.dtype == F64 and kfield != 'mag':
             out[kfield][close] = F16(kval[close])  # round less
-            out[kfield][far] = numpy.round(kval[far], -1)  # round more
+            out[kfield][far] = numpy.round(kval[far])  # round more
         else:
             out[kfield] = ctx[kfield]
     return out

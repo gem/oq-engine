@@ -528,7 +528,7 @@ def kround0(ctx, kfields):
     return out
 
 
-# this is fast
+# this is not so fast
 def kollapse(array, kfields, kround=kround0, mfields=(), afield=''):
     """
     Given a structured array of N elements with a discrete kfield with
