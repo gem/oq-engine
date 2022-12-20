@@ -169,7 +169,7 @@ class Collapser(object):
     def __init__(self, collapse_level, kfields, mon=Monitor()):
         self.collapse_level = collapse_level
         self.kfields = sorted(kfields)
-        self.cfactor = numpy.zeros(2)
+        self.cfactor = numpy.zeros(3)
         self.mon = mon
 
     def collapse(self, ctx, rup_indep=True, collapse_level=None):
@@ -187,12 +187,14 @@ class Collapser(object):
             # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
+            self.cfactor[2] += 1
             return ctx, None
         with self.mon:
             krounded = kround[clevel](ctx, self.kfields)
             out, inv = numpy.unique(krounded, return_inverse=True)
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
+        self.cfactor[2] += 1
         return out.view(numpy.recarray), inv
 
 
@@ -929,7 +931,7 @@ class ContextMaker(object):
         :param sitecol: a SiteCollection instance with N sites
         :returns: an array of PoEs of shape (N, L, G)
         """
-        self.collapser.cfactor = numpy.zeros(2)
+        self.collapser.cfactor = numpy.zeros(3)
         ctxs = self.from_srcs(srcs, sitecol)
         with patch.object(self.collapser, 'collapse_level', collapse_level):
             return self.get_pmap(ctxs, rup_indep).array
