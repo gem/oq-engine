@@ -187,6 +187,28 @@ class MultiSurfaceTestCase(unittest.TestCase):
                 plot_mesh_2d(ax, srf)
             plt.show()
 
+    def test_get_closest_point(self):
+
+        # define two surfaces using four profiles 
+        spc = 2.0
+        pro1 = Line([Point(-70.60549, 17.61792, 0.00), Point(-70.39787, 17.68783, 7.00)])
+        pro2 = Line([Point(-70.71057, 17.90037, 0.00), Point(-70.50262, 17.97028, 7.00)])
+        pro3 = Line([Point(-70.33020, 17.48492, 0.00), Point(-70.23051, 17.67200, 7.00)])
+        pro4 = Line([Point(-70.60549, 17.61792, 0.00), Point(-70.50573, 17.80500, 7.00)])
+        sfc1 = KiteSurface.from_profiles([pro1, pro2], spc, spc)
+        sfc2 = KiteSurface.from_profiles([pro3, pro4], spc, spc)
+        msurf = MultiSurface([sfc1, sfc2])
+        
+        # Define the mesh of sites
+        pcoo = numpy.array([[-70.71057, 17.90037],[-70.60549, 17.61792]])
+        mesh = Mesh(pcoo[:, 0], pcoo[:, 1])
+        
+        # Compute closest distance between mesh points and surface
+        cpoints = msurf.get_closest_points(mesh)
+
+        # checking cpoints
+        expected = [[-70.70686112, -70.60549], [17.89041691, 17.61792],[ 0., 0.]]
+        numpy.testing.assert_almost_equal(expected, cpoints.array, decimal=7)
 
 def _plotting(surf, dst, mlons, mlats, lons=[], lats=[], label=''):
     """

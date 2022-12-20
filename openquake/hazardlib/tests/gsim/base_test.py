@@ -162,8 +162,9 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.fake_surface = FakeSurface
 
     def get_ctx(self, rupture, site_collection):
-        return ContextMaker('*', [self.gsim_class], dict(imtls={})).get_ctxs(
-            [rupture], site_collection, src_id=0)[0]
+        cmaker = ContextMaker('*', [self.gsim_class], dict(imtls={}))
+        [ctx] = cmaker.get_ctx_iter([rupture], site_collection, src_id=0)
+        return ctx
 
     def test_unknown_distance_error(self):
         self.gsim_class.REQUIRES_DISTANCES = frozenset(

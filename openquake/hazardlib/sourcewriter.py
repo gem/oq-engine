@@ -26,12 +26,19 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
-from openquake.hazardlib import nrml, sourceconverter, pmf
+from openquake.hazardlib import nrml, sourceconverter, pmf, valid
 from openquake.hazardlib.source import (
     NonParametricSeismicSource, check_complex_fault, PointSource)
-from openquake.hazardlib.tom import PoissonTOM, NegativeBinomialTOM
+from openquake.hazardlib.tom import NegativeBinomialTOM
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
+
+
+def r4(x):
+    """
+    Round lon, lat to 4 digits (11 meters)
+    """
+    return round(x, 4)
 
 
 def build_area_source_geometry(area_source):
@@ -97,9 +104,9 @@ def build_linestring_node(line, with_depth=False):
     geom = []
     for p in line.points:
         if with_depth:
-            geom.extend((p.x, p.y, p.z))
+            geom.extend((r4(p.x), r4(p.y), r4(p.z)))
         else:
-            geom.extend((p.x, p.y))
+            geom.extend((r4(p.x), r4(p.y)))
     poslist_node = Node("gml:posList", text=geom)
     return Node("gml:LineString", nodes=[poslist_node])
 
@@ -659,11 +666,12 @@ def build_multi_fault_source_node(multi_fault_source):
         probs = ' '.join(map(str, prbs))
         nodes = [Node('magnitude', text=str(mag)),
                  Node('sectionIndexes',
-                      {'indexes': ','.join(map(str, rup_idxs))}),
+                      {'indexes': ' '.join(map(str, rup_idxs))}),
                  Node('rake', text=str(rake))]
         rup_node = Node('multiPlanesRupture', {'probs_occur': probs},
                         nodes=nodes)
         rup_nodes.append(rup_node)
+
     return Node("multiFaultSource",
                 get_source_attributes(multi_fault_source),
                 nodes=rup_nodes)
@@ -688,9 +696,11 @@ def build_source_group(source_group):
         if hasattr(tom, 'occurrence_rate'):
             attrs['tom'] = 'ClusterPoissonTOM'
             attrs['occurrence_rate'] = tom.occurrence_rate
-    srcs_weights = [getattr(src, 'mutex_weight', 1) for src in source_group]
-    if set(srcs_weights) != {1}:
-        attrs['srcs_weights'] = ' '.join(map(str, srcs_weights))
+    if source_group.src_interdep == 'mutex':
+        # tested in multi_fault_test
+        attrs['srcs_weights'] = ' '.join(
+            '%.7f' % getattr(src, 'mutex_weight', 1 / len(source_group))
+            for src in source_group)
     return Node('sourceGroup', attrs, nodes=source_nodes)
 
 
@@ -794,7 +804,11 @@ def write_source_model(dest, sources_or_groups, name=None,
     with open(dest, 'wb') as f:
         nrml.write([smodel], f, '%s')
     if sections:
-        secnodes = [obj_to_node(sec) for sec in sections]
+        # surfaces have no 'id', so we use sections instead, with an 'id'
+        # starting from 0; this is necessary for conversion to hdf5
+        secnodes = [Node('section', {'id': str(i)},
+                         nodes=[obj_to_node(sec)])
+                    for i, sec in enumerate(sections)]
         gmodel = Node("geometryModel", attrs, nodes=secnodes)
         with open(dest[:-4] + '_sections.xml', 'wb') as f:
             nrml.write([gmodel], f, '%s')
@@ -806,7 +820,7 @@ def tomldump(obj, fileobj=None):
     """
     Write a generic serializable object in TOML format
     """
-    dic = node_to_dict(obj_to_node(obj))
+    dic = valid._fix_toml(node_to_dict(obj_to_node(obj)))
     if fileobj is None:
         return toml.dumps(dic)
     toml.dump(dic, fileobj)

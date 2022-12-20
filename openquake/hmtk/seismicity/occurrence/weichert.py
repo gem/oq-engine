@@ -37,8 +37,8 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
@@ -49,8 +49,8 @@ import warnings
 import numpy as np
 from openquake.hmtk.seismicity.occurrence.base import (
     SeismicityOccurrence, OCCURRENCE_METHODS)
-from openquake.hmtk.seismicity.occurrence.utils import (input_checks,
-                                                        get_completeness_counts)
+from openquake.hmtk.seismicity.occurrence.utils import (
+    input_checks, get_completeness_counts)
 
 
 @OCCURRENCE_METHODS.add(
@@ -65,18 +65,31 @@ class Weichert(SeismicityOccurrence):
     '''Class to Implement Weichert Algorithm'''
 
     def calculate(self, catalogue, config, completeness=None):
-        '''Calculates recurrence using the Weichert (1980) method'''
+        '''Calculates b value and rate for mag ref'''
+        bval, sigma_b, rate, sigma_rate, aval, sigma_a = self._calculate(
+            catalogue, config, completeness)
+        return bval, sigma_b, rate, sigma_rate
+
+    def calc(self, catalogue, config, completeness=None):
+        '''Calculates GR params '''
+        bval, sigma_b, rate, sigma_rate, aval, sigma_a = self._calculate(
+            catalogue, config, completeness)
+        return bval, sigma_b, aval, sigma_a
+
+    def _calculate(self, catalogue, config, completeness=None):
+        '''Calculates a, b values + rate for mag ref'''
+
         # Input checks
         cmag, ctime, ref_mag, _, config = input_checks(catalogue,
                                                        config,
                                                        completeness)
-        if not "dtime" in catalogue.data.keys() or not\
+        if "dtime" not in catalogue.data.keys() or not\
                 len(catalogue.data["dtime"]):
             catalogue.data["dtime"] = catalogue.get_decimal_time()
         if not catalogue.end_year:
             catalogue.update_end_year()
         if completeness is None:
-            start_year = float(np.min(catalogue.data["year"]))
+            # start_year = float(np.min(catalogue.data["year"]))
             completeness = np.column_stack([ctime, cmag])
         # Apply Weichert preparation
         cent_mag, t_per, n_obs = get_completeness_counts(
@@ -84,21 +97,23 @@ class Weichert(SeismicityOccurrence):
 
         # A few more Weichert checks
         key_list = config.keys()
-        if (not 'bvalue' in key_list) or (not config['bvalue']):
+        if ('bvalue' not in key_list) or (not config['bvalue']):
             config['bvalue'] = 1.0
-        if (not 'itstab' in key_list) or (not config['itstab']):
+        if ('itstab' not in key_list) or (not config['itstab']):
             config['itstab'] = 1E-5
-        if (not 'maxiter' in key_list) or (not config['maxiter']):
+        if ('maxiter' not in key_list) or (not config['maxiter']):
             config['maxiter'] = 1000
-        bval, sigma_b, rate, sigma_rate, aval, sigma_a = \
+
+        bval, sigma_b, rate, sigma_rate, fn0, stdfn0 = \
             self.weichert_algorithm(t_per, cent_mag, n_obs, ref_mag,
-                                    config['bvalue'], config['itstab'], config['maxiter'])
+                                    config['bvalue'], config['itstab'],
+                                    config['maxiter'])
 
-        if not config['reference_magnitude']:
-            rate = np.log10(aval)
-            sigma_rate = np.log10(aval + sigma_a) - np.log10(aval)
+        # if not config['reference_magnitude']:
+        agr = np.log10(fn0)
+        agr_sigma = np.log10(fn0 + stdfn0) - np.log10(fn0)
 
-        return bval, sigma_b, rate, sigma_rate
+        return bval, sigma_b, rate, sigma_rate, agr, agr_sigma
 
     def weichert_algorithm(self, tper, fmag, nobs, mrate=0.0, bval=1.0,
                            itstab=1E-5, maxiter=1000):
@@ -140,7 +155,7 @@ class Weichert(SeismicityOccurrence):
             if np.isnan(stmex) or np.isnan(sumtex):
                 warnings.warn('NaN occurs in Weichert iteration')
                 return np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
-                #raise ValueError('NaN occers in Weichert iteration')
+                # raise ValueError('NaN occers in Weichert iteration')
 
             d2ldb2 = nkount * ((dldb ** 2.0) - (stm2x / sumtex))
             dldb = (dldb * nkount) - snm

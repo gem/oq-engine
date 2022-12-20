@@ -34,7 +34,7 @@ try:
 except ImportError:
     numba = None
 
-from openquake.baselib.general import humansize
+from openquake.baselib.general import humansize, fast_agg
 from openquake.baselib import hdf5
 
 # NB: one can use vstr fields in extensible datasets, but then reading
@@ -49,6 +49,8 @@ task_info_dt = numpy.dtype(
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
 
+F16= numpy.float16
+F64= numpy.float64
 I64 = numpy.int64
 
 PStatData = collections.namedtuple(
@@ -146,7 +148,10 @@ def memory_rss(pid):
     """
     :returns: the RSS memory allocated by a process
     """
-    return psutil.Process(pid).memory_info().rss
+    try:
+        return psutil.Process(pid).memory_info().rss
+    except psutil.NoSuchProcess:
+        return 0
 
 
 # this is not thread-safe
@@ -187,7 +192,7 @@ class Monitor(object):
         self.inner_loop = inner_loop
         self.h5 = h5
         self.version = version
-        self.mem = 0
+        self._mem = 0
         self.duration = 0
         self._start_time = self._stop_time = time.time()
         self.children = []
@@ -195,6 +200,11 @@ class Monitor(object):
         self.address = None
         self.username = getpass.getuser()
         self.task_no = -1  # overridden in parallel
+
+    @property
+    def mem(self):
+        """Mean memory allocation"""
+        return self._mem / (self.counts or 1)
 
     @property
     def dt(self):
@@ -242,7 +252,7 @@ class Monitor(object):
         self.exc = exc
         if self.measuremem:
             self.stop_mem = self.measure_mem()
-            self.mem += self.stop_mem - self.start_mem
+            self._mem += self.stop_mem - self.start_mem
         self._stop_time = time.time()
         self.duration += self._stop_time - self._start_time
         self.counts += 1
@@ -269,7 +279,7 @@ class Monitor(object):
         Reset duration, mem, counts
         """
         self.duration = 0
-        self.mem = 0
+        self._mem = 0
         self.counts = 0
 
     def flush(self, h5):
@@ -338,6 +348,20 @@ class Monitor(object):
                 return data
             return pickle.loads(data)
 
+    def iter(self, genobj):
+        """
+        :yields: the elements of the generator object
+        """
+        while True:
+            try:
+                self._mem = 0
+                with self:
+                    obj = next(genobj)
+            except StopIteration:
+                return
+            else:
+                yield obj
+
     def __repr__(self):
         calc_id = ' #%s ' % self.calc_id if self.calc_id else ' '
         msg = '%s%s%s[%s]' % (self.__class__.__name__, calc_id,
@@ -396,11 +420,13 @@ else:
         return lambda func: func
 
 
+# used when reading _poes/sid
 @compile(["int64[:, :](uint8[:])",
+          "int64[:, :](uint16[:])",
           "int64[:, :](uint32[:])",
           "int64[:, :](int64[:])"])
-def _idx_start_stop(integers):
-    # given an array of integers returns an array of shape (n, 3)
+def idx_start_stop(integers):
+    # given an array of integers returns an array int64 of shape (n, 3)
     out = []
     start = i = 0
     prev = integers[0]
@@ -410,7 +436,25 @@ def _idx_start_stop(integers):
             start = i
         prev = val
     out.append((I64(prev), start, i + 1))
-    return numpy.array(out)
+    return numpy.array(out, I64)
+
+
+@compile("int64[:, :](uint32[:], uint32)")
+def split_slices(integers, size):
+    # given an array of integers returns an array int64 of shape (n, 2)
+    out = []
+    start = i = 0
+    prev = integers[0]
+    totsize = 1
+    for i, val in enumerate(integers[1:], 1):
+        totsize += 1
+        if val != prev and totsize >= size:
+            out.append((start, i))
+            totsize = 0
+            start = i
+        prev = val
+    out.append((start, i + 1))
+    return numpy.array(out, I64)
 
 
 # this is absurdly fast if you have numba
@@ -426,7 +470,7 @@ def get_slices(uint32s):
     if len(uint32s) == 0:
         return {}
     indices = {}  # idx -> [(start, stop), ...]
-    for idx, start, stop in _idx_start_stop(uint32s):
+    for idx, start, stop in idx_start_stop(uint32s):
         if idx not in indices:
             indices[idx] = []
         indices[idx].append((start, stop))
@@ -435,7 +479,8 @@ def get_slices(uint32s):
 
 # this is used in split_array and it may dominate the performance
 # of classical calculations, so it has to be fast
-@compile("uint32[:](uint32[:], int64[:], int64[:], int64[:])")
+@compile(["uint32[:](uint32[:], int64[:], int64[:], int64[:])",
+          "uint32[:](uint16[:], int64[:], int64[:], int64[:])"])
 def _split(uint32s, indices, counts, cumcounts):
     n = len(uint32s)
     assert len(indices) == n
@@ -461,9 +506,48 @@ def split_array(arr, indices, counts=None):
     [array([0.1, 0.2]), array([0.3, 0.4]), array([0.5])]
     """
     if counts is None:  # ordered indices
-        return [arr[s1:s2] for i, s1, s2 in _idx_start_stop(indices)]
+        return [arr[s1:s2] for i, s1, s2 in idx_start_stop(indices)]
     # indices and counts coming from numpy.unique(arr)
     # this part can be slow, but it is still 10x faster than pandas for EUR!
     cumcounts = counts.cumsum()
     out = _split(arr, indices, counts, cumcounts)
-    return [out[s1:s2] for s1, s2 in zip(cumcounts, cumcounts + counts)]
+    return [out[s1:s2][::-1] for s1, s2 in zip(cumcounts, cumcounts + counts)]
+
+
+def kround0(ctx, kfields):
+    """
+    half-precision rounding
+    """
+    out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
+    for kfield in kfields:
+        kval = ctx[kfield]
+        if kval.dtype == F64:
+            out[kfield] = F16(kval)
+        else:
+            out[kfield] = ctx[kfield]
+    return out
+
+
+# this is fast
+def kollapse(array, kfields, kround=kround0, mfields=(), afield=''):
+    """
+    Given a structured array of N elements with a discrete kfield with
+    K <= N unique values, returns a structured array of K elements
+    obtained by averaging the values associated to the kfield.
+    """
+    k_array = kround(array, kfields)
+    uniq, indices, counts = numpy.unique(
+        k_array, return_inverse=True, return_counts=True)
+    klist = [(k, k_array.dtype[k]) for k in kfields]
+    for mfield in mfields:
+        klist.append((mfield, array.dtype[mfield]))
+    res = numpy.zeros(len(uniq), klist)
+    for kfield in kfields:
+        res[kfield] = uniq[kfield]
+    for mfield in mfields:
+        values = array[mfield]
+        res[mfield] = fast_agg(indices, values) / (
+            counts if len(values.shape) == 1 else counts.reshape(-1, 1))
+    if afield:
+        return res, split_array(array[afield], indices, counts)
+    return res

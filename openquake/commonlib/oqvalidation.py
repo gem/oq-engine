@@ -31,12 +31,12 @@ import numpy
 from openquake.baselib import __version__, hdf5, python3compat, config
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.shakemap.maps import get_array
+from openquake.hazardlib import shakemap
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib import logictree
-from openquake.risklib import asset
+from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
 
 __doc__ = """\
@@ -191,6 +191,13 @@ description:
   Example: *description = Test calculation*.
   Default: "no description"
 
+disagg_bin_edges:
+  A dictionary where the keys can be: mag, eps, dist, lon, lat and the
+  values are lists of floats indicating the edges of the bins used to
+  perform the disaggregation.
+  Example: *disagg_bin_edges = {'mag': [5.0, 5.5, 6.0, 6.5]}*.
+  Default: empty dictionary
+
 disagg_by_src:
   Flag used to enable disaggregation by source when possible.
   Example: *disagg_by_src = true*.
@@ -246,8 +253,7 @@ floating_x_step:
 
 floating_y_step:
   Float, used in rupture generation for kite faults. indicates the fraction
-  of fault width used to float ruptures down dip. (i.e. "0.5" floats the
-  ruptures at half the rupture length). Uniform distribution of the ruptures
+  of fault width used to float ruptures down dip. (i.e. "0.5" floats that half the rupture length). Uniform distribution of the ruptures
   is maintained, such that if the mesh spacing and rupture dimensions
   prohibit the defined overlap fraction, the fraction is increased until
   uniform distribution is achieved. The minimum possible value depends on
@@ -320,6 +326,12 @@ hazard_maps:
   Example: *hazard_maps = true*.
   Default: False
 
+horiz_comp_to_geom_mean:
+  Apply the correction to the geometric mean when possible,
+  depending on the GMPE and the Intensity Measure Component
+  Example: *horiz_comp_to_geom_mean = true*.
+  Default: False
+
 ignore_covs:
   Used in risk calculations to set all the coefficients of variation of the
   vulnerability functions to zero.
@@ -337,16 +349,9 @@ iml_disagg:
   Example: *iml_disagg = {'PGA': 0.02}*.
   Default: no default
 
-imls_ref:
-  Reference intensity measure levels used together with the imt_ref parameter
-  to compute the conditional spectrum
-  Example: *imls_ref = 0.1 0.2*.
-  Default: empty list
-
 imt_ref:
-  Reference intensity measure type used together with the imls_ref parameter
-  to compute the conditional spectrum. The imt_ref must belong to the list
-  of IMTs of the calculation.
+  Reference intensity measure type usedto compute the conditional spectrum.
+  The imt_ref must belong to the list of IMTs of the calculation.
   Example: *imt_ref = SA(0.15)*.
   Default: no default
 
@@ -412,8 +417,18 @@ max:
   Example: *max = true*.
   Default: False
 
+max_aggregations:
+  Maximum number of aggregation keys.
+  Example: *max_aggregations = 200_000*
+  Default: 100_000
+
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
+
+max_gmvs_per_task:
+  Maximum number of rows of the gmf_data table per task.
+  Example: *max_gmvs_per_task = 100_000*
+  Default: 1_000_0000
 
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
@@ -432,17 +447,12 @@ max_sites_disagg:
   Example: *max_sites_disagg = 100*
   Default: 10
 
-max_sites_per_gmf:
-  Restrict the maximum number of sites in event based calculation with GMFs.
-  Example: *max_sites_per_gmf = 100_000*.
-  Default: 65536
-
-max_sites_per_tile:
-  Used in classical calculations which are to big to run within the
-  available memory. This effectively splits the calculation in homogeneous
-  tiles with less than `max_sites_per_tile`. To be used as last resort.
-  Example: *max_sites_per_tile = 50_000*
-  Default: 500_000
+pmap_max_gb:
+   Maximum size of the ProbabilityMaps in classical calculations, should be
+   less than 4 GB to avoid pickling errors. This is also used to split the
+   calculation in tiles.
+   Example: *max_size_db = 2*
+   Default: 1
 
 max_weight:
   INTERNAL
@@ -756,9 +766,11 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
-ALL_CALCULATORS = ['classical_risk',
+ALL_CALCULATORS = ['aftershock',
+                   'classical_risk',
                    'classical_damage',
                    'classical',
+                   'custom',
                    'event_based',
                    'scenario',
                    'post_risk',
@@ -771,8 +783,7 @@ ALL_CALCULATORS = ['classical_risk',
                    'preclassical',
                    'conditional_spectrum',
                    'event_based_damage',
-                   'scenario_damage',
-                   'reinsurance_risk']
+                   'scenario_damage']
 
 
 def check_same_levels(imtls):
@@ -859,6 +870,7 @@ class OqParam(valid.ParamSet):
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs,
                                  list(calc.disagg.pmf_map))
+    disagg_bin_edges = valid.Param(valid.dictionary, {})
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
     discrete_damage_distribution = valid.Param(valid.boolean, False)
@@ -881,10 +893,10 @@ class OqParam(valid.ParamSet):
     hazard_curves = valid.Param(valid.boolean, True)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_maps = valid.Param(valid.boolean, False)
+    horiz_comp_to_geom_mean = valid.Param(valid.boolean, False)
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
-    imls_ref = valid.Param(valid.positivefloats, [])
     imt_ref = valid.Param(valid.intensity_measure_type)
     individual_rlzs = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
@@ -901,12 +913,13 @@ class OqParam(valid.ParamSet):
     maximum_distance = valid.Param(valid.IntegrationDistance.new)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
+    max_aggregations = valid.Param(valid.positivefloat, 100_000)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
-    max_potential_gmfs = valid.Param(valid.positiveint, 2E11)
+    max_gmvs_per_task = valid.Param(valid.positiveint, 1_000_000)
+    max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
-    max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
-    max_sites_per_tile = valid.Param(valid.positiveint, 500_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
+    pmap_max_gb = valid.Param(valid.positivefloat, 1.)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
@@ -972,7 +985,8 @@ class OqParam(valid.ParamSet):
                      'structural+contents',
                      'nonstructural+contents',
                      'structural+nonstructural+contents'), None)
-    truncation_level = valid.Param(valid.positivefloat, 99.)
+    truncation_level = valid.Param(
+        lambda s: valid.positivefloat(s) or 1E-9, 99.)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
@@ -1075,6 +1089,7 @@ class OqParam(valid.ParamSet):
         if self.collapse_level >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 
+        # checks for risk
         self._risk_files = get_risk_files(self.inputs)
         if self.risk_files:
             # checks for risk_files
@@ -1095,6 +1110,11 @@ class OqParam(valid.ParamSet):
             self.check_missing('site_model', 'debug')
             self.check_missing('gsim_logic_tree', 'debug')
             self.check_missing('source_model_logic_tree', 'debug')
+
+        if self.job_type == 'risk':
+            self.check_aggregate_by()
+        if 'reinsurance' in self.inputs:
+            self.check_reinsurance()
 
         # check investigation_time
         if (self.investigation_time and
@@ -1129,12 +1149,6 @@ class OqParam(valid.ParamSet):
             self.poes = 1 - numpy.exp(
                 - self.investigation_time / numpy.array(self.return_periods))
 
-        # check for tiling
-        if self.max_sites_disagg > self.max_sites_per_tile:
-            raise ValueError(
-                'max_sites_disagg is larger than max_sites_per_tile! (%d>%d)'
-                % (self.max_sites_disagg, self.max_sites_per_tile))
-
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
             if not self.poes_disagg and self.poes:
@@ -1152,9 +1166,11 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile(
                     '%s: iml_disagg and poes_disagg cannot be set '
                     'at the same time' % job_ini)
-            for k in ('mag_bin_width', 'distance_bin_width',
-                      'coordinate_bin_width', 'num_epsilon_bins'):
-                if k not in vars(self):
+            bins = ['mag', 'dist', 'lon', 'eps']
+            for i, k in enumerate(['mag_bin_width', 'distance_bin_width',
+                                   'coordinate_bin_width', 'num_epsilon_bins']):
+                if (k not in vars(self) and
+                    bins[i] not in self.disagg_bin_edges):
                     raise InvalidFile('%s must be set in %s' % (k, job_ini))
             if self.disagg_outputs and not any(
                     'Eps' in out for out in self.disagg_outputs):
@@ -1165,9 +1181,8 @@ class OqParam(valid.ParamSet):
 
         # checks for conditional_spectrum
         if self.calculation_mode == 'conditional_spectrum':
-            if not self.imls_ref and not self.poes:
-                raise InvalidFile("%s: you must specify poes or imls_ref"
-                                  % job_ini)
+            if not self.poes:
+                raise InvalidFile("%s: you must specify the poes" % job_ini)
             elif list(self.hazard_stats()) != ['mean']:
                 raise InvalidFile('%s: only the mean is supported' % job_ini)
 
@@ -1260,8 +1275,9 @@ class OqParam(valid.ParamSet):
             else:
                 imts.add(im.string)
         for gsim in gsims:
-            if hasattr(gsim, 'weight'):  # disable the check
-                continue
+            if (hasattr(gsim, 'weight') or
+                    self.calculation_mode == 'aftershock'):
+                continue  # disable the check
             restrict_imts = gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES
             if restrict_imts:
                 names = set(cls.__name__ for cls in restrict_imts)
@@ -1310,7 +1326,7 @@ class OqParam(valid.ParamSet):
     def risk_event_rates(self, num_events, num_haz_rlzs):
         """
         :param num_events: the number of events per risk realization
-        :param num_haz_rlzs the number of hazard realizations
+        :param num_haz_rlzs: the number of hazard realizations
 
         If risk_investigation_time is 1, returns the annual event rates for
         each realization as a list, possibly of 1 element.
@@ -1420,7 +1436,7 @@ class OqParam(valid.ParamSet):
         """
         imts_dt = numpy.dtype([(imt, F32) for imt in self.imtls
                                if imt.startswith(('PGA', 'SA'))])
-        return numpy.dtype([(str(poe), imts_dt) for poe in self.poes])
+        return numpy.dtype([('%.6f' % poe, imts_dt) for poe in self.poes])
 
     def imt_periods(self):
         """
@@ -1632,7 +1648,8 @@ class OqParam(valid.ParamSet):
         """
         if self.shakemap_uri:
             kind = self.shakemap_uri['kind']
-            sig = inspect.signature(get_array[kind])
+            get_array = getattr(shakemap.parsers, 'get_array_' + kind)
+            sig = inspect.signature(get_array)
             # parameters without default value
             params = [p.name for p in list(
                 sig.parameters.values()) if p.default is p.empty]
@@ -1661,8 +1678,8 @@ class OqParam(valid.ParamSet):
         one of sites, sites_csv, hazard_curves_csv, region is set.
         You did set more than one, or nothing.
         """
-        if self.calculation_mode == 'preclassical':  # disable the check
-            return True
+        if self.calculation_mode in ('preclassical', 'aftershock'):
+            return True  # disable the check
         if 'hazard_curves' in self.inputs and (
                 self.sites is not None or 'sites' in self.inputs
                 or 'site_model' in self.inputs):
@@ -1702,7 +1719,7 @@ class OqParam(valid.ParamSet):
         Invalid maximum_distance={maximum_distance}: {error}
         """
         if 'gsim_logic_tree' not in self.inputs:
-            return True  # don't apply validation
+            return True  # disable the check
         gsim_lt = self.inputs['gsim_logic_tree']
         trts = set(self.maximum_distance)
         unknown = ', '.join(trts - self._trts - {'default'})
@@ -1774,18 +1791,6 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
-    def is_valid_aggregate_by(self):
-        """
-        At the moment only `aggregate_by=id` or `aggregate_by=site_id`
-        are accepted
-        """
-        tagset = asset.tagset(self.aggregate_by)
-        if 'id' in tagset and len(tagset) > 1:
-            return False
-        elif 'site_id' in tagset and len(tagset) > 1:
-            return False
-        return True
-
     def is_valid_export_dir(self):
         """
         export_dir={export_dir} must refer to a directory,
@@ -1843,6 +1848,34 @@ class OqParam(valid.ParamSet):
         nostats = not hstats or hstats == ['mean']
         return nostats and self.number_of_logic_tree_samples > 1 and (
             self.sampling_method == 'early_weights')
+
+    def check_aggregate_by(self):
+        tagset = asset.tagset(self.aggregate_by)
+        if 'id' in tagset and len(tagset) > 1:
+            raise ValueError('aggregate_by = id must contain a single tag')
+        elif 'site_id' in tagset and len(tagset) > 1:
+            raise ValueError('aggregate_by = site_id must contain a single tag')
+        elif 'reinsurance' in self.inputs:
+            if not any(['policy'] == aggby for aggby in self.aggregate_by):
+                raise InvalidFile(
+                    '%s: expected aggregate_by=policy; got %s' % (
+                        self.inputs['job_ini'], self.aggregate_by))
+        return True
+
+    def check_reinsurance(self):
+        # there must be a 'treaty' and a loss type (possibly a total type)
+        dic = self.inputs['reinsurance'].copy()
+        try:
+            [lt] = dic
+        except ValueError:
+            raise InvalidFile('%s: too many loss types in reinsurance %s'
+                              % (self.inputs['job_ini'], list(dic)))
+        if lt not in scientific.LOSSID:
+            raise InvalidFile('%s: unknown loss type %s in reinsurance'
+                              % (self.inputs['job_ini'], lt))
+        if '+' in lt and not self.total_losses:
+            raise InvalidFile('%s: you forgot to set total_losses=%s'
+                              % (self.inputs['job_ini'], lt))
 
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or

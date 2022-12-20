@@ -79,6 +79,9 @@ class FromFile(object):
     def compute(self, ctx, imts, mean, sig, tau, phi):
         pass
 
+    def requires(self):
+        return ()
+
     def __repr__(self):
         return '[FromFile]'
 
@@ -114,6 +117,10 @@ def _fix_toml(v):
         return list(v)
     elif hasattr(v, 'items'):
         return {k1: _fix_toml(v1) for k1, v1 in v.items()}
+    elif isinstance(v, list):
+        return [_fix_toml(x) for x in v]
+    elif isinstance(v, numpy.float64):
+        return float(v)
     return v
 
 

@@ -57,7 +57,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
     checksum = 0  # set in source_reader
-    weight = 1  # set in contexts
+    weight = 0.001  # set in contexts
     esites = 0  # updated in estimate_weight
     offset = 0  # set in fix_src_offset
 
@@ -413,14 +413,15 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         self.mfd.max_mag = mag + epsilon * std
 
     def modify_adjust_mfd_from_slip(self, slip_rate: float, rigidity: float,
+                                    constant_term: float = 9.1,
                                     recompute_mmax: float = None):
         """
-        :slip_rate:
+        :param slip_rate:
             A float defining slip rate [in mm]
-        :rigidity:
+        :param rigidity:
             A float defining material rigidity [in GPa]
-        :rigidity:
-            A float defining material rigidity [in GPa]
+        :param constant_term:
+            Constant term of the equation used to compute log M0 from magnitude
         """
         # Check that the current src has a TruncatedGRMFD MFD
         msg = 'This modification works only when the source MFD is a '
@@ -437,4 +438,4 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         bin_w = self.mfd.bin_width
         b_val = self.mfd.b_val
         self.mfd = mfd.TruncatedGRMFD.from_moment(min_mag, max_mag, bin_w,
-                                                  b_val, mo)
+                                                  b_val, mo, constant_term)

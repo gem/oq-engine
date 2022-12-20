@@ -37,36 +37,27 @@ except ImportError:
 
 @compile(["float64[:,:](float64, float64[:,:])",
           "float64[:](float64, float64[:])"])
-def _truncnorm_sf(truncation_level, values):
-    # Fast survival function for truncated normal distribution.
-    # Assumes zero mean, standard deviation equal to one and symmetric
-    # truncation. It is faster than using scipy.stats.truncnorm.sf:
-    #
-    # _truncnorm_sf(sig, x) == truncnorm(-sig, sig).sf(x)
-    #
-    # :param truncation_level:
-    #     Positive float number representing the truncation on both sides
-    #     around the mean, in units of sigma, or None, for non-truncation
-    # :param values:
-    #     Numpy array of values as input to a survival function for the given
-    #     distribution.
-    # :returns:
-    #     Numpy array of survival function results in a range between 0 and 1.
-    if truncation_level == 0.:
-        return values
-
+def truncnorm_sf(phi_b, values):
+    """
+    Fast survival function for truncated normal distribution.
+    Assumes zero mean, standard deviation equal to one and symmetric
+    truncation. It is faster than using scipy.stats.truncnorm.sf.
+    
+    :param phi_b:
+         ndtr(truncation_level); assume phi_b > .5
+    :param values:
+         Numpy array of values as input to a survival function for the given
+         distribution.
+    :returns:
+         Numpy array of survival function results in a range between 0 and 1.
+         For phi_b close to .5 returns a step function 1 1 1 1 .5 0 0 0 0 0.
+    """
     # notation from http://en.wikipedia.org/wiki/Truncated_normal_distribution.
     # given that mu = 0 and sigma = 1, we have alpha = a and beta = b.
-
     # "CDF" in comments refers to cumulative distribution function
     # of non-truncated distribution with that mu and sigma values.
-
     # assume symmetric truncation, that is ``a = - truncation_level``
     # and ``b = + truncation_level``.
-
-    # calculate CDF of b
-    phi_b = ndtr(truncation_level)
-
     # calculate Z as ``Z = CDF(b) - CDF(a)``, here we assume that
     # ``CDF(a) == CDF(- truncation_level) == 1 - CDF(b)``
     z = phi_b * 2. - 1.
@@ -108,17 +99,18 @@ def norm_cdf(x, a, s):
 
 def calc_momenta(array, weights):
     """
-    :param array: an array of shape E, ...
+    :param array: an array of shape (E, ...)
     :param weights: an array of length E
-    :returns: an array of shape (2, ...) with the first two statistical moments
+    :returns: an array of shape (3, ...) with the first 3 statistical moments
     """
-    momenta = numpy.zeros((2,) + array.shape[1:])
-    momenta[0] = numpy.einsum('i,i...', weights, array)
-    momenta[1] = numpy.einsum('i,i...', weights, array**2)
+    momenta = numpy.zeros((3,) + array.shape[1:])
+    momenta[0] = weights.sum()
+    momenta[1] = numpy.einsum('i,i...', weights, array)
+    momenta[2] = numpy.einsum('i,i...', weights, array**2)
     return momenta
 
 
-def calc_avg_std(momenta, totweight):
+def calc_avg_std(momenta):
     """
     :param momenta: an array of shape (2, ...) obtained via calc_momenta
     :param totweight: total weight to divide for
@@ -126,13 +118,15 @@ def calc_avg_std(momenta, totweight):
 
     >>> arr = numpy.array([[2, 4, 6], [3, 5, 7]])
     >>> weights = numpy.ones(2)
-    >>> calc_avg_std(calc_momenta(arr, weights), weights.sum())
+    >>> calc_avg_std(calc_momenta(arr, weights))
     array([[2.5, 4.5, 6.5],
            [0.5, 0.5, 0.5]])
     """
-    avgstd = numpy.zeros_like(momenta)
-    avgstd[0] = avg = momenta[0] / totweight
-    avgstd[1] = numpy.sqrt(numpy.maximum(momenta[1] / totweight - avg ** 2, 0))
+    avgstd = numpy.zeros_like(momenta[1:])
+    avgstd[0] = avg = momenta[1] / momenta[0]
+    # make sure the variance is positive (due to numeric errors can be -1E-9)
+    var = numpy.maximum(momenta[2] / momenta[0] - avg ** 2, 0.)
+    avgstd[1] = numpy.sqrt(var)
     return avgstd
 
 
@@ -148,7 +142,7 @@ def avg_std(array, weights=None):
     """
     if weights is None:
         weights = numpy.ones(len(array))
-    return calc_avg_std(calc_momenta(array, weights), weights.sum())
+    return calc_avg_std(calc_momenta(array, weights))
 
 
 def geom_avg_std(array, weights=None):

@@ -1,4 +1,4 @@
-name: Install OQ engine on Ubuntu OS
+name: Ubuntu test of OpenQuake Engine
 
 on:
   workflow_dispatch:
@@ -7,6 +7,11 @@ on:
         description: Git Ref
         default: master
         required: true
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled'
+        required: false
+        default: false
   schedule:
     - cron: "0 4 * * *"
 
@@ -23,7 +28,7 @@ jobs:
         #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.8, 3.9, "3.10"]
 
     steps:
   # This Checkout use git-ref keyword from dispatch
@@ -42,14 +47,11 @@ jobs:
     # You can test your matrix by printing the current Python version
     - name: Display Python version
       run: python -c "import sys; print(sys.version)"
-   # Use script to install engine and not the pip install .
-    - name: Install engine with install script
-      env: 
+    - name: Install engine with install script 
+      env:
         BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
-        #git status
-        #grep setuptools requirements*
-        #PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
+        #PY_VER=`echo py${{ matrix.python-version }} | tr -d .`
         #echo $PY_VER
         #https://pip.pypa.io/en/stable/user_guide/
         export PIP_DEFAULT_TIMEOUT=100
@@ -58,15 +60,26 @@ jobs:
         #pip3 install -r requirements-$PY_VER-linux64.txt
         #pip3 install -e .\[osgeo\]
         echo "branch to test: ${BRANCH}"
-        if [[ "$BRANCH" != "" ]] 
+        if [[ "$BRANCH" != "" ]]
         then
           python install.py devel --version ${BRANCH}
         else
           python install.py devel
         fi
+    - name: Setup debugging session
+      uses: mxschmitt/action-tmate@v3
+      timeout-minutes: 15
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
     - name: Run tests
       run: |
         source ~/openquake/bin/activate
         pip install pytest
         oq dbserver start
-        pytest -vsx ~/work/oq-engine/oq-engine/openquake/calculators
+        cd ~/work/oq-engine/oq-engine
+        #
+        export MPLBACKEND=Agg
+        pytest -vsx --color=yes openquake/hazardlib/tests/gsim/kotha_2020_test.py
+        pytest -vsx --color=yes openquake/sep/tests/test_utils.py
+        pytest -vsx --color=yes openquake/sep
+        #
+        oq engine --run https://downloads.openquake.org/jobs/risk_test.zip

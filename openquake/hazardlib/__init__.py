@@ -75,6 +75,14 @@ def _get_sitecol(hparams, req_site_params):
     if 'sites' in hparams:
         sm = unittest.mock.Mock(**hparams)
         mesh = geo.Mesh.from_coords(hparams['sites'])
+    elif 'sites_csv' in hparams:
+        data = open(hparams['sites_csv']).read().replace(',', ' ').strip()
+        coords = valid.coordinates(','.join(data.split('\n')))
+        dic = {site.param[p]: hparams[site.param[p]] for p in req_site_params}
+        if 'reference_vs30_type' not in dic:
+            dic['reference_vs30_type'] = 'measured'
+        sm = type('FakeSM', (), dic)
+        mesh = geo.Mesh.from_coords(coords)
     elif 'site_model_file' in hparams:
         sm = _get_site_model(hparams['site_model_file'], req_site_params)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
@@ -242,6 +250,7 @@ def read_input(hparams, **extra):
             src.grp_id = grp_id
             src.trt_smr = grp_id
             src.samples = num_rlzs
+            src.smweight = 1. / num_rlzs
             idx += 1
 
     cmakerdict = {}  # trt => cmaker

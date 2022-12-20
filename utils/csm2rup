@@ -10,7 +10,6 @@ from openquake.baselib import sap, parallel, general, hdf5
 from openquake.commonlib import logs
 from openquake.calculators import base
 
-MAX_RUPS_PER_SOURCE = 1_000_000_000
 rupfields = dict(
     mag=numpy.float32,
     occurrence_rate=numpy.float32,
@@ -18,7 +17,8 @@ rupfields = dict(
     hypo_lat=numpy.float32,
     hypo_dep=numpy.float32,
     grp_id=numpy.uint16,
-    rup_id=numpy.uint64,
+    rup_id=numpy.uint32,
+    src_id=numpy.uint32,
     # add more if you like
 )
 
@@ -33,14 +33,14 @@ def build_rupdict(srcs):
     for src in srcs:
         irups = src.iter_ruptures(step=5)  # fast
         for rupno, rup in enumerate(irups):
-            assert rupno < MAX_RUPS_PER_SOURCE
             dic['mag'].append(rup.mag)
             dic['occurrence_rate'].append(rup.occurrence_rate)
             dic['hypo_lon'].append(rup.hypocenter.x)
             dic['hypo_lat'].append(rup.hypocenter.y)
             dic['hypo_dep'].append(rup.hypocenter.z)
             dic['grp_id'].append(src.grp_id)
-            dic['rup_id'].append(src.id * MAX_RUPS_PER_SOURCE + rupno)
+            dic['src_id'].append(src.id)
+            dic['rup_id'].append(src.offset + rupno)
     return {k: rupfields[k](v) for k, v in dic.items()}
 
 

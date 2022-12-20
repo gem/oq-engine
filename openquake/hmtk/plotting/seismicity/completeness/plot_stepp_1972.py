@@ -125,8 +125,7 @@ def create_stepp_plot(model, figure_size=(8, 6),
                   markerfacecolor='white',
                   markeredgecolor=colour)
 
-    ax.legend(loc='center left',
-              bbox_to_anchor=(1, 0.5), frameon=False, fontsize='small')
+    ax.legend(loc='lower left', frameon=False, fontsize='small')
     ax.set_xlabel('Time (years)')
     ax.set_ylabel("$\\sigma_{\\lambda} = \\sqrt{\\lambda} / \\sqrt{T}$")
     ax.autoscale(enable=True, axis='both', tight=True)

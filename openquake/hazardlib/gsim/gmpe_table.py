@@ -171,6 +171,7 @@ class GMPETable(GMPE):
 
     REQUIRES_SITES_PARAMETERS = set()
 
+    #: REQUIRES_DISTANCES is set at the instance level
     REQUIRES_DISTANCES = set()
 
     REQUIRES_RUPTURE_PARAMETERS = {"mag"}

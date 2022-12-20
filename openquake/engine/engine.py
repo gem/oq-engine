@@ -49,6 +49,7 @@ from openquake.commonlib import readinput
 from openquake.calculators import base, export
 from openquake.commonlib import logs
 
+USER = getpass.getuser()
 OQ_API = 'https://api.openquake.org'
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
@@ -81,7 +82,7 @@ def set_concurrent_tasks_default(calc):
         return
 
     num_workers = sum(total for host, running, total
-                      in parallel.workers_wait())
+                      in parallel.workers_wait(config.zworkers))
     if num_workers == 0:
         logging.critical("No live compute nodes, aborting calculation")
         logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
@@ -93,7 +94,7 @@ def set_concurrent_tasks_default(calc):
     logging.warning('Using %d %s workers', num_workers, OQ_DISTRIBUTE)
 
 
-def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
+def expose_outputs(dstore, owner=USER, status='complete'):
     """
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
@@ -171,23 +172,19 @@ def manage_signals(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
-    # Disable further CTRL-C to allow tasks revocation when Celery is used
-    if OQ_DISTRIBUTE == 'celery':
-        signal.signal(signal.SIGINT, inhibitSigInt)
-
     if signum == signal.SIGINT:
-        parallel.workers_stop()
+        parallel.workers_stop(config.zworkers)
         raise MasterKilled('The openquake master process was killed manually')
 
     if signum == signal.SIGTERM:
-        parallel.workers_stop()
+        parallel.workers_stop(config.zworkers)
         raise SystemExit('Terminated')
 
     if hasattr(signal, 'SIGHUP'):  # there is no SIGHUP on Windows
         # kill the calculation only if os.getppid() != _PPID, i.e. the
         # controlling terminal died; in the workers, do nothing
         if signum == signal.SIGHUP and os.getppid() != _PPID:
-            parallel.workers_stop()
+            parallel.workers_stop(config.zworkers)
             raise MasterKilled(
                 'The openquake master lost its controlling terminal')
 
@@ -222,14 +219,14 @@ def poll_queue(job_id, poll_time):
         first_time = True
         while True:
             running = logs.dbcmd(GET_JOBS, host)
-            previous = [job for job in running if job.id < job_id - offset]
+            previous = [job.id for job in running if job.id < job_id - offset]
             if previous:
                 if first_time:
                     logs.dbcmd('update_job', job_id,
                                {'status': 'submitted', 'pid': _PID})
                     first_time = False
                     # the logging is not yet initialized, so use a print
-                    print('Waiting for jobs %s' % [p.id for p in previous])
+                    print('Waiting for jobs %s' % ' '.join(map(str, previous)))
                 time.sleep(poll_time)
             else:
                 break
@@ -250,7 +247,8 @@ def run_calc(log):
             used_mem = psutil.virtual_memory().percent
             if used_mem < 80:  # continue if little memory is in use
                 break
-            logging.info('Used memory %d%%, waiting', used_mem)
+            logging.info('Memory occupation %d%%, the user should free '
+                         'some memory', used_mem)
             time.sleep(5)
         oqparam = log.get_oqparam()
         calc = base.calculators(oqparam, log.calc_id)
@@ -259,7 +257,7 @@ def run_calc(log):
         except Exception:  # gaierror
             hostname = 'localhost'
         logging.info('%s@%s running %s [--hc=%s]',
-                     getpass.getuser(),
+                     USER,
                      hostname,
                      calc.oqparam.inputs['job_ini'],
                      calc.oqparam.hazard_calculation_id)
@@ -293,7 +291,7 @@ def run_calc(log):
 
 
 def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
-                user_name=None, hc_id=None, multi=False, host=None):
+                user_name=USER, hc_id=None, multi=False, host=None):
     """
     Create job records on the database.
 
@@ -349,23 +347,23 @@ def cleanup(kind):
     if OQ_DISTRIBUTE != 'zmq' or config.distribution.serialize_jobs > 1:
         return  # do nothing
     if kind == 'stop':
-        # called in the regular case
+        # called in the regular case, does not require ssh access
         print('Stopping the workers')
-        parallel.workers_stop()
+        parallel.workers_stop(config.zworkers)
     elif kind == 'kill':
-        # called in case of exceptions (including out of memory)
+        # called in case of exceptions (or out of memory), requires ssh
         print('Asking the DbServer to kill the workers')
-        logs.dbcmd('workers_kill')
+        logs.dbcmd('workers_kill', config.zworkers)
 
 
-def run_jobs(jobs):
+def run_jobs(jobctxs):
     """
     Run jobs using the specified config file and other options.
 
-    :param jobs:
+    :param jobctxs:
         List of LogContexts
     """
-    hc_id = jobs[-1].params['hazard_calculation_id']
+    hc_id = jobctxs[-1].params['hazard_calculation_id']
     if hc_id:
         job = logs.dbcmd('get_job', hc_id)
         ppath = job.ds_calc_dir + '.hdf5'
@@ -374,47 +372,45 @@ def run_jobs(jobs):
             with h5py.File(ppath, 'r') as f:
                 prev_version = f.attrs['engine_version']
                 if prev_version != version:
-                    logging.warning('Starting from a hazard (%d) computed with'
-                                    ' an obsolete version of the engine: %s',
-                                    hc_id, version)
-    jobarray = len(jobs) > 1 and jobs[0].multi
+                    # here the logger is not initialized yet
+                    print('Starting from a hazard (%d) computed with'
+                          ' an obsolete version of the engine: %s' %
+                          (hc_id, version))
+    jobarray = len(jobctxs) > 1 and jobctxs[0].multi
     try:
-        poll_queue(jobs[0].calc_id, poll_time=15)
+        poll_queue(jobctxs[0].calc_id, poll_time=15)
         # wait for an empty slot or a CTRL-C
     except BaseException:
         # the job aborted even before starting
-        for job in jobs:
+        for job in jobctxs:
             logs.dbcmd('finish', job.calc_id, 'aborted')
-        return jobs
+        return jobctxs
     else:
-        for job in jobs:
+        for job in jobctxs:
             dic = {'status': 'executing', 'pid': _PID}
             logs.dbcmd('update_job', job.calc_id, dic)
     try:
-        if OQ_DISTRIBUTE == 'zmq' and parallel.workers_status() == []:
-            print('Asking the DbServer to start the workers')
-            logs.dbcmd('workers_start')  # start the workers
-        allargs = [(job,) for job in jobs]
+        if OQ_DISTRIBUTE == 'zmq' and parallel.workers_status(
+                config.zworkers) == []:
+            print('Asking the DbServer to start the workers %s' %
+                  config.zworkers.host_cores)
+            logs.dbcmd('workers_start', config.zworkers)  # start the workers
+        allargs = [(ctx,) for ctx in jobctxs]
         if jobarray and OQ_DISTRIBUTE != 'no':
-            procs = []
-            try:
-                for args in allargs:
-                    proc = general.mp.Process(target=run_calc, args=args)
-                    proc.start()
-                    logging.info('Started %s' % str(args))
-                    time.sleep(2)
-                    procs.append(proc)
-            finally:
-                for proc in procs:
-                    proc.join()
+            parallel.multispawn(run_calc, allargs, num_cores=3)
         else:
-            for job in jobs:
+            for job in jobctxs:
                 run_calc(job)
         cleanup('stop')
     except Exception:
+        ids = [jc.calc_id for jc in jobctxs]
+        rows = logs.dbcmd("SELECT id FROM job WHERE id IN (?X) "
+                          "AND status IN ('created', 'executing')", ids)
+        for job_id, in rows:
+            logs.dbcmd("set_status", job_id, 'failed')
         cleanup('kill')
         raise
-    return jobs
+    return jobctxs
 
 
 def version_triple(tag):
@@ -468,8 +464,8 @@ def check_obsolete_version(calculation_mode='WebUI'):
 
 if __name__ == '__main__':
     from openquake.server import dbserver
-    # run a job object stored in a pickle file, called by job.yaml
+    # run a LogContext object stored in a pickle file, called by job.yaml
     with open(sys.argv[1], 'rb') as f:
-        job = pickle.load(f)
+        jobctx = pickle.load(f)
     dbserver.ensure_on()
-    run_jobs([job])
+    run_jobs([jobctx])

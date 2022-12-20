@@ -320,10 +320,10 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         assert_close(self.area, self._expected_area)
 
     def test_simple_to_hazardlib(self):
-        assert_close(self._expected_simple, self.simple)
+        assert_close(self._expected_simple, self.simple, rtol=5E-5)
 
     def test_complex_to_hazardlib(self):
-        assert_close(self._expected_complex, self.cmplx)
+        assert_close(self._expected_complex, self.cmplx, rtol=1E-4)
 
     def test_characteristic_simple(self):
         assert_close(self._expected_char_simple, self.char_simple)
@@ -650,17 +650,17 @@ class SourceGroupTestCase(unittest.TestCase):
     def test_repr(self):
         self.assertEqual(
             repr(self.source_collector['Volcanic']),
-            '<SourceGroup Volcanic, 3 source(s)>')
+            '<SourceGroup Volcanic, 3 source(s), weight=0>')
         self.assertEqual(
             repr(self.source_collector['Stable Continental Crust']),
-            '<SourceGroup Stable Continental Crust, 1 source(s)>'
+            '<SourceGroup Stable Continental Crust, 1 source(s), weight=0>'
         )
         self.assertEqual(
             repr(self.source_collector['Subduction Interface']),
-            '<SourceGroup Subduction Interface, 1 source(s)>')
+            '<SourceGroup Subduction Interface, 1 source(s), weight=0>')
         self.assertEqual(
             repr(self.source_collector['Active Shallow Crust']),
-            '<SourceGroup Active Shallow Crust, 2 source(s)>')
+            '<SourceGroup Active Shallow Crust, 2 source(s), weight=0>')
 
 
 class RuptureConverterTestCase(unittest.TestCase):

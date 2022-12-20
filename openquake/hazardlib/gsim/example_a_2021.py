@@ -48,6 +48,7 @@ class ExampleA2021(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
+    #: Required distance rjb
     REQUIRES_DISTANCES = {'rjb'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\

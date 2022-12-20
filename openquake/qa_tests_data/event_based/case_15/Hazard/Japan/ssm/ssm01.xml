@@ -54,7 +54,7 @@ xmlns:gml="http://www.opengis.net/gml"
         name="Tokachi Nemuro"
         rup_interdep="indep"
         src_interdep="mutex"
-        srcs_weights="6.4636395E-01"
+        srcs_weights="1"
         tectonicRegion="Subduction Interface - North East Correction"
         >
             <nonParametricSeismicSource

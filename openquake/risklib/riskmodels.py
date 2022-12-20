@@ -242,7 +242,7 @@ class RiskModel(object):
         self.calcmode = calcmode
         self.taxonomy = taxonomy
         self.risk_functions = risk_functions
-        vars(self).update(kw)
+        vars(self).update(kw)  # updates risk_investigation_time too
         steps = kw.get('lrem_steps_per_interval')
         if calcmode in ('classical', 'classical_risk'):
             self.loss_ratios = {
@@ -778,6 +778,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a dictionary keyed by extended loss type
         """
         rc = scientific.RiskComputer(self, asset_df)
+        # rc.pprint()
         # dic = rc.todict()
         # rc2 = get_riskcomputer(dic)
         # dic2 = rc2.todict()

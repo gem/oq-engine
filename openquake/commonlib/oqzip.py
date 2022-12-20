@@ -32,7 +32,11 @@ def zip_all(directory, ini):
         for f in files:
             if f.endswith(ini):
                 path = os.path.join(cwd, f)
-                oq = oqvalidation.OqParam(**readinput.get_params(path))
+                try:
+                    oq = oqvalidation.OqParam(**readinput.get_params(path))
+                except ValueError as exc:
+                    print('skipping %s: %s' % (f, exc))
+                    continue
                 zips.extend(readinput.get_input_files(oq))
     total = sum(os.path.getsize(z) for z in zips)
     if os.path.exists('jobs.zip'):
