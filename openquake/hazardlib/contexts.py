@@ -1126,10 +1126,9 @@ class ContextMaker(object):
         cmakers = []
         for g, gsim in zip(self.gidx, self.gsims):
             gsim.g = g
-            gsim.num_dists = sum(par in KNOWN_DISTANCES
-                                 for par in gsim.requires())
-        for num_dists, gsims in groupby(
-                self.gsims, operator.attrgetter('num_dists')).items():
+            gsim.dists = tuple(sorted(gsim.REQUIRES_DISTANCES))
+        for dists, gsims in groupby(
+                self.gsims, operator.attrgetter('dists')).items():
             cm = self.__class__(self.trt, gsims, self.oq)
             cm.gidx = numpy.array([gsim.g for gsim in gsims])
             cm.grp_id = self.grp_id

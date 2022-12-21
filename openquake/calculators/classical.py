@@ -655,15 +655,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         allargs = []
-        if oq.collapse_level >= 0:
-            cmakers = []
-            for cmaker in self.haz.cmakers:
-                cmakers.extend(cmaker.split_by_gsim())
-            logging.info('Split %d cmakers into %d', len(self.haz.cmakers),
-                         len(cmakers))
-        else:
-            cmakers = self.haz.cmakers
-        for cm in cmakers:
+        for cm in self.haz.cmakers:
             G = len(cm.gsims)
             sg = self.csm.src_groups[cm.grp_id]
 
@@ -692,12 +684,17 @@ class ClassicalCalculator(base.HazardCalculator):
                     blks = groupby(sg, basename).values()
                 else:
                     blks = block_splitter(sg, maxw, get_weight)
+                if oq.collapse_level >= 0:
+                    cms = cm.split_by_gsim()
+                else:
+                    cms = [cm]
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
                     for tile in tiles:
-                        self.n_outs[cm.grp_id] += 1
-                        allargs.append((block, tile, cm))
+                        for c in cms:
+                            self.n_outs[cm.grp_id] += 1
+                            allargs.append((block, tile, c))
         allargs.sort(key=lambda tup: sum(src.weight for src in tup[0]),
                      reverse=True)
         self.datastore.swmr_on()  # must come before the Starmap
