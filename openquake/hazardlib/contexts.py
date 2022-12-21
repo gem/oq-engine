@@ -963,24 +963,29 @@ class ContextMaker(object):
         :param rup_indep: rupture flag (false for mutex ruptures)
         :yields: poes, ctxt, invs with poes of shape (N, L, G)
         """
+        collapse = rup_indep and self.collapse_level >= 0
+        cfactor = self.collapser.cfactor
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
-            kctx, invs = self.collapser.collapse(ctxt, rup_indep)
-            if invs is None:  # no collapse
-                with self.gmf_mon:
-                    mean_stds = self.get_mean_stds([ctxt])
+            with self.gmf_mon:
+                mean_stds = self.get_mean_stds([ctxt])
+            if not collapse:
+                cfactor[0] += len(ctxt)
+                cfactor[1] += len(ctxt)
+                cfactor[2] += 1
                 for poes in self._gen_poes(ctxt, mean_stds):
                     yield poes, ctxt[self.slc], numpy.arange(len(poes))
             else:  # collapse
-                with self.gmf_mon:
-                    mean_stds = self.get_mean_stds([kctx])
                 ms, inv = numpy.unique(
                     mean_stds.astype(numpy.float16), axis=-1,
                     return_inverse=True)
+                cfactor[0] += ms.shape[-1]
+                cfactor[1] += len(ctxt)
+                cfactor[2] += 1
                 poes = numpy.concatenate(
-                    list(self._gen_poes(kctx, ms.astype(F64))))
-                yield poes[inv], ctxt, invs
+                    list(self._gen_poes(ctxt, ms.astype(F64))))
+                yield poes, ctxt, inv
 
     def get_pmap(self, ctxs, rup_indep=True):
         """
