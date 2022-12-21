@@ -22,6 +22,7 @@ import copy
 import time
 import logging
 import warnings
+import operator
 import itertools
 import collections
 from unittest.mock import patch
@@ -31,7 +32,7 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
-    sqrscale)
+    sqrscale, groupby)
 from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -1123,10 +1124,14 @@ class ContextMaker(object):
         if len(self.gsims) == 1:
             return [self]
         cmakers = []
-        for g, gsim in enumerate(self.gsims):
-            cm = self.__class__(self.trt, [gsim], self.oq)
-            cm.start = self.start + g
-            cm.gsim_idx = g
+        for g, gsim in zip(self.gidx, self.gsims):
+            gsim.g = g
+            gsim.num_dists = sum(par in KNOWN_DISTANCES
+                                 for par in gsim.requires())
+        for num_dists, gsims in groupby(
+                self.gsims, operator.attrgetter('num_dists')).items():
+            cm = self.__class__(self.trt, gsims, self.oq)
+            cm.gidx = numpy.array([gsim.g for gsim in gsims])
             cm.grp_id = self.grp_id
             cmakers.append(cm)
         return cmakers

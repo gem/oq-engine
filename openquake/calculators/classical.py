@@ -655,7 +655,15 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         allargs = []
-        for cm in self.haz.cmakers:
+        if oq.collapse_level >= 0:
+            cmakers = []
+            for cmaker in self.haz.cmakers:
+                cmakers.extend(cmaker.split_by_gsim())
+            logging.info('Split %d cmakers into %d', len(self.haz.cmakers),
+                         len(cmakers))
+        else:
+            cmakers = self.haz.cmakers
+        for cm in cmakers:
             G = len(cm.gsims)
             sg = self.csm.src_groups[cm.grp_id]
 
