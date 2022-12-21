@@ -57,6 +57,8 @@ STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
+NUM_BINS = 256
+DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MULTIPLIER = 200  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
@@ -65,6 +67,12 @@ STD = 1
 # communication, 10 August 2018)
 cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
+
+
+def round_dist(dst):
+    idx = numpy.searchsorted(DIST_BINS, dst)
+    idx[idx == NUM_BINS] -= 1
+    return DIST_BINS[idx]
 
 
 def is_modifiable(gsim):
@@ -162,7 +170,28 @@ def kround1(ctx, kfields):
     return out
 
 
-kround = {0: kround0, 1: kround1}
+def kround2(ctx, kfields):
+    kdist = 5. * ctx.mag**2
+    close = ctx.rrup < kdist
+    far = ~close
+    out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
+    for kfield in kfields:
+        kval = ctx[kfield]
+        if kfield in KNOWN_DISTANCES:
+            out[kfield][close] = numpy.round(kval[close], 1)  # round to 1 km
+            out[kfield][far] = round_dist(kval[far])  # round more
+        elif kfield == 'vs30':
+            out[kfield][close] = numpy.round(kval[close])  # round less
+            out[kfield][far] = numpy.round(kval[far], 1)  # round more
+        elif kval.dtype == F64 and kfield != 'mag':
+            out[kfield][close] = F16(kval[close])  # round less
+            out[kfield][far] = numpy.round(kval[far])  # round more
+        else:
+            out[kfield] = ctx[kfield]
+    return out
+
+
+kround = {0: kround0, 1: kround1, 2: kround2}
 
 
 class Collapser(object):
