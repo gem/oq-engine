@@ -869,7 +869,9 @@ class ClassicalCalculator(base.HazardCalculator):
                      humansize(hcbytes), humansize(hmbytes))
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
-        if self.datastore.parent and '_poes' in self.datastore.parent:
+        if 'delta_rates' in self.datastore.parent:
+            pass  # do nothing for the aftershock calculator, avoids an error
+        else:  # in all the other cases
             self.datastore.swmr_on()
         parallel.Starmap(
             postclassical, allargs,
