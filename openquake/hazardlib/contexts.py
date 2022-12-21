@@ -977,9 +977,10 @@ class ContextMaker(object):
                 for poes in self._gen_poes(ctxt, mean_stds):
                     yield poes, ctxt[self.slc], numpy.arange(len(poes))
             else:  # collapse
-                ms, inv = numpy.unique(
-                    mean_stds.astype(numpy.float16), axis=-1,
-                    return_inverse=True)
+                with self.collapser.mon:
+                    ms, inv = numpy.unique(
+                        mean_stds[:2].astype(numpy.float16), axis=-1,
+                        return_inverse=True)
                 cfactor[0] += ms.shape[-1]
                 cfactor[1] += len(ctxt)
                 cfactor[2] += 1
