@@ -966,27 +966,32 @@ class ContextMaker(object):
         collapse = rup_indep and self.collapse_level >= 0
         cfactor = self.collapser.cfactor
         ctx.mag = numpy.round(ctx.mag, 3)
-        for mag in numpy.unique(ctx.mag):
-            ctxt = ctx[ctx.mag == mag]
+        mags = numpy.round(ctx.mag)  # integer magnitudes
+        for mag in numpy.unique(mags):
+            ct = ctx[mags == mag]
             with self.gmf_mon:
-                mean_stds = self.get_mean_stds([ctxt])
-            if not collapse:
-                cfactor[0] += len(ctxt)
-                cfactor[1] += len(ctxt)
-                cfactor[2] += 1
-                for poes in self._gen_poes(ctxt, mean_stds):
-                    yield poes, ctxt[self.slc], numpy.arange(len(poes))
-            else:  # collapse
-                with self.collapser.mon:
-                    ms, inv = numpy.unique(
-                        mean_stds[:2].astype(numpy.float16), axis=-1,
-                        return_inverse=True)
-                cfactor[0] += ms.shape[-1]
-                cfactor[1] += len(ctxt)
-                cfactor[2] += 1
-                poes = numpy.concatenate(
-                    list(self._gen_poes(ctxt, ms.astype(F64))))
-                yield poes, ctxt, inv
+                mean_stds = self.get_mean_stds([ct])
+            for mag in numpy.unique(ct.mag):
+                ok = ct.mag == mag
+                ctxt = ct[ok]
+                mea_std = mean_stds[:2, :, :, ok]
+                if not collapse:
+                    cfactor[0] += len(ctxt)
+                    cfactor[1] += len(ctxt)
+                    cfactor[2] += 1
+                    for poes in self._gen_poes(ctxt, mea_std):
+                        yield poes, ctxt[self.slc], numpy.arange(len(poes))
+                else:  # collapse
+                    with self.collapser.mon:
+                        ms, inv = numpy.unique(
+                            mea_std.astype(numpy.float16), axis=-1,
+                            return_inverse=True)
+                    cfactor[0] += ms.shape[-1]
+                    cfactor[1] += len(ctxt)
+                    cfactor[2] += 1
+                    poes = numpy.concatenate(
+                        list(self._gen_poes(ctxt, ms.astype(F64))))
+                    yield poes, ctxt, inv
 
     def get_pmap(self, ctxs, rup_indep=True):
         """
