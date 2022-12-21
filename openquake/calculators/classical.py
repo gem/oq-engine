@@ -455,8 +455,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
         cfactor = dic.pop('cfactor')
         if cfactor[1] != cfactor[0]:
-            print('ctxs_per_task = {:.0f}, cfactor_per_task = {:.1f}'.format(
-                cfactor[1], cfactor[1] / cfactor[0]))
+            print('ctxs_per_mag = {:.0f}, cfactor_per_task = {:.1f}'.format(
+                cfactor[1] / cfactor[2], cfactor[1] / cfactor[0]))
         self.cfactor += cfactor
 
         # store rup_data if there are few sites
@@ -539,7 +539,7 @@ class ClassicalCalculator(base.HazardCalculator):
         return sources
 
     def init_poes(self):
-        self.cfactor = numpy.zeros(2)
+        self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         if self.oqparam.hazard_calculation_id:
             full_lt = self.datastore.parent['full_lt']
