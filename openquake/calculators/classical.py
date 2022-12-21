@@ -869,7 +869,8 @@ class ClassicalCalculator(base.HazardCalculator):
                      humansize(hcbytes), humansize(hmbytes))
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
-        self.datastore.swmr_on()  # essential before Starmap
+        if self.datastore.parent and '_poes' in self.datastore.parent:
+            self.datastore.swmr_on()
         parallel.Starmap(
             postclassical, allargs,
             distribute='no' if self.few_sites else None,
