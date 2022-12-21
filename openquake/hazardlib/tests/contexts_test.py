@@ -205,15 +205,15 @@ class CollapseTestCase(unittest.TestCase):
 
         # compute original curves
         pmap = cmaker.get_pmap(ctxs)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [60, 60])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [60, 60, 10])
 
         # compute collapsed curves
-        cmaker.collapser.cfactor = numpy.zeros(2)
+        cmaker.collapser.cfactor = numpy.zeros(3)
         cmaker.collapser.collapse_level = 1
         cmap = cmaker.get_pmap(ctxs)
         self.assertLess(rms(pmap.array[0] - cmap.array[0]), 7E-4)
         self.assertLess(rms(pmap.array[1] - cmap.array[0]), 7E-4)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [56, 60])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [40, 60, 10])
 
     def test_collapse_big(self):
         smpath = os.path.join(os.path.dirname(__file__),
@@ -233,11 +233,11 @@ class CollapseTestCase(unittest.TestCase):
         # get the context
         ctxs = cmaker.from_srcs(srcs, inp.sitecol)
         pcurve0 = cmaker.get_pmap(ctxs).array[0]
-        cmaker.collapser.cfactor = numpy.zeros(2)
+        cmaker.collapser.cfactor = numpy.zeros(3)
         cmaker.collapser.collapse_level = 1
         pcurve1 = cmaker.get_pmap(ctxs).array[0]
-        self.assertLess(numpy.abs(pcurve0 - pcurve1).sum(), 1E-10)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [401, 11616])
+        self.assertLess(numpy.abs(pcurve0 - pcurve1).sum(), 1E-9)
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [94, 11616, 2])
 
     def test_collapse_azimuth(self):
         # YuEtAl2013Ms has an azimuth distance causing a lower precision
@@ -379,7 +379,7 @@ class CollapseTestCase(unittest.TestCase):
         print('maxdiff =', maxdiff)
         self.assertLess(maxdiff[0], 2E-3)
         self.assertLess(maxdiff[1], 6E-4)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [312, 312])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [312, 312, 3])
 
 
 class GetCtxs01TestCase(unittest.TestCase):
