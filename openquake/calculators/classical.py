@@ -57,8 +57,7 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
 disagg_grp_dt = numpy.dtype([
-    ('grp_start', U16), ('grp_trt', hdf5.vstr), ('avg_poe', F32),
-    ('nsites', U32)])
+    ('grp_trt', hdf5.vstr), ('avg_poe', F32), ('nsites', U32)])
 slice_dt = numpy.dtype([('sid', U32), ('start', int), ('stop', int)])
 
 
@@ -224,7 +223,7 @@ def classical(srcs, sitecol, cmaker, monitor):
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
     result['pnemap'] = ~pmap.remove_zeros()
-    result['pnemap'].start = cmaker.start
+    result['pnemap'].gidx = cmaker.gidx
     return result
 
 
@@ -358,7 +357,6 @@ class Hazard:
         """
         Store the pmap of the given group inside the _poes dataset
         """
-        start = pmap.start
         arr = 1. - pmap.array
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence, however that probability
@@ -374,13 +372,12 @@ class Hazard:
         if len(idxs):
             sids = pmap.sids[idxs]
             hdf5.extend(self.datastore['_poes/sid'], sids)
-            hdf5.extend(self.datastore['_poes/gid'], gids + start)
+            hdf5.extend(self.datastore['_poes/gid'], pmap.gidx[gids])
             hdf5.extend(self.datastore['_poes/lid'], lids)
             hdf5.extend(self.datastore['_poes/poe'], arr[idxs, lids, gids])
             sbs = build_slice_by_sid(sids, self.offset)
             hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
             self.offset += len(sids)
-        self.acc[grp_id]['grp_start'] = start
         self.acc[grp_id]['avg_poe'] = arr.mean(axis=(0, 2))@self.level_weights
         self.acc[grp_id]['nsites'] = len(pmap.sids)
 
@@ -395,8 +392,7 @@ class Hazard:
             if dic:
                 trti, smrs = numpy.divmod(indices, n)
                 trt = self.full_lt.trts[trti[0]]
-                lst.append((dic['grp_start'], trt, dic['avg_poe'],
-                            dic['nsites']))
+                lst.append((trt, dic['avg_poe'], dic['nsites']))
         self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
         if pmaps:  # called inside a loop
             disagg_by_src = self.datastore['disagg_by_src'][()]
@@ -683,7 +679,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 # only heavy groups preallocate memory
                 acc[cm.grp_id] = ProbabilityMap(
                     sitecol.sids, oq.imtls.size, len(cm.gsims)).fill(1)
-                acc[cm.grp_id].start = cm.start
+                acc[cm.grp_id].gidx = cm.gidx
                 if oq.disagg_by_src:  # possible only with a single tile
                     blks = groupby(sg, basename).values()
                 else:

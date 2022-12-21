@@ -1619,6 +1619,7 @@ def read_cmakers(dstore, full_lt=None):
     start = 0
     aftershock = 'delta_rates' in dstore
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
+        G = len(rlzs_by_gsim)
         trti = trt_smrs[grp_id][0] // num_eff_rlzs
         trt = trts[trti]
         if ('amplification' in oq.inputs and
@@ -1634,10 +1635,10 @@ def read_cmakers(dstore, full_lt=None):
             cmaker.deltagetter = DeltaRatesGetter(dstore)
         cmaker.tom = valid.occurrence_model(toms[grp_id])
         cmaker.trti = trti
-        cmaker.start = start
+        cmaker.gidx = numpy.arange(start, start + G)
         cmaker.grp_id = grp_id
         cmaker.weight = weight[grp_id]
-        start += len(rlzs_by_gsim)
+        start += G
         cmakers.append(cmaker)
     return cmakers
 
