@@ -936,19 +936,17 @@ class ContextMaker(object):
         with patch.object(self.collapser, 'collapse_level', collapse_level):
             return self.get_pmap(ctxs, rup_indep).array
 
-    def _gen_poes(self, ctx):
+    def _gen_poes(self, ctx, mean_stdt):
         from openquake.hazardlib.site_amplification import get_poes_site
         (M, L1), G = self.loglevels.array.shape, len(self.gsims)
 
         # split large context arrays to avoid filling the CPU cache
-        with self.gmf_mon:
-            mean_stdt = self.get_mean_stds([ctx])
-        for slc in split_in_slices(len(ctx), MULTIPLIER):
+        for slc in split_in_slices(mean_stdt.shape[3], MULTIPLIER):
             ctxt = ctx[slc]
             self.slc = slc  # used in gsim/base.py
             with self.poe_mon:
                 # this is allocating at most 2MB of RAM
-                poes = numpy.zeros((len(ctxt), M*L1, G))
+                poes = numpy.zeros((slc.stop-slc.start, M*L1, G))
                 # NB: using .empty would break the MixtureModelGMPETestCase
                 for g, gsim in enumerate(self.gsims):
                     ms = mean_stdt[:2, g, :, slc]
@@ -970,11 +968,19 @@ class ContextMaker(object):
             ctxt = ctx[ctx.mag == mag]
             kctx, invs = self.collapser.collapse(ctxt, rup_indep)
             if invs is None:  # no collapse
-                for poes in self._gen_poes(ctxt):
+                with self.gmf_mon:
+                    mean_stds = self.get_mean_stds([ctxt])
+                for poes in self._gen_poes(ctxt, mean_stds):
                     yield poes, ctxt[self.slc], numpy.arange(len(poes))
             else:  # collapse
-                poes = numpy.concatenate(list(self._gen_poes(kctx)))
-                yield poes, ctxt, invs
+                with self.gmf_mon:
+                    mean_stds = self.get_mean_stds([kctx])
+                ms, inv = numpy.unique(
+                    mean_stds.astype(numpy.float16), axis=-1,
+                    return_inverse=True)
+                poes = numpy.concatenate(
+                    list(self._gen_poes(kctx, ms.astype(F64))))
+                yield poes[inv], ctxt, invs
 
     def get_pmap(self, ctxs, rup_indep=True):
         """
