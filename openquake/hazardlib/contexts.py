@@ -151,7 +151,7 @@ def kround1(ctx, kfields):
     out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
     for kfield in kfields:
         kval = ctx[kfield]
-        if kfield in ('vs30', 'z1pt0'):
+        if kfield == 'vs30':
             out[kfield][close] = numpy.round(kval[close])  # round less
             out[kfield][far] = numpy.round(kval[far], 1)  # round more
         elif kval.dtype == F64 and kfield != 'mag':
