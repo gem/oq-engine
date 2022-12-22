@@ -1,3 +1,7 @@
+  [Marco Pagani]
+  * Completed implementation of `grp_probability` for SourceGroups with mutex 
+    ruptures
+
   [Michele Simionato]
   * Fixed context collapsing in the multi-site case
   * Optimised postclassical, both in terms of memory in the master node
