@@ -62,15 +62,14 @@ disagg_grp_dt = numpy.dtype([
 slice_dt = numpy.dtype([('sid', U32), ('start', int), ('stop', int)])
 
 
-def get_pmaps_gb(dstore, ct):
+def get_pmaps_gb(dstore):
     """
     :returns: memory required on the master node to keep the pmaps
     """
     N = len(dstore['sitecol'])
     L = dstore['oqparam'].imtls.size
     cmakers = read_cmakers(dstore)
-    maxw = sum(cm.weight for cm in cmakers) / (ct or 1)
-    num_gs = [len(cm.gsims) for cm in cmakers if cm.weight > maxw]
+    num_gs = [len(cm.gsims) for cm in cmakers]
     return sum(num_gs) * N * L * 8 / 1024**3
 
 
@@ -562,13 +561,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Log the memory required to receive the largest ProbabilityMap,
         assuming all sites are affected (upper limit)
         """
-        num_gs = []
-        for cm in self.haz.cmakers:
-            sg = self.csm.src_groups[cm.grp_id]
-            if sg.atomic or sg.weight <= maxw:
-                pass  # no need to keep the group in memory
-            else:
-                num_gs.append(len(cm.gsims))
+        num_gs = [len(cm.gsims) for cm in self.haz.cmakers]
         maxsize = get_maxsize(len(self.oqparam.imtls), max_gs)
         logging.info('Considering {:_d} contexts at once'.format(maxsize))
         size = max_gs * N * L * 8
@@ -612,7 +605,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        req = get_pmaps_gb(self.datastore, oq.concurrent_tasks)
+        req = get_pmaps_gb(self.datastore)
         ntiles = 1 + int(req / (oq.pmap_max_gb * 30))  # 30 GB
         self.n_outs = AccumDict(accum=0)
         if ntiles > 1:
@@ -676,14 +669,15 @@ class ClassicalCalculator(base.HazardCalculator):
                 ntiles = 1
                 tiles = [sitecol]  # do not split
 
+            # preallocate memory
+            acc[cm.grp_id] = ProbabilityMap(
+                sitecol.sids, oq.imtls.size, len(cm.gsims)).fill(1)
+            acc[cm.grp_id].start = cm.start
             if sg.atomic or sg.weight <= maxw:
                 for tile in tiles:
+                    self.n_outs[cm.grp_id] += 1
                     allargs.append((sg, tile, cm))
             else:
-                # only heavy groups preallocate memory
-                acc[cm.grp_id] = ProbabilityMap(
-                    sitecol.sids, oq.imtls.size, len(cm.gsims)).fill(1)
-                acc[cm.grp_id].start = cm.start
                 if oq.disagg_by_src:  # possible only with a single tile
                     blks = groupby(sg, basename).values()
                 else:

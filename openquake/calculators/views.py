@@ -1368,11 +1368,7 @@ def view_mean_perils(token, dstore):
 
 @view.add('pmaps_size')
 def view_pmaps_size(token, dstore):
-    if ':' not in token:
-        ct = Starmap.num_cores * 2
-    else:
-        ct = int(token.split(':')[1])
-    return humansize(get_pmaps_gb(dstore, ct))
+    return humansize(get_pmaps_gb(dstore))
 
 
 @view.add('src_groups')
