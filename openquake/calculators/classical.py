@@ -339,17 +339,18 @@ class Hazard:
         self.acc = AccumDict(accum={})
         self.offset = 0
 
-    def get_hcurves(self, pmap, rlzs_by_gsim):  # used in in disagg_by_src
+    def get_hcurves(self, pmap, cmaker):  # used in in disagg_by_src
         """
         :param pmap: a ProbabilityMap
-        :param rlzs_by_gsim: a dictionary gsim -> rlz IDs
+        :param cmaker: a ContextMaker
         :returns: an array of PoEs of shape (N, R, M, L)
         """
         res = numpy.zeros((self.N, self.R, self.imtls.size))
+        dic = dict(zip(cmaker.gidx, cmaker.gsims.values()))
         for sid, arr in zip(pmap.sids, pmap.array):
-            for gsim_idx, rlzis in enumerate(rlzs_by_gsim.values()):
-                for rlz in rlzis:
-                    res[sid, rlz] = agg_probs(res[sid, rlz], arr[:, gsim_idx])
+            for i, g in enumerate(pmap.gidx):
+                for rlz in dic[g]:
+                    res[sid, rlz] = agg_probs(res[sid, rlz], arr[:, i])
         return res.reshape(self.N, self.R, len(self.imtls), -1)
 
     def store_poes(self, g, pmap, i):
@@ -384,7 +385,6 @@ class Hazard:
     def store_disagg(self, pmaps=None):
         """
         Store data inside disagg_by_grp (optionally disagg_by_src)
-        """
         n = len(self.full_lt.sm_rlzs)
         lst = []
         for grp_id, indices in enumerate(self.datastore['trt_smrs']):
@@ -394,14 +394,14 @@ class Hazard:
                 trt = self.full_lt.trts[trti[0]]
                 lst.append((trt, dic['avg_poe'], dic['nsites']))
         self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
+        """
         if pmaps:  # called inside a loop
             disagg_by_src = self.datastore['disagg_by_src'][()]
             for key, pmap in pmaps.items():
                 if isinstance(key, str):
                     # in case of disagg_by_src key is a source ID
-                    rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
                     disagg_by_src[..., self.srcidx[key]] = (
-                        self.get_hcurves(pmap, rlzs_by_gsim))
+                        self.get_hcurves(pmap, self.cmakers[pmap.grp_id]))
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
@@ -468,6 +468,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # store the poes for the given source
             acc[source_id] = pm
             pm.grp_id = grp_id
+            pm.gidx = pnemap.gidx
         for i, g in enumerate(pnemap.gidx):
             if g in acc:
                 acc[g].update(pnemap, i)
