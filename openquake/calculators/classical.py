@@ -353,11 +353,11 @@ class Hazard:
                     res[sid, rlz] = agg_probs(res[sid, rlz], arr[:, i])
         return res.reshape(self.N, self.R, len(self.imtls), -1)
 
-    def store_poes(self, g, pmap, i):
+    def store_poes(self, g, pmap):
         """
         Store the pmap of the given group inside the _poes dataset
         """
-        arr = 1. - pmap.array[:, :, i]
+        arr = 1. - pmap.array[:, :, 0]
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence, however that probability
         # cannot be exactly 1 unless the level is exactly 0. Numerically, the
@@ -445,6 +445,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if dic is None:
             raise MemoryError('You ran out of memory!')
 
+        oq = self.oqparam
         sdata = dic['source_data']
         self.source_data += sdata
         grp_id = dic.pop('grp_id')
@@ -456,8 +457,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cfactor += cfactor
 
         # store rup_data if there are few sites
-        if (self.few_sites and len(dic['rup_data']) and
-                self.oqparam.collapse_level >= 0):
+        if self.few_sites and len(dic['rup_data']):
+            assert oq.collapse_level < 0, oq.collapse_level
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
@@ -475,7 +476,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.n_outs[g] -= 1
             if self.n_outs[g] == 0:  # no other tasks for this g
                 with self.monitor('storing PoEs', measuremem=True):
-                    self.haz.store_poes(g, acc.pop(g), i)
+                    self.haz.store_poes(g, acc.pop(g))
         return acc
 
     def create_dsets(self):
