@@ -458,7 +458,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']):
-            assert oq.collapse_level < 0, oq.collapse_level
+            assert not self.cmakers_split
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
@@ -648,7 +648,14 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         allargs = []
-        for cm in self.haz.cmakers:
+        cmakers = []
+        if oq.collapse_level >= 0:
+            for cm in self.haz.cmakers:
+                cmakers.extend(cm.split_by_gsim())
+        else:
+            cmakers = self.haz.cmakers
+        self.cmakers_split = len(cmakers) > len(self.haz.cmakers)
+        for cm in cmakers:
             G = len(cm.gsims)
             sg = self.csm.src_groups[cm.grp_id]
 
@@ -678,18 +685,13 @@ class ClassicalCalculator(base.HazardCalculator):
                     blks = groupby(sg, basename).values()
                 else:
                     blks = block_splitter(sg, maxw, get_weight)
-                if oq.collapse_level >= 0:
-                    cms = cm.split_by_gsim()
-                else:
-                    cms = [cm]
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
                     for tile in tiles:
-                        for c in cms:
-                            for g in c.gidx:
-                                self.n_outs[g] += 1
-                            allargs.append((block, tile, c))
+                        for g in cm.gidx:
+                            self.n_outs[g] += 1
+                        allargs.append((block, tile, cm))
 
         allargs.sort(key=lambda tup: sum(src.weight for src in tup[0]),
                      reverse=True)

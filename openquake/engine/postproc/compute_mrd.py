@@ -43,8 +43,7 @@ def compute_mrd(dstore, slc, cmaker, crosscorr, imt1, imt2,
         [ctx] = cmaker.read_ctxs(dstore, slc)
     mrd = calc_mean_rate_dist(ctx, N, cmaker, crosscorr,
                               imt1, imt2, meabins, sigbins)
-    return {g: mrd[:, :, :, g - cmaker.start]
-            for g in range(cmaker.start, cmaker.stop)}
+    return {g: mrd[:, :, :, i] for i, g in enumerate(cmaker.gidx)}
 
 
 def combine_mrds(acc, rlzs_by_g, rlz_weight):
