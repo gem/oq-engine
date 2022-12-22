@@ -227,7 +227,7 @@ class Collapser(object):
         self.cfactor[0] += len(out)
         self.cfactor[1] += len(ctx)
         self.cfactor[2] += 1
-        return out.view(numpy.recarray), inv
+        return out.view(numpy.recarray), inv.astype(U32)
 
 
 class FarAwayRupture(Exception):
@@ -1003,7 +1003,8 @@ class ContextMaker(object):
             kctx, invs = self.collapser.collapse(ctxt, rup_indep)
             if invs is None:  # no collapse
                 for poes in self._gen_poes(ctxt):
-                    yield poes, ctxt[self.slc], numpy.arange(len(poes))
+                    invs = numpy.arange(len(poes), dtype=U32)
+                    yield poes, ctxt[self.slc], invs
             else:  # collapse
                 poes = numpy.concatenate(list(self._gen_poes(kctx)))
                 yield poes, ctxt, invs

@@ -161,7 +161,7 @@ if numba:
     t = numba.types
     sig = t.void(t.float64[:, :, :],                     # pmap
                  t.float64[:, :, :],                     # poes
-                 t.int64[:],                             # invs
+                 t.uint32[:],                            # invs
                  t.float64[:],                           # rates
                  t.float64[:, :],                        # probs_occur
                  t.uint32[:],                            # sids
@@ -170,7 +170,7 @@ if numba:
 
     sig = t.void(t.float64[:, :, :],                     # pmap
                  t.float64[:, :, :],                     # poes
-                 t.int64[:],                             # invs
+                 t.uint32[:],                            # invs
                  t.float64[:],                           # rates
                  t.float64[:, :],                        # probs_occur
                  t.float64[:],                           # weights
