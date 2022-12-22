@@ -260,7 +260,7 @@ def read_input(hparams, **extra):
     for trt, rlzs_by_gsim in gslt.get_rlzs_by_gsim_trt(n, s).items():
         hparams['mags'] = sorted(mags_by_trt[trt] or mags_by_trt['*'])
         cmakerdict[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, hparams)
-        cmakerdict[trt].start = start
+        cmakerdict[trt].gidx = numpy.arange(start, start + len(rlzs_by_gsim))
         start += len(rlzs_by_gsim)
     if rmfname:
         # for instance, for 2 TRTs with 5x2 GSIMs and ngmfs=10, the

@@ -393,7 +393,7 @@ class CompositeSourceModel:
             cmaker = ContextMaker(trts[trti], rlzs_by_gsim, oq)
             cmaker.tom = tom.PoissonTOM(oq.investigation_time)
             cmaker.trti = trti
-            cmaker.start = start
+            cmaker.gidx = numpy.arange(start, start + len(rlzs_by_gsim))
             cmaker.grp_id = grp_id
             start += len(rlzs_by_gsim)
             cmakers.append(cmaker)
