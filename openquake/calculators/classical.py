@@ -822,10 +822,10 @@ class ClassicalCalculator(base.HazardCalculator):
         poes_gb = self.datastore.getsize('_poes') / 1024**3
         if poes_gb < .1:
             ct = 1
-        elif poes_gb < 4:
-            ct = 2 * int(poes_gb) + 2
+        elif poes_gb < 2:
+            ct = int(poes_gb * 10)
         else:
-            ct = int(poes_gb) + 4  # number of tasks > number of GB
+            ct = int(poes_gb) + 18  # number of tasks > number of GB
         if ct > 1:
             logging.info('Producing %d postclassical tasks', ct)
         self.weights = ws = [rlz.weight for rlz in self.realizations]
