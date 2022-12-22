@@ -22,7 +22,6 @@ import copy
 import time
 import logging
 import warnings
-import operator
 import itertools
 import collections
 from unittest.mock import patch
