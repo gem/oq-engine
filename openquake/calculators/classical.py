@@ -552,12 +552,13 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.create_dset('_poes/slice_by_sid', slice_dt)
         # NB: compressing the dataset causes a big slowdown in writing :-(
 
-    def check_memory(self, N, L, max_gs, maxw):
+    def check_memory(self, N, L, maxw):
         """
         Log the memory required to receive the largest ProbabilityMap,
         assuming all sites are affected (upper limit)
         """
-        num_gs = [len(cm.gsims) for cm in self.haz.cmakers]
+        num_gs = [len(cm.gsims) for cm in self.cmakers]
+        max_gs = max(num_gs)
         maxsize = get_maxsize(len(self.oqparam.imtls), max_gs)
         logging.info('Considering {:_d} contexts at once'.format(maxsize))
         size = max_gs * N * L * 8
@@ -600,6 +601,13 @@ class ClassicalCalculator(base.HazardCalculator):
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
 
+        if oq.collapse_level >= 0:
+            self.cmakers = []
+            for cm in self.haz.cmakers:
+                self.cmakers.extend(cm.split_by_gsim())
+        else:
+            self.cmakers = self.haz.cmakers
+
         t0 = time.time()
         req = get_pmaps_gb(self.datastore)
         ntiles = 1 + int(req / (oq.pmap_max_gb * 30))  # 30 GB
@@ -607,8 +615,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if ntiles > 1:
             self.execute_seq(maxw, ntiles)
         else:  # regular case
-            max_gs = max(len(cm.gsims) for cm in self.haz.cmakers)
-            self.check_memory(len(self.sitecol), oq.imtls.size, max_gs, maxw)
+            self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_par(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
@@ -648,14 +655,8 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         allargs = []
-        cmakers = []
-        if oq.collapse_level >= 0:
-            for cm in self.haz.cmakers:
-                cmakers.extend(cm.split_by_gsim())
-        else:
-            cmakers = self.haz.cmakers
-        self.cmakers_split = len(cmakers) > len(self.haz.cmakers)
-        for cm in cmakers:
+        self.cmakers_split = len(self.cmakers) > len(self.haz.cmakers)
+        for cm in self.cmakers:
             G = len(cm.gsims)
             sg = self.csm.src_groups[cm.grp_id]
 
