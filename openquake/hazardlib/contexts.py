@@ -1155,14 +1155,18 @@ class ContextMaker(object):
         cmakers = []
         for g, gsim in zip(self.gidx, self.gsims):
             gsim.g = g
-            gsim.dists = tuple(sorted(gsim.REQUIRES_DISTANCES))
-        for dists, gsims in groupby(
-                self.gsims, operator.attrgetter('dists')).items():
+        for dists, gsims in groupby(self.gsims, by_dists).items():
             cm = self.__class__(self.trt, gsims, self.oq)
             cm.gidx = numpy.array([gsim.g for gsim in gsims])
             cm.grp_id = self.grp_id
+            if len(dists) >= 3:  # don't collapse
+                cm.collapse_level = -1
             cmakers.append(cm)
         return cmakers
+
+
+def by_dists(gsim):
+    return tuple(sorted(gsim.REQUIRES_DISTANCES))
 
 
 # see contexts_tests.py for examples of collapse
