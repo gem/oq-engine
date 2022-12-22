@@ -31,7 +31,7 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
-    sqrscale)
+    sqrscale, groupby)
 from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -57,6 +57,8 @@ STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
+NUM_BINS = 256
+DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MULTIPLIER = 200  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
@@ -65,6 +67,12 @@ STD = 1
 # communication, 10 August 2018)
 cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
+
+
+def round_dist(dst):
+    idx = numpy.searchsorted(DIST_BINS, dst)
+    idx[idx == NUM_BINS] -= 1
+    return DIST_BINS[idx]
 
 
 def is_modifiable(gsim):
@@ -162,7 +170,28 @@ def kround1(ctx, kfields):
     return out
 
 
-kround = {0: kround0, 1: kround1}
+def kround2(ctx, kfields):
+    kdist = 5. * ctx.mag**2
+    close = ctx.rrup < kdist
+    far = ~close
+    out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
+    for kfield in kfields:
+        kval = ctx[kfield]
+        if kfield in KNOWN_DISTANCES:
+            out[kfield][close] = numpy.round(kval[close], 1)  # round to 1 km
+            out[kfield][far] = round_dist(kval[far])  # round more
+        elif kfield == 'vs30':
+            out[kfield][close] = numpy.round(kval[close])  # round less
+            out[kfield][far] = numpy.round(kval[far], 1)  # round more
+        elif kval.dtype == F64 and kfield != 'mag':
+            out[kfield][close] = F16(kval[close])  # round less
+            out[kfield][far] = numpy.round(kval[far])  # round more
+        else:
+            out[kfield] = ctx[kfield]
+    return out
+
+
+kround = {0: kround0, 1: kround1, 2: kround2}
 
 
 class Collapser(object):
@@ -1123,13 +1152,20 @@ class ContextMaker(object):
         if len(self.gsims) == 1:
             return [self]
         cmakers = []
-        for g, gsim in enumerate(self.gsims):
-            cm = self.__class__(self.trt, [gsim], self.oq)
-            cm.start = self.start + g
-            cm.gsim_idx = g
+        for g, gsim in zip(self.gidx, self.gsims):
+            gsim.g = g
+        for dists, gsims in groupby(self.gsims, by_dists).items():
+            cm = self.__class__(self.trt, gsims, self.oq)
+            cm.gidx = numpy.array([gsim.g for gsim in gsims])
             cm.grp_id = self.grp_id
+            if len(dists) >= 3:  # don't collapse
+                cm.collapse_level = -1
             cmakers.append(cm)
         return cmakers
+
+
+def by_dists(gsim):
+    return tuple(sorted(gsim.REQUIRES_DISTANCES))
 
 
 # see contexts_tests.py for examples of collapse
@@ -1619,6 +1655,7 @@ def read_cmakers(dstore, full_lt=None):
     start = 0
     aftershock = 'delta_rates' in dstore
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
+        G = len(rlzs_by_gsim)
         trti = trt_smrs[grp_id][0] // num_eff_rlzs
         trt = trts[trti]
         if ('amplification' in oq.inputs and
@@ -1634,10 +1671,10 @@ def read_cmakers(dstore, full_lt=None):
             cmaker.deltagetter = DeltaRatesGetter(dstore)
         cmaker.tom = valid.occurrence_model(toms[grp_id])
         cmaker.trti = trti
-        cmaker.start = start
+        cmaker.gidx = numpy.arange(start, start + G)
         cmaker.grp_id = grp_id
         cmaker.weight = weight[grp_id]
-        start += len(rlzs_by_gsim)
+        start += G
         cmakers.append(cmaker)
     return cmakers
 

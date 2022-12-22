@@ -57,20 +57,18 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
 disagg_grp_dt = numpy.dtype([
-    ('grp_start', U16), ('grp_trt', hdf5.vstr), ('avg_poe', F32),
-    ('nsites', U32)])
+    ('grp_trt', hdf5.vstr), ('avg_poe', F32), ('nsites', U32)])
 slice_dt = numpy.dtype([('sid', U32), ('start', int), ('stop', int)])
 
 
-def get_pmaps_gb(dstore, ct):
+def get_pmaps_gb(dstore):
     """
     :returns: memory required on the master node to keep the pmaps
     """
     N = len(dstore['sitecol'])
     L = dstore['oqparam'].imtls.size
     cmakers = read_cmakers(dstore)
-    maxw = sum(cm.weight for cm in cmakers) / (ct or 1)
-    num_gs = [len(cm.gsims) for cm in cmakers if cm.weight > maxw]
+    num_gs = [len(cm.gsims) for cm in cmakers]
     return sum(num_gs) * N * L * 8 / 1024**3
 
 
@@ -224,7 +222,7 @@ def classical(srcs, sitecol, cmaker, monitor):
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
     result['pnemap'] = ~pmap.remove_zeros()
-    result['pnemap'].start = cmaker.start
+    result['pnemap'].gidx = cmaker.gidx
     return result
 
 
@@ -341,25 +339,25 @@ class Hazard:
         self.acc = AccumDict(accum={})
         self.offset = 0
 
-    def get_hcurves(self, pmap, rlzs_by_gsim):  # used in in disagg_by_src
+    def get_hcurves(self, pmap, cmaker):  # used in in disagg_by_src
         """
         :param pmap: a ProbabilityMap
-        :param rlzs_by_gsim: a dictionary gsim -> rlz IDs
+        :param cmaker: a ContextMaker
         :returns: an array of PoEs of shape (N, R, M, L)
         """
         res = numpy.zeros((self.N, self.R, self.imtls.size))
+        dic = dict(zip(cmaker.gidx, cmaker.gsims.values()))
         for sid, arr in zip(pmap.sids, pmap.array):
-            for gsim_idx, rlzis in enumerate(rlzs_by_gsim.values()):
-                for rlz in rlzis:
-                    res[sid, rlz] = agg_probs(res[sid, rlz], arr[:, gsim_idx])
+            for i, g in enumerate(pmap.gidx):
+                for rlz in dic[g]:
+                    res[sid, rlz] = agg_probs(res[sid, rlz], arr[:, i])
         return res.reshape(self.N, self.R, len(self.imtls), -1)
 
-    def store_poes(self, grp_id, pmap):
+    def store_poes(self, g, pmap):
         """
         Store the pmap of the given group inside the _poes dataset
         """
-        start = pmap.start
-        arr = 1. - pmap.array
+        arr = 1. - pmap.array[:, :, 0]
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence, however that probability
         # cannot be exactly 1 unless the level is exactly 0. Numerically, the
@@ -370,24 +368,23 @@ class Hazard:
         # with .9999999999999999 (the float64 closest to 1).
         arr[arr == 1.] = .9999999999999999
         # arr[arr < 1E-5] = 0.  # minimum_poe
-        idxs, lids, gids = arr.nonzero()
+        idxs, lids = arr.nonzero()
+        gids = numpy.repeat(g, len(idxs))
         if len(idxs):
             sids = pmap.sids[idxs]
             hdf5.extend(self.datastore['_poes/sid'], sids)
-            hdf5.extend(self.datastore['_poes/gid'], gids + start)
+            hdf5.extend(self.datastore['_poes/gid'], gids)
             hdf5.extend(self.datastore['_poes/lid'], lids)
-            hdf5.extend(self.datastore['_poes/poe'], arr[idxs, lids, gids])
+            hdf5.extend(self.datastore['_poes/poe'], arr[idxs, lids])
             sbs = build_slice_by_sid(sids, self.offset)
             hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
             self.offset += len(sids)
-        self.acc[grp_id]['grp_start'] = start
-        self.acc[grp_id]['avg_poe'] = arr.mean(axis=(0, 2))@self.level_weights
-        self.acc[grp_id]['nsites'] = len(pmap.sids)
+        self.acc[g]['avg_poe'] = arr.mean(axis=0) @ self.level_weights
+        self.acc[g]['nsites'] = len(pmap.sids)
 
     def store_disagg(self, pmaps=None):
         """
         Store data inside disagg_by_grp (optionally disagg_by_src)
-        """
         n = len(self.full_lt.sm_rlzs)
         lst = []
         for grp_id, indices in enumerate(self.datastore['trt_smrs']):
@@ -395,17 +392,16 @@ class Hazard:
             if dic:
                 trti, smrs = numpy.divmod(indices, n)
                 trt = self.full_lt.trts[trti[0]]
-                lst.append((dic['grp_start'], trt, dic['avg_poe'],
-                            dic['nsites']))
+                lst.append((trt, dic['avg_poe'], dic['nsites']))
         self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
+        """
         if pmaps:  # called inside a loop
             disagg_by_src = self.datastore['disagg_by_src'][()]
             for key, pmap in pmaps.items():
                 if isinstance(key, str):
                     # in case of disagg_by_src key is a source ID
-                    rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
                     disagg_by_src[..., self.srcidx[key]] = (
-                        self.get_hcurves(pmap, rlzs_by_gsim))
+                        self.get_hcurves(pmap, self.cmakers[pmap.grp_id]))
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
@@ -449,6 +445,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if dic is None:
             raise MemoryError('You ran out of memory!')
 
+        oq = self.oqparam
         sdata = dic['source_data']
         self.source_data += sdata
         grp_id = dic.pop('grp_id')
@@ -461,27 +458,25 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']):
+            assert not self.cmakers_split
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
         pnemap = dic['pnemap']  # probabilities of no exceedence
-        pnemap.grp_id = grp_id
         pmap_by_src = dic.pop('pmap_by_src', {})
         # len(pmap_by_src) > 1 only for mutex sources, see contexts.py
         for source_id, pm in pmap_by_src.items():
             # store the poes for the given source
             acc[source_id] = pm
             pm.grp_id = grp_id
-        if pnemap and grp_id in acc:
-            acc[grp_id].update(pnemap)
-        elif pnemap:
-            with self.monitor('storing PoEs', measuremem=True):
-                self.haz.store_poes(grp_id, pnemap)
-            return acc
-        self.n_outs[grp_id] -= 1
-        if self.n_outs[grp_id] == 0:  # no other tasks for this grp_id
-            with self.monitor('storing PoEs', measuremem=True):
-                self.haz.store_poes(grp_id, acc.pop(grp_id))
+            pm.gidx = pnemap.gidx
+        for i, g in enumerate(pnemap.gidx):
+            if g in acc:
+                acc[g].update(pnemap, i)
+            self.n_outs[g] -= 1
+            if self.n_outs[g] == 0:  # no other tasks for this g
+                with self.monitor('storing PoEs', measuremem=True):
+                    self.haz.store_poes(g, acc.pop(g))
         return acc
 
     def create_dsets(self):
@@ -562,13 +557,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Log the memory required to receive the largest ProbabilityMap,
         assuming all sites are affected (upper limit)
         """
-        num_gs = []
-        for cm in self.haz.cmakers:
-            sg = self.csm.src_groups[cm.grp_id]
-            if sg.atomic or sg.weight <= maxw:
-                pass  # no need to keep the group in memory
-            else:
-                num_gs.append(len(cm.gsims))
+        num_gs = [len(cm.gsims) for cm in self.haz.cmakers]
         maxsize = get_maxsize(len(self.oqparam.imtls), max_gs)
         logging.info('Considering {:_d} contexts at once'.format(maxsize))
         size = max_gs * N * L * 8
@@ -612,7 +601,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        req = get_pmaps_gb(self.datastore, oq.concurrent_tasks)
+        req = get_pmaps_gb(self.datastore)
         ntiles = 1 + int(req / (oq.pmap_max_gb * 30))  # 30 GB
         self.n_outs = AccumDict(accum=0)
         if ntiles > 1:
@@ -655,11 +644,18 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Run a subset of sites and update the accumulator
         """
-        acc = {}
+        acc = {}  # g -> pmap
         oq = self.oqparam
         L = oq.imtls.size
         allargs = []
-        for cm in self.haz.cmakers:
+        cmakers = []
+        if oq.collapse_level >= 0:
+            for cm in self.haz.cmakers:
+                cmakers.extend(cm.split_by_gsim())
+        else:
+            cmakers = self.haz.cmakers
+        self.cmakers_split = len(cmakers) > len(self.haz.cmakers)
+        for cm in cmakers:
             G = len(cm.gsims)
             sg = self.csm.src_groups[cm.grp_id]
 
@@ -676,14 +672,15 @@ class ClassicalCalculator(base.HazardCalculator):
                 ntiles = 1
                 tiles = [sitecol]  # do not split
 
+            # preallocate memory
+            for g in cm.gidx:
+                acc[g] = ProbabilityMap(sitecol.sids, L, 1).fill(1)
             if sg.atomic or sg.weight <= maxw:
                 for tile in tiles:
+                    for g in cm.gidx:
+                        self.n_outs[g] += 1
                     allargs.append((sg, tile, cm))
             else:
-                # only heavy groups preallocate memory
-                acc[cm.grp_id] = ProbabilityMap(
-                    sitecol.sids, oq.imtls.size, len(cm.gsims)).fill(1)
-                acc[cm.grp_id].start = cm.start
                 if oq.disagg_by_src:  # possible only with a single tile
                     blks = groupby(sg, basename).values()
                 else:
@@ -692,8 +689,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
                     for tile in tiles:
-                        self.n_outs[cm.grp_id] += 1
+                        for g in cm.gidx:
+                            self.n_outs[g] += 1
                         allargs.append((block, tile, cm))
+
         allargs.sort(key=lambda tup: sum(src.weight for src in tup[0]),
                      reverse=True)
         self.datastore.swmr_on()  # must come before the Starmap

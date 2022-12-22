@@ -119,7 +119,7 @@ def get_cs_out(cmaker, ctx, imti, imls, _c=None):
     P = len(imls)
 
     # This is the output dictionary as explained above
-    out = outdict(M, N, P, cmaker.start, cmaker.start + G)
+    out = outdict(M, N, P, cmaker.gidx.min(), cmaker.gidx.max() + 1)
 
     mean_stds = cmaker.get_mean_stds([ctx])  # (4, G, M, N*U)
     imt_ref = cmaker.imts[imti]
@@ -137,10 +137,10 @@ def get_cs_out(cmaker, ctx, imti, imls, _c=None):
         probs = cmaker.tom.get_probability_one_or_more_occurrences(
             ctx.occurrence_rate)  # shape N * U
     # For every GMM
-    for g in range(G):
-        _cs_out(mean_stds[:, g], probs, rho, imti, imls, cmaker.poes,
+    for i, g in enumerate(cmaker.gidx):
+        _cs_out(mean_stds[:, i], probs, rho, imti, imls, cmaker.poes,
                 cmaker.phi_b, cmaker.investigation_time,
-                out[cmaker.start + g], _c if _c is not None else None)
+                out[g], _c if _c is not None else None)
     return out
 
 
