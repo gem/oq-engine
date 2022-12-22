@@ -178,7 +178,7 @@ if numba:
                  t.float64)                              # itime
     update_pmap_m = compile(sig)(update_pmap_m)
 
-    sig = t.void(t.float64[:, :, :],                     # pmap
+    sig = t.void(t.float64[:, :],                        # pmap
                  t.uint32[:],                            # idxs
                  t.float64[:, :])                        # pnes
     update_pnes = compile(sig)(update_pnes)
@@ -273,7 +273,8 @@ class ProbabilityMap(object):
         Multiply by the probabilities of no exceedence
         """
         # assume other.sids are a subset of self.sids
-        update_pnes(self.array, self.sidx[other.sids], other.array[:, :, i])
+        update_pnes(self.array[:, :, 0], self.sidx[other.sids],
+                    other.array[:, :, i])
         return self
 
     def update_(self, poes, invs, ctxt, itime, rup_indep):

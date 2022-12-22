@@ -469,7 +469,8 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[source_id] = pm
             pm.grp_id = grp_id
         for i, g in enumerate(pnemap.gidx):
-            acc[g].update(pnemap, i)
+            if g in acc:
+                acc[g].update(pnemap, i)
             self.n_outs[g] -= 1
             if self.n_outs[g] == 0:  # no other tasks for this g
                 with self.monitor('storing PoEs', measuremem=True):
