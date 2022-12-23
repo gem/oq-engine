@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Huge improvement of the task distribution when using zmq; also, used
+    less memory on the master node
   * Fixed context collapsing in the multi-site case
   * Optimised postclassical, both in terms of memory in the master node
     and reading performance in the workers
