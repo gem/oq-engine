@@ -282,8 +282,11 @@ def get_params(job_ini, kw={}):
     # put source_model_logic_tree_file on top of the items so that
     # oq-risk-tests alaska, which has a smmLT.zip file works, since
     # it is unzipped before and therefore the files can be read later
-    fname = dic.pop('source_model_logic_tree_file')
-    items = [('source_model_logic_tree_file', fname)] + list(dic.items())
+    if 'source_model_logic_tree_file' in dic:
+        fname = dic.pop('source_model_logic_tree_file')
+        items = [('source_model_logic_tree_file', fname)] + list(dic.items())
+    else:
+        items = list(dic.items())
     _update(params, items, base_path)
 
     if input_zip:
