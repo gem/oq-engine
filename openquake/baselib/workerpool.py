@@ -38,7 +38,7 @@ def _streamer(ctrl_port):
     task_input_url = 'tcp://0.0.0.0:%d' % (ctrl_port + 2)
     task_output_url = 'tcp://%s:%s' % (config.dbserver.listen, ctrl_port + 1)
     if (general.socket_ready(('0.0.0.0', ctrl_port + 1)) or
-        general.socket_ready(('0.0.0.0', ctrl_port + 2))):
+            general.socket_ready(('0.0.0.0', ctrl_port + 2))):
         return  # already started
     sock_in = z.bind(task_input_url, z.zmq.PULL)
     sock_out = z.bind(task_output_url, z.zmq.PUSH)
@@ -74,8 +74,9 @@ class WorkerMaster(object):
         self.zworkers = zworkers
         # NB: receiver_ports is not used but needed for compliance
         self.ctrl_port = int(zworkers.ctrl_port)
-        self.host_cores = ([hc.split() for hc in zworkers.host_cores.split(',')]
-                           if zworkers.host_cores else [])
+        self.host_cores = (
+            [hc.split() for hc in zworkers.host_cores.split(',')]
+            if zworkers.host_cores else [])
         for host, cores in self.host_cores:
             if int(cores) < -1:
                 raise InvalidFile('openquake.cfg: found %s %s' %
