@@ -9,7 +9,6 @@ xmlns:gml="http://www.opengis.net/gml"
     >
         <sourceGroup
         name="Nankai"
-        grp_probability="1.0"
         rup_interdep="indep"
         src_interdep="mutex"
         srcs_weights="0.625 0.375"
