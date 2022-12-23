@@ -197,7 +197,6 @@ import multiprocessing.shared_memory as shmem
 from multiprocessing.connection import wait
 import subprocess
 import psutil
-import threading
 import numpy
 try:
     from setproctitle import setproctitle
@@ -218,6 +217,14 @@ sys.setrecursionlimit(2000)  # raised to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
 GB = 1024 ** 3
+host_cores = config.zworkers.host_cores.split(',')
+
+
+def debug(msg, mon):
+    """
+    Trivial task useful for debugging
+    """
+    print(msg)
 
 
 @submit.add('no')
@@ -239,13 +246,13 @@ def threadpool_submit(self, func, args, monitor):
 
 @submit.add('zmq')
 def zmq_submit(self, func, args, monitor):
-    if not hasattr(self, 'sender'):
-        dbhost = config.dbserver.host
-        port = int(config.zworkers.ctrl_port) + 2
-        task_input_url = 'tcp://%s:%d' % (dbhost, port)
-        self.sender = Socket(
-            task_input_url, zmq.PUSH, 'connect').__enter__()
-    return self.sender.send((func, args, self.task_no, monitor))
+    idx = self.task_no % len(host_cores)
+    if not hasattr(self, 'senders'):  # the first time
+        port = int(config.zworkers.ctrl_port)
+        urls = ['tcp://%s:%d' % (hc.split()[0], port) for hc in host_cores]
+        self.senders = [Socket(url, zmq.REQ, 'connect').__enter__()
+                        for url in urls]
+    return self.senders[idx].send((func, args, self.task_no, monitor))
 
 
 @submit.add('ipp')
@@ -1004,7 +1011,7 @@ def multispawn(func, allargs, num_cores=Starmap.num_cores):
     Spawn processes with the given arguments
     """
     allargs = allargs[::-1]  # so that the first argument is submitted first
-    procs = {} # sentinel -> process
+    procs = {}  # sentinel -> process
     while allargs:
         args = allargs.pop()
         proc = mp_context.Process(target=func, args=args)
@@ -1028,13 +1035,6 @@ def workers_start(zworkers):
     """
     Start the remote workers with ssh
     """
-    # start task_in->task_server streamer thread
-    port = int(zworkers.ctrl_port)
-    threading.Thread(
-        target=workerpool._streamer, args=(port,), daemon=True
-    ).start()
-    logging.warning('Task streamer started on ports %d->%d', port+2, port+1)
-
     for host, cores, args in workerpool.ssh_args(zworkers):
         url = 'tcp://0.0.0.0:%s' % zworkers.ctrl_port
         args += ['-m', 'openquake.baselib.workerpool', url, '-n', cores]
