@@ -171,14 +171,16 @@ def kround1(ctx, kfields):
 
 
 def kround2(ctx, kfields):
-    kdist = 5. * ctx.mag**2
+    kdist = 5. * ctx.mag**2  # from 80 to 500 km
     close = ctx.rrup < kdist
     far = ~close
     out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
     for kfield in kfields:
         kval = ctx[kfield]
-        if kfield in KNOWN_DISTANCES:
-            out[kfield][close] = numpy.round(kval[close], 1)  # round to 1 km
+        if kfield == 'rx':   # can be negative
+            out[kfield] = numpy.round(kval)
+        elif kfield in KNOWN_DISTANCES:
+            out[kfield][close] = numpy.round(kval[close])  # round to 1 km
             out[kfield][far] = round_dist(kval[far])  # round more
         elif kfield == 'vs30':
             out[kfield][close] = numpy.round(kval[close])  # round less
