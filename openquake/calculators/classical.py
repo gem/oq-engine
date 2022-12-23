@@ -654,8 +654,9 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = {}  # g -> pmap
         oq = self.oqparam
         L = oq.imtls.size
-        allargs = []
         self.cmakers_split = len(self.cmakers) > len(self.haz.cmakers)
+        self.datastore.swmr_on()  # must come before the Starmap
+        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         for cm in self.cmakers:
             G = len(cm.gsims)
             sg = self.csm.src_groups[cm.grp_id]
@@ -680,27 +681,21 @@ class ClassicalCalculator(base.HazardCalculator):
                 for tile in tiles:
                     for g in cm.gidx:
                         self.n_outs[g] += 1
-                    allargs.append((sg, tile, cm))
+                    smap.submit((sg, tile, cm))
             else:
                 if oq.disagg_by_src:  # possible only with a single tile
                     blks = groupby(sg, basename).values()
                 else:
-                    blks = block_splitter(sg, maxw, get_weight)
+                    blks = block_splitter(sg, maxw, get_weight, sort=True)
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
                     for tile in tiles:
                         for g in cm.gidx:
                             self.n_outs[g] += 1
-                        allargs.append((block, tile, cm))
+                        smap.submit((block, tile, cm))
 
-        allargs.sort(key=lambda tup: sum(src.weight for src in tup[0]),
-                     reverse=True)
-        self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        for args in allargs:
-            # using submit avoids the .task_queue and thus core starvation
-            smap.submit(args)
+        # using submit avoids the .task_queue and thus core starvation
         return smap.reduce(self.agg_dicts, acc)
 
     def store_info(self):
