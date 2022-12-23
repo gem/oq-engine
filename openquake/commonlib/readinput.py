@@ -275,8 +275,19 @@ def get_params(job_ini, kw={}):
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     cp = configparser.ConfigParser()
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
+    dic = {}
     for sect in cp.sections():
-        _update(params, cp.items(sect), base_path)
+        dic.update(cp.items(sect))
+
+    # put source_model_logic_tree_file on top of the items so that
+    # oq-risk-tests alaska, which has a smmLT.zip file works, since
+    # it is unzipped before and therefore the files can be read later
+    if 'source_model_logic_tree_file' in dic:
+        fname = dic.pop('source_model_logic_tree_file')
+        items = [('source_model_logic_tree_file', fname)] + list(dic.items())
+    else:
+        items = list(dic.items())
+    _update(params, items, base_path)
 
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
