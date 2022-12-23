@@ -1220,6 +1220,8 @@ class PmapMaker(object):
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
         self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         self.fewsites = self.N <= cmaker.max_sites_disagg
+        if hasattr(group, 'grp_probability'):
+            self.grp_probability = group.grp_probability
 
     def count_bytes(self, ctxs):
         # # usuful for debugging memory issues
@@ -1341,6 +1343,8 @@ class PmapMaker(object):
                     pmap.array += pm.array
                 else:
                     pmap.array = 1. - (1-pmap.array) * (1-pm.array)
+            if self.src_mutex:
+                pmap.array = self.grp_probability * pmap.array
         else:
             self._make_src_indep(pmap)
         dic['cfactor'] = self.cmaker.collapser.cfactor
