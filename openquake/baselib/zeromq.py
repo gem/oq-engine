@@ -15,6 +15,20 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Here is the simplest client-server you can build with zeromq:
+
+# client
+with Socket('tcp://0.0.0.0:8000', zmq.REQ, 'connect') as sock:
+    for char in 'abc':
+        sock.send(char)
+
+# server
+with Socket('tcp://0.0.0.0:8000', zmq.REP, 'bind') as sock:
+    for msg in sock:
+        print(msg)
+        sock.send('ok')  # mandatory!
+"""
 import re
 import zmq
 import time
