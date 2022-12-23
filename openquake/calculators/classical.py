@@ -697,7 +697,10 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs.sort(key=lambda tup: sum(src.weight for src in tup[0]),
                      reverse=True)
         self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
+        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        for args in allargs:
+            # using submit avoids the .task_queue and thus core starvation
+            smap.submit(args)
         return smap.reduce(self.agg_dicts, acc)
 
     def store_info(self):
