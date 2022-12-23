@@ -17,12 +17,10 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
-import signal
 import shutil
 import getpass
 import tempfile
 import subprocess
-import multiprocessing
 import psutil
 from openquake.baselib import (
     zeromq as z, general, parallel, config, sap, InvalidFile)
@@ -163,34 +161,24 @@ class WorkerMaster(object):
         return 'restarted'
 
 
-def worker(sock, executing):
-    """
-    :param sock: a zeromq.Socket of kind PULL
-    :param executing: a path inside /tmp/calc_XXX
-    """
-    setproctitle('oq-zworker')
-    with sock:
-        for cmd, args, taskno, mon in sock:
-            fname = os.path.join(executing, '%s-%s' % (mon.calc_id, taskno))
-            # NB: very hackish way of keeping track of the running tasks,
-            # used in get_executing, could litter the file system
-            open(fname, 'w').close()
-            parallel.safely_call(cmd, args, taskno, mon)
-            os.remove(fname)
+def call(func, args, taskno, mon, executing):
+    fname = os.path.join(executing, '%s-%s' % (mon.calc_id, taskno))
+    # NB: very hackish way of keeping track of the running tasks,
+    # used in get_executing, could litter the file system
+    open(fname, 'w').close()
+    parallel.safely_call(func, args, taskno, mon)
+    os.remove(fname)
 
 
 class WorkerPool(object):
     """
-    A pool of workers accepting the command 'stop' and 'kill' and reading
-    tasks to perform from the task_server_url.
+    A pool of workers accepting various commands.
 
     :param ctrl_url: zmq address of the control socket
     :param num_workers: the number of workers (or -1)
     """
     def __init__(self, ctrl_url, num_workers=-1):
         self.ctrl_url = ctrl_url
-        self.task_server_url = 'tcp://%s:%s' % (
-            config.dbserver.host, int(config.zworkers.ctrl_port) + 1)
         if num_workers == -1:
             try:
                 self.num_workers = len(psutil.Process().cpu_affinity())
@@ -208,21 +196,12 @@ class WorkerPool(object):
         title = 'oq-zworkerpool %s' % self.ctrl_url[6:]  # strip tcp://
         print('Starting ' + title, file=sys.stderr)
         setproctitle(title)
-        # start workers
-        self.workers = []
-        for _ in range(self.num_workers):
-            sock = z.Socket(self.task_server_url, z.zmq.PULL, 'connect')
-            sock.proc = multiprocessing.Process(
-                target=worker, args=(sock, self.executing))
-            sock.proc.start()
-            self.workers.append(sock)
-
+        self.pool = general.mp.Pool(self.num_workers)
         # start control loop accepting the commands stop and kill
         with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
             for cmd in ctrlsock:
-                if cmd in ('stop', 'kill'):
-                    msg = getattr(self, cmd)()
-                    ctrlsock.send(msg)
+                if cmd == 'stop':
+                    ctrlsock.send(self.stop())
                     break
                 elif cmd == 'getpid':
                     ctrlsock.send(self.proc.pid)
@@ -230,27 +209,21 @@ class WorkerPool(object):
                     ctrlsock.send(self.num_workers)
                 elif cmd == 'get_executing':
                     ctrlsock.send(' '.join(sorted(os.listdir(self.executing))))
+                elif isinstance(cmd, tuple):
+                    self.pool.apply_async(call, cmd + (self.executing,))
+                    ctrlsock.send('submitted')
+                else:
+                    ctrlsock.send('unknown command')
         shutil.rmtree(self.executing)
 
     def stop(self):
         """
-        Send a SIGTERM to all worker processes
+        Terminate the pool
         """
-        for sock in self.workers:
-            os.kill(sock.proc.pid, signal.SIGTERM)
-        for sock in self.workers:
-            sock.proc.join()
+        self.pool.close()
+        self.pool.terminate()
+        self.pool.join()
         return 'WorkerPool %s stopped' % self.ctrl_url
-
-    def kill(self):
-        """
-        Send a SIGKILL to all worker processes
-        """
-        for sock in self.workers:
-            os.kill(sock.proc.pid, signal.SIGKILL)
-        for sock in self.workers:
-            sock.proc.join()
-        return 'WorkerPool %s killed' % self.ctrl_url
 
 
 def workerpool(worker_url='tcp://0.0.0.0:1909', *, num_workers: int = -1):
