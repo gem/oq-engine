@@ -147,6 +147,7 @@ class WorkerMaster(object):
 
 
 def call(func, args, taskno, mon, executing):
+    setproctitle('oq-zworker')
     fname = os.path.join(executing, '%s-%s' % (mon.calc_id, taskno))
     # NB: very hackish way of keeping track of the running tasks,
     # used in get_executing, could litter the file system
