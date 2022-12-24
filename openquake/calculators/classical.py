@@ -445,7 +445,6 @@ class ClassicalCalculator(base.HazardCalculator):
         if dic is None:
             raise MemoryError('You ran out of memory!')
 
-        oq = self.oqparam
         sdata = dic['source_data']
         self.source_data += sdata
         grp_id = dic.pop('grp_id')
@@ -655,6 +654,8 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         self.cmakers_split = len(self.cmakers) > len(self.haz.cmakers)
+        if oq.disagg_by_src and self.cmakers_split:
+            raise NotImplementedError('Cannot collapse with disagg_by_src')
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         for cm in self.cmakers:
