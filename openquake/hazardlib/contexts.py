@@ -422,7 +422,7 @@ class ContextMaker(object):
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=True)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
-        self.collapser.mon = monitor('collapsing contexts', measuremem=True)
+        self.collapser.mon = monitor('collapsing contexts', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
