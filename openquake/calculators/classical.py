@@ -671,7 +671,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 assert not (ntiles > 1 and oq.disagg_by_src)
                 # NB: tiling only works with many sites
                 tiles = sitecol.split(ntiles)
-                assert ntiles == 1 or self.N > oq.max_sites_disagg * ntiles
+                if ntiles > 1 and self.N < oq.max_sites_disagg * ntiles:
+                    raise RuntimeError('There are not enough sites (%d) for '
+                                       '%d tiles' % (self.N, ntiles))
             else:
                 ntiles = 1
                 tiles = [sitecol]  # do not split
