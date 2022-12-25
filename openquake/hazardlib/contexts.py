@@ -180,7 +180,7 @@ def kround2(ctx, kfields):
         if kfield == 'rx':   # can be negative
             out[kfield] = numpy.round(kval)
         elif kfield in KNOWN_DISTANCES:
-            out[kfield][close] = numpy.round(kval[close])  # round to 1 km
+            out[kfield][close] = numpy.ceil(kval[close])  # round to 1 km
             out[kfield][far] = round_dist(kval[far])  # round more
         elif kfield == 'vs30':
             out[kfield][close] = numpy.round(kval[close])  # round less
