@@ -1164,6 +1164,9 @@ class ContextMaker(object):
             cm.gidx = numpy.array([gsim.g for gsim in gsims])
             cm.grp_id = self.grp_id
             cm.collapser.cfactor = self.collapser.cfactor
+            for attr in dir(self):
+                if attr.endswith('_mon'):
+                    setattr(cm, attr, getattr(self, attr))
             cmakers.append(cm)
         return cmakers
 
