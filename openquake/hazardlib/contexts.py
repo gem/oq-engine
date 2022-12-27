@@ -200,13 +200,12 @@ class Collapser(object):
     """
     Class managing the collapsing logic.
     """
-    def __init__(self, collapse_level, kfields, mon=Monitor()):
+    def __init__(self, collapse_level, kfields):
         self.collapse_level = collapse_level
         self.kfields = sorted(kfields)
         self.cfactor = numpy.zeros(3)
-        self.mon = mon
 
-    def collapse(self, ctx, rup_indep=True, collapse_level=None):
+    def collapse(self, ctx, mon, rup_indep, collapse_level=None):
         """
         Collapse a context recarray if possible.
 
@@ -223,7 +222,7 @@ class Collapser(object):
             self.cfactor[1] += len(ctx)
             self.cfactor[2] += 1
             return ctx, None
-        with self.mon:
+        with mon:
             krounded = kround[clevel](ctx, self.kfields)
             out, inv = numpy.unique(krounded, return_inverse=True)
         self.cfactor[0] += len(out)
@@ -405,10 +404,6 @@ class ContextMaker(object):
         dic['weight'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
-        kfields = (self.REQUIRES_DISTANCES |
-                   self.REQUIRES_RUPTURE_PARAMETERS |
-                   self.REQUIRES_SITES_PARAMETERS)
-        self.collapser = Collapser(self.collapse_level, kfields)
         self.shift_hypo = param.get('shift_hypo')
         self.set_imts_conv()
         self.init_monitoring(monitor)
@@ -422,9 +417,13 @@ class ContextMaker(object):
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=True)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
-        self.collapser.mon = monitor('collapsing contexts', measuremem=False)
+        self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
+        kfields = (self.REQUIRES_DISTANCES |
+                   self.REQUIRES_RUPTURE_PARAMETERS |
+                   self.REQUIRES_SITES_PARAMETERS)
+        self.collapser = Collapser(self.collapse_level, kfields)
 
     def restrict(self, imts):
         """
@@ -1002,7 +1001,7 @@ class ContextMaker(object):
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
-            kctx, invs = self.collapser.collapse(ctxt, rup_indep)
+            kctx, invs = self.collapser.collapse(ctxt, self.col_mon, rup_indep)
             if invs is None:  # no collapse
                 for poes in self._gen_poes(ctxt):
                     invs = numpy.arange(len(poes), dtype=U32)
@@ -1035,8 +1034,14 @@ class ContextMaker(object):
             itime = 0.
         else:
             itime = self.tom.time_span
+        start = 0
         for cm in self.split_by_gsim():
-            idx = cm.gidx - self.gidx[0]
+            try:
+                idx = cm.gidx - self.gidx[0]
+            except AttributeError:
+                stop = start + len(cm.gsims)
+                idx = range(start, stop)
+                start = stop
             for ctx in ctxs:
                 for poes, ctxt, invs in cm.gen_poes(ctx, rup_indep):
                     with self.pne_mon:
