@@ -197,7 +197,7 @@ class ClusterPoissonTOM(PoissonTOM):
         self.occurrence_rate = occurrence_rate
 
 
-@compile(["(float64, float64[:], float64[:,:], float64)",
+@compile(["(float64, float64[:], float64[:], float64)",
           "(float64, float64[:], float64[:,:,:,:], float64)"])
 def get_pnes(rate, probs, poes, time_span):
     """

@@ -1035,10 +1035,12 @@ class ContextMaker(object):
             itime = 0.
         else:
             itime = self.tom.time_span
-        for ctx in ctxs:
-            for poes, ctxt, invs in self.gen_poes(ctx, rup_indep):
-                with self.pne_mon:
-                    pmap.update_(poes, invs, ctxt, itime, rup_indep)
+        for cm in self.split_by_gsim():
+            idx = cm.gidx - self.gidx[0]
+            for ctx in ctxs:
+                for poes, ctxt, invs in cm.gen_poes(ctx, rup_indep):
+                    with self.pne_mon:
+                        pmap.update_(poes, invs, ctxt, itime, rup_indep, idx)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs):
@@ -1161,8 +1163,7 @@ class ContextMaker(object):
             cm = self.__class__(self.trt, gsims, self.oq)
             cm.gidx = numpy.array([gsim.g for gsim in gsims])
             cm.grp_id = self.grp_id
-            if len(dists) >= 3:  # don't collapse
-                cm.collapse_level = -1
+            cm.collapser.cfactor = self.collapser.cfactor
             cmakers.append(cm)
         return cmakers
 
