@@ -405,24 +405,6 @@ class Hazard:
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
-def decide_num_tasks(dstore, concurrent_tasks):
-    """
-    :param dstore: DataStore
-    :param concurrent_tasks: hint for the number of tasks to generate
-    """
-    cmakers = read_cmakers(dstore)
-    weights = [cm.weight for cm in cmakers]
-    maxw = 1.5*sum(weights) / concurrent_tasks
-    dtlist = [('grp_id', U16), ('tiles', U16)]
-    ntasks = []
-    for cm in sorted(cmakers, key=lambda cm: weights[cm.grp_id], reverse=True):
-        w = weights[cm.grp_id]
-        nt = int(numpy.ceil(w / maxw))
-        assert nt
-        ntasks.append((cm.grp_id, nt))
-    return numpy.array(ntasks, dtlist)
-
-
 @base.calculators.add('classical', 'ucerf_classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
@@ -637,7 +619,7 @@ class ClassicalCalculator(base.HazardCalculator):
         assert self.N > self.oqparam.max_sites_disagg, self.N
         logging.info('Running %d tiles', ntiles)
         for n, tile in enumerate(self.sitecol.split(ntiles)):
-            self.run_one(tile, maxw)
+            self.run_one(tile, maxw * .6)
             parallel.Starmap.shutdown()  # save memory
             logging.info('Finished tile %d of %d', n+1, ntiles)
 

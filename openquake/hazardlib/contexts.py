@@ -1159,7 +1159,7 @@ class ContextMaker(object):
         """
         Split the ContextMaker in multiple context makers, one per GSIM
         """
-        if len(self.gsims) == 1:
+        if self.collapse_level < 0 or len(self.gsims) == 1:
             return [self]
         cmakers = []
         for g, gsim in zip(self.gidx, self.gsims):
