@@ -457,7 +457,6 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']):
-            assert not self.cmakers_split
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
@@ -600,12 +599,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
 
-        if oq.collapse_level >= 0:
-            self.cmakers = []
-            for cm in self.haz.cmakers:
-                self.cmakers.extend(cm.split_by_gsim())
-        else:
-            self.cmakers = self.haz.cmakers
+        self.cmakers = self.haz.cmakers
 
         t0 = time.time()
         req = get_pmaps_gb(self.datastore)
@@ -654,9 +648,6 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = {}  # g -> pmap
         oq = self.oqparam
         L = oq.imtls.size
-        self.cmakers_split = len(self.cmakers) > len(self.haz.cmakers)
-        if oq.disagg_by_src and self.cmakers_split:
-            raise NotImplementedError('Cannot collapse with disagg_by_src')
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         for cm in self.cmakers:
