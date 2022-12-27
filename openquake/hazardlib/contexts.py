@@ -115,7 +115,7 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fit in the CPU cache
     """
-    maxs = TWO20 // (4*M*G)
+    maxs = TWO20 // (M*G)
     assert maxs > 1, maxs
     return maxs * MULTIPLIER
 
@@ -980,7 +980,7 @@ class ContextMaker(object):
             ctxt = ctx[slc]
             self.slc = slc  # used in gsim/base.py
             with self.poe_mon:
-                # this is allocating at most 2MB of RAM
+                # this is allocating at most few MB of RAM
                 poes = numpy.zeros((len(ctxt), M*L1, G))
                 # NB: using .empty would break the MixtureModelGMPETestCase
                 for g, gsim in enumerate(self.gsims):
