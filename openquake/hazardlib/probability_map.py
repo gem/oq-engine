@@ -142,7 +142,10 @@ class ProbabilityCurve(object):
 def update_pmap_i(arr, poes, inv, rates, probs_occur, idxs, itime):
     levels = range(arr.shape[1])
     for i, rate, probs, idx in zip(inv, rates, probs_occur, idxs):
-        if len(probs) == 0:
+        if itime == 0:  # FatedTOM
+            arr[idx] *= 1. - poes[i]
+        elif len(probs) == 0 and numba is not None:
+            # looping is faster than building arrays
             for lvl in levels:
                 arr[idx, lvl] *= math.exp(-rate * poes[i, lvl] * itime)
         else:
