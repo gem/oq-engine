@@ -59,7 +59,7 @@ KNOWN_DISTANCES = frozenset(
     .split())
 NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
-MULTIPLIER = 150  # len(mean_stds arrays) / len(poes arrays)
+MULTIPLIER = 100  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
 
@@ -115,7 +115,7 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fit in the CPU cache
     """
-    maxs = TWO20 // (M*G)
+    maxs = TWO20 // (2*M*G)
     assert maxs > 1, maxs
     return maxs * MULTIPLIER
 

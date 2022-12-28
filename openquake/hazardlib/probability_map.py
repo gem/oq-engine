@@ -285,12 +285,12 @@ class ProbabilityMap(object):
         probs_occur = getattr(ctxt, 'probs_occur',
                               numpy.zeros((len(ctxt), 0)))
         idxs = self.sidx[ctxt.sids]
-        for g, i in enumerate(idx):
+        for i, x in enumerate(idx):
             if rup_indep:
-                update_pmap_i(self.array[:, :, i], poes[:, :, g], invs, rates,
+                update_pmap_i(self.array[:, :, x], poes[:, :, i], invs, rates,
                               probs_occur, idxs, itime)
             else:  # mutex
-                update_pmap_m(self.array[:, :, i], poes[:, :, g],
+                update_pmap_m(self.array[:, :, x], poes[:, :, i],
                               invs, rates, probs_occur, ctxt.weight,
                               idxs, itime)
 
