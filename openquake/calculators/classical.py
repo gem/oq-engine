@@ -405,24 +405,6 @@ class Hazard:
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
-def decide_num_tasks(dstore, concurrent_tasks):
-    """
-    :param dstore: DataStore
-    :param concurrent_tasks: hint for the number of tasks to generate
-    """
-    cmakers = read_cmakers(dstore)
-    weights = [cm.weight for cm in cmakers]
-    maxw = 1.5*sum(weights) / concurrent_tasks
-    dtlist = [('grp_id', U16), ('tiles', U16)]
-    ntasks = []
-    for cm in sorted(cmakers, key=lambda cm: weights[cm.grp_id], reverse=True):
-        w = weights[cm.grp_id]
-        nt = int(numpy.ceil(w / maxw))
-        assert nt
-        ntasks.append((cm.grp_id, nt))
-    return numpy.array(ntasks, dtlist)
-
-
 @base.calculators.add('classical', 'ucerf_classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
@@ -457,7 +439,6 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']):
-            assert not self.cmakers_split
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
@@ -600,16 +581,11 @@ class ClassicalCalculator(base.HazardCalculator):
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
 
-        if oq.collapse_level >= 0:
-            self.cmakers = []
-            for cm in self.haz.cmakers:
-                self.cmakers.extend(cm.split_by_gsim())
-        else:
-            self.cmakers = self.haz.cmakers
+        self.cmakers = self.haz.cmakers
 
         t0 = time.time()
         req = get_pmaps_gb(self.datastore)
-        ntiles = 1 + int(req / (oq.pmap_max_gb * 35))  # 35 GB
+        ntiles = 1 + int(req / (oq.pmap_max_gb * 40))  # 40 GB
         self.n_outs = AccumDict(accum=0)
         if ntiles > 1:
             self.execute_seq(maxw, ntiles)
@@ -643,7 +619,7 @@ class ClassicalCalculator(base.HazardCalculator):
         assert self.N > self.oqparam.max_sites_disagg, self.N
         logging.info('Running %d tiles', ntiles)
         for n, tile in enumerate(self.sitecol.split(ntiles)):
-            self.run_one(tile, maxw)
+            self.run_one(tile, maxw * .75)
             parallel.Starmap.shutdown()  # save memory
             logging.info('Finished tile %d of %d', n+1, ntiles)
 
@@ -654,9 +630,6 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = {}  # g -> pmap
         oq = self.oqparam
         L = oq.imtls.size
-        self.cmakers_split = len(self.cmakers) > len(self.haz.cmakers)
-        if oq.disagg_by_src and self.cmakers_split:
-            raise NotImplementedError('Cannot collapse with disagg_by_src')
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         for cm in self.cmakers:

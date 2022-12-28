@@ -138,17 +138,16 @@ class ProbabilityCurve(object):
 
 
 # numbified below
-def update_pmap_i(arr, poes, invs, rates, probs_occur, idxs, itime):
-    for inv, rate, probs, idx in zip(invs, rates, probs_occur, idxs):
-        arr[idx] *= get_pnes(rate, probs, poes[inv], itime)  # shape (L, G)
+def update_pmap_i(arr, poes, inv, rates, probs_occur, idxs, itime):
+    for i, rate, probs, idx in zip(inv, rates, probs_occur, idxs):
+        arr[idx] *= get_pnes(rate, probs, poes[i], itime)  # shape L
 
 
 # numbified below
-def update_pmap_m(arr, poes, invs, rates, probs_occur, weights, idxs, itime):
-    for inv, rate, probs, wei, idx in zip(
-            invs, rates, probs_occur, weights, idxs):
-        pne = get_pnes(rate, probs, poes[inv], itime)  # shape (L, G)
-        arr[idx] += (1. - pne) * wei
+def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, idxs, itime):
+    for i, rate, probs, w, idx in zip(inv, rates, probs_occur, weights, idxs):
+        pne = get_pnes(rate, probs, poes[i], itime)  # shape L
+        arr[idx] += (1. - pne) * w
 
 
 # numbified below
@@ -159,8 +158,8 @@ def update_pnes(arr, idxs, pnes):
 
 if numba:
     t = numba.types
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.float64[:, :, :],                     # poes
+    sig = t.void(t.float64[:, :],                        # pmap
+                 t.float64[:, :],                        # poes
                  t.uint32[:],                            # invs
                  t.float64[:],                           # rates
                  t.float64[:, :],                        # probs_occur
@@ -168,8 +167,8 @@ if numba:
                  t.float64)                              # itime
     update_pmap_i = compile(sig)(update_pmap_i)
 
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.float64[:, :, :],                     # poes
+    sig = t.void(t.float64[:, :],                        # pmap
+                 t.float64[:, :],                        # poes
                  t.uint32[:],                            # invs
                  t.float64[:],                           # rates
                  t.float64[:, :],                        # probs_occur
@@ -277,7 +276,7 @@ class ProbabilityMap(object):
                     other.array[:, :, i])
         return self
 
-    def update_(self, poes, invs, ctxt, itime, rup_indep):
+    def update_(self, poes, invs, ctxt, itime, rup_indep, idx):
         """
         Update probabilities
         """
@@ -285,12 +284,14 @@ class ProbabilityMap(object):
         probs_occur = getattr(ctxt, 'probs_occur',
                               numpy.zeros((len(ctxt), 0)))
         idxs = self.sidx[ctxt.sids]
-        if rup_indep:
-            update_pmap_i(self.array, poes, invs, rates,
-                          probs_occur, idxs, itime)
-        else:  # mutex
-            update_pmap_m(self.array, poes, invs, rates, probs_occur,
-                          ctxt.weight, idxs, itime)
+        for i, x in enumerate(idx):
+            if rup_indep:
+                update_pmap_i(self.array[:, :, x], poes[:, :, i], invs, rates,
+                              probs_occur, idxs, itime)
+            else:  # mutex
+                update_pmap_m(self.array[:, :, x], poes[:, :, i],
+                              invs, rates, probs_occur, ctxt.weight,
+                              idxs, itime)
 
     def __invert__(self):
         return self.new(1. - self.array)
