@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import math
 import copy
 import numpy
 import pandas
@@ -139,13 +140,12 @@ class ProbabilityCurve(object):
 
 # numbified below
 def update_pmap_i(arr, poes, inv, rates, probs_occur, idxs, itime):
-    if len(probs_occur[0]) == 0:
-        ps = poes[inv]
-        for sid in numpy.unique(idxs):
-            ok = idxs == sid
-            arr[sid] *= numpy.exp(- rates[ok] @ ps[ok] * itime)
-    else:
-        for i, rate, probs, idx in zip(inv, rates, probs_occur, idxs):
+    levels = range(arr.shape[1])
+    for i, rate, probs, idx in zip(inv, rates, probs_occur, idxs):
+        if len(probs) == 0:
+            for lvl in levels:
+                arr[idx, lvl] *= math.exp(-rate * poes[i, lvl] * itime)
+        else:
             arr[idx] *= get_pnes(rate, probs, poes[i], itime)  # shape L
 
 
