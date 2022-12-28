@@ -139,8 +139,14 @@ class ProbabilityCurve(object):
 
 # numbified below
 def update_pmap_i(arr, poes, inv, rates, probs_occur, idxs, itime):
-    for i, rate, probs, idx in zip(inv, rates, probs_occur, idxs):
-        arr[idx] *= get_pnes(rate, probs, poes[i], itime)  # shape L
+    if len(probs_occur[0]) == 0:
+        ps = poes[inv]
+        for sid in numpy.unique(idxs):
+            ok = idxs == sid
+            arr[sid] *= numpy.exp(- rates[ok] @ ps[ok] * itime)
+    else:
+        for i, rate, probs, idx in zip(inv, rates, probs_occur, idxs):
+            arr[idx] *= get_pnes(rate, probs, poes[i], itime)  # shape L
 
 
 # numbified below
