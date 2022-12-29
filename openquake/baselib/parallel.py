@@ -248,14 +248,17 @@ def threadpool_submit(self, func, args, monitor):
 
 @submit.add('zmq')
 def zmq_submit(self, func, args, monitor):
-    host = getattr(monitor, 'host', None) or next(ihost)
+    host = getattr(monitor, 'host', None)
+    if host is None:
+        host = next(ihost)
+    else:
+        logging.debug('Sending task %d to %s', self.task_no, host)
     if not hasattr(self, 'sender'):  # the first time
         port = int(config.zworkers.ctrl_port)
         self.sender = {
             host: Socket(
                 'tcp://%s:%d' % (host, port), zmq.REQ, 'connect'
             ).__enter__() for host in hosts}
-    print('Sending task %d to %s' % (self.task_no, host))
     return self.sender[host].send((func, args, self.task_no, monitor))
 
 
@@ -386,7 +389,8 @@ class Result(object):
         self.mon = mon
         self.tb_str = tb_str
         self.msg = msg
-        self.workerid = (socket.gethostname(), os.getpid())
+        host_ip = socket.gethostbyname(socket.gethostname())
+        self.workerid = (host_ip, os.getpid())
 
     def get(self):
         """
