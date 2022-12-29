@@ -190,6 +190,7 @@ import inspect
 import logging
 import operator
 import traceback
+import itertools
 import collections
 from unittest import mock
 import multiprocessing.dummy
@@ -217,7 +218,8 @@ sys.setrecursionlimit(2000)  # raised to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
 GB = 1024 ** 3
-host_cores = config.zworkers.host_cores.split(',')
+hosts = [hc.split()[0] for hc in config.zworkers.host_cores.split(',')]
+ihost = itertools.cycle(hosts)
 
 
 def debug(msg, mon):
@@ -246,13 +248,15 @@ def threadpool_submit(self, func, args, monitor):
 
 @submit.add('zmq')
 def zmq_submit(self, func, args, monitor):
-    host_idx = getattr(monitor, 'host_idx', self.task_no % len(host_cores))
+    host = getattr(monitor, 'host', None) or next(ihost)
     if not hasattr(self, 'sender'):  # the first time
         port = int(config.zworkers.ctrl_port)
-        urls = ['tcp://%s:%d' % (hc.split()[0], port) for hc in host_cores]
-        self.sender = [Socket(url, zmq.REQ, 'connect').__enter__()
-                       for url in urls]
-    return self.sender[host_idx].send((func, args, self.task_no, monitor))
+        self.sender = {
+            host: Socket(
+                'tcp://%s:%d' % (host, port), zmq.REQ, 'connect'
+            ).__enter__() for host in hosts}
+    print('Sending task %d to %s' % (self.task_no, host))
+    return self.sender[host].send((func, args, self.task_no, monitor))
 
 
 @submit.add('ipp')
@@ -816,7 +820,7 @@ class Starmap(object):
             self.prev_percent = percent
         return done
 
-    def submit(self, args, func=None, host_idx=None):
+    def submit(self, args, func=None, host=None):
         """
         Submit the given arguments to the underlying task
         """
@@ -845,8 +849,8 @@ class Starmap(object):
                 fname = func.__name__
                 argnames = getargnames(func)[:-1]
             self.sent[fname] += {a: len(p) for a, p in zip(argnames, args)}
-        if host_idx is not None:
-            self.monitor.host_idx = host_idx
+        if host is not None:
+            self.monitor.host = host
         res = submit[dist](self, func, args, self.monitor)
         self.task_no += 1
         self.tasks.append(res)
@@ -888,13 +892,13 @@ class Starmap(object):
     def __iter__(self):
         return iter(self.submit_all())
 
-    def _submit_many(self, howmany, host_idx=None):
+    def _submit_many(self, howmany, host=None):
         for _ in range(howmany):
             if self.task_queue:
                 # remove in LIFO order
                 func, args = self.task_queue[0]
                 del self.task_queue[0]
-                self.submit(args, func=func, host_idx=host_idx)
+                self.submit(args, func, host)
                 self.todo += 1
 
     def _loop(self):
@@ -923,7 +927,7 @@ class Starmap(object):
             elif res.msg == 'TASK_ENDED':
                 self.busytime += {res.workerid: res.mon.duration}
                 self.todo -= 1
-                self._submit_many(1, getattr(res.mon, 'host_idx', None))
+                self._submit_many(1, res.workerid[0])
                 logging.debug('%d tasks running, %d in queue',
                               self.todo, len(self.task_queue))
                 yield res
