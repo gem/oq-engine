@@ -671,6 +671,7 @@ class ClassicalCalculator(base.HazardCalculator):
                             self.n_outs[g] += 1
                         allargs.append((block, tile, cm))
 
+        allargs.sort(key=lambda tup: sum(src.weight for src in tup[0]))
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         return smap.reduce(self.agg_dicts, acc)
