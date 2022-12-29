@@ -630,8 +630,7 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = {}  # g -> pmap
         oq = self.oqparam
         L = oq.imtls.size
-        self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        allargs = []
         for cm in self.cmakers:
             G = len(cm.gsims)
             sg = self.csm.src_groups[cm.grp_id]
@@ -658,7 +657,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 for tile in tiles:
                     for g in cm.gidx:
                         self.n_outs[g] += 1
-                    smap.submit((sg, tile, cm))
+                    allargs.append((sg, tile, cm))
             else:
                 if oq.disagg_by_src:  # possible only with a single tile
                     blks = groupby(sg, basename).values()
@@ -670,9 +669,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     for tile in tiles:
                         for g in cm.gidx:
                             self.n_outs[g] += 1
-                        smap.submit((block, tile, cm))
+                        allargs.append((block, tile, cm))
 
-        # using submit avoids the .task_queue and thus core starvation
+        self.datastore.swmr_on()  # must come before the Starmap
+        smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         return smap.reduce(self.agg_dicts, acc)
 
     def store_info(self):

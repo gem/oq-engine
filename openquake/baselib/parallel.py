@@ -246,13 +246,15 @@ def threadpool_submit(self, func, args, monitor):
 
 @submit.add('zmq')
 def zmq_submit(self, func, args, monitor):
-    idx = self.task_no % len(host_cores)
+    if not hasattr(monitor, 'host_idx'):
+        monitor.host_idx = self.task_no % len(host_cores)
     if not hasattr(self, 'senders'):  # the first time
         port = int(config.zworkers.ctrl_port)
         urls = ['tcp://%s:%d' % (hc.split()[0], port) for hc in host_cores]
         self.senders = [Socket(url, zmq.REQ, 'connect').__enter__()
                         for url in urls]
-    return self.senders[idx].send((func, args, self.task_no, monitor))
+    sender = self.senders[monitor.host_idx]
+    return sender.send((func, args, self.task_no, monitor))
 
 
 @submit.add('ipp')
@@ -506,6 +508,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
             sentbytes += len(res.pik)
             if res.msg == 'TASK_ENDED':
                 break
+
 
 if oq_distribute() == 'ipp':
     from ipyparallel import Cluster
@@ -815,7 +818,7 @@ class Starmap(object):
             self.prev_percent = percent
         return done
 
-    def submit(self, args, func=None):
+    def submit(self, args, func=None, host_idx=None):
         """
         Submit the given arguments to the underlying task
         """
@@ -844,6 +847,8 @@ class Starmap(object):
                 fname = func.__name__
                 argnames = getargnames(func)[:-1]
             self.sent[fname] += {a: len(p) for a, p in zip(argnames, args)}
+        if host_idx is not None:
+            self.monitor.host_idx = host_idx
         res = submit[dist](self, func, args, self.monitor)
         self.task_no += 1
         self.tasks.append(res)
@@ -885,13 +890,13 @@ class Starmap(object):
     def __iter__(self):
         return iter(self.submit_all())
 
-    def _submit_many(self, howmany):
+    def _submit_many(self, howmany, host_idx=None):
         for _ in range(howmany):
             if self.task_queue:
                 # remove in LIFO order
                 func, args = self.task_queue[0]
                 del self.task_queue[0]
-                self.submit(args, func=func)
+                self.submit(args, func=func, host_idx=host_idx)
                 self.todo += 1
 
     def _loop(self):
@@ -920,7 +925,7 @@ class Starmap(object):
             elif res.msg == 'TASK_ENDED':
                 self.busytime += {res.workerid: res.mon.duration}
                 self.todo -= 1
-                self._submit_many(1)
+                self._submit_many(1, getattr(res.mon, 'host_idx', None))
                 logging.debug('%d tasks running, %d in queue',
                               self.todo, len(self.task_queue))
                 yield res
