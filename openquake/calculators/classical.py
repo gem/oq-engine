@@ -620,7 +620,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Running %d tiles', ntiles)
         for n, tile in enumerate(self.sitecol.split(ntiles)):
             self.run_one(tile, maxw * .75)
-            parallel.Starmap.shutdown()  # save memory
+            logs.dbcmd('workers_restart')  # save memory
             logging.info('Finished tile %d of %d', n+1, ntiles)
 
     def run_one(self, sitecol, maxw):

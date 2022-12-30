@@ -1050,6 +1050,14 @@ def workers_stop(zworkers):
     return 'stopped'
 
 
+def workers_restart(zworkers):
+    """
+    Restart all the workers
+    """
+    workerpool.WorkerMaster(zworkers).restart()
+    return 'restarted'
+
+
 def workers_kill(zworkers):
     """
     Kill all the workers
