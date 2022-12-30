@@ -32,7 +32,7 @@ import numpy
 from openquake.baselib.general import DeprecationWarning
 from openquake.baselib.performance import compile
 from openquake.hazardlib import const
-from openquake.hazardlib.stats import truncnorm_sf
+from openquake.hazardlib.stats import ndtr
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, full_context, ContextMaker)
@@ -89,12 +89,20 @@ class AdaptedWarning(UserWarning):
 # collapse the ruptures, then truncnorm_sf will be called less times
 @compile("(float64[:,:,:], float64[:,:], float64, float64[:,:])")
 def _set_poes(mean_std, loglevels, phi_b, out):
+    z = phi_b * 2. - 1.
+    N = out.shape[1]
     L1 = loglevels.size // len(loglevels)
     for m, levels in enumerate(loglevels):
         mL1 = m * L1
         mea, std = mean_std[:, m]  # shape N
         for lvl, iml in enumerate(levels):
-            out[mL1 + lvl] = truncnorm_sf(phi_b, (iml - mea) / std)
+            for i in range(N):
+                val = (phi_b - ndtr((iml-mea[i]) / std[i])) / z
+                if val > 1.:
+                    val = 1.
+                elif val < 0.:
+                    val = 0.
+                out[mL1 + lvl, i] = val
 
 
 def _get_poes(mean_std, loglevels, phi_b):

@@ -42,7 +42,7 @@ def truncnorm_sf(phi_b, values):
     Fast survival function for truncated normal distribution.
     Assumes zero mean, standard deviation equal to one and symmetric
     truncation. It is faster than using scipy.stats.truncnorm.sf.
-    
+
     :param phi_b:
          ndtr(truncation_level); assume phi_b > .5
     :param values:
