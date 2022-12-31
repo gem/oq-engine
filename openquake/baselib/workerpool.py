@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
+import time
 import shutil
 import getpass
 import tempfile
@@ -136,6 +137,21 @@ class WorkerMaster(object):
                 total = sock.send('get_num_workers')
                 executing.append((host, running, total))
         return executing
+
+    def wait(self, seconds=30):
+        """
+        Wait until all workers are active
+        """
+        num_hosts = len(self.zworkers.host_cores.split(','))
+        for _ in range(seconds):
+            time.sleep(1)
+            status = self.status()
+            if len(status) == num_hosts and all(
+                    total for host, running, total in status):
+                break
+        else:
+            raise TimeoutError(status)
+        return status
 
     def restart(self):
         """
