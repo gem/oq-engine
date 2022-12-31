@@ -34,7 +34,7 @@ try:
 except ImportError:
     Image = None
 from openquake.baselib import (
-    performance, parallel, hdf5, config, python3compat)
+    performance, parallel, hdf5, config, python3compat, workerpool as w)
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
     get_nbytes_msg, agg_probs, pprod)
@@ -42,7 +42,7 @@ from openquake.hazardlib.contexts import (
     ContextMaker, read_cmakers, basename, get_maxsize)
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
-from openquake.commonlib import calc, logs, datastore
+from openquake.commonlib import calc, datastore
 from openquake.calculators import base, getters, extract
 
 U16 = numpy.uint16
@@ -620,8 +620,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Running %d tiles', ntiles)
         for n, tile in enumerate(self.sitecol.split(ntiles)):
             self.run_one(tile, maxw * .75)
-            logs.dbcmd('workers_restart')  # save memory
             logging.info('Finished tile %d of %d', n+1, ntiles)
+            w.WorkerMaster(config.zworkers).restart()
 
     def run_one(self, sitecol, maxw):
         """
