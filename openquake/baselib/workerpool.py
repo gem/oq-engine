@@ -157,8 +157,12 @@ class WorkerMaster(object):
         """
         Stop and start again
         """
-        self.stop()
-        self.start()
+        for host, _ in self.host_cores:
+            if not general.socket_ready((host, self.ctrl_port)):
+                continue
+            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+            with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
+                sock.send('restart')
         return 'restarted'
 
 
@@ -205,6 +209,10 @@ class WorkerPool(object):
                 if cmd == 'stop':
                     ctrlsock.send(self.stop())
                     break
+                elif cmd == 'restart':
+                    self.stop()
+                    self.pool = general.mp.Pool(self.num_workers)
+                    ctrlsock.send('restarted')
                 elif cmd == 'getpid':
                     ctrlsock.send(self.proc.pid)
                 elif cmd == 'get_num_workers':
