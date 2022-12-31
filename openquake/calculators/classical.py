@@ -621,7 +621,10 @@ class ClassicalCalculator(base.HazardCalculator):
         for n, tile in enumerate(self.sitecol.split(ntiles)):
             self.run_one(tile, maxw * .75)
             logging.info('Finished tile %d of %d', n+1, ntiles)
-            w.WorkerMaster(config.zworkers).restart()
+            if parallel.oq_distribute() == 'zmq':
+                w.WorkerMaster(config.zworkers).restart()
+            else:
+                parallel.Starmap.shutdown()
 
     def run_one(self, sitecol, maxw):
         """
