@@ -195,7 +195,6 @@ from unittest import mock
 import multiprocessing.dummy
 import multiprocessing.shared_memory as shmem
 from multiprocessing.connection import wait
-import subprocess
 import psutil
 import numpy
 try:
@@ -206,7 +205,7 @@ except ImportError:
 
 from openquake.baselib import config, hdf5, workerpool
 from openquake.baselib.python3compat import decode
-from openquake.baselib.zeromq import zmq, Socket, TimeoutError
+from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
@@ -792,9 +791,9 @@ class Starmap(object):
         self.task_no = 0
         self.t0 = time.time()
         if self.distribute == 'zmq':  # add a check
+            master = workerpool.WorkerMaster(config.zworkers)
             errors = ['The workerpool on %s is down' % host
-                      for host, run, tot in workers_status(config.zworkers)
-                      if tot == 0]
+                      for host, run, tot in master.status() if tot == 0]
             if errors:
                 raise RuntimeError('\n'.join(errors))
 
@@ -1023,59 +1022,3 @@ def multispawn(func, allargs, num_cores=Starmap.num_cores):
     while procs:
         for finished in wait(procs):
             del procs[finished]
-
-
-#                             start/stop workers                             #
-
-
-OQDIST = oq_distribute()
-
-
-def workers_start(zworkers):
-    """
-    Start the remote workers with ssh
-    """
-    for host, cores, args in workerpool.ssh_args(zworkers):
-        url = 'tcp://0.0.0.0:%s' % zworkers.ctrl_port
-        args += ['-m', 'openquake.baselib.workerpool', url, '-n', cores]
-        subprocess.Popen(args, start_new_session=True)
-        logging.info(args)
-
-
-def workers_stop(zworkers):
-    """
-    Stop all the workers with a shutdown
-    """
-    workerpool.WorkerMaster(zworkers).stop()
-    return 'stopped'
-
-
-def workers_kill(zworkers):
-    """
-    Kill all the workers
-    """
-    workerpool.WorkerMaster(zworkers).kill()
-    return 'killed'
-
-
-def workers_status(zworkers):
-    """
-    :returns: a list [(host name, running, total), ...]
-    """
-    return workerpool.WorkerMaster(zworkers).status()
-
-
-def workers_wait(zworkers, seconds=30):
-    """
-    Wait until all workers are active
-    """
-    num_hosts = len(zworkers.host_cores.split(','))
-    for _ in range(seconds):
-        time.sleep(1)
-        status = workers_status(zworkers)
-        if len(status) == num_hosts and all(
-                total for host, running, total in status):
-            break
-    else:
-        raise TimeoutError(status)
-    return status
