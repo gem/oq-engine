@@ -55,7 +55,8 @@ class DbServer(object):
                     continue
                 elif cmd.startswith('workers_'):
                     # call parallel.workers_start et similar routines
-                    msg = getattr(p, cmd)(*args)
+                    master = w.WorkerMaster(args[0])  # zworkers
+                    msg = getattr(master, cmd[8:])()
                     sock.send(msg)
                     continue
                 try:

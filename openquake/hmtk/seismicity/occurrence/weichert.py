@@ -65,12 +65,19 @@ class Weichert(SeismicityOccurrence):
     '''Class to Implement Weichert Algorithm'''
 
     def calculate(self, catalogue, config, completeness=None):
-        '''Calculates recurrence using the Weichert (1980) method'''
+        '''Calculates b value and rate for mag ref'''
         bval, sigma_b, rate, sigma_rate, aval, sigma_a = self._calculate(
             catalogue, config, completeness)
         return bval, sigma_b, rate, sigma_rate
 
+    def calc(self, catalogue, config, completeness=None):
+        '''Calculates GR params '''
+        bval, sigma_b, rate, sigma_rate, aval, sigma_a = self._calculate(
+            catalogue, config, completeness)
+        return bval, sigma_b, aval, sigma_a
+
     def _calculate(self, catalogue, config, completeness=None):
+        '''Calculates a, b values + rate for mag ref'''
 
         # Input checks
         cmag, ctime, ref_mag, _, config = input_checks(catalogue,

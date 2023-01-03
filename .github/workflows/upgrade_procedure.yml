@@ -9,8 +9,8 @@ on:
         required: true
   schedule:
     - cron: "33 12 * * *"
-#  push:
-#    branches: [ test_os ]
+  push:
+    branches: [ ae-upgrade ]
 
 jobs:
 
@@ -29,28 +29,28 @@ jobs:
         python-version: [3.8]
     #
     steps:
-  # This Checkout use git-ref keyword from dispatch
+    # This Checkout use git-ref keyword from dispatch
     - name: Clone Repository (Master)
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       if: github.event.inputs.git-ref == ''
     - name: Clone Repository (Custom Ref)
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       if: github.event.inputs.git-ref != ''
       with:
         ref: ${{ github.event.inputs.git-ref }}
     - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-       # You can test your matrix by printing the current Python version
+    # You can test your matrix by printing the current Python version
     - name: Display Python version
       run: python -c "import sys; print(sys.version)"
-      # Use script to install engine and not the pip install .
+    # Use script to install engine and not the pip install .
     - name: Install engine with install script and version 3.11
       run: |
-        pwd
-        python -m pip install --default-timeout=100 pip wheel setuptools --upgrade
-        sudo -H python install.py server --version=3.11.4
+        sudo env "PATH=$PATH" python -m pip install --default-timeout=100 pip wheel setuptools --upgrade
+        sleep 2
+        sudo env "PATH=$PATH" python install.py server --version=3.11.5
       shell: bash
     - name: Run demos to test installation
       run: |
@@ -65,9 +65,9 @@ jobs:
         source /opt/openquake/venv/bin/activate
         oq --version
         deactivate
-        sudo -H python install.py server --remove
-        sleep 5
-        sudo -H python install.py server --version=master
+        sudo env "PATH=$PATH" python install.py server --remove
+        sleep 10
+        sudo env "PATH=$PATH" python install.py server --version=master
         source /opt/openquake/venv/bin/activate
         journalctl -xe -u openquake-dbserver
         sleep 5

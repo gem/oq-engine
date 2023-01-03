@@ -15,7 +15,9 @@ xmlns:gml="http://www.opengis.net/gml"
             name="Quito"
             tectonicRegion="Active Shallow Crust"
             >
-                <areaGeometry>
+                <areaGeometry
+                discretization="2.0000000E+01"
+                >
                     <gml:Polygon>
                         <gml:exterior>
                             <gml:LinearRing>

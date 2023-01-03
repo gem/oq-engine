@@ -77,6 +77,9 @@ class FromFile(object):
     def compute(self, ctx, imts, mean, sig, tau, phi):
         pass
 
+    def requires(self):
+        return ()
+
     def __repr__(self):
         return '[FromFile]'
 

@@ -1,7 +1,39 @@
+  [Marco Pagani]
+  * Completed implementation of `grp_probability` for SourceGroups with mutex 
+    ruptures
+
   [Michele Simionato]
+  * Huge improvement of the task distribution when using zmq; also, used
+    less memory on the master node
+  * Fixed context collapsing in the multi-site case
+  * Optimised postclassical, both in terms of memory in the master node
+    and reading performance in the workers
+  * Added `parallel.multispawn` facility in `oq engine --multi --run`
+  * Improved `oq engine --multi` to run at most 5 jobs at the time
+  * Fixed bug introduced in engine 3.9 producing wrong numbers in the case of
+    mutex ruptures (i.e. the New Madrid cluster in the USA model)
+  * Added `--venv` option to the universal installer to install in custom places
+  * Bug fix: the `avg_losses-rlzs` output in classical risk was stored
+    incorrectly
+  * Speed up preclassical calculations in presence of complex fault sources and
+    similar; for instance there is a 3x speedup for the SAM model
+
+  [Trevor Allen]
+  * Added class Allen2012_SS14 to Allen (2012) GMM to incorporate Vs30 scaling
+    based on Seyhan & Stewart (2014) amplification factors
+  * Added classes SomervilleEtAl2009NonCratonic_SS14 and
+    SomervilleEtAl2009YilgarnCraton_SS14 to Somerville et al (2009) GMM to
+    incorporate Vs30 scaling based on Seyhan & Stewart (2014) amplification
+    factors
+  * Added Allen (2022) GMM for Banda Sea earthquakes observed in the North
+    Australian Craton
+
+  [Michele Simionato]
+  * Moved the `horiz_comp_to_geom_mean` functionality from the gsim logic tree
+    to the job.ini
+  * Optimized the parsing of XML files (35x for the Alaska model)
   * Bug fix: ModifiableGMPEs with underlying tables were not receiving a
     single magnitude when calling the `compute` method
-  * Introduced `keep_source_groups` mode in classical calculations
   * Rewritten ModifiableGMPE to avoid a subtle memory leak
 
   [Matteo Nastasi]
@@ -9,22 +41,20 @@
 
   [Michele Simionato]
   * Fixed the exporter of `avg_losses-stats` when using `collect_rlzs=true`
-  * Changed the distribution of multiFaultSources to send one fragment per task
   * Mitigate the issue of ultra-long planar ruptures affecting many models
   * Forced the usage of `collect_rlzs` for large exposures when computing
     avg_losses with many realizations
   * Bug fix: min_mag and max_mag were not honored when using a
     magnitude-dependent maximum distance
   * Reduced the memory consumption when using the ps_grid_spacing approximation
-  * Added `spawn` distribution mechanism for testing purposes
 
   [Marco Pagani]
+  * Added a method to compute the mean rate density of two IMTs
   * Added the possibility to define the edges of disaggregation bins
+  * Added a couple of utility methods to the weichert module
 
   [Michele Simionato]
-  * Improved the performance of the preclassical calculator
-  * Changed parallel.Starmap to use maxtasksperchild=1 to fight memory leaks
-    and introduced automatic tiling for extra-large calculations
+  * Introduced automatic tiling for extra-large calculations
   * Added command `oq purge failed`
   * Fixed memory leak in the tiling calculator by resetting the ProcessPool
   * Fixed an indexing error breaking the GMPE AtkinsonBoore2006 with

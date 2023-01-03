@@ -326,6 +326,12 @@ hazard_maps:
   Example: *hazard_maps = true*.
   Default: False
 
+horiz_comp_to_geom_mean:
+  Apply the correction to the geometric mean when possible,
+  depending on the GMPE and the Intensity Measure Component
+  Example: *horiz_comp_to_geom_mean = true*.
+  Default: False
+
 ignore_covs:
   Used in risk calculations to set all the coefficients of variation of the
   vulnerability functions to zero.
@@ -441,17 +447,10 @@ max_sites_disagg:
   Example: *max_sites_disagg = 100*
   Default: 10
 
-max_sites_per_tile:
-  Used in classical calculations which are to big to run within the
-  available memory. This effectively splits the calculation in homogeneous
-  tiles with less than `max_sites_per_tile`. To be used as last resort.
-  Example: *max_sites_per_tile = 50_000*
-  Default: 5_000_000
-
 pmap_max_gb:
    Maximum size of the ProbabilityMaps in classical calculations, should be
    less than 4 GB to avoid pickling errors. This is also used to split the
-   calculation in tiles if max_sites_per_tile is not given.
+   calculation in tiles.
    Example: *max_size_db = 2*
    Default: 1
 
@@ -619,13 +618,6 @@ sampling_method:
   One of early_weights, late_weights, early_latin, late_latin)
   Example: *sampling_method = early_latin*.
   Default: 'early_weights'
-
-keep_source_groups:
-   Set an approach that saves memory in large classical calculations, possibly
-   with a performance penalty. When left unspecified (None), the engine will
-   automatically decide when to use it (i.e. if there are enough gsims).
-   Example: *keep_source_groups = true*
-   Default: None
 
 sec_peril_params:
   INTERNAL
@@ -901,6 +893,7 @@ class OqParam(valid.ParamSet):
     hazard_curves = valid.Param(valid.boolean, True)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_maps = valid.Param(valid.boolean, False)
+    horiz_comp_to_geom_mean = valid.Param(valid.boolean, False)
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
@@ -925,7 +918,6 @@ class OqParam(valid.ParamSet):
     max_gmvs_per_task = valid.Param(valid.positiveint, 1_000_000)
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
-    max_sites_per_tile = valid.Param(valid.positiveint, 5_000_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     pmap_max_gb = valid.Param(valid.positivefloat, 1.)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
@@ -965,7 +957,6 @@ class OqParam(valid.ParamSet):
     sampling_method = valid.Param(
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
-    keep_source_groups = valid.Param(valid.boolean, None)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})
@@ -994,7 +985,8 @@ class OqParam(valid.ParamSet):
                      'structural+contents',
                      'nonstructural+contents',
                      'structural+nonstructural+contents'), None)
-    truncation_level = valid.Param(valid.positivefloat, 99.)
+    truncation_level = valid.Param(
+        lambda s: valid.positivefloat(s) or 1E-9, 99.)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
@@ -1156,12 +1148,6 @@ class OqParam(valid.ParamSet):
         if self.return_periods and not self.poes and self.investigation_time:
             self.poes = 1 - numpy.exp(
                 - self.investigation_time / numpy.array(self.return_periods))
-
-        # check for tiling
-        if self.max_sites_disagg > self.max_sites_per_tile:
-            raise ValueError(
-                'max_sites_disagg is larger than max_sites_per_tile! (%d>%d)'
-                % (self.max_sites_disagg, self.max_sites_per_tile))
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':

@@ -172,12 +172,6 @@ def normalize(key, fnames, base_path):
     for val in fnames:
         if isinstance(val, list):
             val = normpath(val, base_path)
-        elif '://' in val:
-            # get the data from an URL
-            resp = requests.get(val)
-            _, val = val.rsplit('/', 1)
-            with open(os.path.join(base_path, val), 'wb') as f:
-                f.write(resp.content)
         elif os.path.isabs(val):
             raise ValueError('%s=%s is an absolute path' % (key, val))
         elif val.endswith('.zip'):
@@ -252,7 +246,13 @@ def get_params(job_ini, kw={}):
     if isinstance(job_ini, pathlib.Path):
         job_ini = str(job_ini)
     if job_ini.startswith(('http://', 'https://')):
-        resp = requests.get(job_ini)
+        if '://gitlab' in job_ini:
+            # TODO: this is not working even if curl works
+            token = os.environ['GITLAB_TOKEN']
+            auth = {'Authorization': 'PRIVATE-TOKEN ' + token}
+            resp = requests.get(job_ini, headers=auth)
+        else:
+            resp = requests.get(job_ini)
         job_ini = gettemp(suffix='.zip')
         with open(job_ini, 'wb') as f:
             f.write(resp.content)
@@ -275,8 +275,19 @@ def get_params(job_ini, kw={}):
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     cp = configparser.ConfigParser()
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
+    dic = {}
     for sect in cp.sections():
-        _update(params, cp.items(sect), base_path)
+        dic.update(cp.items(sect))
+
+    # put source_model_logic_tree_file on top of the items so that
+    # oq-risk-tests alaska, which has a smmLT.zip file works, since
+    # it is unzipped before and therefore the files can be read later
+    if 'source_model_logic_tree_file' in dic:
+        fname = dic.pop('source_model_logic_tree_file')
+        items = [('source_model_logic_tree_file', fname)] + list(dic.items())
+    else:
+        items = list(dic.items())
+    _update(params, items, base_path)
 
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
@@ -1270,11 +1281,8 @@ def get_input_files(oqparam):
         if key == 'gsim_logic_tree':
             fnames.update(gsim_lt.collect_files(fname))
             fnames.add(fname)
-        elif key == 'source_model':  # UCERF
-            f = oqparam.inputs['source_model']
-            fnames.add(f)
-            fname = nrml.read(f).sourceModel.UCERFSource['filename']
-            fnames.add(os.path.join(os.path.dirname(f), fname))
+        elif key == 'source_model':
+            fnames.add(oqparam.inputs['source_model'])
         elif key == 'exposure':  # fname is a list
             for exp in asset.Exposure.read_headers(fname):
                 fnames.update(exp.datafiles)

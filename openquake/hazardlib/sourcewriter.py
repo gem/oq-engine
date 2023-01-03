@@ -687,7 +687,7 @@ def build_source_group(source_group):
         attrs['src_interdep'] = source_group.src_interdep
     if source_group.rup_interdep:
         attrs['rup_interdep'] = source_group.rup_interdep
-    if source_group.grp_probability is not None:
+    if source_group.grp_probability != 1.0:
         attrs['grp_probability'] = source_group.grp_probability
     if source_group.cluster:
         attrs['cluster'] = 'true'

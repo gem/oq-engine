@@ -51,7 +51,18 @@ from openquake.server.tests import data as test_data
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 NRML_DIR = os.path.dirname(tests.__file__)
-MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
+MIXED_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/mixed.xml')
+AREA_SOURCE_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/area-source.xml')
+COMPLEX_FAULT_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/complex-fault-source.xml')
+MULTI_POINT_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/multi-point-source.xml')
+POINT_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/point-source.xml')
+SIMPLE_FAULT_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/simple-fault-source.xml')
 
 
 def setup_module():
@@ -616,10 +627,6 @@ class NRML2CSVTestCase(unittest.TestCase):
 class NRML2GPKGTestCase(unittest.TestCase):
 
     def test_nrml_to_gpkg(self):
-        try:
-            import fiona
-        except ImportError:
-            raise unittest.SkipTest('fiona is missing')
         temp_dir = tempfile.mkdtemp()
         with Print.patch() as p:
             sap.runline(f'openquake.commands nrml_to gpkg {MIXED_SRC_MODEL} '
@@ -633,41 +640,93 @@ class NRML2GPKGTestCase(unittest.TestCase):
 
 class GPKG2NRMLTestCase(unittest.TestCase):
 
-    def test_nrml_from_gpkg(self):
-        try:
-            import fiona
-        except ImportError:
-            raise unittest.SkipTest('fiona is missing')
-        temp_dir = tempfile.mkdtemp()
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.datadir = os.path.join(os.path.dirname(__file__), 'data')
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    def _convert_nrml_to_gpkg(self, source_model):
         with Print.patch():
-            sap.runline(f'openquake.commands nrml_to gpkg {MIXED_SRC_MODEL} '
-                        f'--outdir={temp_dir} --chatty')
+            sap.runline(f'openquake.commands nrml_to gpkg {source_model} '
+                        f'--outdir={self.temp_dir} --chatty')
         gpkg_path = os.path.join(
-            temp_dir, Path(MIXED_SRC_MODEL).stem + '.gpkg')
-        out_path = os.path.join(
-            temp_dir, Path(MIXED_SRC_MODEL).stem + '_converted.xml')
-        with self.assertLogs('root', level='ERROR') as cm:
+            self.temp_dir, Path(source_model).stem + '.gpkg')
+        return gpkg_path
+
+    def _convert_gpkg_to_nrml(self, gpkg_path, out_path):
+        with Print.patch():
             sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
-        expected_log_outputs = [
-            'ERROR:root:Skipping source of code "X" and attributes'
-            ' "{\'id\': \'5\', \'name\': \'characteristic source,'
-            ' simple fault\', \'tectonicRegion\': \'Volcanic\'}"'
-            ' (the converter is not implemented yet)',
-            'ERROR:root:Skipping source of code "X" and attributes'
-            ' "{\'id\': \'6\', \'name\': \'characteristic source,'
-            ' complex fault\', \'tectonicRegion\': \'Volcanic\'}"'
-            ' (the converter is not implemented yet)',
-            'ERROR:root:Skipping source of code "X" and attributes'
-            ' "{\'id\': \'7\', \'name\': \'characteristic source,'
-            ' multi surface\', \'tectonicRegion\': \'Volcanic\'}"'
-            ' (the converter is not implemented yet)']
-        for line in expected_log_outputs:
-            self.assertIn(line, cm.output)
-        datadir = os.path.join(os.path.dirname(__file__), 'data')
+
+    def _convert_nrml_to_gpkg_to_nrml(self, src_model_path):
+        gpkg_path = self._convert_nrml_to_gpkg(src_model_path)
+        out_path = os.path.join(
+            self.temp_dir, Path(src_model_path).stem + '_converted.xml')
+        self._convert_gpkg_to_nrml(gpkg_path, out_path)
+        return out_path
+
+    def _check_output(self, out_path, expected_path):
         self.assertListEqual(
             list(open(out_path)),
-            list(open(os.path.join(datadir, 'expected_converted_nrml.xml'))))
-        shutil.rmtree(temp_dir)
+            list(open(expected_path)))
+
+    def test_convert_mixed_nrml_from_gpkg(self):
+        gpkg_path = self._convert_nrml_to_gpkg(MIXED_SRC_MODEL)
+        out_path = os.path.join(
+            self.temp_dir, Path(MIXED_SRC_MODEL).stem + '_converted.xml')
+        expected_log_outputs = [
+            'Skipping source of code "X" and attributes'
+            ' "{\'id\': \'5\', \'name\': \'characteristic source,'
+            ' simple fault\'}"'
+            ' (the converter is not implemented yet)',
+            'Skipping source of code "X" and attributes'
+            ' "{\'id\': \'6\', \'name\': \'characteristic source,'
+            ' complex fault\'}"'
+            ' (the converter is not implemented yet)',
+            'Skipping source of code "X" and attributes'
+            ' "{\'id\': \'7\', \'name\': \'characteristic source,'
+            ' multi surface\'}"'
+            ' (the converter is not implemented yet)']
+        with mock.patch('logging.error') as error:
+            sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
+            errors = [error.call_args_list[i].args[0]
+                      for i in range(len(error.call_args_list))]
+            for line in expected_log_outputs:
+                self.assertIn(line, errors)
+        expected_path = os.path.join(
+            self.datadir, 'expected_mixed_converted_nrml.xml')
+        self._check_output(out_path, expected_path)
+
+    def test_convert_AreaSource(self):
+        out_path = self._convert_nrml_to_gpkg_to_nrml(AREA_SOURCE_SRC_MODEL)
+        expected_path = os.path.join(
+            self.datadir, 'expected_area_source_converted_nrml.xml')
+        self._check_output(out_path, expected_path)
+
+    def test_convert_ComplexFaultSource(self):
+        out_path = self._convert_nrml_to_gpkg_to_nrml(COMPLEX_FAULT_SRC_MODEL)
+        expected_path = os.path.join(
+            self.datadir, 'expected_complex_fault_source_converted_nrml.xml')
+        self._check_output(out_path, expected_path)
+
+    def test_convert_MultiPointSource(self):
+        out_path = self._convert_nrml_to_gpkg_to_nrml(MULTI_POINT_SRC_MODEL)
+        expected_path = os.path.join(
+            self.datadir, 'expected_multi_point_source_converted_nrml.xml')
+        self._check_output(out_path, expected_path)
+
+    def test_convert_PointSource(self):
+        out_path = self._convert_nrml_to_gpkg_to_nrml(POINT_SRC_MODEL)
+        expected_path = os.path.join(
+            self.datadir, 'expected_point_source_converted_nrml.xml')
+        self._check_output(out_path, expected_path)
+
+    def test_convert_SimpleFaultSource(self):
+        out_path = self._convert_nrml_to_gpkg_to_nrml(SIMPLE_FAULT_SRC_MODEL)
+        expected_path = os.path.join(
+            self.datadir, 'expected_simple_fault_source_converted_nrml.xml')
+        self._check_output(out_path, expected_path)
 
 
 def teardown_module():

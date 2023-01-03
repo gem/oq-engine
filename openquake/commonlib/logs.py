@@ -53,7 +53,7 @@ def dbcmd(action, *args):
         else:
             return func(dbapi.db, *args)
     sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect',
-                         timeout=60)  # when the system is loaded 60 seconds
+                         timeout=60)  # when the system is loaded
     with sock:
         res = sock.send((action,) + args)
         if isinstance(res, parallel.Result):

@@ -96,7 +96,7 @@ class Comparator(object):
         return numpy.array(arrays)  # shape (C, N, L)
 
     def getuhs(self, what, p, sids):
-        # uhs for the first poe
+        # uhs for the last poe
         oq0 = self.oq
         extractor = self.extractors[0]
         what = 'hmaps?kind=mean'  # shape (N, M, P)
@@ -193,7 +193,7 @@ def compare_cumtime(calc1: int, calc2: int):
     return Comparator([calc1, calc2]).cumtime()
 
 
-def compare_uhs(calc_ids: int, files=False, *, poe_id: int = 0,
+def compare_uhs(calc_ids: int, files=False, *, poe_id: int = -1,
                 samplesites='', rtol: float = 0, atol: float = 1E-3):
     """
     Compare the uniform hazard spectra of two or more calculations.

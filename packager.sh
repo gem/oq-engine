@@ -219,8 +219,9 @@ add_custom_pkg_repo () {
          ssh $lxc_ip "sudo apt-add-repository -y \"$REPO_BIN\""
     fi
     # add custom packages
+    ssh "$lxc_ip" rm -rf repo/custom_pkgs
     if ! ssh "$lxc_ip" ls repo/custom_pkgs >/dev/null ; then
-        ssh "$lxc_ip" mkdir "repo"
+        ssh "$lxc_ip" mkdir -p "repo"
         scp -r "${GEM_DEB_REPO}/custom_pkgs" "$lxc_ip:repo/custom_pkgs"
     fi
     ssh "$lxc_ip" "sudo apt-add-repository -y \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
@@ -254,6 +255,7 @@ add_local_pkg_repo () {
     time_start="$(date +%s)"
     while true; do
         ssh "$lxc_ip" mkdir -p "repo"
+        ssh "$lxc_ip" rm -rf "repo/${dep_pkg}"
         if scp -r "$from_dir" "$lxc_ip:repo/${dep_pkg}"; then
             break
         fi
@@ -471,7 +473,7 @@ _buildfromsrc_innervm_run () {
         export PKG_DSC=\"$pkg_dsc\"
         export PKG_DIR=\"\$(basename \$(echo \"\$PKG_DSC\") | sed 's/\(^[^_]\+\)_\([^-]\+\)-.*/\1-\2/g')\"
 
-        sudo apt-get -y --force-yes install git curl build-essential dpatch fakeroot devscripts equivs lintian quilt lsb-release
+        sudo apt-get -y --force-yes install git curl build-essential dpatch fakeroot devscripts equivs lintian quilt lsb-release pylint
         sudo apt-get "$APT_FORCE_YES" -y install dpkg-dev equivs build-essential pbuilder
 
         mkdir \"\$GEM_GIT_PACKAGE\"
@@ -673,6 +675,9 @@ _devtest_innervm_run () {
 
     ssh "$lxc_ip" "rm -f ssh.log"
 
+    # disabled buggy sources.list cleanup
+    # ssh "$lxc_ip" sudo cp /etc/apt/sources.list /etc/apt/sources.list.orig
+    # ssh "$lxc_ip" sudo grep -v 'file:/home/ubuntu/repo' /etc/apt/sources.list.orig | sudo tee /etc/apt/sources.list
     ssh "$lxc_ip" "sudo apt-get update"
     ssh "$lxc_ip" "sudo apt-get -y upgrade"
     gpg -a --export | ssh "$lxc_ip" "sudo apt-key add -"
@@ -846,10 +851,12 @@ _pkgtest_innervm_run () {
             exit 1
         fi
 
+        sudo systemctl start openquake-dbserver
         # dbserver should be already started by systemd. Let's have a check
         # FIXME instead of using a 'sleep' we should use a better way to check that
         # the dbserver is alive
-        sleep 10; systemctl status openquake-dbserver
+        sleep 10
+        systemctl status openquake-dbserver
 
         if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
             export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
@@ -927,7 +934,8 @@ sudo systemctl status openquake-dbserver
             echo \"The 'oq webui' command is broken: it reports\n\t\$webui_fail\ninstead of\n\t\$webui_fail_msg\"
             exit 1
         fi
-        sudo -u openquake oq webui migrate"
+        # FIXME: this directory must be discussed
+        sudo NUMBA_CACHE_DIR=/tmp -u openquake oq webui migrate"
     fi
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
@@ -1016,20 +1024,23 @@ _lxc_name_and_ip_get()
 {
     local filename="$1" i e
 
-    i=-1
     e=-1
-    for i in $(seq 1 40); do
-        if grep -q " as clone of $GEM_EPHEM_NAME" "$filename" 2>&1 ; then
-            lxc_name="$(grep " as clone of $GEM_EPHEM_NAME" "$filename" | tail -n 1 | sed "s/Created \(.*\) as clone of ${GEM_EPHEM_NAME}/\1/g")"
-            break
-        else
-            sleep 2
+    if [ "$GEM_NO_EPHEM" ]; then
+        lxc_name="$GEM_EPHEM_NAME"
+    else
+        i=-1
+        for i in $(seq 1 40); do
+            if grep -q " as clone of $GEM_EPHEM_NAME" "$filename" 2>&1 ; then
+                lxc_name="$(grep " as clone of $GEM_EPHEM_NAME" "$filename" | tail -n 1 | sed "s/Created \(.*\) as clone of ${GEM_EPHEM_NAME}/\1/g")"
+                break
+            else
+                sleep 2
+            fi
+        done
+        if [ "$i" -eq 40 ]; then
+            return 1
         fi
-    done
-    if [ "$i" -eq 40 ]; then
-        return 1
     fi
-
     for e in $(seq 1 40); do
         sleep 2
         lxc_ip="$(sudo lxc-ls -f --filter "^${lxc_name}\$" | tail -n 1 | sed 's/ \+/ /g' | cut -d ' ' -f 5)"
@@ -1175,14 +1186,18 @@ devtest_run () {
 
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/devtest.history"
 
+    if [ "$GEM_WAIT_BEFORE_DESTROY" ]; then
+        sleep 20000 || true
+    fi
     sudo $LXC_TERM -n "$lxc_name"
 
     # NOTE: pylint returns errors too frequently to consider them a critical event
-    if pylint --rcfile pylintrc -f parseable openquake > pylint.txt ; then
-        echo "pylint exits without errors"
-    else
-        echo "WARNING: pylint exits with $? value"
-    fi
+    echo "pylint disabled"
+    # if pylint --rcfile pylintrc -f parseable openquake > pylint.txt ; then
+    #     echo "pylint exits without errors"
+    # else
+    #     echo "WARNING: pylint exits with $? value"
+    # fi
     set -e
     if [ -f /tmp/packager.eph.$$.log ]; then
         rm /tmp/packager.eph.$$.log
@@ -1282,6 +1297,9 @@ builddoc_run () {
 
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/builddoc.history"
 
+    if [ "$GEM_WAIT_BEFORE_DESTROY" ]; then
+        sleep 20000 || true
+    fi
     sudo $LXC_TERM -n "$lxc_name"
 
     set -e
@@ -1315,6 +1333,9 @@ pkgtest_run () {
     inner_ret=$?
 
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
+    if [ "$GEM_WAIT_BEFORE_DESTROY" ]; then
+        sleep 20000 || true
+    fi
     sudo $LXC_TERM -n "$lxc_name"
     set -e
 
@@ -1559,6 +1580,9 @@ if [ $BUILD_ON_LXC -eq 1 ]; then
     set +e
     _pkgbuild_innervm_run "$lxc_ip" "$branch" "$DPBP_FLAG"
     inner_ret=$?
+    if [ "$GEM_WAIT_BEFORE_DESTROY" ]; then
+        sleep 20000 || true
+    fi
     sudo $LXC_TERM -n "$lxc_name"
     set -e
     if [ -f /tmp/packager.eph.$$.log ]; then
