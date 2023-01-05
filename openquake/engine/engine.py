@@ -42,7 +42,7 @@ except ImportError:
         "Do nothing"
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
-from openquake.baselib import parallel, general, config
+from openquake.baselib import parallel, general, config, workerpool as w
 from openquake.hazardlib import valid
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
@@ -60,6 +60,10 @@ _PPID = os.getppid()  # the controlling terminal PID
 GET_JOBS = '''--- executing or submitted
 SELECT * FROM job WHERE status IN ('executing', 'submitted')
 AND host=?x AND is_running=1 AND pid > 0 ORDER BY id'''
+
+
+def workers_stop():
+    w.WorkerMaster(config.zworkers).stop()
 
 
 def get_zmq_ports():
@@ -81,8 +85,8 @@ def set_concurrent_tasks_default(calc):
         logging.warning('Using %d cores on %s', num_workers, platform.node())
         return
 
-    num_workers = sum(total for host, running, total
-                      in parallel.workers_wait(config.zworkers))
+    master = w.WorkerMaster(config.zworkers)
+    num_workers = sum(total for host, running, total in master.wait())
     if num_workers == 0:
         logging.critical("No live compute nodes, aborting calculation")
         logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
@@ -173,18 +177,18 @@ def manage_signals(signum, _stack):
     :param _stack: the current frame object, ignored
     """
     if signum == signal.SIGINT:
-        parallel.workers_stop(config.zworkers)
+        workers_stop()
         raise MasterKilled('The openquake master process was killed manually')
 
     if signum == signal.SIGTERM:
-        parallel.workers_stop(config.zworkers)
+        workers_stop()
         raise SystemExit('Terminated')
 
     if hasattr(signal, 'SIGHUP'):  # there is no SIGHUP on Windows
         # kill the calculation only if os.getppid() != _PPID, i.e. the
         # controlling terminal died; in the workers, do nothing
         if signum == signal.SIGHUP and os.getppid() != _PPID:
-            parallel.workers_stop(config.zworkers)
+            workers_stop()
             raise MasterKilled(
                 'The openquake master lost its controlling terminal')
 
@@ -349,7 +353,7 @@ def cleanup(kind):
     if kind == 'stop':
         # called in the regular case, does not require ssh access
         print('Stopping the workers')
-        parallel.workers_stop(config.zworkers)
+        workers_stop()
     elif kind == 'kill':
         # called in case of exceptions (or out of memory), requires ssh
         print('Asking the DbServer to kill the workers')
@@ -390,8 +394,8 @@ def run_jobs(jobctxs):
             dic = {'status': 'executing', 'pid': _PID}
             logs.dbcmd('update_job', job.calc_id, dic)
     try:
-        if OQ_DISTRIBUTE == 'zmq' and parallel.workers_status(
-                config.zworkers) == []:
+        if OQ_DISTRIBUTE == 'zmq' and w.WorkerMaster(
+                config.zworkers).status() == []:
             print('Asking the DbServer to start the workers %s' %
                   config.zworkers.host_cores)
             logs.dbcmd('workers_start', config.zworkers)  # start the workers
