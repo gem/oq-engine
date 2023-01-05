@@ -61,8 +61,12 @@ class NonParametricSeismicSource(BaseSeismicSource):
         self.data = data
         if weights is not None:
             assert len(weights) == len(data)
-            for (rup, pmf), weight in zip(data, weights):
+        cnt = 0
+        for (rup, pmf), weight in zip(data, weights):
+            if weights is not None:
                 rup.weight = weight
+            rup.idx = cnt
+            cnt += 1
 
     def iter_ruptures(self, **kwargs):
         """

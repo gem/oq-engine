@@ -181,21 +181,39 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     source_data = AccumDict(accum=[])
     # Set the parameters required to compute the number of occurrences
     # of the group of sources
-    #  assert param['oqparam'].number_of_logic_tree_samples > 0
     samples = getattr(sources[0], 'samples', 1)
-    tom = getattr(sources, 'temporal_occurrence_model')
-    rate = tom.occurrence_rate
-    time_span = tom.time_span
-    # Note that using a single time interval corresponding to the product
-    # of the investigation time and the number of realisations as we do
-    # here is admitted only in the case of a time-independent model
-    grp_num_occ = numpy.random.poisson(rate * time_span * samples *
-                                       num_ses)
+    if getattr(sources, 'src_interdep') == 'mutex':
+        # This is the default TOM assigned to a group of mutex sources though
+        # it's not necessarily correct. For the time being we keep the current
+        # setup since it's ininfluential. We use only the time span.
+        # TODO We will need to review this.
+        grp_num_occ = samples * num_ses
+        threshold_probability = getattr(sources, 'grp_probability')
+        if threshold_probability < 1.0:
+            vals = numpy.random.rand(grp_num_occ)
+            grp_num_occ = sum(vals > threshold_probability)
+        srcs_weights = [s.mutex_weight for s in sources]
+        srcs_weights.insert(0, 0)
+        # Compute the index of the sampled source for each realization
+        cs = numpy.cumsum(srcs_weights)
+        vals = numpy.random.rand(grp_num_occ)
+        sidx = []
+        for i_rlz in range(grp_num_occ):
+            sidx.append(numpy.max(numpy.where((cs-vals[i_rlz]) < 0)))
+    else:
+        tom = getattr(sources, 'temporal_occurrence_model')
+        rate = tom.occurrence_rate
+        time_span = tom.time_span
+        # Note that using a single time interval corresponding to the product
+        # of the investigation time and the number of realisations as we do
+        # here is admitted only in the case of a time-independent model
+        grp_num_occ = numpy.random.poisson(rate * time_span * samples *
+                                           num_ses)
     # Now we process the sources included in the group. Possible cases:
     # * The group is a cluster. In this case we choose one rupture per each
     #   source; uncertainty in the ruptures can be handled in this case
     #   using mutually exclusive ruptures (note that this is admitted
-    #   only for nons-parametric sources).
+    #   only for non-parametric sources).
     # * The group contains mutually exclusive sources. In this case we
     #   choose one source and then one rupture from this source.
     rup_counter = {}
@@ -225,8 +243,41 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                 source_data['ctimes'].append(dt)
                 source_data['weight'].append(src.weight)
                 source_data['taskno'].append(param['task_no'])
-        elif param['src_interdep'] == 'mutex':
-            raise NotImplementedError('src_interdep == mutex')
+
+        elif getattr(sources, 'src_interdep') == 'mutex':
+            src = sources[sidx[rlz_num]]
+            for i_rup, rup in enumerate(src.iter_ruptures()):
+                src_id = src.source_id
+                # Create a vector with the probabilities of occurrence of 0, 1,
+                # ... n occurrences
+                edges = list(rup.probs_occur)
+                edges.insert(0, 0.0)
+                edges = numpy.array(edges)
+                val = numpy.random.rand(1)
+                # This is the number of occurrences of the current rupture
+                nocc = numpy.max(numpy.where((edges-val) < 0))
+                # The problem here is that we do not know a-priori the
+                # number of occurrences of a given rupture.
+                if src_id not in rup_counter:
+                    rup_counter[src_id] = {}
+                    rup_data[src_id] = {}
+                for _ in range(nocc):
+                    if rup.idx not in rup_counter[src_id]:
+                        rup_counter[src_id][rup.idx] = 1
+                        rup_data[src_id][rup.idx] = [rup, src_id, trt_smr]
+                    else:
+                        rup_counter[src_id][rup.idx] += 1
+                # Store info
+                dt = time.time() - t0
+                source_data['src_id'].append(src.source_id)
+                source_data['nsites'].append(src.nsites)
+                source_data['nrups'].append(len(rup_data[src_id]))
+                source_data['ctimes'].append(dt)
+                source_data['weight'].append(src.weight)
+                source_data['taskno'].append(param['task_no'])
+        else:
+            raise NotImplementedError('Case not supported')
+
     # Create event based ruptures
     for src_key in rup_data:
         for rup_key in rup_data[src_key]:
@@ -260,8 +311,8 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
     grp_id = sources[0].grp_id
     # Compute the number of occurrences of the source group. This is used
     # for cluster groups or groups with mutually exclusive sources.
-    if (getattr(sources, 'atomic', False) and
-            getattr(sources, 'cluster', False)):
+    if (getattr(sources, 'atomic', False)):
+#            getattr(sources, 'cluster', False)):
         eb_ruptures, source_data = sample_cluster(
             sources, srcfilter, num_ses, vars(cmaker))
 
@@ -271,6 +322,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
                    source_data=source_data, eff_ruptures={grp_id: er})
         yield AccumDict(dic)
     else:
+        breakpoint()
         eb_ruptures = []
         eff_ruptures = 0
         source_data = AccumDict(accum=[])
