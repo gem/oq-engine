@@ -383,6 +383,7 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
     out.update(claim_to_cessions(claim, pol_dict, treaty_df))
     nonzero = out['claim'] > 0  # discard zero claims
     out_df = pd.DataFrame({k: out[k][nonzero] for k in out})
+    # ex: event_id, policy_id, retention, claim, surplus, quota_shared, wxlr
     return out_df
 
 
