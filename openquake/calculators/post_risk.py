@@ -392,6 +392,7 @@ class PostRiskCalculator(base.RiskCalculator):
             ct = oq.concurrent_tasks or 1
             allargs = [(dstore, pdf, self.treaty_df, loss_id)
                        for pdf in numpy.array_split(self.policy_df, ct)]
+            self.datastore.swmr_on()
             dfs = list(parallel.Starmap(reinsurance.reins_by_policy, allargs))
             rbp = pandas.concat(dfs)
             if len(rbp) == 0:
