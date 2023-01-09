@@ -361,7 +361,7 @@ def clever_agg(ukeys, datalist, treaty_df, idx, overdict, eids):
     return clever_agg(keys, sums, treaty_df, idx, overdict, eids)
 
 
-# tested in test_reinsurance.py
+# tested in reinsurance_test.py
 def by_policy(agglosses_df, pol_dict, treaty_df):
     '''
     :param DataFrame agglosses_df:
