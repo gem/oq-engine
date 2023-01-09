@@ -385,9 +385,13 @@ class PostRiskCalculator(base.RiskCalculator):
             # there must be a single loss type (possibly a total type)
             [lt] = oq.inputs['reinsurance']
             loss_id = scientific.LOSSID[lt]
-            size = len(self.policy_df) // parallel.Starmap.num_cores + 1
-            allargs = [(self.datastore, pdf, self.treaty_df, loss_id)
-                       for pdf in numpy.array_split(self.policy_df, size)]
+            if oq.hazard_calculation_id:
+                dstore = self.datastore.parent
+            else:
+                dstore = self.datastore
+            ct = oq.concurrent_tasks or 1
+            allargs = [(dstore, pdf, self.treaty_df, loss_id)
+                       for pdf in numpy.array_split(self.policy_df, ct)]
             dfs = list(parallel.Starmap(reinsurance.reins_by_policy, allargs))
             rbp = pandas.concat(dfs)
             if len(rbp) == 0:
