@@ -384,12 +384,14 @@ class PostRiskCalculator(base.RiskCalculator):
             self.treaty_df = self.datastore.read_df('treaty_df')
             # there must be a single loss type (possibly a total type)
             [lt] = oq.inputs['reinsurance']
-            with self._monitor("reinsurance by policy", measuremem=True):
-                rbp = reinsurance.reins_by_policy(
-                    self.datastore, self.policy_df, self.treaty_df,
-                    scientific.LOSSID[lt])
-                if len(rbp) == 0:
-                    raise ValueError('No losses for reinsurance %s' % lt)
+            loss_id = scientific.LOSSID[lt]
+            size = len(self.policy_df) // parallel.Starmap.num_cores + 1
+            allargs = [(self.datastore, pdf, self.treaty_df, loss_id)
+                       for pdf in numpy.array_split(self.policy_df, size)]
+            dfs = list(parallel.Starmap(reinsurance.reins_by_policy, allargs))
+            rbp = pandas.concat(dfs)
+            if len(rbp) == 0:
+                raise ValueError('No losses for reinsurance %s' % lt)
             rbe = reinsurance._by_event(rbp, self.treaty_df, self._monitor)
             del rbp['policy_grp']
             self.datastore.create_df('reinsurance_by_policy', rbp)

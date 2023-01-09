@@ -432,12 +432,15 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
     return df
 
 
-def reins_by_policy(dstore, policy_df, treaty_df, loss_id):
+def reins_by_policy(dstore, policy_df, treaty_df, loss_id, mon):
+    """
+    Task function called by post_risk
+    """
     dfs = []
-    nrows = len(dstore['risk_by_event/eid'])
+    nrows = len(dstore['risk_by_event/agg_id'])
     for slc in gen_slices(0, nrows, hdf5.MAX_ROWS):
         rbe_df = dstore.read_df(
-            'risk_by_event', sel={'agg_id': loss_id}, slc=slc)
+            'risk_by_event', sel={'loss_id': loss_id}, slc=slc)
         for _, policy in policy_df.iterrows():
             df = by_policy(rbe_df, dict(policy), treaty_df)
             df['policy_grp'] = build_policy_grp(policy, treaty_df)
