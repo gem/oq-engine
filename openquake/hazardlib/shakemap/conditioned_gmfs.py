@@ -133,41 +133,24 @@ class ConditionedGmfComputer(GmfComputer):
     """
 
     def __init__(
-        self,
-        rupture,
-        sitecol,
-        station_sitecol,
-        station_data,
-        observed_imt_strs,
-        cmaker,
-        spatial_correl=None,
-        cross_correl_between=None,
-        ground_motion_correlation_params=None,
-        number_of_ground_motion_fields=1,
-        amplifier=None,
-        sec_perils=(),
-    ):
+        self, rupture, sitecol, station_sitecol, station_data, 
+        observed_imt_strs, cmaker, spatial_correl=None, 
+        cross_correl_between=None, ground_motion_correlation_params=None,
+        number_of_ground_motion_fields=1, amplifier=None, sec_perils=()):
         GmfComputer.__init__(
-            self,
-            rupture=rupture,
-            sitecol=sitecol,
-            cmaker=cmaker,
-            correlation_model=spatial_correl,
-            cross_correl=cross_correl_between,
-            amplifier=amplifier,
-            sec_perils=sec_perils,
+            self, rupture=rupture, sitecol=sitecol, cmaker=cmaker,
+            correlation_model=spatial_correl, cross_correl=cross_correl_between,
+            amplifier=amplifier, sec_perils=sec_perils,
         )
 
         try:
             vs30_clustering = ground_motion_correlation_params["vs30_clustering"]
         except KeyError:
             vs30_clustering = True
-        self.spatial_correl = spatial_correl or correlation.JB2009CorrelationModel(
-            vs30_clustering
-        )
+        self.spatial_correl = (
+            spatial_correl or correlation.JB2009CorrelationModel(vs30_clustering))
         self.cross_correl_between = (
-            cross_correl_between or cross_correlation.GodaAtkinson2009()
-        )
+            cross_correl_between or cross_correlation.GodaAtkinson2009())
         self.cross_correl_within = cross_correlation.BakerJayaram2008()
         observed_imtls = {
             imt_str: [0]
@@ -175,8 +158,7 @@ class ConditionedGmfComputer(GmfComputer):
             if imt_str not in ["MMI", "PGV"]
         }
         self.observed_imts = sorted(
-            [imt.from_string(imt_str) for imt_str in observed_imtls]
-        )
+            [imt.from_string(imt_str) for imt_str in observed_imtls])
         self.rupture = rupture
         self.target_sitecol = sitecol
         self.station_sitecol = station_sitecol
@@ -205,18 +187,10 @@ class ConditionedGmfComputer(GmfComputer):
             # .compute outside of the loop over the realizations;
             # it is better to have few calls producing big arrays
             mean_covs = get_conditioned_mean_and_covariance(
-                self.rupture,
-                gmm,
-                self.station_sitecol,
-                self.station_data,
-                self.observed_imt_strs,
-                self.target_sitecol,
-                self.imts,
-                self.spatial_correl,
-                self.cross_correl_between,
-                self.cross_correl_within,
-                self.cmaker.maximum_distance,
-            )
+                self.rupture, gmm, self.station_sitecol, self.station_data,
+                self.observed_imt_strs, self.target_sitecol, self.imts, self.spatial_correl, 
+                self.cross_correl_between, self.cross_correl_within,
+                self.cmaker.maximum_distance)
 
             array, sig, eps = self.compute(gmm, num_events, mean_covs, rng)
 
@@ -301,33 +275,19 @@ class ConditionedGmfComputer(GmfComputer):
             cov_Y_Y = cov_WY_WY + cov_BY_BY
             gmf = exp(
                 rng.multivariate_normal(
-                    mu_Y.flatten(),
-                    cov_Y_Y,
-                    size=num_events,
-                    check_valid="warn",
-                    tol=1e-5,
-                    method="eigh",
-                ),
-                imt,
-            ).T
+                    mu_Y.flatten(), cov_Y_Y, size=num_events,
+                    check_valid="warn", tol=1e-5, method="eigh"),
+                imt).T
             inter_sig = 0
             inter_eps = 0
         return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
 
 
 def get_conditioned_mean_and_covariance(
-    rupture,
-    gmm,
-    station_sitecol,
-    station_data,
-    observed_imt_strs,
-    target_sitecol,
-    target_imts,
-    spatial_correl,
-    cross_correl_between,
-    cross_correl_within,
-    maximum_distance,
-):
+    rupture, gmm, station_sitecol, station_data, 
+    observed_imt_strs, target_sitecol, target_imts,
+    spatial_correl, cross_correl_between, cross_correl_within,
+    maximum_distance):
     gmm_name = gmm.__class__.__name__
     if gmm_name == "ModifiableGMPE":
         gmm_name = gmm.gmpe.__class__.__name__
@@ -345,14 +305,10 @@ def get_conditioned_mean_and_covariance(
     }
     observed_imts = sorted([imt.from_string(imt_str) for imt_str in observed_imtls])
     cmaker_D = ContextMaker(
-        rupture.tectonic_region_type,
-        [gmm],
+        rupture.tectonic_region_type, [gmm],
         dict(
-            truncation_level=0,
-            imtls=observed_imtls,
-            maximum_distance=maximum_distance,
-        ),
-    )
+            truncation_level=0, imtls=observed_imtls, 
+            maximum_distance=maximum_distance))
 
     gc_D = GmfComputer(rupture, station_sitecol, cmaker_D)
     mean_stds = cmaker_D.get_mean_stds([gc_D.ctx])[:, 0]
@@ -531,22 +487,15 @@ def get_conditioned_mean_and_covariance(
 
         # From the GMMs, get the mean and stddevs at the target sites
         cmaker_Y = ContextMaker(
-            rupture.tectonic_region_type,
-            [gmm],
-            dict(
-                truncation_level=0,
-                imtls={target_imt.string: [0]},
-                maximum_distance=maximum_distance,
-            ),
-        )
+            rupture.tectonic_region_type, [gmm], dict(
+                truncation_level=0, imtls={target_imt.string: [0]},
+                maximum_distance=maximum_distance))
 
         gc_Y = GmfComputer(rupture, target_sitecol, cmaker_Y)
         mean_stds = cmaker_Y.get_mean_stds([gc_Y.ctx])[:, 0]
         target_sites_filtered = (
             numpy.argwhere(numpy.isin(target_sitecol.sids, gc_Y.ctx.sids))
-            .ravel()
-            .tolist()
-        )
+            .ravel().tolist())
         target_sitecol_filtered = target_sitecol.filtered(target_sites_filtered)
         num_target_sites = len(target_sitecol_filtered)
         # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT; G gsims, M IMTs, N sites/distances
@@ -646,12 +595,9 @@ def get_conditioned_mean_and_covariance(
 
 
 def compute_spatial_cross_correlation_matrix(
-    sitecol_1,
-    sitecol_2,
-    imt_list_1,
-    imt_list_2,
-    spatial_correl,
-    cross_correl_within,
+    sitecol_1, sitecol_2,
+    imt_list_1, imt_list_2,
+    spatial_correl, cross_correl_within,
 ):
     # The correlation structure for IMs of differing types at differing locations
     # can be reasonably assumed as Markovian in nature, and we assume here that
@@ -666,30 +612,16 @@ def compute_spatial_cross_correlation_matrix(
         sitecol_2.lons,
         sitecol_2.lats,
     )
-    spatial_cross_correlation_matrix = numpy.block(
-        [
-            [
-                _compute_spatial_cross_correlation_matrix(
-                    distance_matrix,
-                    imt_1,
-                    imt_2,
-                    spatial_correl,
-                    cross_correl_within,
-                )
-                for imt_2 in imt_list_2
-            ]
-            for imt_1 in imt_list_1
-        ]
-    )
+    spatial_cross_correlation_matrix = numpy.block([[
+        _compute_spatial_cross_correlation_matrix(
+            distance_matrix, imt_1, imt_2, spatial_correl, cross_correl_within)
+            for imt_2 in imt_list_2] for imt_1 in imt_list_1])
     return spatial_cross_correlation_matrix
 
 
 def _compute_spatial_cross_correlation_matrix(
-    distance_matrix,
-    imt_1,
-    imt_2,
-    spatial_correl,
-    cross_correl_within,
+    distance_matrix, imt_1, imt_2,
+    spatial_correl, cross_correl_within,
 ):
     if imt_1 == imt_2:
         # Since we have a single IMT, no cross-correlation terms to be computed
