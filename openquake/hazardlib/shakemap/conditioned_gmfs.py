@@ -289,7 +289,7 @@ def get_conditioned_mean_and_covariance(
     spatial_correl, cross_correl_between, cross_correl_within,
     maximum_distance):
     gmm_name = gmm.__class__.__name__
-    if gmm_name == "ModifiableGMPE":
+    if hasattr(gmm, "gmpe"):
         gmm_name = gmm.gmpe.__class__.__name__
 
     if gmm.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
