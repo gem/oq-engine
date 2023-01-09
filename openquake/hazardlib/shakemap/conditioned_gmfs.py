@@ -299,10 +299,6 @@ class ConditionedGmfComputer(GmfComputer):
             inter_eps = [numpy.zeros(num_events)]
         else:
             cov_Y_Y = cov_WY_WY + cov_BY_BY
-            # cov_Y_Y_near = cov_nearest(
-            #     cov_Y_Y, method="clipped", threshold=1e-15, n_fact=100, return_all=False
-            # )
-            # cov_Y_Y_near = numpy.nan_to_num(cov_Y_Y_near).clip(min=0)
             gmf = exp(
                 rng.multivariate_normal(
                     mu_Y.flatten(),
