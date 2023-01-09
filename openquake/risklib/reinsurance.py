@@ -20,7 +20,8 @@ import os
 import logging
 import pandas as pd
 import numpy as np
-from openquake.baselib.general import BASE183, fast_agg2
+from openquake.baselib import hdf5
+from openquake.baselib.general import BASE183, fast_agg2, gen_slices
 from openquake.baselib.performance import compile, Monitor
 from openquake.baselib.writers import scientificformat
 from openquake.hazardlib import nrml, InvalidFile
@@ -413,6 +414,7 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
             keys.append(key)
             datalist.append(data)
         del rbp['eid']
+
     with mon('reinsurance by event', measuremem=True):
         overspill = {}
         res = clever_agg(keys, datalist, tdf, idx, overspill, eids)
@@ -430,26 +432,14 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
     return df
 
 
-def by_policy_event(agglosses_df, policy_df, treaty_df, mon=Monitor()):
-    """
-    :param DataFrame agglosses_df: losses aggregated by (agg_id, event_id)
-    :param DataFrame policy_df: policies
-    :param DataFrame treaty_df: treaties
-    :returns: (risk_by_policy_df, risk_by_event_df)
-    """
+def reins_by_policy(dstore, policy_df, treaty_df, loss_id):
     dfs = []
-    i = 1
-    logging.info("Processing %d policies", len(policy_df))
-    for _, policy in policy_df.iterrows():
-        if i % 100 == 0:
-            logging.info("Processed %d policies", i)
-        df = by_policy(agglosses_df, dict(policy), treaty_df)
-        df['policy_grp'] = build_policy_grp(policy, treaty_df)
-        dfs.append(df)
-        i += 1
-    rbp = pd.concat(dfs)
-    if DEBUG:
-        print(rbp.sort_values('event_id'))
-    rbe = _by_event(rbp, treaty_df, mon)
-    del rbp['policy_grp']
-    return rbp, rbe
+    nrows = len(dstore['risk_by_event/eid'])
+    for slc in gen_slices(0, nrows, hdf5.MAX_ROWS):
+        rbe_df = dstore.read_df(
+            'risk_by_event', sel={'agg_id': loss_id}, slc=slc)
+        for _, policy in policy_df.iterrows():
+            df = by_policy(rbe_df, dict(policy), treaty_df)
+            df['policy_grp'] = build_policy_grp(policy, treaty_df)
+            dfs.append(df)
+    return pd.concat(dfs)

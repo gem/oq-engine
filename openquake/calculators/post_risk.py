@@ -382,14 +382,16 @@ class PostRiskCalculator(base.RiskCalculator):
             logging.warning('Reinsurance calculations are still experimental')
             self.policy_df = self.datastore.read_df('policy')
             self.treaty_df = self.datastore.read_df('treaty_df')
-            alt = self.datastore.read_df('risk_by_event')
             # there must be a single loss type (possibly a total type)
             [lt] = oq.inputs['reinsurance']
-            agg_loss_table = alt[alt.loss_id == scientific.LOSSID[lt]]
-            if len(agg_loss_table) == 0:
-                raise ValueError('No losses for reinsurance %s' % lt)
-            rbp, rbe = reinsurance.by_policy_event(
-                agg_loss_table, self.policy_df, self.treaty_df, self._monitor)
+            with self._monitor("reinsurance by policy", measuremem=True):
+                rbp = reinsurance.reins_by_policy(
+                    self.datastore, self.policy_df, self.treaty_df,
+                    scientific.LOSSID[lt])
+                if len(rbp) == 0:
+                    raise ValueError('No losses for reinsurance %s' % lt)
+            rbe = reinsurance._by_event(rbp, self.treaty_df, self._monitor)
+            del rbp['policy_grp']
             self.datastore.create_df('reinsurance_by_policy', rbp)
             self.datastore.create_df('reinsurance-risk_by_event', rbe)
         if oq.investigation_time and oq.return_periods != [0]:
