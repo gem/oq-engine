@@ -385,6 +385,7 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
     nonzero = out['claim'] > 0  # discard zero claims
     out_df = pd.DataFrame({k: out[k][nonzero] for k in out})
     # ex: event_id, policy_id, retention, claim, surplus, quota_shared, wxlr
+    out_df['policy_grp'] = build_policy_grp(pol_dict, treaty_df)
     return out_df
 
 
@@ -440,16 +441,14 @@ def reins_by_policy(dstore, policy_df, treaty_df, loss_id, monitor):
     """
     rbe_mon = monitor('reading risk_by_event')
     policies = [dict(policy) for _, policy in policy_df.iterrows()]
+    dfs = []
     with dstore:
-        dfs = []
         nrows = len(dstore['risk_by_event/agg_id'])
         for slc in gen_slices(0, nrows, hdf5.MAX_ROWS):
             with rbe_mon:
                 rbe_df = dstore.read_df(
                     'risk_by_event', sel={'loss_id': loss_id}, slc=slc)
             for policy in policies:
-                df = by_policy(rbe_df, policy, treaty_df)
-                df['policy_grp'] = build_policy_grp(policy, treaty_df)
-                dfs.append(df)
+                dfs.append(by_policy(rbe_df, policy, treaty_df))
     if dfs:
         yield pd.concat(dfs)

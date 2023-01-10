@@ -54,7 +54,6 @@ def by_policy_event(agglosses_df, policy_df, treaty_df):
     dfs = []
     for _, policy in policy_df.iterrows():
         df = reinsurance.by_policy(agglosses_df, dict(policy), treaty_df)
-        df['policy_grp'] = reinsurance.build_policy_grp(policy, treaty_df)
         dfs.append(df)
     rbp = pandas.concat(dfs)
     rbe = reinsurance._by_event(rbp, treaty_df)
@@ -201,6 +200,7 @@ event_id,policy_id,retention,claim,WXLR_metro,WXLR_rural
  5,1, 661.1264, 661.1264,0.0,0.0''')
         pol = dict(self.policy_df.loc[0])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
+        del out['policy_grp']
         assert_ok(out, expected)
 
     def test_policy2(self):
@@ -220,6 +220,7 @@ event_id,policy_id,retention,claim,WXLR_metro,WXLR_rural
 9, 5,2 ,200, 561.1264,  61.1264,300.0''')
         pol = dict(self.policy_df.loc[1])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
+        del out['policy_grp']
         assert_ok(out, expected)
 
     def test_policy3(self):
@@ -229,6 +230,7 @@ event_id,policy_id,retention,claim,WXLR_metro,WXLR_rural
 25,      3,        700,8500, 3000,4800''')
         pol = dict(self.policy_df.loc[2])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
+        del out['policy_grp']
         assert_ok(out, expected)
 
     def test_by_cat_no_apply(self):
