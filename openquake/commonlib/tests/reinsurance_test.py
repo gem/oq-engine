@@ -49,6 +49,18 @@ def assert_ok(got, exp):
             sys.exit(f'Wrong column {col} in {got}')
 
 
+def by_policy_event(agglosses_df, policy_df, treaty_df):
+    #returns (risk_by_policy_df, risk_by_event_df)
+    dfs = []
+    for _, policy in policy_df.iterrows():
+        df = reinsurance.by_policy(agglosses_df, dict(policy), treaty_df)
+        df['policy_grp'] = reinsurance.build_policy_grp(policy, treaty_df)
+        dfs.append(df)
+    rbp = pandas.concat(dfs)
+    rbe = reinsurance._by_event(rbp, treaty_df)
+    return rbp, rbe
+
+
 policy_idx = {'?': 0, 'VA_region_1': 1, 'VA_region_2': 2, 'rur_Ant_1': 3}
 
 # NB: agg_id starts from 0, policy_id from 1
@@ -159,7 +171,7 @@ event_id,agg_id,loss
 event_id,retention,claim,prop1,prop2,over_A
        1,15600.0  ,26000,5000.0,5400.0,3000.0
 ''')
-        bypolicy, byevent = reinsurance.by_policy_event(
+        bypolicy, byevent = by_policy_event(
             risk_by_event, pol_df, treaty_df)
         assert_ok(byevent, expected)
 
@@ -223,7 +235,7 @@ event_id,policy_id,retention,claim,WXLR_metro,WXLR_rural
         expected = _df('''\
 event_id,retention,claim,WXLR_metro,WXLR_rural,CatXL_reg
 25,      700.0,   8500.0,  3000.0,  4800.0,   0.0''', index_col='event_id')
-        bypolicy, byevent = reinsurance.by_policy_event(
+        bypolicy, byevent = by_policy_event(
             risk_by_event, self.policy_df, self.treaty_df)
         # the catxl does not apply on event 25
         byevent = byevent[byevent.event_id == 25].set_index('event_id')
@@ -251,7 +263,7 @@ event_id,agg_id,loss
         expected = _df('''\
 event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
        1,20000,    500.0,5000.0, 7600.0,    4800.0,6900.0''')
-        bypolicy, byevent = reinsurance.by_policy_event(
+        bypolicy, byevent = by_policy_event(
             risk_by_event, pol_df, treaty_df)
 
     def test_many_levels(self):
@@ -289,7 +301,7 @@ event_id,agg_id,loss
         expected = _df('''\
 event_id,retention,claim,prop1,prop2,wxl1,wxl2,cat1,cat2,cat3,cat4,cat5,over_E,over_G
        1,   1000.0,40000.,17000.,4100,1600,1500,3800.,4200.,3800.,2500,500,2300,800''')
-        bypolicy, byevent = reinsurance.by_policy_event(
+        bypolicy, byevent = by_policy_event(
             risk_by_event, pol_df, treaty_df)
         assert_ok(byevent, expected)
 
