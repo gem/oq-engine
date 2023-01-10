@@ -388,8 +388,7 @@ class Result(object):
         self.mon = mon
         self.tb_str = tb_str
         self.msg = msg
-        # host_ip = socket.gethostbyname(socket.gethostname())
-        self.workerid = (socket.gethostname(), os.getpid())
+        self.workerid = (workerpool.HOST_IP, os.getpid())
 
     def get(self):
         """

@@ -31,6 +31,8 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
+HOST_IP = '127.0.0.1'
+
 
 def ssh_args(zworkers):
     """
@@ -240,6 +242,8 @@ def workerpool(worker_url='tcp://0.0.0.0:1909', *, num_workers: int = -1):
     """
     Start a workerpool on the given URL with the given number of workers.
     """
+    global HOST_IP
+    HOST_IP = worker_url.split(':')[0]
     WorkerPool(worker_url, num_workers).start()
 
 
