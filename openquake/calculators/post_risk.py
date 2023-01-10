@@ -390,10 +390,10 @@ class PostRiskCalculator(base.RiskCalculator):
                 dstore = parent
             else:
                 dstore = self.datastore
-                dstore.swmr_on()
             ct = oq.concurrent_tasks or 1
             allargs = [(dstore, pdf, self.treaty_df, loss_id)
                        for pdf in numpy.array_split(self.policy_df, ct)]
+            self.datastore.swmr_on()
             smap = parallel.Starmap(reinsurance.reins_by_policy, allargs,
                                     h5=self.datastore.hdf5)
             rbp = pandas.concat(list(smap))
@@ -422,7 +422,10 @@ class PostRiskCalculator(base.RiskCalculator):
                     self.datastore.set_shape_descr(
                         'src_loss_table/' + loss_type, source=source_ids)
         K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
-        rbe_df = self.datastore.read_df('risk_by_event')
+        if 'risk_by_event' not in self.datastore:
+            rbe_df = self.datastore.parent.open('r').read_df('risk_by_event')
+        else:
+            rbe_df = self.datastore.read_df('risk_by_event')
         if len(rbe_df) == 0:
             raise SystemExit('The risk_by_event table is empty!')
         if self.reaggreate:
