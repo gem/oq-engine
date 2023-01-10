@@ -247,6 +247,8 @@ class DataStore(collections.abc.MutableMapping):
         """
         self.close()  # flush everything
         self.open('a')
+        if self.parent != ():
+            self.parent.open('r')
         try:
             self.hdf5.swmr_mode = True
         except (ValueError, RuntimeError):  # already set
