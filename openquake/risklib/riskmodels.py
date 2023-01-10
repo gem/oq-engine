@@ -529,6 +529,28 @@ class CompositeRiskModel(collections.abc.Mapping):
         self.consdict = consdict or {}  # new style consequences, by anything
         self.init()
 
+    def set_tmap(self, tmap):
+        """
+        Set the attribute .tmap if the risk IDs in the
+        taxonomy mapping are consistent with the exposure.
+        """
+        for loss_type in tmap:
+            for byname, coeffs in self.consdict.items():
+                # ex. byname = "losses_by_taxonomy"
+                if len(coeffs):
+                    consequence, tagname = byname.split('_by_')
+                    # the taxonomy map is a dictionary loss_type ->
+                    # [[(risk_taxon, weight]),...] for each asset taxonomy
+                    for pairs in tmap[loss_type][1:]:  # strip [('?', 1)]
+                        for risk_t, weight in pairs:
+                            try:
+                                coeffs[risk_t][loss_type]
+                            except KeyError as err:
+                                fname = self.oqparam.inputs['taxonomy_mapping']
+                                raise InvalidFile('%s: please check %s' %
+                                                  (fname, err))
+        self.tmap = tmap
+
     def check_risk_ids(self, inputs):
         """
         Check that there are no missing risk IDs for some risk functions
