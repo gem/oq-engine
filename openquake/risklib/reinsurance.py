@@ -446,4 +446,5 @@ def reins_by_policy(dstore, policy_df, treaty_df, loss_id, mon):
                 df = by_policy(rbe_df, dict(policy), treaty_df)
                 df['policy_grp'] = build_policy_grp(policy, treaty_df)
                 dfs.append(df)
-    return pd.concat(dfs)
+    if dfs:
+        yield pd.concat(dfs)
