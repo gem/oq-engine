@@ -534,6 +534,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         Set the attribute .tmap if the risk IDs in the
         taxonomy mapping are consistent with the exposure.
         """
+        self.tmap = tmap
+        fname = self.oqparam.inputs.get('taxonomy_mapping')
+        if fname is None:  # in scenario_damage/case_14
+            return
         for loss_type in tmap:
             for byname, coeffs in self.consdict.items():
                 # ex. byname = "losses_by_taxonomy"
@@ -546,10 +550,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                             try:
                                 coeffs[risk_t][loss_type]
                             except KeyError as err:
-                                fname = self.oqparam.inputs['taxonomy_mapping']
-                                raise InvalidFile('%s: please check %s' %
-                                                  (fname, err))
-        self.tmap = tmap
+                                raise InvalidFile('%s: please check %s:%s' %
+                                                  (fname, loss_type, err))
 
     def check_risk_ids(self, inputs):
         """
