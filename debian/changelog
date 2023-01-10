@@ -1,5 +1,8 @@
+  [Michele Simionato]
+  * Parallelized the reinsurance calculation
+
   [Marco Pagani]
-  * Completed implementation of `grp_probability` for SourceGroups with mutex 
+  * Completed implementation of `grp_probability` for SourceGroups with mutex
     ruptures
 
   [Michele Simionato]

@@ -422,10 +422,7 @@ class PostRiskCalculator(base.RiskCalculator):
                     self.datastore.set_shape_descr(
                         'src_loss_table/' + loss_type, source=source_ids)
         K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
-        if 'risk_by_event' not in self.datastore:
-            rbe_df = self.datastore.parent.open('r').read_df('risk_by_event')
-        else:
-            rbe_df = self.datastore.read_df('risk_by_event')
+        rbe_df = self.datastore.read_df('risk_by_event')
         if len(rbe_df) == 0:
             raise SystemExit('The risk_by_event table is empty!')
         if self.reaggreate:
