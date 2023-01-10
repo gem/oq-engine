@@ -2124,7 +2124,7 @@ description of each parameter is provided below.
    measure levels corresponding to the probability of exceedance
    value(s) provided here. The computations use the
    ``investigation_time`` and the ``intensity_measure_types_and_levels``
-   defined in the “Calculation configuration” section (see page ). For
+   defined in the “Calculation configuration” section. For
    the ``poes_disagg`` the intensity measure level(s) for the
    disaggregation are inferred by performing a classical calculation and
    by inverting the hazard curves.
@@ -2155,7 +2155,7 @@ description of each parameter is provided below.
    ``Lon_Lat_TRT``, ``Mag_Dist``, ``Mag_Dist_Eps``, ``Mag_Lon_Lat``,
    ``TRT``. If none are specified, then all are computed. More details
    of the disaggregation output are given in the “Outputs from Hazard
-   Disaggregation” section, see page )
+   Disaggregation” section)
 
 -  ``disagg_by_src``: optional; if specified and set to true,
    disaggregation by source is computed, if possible.
@@ -2194,7 +2194,7 @@ example is shown below:
 
 If ``iml_disagg`` is specified, the user should not include
 ``intensity_measure_types_and_levels`` in the “Calculation
-configuration” section (see page ) since it is explicitly given here.
+configuration” section since it is explicitly given here.
 
 The OQ Engine supports the calculation of two typologies of disaggregation 
 result involving :math:`\epsilon`. The standard approach used by the 
