@@ -436,7 +436,7 @@ def reins_by_policy(dstore, policy_df, treaty_df, loss_id, mon):
     """
     Task function called by post_risk
     """
-    rbe_mon = mon('reading risk_by_event')
+    rbe_mon = mon('reading risk_by_event', measuremem=True)
     with dstore:
         dfs = []
         nrows = len(dstore['risk_by_event/agg_id'])
