@@ -243,7 +243,7 @@ def workerpool(worker_url='tcp://0.0.0.0:1909', *, num_workers: int = -1):
     Start a workerpool on the given URL with the given number of workers.
     """
     global HOST_IP
-    HOST_IP = worker_url.split(':')[0]
+    HOST_IP = worker_url[6:].split(':')[0]  # strip tcp:// and the port
     WorkerPool(worker_url, num_workers).start()
 
 
