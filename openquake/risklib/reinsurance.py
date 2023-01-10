@@ -390,6 +390,7 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
 
 def _by_event(rbp, treaty_df, mon=Monitor()):
     with mon('processing policy_loss_table', measuremem=True):
+        # this is very fast
         tdf = treaty_df.set_index('code')
         inpcols = ['eid', 'claim'] + [t.id for _, t in tdf.iterrows()
                                       if t.type != 'catxl']
@@ -416,6 +417,7 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
         del rbp['eid']
 
     with mon('reinsurance by event', measuremem=True):
+        # this is fast
         overspill = {}
         res = clever_agg(keys, datalist, tdf, idx, overspill, eids)
 
@@ -436,7 +438,7 @@ def reins_by_policy(dstore, policy_df, treaty_df, loss_id, mon):
     """
     Task function called by post_risk
     """
-    rbe_mon = mon('reading risk_by_event', measuremem=True)
+    rbe_mon = mon('reading risk_by_event')
     with dstore:
         dfs = []
         nrows = len(dstore['risk_by_event/agg_id'])
