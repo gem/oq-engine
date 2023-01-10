@@ -58,7 +58,6 @@ def by_policy_event(agglosses_df, policy_df, treaty_df):
         dfs.append(df)
     rbp = pandas.concat(dfs)
     rbe = reinsurance._by_event(rbp, treaty_df)
-    del rbp['policy_grp']
     return rbp, rbe
 
 

@@ -292,7 +292,7 @@ def claim_to_cessions(claim, policy, treaty_df):
 
 def build_policy_grp(policy, treaty_df):
     """
-    :param policy: policy dictionary or record
+    :param policy: policy dictionary
     :param treaty_df: treaty DataFrame
     :returns: the policy_grp for the given policy
     """
@@ -414,7 +414,7 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
                 data[:, 0] -= data[:, c]
             keys.append(key)
             datalist.append(data)
-        del rbp['eid']
+        del rbp['eid'], rbp['policy_grp']
 
     with mon('reinsurance by event', measuremem=True):
         # this is fast
@@ -434,11 +434,12 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
     return df
 
 
-def reins_by_policy(dstore, policy_df, treaty_df, loss_id, mon):
+def reins_by_policy(dstore, policy_df, treaty_df, loss_id, monitor):
     """
     Task function called by post_risk
     """
-    rbe_mon = mon('reading risk_by_event')
+    rbe_mon = monitor('reading risk_by_event')
+    policies = [dict(policy) for _, policy in policy_df.iterrows()]
     with dstore:
         dfs = []
         nrows = len(dstore['risk_by_event/agg_id'])
@@ -446,8 +447,8 @@ def reins_by_policy(dstore, policy_df, treaty_df, loss_id, mon):
             with rbe_mon:
                 rbe_df = dstore.read_df(
                     'risk_by_event', sel={'loss_id': loss_id}, slc=slc)
-            for _, policy in policy_df.iterrows():
-                df = by_policy(rbe_df, dict(policy), treaty_df)
+            for policy in policies:
+                df = by_policy(rbe_df, policy, treaty_df)
                 df['policy_grp'] = build_policy_grp(policy, treaty_df)
                 dfs.append(df)
     if dfs:

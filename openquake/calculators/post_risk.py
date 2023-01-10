@@ -400,7 +400,6 @@ class PostRiskCalculator(base.RiskCalculator):
             if len(rbp) == 0:
                 raise ValueError('No losses for reinsurance %s' % lt)
             rbe = reinsurance._by_event(rbp, self.treaty_df, self._monitor)
-            del rbp['policy_grp']
             self.datastore.create_df('reinsurance_by_policy', rbp)
             self.datastore.create_df('reinsurance-risk_by_event', rbe)
         if oq.investigation_time and oq.return_periods != [0]:
