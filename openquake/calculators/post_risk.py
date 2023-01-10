@@ -390,10 +390,10 @@ class PostRiskCalculator(base.RiskCalculator):
                 dstore = parent
             else:
                 dstore = self.datastore
+                dstore.swmr_on()
             ct = oq.concurrent_tasks or 1
             allargs = [(dstore, pdf, self.treaty_df, loss_id)
                        for pdf in numpy.array_split(self.policy_df, ct)]
-            #self.datastore.swmr_on()
             smap = parallel.Starmap(reinsurance.reins_by_policy, allargs,
                                     h5=self.datastore.hdf5)
             rbp = pandas.concat(list(smap))
