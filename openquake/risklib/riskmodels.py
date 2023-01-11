@@ -532,12 +532,18 @@ class CompositeRiskModel(collections.abc.Mapping):
     def set_tmap(self, tmap):
         """
         Set the attribute .tmap if the risk IDs in the
-        taxonomy mapping are consistent with the exposure.
+        taxonomy mapping are consistent with the fragility functions.
         """
         self.tmap = tmap
-        fname = self.oqparam.inputs.get('taxonomy_mapping')
-        if fname is None:  # in scenario_damage/case_14
+        if 'consequence' not in self.oqparam.inputs:
             return
+        csq_files = []
+        for fnames in self.oqparam.inputs['consequence'].values():
+            if isinstance(fnames, list):
+                csq_files.extend(fnames)
+            else:
+                csq_files.append(fnames)
+        cfs = '\n'.join(csq_files)
         for loss_type in tmap:
             for byname, coeffs in self.consdict.items():
                 # ex. byname = "losses_by_taxonomy"
@@ -550,9 +556,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                             try:
                                 coeffs[risk_t][loss_type]
                             except KeyError as err:
-                                raise InvalidFile('%s: please check %s:%s' %
-                                                  (fname, loss_type, err))
-
+                                raise InvalidFile('Missing %s in the files\n%s'
+                                                  % (err, cfs))
     def check_risk_ids(self, inputs):
         """
         Check that there are no missing risk IDs for some risk functions
