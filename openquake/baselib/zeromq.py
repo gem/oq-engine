@@ -173,11 +173,9 @@ class Socket(object):
             raise exc.__class__('%s: %r' % (exc, obj))
         self.num_sent += 1
         if self.socket_type == zmq.REQ:
-            ok = self.zsocket.poll(self.timeout)  # 30 seconds
+            ok = self.zsocket.poll(self.timeout)
             if not ok:
-                raise TimeoutError(
-                    'While sending %s; probably the DbServer is off' %
-                    repr(obj))
+                raise TimeoutError('While sending %r' % obj)
             return self.zsocket.recv_pyobj()
 
     def __repr__(self):
