@@ -7,9 +7,7 @@
         <simpleFaultGeometry>
             <gml:LineString>
                 <gml:posList>
-                    41.749493 42.022663 41.804614 42.045204 41.98125 42.068533
-
- 
+                    41.749493 42.022663 41.804614 42.045204 41.98125 42.068533 
                 </gml:posList>
             </gml:LineString>
             <dip>45</dip>
