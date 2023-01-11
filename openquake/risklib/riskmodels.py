@@ -556,8 +556,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                             try:
                                 coeffs[risk_t][loss_type]
                             except KeyError as err:
-                                raise InvalidFile('Missing %s in the files\n%s'
-                                                  % (err, cfs))
+                                raise InvalidFile(
+                                    'Missing %s in\n%s' % (err, cfs))
     def check_risk_ids(self, inputs):
         """
         Check that there are no missing risk IDs for some risk functions
