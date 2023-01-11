@@ -864,7 +864,7 @@ class HazardCalculator(BaseCalculator):
         if oq.job_type == 'risk':
             taxs = python3compat.decode(self.assetcol.tagcol.taxonomy)
             tmap = readinput.taxonomy_mapping(self.oqparam, taxs)
-            self.crmodel.tmap = tmap
+            self.crmodel.set_tmap(tmap)
             taxonomies = set()
             for ln in oq.loss_types:
                 for items in self.crmodel.tmap[ln]:
