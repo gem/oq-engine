@@ -219,13 +219,6 @@ GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
 
 
-def debug(msg, mon):
-    """
-    Trivial task useful for debugging
-    """
-    print(msg)
-
-
 @submit.add('no')
 def no_submit(self, func, args, monitor):
     return safely_call(func, args, self.task_no, monitor)
@@ -505,6 +498,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
             sentbytes += len(res.pik)
             if res.msg == 'TASK_ENDED':
                 break
+
 
 if oq_distribute() == 'ipp':
     from ipyparallel import Cluster

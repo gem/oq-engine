@@ -24,7 +24,7 @@ import tempfile
 import subprocess
 import psutil
 from openquake.baselib import (
-    zeromq as z, general, parallel, config, sap, InvalidFile)
+    zeromq as z, general, performance, parallel, config, sap, InvalidFile)
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -164,6 +164,42 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 sock.send('restart')
         return 'restarted'
+
+    def debug(self):
+        """
+        Start the workers, run a debug job, print some info and stop
+        """
+        self.start()
+        try:
+            mon = performance.Monitor('zmq-debug')
+            rec_host = config.dbserver.receiver_host or '127.0.0.1'
+            receiver = 'tcp://%s:%s' % (
+                rec_host, config.dbserver.receiver_ports)
+            with z.Socket(receiver, z.zmq.PULL, 'bind') as pull:
+                mon.inject = True
+                mon.config = config
+                mon.backurl = 'tcp://%s:%s' % (rec_host, pull.port)
+                for task_no, (host, _) in enumerate(self.host_cores):
+                    url = 'tcp://%s:%d' % (host, self.ctrl_port)
+                    print('Sending to', url)
+                    with z.Socket(url, z.zmq.REQ, 'connect') as sock:
+                        msg = 'executing task #%d' % task_no
+                        sock.send((debug, (msg,), task_no, mon))
+                isocket = iter(pull)
+                for _ in self.host_cores:
+                    res = next(isocket)
+                    print('got', res.get())
+        finally:
+            self.stop()
+        return 'debugged'
+
+
+def debug(msg, mon):
+    """
+    Trivial task useful for debugging
+    """
+    print(msg)
+    return mon.task_no
 
 
 def call(func, args, taskno, mon, executing):

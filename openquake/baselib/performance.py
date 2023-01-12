@@ -184,6 +184,7 @@ class Monitor(object):
     address = None
     authkey = None
     calc_id = None
+    inject = None
 
     def __init__(self, operation='', measuremem=False, inner_loop=False,
                  h5=None, version=None):
