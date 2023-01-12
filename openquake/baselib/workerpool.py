@@ -172,12 +172,12 @@ class WorkerMaster(object):
         self.start()
         try:
             mon = performance.Monitor('zmq-debug')
+            mon.inject = True
+            mon.config = config  # forget this and it will hang silently
             rec_host = config.dbserver.receiver_host or '127.0.0.1'
             receiver = 'tcp://%s:%s' % (
                 rec_host, config.dbserver.receiver_ports)
             with z.Socket(receiver, z.zmq.PULL, 'bind') as pull:
-                mon.inject = True
-                mon.config = config
                 mon.backurl = 'tcp://%s:%s' % (rec_host, pull.port)
                 for task_no, (host, _) in enumerate(self.host_cores):
                     url = 'tcp://%s:%d' % (host, self.ctrl_port)
@@ -188,7 +188,7 @@ class WorkerMaster(object):
                 isocket = iter(pull)
                 for _ in self.host_cores:
                     res = next(isocket)
-                    print('got', res.get())
+                    print('got result', res.get())
         finally:
             self.stop()
         return 'debugged'
