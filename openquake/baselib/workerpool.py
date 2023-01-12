@@ -19,17 +19,23 @@ import os
 import sys
 import time
 import shutil
+import socket
 import getpass
 import tempfile
 import subprocess
 import psutil
 from openquake.baselib import (
-    zeromq as z, general, parallel, config, sap, InvalidFile)
+    zeromq as z, general, performance, parallel, config, sap, InvalidFile)
 try:
     from setproctitle import setproctitle
 except ImportError:
     def setproctitle(title):
         "Do nothing"
+
+
+def init_workers():
+    """Waiting function, used to wake up the process pool"""
+    setproctitle('oq-worker')
 
 
 def ssh_args(zworkers):
@@ -71,8 +77,8 @@ class WorkerMaster(object):
 
     def start(self):
         """
-        Start multiple workerpools, possibly on remote servers via ssh,
-        assuming there is an active streamer.
+        Start multiple workerpools on remote servers via ssh and/or a single
+        workerpool on localhost.
         """
         starting = []
         for host, cores, args in ssh_args(self.zworkers):
@@ -165,9 +171,55 @@ class WorkerMaster(object):
                 sock.send('restart')
         return 'restarted'
 
+    def debug(self):
+        """
+        Start the workers, run a debug job, print some info and stop
+        """
+        self.start()
+        try:
+            mon = performance.Monitor('zmq-debug')
+            mon.inject = True
+            mon.config = config  # forget this and it will hang silently
+            rec_host = config.dbserver.receiver_host or '127.0.0.1'
+            receiver = 'tcp://%s:%s' % (
+                rec_host, config.dbserver.receiver_ports)
+            ntasks = len(self.host_cores) * 2
+            task_no = 0
+            with z.Socket(receiver, z.zmq.PULL, 'bind') as pull:
+                mon.backurl = 'tcp://%s:%s' % (rec_host, pull.port)
+                for host, _ in self.host_cores:
+                    url = 'tcp://%s:%d' % (host, self.ctrl_port)
+                    print('Sending to', url)
+                    with z.Socket(url, z.zmq.REQ, 'connect') as sock:
+                        for i in range(2):
+                            msg = 'executing task #%d' % task_no
+                            sock.send((debug_task, (msg,), task_no, mon))
+                            task_no += 1
+                results = list(get_results(pull, ntasks))
+                print(f'{results=}')
+        finally:
+            self.stop()
+        return 'debugged'
+
+
+def get_results(socket, n):
+    for res in socket:
+        if n == 0:
+            return
+        elif res.msg != 'TASK_ENDED':
+            yield res.get()
+            n -= 1
+
+
+def debug_task(msg, mon):
+    """
+    Trivial task useful for debugging
+    """
+    print(socket.gethostname(), msg)
+    return mon.task_no
+
 
 def call(func, args, taskno, mon, executing):
-    setproctitle('oq-zworker')
     fname = os.path.join(executing, '%s-%s' % (mon.calc_id, taskno))
     # NB: very hackish way of keeping track of the running tasks,
     # used in get_executing, could litter the file system
@@ -202,7 +254,7 @@ class WorkerPool(object):
         title = 'oq-zworkerpool %s' % self.ctrl_url[6:]  # strip tcp://
         print('Starting ' + title, file=sys.stderr)
         setproctitle(title)
-        self.pool = general.mp.Pool(self.num_workers)
+        self.pool = general.mp.Pool(self.num_workers, init_workers)
         # start control loop accepting the commands stop and kill
         with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
             for cmd in ctrlsock:

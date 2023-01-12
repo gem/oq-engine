@@ -197,11 +197,6 @@ import multiprocessing.shared_memory as shmem
 from multiprocessing.connection import wait
 import psutil
 import numpy
-try:
-    from setproctitle import setproctitle
-except ImportError:
-    def setproctitle(title):
-        "Do nothing"
 
 from openquake.baselib import config, hdf5, workerpool
 from openquake.baselib.python3compat import decode
@@ -217,13 +212,6 @@ sys.setrecursionlimit(2000)  # raised to make pickle happier
 submit = CallableDict()
 GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
-
-
-def debug(msg, mon):
-    """
-    Trivial task useful for debugging
-    """
-    print(msg)
 
 
 @submit.add('no')
@@ -471,6 +459,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon is dummy_mon:  # in the DbServer
         assert not isgenfunc, func
         return Result.new(func, args, mon)
+    # debug(f'{mon.backurl=}, {task_no=}')
     if mon.operation.endswith('_'):
         name = mon.operation[:-1]
     elif func is split_task:
@@ -505,6 +494,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
             sentbytes += len(res.pik)
             if res.msg == 'TASK_ENDED':
                 break
+
 
 if oq_distribute() == 'ipp':
     from ipyparallel import Cluster
@@ -607,11 +597,6 @@ class IterResult(object):
         return res
 
 
-def init_workers():
-    """Waiting function, used to wake up the process pool"""
-    setproctitle('oq-worker')
-
-
 def getargnames(task_func):
     # a task can be a function, a method, a class or a callable instance
     if inspect.isfunction(task_func):
@@ -675,7 +660,7 @@ class Starmap(object):
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
             cls.pool = mp_context.Pool(
-                cls.num_cores, init_workers,
+                cls.num_cores, workerpool.init_workers,
                 maxtasksperchild=cls.maxtasksperchild)
             cls.pids = [proc.pid for proc in cls.pool._pool]
             cls.shared = []

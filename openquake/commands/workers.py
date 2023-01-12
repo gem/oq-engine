@@ -20,6 +20,8 @@ import sys
 import getpass
 from openquake.baselib import config, workerpool, parallel as p
 
+CHOICES = 'start stop status restart wait kill debug'.split()
+
 
 def main(cmd):
     """
@@ -36,5 +38,4 @@ def main(cmd):
         print('Nothing to do: oq_distribute=%s' % dist)
 
 
-main.cmd = dict(help='command', choices='start stop status restart wait kill'.
-                split())
+main.cmd = dict(help='command', choices=CHOICES)
