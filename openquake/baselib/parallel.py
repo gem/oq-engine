@@ -197,11 +197,6 @@ import multiprocessing.shared_memory as shmem
 from multiprocessing.connection import wait
 import psutil
 import numpy
-try:
-    from setproctitle import setproctitle
-except ImportError:
-    def setproctitle(title):
-        "Do nothing"
 
 from openquake.baselib import config, hdf5, workerpool
 from openquake.baselib.python3compat import decode
@@ -602,11 +597,6 @@ class IterResult(object):
         return res
 
 
-def init_workers():
-    """Waiting function, used to wake up the process pool"""
-    setproctitle('oq-worker')
-
-
 def getargnames(task_func):
     # a task can be a function, a method, a class or a callable instance
     if inspect.isfunction(task_func):
@@ -670,7 +660,7 @@ class Starmap(object):
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
             cls.pool = mp_context.Pool(
-                cls.num_cores, init_workers,
+                cls.num_cores, workerpool.init_workers,
                 maxtasksperchild=cls.maxtasksperchild)
             cls.pids = [proc.pid for proc in cls.pool._pool]
             cls.shared = []

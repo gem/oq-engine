@@ -32,6 +32,11 @@ except ImportError:
         "Do nothing"
 
 
+def init_workers():
+    """Waiting function, used to wake up the process pool"""
+    setproctitle('oq-worker')
+
+
 def ssh_args(zworkers):
     """
     :yields: triples (hostIP, num_cores, [ssh remote python command])
@@ -237,8 +242,7 @@ class WorkerPool(object):
         title = 'oq-zworkerpool %s' % self.ctrl_url[6:]  # strip tcp://
         print('Starting ' + title, file=sys.stderr)
         setproctitle(title)
-        self.pool = general.mp.Pool(
-            self.num_workers, lambda: setproctitle('oq-zworker'))
+        self.pool = general.mp.Pool(self.num_workers, init_workers)
         # start control loop accepting the commands stop and kill
         with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
             for cmd in ctrlsock:
