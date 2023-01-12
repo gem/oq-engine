@@ -203,7 +203,6 @@ def debug(msg, mon):
 
 
 def call(func, args, taskno, mon, executing):
-    setproctitle('oq-zworker')
     fname = os.path.join(executing, '%s-%s' % (mon.calc_id, taskno))
     # NB: very hackish way of keeping track of the running tasks,
     # used in get_executing, could litter the file system
@@ -238,7 +237,8 @@ class WorkerPool(object):
         title = 'oq-zworkerpool %s' % self.ctrl_url[6:]  # strip tcp://
         print('Starting ' + title, file=sys.stderr)
         setproctitle(title)
-        self.pool = general.mp.Pool(self.num_workers)
+        self.pool = general.mp.Pool(
+            self.num_workers, lambda: setproctitle('oq-zworker'))
         # start control loop accepting the commands stop and kill
         with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
             for cmd in ctrlsock:

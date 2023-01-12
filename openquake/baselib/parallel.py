@@ -464,6 +464,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon is dummy_mon:  # in the DbServer
         assert not isgenfunc, func
         return Result.new(func, args, mon)
+    # debug(f'{mon.backurl=}, {task_no=}')
     if mon.operation.endswith('_'):
         name = mon.operation[:-1]
     elif func is split_task:
