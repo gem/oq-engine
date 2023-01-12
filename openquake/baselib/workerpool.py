@@ -19,6 +19,7 @@ import os
 import sys
 import time
 import shutil
+import socket
 import getpass
 import tempfile
 import subprocess
@@ -214,7 +215,7 @@ def debug_task(msg, mon):
     """
     Trivial task useful for debugging
     """
-    print(msg)
+    print(socket.gethostname(), msg)
     return mon.task_no
 
 
