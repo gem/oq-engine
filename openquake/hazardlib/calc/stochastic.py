@@ -246,7 +246,21 @@ def sample_cluster(sources, srcfilter, num_ses, param):
 
         elif getattr(sources, 'src_interdep') == 'mutex':
             src = sources[sidx[rlz_num]]
+
+            nrup = src.count_ruptures()
+            print(src.source_id, nrup)
+            if nrup == 0:
+                continue
+
             for i_rup, rup in enumerate(src.iter_ruptures()):
+
+                try:
+                    aa = rup.idx
+                except:
+                    breakpoint()
+                """
+                """
+
                 src_id = src.source_id
                 # Create a vector with the probabilities of occurrence of 0, 1,
                 # ... n occurrences
