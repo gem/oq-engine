@@ -186,7 +186,7 @@ class WorkerMaster(object):
             task_no = 0
             with z.Socket(receiver, z.zmq.PULL, 'bind') as pull:
                 mon.backurl = 'tcp://%s:%s' % (rec_host, pull.port)
-                for host, _ in enumerate(self.host_cores):
+                for host, _ in self.host_cores:
                     url = 'tcp://%s:%d' % (host, self.ctrl_port)
                     print('Sending to', url)
                     with z.Socket(url, z.zmq.REQ, 'connect') as sock:
