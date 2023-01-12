@@ -412,7 +412,7 @@ def run_jobs(jobctxs):
                           "AND status IN ('created', 'executing')", ids)
         for job_id, in rows:
             logs.dbcmd("set_status", job_id, 'failed')
-        cleanup('stop')  # kill cause semaphore errors
+        cleanup('kill')
         raise
     return jobctxs
 
