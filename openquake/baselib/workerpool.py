@@ -182,24 +182,35 @@ class WorkerMaster(object):
             rec_host = config.dbserver.receiver_host or '127.0.0.1'
             receiver = 'tcp://%s:%s' % (
                 rec_host, config.dbserver.receiver_ports)
+            ntasks = len(self.host_cores) * 2
+            task_no = 0
             with z.Socket(receiver, z.zmq.PULL, 'bind') as pull:
                 mon.backurl = 'tcp://%s:%s' % (rec_host, pull.port)
-                for task_no, (host, _) in enumerate(self.host_cores):
+                for host, _ in enumerate(self.host_cores):
                     url = 'tcp://%s:%d' % (host, self.ctrl_port)
                     print('Sending to', url)
                     with z.Socket(url, z.zmq.REQ, 'connect') as sock:
-                        msg = 'executing task #%d' % task_no
-                        sock.send((debug, (msg,), task_no, mon))
-                isocket = iter(pull)
-                for _ in self.host_cores:
-                    res = next(isocket)
-                    print('got result', res.get())
+                        for i in range(2):
+                            msg = 'executing task #%d' % task_no
+                            sock.send((debug_task, (msg,), task_no, mon))
+                            task_no += 1
+                results = list(get_results(pull, ntasks))
+                print(f'{results=}')
         finally:
             self.stop()
         return 'debugged'
 
 
-def debug(msg, mon):
+def get_results(socket, n):
+    for res in socket:
+        if n == 0:
+            return
+        elif res.msg != 'TASK_ENDED':
+            yield res.get()
+            n -= 1
+
+
+def debug_task(msg, mon):
     """
     Trivial task useful for debugging
     """
