@@ -71,8 +71,8 @@ class WorkerMaster(object):
 
     def start(self):
         """
-        Start multiple workerpools, possibly on remote servers via ssh,
-        assuming there is an active streamer.
+        Start multiple workerpools on remote servers via ssh and/or a single
+        workerpool on localhost.
         """
         starting = []
         for host, cores, args in ssh_args(self.zworkers):
