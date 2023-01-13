@@ -123,7 +123,7 @@ class WorkerMaster(object):
         """
         killed = []
         for host, cores, args in ssh_args(self.zworkers):
-            args = args[:-1] + ['killall', '-r', 'oq-zworker']
+            args = args[:-1] + ['killall', '-r', 'oq-zworker|multiprocessing']
             print(' '.join(args))
             subprocess.run(args)
             killed.append(host)
