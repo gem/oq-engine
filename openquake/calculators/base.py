@@ -1376,11 +1376,6 @@ def run_calc(job_ini, **kw):
     :returns: a Calculator instance
     """
 
-    if isinstance(job_ini, dict):
-        job = "calc"
-    else:
-        job = "job"
-
     with logs.init("job", job_ini) as log:
         log.params.update(kw)
         calc = calculators(log.get_oqparam(), log.calc_id)
