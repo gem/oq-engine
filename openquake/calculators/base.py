@@ -477,6 +477,7 @@ class HazardCalculator(BaseCalculator):
                 raise MemoryError('You have only %.1f GB available' % avail)
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
+        
         if ('amplification' in oq.inputs and
                 oq.amplification_method == 'kernel'):
             logging.info('Reading %s', oq.inputs['amplification'])
@@ -1375,7 +1376,6 @@ def run_calc(job_ini, **kw):
     :param kw: parameters to override
     :returns: a Calculator instance
     """
-
     with logs.init("job", job_ini) as log:
         log.params.update(kw)
         calc = calculators(log.get_oqparam(), log.calc_id)
