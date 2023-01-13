@@ -29,9 +29,9 @@ from openquake.engine import engine
 from openquake.server import dbserver
 
 
-def fake_run(lon, lat, vs30):
+def fake_run(oq, lon, lat, vs30):
     # stub for the real calculation
-    print(lon, lat, vs30)
+    print(oq, lon, lat, vs30)
 
 
 def main(lon: valid.longitude,
@@ -62,7 +62,7 @@ def main(lon: valid.longitude,
 
     with jobctx:
         try:
-            fake_run()
+            fake_run(jobctx.params, lon, lat, vs30)
         except Exception as exc:
             callback(jobctx.calc_id, exc)
         else:
