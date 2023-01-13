@@ -234,12 +234,10 @@ def threadpool_submit(self, func, args, monitor):
 @submit.add('zmq')
 def zmq_submit(self, func, args, monitor):
     idx = self.task_no % len(host_cores)
-    if not hasattr(self, 'senders'):  # the first time
-        port = int(config.zworkers.ctrl_port)
-        urls = ['tcp://%s:%d' % (hc.split()[0], port) for hc in host_cores]
-        self.senders = [Socket(url, zmq.REQ, 'connect').__enter__()
-                        for url in urls]
-    return self.senders[idx].send((func, args, self.task_no, monitor))
+    host = host_cores[idx].split()[0]
+    port = int(config.zworkers.ctrl_port)
+    with Socket('tcp://%s:%d' % (host, port), zmq.REQ, 'connect') as sock:
+        return sock.send((func, args, self.task_no, monitor))
 
 
 @submit.add('ipp')
