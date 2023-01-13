@@ -334,9 +334,8 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
                                 user_name, hc_id, host)
                 jobs.append(new)
         else:
-            jobs.append(
-                logs.init('job', dic, log_level, log_file,
-                          user_name, hc_id, host))
+            jobs.append(logs.init('job', dic, log_level, log_file,
+                                  user_name, hc_id, host))
     if multi:
         for job in jobs:
             job.multi = True
