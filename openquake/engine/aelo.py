@@ -38,30 +38,23 @@ def main(lon: valid.longitude,
          lat: valid.latitude,
          vs30: valid.positivefloat,
          siteid: valid.simple_id,
-         job_pik='',
-         callback_pik=''
+         pikfname='',
          ):
     """
-    This script is meant to be called from the WebUI with two filenames
-    job_pik and callback_pik. During debugging, however, it is useful
-    to call it from the command line without specifying job_pik and
-    callback_pik.
+    This script is meant to be called from the WebUI with pikfname.
+    During debugging, however, it is useful to call it from the command line
+    without specifying pikfname.
     """
-    if job_pik:
-        # use the job context passed by the WebUI
-        with open(job_pik, 'rb') as f:
-            jobctx = pickle.load(f)
+    if pikfname:
+        # use the job context and callback passed by the WebUI
+        with open(pikfname, 'rb') as f:
+            jobctx, callback = pickle.load(f)
     else:
         # create a new job context
         [jobctx] = engine.create_jobs(
             [dict(calculation_mode='custom', description='AELO for ' + siteid)],
         config.distribution.log_level, None, getpass.getuser(), None)
 
-    if callback_pik:
-        # read the callback passed by the WebUI
-        with open(callback_pik, 'rb') as f:
-            callback = pickle.load(f)
-    else:
         # define a do-nothing callback
         def callback(job_id, exc=None):
             if exc:

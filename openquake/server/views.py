@@ -561,6 +561,14 @@ def calc_run(request):
                         status=status)
 
 
+def aelo_callback(job_id, exc):
+    # TODO: replace this with something better
+    if exc:
+        print('sending email with error %s' % exc)
+    else:
+        print('sending dowload link for %d' % job_id)
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -590,8 +598,9 @@ def aelo_run(request):
         config.distribution.log_level, None, utils.get_user(request), None)
 
     cmd = [sys.executable, '-m', 'openquake.engine.aelo',
-           str(lon), str(lat), str(vs30)]
-    subprocess.Popen(cmd + [save_pik(jobctx, config.directory.tmp)])
+           str(lon), str(lat), str(vs30), siteid]
+    cmd.append(save_pik((jobctx, aelo_callback), config.directory.tmp))
+    subprocess.Popen(cmd)
     response_data = dict(status='created', job_id=jobctx.calc_id)
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
