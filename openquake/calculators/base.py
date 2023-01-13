@@ -210,7 +210,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 (calc_mode, ok_mode, precalc_mode))
 
     def run(self, pre_execute=True, concurrent_tasks=None, remove=True,
-            shutdown=False, **kw):
+            shutdown=False, save_params=False, **kw):
         """
         Run the calculation and return the exported outputs.
 
@@ -234,7 +234,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if self.precalc is None:
                 logging.info('Running %s with concurrent_tasks = %d',
                              self.__class__.__name__, ct)
-            self.save_params(**kw)
+            if save_params:
+                self.save_params(**kw)
             try:
                 if pre_execute:
                     self.pre_execute()
@@ -476,7 +477,6 @@ class HazardCalculator(BaseCalculator):
                 raise MemoryError('You have only %.1f GB available' % avail)
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
-
         if ('amplification' in oq.inputs and
                 oq.amplification_method == 'kernel'):
             logging.info('Reading %s', oq.inputs['amplification'])
@@ -1375,6 +1375,12 @@ def run_calc(job_ini, **kw):
     :param kw: parameters to override
     :returns: a Calculator instance
     """
+
+    if isinstance(job_ini, dict):
+        job = "calc"
+    else:
+        job = "job"
+
     with logs.init("job", job_ini) as log:
         log.params.update(kw)
         calc = calculators(log.get_oqparam(), log.calc_id)
