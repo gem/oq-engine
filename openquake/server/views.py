@@ -568,7 +568,7 @@ def submit_job(request_files, ini, username, hc_id):
     """
     # build a LogContext object associated to a database job
     [job] = engine.create_jobs(
-        [dict(calculation_mode='preclassical',
+        [dict(calculation_mode='custom',
               description='Calculation waiting to start')],
         config.distribution.log_level, None, username, hc_id)
 

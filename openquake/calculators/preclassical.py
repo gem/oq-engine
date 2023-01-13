@@ -163,7 +163,11 @@ class PreClassicalCalculator(base.HazardCalculator):
                 cmakers[grp_id].set_weight(sg, sites)
                 atomic_sources.extend(sg)
             else:
-                normal_sources.extend(sg)
+                for src in sg:
+                    if hasattr(src, 'rupture_idxs'):  # multiFault
+                        normal_sources.extend(split_source(src))
+                    else:
+                        normal_sources.append(src)
 
         # run preclassical for non-atomic sources
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))

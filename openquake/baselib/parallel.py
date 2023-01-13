@@ -197,11 +197,6 @@ import multiprocessing.shared_memory as shmem
 from multiprocessing.connection import wait
 import psutil
 import numpy
-try:
-    from setproctitle import setproctitle
-except ImportError:
-    def setproctitle(title):
-        "Do nothing"
 
 from openquake.baselib import config, hdf5, workerpool
 from openquake.baselib.python3compat import decode
@@ -217,13 +212,6 @@ sys.setrecursionlimit(2000)  # raised to make pickle happier
 submit = CallableDict()
 GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
-
-
-def debug(msg, mon):
-    """
-    Trivial task useful for debugging
-    """
-    print(msg)
 
 
 @submit.add('no')
@@ -246,12 +234,10 @@ def threadpool_submit(self, func, args, monitor):
 @submit.add('zmq')
 def zmq_submit(self, func, args, monitor):
     idx = self.task_no % len(host_cores)
-    if not hasattr(self, 'senders'):  # the first time
-        port = int(config.zworkers.ctrl_port)
-        urls = ['tcp://%s:%d' % (hc.split()[0], port) for hc in host_cores]
-        self.senders = [Socket(url, zmq.REQ, 'connect').__enter__()
-                        for url in urls]
-    return self.senders[idx].send((func, args, self.task_no, monitor))
+    host = host_cores[idx].split()[0]
+    port = int(config.zworkers.ctrl_port)
+    with Socket('tcp://%s:%d' % (host, port), zmq.REQ, 'connect') as sock:
+        return sock.send((func, args, self.task_no, monitor))
 
 
 @submit.add('ipp')
@@ -268,6 +254,16 @@ def oq_distribute(task=None):
     if dist not in ('no', 'processpool', 'threadpool', 'zmq', 'ipp'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
     return dist
+
+
+def init_workers():
+    """Used to initialize the process pool"""
+    try:
+        from setproctitle import setproctitle
+    except ImportError:
+        pass
+    else:
+        setproctitle('oq-worker')
 
 
 class Pickled(object):
@@ -471,6 +467,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon is dummy_mon:  # in the DbServer
         assert not isgenfunc, func
         return Result.new(func, args, mon)
+    # debug(f'{mon.backurl=}, {task_no=}')
     if mon.operation.endswith('_'):
         name = mon.operation[:-1]
     elif func is split_task:
@@ -505,6 +502,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
             sentbytes += len(res.pik)
             if res.msg == 'TASK_ENDED':
                 break
+
 
 if oq_distribute() == 'ipp':
     from ipyparallel import Cluster
@@ -605,11 +603,6 @@ class IterResult(object):
             else:
                 res.name = iresult.name.split('#')[0]
         return res
-
-
-def init_workers():
-    """Waiting function, used to wake up the process pool"""
-    setproctitle('oq-worker')
 
 
 def getargnames(task_func):
