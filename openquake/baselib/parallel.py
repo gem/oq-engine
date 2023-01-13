@@ -240,13 +240,9 @@ def zmq_submit(self, func, args, monitor):
         host = next(ihost)
     else:
         logging.debug('Sending task %d to %s', self.task_no, host)
-    if not hasattr(self, 'sender'):  # the first time
-        port = int(config.zworkers.ctrl_port)
-        self.sender = {
-            host: Socket(
-                'tcp://%s:%d' % (host, port), zmq.REQ, 'connect'
-            ).__enter__() for host in hosts}
-    return self.sender[host].send((func, args, self.task_no, monitor))
+    port = int(config.zworkers.ctrl_port)
+    with Socket('tcp://%s:%d' % (host, port), zmq.REQ, 'connect') as sender:
+        return sender.send((func, args, self.task_no, monitor))
 
 
 @submit.add('ipp')
