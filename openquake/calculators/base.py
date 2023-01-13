@@ -210,7 +210,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 (calc_mode, ok_mode, precalc_mode))
 
     def run(self, pre_execute=True, concurrent_tasks=None, remove=True,
-            shutdown=False, save_params=False, **kw):
+            shutdown=False, save_params=True, **kw):
         """
         Run the calculation and return the exported outputs.
 
@@ -477,7 +477,7 @@ class HazardCalculator(BaseCalculator):
                 raise MemoryError('You have only %.1f GB available' % avail)
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
-        
+
         if ('amplification' in oq.inputs and
                 oq.amplification_method == 'kernel'):
             logging.info('Reading %s', oq.inputs['amplification'])
@@ -1368,7 +1368,7 @@ def create_risk_by_event(calc):
                          L=len(oq.loss_types), limit_states=dmgs)
 
 
-def run_calc(job_ini, **kw):
+def run_calc(job_ini, save_params=True, **kw):
     """
     Helper to run calculations programmatically.
 
@@ -1379,5 +1379,5 @@ def run_calc(job_ini, **kw):
     with logs.init("job", job_ini) as log:
         log.params.update(kw)
         calc = calculators(log.get_oqparam(), log.calc_id)
-        calc.run()
+        calc.run(save_params=save_params)
         return calc
