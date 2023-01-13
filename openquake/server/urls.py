@@ -37,8 +37,9 @@ urlpatterns = [
 # are also not required anymore for an API-only usage
 if settings.WEBUI:
     urlpatterns += [
-        re_path(r'^$', RedirectView.as_view(url='%s/engine/' % settings.WEBUI_PATHPREFIX,
-                permanent=True)),
+        re_path(r'^$', RedirectView.as_view(
+            url='%s/engine/' % settings.WEBUI_PATHPREFIX,
+            permanent=True)),
         re_path(r'^engine/?$', views.web_engine, name="index"),
         re_path(r'^engine/(\d+)/outputs$',
                 views.web_engine_get_outputs, name="outputs"),
