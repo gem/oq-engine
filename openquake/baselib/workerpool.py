@@ -34,8 +34,8 @@ except ImportError:
 
 
 def init_workers():
-    """Waiting function, used to wake up the process pool"""
-    setproctitle('oq-worker')
+    """Used to initialize the process pool"""
+    setproctitle('oq-zworker')
 
 
 def ssh_args(zworkers):
