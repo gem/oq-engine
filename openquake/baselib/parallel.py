@@ -261,6 +261,16 @@ def oq_distribute(task=None):
     return dist
 
 
+def init_workers():
+    """Used to initialize the process pool"""
+    try:
+        from setproctitle import setproctitle
+    except ImportError:
+        pass
+    else:
+        setproctitle('oq-worker')
+
+
 class Pickled(object):
     """
     An utility to manually pickling/unpickling objects. Pickled instances
@@ -663,7 +673,7 @@ class Starmap(object):
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
             cls.pool = mp_context.Pool(
-                cls.num_cores, workerpool.init_workers,
+                cls.num_cores, init_workers,
                 maxtasksperchild=cls.maxtasksperchild)
             cls.pids = [proc.pid for proc in cls.pool._pool]
             cls.shared = []
