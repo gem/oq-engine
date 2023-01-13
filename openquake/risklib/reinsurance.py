@@ -227,10 +227,11 @@ def parse(fname, policy_idx):
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
     df.columns = df.columns.str.strip()
-    all_policies = df.policy.to_numpy()
-    exp_policies = np.array(list(policy_idx))
-    # reduce the policy dataframe to the policies actually in the exposure
-    df = df[np.isin(all_policies, exp_policies)]
+    all_policies = df.policy.to_numpy()  # ex ['A', 'B']
+    exp_policies = np.array(list(policy_idx))  # ex ['?', 'B', 'A']
+    if len(all_policies) !=  len(exp_policies[1:]):
+        # reduce the policy dataframe to the policies actually in the exposure
+        df = df[np.isin(all_policies, exp_policies[1:])]
     check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname,
                  policyfname, treaty['id'], treaty_linenos, treaty['type'])
 

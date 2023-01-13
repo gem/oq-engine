@@ -198,11 +198,6 @@ import multiprocessing.shared_memory as shmem
 from multiprocessing.connection import wait
 import psutil
 import numpy
-try:
-    from setproctitle import setproctitle
-except ImportError:
-    def setproctitle(title):
-        "Do nothing"
 
 from openquake.baselib import config, hdf5, workerpool
 from openquake.baselib.python3compat import decode
@@ -219,13 +214,6 @@ submit = CallableDict()
 GB = 1024 ** 3
 hosts = [hc.split()[0] for hc in config.zworkers.host_cores.split(',')]
 ihost = itertools.cycle(hosts)
-
-
-def debug(msg, mon):
-    """
-    Trivial task useful for debugging
-    """
-    print(msg)
 
 
 @submit.add('no')
@@ -478,6 +466,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon is dummy_mon:  # in the DbServer
         assert not isgenfunc, func
         return Result.new(func, args, mon)
+    # debug(f'{mon.backurl=}, {task_no=}')
     if mon.operation.endswith('_'):
         name = mon.operation[:-1]
     elif func is split_task:
@@ -615,11 +604,6 @@ class IterResult(object):
         return res
 
 
-def init_workers():
-    """Waiting function, used to wake up the process pool"""
-    setproctitle('oq-worker')
-
-
 def getargnames(task_func):
     # a task can be a function, a method, a class or a callable instance
     if inspect.isfunction(task_func):
@@ -683,7 +667,7 @@ class Starmap(object):
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
             cls.pool = mp_context.Pool(
-                cls.num_cores, init_workers,
+                cls.num_cores, workerpool.init_workers,
                 maxtasksperchild=cls.maxtasksperchild)
             cls.pids = [proc.pid for proc in cls.pool._pool]
             cls.shared = []

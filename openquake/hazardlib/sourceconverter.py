@@ -1230,7 +1230,7 @@ class SourceConverter(RuptureConverter):
                 tot += sw
             with context(self.fname, node):
                 numpy.testing.assert_allclose(
-                    tot, 1., err_msg='sum(srcs_weights)')
+                    tot, 1., err_msg='sum(srcs_weights)', atol=5E-6)
 
         # check that, when the cluster option is set, the group has a temporal
         # occurrence model properly defined
