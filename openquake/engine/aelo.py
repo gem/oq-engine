@@ -52,6 +52,7 @@ def fake_run(jobctx, lon, lat, vs30):
 def trivial_callback(job_id, exc=None):
     if exc:
         sys.exit('There was an error: %s' % exc)
+    print('Finished job %d correctly' % job_id)
 
 
 def main(lon: valid.longitude,
