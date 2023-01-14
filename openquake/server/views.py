@@ -43,7 +43,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
 from openquake.baselib import hdf5, config
-from openquake.baselib.general import groupby, gettemp, zipfiles
+from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base
@@ -52,7 +52,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
-from openquake.engine import engine
+from openquake.engine import engine, aelo
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
 
@@ -62,8 +62,6 @@ from wsgiref.util import FileWrapper
 
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
-
-Process = multiprocessing.get_context('spawn').Process
 
 CWD = os.path.dirname(__file__)
 METHOD_NOT_ALLOWED = 405
@@ -561,7 +559,7 @@ def calc_run(request):
                         status=status)
 
 
-def aelo_callback(job_id, exc):
+def aelo_callback(job_id, exc=None):
     # TODO: replace this with something better
     if exc:
         print('sending email with error %s' % exc)
@@ -583,7 +581,7 @@ def aelo_run(request):
         lon = valid.longitude(request.POST.get('lon'))
         lat = valid.latitude(request.POST.get('lat'))
         vs30 = valid.positivefloat(request.POST.get('vs30'))
-        siteid = valid.simpleid(request.POST.get('siteid'))
+        siteid = valid.simple_id(request.POST.get('siteid'))
     except Exception as exc:
         # failed even before creating a job
         exc_msg = str(exc)
@@ -591,17 +589,16 @@ def aelo_run(request):
         response_data = exc_msg.splitlines()
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=500)
-        
+
     # build a LogContext object associated to a database job
     [jobctx] = engine.create_jobs(
         [dict(calculation_mode='custom', description='AELO for ' + siteid)],
         config.distribution.log_level, None, utils.get_user(request), None)
-
-    cmd = [sys.executable, '-m', 'openquake.engine.aelo',
-           str(lon), str(lat), str(vs30), siteid]
-    cmd.append(save_pik((jobctx, aelo_callback), config.directory.tmp))
-    subprocess.Popen(cmd)
     response_data = dict(status='created', job_id=jobctx.calc_id)
+
+    # spawn the AELO main process
+    mp.Process(target=aelo.main, args=(lon, lat, vs30, siteid, jobctx,
+                                       aelo_callback)).start()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
 
@@ -654,7 +651,7 @@ def submit_job(request_files, ini, username, hc_id):
                     CALC_NAME='calc%d' % job.calc_id)
             subprocess.run(submit_cmd, input=yaml.encode('ascii'))
     else:
-        Process(target=engine.run_jobs, args=(jobs,)).start()
+        mp.Process(target=engine.run_jobs, args=(jobs,)).start()
     return job.calc_id
 
 

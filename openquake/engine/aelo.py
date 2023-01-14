@@ -15,54 +15,64 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
 """
 Master script for running an AELO analysis
 """
-
+import os
 import sys
-import pickle
 import getpass
 from openquake.baselib import config, sap
 from openquake.hazardlib import valid
+from openquake.commonlib import readinput
 from openquake.engine import engine
 from openquake.server import dbserver
 
 
-def fake_run(oq, lon, lat, vs30):
+def get_params_from(lon, lat, vs30, siteid):
+    """
+    Build the job.ini parameters for the given lon, lat extracting them
+    from the mosaic files.
+    """
+    model = 'GLD'    # TODO: change to model = get_model_from(lon, lat)
+    ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job.ini')
+    params = readinput.get_params(ini)
+    params['description'] = 'AELO for ' + siteid
+    params['reference_vs30_value'] = str(vs30)
+    params['sites'] = '%s %s' % (lon, lat)
+    del params['inputs']['sites']
+    # TODO: add disaggregation parameters
+    return params
+
+
+def fake_run(jobctx, lon, lat, vs30):
     # stub for the real calculation
-    print(oq, lon, lat, vs30)
+    print(jobctx.get_oqparam(), lon, lat, vs30)
+
+
+def trivial_callback(job_id, exc=None):
+    if exc:
+        sys.exit('There was an error: %s' % exc)
 
 
 def main(lon: valid.longitude,
          lat: valid.latitude,
          vs30: valid.positivefloat,
          siteid: valid.simple_id,
-         pikfname='',
+         jobctx=None,
+         callback=trivial_callback,
          ):
     """
-    This script is meant to be called from the WebUI with pikfname.
-    During debugging, however, it is useful to call it from the command line
-    without specifying pikfname.
+    This script is meant to be called from the WebUI.
     """
-    if pikfname:
-        # use the job context and callback passed by the WebUI
-        with open(pikfname, 'rb') as f:
-            jobctx, callback = pickle.load(f)
-    else:
+    if jobctx is None:
         # create a new job context
-        [jobctx] = engine.create_jobs(
-            [dict(calculation_mode='custom', description='AELO for ' + siteid)],
-        config.distribution.log_level, None, getpass.getuser(), None)
-
-        # define a do-nothing callback
-        def callback(job_id, exc=None):
-            if exc:
-                sys.exit('There was an error: %s' % exc)
-
+        dic = dict(calculation_mode='custom', description='AELO')
+        [jobctx] = engine.create_jobs([dic], config.distribution.log_level,
+                                      None, getpass.getuser(), None)
     with jobctx:
+        jobctx.params.update(get_params_from(lon, lat, vs30, siteid))
         try:
-            fake_run(jobctx.params, lon, lat, vs30)
+            fake_run(jobctx, lon, lat, vs30)
         except Exception as exc:
             callback(jobctx.calc_id, exc)
         else:
