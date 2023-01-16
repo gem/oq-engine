@@ -6,7 +6,7 @@ The OpenQuake Engine is available in the form of *rpm* binary packages for the f
 - RedHat Enterprise Linux 7 
 - CentOS 7
 - RedHat Enterprise Linux 8 
-- CentOS 8
+- RockyLinux 8
 
 For Fedora please check ["Installing the OpenQuake Engine on Fedora"](fedora.md).
 
@@ -20,7 +20,7 @@ sudo yum install epel-release
 
 The following commands add the **official stable builds** package repository:
 
-### RHEL/CentOS 8
+### RHEL/RockyLinux 8
 
 ```bash
 sudo yum copr enable gem/openquake-stable 
