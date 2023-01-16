@@ -25,7 +25,6 @@ from openquake.baselib import config, sap
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput
 from openquake.engine import engine
-from openquake.server import dbserver
 
 
 def get_params_from(lon, lat, vs30, siteid):
@@ -83,5 +82,6 @@ def main(lon: valid.longitude,
 
 
 if __name__ == '__main__':
+    from openquake.server import dbserver  # avoid CodeDependencyError
     dbserver.ensure_on()
     sap.run(main)
