@@ -5,10 +5,10 @@ on:
     inputs:
       lts-ver:
         description: Engine Release (0 for nightly)
-        default: 1
+        default: 0
         required: true
       pkg-num:
-        description: Engine PKG number
+        description: Engine PKG number (for LTS Release)
         default: 1.0
         required: true
       git-ref:
@@ -19,6 +19,9 @@ on:
         description: COPR Repository Staging for default
         default: openquake-staging
         required: true
+  schedule:
+    - cron: "0 19 * * *"
+
 
 jobs:
 
