@@ -59,7 +59,6 @@ or firewall) so that external traffic is excluded.
 The following ports must be open on the **master node**:
 
 * 1908 for DbServer (or any other port allocated for the DbServer in the `openquake.cfg`)
-* 1910 for the ZeroMQ streamer
 * 1912-1920 for ZeroMQ receivers
 * 8800 for the API/WebUI (optional)
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,6 +18,7 @@
 
 import io
 import ast
+import html
 import os.path
 import numbers
 import operator
@@ -41,7 +42,7 @@ from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
-from openquake.calculators.classical import decide_num_tasks, get_pmaps_size
+from openquake.calculators.classical import get_pmaps_gb
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
 
@@ -107,6 +108,56 @@ def dt(names):
         names = names.split()
     return numpy.dtype([(name, object) for name in names])
 
+class HtmlTable(object):
+    """
+    Convert a sequence header+body into a HTML table.
+    """
+    css = """\
+    tr.evenRow { background-color: lightgreen }
+    tr.oddRow { }
+    th { background-color: lightblue }
+    """
+    maxrows = 5000
+    border = "1"
+    summary = ""
+
+    def __init__(self, header_plus_body, name='noname',
+                 empty_table='Empty table'):
+        header, body = header_plus_body[0], header_plus_body[1:]
+        self.name = name
+        self.empty_table = empty_table
+        rows = []  # rows is a finite sequence of tuples
+        for i, row in enumerate(body):
+            if i == self.maxrows:
+                rows.append(
+                    ["Table truncated because too big: more than %s rows" % i])
+                break
+            rows.append(row)
+        self.rows = rows
+        self.header = tuple(header)  # horizontal header
+
+    def render(self, dummy_ctxt=None):
+        out = "\n%s\n" % "".join(list(self._gen_table()))
+        if not self.rows:
+            out += '<em>%s</em>' % html.escape(self.empty_table, quote=True)
+        return out
+
+    def _gen_table(self):
+        yield '<table id="%s" border="%s" summary="%s" class="tablesorter">\n'\
+              % (self.name, self.border, self.summary)
+        yield '<thead>\n'
+        yield '<tr>%s</tr>\n' % ''.join(
+            '<th>%s</th>\n' % h for h in self.header)
+        yield '</thead>\n'
+        yield '<tbody\n>'
+        for r, row in enumerate(self.rows):
+            yield '<tr class="%s">\n' % ["even", "odd"][r % 2]
+            for col in row:
+                yield '<td>%s</td>\n' % col
+            yield '</tr>\n'
+        yield '</tbody>\n'
+        yield '</table>\n'
+
 
 def text_table(data, header=None, fmt=None, ext='rst'):
     """
@@ -122,7 +173,7 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     | b    | 2     |
     +------+-------+
     """
-    assert ext in 'rst org', ext
+    assert ext in 'rst org html', ext
     if isinstance(data, pandas.DataFrame):
         if data.index.name:
             data = data.reset_index()
@@ -153,6 +204,8 @@ def text_table(data, header=None, fmt=None, ext='rst'):
             raise ValueError('The header has %d fields but the row %d fields!'
                              % (len(col_sizes), len(tup)))
         body.append(tup)
+    if ext == 'html':
+        return HtmlTable([header] + body).render()
 
     wrap = '+-%s-+' if ext == 'rst' else '|-%s-|'
     sepline = wrap % '-+-'.join('-' * size for size in col_sizes)
@@ -548,7 +601,7 @@ def view_fullreport(token, dstore):
     """
     # avoid circular imports
     from openquake.calculators.reportwriter import ReportWriter
-    return ReportWriter(dstore).make_report()
+    return ReportWriter(dstore).make_report(show_inputs=False)
 
 
 @view.add('performance')
@@ -617,15 +670,15 @@ def view_required_params_per_trt(token, dstore):
     for trt in full_lt.trts:
         gsims = full_lt.gsim_lt.values[trt]
         # adding fake mags to the ContextMaker, needed for table-based GMPEs
-        maker = ContextMaker(trt, gsims, {'imtls': {}, 'mags': ['7.00']})
-        distances = sorted(maker.REQUIRES_DISTANCES)
-        siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
-        ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((trt, ' '.join(map(repr, gsims)).replace('\n', '\\n'),
-                    distances, siteparams, ruptparams))
-    return text_table(
-        tbl, header='trt_smr gsims distances siteparams ruptparams'.split(),
-        fmt=scientificformat)
+        cmaker = ContextMaker(trt, gsims, {'imtls': {}, 'mags': ['7.00']})
+        req = set()
+        for gsim in cmaker.gsims:
+            req.update(gsim.requires())
+        req_params = sorted(req - {'mag'})
+        gsim_str = ' '.join(map(repr, gsims)).replace('\n', '\\n')
+        tbl.append((trt, gsim_str, req_params))
+    return text_table(tbl, header='trt gsims req_params'.split(),
+                      fmt=scientificformat)
 
 
 @view.add('task_info')
@@ -1312,33 +1365,10 @@ def view_mean_perils(token, dstore):
             out[peril] = fast_agg(sid, data * weights) / totw
     return out
 
-    
-@view.add('group_summary')
-def view_group_summary(token, dstore):
-    if ':' not in token:
-        ct = 1
-    else:
-        ct = int(token.split(':')[1])
-    L = dstore['oqparam'].imtls.size
-    N = len(dstore['sitecol'])
-    gb = L * N * 8
-    header = ['grp_id', 'ntasks', 'maxsize']
-    arr = decide_num_tasks(dstore, ct)
-    tbl = [(grp_id, gsims * tiles, humansize(gsims * gb))
-           for grp_id, gsims, tiles in arr]
-    totsize = arr['cmakers'].sum()
-    numtasks = (arr['cmakers'] * arr['tiles']).sum()
-    tbl.append(['tot', numtasks, humansize(totsize * gb)])
-    return text_table(tbl, header, ext='org')
-
 
 @view.add('pmaps_size')
 def view_pmaps_size(token, dstore):
-    if ':' not in token:
-        ct = Starmap.num_cores * 2
-    else:
-        ct = int(token.split(':')[1])
-    return humansize(get_pmaps_size(dstore, ct))
+    return humansize(get_pmaps_gb(dstore))
 
 
 @view.add('src_groups')
@@ -1387,11 +1417,11 @@ def view_collapsible(token, dstore):
     ctx_df['vs30'] = vs30[ctx_df.sids]
     has_vs30 = len(numpy.unique(vs30)) > 1
     c = Collapser(collapse_level, dist_types, has_vs30)
-    ctx_df['mdvbin'] = c.calc_mdvbin(ctx_df)
-    print('cfactor = %d/%d' % (len(ctx_df), len(ctx_df['mdvbin'].unique())))
+    ctx_df['mdbin'] = c.calc_mdbin(ctx_df)
+    print('cfactor = %d/%d' % (len(ctx_df), len(ctx_df['mdbin'].unique())))
     out = []
     for sid, df in ctx_df.groupby('sids'):
-        n, u = len(df), len(df.mdvbin.unique())
+        n, u = len(df), len(df.mdbin.unique())
         out.append((sid, u, n, n / u))
     return numpy.array(out, dt('site_id eff_rups num_rups cfactor'))
 

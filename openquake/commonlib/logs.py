@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2022 GEM Foundation
+# Copyright (C) 2010-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -53,7 +53,7 @@ def dbcmd(action, *args):
         else:
             return func(dbapi.db, *args)
     sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect',
-                         timeout=60)  # when the system is loaded 60 seconds
+                         timeout=60)  # when the system is loaded
     with sock:
         res = sock.send((action,) + args)
         if isinstance(res, parallel.Result):

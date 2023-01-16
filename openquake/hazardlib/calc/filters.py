@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -59,8 +59,8 @@ def _distances_from_dcache(rup, sites, param, dcache):
     :param dcache:
         A dictionary with the distances. The first key is the
         surface ID and the second one is the type of distance. In a traditional
-        calculation dcache is instatianted by in the `get_ctx_iter` method of the
-        :class:`openquake.hazardlib.contexts.ContextMaker`
+        calculation dcache is instatianted by in the `get_ctx_iter` method of
+        the :class:`openquake.hazardlib.contexts.ContextMaker`
     :returns:
         The computed distances for the rupture in input
     """
@@ -340,6 +340,7 @@ class SourceFilter(object):
             self.integration_distance = default
         else:
             self.integration_distance = integration_distance
+            assert len(sitecol), sitecol
         self.slc = slice(None)
 
     def reduce(self, multiplier=5):

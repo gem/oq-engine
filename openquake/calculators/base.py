@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -864,7 +864,7 @@ class HazardCalculator(BaseCalculator):
         if oq.job_type == 'risk':
             taxs = python3compat.decode(self.assetcol.tagcol.taxonomy)
             tmap = readinput.taxonomy_mapping(self.oqparam, taxs)
-            self.crmodel.tmap = tmap
+            self.crmodel.set_tmap(tmap)
             taxonomies = set()
             for ln in oq.loss_types:
                 for items in self.crmodel.tmap[ln]:
@@ -938,7 +938,10 @@ class HazardCalculator(BaseCalculator):
             self.realizations = self.full_lt.get_realizations()
             if not self.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
-            self.datastore['full_lt'] = self.full_lt
+            # if full_lt is stored in the parent, do not store it again
+            # this avoids breaking case_18 when starting from a preclassical
+            if self.oqparam.hazard_calculation_id is None:
+                self.datastore['full_lt'] = self.full_lt
         else:  # scenario
             self.full_lt = self.datastore['full_lt']
 

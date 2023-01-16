@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -619,13 +619,6 @@ sampling_method:
   Example: *sampling_method = early_latin*.
   Default: 'early_weights'
 
-keep_source_groups:
-   Set an approach that saves memory in large classical calculations, possibly
-   with a performance penalty. When left unspecified (None), the engine will
-   automatically decide when to use it (i.e. if there are enough gsims).
-   Example: *keep_source_groups = true*
-   Default: None
-
 sec_peril_params:
   INTERNAL
 
@@ -964,7 +957,6 @@ class OqParam(valid.ParamSet):
     sampling_method = valid.Param(
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
-    keep_source_groups = valid.Param(valid.boolean, None)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})
@@ -993,7 +985,8 @@ class OqParam(valid.ParamSet):
                      'structural+contents',
                      'nonstructural+contents',
                      'structural+nonstructural+contents'), None)
-    truncation_level = valid.Param(valid.positivefloat, 99.)
+    truncation_level = valid.Param(
+        lambda s: valid.positivefloat(s) or 1E-9, 99.)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)

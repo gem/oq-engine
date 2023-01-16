@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2016-2022 GEM Foundation
+# Copyright (C) 2016-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -151,7 +151,8 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
         src.trt_smr = 0
         src.mutex_weight = 1
         group = SourceGroup(
-            src.tectonic_region_type, [src], 'test', 'mutex', 'mutex')
+            src.tectonic_region_type, [src], 'test', 'mutex', 'mutex',
+            grp_probability=1.0)
         param = dict(imtls=self.imtls,
                      src_interdep=group.src_interdep,
                      rup_interdep=group.rup_interdep,

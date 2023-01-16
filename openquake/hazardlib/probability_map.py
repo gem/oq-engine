@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2022 GEM Foundation
+# Copyright (c) 2016-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import math
 import copy
 import numpy
 import pandas
@@ -136,28 +137,26 @@ class ProbabilityCurve(object):
             curve[imt] = self.array[imtls(imt), idx]
         return curve[0]
 
-# numbified below
-def update_pmap_i(arr, poes, rates, probs_occur, sids, itime):
-    for poe, rate, probs, sid in zip(poes, rates, probs_occur, sids):
-        arr[sid] *= get_pnes(rate, probs, poe, itime)
-
 
 # numbified below
-def update_pmap_m(arr, poes, rates, probs_occur, weights, sids, itime):
-    for poe, rate, probs, wei, sid in zip(
-            poes, rates, probs_occur, weights, sids):
-        pne = get_pnes(rate, probs, poe, itime)
-        arr[sid] += (1. - pne) * wei
+def update_pmap_i(arr, poes, inv, rates, probs_occur, idxs, itime):
+    levels = range(arr.shape[1])
+    for i, rate, probs, idx in zip(inv, rates, probs_occur, idxs):
+        if itime == 0:  # FatedTOM
+            arr[idx] *= 1. - poes[i]
+        elif len(probs) == 0 and numba is not None:
+            # looping is faster than building arrays
+            for lvl in levels:
+                arr[idx, lvl] *= math.exp(-rate * poes[i, lvl] * itime)
+        else:
+            arr[idx] *= get_pnes(rate, probs, poes[i], itime)  # shape L
 
 
 # numbified below
-def update_pmap_c(arr, poes, rates, probs_occur, allsids, sizes, itime):
-    start = 0
-    for poe, rate, probs, size in zip(poes, rates, probs_occur, sizes):
-        pne = get_pnes(rate, probs, poe, itime)
-        for sid in allsids[start:start + size]:
-            arr[sid] *= pne
-        start += size
+def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, idxs, itime):
+    for i, rate, probs, w, idx in zip(inv, rates, probs_occur, weights, idxs):
+        pne = get_pnes(rate, probs, poes[i], itime)  # shape L
+        arr[idx] += (1. - pne) * w
 
 
 # numbified below
@@ -168,16 +167,18 @@ def update_pnes(arr, idxs, pnes):
 
 if numba:
     t = numba.types
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.float64[:, :, :],                     # poes
+    sig = t.void(t.float64[:, :],                        # pmap
+                 t.float64[:, :],                        # poes
+                 t.uint32[:],                            # invs
                  t.float64[:],                           # rates
                  t.float64[:, :],                        # probs_occur
                  t.uint32[:],                            # sids
                  t.float64)                              # itime
     update_pmap_i = compile(sig)(update_pmap_i)
 
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.float64[:, :, :],                     # poes
+    sig = t.void(t.float64[:, :],                        # pmap
+                 t.float64[:, :],                        # poes
+                 t.uint32[:],                            # invs
                  t.float64[:],                           # rates
                  t.float64[:, :],                        # probs_occur
                  t.float64[:],                           # weights
@@ -185,18 +186,9 @@ if numba:
                  t.float64)                              # itime
     update_pmap_m = compile(sig)(update_pmap_m)
 
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.float64[:, :, :],                     # poes
-                 t.float64[:],                           # rates
-                 t.float64[:, :],                        # probs_occur
-                 t.uint32[:],                            # allsids
-                 t.uint32[:],                            # sizes
-                 t.float64)                              # itime
-    update_pmap_c = compile(sig)(update_pmap_c)
-
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.uint32[:]       ,                     # idxs
-                 t.float64[:, :, :])                     # pnes
+    sig = t.void(t.float64[:, :],                        # pmap
+                 t.uint32[:],                            # idxs
+                 t.float64[:, :])                        # pnes
     update_pnes = compile(sig)(update_pnes)
 
 
@@ -284,39 +276,31 @@ class ProbabilityMap(object):
         dic['poe'][dic['poe'] == 1.] = .9999999999999999  # avoids log(0)
         return pandas.DataFrame(dic)
 
-    def update(self, other):
+    def update(self, other, i):
         """
         Multiply by the probabilities of no exceedence
         """
-        if other.shape[1:] != self.shape[1:]:
-            raise ValueError('%s has inconsistent shape with %s' %
-                             (other, self))
         # assume other.sids are a subset of self.sids
-        update_pnes(self.array, self.sidx[other.sids], other.array)
+        update_pnes(self.array[:, :, 0], self.sidx[other.sids],
+                    other.array[:, :, i])
         return self
 
-    def update_i(self, poes, rates, probs_occur, sids, itime):
+    def update_(self, poes, invs, ctxt, itime, rup_indep, idx):
         """
-        Updating independent probabilities
+        Update probabilities
         """
-        idxs = self.sidx[sids]
-        update_pmap_i(self.array, poes, rates, probs_occur, idxs, itime)
-
-    def update_m(self, poes, rates, probs_occur, weights, sids, itime):
-        """
-        Updating mutex probabilities
-        """
-        idxs = self.sidx[sids]
-        update_pmap_m(self.array, poes, rates, probs_occur, weights, idxs,
-                      itime)
-
-    def update_c(self, poes, rates, probs_occur, allsids, sizes, itime):
-        """
-        Updating collapsed probabilities
-        """
-        allidxs = self.sidx[allsids]
-        update_pmap_c(self.array, poes, rates, probs_occur, allidxs, sizes,
-                      itime)
+        rates = ctxt.occurrence_rate
+        probs_occur = getattr(ctxt, 'probs_occur',
+                              numpy.zeros((len(ctxt), 0)))
+        idxs = self.sidx[ctxt.sids]
+        for i, x in enumerate(idx):
+            if rup_indep:
+                update_pmap_i(self.array[:, :, x], poes[:, :, i], invs, rates,
+                              probs_occur, idxs, itime)
+            else:  # mutex
+                update_pmap_m(self.array[:, :, x], poes[:, :, i],
+                              invs, rates, probs_occur, ctxt.weight,
+                              idxs, itime)
 
     def __invert__(self):
         return self.new(1. - self.array)

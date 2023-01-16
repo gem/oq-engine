@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,7 +31,7 @@ from shapely.geometry import Point, shape
 from shapely.prepared import prep
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.geo.packager import fiona
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, from_string
 from openquake.hazardlib.gsim.nga_east import (get_tau_at_quantile, ITPL,
@@ -900,3 +900,79 @@ class KothaEtAl2020ESHM20SlopeGeology(KothaEtAl2020ESHM20):
     7.0000     0.00754320    0.01081496           0.00952506    0.01292858   -0.00247815    -0.02210686   -0.02284293   0.00365737
     8.0000     0.01794388    0.01906271           0.01478150    0.02515701   -0.00401437    -0.03950798   -0.04270189   0.00480742
     """)
+
+
+# Add aliases for the ESHM20 selection - shallow crustal sources
+eshm20_crust_lines = '''\
+ESHM20ShallowCrustVLowStressFastAtten -2.85697 -1.732051
+ESHM20ShallowCrustVLowStressMidAtten -2.85697 0.000000
+ESHM20ShallowCrustVLowStressSlowAtten -2.85697 1.732051
+ESHM20ShallowCrustLowStressFastAtten -1.35563 -1.732051
+ESHM20ShallowCrustLowStressMidAtten -1.35563 0.000000
+ESHM20ShallowCrustLowStressSlowAtten -1.35563 1.732051
+ESHM20ShallowCrustMidStressFastAtten 0.00000 -1.732051
+ESHM20ShallowCrustMidStressMidAtten 0.00000 0.000000
+ESHM20ShallowCrustMidStressSlowAtten 0.00000 1.732051
+ESHM20ShallowCrustHighStressFastAtten 1.35563 -1.732051
+ESHM20ShallowCrustHighStressMidAtten 1.35563 0.000000
+ESHM20ShallowCrustHighStressSlowAtten 1.35563 1.732051
+ESHM20ShallowCrustVHighStressFastAtten 2.85697 -1.732051
+ESHM20ShallowCrustVHighStressMidAtten 2.85697 0.000000
+ESHM20ShallowCrustVHighStressSlowAtten 2.85697 1.732051'''.splitlines()
+
+for line_shallow in eshm20_crust_lines:
+    alias, sig_mu_eps, c3_eps = line_shallow.split()
+    add_alias(alias, KothaEtAl2020ESHM20,
+              sigma_mu_epsilon=float(sig_mu_eps),
+              c3_epsilon=float(c3_eps))
+
+
+# Add aliases for the ESHM20 Iceland ground motion model
+# dl2l values
+ICELAND_dL2L = {
+    "IMTs": ['PGA', 'SA(0.01)', 'SA(0.025)', 'SA(0.04)', 'SA(0.05)',
+             'SA(0.07)', 'SA(0.1)', 'SA(0.15)', 'SA(0.2)', 'SA(0.25)',
+             'SA(0.3)', 'SA(0.35)', 'SA(0.4)', 'SA(0.45)', 'SA(0.5)',
+             'SA(0.6)', 'SA(0.7)', 'SA(0.75)', 'SA(0.8)', 'SA(0.9)', 'SA(1.0)',
+             'SA(1.2)', 'SA(1.4)', 'SA(1.6)', 'SA(1.8)', 'SA(2.0)', 'SA(2.5)',
+             'SA(3.0)', 'SA(3.5)', 'SA(4.0)', 'SA(4.5)', 'SA(5.0)', 'SA(6.0)',
+             'SA(7.0)', 'SA(8.0)'],
+    "VLow": [-1.320714,  -1.334702, -1.411144, -1.593190, -1.732470, -1.846624,
+             -1.869080, -1.666701, -1.370120, -1.239216, -1.107578, -0.953322,
+             -0.919893, -0.888578, -0.819694, -0.763689, -0.703255, -0.641188,
+             -0.592629, -0.560762, -0.453129, -0.320960, -0.235436, -0.159245,
+             -0.011255, 0.114595, 0.268825, 0.214030, 0.061128, -0.066012,
+             -0.016226, 0.005109, 0.144121, 0.125620, -0.081479],
+    "Low": [-0.787319, -0.800154, -0.858052, -0.973254, -1.065389, -1.139585,
+            -1.150332, -1.045077, -0.886725, -0.798828, -0.706965, -0.605590,
+            -0.558332, -0.514375, -0.453700, -0.394184, -0.332799, -0.273109,
+            -0.232198, -0.188936, -0.095642, 0.019582, 0.112757, 0.176902,
+            0.296832, 0.410135, 0.555383, 0.545697, 0.417368, 0.285042,
+            0.279085, 0.298731, 0.430396, 0.438246, 0.243113],
+    "Mid": [-0.305692, -0.317486, -0.358640, -0.413486, -0.463050, -0.501166,
+            -0.501340, -0.483784, -0.450245, -0.401182, -0.345233, -0.291607,
+            -0.231861, -0.176490, -0.123226, -0.060540, 0.001704, 0.059246,
+            0.093252, 0.146803, 0.227150, 0.327073, 0.427158, 0.480424,
+            0.575018, 0.676991, 0.814129, 0.845175, 0.739034, 0.602026,
+            0.545734, 0.563855, 0.688888, 0.720531, 0.536202],
+    "High": [0.175935, 0.165182, 0.140772, 0.146282, 0.139289, 0.137253,
+             0.147652, 0.077509, -0.013765, -0.003536, 0.016499, 0.022376,
+             0.094610, 0.161395, 0.207248, 0.273104, 0.336207, 0.391601,
+             0.418702, 0.482542, 0.549942, 0.634564, 0.741559, 0.783946,
+             0.853204, 0.943847, 1.072875, 1.144653, 1.060700, 0.919010,
+             0.812383, 0.828979, 0.947380, 1.002816, 0.829291],
+    "VHigh": [0.709330, 0.699730, 0.693864, 0.766218, 0.806370, 0.844292,
+              0.866400, 0.699133, 0.469630, 0.436852, 0.417112, 0.370108,
+              0.456171, 0.535598, 0.573242, 0.642609, 0.706663, 0.759680,
+              0.779133, 0.854368, 0.907429, 0.975106, 1.089752, 1.120093,
+              1.161291, 1.239387, 1.359433, 1.476320, 1.416940, 1.270064,
+              1.107694, 1.122601, 1.233655, 1.315442, 1.153883],
+}
+
+# Build the set of aliases
+for stress in list(ICELAND_dL2L)[1:]:
+    dl2l = dict(list(zip(ICELAND_dL2L["IMTs"], ICELAND_dL2L[stress])))
+    for c3_key, c3_eps in zip(["Fast", "Mid", "Slow"],
+                              [-1.732051, 0.0, 1.732051]):
+        alias = "ESHM20Iceland{:s}Stress{:s}Atten".format(stress, c3_key)
+        add_alias(alias, KothaEtAl2020ESHM20, dl2l=dl2l, c3_epsilon=c3_eps)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2020-2022 GEM Foundation
+# Copyright (C) 2020-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -419,6 +419,8 @@ def install(inst, version):
         oqreal = '%s\\Scripts\\oq' % inst.VENV
     else:
         oqreal = '%s/bin/oq' % inst.VENV
+    print('Compiling numba modules')
+    subprocess.run([oqreal, '--version'])  # compile numba
 
     if inst in (user, devel):  # create/upgrade the db in the default location
         # do not stop if `oq dbserver upgrade` is missing (versions < 3.15)

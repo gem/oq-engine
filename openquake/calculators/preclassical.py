@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -163,7 +163,11 @@ class PreClassicalCalculator(base.HazardCalculator):
                 cmakers[grp_id].set_weight(sg, sites)
                 atomic_sources.extend(sg)
             else:
-                normal_sources.extend(sg)
+                for src in sg:
+                    if hasattr(src, 'rupture_idxs'):  # multiFault
+                        normal_sources.extend(split_source(src))
+                    else:
+                        normal_sources.append(src)
 
         # run preclassical for non-atomic sources
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))

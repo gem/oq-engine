@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,69 +23,10 @@ from datetime import date, datetime, timedelta
 import itertools
 from docutils.examples import html_parts
 
-from openquake.calculators.views import view_fullreport
+from openquake.calculators.views import view_fullreport, text_table
 from openquake.commonlib import logs, datastore
 
 tablecounter = itertools.count(0)
-
-
-def htmltable(header_rows):
-    """
-    Convert a list of tuples describing a table into a HTML string
-    """
-    name = 'table%d' % next(tablecounter)
-    return HtmlTable([map(str, row) for row in header_rows], name).render()
-
-
-class HtmlTable(object):
-    """
-    Convert a sequence header+body into a HTML table.
-    """
-    css = """\
-    tr.evenRow { background-color: lightgreen }
-    tr.oddRow { }
-    th { background-color: lightblue }
-    """
-    maxrows = 5000
-    border = "1"
-    summary = ""
-
-    def __init__(self, header_plus_body, name='noname',
-                 empty_table='Empty table'):
-        header, body = header_plus_body[0], header_plus_body[1:]
-        self.name = name
-        self.empty_table = empty_table
-        rows = []  # rows is a finite sequence of tuples
-        for i, row in enumerate(body):
-            if i == self.maxrows:
-                rows.append(
-                    ["Table truncated because too big: more than %s rows" % i])
-                break
-            rows.append(row)
-        self.rows = rows
-        self.header = tuple(header)  # horizontal header
-
-    def render(self, dummy_ctxt=None):
-        out = "\n%s\n" % "".join(list(self._gen_table()))
-        if not self.rows:
-            out += '<em>%s</em>' % html.escape(self.empty_table, quote=True)
-        return out
-
-    def _gen_table(self):
-        yield '<table id="%s" border="%s" summary="%s" class="tablesorter">\n'\
-              % (self.name, self.border, self.summary)
-        yield '<thead>\n'
-        yield '<tr>%s</tr>\n' % ''.join(
-            '<th>%s</th>\n' % h for h in self.header)
-        yield '</thead>\n'
-        yield '<tbody\n>'
-        for r, row in enumerate(self.rows):
-            yield '<tr class="%s">\n' % ["even", "odd"][r % 2]
-            for col in row:
-                yield '<td>%s</td>\n' % col
-            yield '</tr>\n'
-        yield '</tbody>\n'
-        yield '</table>\n'
 
 
 JOB_STATS = '''
@@ -182,7 +123,8 @@ def make_report(isodate='today'):
                     str(exc), quote=True),
                 fragment='')
         page = report['html_title']
-        page += htmltable([stats._fields, stats])
+        page += text_table([[str(col) for col in stats]],
+                           stats._fields, ext='html')
         page += report['fragment']
         tag_contents.append(page)
 
