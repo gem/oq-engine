@@ -24,7 +24,6 @@ import logging
 import os
 import tempfile
 import subprocess
-import multiprocessing
 import traceback
 import signal
 import zlib
@@ -42,7 +41,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
 from openquake.baselib import hdf5, config
-from openquake.baselib.general import groupby, gettemp, zipfiles
+from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base
@@ -51,7 +50,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
-from openquake.engine import engine
+from openquake.engine import engine, aelo
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
 
@@ -61,8 +60,6 @@ from wsgiref.util import FileWrapper
 
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
-
-Process = multiprocessing.get_context('spawn').Process
 
 CWD = os.path.dirname(__file__)
 METHOD_NOT_ALLOWED = 405
@@ -560,6 +557,50 @@ def calc_run(request):
                         status=status)
 
 
+def aelo_callback(job_id, exc=None):
+    # TODO: replace this with something better
+    if exc:
+        print('sending email with error %s' % exc)
+    else:
+        print('sending dowload link for %d' % job_id)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def aelo_run(request):
+    """
+    Run an AELO calculation.
+
+    :param request:
+        a `django.http.HttpRequest` object containing lon, lat, vs30, siteid
+    """
+    try:
+        lon = valid.longitude(request.POST.get('lon'))
+        lat = valid.latitude(request.POST.get('lat'))
+        vs30 = valid.positivefloat(request.POST.get('vs30'))
+        siteid = valid.simple_id(request.POST.get('siteid'))
+    except Exception as exc:
+        # failed even before creating a job
+        exc_msg = str(exc)
+        logging.error(exc_msg)
+        response_data = exc_msg.splitlines()
+        return HttpResponse(content=json.dumps(response_data),
+                            content_type=JSON, status=500)
+
+    # build a LogContext object associated to a database job
+    [jobctx] = engine.create_jobs(
+        [dict(calculation_mode='custom', description='AELO for ' + siteid)],
+        config.distribution.log_level, None, utils.get_user(request), None)
+    response_data = dict(status='created', job_id=jobctx.calc_id)
+
+    # spawn the AELO main process
+    mp.Process(target=aelo.main, args=(lon, lat, vs30, siteid, jobctx,
+                                       aelo_callback)).start()
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
+                        status=200)
+
+
 def submit_job(request_files, ini, username, hc_id):
     """
     Create a job object from the given files and run it in a new process.
@@ -598,21 +639,21 @@ def submit_job(request_files, ini, username, hc_id):
     big_job = oq.get_input_size() > int(config.distribution.min_input_size)
     if submit_cmd == ENGINE:  # used for debugging
         for job in jobs:
-            subprocess.Popen(submit_cmd + [save(job, custom_tmp)])
+            subprocess.Popen(submit_cmd + [save_pik(job, custom_tmp)])
     elif submit_cmd == KUBECTL and big_job:
         for job in jobs:
             with open(os.path.join(CWD, 'job.yaml')) as f:
                 yaml = string.Template(f.read()).substitute(
                     DATABASE='%(host)s:%(port)d' % config.dbserver,
-                    CALC_PIK=save(job, custom_tmp),
+                    CALC_PIK=save_pik(job, custom_tmp),
                     CALC_NAME='calc%d' % job.calc_id)
             subprocess.run(submit_cmd, input=yaml.encode('ascii'))
     else:
-        Process(target=engine.run_jobs, args=(jobs,)).start()
+        mp.Process(target=engine.run_jobs, args=(jobs,)).start()
     return job.calc_id
 
 
-def save(job, dirname):
+def save_pik(job, dirname):
     """
     Save a LogContext object in pickled format; returns the path to it
     """

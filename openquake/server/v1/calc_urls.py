@@ -34,7 +34,8 @@ urlpatterns = [
     re_path(r'^(\d+)/log/(\d*):(\d*)$', views.calc_log),
     re_path(r'^(\d+)/remove$', views.calc_remove),
     re_path(r'^result/(\d+)$', views.calc_result),
-    re_path(r'^run$', views.calc_run),
     re_path(r'^validate_zip$', views.validate_zip),
     re_path(r'^(\d+)/result/list$', views.calc_results),
+    re_path(r'^aelo_run$', views.aelo_run),
+    re_path(r'^run$', views.calc_run),
 ]
