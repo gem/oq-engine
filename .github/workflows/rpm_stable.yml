@@ -54,7 +54,7 @@ jobs:
 
       - name: Install tooling for source RPM build
         run: |
-          dnf -y install @development-tools @rpm-development-tools \
+          dnf --refresh -y install @development-tools @rpm-development-tools \
           copr-cli mock make gcc openssl-devel bzip2-devel libffi-devel
 
       - name: Deploy SPEC file from template
