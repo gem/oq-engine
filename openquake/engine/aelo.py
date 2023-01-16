@@ -71,6 +71,8 @@ def main(lon: valid.longitude,
         [jobctx] = engine.create_jobs([dic], config.distribution.log_level,
                                       None, getpass.getuser(), None)
     with jobctx:
+        if not config.directory.mosaic_dir:
+            sys.exit('mosaic_dir is not specified in openquake.cfg')
         jobctx.params.update(get_params_from(lon, lat, vs30, siteid))
         try:
             fake_run(jobctx, lon, lat, vs30)
