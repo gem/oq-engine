@@ -17,7 +17,7 @@ on:
         required: true
       copr:
         description: COPR Repository Staging for default
-        default: openquake-staging
+        default: openquake
         required: true
   schedule:
     - cron: "0 19 * * *"
@@ -124,7 +124,7 @@ jobs:
            SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
            copr-cli build ${COPR_REPO} $SRPM
           else
-           COPR_REPO=openquake-staging
+           COPR_REPO=openquake
            echo "COPR REPO: $COPR_REPO"
            SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
            copr-cli build ${COPR_REPO} $SRPM
