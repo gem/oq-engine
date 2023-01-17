@@ -166,7 +166,7 @@ jobs:
               PDF_VER="(master)"
           elif [ "$BUILD" == "dev" ]; then
               DOCS_BASE="${DOCS_BASE}.dev/"
-              TARGET=".dev/oq-engine/$GITHUB_REF_NAME/"
+              TARGET="oq-engine/$GITHUB_REF_NAME/"
               PDF_VER="($GITHUB_REF_NAME)"
               PDFDOCS="manuals/"
           else
@@ -220,7 +220,7 @@ jobs:
 
           echo "Make Advanced Manual (PDF)"
           cd ../adv-manual
-          sed -i "s@#PDF_VER#@${PDF_VER}@g;s@#TARGET#@${TARGET}@g" index.rst
+          sed -i "s@#PDF_VER#@${PDF_VER}@g;s@#TARGET#@${DOCS_BASE}${TARGET}@g" index.rst
           make clean && make latexpdf
           echo "uploading OpenQuakeforAdvancedUsers (PDF)"
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/latex/OpenQuakeforAdvancedUsers.pdf "docs@docs.openquake.org:${DOCS_BASE}${TARGET}PDF/"
