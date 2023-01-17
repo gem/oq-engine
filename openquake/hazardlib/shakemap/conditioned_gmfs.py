@@ -176,7 +176,7 @@ class ConditionedGmfComputer(GmfComputer):
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
-        rng = numpy.random.default_rng()
+        rng = numpy.random.default_rng(self.seed)
         num_events = self.num_events
         num_gmms = len(rlzs_by_gsim)
 
@@ -188,7 +188,8 @@ class ConditionedGmfComputer(GmfComputer):
             # it is better to have few calls producing big arrays
             mean_covs = get_conditioned_mean_and_covariance(
                 self.rupture, gmm, self.station_sitecol, self.station_data,
-                self.observed_imt_strs, self.target_sitecol, self.imts, self.spatial_correl, 
+                self.observed_imt_strs, self.target_sitecol, self.imts,
+                self.spatial_correl,
                 self.cross_correl_between, self.cross_correl_within,
                 self.cmaker.maximum_distance)
 
@@ -247,22 +248,23 @@ class ConditionedGmfComputer(GmfComputer):
         eps = numpy.zeros((M, num_events), F32)  # not the same
         numpy.random.seed(self.seed)
 
-        for m, imt in enumerate(self.imts):
-            mu_Y_yD = mean_covs[0][imt.string]
-            # cov_Y_Y_yD = mean_covs[1][imt.string]
-            cov_WY_WY_wD = mean_covs[2][imt.string]
-            cov_BY_BY_yD = mean_covs[3][imt.string]
+        for m, im in enumerate(self.imts):
+            mu_Y_yD = mean_covs[0][im.string]
+            # cov_Y_Y_yD = mean_covs[1][im.string]
+            cov_WY_WY_wD = mean_covs[2][im.string]
+            cov_BY_BY_yD = mean_covs[3][im.string]
             try:
                 result[m], sig[m], eps[m] = self._compute(
-                    mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, imt, num_events, rng
-                )
+                    mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, im, num_events, rng)
             except Exception as exc:
                 raise RuntimeError(
                     "(%s, %s, source_id=%r) %s: %s"
-                    % (gsim, imt, decode(self.source_id), exc.__class__.__name__, exc)
+                    % (gsim, im, decode(self.source_id),
+                       exc.__class__.__name__, exc)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
-            self.amplifier.amplify_gmfs(self.ctx.ampcode, result, self.imts, self.seed)
+            self.amplifier.amplify_gmfs(
+                self.ctx.ampcode, result, self.imts, self.seed)
         return result, sig, eps
 
     def _compute(self, mu_Y, cov_WY_WY, cov_BY_BY, imt, num_events, rng):
