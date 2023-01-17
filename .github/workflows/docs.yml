@@ -44,7 +44,7 @@
 #         OpenQuake Manual <branch>.pdf -> ../oq-engine/<branch>/PDF/OpenQuake Manual <branch>.pdf
 #
 ---
-name: new docs
+name: Docs
 on:
   workflow_dispatch:
     inputs:
