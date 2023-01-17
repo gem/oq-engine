@@ -16,20 +16,17 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-import sys
 
 import numpy
-import pandas
 
-from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import decode
-from openquake.commonlib import readinput
-from openquake.hazardlib import correlation, cross_correlation, imt, valid
+from openquake.baselib.general import AccumDict
+from openquake.hazardlib import correlation, cross_correlation, imt
 from openquake.hazardlib.calc.gmf import GmfComputer, exp
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
-from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.hazardlib.site import SiteCollection
+from openquake.hazardlib.gsim.base import ContextMaker
+
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -268,7 +265,7 @@ class ConditionedGmfComputer(GmfComputer):
         return result, sig, eps
 
     def _compute(self, mu_Y, cov_WY_WY, cov_BY_BY, imt, num_events, rng):
-        if self.cmaker.truncation_level == 0:
+        if self.cmaker.truncation_level <= 1E-9:
             gmf = exp(mu_Y, imt)
             gmf = gmf.repeat(num_events, axis=1)
             inter_sig = 0
@@ -302,15 +299,14 @@ def get_conditioned_mean_and_covariance(
         ):
             raise NoInterIntraStdDevs(gmm)
 
-    observed_imtls = {
-        imt_str: [0] for imt_str in observed_imt_strs if imt_str not in ["MMI", "PGV"]
-    }
-    observed_imts = sorted([imt.from_string(imt_str) for imt_str in observed_imtls])
+    observed_imtls = {imt_str: [0] for imt_str in observed_imt_strs
+                      if imt_str not in ["MMI", "PGV"]}
+    observed_imts = sorted([imt.from_string(imt_str)
+                            for imt_str in observed_imtls])
     cmaker_D = ContextMaker(
         rupture.tectonic_region_type, [gmm],
-        dict(
-            truncation_level=0, imtls=observed_imtls, 
-            maximum_distance=maximum_distance))
+        dict(truncation_level=0, imtls=observed_imtls,
+             maximum_distance=maximum_distance))
 
     gc_D = GmfComputer(rupture, station_sitecol, cmaker_D)
     mean_stds = cmaker_D.get_mean_stds([gc_D.ctx])[:, 0]
@@ -496,12 +492,13 @@ def get_conditioned_mean_and_covariance(
 
         gc_Y = GmfComputer(rupture, target_sitecol, cmaker_Y)
         mean_stds = cmaker_Y.get_mean_stds([gc_Y.ctx])[:, 0]
-        target_sites_filtered = (
-            numpy.argwhere(numpy.isin(target_sitecol.sids, gc_Y.ctx.sids))
-            .ravel().tolist())
-        target_sitecol_filtered = target_sitecol.filtered(target_sites_filtered)
+        target_sites_filtered = numpy.argwhere(
+            numpy.isin(target_sitecol.sids, gc_Y.ctx.sids)).ravel().tolist()
+        target_sitecol_filtered = target_sitecol.filtered(
+            target_sites_filtered)
         num_target_sites = len(target_sitecol_filtered)
-        # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT; G gsims, M IMTs, N sites/distances
+        # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT,
+        # StdDev.INTRA_EVENT; G gsims, M IMTs, N sites/distances
 
         # Predicted mean at the target sites, from GMM(s)
         mu_Y = mean_stds[0, 0].reshape((-1, 1))
@@ -602,13 +599,13 @@ def compute_spatial_cross_correlation_matrix(
     imt_list_1, imt_list_2,
     spatial_correl, cross_correl_within,
 ):
-    # The correlation structure for IMs of differing types at differing locations
-    # can be reasonably assumed as Markovian in nature, and we assume here that
-    # the correlation between differing IMs at differing locations is simply the
-    # product of the cross correlation of IMs i and j at the same location
-    # and the spatial correlation due to the distance between sites m and n
-    # Can be refactored down the line to support direct spatial cross-correlation
-    # models
+    # The correlation structure for IMs of differing types at differing
+    # locations can be reasonably assumed as Markovian in nature, and we
+    # assume here that the correlation between differing IMs at differing
+    # locations is simply the product of the cross correlation of IMs i and j
+    # at the same location and the spatial correlation due to the distance
+    # between sites m and n. Can be refactored down the line to support direct
+    # spatial cross-correlation models
     distance_matrix = geodetic_distance(
         sitecol_1.lons.reshape(sitecol_1.lons.shape + (1,)),
         sitecol_1.lats.reshape(sitecol_1.lats.shape + (1,)),
@@ -618,7 +615,7 @@ def compute_spatial_cross_correlation_matrix(
     spatial_cross_correlation_matrix = numpy.block([[
         _compute_spatial_cross_correlation_matrix(
             distance_matrix, imt_1, imt_2, spatial_correl, cross_correl_within)
-            for imt_2 in imt_list_2] for imt_1 in imt_list_1])
+        for imt_2 in imt_list_2] for imt_1 in imt_list_1])
     return spatial_cross_correlation_matrix
 
 
@@ -645,7 +642,8 @@ def _compute_spatial_cross_correlation_matrix(
         cross_corr_coeff = cross_correl_within.get_correlation(
             from_imt=imt_1, to_imt=imt_2
         )
-        spatial_cross_correlation_matrix = spatial_correlation_matrix * cross_corr_coeff
+        spatial_cross_correlation_matrix = (
+            spatial_correlation_matrix * cross_corr_coeff)
     return spatial_cross_correlation_matrix
 
 
@@ -678,7 +676,8 @@ def cov2corr(cov, return_std=False):
     Notes
     -----
     This function does not convert subclasses of ndarrays. This requires that
-    division is defined elementwise. numpy.ma.array and numpy.matrix are allowed.
+    division is defined elementwise. numpy.ma.array and numpy.matrix are
+    allowed.
     """
     cov = numpy.asanyarray(cov)
     std_ = numpy.sqrt(numpy.diag(cov))
@@ -691,9 +690,8 @@ def cov2corr(cov, return_std=False):
 
 def corr2cov(corr, std):
     """
-    Convert a correlation matrix to a covariance matrix given standard deviation
-
-    Function from statsmodels.stats.moment_helpers
+    Convert a correlation matrix to a covariance matrix given the
+    standard deviation. Function from statsmodels.stats.moment_helpers.
 
     Parameters
     ----------
@@ -850,7 +848,8 @@ def corr_clipped(corr, threshold=1e-15):
     return x_new
 
 
-def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=False):
+def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
+                return_all=False):
     """
     Find the nearest covariance matrix that is positive (semi-) definite
 
