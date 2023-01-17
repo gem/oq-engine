@@ -6,7 +6,7 @@
 OpenQuake for Advanced Users
 ============================
 
-PDF version #PDF_VER#: https://docs.openquake.org/#TARGET#/PDF/OpenQuakeforAdvancedUsers.pdf
+PDF version #PDF_VER#: https://docs.openquake.org/#TARGET#PDF/OpenQuakeforAdvancedUsers.pdf
 
 Contents:
 
