@@ -880,7 +880,8 @@ class ContextMaker(object):
                     r_sites = sites.filter(mask)
                     rctx = self.get_rctx(rup, r_sites, dist[mask])
                     rctx.src_id = src_id
-                    rctx.rup_id = rup.rup_id
+                    if src_id:  # not event based
+                        rctx.rup_id = rup.rup_id
                     if self.fewsites:
                         c = rup.surface.get_closest_points(sites.complete)
                         rctx.clon = c.lons[rctx.sids]

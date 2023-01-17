@@ -113,8 +113,8 @@ def _get_ebruptures(fname, conv=None, ses_seed=None):
         [rup_node] = nrml.read(fname)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'  # no TRT for scenario ruptures
-        rup.rup_id = ses_seed
-        ebrs = [EBRupture(rup, 'NA', 0, id=rup.rup_id, scenario=True)]
+        rup.seed = ses_seed
+        ebrs = [EBRupture(rup, 'NA', 0, id=rup.seed, scenario=True)]
         return ebrs
 
     assert fname.endswith('.csv'), fname
