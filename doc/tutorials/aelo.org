@@ -3,19 +3,19 @@
 #+date: January 16h 2023
 #+epresent_frame_level: 1
 
-* Basic concepts
+* Three basic concepts
 
-calculation: file oqdata/calc_1234.hdf5
-job: database record with fields
+1. calculation: file oqdata/calc_1234.hdf5
+2. job: database record with fields
 
-     id               description              user_name
-     calculation_mode hazard_calculation_id    status
-     is_running       start_time               stop_time
-     ds_calc_dir      pid                      size_mb
-     host
+  id               description              user_name
+  calculation_mode hazard_calculation_id    status
+  start_time       stop_time                ds_calc_dir
+  pid              size_mb                  host
 
-jobctx: context manager for logs and exceptions;
-        sets the `status` to "complete" or "failed"
+3. jobctx: context manager for logs and exceptions
+           job.id + input parameters
+           final status "complete" or "failed"
 * The master script
 
 #+begin_src python
@@ -29,6 +29,17 @@ def main(lon, lat, vs30, siteid, jobctx, callback):
         callback(jobctx.calc_id, exc)
     else:
         callback(jobctx.calc_id)
+#+end_src python
+
+* The callback
+
+Defined in the web service; something like:
+
+#+begin_src python
+def callback(job_id, exc=None):
+    if exc:
+        send_error_message(job_id, exc)
+    send_download_link(job_id)
 #+end_src python
 
 * The Django view/1
@@ -75,6 +86,8 @@ def aelo_run(request):
                       siteid='KATMANDU')
         resp = self.post('aelo_run', params)
         self.assertEqual(resp.status_code, 200)
-        js = json.loads(resp.content.decode('utf8'))
+        js = json.loads(resp.txt)
         self.assertEqual(js['status'], 'created')
 #+end_src python
+
+    *The end!*
