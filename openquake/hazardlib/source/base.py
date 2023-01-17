@@ -114,7 +114,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         numpy.random.seed(seed)
         for trt_smr in self.trt_smrs:
             for rup, num_occ in self._sample_ruptures(eff_num_ses):
-                rup.rup_id = seed
+                rup.seed = seed
                 if hasattr(rup, 'occurrence_rate'):
                     # defined only for poissonian sources
                     rup.occurrence_rate *= self.smweight
@@ -364,7 +364,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         for i, rup in enumerate(self.iter_ruptures()):
             if i == idx:
                 if hasattr(self, 'rup_id'):
-                    rup.rup_id = self.rup_id
+                    rup.seed = self.seed
                 rup.idx = idx
                 return rup
 

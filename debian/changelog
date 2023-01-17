@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Internal: renamed rup_id -> seed in event based calculations to avoid
+    confusion
   * Parallelized the reinsurance calculation
 
   [Marco Pagani]
