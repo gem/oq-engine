@@ -51,6 +51,19 @@ project = u'OpenQuake for Advanced Users'
 copyright = u'2018-2022, Michele Simionato, Anirudh Rao'
 author = u'Michele Simionato, Anirudh Rao'
 
+try:
+    import subprocess
+    import re
+    vcs_branch = subprocess.run(['git', 'branch', '--show-current'], stdout=subprocess.PIPE)
+    vcs_branch = vcs_branch.stdout.decode('utf-8').rstrip()
+    # vcs_branch = 'engine-3.15'
+    if re.compile('engine-[0-9]+\.[0-9]+.*').match(vcs_branch):
+        branch = ''
+    else:
+        branch = " (%s)" % vcs_branch
+except Exception:
+    vcs_branch = None
+    branch = ''
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
