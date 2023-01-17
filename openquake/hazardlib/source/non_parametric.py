@@ -251,6 +251,6 @@ class NonParametricSeismicSource(BaseSeismicSource):
         serial = self.serial(ses_seed)
         for i, rup in enumerate(self.iter_ruptures()):
             if i == idx:
-                rup.rup_id = serial + i
+                rup.seed = serial + i
                 rup.idx = idx
                 return rup

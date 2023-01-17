@@ -1021,7 +1021,10 @@ class OqParam(valid.ParamSet):
         should be called only before starting the calculation.
         The same information is stored in the datastore.
         """
-        return sum(os.path.getsize(f) for f in self._input_files)
+        # NB: when the OqParam object is instantiated from a dictionary and
+        # not from a job.ini file the key 'job_ini ' has value '<in-memory>'
+        return sum(os.path.getsize(f) for f in self._input_files
+                   if f != '<in-memory>')
 
     def get_reqv(self):
         """

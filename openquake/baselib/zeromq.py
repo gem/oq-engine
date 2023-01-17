@@ -92,9 +92,9 @@ class Socket(object):
     :param end_point: zmq end point string
     :param socket_type: zmq socket type (integer)
     :param mode: default 'bind', accepts also 'connect'
-    :param timeout: default 15000 ms, used when polling the underlying socket
+    :param timeout: default 30000 ms, used when polling the underlying socket
     """
-    def __init__(self, end_point, socket_type, mode, timeout=15):
+    def __init__(self, end_point, socket_type, mode, timeout=30):
         assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH)
         assert mode in ('bind', 'connect'), mode
         if mode == 'bind':
@@ -173,11 +173,10 @@ class Socket(object):
             raise exc.__class__('%s: %r' % (exc, obj))
         self.num_sent += 1
         if self.socket_type == zmq.REQ:
-            ok = self.zsocket.poll(self.timeout)  # 30 seconds
+            ok = self.zsocket.poll(self.timeout)
             if not ok:
-                raise TimeoutError(
-                    'While sending %s; probably the DbServer is off' %
-                    repr(obj))
+                raise TimeoutError('While sending %r to %s' %
+                                   (obj, self.end_point))
             return self.zsocket.recv_pyobj()
 
     def __repr__(self):
