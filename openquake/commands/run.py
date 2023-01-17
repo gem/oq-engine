@@ -20,7 +20,9 @@ import logging
 import os.path
 import socket
 import cProfile
+import warnings
 import getpass
+from pandas.core.common import SettingWithCopyWarning
 
 from openquake.baselib import performance, general
 from openquake.hazardlib import valid
@@ -79,6 +81,7 @@ def main(job_ini,
     """
     Run a calculation
     """
+    # warnings.filterwarnings("error", category=SettingWithCopyWarning)
     if not os.environ.get('OQ_DATABASE'):
         dbserver.ensure_on()
     user_name = getpass.getuser()

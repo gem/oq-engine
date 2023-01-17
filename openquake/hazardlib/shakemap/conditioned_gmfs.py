@@ -312,19 +312,20 @@ def get_conditioned_mean_and_covariance(
 
     gc_D = GmfComputer(rupture, station_sitecol, cmaker_D)
     mean_stds = cmaker_D.get_mean_stds([gc_D.ctx])[:, 0]
-    station_locs_filtered = (
-        numpy.argwhere(numpy.isin(station_sitecol.sids, gc_D.ctx.sids)).ravel().tolist()
-    )
+    station_locs_filtered = numpy.argwhere(
+        numpy.isin(station_sitecol.sids, gc_D.ctx.sids)).ravel().tolist()
     station_sitecol_filtered = station_sitecol.filtered(station_locs_filtered)
     station_data_filtered = station_data.iloc[station_locs_filtered]
     num_station_sites = len(station_sitecol_filtered)
 
-    # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT; G gsims, M IMTs, N sites/distances
+    # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT;
+    # G gsims, M IMTs, N sites/distances
     for i, imt_i in enumerate(observed_imts):
-        station_data_filtered.loc[:, imt_i.string + "_" + "median"] = mean_stds[0, i, :]
-        station_data_filtered.loc[:, imt_i.string + "_" + "sigma"] = mean_stds[1, i, :]
-        station_data_filtered.loc[:, imt_i.string + "_" + "tau"] = mean_stds[2, i, :]
-        station_data_filtered.loc[:, imt_i.string + "_" + "phi"] = mean_stds[3, i, :]
+        s = imt_i.string
+        station_data_filtered.loc[:, s + "_median"] = mean_stds[0, i, :]
+        station_data_filtered.loc[:, s + "_sigma"] = mean_stds[1, i, :]
+        station_data_filtered.loc[:, s + "_tau"] = mean_stds[2, i, :]
+        station_data_filtered.loc[:, s + "_phi"] = mean_stds[3, i, :]
 
     mu_Y_yD_dict = {target_imt.string: None for target_imt in target_imts}
     cov_Y_Y_yD_dict = {target_imt.string: None for target_imt in target_imts}
