@@ -304,14 +304,14 @@ def get_conditioned_mean_and_covariance(
     station_locs_filtered = numpy.argwhere(
         numpy.isin(station_sitecol.sids, gc_D.ctx.sids)).ravel().tolist()
     station_sitecol_filtered = station_sitecol.filtered(station_locs_filtered)
-    station_data_filtered = station_data.iloc[station_locs_filtered]
+    station_data_filtered = station_data.iloc[station_locs_filtered].copy()
     nss = len(station_sitecol_filtered)  # number of station sites
     for i, o_imt in enumerate(observed_imts):
         im = o_imt.string
-        station_data_filtered.loc[:, im + "_median"] = mean_stds[0, i, :]
-        station_data_filtered.loc[:, im + "_sigma"] = mean_stds[1, i, :]
-        station_data_filtered.loc[:, im + "_tau"] = mean_stds[2, i, :]
-        station_data_filtered.loc[:, im + "_phi"] = mean_stds[3, i, :]
+        station_data_filtered[im + "_median"] = mean_stds[0, i]
+        station_data_filtered[im + "_sigma"] = mean_stds[1, i]
+        station_data_filtered[im + "_tau"] = mean_stds[2, i]
+        station_data_filtered[im + "_phi"] = mean_stds[3, i]
 
     mu_Y_yD_dict = {target_imt.string: None for target_imt in target_imts}
     cov_Y_Y_yD_dict = {target_imt.string: None for target_imt in target_imts}
