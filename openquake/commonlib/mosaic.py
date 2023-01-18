@@ -13,7 +13,8 @@ CLOSE_DIST_THRESHOLD = 0.1  # deg
 
 
 class Mosaic:
-    def __init__(self, shapefile_path='tests/data/mosaic/ModelBoundaries.shp'):
+    def __init__(self,
+                 shapefile_path='../qa_tests_data/mosaic/ModelBoundaries.shp'):
         self.shapefile_path = shapefile_path
 
     def get_models_list(self):
