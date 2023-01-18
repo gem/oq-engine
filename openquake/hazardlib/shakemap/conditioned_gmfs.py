@@ -437,7 +437,8 @@ def get_conditioned_mean_and_covariance(
         # var_H_y2 = 1.0 / (
         #     1.0 + numpy.linalg.multi_dot([tau_y2.T, cov_W2_W2_inv, tau_y2])
         # )
-        # mu_H_y2 = numpy.linalg.multi_dot([tau_y2.T, cov_W2_W2_inv, zeta]) * var_H_y2
+        # mu_H_y2 = numpy.linalg.multi_dot(
+        #   [tau_y2.T, cov_W2_W2_inv, zeta]) * var_H_y2
         # The more generic equations B8 and B9 from Appendix B are used instead
         # requiring the computation of the covariance matrix Σ_HD_HD, which is
         # just the matrix of cross-correlations for the observed IMTs, since
@@ -465,6 +466,7 @@ def get_conditioned_mean_and_covariance(
         # Get the nominal bias and its variance as the means of the
         # conditional between-event residual mean and covariance
         nominal_bias_mean = numpy.mean(mu_BD_yD)
+        # ASK: why are we computing nominal_bias_stddev if it is not used??
         nominal_bias_stddev = numpy.sqrt(numpy.mean(cov_BD_BD_yD))
         logging.info(
             "GMM: %s, IMT: %s, Nominal bias (mean): %.3f",
