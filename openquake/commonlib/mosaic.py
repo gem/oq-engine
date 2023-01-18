@@ -93,8 +93,12 @@ class Mosaic:
         model_by_site = {}
         with open(csv_path, 'r') as sites:
             for site in csv.DictReader(sites):
-                lon = site['Longitude']
-                lat = site['Latitude']
+                try:
+                    lon = site['Longitude']
+                    lat = site['Latitude']
+                except KeyError:
+                    lon = site['lon']
+                    lat = site['lat']
                 model_by_site[(lon, lat)] = self.get_model_by_lon_lat(lon, lat)
         logging.info(Counter(model_by_site.values()))
         return model_by_site
