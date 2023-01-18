@@ -298,8 +298,8 @@ def get_conditioned_mean_and_covariance(
 
     gc_D = GmfComputer(rupture, station_sitecol, cmaker_D)
     mean_stds = cmaker_D.get_mean_stds([gc_D.ctx])[:, 0]
-    # shape (4, G, M, N) where 4 means (mean, TOTAL, INTER_EVENT, INTRA_EVENT)
-    # G is is the number of gsims, M the number of IMTs, with N sites/distances
+    # shape (4, M, N) where 4 means (mean, TOTAL, INTER_EVENT, INTRA_EVENT)
+    # M is the number of IMTs, N the number of sites/distances
 
     station_locs_filtered = numpy.argwhere(
         numpy.isin(station_sitecol.sids, gc_D.ctx.sids)).ravel().tolist()
