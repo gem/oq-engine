@@ -46,7 +46,7 @@ Description: transitional package
  This is a transitional package. It can safely be removed.
 
 Package: python-oq-engine-master
-Depends: python3-oq-engine-master, ${misc:Depends}
+Depends: python3-oq-engine, ${misc:Depends}
 Architecture: amd64
 Priority: optional
 Section: oldlibs
@@ -54,7 +54,7 @@ Description: transitional package
  This is a transitional package. It can safely be removed.
 
 Package: python-oq-engine-worker
-Depends: python3-oq-engine-worker, ${misc:Depends}
+Depends: python3-oq-engine, ${misc:Depends}
 Architecture: amd64
 Priority: optional
 Section: oldlibs
