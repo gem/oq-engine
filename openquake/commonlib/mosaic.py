@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import pprint
 import fiona
 import logging
 import time
@@ -113,4 +114,4 @@ if __name__ == '__main__':
     if not os.path.isfile(csv_path):
         print(f'The path {csv_path} does not correpond to a valid file')
         exit(1)
-    Mosaic().get_models_by_sites_csv(csv_path)
+    pprint.pprint(Mosaic().get_models_by_sites_csv(csv_path))
