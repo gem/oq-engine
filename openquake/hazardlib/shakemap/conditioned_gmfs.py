@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2022 GEM Foundation
+# Copyright (C) 2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,8 +27,6 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.gsim.base import ContextMaker
 
-
-U32 = numpy.uint32
 F32 = numpy.float32
 
 # This module implements the process for conditioning ground motion
@@ -75,21 +73,18 @@ class NoInterIntraStdDevs(Exception):
 
     def __str__(self):
         return """\
-You cannot use the conditioned ground shaking module with the GSIM %s, \
-that defines only the total standard deviation. If you wish to use the \
-conditioned ground shaking module you have to select a GSIM that provides \
-the inter and intra event standard deviations, or use the ModifiableGMPE \
-with `add_between_within_stds.with_betw_ratio`.""" % (
-            self.gsim.__class__.__name__
-        )
+You cannot use the conditioned ground shaking module with the GSIM %s,
+that defines only the total standard deviation. If you wish to use the
+conditioned ground shaking module you have to select a GSIM that provides
+the inter and intra event standard deviations, or use the ModifiableGMPE
+with `add_between_within_stds.with_betw_ratio`.
+""" % self.gsim.__class__.__name_
 
 
 class IterationLimitWarning(Warning):
     """
     Iteration limit reached without convergence
     """
-
-    pass
 
 
 class ConditionedGmfComputer(GmfComputer):
@@ -128,32 +123,30 @@ class ConditionedGmfComputer(GmfComputer):
         :mod:`openquake.hazardlib.sep`. Can be ``None``, in which
         case no secondary perils need to be evaluated.
     """
-
     def __init__(
-        self, rupture, sitecol, station_sitecol, station_data, 
-        observed_imt_strs, cmaker, spatial_correl=None, 
-        cross_correl_between=None, ground_motion_correlation_params=None,
-        number_of_ground_motion_fields=1, amplifier=None, sec_perils=()):
+            self, rupture, sitecol, station_sitecol, station_data,
+            observed_imt_strs, cmaker, spatial_correl=None,
+            cross_correl_between=None, ground_motion_correlation_params=None,
+            number_of_ground_motion_fields=1, amplifier=None, sec_perils=()):
         GmfComputer.__init__(
             self, rupture=rupture, sitecol=sitecol, cmaker=cmaker,
-            correlation_model=spatial_correl, cross_correl=cross_correl_between,
-            amplifier=amplifier, sec_perils=sec_perils,
-        )
+            correlation_model=spatial_correl,
+            cross_correl=cross_correl_between,
+            amplifier=amplifier, sec_perils=sec_perils)
 
         try:
-            vs30_clustering = ground_motion_correlation_params["vs30_clustering"]
+            vs30_clustering = ground_motion_correlation_params[
+                "vs30_clustering"]
         except KeyError:
             vs30_clustering = True
-        self.spatial_correl = (
-            spatial_correl or correlation.JB2009CorrelationModel(vs30_clustering))
+        self.spatial_correl = (spatial_correl or correlation.
+                               JB2009CorrelationModel(vs30_clustering))
         self.cross_correl_between = (
             cross_correl_between or cross_correlation.GodaAtkinson2009())
         self.cross_correl_within = cross_correlation.BakerJayaram2008()
-        observed_imtls = {
-            imt_str: [0]
-            for imt_str in observed_imt_strs
-            if imt_str not in ["MMI", "PGV"]
-        }
+        observed_imtls = {imt_str: [0]
+                          for imt_str in observed_imt_strs
+                          if imt_str not in ["MMI", "PGV"]}
         self.observed_imts = sorted(
             [imt.from_string(imt_str) for imt_str in observed_imtls])
         self.rupture = rupture
@@ -176,7 +169,7 @@ class ConditionedGmfComputer(GmfComputer):
         rng = numpy.random.default_rng(self.seed)
         num_events = self.num_events
         num_gmms = len(rlzs_by_gsim)
-
+        offsets = numpy.arange(num_events) * num_gmms
         for g, (gmm, rlzs) in enumerate(rlzs_by_gsim.items()):
             if num_events == 0:  # it may happen
                 continue
@@ -191,7 +184,6 @@ class ConditionedGmfComputer(GmfComputer):
                 self.cmaker.maximum_distance)
 
             array, sig, eps = self.compute(gmm, num_events, mean_covs, rng)
-
             M, N, E = array.shape  # sig and eps have shapes (M, E) instead
             for n in range(N):
                 for e in range(E):
@@ -200,13 +192,12 @@ class ConditionedGmfComputer(GmfComputer):
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
             n = 0
             for rlz in rlzs:
-                eids = eids_by_rlz[rlz][0] + numpy.arange(num_events) * num_gmms
+                eids = eids_by_rlz[rlz][0] + offsets
                 for ei, eid in enumerate(eids):
                     gmfa = array[:, :, n + ei]  # shape (N, M)
                     if sig_eps is not None:
-                        tup = tuple(
-                            [eid, rlz] + list(sig[:, n + ei]) + list(eps[:, n + ei])
-                        )
+                        tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
+                                    list(eps[:, n + ei]))
                         sig_eps.append(tup)
                     items = []
                     for sp in self.sec_perils:
@@ -283,20 +274,17 @@ class ConditionedGmfComputer(GmfComputer):
 
 
 def get_conditioned_mean_and_covariance(
-    rupture, gmm, station_sitecol, station_data, 
-    observed_imt_strs, target_sitecol, target_imts,
-    spatial_correl, cross_correl_between, cross_correl_within,
-    maximum_distance):
-    gmm_name = gmm.__class__.__name__
+        rupture, gmm, station_sitecol, station_data,
+        observed_imt_strs, target_sitecol, target_imts,
+        spatial_correl, cross_correl_between, cross_correl_within,
+        maximum_distance):
     if hasattr(gmm, "gmpe"):
         gmm_name = gmm.gmpe.__class__.__name__
-
+    else:
+        gmm_name = gmm.__class__.__name__
     if gmm.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
-        modifications = list(gmm.kwargs.keys())
-        if not (
-            type(gmm).__name__ == "ModifiableGMPE"
-            and "add_between_within_stds" in modifications
-        ):
+        if not (type(gmm).__name__ == "ModifiableGMPE"
+                and "add_between_within_stds" in gmm.kwargs):
             raise NoInterIntraStdDevs(gmm)
 
     observed_imtls = {imt_str: [0] for imt_str in observed_imt_strs
@@ -314,7 +302,7 @@ def get_conditioned_mean_and_covariance(
         numpy.isin(station_sitecol.sids, gc_D.ctx.sids)).ravel().tolist()
     station_sitecol_filtered = station_sitecol.filtered(station_locs_filtered)
     station_data_filtered = station_data.iloc[station_locs_filtered]
-    num_station_sites = len(station_sitecol_filtered)
+    num_station_sites = s = len(station_sitecol_filtered)
 
     # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT;
     # G gsims, M IMTs, N sites/distances
@@ -341,7 +329,8 @@ def get_conditioned_mean_and_covariance(
         # in the observed IMTs or not
         if not (target_imt.period or target_imt.string == "PGA"):
             # Target IMT is not PGA or SA: Currently not supported
-            logging.warning("Conditioned gmfs not available for %s", target_imt.string)
+            logging.warning("Conditioned gmfs not available for %s",
+                            target_imt.string)
             continue
         elif target_imt in observed_imts:
             # Target IMT is present in the observed IMTs
@@ -351,34 +340,35 @@ def get_conditioned_mean_and_covariance(
         else:
             # Find where the target IMT falls in the list of observed IMTs
             all_imts = sorted(observed_imts + [target_imt])
-            imt_idx = numpy.where(target_imt.string == numpy.array(all_imts)[:, 0])[0][
-                0
-            ]
+            imt_idx = numpy.where(
+                target_imt.string == numpy.array(all_imts)[:, 0])[0][0]
             if imt_idx == 0:
                 # Target IMT is outside the range of the observed IMT periods
-                # and its period is lower than the lowest available in the observed IMTs
+                # and its period is lower than the lowest available in the
+                # observed IMTs
                 conditioning_imts = [all_imts[1]]
             elif imt_idx == len(all_imts) - 1:
                 # Target IMT is outside the range of the observed IMT periods
-                # and its period is higher than the highest available in the observed IMTs
+                # and its period is higher than the highest available in the
+                # observed IMTs
                 conditioning_imts = [all_imts[-2]]
             else:
                 # Target IMT is within the range of the observed IMT periods
                 # and its period falls between two periods in the observed IMTs
-                conditioning_imts = [all_imts[imt_idx - 1], all_imts[imt_idx + 1]]
+                conditioning_imts = [all_imts[imt_idx - 1],
+                                     all_imts[imt_idx + 1]]
             bracketed_imts = [target_imt] + conditioning_imts
 
-        # Check if the station data for the IMTs shortlisted for conditioning contains NaNs
+        # Check if the station data for the IMTs shortlisted for conditioning
+        # contains NaNs
         for conditioning_imt in conditioning_imts:
-            num_null_values = (
-                station_data_filtered[conditioning_imt.string + "_mean"].isna().sum()
-            )
+            num_null_values = station_data_filtered[
+                conditioning_imt.string + "_mean"].isna().sum()
             if num_null_values:
                 raise ValueError(
                     f"The station data contains {num_null_values}"
                     f"null values for {target_imt.string}."
-                    "Please fill or discard these rows."
-                )
+                    "Please fill or discard these rows.")
 
         # Observations (recorded values at the stations)
         yD = numpy.log(
@@ -390,18 +380,16 @@ def get_conditioned_mean_and_covariance(
         # These arise if the values for this particular IMT were not
         # directly recorded, but obtained by conversion equations or
         # cross-correlation functions
-        var_addon_D = (
-            station_data_filtered[
-                [c_imt.string + "_std" for c_imt in conditioning_imts]
-            ].values.reshape((-1, 1), order="F")
-            ** 2
-        )
+        var_addon_D = station_data_filtered[
+            [c_imt.string + "_std" for c_imt in conditioning_imts]
+        ].values.reshape((-1, 1), order="F") ** 2
 
         # Predicted mean at the observation points, from GMM(s)
         mu_yD = station_data_filtered[
             [c_imt.string + "_median" for c_imt in conditioning_imts]
         ].values.reshape((-1, 1), order="F")
-        # Predicted uncertainty components at the observation points, from GMM(s)
+        # Predicted uncertainty components at the observation points
+        # from GMM(s)
         phi_D = station_data_filtered[
             [c_imt.string + "_phi" for c_imt in conditioning_imts]
         ].values.reshape((-1, 1), order="F")
@@ -412,13 +400,12 @@ def get_conditioned_mean_and_covariance(
         if native_data_available:
             T_D = tau_D
         else:
+            # s = num_station_sites
             T_D = numpy.zeros(
-                (len(conditioning_imts) * num_station_sites, len(bracketed_imts))
-            )
+                (len(conditioning_imts) * s, len(bracketed_imts)))
             for i in range(len(conditioning_imts)):
-                T_D[i * num_station_sites : (i + 1) * num_station_sites, i + 1] = tau_D[
-                    i * num_station_sites : (i + 1) * num_station_sites, 0
-                ]
+                T_D[i * s: (i + 1) * s, i + 1] = tau_D[
+                    i * s: (i + 1) * s, 0]
         # The raw residuals
         zeta_D = yD - mu_yD
 
@@ -435,27 +422,28 @@ def get_conditioned_mean_and_covariance(
         cov_WD_WD = numpy.linalg.multi_dot(
             [numpy.diag(phi_D_flat), rho_WD_WD, numpy.diag(phi_D_flat)]
         )
-
         # Add on the additional variance of the residuals
         # for the cases where the station data is uncertain
         numpy.fill_diagonal(cov_WD_WD, numpy.diag(cov_WD_WD) + var_addon_D)
 
-        # Get the (pseudo)-inverse of the station data within-event covariance matrix
+        # Get the (pseudo)-inverse of the station data within-event covariance
+        # matrix
         cov_WD_WD_inv = numpy.linalg.pinv(cov_WD_WD)
 
-        # # The normalized between-event residual and its variance (for the observation points)
-        # # Engler et al. (2022) equations 12 and 13; assumes between event residuals
-        # # are perfectly cross-correlated
+        # # The normalized between-event residual and its variance (for the
+        # # observation points)
+        # # Engler et al. (2022) equations 12 and 13; assumes between event
+        # # residuals are perfectly cross-correlated
         # var_H_y2 = 1.0 / (
         #     1.0 + numpy.linalg.multi_dot([tau_y2.T, cov_W2_W2_inv, tau_y2])
         # )
         # mu_H_y2 = numpy.linalg.multi_dot([tau_y2.T, cov_W2_W2_inv, zeta]) * var_H_y2
-
         # The more generic equations B8 and B9 from Appendix B are used instead
         # requiring the computation of the covariance matrix Σ_HD_HD, which is
         # just the matrix of cross-correlations for the observed IMTs, since
         # H is the normalized between-event residual
-        corr_HD_HD = cross_correl_between._get_correlation_matrix(bracketed_imts)
+        corr_HD_HD = cross_correl_between._get_correlation_matrix(
+            bracketed_imts)
 
         # Using Bayes rule, compute the posterior distribution of the
         # normalized between-event residual H|YD=yD, employing
@@ -465,13 +453,14 @@ def get_conditioned_mean_and_covariance(
             numpy.linalg.multi_dot([T_D.T, cov_WD_WD_inv, T_D])
             + numpy.linalg.pinv(corr_HD_HD)
         )
-        mu_HD_yD = numpy.linalg.multi_dot([cov_HD_HD_yD, T_D.T, cov_WD_WD_inv, zeta_D])
+        mu_HD_yD = numpy.linalg.multi_dot(
+            [cov_HD_HD_yD, T_D.T, cov_WD_WD_inv, zeta_D])
 
-        # Compute the distribution of the conditional between-event residual B|Y2=y2
+        # Compute the distribution of the conditional between-event
+        # residual B|Y2=y2
         mu_BD_yD = T_D @ mu_HD_yD
         cov_BD_BD_yD = numpy.sqrt(
-            numpy.diag(numpy.linalg.multi_dot([T_D, cov_HD_HD_yD, T_D.T]))
-        )
+            numpy.diag(numpy.linalg.multi_dot([T_D, cov_HD_HD_yD, T_D.T])))
 
         # Get the nominal bias and its variance as the means of the
         # conditional between-event residual mean and covariance
@@ -479,10 +468,7 @@ def get_conditioned_mean_and_covariance(
         nominal_bias_stddev = numpy.sqrt(numpy.mean(cov_BD_BD_yD))
         logging.info(
             "GMM: %s, IMT: %s, Nominal bias (mean): %.3f",
-            gmm_name,
-            target_imt.string,
-            nominal_bias_mean,
-        )
+            gmm_name, target_imt.string, nominal_bias_mean)
 
         # From the GMMs, get the mean and stddevs at the target sites
         cmaker_Y = ContextMaker(
@@ -595,10 +581,8 @@ def get_conditioned_mean_and_covariance(
 
 
 def compute_spatial_cross_correlation_matrix(
-    sitecol_1, sitecol_2,
-    imt_list_1, imt_list_2,
-    spatial_correl, cross_correl_within,
-):
+        sitecol_1, sitecol_2, imt_list_1, imt_list_2,
+        spatial_correl, cross_correl_within):
     # The correlation structure for IMs of differing types at differing
     # locations can be reasonably assumed as Markovian in nature, and we
     # assume here that the correlation between differing IMs at differing
@@ -620,9 +604,8 @@ def compute_spatial_cross_correlation_matrix(
 
 
 def _compute_spatial_cross_correlation_matrix(
-    distance_matrix, imt_1, imt_2,
-    spatial_correl, cross_correl_within,
-):
+        distance_matrix, imt_1, imt_2,
+        spatial_correl, cross_correl_within):
     if imt_1 == imt_2:
         # Since we have a single IMT, no cross-correlation terms to be computed
         spatial_correlation_matrix = correlation.jbcorrelation(
