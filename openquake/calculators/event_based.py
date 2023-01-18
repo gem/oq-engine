@@ -31,8 +31,10 @@ from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.calc.filters import nofilter, getdefault, SourceFilter
 from openquake.hazardlib.calc.gmf import GmfComputer
+from openquake.hazardlib.shakemap.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
+from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
 from openquake.commonlib import (
@@ -101,13 +103,47 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                     continue
                 proxy.geom = rupgeoms[proxy['geom_id']]
                 ebr = proxy.to_ebr(cmaker.trt)  # after the geometry is set
-                try:
-                    computer = GmfComputer(
-                        ebr, srcfilter.sitecol.filtered(sids), cmaker,
-                        oqparam.correl_model, oqparam.cross_correl,
-                        oqparam._amplifier, oqparam._sec_perils)
-                except FarAwayRupture:
-                    continue
+                if "station_data" in oqparam.inputs:
+                    station_sites = dstore.read_df('station_sites')
+                    station_data = dstore.read_df('station_data')
+                    station_sites = SiteCollection.from_points(
+                        lons=station_sites.lon.values,
+                        lats=station_sites.lat.values)
+                    station_sitemodel = station_sites.assoc(
+                        sitecol, assoc_dist=None)
+                    station_sitecol = SiteCollection.from_points(
+                        lons=station_sites.lon,
+                        lats=station_sites.lat,
+                        sitemodel=station_sitemodel)
+                    stnfilter = SourceFilter(
+                        station_sitecol, oqparam.maximum_distance(trt))
+                    stnids = stnfilter.close_sids(proxy, trt)
+                    if len(stnids) < len(station_sites):
+                        logging.warning('%d stations filtered away',
+                                        len(station_sites) - len(stnids))
+                    if len(stnids) == 0:  # all stations filtered away
+                        continue
+                    try:
+                        computer = ConditionedGmfComputer(
+                            ebr, srcfilter.sitecol.filtered(sids), 
+                            stnfilter.sitecol.filtered(stnids), 
+                            station_data.loc[stnids], oqparam.observed_imts,
+                            cmaker, oqparam.correl_model, oqparam.cross_correl,
+                            oqparam.ground_motion_correlation_params,
+                            oqparam.number_of_ground_motion_fields,
+                            oqparam._amplifier, oqparam._sec_perils)
+                    except FarAwayRupture:
+                        # skip this rupture
+                        continue
+                else:
+                    try:
+                        computer = GmfComputer(
+                            ebr, srcfilter.sitecol.filtered(sids), cmaker,
+                            oqparam.correl_model, oqparam.cross_correl,
+                            oqparam._amplifier, oqparam._sec_perils)
+                    except FarAwayRupture:
+                        # skip this rupture
+                        continue
             with cmon:
                 data = computer.compute_all(sig_eps)
             dt = time.time() - t0
@@ -406,6 +442,12 @@ class EventBasedCalculator(base.HazardCalculator):
         scenario = 'scenario' in oq.calculation_mode
         proxies = [RuptureProxy(rec, scenario)
                    for rec in dstore['ruptures'][:]]
+        if "station_data" in oq.inputs:
+            # this is meant to be used in scenario calculations with a single
+            # rupture; we are taking the first copy of the rupture (remember:
+            # _read_scenario_ruptures makes num_gmfs copies to parallelize)
+            # TODO: this is ugly andmust be improved upon!
+            proxies = proxies[0:1]
         full_lt = self.datastore['full_lt']
         dstore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap.apply_split(
@@ -523,7 +565,7 @@ class EventBasedCalculator(base.HazardCalculator):
                         'hmaps-stats', site_id=N, stat=list(hstats),
                         imt=list(oq.imtls), poes=oq.poes)
                 for s, stat in enumerate(hstats):
-                    smap = ProbabilityMap(self.sitecol.sids, L1, M)  # statistical map
+                    smap = ProbabilityMap(self.sitecol.sids, L1, M)
                     [smap.array] = compute_stats(
                         numpy.array([p.array for p in pmaps]),
                         [hstats[stat]], weights)

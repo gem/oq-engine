@@ -91,7 +91,7 @@ class GmfComputer(object):
         None or an instance of Amplifier
 
     :param sec_perils:
-        Tuple of secondary perils. See 
+        Tuple of secondary perils. See
         :mod:`openquake.hazardlib.sep`. Can be ``None``, in which
         case no secondary perils need to be evaluated.
     """
