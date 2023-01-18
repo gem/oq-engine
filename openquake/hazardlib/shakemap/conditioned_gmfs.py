@@ -257,10 +257,10 @@ class ConditionedGmfComputer(GmfComputer):
 
     def _compute(self, mu_Y, cov_WY_WY, cov_BY_BY, imt, num_events, rng):
         if self.cmaker.truncation_level <= 1E-9:
-            gmf = exp(mu_Y, imt)
+            gmf = exp(mu_Y, imt)  # exponentiate unless imt == 'MMI'
             gmf = gmf.repeat(num_events, axis=1)
             inter_sig = 0
-            inter_eps = [numpy.zeros(num_events)]
+            inter_eps = numpy.zeros(num_events)
         else:
             cov_Y_Y = cov_WY_WY + cov_BY_BY
             gmf = exp(
