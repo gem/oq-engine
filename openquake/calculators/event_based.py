@@ -108,19 +108,19 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                     station_data = dstore.read_df('station_data')
                     station_sites = SiteCollection.from_points(
                         lons=station_sites.lon.values,
-                        lats=station_sites.lat.values,
-                    )
-                    station_sitemodel = station_sites.assoc(sitecol, assoc_dist=None)
+                        lats=station_sites.lat.values)
+                    station_sitemodel = station_sites.assoc(
+                        sitecol, assoc_dist=None)
                     station_sitecol = SiteCollection.from_points(
                         lons=station_sites.lon,
                         lats=station_sites.lat,
-                        sitemodel=station_sitemodel,
-                    )
+                        sitemodel=station_sitemodel)
                     stnfilter = SourceFilter(
                         station_sitecol, oqparam.maximum_distance(trt))
                     stnids = stnfilter.close_sids(proxy, trt)
                     if len(stnids) < len(station_sites):
-                        logging.warning('%d stations filtered away', len(station_sites) - len(stnids))
+                        logging.warning('%d stations filtered away',
+                                        len(station_sites) - len(stnids))
                     if len(stnids) == 0:  # all stations filtered away
                         continue
                     try:
@@ -133,6 +133,7 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                             oqparam.number_of_ground_motion_fields,
                             oqparam._amplifier, oqparam._sec_perils)
                     except FarAwayRupture:
+                        # skip this rupture
                         continue
                 else:
                     try:
@@ -141,6 +142,7 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                             oqparam.correl_model, oqparam.cross_correl,
                             oqparam._amplifier, oqparam._sec_perils)
                     except FarAwayRupture:
+                        # skip this rupture
                         continue
             with cmon:
                 data = computer.compute_all(sig_eps)
@@ -563,7 +565,7 @@ class EventBasedCalculator(base.HazardCalculator):
                         'hmaps-stats', site_id=N, stat=list(hstats),
                         imt=list(oq.imtls), poes=oq.poes)
                 for s, stat in enumerate(hstats):
-                    smap = ProbabilityMap(self.sitecol.sids, L1, M)  # statistical map
+                    smap = ProbabilityMap(self.sitecol.sids, L1, M)
                     [smap.array] = compute_stats(
                         numpy.array([p.array for p in pmaps]),
                         [hstats[stat]], weights)

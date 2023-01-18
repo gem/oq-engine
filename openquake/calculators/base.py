@@ -485,8 +485,10 @@ class HazardCalculator(BaseCalculator):
             self.af = AmplFunction.from_dframe(df)
 
         if 'station_data' in oq.inputs:
-            logging.info('Reading station data from %s', oq.inputs['station_data'])
-            self.station_data, self.station_sites, self.observed_imts = readinput.get_station_data(oq)
+            logging.info('Reading station data from %s',
+                         oq.inputs['station_data'])
+            self.station_data, self.station_sites, self.observed_imts = \
+                readinput.get_station_data(oq)
             self.datastore.create_df('station_data', self.station_data)
             self.datastore.create_df('station_sites', self.station_sites)
             oq.observed_imts = self.observed_imts
