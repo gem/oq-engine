@@ -298,20 +298,20 @@ def get_conditioned_mean_and_covariance(
 
     gc_D = GmfComputer(rupture, station_sitecol, cmaker_D)
     mean_stds = cmaker_D.get_mean_stds([gc_D.ctx])[:, 0]
+    # shape (4, G, M, N) where 4 means (mean, TOTAL, INTER_EVENT, INTRA_EVENT)
+    # G is is the number of gsims, M the number of IMTs, with N sites/distances
+
     station_locs_filtered = numpy.argwhere(
         numpy.isin(station_sitecol.sids, gc_D.ctx.sids)).ravel().tolist()
     station_sitecol_filtered = station_sitecol.filtered(station_locs_filtered)
     station_data_filtered = station_data.iloc[station_locs_filtered]
-    num_station_sites = s = len(station_sitecol_filtered)
-
-    # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT;
-    # G gsims, M IMTs, N sites/distances
-    for i, imt_i in enumerate(observed_imts):
-        s = imt_i.string
-        station_data_filtered.loc[:, s + "_median"] = mean_stds[0, i, :]
-        station_data_filtered.loc[:, s + "_sigma"] = mean_stds[1, i, :]
-        station_data_filtered.loc[:, s + "_tau"] = mean_stds[2, i, :]
-        station_data_filtered.loc[:, s + "_phi"] = mean_stds[3, i, :]
+    nss = len(station_sitecol_filtered)  # number of station sites
+    for i, o_imt in enumerate(observed_imts):
+        im = o_imt.string
+        station_data_filtered.loc[:, im + "_median"] = mean_stds[0, i, :]
+        station_data_filtered.loc[:, im + "_sigma"] = mean_stds[1, i, :]
+        station_data_filtered.loc[:, im + "_tau"] = mean_stds[2, i, :]
+        station_data_filtered.loc[:, im + "_phi"] = mean_stds[3, i, :]
 
     mu_Y_yD_dict = {target_imt.string: None for target_imt in target_imts}
     cov_Y_Y_yD_dict = {target_imt.string: None for target_imt in target_imts}
@@ -402,10 +402,10 @@ def get_conditioned_mean_and_covariance(
         else:
             # s = num_station_sites
             T_D = numpy.zeros(
-                (len(conditioning_imts) * s, len(bracketed_imts)))
+                (len(conditioning_imts) * nss, len(bracketed_imts)))
             for i in range(len(conditioning_imts)):
-                T_D[i * s: (i + 1) * s, i + 1] = tau_D[
-                    i * s: (i + 1) * s, 0]
+                T_D[i * nss: (i + 1) * nss, i + 1] = tau_D[
+                    i * nss: (i + 1) * nss, 0]
         # The raw residuals
         zeta_D = yD - mu_yD
 
