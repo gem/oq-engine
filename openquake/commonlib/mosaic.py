@@ -5,6 +5,8 @@ import fiona
 import logging
 import time
 import csv
+import sys
+import os
 from shapely.geometry import Point, shape
 from collections import Counter
 
@@ -72,7 +74,7 @@ class Mosaic:
                 f'Site at lon={lon} lat={lat} is on the border between more'
                 f' than one model: {close_models}. Using {model}')
         else:  # only one close model was found
-            model = list(close_models.keys())[0]
+            model = list(close_models)[0]
             logging.info(
                 f'Site at lon={lon} lat={lat} is covered by model {model}'
                 f' (distance: {model_dist[model]})')
@@ -96,3 +98,15 @@ class Mosaic:
                 model_by_site[(lon, lat)] = self.get_model_by_lon_lat(lon, lat)
         logging.info(Counter(model_by_site.values()))
         return model_by_site
+
+
+if __name__ == '__main__':
+    try:
+        csv_path = sys.argv[1]
+    except IndexError:
+        print('Please provide the path of a csv file with site coordinates')
+        exit(1)
+    if not os.path.isfile(csv_path):
+        print(f'The path {csv_path} does not correpond to a valid file')
+        exit(1)
+    Mosaic().get_models_by_sites_csv(csv_path)
