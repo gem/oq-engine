@@ -1,3 +1,6 @@
+  [Anirudh Rao]
+  * Implemented Conditioned GMFs as defined in Engler et al. (2022)
+
   [Michele Simionato]
   * Internal: renamed rup_id -> seed in event based calculations to avoid
     confusion
