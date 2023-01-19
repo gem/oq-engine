@@ -1,4 +1,13 @@
   [Michele Simionato]
+  * Optimized the disaggregation by using our own truncnorm_sf function and not scipy
+
+  [Anirudh Rao]
+  * Implemented Conditioned GMFs as defined in Engler et al. (2022)
+
+  [Matteo Nastasi]
+  * Removed python3-engine-master and python3-engine-worker ubuntu packages
+
+  [Michele Simionato]
   * Internal: renamed rup_id -> seed in event based calculations to avoid
     confusion
   * Parallelized the reinsurance calculation

@@ -388,10 +388,9 @@ def run_jobs(jobctxs):
         for job in jobctxs:
             logs.dbcmd('finish', job.calc_id, 'aborted')
         return jobctxs
-    else:
-        for job in jobctxs:
-            dic = {'status': 'executing', 'pid': _PID}
-            logs.dbcmd('update_job', job.calc_id, dic)
+    for job in jobctxs:
+        dic = {'status': 'executing', 'pid': _PID}
+        logs.dbcmd('update_job', job.calc_id, dic)
     try:
         if OQ_DISTRIBUTE == 'zmq' and w.WorkerMaster(
                 config.zworkers).status() == []:
