@@ -1,5 +1,7 @@
   [Michele Simionato]
-  * Optimized the disaggregation by using our own truncnorm_sf function and not scipy
+  * Added a warning for pointlike sources with magnitudes >= 8
+  * Optimized the disaggregation by using our own truncnorm_sf function and
+    not scipy
 
   [Anirudh Rao]
   * Implemented Conditioned GMFs as defined in Engler et al. (2022)
