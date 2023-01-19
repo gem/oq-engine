@@ -253,7 +253,8 @@ floating_x_step:
 
 floating_y_step:
   Float, used in rupture generation for kite faults. indicates the fraction
-  of fault width used to float ruptures down dip. (i.e. "0.5" floats that half the rupture length). Uniform distribution of the ruptures
+  of fault width used to float ruptures down dip. (i.e. "0.5" floats that
+  half the rupture length). Uniform distribution of the ruptures
   is maintained, such that if the mesh spacing and rupture dimensions
   prohibit the defined overlap fraction, the fraction is increased until
   uniform distribution is achieved. The minimum possible value depends on
@@ -818,7 +819,7 @@ class OqParam(valid.ParamSet):
                     'insurance', 'reinsurance', 'ins_loss',
                     'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
                     'fragility', 'consequence', 'reqv', 'input_zip',
-                    'amplification',
+                    'amplification', 'station_data',
                     'nonstructural_vulnerability',
                     'nonstructural_fragility',
                     'nonstructural_consequence',
