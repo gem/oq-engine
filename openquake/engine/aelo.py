@@ -26,28 +26,30 @@ from openquake.hazardlib import valid
 from openquake.commonlib import readinput, mosaic
 from openquake.engine import engine
 
+CDIR = os.path.dirname(__file__)  # openquake/engine
 
-def get_params_from(lon, lat, vs30, siteid):
+
+def get_params_from(lon, lat, siteid):
     """
     Build the job.ini parameters for the given lon, lat extracting them
     from the mosaic files.
     """
-    # FIXME: initialize Mosaic passing the actual shapefile path as argument
-    #        (the test file is used by default by the class)
-    model = mosaic.Mosaic().get_model_by_lon_lat(lon, lat)
+    model = mosaic.MosaicGetter().get_model_by_lon_lat(lon, lat)
     ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job.ini')
     params = readinput.get_params(ini)
     params['description'] = 'AELO for ' + siteid
-    params['reference_vs30_value'] = str(vs30)
-    params['sites'] = '%s %s' % (lon, lat)
-    del params['inputs']['sites']
     # TODO: add disaggregation parameters
     return params
 
 
 def fake_run(jobctx, lon, lat, vs30):
     # stub for the real calculation
-    print(jobctx.get_oqparam(), lon, lat, vs30)
+    oq = jobctx.get_oqparam()
+    sitecol = readinput.get_site_collection(oq)
+    sitecol.lons[0] = lon
+    sitecol.lats[0] = lat
+    sitecol.vs30[0] = vs30
+    print(sitecol.array)
 
 
 def trivial_callback(job_id, exc=None):
@@ -64,17 +66,20 @@ def main(lon: valid.longitude,
          callback=trivial_callback,
          ):
     """
-    This script is meant to be called from the WebUI.
+    This script is meant to be called from the WebUI in production mode,
+    and from the command-line in testing mode.
     """
     if jobctx is None:
-        # create a new job context
+        # in  testing mode create a new job context
+        config.directory.mosaic_dir = os.path.join(
+            os.path.dirname(CDIR), 'qa_tests_data/mosaic')
         dic = dict(calculation_mode='custom', description='AELO')
         [jobctx] = engine.create_jobs([dic], config.distribution.log_level,
                                       None, getpass.getuser(), None)
     with jobctx:
         if not config.directory.mosaic_dir:
             sys.exit('mosaic_dir is not specified in openquake.cfg')
-        jobctx.params.update(get_params_from(lon, lat, vs30, siteid))
+        jobctx.params.update(get_params_from(lon, lat, siteid))
         try:
             fake_run(jobctx, lon, lat, vs30)
         except Exception as exc:
