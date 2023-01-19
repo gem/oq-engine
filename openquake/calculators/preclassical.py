@@ -233,6 +233,12 @@ class PreClassicalCalculator(base.HazardCalculator):
                     assert src.weight
                     assert src.num_ruptures
                     acc[src.code] += int(src.num_ruptures)
+                    # check for point sources with high magnitudes
+                    if hasattr(src, 'location'):
+                        maxmag = src.get_annual_occurrence_rates()[-1][0]
+                        if maxmag >= 8.:
+                            logging.warning('%s has max magnitude %s',
+                                            src, maxmag)
         csm.fix_src_offset()
         for val, key in sorted((val, key) for key, val in acc.items()):
             cls = code2cls[key].__name__
