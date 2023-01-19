@@ -27,9 +27,11 @@ import collections
 from functools import partial
 import numpy
 import scipy.stats
+from scipy.special import ndtr
 
 from openquake.baselib.general import AccumDict, groupby, pprod
 from openquake.hazardlib.calc import filters
+from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
@@ -161,6 +163,7 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
         # 0 values are converted into -inf
         iml3[m] = to_distribution_values(iml2, imt)
 
+    phi_b = cmaker.phi_b
     truncnorm, epsilons, eps_bands = eps3
     cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
     # Array with mean and total std values. Shape of this is:
@@ -190,10 +193,10 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
         if epsstar:
             iii = (lvls >= min_eps) & (lvls < max_eps)
             # The leftmost indexes are ruptures and epsilons
-            poes[iii, idxs[iii]-1, m, p, z] = truncnorm.sf(lvls[iii])
+            poes[iii, idxs[iii]-1, m, p, z] = truncnorm_sf(phi_b, lvls[iii])
         else:
             poes[:, :, m, p, z] = _disagg_eps(
-                truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
+                truncnorm_sf(phi_b, lvls), idxs, eps_bands, cum_bands)
     z0 = numpy.zeros(0)
     time_span = cmaker.tom.time_span
     for u, rec in enumerate(ctx):
