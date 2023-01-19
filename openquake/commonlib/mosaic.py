@@ -6,10 +6,9 @@ import fiona
 import logging
 import time
 import csv
-import sys
-import os
 from shapely.geometry import Point, shape
 from collections import Counter
+from openquake.baselib import sap
 
 CLOSE_DIST_THRESHOLD = 0.1  # deg
 # logging.basicConfig(level=logging.INFO)
@@ -105,13 +104,15 @@ class Mosaic:
         return model_by_site
 
 
+def main(sites_csv_path, models_boundaries_shp_path):
+    model_by_site = Mosaic(
+        models_boundaries_shp_path).get_models_by_sites_csv(sites_csv_path)
+    pprint.pprint(model_by_site)
+
+
+main.sites_csv_path = 'path of a csv file containing sites coordinates'
+main.models_boundaries_shp_path = \
+    'path of a shapefile containing boundaries of mosaic models'
+
 if __name__ == '__main__':
-    try:
-        csv_path = sys.argv[1]
-    except IndexError:
-        print('Please provide the path of a csv file with site coordinates')
-        exit(1)
-    if not os.path.isfile(csv_path):
-        print(f'The path {csv_path} does not correpond to a valid file')
-        exit(1)
-    pprint.pprint(Mosaic().get_models_by_sites_csv(csv_path))
+    sap.run(main)
