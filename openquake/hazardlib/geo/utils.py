@@ -416,6 +416,8 @@ def get_bounding_box(obj, maxdist):
     return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
 
 
+# NB: returns (west, east, north, south) which is DIFFERENT from
+# get_bounding_box return (west, south, east, north)
 def get_spherical_bounding_box(lons, lats):
     """
     Given a collection of points find and return the bounding box,
