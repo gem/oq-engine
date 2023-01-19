@@ -6,17 +6,22 @@ import fiona
 import logging
 import time
 import csv
+import os
 from shapely.geometry import Point, shape
 from collections import Counter
-from openquake.baselib import sap
+from openquake.baselib import sap, config
 
-CLOSE_DIST_THRESHOLD = 0.1  # deg
-# logging.basicConfig(level=logging.INFO)
+CLOSE_DIST_THRESHOLD = 0.1  # degrees
 
 
-class Mosaic:
-    def __init__(self,
-                 shapefile_path='../qa_tests_data/mosaic/ModelBoundaries.shp'):
+class MosaicGetter:
+    """
+    Class with methods to associate coordinates to mosaic models
+    """
+    def __init__(self, shapefile_path=None):
+        if shapefile_path is None:  # read from openquake.cfg
+            shapefile_path = os.path.join(config.directory.mosaic_dir,
+                                          'ModelBoundaries.shp')
         self.shapefile_path = shapefile_path
 
     def get_models_list(self):
@@ -105,7 +110,8 @@ class Mosaic:
 
 
 def main(sites_csv_path, models_boundaries_shp_path):
-    model_by_site = Mosaic(
+    logging.basicConfig(level=logging.INFO)
+    model_by_site = MosaicGetter(
         models_boundaries_shp_path).get_models_by_sites_csv(sites_csv_path)
     pprint.pprint(model_by_site)
 
