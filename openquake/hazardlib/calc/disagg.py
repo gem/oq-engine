@@ -53,14 +53,14 @@ def assert_same_shape(arrays):
         assert arr.shape == shape, (arr.shape, shape)
 
 
-def get_edges_shapedic(oq, sitecol, mags_by_trt):
+def get_edges_shapedic(oq, sitecol, mags_by_trt, num_tot_rlzs):
     """
     :returns: (mag dist lon lat eps trt) edges and shape dictionary
     """
     assert mags_by_trt
     tl = oq.truncation_level
     if oq.rlz_index is None:
-        Z = oq.num_rlzs_disagg
+        Z = oq.num_rlzs_disagg or num_tot_rlzs
     else:
         Z = len(oq.rlz_index)
 
