@@ -23,7 +23,7 @@ import sys
 import getpass
 from openquake.baselib import config, sap
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, mosaic
 from openquake.engine import engine
 
 
@@ -32,7 +32,9 @@ def get_params_from(lon, lat, vs30, siteid):
     Build the job.ini parameters for the given lon, lat extracting them
     from the mosaic files.
     """
-    model = 'GLD'    # TODO: change to model = get_model_from(lon, lat)
+    # FIXME: initialize Mosaic passing the actual shapefile path as argument
+    #        (the test file is used by default by the class)
+    model = mosaic.Mosaic().get_model_by_lon_lat(lon, lat)
     ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job.ini')
     params = readinput.get_params(ini)
     params['description'] = 'AELO for ' + siteid
