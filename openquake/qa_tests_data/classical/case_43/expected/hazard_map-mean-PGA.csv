@@ -1,3 +1,3 @@
-#,,"generated_by='OpenQuake engine 3.16.0-git4c75d2fe4c', start_date='2022-11-08T03:23:56', checksum=4118480633, kind='mean', investigation_time=50.0"
+#,,"generated_by='OpenQuake engine 3.16.0-git4725478d37', start_date='2023-01-20T11:17:50', checksum=4118480633, kind='mean', investigation_time=50.0"
 lon,lat,PGA-0.002105
-112.10000,22.30000,3.188878E-02
+112.10000,22.30000,3.189415E-02

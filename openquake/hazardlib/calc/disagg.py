@@ -27,7 +27,6 @@ import collections
 from functools import partial
 import numpy
 import scipy.stats
-from scipy.special import ndtr
 
 from openquake.baselib.general import AccumDict, groupby, pprod
 from openquake.hazardlib.calc import filters
