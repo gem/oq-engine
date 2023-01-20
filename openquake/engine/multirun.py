@@ -39,10 +39,17 @@ def main(dirname, job_ini='job.ini', multi=True):
     from openquake.server import dbserver  # avoid CodeDependencyError
     dbserver.ensure_on()
     t0 = time.time()
-    ctxs = run_jobs(create_jobs(inis, multi=multi))
+    if multi:  # in parallel
+        ctxs = run_jobs(create_jobs(inis, multi=True))
+        out = [(ctx.calc_id, ini) for ctx, ini in zip(ctxs, inis)]
+    else:  # sequentially
+        out = []
+        for ini in inis:
+            [ctx] = run_jobs(create_jobs([ini]))
+            out.append((ctx.calc_id, ini))
     dt = time.time() - t0
     print('Total time: %.1f minutes' % (dt/60))
-    return [(ctx.calc_id, ini) for ctx, ini in zip(ctxs, inis)]
+    return out
 
 
 if __name__ == '__main__':
