@@ -139,7 +139,7 @@ html_theme = 'pydata_sphinx_theme'
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-    "navbar_start": ["version-switcher"],
+    "navbar_end": ["version-switcher"],
     "switcher": {
         "json_url": "_static/switcher.json",
         "version_match": "2.1rc1"
