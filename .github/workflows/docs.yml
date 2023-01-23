@@ -201,8 +201,6 @@ jobs:
 
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
 
-          IFS='
-          '
           for v in $(git branch | sed 's/ *engine-//g' | grep '^[0-9]\+\.[0-9]\+$'); do
               ver_maj="$(echo "$v" | sed 's/\([0-9]\+\)\..*/\1/g')"
               ver_min="$(echo "$v" | sed 's/[0-9]\+\.\(.*\)$/\1/g')"
