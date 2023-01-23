@@ -49,6 +49,15 @@ def source_data(sources):
     return data
 
 
+def check_maxmag(pointlike):
+    """Check for pointlike sources with high magnitudes"""
+    for src in pointlike:
+        maxmag = src.get_annual_occurrence_rates()[-1][0]
+        if maxmag >= 8.:
+            logging.warning('%s %s has maximum magnitude %s',
+                            src.__class__.__name__, src.source_id, maxmag)
+
+
 def collapse_nphc(src):
     """
     Collapse the nodal_plane_distribution and hypocenter_distribution.
@@ -187,6 +196,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                     smap.submit(([src], sites, cmakers[grp_id]))
                 else:
                     others.append(src)
+            check_maxmag(pointlike)
             if pointsources or pointlike:
                 if self.oqparam.ps_grid_spacing:
                     # do not split the pointsources

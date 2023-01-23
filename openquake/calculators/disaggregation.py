@@ -228,7 +228,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 'The number of sites is to disaggregate is %d, but you have '
                 'max_sites_disagg=%d' % (self.N, few))
         all_edges, shapedic = disagg.get_edges_shapedic(
-            self.oqparam, self.sitecol, self.datastore['source_mags'])
+            self.oqparam, self.sitecol, self.datastore['source_mags'], self.R)
         *b, trts = all_edges
         T = len(trts)
         shape = [len(bin) - 1 for bin in
@@ -243,7 +243,6 @@ class DisaggregationCalculator(base.HazardCalculator):
 
     def execute(self):
         """Performs the disaggregation"""
-        self.pre_checks()
         return self.full_disaggregation()
 
     def get_curve(self, sid, rlzs):
@@ -276,7 +275,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         if oq.rlz_index is None and oq.num_rlzs_disagg == 0:
             oq.num_rlzs_disagg = len(ws)  # 0 means all rlzs
         edges, self.shapedic = disagg.get_edges_shapedic(
-            oq, self.sitecol, self.datastore['source_mags'])
+            oq, self.sitecol, self.datastore['source_mags'], self.R)
         self.save_bin_edges(edges)
         self.full_lt = self.datastore['full_lt']
         self.poes_disagg = oq.poes_disagg or (None,)
