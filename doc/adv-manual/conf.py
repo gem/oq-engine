@@ -73,6 +73,11 @@ version = engine.__version__.split('-')[0]
 # The full version, including alpha/beta/rc tags.
 release = engine.__version__
 
+#
+#  Version Dropdown Config
+
+
+
 rst_epilog = """
 .. |VERSION| replace:: %s
 """ % release
@@ -134,6 +139,11 @@ html_theme = 'pydata_sphinx_theme'
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
+    "navbar_start": ["version_switcher"],
+    "switcher": {
+        "json_url": "_static/switcher.json",
+        "version_match": "2.1rc1"
+    },
     "icon_links": [
 
         {
