@@ -401,8 +401,8 @@ def run_jobs(jobctxs):
         if jobarray and OQ_DISTRIBUTE != 'no':
             parallel.multispawn(run_calc, allargs, num_cores=3)
         else:
-            for job in jobctxs:
-                run_calc(job)
+            for jobctx in jobctxs:
+                run_calc(jobctx)
         cleanup('stop')
     except Exception:
         ids = [jc.calc_id for jc in jobctxs]
