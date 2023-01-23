@@ -145,7 +145,8 @@ jobs:
               fi
           fi
 
-          LATEST_VER="$(git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | tail -n 1)"
+          ALL_VERS="$(git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n)"
+          LATEST_VER="echo "$(echo "$ALL_VERS" | tail -n 1)"
 
           PDFDOCS="manuals/"
           TARGET_LINK=""
@@ -202,7 +203,7 @@ jobs:
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
 
           echo "BEGIN VERSION LOOP"
-          git branch -a
+          echo "$ALL_VERS"
           echo "BEGIN 2 VERSION LOOP"
           for v in $(git branch | sed 's/ *engine-//g' | grep '^[0-9]\+\.[0-9]\+$'); do
               ver_maj="$(echo "$v" | sed 's/\([0-9]\+\)\..*/\1/g')"
