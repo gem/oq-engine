@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -35,19 +35,6 @@ Here is a minimal example of usage:
  >>> convert_archive.inplace = 'convert inplace'
  >>> convert_archive.output = 'output archive'
  >>> convert_archive.out = 'output directory'
- >>> parser(convert_archive, prog='app').print_help()
- usage: app [-h] [-i] [-o /tmp] input [output]
- <BLANKLINE>
- Example
- <BLANKLINE>
- positional arguments:
-   input                input file or archive
-   output               output archive
- <BLANKLINE>
- options:
-   -h, --help           show this help message and exit
-   -i, --inplace        convert inplace
-   -o /tmp, --out /tmp  output directory
  >>> run(convert_archive, argv=['a.zip', 'b.zip'])
  a.zip b.zip False /tmp
  >>> run(convert_archive, argv=['a.zip', '-i', '-o', '/tmp/x'])

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -285,6 +285,7 @@ validators = {
     'alongStrike': valid.probability,
     'downDip': valid.probability,
     'slipRate': valid.positivefloat,
+    'slip': valid.positivefloat,
     'rigidity': valid.positivefloat,
     'totalMomentRate': valid.positivefloat,
     'characteristicRate': valid.positivefloat,

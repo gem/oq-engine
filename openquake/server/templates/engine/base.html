@@ -14,12 +14,12 @@
 <body>
   {% block header %}
   <div id="header" class="navbar navbar-fixed-top">
-    <div class="navbar-inner">
+    <div class="navbar-inner" style="background: url({{ STATIC_URL }}img/oq-header.png) no-repeat left top; background-color: #1b75a5;">
       <section>
       <div class="container">
         <div class="row">
           <div class="span3">
-            <a href="{% url "index" %}"><span class="nav-logo"></span></a>
+            <a href="{% url "index" %}"><span class="nav-logo" style="background: url({{ STATIC_URL }}img/oq-logo-engine.png) no-repeat;"></span></a>
           </div>
           <div class="span10">
             <nav class="main-nav">
@@ -55,14 +55,14 @@
                   </li>
                   {% endif %}
                   <li class="actions">
-                      <a href="https://github.com/gem/oq-engine" id="help_url" rel="tooltip" target="_blank" title="Help"><img src="/static/img/oq-help.png"></a>
+                      <a href="https://github.com/gem/oq-engine" id="help_url" rel="tooltip" target="_blank" title="Help"><img src="{{ STATIC_URL }}img/oq-help.png"></a>
                   </li>
                 </ul>
               </div>
             </div>
           </div>
           <div id="gem-right-logo">
-            <a href="http://www.globalquakemodel.org" title="GEM Foundation" target="_blank"><span class="nav-logo nav-logo-gem"></span></a>
+            <a href="http://www.globalquakemodel.org" title="GEM Foundation" target="_blank"><span class="nav-logo nav-logo-gem" style="background: url({{ STATIC_URL }}img/oq-gem.png) no-repeat;"></span></a>
           </div>
         </div>
       </div> <!-- /.container -->

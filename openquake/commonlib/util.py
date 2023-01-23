@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -182,6 +182,8 @@ def get_assets(dstore):
     """
     assetcol = dstore['assetcol']
     tagnames = sorted(tn for tn in assetcol.tagnames if tn != 'id')
+    if 'site_id' in tagnames:  # special case, starts from 1 and not from 0
+        assetcol.array['site_id'] += 1
     tag = {t: getattr(assetcol.tagcol, t) for t in tagnames}
     dtlist = [('id', '<S100')]
     for tagname in tagnames:

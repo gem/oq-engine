@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -214,12 +214,20 @@ class PointSource(ParametricSeismicSource):
             arr['dims'] = get_rupdims(areas, np.dip, width, rar)
         return planin
 
-    def max_radius(self):
+    def max_radius(self, maxdist):
         """
         :returns: max radius + ps_grid_spacing * sqrt(2)/2
         """
-        max_rp_radius = self._get_max_rupture_projection_radius()
-        return self.ps_grid_spacing * .707 + max_rp_radius
+        self._get_max_rupture_projection_radius()
+        eff_radius = min(self.radius[-1], maxdist / 2)
+        return eff_radius + self.ps_grid_spacing * .707
+
+    def get_psdist(self, m, mag, psdist, magdist):
+        """
+        :returns: the effective pointsource distance for the given magnitude
+        """
+        eff_radius = min(self.radius[m], magdist[mag] / 2)
+        return eff_radius + self.ps_grid_spacing * .707 + psdist
 
     def _get_max_rupture_projection_radius(self):
         """
@@ -347,7 +355,8 @@ class PointSource(ParametricSeismicSource):
         """
         Bounding box of the point, enlarged by the maximum distance
         """
-        return get_bounding_box([self.location], maxdist + self.max_radius())
+        radius = self.max_radius(maxdist)
+        return get_bounding_box([self.location], maxdist + radius)
 
     def wkt(self):
         """

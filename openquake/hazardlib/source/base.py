@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -57,7 +57,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
     checksum = 0  # set in source_reader
-    weight = 1  # set in contexts
+    weight = 0.001  # set in contexts
     esites = 0  # updated in estimate_weight
     offset = 0  # set in fix_src_offset
 
@@ -114,7 +114,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         numpy.random.seed(seed)
         for trt_smr in self.trt_smrs:
             for rup, num_occ in self._sample_ruptures(eff_num_ses):
-                rup.rup_id = seed
+                rup.seed = seed
                 if hasattr(rup, 'occurrence_rate'):
                     # defined only for poissonian sources
                     rup.occurrence_rate *= self.smweight
@@ -364,7 +364,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         for i, rup in enumerate(self.iter_ruptures()):
             if i == idx:
                 if hasattr(self, 'rup_id'):
-                    rup.rup_id = self.rup_id
+                    rup.seed = self.seed
                 rup.idx = idx
                 return rup
 

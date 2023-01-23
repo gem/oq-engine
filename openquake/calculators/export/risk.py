@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -177,6 +177,9 @@ def _get_data(dstore, dskey, loss_types, stats):
             rlzs_or_stats = list(stats)
             statfuncs = [stats[ros] for ros in stats]
             value = avglosses(dstore, loss_types, 'stats')  # shape (A, S, L)
+        elif dstore['oqparam'].collect_rlzs:
+            rlzs_or_stats = list(stats)
+            value = avglosses(dstore, loss_types, 'rlzs')
         else:  # compute on the fly
             rlzs_or_stats, statfuncs = zip(*stats.items())
             value = compute_stats2(

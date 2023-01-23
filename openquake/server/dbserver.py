@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2022 GEM Foundation
+# Copyright (C) 2016-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,7 +29,6 @@ from openquake.baselib import (
 from openquake.baselib.general import socket_ready, detach_process
 from openquake.hazardlib import valid
 from openquake.commonlib import logs
-from openquake.engine import __version__
 from openquake.server.db import actions
 from openquake.commonlib.dbapi import db
 from openquake.server import __file__ as server_path
@@ -45,10 +44,6 @@ class DbServer(object):
         self.backend = 'inproc://dbworkers'
         self.num_workers = num_workers
         self.pid = os.getpid()
-        if p.OQDIST == 'zmq':
-            self.zmaster = w.WorkerMaster(**config.zworkers)
-        else:
-            self.zmaster = None
 
     def dworker(self, sock):
         # a database worker responding to commands
@@ -59,9 +54,9 @@ class DbServer(object):
                     sock.send(self.pid)
                     continue
                 elif cmd.startswith('workers_'):
-                    # engine.run_jobs calls logs.dbcmd(cmd)
-                    msg = getattr(p, cmd)()
-                    logging.info(msg)
+                    # call parallel.workers_start et similar routines
+                    master = w.WorkerMaster(args[0])  # zworkers
+                    msg = getattr(master, cmd[8:])()
                     sock.send(msg)
                     continue
                 try:
@@ -85,14 +80,6 @@ class DbServer(object):
             dworkers.append(sock)
         logging.warning('DB server started with %s on %s, pid %d',
                         sys.executable, self.frontend, self.pid)
-        if p.OQDIST == 'zmq':
-            # start task_in->task_server streamer thread
-            threading.Thread(target=w._streamer, daemon=True).start()
-            logging.warning('Task streamer started on port %d',
-                            int(config.zworkers.ctrl_port) + 1)
-            if 'git' not in __version__:
-                # in production installations start the zworkers
-                self.zmaster.start()
         # start frontend->backend proxy for the database workers
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
@@ -107,10 +94,9 @@ class DbServer(object):
             self.stop()
 
     def stop(self):
-        """Stop the DbServer and the zworkers if any"""
-        if p.OQDIST == 'zmq':
-            self.zmaster.stop()
-            z.context.term()
+        """
+        Stop the DbServer
+        """
         self.db.close()
 
 

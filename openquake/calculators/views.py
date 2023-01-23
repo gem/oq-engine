@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,6 +18,7 @@
 
 import io
 import ast
+import html
 import os.path
 import numbers
 import operator
@@ -33,6 +34,7 @@ from openquake.baselib.general import (
     get_array, group_array, fast_agg)
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
+from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
@@ -40,6 +42,7 @@ from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
+from openquake.calculators.classical import get_pmaps_gb
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
 
@@ -105,6 +108,56 @@ def dt(names):
         names = names.split()
     return numpy.dtype([(name, object) for name in names])
 
+class HtmlTable(object):
+    """
+    Convert a sequence header+body into a HTML table.
+    """
+    css = """\
+    tr.evenRow { background-color: lightgreen }
+    tr.oddRow { }
+    th { background-color: lightblue }
+    """
+    maxrows = 5000
+    border = "1"
+    summary = ""
+
+    def __init__(self, header_plus_body, name='noname',
+                 empty_table='Empty table'):
+        header, body = header_plus_body[0], header_plus_body[1:]
+        self.name = name
+        self.empty_table = empty_table
+        rows = []  # rows is a finite sequence of tuples
+        for i, row in enumerate(body):
+            if i == self.maxrows:
+                rows.append(
+                    ["Table truncated because too big: more than %s rows" % i])
+                break
+            rows.append(row)
+        self.rows = rows
+        self.header = tuple(header)  # horizontal header
+
+    def render(self, dummy_ctxt=None):
+        out = "\n%s\n" % "".join(list(self._gen_table()))
+        if not self.rows:
+            out += '<em>%s</em>' % html.escape(self.empty_table, quote=True)
+        return out
+
+    def _gen_table(self):
+        yield '<table id="%s" border="%s" summary="%s" class="tablesorter">\n'\
+              % (self.name, self.border, self.summary)
+        yield '<thead>\n'
+        yield '<tr>%s</tr>\n' % ''.join(
+            '<th>%s</th>\n' % h for h in self.header)
+        yield '</thead>\n'
+        yield '<tbody\n>'
+        for r, row in enumerate(self.rows):
+            yield '<tr class="%s">\n' % ["even", "odd"][r % 2]
+            for col in row:
+                yield '<td>%s</td>\n' % col
+            yield '</tr>\n'
+        yield '</tbody>\n'
+        yield '</table>\n'
+
 
 def text_table(data, header=None, fmt=None, ext='rst'):
     """
@@ -120,7 +173,7 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     | b    | 2     |
     +------+-------+
     """
-    assert ext in 'rst org', ext
+    assert ext in 'rst org html', ext
     if isinstance(data, pandas.DataFrame):
         if data.index.name:
             data = data.reset_index()
@@ -151,6 +204,8 @@ def text_table(data, header=None, fmt=None, ext='rst'):
             raise ValueError('The header has %d fields but the row %d fields!'
                              % (len(col_sizes), len(tup)))
         body.append(tup)
+    if ext == 'html':
+        return HtmlTable([header] + body).render()
 
     wrap = '+-%s-+' if ext == 'rst' else '|-%s-|'
     sepline = wrap % '-+-'.join('-' * size for size in col_sizes)
@@ -258,7 +313,7 @@ def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
     df['slow_factor'] = df.calc_time / df.weight
-    del df['grp_id'], df['trti']
+    del df['grp_id'], df['trti'], df['mutex_weight']
     return df
 
 
@@ -440,10 +495,14 @@ def view_portfolio_loss(token, dstore):
     E = len(rlzs)
     ws = weights[rlzs]
     avgs = []
+    if oq.investigation_time:
+        factor = oq.time_ratio * E / R
+    else:
+        factor = 1 / R
     for ln in oq.loss_types:
         df = alt_df[alt_df.loss_id == LOSSID[ln]]
         eids = df.pop('event_id').to_numpy()
-        avgs.append(ws[eids] @ df.loss.to_numpy() / ws.sum() * E / R)
+        avgs.append(ws[eids] @ df.loss.to_numpy() / ws.sum() * factor)
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
 
 
@@ -542,7 +601,7 @@ def view_fullreport(token, dstore):
     """
     # avoid circular imports
     from openquake.calculators.reportwriter import ReportWriter
-    return ReportWriter(dstore).make_report()
+    return ReportWriter(dstore).make_report(show_inputs=False)
 
 
 @view.add('performance')
@@ -611,15 +670,15 @@ def view_required_params_per_trt(token, dstore):
     for trt in full_lt.trts:
         gsims = full_lt.gsim_lt.values[trt]
         # adding fake mags to the ContextMaker, needed for table-based GMPEs
-        maker = ContextMaker(trt, gsims, {'imtls': {}, 'mags': ['7.00']})
-        distances = sorted(maker.REQUIRES_DISTANCES)
-        siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
-        ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((trt, ' '.join(map(repr, gsims)).replace('\n', '\\n'),
-                    distances, siteparams, ruptparams))
-    return text_table(
-        tbl, header='trt_smr gsims distances siteparams ruptparams'.split(),
-        fmt=scientificformat)
+        cmaker = ContextMaker(trt, gsims, {'imtls': {}, 'mags': ['7.00']})
+        req = set()
+        for gsim in cmaker.gsims:
+            req.update(gsim.requires())
+        req_params = sorted(req - {'mag'})
+        gsim_str = ' '.join(map(repr, gsims)).replace('\n', '\\n')
+        tbl.append((trt, gsim_str, req_params))
+    return text_table(tbl, header='trt gsims req_params'.split(),
+                      fmt=scientificformat)
 
 
 @view.add('task_info')
@@ -694,12 +753,14 @@ def view_task_hazard(token, dstore):
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['task_no']
-    sdata = dstore.read_df('source_data', 'taskno')
-    eff_ruptures = sdata.loc[taskno].nrupts.sum()
-    eff_sites = sdata.loc[taskno].nsites.sum()
-    res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, weight=%d, duration=%d s'
-           % (taskno, eff_ruptures, eff_sites, rec['weight'], rec['duration']))
-    return res
+    sdata = dstore.read_df('source_data', 'taskno').loc[taskno]
+    num_ruptures = sdata.nrupts.sum()
+    eff_sites = sdata.nsites.sum()
+    msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
+             'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
+                 taskno, len(sdata), num_ruptures, eff_sites,
+                 rec['weight'], rec['duration'])
+    return msg
 
 
 @view.add('source_data')
@@ -1305,6 +1366,11 @@ def view_mean_perils(token, dstore):
     return out
 
 
+@view.add('pmaps_size')
+def view_pmaps_size(token, dstore):
+    return humansize(get_pmaps_gb(dstore))
+
+
 @view.add('src_groups')
 def view_src_groups(token, dstore):
     """
@@ -1351,11 +1417,11 @@ def view_collapsible(token, dstore):
     ctx_df['vs30'] = vs30[ctx_df.sids]
     has_vs30 = len(numpy.unique(vs30)) > 1
     c = Collapser(collapse_level, dist_types, has_vs30)
-    ctx_df['mdvbin'] = c.calc_mdvbin(ctx_df)
-    print('cfactor = %d/%d' % (len(ctx_df), len(ctx_df['mdvbin'].unique())))
+    ctx_df['mdbin'] = c.calc_mdbin(ctx_df)
+    print('cfactor = %d/%d' % (len(ctx_df), len(ctx_df['mdbin'].unique())))
     out = []
     for sid, df in ctx_df.groupby('sids'):
-        n, u = len(df), len(df.mdvbin.unique())
+        n, u = len(df), len(df.mdbin.unique())
         out.append((sid, u, n, n / u))
     return numpy.array(out, dt('site_id eff_rups num_rups cfactor'))
 

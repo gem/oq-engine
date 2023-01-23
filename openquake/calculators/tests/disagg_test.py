@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,9 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
-import sys
-import platform
-import unittest
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
@@ -30,7 +27,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
-    case_10, case_11, case_12, case_master)
+    case_10, case_11, case_12, case_13, case_master)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -245,3 +242,7 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_12(self):
         # check source IDs with :, . and ;
         self.run_calc(case_12.__file__, 'job.ini')
+
+    def test_case_13(self):
+        # check split_by_mag, essential with GMPETable
+        self.run_calc(case_13.__file__, 'job.ini')

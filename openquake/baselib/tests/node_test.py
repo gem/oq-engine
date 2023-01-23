@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2022 GEM Foundation
+# Copyright (C) 2013-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -161,31 +161,31 @@ param=yyy
         # we may want to raise an error instead
         xmlfile = io.StringIO(u"""\
 <nonParametric>
-<singlePlaneRupture>1</singlePlaneRupture>
-<multiPlanesRupture>2</multiPlanesRupture>
-<singlePlaneRupture>3</singlePlaneRupture>
+<node>1</node>
+<otherNode>2</otherNode>
+<node>3</node>
 </nonParametric>
 """)
         node = n.node_from_xml(xmlfile)
         dic = n.node_to_dict(node)
         self.assertEqual(dic, {
             'nonParametric':
-            {'singlePlaneRupture': '3', 'multiPlanesRupture': '2'}})
+            {'node': '3', 'otherNode': '2'}})
 
     def test_duplicates_ok(self):
         # sequential duplicate tags
         xmlfile = io.StringIO(u"""\
 <nonParametric>
-<singlePlaneRupture>1</singlePlaneRupture>
-<singlePlaneRupture>3</singlePlaneRupture>
-<multiPlanesRupture>2</multiPlanesRupture>
+<node>1</node>
+<node>3</node>
+<otherNode>2</otherNode>
 </nonParametric>
 """)
         node = n.node_from_xml(xmlfile)
         dic = n.node_to_dict(node)
         self.assertEqual(dic, {
             'nonParametric':
-            {'singlePlaneRupture': ['1', '3'], 'multiPlanesRupture': '2'}})
+            {'node': ['1', '3'], 'otherNode': '2'}})
 
     def test_can_pickle(self):
         node = n.Node('tag')

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,7 +39,7 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
     case_66, case_67, case_68, case_69, case_70, case_71, case_72, case_73,
-    case_74, case_75, case_76, case_77, case_78, case_79, case_80)
+    case_74, case_75, case_76, case_77, case_78, case_79, case_80, case_81)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -304,13 +304,18 @@ hazard_uhs-std.csv
         numpy.testing.assert_equal(ids, ['A;0', 'A;1', 'B'])
 
     def test_case_18(self):  # GMPEtable, PointMSR, 3 hypodepths
+        self.run_calc(case_18.__file__, 'job.ini',
+                      calculation_mode='preclassical')
+        hc_id = str(self.calc.datastore.calc_id)
+        # check also that I can start from preclassical with GMPETables
         self.assert_curves_ok(
             ['hazard_curve-mean_PGA.csv',
              'hazard_curve-mean_SA(0.2).csv',
              'hazard_curve-mean_SA(1.0).csv',
              'hazard_map-mean.csv',
              'hazard_uhs-mean.csv'],
-            case_18.__file__, kind='stats', delta=1E-7)
+            case_18.__file__,
+            kind='stats', delta=1E-7, hazard_calculation_id=hc_id)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
         self.calc.datastore.close()
@@ -432,7 +437,7 @@ hazard_uhs-std.csv
         total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
         self.assertEqual(total, 780)  # 260 x 3; 2 sites => 1560 contexts
         self.assertEqual(len(self.calc.datastore['rup/mag']), 1560)
-        numpy.testing.assert_equal(self.calc.cfactor, [264, 1560])
+        numpy.testing.assert_equal(self.calc.cfactor, [502, 1560, 5])
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
 
@@ -1067,3 +1072,9 @@ hazard_uhs-std.csv
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/hazard_curve-mean-PGA.csv', f1)
+
+    def test_case_81(self):
+        # collapse_level=1
+        self.run_calc(case_81.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean.csv', f1)

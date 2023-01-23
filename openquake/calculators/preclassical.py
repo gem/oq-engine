@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -47,6 +47,15 @@ def source_data(sources):
         data['weight'].append(src.weight)
         data['ctimes'].append(0)
     return data
+
+
+def check_maxmag(pointlike):
+    """Check for pointlike sources with high magnitudes"""
+    for src in pointlike:
+        maxmag = src.get_annual_occurrence_rates()[-1][0]
+        if maxmag >= 8.:
+            logging.warning('%s %s has maximum magnitude %s',
+                            src.__class__.__name__, src.source_id, maxmag)
 
 
 def collapse_nphc(src):
@@ -106,7 +115,7 @@ def preclassical(srcs, sites, cmaker, monitor):
             # this is also prefiltering the split sources
             mon = monitor('weighting sources', measuremem=False)
             cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
-            # print(mon.duration, [s.source_id for s in dic[grp_id]])
+            # print(f'{mon.task_no=}, {mon.duration=}')
             dic['before'] = len(block)
             dic['after'] = len(dic[grp_id])
             yield dic
@@ -163,7 +172,11 @@ class PreClassicalCalculator(base.HazardCalculator):
                 cmakers[grp_id].set_weight(sg, sites)
                 atomic_sources.extend(sg)
             else:
-                normal_sources.extend(sg)
+                for src in sg:
+                    if hasattr(src, 'rupture_idxs'):  # multiFault
+                        normal_sources.extend(split_source(src))
+                    else:
+                        normal_sources.append(src)
 
         # run preclassical for non-atomic sources
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
@@ -179,11 +192,11 @@ class PreClassicalCalculator(base.HazardCalculator):
                     pointsources.append(src)
                 elif hasattr(src, 'nodal_plane_distribution'):
                     pointlike.append(src)
-                elif src.code in b'FN':  # split multifault, nonparametric
-                    others.extend(split_source(src)
-                                  if self.oqparam.split_sources else [src])
+                elif src.code in b'CFN':  # send the heavy sources
+                    smap.submit(([src], sites, cmakers[grp_id]))
                 else:
                     others.append(src)
+            check_maxmag(pointlike)
             if pointsources or pointlike:
                 if self.oqparam.ps_grid_spacing:
                     # do not split the pointsources

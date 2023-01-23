@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2022 GEM Foundation
+# Copyright (C) 2013-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,7 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`Allen2012`
+Module exports :class:`Allen2012`,
+:class:'Allen2012_SS14'
 """
 import numpy as np
 from scipy.constants import g
@@ -25,7 +26,7 @@ from scipy.constants import g
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGA
-
+from openquake.hazardlib.gsim import boore_2014
 
 def _compute_mean(C, mag, rrup):
     """
@@ -84,7 +85,7 @@ class Allen2012(GMPE):
     #: see paragraph 'Executive Summary', page VII. (provisionally set to 800
     #: for compatibility with SiteTerm class)
     REQUIRES_SITES_PARAMETERS = set()
-    DEFINED_FOR_REFERENCE_VELOCITY = 800.
+    DEFINED_FOR_REFERENCE_VELOCITY = 820.
 
     #: Required rupture parameters are magnitude and hypocentral depth, see
     #: paragraph 'Regression of Model Coefficients', page 32 and tables 7 and
@@ -160,3 +161,57 @@ class Allen2012(GMPE):
     3.0003  0.534400  1.095900  -0.105400  -1.707400  0.217800  1.598000   0.597500  -0.167000  -3.159600  -2.706200  0.311300  -0.575300  0.311300
     4.0000  0.320200  1.025000  -0.084500  -1.730700  0.229100  1.570300   0.640300  -0.176500  -2.737500  -2.811400  0.352600  -0.854700  0.309700
     """)
+
+class Allen2012_SS14(Allen2012):
+    """
+    Allen2012 Model updated to apply the linear and non-linear amplification factors of Sayhan & 
+    Stewart (2014) as applied in the Boore et al (2014) NGE-West 2 GMM
+    """
+    
+    #: Required site parameters is Vs30
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.compute>`
+        for spec of input and result values.
+        """
+        # get coefficients for rock PGA
+        C_PGA = np.where(ctx.hypo_depth < 10,
+                         self.COEFFS_SHALLOW[PGA()],
+                         self.COEFFS_DEEP[PGA()])
+        BEA14_C_PGA = boore_2014.BooreEtAl2014.COEFFS[PGA()]
+        
+        # get rock PGA - correct from PGA(820 m/s) to PGA(760 m/s)
+        pga_rock = _compute_mean(C_PGA, ctx.mag, ctx.rrup)
+        
+        # make array like ctx.vs30 of 820 m/s
+        sites_820 = 820. * np.ones_like(ctx.vs30)
+        
+        # use Boore et al (2014) amplification factors
+        flin_820_760 = boore_2014._get_linear_site_term(BEA14_C_PGA, sites_820)
+        fnl_820_760 = boore_2014._get_nonlinear_site_term(BEA14_C_PGA, sites_820, np.exp(pga_rock))
+        
+        # apply correction to get PGA(760 m/s)
+        pga_rock_760 = pga_rock - flin_820_760 - fnl_820_760
+        
+        for m, imt in enumerate(imts):
+            C = np.where(ctx.hypo_depth < 10,
+                         self.COEFFS_SHALLOW[imt],
+                         self.COEFFS_DEEP[imt])
+            
+            # get amplification model coefficients from Boore et al, 2014
+            BEA14_C = boore_2014.BooreEtAl2014.COEFFS[imt]
+            
+            # correction from 820 m/s to 760 m/s
+            flin_820_760 = boore_2014._get_linear_site_term(BEA14_C, sites_820)
+            fnl_820_760 = boore_2014._get_nonlinear_site_term(BEA14_C, sites_820, np.exp(pga_rock))
+            
+            # correction from 760 m/s to target vs30
+            flin = boore_2014._get_linear_site_term(BEA14_C, ctx.vs30)
+            fnl = boore_2014._get_nonlinear_site_term(BEA14_C, ctx.vs30, np.exp(pga_rock_760))
+            
+            mean[m] = _compute_mean(C, ctx.mag, ctx.rrup) - flin_820_760 - fnl_820_760 + flin + fnl 
+            
+            sig[m] = np.log(10 ** C['sigma'])

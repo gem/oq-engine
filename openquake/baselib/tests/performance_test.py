@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2022 GEM Foundation
+# Copyright (c) 2016-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,7 @@ import time
 import unittest
 import pickle
 import numpy
-from openquake.baselib.performance import Monitor, split_array
+from openquake.baselib.performance import Monitor, kollapse
 
 
 class MonitorTestCase(unittest.TestCase):
@@ -62,20 +62,43 @@ class MonitorTestCase(unittest.TestCase):
         pickle.loads(pickle.dumps(self.mon))
 
 
-class SplitArrayTestCase(unittest.TestCase):
-    def test(self):
+class KollapseTestCase(unittest.TestCase):
+    def test_small(self):
         # build a small structured array
-        dtlist = [('mdvbin', numpy.uint32), ('rake', numpy.float64),
+        dtlist = [('mdbin', numpy.uint32), ('rake', numpy.float64),
                   ('sids', numpy.uint32)]
         N = 10
         arr = numpy.zeros(N, dtlist)
         rng = numpy.random.default_rng(42)
-        arr['mdvbin'] = rng.integers(50, size=N)
+        arr['mdbin'] = rng.integers(50, size=N)
         arr['rake'] = rng.random(N) * 360
         arr['sids'] = rng.integers(1000, size=N)
-        uniq, indices, counts = numpy.unique(
-            arr['mdvbin'], return_inverse=True, return_counts=True)
-        sids = split_array(arr['sids'], indices, counts)
-        expected_sids = [[631, 858, 450], [276], [887, 554], [92],
+        sids = []
+        for rec in kollapse(arr, ['mdbin']):
+            sids.append(arr['sids'][arr['mdbin'] == rec['mdbin']])
+        expected_sids = [[450, 858, 631], [276], [554, 887], [92],
                          [827], [227], [63]]
         numpy.testing.assert_equal(sids, expected_sids)
+
+        # now test kollapse with an aggregate field afield='sids'
+        out, allsids = kollapse(arr, ['mdbin'], afield='sids')
+        numpy.testing.assert_equal(allsids, expected_sids)
+
+    def test_big(self):
+        # build a very large structured array
+        dtlist = [('mdbin', numpy.uint32), ('rake', numpy.float64),
+                  ('sids', numpy.uint32)]
+        N = 10_000_000
+        arr = numpy.zeros(N, dtlist)
+        rng = numpy.random.default_rng(42)
+        arr['mdbin'] = rng.integers(50, size=N)
+        arr['rake'] = rng.random(N) * 360
+        arr['sids'] = rng.integers(1000, size=N)
+        t0 = time.time()
+        mean = kollapse(arr, ['mdbin'])
+        sids = []
+        for mdbin in mean['mdbin']:
+            sids.append(arr['sids'][arr['mdbin'] == mdbin])
+        print([len(s) for s in sids])
+        dt = time.time() - t0
+        print('Grouped %d elements in %.1f seconds' % (N, dt))

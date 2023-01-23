@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -88,7 +88,6 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
     """
     mon_agg = monitor('aggregating losses', measuremem=False)
     mon_avg = monitor('averaging losses', measuremem=False)
-    mon_df = monitor('building event loss table', measuremem=True)
     oq = crmodel.oqparam
     xtypes = oq.ext_loss_types
     loss_by_AR = {ln: [] for ln in xtypes}
@@ -118,20 +117,20 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
                     aids = alt.aid.to_numpy()
                     for kids in aggids[:, aids]:
                         fast_agg(eids + U64(kids), values, correl, li, acc)
-    with mon_df:
+    lis = range(len(xtypes))
+    with monitor('building event loss table', measuremem=True):
         dic = general.AccumDict(accum=[])
         for ukey, arr in acc.items():
             eid, kid = divmod(ukey, TWO32)
-            for li in range(L):
+            for li in lis:
                 if arr[li].any():
                     dic['event_id'].append(eid)
                     dic['agg_id'].append(kid)
                     dic['loss_id'].append(LOSSID[xtypes[li]])
-                    for c, col in enumerate(value_cols):
+                    for c, col in enumerate(['variance', 'loss']):
                         dic[col].append(arr[li, c])
         fix_dtypes(dic)
-        df = pandas.DataFrame(dic)
-    return dict(avg=loss_by_AR, alt=df)
+    return loss_by_AR, pandas.DataFrame(dic)
 
 
 def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
@@ -175,6 +174,25 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             yield event_based_risk, df[s0:s1], oqparam
 
 
+def outputs(taxo_assets, df, crmodel, rng, monitor):
+    mon_risk = monitor('computing risk', measuremem=True)
+    fil_mon = monitor('filtering GMFs', measuremem=False)
+    for s0, s1 in performance.split_slices(df.eid.to_numpy(), 250_000):
+        grp = df[s0:s1]
+        for taxo, adf in taxo_assets:
+            with fil_mon:
+                # *crucial* for the performance
+                # of the next step, 'computing risk'
+                gmf_df = grp[numpy.isin(
+                    grp.sid.to_numpy(), adf.site_id.to_numpy())]
+            if len(gmf_df) == 0:
+                continue
+            with mon_risk:  # this is using a lot of memory
+                out = crmodel.get_output(
+                    adf, gmf_df, crmodel.oqparam._sec_losses, rng)
+            yield out
+
+
 def event_based_risk(df, oqparam, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
@@ -199,25 +217,9 @@ def event_based_risk(df, oqparam, monitor):
         rng = MultiEventRNG(oqparam.master_seed, df.eid.unique(),
                             int(oqparam.asset_correlation))
 
-    def outputs():
-        mon_risk = monitor('computing risk', measuremem=True)
-        fil_mon = monitor('filtering GMFs', measuremem=False)
-        for s0, s1 in performance.split_slices(df.eid.to_numpy(), 250_000):
-            grp = df[s0:s1]
-            for taxo, adf in taxo_assets:
-                with fil_mon:
-                    # *crucial* for the performance
-                    # of the next step, 'computing risk'
-                    gmf_df = grp[numpy.isin(
-                        grp.sid.to_numpy(), adf.site_id.to_numpy())]
-                if len(gmf_df) == 0:
-                    continue
-                with mon_risk:  # this is using a lot of memory
-                    out = crmodel.get_output(
-                        adf, gmf_df, oqparam._sec_losses, rng)
-                yield out
-
-    return aggreg(outputs(), crmodel, ARK, aggids, rlz_id, monitor)
+    avg, alt = aggreg(outputs(taxo_assets, df, crmodel, rng, monitor),
+                      crmodel, ARK, aggids, rlz_id, monitor)
+    return dict(avg=avg, alt=alt)
 
 
 def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
@@ -314,6 +316,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq.maxweight = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_types)
+        if (oq.calculation_mode == 'event_based_risk' and
+                A * self.R > 1_000_000 and oq.avg_losses
+                and not oq.collect_rlzs):
+            raise ValueError('For large exposures you must set '
+                             'collect_rlzs=true or avg_losses=false')
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
                 all(val == 0 for val in oq.minimum_asset_loss.values())):
             logging.warning('The calculation is really big; consider setting '
@@ -416,12 +423,13 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.gmf_bytes += dic['alt'].memory_usage().sum()
         self.oqparam.ground_motion_fields = False  # hack
         with self.monitor('saving risk_by_event'):
-            alt = dic['alt']
+            alt = dic.pop('alt')
             if alt is not None:
                 for name in alt.columns:
                     dset = self.datastore['risk_by_event/' + name]
                     hdf5.extend(dset, alt[name].to_numpy())
-            for ln, ls in dic['avg'].items():
+        with self.monitor('saving avg_losses'):
+            for ln, ls in dic.pop('avg').items():
                 for coo in ls:
                     self.avg_losses[ln][coo.row, coo.col] += coo.data
 
@@ -465,5 +473,4 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         prc.assetcol = self.assetcol
         if hasattr(self, 'exported'):
             prc.exported = self.exported
-        with prc.datastore:
-            prc.run(exports='')
+        prc.run(exports='')

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -228,7 +228,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 'The number of sites is to disaggregate is %d, but you have '
                 'max_sites_disagg=%d' % (self.N, few))
         all_edges, shapedic = disagg.get_edges_shapedic(
-            self.oqparam, self.sitecol, self.datastore['source_mags'])
+            self.oqparam, self.sitecol, self.datastore['source_mags'], self.R)
         *b, trts = all_edges
         T = len(trts)
         shape = [len(bin) - 1 for bin in
@@ -243,7 +243,6 @@ class DisaggregationCalculator(base.HazardCalculator):
 
     def execute(self):
         """Performs the disaggregation"""
-        self.pre_checks()
         return self.full_disaggregation()
 
     def get_curve(self, sid, rlzs):
@@ -276,7 +275,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         if oq.rlz_index is None and oq.num_rlzs_disagg == 0:
             oq.num_rlzs_disagg = len(ws)  # 0 means all rlzs
         edges, self.shapedic = disagg.get_edges_shapedic(
-            oq, self.sitecol, self.datastore['source_mags'])
+            oq, self.sitecol, self.datastore['source_mags'], self.R)
         self.save_bin_edges(edges)
         self.full_lt = self.datastore['full_lt']
         self.poes_disagg = oq.poes_disagg or (None,)
@@ -347,9 +346,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         trt_smrs = dstore['trt_smrs'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
         G = max(len(rbg) for rbg in rlzs_by_gsim)
-        maxw = 2 * 1024**3 / (16 * G * self.M)  # at max 2 GB
-        maxweight = min(
-            numpy.ceil(totrups / (oq.concurrent_tasks or 1)), maxw)
         task_inputs = []
         U = 0
         self.datastore.swmr_on()
@@ -361,7 +357,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         # that would break the ordering of the indices causing an incredibly
         # worse performance, but visible only in extra-large calculations!
         cmakers = read_cmakers(self.datastore)
-        grp_ids = U32(rdata['grp_id'])
+        grp_ids = rdata['grp_id']
         for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
             for start, stop in slices:

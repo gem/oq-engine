@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -159,7 +159,7 @@ class NRCan15SiteTerm(GMPE):
         super().__init__(gmpe_name=gmpe_name, **kwargs)
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
-        #
+
         # Check if this GMPE has the necessary requirements
         if not (hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY') or
                 'vs30' in self.gmpe.REQUIRES_SITES_PARAMETERS):
@@ -168,11 +168,14 @@ class NRCan15SiteTerm(GMPE):
         if 'vs30' not in self.gmpe.REQUIRES_SITES_PARAMETERS:
             self.REQUIRES_SITES_PARAMETERS = frozenset(
                 self.gmpe.REQUIRES_SITES_PARAMETERS | {'vs30'})
-        #
+
         # Check compatibility of reference velocity
         if hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY'):
-            assert (self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY >= 760 and
-                    self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY <= 800)
+            ok = 760 <= self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY <= 820
+            if not ok:
+                name = self.gmpe.__class__.__name__
+                raise ValueError(f'{name}.DEFINED_FOR_REFERENCE_VELOCITY '
+                                 'is not in the range 760..800')
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

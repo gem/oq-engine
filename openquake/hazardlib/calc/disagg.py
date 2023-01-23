@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,6 +30,7 @@ import scipy.stats
 
 from openquake.baselib.general import AccumDict, groupby, pprod
 from openquake.hazardlib.calc import filters
+from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
@@ -51,14 +52,14 @@ def assert_same_shape(arrays):
         assert arr.shape == shape, (arr.shape, shape)
 
 
-def get_edges_shapedic(oq, sitecol, mags_by_trt):
+def get_edges_shapedic(oq, sitecol, mags_by_trt, num_tot_rlzs):
     """
     :returns: (mag dist lon lat eps trt) edges and shape dictionary
     """
     assert mags_by_trt
     tl = oq.truncation_level
     if oq.rlz_index is None:
-        Z = oq.num_rlzs_disagg
+        Z = oq.num_rlzs_disagg or num_tot_rlzs
     else:
         Z = len(oq.rlz_index)
 
@@ -121,6 +122,7 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     shapedic['Z'] = Z
     return bin_edges + [trts], shapedic
 
+
 def _eps3(truncation_level, eps):
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
@@ -160,13 +162,15 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
         # 0 values are converted into -inf
         iml3[m] = to_distribution_values(iml2, imt)
 
+    phi_b = cmaker.phi_b
     truncnorm, epsilons, eps_bands = eps3
     cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
     # Array with mean and total std values. Shape of this is:
     # U - Number of contexts (i.e. ruptures if there is a single site)
     # M - Number of IMTs
     # G - Number of gsims
-    mean_std = cmaker.get_mean_stds([ctx])[:2]  # (2, G, M, U)
+    mean_std = cmaker.get_mean_stds([ctx], split_by_mag=True)[:2]
+    # shape (2, G, M, U)
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
     # Multi-dimensional iteration
@@ -189,10 +193,10 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
         if epsstar:
             iii = (lvls >= min_eps) & (lvls < max_eps)
             # The leftmost indexes are ruptures and epsilons
-            poes[iii, idxs[iii]-1, m, p, z] = truncnorm.sf(lvls[iii])
+            poes[iii, idxs[iii]-1, m, p, z] = truncnorm_sf(phi_b, lvls[iii])
         else:
             poes[:, :, m, p, z] = _disagg_eps(
-                truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
+                truncnorm_sf(phi_b, lvls), idxs, eps_bands, cum_bands)
     z0 = numpy.zeros(0)
     time_span = cmaker.tom.time_span
     for u, rec in enumerate(ctx):
@@ -274,6 +278,20 @@ def _build_disagg_matrix(bdata, bins):
             dists_idx, lons_idx, lats_idx, bdata.pnes):
         mat7D[i_dist, i_lon, i_lat] *= pne  # shape E, M, P, Z
     return 1. - mat7D
+
+
+def uniform_bins(min_value, max_value, bin_width):
+    """
+    Returns an array of bins including all values:
+
+    >>> uniform_bins(1, 10, 1.)
+    array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
+    >>> uniform_bins(1, 10, 1.1)
+    array([ 0. ,  1.1,  2.2,  3.3,  4.4,  5.5,  6.6,  7.7,  8.8,  9.9, 11. ])
+    """
+    return bin_width * numpy.arange(
+        int(numpy.floor(min_value/ bin_width)),
+        int(numpy.ceil(max_value / bin_width) + 1))
 
 
 def _digitize_lons(lons, lon_bins):
@@ -412,9 +430,7 @@ def disaggregation(
         mag_bins = bine['mag']
     else:
         mags = numpy.array([r.mag for rs in rups.values() for r in rs])
-        mag_bins = mag_bin_width * numpy.arange(
-            int(numpy.floor(mags.min() / mag_bin_width)),
-            int(numpy.ceil(mags.max() / mag_bin_width) + 1))
+        mag_bins = uniform_bins(mags.min(), mags.max(), mag_bin_width)
 
     # Compute disaggregation per TRT
     for trt, cm in cmaker.items():
@@ -437,9 +453,7 @@ def disaggregation(
     if 'dist' in bine:
         dist_bins = bine['dist']
     else:
-        dist_bins = dist_bin_width * numpy.arange(
-            int(numpy.floor(min_dist / dist_bin_width)),
-            int(numpy.ceil(max_dist / dist_bin_width) + 1))
+        dist_bins = uniform_bins(min_dist, max_dist, dist_bin_width)
 
     # Lon, Lat bins
     if 'lon' in bine and 'lat' in bine:

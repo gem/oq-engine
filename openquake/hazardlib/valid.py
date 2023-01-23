@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2022 GEM Foundation
+# Copyright (C) 2013-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -77,6 +77,9 @@ class FromFile(object):
     def compute(self, ctx, imts, mean, sig, tau, phi):
         pass
 
+    def requires(self):
+        return ()
+
     def __repr__(self):
         return '[FromFile]'
 
@@ -112,6 +115,10 @@ def _fix_toml(v):
         return list(v)
     elif hasattr(v, 'items'):
         return {k1: _fix_toml(v1) for k1, v1 in v.items()}
+    elif isinstance(v, list):
+        return [_fix_toml(x) for x in v]
+    elif isinstance(v, numpy.float64):
+        return float(v)
     return v
 
 

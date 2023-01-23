@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -259,11 +259,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                         del os.environ['OQ_DISTRIBUTE']
                     else:
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
-                readinput.pmap = None
-                readinput.exposure = None
-                readinput.gmfs = None
-                readinput.eids = None
-                readinput.gsim_lt_cache.clear()
+                readinput.Global.reset()
 
                 # remove temporary hdf5 file, if any (currently none)
                 if os.path.exists(self.datastore.tempname) and remove:
@@ -488,6 +484,15 @@ class HazardCalculator(BaseCalculator):
             check_amplification(df, self.sitecol)
             self.af = AmplFunction.from_dframe(df)
 
+        if 'station_data' in oq.inputs:
+            logging.info('Reading station data from %s',
+                         oq.inputs['station_data'])
+            self.station_data, self.station_sites, self.observed_imts = \
+                readinput.get_station_data(oq)
+            self.datastore.create_df('station_data', self.station_data)
+            self.datastore.create_df('station_sites', self.station_sites)
+            oq.observed_imts = self.observed_imts
+
         if (oq.calculation_mode == 'disaggregation' and
                 oq.max_sites_disagg < len(self.sitecol)):
             raise ValueError(
@@ -506,10 +511,10 @@ class HazardCalculator(BaseCalculator):
                     interp = oq.maximum_distance(trt)
                     if min_mag < interp.x[0]:
                         logging.warning(
-                            'discarding magnitudes < %.2f', interp.x[0])
+                            '%s: discarding mags < %.2f', trt, interp.x[0])
                     if max_mag > interp.x[-1]:
                         logging.warning(
-                            'discarding magnitudes > %.2f', interp.x[-1])
+                            '%s: discarding mags > %.2f', trt, interp.x[-1])
                     if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (
                             interp.x[0], interp.y[0],
@@ -572,7 +577,7 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            self.datastore.create_df('_poes', readinput.pmap.to_dframe())
+            self.datastore.create_df('_poes', readinput.Global.pmap.to_dframe())
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.datastore['rlzs_by_g'] = sum(
@@ -706,7 +711,7 @@ class HazardCalculator(BaseCalculator):
             self.load_insurance_data(oq.inputs['insurance'].items())
         elif 'reinsurance' in oq.inputs:
             self.load_insurance_data(oq.inputs['reinsurance'].items())
-        return readinput.exposure
+        return readinput.Global.exposure
 
     def load_insurance_data(self, lt_fnames):
         """
@@ -813,7 +818,7 @@ class HazardCalculator(BaseCalculator):
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['cost_calculator'] = exposure.cost_calculator
-            if hasattr(readinput.exposure, 'exposures'):
+            if hasattr(readinput.Global.exposure, 'exposures'):
                 self.datastore.getitem('assetcol')['exposures'] = numpy.array(
                     exposure.exposures, hdf5.vstr)
         elif 'assetcol' in self.datastore.parent:
@@ -868,7 +873,7 @@ class HazardCalculator(BaseCalculator):
         if oq.job_type == 'risk':
             taxs = python3compat.decode(self.assetcol.tagcol.taxonomy)
             tmap = readinput.taxonomy_mapping(self.oqparam, taxs)
-            self.crmodel.tmap = tmap
+            self.crmodel.set_tmap(tmap)
             taxonomies = set()
             for ln in oq.loss_types:
                 for items in self.crmodel.tmap[ln]:
@@ -942,7 +947,10 @@ class HazardCalculator(BaseCalculator):
             self.realizations = self.full_lt.get_realizations()
             if not self.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
-            self.datastore['full_lt'] = self.full_lt
+            # if full_lt is stored in the parent, do not store it again
+            # this avoids breaking case_18 when starting from a preclassical
+            if self.oqparam.hazard_calculation_id is None:
+                self.datastore['full_lt'] = self.full_lt
         else:  # scenario
             self.full_lt = self.datastore['full_lt']
 

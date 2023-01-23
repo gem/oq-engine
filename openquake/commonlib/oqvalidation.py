@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -253,7 +253,8 @@ floating_x_step:
 
 floating_y_step:
   Float, used in rupture generation for kite faults. indicates the fraction
-  of fault width used to float ruptures down dip. (i.e. "0.5" floats that half the rupture length). Uniform distribution of the ruptures
+  of fault width used to float ruptures down dip. (i.e. "0.5" floats that
+  half the rupture length). Uniform distribution of the ruptures
   is maintained, such that if the mesh spacing and rupture dimensions
   prohibit the defined overlap fraction, the fraction is increased until
   uniform distribution is achieved. The minimum possible value depends on
@@ -324,6 +325,12 @@ hazard_curves_from_gmfs:
 hazard_maps:
   Set it to true to export the hazard maps.
   Example: *hazard_maps = true*.
+  Default: False
+
+horiz_comp_to_geom_mean:
+  Apply the correction to the geometric mean when possible,
+  depending on the GMPE and the Intensity Measure Component
+  Example: *horiz_comp_to_geom_mean = true*.
   Default: False
 
 ignore_covs:
@@ -441,12 +448,12 @@ max_sites_disagg:
   Example: *max_sites_disagg = 100*
   Default: 10
 
-max_sites_per_tile:
-  Used in classical calculations which are to big to run within the
-  available memory. This effectively splits the calculation in homogeneous
-  tiles with less than `max_sites_per_tile`. To be used as last resort.
-  Example: *max_sites_per_tile = 50_000*
-  Default: 500_000
+pmap_max_gb:
+   Maximum size of the ProbabilityMaps in classical calculations, should be
+   less than 4 GB to avoid pickling errors. This is also used to split the
+   calculation in tiles.
+   Example: *max_size_db = 2*
+   Default: 1
 
 max_weight:
   INTERNAL
@@ -812,7 +819,7 @@ class OqParam(valid.ParamSet):
                     'insurance', 'reinsurance', 'ins_loss',
                     'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
                     'fragility', 'consequence', 'reqv', 'input_zip',
-                    'amplification',
+                    'amplification', 'station_data',
                     'nonstructural_vulnerability',
                     'nonstructural_fragility',
                     'nonstructural_consequence',
@@ -887,6 +894,7 @@ class OqParam(valid.ParamSet):
     hazard_curves = valid.Param(valid.boolean, True)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_maps = valid.Param(valid.boolean, False)
+    horiz_comp_to_geom_mean = valid.Param(valid.boolean, False)
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
@@ -911,8 +919,8 @@ class OqParam(valid.ParamSet):
     max_gmvs_per_task = valid.Param(valid.positiveint, 1_000_000)
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
-    max_sites_per_tile = valid.Param(valid.positiveint, 500_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
+    pmap_max_gb = valid.Param(valid.positivefloat, 1.)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
@@ -978,7 +986,8 @@ class OqParam(valid.ParamSet):
                      'structural+contents',
                      'nonstructural+contents',
                      'structural+nonstructural+contents'), None)
-    truncation_level = valid.Param(valid.positivefloat, 99.)
+    truncation_level = valid.Param(
+        lambda s: valid.positivefloat(s) or 1E-9, 99.)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
@@ -1013,7 +1022,10 @@ class OqParam(valid.ParamSet):
         should be called only before starting the calculation.
         The same information is stored in the datastore.
         """
-        return sum(os.path.getsize(f) for f in self._input_files)
+        # NB: when the OqParam object is instantiated from a dictionary and
+        # not from a job.ini file the key 'job_ini ' has value '<in-memory>'
+        return sum(os.path.getsize(f) for f in self._input_files
+                   if f != '<in-memory>')
 
     def get_reqv(self):
         """
@@ -1077,7 +1089,7 @@ class OqParam(valid.ParamSet):
         if ('ps_grid_spacing' in names_vals and
                 float(names_vals['ps_grid_spacing']) and
                 'pointsource_distance' not in names_vals):
-            self.pointsource_distance = dict(default=10.)
+            self.pointsource_distance = dict(default=40.)
         if self.collapse_level >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 
@@ -1141,12 +1153,6 @@ class OqParam(valid.ParamSet):
             self.poes = 1 - numpy.exp(
                 - self.investigation_time / numpy.array(self.return_periods))
 
-        # check for tiling
-        if self.max_sites_disagg > self.max_sites_per_tile:
-            raise ValueError(
-                'max_sites_disagg is larger than max_sites_per_tile! (%d>%d)'
-                % (self.max_sites_disagg, self.max_sites_per_tile))
-
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
             if not self.poes_disagg and self.poes:
@@ -1164,7 +1170,7 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile(
                     '%s: iml_disagg and poes_disagg cannot be set '
                     'at the same time' % job_ini)
-            bins = ['mag', 'dst', 'lon', 'eps']
+            bins = ['mag', 'dist', 'lon', 'eps']
             for i, k in enumerate(['mag_bin_width', 'distance_bin_width',
                                    'coordinate_bin_width', 'num_epsilon_bins']):
                 if (k not in vars(self) and

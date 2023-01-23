@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -118,26 +118,16 @@ def input_checks(catalogue, config, completeness):
         cmag = np.array(np.min(catalogue.data['magnitude']))
         ctime = np.array(np.min(catalogue.data['year']))
 
-    # Set reference magnitude - if not in config then default to M = 0.
-    if not config:
-        # use default reference magnitude of 0.0 and magnitude interval of 0.1
-        ref_mag = 0.0
-        dmag = 0.1
-        config = {'reference_magnitude': None,
-                  'magnitude_interval': 0.1}
-    else:
-        if (not 'reference_magnitude' in config.keys()) or\
-                (config['reference_magnitude'] is None):
-            ref_mag = 0.
-            config['reference_magnitude'] = None
-        else:
-            ref_mag = config['reference_magnitude']
-
-        if (not 'magnitude_interval' in config.keys()) or \
-                not config['magnitude_interval']:
-            dmag = 0.1
-        else:
-            dmag = config['magnitude_interval']
+    # Set the config parameters if missing
+    config = {} if config is None else config
+    key = 'reference_magnitude'
+    if key not in config or config[key] is None:
+        config['reference_magnitude'] = 0.0
+    key = 'magnitude_interval'
+    if key not in config or config[key] is None:
+        config['magnitude_interval'] = 0.1
+    ref_mag = config['reference_magnitude']
+    dmag = config['magnitude_interval']
 
     return cmag, ctime, ref_mag, dmag, config
 

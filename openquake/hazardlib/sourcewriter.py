@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
-from openquake.hazardlib import nrml, sourceconverter, pmf
+from openquake.hazardlib import nrml, sourceconverter, pmf, valid
 from openquake.hazardlib.source import (
     NonParametricSeismicSource, check_complex_fault, PointSource)
 from openquake.hazardlib.tom import NegativeBinomialTOM
@@ -687,7 +687,7 @@ def build_source_group(source_group):
         attrs['src_interdep'] = source_group.src_interdep
     if source_group.rup_interdep:
         attrs['rup_interdep'] = source_group.rup_interdep
-    if source_group.grp_probability is not None:
+    if source_group.grp_probability != 1.0:
         attrs['grp_probability'] = source_group.grp_probability
     if source_group.cluster:
         attrs['cluster'] = 'true'
@@ -820,7 +820,7 @@ def tomldump(obj, fileobj=None):
     """
     Write a generic serializable object in TOML format
     """
-    dic = node_to_dict(obj_to_node(obj))
+    dic = valid._fix_toml(node_to_dict(obj_to_node(obj)))
     if fileobj is None:
         return toml.dumps(dic)
     toml.dump(dic, fileobj)

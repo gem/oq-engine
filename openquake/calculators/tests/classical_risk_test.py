@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -79,7 +79,10 @@ class ClassicalRiskTestCase(CalculatorTestCase):
 
         # check avg losses
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/loss_curves_avg.txt', fname)
+        self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
+        fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
+        assert len(fnames) == 4  # there are 4 realizations
+        self.assertEqualFiles('expected/avg_losses-000.csv', fnames[0])
 
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini')

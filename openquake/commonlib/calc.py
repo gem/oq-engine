@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -270,7 +270,7 @@ class RuptureImporter(object):
         eid_rlz = []
         for rup in proxies:
             ebr = EBRupture(
-                Mock(rup_id=rup['seed']), rup['source_id'],
+                Mock(seed=rup['seed']), rup['source_id'],
                 rup['trt_smr'], rup['n_occ'], e0=rup['e0'],
                 scenario='scenario' in self.oqparam.calculation_mode)
             for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
