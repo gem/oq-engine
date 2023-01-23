@@ -1320,7 +1320,9 @@ def _checksum(fnames, checksum=0):
     :returns: the 32 bit checksum of a list of files
     """
     for fname in fnames:
-        if not os.path.exists(fname):
+        if fname == '<in-memory>':
+            pass
+        elif not os.path.exists(fname):
             zpath = os.path.splitext(fname)[0] + '.zip'
             if not os.path.exists(zpath):
                 raise OSError('No such file: %s or %s' % (fname, zpath))

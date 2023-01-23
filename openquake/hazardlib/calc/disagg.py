@@ -27,7 +27,6 @@ import collections
 from functools import partial
 import numpy
 import scipy.stats
-from scipy.special import ndtr
 
 from openquake.baselib.general import AccumDict, groupby, pprod
 from openquake.hazardlib.calc import filters
@@ -53,14 +52,14 @@ def assert_same_shape(arrays):
         assert arr.shape == shape, (arr.shape, shape)
 
 
-def get_edges_shapedic(oq, sitecol, mags_by_trt):
+def get_edges_shapedic(oq, sitecol, mags_by_trt, num_tot_rlzs):
     """
     :returns: (mag dist lon lat eps trt) edges and shape dictionary
     """
     assert mags_by_trt
     tl = oq.truncation_level
     if oq.rlz_index is None:
-        Z = oq.num_rlzs_disagg
+        Z = oq.num_rlzs_disagg or num_tot_rlzs
     else:
         Z = len(oq.rlz_index)
 
@@ -170,7 +169,8 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
     # U - Number of contexts (i.e. ruptures if there is a single site)
     # M - Number of IMTs
     # G - Number of gsims
-    mean_std = cmaker.get_mean_stds([ctx])[:2]  # (2, G, M, U)
+    mean_std = cmaker.get_mean_stds([ctx], split_by_mag=True)[:2]
+    # shape (2, G, M, U)
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
     # Multi-dimensional iteration

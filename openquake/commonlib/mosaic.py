@@ -2,7 +2,6 @@
 # coding: utf-8
 
 import pprint
-import fiona
 import logging
 import time
 import csv
@@ -10,6 +9,7 @@ import os
 from shapely.geometry import Point, shape
 from collections import Counter
 from openquake.baselib import sap, config
+from openquake.hazardlib.geo.packager import fiona
 
 CLOSE_DIST_THRESHOLD = 0.1  # degrees
 

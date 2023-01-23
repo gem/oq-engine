@@ -44,9 +44,8 @@ class PankowPechmann2004(GMPE):
 
     #: Supported intensity measure component is VECTORIAL
     #: :attr:`~openquake.hazardlib.const.IMC.VECTORIAL`,
-    #: NOTE: The paper indicates it as Geometric mean (to check)
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = {
-        const.IMC.VECTORIAL, const.IMC.RANDOM_HORIZONTAL}
+    #: NOTE: The paper indicates it as Geometric mean
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}

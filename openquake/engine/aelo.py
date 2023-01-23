@@ -38,18 +38,12 @@ def get_params_from(lon, lat, siteid):
     ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job.ini')
     params = readinput.get_params(ini)
     params['description'] = 'AELO for ' + siteid
-    # TODO: add disaggregation parameters
+    # TODO: fix site params, add disaggregation parameters
     return params
 
 
-def fake_run(jobctx, lon, lat, vs30):
-    # stub for the real calculation
-    oq = jobctx.get_oqparam()
-    sitecol = readinput.get_site_collection(oq)
-    sitecol.lons[0] = lon
-    sitecol.lats[0] = lat
-    sitecol.vs30[0] = vs30
-    print(sitecol.array)
+def aelo_run(jobctx, lon, lat, vs30):
+    engine.run_jobs([jobctx])
 
 
 def trivial_callback(job_id, exc=None):
@@ -81,7 +75,7 @@ def main(lon: valid.longitude,
             sys.exit('mosaic_dir is not specified in openquake.cfg')
         jobctx.params.update(get_params_from(lon, lat, siteid))
         try:
-            fake_run(jobctx, lon, lat, vs30)
+            aelo_run(jobctx, lon, lat, vs30)
         except Exception as exc:
             callback(jobctx.calc_id, exc)
         else:
