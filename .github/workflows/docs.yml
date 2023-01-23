@@ -201,11 +201,13 @@ jobs:
 
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
 
+          echo "BEGIN VERSION LOOP"
           for v in $(git branch | sed 's/ *engine-//g' | grep '^[0-9]\+\.[0-9]\+$'); do
               ver_maj="$(echo "$v" | sed 's/\([0-9]\+\)\..*/\1/g')"
               ver_min="$(echo "$v" | sed 's/[0-9]\+\.\(.*\)$/\1/g')"
               echo "[$ver_maj . $ver_min ]"
           done
+          echo "END VERSION LOOP"
 
           echo "Make OpenQuake Manual (HTML and PDF)"
           cd doc/manual && make html && make latexpdf
