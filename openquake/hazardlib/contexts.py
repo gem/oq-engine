@@ -1049,9 +1049,10 @@ class ContextMaker(object):
                         pmap.update_(poes, invs, ctxt, itime, rup_indep, idx)
 
     # called by gen_poes and by the GmfComputer
-    def get_mean_stds(self, ctxs):
+    def get_mean_stds(self, ctxs, split_by_mag=False):
         """
         :param ctxs: a list of contexts with N=sum(len(ctx) for ctx in ctxs)
+        :param disagg: True when called from the disaggregation calculator
         :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
         N = sum(len(ctx) for ctx in ctxs)
@@ -1063,7 +1064,7 @@ class ContextMaker(object):
             recarrays = ctxs
         else:  # vectorize the contexts
             recarrays = [self.recarray(ctxs)]
-        if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
+        if split_by_mag:
             assert len(recarrays) == 1, len(recarrays)
             recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
         self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
