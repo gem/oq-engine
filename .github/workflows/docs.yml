@@ -241,7 +241,7 @@ jobs:
                       if [ "$ddown_adv" != "[" ]; then
                          ddown_adv="${ddown_adv}, "
                       fi
-                      ddown_adv="${ddown_vers}{ \"name\": \"${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
+                      ddown_adv="${ddown_adv}{ \"name\": \"${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
                   fi
               done
               ddown_adv="${ddown_adv}]"
