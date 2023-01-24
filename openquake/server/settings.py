@@ -173,6 +173,9 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 # confusion between different installations when the WebUI is used
 SERVER_NAME = socket.gethostname()
 
+# Enable AELO functionalities
+AELO_MODE = False
+
 # Expose the WebUI interface, otherwise only the REST API will be available
 WEBUI = True
 
@@ -254,4 +257,3 @@ if LOCKDOWN:
     LOGOUT_REDIRECT_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
     LOGIN_EXEMPT_URLS = ('%s/accounts/ajax_login/' % WEBUI_PATHPREFIX, )
     LOGIN_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
-
