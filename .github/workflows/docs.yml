@@ -146,7 +146,7 @@ jobs:
           fi
 
           ALL_VERS="$(git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n)"
-          LATEST_VER="echo "$(echo "$ALL_VERS" | tail -n 1)"
+          LATEST_VER="$(echo "$ALL_VERS" | tail -n 1)"
 
           PDFDOCS="manuals/"
           TARGET_LINK=""
