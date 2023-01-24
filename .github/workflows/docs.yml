@@ -199,7 +199,7 @@ jobs:
           if [ 1 -eq 1 -o "$BUILD" != "dev" ]; then
               old_IFS="$IFS"
               IFS="$(echo -e "\n")"
-              for v in $ALL_VERS; do
+              for v in \$ALL_VERS; do
                   ver_maj="$(echo "$v" | sed 's/\([0-9]\+\)\..*/\1/g')"
                   if [ $ver_maj -lt 3 ]; then
                       continue
