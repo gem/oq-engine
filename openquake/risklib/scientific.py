@@ -934,7 +934,8 @@ def annual_frequency_of_exceedence(poe, t_haz):
     :param t_haz: hazard investigation time
     :returns: array of frequencies (with +inf values where poe=1)
     """
-    assert not (poe == 1).any()  # avoid log(0)
+    # replace 1 with the closest to 1 float64 number to avoid log(1-1)
+    poe[poe == 1.] = .9999999999999999
     return - numpy.log(1-poe) / t_haz
 
 def probability_of_exceedance(afoe, t_risk):
@@ -1039,7 +1040,8 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios,
     lr_afoes = numpy.empty(lrem.shape)
     for idx, afoo in enumerate(afoos):
         lr_afoes[:, idx] = lrem[:, idx] * afoo  # column * afoo
-    lr_poes = probability_of_exceedance(lr_afoes.sum(axis=1), risk_investigation_time)
+    lr_poes = probability_of_exceedance(
+        lr_afoes.sum(axis=1), risk_investigation_time)
     return numpy.array([loss_ratios, lr_poes])
 
 
