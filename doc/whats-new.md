@@ -228,13 +228,13 @@ We fixed a bug when running a classical calculation starting from a
 preclassical one, appearing only in the case of tabular GMPEs, like in
 the Canada model.
 
-We fixed conditional spectrum calculator which was giving incorrect
-results, but it should be considered still in experimental status.
+We fixed a bug such that using the ``--hc`` option caused the site model of
+the child calculation to be associated incorrectly.
 
-In the presence of parent site collection and a child
-site model the engine was associating the site model to the parent
+We fixed the conditional spectrum calculator which was giving incorrect
+results, but it should still be considered on experimental status.
 
-We fixed a bug in the classical_risk calculator, where the avg_losses
+We fixed a bug in the `classical_risk` calculator, where the `avg_losses`
 output was not stored and therefore not exportable
 (see https://github.com/gem/oq-engine/pull/8267).
 
