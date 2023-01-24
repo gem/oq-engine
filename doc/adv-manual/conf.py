@@ -141,7 +141,7 @@ html_theme = 'pydata_sphinx_theme'
 html_theme_options = {
     "navbar_end": ["version-switcher"],
     "switcher": {
-        "json_url": "../.ddown_adv.json",
+        "json_url": "../../.ddown_adv.json",
         "version_match": "master"
     },
     "icon_links": [

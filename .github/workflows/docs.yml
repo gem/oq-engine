@@ -253,7 +253,7 @@ jobs:
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
 
           if [ -f "dot_ddown_adv.json" ]; then
-              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine/advanced\" && rsync" dot_ddown_adv.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/advanced/.ddown_adv.json"
+              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine/advanced\" && rsync" dot_ddown_adv.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/.ddown_adv.json"
           fi
 
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
