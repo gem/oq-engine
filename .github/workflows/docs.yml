@@ -197,16 +197,11 @@ jobs:
           echo "UPLOAD:              [$UPLOAD]"
 
           if [ 1 -eq 1 -o "$BUILD" != "dev" ]; then
+              ddown_adv="["
               for v in $ALL_VERS; do
                   ver_maj="$(echo "$v" | sed 's/\([0-9]\+\)\..*/\1/g')"
-                  if [ $ver_maj -lt 3 ]; then
-                      continue
-                  elif [ $ver_maj -eq 3 ]; then
-                      ver_min="$(echo "$v" | sed 's/[0-9]\+\.\(.*\)$/\1/g')"
-                      if [ $ver_min -lt 11 ]; then
-                         continue
-                      fi
-                  fi
+                  ver_min="$(echo "$v" | sed 's/[0-9]\+\.\(.*\)$/\1/g')"
+
                   sfx=""
                   if [ "$v" = "$ENG_VER" ]; then
                       if [ "$BUILD" == "master" -o "$GITHUB_REF_NAME" == "moster" ]; then
@@ -233,13 +228,25 @@ jobs:
                   if [ "$sfx" ]; then
                       sfx=" (${sfx})"
                   fi
-                  if [ "$master_rename" = "true" ]; then
-                      echo "VERSION master (pre ${v})"
-                  else
-                      echo "VERSION ${v}${sfx}"
+
+                  if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 16 )) ) || (( "$ver_maj" > 3 )); then
+                      if [ "$master_rename" = "true" ]; then
+                          ver_name="master (target ${ver_maj}.${ver_min})"
+                          ver_val="master"
+                      else
+                          ver_name="${ver_maj}.${ver_min}${sfx}"
+                          ver_val="${ver_maj}.${ver_min}"
+                      fi
+                      ver_url="https://docs.openquake.org/oq-engine/advanced/${ver_val}"
+                      if [ "$ddown_adv" != "[" ]; then
+                         ddown_adv="${ddown_adv}, "
+                      fi
+                      ddown_adv="${ddown_vers}{ \"name\": \"${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url} }"
                   fi
               done
-              IFS="$old_IFS"
+              ddown_adv="${ddown_adv}]"
+              echo "$ddown_adv" > dot_ddown_adv.json
+              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine/advanced\" && rsync" dot_ddown_adv.json "docs@docs.openquake.org:${DOCS_BASE}/oq-engine/advanced/.ddown_adv.json"
           fi
 
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
