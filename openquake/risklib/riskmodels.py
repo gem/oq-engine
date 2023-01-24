@@ -331,16 +331,17 @@ class RiskModel(object):
         self.assets = assets
         vf = self.risk_functions[loss_type]
         imls = self.hazard_imtls[vf.imt]
+        rtime = self.risk_investigation_time or self.investigation_time
         curves_orig = functools.partial(
             scientific.classical, vf, imls,
             loss_ratios=self.loss_ratios_orig[loss_type],
             investigation_time=self.investigation_time,
-            risk_investigation_time=self.risk_investigation_time)
+            risk_investigation_time=rtime)
         curves_retro = functools.partial(
             scientific.classical, vf.retro, imls,
             loss_ratios=self.loss_ratios_retro[loss_type],
             investigation_time=self.investigation_time,
-            risk_investigation_time=self.risk_investigation_time)
+            risk_investigation_time=rtime)
         original_loss_curves = numpy.array([curves_orig(hazard)] * n)
         retrofitted_loss_curves = numpy.array([curves_retro(hazard)] * n)
 
