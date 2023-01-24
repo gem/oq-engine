@@ -1029,6 +1029,8 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios,
 
     # interpolate the hazard curve
     poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
+    if abs((1-poes).max()) < 1E-6:  # flat curve => zero risk
+        return numpy.array([loss_ratios, numpy.zeros_like(loss_ratios)])
 
     # convert the hazard probabilities of exceedance ot annual
     # frequencies of exceedance, and then occurrence
