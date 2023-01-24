@@ -209,9 +209,12 @@ jobs:
                   fi
                   sfx=""
                   if [ "$v" = "$ENG_VER" ]; then
-                      if [ "$BUILD" == "master" ]; then
+                      if [ "$BUILD" == "master" -o "$GITHUB_REF_NAME" == "moster" ]; then
                           sfx="master"
                       fi
+                      master_rename="true"
+                  else
+                      master_rename="false"
                   fi
                   if [ "$v" = "$LATEST_VER" ]; then
                       if [ "$sfx" ]; then
@@ -228,9 +231,13 @@ jobs:
                       fi
                   fi
                   if [ "$sfx" ]; then
-                      sfx="(${sfx})"
+                      sfx=" (${sfx})"
                   fi
-                  echo "VERSION ${v}${sfx}"
+                  if [ "$master_rename" = "true" ]; then
+                      echo "VERSION master (pre ${v})"
+                  else
+                      echo "VERSION ${v}${sfx}"
+                  fi
               done
               IFS="$old_IFS"
           fi
