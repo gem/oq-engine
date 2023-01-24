@@ -147,7 +147,7 @@ jobs:
 
           ALL_VERS="$(git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n)"
           LATEST_VER="$(echo "$ALL_VERS" | tail -n 1)"
-
+          ALL_VERS="$((git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' ; echo "$ENG_VER") | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | uniq)"
           PDFDOCS="manuals/"
           TARGET_LINK=""
           PDF_VER_LINK=""
@@ -196,21 +196,52 @@ jobs:
           echo "GITHUB_BS_REF:       [$GITHUB_BS_REF]"
           echo "UPLOAD:              [$UPLOAD]"
 
+          if [ 1 -eq 1 -o "$BUILD" != "dev" ]; then
+              old_IFS="$IFS"
+              IFS="$(echo -e "\n")"
+              for v in $ALL_VERS; do
+                  ver_maj="$(echo "$v" | sed 's/\([0-9]\+\)\..*/\1/g')"
+                  if [ $ver_maj -lt 3 ]; then
+                      continue
+                  elif [ $ver_maj -eq 3 ]; then
+                      ver_min="$(echo "$v" | sed 's/[0-9]\+\.\(.*\)$/\1/g')"
+                      if [ $ver_min -lt 11 ]; then
+                         continue
+                      fi
+                  fi
+                  sfx=""
+                  if [ "$v" = "$ENG_VER" ]; then
+                      if [ "$BUILD" == "master" ]; then
+                          sfx="master"
+                      fi
+                  fi
+                  if [ "$v" = "$LATEST_VER" ]; then
+                      if [ "$sfx" ]; then
+                          sfx="${sfx}, latest"
+                      else
+                          sfx="latest"
+                      fi
+                  fi
+                  if [ "$v" = "$LTS_VER" ]; then
+                      if [ "$sfx" ]; then
+                          sfx="${sfx}, LTS"
+                      else
+                          sfx="LTS"
+                      fi
+                  fi
+                  if [ "$sfx" ]; then
+                      sfx="(${sfx})"
+                  fi
+                  echo "VERSION ${v}${sfx}"
+              done
+              IFS="$old_IFS"
+          fi
+
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
           chmod 600 ./.deploy_rsa
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
 
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
-
-          echo "BEGIN VERSION LOOP"
-          echo "$ALL_VERS"
-          echo "BEGIN 2 VERSION LOOP"
-          for v in $(git branch | sed 's/ *engine-//g' | grep '^[0-9]\+\.[0-9]\+$'); do
-              ver_maj="$(echo "$v" | sed 's/\([0-9]\+\)\..*/\1/g')"
-              ver_min="$(echo "$v" | sed 's/[0-9]\+\.\(.*\)$/\1/g')"
-              echo "[$ver_maj . $ver_min ]"
-          done
-          echo "END VERSION LOOP"
 
           echo "Make OpenQuake Manual (HTML and PDF)"
           cd doc/manual && make html && make latexpdf
