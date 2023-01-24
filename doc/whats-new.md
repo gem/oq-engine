@@ -1,5 +1,5 @@
-Version 3.16 is the second Long Term Support release of the engine,
-replacing version 3.11 after a two years period. It is the result of 5
+Version 3.16 is the second Long Term Support (LTS) release of the engine,
+replacing version 3.11 after gap of two years. It is the result of five
 months of work involving nearly 300 pull requests, featuring major
 optimizations and new features.
 
@@ -19,7 +19,7 @@ the new models will be roughly 5 times more computational intensive,
 requiring 5 times more memory and disk space.
 
 Special care was taken to reduce the memory consumption of classical
-calculations. For instance, the ESHM20 model for Europe, with before
+calculations. For instance, the ESHM20 model for Europe, which before
 ran on our server with 512 GB of RAM, with version 3.15
 would require over 2 TB and it would just run out of memory.
 
@@ -32,9 +32,9 @@ in the master node that would ran out of memory. In that case
 the engine runs the tiles sequentially: for instance, by splitting in 4 tiles,
 only 40 GB would be required on the master node for Europe.
 
-All that is done automatically: before the user has to painfully
-determine the right `max_sites_per_tile` parameter, which is now not
-needed anymore. There is instead a parameter `pmap_max_gb` with
+All that is done automatically: previously the user had to painfully
+determine the right `max_sites_per_tile` parameter, which is not
+needed anymore. There is instead a parameter `pmap_max_gb` with a
 default value 1 which can be used to control the memory used on the
 workers, but regular users will never have to touch it.
 
@@ -43,8 +43,8 @@ the models reasonable. On top of a performance improvement (up to a 2x
 speedup by keeping the same precision) we fixed a memory issue with
 models containing point sources with very large magnitudes (such
 practice is arguably incorrect, but very common in the models of the
-GEM mosaic). In such situations the magnitude-scaling relationship can
-produce rupture radius of thousands of kilometers, causing the point
+GEM mosaic). In such situations, the magnitude-scaling relationship can
+produce rupture radii of thousands of kilometers, causing the point
 source gridding approximation to keep in memory huge amount of data
 and thus sending the system out of memory. We have solved the problem
 by limiting the rupture radius to the integration distance; moreover
@@ -78,21 +78,21 @@ The postclassical calculator has been optimized to reduce the PoEs
 reading time, which could become substantial in extra-large
 calculations, expecially on clusters with a large number of
 cores. This has become relevant now that the calculations are becoming
-5 times larger; for instance for the european model the number of PoEs
+5 times larger; for instance for the European model the number of PoEs
 to read will increase from ~32 GB to ~160 GB.
 
 As part of the future Global Hazard Model update the models have changed
 to convert the Intensity Measure Component of the GMPEs to "Geometric Mean"
-when possible; when not possible, a warning is printed. To enable such
+when possible; when not possible, a warning is printed. To enable this
 feature you just need to add a line
 
-horiz_comp_to_geom_mean = true
+`horiz_comp_to_geom_mean = true`
 
 to your job.ini file.
 
-In the context of the METIS project we added a way to include
-aftershock effects by reading a file of corrected occurrence rates
-for the rupture of a model.
+In the context of the [METIS project](https://metis-h2020.eu/) 
+we added a way to include aftershock effects by reading a file 
+of corrected occurrence rates for the rupture of a model.
 
 There was a major optimization in the disaggregation calculator (we measured
 speedups of over 76 times in the disaggregation part) obtained by replacing
@@ -108,34 +108,36 @@ When using `num_disagg_rlzs=0` the engine was logging the nonsensical
 message `Total output size: 0 B`. Now you get the correct output size.
 
 In the context of the new release of the Global Hazard Mosaic we are
-adding some feature to make the engine aware of the mosaic, like an utility
+adding some feature to make the engine aware of the mosaic, like a utility
 to determine which mosaic model to use given a longitude and latitude.
 
-The header of the UHS files changed slightly, using less digits, to make the
+The header of the UHS files changed slightly, using fewer digits, to make the
 test run across different platforms in spite of minor numeric differences.
 
 Additions to hazardlib
 ----------------------
 
-Prajakta Jadhav and Dharma Wijewickreme contributed a new GMPE
-for Zhang and Zhao (2005) (see https://github.com/gem/oq-engine/pull/7766).
+[Prajakta Jadhav](https://github.com/Prajakta-Jadhav-25) and Dharma Wijewickreme 
+contributed a new GMPE for Zhang and Zhao (2005) 
+(see https://github.com/gem/oq-engine/pull/7766).
 
-Trevor Allen contributed some enhancements to Australian GMPEs
-(see https://github.com/gem/oq-engine/pull/8205).
+[Trevor Allen](https://github.com/treviallen) contributed some enhancements 
+to Australian GMPEs (see https://github.com/gem/oq-engine/pull/8205).
 
-Guillaume Daniel contributed a bug fix to the HMTK, in the function
-used for the Stepp completeness analysis
+[Guillaume Daniel](https://github.com/guyomd) contributed a bug-fix to the HMTK, 
+in the function used for the Stepp (1972) completeness analysis
 (see https://github.com/gem/oq-engine/pull/8127).
 
-Graeme Weatherill contributed some aliases for the GSIMs used
-in the ESHM20 model for Europe.
+[Graeme Weatherill](https://github.com/g-weatherill) contributed some aliases 
+for the GSIMs used in the ESHM20 model for Europe.
 
-Bruce Warden of USGS asked to change the AbrahamsonEtAl2014 GMPE to
-extrapolate the vs30 so that it could be used with the official
-J-SHIS Vs30 model of Japan (see https://github.com/gem/oq-engine/pull/8171).
+[C. Bruce Wprden](https://github.com/cbworden) asked to change the 
+AbrahamsonEtAl2014 GMPE to extrapolate the Vs30 so that it could be used 
+with the official J-SHIS Vs30 model of Japan 
+(see https://github.com/gem/oq-engine/pull/8171).
 
 We introduced a new GMPE KothaEtAl2020regional where the site-specific
-(delta_c3 and its standard error) and source-specific (delta_l2l and
+(`delta_c3` and its standard error) and source-specific (`delta_l2l` and
 its standard error) values are automatically selected.  Since the
 procedure is slow it is meant to be used solely for single-site
 calculations. It is also likely to change in the future.
@@ -143,9 +145,11 @@ calculations. It is also likely to change in the future.
 Since a few versions ago, the engine has the ability to modify the magnitude
 frequency distribution from the logic tree with code like the following:
 
+```xml
      <uncertaintyModel>
         <faultActivityData slipRate="20.0" rigidity="32" />
      </uncertaintyModel>
+```
 
 Now it is also possible to specify a `constant_term`; before it was hard
 coded to 9.1.
@@ -168,25 +172,26 @@ Risk
 We have two major new features, which for the moment are to be considered
 experimental: ground motion fields conditioned on station data, as
 discussed in https://github.com/gem/oq-engine/issues/8317, and reinsurance
-calculations, as described in XXX.
+calculations, as described in https://github.com/gem/oq-engine/issues/7886.
 
 We welcome users wanting to try the new features and understanding that
-they may change in future versions of the engine.
+usage and implementation details may change in future versions of the engine.
+We also welcome feedback from users on these experimental features.
 
 We implemented also a major optimization in `event_based_risk` starting from
 precomputed ground motion fields. As a matter of fact, it is now
 possible to compute GMFs at continental scale, producing hundreds
 of gigabytes of data, and then run risk calculations country-by-country
-without running out of memory. This was previously impossible.
+without running out of memory. This was previously intractable.
 
-As part of this work we removed the limit of 4 billion rows for the
+As part of this work, we removed the limit of 4 billion rows for the
 `gmf_data` table and we added a parameter `max_gmvs_per_task` in the
 job.ini that can be used to regulate the memory consumption (the
 default is 1,000,000).
 
 We added a parameter `max_aggregations` in the job.ini: its purpose is
-to make it possible to increase the number of risk aggregations that
-before was hard-coded to 65536. The default is now 100,000 aggregations.
+to make it possible to increase the number of risk aggregations that was 
+previously hard-coded to 65,536. The default is now 100,000 aggregations.
 
 As a convenience, we changed the risk calculators to reuse the
 hazard exposure when running with the `--hc` flag: before the exposure
@@ -202,24 +207,19 @@ For large exposures and many realizations now the engine raises an early
 error forcing the user to setting the parameter `collect_rlzs` to true.
 This is preferable to going out of memory in the middle of a computation. 
 
-We fixed a bug in the classical_risk calculator, where the avg_losses
-output was not stored and therefore not exportable.
-
-We fixed a bug in vulnerability functions using the beta distribution:
-the case of zero coefficients of variation was not treated correctly.
 
 Bug fixes and new checks
 ------------------------
 
-We fixed a long standing a bug entered in engine 3.9 and affecting the USA
-model, specifically the area around the New Madrid cluster, producing
-incorrect hazard curves and maps.
+We fixed a long standing a bug which entered in engine 3.9 and was 
+affecting the USA model, specifically the area around the New Madrid 
+cluster, producing incorrect hazard curves and maps.
 
 We raised the recursion limit to work around an error
 `maximum recursion depth exceeded while pickling an object` happening in
 classical calculations with extra-large logic trees.
 
-We fixed a bug breaking the fullreport .rst output for NGAEast GMPEs.
+We fixed a bug breaking the fullreport.rst output for NGAEast GMPEs.
 
 `min_mag` and `max_mag` were not honored when using a
 magnitude-dependent maximum distance: this is now fixed.
@@ -234,6 +234,18 @@ results, but it should be considered still in experimental status.
 In the presence of parent site collection and a child
 site model the engine was associating the site model to the parent
 
+We fixed a bug in the classical_risk calculator, where the avg_losses
+output was not stored and therefore not exportable
+(see https://github.com/gem/oq-engine/pull/8267).
+
+We fixed a bug in vulnerability functions using the Beta distribution:
+the case of zero coefficients of variation was not treated correctly
+(see https://github.com/gem/oq-engine/pull/8060).
+
+We fixed another bug affecting the classical_risk calculator, where the
+`risk_investigation_time` parameter was not being considered in the 
+calculation (see https://github.com/gem/oq-engine/pull/8046).
+
 oq commands
 -----------
 
@@ -246,7 +258,7 @@ a feature users wanted for years.
 
 However, not all source models are convertible since not all source
 typologies are convertible, nor there are plan to make them
-convertible in the future. For instance multi fault sources have an efficient
+convertible in the future. For instance multi-fault sources have an efficient
 HDF5 storage and it would make little sense to convert them into .gpkg,
 because they are so large that they would simply send QGIS out of memory,
 not the mention the fact that it would be impossible to edit millions of
@@ -266,7 +278,7 @@ a cluster installation.
 IT
 --
 
-There was a couple of major changes in the zmq distribution mechanism
+There were a couple of major changes in the zmq distribution mechanism
 in cluster environments. The first change was to move the task queue
 to the worker nodes: as a consequence, calculations that before were
 running out of memory on the master node now run without issues. The
@@ -293,7 +305,7 @@ chose where to create the virtual environmente (the default is still
 $HOME/openquake).
 
 We revamped the docs site and now both the regular manual and the 
-advanced manual are versioned.
+advanced manual are versioned (see https://docs.openquake.org/oq-engine/master/).
 
 We now distribute a test calculation
 https://downloads.openquake.org/jobs/performance.zip which can be used
