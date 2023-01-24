@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -86,11 +86,12 @@ class ReportWriter(object):
             line = '-' * len(title)
             self.text += '\n'.join(['\n\n' + title, line, text])
 
-    def make_report(self):
+    def make_report(self, show_inputs=True):
         """Build the report and return a restructed text string"""
         oq, ds = self.oq, self.dstore
-        for name in ('params', 'inputs'):
-            self.add(name)
+        if show_inputs:
+            for name in ('params', 'inputs'):
+                self.add(name)
         if 'full_lt' in ds:
             self.add('required_params_per_trt')
         if 'rup_data' in ds:
@@ -155,5 +156,5 @@ def build_report(job_ini, output_dir=None):
         rw.save(report)
     except IOError as exc:  # permission error
         sys.stderr.write(str(exc) + '\n')
-    readinput.exposure = None  # ugly hack
+    readinput.Global.reset()  # ugly hack
     return report

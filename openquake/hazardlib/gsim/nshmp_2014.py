@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -56,7 +56,8 @@ class NSHMP2014(base.GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = ()
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
     DEFINED_FOR_TECTONIC_REGION_TYPE = ()
-    REQUIRES_DISTANCES = ()
+    #: REQUIRES_DISTANCES is set at the instance level
+    REQUIRES_DISTANCES = frozenset()
     REQUIRES_RUPTURE_PARAMETERS = ()
     REQUIRES_SITES_PARAMETERS = ()
 

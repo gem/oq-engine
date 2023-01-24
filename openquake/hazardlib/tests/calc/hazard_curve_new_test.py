@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2016-2022 GEM Foundation
+# Copyright (C) 2016-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -151,15 +151,16 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
         src.trt_smr = 0
         src.mutex_weight = 1
         group = SourceGroup(
-            src.tectonic_region_type, [src], 'test', 'mutex', 'mutex')
+            src.tectonic_region_type, [src], 'test', 'mutex', 'mutex',
+            grp_probability=1.0)
         param = dict(imtls=self.imtls,
                      src_interdep=group.src_interdep,
                      rup_interdep=group.rup_interdep,
                      grp_probability=group.grp_probability)
         cmaker = ContextMaker(src.tectonic_region_type, gsim_by_trt, param)
-        crv = classical(group, self.sites, cmaker)['pmap'][0]
+        crv = classical(group, self.sites, cmaker)['pmap']
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
-                                crv.array[:, 0], decimal=4)
+                                crv.array[0, :, 0], decimal=4)
 
     def test_raise_error_non_uniform_group(self):
         # Test that the uniformity of a group (in terms of tectonic region)

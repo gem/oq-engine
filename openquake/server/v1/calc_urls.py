@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,7 +34,8 @@ urlpatterns = [
     re_path(r'^(\d+)/log/(\d*):(\d*)$', views.calc_log),
     re_path(r'^(\d+)/remove$', views.calc_remove),
     re_path(r'^result/(\d+)$', views.calc_result),
-    re_path(r'^run$', views.calc_run),
     re_path(r'^validate_zip$', views.validate_zip),
     re_path(r'^(\d+)/result/list$', views.calc_results),
+    re_path(r'^aelo_run$', views.aelo_run),
+    re_path(r'^run$', views.calc_run),
 ]

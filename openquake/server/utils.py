@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -103,9 +103,12 @@ def oq_server_context_processor(request):
 
     context = {}
 
+    webui_host = request.get_host()
     context['oq_engine_server_url'] = ('//' +
-                                       request.META.get('HTTP_HOST',
+                                       (webui_host if webui_host else
+                                        request.META.get('HTTP_HOST',
                                                         'localhost:8800'))
+                                        + settings.WEBUI_PATHPREFIX)
     # this context var is also evaluated by the STANDALONE_APPS to identify
     # the running environment. Keep it as it is
     context['oq_engine_version'] = oqversion

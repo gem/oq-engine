@@ -92,18 +92,17 @@ class CollapseTestCase(unittest.TestCase):
             weights.append(weight)
         for i, src in enumerate(srcs):
             src.id = i
-        N = len(self.sitecol.complete)
         time_span = srcs[0].temporal_occurrence_model.time_span
         idist = calc.filters.IntegrationDistance.new('200')
         params = dict(imtls=self.imtls, truncation_level2=2,
-                      collapse_level=2, investigation_time=time_span,
+                      collapse_level=1, investigation_time=time_span,
                       maximum_distance=idist('default'))
         cmaker = contexts.ContextMaker(
             srcs[0].tectonic_region_type, self.gsims, params)
         res = classical(srcs, self.sitecol, cmaker)
         pmap = res['pmap']
         effrups = sum(res['source_data']['nrupts'])
-        curve = pmap.array(N)[0, :, 0]
+        curve = pmap.array[0, :, 0]
         return curve, srcs, effrups, weights
 
     # this tests also the collapsing of the ruptures happening in contexts.py

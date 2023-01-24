@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,12 +21,15 @@ to the author's coefficient set and verified against the expected values from
 the author's equivalent R implementation
 """
 import unittest
+import pandas as pd
+import numpy as np
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.kotha_2020 import (
     KothaEtAl2020, KothaEtAl2020ESHM20, KothaEtAl2020Site,
-    KothaEtAl2020Slope, KothaEtAl2020ESHM20SlopeGeology)
+    KothaEtAl2020Slope, KothaEtAl2020ESHM20SlopeGeology, KothaEtAl2020regional)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.kotha_2020 import get_distance_coefficients_3, get_dl2l
 
 MAX_DISCREP = 0.01
 
@@ -125,6 +128,54 @@ class KothaEtAl2020InstantiationTestCase(unittest.TestCase):
             "For Kotha et al. (2020) GMM, residual attenuation scaling (c3) "
             "must be input in the form of a dictionary, if specified")
 
+class KothaEtAl2020regionalcoefficientsTestCase(unittest.TestCase):
+    # test to check the selection of region and site specific coefficients
+    # the test sites and their corresponding delta_l2l and delta_c3 values
+    # were selected manually. 
+    def test_get_distance_coefficients3(self):
+        delta_c3_epsilon = 0
+        imt = 'PGA'
+        f = KothaEtAl2020regional()
+        self.att = f.att
+        C = KothaEtAl2020regional.COEFFS[PGA()]
+        ## manually selected sites
+        data = [[-4.13, 38.55], [7.74, 46.23], [10.579, 62.477], 
+                [12.34, 45.03], [15.02, 39.80]] 
+        sctx = pd.DataFrame(data, columns=['lon', 'lat'])
+        ## values retireved manually from the author provided csv files
+        expected_val = np.array([-0.609876182476899, -0.589902644476899, 
+            -0.609876182476899, -0.530099285476899, -1.065428170476899])
+        target = get_distance_coefficients_3(self.att, delta_c3_epsilon, C, imt, sctx)
+        np.testing.assert_array_equal(target, expected_val)
+
+    def test_get_dl2l_coefficients(self):
+        delta_l2l_epsilon = 0
+        imt = 'PGA'
+        f = KothaEtAl2020regional()
+        self.tec = f.tec
+        ## manually selected sites
+        hypo = [[-4.13, 38.55], [7.74, 46.23], [10.579, 62.477], 
+                [12.34, 45.03], [15.02, 39.80]]
+        ctx = pd.DataFrame(hypo, columns=['hypo_lon', 'hypo_lat'])
+        ## values retireved manually from the author provided csv files
+        expected_val = np.array([0., -0.1490727,  0., -0.28239376, -0.2107627 ])
+        dl2l = get_dl2l(self.tec, ctx, imt, delta_l2l_epsilon)            
+        np.testing.assert_array_equal(dl2l, expected_val)
+    
+
+class KothaEtAl2020regionalTestCase(BaseGSIMTestCase):
+    ##Testing the regional version of the GMPE
+    GSIM_CLASS = KothaEtAl2020regional
+    ## for a list of pre defined scenarios, the GMPE predictions
+    ## were calculated in a notebook using the 
+    ## `KothaEtAl2020regional.get_mean_and_stddevs(ctxs, ctxs, ctxs, i, [StdDev.TOTAL])`
+    def test_all(self):
+        self.check("kotha20/KOTHA_2020_REGIONAL_MEAN.csv",
+                max_discrep_percentage=MAX_DISCREP)
+        self.check("kotha20/KOTHA_2020_REGIONAL_STDDEV_INTRA_EVENT.csv",
+                "kotha20/KOTHA_2020_REGIONAL_STDDEV_INTER_EVENT.csv",
+                "kotha20/KOTHA_2020_REGIONAL_STDDEV_TOTAL.csv",
+                max_discrep_percentage=MAX_DISCREP)
 
 class KothaEtAl2020TestCase(BaseGSIMTestCase):
     # Testing the unadjusted version of the original GMPE

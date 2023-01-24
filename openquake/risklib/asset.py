@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2022 GEM Foundation
+# Copyright (C) 2013-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -307,7 +307,7 @@ class TagCollection(object):
         return {tagname: getattr(self, tagname)[tagidx]
                 for tagidx, tagname in zip(tagidxs, self.tagnames)}
 
-    def get_aggkey(self, alltagnames):
+    def get_aggkey(self, alltagnames, max_aggregations):
         """
         :param alltagnames: array of (Ag, T) tag names
         :returns: a dictionary tuple of indices -> tagvalues
@@ -321,11 +321,14 @@ class TagCollection(object):
             for idxs in itertools.product(*ranges):
                 aggkey[ag, idxs] = tuple(
                     tags[idx] for idx, tags in zip(idxs, alltags))
-            if len(aggkey) >= TWO16 and 'site_id' not in self.tagnames:
-                # forbid too many aggregations (they are usual an user mistake)
-                # except for aggregate_by=site_id which is legitimate
-                raise ValueError('Too many aggregation tags: %d >= %d' %
-                                 (len(aggkey), TWO16))
+            if len(aggkey) >= TWO16:
+                logging.warning('Performing {:_d} aggregations!'.
+                                format(len(aggkey)))
+            if len(aggkey) >= max_aggregations:
+                # forbid too many aggregations
+                raise ValueError(
+                    'Too many aggregation tags: %d >= max_aggregations=%d' %
+                    (len(aggkey), max_aggregations))
         return aggkey
 
     def gen_tags(self, tagname):
@@ -518,7 +521,7 @@ class AssetCollection(object):
         """
         return [f for f in self.array.dtype.names if f.startswith('value-')]
 
-    def get_agg_values(self, aggregate_by):
+    def get_agg_values(self, aggregate_by, max_aggregations):
         """
         :param aggregate_by:
             a list of Ag lists of tag names
@@ -527,7 +530,7 @@ class AssetCollection(object):
         """
         allnames = tagset(aggregate_by)
         aggkey = {key: k for k, key in enumerate(
-            self.tagcol.get_aggkey(aggregate_by))}
+            self.tagcol.get_aggkey(aggregate_by, max_aggregations))}
         K = len(aggkey)
         dic = {tagname: self[tagname] for tagname in allnames}
         for field in self.fields:
@@ -552,12 +555,12 @@ class AssetCollection(object):
             agg_values[K] = tuple(dataf[vfields].sum())
         return agg_values
 
-    def build_aggids(self, aggregate_by):
+    def build_aggids(self, aggregate_by, max_aggregations):
         """
         :param aggregate_by: list of Ag lists of strings
         :returns: (array of (Ag, A) integers, list of K strings)
         """
-        aggkey = self.tagcol.get_aggkey(aggregate_by)
+        aggkey = self.tagcol.get_aggkey(aggregate_by, max_aggregations)
         aggids = numpy.zeros((len(aggregate_by), len(self)), U32)
         key2i = {key: i for i, key in enumerate(aggkey)}
         for ag, aggby in enumerate(aggregate_by):

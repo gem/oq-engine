@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -228,7 +228,7 @@ def make_figure_uhs(extractors, what):
                       (site, poe, oq.investigation_time))
         ax.set_ylabel('g')
         for ck, arr in got.items():
-            curve = list(arr[str(poe)][imts])
+            curve = list(arr['%.6f' % poe][imts])
             ax.plot(periods, curve, '-', label='%s_%s' % ck)
             ax.plot(periods, curve, '.')
         ax.grid(True)
@@ -408,13 +408,9 @@ def make_figure_sources(extractors, what):
         if not wkt:
             logging.warning('No geometries for source id %s', srcid)
             continue
-        if rec['eff_ruptures']:  # not filtered out
-            color = 'green'
-            alpha = .3
-            n += 1
-        else:
-            color = 'yellow'
-            alpha = .1
+        color = 'green'
+        alpha = .3
+        n += 1
         if wkt.startswith('POINT'):
             psources.append(shapely.wkt.loads(wkt))
         else:

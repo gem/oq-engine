@@ -18,7 +18,7 @@
 
 import numpy as np
 from scipy.special import erf
-from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2015 import (
     AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SInterLow,
     AbrahamsonEtAl2015SInterHigh, AbrahamsonEtAl2015SSlab,
@@ -219,7 +219,6 @@ class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):
 
     Depending on the choice of taper model, additional parameters may be passed
     """
-    experimental = True
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
@@ -258,7 +257,7 @@ class BCHydroESHM20SInterLow(AbrahamsonEtAl2015SInterLow):
     with theta6 calibrated to Mediterranean data, for the low magnitude
     scaling branch.
     """
-    experimental = True
+
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
@@ -296,7 +295,6 @@ class BCHydroESHM20SInterHigh(AbrahamsonEtAl2015SInterHigh):
     with theta6 calibrated to Mediterranean data, for the high
     magnitude scaling branch.
     """
-    experimental = True
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
@@ -342,7 +340,6 @@ class BCHydroESHM20SSlab(AbrahamsonEtAl2015SSlab):
     sigma_mu_epsilon - number of standard deviations above or below the mean
     to apply the statistical uncertainty sigma_mu term.
     """
-    experimental = True
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
@@ -381,7 +378,6 @@ class BCHydroESHM20SSlabLow(AbrahamsonEtAl2015SSlabLow):
     with theta6 calibrated to Mediterranean data, for the low magnitude
     scaling branch.
     """
-    experimental = True
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
@@ -420,7 +416,6 @@ class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
     with theta6 calibrated to Mediterranean data, for the high magnitude
     scaling branch.
     """
-    experimental = True
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
@@ -451,3 +446,23 @@ class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
     7.5000   400.0000   0.0000  -1.6017   -0.4600   -0.00752097   -0.4433    0.3000   0.7000  -0.0033   -0.5280   -0.0980    0.0000   0.3000    0.0000   0.6000  0.4300  0.7400    0.6000
     10.0000  400.0000   0.0000  -2.2937   -0.4000   -0.00762908   -0.4828    0.3000   0.7000  -0.0060   -0.5040   -0.0980    0.0000   0.3000    0.0000   0.6000  0.4300  0.7400    0.6000
     """)
+
+
+# Add aliases of the ESHM20 model selection
+MILLER_RICE_GAUSS_5PNT = [-2.856970, -1.355630, 0.0, 1.355630, -2.856970]
+THETA_6_ADJUSTMENTS = [-0.0015, 0.0000, 0.0015]
+STRESS_BRANCHES = ["VLow", "Low", "Mid", "High", "VHigh"]
+ATTEN_BRANCHES = ["Fast", "Mid", "Slow"]
+
+for stress, eps1 in zip(STRESS_BRANCHES, MILLER_RICE_GAUSS_5PNT):
+    for atten, theta6adj in zip(ATTEN_BRANCHES, THETA_6_ADJUSTMENTS):
+        alias_sinter = "ESHM20SInter{:s}Stress{:s}Atten".format(stress, atten)
+        alias_sslab = "ESHM20SSlab{:s}Stress{:s}Atten".format(stress, atten)
+        # Subduction Interface
+        add_alias(alias_sinter, BCHydroESHM20SInter, sigma_mu_epsilon=eps1,
+                  theta_6_adjustment=theta6adj, faba_taper_model="SFunc",
+                  a=-100, b=100)
+        # Subduction Slab
+        add_alias(alias_sslab, BCHydroESHM20SSlab, sigma_mu_epsilon=eps1,
+                  theta_6_adjustment=theta6adj, faba_taper_model="SFunc",
+                  a=-100, b=100)

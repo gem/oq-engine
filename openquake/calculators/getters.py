@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2022 GEM Foundation
+# Copyright (C) 2018-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -139,7 +139,7 @@ class PmapGetter(object):
     :param dstore: a DataStore instance or file system path to it
     :param sids: the subset of sites to consider (if None, all sites)
     """
-    def __init__(self, dstore, weights, slices, imtls=(), poes=()):
+    def __init__(self, dstore, weights, slices, imtls=(), poes=(), ntasks=1):
         self.filename = dstore if isinstance(dstore, str) else dstore.filename
         if len(weights[0].dic) == 1:  # no weights by IMT
             self.weights = numpy.array([w['weight'] for w in weights])
@@ -147,6 +147,7 @@ class PmapGetter(object):
             self.weights = weights
         self.imtls = imtls
         self.poes = poes
+        self.ntasks = ntasks
         self.num_rlzs = len(weights)
         self.eids = None
         self.rlzs_by_g = dstore['rlzs_by_g'][()]
@@ -244,7 +245,7 @@ class PmapGetter(object):
                 pcurve.array = array
             return pmap
         L = self.imtls.size
-        pmap = probability_map.ProbabilityMap.build(L, 1, self.sids)
+        pmap = probability_map.ProbabilityMap(self.sids, L, 1)
         for sid in self.sids:
             pmap[sid] = build_stat_curve(
                 self.get_pcurve(sid),

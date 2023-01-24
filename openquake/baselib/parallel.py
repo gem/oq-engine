@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2022 GEM Foundation
+# Copyright (C) 2010-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,7 +24,7 @@ in the standard library and in third party packages. Since we are not
 interested in reinventing the wheel, OpenQuake does not provide any new
 parallel library; however, it does offer some glue code so that you
 can use over your library of choice. Currently threading, multiprocessing,
-zmq and celery are supported. Moreover,
+and zmq are supported. Moreover,
 :mod:`openquake.baselib.parallel` offers some additional facilities
 that make it easier to parallelize scientific computations,
 i.e. embarrassingly parallel problems.
@@ -77,8 +77,6 @@ available at the moment:
   use multiprocessing
 `OQ_DISTRIBUTE` set to "no":
   disable the parallelization, useful for debugging
-`OQ_DISTRIBUTE` set to "celery":
-   use celery, useful if you have multiple machines in a cluster
 `OQ_DISTRIBUTE` set tp "zmq"
    use the zmq concurrency mechanism (experimental)
 
@@ -195,29 +193,25 @@ import traceback
 import collections
 from unittest import mock
 import multiprocessing.dummy
-import subprocess
+import multiprocessing.shared_memory as shmem
+from multiprocessing.connection import wait
 import psutil
-import getpass
 import numpy
-try:
-    from setproctitle import setproctitle
-except ImportError:
-    def setproctitle(title):
-        "Do nothing"
 
 from openquake.baselib import config, hdf5, workerpool
 from openquake.baselib.python3compat import decode
-from openquake.baselib.zeromq import zmq, Socket, TimeoutError
+from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp, engine_version)
+    gettemp, engine_version, mp as mp_context)
 
-sys.setrecursionlimit(1200)  # raised a bit to make pickle happier
+sys.setrecursionlimit(2000)  # raised to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
 GB = 1024 ** 3
+host_cores = config.zworkers.host_cores.split(',')
 
 
 @submit.add('no')
@@ -237,25 +231,13 @@ def threadpool_submit(self, func, args, monitor):
         safely_call, (func, args, self.task_no, monitor))
 
 
-@submit.add('celery')
-def celery_submit(self, func, args, monitor):
-    return safetask.delay(func, args, self.task_no, monitor)
-
-
 @submit.add('zmq')
 def zmq_submit(self, func, args, monitor):
-    if not hasattr(self, 'sender'):
-        port = int(config.zworkers.ctrl_port) + 2
-        task_input_url = 'tcp://0.0.0.0:%d' % port
-        self.sender = Socket(
-            task_input_url, zmq.PUSH, 'connect').__enter__()
-    return self.sender.send((func, args, self.task_no, monitor))
-
-
-@submit.add('dask')
-def dask_submit(self, func, args, monitor):
-    return self.dask_client.submit(
-        safely_call, func, args, self.task_no, monitor)
+    idx = self.task_no % len(host_cores)
+    host = host_cores[idx].split()[0]
+    port = int(config.zworkers.ctrl_port)
+    with Socket('tcp://%s:%d' % (host, port), zmq.REQ, 'connect') as sock:
+        return sock.send((func, args, self.task_no, monitor))
 
 
 @submit.add('ipp')
@@ -269,17 +251,24 @@ def oq_distribute(task=None):
     :returns: the value of OQ_DISTRIBUTE or config.distribution.oq_distribute
     """
     dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
-    if dist not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
-                    'dask', 'ipp'):
+    if dist not in ('no', 'processpool', 'threadpool', 'zmq', 'ipp'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
     return dist
 
 
+def init_workers():
+    """Used to initialize the process pool"""
+    try:
+        from setproctitle import setproctitle
+    except ImportError:
+        pass
+    else:
+        setproctitle('oq-worker')
+
+
 class Pickled(object):
     """
-    An utility to manually pickling/unpickling objects.
-    The reason is that celery does not use the HIGHEST_PROTOCOL,
-    so relying on celery is slower. Moreover Pickled instances
+    An utility to manually pickling/unpickling objects. Pickled instances
     have a nice string representation and length giving the size
     of the pickled bytestring.
 
@@ -478,9 +467,11 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon is dummy_mon:  # in the DbServer
         assert not isgenfunc, func
         return Result.new(func, args, mon)
-
+    # debug(f'{mon.backurl=}, {task_no=}')
     if mon.operation.endswith('_'):
         name = mon.operation[:-1]
+    elif func is split_task:
+        name = args[1].__name__
     else:
         name = func.__name__
     mon = mon.new(operation='total ' + name, measuremem=True)
@@ -513,18 +504,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
                 break
 
 
-if oq_distribute().startswith('celery'):
-    from celery import Celery
-    from celery.task import task
-
-    app = Celery('openquake')
-    app.config_from_object('openquake.engine.celeryconfig')
-    safetask = task(safely_call, queue='celery')  # has to be global
-
-elif oq_distribute() == 'dask':
-    from dask.distributed import Client
-
-elif oq_distribute() == 'ipp':
+if oq_distribute() == 'ipp':
     from ipyparallel import Cluster
 
 
@@ -625,11 +605,6 @@ class IterResult(object):
         return res
 
 
-def init_workers():
-    """Waiting function, used to wake up the process pool"""
-    setproctitle('oq-worker')
-
-
 def getargnames(task_func):
     # a task can be a function, a method, a class or a callable instance
     if inspect.isfunction(task_func):
@@ -642,9 +617,36 @@ def getargnames(task_func):
         return inspect.getfullargspec(task_func.__call__).args[1:]
 
 
+class SharedArray(object):
+    """
+    Wrapper over a SharedMemory object to be used as a context manager.
+    """
+    def __init__(self, shape, dtype, value):
+        nbytes = numpy.zeros(1, dtype).nbytes * numpy.prod(shape)
+        sm = shmem.SharedMemory(create=True, size=nbytes)
+        self.name = sm.name
+        self.shape = shape
+        self.dtype = dtype
+        # fill the SharedMemory buffer with the value
+        arr = numpy.ndarray(shape, dtype, buffer=sm.buf)
+        arr[:] = value
+
+    def __enter__(self):
+        self.sm = shmem.SharedMemory(self.name)
+        return numpy.ndarray(self.shape, self.dtype, buffer=self.sm.buf)
+
+    def __exit__(self, etype, exc, tb):
+        self.sm.close()
+
+    def unlink(self):
+        shmem.SharedMemory(self.name).unlink()
+
+
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
+    shared = []  # SharedArrays
+    maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
     num_cores = int(config.distribution.get('num_cores', '0'))
     if not num_cores:
         # use only the "visible" cores, not the total system cores
@@ -665,27 +667,25 @@ class Starmap(object):
             # we use spawn here to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
-            try:
-                from ray.util.multiprocessing import Pool
-                cls.pool = Pool(cls.num_cores, init_workers)
-            except ImportError:
-                cls.pool = multiprocessing.get_context('spawn').Pool(
-                    cls.num_cores, init_workers)
-                cls.pids = [proc.pid for proc in cls.pool._pool]
+            cls.pool = mp_context.Pool(
+                cls.num_cores, init_workers,
+                maxtasksperchild=cls.maxtasksperchild)
+            cls.pids = [proc.pid for proc in cls.pool._pool]
+            cls.shared = []
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine
             signal.signal(signal.SIGTERM, term_handler)
             signal.signal(signal.SIGINT, int_handler)
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(cls.num_cores)
-        elif cls.distribute == 'dask':
-            cls.dask_client = Client(config.distribution.dask_scheduler)
         elif cls.distribute == 'ipp' and not hasattr(cls, 'executor'):
             rc = Cluster(n=cls.num_cores).start_and_connect_sync()
             cls.executor = rc.executor()
 
     @classmethod
     def shutdown(cls):
+        for shared in cls.shared:
+            shmem.SharedMemory(shared.name).unlink()
         # shutting down the pool during the runtime causes mysterious
         # race conditions with errors inside atexit._run_exitfuncs
         if hasattr(cls, 'pool'):
@@ -694,8 +694,6 @@ class Starmap(object):
             cls.pool.join()
             del cls.pool
             cls.pids = []
-        if hasattr(cls, 'dask_client'):
-            del cls.dask_client
         elif hasattr(cls, 'executor'):
             cls.executor.shutdown()
 
@@ -785,9 +783,10 @@ class Starmap(object):
         self.tasks = []  # populated by .submit
         self.task_no = 0
         self.t0 = time.time()
-        if self.distribute in 'zmq dask celery':  # add a check
+        if self.distribute == 'zmq':  # add a check
+            master = workerpool.WorkerMaster(config.zworkers)
             errors = ['The workerpool on %s is down' % host
-                      for host, run, tot in workers_status() if tot == 0]
+                      for host, run, tot in master.status() if tot == 0]
             if errors:
                 raise RuntimeError('\n'.join(errors))
 
@@ -931,6 +930,19 @@ class Starmap(object):
                 'Mean time per core=%ds, std=%.1fs, min=%ds, max=%ds',
                 times.mean(), times.std(), times.min(), times.max())
 
+    def create_shared(self, shape, dtype=float, value=0.):
+        """
+        Create an array backed by a SharedMemory buffer.
+
+        :param shape: shape of the array
+        :param dtype: dtype of the array (default float)
+        :param value: initialization value (default 0.)
+        :returns: a SharedArray instance
+        """
+        shared = SharedArray(shape, dtype, value)
+        self.shared.append(shared)
+        return shared
+
 
 def sequential_apply(task, args, concurrent_tasks=Starmap.CT,
                      maxweight=None, weight=lambda item: 1,
@@ -985,114 +997,21 @@ def split_task(elements, func, args, duration, outs_per_task, monitor):
                 yield (func, ls) + args
             break
 
-#                             start/stop workers                             #
 
-
-OQDIST = oq_distribute()
-
-
-def ssh_args():
-    remote_python = config.zworkers.remote_python or sys.executable
-    remote_user = config.zworkers.remote_user or getpass.getuser()
-    if config.zworkers.host_cores.strip():
-        for hostcores in config.zworkers.host_cores.split(','):
-            host, cores = hostcores.split()
-            if host == '127.0.0.1':  # localhost
-                yield host, cores, [sys.executable]
-            else:
-                yield host, cores, [
-                    'ssh', '-f', '-T', remote_user + '@' + host, remote_python]
-
-
-def workers_start():
+def multispawn(func, allargs, num_cores=Starmap.num_cores):
     """
-    Start the remote workers with ssh
+    Spawn processes with the given arguments
     """
-    if OQDIST in 'no processpool':
-        return
-    for host, cores, args in ssh_args():
-        if OQDIST == 'dask':
-            sched = config.distribution.dask_scheduler
-            args += ['-m', 'distributed.cli.dask_worker', sched,
-                     '--nprocs', cores, '--nthreads', '1',
-                     '--memory-limit', '1e11']
-        elif OQDIST == 'celery':
-            args += ['-m', 'celery', 'worker', '--purge', '-O', 'fair',
-                     '--config', 'openquake.engine.celeryconfig']
-            if cores != '-1':
-                args += ['-c', cores]
-        elif OQDIST == 'zmq':
-            args += ['-m', 'openquake.baselib.workerpool', '-n', cores]
-        subprocess.Popen(args, start_new_session=True)
-        logging.info(args)
-
-
-def workers_stop():
-    """
-    Stop all the workers with a shutdown
-    """
-    if OQDIST == 'dask':
-        Client(config.distribution.dask_scheduler).retire_workers()
-    elif OQDIST == 'celery':
-        app.control.shutdown()
-    elif OQDIST == 'zmq':
-        workerpool.WorkerMaster().stop()
-    return 'stopped'
-
-
-def workers_kill():
-    """
-    Kill all the workers
-    """
-    if OQDIST == 'dask':
-        Client(config.distribution.dask_scheduler).retire_workers()
-    elif OQDIST == 'celery':
-        app.control.shutdown()
-    elif OQDIST == 'zmq':
-        workerpool.WorkerMaster().kill()
-    return 'killed'
-
-
-def workers_status():
-    """
-    :returns: a list [(host name, running, total), ...]
-    """
-    if OQDIST == 'dask':
-        with Client(config.distribution.dask_scheduler) as c:
-            info = c.scheduler_info()
-        acc = AccumDict(accum=numpy.zeros(2, int))  # IP -> (running, total)
-        for uri, worker in info['workers'].items():
-            ip = uri.split(':')[1]  # 'tcp://192.168.2.2:3429' => //192.168.2.2
-            ex = bool(worker['metrics']['executing'])
-            acc[ip[2:]] += numpy.array([ex, 1])
-        return [(host, arr[0], arr[1]) for host, arr in acc.items()]
-
-    elif OQDIST == 'celery':
-        stats = app.control.inspect(timeout=1).stats() or {}
-        out = []
-        for host, worker in stats.items():
-            total = worker['pool']['max-concurrency']
-            out.append((host, total, total))
-        return out
-
-    elif OQDIST == 'zmq':
-        return workerpool.WorkerMaster().status()
-
-    return []
-
-
-def workers_wait(seconds=30):
-    """
-    Wait until all workers are active
-    """
-    if OQDIST in 'dask celery zmq':
-        num_hosts = len(config.zworkers.host_cores.split(','))
-        for _ in range(seconds):
-            time.sleep(1)
-            status = workers_status()
-            if len(status) == num_hosts and all(
-                    total for host, running, total in status):
-                break
-        else:
-            raise TimeoutError(status)
-        return status
+    allargs = allargs[::-1]  # so that the first argument is submitted first
+    procs = {}  # sentinel -> process
+    while allargs:
+        args = allargs.pop()
+        proc = mp_context.Process(target=func, args=args)
+        proc.start()
+        procs[proc.sentinel] = proc
+        while len(procs) >= num_cores:  # wait for something to finish
+            for finished in wait(procs):
+                del procs[finished]
+    while procs:
+        for finished in wait(procs):
+            del procs[finished]

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,7 +34,7 @@ from openquake.commonlib.calc import gmvs_to_poes
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.event_based import get_mean_curves, compute_avg_gmf
+from openquake.calculators.event_based import get_mean_curve, compute_avg_gmf
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import case_18 as gmpe_tables
 from openquake.qa_tests_data.event_based import (
@@ -226,7 +226,8 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertIn('gmf-data_', fname)
 
     def test_case_2(self):
-        out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
+        out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
+                            concurrent_tasks='4')
 
         [gmfs, sig_eps, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', gmfs)
@@ -337,12 +338,11 @@ class EventBasedTestCase(CalculatorTestCase):
                          dic)
 
         fnames = out['hcurves', 'csv']
-        mean_eb = get_mean_curves(self.calc.datastore, 'PGA')
+        mean_eb = get_mean_curve(self.calc.datastore, 'PGA', slice(None))
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
-        mean_cl = get_mean_curves(self.calc.cl.datastore, 'PGA')
-        reldiff, _index = max_rel_diff_index(
-            mean_cl, mean_eb, min_value=0.1)
+        mean_cl = get_mean_curve(self.calc.cl.datastore, 'PGA', slice(None))
+        reldiff, _index = max_rel_diff_index(mean_cl, mean_eb, min_value=0.1)
         self.assertLess(reldiff, 0.05)
 
     def test_case_8(self):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -508,8 +508,8 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
 class SitecolAssetcolTestCase(unittest.TestCase):
 
     def setUp(self):
-        # cleanup evil global
-        readinput.exposure = None
+        # cleanup evil globals
+        readinput.Global.reset()
 
     def test_grid_site_model_exposure(self):
         oq = readinput.get_oqparam('job.ini', case_16)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -268,7 +268,7 @@ def export_uhs_xml(ekey, dstore):
                 investigation_time=oq.investigation_time, **metadata)
             data = []
             for site, curve in zip(sitemesh, uhs):
-                data.append(UHS(curve[str(poe)], Location(site)))
+                data.append(UHS(curve['%.6f' % poe], Location(site)))
             writer.serialize(data)
             fnames.append(fname)
     return sorted(fnames)
@@ -386,6 +386,7 @@ def export_cond_spectra(ekey, dstore):
     return fnames
 
 
+# TODO: see if I can remove this
 def _extract(hmap, imt, j):
     # hmap[imt] can be a tuple or a scalar if j=0
     tup = hmap[imt]

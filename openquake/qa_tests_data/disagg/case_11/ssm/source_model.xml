@@ -5,6 +5,7 @@
     <sourceModel name="Model 1" investigation_time="1.0">
         <sourceGroup
             name="MUTEX sources"
+            grp_probability="1.0"
             rup_interdep="indep"
             src_interdep="mutex"
             srcs_weights=".25 .25 .25 .25"

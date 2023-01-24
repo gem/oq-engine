@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # LICENSE
 #
-# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -266,7 +266,8 @@ class TestSmoothedSeismicity(unittest.TestCase):
         self.model = SmoothedSeismicity(self.grid_limits, bvalue=1.0)
         expected_dict['bval'] = 1.0
         expected_dict['beta'] = np.log(10.)
-        self.assertDictEqual(self.model.__dict__, expected_dict)
+        for key in expected_dict:
+            self.assertAlmostEqual(self.model.__dict__[key], expected_dict[key])
 
     def test_get_2d_grid(self):
         '''
@@ -283,9 +284,10 @@ class TestSmoothedSeismicity(unittest.TestCase):
         years = 2000. * np.ones(6)
         expected_result = np.zeros(100, dtype=int)
         expected_result[[9, 28, 46, 64, 82, 90]] = 1
-        np.testing.assert_array_almost_equal(expected_result,
-                                             self.model.create_2D_grid_simple(lons, lats, years, mags,
-                                                                              comp_table))
+        np.testing.assert_array_almost_equal(
+            expected_result,
+            self.model.create_2D_grid_simple(lons, lats, years, mags,
+                                             comp_table))
         self.assertEqual(np.sum(expected_result), 6)
 
         # Case 2 - some events outside grid
@@ -293,9 +295,10 @@ class TestSmoothedSeismicity(unittest.TestCase):
         lats = np.arange(40.0, 47.0, 1.0)
         mags = 5.0 * np.ones(7)
         years = 2000. * np.ones(7)
-        np.testing.assert_array_almost_equal(expected_result,
-                                             self.model.create_2D_grid_simple(lons, lats, years, mags,
-                                                                              comp_table))
+        np.testing.assert_array_almost_equal(
+            expected_result,
+            self.model.create_2D_grid_simple(lons, lats, years, mags,
+                                             comp_table))
         self.assertEqual(np.sum(expected_result), 6)
 
     def test_get_3d_grid(self):

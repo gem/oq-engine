@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,6 +22,7 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5, writers, general
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
@@ -127,8 +128,10 @@ def export_aggrisk(ekey, dstore):
 
     aggrisk = dstore.read_df('aggrisk')
     dest = dstore.build_fname('aggrisk-{}', '', 'csv')
-    agg_values = assetcol.get_agg_values(oq.aggregate_by)
-    aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
+    agg_values = assetcol.get_agg_values(
+        oq.aggregate_by, oq.max_aggregations)
+    aggids, aggtags = assetcol.build_aggids(
+        oq.aggregate_by, oq.max_aggregations)
     return _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest)
 
 
@@ -144,9 +147,11 @@ def export_aggrisk_stats(ekey, dstore):
     dest = dstore.build_fname(key + '-stats-{}', '', 'csv')
     dataf = extract(dstore, 'risk_stats/' + key)
     assetcol = dstore['assetcol']
-    agg_values = assetcol.get_agg_values(oq.aggregate_by)
+    agg_values = assetcol.get_agg_values(
+        oq.aggregate_by, oq.max_aggregations)
     K = len(agg_values) - 1
-    aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
+    aggids, aggtags = assetcol.build_aggids(
+        oq.aggregate_by, oq.max_aggregations)
     pairs = [([], dataf.agg_id == K)]  # full aggregation
     for tagnames, agg_ids in zip(oq.aggregate_by, aggids):
         pairs.append((tagnames, numpy.isin(dataf.agg_id, agg_ids)))
@@ -172,6 +177,9 @@ def _get_data(dstore, dskey, loss_types, stats):
             rlzs_or_stats = list(stats)
             statfuncs = [stats[ros] for ros in stats]
             value = avglosses(dstore, loss_types, 'stats')  # shape (A, S, L)
+        elif dstore['oqparam'].collect_rlzs:
+            rlzs_or_stats = list(stats)
+            value = avglosses(dstore, loss_types, 'rlzs')
         else:  # compute on the fly
             rlzs_or_stats, statfuncs = zip(*stats.items())
             value = compute_stats2(
@@ -548,8 +556,10 @@ def export_aggcurves_csv(ekey, dstore):
     """
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
-    agg_values = assetcol.get_agg_values(oq.aggregate_by)
-    aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
+    agg_values = assetcol.get_agg_values(
+        oq.aggregate_by, oq.max_aggregations)
+    aggids, aggtags = assetcol.build_aggids(
+        oq.aggregate_by, oq.max_aggregations)
     E = len(dstore['events'])
     R = len(dstore['weights'])
     K = len(dstore['agg_values']) - 1
@@ -599,15 +609,26 @@ def export_aggcurves_csv(ekey, dstore):
     return fnames
 
 
-@export.add(('reinsurance_losses', 'csv'))
+@export.add(('reinsurance-risk_by_event', 'csv'),
+            ('reinsurance-aggcurves', 'csv'),
+            ('reinsurance-avg_portfolio', 'csv'),
+            ('reinsurance-avg_policy', 'csv'))
 def export_reinsurance(ekey, dstore):
-    policy = dstore['assetcol/tagcol'].policy
     dest = dstore.export_path('%s.%s' % ekey)
-    fields = 'id policy retention cession remainder'.split()
-    df = dstore.read_df('reinsurance_losses').sort_values('id')
-    df['policy'] = [policy[idx] for idx in df.policy]
-    if 'no_insured' in df.columns:
-        fields.append('no_insured')
+    df = dstore.read_df(ekey[0])
+    if 'event_id' in df.columns:
+        events = dstore['events'][()]
+        if 'year' not in events.dtype.names:  # gmfs.hdf5 missing events
+            df['year'] = 1
+        else:
+            df['year'] = events[df.event_id.to_numpy()]['year']
+    if 'policy_id' in df.columns:  # convert policy_id -> policy name
+        policy_names = dstore['agg_keys'][:]
+        df['policy_id'] = decode(policy_names[df['policy_id'].to_numpy() - 1])
+    fmap = json.loads(dstore.get_attr('treaty_df', 'field_map'))
+    treaty_df = dstore.read_df('treaty_df')
+    for code, col in zip(treaty_df.code, treaty_df.id):
+        fmap['over_' + code] = 'overspill_' + col
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    writer.save(df[fields], dest, comment=dstore.metadata)
+    writer.save(df.rename(columns=fmap), dest, comment=dstore.metadata)
     return [dest]

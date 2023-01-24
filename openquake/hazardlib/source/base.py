@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -57,7 +57,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
     checksum = 0  # set in source_reader
-    weight = 1  # set in contexts
+    weight = 0.001  # set in contexts
     esites = 0  # updated in estimate_weight
     offset = 0  # set in fix_src_offset
 
@@ -114,7 +114,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         numpy.random.seed(seed)
         for trt_smr in self.trt_smrs:
             for rup, num_occ in self._sample_ruptures(eff_num_ses):
-                rup.rup_id = seed
+                rup.seed = seed
                 if hasattr(rup, 'occurrence_rate'):
                     # defined only for poissonian sources
                     rup.occurrence_rate *= self.smweight
@@ -364,7 +364,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         for i, rup in enumerate(self.iter_ruptures()):
             if i == idx:
                 if hasattr(self, 'rup_id'):
-                    rup.rup_id = self.rup_id
+                    rup.seed = self.seed
                 rup.idx = idx
                 return rup
 
@@ -413,14 +413,15 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         self.mfd.max_mag = mag + epsilon * std
 
     def modify_adjust_mfd_from_slip(self, slip_rate: float, rigidity: float,
+                                    constant_term: float = 9.1,
                                     recompute_mmax: float = None):
         """
-        :slip_rate:
+        :param slip_rate:
             A float defining slip rate [in mm]
-        :rigidity:
+        :param rigidity:
             A float defining material rigidity [in GPa]
-        :rigidity:
-            A float defining material rigidity [in GPa]
+        :param constant_term:
+            Constant term of the equation used to compute log M0 from magnitude
         """
         # Check that the current src has a TruncatedGRMFD MFD
         msg = 'This modification works only when the source MFD is a '
@@ -437,4 +438,4 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         bin_w = self.mfd.bin_width
         b_val = self.mfd.b_val
         self.mfd = mfd.TruncatedGRMFD.from_moment(min_mag, max_mag, bin_w,
-                                                  b_val, mo)
+                                                  b_val, mo, constant_term)

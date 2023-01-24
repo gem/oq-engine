@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -174,7 +174,7 @@ def build_planar(planin, hdd, lon, lat, usd, lsd):
     """
     :param planin:
         Surface input parameters as an array of shape (M, N)
-    :param lon, lat
+    :param lon, lat:
         Longitude and latitude of the hypocenters (scalars)
     :parameter deps:
         Depths of the hypocenters (vector)

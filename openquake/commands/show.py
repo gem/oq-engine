@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -89,7 +89,7 @@ def main(what='contents', calc_id: str_or_int = -1, extra=()):
         obj = ds.getitem(what)
         if '__pdcolumns__' in obj.attrs:
             df = ds.read_df(what)
-            print(df.sort_values(df.columns[0]))
+            print(df)
         elif hasattr(obj, 'items'):  # is a group of datasets
             print(obj)
         else:  # is a single dataset

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2022 GEM Foundation
+# Copyright (c) 2016-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,10 +15,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib.python3compat import zip
-from openquake.baselib.performance import numba, compile
+import math
+import copy
 import numpy
 import pandas
+from openquake.baselib.general import cached_property
+from openquake.baselib.performance import numba, compile
+from openquake.hazardlib.tom import get_pnes
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -40,12 +43,6 @@ else:
     def combine_probs(array, other, rlzs):
         for r in rlzs:
             array[:, r] = (1. - (1. - array[:, r]) * (1. - other))
-
-
-class AllEmptyProbabilityMaps(ValueError):
-    """
-    Raised by get_shape(pmaps) if all passed probability maps are empty
-    """
 
 
 class ProbabilityCurve(object):
@@ -141,117 +138,102 @@ class ProbabilityCurve(object):
         return curve[0]
 
 
-class ProbabilityMap(dict):
+# numbified below
+def update_pmap_i(arr, poes, inv, rates, probs_occur, idxs, itime):
+    levels = range(arr.shape[1])
+    for i, rate, probs, idx in zip(inv, rates, probs_occur, idxs):
+        if itime == 0:  # FatedTOM
+            arr[idx] *= 1. - poes[i]
+        elif len(probs) == 0 and numba is not None:
+            # looping is faster than building arrays
+            for lvl in levels:
+                arr[idx, lvl] *= math.exp(-rate * poes[i, lvl] * itime)
+        else:
+            arr[idx] *= get_pnes(rate, probs, poes[i], itime)  # shape L
+
+
+# numbified below
+def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, idxs, itime):
+    for i, rate, probs, w, idx in zip(inv, rates, probs_occur, weights, idxs):
+        pne = get_pnes(rate, probs, poes[i], itime)  # shape L
+        arr[idx] += (1. - pne) * w
+
+
+# numbified below
+def update_pnes(arr, idxs, pnes):
+    for idx, pne in zip(idxs, pnes):
+        arr[idx] *= pne
+
+
+if numba:
+    t = numba.types
+    sig = t.void(t.float64[:, :],                        # pmap
+                 t.float64[:, :],                        # poes
+                 t.uint32[:],                            # invs
+                 t.float64[:],                           # rates
+                 t.float64[:, :],                        # probs_occur
+                 t.uint32[:],                            # sids
+                 t.float64)                              # itime
+    update_pmap_i = compile(sig)(update_pmap_i)
+
+    sig = t.void(t.float64[:, :],                        # pmap
+                 t.float64[:, :],                        # poes
+                 t.uint32[:],                            # invs
+                 t.float64[:],                           # rates
+                 t.float64[:, :],                        # probs_occur
+                 t.float64[:],                           # weights
+                 t.uint32[:],                            # sids
+                 t.float64)                              # itime
+    update_pmap_m = compile(sig)(update_pmap_m)
+
+    sig = t.void(t.float64[:, :],                        # pmap
+                 t.uint32[:],                            # idxs
+                 t.float64[:, :])                        # pnes
+    update_pnes = compile(sig)(update_pnes)
+
+
+class ProbabilityMap(object):
     """
-    A dictionary site_id -> ProbabilityCurve. It defines the complement
-    operator `~`, performing the complement on each curve
-
-    ~p = 1 - p
-
-    and the "inclusive or" operator `|`:
-
-    m = m1 | m2 = {sid: m1[sid] | m2[sid] for sid in all_sids}
-
-    Such operators are implemented efficiently at the numpy level, by
-    dispatching on the underlying array. Moreover there is a classmethod
-    .build(L, I, sids, initvalue) to build initialized instances of
-    :class:`ProbabilityMap`. The map can be represented as 3D array of shape
-    (shape_x, shape_y, shape_z) = (N, L, I), where N is the number of site IDs,
-    L the total number of hazard levels and I the number of GSIMs.
+    Thin wrapper over a 3D-array of probabilities.
     """
-    @classmethod
-    def build(cls, shape_y, shape_z, sids=(), initvalue=0., dtype=F64):
-        """
-        :param shape_y: the total number of intensity measure levels
-        :param shape_z: the number of inner levels
-        :param sids: a set of site indices
-        :param initvalue: the initial value of the probability (default 0)
-        :returns: a ProbabilityMap dictionary
-        """
-        dic = cls(shape_y, shape_z)
-        for sid in sids:
-            dic.setdefault(sid, initvalue, dtype)
-        return dic
+    def __init__(self, sids, shape_y, shape_z):
+        self.sids = sids
+        self.shape = (len(sids), shape_y, shape_z)
 
-    @classmethod
-    def from_array(cls, array, sids):
+    @cached_property
+    def sidx(self):
         """
-        :param array: array of shape (N, L) or (N, L, I)
-        :param sids: array of N site IDs
+        :returns: an array of length N site_id -> index
         """
-        n_sites = len(sids)
-        n = len(array)
-        if n_sites != n:
-            raise ValueError('Passed %d site IDs, but the array has length %d'
-                             % (n_sites, n))
-        if len(array.shape) == 2:  # shape (N, L) -> (N, L, 1)
-            array = array.reshape(array.shape + (1,))
-        self = cls(*array.shape[1:])
-        for sid, poes in zip(sids, array):
-            self[sid] = ProbabilityCurve(poes)
+        idxs = numpy.zeros(self.sids.max() + 1, numpy.uint32)
+        for idx, sid in enumerate(self.sids):
+            idxs[sid] = idx
+        return idxs
+
+    def new(self, array):
+        new = copy.copy(self)
+        new.array = array
+        return new
+
+    def fill(self, value):
+        """
+        :param value: a scalar probability
+
+        Fill the ProbabilityMap underlying array with the given scalar
+        and build the .sidx array
+        """
+        assert 0 <= value <= 1, value
+        self.array = numpy.empty(self.shape)
+        self.array.fill(value)
         return self
 
-    def __init__(self, shape_y, shape_z=1):
-        self.shape_y = shape_y
-        self.shape_z = shape_z
-
-    def setdefault(self, sid, value, dtype=F64):
+    def reshape(self, N, M, P):
         """
-        Works like `dict.setdefault`: if the `sid` key is missing, it fills
-        it with an array and returns the associate ProbabilityCurve
-
-        :param sid: site ID
-        :param value: value used to fill the returned ProbabilityCurve
-        :param dtype: dtype used internally (F32 or F64)
+        :returns: a new Pmap associated to a reshaped array
         """
-        try:
-            return self[sid]
-        except KeyError:
-            array = numpy.empty((self.shape_y, self.shape_z), dtype)
-            array.fill(value)
-            pc = ProbabilityCurve(array)
-            self[sid] = pc
-            return pc
+        return self.new(self.array.reshape(N, M, P))
 
-    @property
-    def sids(self):
-        """The ordered keys of the map as a numpy.uint32 array"""
-        return numpy.array(sorted(self), numpy.uint32)
-
-    def array(self, N, g=slice(None)):
-        """
-        An array of shape (N, L, G) or (stop-start, L)
-        """
-        if isinstance(g, slice):
-            arr = numpy.zeros((N, self.shape_y, self.shape_z))
-        else:
-            arr = numpy.zeros((N, self.shape_y))
-        for sid in range(N):
-            try:
-                arr[sid] = self[sid].array[:, g]
-            except KeyError:
-                pass
-        # Physically, an extremely small intensity measure level can have an
-        # extremely large probability of exceedence, however that probability
-        # cannot be exactly 1 unless the level is exactly 0. Numerically, the
-        # PoE can be 1 and this give issues when calculating the damage (there
-        # is a log(0) in
-        # :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
-        # Here we solve the issue by replacing the unphysical probabilities 1
-        # with .9999999999999999 (the float64 closest to 1).
-        arr[arr == 1.] = .9999999999999999
-        return arr
-
-    @property
-    def nbytes(self):
-        """The size of the underlying array"""
-        try:
-            N, L, I = get_shape([self])
-        except AllEmptyProbabilityMaps:
-            return 0
-        return BYTES_PER_FLOAT * N * L * I
-
-    # used when exporting to HDF5
+    # used in calc_hazard_curves
     def convert(self, imtls, nsites, idx=0):
         """
         Convert a probability map into a composite array of length `nsites`
@@ -266,42 +248,25 @@ class ProbabilityMap(dict):
         """
         curves = numpy.zeros(nsites, imtls.dt)
         for imt in curves.dtype.names:
-            curves_by_imt = curves[imt]
-            for sid in self:
-                curves_by_imt[sid] = self[sid].array[imtls(imt), idx]
+            curves[imt][self.sids] = self.array[:, imtls(imt), idx]
         return curves
 
-    def filter(self, sids):
-        """
-        Extracs a submap of self for the given sids.
-        """
-        dic = self.__class__(self.shape_y, self.shape_z)
-        for sid in sids:
-            try:
-                dic[sid] = self[sid]
-            except KeyError:
-                pass
-        return dic
+    def remove_zeros(self):
+        ok = self.array.sum(axis=(1, 2)) > 0
+        if ok.sum() == 0:  # avoid empty array
+            ok = slice(0, 1)
+        new = self.__class__(self.sids[ok], self.shape[1], self.shape[2])
+        new.array = self.array[ok]
+        return new
 
-    def extract(self, inner_idx):
-        """
-        Extracts a component of the underlying ProbabilityCurves,
-        specified by the index `inner_idx`.
-        """
-        out = self.__class__(self.shape_y, 1)
-        for sid in self:
-            curve = self[sid]
-            array = curve.array[:, inner_idx].reshape(-1, 1)
-            out[sid] = ProbabilityCurve(array)
-        return out
-
+    # used in classical_risk from CSV
     def to_dframe(self):
         """
         :returns: a DataFrame with fields sid, gid, lid, poe
         """
         dic = dict(sid=[], gid=[], lid=[], poe=[])
-        for sid in self:
-            for (lid, gid), poe in numpy.ndenumerate(self[sid].array):
+        for sid, arr in zip(self.sids, self.array):
+            for (lid, gid), poe in numpy.ndenumerate(arr):
                 dic['sid'].append(sid)
                 dic['gid'].append(gid)
                 dic['lid'].append(lid)
@@ -311,117 +276,37 @@ class ProbabilityMap(dict):
         dic['poe'][dic['poe'] == 1.] = .9999999999999999  # avoids log(0)
         return pandas.DataFrame(dic)
 
-    def combine(self, pmap, rlz_groups):
+    def update(self, other, i):
         """
-        Update a ProbabilityMap with shape (L, R) with a pmap with shape
-        (L, G), being G the number of realization groups, which are list
-        of integers in the range 0..R-1.
+        Multiply by the probabilities of no exceedence
         """
-        for sid in pmap:
-            self[sid].combine(pmap[sid], rlz_groups)
-
-    def __ior__(self, other):
-        if not other:
-            return self
-        if (other.shape_y, other.shape_z) != (self.shape_y, self.shape_z):
-            raise ValueError('%s has inconsistent shape with %s' %
-                             (other, self))
-        self_sids = set(self)
-        other_sids = set(other)
-        for sid in self_sids & other_sids:
-            self[sid] = self[sid] | other[sid]
-        for sid in other_sids - self_sids:
-            self[sid] = other[sid]
+        # assume other.sids are a subset of self.sids
+        update_pnes(self.array[:, :, 0], self.sidx[other.sids],
+                    other.array[:, :, i])
         return self
 
-    def __or__(self, other):
-        new = self.__class__(self.shape_y, self.shape_z)
-        new.update(self)
-        new |= other
-        return new
-
-    __ror__ = __or__
-
-    def __add__(self, other):
-        try:
-            other.get
-            is_pmap = True
-            sids = set(self) | set(other)
-        except AttributeError:  # no .get method, assume a float
-            is_pmap = False
-            assert 0. <= other <= 1., other  # must be a probability
-            sids = set(self)
-        new = self.__class__(self.shape_y, self.shape_z)
-        for sid in sids:
-            prob = other.get(sid, 1) if is_pmap else other
-            new[sid] = self.get(sid, 1) + prob
-        return new
-
-    def __iadd__(self, other):
-        # this is used when composing mutually exclusive probabilities
-        for sid in other:
-            pcurve = self.setdefault(sid, 0)
-            pcurve += other[sid]
-        return self
-
-    def __mul__(self, other):
-        try:
-            other.get
-            is_pmap = True
-            sids = set(self) | set(other)
-        except AttributeError:  # no .get method, assume a float
-            is_pmap = False
-            assert 0. <= other <= 1., other  # must be a probability
-            sids = set(self)
-        new = self.__class__(self.shape_y, self.shape_z)
-        for sid in sids:
-            prob = other.get(sid, 1) if is_pmap else other
-            new[sid] = self.get(sid, 1) * prob
-        return new
-
-    def __ipow__(self, n):
-        for sid, pcurve in self.items():
-            self[sid] = pcurve ** n
-        return self
-
-    def __pow__(self, n):
-        new = self.__class__(self.shape_y, self.shape_z)
-        for sid, pcurve in self.items():
-            new[sid] = pcurve ** n
-        return new
+    def update_(self, poes, invs, ctxt, itime, rup_indep, idx):
+        """
+        Update probabilities
+        """
+        rates = ctxt.occurrence_rate
+        probs_occur = getattr(ctxt, 'probs_occur',
+                              numpy.zeros((len(ctxt), 0)))
+        idxs = self.sidx[ctxt.sids]
+        for i, x in enumerate(idx):
+            if rup_indep:
+                update_pmap_i(self.array[:, :, x], poes[:, :, i], invs, rates,
+                              probs_occur, idxs, itime)
+            else:  # mutex
+                update_pmap_m(self.array[:, :, x], poes[:, :, i],
+                              invs, rates, probs_occur, ctxt.weight,
+                              idxs, itime)
 
     def __invert__(self):
-        new = self.__class__(self.shape_y, self.shape_z)
-        for sid in self:
-            if (self[sid].array != 1.).any():
-                new[sid] = ~self[sid]  # store only nonzero probabilities
-        return new
+        return self.new(1. - self.array)
 
-    def __getstate__(self):
-        return dict(shape_y=self.shape_y, shape_z=self.shape_z)
+    def __pow__(self, n):
+        return self.new(self.array ** n)
 
-
-def get_shape(pmaps):
-    """
-    :param pmaps: a set of homogenous ProbabilityMaps
-    :returns: the common shape (N, L, I)
-    """
-    for pmap in pmaps:
-        if pmap:
-            sid = next(iter(pmap))
-            break
-    else:
-        raise AllEmptyProbabilityMaps(pmaps)
-    return (len(pmap),) + pmap[sid].array.shape
-
-
-def combine(pmaps):
-    """
-    :param pmaps: a set of homogenous ProbabilityMaps
-    :returns: the combined map
-    """
-    shape = get_shape(pmaps)
-    res = ProbabilityMap(shape[1], shape[2])
-    for pmap in pmaps:
-        res |= pmap
-    return res
+    def __repr__(self):
+        return '<ProbabilityMap(%d, %d, %d)>' % self.shape

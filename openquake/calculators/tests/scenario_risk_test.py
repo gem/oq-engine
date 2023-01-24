@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,11 +18,6 @@
 
 import numpy
 import unittest
-from openquake.qa_tests_data.scenario_risk import (
-    case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
-    case_6a, case_7, case_8, case_10, occupants, case_master,
-    case_shakemap, case_shapefile)
-
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.gsim_lt import InvalidLogicTree
@@ -30,6 +25,11 @@ from openquake.calculators.tests import CalculatorTestCase
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.qa_tests_data.scenario_risk import (
+    case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
+    case_6a, case_7, case_8, case_10, case_11, occupants, case_master,
+    case_shakemap, case_shapefile, reinsurance)
+
 
 aac = numpy.testing.assert_allclose
 
@@ -216,6 +216,12 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         with self.assertRaises(InvalidFile):
             self.run_calc(case_10.__file__, 'job.ini')
 
+    def test_case_11(self):
+        # conditioned gmfs
+        self.run_calc(case_11.__file__, 'job.ini', concurrent_tasks='0')
+        fname, _, _ = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('gmf-data.csv', fname)
+
     def test_case_shakemap(self):
         self.run_calc(case_shakemap.__file__, 'pre-job.ini')
         self.run_calc(case_shakemap.__file__, 'job.ini',
@@ -261,3 +267,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       hazard_calculation_id=pre_id)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
+
+    def test_reinsurance(self):
+        self.run_calc(reinsurance.__file__, 'job.ini')
+        [fname] = export(('reinsurance-avg_portfolio', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
+                              fname, delta=1E-5)

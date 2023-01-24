@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -423,15 +423,21 @@ class SiteCollection(object):
         """
         Split a SiteCollection into SiteCollection instances
         """
-        N = len(self)
-        if N < max_sites:  # do not split
+        return self.split(numpy.ceil(len(self) / max_sites))
+
+    def split(self, ntiles):
+        """
+        :param ntiles: number of tiles to generate (rounded if float)
+        :returns: self if there are <=1 tiles, otherwise the tiles
+        """
+        ntiles = min(int(numpy.ceil(ntiles)), len(self))
+        if ntiles <= 1:
             return [self]
-        hint = int(numpy.ceil(N / max_sites))
         tiles = []
-        for i in range(hint):
+        for i in range(ntiles):
             sc = SiteCollection.__new__(SiteCollection)
             # smart trick to split in "homogenous" tiles
-            sc.array = self.array[self.sids % hint == i]
+            sc.array = self.array[self.sids % ntiles == i]
             sc.complete = self
             tiles.append(sc)
         return tiles

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2022 GEM Foundation
+# Copyright (C) 2016-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -307,6 +307,10 @@ DISPLAY_NAME = {
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'cs-stats': 'Mean Conditional Spectra',
+    'reinsurance-avg_policy': 'Average Reinsurance By Policy',
+    'reinsurance-avg_portfolio': 'Average Reinsurance',
+    'reinsurance-risk_by_event': 'Reinsurance By Event',
+    'reinsurance-aggcurves': 'Aggregated Reinsurance Curves',
     'ruptures': 'Earthquake Ruptures',
     'hcurves': 'Hazard Curves',
     'hmaps': 'Hazard Maps',

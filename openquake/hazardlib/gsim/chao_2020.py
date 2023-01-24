@@ -169,6 +169,7 @@ class ChaoEtAl2020SInter(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
+    #: Required distance rrup
     REQUIRES_DISTANCES = {'rrup'}
 
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}

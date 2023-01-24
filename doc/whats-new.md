@@ -1,205 +1,312 @@
-The release 3.14 is the result of 3 months of work involving nearly
-200 pull requests. The major highlights are: complete vectorization of
-hazardlib, optimization of the UCERF model, and upgrade of Shapely to
-version 1.8.0 (the upgrade causes slight changes in the numbers
-produced by the engine, this is why it is important to mention it).
+The release 3.15 is the result of 5 months of work involving more than
+310 pull requests, featuring many significant optimizations and new features.
 
 The complete list of changes is listed in the changelog:
 
-https://github.com/gem/oq-engine/blob/engine-3.14/debian/changelog
+https://github.com/gem/oq-engine/blob/engine-3.15/debian/changelog
 
-# New in hazardlib
+# Classical PSHA
 
-One year ago we started a vectorization program for the GMPEs in hazardlib,
-described here:
+The major highlight of the release is an optimization of point-like
+sources resulting in a speedup from 1.5 to 50 times, measured on various
+hazard models dominated by point-like sources. The speedup is especially
+large for single site calculations. It was obtained by using
+different optimizations, including a careful allocation of the arrays
+and writing numba-accelerated code for
+building the planar surfaces and computing the distances.
 
-https://github.com/gem/oq-engine/blob/master/doc/breaking-hazardlib.md
+We reduced the memory consumption in the context objects, thus
+solving an out of memory issue in UCERF calculations.
 
-As of engine 3.14 all of the ~700 GMPEs in hazardlib are vectorized,
-i.e. they use the new API in terms of numpy arrays and not Python
-objects. The new and better way to work with GMPEs is documented here:
+We improved the `ps_grid_spacing` approximation which
+is now more precise. Setting the `ps_grid_spacing` parameter
+now sets the `pointsource_distance` parameter too and this the
+recommended way to use the feature.
 
-https://docs.openquake.org/oq-engine/advanced/developing.html#working-with-gmpes-directly-the-contextmaker
+We fixed a bug occuring when the grid produced by the
+`ps_grid_spacing` approximation degenerates to a line, by simply not
+collapsing the sources in that case.
 
-As a consequence of the vectorization, classical calculations can be
-much faster than before (of the order of 2-10 times faster)
-in the case of few sites. Models with GMPEs based on HDF5 tables -
-like the Canada and USA models - have been specially optimized, so
-that you can have significant speedups - in the order of 3-5 times for
-the Canada 2015 model - even in the many-sites case.
+The preclassical calculator has been optimized resulting in a 2-3x speedup
+in many models. We also improved the weighting algorithm by taking into
+account the number of GMPEs per tectonic region type and thus solving a
+slow task issue affecting the ESHM20 model.
 
-There was also a substantial amount of work for collapsing
-the context objects, even for nonparametric sources: that
-will give significant speedups in future versions of the engine.
+At user request, we made it possible to filter the ruptures of a model
+by magnitude range. The way to do it is to use a magnitude-dependent
+`maximum_distance`.  For instance using
 
-Also, numba is used in a few more hotspots, giving significant speedups
-in some classical calculations.
+  `maximum_distance = [(5.5, 70), (6, 100), (6.5, 150), (7, 200), (8, 250)]`
 
-There were some improvements to `KiteSurfaces` and to
-`MultiFaultSources`. In particular the performance of
-MultiFaultSources in the engine was disastrous: all the time was
-spent in computing the bounding box and the encircling polygon. This is
-now fixed.
+will discard magnitudes < 5.5 and > 8. This is semantic change with respect
+to the past where outside magnitudes were not discarded.
 
-The magnitudes in multiFaultSources have been rounded to two digits
-after the decimal point.
+There was a major (but internal) change to the way ruptures are stored in
+classical calculations with few sites. Now we store context objects rather
+than ruptures. The command `oq compare rups` has been changed accordingly,
+as well as the disaggregation and conditional spectrum calculators.
 
-We added a check on `geo.Line` forbidden degenerate lines with less than
-two points.
+The change made it possible a performance improvement in
+disaggregation calculations and paved the way for disaggregation by
+rupture, since now reproducible rupture
+IDs are stored in the context arrays.
 
-We extended the ModifiableGMPE to work with GMPETable subclasses,
-with  the NRCan15 site term and with the Al Atik Sigma model.
+There was a lot of effort on the `disagg_by_src` functionality, which
+has been extended to mutually exclusive sources (used in the Japan
+model) and has some new features documented here:
+https://docs.openquake.org/oq-engine/advanced/classical_PSHA.html#disagg-by-src
 
-We introduced the concept of computed rupture parameters, which was used to
-vectorize the McVerry GMPEs.
+The storing of the `disagg_by_src` array is much more efficient and
+there is a consistency check with the mean hazard curves which is
+always enabled.
 
-Prajacta Jadhav and Dharma Wijewickreme contributed the GMPE Youd et
-al. (2002) and the corresponding site parameters.
+Finally, we removed a logging statement that could cause an out of
+memory in some calculations: thanks to Chris Chamberlain of
+GNS-Science for discovering the issue.
 
-Tom Son contributed a few bug fixes to the GMPE Kuehn et al. (2020).
+# Disaggregation
 
-Finally, we raise an error when the total standard deviation is zero and the
-truncation level is not zero (currently this may happen only with the 
-GMPE YenierAtkinson2015BSSA).
+The disaggregation calculator was failing when a tectonic region type
+had a single magnitude, or when, due to rounding issues, incorrect
+magnitude bins were generated. Both issues have been fixed and we also
+changed the calculator to automatically discard non-contributing
+tectonic region types.
 
-# New hazard features
+The calculator has been extended to work with mutually exclusive
+sources and now it is possible to perform disaggregations of the Japan
+model.
 
-The UCERF calculator has been removed. Now you can run an UCERF
-calculation by using the regular classical calculator, provided you
-have the UCERF model in a new format using multiFaultSources. The new
-format has substantial advantages, for instance it is possible to
-combine the UCERF model with other models.
+There is a new feature called `epsilon_star` disaggregation (in the
+sense of the PEER report
+https://peer.berkeley.edu/sites/default/files/2018_03_hale_final_8.13.18.pdf).
+For examples of use see the tests in `qa_tests_data/disagg` from `case_8`
+to `case_12`.
 
-We implemented a cache for the distances that speedups
-substantially the calculation (we are talking about a 2x
-speedup). Since the distance calculation algorithm has changed
-internally, the numbers are expected to be slightly different than
-in past versions.
+In some models with nonParametric/multiFaultSources the calculators
+was returning spurious NaNs: this has been fixed.
 
-At user request, it is now possible to disaggregate by all realizations
-by setting in the job.ini file
+lon,lat disaggregation with multiFaultSources was giving incorrect results:
+it has been fixed now.
 
-`num_rlzs_disagg = 0`
+Finally, Anne Hulsey from GNS New Zealand contributed two new kinds of
+disaggregation: `Mag_Dist_TRT` and `Mag_Dist_TRT_Eps`.
 
-Naturally, if you have a large number of realizations that can cause
-your calculation to run out of memory or to become extra-slow. Use
-this feature with care.
+# Hazard sources
 
-# New risk features
+There were several changes in multi fault sources and a few bugs were
+fixed while implementing the New Zealand model.  As a new feature the
+SourceWriter writes multi-fault sources in HDF5 format rather than
+XML, thus drastically speeding up the reading time (by 3,600 times in the
+UCERF3 model). The data transfer in multi-fault sources has been
+drastically reduced too.
 
-At user request, we implemented [multi-tag
-aggregation](https://github.com/gem/oq-engine/issues/7663): it is now
-possible to aggregate across different tag combinations within a
-single calculation. The exporters have been changed accordingly to
-export a file for each tag combination.  For instance setting in the
-job.ini something like
 
-`aggregate_by = NAME_1, taxonomy; NAME_1; taxonomy`
+Sources have been extended to support parametric temporal occurrence
+models in their XML representation. We also have a way to serialize
+parametric temporal occurrence models inside the datastore. Thanks to
+such features the engine can now manage the **negative binomial temporal
+occurrence model** contributed by Pablo Iturrieta and used in the latest
+New Zealand model.
 
-would perform four different kinds of aggregations (by "NAME_1 &
-taxonomy", by "NAME_1", by "taxonomy" and total aggregation) and the
-aggregate risk and aggregate curves exporters would export four files
-each. The export format is the same, however while before the totals
-were exported in the same file, now they are exported in a separate
-file.
+We added a check on sum(srcs_weights) == 1 for mutually exclusive sources
+that was missing.
 
-We also changed how the [Aggregate Risk
-output](https://github.com/gem/oq-engine/pull/7708) is computed,
-reverting back to the definition of previous versions of the engine,
-directly related to the average annual losses.
+We fixed a bug in `upgrade_nrml` when converting point sources with
+varying seismogenic depths into multipoint sources.
 
-# Bug fixes
+We changed the sourcewriter to round the coordinates to 4 digits after
+the decimal point. This helps in limiting the platform dependencies,
+since in general when the precision is not specified the XML generated
+on a Mac with M1 processor is different from the XML generated on a
+Linux/Windows Intel machine.
 
-We discovered a bug in the check on unique section IDs for
-multiFaultSources, such that non-unique sections IDs were
-possible. Also, section IDs were incorrectly recognized as source
-IDs. Both issues are now fixed.
+# hazardlib
 
-`job.ini` files containing a Byte Order Mark (BOM) where not read
-correctly, causing issues particularly on the Windows platform.
+Tom Son contributed a bug fix to the Chiou & Youngs 2014 model: the
+Spectral Acceleration at T ≤ 0.3s was not being set correctly.
+He also added `ztor`, `width` and `hypo_depth` estimations to the
+Campbell and Bozorgnia (2014) model and suggested to add the z1pt0
+parameter to the `REQUIRES_SITES_PARAMETERS` in the Boore (2014)
+model. He also improved the performance of Kuehn et al. (2020).
 
-There was a small bug with discard_trts, such that in some cases too many
-TRTs were discarded. This is now fixed.
+Julián Santiago Montejo Espitia contributed the Arteta et al. (2021) GMPE.
 
-Some `event_based_damage` calculations could fail in a cluster environment
-due to the `parent_dir` parameter being passed incorrectly.
+The Hassani and Atkinson (2018) GMPE has been added to hazardlib.
 
-The web API /v1/calc/run was failing when uploading files due to a
-sorting issue.
+The Bahrampouri (2021) Arias Intensity GMPE with region-specific
+coefficients `Cm` and `Ck` has been added. Notice that the performance is
+expected to be poor since a geospatial query is performed for each rupture.
 
-We changed the web API `/extract/events` to return events sorted by ID:
-this avoids an error with the QGIS plugin when visualizing GMFs.
+We implemented a parametric Magnitude Scaling Relationship
+called `CScalingMSR` for use in the New Zealand model.
 
-There was an error in the aggrisk exporter not considering the realizations
-generating zero losses and therefore computing incorrectly the means.
+We avoided building multiple times the same polygons in the Bradley (2013)
+model.
 
-There was a bug when exporting Asset Loss Maps in some situations, due
-to a 32 bit/64 bit mismatch in the `conditional_loss_ratio` parameter.
+We now raise a clear error when passing a string instead of an IMT to
+the legacy method `get_mean_and_stddevs`.
 
-We improved the error checking for calculations with site amplification.
+We added a check for missing mags when calling the class GMPETable incorrectly
+from hazardlib and we added a property `GMPETable.filename`.
 
-We fixed the `--hc` feature that was failing when starting from a
-preclassical calculation.
+# Risk
+
+We added some restrictions on the risk IDs (they must be printable
+ASCII characters excluding #'"); further restrictions may be added
+in the future.
+
+We added a check for inconsistent IDs between fragility and consequence
+functions.
+
+We added a warning for missing risk IDs, such as
+an ID present in the `structural_vulnerability` file and missing in the
+`occupants_vulnerability` file.
+
+We changed the internal serialization of risk
+functions in the datastore, as well as the storage of `agg_curves-stats`,
+`src_loss_table` and `avg_losses`: this is part of a large project to
+manage secondary generic secondary loss types.
+
+At the moment the only kinds of secondary loss type implemented
+are insured losses (which have been reimplemented) and total losses
+(brand new). You can find examples in the event based risk tests,
+but essentially it is possible to write in the job.ini something like
+
+`total_losses = structural+contents`
+
+or
+
+`total_losses = structural+nonstructural+contents`
+
+and have the new loss type pop up in the CSV outputs as a new column.
+This is especially useful for computing total loss curves, or in
+situations were the insurance is based on the total losses obtained by
+summing different loss types.
+
+The event based risk calculator has been refactored with some speedup
+(a few percent).
+
+Thanks to Astha Poudel and [Anirudh Rao](https://github.com/raoanirudh), 
+an experimental module to assess linear infrastructure risk 
+[connectivity.py](https://github.com/gem/oq-engine/blob/engine-3.15/openquake/risklib/connectivity.py)
+has been added to the engine. Common metrics to measure network connectivity
+loss are automatically computed for scenario_damage calculations or 
+event_based_damage calculations with an exposure containing the nodes and 
+links/edges describing an infrastructure network. While detailed 
+documentation for the module will be added once it graduates from
+the experimental stage, a working example for a water supply system
+with the scenario_damage calculator can be found in the QA tests directory: 
+[scenario_damage/case_15](https://github.com/gem/oq-engine/tree/engine-3.15/openquake/qa_tests_data/scenario_damage/case_15)
+
+
+The `aggrisk` output, that was experimental in previous version
+of the engine, has been finalized. Now it is consistent with the
+sum of the average losses even for event based calculations and some
+spurious warnings about `agg_losses != sum(avg_losses)`
+(happening in some situations) have been removed.
+
+In presence of an exposure, a `custom_site_id` field is automatically
+added to the site collection, if not present already. It is computed
+as a geohash 8-characters long and it is meant for debugging purposes.
 
 # oq commands
 
-We removed the obsolete commands `oq to_shapefile` and `oq from_shapefile`
-and the explicit dependency from pyshp.
+The command `oq download_shakemap` has been replaced with a command
+`oq shakemap2gmfs` which is able to convert a ShakeMap coming from
+the USGS site into a set of ground motion fields suitable for scenario
+risk or damage calculations.
 
-We changed `oq zip <directory>` to generate a single big archive instead
-of an archive for each job.ini.
+We added a command `oq dbserver upgrade` to create/upgrade the schema of the
+engine database without starting the DbServer. This is used in the
+universal installer.
 
-We extended `oq postzip` to post multiple files at once.
+We added a command `oq compare risk_by_event` to compare event loss tables.
+It raises an error if the GMFs are not compatible.
 
-We extended `oq reduce_sm` to work with multiFaultSources.
+We extended the command `oq engine` with and option `--sample-sources`
+to reduce large calculations by sampling the source model (useful for
+debugging).
 
-We made `oq engine --multi --run` more robust against out-of-memory errors.
+# Bug fixes and new checks
 
-# IT changes
+A bug in event based calculations, where far away ruptures coming from
+multi fault sources were needlessly stored, has been fixed.
 
-The support for Python 3.6, deprecated in version 3.13, has been
-removed. The engine should still work with it but we do not test Python 3.6
-anymore and can stop working at any moment without warnings.
-On the other hand, Python 3.9 is now officially supported.
+When using the command `oq engine --run job.ini --exports=csv` the
+`realizations.csv` output was not being exported. This is now fixed.
 
-We upgraded Shapely to version 1.8.0. This is a big change, since
-the new version is incompatible with the past and produces different
-numbers: as a consequence the engine produces slightly different
-results than in previous versions.
+`get_composite_source_model(oqparam)` was raising an error in some cases:
+this has been fixed.
 
-We updated Django to release 3.2.12 to avoid security bugs.
+The counting of the logic tree paths (`.num_paths`)
+was incorrect in some situations and has been fixed.
+Moreover we raised the limit on the number of branches to 183.
 
-We changed some internals to make it easier to run the engine in
-cluster environments with a shared database.
+The simplified logic tree implementation in the module hazardlib.lt
+has been fixed and documented in the advanced manual:
 
-We made it possible to set a default `pointsource_distance` in
-the global configuration file `openquake.cfg`.
+https://docs.openquake.org/oq-engine/advanced/logic_trees.html
 
-Finally the install.py script has been improved:
+We added a check for missing site parameters, for instance when
+accidentally passing a `sites.csv` file instead of a `site_model.csv` file.
 
-- the server installation correctly installs the systemctl files both on
-  Debian-based and RedHat-based distributions.
+We added a warning when starting from an calculation computed with an
+old version of the engine.
 
-- we added a missing `[directory]` section in the `openquake.cfg` file
-  generated by install.py.
+We added a warning for missing IMTs in ShakeMaps.
 
-- we now raise a helpful error message when ensurepip is missing.
+When using the `--hc` options extra fields of the site collection, such as
+the `custom_site_id` were lost: this is now fixed.
+
+# Installer and dependencies
+
+The universal installer now officially supports the M1 processor with Python 3.9
+(see https://github.com/gem/oq-engine/blob/master/doc/installing/universal.md)
+and Ubuntu 2022 and any linux system with Python 3.10.
+
+We fixed a few bugs: now the installer can be run from outside of
+the oq-engine directory, and there is a better error message when it is
+called with an unsupported Python version.
+
+The installer also installs the standalone tools, which are visible in
+separate tabs in the WebUI. Before they had to be installed manually.
+
+Our RPM packages use the universal installer internally.
+
+`numba` has been added to the list of dependencies and it is now automatically
+installed with the engine. The engine still works without it, though
+calculations might be slower without numba.
+
+We added NetworkX as a dependency: this is used only when performing
+risk infrastructure calculations.
+
+We upgraded pandas to version 1.3.5, to avoid a bug breaking the
+risk infrastructure calculations.
+
+We raised the toml module version to 0.10.2.
 
 # Other
 
-The classical calculator now stores unique rupture IDs in the `rup` DataFrame.
-There are some limitations, and in particular you cannot expect the same
-calculation on different machine to produce the same IDs unless you fix
-the parameter `concurrent_tasks` too.
+Thanks to a grant from USAID the engine manual has been converted from
+LaTeX format to Sphinx format and it is now accessible online at the
+address https://docs.openquake.org/oq-engine/manual/
+We also overhauled the advanced manual and documented the new features.
 
-We removed the `applyToSourceType` functionality of the logic tree, since it
-was not used and broken anyway.
+Modern laptops/PCs tend to have many cores but not enough memory per
+core. To avoid running out of memory the engine now automatically
+disables parallelization if less than 0.5 GB per core is
+available. We remind our users that for large calculations, 4 GB per
+core is recommended; also, hyperthreading should be disabled to increase
+the available memory per core.
 
-We raised the limit to 94 GMPEs per tectonic region type and 94
-branches per source model logic tree.
+If the DbServer does not start, it is now possible to
+debug the problem by accessing the database access directly;
+it is enough to set the environment variable `OQ_DATABASE=local`
+or to set `dbserver.host = local` in the openquake.cfg file.
 
-In the ruptures dataset for event based calculations we now store the
-occurrence rate multiplied by the source model weight, to simplify some
-consistency checks.
+We extended the WebUI to display the host name in the calculation list:
+this is useful when running calculations on a shared database.
 
-Finally, as usual, we worked at improving the documentation.
+At user request, we introduced three new environment variables `OQ_ADMIN_LOGIN`,
+`OQ_ADMIN_PASSWORD`, `OQ_ADMIN_EMAIL` that can be used to set the credentials
+of the administrator user in the WebUI.

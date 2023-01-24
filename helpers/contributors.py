@@ -30,7 +30,6 @@ def main():
                 is_header = False
 
             l_mod = re.sub(' +', ' ', lin)
-            # sys.stdout.write(l_mod)
             l_items = l_mod.split(' ')
             l_arr.append(l_items)
             n_items = len(l_items)
@@ -47,10 +46,8 @@ def main():
                     name = ' '.join(l_items[0:n_items - 2])
                     gh_account = ""
                 max_name = max_name if max_name > len(name) else len(name)
-#                import pdb ; pdb.set_trace()
     for l_items in l_arr:
         n_items = len(l_items)
-        # import pdb ; pdb.set_trace()
         if n_items >= 4:
             year = l_items[n_items - 1]
             month = l_items[n_items - 2]

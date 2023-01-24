@@ -82,9 +82,11 @@ class MultiFaultTestCase(unittest.TestCase):
         src = MultiFaultSource("01", "test", "Moon Crust",
                                self.rup_idxs, self.pmfs, self.mags, self.rakes)
         src.set_sections(self.sections)
+        src.mutex_weight = 1.
 
         # test conversion to XML
-        smodel = SourceModel([SourceGroup("Moon Crust", [src], "test_group")])
+        smodel = SourceModel([SourceGroup("Moon Crust", [src], "test_group",
+                                          src_interdep='mutex')])
         fd, tmp = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'wb'):
             sm_xml, gm_hdf5, gm_xml = write_source_model(tmp, smodel)

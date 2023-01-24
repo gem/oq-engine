@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2022 GEM Foundation
+# Copyright (C) 2018-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.baselib import sap, hdf5, datastore
-from openquake.calculators.getters import PmapGetter
+from openquake.calculators.getters import ProbabilityMapGetter
 
 
 def combine_mean_curves(calc_big: int, calc_small: int):

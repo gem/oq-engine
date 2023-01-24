@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -292,7 +292,7 @@ class Stepp1971(BaseCatalogueCompleteness):
         if (max_mag - min_mag) < delta_m:
             raise ValueError('Bin width greater than magnitude range!')
 
-        mag_bins = np.arange(np.floor(min_mag), np.ceil(max_mag), delta_m)
+        mag_bins = np.arange(np.floor(min_mag), np.ceil(max_mag + delta_m), delta_m)
 
         # Check to see if there are magnitudes in lower and upper bins
         is_mag = np.logical_and(mag_bins - max_mag < delta_m,

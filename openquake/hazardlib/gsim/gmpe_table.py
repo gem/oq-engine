@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -171,6 +171,7 @@ class GMPETable(GMPE):
 
     REQUIRES_SITES_PARAMETERS = set()
 
+    #: REQUIRES_DISTANCES is set at the instance level
     REQUIRES_DISTANCES = set()
 
     REQUIRES_RUPTURE_PARAMETERS = {"mag"}

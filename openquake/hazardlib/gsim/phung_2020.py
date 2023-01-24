@@ -124,7 +124,7 @@ class PhungEtAl2020Asc(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
-    # rx for hanging wall
+    #: rx for hanging wall
     REQUIRES_DISTANCES = {'rjb', 'rrup', 'rx'}
 
     REQUIRES_RUPTURE_PARAMETERS = {'dip', 'mag', 'rake', 'ztor'}
@@ -330,10 +330,10 @@ class PhungEtAl2020SInter(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
-    # rjb and rx not required for subduction
+    #: rjb and rx not required for subduction
     REQUIRES_DISTANCES = {'rrup'}
 
-    # dip and rake not required for subduction
+    #: dip and rake not required for subduction
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}

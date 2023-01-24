@@ -152,71 +152,6 @@ they are not important, you have succeeded in doubling the speed
 on your computation. And then you can start to work on the other
 quadratic and linear parameter and to get an ever bigger speedup!
 
-GMFs for California
------------------------------------------
-
-We had an user asking for the GMFs of California on 707,920 hazard sites,
-using the UCERF mean model and an investigation time of 100,000 years.
-Is this feasible or not? Some back of the envelope calculations
-suggests that it is unfeasible, but reality can be different.
-
-The relevant parameters are the following::
-
- N = 707,920 hazard sites
- E = 10^5 estimated events of magnitude greater then 5.5 in the investigation
-     time of 100,000 years
- B = 1 number of branches in the UCERF logic tree
- G = 5 number of GSIMS in the GMPE logic tree
- I = 6 number of intensity measure types
- S1 = 13 number of bytes used by the engine to store a single GMV
-
-The maximum size of generated GMFs is
-
-``N * E * B * G * I * S1 = 25 TB (terabytes)``
-
-Storing and sharing 25 TB of data is a big issue, so the problem seems
-without solution. However, most of the ground motion values are zero,
-because there is a maximum distance of 300 km and a rupture cannot
-affect all of the sites. So the size of the GMFs should be less than
-25 TB. Moreover, if you want to use such GMFs for a damage analysis,
-you may want to discard very small shaking that will not cause any
-damage to your buildings. The engine has a parameter to discard all
-GMFs below a minimum threshold, the ``minimum_intensity`` parameter. The
-higher the threshold, the smaller the size of the GMFs. By playing
-with that parameter you can reduce the size of the output by orders of
-magnitudes. Terabytes could easily become gigabytes with a well chosen
-threshold.
-
-In practice, we were able to run the full 707,920 sites by
-splitting the sites in 70 tiles and by using a minimum intensity of 0.1 g. This
-was the limit configuration for our cluster which has 5 machines with
-128 GB of RAM each. 
-
-The full calculation was completed in only 4 hours because our calculators
-are highly optimized. The total size of the generated HDF5 files was
-of 400 GB. This is a lot less than 25 TB, but still too large for sharing
-purposes.
-
-Another way to reduce the output is to reduce the number of intensity
-measure types. Currently in your calculations there are 6 of them
-(PGA, SA(0.1), SA(0.2), SA(0.5), SA(1.0), SA(2.0)) but if you restrict
-yourself to only PGA the computation and the output will become 6
-times smaller. Also, there are 5 GMPEs: if you restrict yourself to 1 GMPE
-you gain a factor of 5. Similarly, you can reduce the investigation period
-from 100,000 year to 10,000 years, thus gaining another order of magnitude.
-Also, raising the minimum magnitude reduces the number of events significantly.
-
-But the best approach is to be smart. For instance, we know from experience
-that if the final goal is to estimate the total loss for a given exposure, the
-correct way to do that is to aggregate the exposure on a smaller number of
-hazard sites. For instance, instead of the original 707,920 hazard sites
-we could aggregate on only ~7,000 hazard sites and we would a calculation
-which is 100 times faster, produces 100 times less GMFs and still produces
-a good estimate for the total loss.
-
-In short, risk calculations for the mean field UCERF model are routines
-now, in spite of what the naive expectations could be.
-
 Collapsing the GMPE logic tree
 ---------------------------------------
 
@@ -948,8 +883,8 @@ curve. The ``lvl`` field is an integer corresponding to the intensity
 measure level in the hazard curve.
 
 There is a consistency check comparing the mean hazard curves
-with the value obtained by composing the probab `disagg_by_src` array,
-for the heighest level of each intensity measure type.
+with the value obtained by composing the probabilities in the
+disagg_by_src` array, for the heighest level of each intensity measure type.
 
 It should be noticed that many hazard models contain thousands of
 sources and as a consequence the ``disagg_by_src`` matrix can be
@@ -961,11 +896,12 @@ sources: for instance you could convert point sources in multipoint
 sources.
 
 In engine 3.15 we also introduced the so-called "colon convention" on source
-IDs: if you have many sources that for some reason can be collected
-together - for instance because they are all in the same region or
-because they are components of a same source split by magnitude - you
-can tell to the engine to collect them in the ``disagg_by_src``
-matrix. The trick is to use IDs with the same prefix, a colon and then a
+IDs: if you have many sources that for some reason should be collected
+together - for instance because they all account for seismicity in the same 
+tectonic region, or because they are components of a same source but are split
+into separate sources by magnitude - you
+can tell the engine to collect them into one source in the ``disagg_by_src``
+matrix. The trick is to use IDs with the same prefix, a colon, and then a
 numeric index. For instance, if you had 3 sources with IDs ``src_mag_6.65``,
 ``src_mag_6.75``, ``src_mag_6.85``, fragments of the same source with
 different magnitudes, you could change their IDs to something like
@@ -978,9 +914,11 @@ work too and would be clearer: the IDs should be unique, however.
 If the IDs are not unique and the engine determines that the underlying
 sources are different, then an extension "semicolon + incremental index"
 is automatically added. This is useful when the hazard modeler wants
-to define a model where the same source appears in different versions
-having changed some of the parameters. In that case the modeler should
-use always the same ID: the engine will automatically distinguish the
+to define a model where the more than one version of the same source appears
+in one source model, having changed some of the parameters, or when varied
+versions of a source appear in each branch of a logic tree. In that case, 
+the modeler should use always the exact same ID (i.e. without the colon and 
+numeric index): the engine will automatically distinguish the
 sources during the calculation of the hazard curves and consider them the same
 when saving the array ``disagg_by_src``: you can see an example in the
 test ``qa_tests_data/classical/case_79`` in the engine code base. In that
@@ -995,6 +933,41 @@ exclusive sources, i.e. for the Japan model. You can see an example in
 the test ``qa_tests_data/classical/case_27``. However, the case of
 mutually exclusive ruptures - an example is the New Madrid cluster
 in the USA model - is not supported yet.
+
+In some cases it is tricky to discern whether use of the colon convention
+or identical source IDs is appropriate. The following list indicates several
+possible cases that a user may encounter, and the appropriate approach to 
+assigning source IDs. Note that this list includes the cases that have been 
+tested so far, and is not a comprehensive list of all cases that may arise.
+
+1. Sources in the same source group/source model are scaled alternatives of 
+   each other. For example, this occurs when for a given source, epistemic
+   uncertainties such as occurrence rates or geometries are considered, 
+   but the modeller has pre-scaled the rates rather than including the 
+   alternative hypothesis in separate logic tree branches. 
+
+   **Naming approach**: identical IDs.
+
+2. Sources in different files are alternatives of each other, e.g. each is used 
+   in a different branch of the source model logic tree. 
+
+   **Naming approach**: identical IDs.
+
+3. A source is defined in OQ by numerous sources, either in the same file or 
+   different ones. For example, one could have a set of non-parametric sources,
+   each with many rutpures, that are grouped together into single files by 
+   magnitude. Or, one could have many point sources that together represent the 
+   seismicity from one source. 
+
+   **Naming approach**: colon convention
+
+4. One source consists of many mutually exclusive sources, as in 
+   ``qa_tests_data/classical/case_27``. 
+
+   **Naming approach**: colon convention
+
+Cases 1 and 2 could include include more than one source typology, as in 
+``qa_tests_data/classical/case_79``.
 
 NB: ``disagg_by_src`` can be set to true only if the
 ``ps_grid_spacing`` approximation is disabled. The reason is that the

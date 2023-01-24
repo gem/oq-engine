@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -40,6 +40,7 @@ ALT_MFDS = os.path.join(os.path.dirname(__file__),
 COLLECTION = os.path.join(os.path.dirname(__file__),
                           'source_model/source_group_collection.xml')
 
+# NB: this is RUP_MUTEX, SRC_MUTEX is tested in multi_fault_test
 MUTEX = os.path.join(os.path.dirname(__file__),
                      'source_model/nonparametric-source-mutex-ruptures.xml')
 

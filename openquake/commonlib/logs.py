@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2022 GEM Foundation
+# Copyright (C) 2010-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -52,7 +52,8 @@ def dbcmd(action, *args):
             return dbapi.db(action, *args)
         else:
             return func(dbapi.db, *args)
-    sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect')
+    sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect',
+                         timeout=60)  # when the system is loaded
     with sock:
         res = sock.send((action,) + args)
         if isinstance(res, parallel.Result):
@@ -182,24 +183,27 @@ class LogContext:
                 'create_job',
                 get_datadir(),
                 self.params['calculation_mode'],
-                self.params['description'],
+                self.params.get('description', 'test'),
                 user_name,
                 hc_id,
                 host)
+            self.usedb = True
         elif calc_id == -1:
             # only works in single-user situations
             self.calc_id = get_last_calc_id() + 1
+            self.usedb = False
         else:
             # assume the calc_id was alreay created in the db
             self.calc_id = calc_id
+            self.usedb = True
 
-    def get_oqparam(self):
+    def get_oqparam(self, validate=True):
         """
-        :returns: a validated OqParam instance
+        :returns: an OqParam instance
         """
         if self.oqparam:  # set by submit_job
             return self.oqparam
-        return readinput.get_oqparam(self.params)
+        return readinput.get_oqparam(self.params, validate=validate)
 
     def __enter__(self):
         if not logging.root.handlers:  # first time
@@ -209,7 +213,8 @@ class LogContext:
         for handler in logging.root.handlers:
             fmt = logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S')
             handler.setFormatter(fmt)
-        self.handlers = [LogDatabaseHandler(self.calc_id)]
+        self.handlers = [LogDatabaseHandler(self.calc_id)] \
+            if self.usedb else []
         if self.log_file is None:
             # add a StreamHandler if not already there
             if not any(h for h in logging.root.handlers
@@ -233,7 +238,7 @@ class LogContext:
 
     def __getstate__(self):
         # ensure pickleability
-        return dict(calc_id=self.calc_id, params=self.params,
+        return dict(calc_id=self.calc_id, params=self.params, usedb=self.usedb,
                     log_level=self.log_level, log_file=self.log_file,
                     user_name=self.user_name, oqparam=self.oqparam)
 

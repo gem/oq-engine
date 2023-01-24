@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2022 GEM Foundation
+# Copyright (C) 2013-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -535,6 +535,35 @@ class CompositeRiskModel(collections.abc.Mapping):
         self.consdict = consdict or {}  # new style consequences, by anything
         self.init()
 
+    def set_tmap(self, tmap):
+        """
+        Set the attribute .tmap if the risk IDs in the
+        taxonomy mapping are consistent with the fragility functions.
+        """
+        self.tmap = tmap
+        if 'consequence' not in self.oqparam.inputs:
+            return
+        csq_files = []
+        for fnames in self.oqparam.inputs['consequence'].values():
+            if isinstance(fnames, list):
+                csq_files.extend(fnames)
+            else:
+                csq_files.append(fnames)
+        cfs = '\n'.join(csq_files)
+        for loss_type in tmap:
+            for byname, coeffs in self.consdict.items():
+                # ex. byname = "losses_by_taxonomy"
+                if len(coeffs):
+                    consequence, tagname = byname.split('_by_')
+                    # the taxonomy map is a dictionary loss_type ->
+                    # [[(risk_taxon, weight]),...] for each asset taxonomy
+                    for pairs in tmap[loss_type][1:]:  # strip [('?', 1)]
+                        for risk_t, weight in pairs:
+                            try:
+                                coeffs[risk_t][loss_type]
+                            except KeyError as err:
+                                raise InvalidFile(
+                                    'Missing %s in\n%s' % (err, cfs))
     def check_risk_ids(self, inputs):
         """
         Check that there are no missing risk IDs for some risk functions
@@ -784,6 +813,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a dictionary keyed by extended loss type
         """
         rc = scientific.RiskComputer(self, asset_df)
+        # rc.pprint()
         # dic = rc.todict()
         # rc2 = get_riskcomputer(dic)
         # dic2 = rc2.todict()

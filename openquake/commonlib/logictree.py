@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2022 GEM Foundation
+# Copyright (C) 2010-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -142,7 +142,7 @@ def collect_info(smltpath, branchID=None):
     except Exception:
         raise InvalidFile('%s is not a valid source_model_logic_tree_file'
                           % smltpath)
-    paths = set()
+    smpaths = set()
     h5paths = set()
     applytosources = collections.defaultdict(list)  # branchID -> source IDs
     for blevel in blevels:
@@ -156,12 +156,14 @@ def collect_info(smltpath, branchID=None):
                         continue
                     with context(smltpath, br):
                         fnames = unique(br.uncertaintyModel.text.split())
-                        paths.update(abs_paths(smltpath, fnames))
+                        smpaths.update(abs_paths(smltpath, fnames))
                         for fname in fnames:
                             hdf5file = os.path.splitext(fname)[0] + '.hdf5'
                             if os.path.exists(hdf5file):
                                 h5paths.add(os.path.abspath(hdf5file))
-    return Info(sorted(paths), sorted(h5paths), applytosources)
+                    if os.environ.get('OQ_REDUCE'):  # only take first branch
+                        break
+    return Info(sorted(smpaths), sorted(h5paths), applytosources)
 
 
 def read_source_groups(fname):
@@ -451,6 +453,9 @@ class SourceModelLogicTree(object):
         bs_id = branchset_node['branchSetID']
         weight_sum = 0
         branches = branchset_node.nodes
+        if os.environ.get('OQ_REDUCE'):  # only take first branch
+            branches = [branches[0]]
+            branches[0].uncertaintyWeight.text = 1.
         values = []
         bsno = len(self.branchsets)
         for brno, branchnode in enumerate(branches):

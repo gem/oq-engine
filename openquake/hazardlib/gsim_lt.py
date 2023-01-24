@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2022, GEM Foundation
+# Copyright (C) 2010-2023, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -406,6 +406,9 @@ class GsimLogicTree(object):
                     branches.append(bt)
                     self.shortener[branch_id] = keyno(
                         branch_id, bsno, brno, self.filename)
+                if os.environ.get('OQ_REDUCE'):  # take the first branch only
+                    bt.weight.dic['weight'] = 1.
+                    break
             tot = sum(weights)
             assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
             if duplicated(branch_ids):

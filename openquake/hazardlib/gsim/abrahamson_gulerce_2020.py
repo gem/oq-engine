@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -669,7 +669,7 @@ class AbrahamsonGulerce2020SInter(GMPE):
         sig += np.sqrt(tau ** 2.0 + phi ** 2.0)
 
     # Coefficients taken from digital files supplied by Norm Abrahamson
-    COEFFS = COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt     c1i   vlin       b        a1       a2       a6      a7      a8    a10     a11      a12      a13      a14     a16    a17      a18    a19      a20     a21     a22     a23     a24      a25      a26      a27     a28      a29     a30      a31      a32      a33      a34      a35      a36      a37    a39     a41  USA-AK_Adj  CAS_Adj     d1     d2   rhoW   rhoB  phi_s2s_g1  phi_s2s_g2   phi_s2s_g3      e1       e2      e3
     pga    8.20   865.1  -1.186   4.5960  -1.4500  -0.0043  3.2100  0.0440  3.210  0.0070   0.9000   0.0000  -0.4600  0.0900  0.000  -0.2000  0.000   0.0000  0.0400  0.0400  0.0000  0.0015   0.0007   0.0036  -0.0004  0.0025   0.0006  0.0033   3.7783   3.3468   3.8025   5.0361   4.6272   4.8044   3.5669  0.000  -0.029       0.487    0.828  0.325  0.137  1.000  1.000       0.396       0.396        0.545   0.550   -0.270   0.050
     0.010  8.20   865.1  -1.186   4.5960  -1.4500  -0.0043  3.2100  0.0440  3.210  0.0070   0.9000   0.0000  -0.4600  0.0900  0.000  -0.2000  0.000   0.0000  0.0400  0.0400  0.0000  0.0015   0.0007   0.0036  -0.0004  0.0025   0.0006  0.0033   3.7783   3.3468   3.8025   5.0361   4.6272   4.8044   3.5669  0.000  -0.029       0.487    0.828  0.325  0.137  1.000  1.000       0.396       0.396        0.545   0.550   -0.270   0.050

@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -150,7 +150,7 @@ class TestSteppCompleteness(unittest.TestCase):
     def test_stepp_get_magnitudes(self):
         # Tests the stepp private function _get_magnitudes_from_spacing
         magnitudes = np.arange(3.7, 7.8, 0.5)
-        expected = np.arange(3.5, 8.0, 0.5)
+        expected = np.arange(3.5, 8.5, 0.5)
         np.testing.assert_allclose(
             expected,
             self.process._get_magnitudes_from_spacing(magnitudes, 0.5))

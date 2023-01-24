@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -75,6 +75,14 @@ def _get_sitecol(hparams, req_site_params):
     if 'sites' in hparams:
         sm = unittest.mock.Mock(**hparams)
         mesh = geo.Mesh.from_coords(hparams['sites'])
+    elif 'sites_csv' in hparams:
+        data = open(hparams['sites_csv']).read().replace(',', ' ').strip()
+        coords = valid.coordinates(','.join(data.split('\n')))
+        dic = {site.param[p]: hparams[site.param[p]] for p in req_site_params}
+        if 'reference_vs30_type' not in dic:
+            dic['reference_vs30_type'] = 'measured'
+        sm = type('FakeSM', (), dic)
+        mesh = geo.Mesh.from_coords(coords)
     elif 'site_model_file' in hparams:
         sm = _get_site_model(hparams['site_model_file'], req_site_params)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
@@ -105,8 +113,8 @@ def _get_ebruptures(fname, conv=None, ses_seed=None):
         [rup_node] = nrml.read(fname)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'  # no TRT for scenario ruptures
-        rup.rup_id = ses_seed
-        ebrs = [EBRupture(rup, 'NA', 0, id=rup.rup_id, scenario=True)]
+        rup.seed = ses_seed
+        ebrs = [EBRupture(rup, 'NA', 0, id=rup.seed, scenario=True)]
         return ebrs
 
     assert fname.endswith('.csv'), fname
@@ -252,7 +260,7 @@ def read_input(hparams, **extra):
     for trt, rlzs_by_gsim in gslt.get_rlzs_by_gsim_trt(n, s).items():
         hparams['mags'] = sorted(mags_by_trt[trt] or mags_by_trt['*'])
         cmakerdict[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, hparams)
-        cmakerdict[trt].start = start
+        cmakerdict[trt].gidx = numpy.arange(start, start + len(rlzs_by_gsim))
         start += len(rlzs_by_gsim)
     if rmfname:
         # for instance, for 2 TRTs with 5x2 GSIMs and ngmfs=10, the

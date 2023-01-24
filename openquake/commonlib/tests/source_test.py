@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2022 GEM Foundation
+# Copyright (C) 2010-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -650,17 +650,17 @@ class SourceGroupTestCase(unittest.TestCase):
     def test_repr(self):
         self.assertEqual(
             repr(self.source_collector['Volcanic']),
-            '<SourceGroup Volcanic, 3 source(s)>')
+            '<SourceGroup Volcanic, 3 source(s), weight=0>')
         self.assertEqual(
             repr(self.source_collector['Stable Continental Crust']),
-            '<SourceGroup Stable Continental Crust, 1 source(s)>'
+            '<SourceGroup Stable Continental Crust, 1 source(s), weight=0>'
         )
         self.assertEqual(
             repr(self.source_collector['Subduction Interface']),
-            '<SourceGroup Subduction Interface, 1 source(s)>')
+            '<SourceGroup Subduction Interface, 1 source(s), weight=0>')
         self.assertEqual(
             repr(self.source_collector['Active Shallow Crust']),
-            '<SourceGroup Active Shallow Crust, 2 source(s)>')
+            '<SourceGroup Active Shallow Crust, 2 source(s), weight=0>')
 
 
 class RuptureConverterTestCase(unittest.TestCase):

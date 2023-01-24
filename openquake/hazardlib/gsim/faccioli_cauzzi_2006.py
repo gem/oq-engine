@@ -51,6 +51,7 @@ class FaccioliCauzzi2006(GMPE):
 
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
+    #: Required distances
     REQUIRES_DISTANCES = {'repi'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):

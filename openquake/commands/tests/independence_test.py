@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2022 GEM Foundation
+# Copyright (C) 2016-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -66,4 +66,4 @@ class CaseConsistencyTestCase(unittest.TestCase):
         for key, counts in cnt.items():
             if counts > 1:
                 raise RuntimeError('There are case-inconsistent files %s' %
-                                   key)
+                                   [f for f in fnames if f.lower() == key])

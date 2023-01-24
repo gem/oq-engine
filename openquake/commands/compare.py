@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2022 GEM Foundation
+# Copyright (C) 2018-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -96,7 +96,7 @@ class Comparator(object):
         return numpy.array(arrays)  # shape (C, N, L)
 
     def getuhs(self, what, p, sids):
-        # uhs for the first poe
+        # uhs for the last poe
         oq0 = self.oq
         extractor = self.extractors[0]
         what = 'hmaps?kind=mean'  # shape (N, M, P)
@@ -193,7 +193,7 @@ def compare_cumtime(calc1: int, calc2: int):
     return Comparator([calc1, calc2]).cumtime()
 
 
-def compare_uhs(calc_ids: int, files=False, *, poe_id: int = 0,
+def compare_uhs(calc_ids: int, files=False, *, poe_id: int = -1,
                 samplesites='', rtol: float = 0, atol: float = 1E-3):
     """
     Compare the uniform hazard spectra of two or more calculations.
@@ -248,16 +248,40 @@ def compare_avg_gmf(imt, calc_ids: int, files=False, *,
         print('rms-diff =', sigma)
 
 
+# works only locally for the moment
+def compare_risk_by_event(event: int, calc_ids: int, *,
+                          rtol: float = 0, atol: float = 1E-3):
+    """
+    Compare risk_by_event for a given event across two calculations.
+    Raise an error if the GMFs are not compatible.
+    """
+    ds0 = datastore.read(calc_ids[0])
+    ds1 = datastore.read(calc_ids[1])
+    df0 = ds0.read_df('gmf_data', 'sid', sel={'eid': event})
+    df1 = ds1.read_df('gmf_data', 'sid', sel={'eid': event})
+    df = df0.compare(df1)
+    if len(df):
+        print('Not comparable GMFs: %s', df); return
+    df0 = ds0.read_df('risk_by_event', 'agg_id', sel={'event_id': event})
+    df1 = ds1.read_df('risk_by_event', 'agg_id', sel={'event_id': event})
+    print(df0)
+    print(df1)
+
+
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
             uhs=compare_uhs,
             hmaps=compare_hmaps,
             hcurves=compare_hcurves,
-            avg_gmf=compare_avg_gmf)
+            avg_gmf=compare_avg_gmf,
+            risk_by_event=compare_risk_by_event)
 
-for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf):
+for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
+          compare_risk_by_event):
     if f is compare_uhs:
         f.poe_id = 'index of the PoE (or return period)'
+    elif f is compare_risk_by_event:
+        f.event = 'event index'
     else:
         f.imt = 'intensity measure type to compare'
     f.calc_ids = dict(help='calculation IDs', nargs='+')

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -263,6 +263,13 @@ def PGDMax(vert_settlement, lat_spread):
     """
     return numpy.maximum(vert_settlement, lat_spread)
 
+    
+def LSD():
+    """
+    Liquefaction-induced lateral spread displacements measured in units of ``m``.
+    """
+    return IMT('LSD')    
+    
 
 def PGDGeomMean(vert_settlement, lat_spread):
     """

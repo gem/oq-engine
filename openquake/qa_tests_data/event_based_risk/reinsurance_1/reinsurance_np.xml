@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <reinsuranceModel>
+    <description>Test nonproportional reinsurance model</description>
+    <fieldMap>
+      <field oq="nonprop1" input="WXLR" type="wxlr"
+             deductible="50" limit="350" />
+    </fieldMap>
+    <policies>policy.csv</policies>
+  </reinsuranceModel>
+</nrml>

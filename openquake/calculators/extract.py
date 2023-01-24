@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2022 GEM Foundation
+# Copyright (C) 2017-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -1136,8 +1136,9 @@ def extract_disagg(dstore, what):
     # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))
     axis = [bins[k] for k in disag_tup]
-    # compute axis mid points
-    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
+
+    # compute axis mid points, except for the TRT axis
+    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype != object
             else ax for ax in axis]
     if len(axis) == 1:  # i.e. Mag or Dist
         values = numpy.array([axis[0]] + list(matrix.T))  # i.e. shape (2, 3)
@@ -1218,11 +1219,11 @@ def extract_disagg_layer(dstore, what):
         kinds = oq.disagg_outputs
     sitecol = dstore['sitecol']
     poes_disagg = oq.poes_disagg or (None,)
+    realizations = numpy.array(dstore['full_lt'].get_realizations())
     edges, shapedic = disagg.get_edges_shapedic(
-        oq, sitecol, dstore['source_mags'])
+        oq, sitecol, dstore['source_mags'], len(realizations))
     dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
     out = numpy.zeros(len(sitecol), dt)
-    realizations = numpy.array(dstore['full_lt'].get_realizations())
     hmap4 = dstore['hmap4'][:]
     best_rlzs = dstore['best_rlzs'][:]
     arr = {kind: dstore['disagg/' + kind][:] for kind in kinds}

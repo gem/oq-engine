@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2022 GEM Foundation
+# Copyright (C) 2013-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,8 +21,10 @@ import pickle
 
 import numpy
 import pandas
+import matplotlib.pyplot as plt
 from openquake.risklib import scientific
 
+PLOTTING = False
 aae = numpy.testing.assert_allclose
 eids = numpy.arange(3)
 
@@ -226,29 +228,23 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
         self.v2.seed = 41
 
     def test_split_single_interval_with_no_steps_between(self):
-        numpy.testing.assert_allclose(
-            [0.0, 0.5, 0.7, 1.0],
-            self.v1.mean_loss_ratios_with_steps(1))
+        aae([0.0, 0.5, 0.7, 1.0], self.v1.mean_loss_ratios_with_steps(1))
 
     def test_evenly_spaced_single_interval_with_a_step_between(self):
-        numpy.testing.assert_allclose(
-            [0., 0.25, 0.5, 0.6, 0.7, 0.85, 1.],
+        aae([0., 0.25, 0.5, 0.6, 0.7, 0.85, 1.],
             self.v1.mean_loss_ratios_with_steps(2))
 
     def test_evenly_spaced_single_interval_with_steps_between(self):
-        numpy.testing.assert_allclose(
-            [0., 0.125, 0.25, 0.375, 0.5, 0.55, 0.6, 0.65,
+        aae([0., 0.125, 0.25, 0.375, 0.5, 0.55, 0.6, 0.65,
              0.7, 0.775, 0.85, 0.925, 1.],
             self.v1.mean_loss_ratios_with_steps(4))
 
     def test_evenly_spaced_multiple_intervals_with_a_step_between(self):
-        numpy.testing.assert_allclose(
-            [0., 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.],
+        aae([0., 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.],
             self.v2.mean_loss_ratios_with_steps(2))
 
     def test_evenly_spaced_multiple_intervals_with_steps_between(self):
-        numpy.testing.assert_allclose(
-            [0., 0.0625, 0.125, 0.1875, 0.25, 0.3125, 0.375,
+        aae([0., 0.0625, 0.125, 0.1875, 0.25, 0.3125, 0.375,
              0.4375, 0.5, 0.5625, 0.625, 0.6875, 0.75, 0.8125,
              0.875, 0.9375, 1.],
             self.v2.mean_loss_ratios_with_steps(4))
@@ -264,7 +260,7 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
         expected = [0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18,
                     0.2, 0.24000000000000002, 0.28, 0.32, 0.36, 0.4, 0.56,
                     0.72, 0.8799999999999999, 1.04, 1.2]
-        numpy.testing.assert_allclose(es_lrs, expected)
+        aae(es_lrs, expected)
 
     def test__evenly_spaced_loss_ratios_prepend_0(self):
         # We expect a 0.0 to be prepended to the LRs before spacing them
@@ -278,7 +274,7 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
         expected = [0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18,
                     0.2, 0.24000000000000002, 0.28, 0.32, 0.36, 0.4, 0.56,
                     0.72, 0.8799999999999999, 1.04, 1.2]
-        numpy.testing.assert_allclose(es_lrs, expected)
+        aae(es_lrs, expected)
 
     def test__evenly_spaced_loss_ratios_append_1(self):
         vf = scientific.VulnerabilityFunction(
@@ -287,7 +283,7 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
         vf.init()
         es_lrs = vf.mean_loss_ratios_with_steps(2)
         expected = [0.0, 0.25, 0.5, 0.75, 1.0]
-        numpy.testing.assert_allclose(es_lrs, expected)
+        aae(es_lrs, expected)
 
     def test_strictly_increasing(self):
         vf = scientific.VulnerabilityFunction(
@@ -296,9 +292,9 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
         vf.init()
         vfs = vf.strictly_increasing()
 
-        numpy.testing.assert_allclose([0, 1, 3], vfs.imls)
-        numpy.testing.assert_allclose([0, 0.5, 1], vfs.mean_loss_ratios)
-        numpy.testing.assert_allclose([0, 0, 4], vfs.covs)
+        aae([0, 1, 3], vfs.imls)
+        aae([0, 0.5, 1], vfs.mean_loss_ratios)
+        aae([0, 0, 4], vfs.covs)
         self.assertEqual(vf.distribution_name, vfs.distribution_name)
 
     def test_pickle(self):
@@ -370,7 +366,7 @@ class FragilityFunctionTestCase(unittest.TestCase):
                        scientific.scenario_damage(ffs, 0.075))
 
     def _close_to(self, expected, actual):
-        numpy.testing.assert_allclose(actual, expected, atol=0.0, rtol=0.05)
+        aae(actual, expected, atol=0.0, rtol=0.05)
 
     def test_can_pickle(self):
         ffd = scientific.FragilityFunctionDiscrete(
@@ -395,32 +391,24 @@ class FragilityFunctionTestCase(unittest.TestCase):
 
 class InsuredLossesTestCase(unittest.TestCase):
     def test_below_deductible(self):
-        numpy.testing.assert_allclose(
-            [0],
-            scientific.insured_losses(numpy.array([0.05]), 0.1, 1))
-        numpy.testing.assert_allclose(
-            [0, 0],
+        aae([0],scientific.insured_losses(numpy.array([0.05]), 0.1, 1))
+        aae([0, 0],
             scientific.insured_losses(numpy.array([0.05, 0.1]), 0.1, 1))
 
     def test_above_limit(self):
-        numpy.testing.assert_allclose(
-            [0.4],
+        aae([0.4],
             scientific.insured_losses(numpy.array([0.6]), 0.1, 0.5))
-        numpy.testing.assert_allclose(
-            [0.4, 0.4],
+        aae([0.4, 0.4],
             scientific.insured_losses(numpy.array([0.6, 0.7]), 0.1, 0.5))
 
     def test_in_range(self):
-        numpy.testing.assert_allclose(
-            [0.2],
+        aae([0.2],
             scientific.insured_losses(numpy.array([0.3]), 0.1, 0.5))
-        numpy.testing.assert_allclose(
-            [0.2, 0.3],
+        aae([0.2, 0.3],
             scientific.insured_losses(numpy.array([0.3, 0.4]), 0.1, 0.5))
 
     def test_mixed(self):
-        numpy.testing.assert_allclose(
-            [0, 0.1, 0.4],
+        aae([0, 0.1, 0.4],
             scientific.insured_losses(numpy.array([0.05, 0.2, 0.6]), 0.1, 0.5))
 
     def test_mean(self):
@@ -432,7 +420,7 @@ class InsuredLossesTestCase(unittest.TestCase):
         m2 = scientific.insured_losses(losses2, 0.1, 0.5).mean()
         m = scientific.insured_losses(numpy.concatenate([losses1, losses2]),
                                       0.1, 0.5).mean()
-        numpy.testing.assert_allclose((m1 * l1 + m2 * l2) / (l1 + l2), m)
+        aae((m1 * l1 + m2 * l2) / (l1 + l2), m)
 
 
 class InsuredLossCurveTestCase(unittest.TestCase):
@@ -440,8 +428,7 @@ class InsuredLossCurveTestCase(unittest.TestCase):
         curve = numpy.array(
             [numpy.linspace(0, 1, 11), numpy.linspace(1, 0, 11)])
 
-        numpy.testing.assert_allclose(
-            numpy.array([[0., 0.1, 0.2, 0.3, 0.4, 0.5],
+        aae(numpy.array([[0., 0.1, 0.2, 0.3, 0.4, 0.5],
                          [0.8, 0.8, 0.8, 0.7, 0.6, 0.5]]),
             scientific.insurance_loss_curve(curve, 0.2, 0.5))
 
@@ -449,9 +436,7 @@ class InsuredLossCurveTestCase(unittest.TestCase):
         curve = numpy.array(
             [numpy.linspace(0, 1, 11), numpy.zeros(11)])
 
-        numpy.testing.assert_allclose(
-            [[0, 0.1, 0.2, 0.3, 0.4, 0.5],
-             [0, 0, 0, 0, 0, 0]],
+        aae([[0, 0.1, 0.2, 0.3, 0.4, 0.5], [0, 0, 0, 0, 0, 0]],
             scientific.insurance_loss_curve(curve, 0.1, 0.5))
 
 
@@ -548,7 +533,7 @@ class ClassicalDamageTestCase(unittest.TestCase):
 
 
 class LossesByEventTestCase(unittest.TestCase):
-    def test(self):
+    def test_convergency(self):
         # testing convergency of the mean curve
         periods = [10, 20, 50, 100, 150, 200, 250]
         eff_time = 500
@@ -563,3 +548,66 @@ class LossesByEventTestCase(unittest.TestCase):
         full = scientific.losses_by_period(
             losses, periods, eff_time=2*eff_time)
         aae(mean, full, rtol=1E-2)  # converges only at 1%
+
+    def test_maximum_probable_loss(self):
+        # checking that MPL does not break summability
+        rng = numpy.random.default_rng(42)
+        claim = numpy.round(1000 + rng.random(10) * 1000)
+        cession = numpy.round(rng.random(10) * 1000)
+        period = 2000
+        efftime = 10000
+        retention = claim - cession
+        idxs = numpy.argsort(claim)
+        claim_mpl = scientific.maximum_probable_loss(
+            claim, period, efftime, idxs)
+        cession_mpl = scientific.maximum_probable_loss(
+            cession, period, efftime, idxs)
+        ret_mpl = scientific.maximum_probable_loss(
+            retention, period, efftime, idxs)
+        self.assertEqual(claim_mpl, cession_mpl + ret_mpl)
+        # print('claim', claim[idxs], claim_mpl)
+        # print('cession', cession[idxs], cession_mpl)
+        # print('retention', retention[idxs], ret_mpl)
+        # [1094. 1128. 1439. 1450. 1697. 1761. 1774. 1786. 1859. 1976.] 1761.
+        # [443. 828. 927. 632. 823. 555. 371.  64. 644. 227.] 555.
+        # [651. 300. 512. 818. 874. 1206. 1403. 1722. 1215. 1749.] 1206.
+
+    def test_claim(self):
+        # curves for claim=cession+retention        
+        rng = numpy.random.default_rng(42)
+        claim = numpy.round(1000 + rng.random(100) * 1000)
+        cession = numpy.round(rng.random(100) * 1000)
+        efftime = 100_000
+        n = len(claim)
+        periods = scientific.return_periods(efftime, n)
+        retention = claim - cession
+        idxs = numpy.argsort(claim)
+        claim_curve = scientific.losses_by_period(
+            claim, periods, n, efftime, idxs)
+        cession_curve = scientific.losses_by_period(
+            cession, periods, n, efftime, idxs)
+        ret_curve = scientific.losses_by_period(
+            retention, periods, n, efftime, idxs)
+        aae(claim_curve, cession_curve + ret_curve)
+        print('keeping event associations')
+        print('claim', claim_curve)
+        print('cession', cession_curve)
+        print('retention', ret_curve)
+        if PLOTTING:
+            fig, ax = plt.subplots()
+            ax.plot(periods, claim_curve, label='claim')
+            ax.plot(periods, cession_curve, label='cession')
+            ax.plot(periods, ret_curve, label='retention')
+            ax.legend()
+            plt.show()
+
+        claim_curve = scientific.losses_by_period(
+            claim, periods, n, efftime)
+        cession_curve = scientific.losses_by_period(
+            cession, periods, n, efftime)
+        ret_curve = scientific.losses_by_period(
+            retention, periods, n, efftime)
+        print('not keeping event associations')
+        print('claim', claim_curve)
+        print('cession', cession_curve)
+        print('retention', ret_curve)

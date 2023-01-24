@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -149,15 +149,42 @@ class WeichertTestCase(unittest.TestCase):
                                       [1930., 6.0],
                                       [1910., 7.0]])
 
-    def test_weichert_full(self):
+    def test_weichert_calc(self):
         """
         Tests the Weichert function for the synthetic catalogue
         """
         wchrt = Weichert()
-        bval, sigmab, rate, sigma_rate = wchrt.calculate(self.catalogue,
-                                                         self.config,
-                                                         self.completeness)
+        bval, sigmab, aval, sigmaa = wchrt.calc(self.catalogue,
+                                                self.config,
+                                                self.completeness)
+        self.assertAlmostEqual(bval, 0.890, 3)
+        self.assertAlmostEqual(sigmab, 0.015, 3)
+        self.assertAlmostEqual(aval, 4.6708, 4)
+        self.assertAlmostEqual(sigmaa, 0.009108, 5)
+
+    def test_weichert_calculate(self):
+        """
+        Tests the Weichert function for the synthetic catalogue
+        """
+        wchrt = Weichert()
+        bval, sigmab, rate, sigma_rate, = wchrt.calculate(self.catalogue,
+                                                          self.config,
+                                                          self.completeness)
         self.assertAlmostEqual(bval, 0.890, 3)
         self.assertAlmostEqual(sigmab, 0.015, 3)
         self.assertAlmostEqual(rate, 100.1078, 4)
         self.assertAlmostEqual(sigma_rate, 2.1218, 4)
+
+    def test_weichert_calculate_all(self):
+        """
+        Tests the Weichert function for the synthetic catalogue
+        """
+        wchrt = Weichert()
+        bval, sigmab, rate, sigma_rate, aval, sigmaa = wchrt._calculate(
+            self.catalogue, self.config, self.completeness)
+        self.assertAlmostEqual(bval, 0.890, 3)
+        self.assertAlmostEqual(sigmab, 0.015, 3)
+        self.assertAlmostEqual(rate, 100.1078, 4)
+        self.assertAlmostEqual(sigma_rate, 2.1218, 4)
+        self.assertAlmostEqual(aval, 4.6708, 4)
+        self.assertAlmostEqual(sigmaa, 0.009108, 5)

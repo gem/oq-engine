@@ -1,0 +1,1241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="as_model eshm20"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Craton"
+        >
+            <areaSource
+            id="SHD-AS-TRAS447"
+            name="maina_lo_lowp447"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    42.9886 39.2242 43.2005 39.4611 42.8332 39.793 42.9505 40.2181 43.6621 40.2873 44.5424 39.5355 45.2636 38.4789 44.6863 38.4905 44.0771 38.6737 42.9886 39.2242
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.3837" bValue="0.7864" maxMag="7.7" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="85.0" probability="1.0" rake="-90.0" strike="10.08"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS449"
+            name="maina_lo_lowp449"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    43.0769 40.7929 43.8031 40.7452 43.6621 40.2873 42.9505 40.2181 42.8332 39.793 42.2921 39.8923 42.002 39.9091 41.5035 39.9568 42.5727 41.5192 42.6236 41.0591 43.0813 40.8691 43.0769 40.7929
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.3253" bValue="0.7769" maxMag="7.7" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="85.01" probability="1.0" rake="0.0" strike="48.69"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS451"
+            name="maina_lo_lowp451"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    39.3461 39.9993 39.5783 40.2031 40.7347 40.6053 41.1604 41.3248 41.4607 41.3753 42.5727 41.5192 41.5035 39.9568 40.7318 39.603 40.536 39.6471 39.9549 39.7641 39.3461 39.9993
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.6007" bValue="0.8338" maxMag="7.9" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="85.01" probability="1.0" rake="0.0" strike="48.69"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS454"
+            name="maina_lo_lowp454"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    28.1603 41.4793 28.3105 41.0354 27.2024 40.9024 26.0261 40.6028 26.3057 40.9535 26.1464 41.2495 26.1026 41.5234 26.7401 41.5805 26.5291 42.093 28.2681 42.0014 28.1603 41.4793
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.4302" bValue="0.721" maxMag="7.3" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="49.72" probability="1.0" rake="-90.0" strike="84.71"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS455"
+            name="maina_lo_lowp455"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    33.6655 39.0993 33.5579 39.2292 33.2646 39.4286 33.6343 39.8444 35.5308 40.5862 36.2582 40.3453 36.8241 40.4404 37.9688 40.0747 36.0145 39.5009 35.89 39.5474 34.7684 39.958 33.6655 39.0993
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.4538" bValue="0.8196" maxMag="7.3" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="1.0" rake="-90.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="9.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS456"
+            name="maina_lo_lowp456"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    33.2646 39.4286 33.5579 39.2292 33.6655 39.0993 34.7684 39.958 35.89 39.5474 34.861 38.7603 34.9277 38.1666 34.6635 37.6781 33.9792 37.9253 33.588 38.2756 33.0525 38.4337 32.5518 38.7162 32.405 38.8252 31.9422 39.0755 31.4968 39.2515 31.7986 39.6658 32.7101 39.3847 32.9727 39.6272 33.2646 39.4286
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.4451" bValue="0.8375" maxMag="7.0" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="1.0" rake="-90.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS460"
+            name="maina_lo_lowp460"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    31.7986 39.6658 31.4968 39.2515 31.1458 39.3572 30.3779 39.5835 29.5386 39.7202 27.8701 39.9757 29.5736 40.1229 29.665 40.3146 30.1759 40.1474 31.0074 40.0049 31.2845 39.8158 31.7986 39.6658
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.2372" bValue="0.8219" maxMag="7.3" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="49.85" probability="1.0" rake="-90.0" strike="45.92"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS461"
+            name="maina_lo_lowp461"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    32.5518 38.7162 32.0765 38.1491 31.883 38.2287 31.1432 38.7419 31.0372 38.8225 30.7308 38.9385 30.039 39.188 29.2351 39.4093 29.5386 39.7202 30.3779 39.5835 31.1458 39.3572 31.4968 39.2515 31.9422 39.0755 32.405 38.8252 32.5518 38.7162
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.5626" bValue="0.9621" maxMag="7.3" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="50.66" probability="1.0" rake="-90.0" strike="32.05"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS463"
+            name="maina_lo_lowp463"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    26.3013 39.8378 26.0609 39.6587 25.5149 39.6665 25.1695 39.968 26.2289 40.242 27.0668 40.5135 28.1863 40.6595 28.7145 40.5083 28.066 40.4663 27.4858 40.3165 26.3013 39.8378
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.5063" bValue="0.8526" maxMag="7.9" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="83.49" probability="1.0" rake="-90.0" strike="119.41"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS465"
+            name="maina_lo_lowp465"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    28.4793 36.2827 28.4648 36.7191 29.0226 37.176 29.5771 37.6308 30.1105 37.8507 30.2778 37.9525 30.2781 37.9653 30.4749 37.8815 30.5814 37.479 29.8689 37.3617 29.5189 37.1512 29.0259 36.7129 28.4793 36.2827
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.8912" bValue="0.9276" maxMag="7.3" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="52.35" probability="1.0" rake="0.0" strike="35.87"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS466"
+            name="maina_lo_lowp466"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    28.9763 40.5768 29.912 40.5659 30.6232 40.5574 31.3055 40.419 29.665 40.3146 29.5736 40.1229 27.8701 39.9757 27.1967 39.6397 26.2489 39.5414 26.1059 39.601 26.0609 39.6587 26.3013 39.8378 27.4858 40.3165 28.066 40.4663 28.7145 40.5083 28.9763 40.5768
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.57" bValue="0.813" maxMag="7.9" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="78.74" probability="1.0" rake="0.0" strike="65.67"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS467"
+            name="maina_lo_lowp467"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    27.8701 39.9757 29.5386 39.7202 29.2351 39.4093 29.0651 39.4386 28.2078 39.4941 27.7846 39.5297 26.9575 39.5285 27.1967 39.6397 27.8701 39.9757
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.6541" bValue="0.8965" maxMag="7.3" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="72.91" probability="1.0" rake="-90.0" strike="40.99"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS468"
+            name="maina_lo_lowp468"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    29.0226 37.176 27.4426 37.0225 26.9135 37.1787 26.5 37.1031 26.5707 37.4747 27.7858 37.6668 28.291 37.5923 29.4656 37.6686 29.5771 37.6308 29.0226 37.176
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.0391" bValue="0.9686" maxMag="7.3" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="65.43" probability="1.0" rake="-90.0" strike="67.19"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS471"
+            name="maina_lo_lowp471"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    32.0115 36.0519 30.3919 35.6752 29.8689 37.3617 30.5814 37.479 31.5265 37.8113 31.9907 37.0329 32.3559 36.6338 32.5341 36.1529 32.0115 36.0519
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="5.0189" bValue="1.1357" maxMag="7.3" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="52.35" probability="1.0" rake="0.0" strike="35.87"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS472"
+            name="maina_lo_lowp472"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    25.4714 38.0974 26.0052 38.8767 26.2492 39.0641 26.5279 38.606 26.5014 38.1222 26.1467 38.165 25.4714 38.0974
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.931" bValue="0.7226" maxMag="7.6" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="72.91" probability="1.0" rake="0.0" strike="44.98"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS474"
+            name="maina_lo_lowp474"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    30.5814 37.479 30.4749 37.8815 30.2781 37.9653 30.2817 38.1223 30.3718 38.5428 30.3774 38.8951 30.7308 38.9385 31.0372 38.8225 31.1432 38.7419 31.883 38.2287 32.0765 38.1491 31.6891 37.9104 31.5265 37.8113 30.5814 37.479
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.5649" bValue="0.8611" maxMag="7.3" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="46.29" probability="1.0" rake="-90.0" strike="31.28"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS476"
+            name="maina_lo_lowp476"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    30.3919 35.6752 28.6276 35.2326 28.5444 35.8218 28.4793 36.2827 29.0259 36.7129 29.5189 37.1512 29.8689 37.3617 30.3919 35.6752
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.4394" bValue="0.9944" maxMag="7.3" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="52.35" probability="1.0" rake="0.0" strike="35.87"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS477"
+            name="maina_lo_lowp477"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    26.2489 39.5414 27.1967 39.6397 26.9575 39.5285 26.5849 39.293 26.2492 39.0641 26.0052 38.8767 25.4787 39.1862 25.5149 39.6665 26.0609 39.6587 26.1059 39.601 26.2489 39.5414
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.3918" bValue="0.8035" maxMag="7.6" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="64.19" probability="1.0" rake="-90.0" strike="66.27"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS478"
+            name="maina_lo_lowp478"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    29.0226 37.176 28.4648 36.7191 26.9333 36.4333 26.5 36.3 26.6353 36.6471 27.4426 37.0225 29.0226 37.176
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.654" bValue="1.0209" maxMag="7.3" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="56.01" probability="1.0" rake="0.0" strike="57.72"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS479"
+            name="maina_lo_lowp479"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    28.4793 36.2827 28.5444 35.8218 28.0847 35.5673 27.4633 36.0431 26.5 36.3 26.9333 36.4333 28.4648 36.7191 28.4793 36.2827
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.7861" bValue="1.0528" maxMag="6.9" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="64.15" probability="1.0" rake="-90.0" strike="50.68"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS481"
+            name="maina_lo_lowp481"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    37.8816 38.0671 40.0281 38.9443 40.4132 39.3096 41.3426 39.0044 40.5882 38.7424 39.3595 38.3355 38.0917 37.9298 37.3677 37.4161 37.285 37.3567 37.1144 37.4394 36.942 37.3266 36.5948 37.4405 36.7637 37.5877 37.4935 37.9405 37.8816 38.0671
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.8975" bValue="0.828" maxMag="7.7" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS482"
+            name="maina_lo_lowp482"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    40.5882 38.7424 41.441 38.41 41.4089 38.3034 41.1211 38.3719 41.028 38.3056 40.1536 38.2655 39.3262 38.0448 38.9791 37.8575 38.0917 37.9298 39.3595 38.3355 40.5882 38.7424
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.0402" bValue="0.9519" maxMag="7.7" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS483"
+            name="maina_lo_lowp483"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    42.9886 39.2242 44.0771 38.6737 44.6863 38.4905 45.2636 38.4789 45.867 38.2581 46.0356 37.6314 45.9048 37.1388 44.0645 37.8966 42.5926 38.6564 42.4169 38.6949 41.3426 39.0044 41.5093 39.428 41.7959 39.3634 42.9886 39.2242
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.6482" bValue="0.8149" maxMag="7.7" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="86.5" probability="1.0" rake="0.0" strike="34.28"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS485"
+            name="maina_lo_lowp485"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    27.7846 39.5297 27.5806 39.2296 27.2693 39.0066 26.9865 38.7887 26.8369 38.3864 26.7606 38.0377 26.5014 38.1222 26.5279 38.606 26.2492 39.0641 26.5849 39.293 26.9575 39.5285 27.7846 39.5297
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.6376" bValue="0.8247" maxMag="7.6" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="82.14" probability="1.0" rake="0.0" strike="30.42"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS486"
+            name="maina_lo_lowp486"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    27.7858 37.6668 27.1543 37.8247 26.7606 38.0377 26.8675 38.0104 26.9704 38.1009 27.083 38.1313 27.5483 38.266 27.7747 38.3039 28.0048 38.3908 28.2022 38.3821 28.3562 38.3442 28.4831 38.2802 28.5995 38.1964 28.7253 38.0863 29.3308 38.1303 29.4595 37.7414 29.4656 37.6686 28.291 37.5923 27.7858 37.6668
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.7057" bValue="0.8366" maxMag="7.3" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="58.32" probability="1.0" rake="-90.0" strike="70.92"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS487"
+            name="maina_lo_lowp487"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    29.58 38.7475 30.0874 38.6849 30.3718 38.5428 30.2817 38.1223 30.2781 37.9653 30.2778 37.9525 30.1105 37.8507 29.5771 37.6308 29.4656 37.6686 29.4595 37.7414 29.3308 38.1303 28.8243 38.4357 28.1885 38.8028 27.775 39.0776 28.0297 39.0449 29.1509 38.9294 29.4549 38.8091 29.58 38.7475
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.1985" bValue="0.8204" maxMag="7.3" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="46.29" probability="1.0" rake="-90.0" strike="31.28"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS492"
+            name="maina_lo_lowp492"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    30.3774 38.8951 30.3718 38.5428 30.0874 38.6849 29.58 38.7475 29.4549 38.8091 29.1509 38.9294 28.0297 39.0449 27.775 39.0776 27.6796 39.158 27.5806 39.2296 27.7846 39.5297 28.2078 39.4941 29.0651 39.4386 29.2351 39.4093 30.039 39.188 30.7308 38.9385 30.3774 38.8951
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.5049" bValue="1.0125" maxMag="7.3" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="46.29" probability="1.0" rake="-90.0" strike="31.28"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS493"
+            name="maina_lo_lowp493"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    27.5806 39.2296 27.6796 39.158 27.775 39.0776 28.1885 38.8028 28.8243 38.4357 29.3308 38.1303 28.7253 38.0863 28.5995 38.1964 28.4831 38.2802 28.3562 38.3442 28.2022 38.3821 28.0048 38.3908 27.7747 38.3039 27.5483 38.266 27.083 38.1313 26.9704 38.1009 26.8675 38.0104 26.7606 38.0377 26.8369 38.3864 26.9865 38.7887 27.2693 39.0066 27.5806 39.2296
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.8481" bValue="0.8495" maxMag="7.3" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="50.26" probability="1.0" rake="-90.0" strike="59.42"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS495"
+            name="maina_lo_lowp495"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    32.8763 42.0915 31.3986 41.3172 30.697 41.244 30.6008 41.5991 32.6319 42.6354 34.0319 42.8354 36.3327 42.783 37.2172 42.5796 37.7832 42.1769 40.6663 42.1212 41.7911 42.1125 41.4607 41.3753 41.1604 41.3248 40.1475 41.0676 38.6375 41.1102 36.6765 41.647 35.3675 42.1201 34.2599 42.334 32.8763 42.0915
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.9782" bValue="0.9428" maxMag="7.1" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="57.4" probability="1.0" rake="0.0" strike="65.37"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-TRAS496"
+            name="maina_lo_lowp496"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    36.6765 41.647 38.6375 41.1102 40.1475 41.0676 41.1604 41.3248 40.7347 40.6053 39.5783 40.2031 39.3461 39.9993 38.69 40.2438 37.1819 40.7095 36.2388 41.0432 35.31 41.264 34.0066 41.3109 33.3425 41.2735 32.9308 41.1299 31.8863 40.8779 31.3986 41.3172 32.8763 42.0915 34.2599 42.334 35.3675 42.1201 36.6765 41.647
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.8756" bValue="0.933" maxMag="7.5" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="57.4" probability="1.0" rake="0.0" strike="65.37"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-UAAS496"
+            name="maina_lo_lowp496"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    36.8948 46.955 36.7465 46.2032 37.0313 45.504 35.9874 45.693 34.3649 45.2083 33.5288 45.3877 31.8411 45.3238 31.2173 45.0445 31.4851 44.1443 29.816 45.1989 28.4248 45.7951 26.9998 47.9904 26.65 48.25 26.4 48.2 26.2 48.0 25.2662 48.0953 24.4263 48.0445 22.8857 49.0379 23.526 49.912 24.12 50.415 30.9809 52.0071 30.1276 50.4618 30.225 49.5314 31.0561 48.6642 31.9638 47.9409 32.7792 47.868 34.1783 47.2747 35.618 47.3532 36.8948 46.955
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        25.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.7537" bValue="0.9781" maxMag="6.1" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="12.3" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-UKRA501"
+            name="maina_lo_lowp501"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    36.0249 44.4772 34.0848 43.9238 32.4377 44.221 31.4851 44.1443 31.2173 45.0445 31.8411 45.3238 33.5288 45.3877 34.3649 45.2083 35.9874 45.693 37.0313 45.504 39.616 44.463 39.5923 44.202 38.4438 44.0238 37.5777 43.9198 36.0249 44.4772
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        5.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        25.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.8796" bValue="0.8984" maxMag="6.9" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.0" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-UKRA502"
+            name="maina_lo_lowp502"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    28.2216 42.6305 28.5858 43.18 29.1144 43.9774 29.816 45.1989 31.4851 44.1443 32.4377 44.221 34.0848 43.9238 36.0249 44.4772 37.5777 43.9198 38.4438 44.0238 39.5534 43.3379 39.8271 43.2416 40.4402 43.1239 41.009 43.0959 40.8581 42.8145 41.4022 42.4511 41.7911 42.1125 40.6663 42.1212 37.7832 42.1769 37.2172 42.5796 36.3327 42.783 34.0319 42.8354 32.6319 42.6354 30.6008 41.5991 29.674 41.6017 29.0371 41.6848 28.6279 41.9093 28.2681 42.0014 28.2216 42.6305
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        5.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        25.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.0234" bValue="1.013" maxMag="6.0" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.0" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-YUAS503"
+            name="maina_lo_lowp503"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    18.3221 45.1026 18.6853 45.4081 19.9087 45.159 20.5806 45.3513 21.4551 44.8089 21.1377 44.6533 20.1827 44.5448 19.4726 44.774 18.3221 45.1026
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        18.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.9801" bValue="0.8248" maxMag="6.9" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="67.19" probability="1.0" rake="0.0" strike="116.15"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="10.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="SHD-AS-YUAS505"
+            name="maina_lo_lowp505"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    21.739 43.629 22.2596 43.4545 22.421 43.3015 22.782 42.9759 21.7387 42.7732 20.9136 43.0594 20.3034 43.4219 20.6464 43.496 21.5929 43.4069 21.739 43.629
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        15.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.1245" bValue="0.8481" maxMag="6.9" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="64.36" probability="1.0" rake="0.0" strike="292.35"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="10.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

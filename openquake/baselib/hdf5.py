@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,6 +44,10 @@ vfloat64 = h5py.special_dtype(vlen=numpy.float64)
 FLOAT = (float, numpy.float32, numpy.float64)
 INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 MAX_ROWS = 10_000_000
+
+if sys.platform == 'win32':
+    # go back to the behavior before hdf5==1.12 i.e. h5py==3.4
+    os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 
 
 def sanitize(value):
