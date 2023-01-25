@@ -159,8 +159,12 @@ html_title = 'OpenQuake Engine Manual %s%s' % (version, branch)
 html_logo = None
 
 html_theme_options = {
+    "navbar_start": ["version-switcher"],
+    "switcher": {
+        "json_url": "../../.ddown_adv.json",
+        "version_match": "master"
+    },
     "icon_links": [
-        
         {
             # Label for this link
             "name": "OpenQuake",
@@ -234,6 +238,8 @@ html_theme_options = {
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+html_css_files = ['css/custom.css']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
