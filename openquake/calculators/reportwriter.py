@@ -22,6 +22,7 @@ Utilities to build a report writer generating a .rst report for a calculation
 """
 import os
 import sys
+import getpass
 import logging
 import numpy
 import pandas
@@ -132,7 +133,7 @@ def build_report(job_ini, output_dir=None):
     :param output_dir:
         the directory where the report is written (default the input directory)
     """
-    with logs.init('job', job_ini) as log:
+    with logs.init('job', job_ini, user_name=getpass.getuser()) as log:
         oq = log.get_oqparam()
         if 'source_model_logic_tree' in oq.inputs:
             oq.calculation_mode = 'preclassical'
