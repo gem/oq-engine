@@ -53,7 +53,6 @@ def static_factor_of_safety(
         'cause.
 
     :returns: Scalar or array of the factor of safety.
-
     """
 
     soil_weight = 9.81 * soil_dry_density
@@ -62,8 +61,6 @@ def static_factor_of_safety(
     if np.isscalar(slope):
         if slope == 0.0:
             slope = 1e-5
-    #elif isinstance(slope, xr.DataArray):
-    #    slope = xr.where(slope == 0.0, 1e-5, slope)
     else:
         slope[slope == 0.0] = 1e-5
 
@@ -73,8 +70,7 @@ def static_factor_of_safety(
     term_1 = cohesion / (soil_weight * slab_thickness * np.sin(r_slope))
     term_2 = np.tan(r_fric_ang) / np.tan(r_slope)
     term_3 = (saturation_coeff * water_weight * np.tan(r_fric_ang)) / (
-        soil_weight * np.tan(r_slope)
-    )
+        soil_weight * np.tan(r_slope))
 
     return term_1 + term_2 - term_3
 
