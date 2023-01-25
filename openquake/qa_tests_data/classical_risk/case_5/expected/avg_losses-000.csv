@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.16.0-gitf433deaf98', start_date='2022-11-24T10:08:53', checksum=1863488160, investigation_time=15.0, risk_investigation_time=15.0"
+#,,,,"generated_by='OpenQuake engine 3.16.0-git81895ed69d', start_date='2023-01-24T17:57:43', checksum=1525518661, investigation_time=1.0, risk_investigation_time=1.0"
 asset_id,taxonomy,lon,lat,structural
-a6,MC-RLSB-2,-78.16800,15.59329,1.51610E+01
-a7,MS-SLSB-1,-78.16812,15.59329,9.93312E-02
+a6,MC-RLSB-2,-78.16800,15.59329,6.49982E+04
+a7,MS-SLSB-1,-78.16812,15.59329,1.74160E+04

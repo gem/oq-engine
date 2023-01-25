@@ -1,3 +1,7 @@
+  [Anirudh Rao, Michele Simionato]
+  * Changed the algorithm used in classical_risk and classical_bcr
+    calculations to take into account the risk_investigation_time
+
   [Michele Simionato]
   * Added a warning for pointlike sources with magnitudes >= 8
   * Optimized the disaggregation by using our own truncnorm_sf function and
