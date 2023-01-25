@@ -161,8 +161,8 @@ html_logo = None
 html_theme_options = {
     "navbar_start": ["version-switcher"],
     "switcher": {
-        "json_url": "../../.ddown_adv.json",
-        "version_match": "master"
+        "json_url": "../../.ddown_man.json",
+        "version_match": version
     },
     "icon_links": [
         {
