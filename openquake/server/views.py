@@ -36,6 +36,7 @@ from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
     HttpResponseForbidden)
+from django.core.mail import send_mail
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
@@ -558,11 +559,20 @@ def calc_run(request):
 
 
 def aelo_callback(job_id, exc=None):
-    # TODO: replace this with something better
     if exc:
-        print('sending email with error %s' % exc)
+        send_mail(f'Job {job_id} failed',
+                  f'There was an error running job {job_id}:\n{exc}',
+                  'FIXMEfrom@from.com',
+                  ['FIXMEto1@to.com', 'FIXMEto2@to.com'],
+                  fail_silently=False)
     else:
-        print('sending dowload link for %d' % job_id)
+        hostname = 'localhost:8800'  # FIXME: get actual hostname and port
+        send_mail(f'Job {job_id} finished correctly',
+                  f'Please find the results here:\n'
+                  f'{hostname}/engine/{job_id}/outputs',
+                  'FIXMEfrom@from.com',
+                  ['FIXMEto1@to.com', 'FIXMEto2@to.com'],
+                  fail_silently=False)
 
 
 @csrf_exempt

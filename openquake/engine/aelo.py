@@ -73,7 +73,16 @@ def main(lon: valid.longitude,
     with jobctx:
         if not config.directory.mosaic_dir:
             sys.exit('mosaic_dir is not specified in openquake.cfg')
-        jobctx.params.update(get_params_from(lon, lat, siteid))
+        try:
+            jobctx.params.update(get_params_from(lon, lat, siteid))
+        except ValueError as exc:
+            # FIXME: this can happen if no model covers the given coordinates.
+            #        In this case we need the job to fail and the email to be
+            #        sent. This is the only way I was able to make it happen,
+            #        but I guess there might be a better way to achieve the
+            #        same behavior
+            callback(jobctx.calc_id, exc)
+            raise exc
         try:
             aelo_run(jobctx, lon, lat, vs30)
         except Exception as exc:
