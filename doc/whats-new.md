@@ -117,16 +117,16 @@ test run across different platforms in spite of minor numeric differences.
 Additions to hazardlib
 ----------------------
 
-[Prajakta Jadhav](https://github.com/Prajakta-Jadhav-25) and Dharma Wijewickreme 
-contributed a new GMPE for Zhang and Zhao (2005) 
-(see https://github.com/gem/oq-engine/pull/7766).
+[Prajakta Jadhav](https://github.com/Prajakta-Jadhav-25) and Dharma
+Wijewickreme contributed a new GMPE for Zhang and Zhao (2005) (see
+https://github.com/gem/oq-engine/pull/7766).
 
 [Trevor Allen](https://github.com/treviallen) contributed some enhancements 
 to Australian GMPEs (see https://github.com/gem/oq-engine/pull/8205).
 
-[Guillaume Daniel](https://github.com/guyomd) contributed a bug-fix to the HMTK, 
-in the function used for the Stepp (1972) completeness analysis
-(see https://github.com/gem/oq-engine/pull/8127).
+[Guillaume Daniel](https://github.com/guyomd) contributed a bug-fix to
+the HMTK, in the function used for the Stepp (1972) completeness
+analysis (see https://github.com/gem/oq-engine/pull/8127).
 
 [Graeme Weatherill](https://github.com/g-weatherill) contributed some aliases 
 for the GSIMs used in the ESHM20 model for Europe.
@@ -144,13 +144,11 @@ calculations. It is also likely to change in the future.
 
 Since a few versions ago, the engine has the ability to modify the magnitude
 frequency distribution from the logic tree with code like the following:
-
 ```xml
      <uncertaintyModel>
         <faultActivityData slipRate="20.0" rigidity="32" />
      </uncertaintyModel>
 ```
-
 Now it is also possible to specify a `constant_term`; before it was hard
 coded to 9.1.
 
@@ -182,7 +180,7 @@ We implemented also a major optimization in `event_based_risk` starting from
 precomputed ground motion fields. As a matter of fact, it is now
 possible to compute GMFs at continental scale, producing hundreds
 of gigabytes of data, and then run risk calculations country-by-country
-without running out of memory. This was previously intractable.
+without running out of memory. This case was previously intractable.
 
 As part of this work, we removed the limit of 4 billion rows for the
 `gmf_data` table and we added a parameter `max_gmvs_per_task` in the
@@ -204,9 +202,18 @@ consequences, so that now you get a clear error before starting the
 calculation and not a confusing error in the middle of it.
 
 For large exposures and many realizations now the engine raises an early
-error forcing the user to setting the parameter `collect_rlzs` to true.
+error forcing the user to set the parameter `collect_rlzs`.
 This is preferable to going out of memory in the middle of a computation. 
 
+Finally, we changed the logic in the calculation of loss curves and
+averages in `classical_risk/classical_bcr` calculations, by taking
+into consideration the `risk_investigation_time` parameter (see
+https://github.com/gem/oq-engine/pull/8046). As a consequence, the
+numbers generated are slightly different than before. We now also raise an
+error when a loss curve is computed starting from a flat hazard
+curve, since in that case numeric errors make the results
+unreliable. The solution is to reduce the hazard investigation time to
+have a less flat curve.
 
 Bug fixes and new checks
 ------------------------
