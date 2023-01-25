@@ -249,10 +249,6 @@ We fixed a bug in vulnerability functions using the Beta distribution:
 the case of zero coefficients of variation was not treated correctly
 (see https://github.com/gem/oq-engine/pull/8060).
 
-We fixed another bug affecting the classical_risk calculator, where the
-`risk_investigation_time` parameter was not being considered in the 
-calculation (see https://github.com/gem/oq-engine/pull/8046).
-
 oq commands
 -----------
 
