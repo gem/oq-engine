@@ -1,6 +1,6 @@
   [Anirudh Rao, Michele Simionato]
-  * The risk_investigation_time parameter was not honored in classical_risk
-    and classical_bcr calculations
+  * Changed the algorithm used in classical_risk and classical_bcr
+    calculations to take into account the risk_investigation_time
 
   [Michele Simionato]
   * Added a warning for pointlike sources with magnitudes >= 8

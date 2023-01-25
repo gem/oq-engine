@@ -938,6 +938,7 @@ def annual_frequency_of_exceedence(poe, t_haz):
     poe[poe == 1.] = .9999999999999999
     return - numpy.log(1-poe) / t_haz
 
+
 def probability_of_exceedance(afoe, t_risk):
     """
     :param afoe: array of annual frequencies of exceedence
@@ -945,7 +946,7 @@ def probability_of_exceedance(afoe, t_risk):
     :returns: array of probabilities of exceedance in time t_risk
     """
     return 1 - numpy.exp(-t_risk * afoe)
-    
+
 
 def classical_damage(
         fragility_functions, hazard_imls, hazard_poes,
@@ -978,7 +979,8 @@ def classical_damage(
     else:
         imls = hazard_imls
         poes = numpy.array(hazard_poes)
-    # convert the hazard probabilities of exceedance to 
+
+    # convert the hazard probabilities of exceedance to
     # annual frequencies of exceedance, and then occurrence
     afoes = annual_frequency_of_exceedence(poes, investigation_time)
     afoos = pairwise_diff(
@@ -1029,8 +1031,8 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios,
 
     # interpolate the hazard curve
     poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
-    if abs((1-poes).max()) < 1E-6:  # flat curve
-        raise ValueError('The hazard curve is flat (all 1s) probably due to '
+    if abs((1-poes).mean()) < 1E-4:  # flat curve
+        raise ValueError('The hazard curve is flat (all ones) probably due to '
                          'a (hazard) investigation time too large')
 
     # convert the hazard probabilities of exceedance ot annual
