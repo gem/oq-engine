@@ -22,6 +22,7 @@ import shutil
 import socket
 import getpass
 import tempfile
+import threading
 import subprocess
 import psutil
 from openquake.baselib import (
@@ -54,6 +55,21 @@ def ssh_args(zworkers):
                     'ssh', '-f', '-T', remote_user + '@' + host, remote_python]
 
 
+def _streamer(ctrl_port):
+    # streamer for zmq workers running on the master node
+    task_input_url = 'tcp://0.0.0.0:%d' % (ctrl_port + 2)
+    task_output_url = 'tcp://%s:%s' % (config.dbserver.listen, ctrl_port + 1)
+    if (general.socket_ready(('0.0.0.0', ctrl_port + 1)) or
+            general.socket_ready(('0.0.0.0', ctrl_port + 2))):
+        return  # already started
+    sock_in = z.bind(task_input_url, z.zmq.PULL)
+    sock_out = z.bind(task_output_url, z.zmq.PUSH)
+    try:
+        z.zmq.proxy(sock_in, sock_out)
+    except (KeyboardInterrupt, z.zmq.ContextTerminated):
+        pass  # killed cleanly by SIGINT/SIGTERM
+
+
 class WorkerMaster(object):
     """
     :param ctrl_port: port on which the worker pools listen
@@ -80,6 +96,12 @@ class WorkerMaster(object):
         Start multiple workerpools on remote servers via ssh and/or a single
         workerpool on localhost.
         """
+        # start task_in->task_server streamer thread		
+        port = int(config.zworkers.ctrl_port)
+        threading.Thread(
+            target=workerpool._streamer, args=(port,), daemon=True		
+        ).start()
+        print('Task streamer started on ports %d->%d', port+2, port+1)
         starting = []
         for host, cores, args in ssh_args(self.zworkers):
             if general.socket_ready((host, self.ctrl_port)):
