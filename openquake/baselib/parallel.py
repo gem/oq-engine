@@ -242,7 +242,7 @@ def zmq_submit(self, func, args, monitor):
     elif idx not in self.sender:
         self.sender[idx] = Socket(
             'tcp://%s:%d' % (host, port), zmq.REQ, 'connect').__enter__()
-    return self.sender.send((func, args, self.task_no, monitor))
+    return self.sender[idx].send((func, args, self.task_no, monitor))
 
 
 @submit.add('ipp')
