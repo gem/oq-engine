@@ -3,6 +3,7 @@
 #
 #  link a pdf e constraint coi test ok
 
+
 # Tree Structure
 # --------------
 #
@@ -115,6 +116,9 @@ jobs:
           GITHUB_HD_REF: ${{ github.head_ref }}
           GITHUB_BS_REF: ${{ github.base_ref }}
           UPLOAD: ${{ github.event.inputs.git-ref }}
+
+          # JUST TO TEST MULTI_DOCS
+          MULTI_DOCS_FOR_DEVEL: "true"
         run: |
           bash --version
           LTS_VER=$(grep 'Current Long Term Support' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
@@ -145,8 +149,8 @@ jobs:
               fi
           fi
 
-          ALL_VERS="$(git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n)"
-          LATEST_VER="$(echo "$ALL_VERS" | tail -n 1)"
+          REL_VERS="$(git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n)"
+          LATEST_VER="$(echo "$REL_VERS" | tail -n 1)"
           ALL_VERS="$((git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' ; echo "$ENG_VER") | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | uniq)"
           PDFDOCS="manuals/"
           TARGET_LINK=""
@@ -196,7 +200,9 @@ jobs:
           echo "GITHUB_BS_REF:       [$GITHUB_BS_REF]"
           echo "UPLOAD:              [$UPLOAD]"
 
-          if [ 1 -eq 1 -o "$BUILD" != "dev" ]; then
+          # multi-version doc switcher could be runned just from master because
+          # is the only one known the master version (from sources)
+          if [ "$MULTI_DOCS_FOR_DEVEL" == "true" -o  "$BUILD" == "master" ]; then
               ddown_adv="["
               ddown_man="["
               for v in $ALL_VERS; do
@@ -205,8 +211,10 @@ jobs:
 
                   sfx=""
                   if [ "$v" = "$ENG_VER" ]; then
-                      if [ "$BUILD" == "master" -o "$GITHUB_REF_NAME" == "moster" ]; then
-                          sfx="master"
+                      if [ "$BUILD" == "master" ]; then
+                         sfx="master"
+                      else
+                         sfx="for_devel"
                       fi
                       master_rename="true"
                   else
@@ -232,9 +240,9 @@ jobs:
 
                   # policies for the user manual version switcher menu
                   if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 16 )) ) || (( "$ver_maj" > 3 )); then
-                      if [ "$master_rename" = "true" ]; then
-                          ver_name="master (target ${ver_maj}.${ver_min})"
-                          ver_val="master"
+                      if [ "$master_rename" == "true" ]; then
+                          ver_name="${sfx} (target ${ver_maj}.${ver_min})"
+                          ver_val="${sfx}"
                       else
                           ver_name="${ver_maj}.${ver_min}${sfx}"
                           ver_val="${ver_maj}.${ver_min}"
@@ -248,9 +256,9 @@ jobs:
 
                   # policies for the advanced manual version switcher menu
                   if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 16 )) ) || (( "$ver_maj" > 3 )); then
-                      if [ "$master_rename" = "true" ]; then
-                          ver_name="master (target ${ver_maj}.${ver_min})"
-                          ver_val="master"
+                      if [ "$master_rename" == "true" ]; then
+                          ver_name="${sfx} (target ${ver_maj}.${ver_min})"
+                          ver_val="${sfx}"
                       else
                           ver_name="${ver_maj}.${ver_min}${sfx}"
                           ver_val="${ver_maj}.${ver_min}"
