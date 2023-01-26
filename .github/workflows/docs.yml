@@ -248,7 +248,7 @@ jobs:
                           ver_name="${ver_maj}.${ver_min}${sfx}"
                           ver_val="${ver_maj}.${ver_min}"
                       fi
-                      ver_url="https://docs.openquake.org/oq-engine/manual/${ver_val}"
+                      ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine/${ver_val}/manual/"
                       if [ "$ddown_man" != "[" ]; then
                          ddown_man="${ddown_man}, "
                       fi
@@ -264,7 +264,7 @@ jobs:
                           ver_name="${ver_maj}.${ver_min}${sfx}"
                           ver_val="${ver_maj}.${ver_min}"
                       fi
-                      ver_url="https://docs.openquake.org/oq-engine/advanced/${ver_val}"
+                      ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine/${ver_val}/advanced/"
                       if [ "$ddown_adv" != "[" ]; then
                          ddown_adv="${ddown_adv}, "
                       fi
