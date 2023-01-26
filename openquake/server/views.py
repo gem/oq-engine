@@ -558,20 +558,19 @@ def calc_run(request):
                         status=status)
 
 
-def aelo_callback(job_id, exc=None):
+def aelo_callback(job_id, job_owner_email, hostname, exc=None):
     if exc:
         send_mail(f'Job {job_id} failed',
                   f'There was an error running job {job_id}:\n{exc}',
                   'FIXMEfrom@from.com',
-                  ['FIXMEto1@to.com', 'FIXMEto2@to.com'],
+                  [job_owner_email, 'FIXMEto2@to.com'],
                   fail_silently=False)
     else:
-        hostname = 'localhost:8800'  # FIXME: get actual hostname and port
         send_mail(f'Job {job_id} finished correctly',
                   f'Please find the results here:\n'
                   f'{hostname}/engine/{job_id}/outputs',
                   'FIXMEfrom@from.com',
-                  ['FIXMEto1@to.com', 'FIXMEto2@to.com'],
+                  [job_owner_email, 'FIXMEto2@to.com'],
                   fail_silently=False)
 
 
@@ -604,9 +603,14 @@ def aelo_run(request):
         config.distribution.log_level, None, utils.get_user(request), None)
     response_data = dict(status='created', job_id=jobctx.calc_id)
 
+    # FIXME: should we make the user email mandatory?
+    job_owner_email = request.user.email
+    hostname = request.get_host()
+
     # spawn the AELO main process
-    mp.Process(target=aelo.main, args=(lon, lat, vs30, siteid, jobctx,
-                                       aelo_callback)).start()
+    mp.Process(target=aelo.main, args=(
+        lon, lat, vs30, siteid, job_owner_email, hostname, jobctx,
+        aelo_callback)).start()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
 

@@ -46,7 +46,7 @@ def aelo_run(jobctx, lon, lat, vs30):
     engine.run_jobs([jobctx])
 
 
-def trivial_callback(job_id, exc=None):
+def trivial_callback(job_id, job_owner_email, hostname, exc=None):
     if exc:
         sys.exit('There was an error: %s' % exc)
     print('Finished job %d correctly' % job_id)
@@ -56,6 +56,8 @@ def main(lon: valid.longitude,
          lat: valid.latitude,
          vs30: valid.positivefloat,
          siteid: valid.simple_id,
+         job_owner_email,
+         hostname,
          jobctx=None,
          callback=trivial_callback,
          ):
@@ -76,19 +78,15 @@ def main(lon: valid.longitude,
         try:
             jobctx.params.update(get_params_from(lon, lat, siteid))
         except ValueError as exc:
-            # FIXME: this can happen if no model covers the given coordinates.
-            #        In this case we need the job to fail and the email to be
-            #        sent. This is the only way I was able to make it happen,
-            #        but I guess there might be a better way to achieve the
-            #        same behavior
-            callback(jobctx.calc_id, exc)
+            # This can happen if no model covers the given coordinates.
+            callback(jobctx.calc_id, job_owner_email, hostname, exc)
             raise exc
         try:
             aelo_run(jobctx, lon, lat, vs30)
         except Exception as exc:
-            callback(jobctx.calc_id, exc)
+            callback(jobctx.calc_id, job_owner_email, hostname, exc)
         else:
-            callback(jobctx.calc_id)
+            callback(jobctx.calc_id, job_owner_email, hostname)
 
 
 if __name__ == '__main__':
