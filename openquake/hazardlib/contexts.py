@@ -1148,6 +1148,8 @@ class ContextMaker(object):
                 with mon:
                     src.weight, src.esites = self.estimate_weight(
                         src, srcfilter, multiplier)
+                    if src.weight == 0:
+                        src.weight = 0.001
                     src.weight *= G
                     if src.code == b'P':
                         src.weight += .1
