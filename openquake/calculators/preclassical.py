@@ -104,7 +104,10 @@ def preclassical(srcs, sites, cmaker, monitor):
         split_sources.extend(splits)
     mon = monitor('weighting sources', measuremem=False)
     if sites is None or spacing == 0:
-        if sites is not None:
+        if sites is None:
+            for src in split_sources:
+                src.weight = .01
+        else:
             cmaker.set_weight(split_sources, sf, multiplier, mon)
         dic = {grp_id: split_sources}
         dic['before'] = len(srcs)
@@ -157,6 +160,8 @@ class PreClassicalCalculator(base.HazardCalculator):
              for sg in csm.src_groups], hdf5.vstr)
         cmakers = read_cmakers(self.datastore, csm.full_lt)
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
+        if sites is None:
+            logging.warning('No sites??')
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
         normal_sources = []
