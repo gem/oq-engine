@@ -563,7 +563,7 @@ def aelo_callback(job_id, job_owner_email, hostname, exc=None):
     to = [job_owner_email]
     reply_to = 'aelosupport@openquake.org'
     if exc:
-        subject = f'Job {job_id} failed',
+        subject = f'Job {job_id} failed'
         body = f'There was an error running job {job_id}:\n{exc}'
     else:
         subject = f'Job {job_id} finished correctly'
