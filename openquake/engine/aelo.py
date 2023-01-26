@@ -77,8 +77,10 @@ def main(lon: valid.longitude,
             sys.exit('mosaic_dir is not specified in openquake.cfg')
         try:
             jobctx.params.update(get_params_from(lon, lat, siteid))
-        except ValueError as exc:
-            # This can happen if no model covers the given coordinates.
+        except Exception as exc:
+            # This can happen for instance:
+            # - if no model covers the given coordinates.
+            # - if no ini file was found
             callback(jobctx.calc_id, job_owner_email, hostname, exc)
             raise exc
         try:

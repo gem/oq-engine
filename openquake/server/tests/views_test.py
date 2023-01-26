@@ -410,7 +410,7 @@ class EngineServerTestCase(unittest.TestCase):
             self.assertFalse(resp_text_dict['success'])
 
     def test_aelo(self):
-        params = dict(lon='85', lat='27', vs30='600', siteid='KATMANDU')
+        params = dict(lon='-86', lat='12', vs30='800', siteid='CCA_SITE')
         resp = self.post('aelo_run', params)
         self.assertEqual(resp.status_code, 200)
         print(json.loads(resp.content.decode('utf8')))
