@@ -82,7 +82,7 @@ version = engine.__version__.split('-')[0]
 # The full version, including alpha/beta/rc tags.
 
 if it_is_master:
-    release = "master (target %s%s)" % (engine.__version__, branch)
+    release = "master (target %s)" % (engine.__version__,)
 else:
     release = "%s%s" % (engine.__version__, branch)
 
@@ -171,7 +171,7 @@ html_theme_options = {
     "navbar_start": ["version-switcher"],
     "switcher": {
         "json_url": "../../.ddown_man.json",
-        "version_match": version
+        "version_match": 'master' if it_is_master == True else '.'.join(version.split('.')[0:2])
     },
     "icon_links": [
         {

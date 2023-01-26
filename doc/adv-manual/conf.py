@@ -56,6 +56,10 @@ try:
     import re
     vcs_branch = subprocess.run(['git', 'branch', '--show-current'], stdout=subprocess.PIPE)
     vcs_branch = vcs_branch.stdout.decode('utf-8').rstrip()
+    it_is_master = False
+    if vcs_branch == 'master' or vcs_branch == 'vers-adv-man2':
+        it_is_master = True
+
     # vcs_branch = 'engine-3.15'
     if re.compile('engine-[0-9]+\.[0-9]+.*').match(vcs_branch):
         branch = ''
@@ -71,7 +75,11 @@ except Exception:
 # The short X.Y.Z version.
 version = engine.__version__.split('-')[0]
 # The full version, including alpha/beta/rc tags.
-release = engine.__version__
+if it_is_master:
+    release = "master (target %s)" % (engine.__version__,)
+else:
+    release = "%s%s" % (engine.__version__, branch)
+
 
 #
 #  Version Dropdown Config
@@ -142,7 +150,7 @@ html_theme_options = {
     "navbar_start": ["version-switcher"],
     "switcher": {
         "json_url": "../../.ddown_adv.json",
-        "version_match": version
+        "version_match": 'master' if it_is_master == True else '.'.join(version.split('.')[0:2])
     },
     "icon_links": [
 
