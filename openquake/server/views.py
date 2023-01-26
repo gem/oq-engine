@@ -36,7 +36,7 @@ from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
     HttpResponseForbidden)
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
@@ -559,19 +559,17 @@ def calc_run(request):
 
 
 def aelo_callback(job_id, job_owner_email, hostname, exc=None):
+    from_email = 'aelonoreply@openquake.org'
+    to = [job_owner_email]
+    reply_to = 'aelosupport@openquake.org'
     if exc:
-        send_mail(f'Job {job_id} failed',
-                  f'There was an error running job {job_id}:\n{exc}',
-                  'FIXMEfrom@from.com',
-                  [job_owner_email, 'FIXMEto2@to.com'],
-                  fail_silently=False)
+        subject = f'Job {job_id} failed',
+        body = f'There was an error running job {job_id}:\n{exc}'
     else:
-        send_mail(f'Job {job_id} finished correctly',
-                  f'Please find the results here:\n'
-                  f'{hostname}/engine/{job_id}/outputs',
-                  'FIXMEfrom@from.com',
-                  [job_owner_email, 'FIXMEto2@to.com'],
-                  fail_silently=False)
+        subject = f'Job {job_id} finished correctly'
+        body = (f'Please find the results here:\n'
+                f'{hostname}/engine/{job_id}/outputs')
+    EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
 @csrf_exempt
