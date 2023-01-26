@@ -240,7 +240,7 @@ jobs:
                   fi
 
                   # policies for the user manual version switcher menu
-                  if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 16 )) ) || (( "$ver_maj" > 3 )); then
+                  if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 11 )) ) || (( "$ver_maj" > 3 )); then
                       if [ "$master_rename" == "true" ]; then
                           ver_name="${pfx} (target ${ver_maj}.${ver_min})"
                           ver_val="${pfx}"
@@ -256,7 +256,7 @@ jobs:
                   fi
 
                   # policies for the advanced manual version switcher menu
-                  if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 16 )) ) || (( "$ver_maj" > 3 )); then
+                  if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 11 )) ) || (( "$ver_maj" > 3 )); then
                       if [ "$master_rename" == "true" ]; then
                           ver_name="${pfx} (target ${ver_maj}.${ver_min})"
                           ver_val="${pfx}"
