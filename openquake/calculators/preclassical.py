@@ -240,8 +240,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                 newsg.sources = srcs
                 csm.src_groups[grp_id] = newsg
                 for src in srcs:
-                    assert src.weight
-                    assert src.num_ruptures
+                    assert src.weight, src
+                    assert src.num_ruptures, src
                     acc[src.code] += int(src.num_ruptures)
         csm.fix_src_offset()
         for val, key in sorted((val, key) for key, val in acc.items()):
