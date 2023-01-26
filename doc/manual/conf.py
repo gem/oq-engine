@@ -171,7 +171,7 @@ html_theme_options = {
     "navbar_start": ["version-switcher"],
     "switcher": {
         "json_url": "../../.ddown_man.json",
-        "version_match": 'master' if it_is_master == True else '.'.join(version.split('.')[0:2])
+        "version_match": vcs_branch if it_is_master == True else '.'.join(version.split('.')[0:2])
     },
     "icon_links": [
         {
