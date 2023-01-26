@@ -691,10 +691,6 @@ class Starmap(object):
 
     @classmethod
     def shutdown(cls):
-        if hasattr(cls, 'sender'):  # dictionary of zmq sockets
-            for sock in cls.sender.values():
-                if hasattr(sock, 'zsocket'):  # not already closed
-                    sock.__exit__()
         for shared in cls.shared:
             shmem.SharedMemory(shared.name).unlink()
         # shutting down the pool during the runtime causes mysterious
@@ -707,6 +703,10 @@ class Starmap(object):
             cls.pids = []
         elif hasattr(cls, 'executor'):
             cls.executor.shutdown()
+        if hasattr(cls, 'sender'):  # dictionary of zmq sockets
+            for sock in cls.sender.values():
+                if hasattr(sock, 'zsocket'):  # not already closed
+                    sock.__exit__()
 
     @classmethod
     def apply(cls, task, allargs, concurrent_tasks=None,
