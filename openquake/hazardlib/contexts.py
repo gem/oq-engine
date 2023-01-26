@@ -1143,6 +1143,7 @@ class ContextMaker(object):
         for src in sources:
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.esites = 0
+                src.weight = 0
             else:
                 with mon:
                     src.weight, src.esites = self.estimate_weight(
