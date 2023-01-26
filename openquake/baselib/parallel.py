@@ -236,8 +236,13 @@ def zmq_submit(self, func, args, monitor):
     idx = self.task_no % len(host_cores)
     host = host_cores[idx].split()[0]
     port = int(config.zworkers.ctrl_port)
-    with Socket('tcp://%s:%d' % (host, port), zmq.REQ, 'connect') as sock:
-        return sock.send((func, args, self.task_no, monitor))
+    if not hasattr(self, 'sender'):
+        self.sender = {idx: Socket(
+            'tcp://%s:%d' % (host, port), zmq.REQ, 'connect').__enter__()}
+    elif idx not in self.sender:
+        self.sender[idx] = Socket(
+            'tcp://%s:%d' % (host, port), zmq.REQ, 'connect').__enter__()
+    return self.sender.send((func, args, self.task_no, monitor))
 
 
 @submit.add('ipp')
