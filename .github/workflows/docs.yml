@@ -209,12 +209,13 @@ jobs:
                   ver_maj="$(echo "$v" | sed 's/\([0-9]\+\)\..*/\1/g')"
                   ver_min="$(echo "$v" | sed 's/[0-9]\+\.\(.*\)$/\1/g')"
 
+                  pfx=""
                   sfx=""
                   if [ "$v" = "$ENG_VER" ]; then
                       if [ "$BUILD" == "master" ]; then
-                         sfx="master"
+                         pfx="master"
                       else
-                         sfx="for_devel"
+                         pfx="for_devel"
                       fi
                       master_rename="true"
                   else
@@ -241,8 +242,8 @@ jobs:
                   # policies for the user manual version switcher menu
                   if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 16 )) ) || (( "$ver_maj" > 3 )); then
                       if [ "$master_rename" == "true" ]; then
-                          ver_name="${sfx} (target ${ver_maj}.${ver_min})"
-                          ver_val="${sfx}"
+                          ver_name="${pfx} (target ${ver_maj}.${ver_min})"
+                          ver_val="${pfx}"
                       else
                           ver_name="${ver_maj}.${ver_min}${sfx}"
                           ver_val="${ver_maj}.${ver_min}"
@@ -257,8 +258,8 @@ jobs:
                   # policies for the advanced manual version switcher menu
                   if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 16 )) ) || (( "$ver_maj" > 3 )); then
                       if [ "$master_rename" == "true" ]; then
-                          ver_name="${sfx} (target ${ver_maj}.${ver_min})"
-                          ver_val="${sfx}"
+                          ver_name="${pfx} (target ${ver_maj}.${ver_min})"
+                          ver_val="${pfx}"
                       else
                           ver_name="${ver_maj}.${ver_min}${sfx}"
                           ver_val="${ver_maj}.${ver_min}"
