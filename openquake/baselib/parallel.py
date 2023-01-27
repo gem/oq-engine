@@ -480,28 +480,30 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon.inject:
         args += (mon,)
     sentbytes = 0
-    with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
-        msg = check_mem_usage()  # warn if too much memory is used
-        if msg:
-            zsocket.send(Result(None, mon, msg=msg))
-        if inspect.isgeneratorfunction(func):
-            it = func(*args)
-        else:
-            def gen(*args):
-                yield func(*args)
-            it = gen(*args)
-        while True:
-            # StopIteration -> TASK_ENDED
-            res = Result.new(next, (it,), mon, sentbytes)
-            try:
-                zsocket.send(res)
-            except Exception:  # like OverflowError
-                _etype, exc, tb = sys.exc_info()
-                err = Result(exc, mon, ''.join(traceback.format_tb(tb)))
-                zsocket.send(err)
+    if isgenfunc:
+        it = func(*args)
+        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:  
+            while True:
+                # StopIteration -> TASK_ENDED
+                res = Result.new(next, (it,), mon, sentbytes)
+                try:
+                    zsocket.send(res)
+                except Exception:  # like OverflowError
+                    _etype, exc, tb = sys.exc_info()
+                    err = Result(exc, mon, ''.join(traceback.format_tb(tb)))
+                    zsocket.send(err)
+                sentbytes += len(res.pik)
+                if res.msg == 'TASK_ENDED':
+                    break
+    else:
+        # send back a single result and a TASK_ENDED
+        res = Result.new(func, args, mon)
+        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:  
+            zsocket.send(res)
             sentbytes += len(res.pik)
-            if res.msg == 'TASK_ENDED':
-                break
+            end = Result(None, mon, msg='TASK_ENDED')
+            end.pik = FakePickle(sentbytes)
+            zsocket.send(end)
 
 
 if oq_distribute() == 'ipp':

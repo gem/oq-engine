@@ -385,6 +385,7 @@ class Hazard:
     def store_disagg(self, pmaps=None):
         """
         Store data inside disagg_by_grp (optionally disagg_by_src)
+        """
         n = len(self.full_lt.sm_rlzs)
         lst = []
         for grp_id, indices in enumerate(self.datastore['trt_smrs']):
@@ -394,7 +395,6 @@ class Hazard:
                 trt = self.full_lt.trts[trti[0]]
                 lst.append((trt, dic['avg_poe'], dic['nsites']))
         self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
-        """
         if pmaps:  # called inside a loop
             disagg_by_src = self.datastore['disagg_by_src'][()]
             for key, pmap in pmaps.items():
