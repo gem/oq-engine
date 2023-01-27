@@ -424,13 +424,18 @@ class EngineServerTestCase(unittest.TestCase):
             resp_text_dict = json.loads(resp.content.decode('utf8'))
             self.assertFalse(resp_text_dict['success'])
 
-    def test_aelo(self):
+    def test_aelo_successful_run(self):
         params = dict(lon='-86', lat='12', vs30='800', siteid='CCA_SITE')
         resp = self.post('aelo_run', params)
         self.assertEqual(resp.status_code, 200)
-        print(json.loads(resp.content.decode('utf8')))
-        # TODO: this should not only check that the calculation is started
-        # correctly, but also the email with the link to the outputs
+        try:
+            js = json.loads(resp.content.decode('utf8'))
+        except Exception:
+            raise ValueError(b'Invalid JSON response: %r' % resp.content)
+        job_id = js['job_id']
+        self.wait()
+        results = self.get('%s/results' % job_id)
+        self.assertGreater(len(results), 0, 'The job produced no outputs!')
 
     def test_aelo_invalid_latitude(self):
         params = dict(lon='-86', lat='100', vs30='800', siteid='CCA_SITE')
@@ -465,12 +470,19 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertIn("Invalid ID 'CCA SITE': "
                       "the only accepted chars are a-zA-Z0-9_-:", err_msg)
 
-    def _FIXME_test_aelo_no_model_found(self):
+    def test_aelo_mosaic_model_not_found(self):
         params = dict(lon='-86', lat='88', vs30='800', siteid='SOMEWHERE')
         resp = self.post('aelo_run', params)
         self.assertEqual(resp.status_code, 200)
-        err_msg = json.loads(resp.content.decode('utf8'))
-        print(err_msg)
-        # FIXME: this needs to check the email
+        # the job is supposed to start and to give an error afterwards
+        try:
+            js = json.loads(resp.content.decode('utf8'))
+        except Exception:
+            raise ValueError(b'Invalid JSON response: %r' % resp.content)
+        job_id = js['job_id']
+        self.wait()
+        tb = self.get('%s/traceback' % job_id)
+        if not tb:
+            sys.stderr.write('Empty traceback, please check!\n')
         self.assertIn('ValueError: Site at lon=-86.0 lat=88.0 '
-                      'is not covered by any model!', err_msg)
+                      'is not covered by any model!', tb)
