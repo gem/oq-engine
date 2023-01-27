@@ -224,8 +224,7 @@ jobs:
                   #         sfx="latest"
                   #     fi
                   # fi
-                  # FIXME if [ "$v" = "$LTS_VER" ]; then
-                  if [ "$v" = "$LTS_VER" -o "$v" = "3.15" ]; then
+                  if [ "$v" = "$LTS_VER" ]; then
                       if [ "$sfx" ]; then
                           sfx="${sfx}, LTS"
                       else
@@ -236,9 +235,8 @@ jobs:
                       sfx=" (${sfx})"
                   fi
 
-                  # FIXME >= 16
                   # policies for the user manual version switcher menu
-                  if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 15 )) ) || (( "$ver_maj" > 3 )); then
+                  if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 16 )) ) || (( "$ver_maj" > 3 )); then
                       if [ "$master_rename" == "true" ]; then
                           ver_name="${pfx}"
                           ver_val="master"
@@ -253,9 +251,8 @@ jobs:
                       ddown_man="${ddown_man}{ \"name\": \"${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
                   fi
 
-                  # FIXME >= 16
                   # policies for the advanced manual version switcher menu
-                  if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 15 )) ) || (( "$ver_maj" > 3 )); then
+                  if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 16 )) ) || (( "$ver_maj" > 3 )); then
                       if [ "$master_rename" == "true" ]; then
                           ver_name="${pfx}"
                           ver_val="master"
