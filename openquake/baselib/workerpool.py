@@ -22,7 +22,10 @@ import shutil
 import socket
 import getpass
 import tempfile
+import functools
 import subprocess
+import traceback
+from datetime import datetime
 import psutil
 from openquake.baselib import (
     zeromq as z, general, performance, parallel, config, sap, InvalidFile)
@@ -229,6 +232,12 @@ def call(func, args, taskno, mon, executing):
     os.remove(fname)
 
 
+def errback(job_id, task_no, exc):
+    e = exc.__class__('in job %d, task %d' % (job_id, task_no))
+    raise e.with_traceback(exc.__traceback__)
+
+
+
 class WorkerPool(object):
     """
     A pool of workers accepting various commands.
@@ -273,7 +282,10 @@ class WorkerPool(object):
                 elif cmd == 'get_executing':
                     ctrlsock.send(' '.join(sorted(os.listdir(self.executing))))
                 elif isinstance(cmd, tuple):
-                    self.pool.apply_async(call, cmd + (self.executing,))
+                    func, args, taskno, mon = cmd
+                    eback = functools.partial(errback, mon.calc_id, taskno)
+                    self.pool.apply_async(call, cmd + (self.executing,),
+                                          error_callback=eback)
                     ctrlsock.send('submitted')
                 else:
                     ctrlsock.send('unknown command')
