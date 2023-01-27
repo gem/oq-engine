@@ -52,19 +52,37 @@ F32 = numpy.float32
 # simulate the requested number of ground motion fields
 
 # Notation:
-# K: number of target sites at which ground motion is to be estimated
-# L: number of recording stations with ground motion observations
-# _D: subscript denoting data
-# _N: subscript denoting "native" data, for the target IMT
-# _NN: subscript denoting "nonnative" data, other IMTs at the stations
-# M: number of nonnative IMTs used in the conditioning process
-# Y_N: station data for the target IMT
-# Y_NN: station data for the 'M' nonnative IMTs
-# y2 = observations
-# φ = phi = within-event standard deviation
-# τ = tau = between-event standard deviation
-# Η (capital Greek η, not Latin H) = normalized between-event residual
-# δB = between-event residual, or bias
+# yD: recorded values at the stations
+# var_addon_D: additional sigma for the observations that are uncertain, 
+#   which might arise if the values for this particular IMT were not directly
+#   recorded, but obtained by conversion equations or cross-correlation functions
+# mu_yD: predicted mean intensity at the observation points, from the specified GMM(s)
+# phi_D: predicted within-event uncertainty at the observation points, from the specified GMM(s)
+# tau_D: predicted between-event uncertainty at the observation points, from the specified GMM(s)
+# zeta_D: raw residuals at the observation points
+# cov_WD_WD: station data within-event covariance matrix, with the additional 
+#   variance of the residuals for the cases where the station data is uncertain
+# cov_WD_WD_inv: (pseudo)-inverse of the station data within-event covariance matrix
+# corr_HD_HD: cross-intensity measure correlations for the observed intensity measures 
+# mu_HD_yD: posterior mean of the (normalized) between-event residual
+# cov_HD_HD_yD: posterior covariance of the (normalized) between-event residual
+# mu_BD_yD: posterior mean of the between-event residual
+# cov_BD_BD_yD: posterior covariance of the conditional between-event residual
+# nominal_bias_mean: mean of mu_BD_yD, useful as a single value measure of the event bias,
+#   particularly in the heteroscedastic case
+# nominal_bias_stddev: sqrt of the mean of cov_BD_BD_yD
+# mu_Y: redicted mean of the intensity at the target sites
+# phi_Y: predicted within-event standard deviation of the intensity at the target sites
+# tau_Y: predicted between-event standard deviation of the intensity at the target sites
+# mu_BY_yD: mean of the conditional between-event residual for the target sites
+# cov_WY_WD and cov_WD_WY: within-event covariance matrices for the target sites and observation sites 
+# cov_WY_WY: apriori within-event covariance matrix for the target sites
+# RC: regression coefficient matrix ("RC" = cov_WY_WD × cov_WD_WD_inv)
+# C: scaling matrix for the conditioned between-event covariance matrix
+# cov_WY_WY_wD: conditioned within-event covariance matrix for the target sites 
+# cov_BY_BY_yD: "conditioned between-event" covariance matrix for the target sites
+# mu_Y_yD: conditioned mean of the ground motion at the target sites
+# cov_Y_Y_yD: conditional covariance of the ground motion at the target sites
 
 
 class NoInterIntraStdDevs(Exception):
