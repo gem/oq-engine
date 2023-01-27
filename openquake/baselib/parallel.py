@@ -198,7 +198,7 @@ from multiprocessing.connection import wait
 import psutil
 import numpy
 
-from openquake.baselib import config, hdf5, workerpool
+from openquake.baselib import config, hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
@@ -787,12 +787,6 @@ class Starmap(object):
         self.tasks = []  # populated by .submit
         self.task_no = 0
         self.t0 = time.time()
-        if self.distribute == 'zmq':  # add a check
-            master = workerpool.WorkerMaster(config.zworkers)
-            errors = ['The workerpool on %s is down' % host
-                      for host, run, tot in master.status() if tot == 0]
-            if errors:
-                raise RuntimeError('\n'.join(errors))
 
     def log_percent(self):
         """
