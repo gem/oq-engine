@@ -1143,10 +1143,13 @@ class ContextMaker(object):
         for src in sources:
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.esites = 0
+                src.weight = .01
             else:
                 with mon:
                     src.weight, src.esites = self.estimate_weight(
                         src, srcfilter, multiplier)
+                    if src.weight == 0:
+                        src.weight = 0.001
                     src.weight *= G
                     if src.code == b'P':
                         src.weight += .1
