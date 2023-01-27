@@ -231,7 +231,7 @@ def call(func, args, taskno, mon, executing):
     os.remove(fname)
 
 
-def streamer():
+def sendback():
     """
     Redirect from the WorkerPool to the backurl on the master
     """
@@ -268,7 +268,7 @@ class WorkerPool(object):
         print('Starting ' + title, file=sys.stderr)
         setproctitle(title)
         self.pool = general.mp.Pool(self.num_workers, init_workers)
-        self.pool.apply_async(streamer)
+        self.pool.apply_async(sendback)
         # start control loop accepting the commands stop and kill
         with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
             for cmd in ctrlsock:
