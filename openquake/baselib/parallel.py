@@ -198,7 +198,7 @@ from multiprocessing.connection import wait
 import psutil
 import numpy
 
-from openquake.baselib import config, hdf5, workerpool
+from openquake.baselib import config, hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
@@ -447,6 +447,15 @@ dummy_mon.config = config
 dummy_mon.backurl = None
 
 
+def sendback(res, zsocket, sentbytes):
+    try:
+        zsocket.send(res)
+    except Exception:  # like OverflowError
+        _etype, exc, tb = sys.exc_info()
+        zsocket.send(Result(exc, res.mon, ''.join(traceback.format_tb(tb))))
+    return sentbytes + len(res.pik)
+
+
 def safely_call(func, args, task_no=0, mon=dummy_mon):
     """
     Call the given function with the given arguments safely, i.e.
@@ -484,23 +493,16 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
         it = func(*args)
         with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:  
             while True:
-                # StopIteration -> TASK_ENDED
                 res = Result.new(next, (it,), mon, sentbytes)
-                try:
-                    zsocket.send(res)
-                except Exception:  # like OverflowError
-                    _etype, exc, tb = sys.exc_info()
-                    err = Result(exc, mon, ''.join(traceback.format_tb(tb)))
-                    zsocket.send(err)
-                sentbytes += len(res.pik)
+                sentbytes = sendback(res, zsocket, sentbytes)
+                # StopIteration -> TASK_ENDED
                 if res.msg == 'TASK_ENDED':
                     break
     else:
-        # send back a single result and a TASK_ENDED
         res = Result.new(func, args, mon)
-        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:  
-            zsocket.send(res)
-            sentbytes += len(res.pik)
+        # send back a single result and a TASK_ENDED
+        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
+            sentbytes = sendback(res, zsocket, sentbytes)
             end = Result(None, mon, msg='TASK_ENDED')
             end.pik = FakePickle(sentbytes)
             zsocket.send(end)
@@ -785,12 +787,6 @@ class Starmap(object):
         self.tasks = []  # populated by .submit
         self.task_no = 0
         self.t0 = time.time()
-        if self.distribute == 'zmq':  # add a check
-            master = workerpool.WorkerMaster(config.zworkers)
-            errors = ['The workerpool on %s is down' % host
-                      for host, run, tot in master.status() if tot == 0]
-            if errors:
-                raise RuntimeError('\n'.join(errors))
 
     def log_percent(self):
         """
