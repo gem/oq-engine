@@ -233,18 +233,11 @@ def threadpool_submit(self, func, args, monitor):
 
 @submit.add('zmq')
 def zmq_submit(self, func, args, monitor):
-    idx = self.task_no % len(host_cores)
-    host = host_cores[idx].split()[0]
-    port = int(config.zworkers.ctrl_port)
-    cls = self.__class__  # Starmap
-    if not hasattr(cls, 'sender'):
-        cls.sender = {idx: Socket(
-            'tcp://%s:%d' % (host, port), zmq.REQ, 'connect').__enter__()}
-    elif idx not in cls.sender:
-        cls.sender[idx] = Socket(
-            'tcp://%s:%d' % (host, port), zmq.REQ, 'connect').__enter__()
-    # NB: the sockets are closed at shutdown
-    return cls.sender[idx].send((func, args, self.task_no, monitor))
+    port = int(config.zworkers.ctrl_port) + 2
+    task_input_url = 'tcp://%s:%d' % (config.dbserver.host, port)
+    print(f'{task_input_url=}')
+    with Socket(task_input_url, zmq.PUSH, 'connect') as sender:
+        return sender.send((func, args, self.task_no, monitor))
 
 
 @submit.add('ipp')

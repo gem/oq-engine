@@ -18,6 +18,7 @@
 import os
 import sys
 import time
+import signal
 import shutil
 import socket
 import getpass
@@ -98,9 +99,7 @@ class WorkerMaster(object):
         """
         # start task_in->task_server streamer thread		
         port = int(config.zworkers.ctrl_port)
-        threading.Thread(
-            target=workerpool._streamer, args=(port,), daemon=True		
-        ).start()
+        threading.Thread(target=_streamer, args=(port,), daemon=True).start()
         print('Task streamer started on ports %d->%d', port+2, port+1)
         starting = []
         for host, cores, args in ssh_args(self.zworkers):
@@ -251,6 +250,23 @@ def call(func, args, taskno, mon, executing):
     os.remove(fname)
 
 
+def worker(sock, executing):
+    """
+    :param sock: a zeromq.Socket of kind PULL
+    :param executing: a path inside /tmp/calc_XXX
+    """
+    setproctitle('oq-zworker')
+    with sock:
+        for cmd, args, taskno, mon in sock:
+            print('got', cmd, args)
+            fname = os.path.join(executing, '%s-%s' % (mon.calc_id, taskno))
+            # NB: very hackish way of keeping track of the running tasks,
+            # used in get_executing, could litter the file system
+            open(fname, 'w').close()
+            parallel.safely_call(cmd, args, taskno, mon)
+            os.remove(fname)
+
+
 class WorkerPool(object):
     """
     A pool of workers accepting various commands.
@@ -260,6 +276,8 @@ class WorkerPool(object):
     """
     def __init__(self, ctrl_url, num_workers=-1):
         self.ctrl_url = ctrl_url
+        self.task_server_url = 'tcp://%s:%s' % (		
+            config.dbserver.host, int(config.zworkers.ctrl_port) + 1)
         if num_workers == -1:
             try:
                 self.num_workers = len(psutil.Process().cpu_affinity())
@@ -277,37 +295,36 @@ class WorkerPool(object):
         title = 'oq-zworkerpool %s' % self.ctrl_url[6:]  # strip tcp://
         print('Starting ' + title, file=sys.stderr)
         setproctitle(title)
-        self.pool = general.mp.Pool(self.num_workers, init_workers)
+        self.workers = []
+        for _ in range(self.num_workers):
+            sock = z.Socket(self.task_server_url, z.zmq.PULL, 'connect')
+            sock.proc = general.mp.Process(
+                target=worker, args=(sock, self.executing))
+            sock.proc.start()
+            self.workers.append(sock)
+        print('Started subprocesses in the pool')
         # start control loop accepting the commands stop and kill
         with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
             for cmd in ctrlsock:
                 if cmd == 'stop':
                     ctrlsock.send(self.stop())
                     break
-                elif cmd == 'restart':
-                    self.stop()
-                    self.pool = general.mp.Pool(self.num_workers)
-                    ctrlsock.send('restarted')
                 elif cmd == 'getpid':
                     ctrlsock.send(self.proc.pid)
                 elif cmd == 'get_num_workers':
                     ctrlsock.send(self.num_workers)
                 elif cmd == 'get_executing':
                     ctrlsock.send(' '.join(sorted(os.listdir(self.executing))))
-                elif isinstance(cmd, tuple):
-                    self.pool.apply_async(call, cmd + (self.executing,))
-                    ctrlsock.send('submitted')
-                else:
-                    ctrlsock.send('unknown command')
         shutil.rmtree(self.executing)
 
     def stop(self):
         """
         Terminate the pool
         """
-        self.pool.close()
-        self.pool.terminate()
-        self.pool.join()
+        for sock in self.workers:
+            os.kill(sock.proc.pid, signal.SIGTERM)
+        for sock in self.workers:
+            sock.proc.join()
         return 'WorkerPool %s stopped' % self.ctrl_url
 
 
