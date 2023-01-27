@@ -233,9 +233,12 @@ def call(func, args, taskno, mon, executing):
 
 
 def errback(job_id, task_no, exc):
+    from openquake.commonlib.logs import dbcmd
+    dbcmd('log', job_id, datetime.utcnow(), 'ERROR',
+          '%s/%s' % (job_id, task_no), str(exc))
+    raise exc
     e = exc.__class__('in job %d, task %d' % (job_id, task_no))
     raise e.with_traceback(exc.__traceback__)
-
 
 
 class WorkerPool(object):
