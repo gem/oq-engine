@@ -268,7 +268,7 @@ class WorkerPool(object):
         print('Starting ' + title, file=sys.stderr)
         setproctitle(title)
         self.pool = general.mp.Pool(self.num_workers, init_workers)
-        streamer_on = False
+        self.pool.apply_async(streamer)
         # start control loop accepting the commands stop and kill
         with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
             for cmd in ctrlsock:
@@ -286,9 +286,6 @@ class WorkerPool(object):
                 elif cmd == 'get_executing':
                     ctrlsock.send(' '.join(sorted(os.listdir(self.executing))))
                 elif isinstance(cmd, tuple):
-                    if not streamer_on:
-                        self.pool.apply_async(streamer)
-                        streamer_on = True
                     self.pool.apply_async(call, cmd + (self.executing,))
                     ctrlsock.send('submitted')
                 else:
