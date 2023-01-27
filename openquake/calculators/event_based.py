@@ -443,10 +443,12 @@ class EventBasedCalculator(base.HazardCalculator):
         proxies = [RuptureProxy(rec, scenario)
                    for rec in dstore['ruptures'][:]]
         if "station_data" in oq.inputs:
-            # this is meant to be used in scenario calculations with a single
-            # rupture; we are taking the first copy of the rupture (remember:
-            # _read_scenario_ruptures makes num_gmfs copies to parallelize)
-            # TODO: this is ugly andmust be improved upon!
+            # this is meant to be used in conditioned scenario calculations 
+            # with a single rupture; we are taking the first copy of the rupture 
+            # (remember: _read_scenario_ruptures makes num_gmfs copies in order to 
+            # parallelize, but the conditioning process is computationally quite 
+            # expensive, so we want to avoid repeating it num_gmfs times)
+            # TODO: this is ugly and must be improved upon!
             proxies = proxies[0:1]
         full_lt = self.datastore['full_lt']
         dstore.swmr_on()  # must come before the Starmap
