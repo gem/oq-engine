@@ -466,11 +466,10 @@ def get_conditioned_mean_and_covariance(
         # Get the nominal bias and its variance as the means of the
         # conditional between-event residual mean and covariance
         nominal_bias_mean = numpy.mean(mu_BD_yD)
-        # ASK: why are we computing nominal_bias_stddev if it is not used??
         nominal_bias_stddev = numpy.sqrt(numpy.mean(cov_BD_BD_yD))
         logging.info(
-            "GMM: %s, IMT: %s, Nominal bias (mean): %.3f",
-            gmm_name, target_imt.string, nominal_bias_mean)
+            "GMM: %s, IMT: %s, Nominal bias mean: %.3f, Nominal bias stddev: %.3f",
+            gmm_name, target_imt.string, nominal_bias_mean, nominal_bias_stddev)
 
         # From the GMMs, get the mean and stddevs at the target sites
         cmaker_Y = ContextMaker(
