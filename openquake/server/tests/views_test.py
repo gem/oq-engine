@@ -34,6 +34,7 @@ import gzip
 import tempfile
 import string
 import random
+import django
 from django.test import Client
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logs import dbcmd
@@ -41,6 +42,12 @@ from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
 from openquake.commands import engine
+
+# NOTE: before importing User or any other model, django.setup() is needed,
+#       otherwise it would raise:
+#       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
+django.setup()
+from django.contrib.auth.models import User
 
 
 def loadnpz(lines):
@@ -122,8 +129,16 @@ class EngineServerTestCase(unittest.TestCase):
         env['OQ_DISTRIBUTE'] = 'no'
         # let's impersonate the user openquake, the one running the WebUI:
         # we need to set LOGNAME on Linux and USERNAME on Windows
-        env['LOGNAME'] = env['USERNAME'] = 'openquake'
+        env['LOGNAME'] = env['USERNAME'] = username = 'openquake'
+        email = 'openquake@email.test'
+        password = '12345'
+        cls.user, created = User.objects.get_or_create(
+            username=username, email=email)
+        if created:
+            cls.user.set_password(password)
+            cls.user.save()
         cls.c = Client()
+        cls.c.login(username=username, password=password)
 
     @classmethod
     def tearDownClass(cls):
@@ -414,3 +429,48 @@ class EngineServerTestCase(unittest.TestCase):
         resp = self.post('aelo_run', params)
         self.assertEqual(resp.status_code, 200)
         print(json.loads(resp.content.decode('utf8')))
+        # TODO: this should not only check that the calculation is started
+        # correctly, but also the email with the link to the outputs
+
+    def test_aelo_invalid_latitude(self):
+        params = dict(lon='-86', lat='100', vs30='800', siteid='CCA_SITE')
+        resp = self.post('aelo_run', params)
+        self.assertEqual(resp.status_code, 500)
+        err_msg = json.loads(resp.content.decode('utf8'))
+        print(err_msg)
+        self.assertIn('latitude 100.0 > 90', err_msg)
+
+    def test_aelo_invalid_longitude(self):
+        params = dict(lon='-186', lat='12', vs30='800', siteid='CCA_SITE')
+        resp = self.post('aelo_run', params)
+        self.assertEqual(resp.status_code, 500)
+        err_msg = json.loads(resp.content.decode('utf8'))
+        print(err_msg)
+        self.assertIn('longitude -186.0 < -180', err_msg)
+
+    def test_aelo_invalid_vs30(self):
+        params = dict(lon='-86', lat='12', vs30='-800', siteid='CCA_SITE')
+        resp = self.post('aelo_run', params)
+        self.assertEqual(resp.status_code, 500)
+        err_msg = json.loads(resp.content.decode('utf8'))
+        print(err_msg)
+        self.assertIn('float -800.0 < 0', err_msg)
+
+    def test_aelo_invalid_siteid(self):
+        params = dict(lon='-86', lat='12', vs30='800', siteid='CCA SITE')
+        resp = self.post('aelo_run', params)
+        self.assertEqual(resp.status_code, 500)
+        err_msg = json.loads(resp.content.decode('utf8'))
+        print(err_msg)
+        self.assertIn("Invalid ID 'CCA SITE': "
+                      "the only accepted chars are a-zA-Z0-9_-:", err_msg)
+
+    def _FIXME_test_aelo_no_model_found(self):
+        params = dict(lon='-86', lat='88', vs30='800', siteid='SOMEWHERE')
+        resp = self.post('aelo_run', params)
+        self.assertEqual(resp.status_code, 200)
+        err_msg = json.loads(resp.content.decode('utf8'))
+        print(err_msg)
+        # FIXME: this needs to check the email
+        self.assertIn('ValueError: Site at lon=-86.0 lat=88.0 '
+                      'is not covered by any model!', err_msg)
