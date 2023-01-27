@@ -212,23 +212,20 @@ jobs:
                   pfx=""
                   sfx=""
                   if [ "$v" = "$ENG_VER" ]; then
-                      if [ "$BUILD" == "master" ]; then
-                         pfx="master"
-                      else
-                         pfx="$GITHUB_REF_NAME"
-                      fi
+                      pfx="development"
                       master_rename="true"
                   else
                       master_rename="false"
                   fi
-                  if [ "$v" = "$LATEST_VER" ]; then
-                      if [ "$sfx" ]; then
-                          sfx="${sfx}, latest"
-                      else
-                          sfx="latest"
-                      fi
-                  fi
-                  if [ "$v" = "$LTS_VER" ]; then
+                  # if [ "$v" = "$LATEST_VER" ]; then
+                  #     if [ "$sfx" ]; then
+                  #         sfx="${sfx}, latest"
+                  #    else
+                  #         sfx="latest"
+                  #     fi
+                  # fi
+                  # FIXME if [ "$v" = "$LTS_VER" ]; then
+                  if [ "$v" = "$LTS_VER" -o "$v" = "3.15" ]; then
                       if [ "$sfx" ]; then
                           sfx="${sfx}, LTS"
                       else
@@ -239,11 +236,12 @@ jobs:
                       sfx=" (${sfx})"
                   fi
 
+                  # FIXME >= 16
                   # policies for the user manual version switcher menu
-                  if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 11 )) ) || (( "$ver_maj" > 3 )); then
+                  if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 15 )) ) || (( "$ver_maj" > 3 )); then
                       if [ "$master_rename" == "true" ]; then
-                          ver_name="${pfx} (target ${ver_maj}.${ver_min})"
-                          ver_val="${pfx}"
+                          ver_name="${pfx}"
+                          ver_val="master"
                       else
                           ver_name="${ver_maj}.${ver_min}${sfx}"
                           ver_val="${ver_maj}.${ver_min}"
@@ -255,8 +253,9 @@ jobs:
                       ddown_man="${ddown_man}{ \"name\": \"${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
                   fi
 
+                  # FIXME >= 16
                   # policies for the advanced manual version switcher menu
-                  if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 11 )) ) || (( "$ver_maj" > 3 )); then
+                  if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 15 )) ) || (( "$ver_maj" > 3 )); then
                       if [ "$master_rename" == "true" ]; then
                           ver_name="${pfx} (target ${ver_maj}.${ver_min})"
                           ver_val="${pfx}"
