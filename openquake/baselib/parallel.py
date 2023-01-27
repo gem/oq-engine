@@ -266,166 +266,6 @@ def init_workers():
         setproctitle('oq-worker')
 
 
-class Pickled(object):
-    """
-    An utility to manually pickling/unpickling objects. Pickled instances
-    have a nice string representation and length giving the size
-    of the pickled bytestring.
-
-    :param obj: the object to pickle
-    """
-    def __init__(self, obj):
-        self.clsname = obj.__class__.__name__
-        self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
-        try:
-            self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
-        except TypeError as exc:  # can't pickle, show the obj in the message
-            raise TypeError('%s: %s' % (exc, obj))
-
-    def __repr__(self):
-        """String representation of the pickled object"""
-        return '<Pickled %s #%s %s>' % (
-            self.clsname, self.calc_id, humansize(len(self)))
-
-    def __len__(self):
-        """Length of the pickled bytestring"""
-        return len(self.pik)
-
-    def unpickle(self):
-        """Unpickle the underlying object"""
-        return pickle.loads(self.pik)
-
-
-def get_pickled_sizes(obj):
-    """
-    Return the pickled sizes of an object and its direct attributes,
-    ordered by decreasing size. Here is an example:
-
-    >> total_size, partial_sizes = get_pickled_sizes(Monitor(''))
-    >> total_size
-    345
-    >> partial_sizes
-    [('_procs', 214), ('exc', 4), ('mem', 4), ('start_time', 4),
-    ('_start_time', 4), ('duration', 4)]
-
-    Notice that the sizes depend on the operating system and the machine.
-    """
-    sizes = []
-    attrs = getattr(obj, '__dict__',  {})
-    for name, value in attrs.items():
-        sizes.append((name, len(Pickled(value))))
-    return len(Pickled(obj)), sorted(
-        sizes, key=lambda pair: pair[1], reverse=True)
-
-
-def pickle_sequence(objects):
-    """
-    Convert an iterable of objects into a list of pickled objects.
-    If the iterable contains copies, the pickling will be done only once.
-    If the iterable contains objects already pickled, they will not be
-    pickled again.
-
-    :param objects: a sequence of objects to pickle
-    """
-    cache = {}
-    out = []
-    for obj in objects:
-        obj_id = id(obj)
-        if obj_id not in cache:
-            if isinstance(obj, Pickled):  # already pickled
-                cache[obj_id] = obj
-            else:  # pickle the object
-                cache[obj_id] = Pickled(obj)
-        out.append(cache[obj_id])
-    return out
-
-
-class FakePickle:
-    def __init__(self, sentbytes):
-        self.sentbytes = sentbytes
-
-    def unpickle(self):
-        pass
-
-    def __len__(self):
-        return self.sentbytes
-
-
-class Result(object):
-    """
-    :param val: value to return or exception instance
-    :param mon: Monitor instance
-    :param tb_str: traceback string (empty if there was no exception)
-    :param msg: message string (default empty)
-    """
-    func = None
-
-    def __init__(self, val, mon, tb_str='', msg=''):
-        if isinstance(val, dict):
-            self.pik = Pickled(val)
-            self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
-        elif isinstance(val, tuple) and callable(val[0]):
-            self.func = val[0]
-            self.pik = pickle_sequence(val[1:])
-            self.nbytes = {'args': sum(len(p) for p in self.pik)}
-        elif msg == 'TASK_ENDED':
-            self.pik = Pickled(None)
-            self.nbytes = {}
-        else:
-            self.pik = Pickled(val)
-            self.nbytes = {'tot': len(self.pik)}
-        self.mon = mon
-        self.tb_str = tb_str
-        self.msg = msg
-        self.workerid = (socket.gethostname(), os.getpid())
-
-    def get(self):
-        """
-        Returns the underlying value or raise the underlying exception
-        """
-        val = self.pik.unpickle()
-        if self.tb_str:
-            etype = val.__class__
-            msg = '\n%s%s: %s' % (self.tb_str, etype.__name__, val)
-            if issubclass(etype, KeyError):
-                raise RuntimeError(msg)  # nicer message
-            else:
-                raise etype(msg)
-        return val
-
-    def __repr__(self):
-        nbytes = ['%s: %s' % (k, humansize(v)) for k, v in self.nbytes.items()]
-        return '<%s %s>' % (self.__class__.__name__, ' '.join(nbytes))
-
-    @classmethod
-    def new(cls, func, args, mon, sentbytes=0):
-        """
-        :returns: a new Result instance
-        """
-        try:
-            if mon.version and mon.version != engine_version():
-                raise RuntimeError(
-                    'The master is at version %s while the worker %s is at '
-                    'version %s' % (mon.version, socket.gethostname(),
-                                    engine_version()))
-            if mon.config.dbserver.host != config.dbserver.host:
-                raise RuntimeError(
-                    'The master has dbserver.host=%s while the worker has %s'
-                    % (mon.config.dbserver.host, config.dbserver.host))
-            with mon:
-                val = func(*args)
-        except StopIteration:
-            mon.counts -= 1  # StopIteration does not count
-            res = Result(None, mon, msg='TASK_ENDED')
-            res.pik = FakePickle(sentbytes)
-        except Exception:
-            _etype, exc, tb = sys.exc_info()
-            res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
-        else:
-            res = Result(val, mon)
-        return res
-
-
 def check_mem_usage(soft_percent=None, hard_percent=None):
     """
     Display a warning if we are running out of memory
@@ -466,7 +306,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
         args = [a.unpickle() for a in args]
     if mon is dummy_mon:  # in the DbServer
         assert not isgenfunc, func
-        return Result.new(func, args, mon)
+        return workerpool.Result.new(func, args, mon)
     # debug(f'{mon.backurl=}, {task_no=}')
     if mon.operation.endswith('_'):
         name = mon.operation[:-1]
@@ -483,7 +323,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
         msg = check_mem_usage()  # warn if too much memory is used
         if msg:
-            zsocket.send(Result(None, mon, msg=msg))
+            zsocket.send(workerpool.Result(None, mon, msg=msg))
         if inspect.isgeneratorfunction(func):
             it = func(*args)
         else:
@@ -492,12 +332,13 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
             it = gen(*args)
         while True:
             # StopIteration -> TASK_ENDED
-            res = Result.new(next, (it,), mon, sentbytes)
+            res = workerpool.Result.new(next, (it,), mon, sentbytes)
             try:
                 zsocket.send(res)
             except Exception:  # like OverflowError
                 _etype, exc, tb = sys.exc_info()
-                err = Result(exc, mon, ''.join(traceback.format_tb(tb)))
+                err = workerpool.Result(
+                    exc, mon, ''.join(traceback.format_tb(tb)))
                 zsocket.send(err)
             sentbytes += len(res.pik)
             if res.msg == 'TASK_ENDED':
@@ -541,7 +382,7 @@ class IterResult(object):
             if isinstance(result, BaseException):
                 # this happens with WorkerLostError with celery
                 raise result
-            elif isinstance(result, Result):
+            elif isinstance(result, workerpool.Result):
                 val = result.get()
                 self.nbytes += result.nbytes
             else:  # this should never happen
@@ -825,10 +666,10 @@ class Starmap(object):
             return
         dist = 'no' if self.num_tasks == 1 or OQ_TASK_NO else self.distribute
         if dist != 'no':
-            pickled = isinstance(args[0], Pickled)
+            pickled = isinstance(args[0], workerpool.Pickled)
             if not pickled:
                 assert not isinstance(args[-1], Monitor)  # sanity check
-                args = pickle_sequence(args)
+                args = workerpool.pickle_sequence(args)
             if func is None:
                 fname = self.task_func.__name__
                 argnames = self.argnames[:-1]

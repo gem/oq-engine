@@ -24,7 +24,7 @@ import getpass
 import logging
 import traceback
 from datetime import datetime
-from openquake.baselib import config, zeromq, parallel
+from openquake.baselib import config, zeromq, parallel, workerpool
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput, dbapi
 
@@ -56,7 +56,7 @@ def dbcmd(action, *args):
                          timeout=60)  # when the system is loaded
     with sock:
         res = sock.send((action,) + args)
-        if isinstance(res, parallel.Result):
+        if isinstance(res, workerpool.Result):
             return res.get()
     return res
 
