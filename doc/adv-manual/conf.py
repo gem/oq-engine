@@ -76,7 +76,7 @@ except Exception:
 version = engine.__version__.split('-')[0]
 # The full version, including alpha/beta/rc tags.
 if it_is_master:
-    release = "develpment (%s)" % (vcs_branch, engine.__version__,)
+    release = "develpment (%s)" % (engine.__version__,)
 else:
     release = "%s%s" % (engine.__version__, branch)
 
