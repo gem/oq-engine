@@ -52,6 +52,8 @@ F32 = numpy.float32
 # simulate the requested number of ground motion fields
 
 # Notation:
+# _D: subscript refers to the "Data" or observations
+# _Y: subscript refers to the target sites
 # yD: recorded values at the stations
 # var_addon_D: additional sigma for the observations that are uncertain, 
 #   which might arise if the values for this particular IMT were not directly
@@ -75,7 +77,7 @@ F32 = numpy.float32
 # phi_Y: predicted within-event standard deviation of the intensity at the target sites
 # tau_Y: predicted between-event standard deviation of the intensity at the target sites
 # mu_BY_yD: mean of the conditional between-event residual for the target sites
-# cov_WY_WD and cov_WD_WY: within-event covariance matrices for the target sites and observation sites 
+# cov_WY_WD and cov_WD_WY: within-event covariance matrices for the target sites and observation sites
 # cov_WY_WY: apriori within-event covariance matrix for the target sites
 # RC: regression coefficient matrix ("RC" = cov_WY_WD × cov_WD_WD_inv)
 # C: scaling matrix for the conditioned between-event covariance matrix
@@ -309,6 +311,9 @@ def get_conditioned_mean_and_covariance(
                       if imt_str not in ["MMI", "PGV"]}
     observed_imts = sorted([imt.from_string(imt_str)
                             for imt_str in observed_imtls])
+
+    # Generate the contexts and calculate the means and 
+    # standard deviations at the *station* sites ("_D")
     cmaker_D = ContextMaker(
         rupture.tectonic_region_type, [gmm],
         dict(truncation_level=0, imtls=observed_imtls,
@@ -489,7 +494,8 @@ def get_conditioned_mean_and_covariance(
             "GMM: %s, IMT: %s, Nominal bias mean: %.3f, Nominal bias stddev: %.3f",
             gmm_name, target_imt.string, nominal_bias_mean, nominal_bias_stddev)
 
-        # From the GMMs, get the mean and stddevs at the target sites
+        # Generate the contexts and calculate the means and 
+        # standard deviations at the *target* sites ("_Y")
         cmaker_Y = ContextMaker(
             rupture.tectonic_region_type, [gmm], dict(
                 truncation_level=0, imtls={target_imt.string: [0]},
