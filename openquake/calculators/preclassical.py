@@ -102,7 +102,13 @@ def preclassical(srcs, sites, cmaker, monitor):
         for ss in splits:
             ss.num_ruptures = ss.count_ruptures()
         split_sources.extend(splits)
+    mon = monitor('weighting sources', measuremem=False)
     if sites is None or spacing == 0:
+        if sites is None:
+            for src in split_sources:
+                src.weight = .01
+        else:
+            cmaker.set_weight(split_sources, sf, multiplier, mon)
         dic = {grp_id: split_sources}
         dic['before'] = len(srcs)
         dic['after'] = len(split_sources)
@@ -113,7 +119,6 @@ def preclassical(srcs, sites, cmaker, monitor):
             for src in dic[grp_id]:
                 src.num_ruptures = src.count_ruptures()
             # this is also prefiltering the split sources
-            mon = monitor('weighting sources', measuremem=False)
             cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
             # print(f'{mon.task_no=}, {mon.duration=}')
             dic['before'] = len(block)
@@ -155,6 +160,8 @@ class PreClassicalCalculator(base.HazardCalculator):
              for sg in csm.src_groups], hdf5.vstr)
         cmakers = read_cmakers(self.datastore, csm.full_lt)
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
+        if sites is None:
+            logging.warning('No sites??')
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
         normal_sources = []
@@ -240,8 +247,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                 newsg.sources = srcs
                 csm.src_groups[grp_id] = newsg
                 for src in srcs:
-                    assert src.weight
-                    assert src.num_ruptures
+                    assert src.weight, src
+                    assert src.num_ruptures, src
                     acc[src.code] += int(src.num_ruptures)
         csm.fix_src_offset()
         for val, key in sorted((val, key) for key, val in acc.items()):
