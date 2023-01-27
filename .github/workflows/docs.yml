@@ -257,8 +257,8 @@ jobs:
                   # policies for the advanced manual version switcher menu
                   if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 15 )) ) || (( "$ver_maj" > 3 )); then
                       if [ "$master_rename" == "true" ]; then
-                          ver_name="${pfx} (target ${ver_maj}.${ver_min})"
-                          ver_val="${pfx}"
+                          ver_name="${pfx}"
+                          ver_val="master"
                       else
                           ver_name="${ver_maj}.${ver_min}${sfx}"
                           ver_val="${ver_maj}.${ver_min}"
