@@ -447,7 +447,7 @@ dummy_mon.config = config
 dummy_mon.backurl = None
 
 
-def safely_call(func, args, task_no=0, mon=dummy_mon):
+def safely_call(func, args, task_no=0, mon=dummy_mon, backurl=None):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -480,7 +480,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon.inject:
         args += (mon,)
     sentbytes = 0
-    with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
+    with Socket(backurl or mon.backurl, zmq.PUSH, 'connect') as zsocket:
         msg = check_mem_usage()  # warn if too much memory is used
         if msg:
             zsocket.send(Result(None, mon, msg=msg))

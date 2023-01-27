@@ -32,6 +32,8 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
+INPROC = 'tcp://127.0.0.1:9999'
+
 
 def init_workers():
     """Used to initialize the process pool"""
@@ -225,8 +227,18 @@ def call(func, args, taskno, mon, executing):
     # NB: very hackish way of keeping track of the running tasks,
     # used in get_executing, could litter the file system
     open(fname, 'w').close()
-    parallel.safely_call(func, args, taskno, mon)
+    parallel.safely_call(func, args, taskno, mon, INPROC)
     os.remove(fname)
+
+
+def streamer():
+    """
+    Redirect from the WorkerPool to the backurl on the master
+    """
+    with z.Socket(INPROC, z.zmq.PULL, 'bind') as inp:
+        for res in inp:
+            with z.Socket(res.mon.backurl, z.zmq.PUSH, 'connect') as back:
+                back.send(res)
 
 
 class WorkerPool(object):
@@ -256,6 +268,7 @@ class WorkerPool(object):
         print('Starting ' + title, file=sys.stderr)
         setproctitle(title)
         self.pool = general.mp.Pool(self.num_workers, init_workers)
+        streamer_on = False
         # start control loop accepting the commands stop and kill
         with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
             for cmd in ctrlsock:
@@ -273,6 +286,9 @@ class WorkerPool(object):
                 elif cmd == 'get_executing':
                     ctrlsock.send(' '.join(sorted(os.listdir(self.executing))))
                 elif isinstance(cmd, tuple):
+                    if not streamer_on:
+                        self.pool.apply_async(streamer)
+                        streamer_on = True
                     self.pool.apply_async(call, cmd + (self.executing,))
                     ctrlsock.send('submitted')
                 else:
