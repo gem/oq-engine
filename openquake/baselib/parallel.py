@@ -237,7 +237,8 @@ def zmq_submit(self, func, args, monitor):
     host = host_cores[idx].split()[0]
     port = int(config.zworkers.ctrl_port)
     with Socket('tcp://%s:%d' % (host, port), zmq.REQ, 'connect') as sock:
-        return sock.send((func, args, self.task_no, monitor))
+        ok = sock.send((func, args, self.task_no, monitor))
+        assert ok == 'submitted', ok
 
 
 @submit.add('ipp')
@@ -491,7 +492,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     sentbytes = 0
     if isgenfunc:
         it = func(*args)
-        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:  
+        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
             while True:
                 res = Result.new(next, (it,), mon, sentbytes)
                 sentbytes = sendback(res, zsocket, sentbytes)
