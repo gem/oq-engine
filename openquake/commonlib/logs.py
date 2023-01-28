@@ -61,6 +61,15 @@ def dbcmd(action, *args):
     return res
 
 
+def dblog(level: str, job_id: int, task_no: int, msg: str):
+    """
+    Log on the database
+    """
+    process = 'task #%d ' % task_no  # not displayed by the logger
+    return dbcmd('log', job_id, datetime.utcnow(), level,
+                 process, process + msg)
+                 
+    
 def get_datadir():
     """
     Extracts the path of the directory where the openquake data are stored
