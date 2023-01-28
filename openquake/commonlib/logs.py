@@ -53,7 +53,7 @@ def dbcmd(action, *args):
         else:
             return func(dbapi.db, *args)
     sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect',
-                         timeout=60)  # when the system is loaded
+                         timeout=3600)  # when the system is loaded
     with sock:
         res = sock.send((action,) + args)
         if isinstance(res, parallel.Result):
@@ -65,9 +65,8 @@ def dblog(level: str, job_id: int, task_no: int, msg: str):
     """
     Log on the database
     """
-    process = 'task #%d ' % task_no  # not displayed by the logger
-    return dbcmd('log', job_id, datetime.utcnow(), level,
-                 process, process + msg)
+    task = 'task #%d' % task_no
+    return dbcmd('log', job_id, datetime.utcnow(), level, task, msg)
                  
     
 def get_datadir():
