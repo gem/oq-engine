@@ -360,7 +360,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
             for start, stop in slices:
-                for slc in gen_slices(start, stop, 100_000):
+                for slc in gen_slices(start, stop, 50_000):
                     U = max(U, stop - start)
                     smap.submit((dstore, slc, cmaker, self.hmap4,
                                  magi[slc], self.bin_edges))
