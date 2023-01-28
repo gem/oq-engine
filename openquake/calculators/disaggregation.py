@@ -361,7 +361,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             cmaker = cmakers[grp_id]
             for start, stop in slices:
                 for slc in gen_slices(start, stop, 50_000):
-                    U = max(U, stop - start)
+                    U = max(U, slc.stop - slc.start)
                     smap.submit((dstore, slc, cmaker, self.hmap4,
                                  magi[slc], self.bin_edges))
                     task_inputs.append((grp_id, stop - start))
