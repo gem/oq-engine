@@ -147,7 +147,7 @@ class WorkerMaster(object):
                 executing.append((host, running, total))
         return executing
 
-    def wait(self, seconds=30):
+    def wait(self, seconds=60):
         """
         Wait until all workers are active
         """
