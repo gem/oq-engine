@@ -124,7 +124,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         shapes = U32(shapes)
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rec = numpy.zeros(1, rupture_dt)[0]
-        rec['seed'] = rup.rup_id
+        rec['seed'] = rup.seed
         rec['minlon'] = minlon = numpy.nanmin(lons)  # NaNs are in KiteSurfaces
         rec['minlat'] = minlat = numpy.nanmin(lats)
         rec['maxlon'] = maxlon = numpy.nanmax(lons)
@@ -135,7 +135,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
                 srcfilter.close_sids(rec, rup.tectonic_region_type)) == 0:
             continue
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        tup = (0, ebrupture.rup_id, ebrupture.source_id, ebrupture.trt_smr,
+        tup = (0, ebrupture.seed, ebrupture.source_id, ebrupture.trt_smr,
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
                minlon, minlat, maxlon, maxlat, hypo, 0, 0)
         rups.append(tup)

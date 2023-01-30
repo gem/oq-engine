@@ -385,6 +385,7 @@ class Hazard:
     def store_disagg(self, pmaps=None):
         """
         Store data inside disagg_by_grp (optionally disagg_by_src)
+        """
         n = len(self.full_lt.sm_rlzs)
         lst = []
         for grp_id, indices in enumerate(self.datastore['trt_smrs']):
@@ -394,7 +395,6 @@ class Hazard:
                 trt = self.full_lt.trts[trti[0]]
                 lst.append((trt, dic['avg_poe'], dic['nsites']))
         self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
-        """
         if pmaps:  # called inside a loop
             disagg_by_src = self.datastore['disagg_by_src'][()]
             for key, pmap in pmaps.items():
@@ -443,7 +443,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
         pnemap = dic['pnemap']  # probabilities of no exceedence
-        pmap_by_src = dic.pop('pmap_by_src', {})
+        pmap_by_src = dic.pop('pmap_by_src', {})  # non-empty for disagg_by_src
         # len(pmap_by_src) > 1 only for mutex sources, see contexts.py
         for source_id, pm in pmap_by_src.items():
             # store the poes for the given source

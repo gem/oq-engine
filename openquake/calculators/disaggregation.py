@@ -20,12 +20,11 @@
 Disaggregation calculator core functionality
 """
 import logging
-import operator
 import numpy
 
 from openquake.baselib import parallel, hdf5, performance
 from openquake.baselib.general import (
-    AccumDict, get_nbytes_msg, humansize, pprod, agg_probs, block_splitter)
+    AccumDict, get_nbytes_msg, humansize, pprod, agg_probs, gen_slices)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -228,7 +227,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 'The number of sites is to disaggregate is %d, but you have '
                 'max_sites_disagg=%d' % (self.N, few))
         all_edges, shapedic = disagg.get_edges_shapedic(
-            self.oqparam, self.sitecol, self.datastore['source_mags'])
+            self.oqparam, self.sitecol, self.datastore['source_mags'], self.R)
         *b, trts = all_edges
         T = len(trts)
         shape = [len(bin) - 1 for bin in
@@ -243,7 +242,6 @@ class DisaggregationCalculator(base.HazardCalculator):
 
     def execute(self):
         """Performs the disaggregation"""
-        self.pre_checks()
         return self.full_disaggregation()
 
     def get_curve(self, sid, rlzs):
@@ -276,7 +274,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         if oq.rlz_index is None and oq.num_rlzs_disagg == 0:
             oq.num_rlzs_disagg = len(ws)  # 0 means all rlzs
         edges, self.shapedic = disagg.get_edges_shapedic(
-            oq, self.sitecol, self.datastore['source_mags'])
+            oq, self.sitecol, self.datastore['source_mags'], self.R)
         self.save_bin_edges(edges)
         self.full_lt = self.datastore['full_lt']
         self.poes_disagg = oq.poes_disagg or (None,)
@@ -362,11 +360,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
             for start, stop in slices:
-                slc = slice(start, stop)
-                U = max(U, stop - start)
-                smap.submit((dstore, slc, cmaker, self.hmap4,
-                             magi[slc], self.bin_edges))
-                task_inputs.append((grp_id, stop - start))
+                for slc in gen_slices(start, stop, 50_000):
+                    U = max(U, slc.stop - slc.start)
+                    smap.submit((dstore, slc, cmaker, self.hmap4,
+                                 magi[slc], self.bin_edges))
+                    task_inputs.append((grp_id, stop - start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)

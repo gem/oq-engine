@@ -93,7 +93,6 @@ def set_concurrent_tasks_default(calc):
         sys.exit(1)
 
     parallel.Starmap.CT = num_workers * 2
-    parallel.Starmap.num_cores = num_workers
     OqParam.concurrent_tasks.default = num_workers * 2
     logging.warning('Using %d %s workers', num_workers, OQ_DISTRIBUTE)
 
@@ -275,7 +274,7 @@ def run_calc(log):
             set_concurrent_tasks_default(calc)
         else:
             logging.warning('Assuming %d %s workers',
-                            parallel.Starmap.num_cores, OQ_DISTRIBUTE)
+                            parallel.Starmap.CT // 2, OQ_DISTRIBUTE)
         t0 = time.time()
         calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
@@ -388,10 +387,9 @@ def run_jobs(jobctxs):
         for job in jobctxs:
             logs.dbcmd('finish', job.calc_id, 'aborted')
         return jobctxs
-    else:
-        for job in jobctxs:
-            dic = {'status': 'executing', 'pid': _PID}
-            logs.dbcmd('update_job', job.calc_id, dic)
+    for job in jobctxs:
+        dic = {'status': 'executing', 'pid': _PID}
+        logs.dbcmd('update_job', job.calc_id, dic)
     try:
         if OQ_DISTRIBUTE == 'zmq' and w.WorkerMaster(
                 config.zworkers).status() == []:
@@ -402,8 +400,8 @@ def run_jobs(jobctxs):
         if jobarray and OQ_DISTRIBUTE != 'no':
             parallel.multispawn(run_calc, allargs, num_cores=3)
         else:
-            for job in jobctxs:
-                run_calc(job)
+            for jobctx in jobctxs:
+                run_calc(jobctx)
         cleanup('stop')
     except Exception:
         ids = [jc.calc_id for jc in jobctxs]

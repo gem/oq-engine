@@ -253,7 +253,8 @@ floating_x_step:
 
 floating_y_step:
   Float, used in rupture generation for kite faults. indicates the fraction
-  of fault width used to float ruptures down dip. (i.e. "0.5" floats that half the rupture length). Uniform distribution of the ruptures
+  of fault width used to float ruptures down dip. (i.e. "0.5" floats that
+  half the rupture length). Uniform distribution of the ruptures
   is maintained, such that if the mesh spacing and rupture dimensions
   prohibit the defined overlap fraction, the fraction is increased until
   uniform distribution is achieved. The minimum possible value depends on
@@ -818,7 +819,7 @@ class OqParam(valid.ParamSet):
                     'insurance', 'reinsurance', 'ins_loss',
                     'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
                     'fragility', 'consequence', 'reqv', 'input_zip',
-                    'amplification',
+                    'amplification', 'station_data',
                     'nonstructural_vulnerability',
                     'nonstructural_fragility',
                     'nonstructural_consequence',
@@ -1021,7 +1022,10 @@ class OqParam(valid.ParamSet):
         should be called only before starting the calculation.
         The same information is stored in the datastore.
         """
-        return sum(os.path.getsize(f) for f in self._input_files)
+        # NB: when the OqParam object is instantiated from a dictionary and
+        # not from a job.ini file the key 'job_ini ' has value '<in-memory>'
+        return sum(os.path.getsize(f) for f in self._input_files
+                   if f != '<in-memory>')
 
     def get_reqv(self):
         """
@@ -1085,7 +1089,7 @@ class OqParam(valid.ParamSet):
         if ('ps_grid_spacing' in names_vals and
                 float(names_vals['ps_grid_spacing']) and
                 'pointsource_distance' not in names_vals):
-            self.pointsource_distance = dict(default=10.)
+            self.pointsource_distance = dict(default=40.)
         if self.collapse_level >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 

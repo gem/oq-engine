@@ -1,4 +1,24 @@
   [Michele Simionato]
+  * Increased the number of disaggregation tasks
+
+  [Anirudh Rao, Michele Simionato]
+  * Changed the algorithm used in classical_risk and classical_bcr
+    calculations to take into account the risk_investigation_time
+
+  [Michele Simionato]
+  * Added a warning for pointlike sources with magnitudes >= 8
+  * Optimized the disaggregation by using our own truncnorm_sf function and
+    not scipy
+
+  [Anirudh Rao]
+  * Implemented Conditioned GMFs as defined in Engler et al. (2022)
+
+  [Matteo Nastasi]
+  * Removed python3-engine-master and python3-engine-worker ubuntu packages
+
+  [Michele Simionato]
+  * Internal: renamed rup_id -> seed in event based calculations to avoid
+    confusion
   * Parallelized the reinsurance calculation
 
   [Marco Pagani]

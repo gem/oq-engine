@@ -880,7 +880,8 @@ class ContextMaker(object):
                     r_sites = sites.filter(mask)
                     rctx = self.get_rctx(rup, r_sites, dist[mask])
                     rctx.src_id = src_id
-                    rctx.rup_id = rup.rup_id
+                    if src_id:  # not event based
+                        rctx.rup_id = rup.rup_id
                     if self.fewsites:
                         c = rup.surface.get_closest_points(sites.complete)
                         rctx.clon = c.lons[rctx.sids]
@@ -1048,9 +1049,10 @@ class ContextMaker(object):
                         pmap.update_(poes, invs, ctxt, itime, rup_indep, idx)
 
     # called by gen_poes and by the GmfComputer
-    def get_mean_stds(self, ctxs):
+    def get_mean_stds(self, ctxs, split_by_mag=False):
         """
         :param ctxs: a list of contexts with N=sum(len(ctx) for ctx in ctxs)
+        :param disagg: True when called from the disaggregation calculator
         :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
         N = sum(len(ctx) for ctx in ctxs)
@@ -1062,6 +1064,9 @@ class ContextMaker(object):
             recarrays = ctxs
         else:  # vectorize the contexts
             recarrays = [self.recarray(ctxs)]
+        if split_by_mag:
+            assert len(recarrays) == 1, len(recarrays)
+            recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
         self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
@@ -1138,10 +1143,13 @@ class ContextMaker(object):
         for src in sources:
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.esites = 0
+                src.weight = .01
             else:
                 with mon:
                     src.weight, src.esites = self.estimate_weight(
                         src, srcfilter, multiplier)
+                    if src.weight == 0:
+                        src.weight = 0.001
                     src.weight *= G
                     if src.code == b'P':
                         src.weight += .1

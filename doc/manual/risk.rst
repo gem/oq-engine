@@ -256,9 +256,9 @@ risk calculation and the resulting output files are depicted in
 
    Classical PSHA-based Risk Calculator input/output structure.
 
-Stochastic Event Based Probabilistic Seismic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Damage Analysis This calculator employs an event-based Monte Carlo
+Stochastic Event Based Probabilistic Seismic Damage Analysis
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This calculator employs an event-based Monte Carlo
 simulation approach to probabilistic damage assessment in order to
 estimate the damage distribution for individual assets and aggregated
 damage distribution for a spatially distributed portfolio of assets
@@ -340,9 +340,9 @@ which a *Fragility Model* file is provided. Whereas providing a
 an Event-Based Damage calculation, providing corresponding
 *Consequence Model* files is optional.
 
-Stochastic Event Based Probabilistic Seismic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Risk Analysis This calculator employs an event-based Monte Carlo
+Stochastic Event Based Probabilistic Seismic Risk Analysis
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This calculator employs an event-based Monte Carlo
 simulation approach to probabilistic risk assessment in order to
 estimate the loss distribution for individual assets and aggregated loss
 distribution for a spatially distributed portfolio of assets within a

@@ -49,6 +49,15 @@ def source_data(sources):
     return data
 
 
+def check_maxmag(pointlike):
+    """Check for pointlike sources with high magnitudes"""
+    for src in pointlike:
+        maxmag = src.get_annual_occurrence_rates()[-1][0]
+        if maxmag >= 8.:
+            logging.warning('%s %s has maximum magnitude %s',
+                            src.__class__.__name__, src.source_id, maxmag)
+
+
 def collapse_nphc(src):
     """
     Collapse the nodal_plane_distribution and hypocenter_distribution.
@@ -93,7 +102,13 @@ def preclassical(srcs, sites, cmaker, monitor):
         for ss in splits:
             ss.num_ruptures = ss.count_ruptures()
         split_sources.extend(splits)
+    mon = monitor('weighting sources', measuremem=False)
     if sites is None or spacing == 0:
+        if sites is None:
+            for src in split_sources:
+                src.weight = .01
+        else:
+            cmaker.set_weight(split_sources, sf, multiplier, mon)
         dic = {grp_id: split_sources}
         dic['before'] = len(srcs)
         dic['after'] = len(split_sources)
@@ -104,7 +119,6 @@ def preclassical(srcs, sites, cmaker, monitor):
             for src in dic[grp_id]:
                 src.num_ruptures = src.count_ruptures()
             # this is also prefiltering the split sources
-            mon = monitor('weighting sources', measuremem=False)
             cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
             # print(f'{mon.task_no=}, {mon.duration=}')
             dic['before'] = len(block)
@@ -146,6 +160,8 @@ class PreClassicalCalculator(base.HazardCalculator):
              for sg in csm.src_groups], hdf5.vstr)
         cmakers = read_cmakers(self.datastore, csm.full_lt)
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
+        if sites is None:
+            logging.warning('No sites??')
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
         normal_sources = []
@@ -187,6 +203,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                     smap.submit(([src], sites, cmakers[grp_id]))
                 else:
                     others.append(src)
+            check_maxmag(pointlike)
             if pointsources or pointlike:
                 if self.oqparam.ps_grid_spacing:
                     # do not split the pointsources
@@ -230,8 +247,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                 newsg.sources = srcs
                 csm.src_groups[grp_id] = newsg
                 for src in srcs:
-                    assert src.weight
-                    assert src.num_ruptures
+                    assert src.weight, src
+                    assert src.num_ruptures, src
                     acc[src.code] += int(src.num_ruptures)
         csm.fix_src_offset()
         for val, key in sorted((val, key) for key, val in acc.items()):
