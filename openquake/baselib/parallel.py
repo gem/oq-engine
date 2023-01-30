@@ -455,13 +455,11 @@ def sendback(res, zsocket, sentbytes):
     size = humansize(len(res.pik))
     try:
         zsocket.send(res)
-        if calc_id:  # missing whe building the png maps
+        if calc_id:  # None when building the png maps
             dblog('DEBUG', calc_id, task_no, 'sent back %s' % size)
     except Exception:  # like OverflowError
         _etype, exc, tb = sys.exc_info()
         zsocket.send(Result(exc, res.mon, ''.join(traceback.format_tb(tb))))
-        if calc_id:  # missing whe building the png maps
-            dblog('ERROR', calc_id, task_no, 'could not send %s' % size)
     return sentbytes + len(res.pik)
 
 
