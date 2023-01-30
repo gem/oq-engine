@@ -437,7 +437,8 @@ def get_log(db, job_id):
     out = []
     for log in logs:
         time = str(log.timestamp)[:-4]  # strip decimals
-        out.append('[%s #%d %s] %s' % (time, job_id, log.level, log.message))
+        out.append('[%s #%d %s] %s %s' %
+                   (time, job_id, log.level, log.process, log.message))
     return out
 
 

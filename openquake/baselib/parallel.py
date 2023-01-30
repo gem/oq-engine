@@ -237,7 +237,8 @@ def zmq_submit(self, func, args, monitor):
     host = host_cores[idx].split()[0]
     port = int(config.zworkers.ctrl_port)
     with Socket('tcp://%s:%d' % (host, port), zmq.REQ, 'connect') as sock:
-        return sock.send((func, args, self.task_no, monitor))
+        ok = sock.send((func, args, self.task_no, monitor))
+        assert ok == 'submitted', ok
 
 
 @submit.add('ipp')
@@ -450,6 +451,14 @@ dummy_mon.backurl = None
 def sendback(res, zsocket, sentbytes):
     try:
         zsocket.send(res)
+        '''  # debugging
+        from openquake.commonlib.logs import dblog
+        calc_id = res.mon.calc_id
+        task_no = res.mon.task_no
+        size = humansize(len(res.pik))
+        if calc_id:  # None when building the png maps
+            dblog('DEBUG', calc_id, task_no, 'sent back %s' % size)
+        '''
     except Exception:  # like OverflowError
         _etype, exc, tb = sys.exc_info()
         zsocket.send(Result(exc, res.mon, ''.join(traceback.format_tb(tb))))
@@ -491,7 +500,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     sentbytes = 0
     if isgenfunc:
         it = func(*args)
-        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:  
+        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
             while True:
                 res = Result.new(next, (it,), mon, sentbytes)
                 sentbytes = sendback(res, zsocket, sentbytes)
