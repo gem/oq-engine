@@ -268,30 +268,33 @@ class WorkerPool(object):
         setproctitle(title)
         self.pool = general.mp.Pool(self.num_workers, init_workers)
         # start control loop accepting the commands stop and kill
-        with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
-            for cmd in ctrlsock:
-                if cmd == 'stop':
-                    ctrlsock.send(self.stop())
-                    break
-                elif cmd == 'restart':
-                    self.stop()
-                    self.pool = general.mp.Pool(self.num_workers)
-                    ctrlsock.send('restarted')
-                elif cmd == 'getpid':
-                    ctrlsock.send(self.proc.pid)
-                elif cmd == 'get_num_workers':
-                    ctrlsock.send(self.num_workers)
-                elif cmd == 'get_executing':
-                    executing = sorted(os.listdir(self.executing))
-                    ctrlsock.send(' '.join(executing))
-                elif isinstance(cmd, tuple):
-                    func, args, taskno, mon = cmd
-                    eback = functools.partial(errback, mon.calc_id, taskno)
-                    self.pool.apply_async(call, cmd + (self.executing,),
-                                          error_callback=eback)
-                    ctrlsock.send('submitted')
-                else:
-                    ctrlsock.send('unknown command')
+        try:
+            with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
+                for cmd in ctrlsock:
+                    if cmd == 'stop':
+                        ctrlsock.send(self.stop())
+                        break
+                    elif cmd == 'restart':
+                        self.stop()
+                        self.pool = general.mp.Pool(self.num_workers)
+                        ctrlsock.send('restarted')
+                    elif cmd == 'getpid':
+                        ctrlsock.send(self.proc.pid)
+                    elif cmd == 'get_num_workers':
+                        ctrlsock.send(self.num_workers)
+                    elif cmd == 'get_executing':
+                        executing = sorted(os.listdir(self.executing))
+                        ctrlsock.send(' '.join(executing))
+                    elif isinstance(cmd, tuple):
+                        func, args, taskno, mon = cmd
+                        eback = functools.partial(errback, mon.calc_id, taskno)
+                        self.pool.apply_async(call, cmd + (self.executing,),
+                                              error_callback=eback)
+                        ctrlsock.send('submitted')
+                    else:
+                        ctrlsock.send('unknown command')
+        finally:
+            shutil.rmtree(self.executing)
 
     def stop(self):
         """
@@ -300,8 +303,6 @@ class WorkerPool(object):
         self.pool.close()
         self.pool.terminate()
         self.pool.join()
-        #z.context.term()
-        shutil.rmtree(self.executing)
         return 'WorkerPool %s stopped' % self.ctrl_url
 
 
