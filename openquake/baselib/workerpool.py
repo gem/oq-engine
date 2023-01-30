@@ -300,7 +300,7 @@ class WorkerPool(object):
         self.pool.close()
         self.pool.terminate()
         self.pool.join()
-        z.context.term()
+        #z.context.term()
         shutil.rmtree(self.executing)
         return 'WorkerPool %s stopped' % self.ctrl_url
 
