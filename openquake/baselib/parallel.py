@@ -462,7 +462,9 @@ def sendback(res, zsocket, sentbytes):
             dblog('DEBUG', calc_id, task_no, 'sent back %s' % size)
     except Exception:  # like OverflowError
         _etype, exc, tb = sys.exc_info()
-        zsocket.send(Result(exc, res.mon, ''.join(traceback.format_tb(tb))))
+        tb_str = ''.join(traceback.format_tb(tb))
+        dblog('ERROR', calc_id, task_no, tb_str)
+        zsocket.send(Result(exc, res.mon, tb_str))
     return sentbytes + len(res.pik)
 
 
