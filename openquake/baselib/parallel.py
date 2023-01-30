@@ -240,6 +240,7 @@ def zmq_submit(self, func, args, monitor):
     with Socket(dest, zmq.REQ, 'connect', timeout=120) as sock:
         sub = sock.send((func, args, self.task_no, monitor))
         assert sub == 'submitted', sub
+    return self.task_no
 
 
 @submit.add('ipp')
@@ -820,7 +821,7 @@ class Starmap(object):
         Submit the given arguments to the underlying task
         """
         func = func or self.task_func
-        if not hasattr(self, 'socket'):  # first time
+        if not hasattr(self, 'socket'):  # setup the PULL socket the first time
             self.t0 = time.time()
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
@@ -911,6 +912,7 @@ class Starmap(object):
 
         isocket = iter(self.socket)
         self.todo = len(self.tasks)
+        finished = set()
         while self.todo:
             self.log_percent()
             res = next(isocket)
@@ -918,11 +920,14 @@ class Starmap(object):
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %s', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
+                finished.add(res.mon.task_no)
                 self.busytime += {res.workerid: res.mon.duration}
                 self.todo -= 1
                 self._submit_many(1)
                 logging.debug('%d tasks running, %d in queue',
                               self.todo, len(self.task_queue))
+                todo = set(range(self.task_no)) - finished
+                logging.debug('tasks todo %s', sorted(todo))
                 yield res
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
