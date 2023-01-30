@@ -81,10 +81,9 @@ class DbServer(object):
         logging.warning('DB server started with %s on %s, pid %d',
                         sys.executable, self.frontend, self.pid)
         # start frontend->backend proxy for the database workers
-        zctx = z.zmq.Context()
         try:
-            z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER, zctx),
-                        z.bind(self.backend, z.zmq.DEALER, zctx))
+            z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
+                        z.bind(self.backend, z.zmq.DEALER))
         except (KeyboardInterrupt, z.zmq.ContextTerminated):
             for sock in dworkers:
                 sock.running = False
