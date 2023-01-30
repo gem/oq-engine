@@ -24,7 +24,6 @@ import getpass
 import tempfile
 import functools
 import subprocess
-import traceback
 from datetime import datetime
 import psutil
 from openquake.baselib import (
