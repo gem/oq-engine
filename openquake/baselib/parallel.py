@@ -449,14 +449,16 @@ dummy_mon.backurl = None
 
 
 def sendback(res, zsocket, sentbytes):
-    from openquake.commonlib.logs import dblog
-    calc_id = res.mon.calc_id
-    task_no = res.mon.task_no
-    size = humansize(len(res.pik))
     try:
         zsocket.send(res)
+        '''  # debugging
+        from openquake.commonlib.logs import dblog
+        calc_id = res.mon.calc_id
+        task_no = res.mon.task_no
+        size = humansize(len(res.pik))
         if calc_id:  # None when building the png maps
             dblog('DEBUG', calc_id, task_no, 'sent back %s' % size)
+        '''
     except Exception:  # like OverflowError
         _etype, exc, tb = sys.exc_info()
         zsocket.send(Result(exc, res.mon, ''.join(traceback.format_tb(tb))))
