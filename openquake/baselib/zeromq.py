@@ -34,8 +34,6 @@ import zmq
 import time
 import logging
 
-context = zmq.Context()
-
 # from integer socket_type to string
 SOCKTYPE = {zmq.REQ: 'REQ', zmq.REP: 'REP',
             zmq.PUSH: 'PUSH', zmq.PULL: 'PULL',
@@ -46,7 +44,7 @@ class TimeoutError(RuntimeError):
     pass
 
 
-def bind(end_point, socket_type):
+def bind(end_point, socket_type, context):
     """
     Bind to a zmq URL; raise a proper error if the URL is invalid; return
     a zmq socket.
@@ -60,7 +58,7 @@ def bind(end_point, socket_type):
     return sock
 
 
-def connect(end_point, socket_type):
+def connect(end_point, socket_type, context):
     """
     Connect to a zmq URL; raise a proper error if the URL is invalid; return
     a zmq socket.
@@ -109,13 +107,14 @@ class Socket(object):
 
     def __enter__(self):
         """Instantiate the underlying zmq socket"""
+        self.context = ctx = zmq.Context()
         # first check if the end_point ends in :<min_port>-<max_port>
         port_range = re.search(r':(\d+)-(\d+)$', self.end_point)
         if port_range:
             assert self.mode == 'bind', self.mode
             p1, p2 = map(int, port_range.groups())
             end_point = self.end_point.rsplit(':', 1)[0]  # strip port range
-            self.zsocket = context.socket(self.socket_type)
+            self.zsocket = self.context.socket(self.socket_type)
             while True:
                 try:
                     # NB: will raise a ZMQBindError if no port is available
@@ -127,9 +126,9 @@ class Socket(object):
                     break
             self.port = port
         elif self.mode == 'bind':
-            self.zsocket = bind(self.end_point, self.socket_type)
+            self.zsocket = bind(self.end_point, self.socket_type, ctx)
         else:  # connect
-            self.zsocket = connect(self.end_point, self.socket_type)
+            self.zsocket = connect(self.end_point, self.socket_type, ctx)
         port = re.search(r':(\d+)$', self.end_point)
         if port:
             self.port = int(port.group(1))
@@ -139,6 +138,7 @@ class Socket(object):
 
     def __exit__(self, *args):
         self.zsocket.__exit__(*args)
+        self.context.term()
         del self.zsocket
 
     def __iter__(self):
