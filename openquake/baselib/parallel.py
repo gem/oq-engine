@@ -924,8 +924,6 @@ class Starmap(object):
                 self.busytime += {res.workerid: res.mon.duration}
                 self.todo -= 1
                 self._submit_many(1)
-                logging.debug('%d tasks running, %d in queue',
-                              self.todo, len(self.task_queue))
                 todo = set(range(self.task_no)) - finished
                 logging.debug('tasks todo %s', sorted(todo))
                 yield res
