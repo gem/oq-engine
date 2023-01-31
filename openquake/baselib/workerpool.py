@@ -23,7 +23,6 @@ import shutil
 import socket
 import getpass
 import tempfile
-import threading
 import subprocess
 import psutil
 from openquake.baselib import (
@@ -97,10 +96,6 @@ class WorkerMaster(object):
         Start multiple workerpools on remote servers via ssh and/or a single
         workerpool on localhost.
         """
-        # start task_in->task_server streamer thread		
-        port = int(config.zworkers.ctrl_port)
-        threading.Thread(target=_streamer, args=(port,), daemon=True).start()
-        print('Task streamer started on ports %d->%d', port+2, port+1)
         starting = []
         for host, cores, args in ssh_args(self.zworkers):
             if general.socket_ready((host, self.ctrl_port)):
@@ -258,7 +253,6 @@ def worker(sock, executing):
     setproctitle('oq-zworker')
     with sock:
         for cmd, args, taskno, mon in sock:
-            print('got', cmd, args)
             fname = os.path.join(executing, '%s-%s' % (mon.calc_id, taskno))
             # NB: very hackish way of keeping track of the running tasks,
             # used in get_executing, could litter the file system
@@ -302,20 +296,22 @@ class WorkerPool(object):
                 target=worker, args=(sock, self.executing))
             sock.proc.start()
             self.workers.append(sock)
-        print('Started subprocesses in the pool')
         # start control loop accepting the commands stop and kill
-        with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
-            for cmd in ctrlsock:
-                if cmd == 'stop':
-                    ctrlsock.send(self.stop())
-                    break
-                elif cmd == 'getpid':
-                    ctrlsock.send(self.proc.pid)
-                elif cmd == 'get_num_workers':
-                    ctrlsock.send(self.num_workers)
-                elif cmd == 'get_executing':
-                    ctrlsock.send(' '.join(sorted(os.listdir(self.executing))))
-        shutil.rmtree(self.executing)
+        try:
+            with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
+                for cmd in ctrlsock:
+                    if cmd == 'stop':
+                        ctrlsock.send(self.stop())
+                        break
+                    elif cmd == 'getpid':
+                        ctrlsock.send(self.proc.pid)
+                    elif cmd == 'get_num_workers':
+                        ctrlsock.send(self.num_workers)
+                    elif cmd == 'get_executing':
+                        executing = sorted(os.listdir(self.executing))
+                        ctrlsock.send(' '.join(executing))
+        finally:
+            shutil.rmtree(self.executing)
 
     def stop(self):
         """
@@ -325,6 +321,7 @@ class WorkerPool(object):
             os.kill(sock.proc.pid, signal.SIGTERM)
         for sock in self.workers:
             sock.proc.join()
+        self.workers.clear()
         return 'WorkerPool %s stopped' % self.ctrl_url
 
 
@@ -333,11 +330,16 @@ def workerpool(worker_url='tcp://0.0.0.0:1909', *, num_workers: int = -1):
     Start a workerpool on the given URL with the given number of workers.
     """
     # NB: unexpected errors will appear in the DbServer log
+    port = int(config.zworkers.ctrl_port)
+    streamer = general.mp.Process(target=_streamer, args=(port,), daemon=True)
+    streamer.start()
+    print('Task streamer started on ports %d->%d' % (port+2, port+1))
     wpool = WorkerPool(worker_url, num_workers)
     try:
         wpool.start()
     finally:
         wpool.stop()
+        streamer.terminate()
 
 
 workerpool.worker_url = dict(

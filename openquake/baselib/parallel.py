@@ -235,7 +235,6 @@ def threadpool_submit(self, func, args, monitor):
 def zmq_submit(self, func, args, monitor):
     port = int(config.zworkers.ctrl_port) + 2
     task_input_url = 'tcp://%s:%d' % (config.dbserver.host, port)
-    print(f'{task_input_url=}')
     with Socket(task_input_url, zmq.PUSH, 'connect') as sender:
         return sender.send((func, args, self.task_no, monitor))
 
@@ -798,12 +797,6 @@ class Starmap(object):
         self.tasks = []  # populated by .submit
         self.task_no = 0
         self.t0 = time.time()
-        if self.distribute == 'zmq':  # add a check
-            master = workerpool.WorkerMaster(config.zworkers)
-            errors = ['The workerpool on %s is down' % host
-                      for host, run, tot in master.status() if tot == 0]
-            if errors:
-                raise RuntimeError('\n'.join(errors))
 
     def log_percent(self):
         """

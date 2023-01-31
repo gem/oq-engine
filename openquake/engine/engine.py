@@ -63,7 +63,7 @@ AND host=?x AND is_running=1 AND pid > 0 ORDER BY id'''
 
 
 def workers_stop():
-    w.WorkerMaster(config.zworkers).stop()
+    logs.dbcmd('workers_stop', config.zworkers)  # stop the workers
 
 
 def get_zmq_ports():
