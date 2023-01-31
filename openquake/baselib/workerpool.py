@@ -55,21 +55,6 @@ def ssh_args(zworkers):
                     'ssh', '-f', '-T', remote_user + '@' + host, remote_python]
 
 
-def _streamer(ctrl_port):
-    # streamer for zmq workers running on the master node
-    task_input_url = 'tcp://0.0.0.0:%d' % (ctrl_port + 2)
-    task_output_url = 'tcp://%s:%s' % (config.dbserver.listen, ctrl_port + 1)
-    if (general.socket_ready(('0.0.0.0', ctrl_port + 1)) or
-            general.socket_ready(('0.0.0.0', ctrl_port + 2))):
-        return  # already started
-    sock_in = z.bind(task_input_url, z.zmq.PULL)
-    sock_out = z.bind(task_output_url, z.zmq.PUSH)
-    try:
-        z.zmq.proxy(sock_in, sock_out)
-    except (KeyboardInterrupt, z.zmq.ContextTerminated):
-        pass  # killed cleanly by SIGINT/SIGTERM
-
-
 class WorkerMaster(object):
     """
     :param ctrl_port: port on which the worker pools listen
@@ -330,16 +315,11 @@ def workerpool(worker_url='tcp://0.0.0.0:1909', *, num_workers: int = -1):
     Start a workerpool on the given URL with the given number of workers.
     """
     # NB: unexpected errors will appear in the DbServer log
-    port = int(config.zworkers.ctrl_port)
-    streamer = general.mp.Process(target=_streamer, args=(port,), daemon=True)
-    streamer.start()
-    print('Task streamer started on ports %d->%d' % (port+2, port+1))
     wpool = WorkerPool(worker_url, num_workers)
     try:
         wpool.start()
     finally:
         wpool.stop()
-        streamer.terminate()
 
 
 workerpool.worker_url = dict(

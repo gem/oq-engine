@@ -26,12 +26,35 @@ import subprocess
 
 from openquake.baselib import (
     config, zeromq as z, workerpool as w, parallel as p)
-from openquake.baselib.general import socket_ready, detach_process
+from openquake.baselib.general import socket_ready, detach_process, mp
 from openquake.hazardlib import valid
 from openquake.commonlib import logs
 from openquake.server.db import actions
 from openquake.commonlib.dbapi import db
 from openquake.server import __file__ as server_path
+
+
+def _streamer(ctrl_port):
+    # streamer for zmq workers running on the master node
+    task_input_url = 'tcp://0.0.0.0:%d' % (ctrl_port + 2)
+    task_output_url = 'tcp://%s:%s' % (config.dbserver.listen, ctrl_port + 1)
+    if (socket_ready(('0.0.0.0', ctrl_port + 1)) or
+            socket_ready(('0.0.0.0', ctrl_port + 2))):
+        return  # already started
+    sock_in = z.bind(task_input_url, z.zmq.PULL)
+    sock_out = z.bind(task_output_url, z.zmq.PUSH)
+    try:
+        z.zmq.proxy(sock_in, sock_out)
+    except (KeyboardInterrupt, z.zmq.ContextTerminated):
+        pass  # killed cleanly by SIGINT/SIGTERM
+
+
+def start_streamer():
+    port = int(config.zworkers.ctrl_port)
+    streamer = mp.Process(target=_streamer, args=(port,), daemon=True)
+    streamer.start()
+    print('Task streamer started on ports %d->%d' % (port+2, port+1))
+    return streamer
 
 
 class DbServer(object):
@@ -80,6 +103,8 @@ class DbServer(object):
             dworkers.append(sock)
         logging.warning('DB server started with %s on %s, pid %d',
                         sys.executable, self.frontend, self.pid)
+        if p.oq_distribute() == 'zmq':
+            streamer = start_streamer()
         # start frontend->backend proxy for the database workers
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
@@ -92,6 +117,8 @@ class DbServer(object):
             logging.warning('DB server stopped')
         finally:
             self.stop()
+            if p.oq_distribute() == 'zmq':
+                streamer.terminate()
 
     def stop(self):
         """
