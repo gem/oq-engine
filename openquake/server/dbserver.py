@@ -53,7 +53,7 @@ def start_streamer():
     port = int(config.zworkers.ctrl_port)
     streamer = mp.Process(target=_streamer, args=(port,), daemon=True)
     streamer.start()
-    print('Task streamer started on ports %d->%d' % (port+2, port+1))
+    logging.warning('Task streamer started on ports %d->%d', port+2, port+1)
     return streamer
 
 
