@@ -448,6 +448,7 @@ def check_mem_usage(soft_percent=None, hard_percent=None):
 dummy_mon = Monitor()
 dummy_mon.config = config
 dummy_mon.backurl = None
+DEBUG = False
 
 
 def sendback(res, zsocket, sentbytes):
@@ -458,12 +459,13 @@ def sendback(res, zsocket, sentbytes):
         calc_id = res.mon.calc_id
         task_no = res.mon.task_no
         size = humansize(len(res.pik))
-        if calc_id:  # None when building the png maps
+        if DEBUG and calc_id:  # None when building the png maps
             dblog('DEBUG', calc_id, task_no, 'sent back %s' % size)
     except Exception:  # like OverflowError
         _etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
-        dblog('ERROR', calc_id, task_no, tb_str)
+        if DEBUG and calc_id:
+            dblog('ERROR', calc_id, task_no, tb_str)
         zsocket.send(Result(exc, res.mon, tb_str))
     return sentbytes + len(res.pik)
 
