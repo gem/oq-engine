@@ -222,9 +222,14 @@ def classical(srcs, sitecol, cmaker, monitor):
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
     pnemap = ~pmap.remove_zeros()
-    for g, pne in zip(cmaker.gidx, pnemap.split()):
-        result['pnemap'] = pne
-        result['pnemap'].gidx = [g]
+    if len(sitecol) > cmaker.max_sites_disagg:
+        for g, pne in zip(cmaker.gidx, pnemap.split()):
+            result['pnemap'] = pne
+            result['pnemap'].gidx = [g]
+            yield result
+    else:
+        result['pnemap'] = pnemap
+        result['pnemap'].gidx = cmaker.gidx
         yield result
 
 
