@@ -332,7 +332,12 @@ def workerpool(worker_url='tcp://0.0.0.0:1909', *, num_workers: int = -1):
     """
     Start a workerpool on the given URL with the given number of workers.
     """
-    WorkerPool(worker_url, num_workers).start()
+    # NB: unexpected errors will appear in the DbServer log
+    wpool = WorkerPool(worker_url, num_workers)
+    try:
+        wpool.start()
+    finally:
+        wpool.stop()
 
 
 workerpool.worker_url = dict(

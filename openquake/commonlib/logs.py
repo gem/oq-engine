@@ -53,7 +53,7 @@ def dbcmd(action, *args):
         else:
             return func(dbapi.db, *args)
     sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect',
-                         timeout=60)  # when the system is loaded
+                         timeout=600)  # when the system is loaded
     with sock:
         res = sock.send((action,) + args)
         if isinstance(res, parallel.Result):
@@ -61,6 +61,14 @@ def dbcmd(action, *args):
     return res
 
 
+def dblog(level: str, job_id: int, task_no: int, msg: str):
+    """
+    Log on the database
+    """
+    task = 'task #%d' % task_no
+    return dbcmd('log', job_id, datetime.utcnow(), level, task, msg)
+                 
+    
 def get_datadir():
     """
     Extracts the path of the directory where the openquake data are stored
