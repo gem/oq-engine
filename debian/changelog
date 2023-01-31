@@ -1,3 +1,7 @@
+  [Marco Pagani]
+  * Implemented the correction of Lanzano et al. (2019) as described in 
+    Lanzano et al. (2022)
+
   [Michele Simionato]
   * Increased the number of disaggregation tasks
 
