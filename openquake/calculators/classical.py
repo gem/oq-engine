@@ -221,14 +221,13 @@ def classical(srcs, sitecol, cmaker, monitor):
     pmap = ProbabilityMap(
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
     result = hazclassical(srcs, sitecol, cmaker, pmap)
-    pnemap = ~pmap.remove_zeros()
     if len(sitecol) > cmaker.max_sites_disagg:
-        for g, pne in zip(cmaker.gidx, pnemap.split()):
-            result['pnemap'] = pne
+        for g, pne in zip(cmaker.gidx, pmap.split()):
+            result['pnemap'] = ~pne.remove_zeros()
             result['pnemap'].gidx = [g]
             yield result
     else:
-        result['pnemap'] = pnemap
+        result['pnemap'] = ~pmap.remove_zeros()
         result['pnemap'].gidx = cmaker.gidx
         yield result
 
