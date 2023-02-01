@@ -92,7 +92,7 @@ to your job.ini file.
 
 In the context of the [METIS project](https://metis-h2020.eu/) we
 added a way to include the aftershock contribution to the hazard by
-reading a file of corrected occurrence rates for the rupture of a
+reading a file of corrected occurrence rates for the ruptures of a
 model.
 
 There was a major optimization in the disaggregation calculator (we measured
