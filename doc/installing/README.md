@@ -72,6 +72,7 @@ See instructions for the [Universal installer](./universal.md) script. This scri
     $ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-win64.txt openquake.engine
     ```
   and for Mac
+  
     ```
     $ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-macos.txt openquake.engine
     ```

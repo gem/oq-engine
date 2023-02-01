@@ -35,9 +35,6 @@ Current LTS version is the **OpenQuake Engine 3.16** 'Piero Angela':
 * [Documentation 3.16](https://github.com/gem/oq-engine/tree/engine-3.16#openquake-engine)
 * [User's manual](https://docs.openquake.org/oq-engine/manual/latest/)
 
-Old LTS versions:
-* OpenQuake Engine [3.11](https://github.com/gem/oq-engine/tree/engine-3.11#openquake-engine) 
-
 
 ### Latest release - for users needing the latest features
 
@@ -52,13 +49,15 @@ The OpenQuake Engine software provides calculation and assessment of seismic haz
 
 * [Installation](doc/installing/README.md)
 * [User's manual](https://docs.openquake.org/oq-engine/manual/latest/)
+* [Advanced user manual](https://docs.openquake.org/oq-engine/advanced/master/). _Disclaimer: It includes experimental features and is only recommended for users that are already familiar with the user's manual._
 * [FAQ](doc/faq.md)
 * [Glossary of Terms](doc/glossary.md)
 
 
 ## Running the OpenQuake Engine
 
-* [Using the command line](doc/running/unix.md)
+* Using the command line [on Windows](doc/running/windows.md)
+* Using the command line [on macOS and Linux](doc/running/unix.md)
 * [Using the WebUI](doc/running/server.md)
 
 ## Visualizing outputs via QGIS
