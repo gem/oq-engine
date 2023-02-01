@@ -27,7 +27,7 @@ The engine runs on Linux, macOS and Windows; on laptops, workstations, standalon
   - macOS 10.15 (Catalina) or above
   - Linux: [see details](./)
 
-Check more advanced [hardware suggestions here](doc/hardware-suggestions.md).
+Check more advanced [hardware suggestions here](./hardware-suggestions.md).
 
 
 ## Installing the Long Term Support (LTS) version
@@ -42,12 +42,12 @@ Check more advanced [hardware suggestions here](doc/hardware-suggestions.md).
 
 **On MacOS or Linux**
 
-  See instructions for the [Universal installer](doc/installing/universal.md) script, and consider the specific LTS to be installed.
+  See instructions for the [Universal installer](./universal.md) script, and consider the specific LTS to be installed.
 
 
 ## Installing the latest version
 
-See instructions for the [universal installer](doc/installing/universal.md) script. This script works for Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
+See instructions for the [Universal installer](./universal.md) script. This script works for Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
 
 
 ## Changing the OpenQuake Engine version
@@ -56,7 +56,7 @@ See instructions for the [universal installer](doc/installing/universal.md) scri
   * [Installing a specific engine version](./universal.md##installing-a-specific-engine-version)
 
 
-## Other installtion methods
+## Other installation methods
 
 **Using `pip`**
 
@@ -66,13 +66,12 @@ See instructions for the [universal installer](doc/installing/universal.md) scri
     $ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-linux64.txt openquake.engine
     $ pip install openquake.engine
     ```
-  This works for Linux and Python 3.8. You can trivially adapt the command to Python 3.7 and 3.6 and to other
-    operating systems. For instance for Windows it would be
+  This works for Linux and Python 3.8. You can trivially adapt the command to Python 3.8, 3.9, and 3.10, and to other operating systems. For instance for Windows it would be
 
     ```
     $ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-win64.txt openquake.engine
     ```
-    and for Mac
+  and for Mac
     ```
     $ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-macos.txt openquake.engine
     ```
