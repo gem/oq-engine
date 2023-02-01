@@ -1,3 +1,10 @@
+  [Marco Pagani]
+  * Implemented the correction of Lanzano et al. (2019) as described in 
+    Lanzano et al. (2022)
+
+  [Michele Simionato]
+  * Increased the number of disaggregation tasks
+
   [Anirudh Rao, Michele Simionato]
   * Changed the algorithm used in classical_risk and classical_bcr
     calculations to take into account the risk_investigation_time

@@ -172,8 +172,7 @@ def get_csm(oq, full_lt, h5=None):
         allargs.append((fname, converter))
     smdict = parallel.Starmap(read_source_model, allargs, distribute=dist,
                               h5=h5 if h5 else None).reduce()
-    if len(smdict) > 1:  # really parallel
-        parallel.Starmap.shutdown()  # save memory
+    parallel.Starmap.shutdown()  # save memory
     fix_geometry_sections(smdict, h5)
     logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)

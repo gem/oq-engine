@@ -20,12 +20,11 @@
 Disaggregation calculator core functionality
 """
 import logging
-import operator
 import numpy
 
 from openquake.baselib import parallel, hdf5, performance
 from openquake.baselib.general import (
-    AccumDict, get_nbytes_msg, humansize, pprod, agg_probs, block_splitter)
+    AccumDict, get_nbytes_msg, humansize, pprod, agg_probs, gen_slices)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -361,11 +360,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
             for start, stop in slices:
-                slc = slice(start, stop)
-                U = max(U, stop - start)
-                smap.submit((dstore, slc, cmaker, self.hmap4,
-                             magi[slc], self.bin_edges))
-                task_inputs.append((grp_id, stop - start))
+                for slc in gen_slices(start, stop, 50_000):
+                    U = max(U, slc.stop - slc.start)
+                    smap.submit((dstore, slc, cmaker, self.hmap4,
+                                 magi[slc], self.bin_edges))
+                    task_inputs.append((grp_id, stop - start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)

@@ -198,7 +198,7 @@ from multiprocessing.connection import wait
 import psutil
 import numpy
 
-from openquake.baselib import config, hdf5, workerpool
+from openquake.baselib import config, hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
@@ -236,8 +236,11 @@ def zmq_submit(self, func, args, monitor):
     idx = self.task_no % len(host_cores)
     host = host_cores[idx].split()[0]
     port = int(config.zworkers.ctrl_port)
-    with Socket('tcp://%s:%d' % (host, port), zmq.REQ, 'connect') as sock:
-        return sock.send((func, args, self.task_no, monitor))
+    dest = 'tcp://%s:%d' % (host, port)
+    with Socket(dest, zmq.REQ, 'connect', timeout=120) as sock:
+        sub = sock.send((func, args, self.task_no, monitor))
+        assert sub == 'submitted', sub
+    return self.task_no
 
 
 @submit.add('ipp')
@@ -445,6 +448,26 @@ def check_mem_usage(soft_percent=None, hard_percent=None):
 dummy_mon = Monitor()
 dummy_mon.config = config
 dummy_mon.backurl = None
+DEBUG = False
+
+
+def sendback(res, zsocket, sentbytes):
+    try:
+        zsocket.send(res)
+        # debugging
+        from openquake.commonlib.logs import dblog
+        calc_id = res.mon.calc_id
+        task_no = res.mon.task_no
+        size = humansize(len(res.pik))
+        if DEBUG and calc_id:  # None when building the png maps
+            dblog('DEBUG', calc_id, task_no, 'sent back %s' % size)
+    except Exception:  # like OverflowError
+        _etype, exc, tb = sys.exc_info()
+        tb_str = ''.join(traceback.format_tb(tb))
+        if DEBUG and calc_id:
+            dblog('ERROR', calc_id, task_no, tb_str)
+        zsocket.send(Result(exc, res.mon, tb_str))
+    return sentbytes + len(res.pik)
 
 
 def safely_call(func, args, task_no=0, mon=dummy_mon):
@@ -480,28 +503,23 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon.inject:
         args += (mon,)
     sentbytes = 0
-    with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
-        msg = check_mem_usage()  # warn if too much memory is used
-        if msg:
-            zsocket.send(Result(None, mon, msg=msg))
-        if inspect.isgeneratorfunction(func):
-            it = func(*args)
-        else:
-            def gen(*args):
-                yield func(*args)
-            it = gen(*args)
-        while True:
-            # StopIteration -> TASK_ENDED
-            res = Result.new(next, (it,), mon, sentbytes)
-            try:
-                zsocket.send(res)
-            except Exception:  # like OverflowError
-                _etype, exc, tb = sys.exc_info()
-                err = Result(exc, mon, ''.join(traceback.format_tb(tb)))
-                zsocket.send(err)
-            sentbytes += len(res.pik)
-            if res.msg == 'TASK_ENDED':
-                break
+    if isgenfunc:
+        it = func(*args)
+        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
+            while True:
+                res = Result.new(next, (it,), mon, sentbytes)
+                sentbytes = sendback(res, zsocket, sentbytes)
+                # StopIteration -> TASK_ENDED
+                if res.msg == 'TASK_ENDED':
+                    break
+    else:
+        res = Result.new(func, args, mon)
+        # send back a single result and a TASK_ENDED
+        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
+            sentbytes = sendback(res, zsocket, sentbytes)
+            end = Result(None, mon, msg='TASK_ENDED')
+            end.pik = FakePickle(sentbytes)
+            zsocket.send(end)
 
 
 if oq_distribute() == 'ipp':
@@ -783,12 +801,6 @@ class Starmap(object):
         self.tasks = []  # populated by .submit
         self.task_no = 0
         self.t0 = time.time()
-        if self.distribute == 'zmq':  # add a check
-            master = workerpool.WorkerMaster(config.zworkers)
-            errors = ['The workerpool on %s is down' % host
-                      for host, run, tot in master.status() if tot == 0]
-            if errors:
-                raise RuntimeError('\n'.join(errors))
 
     def log_percent(self):
         """
@@ -812,7 +824,7 @@ class Starmap(object):
         Submit the given arguments to the underlying task
         """
         func = func or self.task_func
-        if not hasattr(self, 'socket'):  # first time
+        if not hasattr(self, 'socket'):  # setup the PULL socket the first time
             self.t0 = time.time()
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
@@ -903,6 +915,7 @@ class Starmap(object):
 
         isocket = iter(self.socket)
         self.todo = len(self.tasks)
+        finished = set()
         while self.todo:
             self.log_percent()
             res = next(isocket)
@@ -910,11 +923,12 @@ class Starmap(object):
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %s', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
+                finished.add(res.mon.task_no)
                 self.busytime += {res.workerid: res.mon.duration}
                 self.todo -= 1
                 self._submit_many(1)
-                logging.debug('%d tasks running, %d in queue',
-                              self.todo, len(self.task_queue))
+                todo = set(range(self.task_no)) - finished
+                logging.debug('tasks todo %s', sorted(todo))
                 yield res
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
