@@ -23,8 +23,8 @@ The engine runs on Linux, macOS and Windows; on laptops, workstations, standalon
 - 8 GB of RAM
 - + 1.2 GB of free disk space
 - Operating system:
-  - Windows 10 (64bit)
-  - macOS 10.15 (Catalina) or above
+  - Windows 10 (64bit). Windows 11 is not yet supported.
+  - macOS `Big Sur` and `Monterrey`. macOS `Ventura` is on experimental stage.
   - Linux: [see details](./)
 
 Check more advanced [hardware suggestions here](./hardware-suggestions.md).
