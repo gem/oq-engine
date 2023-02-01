@@ -1,5 +1,5 @@
 Version 3.16 is the second Long Term Support (LTS) release of the engine,
-replacing version 3.11 after gap of two years. It is the result of five
+replacing version 3.11 after a gap of two years. It is the result of five
 months of work involving nearly 300 pull requests, featuring major
 optimizations and new features.
 
@@ -42,9 +42,9 @@ We improved the point source grid approximation to keep the runtime of
 the models reasonable. On top of a performance improvement (up to a 2x
 speedup by keeping the same precision) we fixed a memory issue with
 models containing point sources with very large magnitudes (such
-practice is arguably incorrect, but very common in the models of the
+practice is arguably incorrect, but common in some of the models of the
 GEM mosaic). In such situations, the magnitude-scaling relationship can
-produce rupture radii of thousands of kilometers, causing the point
+produce rupture lengths of thousands of kilometers, causing the point
 source gridding approximation to keep in memory huge amount of data
 and thus sending the system out of memory. We have solved the problem
 by limiting the rupture radius to the integration distance; moreover
@@ -90,9 +90,10 @@ feature you just need to add a line
 
 to your job.ini file.
 
-In the context of the [METIS project](https://metis-h2020.eu/) 
-we added a way to include aftershock effects by reading a file 
-of corrected occurrence rates for the rupture of a model.
+In the context of the [METIS project](https://metis-h2020.eu/) we
+added a way to include the aftershock contribution to the hazard by
+reading a file of corrected occurrence rates for the rupture of a
+model.
 
 There was a major optimization in the disaggregation calculator (we measured
 speedups of over 76 times in the disaggregation part) obtained by replacing
@@ -135,6 +136,9 @@ for the GSIMs used in the ESHM20 model for Europe.
 AbrahamsonEtAl2014 GMPE to extrapolate the Vs30 so that it could be used 
 with the official J-SHIS Vs30 model of Japan 
 (see https://github.com/gem/oq-engine/pull/8171).
+
+We implemented the correction of Lanzano et al. (2019) as described in
+Lanzano et al. (2022).
 
 We introduced a new GMPE KothaEtAl2020regional where the site-specific
 (`delta_c3` and its standard error) and source-specific (`delta_l2l` and
