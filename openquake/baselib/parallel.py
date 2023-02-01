@@ -237,7 +237,7 @@ def zmq_submit(self, func, args, monitor):
     host = host_cores[idx].split()[0]
     port = int(config.zworkers.ctrl_port)
     dest = 'tcp://%s:%d' % (host, port)
-    with Socket(dest, zmq.REQ, 'connect', timeout=120) as sock:
+    with Socket(dest, zmq.REQ, 'connect', timeout=300) as sock:
         sub = sock.send((func, args, self.task_no, monitor))
         assert sub == 'submitted', sub
     return self.task_no
