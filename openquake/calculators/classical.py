@@ -460,6 +460,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if g in acc:
                 acc[g].update(pnemap, i)
             self.n_outs[g] -= 1
+            assert self.n_outs[g] > -1, (g, self.n_outs[g])
             if self.n_outs[g] == 0:  # no other tasks for this g
                 with self.monitor('storing PoEs', measuremem=True):
                     pmap = acc.pop(g)
