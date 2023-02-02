@@ -333,14 +333,18 @@ class Hazard:
     """
     def __init__(self, dstore, full_lt, srcidx):
         self.datastore = dstore
+        oq = dstore['oqparam']
         self.full_lt = full_lt
+        self.weights = [r.weight['weight'] for r in full_lt.get_realizations()]
         self.cmakers = read_cmakers(dstore, full_lt)
+        self.collect_rlzs = oq.collect_rlzs
         self.totgsims = sum(len(cm.gsims) for cm in self.cmakers)
-        self.imtls = imtls = dstore['oqparam'].imtls
-        self.level_weights = imtls.array.flatten() / imtls.array.sum()
+        self.imtls = oq.imtls
+        self.level_weights = oq.imtls.array.flatten() / oq.imtls.array.sum()
         self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
         self.N = len(dstore['sitecol/sids'])
+        self.L = oq.imtls.size
         self.R = full_lt.get_num_paths()
         self.acc = AccumDict(accum={})
         self.offset = 0
@@ -351,14 +355,22 @@ class Hazard:
         :param cmaker: a ContextMaker
         :returns: an array of PoEs of shape (N, R, M, L)
         """
-        res = numpy.zeros((self.N, self.R, self.imtls.size))
+        R = 1 if self.collect_rlzs else self.R
+        M = len(self.imtls)
+        out = numpy.zeros((self.N, R, M, self.L // M))
         dic = dict(zip(cmaker.gidx, cmaker.gsims.values()))
-        for sid, arr in zip(pmap.sids, pmap.array):
-            for i, g in enumerate(pmap.gidx):
-                for rlz in dic[g]:
-                    res[sid, rlz] = agg_probs(res[sid, rlz], arr[:, i])
-        shp = res.shape[:-1] + (len(self.imtls), -1)
-        return res.reshape(shp)
+        for lvl in range(self.L):
+            l, m = divmod(lvl, M)
+            for sid, arr in zip(pmap.sids, pmap.array):
+                res = numpy.zeros(self.R)
+                for i, g in enumerate(pmap.gidx):
+                    for rlz in dic[g]:
+                        res[rlz] = agg_probs(res[rlz], arr[lvl, i])
+                if self.collect_rlzs:
+                    out[sid, 0, m, l] = res @ self.weights
+                else:
+                    out[sid, :, m, l] = res
+        return out
 
     def store_poes(self, g, pmap):
         """
@@ -510,16 +522,19 @@ class ClassicalCalculator(base.HazardCalculator):
         self.M = len(oq.imtls)
         self.L1 = oq.imtls.size // self.M
         sources = list(self.csm.source_info)
+        R = 1 if oq.collect_rlzs else self.R
         size, msg = get_nbytes_msg(
-            dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=len(sources)))
+            dict(N=self.N, R=R, M=self.M, L1=self.L1, Ns=len(sources)))
         if size > TWO32:
-            raise RuntimeError('The matrix disagg_by_src is too large: %s'
-                               % msg)
+            raise RuntimeError('The matrix disagg_by_src is too large, '
+                               'use collect_rlzs=true\n%s' % msg)
+        size = self.N * R * self.M * self.L1 * len(sources) * 8
+        logging.info('Creating disagg_by_src of size %s', humansize(size))
         self.datastore.create_dset(
             'disagg_by_src', F32,
-            (self.N, self.R, self.M, self.L1, len(sources)))
+            (self.N, R, self.M, self.L1, len(sources)))
         self.datastore.set_shape_descr(
-            'disagg_by_src', site_id=self.N, rlz_id=self.R,
+            'disagg_by_src', site_id=self.N, rlz_id=R,
             imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
         return sources
 
