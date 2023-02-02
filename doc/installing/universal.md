@@ -25,7 +25,7 @@ You can install Python via [python.org](https://www.python.org/downloads/).
 
 If you do not need to modify the engine codebase or develop new features with the engine, but intend to use it as an application, you should perform a `user` installation (on Windows / macOS) or a `server` installation (on Linux). The `user` installation is also the recommended option for Linux, in the case where you do not have root permissions on the machine. 
 
-By default, the script will install the latest stable release of the engine. It is possible to [specify another versions](#installing-a-specific-engine-version).
+By default, the script will install the latest stable release of the engine. It is possible to [specify another version](#installing-a-specific-engine-version).
 
 ### on Windows
 

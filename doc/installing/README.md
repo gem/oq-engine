@@ -51,7 +51,7 @@ See instructions for the [universal installer](./universal.md) script. This scri
 
 
 ## Changing the OpenQuake Engine version
-  To change a version of the engine, make sure to uninstall the current version, before installing a new version.
+  To change the version of the engine, make sure to uninstall the current version, before installing a new version.
   * [Uninstalling the engine](./universal.md#uninstalling-the-engine)
   * [Installing a specific engine version](./universal.md##installing-a-specific-engine-version)
 
