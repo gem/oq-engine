@@ -452,15 +452,20 @@ DEBUG = False
 
 
 def sendback(res, zsocket, sentbytes):
+    """
+    Send back to the master node the result by using the zsocket.
+
+    :returns: the accumulated number of bytes sent
+    """
+    calc_id = res.mon.calc_id
+    task_no = res.mon.task_no
     try:
         zsocket.send(res)
-        # debugging
-        from openquake.commonlib.logs import dblog
-        calc_id = res.mon.calc_id
-        task_no = res.mon.task_no
-        size = humansize(len(res.pik))
-        if DEBUG and calc_id:  # None when building the png maps
-            dblog('DEBUG', calc_id, task_no, 'sent back %s' % size)
+        if DEBUG:
+            from openquake.commonlib.logs import dblog
+            size = humansize(len(res.pik))
+            if calc_id:  # None when building the png maps
+                dblog('DEBUG', calc_id, task_no, 'sent back %s' % size)
     except Exception:  # like OverflowError
         _etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
