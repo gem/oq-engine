@@ -412,6 +412,14 @@ hazard_uhs-std.csv
                 avg2 = dbs_avg[0, 0, m, l]
                 aac(avg1, avg2)
 
+        # with semicolon_aggregate the averages are different because
+        # agg(<poes>) != <agg(poes)> where <...> is the mean on the rlzs;
+        # here is an example with 2 sources to aggregate and 3 realizations:
+        ws = numpy.array([.33333333333333]*3)
+        poes = numpy.array([[.1, .2, .3], [.4, .5, .6]])  # shape (S, R)
+        print(general.agg_probs(poes[0] @ ws, poes[1] @ ws))
+        print(general.agg_probs(poes[0], poes[1]) @ ws)
+
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
         self.assert_curves_ok([
