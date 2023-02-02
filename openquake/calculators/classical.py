@@ -462,8 +462,10 @@ class ClassicalCalculator(base.HazardCalculator):
             self.n_outs[g] -= 1
             if self.n_outs[g] == 0:  # no other tasks for this g
                 with self.monitor('storing PoEs', measuremem=True):
-                    logging.debug('storing PoEs for g=', g)
-                    self.haz.store_poes(g, acc.pop(g))
+                    pmap = acc.pop(g)
+                    size = humansize(pmap.array.nbytes)
+                    logging.debug('storing %s of PoEs for g=%d', size, g)
+                    self.haz.store_poes(g, pmap)
         return acc
 
     def create_dsets(self):
