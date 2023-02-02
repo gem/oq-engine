@@ -180,17 +180,17 @@ def check_disagg_by_src(dstore):
     info = dstore['source_info'][:]
     mutex = info['mutex_weight'] > 0
     mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
-    dbs = dstore.sel('disagg_by_src')  # N, R, M, L, Ns
+    dbs = dstore.sel('disagg_by_src')  # N, R, M, L1, Ns
     if mutex.sum():
         dbs_indep = dbs[:, :, :, :, ~mutex]
         dbs_mutex = dbs[:, :, :, :, mutex]
-        poes_indep = pprod(dbs_indep, axis=4)  # N, R, M, L
-        poes_mutex = dbs_mutex.sum(axis=4)  # N, R, M, L
+        poes_indep = pprod(dbs_indep, axis=4)  # N, R, M, L1
+        poes_mutex = dbs_mutex.sum(axis=4)  # N, R, M, L1
         poes = poes_indep + poes_mutex - poes_indep * poes_mutex
     else:
-        poes = pprod(dbs, axis=4)  # N, R, M, L
+        poes = pprod(dbs, axis=4)  # N, R, M, L1
     rlz_weights = dstore['weights'][:]
-    mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L
+    mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L1
     if not numpy.allclose(mean, mean2, atol=1E-6):
         logging.error('check_disagg_src fails: %s =! %s',
                       mean[0], mean2[0])
@@ -349,7 +349,7 @@ class Hazard:
         self.acc = AccumDict(accum={})
         self.offset = 0
 
-    def get_hcurves(self, pmap, cmaker):  # used in in disagg_by_src
+    def get_poes(self, pmap, cmaker):  # used in in disagg_by_src
         """
         :param pmap: a ProbabilityMap
         :param cmaker: a ContextMaker
@@ -421,7 +421,7 @@ class Hazard:
                 if isinstance(key, str):
                     # in case of disagg_by_src key is a source ID
                     disagg_by_src[..., self.srcidx[key]] = (
-                        self.get_hcurves(pmap, self.cmakers[pmap.grp_id]))
+                        self.get_poes(pmap, self.cmakers[pmap.grp_id]))
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
