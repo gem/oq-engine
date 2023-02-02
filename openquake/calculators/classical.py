@@ -357,7 +357,8 @@ class Hazard:
             for i, g in enumerate(pmap.gidx):
                 for rlz in dic[g]:
                     res[sid, rlz] = agg_probs(res[sid, rlz], arr[:, i])
-        return res.reshape(self.N, self.R, len(self.imtls), -1)
+        shp = res.shape[:-1] + (len(self.imtls), -1)
+        return res.reshape(shp)
 
     def store_poes(self, g, pmap):
         """
