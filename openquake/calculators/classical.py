@@ -462,6 +462,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.n_outs[g] -= 1
             if self.n_outs[g] == 0:  # no other tasks for this g
                 with self.monitor('storing PoEs', measuremem=True):
+                    logging.debug('storing PoEs for g=', g)
                     self.haz.store_poes(g, acc.pop(g))
         return acc
 
