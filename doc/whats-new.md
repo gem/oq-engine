@@ -95,6 +95,13 @@ added a way to include the aftershock contribution to the hazard by
 reading a file of corrected occurrence rates for the ruptures of a
 model.
 
+The `disagg_by_src` feature has been changed to store only the mean
+PoEs across the realizations for models using sampling. The user can
+customize what happens by setting the flag `collect_rlzs` ("true"
+means store the mean, "false" mean store all realizations). Thanks to
+this change now large models like EUR do not run out of memory when using
+the flag `disagg_by_src=true`. 
+
 There was a major optimization in the disaggregation calculator (we measured
 speedups of over 76 times in the disaggregation part) obtained by replacing
 the `scipy.truncnorm.sf` function with our own function. Also, our own
