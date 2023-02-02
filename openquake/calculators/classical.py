@@ -353,14 +353,15 @@ class Hazard:
         """
         :param pmap: a ProbabilityMap
         :param cmaker: a ContextMaker
-        :returns: an array of PoEs of shape (N, R, M, L)
+        :returns: an array of PoEs of shape (N, R, M, L1)
         """
         R = 1 if self.collect_rlzs else self.R
         M = len(self.imtls)
-        out = numpy.zeros((self.N, R, M, self.L // M))
+        L1 = self.L // M
+        out = numpy.zeros((self.N, R, M, L1))
         dic = dict(zip(cmaker.gidx, cmaker.gsims.values()))
         for lvl in range(self.L):
-            l, m = divmod(lvl, M)
+            m, l = divmod(lvl, L1)
             for sid, arr in zip(pmap.sids, pmap.array):
                 res = numpy.zeros(self.R)
                 for i, g in enumerate(pmap.gidx):

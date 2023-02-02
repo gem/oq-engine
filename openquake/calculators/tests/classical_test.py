@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import gzip
+import json
 import unittest
 import numpy
 from openquake.baselib import parallel, general, config
@@ -382,6 +383,19 @@ hazard_uhs-std.csv
         df = self.calc.datastore.read_df('hcurves-stats', 'lvl')
         self.assertEqual(list(df.columns),
                          ['site_id', 'stat', 'imt', 'value'])
+
+    def test_case_20_bis(self):
+        # disagg_by_src
+        self.run_calc(case_20.__file__, 'job_bis.ini')
+        js = self.calc.datastore['disagg_by_src'].attrs['json']
+        attrs = json.loads(js)
+        self.assertEqual(attrs, {
+            'shape_descr': ['site_id', 'rlz_id', 'imt', 'lvl', 'src_id'],
+            'site_id': 1,
+            'rlz_id': 12,
+            'imt': ['PGA', 'SA(1.0)'],
+            'lvl': 4,
+            'src_id': ['CHAR1', 'COMFLT1', 'SFLT1']})
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
