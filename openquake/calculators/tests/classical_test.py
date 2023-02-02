@@ -397,8 +397,8 @@ hazard_uhs-std.csv
             'imt': ['PGA', 'SA(1.0)'],
             'lvl': 4,
             'src_id': ['CHAR1', 'COMFLT1', 'SFLT1']})
-        poes = weights @ dbs[0, :, 0, 0, :]  # shape Ns
-        aac(poes, [0.01980132, 0.01488805, 0.01488805, 0., 0., 0., 0.],
+        poes1 = weights @ dbs[0, :, 0, 0, :]  # shape Ns
+        aac(poes1, [0.01980132, 0.01488805, 0.01488805, 0., 0., 0., 0.],
             atol=1E-7)
 
         # disagg_by_src with collect_rlzs:
@@ -419,6 +419,11 @@ hazard_uhs-std.csv
         poes = numpy.array([[.1, .2, .3], [.4, .5, .6]])  # shape (S, R)
         print(general.agg_probs(poes[0] @ ws, poes[1] @ ws))
         print(general.agg_probs(poes[0], poes[1]) @ ws)
+
+        # here are the numbers
+        poes2 = self.calc.datastore['disagg_by_src'][0, 0, 0, 0]
+        aac(poes2, [0.01968, 0.014833, 0.014841, 0., 0., 0., 0.],
+            atol=1E-6)
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
