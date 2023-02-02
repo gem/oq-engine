@@ -192,8 +192,7 @@ def check_disagg_by_src(dstore):
     rlz_weights = dstore['weights'][:]
     mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L1
     if not numpy.allclose(mean, mean2, atol=1E-6):
-        logging.error('check_disagg_src fails: %s =! %s',
-                      mean[0], mean2[0])
+        logging.error('check_disagg_src fails: %s =! %s', mean[0], mean2[0])
 
     # check the extract call is not broken
     aw = extract.extract(dstore, 'disagg_by_src?lvl_id=-1')
@@ -335,7 +334,8 @@ class Hazard:
         self.datastore = dstore
         oq = dstore['oqparam']
         self.full_lt = full_lt
-        self.weights = [r.weight['weight'] for r in full_lt.get_realizations()]
+        self.weights = numpy.array(
+            [r.weight['weight'] for r in full_lt.get_realizations()])
         self.cmakers = read_cmakers(dstore, full_lt)
         self.collect_rlzs = oq.collect_rlzs
         self.totgsims = sum(len(cm.gsims) for cm in self.cmakers)
@@ -770,7 +770,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.set_shape_descr(
                     'disagg_by_src', site_id=self.N, rlz_id=self.R,
                     imt=list(self.oqparam.imtls), lvl=self.L1, src_id=srcids)
-        if 'disagg_by_src' in self.datastore:
+        if 'disagg_by_src' in self.datastore and not self.oqparam.collect_rlzs:
             logging.info('Comparing disagg_by_src vs mean curves')
             check_disagg_by_src(self.datastore)
 
