@@ -387,8 +387,9 @@ hazard_uhs-std.csv
     def test_case_20_bis(self):
         # disagg_by_src
         self.run_calc(case_20.__file__, 'job_bis.ini')
-        js = self.calc.datastore['disagg_by_src'].attrs['json']
-        attrs = json.loads(js)
+        weights = self.calc.datastore['weights'][:]
+        dbs = self.calc.datastore['disagg_by_src']
+        attrs = json.loads(dbs.attrs['json'])
         self.assertEqual(attrs, {
             'shape_descr': ['site_id', 'rlz_id', 'imt', 'lvl', 'src_id'],
             'site_id': 1,
@@ -396,6 +397,9 @@ hazard_uhs-std.csv
             'imt': ['PGA', 'SA(1.0)'],
             'lvl': 4,
             'src_id': ['CHAR1', 'COMFLT1', 'SFLT1']})
+        poes = weights @ dbs[0, :, 0, 0, :]  # shape Ns
+        aac(poes, [0.01980132, 0.01488805, 0.01488805, 0., 0., 0., 0.],
+            atol=1E-7)
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
