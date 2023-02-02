@@ -504,8 +504,8 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
         args += (mon,)
     sentbytes = 0
     if isgenfunc:
-        it = func(*args)
         with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
+            it = func(*args)
             while True:
                 res = Result.new(next, (it,), mon, sentbytes)
                 sentbytes = sendback(res, zsocket, sentbytes)
