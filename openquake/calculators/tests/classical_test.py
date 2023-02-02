@@ -385,7 +385,7 @@ hazard_uhs-std.csv
                          ['site_id', 'stat', 'imt', 'value'])
 
     def test_case_20_bis(self):
-        # disagg_by_src
+        # disagg_by_src without collect_rlzs
         self.run_calc(case_20.__file__, 'job_bis.ini')
         weights = self.calc.datastore['weights'][:]
         dbs = self.calc.datastore['disagg_by_src']
@@ -400,6 +400,17 @@ hazard_uhs-std.csv
         poes = weights @ dbs[0, :, 0, 0, :]  # shape Ns
         aac(poes, [0.01980132, 0.01488805, 0.01488805, 0., 0., 0., 0.],
             atol=1E-7)
+
+        # disagg_by_src with collect_rlzs:
+        # the averages are correct when ignoring semicolon_aggregate
+        dbs_full = self.calc.disagg_by_src  # shape (N, R, M, L1, Ns)
+        self.run_calc(case_20.__file__, 'job_bis.ini', collect_rlzs='true')
+        dbs_avg = self.calc.disagg_by_src  # shape (N, 1, M, L1, Ns)
+        for m in range(2):
+            for l in range(4):
+                avg1 = weights @ dbs_full[0, :, m, l]
+                avg2 = dbs_avg[0, 0, m, l]
+                aac(avg1, avg2)
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration

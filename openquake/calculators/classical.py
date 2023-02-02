@@ -764,7 +764,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore['source_info']['source_id'])
             if any(';' in srcid for srcid in srcids):
                 # enable reduction of the array disagg_by_src
-                arr = self.datastore['disagg_by_src'][:]
+                arr = self.disagg_by_src = self.datastore['disagg_by_src'][:]
                 arr, srcids = semicolon_aggregate(arr, srcids)
                 self.datastore['disagg_by_src'][:] = arr
                 self.datastore.set_shape_descr(
