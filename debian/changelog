@@ -1,5 +1,9 @@
+  [Michele Simionato]
+  * Supported `collect_rlzs` together with `disagg_by_src` to avoid running
+    out of memory in models with many realizations and many sources
+
   [Marco Pagani]
-  * Implemented the correction of Lanzano et al. (2019) as described in 
+  * Implemented the correction of Lanzano et al. (2019) as described in
     Lanzano et al. (2022)
 
   [Michele Simionato]

@@ -180,20 +180,19 @@ def check_disagg_by_src(dstore):
     info = dstore['source_info'][:]
     mutex = info['mutex_weight'] > 0
     mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
-    dbs = dstore.sel('disagg_by_src')  # N, R, M, L, Ns
+    dbs = dstore.sel('disagg_by_src')  # N, R, M, L1, Ns
     if mutex.sum():
         dbs_indep = dbs[:, :, :, :, ~mutex]
         dbs_mutex = dbs[:, :, :, :, mutex]
-        poes_indep = pprod(dbs_indep, axis=4)  # N, R, M, L
-        poes_mutex = dbs_mutex.sum(axis=4)  # N, R, M, L
+        poes_indep = pprod(dbs_indep, axis=4)  # N, R, M, L1
+        poes_mutex = dbs_mutex.sum(axis=4)  # N, R, M, L1
         poes = poes_indep + poes_mutex - poes_indep * poes_mutex
     else:
-        poes = pprod(dbs, axis=4)  # N, R, M, L
+        poes = pprod(dbs, axis=4)  # N, R, M, L1
     rlz_weights = dstore['weights'][:]
-    mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L
+    mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L1
     if not numpy.allclose(mean, mean2, atol=1E-6):
-        logging.error('check_disagg_src fails: %s =! %s',
-                      mean[0], mean2[0])
+        logging.error('check_disagg_src fails: %s =! %s', mean[0], mean2[0])
 
     # check the extract call is not broken
     aw = extract.extract(dstore, 'disagg_by_src?lvl_id=-1')
@@ -333,31 +332,46 @@ class Hazard:
     """
     def __init__(self, dstore, full_lt, srcidx):
         self.datastore = dstore
+        oq = dstore['oqparam']
         self.full_lt = full_lt
+        self.weights = numpy.array(
+            [r.weight['weight'] for r in full_lt.get_realizations()])
         self.cmakers = read_cmakers(dstore, full_lt)
+        self.collect_rlzs = oq.collect_rlzs
         self.totgsims = sum(len(cm.gsims) for cm in self.cmakers)
-        self.imtls = imtls = dstore['oqparam'].imtls
-        self.level_weights = imtls.array.flatten() / imtls.array.sum()
+        self.imtls = oq.imtls
+        self.level_weights = oq.imtls.array.flatten() / oq.imtls.array.sum()
         self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
         self.N = len(dstore['sitecol/sids'])
+        self.L = oq.imtls.size
         self.R = full_lt.get_num_paths()
         self.acc = AccumDict(accum={})
         self.offset = 0
 
-    def get_hcurves(self, pmap, cmaker):  # used in in disagg_by_src
+    def get_poes(self, pmap, cmaker):  # used in in disagg_by_src
         """
         :param pmap: a ProbabilityMap
         :param cmaker: a ContextMaker
-        :returns: an array of PoEs of shape (N, R, M, L)
+        :returns: an array of PoEs of shape (N, R, M, L1)
         """
-        res = numpy.zeros((self.N, self.R, self.imtls.size))
+        R = 1 if self.collect_rlzs else self.R
+        M = len(self.imtls)
+        L1 = self.L // M
+        out = numpy.zeros((self.N, R, M, L1))
         dic = dict(zip(cmaker.gidx, cmaker.gsims.values()))
-        for sid, arr in zip(pmap.sids, pmap.array):
-            for i, g in enumerate(pmap.gidx):
-                for rlz in dic[g]:
-                    res[sid, rlz] = agg_probs(res[sid, rlz], arr[:, i])
-        return res.reshape(self.N, self.R, len(self.imtls), -1)
+        for lvl in range(self.L):
+            m, l = divmod(lvl, L1)
+            for sid, arr in zip(pmap.sids, pmap.array):
+                res = numpy.zeros(self.R)
+                for i, g in enumerate(pmap.gidx):
+                    for rlz in dic[g]:
+                        res[rlz] = agg_probs(res[rlz], arr[lvl, i])
+                if self.collect_rlzs:
+                    out[sid, 0, m, l] = res @ self.weights
+                else:
+                    out[sid, :, m, l] = res
+        return out
 
     def store_poes(self, g, pmap):
         """
@@ -407,7 +421,7 @@ class Hazard:
                 if isinstance(key, str):
                     # in case of disagg_by_src key is a source ID
                     disagg_by_src[..., self.srcidx[key]] = (
-                        self.get_hcurves(pmap, self.cmakers[pmap.grp_id]))
+                        self.get_poes(pmap, self.cmakers[pmap.grp_id]))
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
@@ -510,16 +524,19 @@ class ClassicalCalculator(base.HazardCalculator):
         self.M = len(oq.imtls)
         self.L1 = oq.imtls.size // self.M
         sources = list(self.csm.source_info)
+        R = 1 if oq.collect_rlzs else self.R
         size, msg = get_nbytes_msg(
-            dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=len(sources)))
+            dict(N=self.N, R=R, M=self.M, L1=self.L1, Ns=len(sources)))
         if size > TWO32:
-            raise RuntimeError('The matrix disagg_by_src is too large: %s'
-                               % msg)
+            raise RuntimeError('The matrix disagg_by_src is too large, '
+                               'use collect_rlzs=true\n%s' % msg)
+        size = self.N * R * self.M * self.L1 * len(sources) * 8
+        logging.info('Creating disagg_by_src of size %s', humansize(size))
         self.datastore.create_dset(
             'disagg_by_src', F32,
-            (self.N, self.R, self.M, self.L1, len(sources)))
+            (self.N, R, self.M, self.L1, len(sources)))
         self.datastore.set_shape_descr(
-            'disagg_by_src', site_id=self.N, rlz_id=self.R,
+            'disagg_by_src', site_id=self.N, rlz_id=R,
             imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
         return sources
 
@@ -748,13 +765,13 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore['source_info']['source_id'])
             if any(';' in srcid for srcid in srcids):
                 # enable reduction of the array disagg_by_src
-                arr = self.datastore['disagg_by_src'][:]
+                arr = self.disagg_by_src = self.datastore['disagg_by_src'][:]
                 arr, srcids = semicolon_aggregate(arr, srcids)
                 self.datastore['disagg_by_src'][:] = arr
                 self.datastore.set_shape_descr(
                     'disagg_by_src', site_id=self.N, rlz_id=self.R,
                     imt=list(self.oqparam.imtls), lvl=self.L1, src_id=srcids)
-        if 'disagg_by_src' in self.datastore:
+        if 'disagg_by_src' in self.datastore and not self.oqparam.collect_rlzs:
             logging.info('Comparing disagg_by_src vs mean curves')
             check_disagg_by_src(self.datastore)
 

@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import gzip
+import json
 import unittest
 import numpy
 from openquake.baselib import parallel, general, config
@@ -382,6 +383,47 @@ hazard_uhs-std.csv
         df = self.calc.datastore.read_df('hcurves-stats', 'lvl')
         self.assertEqual(list(df.columns),
                          ['site_id', 'stat', 'imt', 'value'])
+
+    def test_case_20_bis(self):
+        # disagg_by_src without collect_rlzs
+        self.run_calc(case_20.__file__, 'job_bis.ini')
+        weights = self.calc.datastore['weights'][:]
+        dbs = self.calc.datastore['disagg_by_src']
+        attrs = json.loads(dbs.attrs['json'])
+        self.assertEqual(attrs, {
+            'shape_descr': ['site_id', 'rlz_id', 'imt', 'lvl', 'src_id'],
+            'site_id': 1,
+            'rlz_id': 12,
+            'imt': ['PGA', 'SA(1.0)'],
+            'lvl': 4,
+            'src_id': ['CHAR1', 'COMFLT1', 'SFLT1']})
+        poes1 = weights @ dbs[0, :, 0, 0, :]  # shape Ns
+        aac(poes1, [0.01980132, 0.01488805, 0.01488805, 0., 0., 0., 0.],
+            atol=1E-7)
+
+        # disagg_by_src with collect_rlzs:
+        # the averages are correct when ignoring semicolon_aggregate
+        dbs_full = self.calc.disagg_by_src  # shape (N, R, M, L1, Ns)
+        self.run_calc(case_20.__file__, 'job_bis.ini', collect_rlzs='true')
+        dbs_avg = self.calc.disagg_by_src  # shape (N, 1, M, L1, Ns)
+        for m in range(2):
+            for l in range(4):
+                avg1 = weights @ dbs_full[0, :, m, l]
+                avg2 = dbs_avg[0, 0, m, l]
+                aac(avg1, avg2)
+
+        # with semicolon_aggregate the averages are different because
+        # agg(<poes>) != <agg(poes)> where <...> is the mean on the rlzs;
+        # here is an example with 2 sources to aggregate and 3 realizations:
+        ws = numpy.array([.33333333333333]*3)
+        poes = numpy.array([[.1, .2, .3], [.4, .5, .6]])  # shape (S, R)
+        print(general.agg_probs(poes[0] @ ws, poes[1] @ ws))
+        print(general.agg_probs(poes[0], poes[1]) @ ws)
+
+        # here are the numbers
+        poes2 = self.calc.datastore['disagg_by_src'][0, 0, 0, 0]
+        aac(poes2, [0.01968, 0.014833, 0.014841, 0., 0., 0., 0.],
+            atol=1E-6)
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
