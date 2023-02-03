@@ -154,10 +154,11 @@ class MultiFaultSource(BaseSeismicSource):
                 sec.suid = idx
         else:
             s = self.sections
-        nrups = len(self.mags)
-        matrix = np.random.random((nrups, eff_num_ses))
+        # NB: np.random.random(eff_num_ses) called inside to save memory
+        # the seed is set before
         for i, probs in enumerate(self.probs_occur):
-            num_occ = np.digitize(matrix[i], np.cumsum(probs)).sum()
+            cdf = np.cumsum(probs)
+            num_occ = np.digitize(np.random.random(eff_num_ses), cdf).sum()
             if num_occ == 0:  # ignore non-occurring ruptures
                 continue
             idxs = self.rupture_idxs[i]
