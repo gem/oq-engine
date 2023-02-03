@@ -1130,7 +1130,7 @@ class SourceConverter(RuptureConverter):
                 mags = rounded_unique(dic['mag'], idxs)
             # NB: the sections will be fixed later on, in source_reader
             mfs = MultiFaultSource(sid, name, trt, idxs, dic['probs_occur'],
-                                   dic['mag'], dic['rake'])
+                                   dic['mag'], dic['rake'], self.get_tom(node))
             return mfs
         probs = []
         mags = []
@@ -1158,8 +1158,8 @@ class SourceConverter(RuptureConverter):
             mags = rounded_unique(mags, idxs)
         rakes = numpy.array(rakes)
         # NB: the sections will be fixed later on, in source_reader
-        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes)
-        mfs.temporal_occurrence_model=self.get_tom(node)
+        mfs = MultiFaultSource(sid, name, trt, idxs, numpy.array(probs),
+                               mags, rakes, self.get_tom(node))
         return mfs
 
     def convert_sourceModel(self, node):

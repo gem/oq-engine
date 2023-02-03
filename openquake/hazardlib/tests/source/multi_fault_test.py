@@ -17,6 +17,7 @@
 import os
 import tempfile
 import unittest
+import numpy
 from openquake.baselib import hdf5, python3compat
 from openquake.hazardlib.source.multi_fault import MultiFaultSource
 from openquake.hazardlib.geo.surface import KiteSurface
@@ -24,6 +25,7 @@ from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.nrml import SourceModel
+from openquake.hazardlib.tom import PoissonTOM
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -73,14 +75,16 @@ class MultiFaultTestCase(unittest.TestCase):
                 [0.90, 0.10]]
         self.sections = sections
         self.rup_idxs = rup_idxs
-        self.pmfs = pmfs
+        self.pmfs = numpy.array(pmfs)
         self.mags = rup_mags
         self.rakes = rakes
+        self.tom = PoissonTOM(50.)
 
     def test01(self):
         # test instantiation
         src = MultiFaultSource("01", "test", "Moon Crust",
-                               self.rup_idxs, self.pmfs, self.mags, self.rakes)
+                               self.rup_idxs, self.pmfs, self.mags, self.rakes,
+                               self.tom)
         src.set_sections(self.sections)
         src.mutex_weight = 1.
 
@@ -103,7 +107,7 @@ class MultiFaultTestCase(unittest.TestCase):
         # test set_sections, 3 is not a known section ID
         rup_idxs = [[0], [1], [3], [0], [1], [3], [0]]
         mfs = MultiFaultSource("01", "test", "Moon Crust", rup_idxs,
-                               self.pmfs, self.mags, self.rakes)
+                               self.pmfs, self.mags, self.rakes, self.tom)
         with self.assertRaises(IndexError) as ctx:
             mfs.set_sections(self.sections)
         expected = 'list index out of range'

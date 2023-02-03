@@ -76,8 +76,8 @@ class MultiFaultSource(BaseSeismicSource):
         assert len(occurrence_probs) == len(magnitudes) == len(rakes) == nrups
         self.rupture_idxs = rupture_idxs
         self.probs_occur = occurrence_probs
-        # for instance prob=0.8 -> rate = 1.6094
-        self.rates = - np.log(1. - occurrence_probs[:, 0])
+        # for instance prob=0.8 -> rate = 0.223143551
+        self.rates = - np.log(occurrence_probs[:, 0])
         self.mags = magnitudes
         self.rakes = rakes
         self.temporal_occurrence_model = temporal_occurrence_model
@@ -186,7 +186,8 @@ class MultiFaultSource(BaseSeismicSource):
                 self.rupture_idxs[slc],
                 self.probs_occur[slc],
                 self.mags[slc],
-                self.rakes[slc])
+                self.rakes[slc],
+                self.temporal_occurrence_model)
             src.hdf5path = self.hdf5path
             src.num_ruptures = src.count_ruptures()
             yield src
