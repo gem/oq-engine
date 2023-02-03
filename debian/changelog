@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the rupture sampling for MultiFaultSources
   * Supported `collect_rlzs` together with `disagg_by_src` to avoid running
     out of memory in models with many realizations and many sources
 
