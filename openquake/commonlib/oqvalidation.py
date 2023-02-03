@@ -449,10 +449,11 @@ max_sites_disagg:
   Default: 10
 
 pmap_max_gb:
-   Maximum size of the ProbabilityMaps in classical calculations, should be
-   less than 4 GB to avoid pickling errors. This is also used to split the
-   calculation in tiles.
-   Example: *max_size_db = 2*
+   Control the memory used in large classical calculations. The default is 1
+   (meant for people with 2 GB per core or less) but you increase it if you
+   have plenty of memory, thus producing less tiles and making the calculation
+   more efficient. For small calculations it has basically no effect.
+   Example: *pmap_max_gb = 2*
    Default: 1
 
 max_weight:
