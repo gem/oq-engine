@@ -144,6 +144,33 @@ class MultiFaultSource(BaseSeismicSource):
                 self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
                 PMF(data))
 
+    def _sample_ruptures(self, eff_num_ses):
+        # yields (rup, num_occur)
+        if self.hdf5path:
+            with hdf5.File(self.hdf5path, 'r') as f:
+                geoms = f['multi_fault_sections'][:]
+            s = [geom_to_kite(geom) for geom in geoms]
+            for idx, sec in enumerate(s):
+                sec.suid = idx
+        else:
+            s = self.sections
+        nrups = len(self.mags)
+        matrix = np.random.random((nrups, eff_num_ses))
+        for i, probs in enumerate(self.probs_occur):
+            num_occ = np.digitize(matrix[i], np.cumsum(probs)).sum()
+            if num_occ == 0:  # ignore non-occurring ruptures
+                continue
+            idxs = self.rupture_idxs[i]
+            if len(idxs) == 1:
+                sfc = s[idxs[0]]
+            else:
+                sfc = MultiSurface([s[idx] for idx in idxs])
+            hypo = s[idxs[0]].get_middle_point()
+            data = [(p, o) for o, p in enumerate(probs)]
+            yield (NonParametricProbabilisticRupture(
+                self.mags[i], self.rakes[i], self.tectonic_region_type, hypo,
+                sfc, PMF(data)), num_occ)
+
     def __iter__(self):
         if len(self.mags) <= BLOCKSIZE:  # already split
             yield self
