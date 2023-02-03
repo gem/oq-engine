@@ -1159,6 +1159,7 @@ class SourceConverter(RuptureConverter):
         rakes = numpy.array(rakes)
         # NB: the sections will be fixed later on, in source_reader
         mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes)
+        mfs.temporal_occurrence_model=self.get_tom(node)
         return mfs
 
     def convert_sourceModel(self, node):

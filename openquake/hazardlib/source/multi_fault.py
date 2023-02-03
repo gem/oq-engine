@@ -25,7 +25,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import gen_slices
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.rupture import (
-    NonParametricProbabilisticRupture)
+    NonParametricProbabilisticRupture, ParametricProbabilisticRupture)
 from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.kite_fault import geom_to_kite
@@ -38,7 +38,7 @@ BLOCKSIZE = 200
 # NB: we need enough sources for parallelization and not too
 # big to cause an out-of-memory when building the contexts
 
-
+    
 class MultiFaultSource(BaseSeismicSource):
     """
     The multi-fault source is a source typology specifically supporting the
@@ -71,13 +71,16 @@ class MultiFaultSource(BaseSeismicSource):
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
                  rupture_idxs: list, occurrence_probs: Union[list, np.ndarray],
-                 magnitudes: list, rakes: list):
+                 magnitudes: list, rakes: list, temporal_occurrence_model):
         nrups = len(rupture_idxs)
         assert len(occurrence_probs) == len(magnitudes) == len(rakes) == nrups
         self.rupture_idxs = rupture_idxs
         self.probs_occur = occurrence_probs
+        # for instance prob=0.8 -> rate = 1.6094
+        self.rates = - np.log(1. - occurrence_probs[:, 0])
         self.mags = magnitudes
         self.rakes = rakes
+        self.temporal_occurrence_model = temporal_occurrence_model
         super().__init__(source_id, name, tectonic_region_type)
 
     def is_gridded(self):
@@ -143,6 +146,32 @@ class MultiFaultSource(BaseSeismicSource):
             yield NonParametricProbabilisticRupture(
                 self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
                 PMF(data))
+
+    def _sample_ruptures(self, eff_num_ses):
+        # yields (rup, num_occur)
+        num_occurs = np.random.poisson(
+            self.rates * self.temporal_occurrence_model.time_span * eff_num_ses)
+        if self.hdf5path:
+            with hdf5.File(self.hdf5path, 'r') as f:
+                geoms = f['multi_fault_sections'][:]
+            s = [geom_to_kite(geom) for geom in geoms]
+            for idx, sec in enumerate(s):
+                sec.suid = idx
+        else:
+            s = self.sections
+        for i, num_occ in enumerate(num_occurs):
+            if num_occ == 0:  # ignore non-occurring ruptures
+                continue
+            idxs = self.rupture_idxs[i]
+            if len(idxs) == 1:
+                sfc = s[idxs[0]]
+            else:
+                sfc = MultiSurface([s[idx] for idx in idxs])
+            hypo = s[idxs[0]].get_middle_point()
+            yield (ParametricProbabilisticRupture(
+                self.mags[i], self.rakes[i], self.tectonic_region_type, hypo,
+                sfc, self.rates[i], self.temporal_occurrence_model),
+                   num_occ)
 
     def __iter__(self):
         if len(self.mags) <= BLOCKSIZE:  # already split
