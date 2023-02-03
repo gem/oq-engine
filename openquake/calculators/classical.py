@@ -769,8 +769,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 arr = self.disagg_by_src = self.datastore['disagg_by_src'][:]
                 arr, srcids = semicolon_aggregate(arr, srcids)
                 self.datastore['disagg_by_src'][:] = arr
+                R = 1 if self.oqparam.collect_rlzs else self.R
                 self.datastore.set_shape_descr(
-                    'disagg_by_src', site_id=self.N, rlz_id=self.R,
+                    'disagg_by_src', site_id=self.N, rlz_id=R,
                     imt=list(self.oqparam.imtls), lvl=self.L1, src_id=srcids)
         if 'disagg_by_src' in self.datastore and not self.oqparam.collect_rlzs:
             logging.info('Comparing disagg_by_src vs mean curves')
