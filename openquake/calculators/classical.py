@@ -195,8 +195,9 @@ def check_disagg_by_src(dstore):
         logging.error('check_disagg_src fails: %s =! %s', mean[0], mean2[0])
 
     # check the extract call is not broken
-    aw = extract.extract(dstore, 'disagg_by_src?lvl_id=-1')
-    assert aw.array.dtype.names == ('src_id', 'poe')
+    for imt in dstore['oqparam'].imtls:
+        aw = extract.extract(dstore, f'disagg_by_src?imt={imt}&poe=1E-4&site_id=0')
+        assert aw.array.dtype.names == ('src_id', 'poe')
 
 #  ########################### task functions ############################ #
 

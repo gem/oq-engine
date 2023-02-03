@@ -34,7 +34,6 @@ from openquake.baselib.general import (
     get_array, group_array, fast_agg)
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
-from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
