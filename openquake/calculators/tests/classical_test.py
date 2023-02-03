@@ -425,6 +425,17 @@ hazard_uhs-std.csv
         aac(poes2, [0.01968, 0.014833, 0.014841, 0., 0., 0., 0.],
             atol=1E-6)
 
+        # testing extract_disagg_by_src
+        aw = extract(self.calc.datastore, 'disagg_by_src?imt=PGA&poe=1E-3')
+        self.assertEqual(aw.site_id, 0)
+        self.assertEqual(aw.imt, 'PGA')
+        self.assertEqual(aw.poe, .001)
+        aac(aw.array['poe'], [6.46114349e-05, 0, 0])
+
+        # testing view_relevant_sources
+        arr = view('relevant_sources:SA(1.0)', self.calc.datastore)
+        self.assertEqual(decode(arr['src_id']), ['SFLT1'])
+
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
         self.assert_curves_ok([
