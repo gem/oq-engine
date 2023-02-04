@@ -183,6 +183,7 @@ import re
 import ast
 import sys
 import time
+import random
 import socket
 import signal
 import pickle
@@ -459,20 +460,23 @@ def sendback(res, zsocket, sentbytes):
     """
     calc_id = res.mon.calc_id
     task_no = res.mon.task_no
+    nbytes = len(res.pik)
     try:
         zsocket.send(res)
         if DEBUG:
             from openquake.commonlib.logs import dblog
-            size = humansize(len(res.pik))
             if calc_id:  # None when building the png maps
-                dblog('DEBUG', calc_id, task_no, 'sent back %s' % size)
+                dblog('DEBUG', calc_id, task_no,
+                      'sent back %s' % humansize(nbytes))
     except Exception:  # like OverflowError
         _etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
         if DEBUG and calc_id:
             dblog('ERROR', calc_id, task_no, tb_str)
         zsocket.send(Result(exc, res.mon, tb_str))
-    return sentbytes + len(res.pik)
+    # avoid output congestion by waiting a bit, if slowdown_rate is set
+    time.sleep(config.performance.slowdown_rate * nbytes * random.random())
+    return sentbytes + nbytes
 
 
 def safely_call(func, args, task_no=0, mon=dummy_mon):
@@ -919,8 +923,8 @@ class Starmap(object):
                          self.name, humansize(nbytes), time.time() - self.t0)
 
         isocket = iter(self.socket)
-        self.todo = len(self.tasks)
         finished = set()
+        self.todo = len(self.tasks)
         while self.todo:
             self.log_percent()
             res = next(isocket)
@@ -933,7 +937,7 @@ class Starmap(object):
                 self.todo -= 1
                 self._submit_many(1)
                 todo = set(range(self.task_no)) - finished
-                logging.debug('tasks todo %s', sorted(todo))
+                logging.debug('tasks todo %s', numpy.array(sorted(todo)))
                 yield res
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
