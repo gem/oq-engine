@@ -562,7 +562,6 @@ class IterResult(object):
                 logging.warning(msg)
                 first_time = False  # warn only once
             self.nbytes += result.nbytes
-            print(result)
             yield result.get()
 
     def __iter__(self):
@@ -787,16 +786,15 @@ class Starmap(object):
         """
         Log the progress of the computation in percentage
         """
-        submitted = len(self.tasks)
         queued = len(self.task_queue)
-        total = submitted + queued
-        done = submitted - self.todo
+        total = self.task_no
+        done = total - len(self.tasks)
         percent = int(float(done) / total * 100)
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
         elif percent > self.prev_percent:
             self.progress('%s %3d%% [%d submitted, %d queued]',
-                          self.name, percent, submitted, queued)
+                          self.name, percent, self.task_no, queued)
             self.prev_percent = percent
         return done
 
@@ -877,7 +875,6 @@ class Starmap(object):
                 func, args = self.task_queue[0]
                 del self.task_queue[0]
                 self.submit(args, func=func)
-                self.todo += 1
 
     def _loop(self):
         self.busytime = AccumDict(accum=[])  # pid -> time
@@ -896,8 +893,7 @@ class Starmap(object):
 
         isocket = iter(self.socket)
         finished = set()
-        self.todo = len(self.tasks)
-        while self.todo:
+        while self.tasks:
             self.log_percent()
             res = next(isocket)
             if self.calc_id != res.mon.calc_id:
@@ -906,11 +902,9 @@ class Starmap(object):
             elif res.msg == 'TASK_ENDED':
                 finished.add(res.mon.task_no)
                 self.busytime += {res.workerid: res.mon.duration}
-                self.todo -= 1
+                self.tasks.remove(res.mon.task_no)
                 self._submit_many(1)
                 todo = set(range(self.task_no)) - finished
-                if not todo:
-                    print('=============== finished ================')
                 logging.debug('tasks todo %s', numpy.array(sorted(todo)))
                 task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
                 task_sent.update(self.sent)
