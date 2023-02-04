@@ -922,8 +922,8 @@ class Starmap(object):
                          self.name, humansize(nbytes), time.time() - self.t0)
 
         isocket = iter(self.socket)
-        self.todo = len(self.tasks)
         finished = set()
+        self.todo = len(self.tasks)
         while self.todo:
             self.log_percent()
             res = next(isocket)
