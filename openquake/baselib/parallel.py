@@ -459,20 +459,23 @@ def sendback(res, zsocket, sentbytes):
     """
     calc_id = res.mon.calc_id
     task_no = res.mon.task_no
+    nbytes = len(res.pik)
     try:
         zsocket.send(res)
         if DEBUG:
             from openquake.commonlib.logs import dblog
-            size = humansize(len(res.pik))
             if calc_id:  # None when building the png maps
-                dblog('DEBUG', calc_id, task_no, 'sent back %s' % size)
+                dblog('DEBUG', calc_id, task_no,
+                      'sent back %s' % humansize(nbytes))
     except Exception:  # like OverflowError
         _etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
         if DEBUG and calc_id:
             dblog('ERROR', calc_id, task_no, tb_str)
         zsocket.send(Result(exc, res.mon, tb_str))
-    return sentbytes + len(res.pik)
+    # avoid output congestion by waiting a bit, if slowdown_rate is set
+    time.sleep(config.performance.slowdown_rate * nbytes)
+    return sentbytes + nbytes
 
 
 def safely_call(func, args, task_no=0, mon=dummy_mon):

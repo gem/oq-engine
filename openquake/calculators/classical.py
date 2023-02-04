@@ -226,8 +226,6 @@ def classical(srcs, sitecol, cmaker, monitor):
             result['pnemap'] = ~pne.remove_zeros()
             result['pnemap'].gidx = [g]
             yield result
-            # avoid output congestion by waiting a bit
-            time.sleep(config.performance.slowdown_rate * pne.array.nbytes)
     else:
         result['pnemap'] = ~pmap.remove_zeros()
         result['pnemap'].gidx = cmaker.gidx
