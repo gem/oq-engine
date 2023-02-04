@@ -378,6 +378,7 @@ class Hazard:
         """
         Store the pmap of the given group inside the _poes dataset
         """
+        print('=========== storing ===============')
         arr = 1. - pmap.array[:, :, 0]
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence, however that probability

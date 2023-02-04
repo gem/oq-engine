@@ -217,19 +217,17 @@ host_cores = config.zworkers.host_cores.split(',')
 
 @submit.add('no')
 def no_submit(self, func, args, monitor):
-    return safely_call(func, args, self.task_no, monitor)
+    safely_call(func, args, self.task_no, monitor)
 
 
 @submit.add('processpool')
 def processpool_submit(self, func, args, monitor):
-    return self.pool.apply_async(
-        safely_call, (func, args, self.task_no, monitor))
+    self.pool.apply_async(safely_call, (func, args, self.task_no, monitor))
 
 
 @submit.add('threadpool')
 def threadpool_submit(self, func, args, monitor):
-    return self.pool.apply_async(
-        safely_call, (func, args, self.task_no, monitor))
+    self.pool.apply_async(safely_call, (func, args, self.task_no, monitor))
 
 
 @submit.add('zmq')
@@ -241,13 +239,11 @@ def zmq_submit(self, func, args, monitor):
     with Socket(dest, zmq.REQ, 'connect', timeout=300) as sock:
         sub = sock.send((func, args, self.task_no, monitor))
         assert sub == 'submitted', sub
-    return self.task_no
 
 
 @submit.add('ipp')
 def ipp_submit(self, func, args, monitor):
-    return self.executor.submit(
-        safely_call, func, args, self.task_no, monitor)
+    self.executor.submit(safely_call, func, args, self.task_no, monitor)
 
 
 def oq_distribute(task=None):
@@ -565,33 +561,9 @@ class IterResult(object):
             if msg and first_time:
                 logging.warning(msg)
                 first_time = False  # warn only once
-            if isinstance(result, BaseException):
-                # this happens with WorkerLostError with celery
-                raise result
-            elif isinstance(result, Result):
-                val = result.get()
-                self.nbytes += result.nbytes
-            else:  # this should never happen
-                raise ValueError(result)
-            if sys.platform != 'darwin':
-                # it normally works on macOS, but not in notebooks calling
-                # notebooks, which is the case relevant for Marco Pagani
-                mem_gb = (memory_rss(os.getpid()) + sum(
-                    memory_rss(pid) for pid in Starmap.pids)) / GB
-            else:
-                # measure only the memory used by the main process
-                mem_gb = memory_rss(os.getpid()) / GB
-            if result.msg == 'TASK_ENDED':
-                task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
-                task_sent.update(self.sent)
-                del self.h5['task_sent']
-                self.h5['task_sent'] = str(task_sent)
-                name = result.mon.operation[6:]  # strip 'total '
-                n = self.name + ':' + name if name == 'split_task' else name
-                result.mon.save_task_info(self.h5, result, n, mem_gb)
-                result.mon.flush(self.h5)
-            elif not result.func:  # real output
-                yield val
+            self.nbytes += result.nbytes
+            print(result)
+            yield result.get()
 
     def __iter__(self):
         if self.iresults == ():
@@ -857,9 +829,9 @@ class Starmap(object):
                 fname = func.__name__
                 argnames = getargnames(func)[:-1]
             self.sent[fname] += {a: len(p) for a, p in zip(argnames, args)}
-        res = submit[dist](self, func, args, self.monitor)
+        submit[dist](self, func, args, self.monitor)
+        self.tasks.append(self.task_no)
         self.task_no += 1
-        self.tasks.append(res)
 
     def submit_split(self, args,  duration, outs_per_task):
         """
@@ -937,8 +909,25 @@ class Starmap(object):
                 self.todo -= 1
                 self._submit_many(1)
                 todo = set(range(self.task_no)) - finished
+                if not todo:
+                    print('=============== finished ================')
                 logging.debug('tasks todo %s', numpy.array(sorted(todo)))
-                yield res
+                task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
+                task_sent.update(self.sent)
+                del self.h5['task_sent']
+                self.h5['task_sent'] = str(task_sent)
+                name = res.mon.operation[6:]  # strip 'total '
+                n = self.name + ':' + name if name == 'split_task' else name
+                if sys.platform != 'darwin':
+                    # it normally works on macOS, but not in notebooks calling
+                    # notebooks, which is the case relevant for Marco Pagani
+                    mem_gb = (memory_rss(os.getpid()) + sum(
+                        memory_rss(pid) for pid in Starmap.pids)) / GB
+                else:
+                    # measure only the memory used by the main process
+                    mem_gb = memory_rss(os.getpid()) / GB
+                res.mon.save_task_info(self.h5, res, n, mem_gb)
+                res.mon.flush(self.h5)
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
                 self._submit_many(1)
