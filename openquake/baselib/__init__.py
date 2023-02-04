@@ -106,9 +106,11 @@ def read(*paths, **validators):
                 raise ValueError('%s for %s in %s' % (err, k, found[-1]))
 
 
+# NB: duplicated in commands/engine.py!!
 config.read = read
 config.read(limit=int, soft_mem_limit=int, hard_mem_limit=int, port=int,
-            serialize_jobs=positiveint, strict=positiveint, code=exec)
+            serialize_jobs=positiveint, strict=positiveint, code=exec,
+            slowdown_rate=float)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
