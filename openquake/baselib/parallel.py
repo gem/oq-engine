@@ -183,6 +183,7 @@ import re
 import ast
 import sys
 import time
+import random
 import socket
 import signal
 import pickle
@@ -474,7 +475,7 @@ def sendback(res, zsocket, sentbytes):
             dblog('ERROR', calc_id, task_no, tb_str)
         zsocket.send(Result(exc, res.mon, tb_str))
     # avoid output congestion by waiting a bit, if slowdown_rate is set
-    time.sleep(config.performance.slowdown_rate * nbytes)
+    time.sleep(config.performance.slowdown_rate * nbytes * random.random())
     return sentbytes + nbytes
 
 
