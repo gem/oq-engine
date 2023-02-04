@@ -937,7 +937,7 @@ class Starmap(object):
                 self.todo -= 1
                 self._submit_many(1)
                 todo = set(range(self.task_no)) - finished
-                logging.debug('tasks todo %s', sorted(todo))
+                logging.debug('tasks todo %s', numpy.array(sorted(todo)))
                 yield res
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
