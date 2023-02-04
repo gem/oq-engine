@@ -1276,6 +1276,16 @@ def detach_process():
     fork_then_exit_parent()
 
 
+def shortlist(lst):
+    """
+    >>> shortlist([1, 2, 3, 4, 5, 6])
+    '[1, 2, ..., 5, 6]'
+    """
+    if len(lst) < 5:
+        return str(lst)
+    return str(lst[:2] + ['...'] + lst[-2:]).replace("'", "")
+
+
 def println(msg):
     """
     Convenience function to print messages on a single line in the terminal

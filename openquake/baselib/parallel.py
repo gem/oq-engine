@@ -206,7 +206,7 @@ from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp, engine_version, mp as mp_context)
+    gettemp, engine_version, shortlist, mp as mp_context)
 
 sys.setrecursionlimit(2000)  # raised to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
@@ -905,7 +905,7 @@ class Starmap(object):
                 self.tasks.remove(res.mon.task_no)
                 self._submit_many(1)
                 todo = set(range(self.task_no)) - finished
-                logging.debug('tasks todo %s', numpy.array(sorted(todo)))
+                logging.debug('tasks todo %s', shortlist(sorted(todo)))
                 task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
                 task_sent.update(self.sent)
                 del self.h5['task_sent']
