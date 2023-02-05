@@ -908,7 +908,8 @@ class Starmap(object):
                 self.tasks.remove(res.mon.task_no)
                 self._submit_many(1)
                 todo = set(range(self.task_no)) - finished
-                logging.debug('tasks todo %s', shortlist(sorted(todo)))
+                logging.debug('%d tasks todo %s', len(todo),
+                              shortlist(sorted(todo)))
                 task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
                 task_sent.update(self.sent)
                 del self.h5['task_sent']

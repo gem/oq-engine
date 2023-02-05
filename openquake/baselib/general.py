@@ -1278,12 +1278,12 @@ def detach_process():
 
 def shortlist(lst):
     """
-    >>> shortlist([1, 2, 3, 4, 5, 6])
-    '[1, 2, ..., 5, 6]'
+    >>> shortlist([1, 2, 3, 4, 5, 6, 7, 8])
+    '[1, 2, 3, ..., 6, 7, 8]'
     """
-    if len(lst) < 5:
+    if len(lst) <= 7:
         return str(lst)
-    return str(lst[:2] + ['...'] + lst[-2:]).replace("'", "")
+    return str(lst[:3] + ['...'] + lst[-3:]).replace("'", "")
 
 
 def println(msg):
