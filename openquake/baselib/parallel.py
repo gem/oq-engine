@@ -469,9 +469,11 @@ def sendback(res, zsocket, sentbytes):
         tb_str = ''.join(traceback.format_tb(tb))
         if DEBUG and calc_id:
             dblog('ERROR', calc_id, task_no, tb_str)
-        zsocket.send(Result(exc, res.mon, tb_str))
-    # avoid output congestion by waiting a bit, if slowdown_rate is set
-    time.sleep(config.performance.slowdown_rate * nbytes * random.random())
+        res = Result(exc, res.mon, tb_str)
+        zsocket.send(res)
+    if res.msg == '':
+        # avoid output congestion by waiting a bit
+        time.sleep(config.performance.slowdown_rate * nbytes * random.random())
     return sentbytes + nbytes
 
 
@@ -891,7 +893,7 @@ class Starmap(object):
             logging.info('Sent %d %s tasks, %s in %d seconds', len(self.tasks),
                          self.name, humansize(nbytes), time.time() - self.t0)
 
-        isocket = iter(self.socket)
+        isocket = iter(self.socket)  # read from the PULL socket
         finished = set()
         while self.tasks:
             self.log_percent()
