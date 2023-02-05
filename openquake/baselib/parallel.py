@@ -526,7 +526,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
         with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
             sentbytes = sendback(res, zsocket, sentbytes)
             end = Result(None, mon, msg='TASK_ENDED')
-            end.pik = FakePickle(0)
+            end.pik = FakePickle(sentbytes)
             zsocket.send(end)
 
 
