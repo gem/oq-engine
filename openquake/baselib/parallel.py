@@ -471,7 +471,7 @@ def sendback(res, zsocket, sentbytes):
             dblog('ERROR', calc_id, task_no, tb_str)
         res = Result(exc, res.mon, tb_str)
         zsocket.send(res)
-    if res.msg == '':
+    if res.msg == '':  # no error
         # avoid output congestion by waiting a bit
         time.sleep(config.performance.slowdown_rate * nbytes * random.random())
     return sentbytes + nbytes
@@ -515,17 +515,18 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
             it = func(*args)
             while True:
                 res = Result.new(next, (it,), mon, sentbytes)
-                sentbytes = sendback(res, zsocket, sentbytes)
                 # StopIteration -> TASK_ENDED
                 if res.msg == 'TASK_ENDED':
+                    zsocket.send(res)
                     break
+                sentbytes = sendback(res, zsocket, sentbytes)
     else:
         res = Result.new(func, args, mon)
         # send back a single result and a TASK_ENDED
         with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
             sentbytes = sendback(res, zsocket, sentbytes)
             end = Result(None, mon, msg='TASK_ENDED')
-            end.pik = FakePickle(sentbytes)
+            end.pik = FakePickle(0)
             zsocket.send(end)
 
 
