@@ -183,7 +183,6 @@ import re
 import ast
 import sys
 import time
-import random
 import socket
 import signal
 import pickle
@@ -473,7 +472,7 @@ def sendback(res, zsocket, sentbytes):
         zsocket.send(res)
     if res.msg == '':  # no error
         # avoid output congestion by waiting a bit
-        time.sleep(config.performance.slowdown_rate * nbytes * random.random())
+        time.sleep(config.performance.slowdown_rate * nbytes)
     return sentbytes + nbytes
 
 
