@@ -457,8 +457,8 @@ def sendback(res, zsocket, sentbytes):
     task_no = res.mon.task_no
     nbytes = len(res.pik)
     wait = config.performance.slowdown_rate * nbytes
-    if res.mon.duration > wait:  # slow output
-        wait /= 10
+    if res.mon.duration > wait:  # slow output, no need to wait
+        wait = 0
     # avoid output congestion by waiting a bit
     time.sleep(wait)
     try:
