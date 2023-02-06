@@ -20,13 +20,15 @@ standalone servers and multi-node clusters.
 
 ## Hardware requirements
 
-**Single computer**
+The minimum required to install the engine and run the demos is
+
 - 8 GB of RAM
-- + 1.2 GB of free disk space
-- Operating system:
-  - Windows 10 (64bit). Windows 11 is not yet supported.
-  - macOS `Big Sur` and `Monterrey`. macOS `Ventura` is on experimental stage.
-  - Linux: [see details](./)
+- 4 GB of free disk space
+
+To run any serious calculation (i.e. a model in GEM mosaic) you need
+at least 2 GB of RAM per thread for hazard calculations and even more
+memory for risk calculations. For instance, on a recent i9 processor
+with 32 threads you would need at least 64 GB of RAM.
 
 Check more advanced [hardware suggestions here](./hardware-suggestions.md).
 
