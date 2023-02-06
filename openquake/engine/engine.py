@@ -454,7 +454,7 @@ def check_obsolete_version(calculation_mode='WebUI'):
         msg = ('An error occurred while calling %s/engine/latest to check'
                ' if the installed version of the engine is up to date.' %
                OQ_API)
-        logging.warning(msg, exc_info=True)
+        logging.warning(msg)
         return
     if current < latest:
         return ('Version %s of the engine is available, but you are '
