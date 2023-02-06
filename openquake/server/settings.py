@@ -107,8 +107,8 @@ MIDDLEWARE = (
     'django.middleware.csrf.CsrfViewMiddleware',
 )
 
-# Authentication is enabled by default
-LOCKDOWN = True
+# Authentication is not enabled by default
+LOCKDOWN = False
 # Allow all users to see other users outputs by default
 ACL_ON = False
 
@@ -173,22 +173,13 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 # confusion between different installations when the WebUI is used
 SERVER_NAME = socket.gethostname()
 
-# Enable AELO functionalities
-AELO_MODE = False
+APPLICATION_MODES = ['PUBLIC', 'RESTRICTED', 'AELO']
+
+# case insensitive
+APPLICATION_MODE = 'public'
 
 # Expose the WebUI interface, otherwise only the REST API will be available
 WEBUI = True
-
-EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-
-# SMTP Configuration
-if EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':
-    EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
-    EMAIL_PORT = os.environ.get('EMAIL_PORT', 587)
-    EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', True)
-    EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
-    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
 
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
 if STANDALONE and WEBUI:
@@ -208,20 +199,41 @@ try:
     # Try to load a local_settings.py from the current folder; this is useful
     # when packages are used. A custom local_settings.py can be placed in
     # /usr/share/openquake/engine, avoiding changes inside the python package
-    from local_settings import *
+    from local_settings import *  # noqa
 except ImportError:
     # If no local_settings.py is availble in the current folder let's try to
     # load it from openquake/server/local_settings.py
     try:
-        from openquake.server.local_settings import *
+        from openquake.server.local_settings import *  # noqa
     except ImportError:
         # If a local_setting.py does not exist
         # settings in this file only will be used
         pass
 
+if APPLICATION_MODE.upper() in ('RESTRICTED', 'AELO'):
+    LOCKDOWN = True
+
 STATIC_URL = '%s/static/' % WEBUI_PATHPREFIX
 
 if LOCKDOWN:
+    try:
+        EMAIL_BACKEND  # noqa
+    except NameError:
+        raise NameError(
+            f'If APPLICATION_MODE is {APPLICATION_MODE} an email'
+            f' backend must be defined')
+    if EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':  # noqa
+        try:
+            EMAIL_HOST           # noqa
+            EMAIL_PORT           # noqa
+            EMAIL_USE_TLS        # noqa
+            EMAIL_HOST_USER      # noqa
+            EMAIL_HOST_PASSWORD  # noqa
+        except NameError:
+            raise NameError(
+                f'If APPLICATION_MODE is {APPLICATION_MODE}'
+                f' EMAIL_<HOST|PORT|USE_TLS|HOST_USER|HOST_PASSWORD>'
+                f' must all be defined')
 
     AUTHENTICATION_BACKENDS += (
         'django.contrib.auth.backends.ModelBackend',
