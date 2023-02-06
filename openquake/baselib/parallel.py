@@ -456,13 +456,18 @@ def sendback(res, zsocket, sentbytes):
     calc_id = res.mon.calc_id
     task_no = res.mon.task_no
     nbytes = len(res.pik)
+    wait = config.performance.slowdown_rate * nbytes
     try:
         zsocket.send(res)
+        if res.mon.duration > wait:  # slow output
+            wait /= 10
+        # avoid output congestion by waiting a bit
+        time.sleep(wait)
         if DEBUG:
             from openquake.commonlib.logs import dblog
             if calc_id:  # None when building the png maps
-                dblog('DEBUG', calc_id, task_no,
-                      'sent back %s' % humansize(nbytes))
+                msg = 'sent back %s; waiting %.1f s' % (humansize(nbytes), wait)
+                dblog('DEBUG', calc_id, task_no, msg)
     except Exception:  # like OverflowError
         _etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
@@ -470,12 +475,6 @@ def sendback(res, zsocket, sentbytes):
             dblog('ERROR', calc_id, task_no, tb_str)
         res = Result(exc, res.mon, tb_str)
         zsocket.send(res)
-    wait = config.performance.slowdown_rate * nbytes
-    if res.msg == '' and res.mon.duration < wait:  # fast output
-        if DEBUG:
-            dblog('DEBUG', calc_id, task_no, 'wait for %.2f s' % wait)
-        # avoid output congestion by waiting a bit
-        time.sleep(wait)
     return sentbytes + nbytes
 
 
