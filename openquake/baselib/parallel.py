@@ -456,12 +456,12 @@ def sendback(res, zsocket, sentbytes):
     calc_id = res.mon.calc_id
     task_no = res.mon.task_no
     nbytes = len(res.pik)
-    wait = config.performance.slowdown_rate * nbytes
-    if res.mon.duration > wait:  # slow output, no need to wait
-        wait = 0
     # avoid output congestion by waiting a bit
-    if task_no % 4:  # 1 task of 4 does not wait
-        time.sleep(wait)
+    wait = config.performance.slowdown_rate * nbytes
+    if task_no % 4 == 0 or res.mon.duration > wait:
+        # 1 task of 4 does not wait; slow tasks do not wait
+        wait = 0
+    time.sleep(wait)
     try:
         zsocket.send(res)
         if DEBUG:
