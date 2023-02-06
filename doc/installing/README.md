@@ -1,8 +1,8 @@
 # Installing the OpenQuake Engine
 
-The OpenQuake Engine can be installed in several different ways.  The
-engine runs on Linux, macOS and Windows; on laptops, workstations,
-standalone servers and multi-node clusters.
+The OpenQuake Engine runs on Linux, macOS and Windows; on laptops,
+workstations, standalone servers and multi-node clusters. Due to its
+large range of use cases it can be installed in several different ways.
 
 > **Warning**:
 > If you already have an engine installation, before installing the new version you must [uninstall](universal.md#uninstalling-the-engine) the old one.
