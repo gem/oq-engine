@@ -593,7 +593,7 @@ def aelo_run(request):
         logging.error(exc_msg)
         response_data = exc_msg.splitlines()
         return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=500)
+                            content_type=JSON, status=400)
 
     # build a LogContext object associated to a database job
     [jobctx] = engine.create_jobs(

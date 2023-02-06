@@ -440,7 +440,7 @@ class EngineServerTestCase(unittest.TestCase):
     def test_aelo_invalid_latitude(self):
         params = dict(lon='-86', lat='100', vs30='800', siteid='CCA_SITE')
         resp = self.post('aelo_run', params)
-        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(resp.status_code, 400)
         err_msg = json.loads(resp.content.decode('utf8'))
         print(err_msg)
         self.assertIn('latitude 100.0 > 90', err_msg)
@@ -448,7 +448,7 @@ class EngineServerTestCase(unittest.TestCase):
     def test_aelo_invalid_longitude(self):
         params = dict(lon='-186', lat='12', vs30='800', siteid='CCA_SITE')
         resp = self.post('aelo_run', params)
-        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(resp.status_code, 400)
         err_msg = json.loads(resp.content.decode('utf8'))
         print(err_msg)
         self.assertIn('longitude -186.0 < -180', err_msg)
@@ -456,7 +456,7 @@ class EngineServerTestCase(unittest.TestCase):
     def test_aelo_invalid_vs30(self):
         params = dict(lon='-86', lat='12', vs30='-800', siteid='CCA_SITE')
         resp = self.post('aelo_run', params)
-        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(resp.status_code, 400)
         err_msg = json.loads(resp.content.decode('utf8'))
         print(err_msg)
         self.assertIn('float -800.0 < 0', err_msg)
@@ -464,7 +464,7 @@ class EngineServerTestCase(unittest.TestCase):
     def test_aelo_invalid_siteid(self):
         params = dict(lon='-86', lat='12', vs30='800', siteid='CCA SITE')
         resp = self.post('aelo_run', params)
-        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(resp.status_code, 400)
         err_msg = json.loads(resp.content.decode('utf8'))
         print(err_msg)
         self.assertIn("Invalid ID 'CCA SITE': "
