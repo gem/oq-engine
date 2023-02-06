@@ -22,6 +22,7 @@ running computations.
 """
 import io
 import os
+import glob
 import re
 import sys
 import json
@@ -46,7 +47,7 @@ from openquake.commands import engine
 #       otherwise it would raise:
 #       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
 django.setup()
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User  # noqa
 
 
 def loadnpz(lines):
@@ -424,17 +425,40 @@ class EngineServerTestCase(django.test.TestCase):
             self.assertFalse(resp_text_dict['success'])
 
     def test_aelo_successful_run(self):
-        params = dict(lon='-86', lat='12', vs30='800', siteid='CCA_SITE')
-        resp = self.post('aelo_run', params)
-        self.assertEqual(resp.status_code, 200)
-        try:
-            js = json.loads(resp.content.decode('utf8'))
-        except Exception:
-            raise ValueError(b'Invalid JSON response: %r' % resp.content)
-        job_id = js['job_id']
-        self.wait()
-        results = self.get('%s/results' % job_id)
-        self.assertGreater(len(results), 0, 'The job produced no outputs!')
+        with tempfile.TemporaryDirectory() as email_dir:
+            with self.settings(
+                    EMAIL_BACKEND=(
+                        'django.core.mail.backends.filebased.EmailBackend'),
+                    EMAIL_FILE_PATH=email_dir):
+                params = dict(
+                    lon='-86', lat='12', vs30='800', siteid='CCA_SITE')
+                resp = self.post('aelo_run', params)
+                self.assertEqual(resp.status_code, 200)
+                try:
+                    js = json.loads(resp.content.decode('utf8'))
+                except Exception:
+                    raise ValueError(
+                        b'Invalid JSON response: %r' % resp.content)
+                job_id = js['job_id']
+                self.wait()
+                results = self.get('%s/results' % job_id)
+                self.assertGreater(
+                    len(results), 0, 'The job produced no outputs!')
+                email_files = glob.glob('/tmp/app-messages/*')
+                email_file = max(email_files, key=os.path.getctime)
+                # FIXME: we should use the overridden EMAIL_FILE_PATH
+                # email_file = os.listdir(email_dir)[0]
+                with open(os.path.join(email_dir, email_file), 'r') as f:
+                    email_content = f.read()
+                self.assertIn('finished correctly', email_content)
+                self.assertIn('From: aelonoreply@openquake.org', email_content)
+                self.assertIn('To: openquake@email.test', email_content)
+                self.assertIn('Reply-To: aelosupport@openquake.org',
+                              email_content)
+                self.assertIn(
+                    'Input values: lon = -86.0, lat = 12.0,'
+                    ' vs30 = 800.0, siteid = CCA_SITE', email_content)
+                self.assertIn('Please find the results here:', email_content)
 
     def test_aelo_invalid_latitude(self):
         params = dict(lon='-86', lat='100', vs30='800', siteid='CCA_SITE')
@@ -470,18 +494,43 @@ class EngineServerTestCase(django.test.TestCase):
                       "the only accepted chars are a-zA-Z0-9_-:", err_msg)
 
     def test_aelo_mosaic_model_not_found(self):
-        params = dict(lon='-86', lat='88', vs30='800', siteid='SOMEWHERE')
-        resp = self.post('aelo_run', params)
-        self.assertEqual(resp.status_code, 200)
-        # the job is supposed to start and to give an error afterwards
-        try:
-            js = json.loads(resp.content.decode('utf8'))
-        except Exception:
-            raise ValueError(b'Invalid JSON response: %r' % resp.content)
-        job_id = js['job_id']
-        self.wait()
-        tb = self.get('%s/traceback' % job_id)
-        if not tb:
-            sys.stderr.write('Empty traceback, please check!\n')
-        self.assertIn('ValueError: Site at lon=-86.0 lat=88.0 '
-                      'is not covered by any model!', tb)
+        with tempfile.TemporaryDirectory() as email_dir:
+            with self.settings(
+                    EMAIL_BACKEND=(
+                        'django.core.mail.backends.filebased.EmailBackend'),
+                    EMAIL_FILE_PATH=email_dir):
+                params = dict(
+                    lon='-86', lat='88', vs30='800', siteid='SOMEWHERE')
+                resp = self.post('aelo_run', params)
+                self.assertEqual(resp.status_code, 200)
+                # the job is supposed to start and to give an error afterwards
+                try:
+                    js = json.loads(resp.content.decode('utf8'))
+                except Exception:
+                    raise ValueError(
+                        b'Invalid JSON response: %r' % resp.content)
+                job_id = js['job_id']
+                self.wait()
+                tb = self.get('%s/traceback' % job_id)
+                if not tb:
+                    sys.stderr.write('Empty traceback, please check!\n')
+                self.assertIn('ValueError: Site at lon=-86.0 lat=88.0 '
+                              'is not covered by any model!', tb)
+                email_files = glob.glob('/tmp/app-messages/*')
+                email_file = max(email_files, key=os.path.getctime)
+                # FIXME: we should use the overridden EMAIL_FILE_PATH
+                # email_file = os.listdir(email_dir)[0]
+                with open(os.path.join(email_dir, email_file), 'r') as f:
+                    email_content = f.read()
+                    print(email_content)
+                self.assertIn('failed', email_content)
+                self.assertIn('From: aelonoreply@openquake.org', email_content)
+                self.assertIn('To: openquake@email.test', email_content)
+                self.assertIn('Reply-To: aelosupport@openquake.org',
+                              email_content)
+                self.assertIn(
+                    'Input values: lon = -86.0, lat = 88.0,'
+                    ' vs30 = 800.0, siteid = SOMEWHERE', email_content)
+                self.assertIn(
+                    'Site at lon=-86.0 lat=88.0 is not covered by any model!',
+                    email_content)
