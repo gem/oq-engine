@@ -460,7 +460,8 @@ def sendback(res, zsocket, sentbytes):
     if res.mon.duration > wait:  # slow output, no need to wait
         wait = 0
     # avoid output congestion by waiting a bit
-    time.sleep(wait)
+    if task_no % 4:  # 1 task of 4 does not wait
+        time.sleep(wait)
     try:
         zsocket.send(res)
         if DEBUG:
