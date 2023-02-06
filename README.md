@@ -40,7 +40,7 @@ Current LTS version is the **OpenQuake Engine 3.11** 'Wegener':
 
 Latest stable version is the **OpenQuake Engine 3.15**.
 
-<!-- GENERAL DOCUMENTATION -->
+<!-- GEM END -->
 
 ## General overview
 
