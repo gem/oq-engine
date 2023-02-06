@@ -18,15 +18,12 @@
 
 import io
 import os
-import gzip
 import time
-import pickle
 import psutil
 import random
 import logging
 import operator
 import functools
-import h5py
 import numpy
 import pandas
 try:
@@ -42,7 +39,7 @@ from openquake.hazardlib.contexts import (
     ContextMaker, read_cmakers, basename, get_maxsize)
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
-from openquake.commonlib import calc, datastore
+from openquake.commonlib import calc
 from openquake.calculators import base, getters, extract
 
 U16 = numpy.uint16
@@ -208,7 +205,7 @@ def classical(srcs, sitecol, cmaker, monitor):
     """
     cmaker.init_monitoring(monitor)
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
-    for sites in sitecol.split(cmaker.ntiles):
+    for sites in sitecol.split_in_tiles(cmaker.ntiles):
         pmap = ProbabilityMap(
             sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
         result = hazclassical(srcs, sites, cmaker, pmap)
