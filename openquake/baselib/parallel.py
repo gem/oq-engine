@@ -458,12 +458,13 @@ def sendback(res, zsocket, sentbytes):
     nbytes = len(res.pik)
     # avoid output congestion by waiting a bit
     wait = config.performance.slowdown_rate * nbytes
-    if res.mon.duration > wait:
-        # slow outputs do not wait
-        wait = 0
-    time.sleep(wait)
+    #if res.mon.duration > wait:
+    #    # slow outputs do not wait
+    #    wait = 0
+    time.sleep(wait/2)
     try:
         zsocket.send(res)
+        time.sleep(wait/2)
         if DEBUG:
             from openquake.commonlib.logs import dblog
             if calc_id:  # None when building the png maps
