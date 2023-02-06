@@ -1,7 +1,8 @@
 # Installing the OpenQuake Engine
 
-The OpenQuake Engine can be installed in several different ways.
-The engine runs on Linux, macOS and Windows; on laptops, workstations, standalone servers and multi-node clusters.
+The OpenQuake Engine can be installed in several different ways.  The
+engine runs on Linux, macOS and Windows; on laptops, workstations,
+standalone servers and multi-node clusters.
 
 > **Warning**:
 > If you already have an engine installation, before installing the new version you must [uninstall](universal.md#uninstalling-the-engine) the old one.
@@ -64,7 +65,6 @@ See instructions for the [universal installer](./universal.md) script. This scri
 
     ```
     $ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-linux64.txt openquake.engine
-    $ pip install openquake.engine
     ```
   This works for Linux and Python 3.8. You can trivially adapt the command to Python 3.9 and 3.10, and to other operating systems. For instance for Windows and Python 3.8, it would be
 
