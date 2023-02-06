@@ -61,14 +61,10 @@ The OpenQuake Engine software provides calculation and assessment of seismic haz
 
 ## Visualizing outputs via QGIS
 
-![IRMT Logo](https://github.com/gem/oq-infrastructure/raw/master/icons/irmt_icon.png)
+<img src="https://github.com/gem/oq-infrastructure/raw/master/icons/irmt_icon.png" alt="IRMT Logo" width="50" >
 
-* [Installation](https://docs.openquake.org/oq-irmt-qgis/latest/00_installation.html)
-* [Driving the Engine](https://docs.openquake.org/oq-irmt-qgis/latest/14_driving_the_oqengine.html)
-* [Visualizing outputs](https://docs.openquake.org/oq-irmt-qgis/latest/15_viewer_dock.html)
-* [Repository](https://plugins.qgis.org/plugins/svir/)
-* [Source code](https://github.com/gem/oq-irmt-qgis)
-
+A [QGIS plug-in](https://plugins.qgis.org/plugins/svir/) is available for users that would like to visually explore the outputs from the engine. 
+Check the documentation for instructions on how to [drive the engine](https://docs.openquake.org/oq-irmt-qgis/latest/14_driving_the_oqengine.html) and [visualize outputs](https://docs.openquake.org/oq-irmt-qgis/latest/15_viewer_dock.html). [Source code](https://github.com/gem/oq-irmt-qgis) also available.
 
 ## For developers and contributors
 
