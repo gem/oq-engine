@@ -558,16 +558,18 @@ def calc_run(request):
                         status=status)
 
 
-def aelo_callback(job_id, job_owner_email, hostname, exc=None):
+def aelo_callback(job_id, job_owner_email, hostname, inputs, exc=None):
     from_email = 'aelonoreply@openquake.org'
     to = [job_owner_email]
     reply_to = 'aelosupport@openquake.org'
+    body = (f"Input values: lon = {inputs['lon']}, lat = {inputs['lat']},"
+            f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']}\n\n")
     if exc:
         subject = f'Job {job_id} failed'
-        body = f'There was an error running job {job_id}:\n{exc}'
+        body += f'There was an error running job {job_id}:\n{exc}'
     else:
         subject = f'Job {job_id} finished correctly'
-        body = (f'Please find the results here:\n'
+        body += (f'Please find the results here:\n'
                 f'{hostname}/engine/{job_id}/outputs')
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 

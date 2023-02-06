@@ -46,7 +46,7 @@ def aelo_run(jobctx, lon, lat, vs30):
     engine.run_jobs([jobctx])
 
 
-def trivial_callback(job_id, job_owner_email, hostname, exc=None):
+def trivial_callback(job_id, job_owner_email, hostname, inputs, exc=None):
     if exc:
         sys.exit('There was an error: %s' % exc)
     print('Finished job %d correctly' % job_id)
@@ -65,6 +65,7 @@ def main(lon: valid.longitude,
     This script is meant to be called from the WebUI in production mode,
     and from the command-line in testing mode.
     """
+    inputs = dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid)
     if jobctx is None:
         # in  testing mode create a new job context
         config.directory.mosaic_dir = os.path.join(
@@ -81,14 +82,14 @@ def main(lon: valid.longitude,
             # This can happen for instance:
             # - if no model covers the given coordinates.
             # - if no ini file was found
-            callback(jobctx.calc_id, job_owner_email, hostname, exc)
+            callback(jobctx.calc_id, job_owner_email, hostname, inputs, exc)
             raise exc
         try:
             aelo_run(jobctx, lon, lat, vs30)
         except Exception as exc:
-            callback(jobctx.calc_id, job_owner_email, hostname, exc)
+            callback(jobctx.calc_id, job_owner_email, hostname, inputs, exc)
         else:
-            callback(jobctx.calc_id, job_owner_email, hostname)
+            callback(jobctx.calc_id, job_owner_email, hostname, inputs)
 
 
 if __name__ == '__main__':
