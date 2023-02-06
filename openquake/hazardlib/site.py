@@ -123,6 +123,7 @@ site_param_dt = {
     'lat': numpy.float64,
     'depth': numpy.float64,
     'vs30': numpy.float64,
+    'kappa0': numpy.float64,
     'vs30measured': bool,
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,

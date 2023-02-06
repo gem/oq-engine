@@ -162,10 +162,9 @@ class LogDatabaseHandler(logging.Handler):
         self.job_id = job_id
 
     def emit(self, record):  # pylint: disable=E0202
-        if record.levelno >= logging.INFO:
-            dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
-                  '%s/%s' % (record.processName, record.process),
-                  record.getMessage())
+        dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
+              '%s/%s' % (record.processName, record.process),
+              record.getMessage())
 
 
 class LogContext:
