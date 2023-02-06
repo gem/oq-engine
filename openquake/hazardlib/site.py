@@ -443,16 +443,16 @@ class SiteCollection(object):
             tiles.append(sc)
         return tiles
 
-    def split_in_tiles(self, max_sites):
+    def split_in_tiles(self, hint):
         """
         Split a SiteCollection into a set of tiles with contiguous site IDs
         """
-        hint = int(numpy.ceil(len(self) / max_sites))
         tiles = []
         for sids in numpy.array_split(self.sids, hint):
+            assert len(sids), 'Cannot split %s in %d tiles' % (self, hint)
             sc = SiteCollection.__new__(SiteCollection)
-            sc.array = self.array[sids]
-            sc.complete = self
+            sc.array = self.complete.array[sids]
+            sc.complete = self.complete
             tiles.append(sc)
         return tiles
 
