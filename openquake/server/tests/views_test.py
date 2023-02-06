@@ -27,7 +27,6 @@ import sys
 import json
 import time
 import pprint
-import unittest
 import numpy
 import zlib
 import gzip
@@ -55,7 +54,7 @@ def loadnpz(lines):
     return numpy.load(bio)
 
 
-class EngineServerTestCase(unittest.TestCase):
+class EngineServerTestCase(django.test.TestCase):
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
@@ -104,7 +103,7 @@ class EngineServerTestCase(unittest.TestCase):
             if not running_calcs:
                 return
         # to avoid issues on Jenkins
-        raise unittest.SkipTest('Timeout waiting for %s' % running_calcs)
+        raise django.test.SkipTest('Timeout waiting for %s' % running_calcs)
 
     def postzip(self, archive):
         with open(os.path.join(self.datadir, archive), 'rb') as a:
@@ -346,7 +345,7 @@ class EngineServerTestCase(unittest.TestCase):
         # error Could not convert insuranceLimit->positivefloat
         pprint.pprint(dic)
         if dic['error_msg'] is None:  # this should not happen
-            raise unittest.SkipTest(dic)
+            raise django.test.SkipTest(dic)
 
     # tests for nrml validation
 
