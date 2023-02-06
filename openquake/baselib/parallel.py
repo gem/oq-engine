@@ -470,9 +470,10 @@ def sendback(res, zsocket, sentbytes):
             dblog('ERROR', calc_id, task_no, tb_str)
         res = Result(exc, res.mon, tb_str)
         zsocket.send(res)
-    if res.msg == '':  # no error
+    wait = config.performance.slowdown_rate * nbytes
+    if res.msg == '' and res.mon.duration < wait:  # fast output
         # avoid output congestion by waiting a bit
-        time.sleep(config.performance.slowdown_rate * nbytes)
+        time.sleep(wait)
     return sentbytes + nbytes
 
 
