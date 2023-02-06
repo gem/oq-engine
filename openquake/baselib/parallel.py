@@ -472,6 +472,8 @@ def sendback(res, zsocket, sentbytes):
         zsocket.send(res)
     wait = config.performance.slowdown_rate * nbytes
     if res.msg == '' and res.mon.duration < wait:  # fast output
+        if DEBUG:
+            dblog('ERROR', calc_id, task_no, 'waiting %.2fs' % wait)
         # avoid output congestion by waiting a bit
         time.sleep(wait)
     return sentbytes + nbytes
