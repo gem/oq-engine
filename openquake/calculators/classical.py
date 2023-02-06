@@ -375,9 +375,6 @@ class Hazard:
         arr[arr == 1.] = .9999999999999999
         # arr[arr < 1E-5] = 0.  # minimum_poe
         idxs, lids = arr.nonzero()
-        nbytes = 4 + 2 + 2 + 8  # sid, gid, lid, poe
-        logging.debug('storing %s of PoEs for g=%d',
-                      humansize(len(idxs) * nbytes), g)
         gids = numpy.repeat(g, len(idxs))
         if len(idxs):
             sids = pmap.sids[idxs]
@@ -467,7 +464,6 @@ class ClassicalCalculator(base.HazardCalculator):
             if self.n_outs[g] == 0:  # no other tasks for this g
                 with self.monitor('storing PoEs', measuremem=True):
                     pmap = acc.pop(g)
-                    size = humansize(pmap.array.nbytes)
                     self.haz.store_poes(g, pmap)
         return acc
 
