@@ -19,7 +19,6 @@ jobs:
     strategy:
       matrix:
         distro:
-          - ubuntu1804
           - ubuntu2004
     env:
       working-directory: ./ansible/cluster

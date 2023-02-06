@@ -215,6 +215,14 @@ class ProbabilityMap(object):
         new.array = array
         return new
 
+    def split(self):
+        """
+        :yields: G ProbabilityMaps of shape (N, L, 1)
+        """
+        N, L, G = self.array.shape
+        for g in range(G):
+            yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
+
     def fill(self, value):
         """
         :param value: a scalar probability

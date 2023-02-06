@@ -34,7 +34,6 @@ from openquake.baselib.general import (
     get_array, group_array, fast_agg)
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
-from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
@@ -1434,3 +1433,18 @@ def view_event_based_mfd(token, dstore):
     """
     aw = extract(dstore, 'event_based_mfd?')
     return pandas.DataFrame(aw.to_dict()).set_index('mag')
+
+
+# used in the AELO project
+@view.add('relevant_sources')
+def view_relevant_sources(token, dstore):
+    """
+    Returns a table with the sources contributing more than 10%
+    of the highest source.
+    """
+    imt = token.split(':')[1]
+    poe = dstore['oqparam'].poes[0]
+    aw = extract(dstore, f'disagg_by_src?imt={imt}&poe={poe}')
+    poes = aw.array['poe']  # for each source in decreasing order
+    max_poe = poes[0]
+    return aw.array[poes > .1 * max_poe]

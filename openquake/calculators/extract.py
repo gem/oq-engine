@@ -1187,20 +1187,31 @@ def norm(qdict, params):
 @extract.add('disagg_by_src')
 def extract_disagg_by_src(dstore, what):
     """
-    Extract the disagg_by_src information Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/disagg_by_src?site_id=0&imt_id=0&rlz_id=0&lvl_id=-1
+    Extract the disagg_by_src information.
+    Example: http://127.0.0.1:8800/v1/calc/30/extract/disagg_by_src?site_id=0&imt=PGA&poe=.001
     """
     qdict = parse(what)
-    dic = hdf5.get_shape_descr(dstore['disagg_by_src'].attrs['json'])
-    src_id = dic['src_id']
-    f = norm(qdict, 'site_id rlz_id lvl_id imt_id'.split())
-    poe = dstore['disagg_by_src'][
-        f['site_id'], f['rlz_id'], f['imt_id'], f['lvl_id']]
+    dset = dstore['disagg_by_src']
+    oq = dstore['oqparam']
+    attr = hdf5.get_shape_descr(dset.attrs['json'])
+    src_id = attr['src_id']
+    [imt] = qdict['imt']
+    [poe] = qdict['poe']
+    [site_id] = qdict.get('site_id', ['0'])
+    site_id = int(site_id)
+    mean = dstore.sel('hcurves-stats', imt=imt, stat='mean', site_id=site_id)[0, 0, 0]
+    lvl_id = calc.get_lvl(mean, oq.imtls[imt], float(poe))
+    imt_id = list(oq.imtls).index(imt)
+    poes = dset[site_id, :, imt_id, lvl_id]  # shape (R, Ns)
+    if oq.collect_rlzs:  # already averaged
+        poes = poes[0, :]
+    else:  # compute the average
+        poes = dstore['weights'][:] @ poes
     arr = numpy.zeros(len(src_id), [('src_id', '<S16'), ('poe', '<f8')])
     arr['src_id'] = src_id
-    arr['poe'] = poe[:len(src_id)]
+    arr['poe'] = poes[:len(src_id)]
     arr.sort(order='poe')
-    return ArrayWrapper(arr[::-1], dict(json=hdf5.dumps(f)))
+    return ArrayWrapper(arr[::-1], dict(site_id=site_id, imt=imt, poe=poe))
 
 
 @extract.add('disagg_layer')

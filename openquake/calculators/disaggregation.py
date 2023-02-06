@@ -20,12 +20,11 @@
 Disaggregation calculator core functionality
 """
 import logging
-import operator
 import numpy
 
 from openquake.baselib import parallel, hdf5, performance
 from openquake.baselib.general import (
-    AccumDict, get_nbytes_msg, humansize, pprod, agg_probs, block_splitter)
+    AccumDict, get_nbytes_msg, humansize, pprod, agg_probs, gen_slices)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -155,8 +154,8 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
                 iml2 = dict(zip(imts, iml3))
                 with dis_mon:
                     # 7D-matrix #disbins, #lonbins, #latbins, #epsbins, M, P, Z
-                    matrix = weighted_disagg(close, cmaker, g_by_z[s],
-                                             iml2, eps3, s, bins, epsstar)
+                    matrix = disaggregate(close, cmaker, g_by_z[s],
+                                          iml2, eps3, s, bins, epsstar)
                     for m in range(M):
                         mat6 = matrix[..., m, :, :]
                         if mat6.any():
@@ -167,7 +166,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     # the matrices is fast and the data are not queuing up
 
 
-def weighted_disagg(close, cmaker, g_by_z, iml2, eps3, s, bins, epsstar):
+def disaggregate(close, cmaker, g_by_z, iml2, eps3, s, bins, epsstar):
     """
     :returns: a 7D disaggregation matrix, weighted if src_mutex is True
     """
@@ -177,13 +176,13 @@ def weighted_disagg(close, cmaker, g_by_z, iml2, eps3, s, bins, epsstar):
         # built as ctx['weight'] = src.mutex_weight in contexts.py
         ctxs = performance.split_array(close, close.src_id)
         weights = [ctx.weight[0] for ctx in ctxs]
-        mats = [disagg.disaggregate(ctx, cmaker, g_by_z,
-                                    iml2, eps3, s, bins, epsstar=epsstar)
+        mats = [disagg.disaggregate(ctx, cmaker, g_by_z, iml2, eps3, s, bins,
+                                    epsstar=epsstar)
                 for ctx in ctxs]
         return numpy.average(mats, weights=weights, axis=0)
     else:
-        return disagg.disaggregate(close, cmaker, g_by_z,
-                                   iml2, eps3, s, bins, epsstar=epsstar)
+        return disagg.disaggregate(close, cmaker, g_by_z, iml2, eps3, s, bins,
+                                   epsstar=epsstar)
 
 
 def get_outputs_size(shapedic, disagg_outputs):
@@ -361,11 +360,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
             for start, stop in slices:
-                slc = slice(start, stop)
-                U = max(U, stop - start)
-                smap.submit((dstore, slc, cmaker, self.hmap4,
-                             magi[slc], self.bin_edges))
-                task_inputs.append((grp_id, stop - start))
+                for slc in gen_slices(start, stop, 50_000):
+                    U = max(U, slc.stop - slc.start)
+                    smap.submit((dstore, slc, cmaker, self.hmap4,
+                                 magi[slc], self.bin_edges))
+                    task_inputs.append((grp_id, stop - start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
@@ -433,7 +432,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         *self.bin_edges, self.trts = all_edges
         b = self.bin_edges
 
-        def a(bin_no):
+        def ll_edges(bin_no):
             # lon/lat edges for the sites, bin_no can be 2 or 3
             num_edges = len(b[bin_no][0])
             arr = numpy.zeros((self.N, num_edges))
@@ -442,8 +441,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             return arr
         self.datastore['disagg-bins/Mag'] = b[0]
         self.datastore['disagg-bins/Dist'] = b[1]
-        self.datastore['disagg-bins/Lon'] = a(2)
-        self.datastore['disagg-bins/Lat'] = a(3)
+        self.datastore['disagg-bins/Lon'] = ll_edges(2)
+        self.datastore['disagg-bins/Lat'] = ll_edges(3)
         self.datastore['disagg-bins/Eps'] = b[4]
         self.datastore['disagg-bins/TRT'] = encode(self.trts)
 
