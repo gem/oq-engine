@@ -196,7 +196,7 @@ def check_disagg_by_src(dstore):
 
     # check the extract call is not broken
     for imt in dstore['oqparam'].imtls:
-        aw = extract.extract(dstore, f'disagg_by_src?imt={imt}&poe=1E-4&site_id=0')
+        aw = extract.extract(dstore, f'disagg_by_src?imt={imt}&poe=1E-4')
         assert aw.array.dtype.names == ('src_id', 'poe')
 
 #  ########################### task functions ############################ #
@@ -207,26 +207,11 @@ def classical(srcs, sitecol, cmaker, monitor):
     Call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
-    if isinstance(srcs, datastore.DataStore):
-        with srcs:
-            if sitecol is None:
-                sitecol = srcs['sitecol']
-            if srcs.parent:
-                with srcs.parent.open('r').hdf5 as h5:
-                    arr = h5py.File.__getitem__(h5, '_csm')[cmaker.grp_id]
-            else:
-                arr = h5py.File.__getitem__(srcs.hdf5, '_csm')[cmaker.grp_id]
-            srcs = pickle.loads(gzip.decompress(arr.tobytes()))
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
-    pmap = ProbabilityMap(
-        sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
-    result = hazclassical(srcs, sitecol, cmaker, pmap)
-    if len(sitecol) > cmaker.max_sites_disagg:
-        for g, pne in zip(cmaker.gidx, pmap.split()):
-            result['pnemap'] = ~pne.remove_zeros()
-            result['pnemap'].gidx = [g]
-            yield result
-    else:
+    for sites in sitecol.split(cmaker.ntiles):
+        pmap = ProbabilityMap(
+            sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
+        result = hazclassical(srcs, sites, cmaker, pmap)
         result['pnemap'] = ~pmap.remove_zeros()
         result['pnemap'].gidx = cmaker.gidx
         yield result
@@ -671,27 +656,24 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # maximum size of the pmap array in GB
             size_gb = G * L * self.N * 8 / 1024**3
-            ntiles = numpy.ceil(size_gb / oq.pmap_max_gb)
-            if sitecol is sitecol.complete:
-                # NB: disagg_by_src is disabled in case of tiling
-                assert not (ntiles > 1 and oq.disagg_by_src)
-                # NB: tiling only works with many sites
-                tiles = sitecol.split(ntiles)
-                if ntiles > 1 and self.N < oq.max_sites_disagg * ntiles:
-                    raise RuntimeError('There are not enough sites (%d) for '
-                                       '%d tiles' % (self.N, ntiles))
-            else:
-                ntiles = 1
-                tiles = [sitecol]  # do not split
+            ntiles = int(numpy.ceil(size_gb / oq.pmap_max_gb))            
+            # NB: disagg_by_src is disabled in case of tiling
+            assert not (ntiles > 1 and oq.disagg_by_src)
+            # NB: tiling only works with many sites
+            if ntiles > 1 and self.N < oq.max_sites_disagg * ntiles:
+                raise RuntimeError('There are not enough sites (%d) for '
+                                   '%d tiles' % (self.N, ntiles))
+            cm.ntiles = ntiles
+            if ntiles > 1:
+                logging.debug('Producing %d inner tiles', ntiles)
 
             # preallocate memory
             for g in cm.gidx:
                 acc[g] = ProbabilityMap(sitecol.sids, L, 1).fill(1)
             if sg.atomic or sg.weight <= maxw:
-                for tile in tiles:
-                    for g in cm.gidx:
-                        self.n_outs[g] += 1
-                    smap.submit((sg, tile, cm))
+                for g in cm.gidx:
+                    self.n_outs[g] += cm.ntiles
+                smap.submit((sg, sitecol, cm))
             else:
                 if oq.disagg_by_src:  # possible only with a single tile
                     blks = groupby(sg, basename).values()
@@ -700,10 +682,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 for block in blks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
-                    for tile in tiles:
-                        for g in cm.gidx:
-                            self.n_outs[g] += 1
-                        smap.submit((block, tile, cm))
+                    for g in cm.gidx:
+                        self.n_outs[g] += cm.ntiles
+                    smap.submit((block, sitecol, cm))
 
         # using submit avoids the .task_queue and thus core starvation
         return smap.reduce(self.agg_dicts, acc)
