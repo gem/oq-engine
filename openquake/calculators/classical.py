@@ -552,7 +552,7 @@ class ClassicalCalculator(base.HazardCalculator):
         maxsize = get_maxsize(len(self.oqparam.imtls), max_gs)
         logging.info('Considering {:_d} contexts at once'.format(maxsize))
         size = max_gs * N * L * 8
-        logging.info('ProbabilityMap(G=%d,N=%d,L=%d): %s per core',
+        logging.info('ProbabilityMap(G=%d,N=%d,L=%d) %s per core',
                      max_gs, N, L, humansize(size))
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         if avail < size:
@@ -594,7 +594,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         t0 = time.time()
         req = get_pmaps_gb(self.datastore)
-        ntiles = 1 + int(req / (oq.pmap_max_gb * 40))  # 40 GB
+        ntiles = 1 + int(req / (oq.pmap_max_gb * 100))  # 50 GB
         self.n_outs = AccumDict(accum=0)
         if ntiles > 1:
             self.execute_seq(maxw, ntiles)
@@ -685,9 +685,10 @@ class ClassicalCalculator(base.HazardCalculator):
 
         totsize = sum(pmap.array.nbytes for pmap in acc.values())
         logging.info('Global pmap size %s', humansize(totsize))
-        # using submit avoids the .task_queue and thus core starvation
+
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        # using submit avoids the .task_queue and thus core starvation
         for args in allargs:
             smap.submit(args)
         return smap.reduce(self.agg_dicts, acc)
