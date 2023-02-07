@@ -1388,9 +1388,9 @@ def extract_eids_by_gsim(dstore, what):
 @extract.add('risk_stats')
 def extract_risk_stats(dstore, what):
     """
-    Extract the risk statistics from a DataFrame.
+    Compute the risk statistics from a DataFrame with individual realizations
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/risk_stats/aggcurves
+    http://127.0.0.1:8800/v1/calc/30/extract/risk_stats/aggrisk
     """
     oq = dstore['oqparam']
     stats = oq.hazard_stats()
