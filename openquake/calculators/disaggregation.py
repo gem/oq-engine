@@ -342,9 +342,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         rdata['magi'] = magi
         rdata['idx'] = numpy.arange(totrups)
         rdata['grp_id'] = dstore['rup/grp_id'][:]
-        trt_smrs = dstore['trt_smrs'][:]
-        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
-        G = max(len(rbg) for rbg in rlzs_by_gsim)
         task_inputs = []
         U = 0
         self.datastore.swmr_on()
@@ -357,6 +354,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         # worse performance, but visible only in extra-large calculations!
         cmakers = read_cmakers(self.datastore)
         grp_ids = rdata['grp_id']
+        G = max(len(cmaker.gsims) for cmaker in cmakers)
         for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
             for start, stop in slices:
