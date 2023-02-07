@@ -463,7 +463,7 @@ class ClassicalCalculator(base.HazardCalculator):
                         self.haz.store_poes(g, 1-pmap.array[:, :, 0], pmap.sids)
             else:  # single output
                 with self.monitor('storing PoEs', measuremem=True):
-                    self.haz.store_poes(g, pnemap.array[:, :, i], pnemap.sids)
+                    self.haz.store_poes(g, 1-pnemap.array[:, :, i], pnemap.sids)
         return acc
 
     def create_dsets(self):
