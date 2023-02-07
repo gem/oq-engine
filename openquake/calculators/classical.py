@@ -356,9 +356,9 @@ class Hazard:
                     out[sid, :, m, l] = res
         return out
 
-    def store_poes(self, g, poes, poes_sids):
+    def store_poes(self, g, pnes, pnes_sids):
         """
-        Store the pmap of the given group inside the _poes dataset
+        Store 1-pnes inside the _poes dataset
         """
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence, however that probability
@@ -368,12 +368,13 @@ class Hazard:
         # :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
         # Here we solve the issue by replacing the unphysical probabilities 1
         # with .9999999999999999 (the float64 closest to 1).
+        poes = 1. - pnes
         poes[poes == 1.] = .9999999999999999
         # poes[poes < 1E-5] = 0.  # minimum_poe
         idxs, lids = poes.nonzero()
         gids = numpy.repeat(g, len(idxs))
         if len(idxs):
-            sids = poes_sids[idxs]
+            sids = pnes_sids[idxs]
             hdf5.extend(self.datastore['_poes/sid'], sids)
             hdf5.extend(self.datastore['_poes/gid'], gids)
             hdf5.extend(self.datastore['_poes/lid'], lids)
@@ -382,7 +383,7 @@ class Hazard:
             hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
             self.offset += len(sids)
         self.acc[g]['avg_poe'] = poes.mean(axis=0) @ self.level_weights
-        self.acc[g]['nsites'] = len(poes_sids)
+        self.acc[g]['nsites'] = len(pnes_sids)
 
     def store_disagg(self, pmaps=None):
         """
@@ -460,10 +461,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 if self.n_outs[g] == 0:  # no other tasks for this g
                     with self.monitor('storing PoEs', measuremem=True):
                         pne = acc.pop(g)
-                        self.haz.store_poes(g, 1-pne.array[:, :, 0], pne.sids)
+                        self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
             else:  # single output
                 with self.monitor('storing PoEs', measuremem=True):
-                    self.haz.store_poes(g, 1-pnemap.array[:, :, i], pnemap.sids)
+                    self.haz.store_poes(g, pnemap.array[:, :, i], pnemap.sids)
         return acc
 
     def create_dsets(self):
