@@ -38,7 +38,8 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import (
     ContextMaker, read_cmakers, basename, get_maxsize)
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
-from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
+from openquake.hazardlib.probability_map import (
+    ProbabilityMap, poes_dt, combine_probs)
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, extract
 
@@ -345,15 +346,13 @@ class Hazard:
         dic = dict(zip(cmaker.gidx, cmaker.gsims.values()))
         for lvl in range(self.L):
             m, l = divmod(lvl, L1)
-            for sid, arr in zip(pmap.sids, pmap.array):
-                res = numpy.zeros(self.R)
-                for i, g in enumerate(pmap.gidx):
-                    for rlz in dic[g]:
-                        res[rlz] = agg_probs(res[rlz], arr[lvl, i])
-                if self.collect_rlzs:
-                    out[sid, 0, m, l] = res @ self.weights
-                else:
-                    out[sid, :, m, l] = res
+            res = numpy.zeros((len(pmap.sids), self.R))
+            for i, g in enumerate(pmap.gidx):
+                combine_probs(res, pmap.array[:, lvl, i], U32(dic[g]))
+            if self.collect_rlzs:
+                out[:, 0, m, l] = res @ self.weights
+            else:
+                out[:, :, m, l] = res
         return out
 
     def store_poes(self, g, pnes, pnes_sids):
