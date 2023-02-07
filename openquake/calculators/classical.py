@@ -356,7 +356,7 @@ class Hazard:
                     out[sid, :, m, l] = res
         return out
 
-    def store_poes(self, g, arr, arr_sids):
+    def store_poes(self, g, poes, poes_sids):
         """
         Store the pmap of the given group inside the _poes dataset
         """
@@ -368,21 +368,21 @@ class Hazard:
         # :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
         # Here we solve the issue by replacing the unphysical probabilities 1
         # with .9999999999999999 (the float64 closest to 1).
-        arr[arr == 1.] = .9999999999999999
-        # arr[arr < 1E-5] = 0.  # minimum_poe
-        idxs, lids = arr.nonzero()
+        poes[poes == 1.] = .9999999999999999
+        # poes[poes < 1E-5] = 0.  # minimum_poe
+        idxs, lids = poes.nonzero()
         gids = numpy.repeat(g, len(idxs))
         if len(idxs):
-            sids = arr_sids[idxs]
+            sids = poes_sids[idxs]
             hdf5.extend(self.datastore['_poes/sid'], sids)
             hdf5.extend(self.datastore['_poes/gid'], gids)
             hdf5.extend(self.datastore['_poes/lid'], lids)
-            hdf5.extend(self.datastore['_poes/poe'], arr[idxs, lids])
+            hdf5.extend(self.datastore['_poes/poe'], poes[idxs, lids])
             sbs = build_slice_by_sid(sids, self.offset)
             hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
             self.offset += len(sids)
-        self.acc[g]['avg_poe'] = arr.mean(axis=0) @ self.level_weights
-        self.acc[g]['nsites'] = len(arr_sids)
+        self.acc[g]['avg_poe'] = poes.mean(axis=0) @ self.level_weights
+        self.acc[g]['nsites'] = len(poes_sids)
 
     def store_disagg(self, pmaps=None):
         """
@@ -459,8 +459,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 assert self.n_outs[g] > -1, (g, self.n_outs[g])
                 if self.n_outs[g] == 0:  # no other tasks for this g
                     with self.monitor('storing PoEs', measuremem=True):
-                        pmap = acc.pop(g)
-                        self.haz.store_poes(g, 1-pmap.array[:, :, 0], pmap.sids)
+                        pne = acc.pop(g)
+                        self.haz.store_poes(g, 1-pne.array[:, :, 0], pne.sids)
             else:  # single output
                 with self.monitor('storing PoEs', measuremem=True):
                     self.haz.store_poes(g, 1-pnemap.array[:, :, i], pnemap.sids)
@@ -651,7 +651,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # maximum size of the pmap array in GB
             size_gb = G * L * len(sitecol) * 8 / 1024**3
-            ntiles = int(numpy.ceil(size_gb / oq.pmap_max_gb))            
+            ntiles = int(numpy.ceil(size_gb / oq.pmap_max_gb))
             # NB: disagg_by_src is disabled in case of tiling
             assert not (ntiles > 1 and oq.disagg_by_src)
             # NB: tiling only works with many sites
