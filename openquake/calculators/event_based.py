@@ -259,7 +259,7 @@ class EventBasedCalculator(base.HazardCalculator):
             cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], oq)
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
-        self.datastore.swmr_on()
+        # self.datastore.swmr_on() # removed to fix test_ebr[case_2b
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
@@ -443,10 +443,10 @@ class EventBasedCalculator(base.HazardCalculator):
         proxies = [RuptureProxy(rec, scenario)
                    for rec in dstore['ruptures'][:]]
         if "station_data" in oq.inputs:
-            # this is meant to be used in conditioned scenario calculations 
-            # with a single rupture; we are taking the first copy of the rupture 
-            # (remember: _read_scenario_ruptures makes num_gmfs copies in order to 
-            # parallelize, but the conditioning process is computationally quite 
+            # this is meant to be used in conditioned scenario calculations with
+            # a single rupture; we are taking the first copy of the rupture
+            # (remember: _read_scenario_ruptures makes num_gmfs copies to 
+            # parallelize, but the conditioning process is computationally 
             # expensive, so we want to avoid repeating it num_gmfs times)
             # TODO: this is ugly and must be improved upon!
             proxies = proxies[0:1]
