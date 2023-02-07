@@ -680,8 +680,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # allocate memory
             for g in cm.gidx:
-                #if self.n_outs[g] > 1:
-                acc[g] = ProbabilityMap(sitecol.sids, L, 1).fill(1)
+                if self.n_outs[g] > 1:
+                    acc[g] = ProbabilityMap(sitecol.sids, L, 1).fill(1)
 
         totsize = sum(pmap.array.nbytes for pmap in acc.values())
         logging.info('Global pmap size %s', humansize(totsize))
