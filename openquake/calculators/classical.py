@@ -643,8 +643,7 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = {}  # g -> pmap
         oq = self.oqparam
         L = oq.imtls.size
-        self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        allargs = []
         for cm in self.cmakers:
             G = len(cm.gsims)
             sg = self.csm.src_groups[cm.grp_id]
@@ -668,7 +667,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if sg.atomic or sg.weight <= maxw:
                 for g in cm.gidx:
                     self.n_outs[g] += cm.ntiles
-                smap.submit((sg, sitecol, cm))
+                allargs.append((sg, sitecol, cm))
             else:
                 if oq.disagg_by_src:  # possible only with a single tile
                     blks = groupby(sg, basename).values()
@@ -679,9 +678,13 @@ class ClassicalCalculator(base.HazardCalculator):
                                   len(block), sg.weight)
                     for g in cm.gidx:
                         self.n_outs[g] += cm.ntiles
-                    smap.submit((block, sitecol, cm))
+                    allargs.append((block, sitecol, cm))
 
         # using submit avoids the .task_queue and thus core starvation
+        self.datastore.swmr_on()  # must come before the Starmap
+        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        for args in allargs:
+            smap.submit(args)
         return smap.reduce(self.agg_dicts, acc)
 
     def store_info(self):
