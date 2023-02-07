@@ -455,12 +455,15 @@ class ClassicalCalculator(base.HazardCalculator):
         for i, g in enumerate(pnemap.gidx):
             if g in acc:
                 acc[g].update(pnemap, i)
-            self.n_outs[g] -= 1
-            assert self.n_outs[g] > -1, (g, self.n_outs[g])
-            if self.n_outs[g] == 0:  # no other tasks for this g
+                self.n_outs[g] -= 1
+                assert self.n_outs[g] > -1, (g, self.n_outs[g])
+                if self.n_outs[g] == 0:  # no other tasks for this g
+                    with self.monitor('storing PoEs', measuremem=True):
+                        pmap = acc.pop(g)
+                        self.haz.store_poes(g, 1-pmap.array[:, :, 0], pmap.sids)
+            else:  # single output
                 with self.monitor('storing PoEs', measuremem=True):
-                    pmap = acc.pop(g)
-                    self.haz.store_poes(g, 1-pmap.array[:, :, 0], pmap.sids)
+                    self.haz.store_poes(g, pnemap.array[:, :, i], pnemap.sids)
         return acc
 
     def create_dsets(self):
@@ -660,9 +663,6 @@ class ClassicalCalculator(base.HazardCalculator):
             if ntiles > 1:
                 logging.debug('Producing %d inner tiles', ntiles)
 
-            # preallocate memory
-            for g in cm.gidx:
-                acc[g] = ProbabilityMap(sitecol.sids, L, 1).fill(1)
             if sg.atomic or sg.weight <= maxw:
                 for g in cm.gidx:
                     self.n_outs[g] += cm.ntiles
@@ -678,6 +678,11 @@ class ClassicalCalculator(base.HazardCalculator):
                     for g in cm.gidx:
                         self.n_outs[g] += cm.ntiles
                     allargs.append((block, sitecol, cm))
+
+            # allocate memory
+            for g in cm.gidx:
+                #if self.n_outs[g] > 1:
+                acc[g] = ProbabilityMap(sitecol.sids, L, 1).fill(1)
 
         # using submit avoids the .task_queue and thus core starvation
         self.datastore.swmr_on()  # must come before the Starmap
