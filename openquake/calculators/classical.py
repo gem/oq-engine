@@ -356,11 +356,10 @@ class Hazard:
                     out[sid, :, m, l] = res
         return out
 
-    def store_poes(self, g, pmap):
+    def store_poes(self, g, arr, arr_sids):
         """
         Store the pmap of the given group inside the _poes dataset
         """
-        arr = 1. - pmap.array[:, :, 0]
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence, however that probability
         # cannot be exactly 1 unless the level is exactly 0. Numerically, the
@@ -374,7 +373,7 @@ class Hazard:
         idxs, lids = arr.nonzero()
         gids = numpy.repeat(g, len(idxs))
         if len(idxs):
-            sids = pmap.sids[idxs]
+            sids = arr_sids[idxs]
             hdf5.extend(self.datastore['_poes/sid'], sids)
             hdf5.extend(self.datastore['_poes/gid'], gids)
             hdf5.extend(self.datastore['_poes/lid'], lids)
@@ -383,7 +382,7 @@ class Hazard:
             hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
             self.offset += len(sids)
         self.acc[g]['avg_poe'] = arr.mean(axis=0) @ self.level_weights
-        self.acc[g]['nsites'] = len(pmap.sids)
+        self.acc[g]['nsites'] = len(arr_sids)
 
     def store_disagg(self, pmaps=None):
         """
@@ -461,7 +460,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if self.n_outs[g] == 0:  # no other tasks for this g
                 with self.monitor('storing PoEs', measuremem=True):
                     pmap = acc.pop(g)
-                    self.haz.store_poes(g, pmap)
+                    self.haz.store_poes(g, 1-pmap.array[:, :, 0], pmap.sids)
         return acc
 
     def create_dsets(self):
