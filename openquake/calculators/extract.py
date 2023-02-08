@@ -762,7 +762,7 @@ def extract_agg_curves(dstore, what):
     attrs = dict(shape_descr=['return_period', 'kind'] + tagnames)
     attrs['return_period'] = list(rps)
     attrs['kind'] = kinds
-    attrs['units'] = list(units)  # used by the QGIS plugin
+    attrs['units'] = units.split()  # used by the QGIS plugin
     for tagname, tagvalue in zip(tagnames, tagvalues):
         attrs[tagname] = [tagvalue]
     if tagnames:
