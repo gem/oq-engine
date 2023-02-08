@@ -121,6 +121,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 seed += 1
                 yield rup, trt_smr, num_occ
 
+    # NB: overridden in MultiFaultSource
     def _sample_ruptures(self, eff_num_ses):
         tom = getattr(self, 'temporal_occurrence_model', None)
         if tom:  # time-independent source
