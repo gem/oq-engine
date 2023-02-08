@@ -8,7 +8,7 @@
     Lanzano et al. (2022)
 
   [Michele Simionato]
-  * Increased the number of disaggregation tasks
+  * Fixed disaggregation calculations when too few tasks were generated
 
   [Anirudh Rao, Michele Simionato]
   * Changed the algorithm used in classical_risk and classical_bcr
