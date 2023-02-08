@@ -40,7 +40,7 @@ from openquake.hazardlib.gsim.base import ContextMaker, read_cmakers
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
-from openquake.risklib.scientific import LOSSTYPE
+from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
 from openquake.calculators import getters
@@ -119,11 +119,11 @@ def parse(query_string, info={}):
     {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0], 'k': [3], 'rlzs': True}
     """
     qdic = parse_qs(query_string)
-    loss_types = info.get('loss_types', [])
+    # loss_types = info.get('loss_types', [])
     for key, val in sorted(qdic.items()):
         # convert site_id to an int, loss_type to an int, etc
         if key == 'loss_type':
-            qdic[key] = [loss_types[k] for k in val]
+            qdic[key] = [LOSSID[k] for k in val]
             qdic['lt'] = val
         else:
             qdic[key] = [lit_eval(v) for v in val]
@@ -746,9 +746,15 @@ def extract_agg_curves(dstore, what):
         lst = decode(dstore['agg_keys'][:])
         agg_id = lst.index(','.join(tagvalues))
     if qdic['rlzs']:
-        df = dstore.read_df('aggcurves')
-        import pdb; pdb.set_trace()
-        # TODO: build arr, rps, units
+        [li] = qdic['loss_type']  # loss type index
+        units = dstore.get_attr('aggcurves', 'units').split()
+        df = dstore.read_df('aggcurves', sel=dict(agg_id=agg_id, loss_id=li))
+        rps = list(df.return_period.unique())
+        P = len(rps)
+        R = len(qdic['kind'])
+        arr = numpy.zeros((P, R))
+        for rlz in range(R):
+            arr[:, rlz] = df[df.rlz_id == rlz].loss
     else:
         name = 'agg_curves-stats/' + lts[0]
         shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
@@ -838,7 +844,7 @@ def extract_aggregate(dstore, what):
     lis = qdic.get('loss_type', [])  # list of indices
     if lis:
         li = lis[0]
-        lts = [lt for lt, i in loss_types.items() if i == li]
+        lts = [lt for i, lt in enumerate(LOSSTYPE) if i == li]
         array = dstore['avg_losses%s/%s' % (suffix, lts[0])][:, ridx]
         aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {}, lts)
     else:
