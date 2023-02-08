@@ -724,7 +724,7 @@ def extract_agg_curves(dstore, what):
     """
     Aggregate loss curves from the ebrisk calculator:
 
-    /extract/agg_curves?kind=stats,absolute=1&loss_type=occupants&occupancy=RES
+    /extract/agg_curves?kind=stats&absolute=1&loss_type=occupants&occupancy=RES
 
     Returns an array of shape (P, S, ...)
     """
