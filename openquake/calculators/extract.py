@@ -821,7 +821,7 @@ def extract_agg_damages(dstore, what):
         oq = dstore['oqparam']
         lti = oq.lti[loss_type]
         D = len(oq.limit_states) + 1
-        damages = dstore['damages-rlzs'][:, :, lti, :D]
+        damages = dstore['damages-rlzs'][:, :, lti]
     else:
         raise KeyError('No damages found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], damages, tags)

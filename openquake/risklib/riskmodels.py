@@ -847,6 +847,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                                           if self.damage_states else [])
         attrs = dict(covs=self.covs, loss_types=loss_types,
                      limit_states=limit_states,
+                     consequences=self.get_consequences(),
                      tmap=repr(getattr(self, 'tmap', [])))
         rf = next(iter(self.values()))
         if hasattr(rf, 'loss_ratios'):
