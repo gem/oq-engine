@@ -740,10 +740,11 @@ def extract_agg_curves(dstore, what):
         raise ValueError('Expected tagnames=%s, got %s' %
                          (info['tagnames'], tagnames))
     tagvalues = [tagdict[t][0] for t in tagnames]
-    agg_id = -1
     if tagnames:
         lst = decode(dstore['agg_keys'][:])
         agg_id = lst.index(','.join(tagvalues))
+    else:
+        agg_id = 0  # total aggregation
     if qdic['rlzs']:
         [li] = qdic['loss_type']  # loss type index
         units = dstore.get_attr('aggcurves', 'units').split()
