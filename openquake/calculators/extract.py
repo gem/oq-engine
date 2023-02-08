@@ -843,10 +843,9 @@ def extract_aggregate(dstore, what):
     ridx = qdic['k'][0]
     lis = qdic.get('loss_type', [])  # list of indices
     if lis:
-        li = lis[0]
-        lts = [lt for i, lt in enumerate(LOSSTYPE) if i == li]
-        array = dstore['avg_losses%s/%s' % (suffix, lts[0])][:, ridx]
-        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {}, lts)
+        lt = LOSSTYPE[lis[0]]
+        array = dstore['avg_losses%s/%s' % (suffix, lt)][:, ridx]
+        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {}, [lt])
     else:
         array = avglosses(dstore, loss_types, suffix[1:])[:, ridx]
         aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {},
