@@ -1,3 +1,7 @@
+  [Michele Simionato, Paolo Tormene]
+  * Fixed the `agg_curves` extractor to also extract individual curves, thus
+    fixing the QGIS plugin visualization
+
   [Michele Simionato]
   * Optimized the rupture sampling for MultiFaultSources
   * Supported `collect_rlzs` together with `disagg_by_src` to avoid running

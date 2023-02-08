@@ -40,7 +40,7 @@ from openquake.hazardlib.gsim.base import ContextMaker, read_cmakers
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
-from openquake.risklib.scientific import LOSSTYPE
+from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
 from openquake.calculators import getters
@@ -119,11 +119,10 @@ def parse(query_string, info={}):
     {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0], 'k': [3], 'rlzs': True}
     """
     qdic = parse_qs(query_string)
-    loss_types = info.get('loss_types', [])
     for key, val in sorted(qdic.items()):
         # convert site_id to an int, loss_type to an int, etc
         if key == 'loss_type':
-            qdic[key] = [loss_types[k] for k in val]
+            qdic[key] = [LOSSID[k] for k in val]
             qdic['lt'] = val
         else:
             qdic[key] = [lit_eval(v) for v in val]
@@ -726,7 +725,7 @@ def extract_agg_curves(dstore, what):
 
     /extract/agg_curves?kind=stats&absolute=1&loss_type=occupants&occupancy=RES
 
-    Returns an array of shape (P, S, ...)
+    Returns an array of shape (#periods, #stats) or (#periods, #rlzs)
     """
     info = get_info(dstore)
     qdic = parse(what, info)
@@ -741,17 +740,27 @@ def extract_agg_curves(dstore, what):
         raise ValueError('Expected tagnames=%s, got %s' %
                          (info['tagnames'], tagnames))
     tagvalues = [tagdict[t][0] for t in tagnames]
-    agg_id = -1
     if tagnames:
         lst = decode(dstore['agg_keys'][:])
         agg_id = lst.index(','.join(tagvalues))
-    kinds = list(info['stats'])
-    name = 'agg_curves-stats/' + lts[0]
-    units = dstore.get_attr(name, 'units')
-    shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
-    units = dstore.get_attr(name, 'units')
-    rps = shape_descr['return_period']
-    arr = dstore[name][agg_id, k].T  # shape P, R
+    else:
+        agg_id = 0  # total aggregation
+    if qdic['rlzs']:
+        [li] = qdic['loss_type']  # loss type index
+        units = dstore.get_attr('aggcurves', 'units').split()
+        df = dstore.read_df('aggcurves', sel=dict(agg_id=agg_id, loss_id=li))
+        rps = list(df.return_period.unique())
+        P = len(rps)
+        R = len(qdic['kind'])
+        arr = numpy.zeros((P, R))
+        for rlz in range(R):
+            arr[:, rlz] = df[df.rlz_id == rlz].loss
+    else:
+        name = 'agg_curves-stats/' + lts[0]
+        shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
+        rps = list(shape_descr['return_period'])
+        units = dstore.get_attr(name, 'units').split()
+        arr = dstore[name][agg_id, k].T  # shape P, R
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
@@ -760,9 +769,9 @@ def extract_agg_curves(dstore, what):
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
     attrs = dict(shape_descr=['return_period', 'kind'] + tagnames)
-    attrs['return_period'] = list(rps)
-    attrs['kind'] = kinds
-    attrs['units'] = list(units)  # used by the QGIS plugin
+    attrs['return_period'] = rps
+    attrs['kind'] = qdic['kind']
+    attrs['units'] = units  # used by the QGIS plugin
     for tagname, tagvalue in zip(tagnames, tagvalues):
         attrs[tagname] = [tagvalue]
     if tagnames:
@@ -834,10 +843,9 @@ def extract_aggregate(dstore, what):
     ridx = qdic['k'][0]
     lis = qdic.get('loss_type', [])  # list of indices
     if lis:
-        li = lis[0]
-        lts = [lt for lt, i in loss_types.items() if i == li]
-        array = dstore['avg_losses%s/%s' % (suffix, lts[0])][:, ridx]
-        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {}, lts)
+        lt = LOSSTYPE[lis[0]]
+        array = dstore['avg_losses%s/%s' % (suffix, lt)][:, ridx]
+        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {}, [lt])
     else:
         array = avglosses(dstore, loss_types, suffix[1:])[:, ridx]
         aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {},
