@@ -726,7 +726,7 @@ def extract_agg_curves(dstore, what):
 
     /extract/agg_curves?kind=stats&absolute=1&loss_type=occupants&occupancy=RES
 
-    Returns an array of shape (P, S, ...)
+    Returns an array of shape (#periods, #stats) or (#periods, #rlzs)
     """
     info = get_info(dstore)
     qdic = parse(what, info)
@@ -745,13 +745,16 @@ def extract_agg_curves(dstore, what):
     if tagnames:
         lst = decode(dstore['agg_keys'][:])
         agg_id = lst.index(','.join(tagvalues))
-    kinds = list(info['stats'])
-    name = 'agg_curves-stats/' + lts[0]
-    units = dstore.get_attr(name, 'units')
-    shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
-    units = dstore.get_attr(name, 'units')
-    rps = shape_descr['return_period']
-    arr = dstore[name][agg_id, k].T  # shape P, R
+    if qdic['rlzs']:
+        df = dstore.read_df('aggcurves')
+        import pdb; pdb.set_trace()
+        # TODO: build arr, rps, units
+    else:
+        name = 'agg_curves-stats/' + lts[0]
+        shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
+        rps = list(shape_descr['return_period'])
+        units = dstore.get_attr(name, 'units').split()
+        arr = dstore[name][agg_id, k].T  # shape P, R
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
@@ -760,9 +763,9 @@ def extract_agg_curves(dstore, what):
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
     attrs = dict(shape_descr=['return_period', 'kind'] + tagnames)
-    attrs['return_period'] = list(rps)
-    attrs['kind'] = kinds
-    attrs['units'] = units.split()  # used by the QGIS plugin
+    attrs['return_period'] = rps
+    attrs['kind'] = qdic['kind']
+    attrs['units'] = units  # used by the QGIS plugin
     for tagname, tagvalue in zip(tagnames, tagvalues):
         attrs[tagname] = [tagvalue]
     if tagnames:
