@@ -119,7 +119,6 @@ def parse(query_string, info={}):
     {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0], 'k': [3], 'rlzs': True}
     """
     qdic = parse_qs(query_string)
-    # loss_types = info.get('loss_types', [])
     for key, val in sorted(qdic.items()):
         # convert site_id to an int, loss_type to an int, etc
         if key == 'loss_type':
