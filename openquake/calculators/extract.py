@@ -717,6 +717,8 @@ def extract_csq_curves(dstore, what):
                              consequences=cols))
 
 
+# NB: used by QGIS but not by the exporters
+# tested in test_case_1_ins
 @extract.add('agg_curves')
 def extract_agg_curves(dstore, what):
     """
