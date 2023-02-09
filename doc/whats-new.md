@@ -305,7 +305,7 @@ resulting in huge improvements in calculations affected by slow tasks.
 At user request, we added to the WebUI the ability
 to specify a non-standard prefix path by setting the environment
 variable WEBUI_PATHPREFIX. This is documented here:
-https://github.com/gem/oq-engine/blob/master/docker/README.md
+https://github.com/gem/oq-engine/blob/engine-3.16/docker/README.md
 
 We fully removed the celery support that has been deprecated for 5 years.
 
