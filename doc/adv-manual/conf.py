@@ -160,7 +160,7 @@ html_theme_options = {
             # URL where the link will redirect
             "url": "https://www.globalquakemodel.org/openquake",  # required
             # Icon class (if "type": "fontawesome"), or path to local image (if "type": "local")
-            "icon": "../manual/_static/oq_logo.png",
+            "icon": "_static/oq_logo.png",
             # Whether icon should be a FontAwesome class, or a local file
             "type": "local",  # Default is fontawesome
         },
