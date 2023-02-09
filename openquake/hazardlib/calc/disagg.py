@@ -186,6 +186,7 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps_bands, sid, bin_edges,
     :param sid: the site ID
     :param bin_edges: a tuple of 5 bin edges (mag, dist, lon, lat, eps)
     :param epsstar: a boolean. When True, disaggregation contains eps* results
+    :returns: a 7D-array of shape (D, Lo, La, E, M, P, Z)
     """
     # disaggregate (separate) PoE in different contributions
     # U - Number of contexts (i.e. ruptures)
@@ -210,7 +211,7 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps_bands, sid, bin_edges,
     # U - Number of contexts (i.e. ruptures if there is a single site)
     # M - Number of IMTs
     # G - Number of gsims
-    mean_std = cmaker.get_mean_stds([ctx], split_by_mag=True)[:2]
+    mea, std = cmaker.get_mean_stds([ctx], split_by_mag=True)[:2]
     # shape (2, G, M, U)
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
@@ -225,16 +226,16 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps_bands, sid, bin_edges,
             g = g_by_z[z]
         except KeyError:
             continue
-        lvls = (iml - mean_std[0, g, m]) / mean_std[1, g, m]
+        lvls = (iml - mea[g, m]) / std[g, m]
         # Find the index in the epsilons-bins vector where lvls (which are
         # epsilons) should be included.
         idxs = numpy.searchsorted(epsilons, lvls)
-        # Now we split the epsilon into parts (one for each epsilon-bin larger
+        # Now we split the epsilons into parts (one for each epsilon-bin larger
         # than lvls)
         if epsstar:
-            iii = (lvls >= min_eps) & (lvls < max_eps)
+            ok = (lvls >= min_eps) & (lvls < max_eps)
             # The leftmost indexes are ruptures and epsilons
-            poes[iii, idxs[iii]-1, m, p, z] = truncnorm_sf(phi_b, lvls[iii])
+            poes[ok, idxs[ok] - 1, m, p, z] = truncnorm_sf(phi_b, lvls[ok])
         else:
             poes[:, :, m, p, z] = _disagg_eps(
                 truncnorm_sf(phi_b, lvls), idxs, eps_bands, cum_bands)
@@ -536,12 +537,17 @@ pmf_map = dict([
 
 # ####################### SourceSiteDisaggregator ############################ #
 
+
 class SourceSiteDisaggregator(object):
+    """
+    A class to perform disaggregations when there is a single source and
+    a single site.
+    """
     def __init__(self, src, site, cmaker):
         self.src = src
         if isinstance(site, Site):
             self.sitecol = SiteCollection([site])
-        else:
+        else:  # assume a length-1 site collection
             assert isinstance(site, SiteCollection), site
             assert len(site) == 1, site
             self.sitecol = site
@@ -549,10 +555,12 @@ class SourceSiteDisaggregator(object):
         assert cmaker.grp_id == src.grp_id, (cmaker.grp_id == src.grp_id)
         cmaker.oq.mags_by_trt = {src.tectonic_region_type: src.get_magstrs()}
         self.edges = build_bin_edges(cmaker.oq, self.sitecol)
+        self.eps_bands = calc_eps_bands(
+            cmaker.truncation_level, self.edges['eps'])
 
     def make_ctxs(self):
         """
-        Build a list of contexts, one for each magnitude bin
+        Build a list of contexts, one for each non-empty magnitude bin
         """
         ctxs = self.cmaker.from_srcs([self.src], self.sitecol)
         if not ctxs:
@@ -566,3 +574,14 @@ class SourceSiteDisaggregator(object):
         magi[magi == -1] = 0  # when the magnitude is on the edge
         idxs = numpy.argsort(magi)
         return split_array(ctx[idxs], magi[idxs])
+
+    def disaggregate(self, ctx, imt, iml, rlz, epsstar=False):
+        # for each z
+        iml2dict = {imt: numpy.array([[iml]])}
+        arr7D = disaggregate(ctx, self.cmaker, self.g_by_z, iml2dict,
+                             self.eps_bands, 0, self.bin_edges, epsstar)
+        return arr7D[..., 0, 0, 0]  # 4D array of shape (D, Lo, La, E)
+
+    def disagg_dist_eps(self, ctx, imt, iml, rlz, epsstar=False):
+        mat4 = self.disaggregate(ctx, imt, iml, rlz, epsstar)
+        return mag_dist_eps_pmf(mat4)  # shape (D, E)
