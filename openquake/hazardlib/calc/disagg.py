@@ -77,7 +77,7 @@ def lon_lat_bins(lon, lat, size_km, coord_bin_width):
     return lon_bins, lat_bins
 
 
-def build_bin_edges(oq, mags_by_trt, sitecol):
+def build_bin_edges(oq, sitecol):
     """
     :returns: dictionary with (mag, dist, lon, lat, eps) edges
     """
@@ -87,6 +87,7 @@ def build_bin_edges(oq, mags_by_trt, sitecol):
     maximum_distance = oq.maximum_distance
     num_epsilon_bins = oq.num_epsilon_bins
     truncation_level = oq.truncation_level
+    mags_by_trt = oq.mags_by_trt
     
     # build mag_edges
     mags = set()
@@ -127,19 +128,19 @@ def build_bin_edges(oq, mags_by_trt, sitecol):
                 eps=eps_edges)
     
 
-def get_edges_shapedic(oq, sitecol, mags_by_trt, num_tot_rlzs):
+def get_edges_shapedic(oq, sitecol, num_tot_rlzs):
     """
     :returns: (mag dist lon lat eps trt) edges and shape dictionary
     """
-    assert mags_by_trt
-    trts = list(mags_by_trt)
+    assert oq.mags_by_trt
+    trts = list(oq.mags_by_trt)
 
     if oq.rlz_index is None:
         Z = oq.num_rlzs_disagg or num_tot_rlzs
     else:
         Z = len(oq.rlz_index)
 
-    edges = build_bin_edges(oq, mags_by_trt, sitecol)
+    edges = build_bin_edges(oq, sitecol)
     # override the computed edges with the explicit disagg_bin_edges
     for key, val in oq.disagg_bin_edges.items():
         if key in ('lon', 'lat'):
@@ -546,10 +547,10 @@ class SourceSiteDisaggregator(object):
             self.sitecol = site
         self.cmaker = cmaker
         assert cmaker.grp_id == src.grp_id, (cmaker.grp_id == src.grp_id)
-        mags_by_trt = {src.tectonic_region_type: src.get_magstrs()}
-        self.edges = build_bin_edges(cmaker, mags_by_trt, self.sitecol)
+        cmaker.oq.mags_by_trt = {src.tectonic_region_type: src.get_magstrs()}
+        self.edges = build_bin_edges(cmaker.oq, self.sitecol)
 
-    def init_ctxs(self):
+    def make_ctxs(self):
         """
         Build a list of contexts, one for each magnitude bin
         """
@@ -563,4 +564,5 @@ class SourceSiteDisaggregator(object):
 
         magi = numpy.searchsorted(self.edges['mag'], ctx.mag) - 1
         magi[magi == -1] = 0  # when the magnitude is on the edge
-        self.ctxs = split_array(ctx, magi)
+        idxs = numpy.argsort(magi)
+        return split_array(ctx[idxs], magi[idxs])

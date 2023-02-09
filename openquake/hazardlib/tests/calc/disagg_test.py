@@ -18,7 +18,7 @@ import os.path
 import numpy
 
 from openquake.hazardlib.nrml import to_python
-from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.calc import disagg, filters
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.gsim.campbell_2003 import Campbell2003
@@ -30,6 +30,7 @@ from openquake.hazardlib.gsim.bradley_2013 import Bradley2013
 from openquake.hazardlib import sourceconverter
 
 DATA_PATH = os.path.dirname(__file__)
+aac = numpy.testing.assert_allclose
 
 
 class BuildDisaggDataTestCase(unittest.TestCase):
@@ -93,18 +94,22 @@ class DisaggregateTestCase(unittest.TestCase):
         cls.site = Site(Point(0.1, 0.1), 800, z1pt0=100., z2pt5=1.)
         cls.imt = PGA()
         cls.iml = 0.1
-        cls.truncation_level = 1
+        cls.truncation_level = 1.
         cls.trt = 'Stable Continental Crust'
         gsim = Campbell2003()
         cls.gsims = {cls.trt: gsim}
-        params = dict(truncation_level=cls.truncation_level,
-                      imtls={'PGA': [cls.iml]},
-                      rlz_index=[0, 1],
-                      n_epsilons=3,
-                      mag_bin_width=3,
-                      dist_bin_width=4,
-                      coord_bin_width=2.4)
-        cls.cmaker = ContextMaker(cls.trt, {gsim: [0, 1]}, params)
+        mags = cls.sources[0].get_mags()
+        maxdist = filters.IntegrationDistance.new('200.')
+        oq = unittest.mock.Mock(truncation_level=cls.truncation_level,
+                                imtls={'PGA': [cls.iml]},
+                                rlz_index=[0, 1],
+                                num_epsilon_bins=3,
+                                mag_bin_width=.075,
+                                distance_bin_width=10,
+                                coordinate_bin_width=100,
+                                maximum_distance=maxdist,
+                                mags_by_trt={cls.trt: mags})
+        cls.cmaker = ContextMaker(cls.trt, {gsim: [0, 1]}, oq)
         cls.sources[0].grp_id = 0
         cls.cmaker.grp_id = 0
 
@@ -141,11 +146,14 @@ class DisaggregateTestCase(unittest.TestCase):
         aaae(matrix.sum(), 6.14179818e-11)
 
 
-    def _test_SSD(self):
+    def test_SSD(self):
         # test the SourceSiteDisaggregator
         ssd = disagg.SourceSiteDisaggregator(
             self.sources[0], self.site, self.cmaker)
-        ssd.init_ctxs()
+        ctxs = ssd.make_ctxs()
+        aac(ctxs[0].mag, [4.5, 4.5, 4.5, 4.5])
+        aac(ctxs[1].mag, [4.6, 4.6, 4.6, 4.6])
+        aac(ctxs[2].mag, [4.7, 4.7])
 
         
 class PMFExtractorsTestCase(unittest.TestCase):
