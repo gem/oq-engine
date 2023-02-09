@@ -395,7 +395,6 @@ def disaggregation(
         of the result tuple. The matrix can be used directly by pmf-extractor
         functions.
     """
-    bine = bin_edges
     trts = sorted(set(src.tectonic_region_type for src in sources))
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
@@ -405,8 +404,8 @@ def disaggregation(
     iml2 = numpy.array([[iml]])
 
     # Epsilon bins
-    if 'eps' in bine:
-        eps_bins = bine['eps']
+    if 'eps' in bin_edges:
+        eps_bins = bin_edges['eps']
         n_epsilons = len(eps_bins) - 1
     else:
         eps_bins = numpy.linspace(-truncation_level, truncation_level,
@@ -426,8 +425,8 @@ def disaggregation(
         rups[trt].extend(cm.from_srcs(srcs, sitecol))
 
     # Set the magnitude bins
-    if 'mag' in bine:
-        mag_bins = bine['mag']
+    if 'mag' in bin_edges:
+        mag_bins = bin_edges['mag']
     else:
         mags = numpy.array([r.mag for rs in rups.values() for r in rs])
         mag_bins = uniform_bins(mags.min(), mags.max(), mag_bin_width)
@@ -450,15 +449,15 @@ def disaggregation(
     # Distance bins
     min_dist = min(bd.dists.min() for bd in bdata.values())
     max_dist = max(bd.dists.max() for bd in bdata.values())
-    if 'dist' in bine:
-        dist_bins = bine['dist']
+    if 'dist' in bin_edges:
+        dist_bins = bin_edges['dist']
     else:
         dist_bins = uniform_bins(min_dist, max_dist, dist_bin_width)
 
     # Lon, Lat bins
-    if 'lon' in bine and 'lat' in bine:
-        lon_bins = bine['lon']
-        lat_bins = bine['lat']
+    if 'lon' in bin_edges and 'lat' in bin_edges:
+        lon_bins = bin_edges['lon']
+        lat_bins = bin_edges['lat']
     else:
         lon_bins, lat_bins = lon_lat_bins(site.location.x, site.location.y,
                                           max_dist, coord_bin_width)
