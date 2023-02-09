@@ -192,7 +192,7 @@ description:
   Default: "no description"
 
 disagg_bin_edges:
-  A dictionary where the keys can be: mag, eps, dist, lon, lat and the
+  A dictionary where the keys can be: mag, dist, lon, lat, eps and the
   values are lists of floats indicating the edges of the bins used to
   perform the disaggregation.
   Example: *disagg_bin_edges = {'mag': [5.0, 5.5, 6.0, 6.5]}*.

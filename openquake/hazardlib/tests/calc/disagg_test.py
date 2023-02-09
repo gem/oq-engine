@@ -25,6 +25,7 @@ from openquake.hazardlib.gsim.campbell_2003 import Campbell2003
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.site import Site
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.gsim.bradley_2013 import Bradley2013
 from openquake.hazardlib import sourceconverter
 
@@ -82,18 +83,30 @@ class DigitizeLonsTestCase(unittest.TestCase):
 
 
 class DisaggregateTestCase(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        # reading two multifault sources and a site
         d = os.path.dirname(os.path.dirname(__file__))
         source_model = os.path.join(d, 'source_model/multi-point-source.xml')
-        [self.sources] = nrml.to_python(source_model, SourceConverter(
+        [cls.sources] = nrml.to_python(source_model, SourceConverter(
             investigation_time=50., rupture_mesh_spacing=2.))
-        self.site = Site(Point(0.1, 0.1), 800, z1pt0=100., z2pt5=1.)
-        self.imt = PGA()
-        self.iml = 0.1
-        self.truncation_level = 1
-        self.trt = 'Stable Continental Crust'
+        cls.site = Site(Point(0.1, 0.1), 800, z1pt0=100., z2pt5=1.)
+        cls.imt = PGA()
+        cls.iml = 0.1
+        cls.truncation_level = 1
+        cls.trt = 'Stable Continental Crust'
         gsim = Campbell2003()
-        self.gsims = {self.trt: gsim}
+        cls.gsims = {cls.trt: gsim}
+        params = dict(truncation_level=cls.truncation_level,
+                      imtls={'PGA': [cls.iml]},
+                      rlz_index=[0, 1],
+                      n_epsilons=3,
+                      mag_bin_width=3,
+                      dist_bin_width=4,
+                      coord_bin_width=2.4)
+        cls.cmaker = ContextMaker(cls.trt, {gsim: [0, 1]}, params)
+        cls.sources[0].grp_id = 0
+        cls.cmaker.grp_id = 0
 
     def test(self):
         # a test sensitive to gsim.minimum_distance
@@ -128,6 +141,13 @@ class DisaggregateTestCase(unittest.TestCase):
         aaae(matrix.sum(), 6.14179818e-11)
 
 
+    def _test_SSD(self):
+        # test the SourceSiteDisaggregator
+        ssd = disagg.SourceSiteDisaggregator(
+            self.sources[0], self.site, self.cmaker)
+        ssd.init_ctxs()
+
+        
 class PMFExtractorsTestCase(unittest.TestCase):
     def setUp(self):
         super().setUp()

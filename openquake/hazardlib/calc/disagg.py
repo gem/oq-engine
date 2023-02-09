@@ -29,15 +29,16 @@ import numpy
 import scipy.stats
 
 from openquake.baselib.general import AccumDict, groupby, pprod
+from openquake.baselib.performance import split_array
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
 from openquake.hazardlib.tom import get_pnes
-from openquake.hazardlib.site import SiteCollection
+from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
@@ -52,17 +53,41 @@ def assert_same_shape(arrays):
         assert arr.shape == shape, (arr.shape, shape)
 
 
-def get_edges_shapedic(oq, sitecol, mags_by_trt, num_tot_rlzs):
+# used in calculators/disaggregation
+def lon_lat_bins(lon, lat, size_km, coord_bin_width):
     """
-    :returns: (mag dist lon lat eps trt) edges and shape dictionary
-    """
-    assert mags_by_trt
-    tl = oq.truncation_level
-    if oq.rlz_index is None:
-        Z = oq.num_rlzs_disagg or num_tot_rlzs
-    else:
-        Z = len(oq.rlz_index)
+    Define lon, lat bin edges for disaggregation histograms.
 
+    :param lon: longitude of the site
+    :param lat: latitude of the site
+    :param size_km: total size of the bins in km
+    :param coord_bin_width: bin width in degrees
+    :returns: two arrays lon bins, lat bins
+    """
+    nbins = numpy.ceil(size_km * KM_TO_DEGREES / coord_bin_width)
+    delta_lon = min(angular_distance(size_km, lat), 180)
+    delta_lat = min(size_km * KM_TO_DEGREES, 90)
+    EPS = .001  # avoid discarding the last edge
+    lon_bins = lon + numpy.arange(-delta_lon, delta_lon + EPS,
+                                  delta_lon / nbins)
+    lat_bins = lat + numpy.arange(-delta_lat, delta_lat + EPS,
+                                  delta_lat / nbins)
+    if cross_idl(*lon_bins):
+        lon_bins %= 360
+    return lon_bins, lat_bins
+
+
+def build_bin_edges(oq, mags_by_trt, sitecol):
+    """
+    :returns: dictionary with (mag, dist, lon, lat, eps) edges
+    """
+    mag_bin_width = oq.mag_bin_width
+    distance_bin_width = oq.distance_bin_width
+    coordinate_bin_width = oq.coordinate_bin_width
+    maximum_distance = oq.maximum_distance
+    num_epsilon_bins = oq.num_epsilon_bins
+    truncation_level = oq.truncation_level
+    
     # build mag_edges
     mags = set()
     trts = []
@@ -72,55 +97,71 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt, num_tot_rlzs):
     mags = sorted(mags)
     min_mag = mags[0]
     max_mag = mags[-1]
-
-    # build _edges
-    if 'mag' in oq.disagg_bin_edges:
-        mag_edges = oq.disagg_bin_edges.get('mag')
-    else:
-        n1 = int(numpy.floor(min_mag / oq.mag_bin_width))
-        n2 = int(numpy.ceil(max_mag / oq.mag_bin_width))
-        if n2 == n1 or max_mag >= round((oq.mag_bin_width * n2), 3):
-            n2 += 1
-        mag_edges = oq.mag_bin_width * numpy.arange(n1, n2+1)
+    n1 = int(numpy.floor(min_mag / mag_bin_width))
+    n2 = int(numpy.ceil(max_mag / mag_bin_width))
+    if n2 == n1 or max_mag >= round((mag_bin_width * n2), 3):
+        n2 += 1
+    mag_edges = mag_bin_width * numpy.arange(n1, n2+1)
 
     # build dist_edges
-    maxdist = max(oq.maximum_distance.max().values())
-    if 'dist' in oq.disagg_bin_edges:
-        dist_edges = oq.disagg_bin_edges['dist']
-    else:
-        dist_edges = oq.distance_bin_width * numpy.arange(
-            0, int(numpy.ceil(maxdist / oq.distance_bin_width) + 1))
-
-    # build eps_edges
-    if 'eps' in oq.disagg_bin_edges:
-        eps_edges = oq.disagg_bin_edges['eps']
-    else:
-        eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
+    maxdist = max(maximum_distance.max().values())
+    dist_edges = distance_bin_width * numpy.arange(
+        0, int(numpy.ceil(maxdist / distance_bin_width) + 1))
 
     # build lon_edges, lat_edges per sid
     lon_edges, lat_edges = {}, {}  # by sid
     for site in sitecol:
-        if 'lon' in oq.disagg_bin_edges and 'lat' in oq.disagg_bin_edges:
-            lon_edges[site.id] = oq.disagg_bin_edges['lon']
-            lat_edges[site.id] = oq.disagg_bin_edges['lat']
-        else:
-            loc = site.location
-            lon_edges[site.id], lat_edges[site.id] = lon_lat_bins(
-                loc.x, loc.y, maxdist, oq.coordinate_bin_width)
+        loc = site.location
+        lon_edges[site.id], lat_edges[site.id] = lon_lat_bins(
+            loc.x, loc.y, maxdist, coordinate_bin_width)
 
     # sanity check: the shapes of the lon lat edges are consistent
     assert_same_shape(list(lon_edges.values()))
     assert_same_shape(list(lat_edges.values()))
 
-    bin_edges = [mag_edges, dist_edges, lon_edges, lat_edges, eps_edges]
-    edges = [mag_edges, dist_edges, lon_edges[0], lat_edges[0], eps_edges]
-    shape = [len(edge) - 1 for edge in edges] + [len(trts)]
-    shapedic = dict(zip(BIN_NAMES, shape))
+    # build eps_edges
+    eps_edges = numpy.linspace(
+        -truncation_level, truncation_level, num_epsilon_bins + 1)
+
+    return dict(mag=mag_edges, dist=dist_edges, lon=lon_edges, lat=lat_edges,
+                eps=eps_edges)
+    
+
+def get_edges_shapedic(oq, sitecol, mags_by_trt, num_tot_rlzs):
+    """
+    :returns: (mag dist lon lat eps trt) edges and shape dictionary
+    """
+    assert mags_by_trt
+    trts = list(mags_by_trt)
+
+    if oq.rlz_index is None:
+        Z = oq.num_rlzs_disagg or num_tot_rlzs
+    else:
+        Z = len(oq.rlz_index)
+
+    edges = build_bin_edges(oq, mags_by_trt, sitecol)
+    # override the computed edges with the explicit disagg_bin_edges
+    for key, val in oq.disagg_bin_edges.items():
+        if key in ('lon', 'lat'):
+            edges[key] = {0: val}
+        else:
+            edges[key] = val
+    shapedic = {}
+    for name in BIN_NAMES:
+        if name in ('lon', 'lat'):
+            # taking the first, since the shape is the same for all sites
+            shapedic[name] = len(edges[name][0]) - 1
+        elif name == 'trt':
+            shapedic[name] = len(trts)
+        else:
+            shapedic[name] = len(edges[name]) - 1
     shapedic['N'] = len(sitecol)
     shapedic['M'] = len(oq.imtls)
     shapedic['P'] = len(oq.poes_disagg or (None,))
     shapedic['Z'] = Z
-    return bin_edges + [trts], shapedic
+    all_edges = [edges['mag'], edges['dist'], edges['lon'], edges['lat'],
+                 edges['eps'], trts]
+    return all_edges + [trts], shapedic
 
 
 def calc_eps_bands(truncation_level, eps):
@@ -217,30 +258,6 @@ def _disagg_eps(survival, bins, eps_bands, cum_bands):
         inside = bins == e + 1  # inside bins
         res[inside, e] = survival[inside] - cum_bands[bins[inside]]
     return res  # shape (U, E)
-
-
-# used in calculators/disaggregation
-def lon_lat_bins(lon, lat, size_km, coord_bin_width):
-    """
-    Define lon, lat bin edges for disaggregation histograms.
-
-    :param lon: longitude of the site
-    :param lat: latitude of the site
-    :param size_km: total size of the bins in km
-    :param coord_bin_width: bin width in degrees
-    :returns: two arrays lon bins, lat bins
-    """
-    nbins = numpy.ceil(size_km * KM_TO_DEGREES / coord_bin_width)
-    delta_lon = min(angular_distance(size_km, lat), 180)
-    delta_lat = min(size_km * KM_TO_DEGREES, 90)
-    EPS = .001  # avoid discarding the last edgebdata.pnes.shape
-    lon_bins = lon + numpy.arange(-delta_lon, delta_lon + EPS,
-                                  delta_lon / nbins)
-    lat_bins = lat + numpy.arange(-delta_lat, delta_lat + EPS,
-                                  delta_lat / nbins)
-    if cross_idl(*lon_bins):
-        lon_bins %= 360
-    return lon_bins, lat_bins
 
 
 # this is fast
@@ -515,3 +532,36 @@ pmf_map = dict([
     ('Mag_Lon_Lat', mag_lon_lat_pmf),
     ('Lon_Lat_TRT', lon_lat_trt_pmf),
 ])
+
+# ####################### SourceSiteDisaggregator ############################ #
+
+class SourceSiteDisaggregator(object):
+    def __init__(self, src, site, cmaker):
+        self.src = src
+        if isinstance(site, Site):
+            self.sitecol = SiteCollection([site])
+        else:
+            assert isinstance(site, SiteCollection), site
+            assert len(site) == 1, site
+            self.sitecol = site
+        self.cmaker = cmaker
+        assert cmaker.grp_id == src.grp_id, (cmaker.grp_id == src.grp_id)
+        mags_by_trt = {src.tectonic_region_type: src.get_magstrs()}
+        self.edges, self.shapedic = get_edges_shapedic(
+            cmaker, self.sitecol, mags_by_trt, 0)
+
+    def init_ctxs(self):
+        """
+        Build a list of contexts, one for each magnitude bin
+        """
+        ctxs = self.cmaker.from_srcs([self.src], self.sitecol)
+        if not ctxs:
+            raise FarAwayRupture
+        elif len(ctxs) == 1:  # poissonian source
+            ctx = ctxs[0]
+        elif len(ctxs) == 2:  # nonpoissonian source
+            ctx = ctxs[1]
+
+        magi = numpy.searchsorted(self.edges[0], ctx.mag) - 1
+        magi[magi == -1] = 0  # when the magnitude is on the edge
+        self.ctxs = split_array(ctx, magi)
