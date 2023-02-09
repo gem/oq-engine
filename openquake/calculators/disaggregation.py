@@ -176,13 +176,17 @@ def disaggregate(close, cmaker, g_by_z, iml2, eps_bands, s, bins, epsstar):
         # built as ctx['weight'] = src.mutex_weight in contexts.py
         ctxs = performance.split_array(close, close.src_id)
         weights = [ctx.weight[0] for ctx in ctxs]
-        mats = [disagg.disaggregate(ctx, cmaker, g_by_z, iml2,
-                                    eps_bands, s, bins, epsstar)
-                for ctx in ctxs]
+        mats = []
+        for ctx in ctxs:
+            mea, std, _, _ = cmaker.get_mean_stds([ctx], split_by_mag=True)
+            mat = disagg.disaggregate(ctx, mea, std, cmaker, g_by_z, iml2,
+                                      eps_bands, s, bins, epsstar)
+            mats.append(mat)
         return numpy.average(mats, weights=weights, axis=0)
     else:
-        return disagg.disaggregate(close, cmaker, g_by_z, iml2, eps_bands,
-                                   s, bins, epsstar)
+        mea, std, _, _ = cmaker.get_mean_stds([close], split_by_mag=True)
+        return disagg.disaggregate(close, mea, std, cmaker, g_by_z, iml2,
+                                   eps_bands, s, bins, epsstar)
 
 
 def get_outputs_size(shapedic, disagg_outputs):

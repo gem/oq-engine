@@ -175,10 +175,12 @@ DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
 
 
 # this is inside an inner loop
-def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps_bands, sid, bin_edges,
-                 epsstar=False):
+def disaggregate(ctx, mea, std, cmaker, g_by_z, iml2dict, eps_bands,
+                 sid, bin_edges, epsstar=False):
     """
     :param ctx: a recarray of size U for a single site and magnitude bin
+    :param mea: array of shape (G, M, U)
+    :param std: array of shape (G, M, U)
     :param cmaker: a ContextMaker instance
     :param g_by_z: an array of gsim indices
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
@@ -211,8 +213,6 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps_bands, sid, bin_edges,
     # U - Number of contexts (i.e. ruptures if there is a single site)
     # M - Number of IMTs
     # G - Number of gsims
-    mea, std = cmaker.get_mean_stds([ctx], split_by_mag=True)[:2]
-    # shape (2, G, M, U)
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
     # Multi-dimensional iteration
@@ -454,9 +454,11 @@ def disaggregation(
         [ctx] = rups[trt]
         ctx.magi = numpy.searchsorted(mag_bins, ctx.mag) - 1
         for magi in numpy.unique(ctx.magi):
+            ctxt = ctx[ctx.magi == magi]
+            mea, std, _, _ = cm.get_mean_stds([ctxt], split_by_mag=True)
             bdata[trt, magi] = disaggregate(
-                ctx[ctx.magi == magi], cm, [0],
-                {imt: iml2}, eps_bands, 0, [eps_bins], epsstar)
+                ctxt, mea, std, cm, [0], {imt: iml2}, eps_bands, 0,
+                [eps_bins], epsstar)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(
