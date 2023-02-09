@@ -998,7 +998,7 @@ types of analysis are currently supported:
    post- processing the set of computed ground-motion fields.
 
 -  *Scenario Based Seismic Hazard Analysis*, allowing the calculation of ground motion 
-   fields from a single earthquake rupture scenario taking into account ground-motion
+   fields from a single earthquake rupture scenario taking into account ground motion
    aleatory variability. The ground motion fields can be conditioned to observed data,
    when available.
 
@@ -1096,7 +1096,7 @@ The main calculators used to perform this analysis are:
 
 Scenario based Seismic Hazard Analysis 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-In case of Scenario Based Seismic Hazard Analysis, simulates a set of 
+In case of Scenario Based Seismic Hazard Analysis, the engine simulates a set of 
 ground motion fields (GMFs) at the target sites for the requested set of 
 intensity measure types. This set of GMFs can then be used in 
 :ref:`Scenario Damage Assessment` and :ref:`Scenario Risk Assessment`
@@ -1779,11 +1779,11 @@ calculation.
 The Ground Motion Logic Tree
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The structure of the *Ground-Motion Logic Tree* consists of a list of ground
+The structure of the *Ground Motion Logic Tree* consists of a list of ground
 motion prediction equations for each tectonic region used to
 characterise the sources in the PSHA input model.
 
-The example below in shows a simple *Ground-Motion Logic Tree*. This logic tree assumes that all
+The example below in shows a simple *Ground Motion Logic Tree*. This logic tree assumes that all
 the sources in the PSHA input model belong to “Active Shallow Crust” and
 uses for calculation the B. S.-J. Chiou and Youngs (2008) Ground Motion Prediction Equation.
 
@@ -1827,8 +1827,7 @@ different types of seismic hazard calculations.
 
 Classical PSHA 
 ~~~~~~~~~~~~~~
-In the
-following we describe the overall structure and the most typical
+In the following we describe the overall structure and the most typical
 parameters of a configuration file to be used for the computation of a
 seismic hazard map using a classical PSHA methodology.
 
@@ -2302,7 +2301,7 @@ Scenario hazard
 ~~~~~~~~~~~~~~~
 In order to run this calculator, the parameter ``calculation_mode`` needs to be set to
 ``scenario``. The user can run scenario calculations with and without conditioning the
-gorund shaking to station and macroseismic data. 
+ground shaking to station and macroseismic data. 
 The ground motion fields will be computed at each of the sites and for
 each of the intensity measure types specified in the job configuration file.
 
