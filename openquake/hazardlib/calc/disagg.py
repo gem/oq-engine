@@ -161,7 +161,7 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt, num_tot_rlzs):
     shapedic['Z'] = Z
     all_edges = [edges['mag'], edges['dist'], edges['lon'], edges['lat'],
                  edges['eps'], trts]
-    return all_edges + [trts], shapedic
+    return all_edges, shapedic
 
 
 def calc_eps_bands(truncation_level, eps):
@@ -547,8 +547,7 @@ class SourceSiteDisaggregator(object):
         self.cmaker = cmaker
         assert cmaker.grp_id == src.grp_id, (cmaker.grp_id == src.grp_id)
         mags_by_trt = {src.tectonic_region_type: src.get_magstrs()}
-        self.edges, self.shapedic = get_edges_shapedic(
-            cmaker, self.sitecol, mags_by_trt, 0)
+        self.edges = build_bin_edges(cmaker, mags_by_trt, self.sitecol)
 
     def init_ctxs(self):
         """
@@ -562,6 +561,6 @@ class SourceSiteDisaggregator(object):
         elif len(ctxs) == 2:  # nonpoissonian source
             ctx = ctxs[1]
 
-        magi = numpy.searchsorted(self.edges[0], ctx.mag) - 1
+        magi = numpy.searchsorted(self.edges['mag'], ctx.mag) - 1
         magi[magi == -1] = 0  # when the magnitude is on the edge
         self.ctxs = split_array(ctx, magi)
