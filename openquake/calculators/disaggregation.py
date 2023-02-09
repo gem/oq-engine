@@ -136,7 +136,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
         for (s, z), r in numpy.ndenumerate(hmap4.rlzs):
             if r in rlzs:
                 g_by_z[s][z] = g
-    eps3 = disagg._eps3(cmaker.truncation_level, bin_edges[4])  # eps edges
+    eps_bands = disagg.calc_eps_bands(cmaker.truncation_level, bin_edges[4])
     imts = [from_string(im) for im in cmaker.imtls]
     for magi in numpy.unique(magidx):
         for ctxt in ctxs:
@@ -155,7 +155,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
                 with dis_mon:
                     # 7D-matrix #disbins, #lonbins, #latbins, #epsbins, M, P, Z
                     matrix = disaggregate(close, cmaker, g_by_z[s],
-                                          iml2, eps3, s, bins, epsstar)
+                                          iml2, eps_bands, s, bins, epsstar)
                     for m in range(M):
                         mat6 = matrix[..., m, :, :]
                         if mat6.any():
@@ -166,7 +166,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     # the matrices is fast and the data are not queuing up
 
 
-def disaggregate(close, cmaker, g_by_z, iml2, eps3, s, bins, epsstar):
+def disaggregate(close, cmaker, g_by_z, iml2, eps_bands, s, bins, epsstar):
     """
     :returns: a 7D disaggregation matrix, weighted if src_mutex is True
     """
@@ -176,13 +176,13 @@ def disaggregate(close, cmaker, g_by_z, iml2, eps3, s, bins, epsstar):
         # built as ctx['weight'] = src.mutex_weight in contexts.py
         ctxs = performance.split_array(close, close.src_id)
         weights = [ctx.weight[0] for ctx in ctxs]
-        mats = [disagg.disaggregate(ctx, cmaker, g_by_z, iml2, eps3, s, bins,
-                                    epsstar=epsstar)
+        mats = [disagg.disaggregate(ctx, cmaker, g_by_z, iml2,
+                                    eps_bands, s, bins, epsstar)
                 for ctx in ctxs]
         return numpy.average(mats, weights=weights, axis=0)
     else:
-        return disagg.disaggregate(close, cmaker, g_by_z, iml2, eps3, s, bins,
-                                   epsstar=epsstar)
+        return disagg.disaggregate(close, cmaker, g_by_z, iml2, eps_bands,
+                                   s, bins, epsstar)
 
 
 def get_outputs_size(shapedic, disagg_outputs):

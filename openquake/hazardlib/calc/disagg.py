@@ -123,27 +123,26 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt, num_tot_rlzs):
     return bin_edges + [trts], shapedic
 
 
-def _eps3(truncation_level, eps):
+def calc_eps_bands(truncation_level, eps):
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
-    eps_bands = tn.cdf(eps[1:]) - tn.cdf(eps[:-1])
-    return tn, eps, eps_bands
+    return tn.cdf(eps[1:]) - tn.cdf(eps[:-1])
 
 
 DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
 
 
 # this is inside an inner loop
-def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
+def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps_bands, sid, bin_edges,
                  epsstar=False):
     """
     :param ctx: a recarray of size U for a single site and magnitude bin
     :param cmaker: a ContextMaker instance
     :param g_by_z: an array of gsim indices
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
-    :param eps3: a triplet (truncnorm, epsilons, eps_bands)
+    :param eps_bands: an array of E elements obtained from the E+1 eps_edges
     :param sid: the site ID
-    :param bin_edges: a tuple of bin edges
+    :param bin_edges: a tuple of 5 bin edges (mag, dist, lon, lat, eps)
     :param epsstar: a boolean. When True, disaggregation contains eps* results
     """
     # disaggregate (separate) PoE in different contributions
@@ -152,7 +151,8 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
     # M - Number of IMTs
     # P - Number of PoEs in poes_disagg
     # Z - Number of realizations to consider
-    U, E, M = len(ctx), len(eps3[2]), len(iml2dict)
+    epsilons = bin_edges[-1]
+    U, E, M = len(ctx), len(eps_bands), len(iml2dict)
     iml2 = next(iter(iml2dict.values()))
     P, Z = iml2.shape
 
@@ -163,7 +163,6 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
         iml3[m] = to_distribution_values(iml2, imt)
 
     phi_b = cmaker.phi_b
-    truncnorm, epsilons, eps_bands = eps3
     cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
     # Array with mean and total std values. Shape of this is:
     # U - Number of contexts (i.e. ruptures if there is a single site)
@@ -204,7 +203,7 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
                             getattr(rec, 'probs_occur', z0),
                             poes[u], time_span)
     bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
-    if not bin_edges:
+    if len(bin_edges) == 1:  # disagg.disaggregation passes only eps_edges
         return bindata
     return _build_disagg_matrix(bindata, bin_edges)
 
@@ -410,7 +409,7 @@ def disaggregation(
     else:
         eps_bins = numpy.linspace(-truncation_level, truncation_level,
                                   n_epsilons + 1)
-    eps3 = _eps3(truncation_level, eps_bins)
+    eps_bands = calc_eps_bands(truncation_level, eps_bins)
 
     # Create contexts
     rups = AccumDict(accum=[])
@@ -438,7 +437,7 @@ def disaggregation(
         for magi in numpy.unique(ctx.magi):
             bdata[trt, magi] = disaggregate(
                 ctx[ctx.magi == magi], cm, [0],
-                {imt: iml2}, eps3, epsstar=epsstar)
+                {imt: iml2}, eps_bands, 0, [eps_bins], epsstar)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(
