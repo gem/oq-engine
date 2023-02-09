@@ -175,15 +175,15 @@ DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
 
 
 # this is inside an inner loop
-def disaggregate(ctx, mea, std, cmaker, g_by_z, iml2dict, eps_bands,
+def disaggregate(ctx, mea, std, cmaker, g, iml2dict, eps_bands,
                  sid, bin_edges, epsstar=False):
     """
     :param ctx: a recarray of size U for a single site and magnitude bin
     :param mea: array of shape (G, M, U)
     :param std: array of shape (G, M, U)
     :param cmaker: a ContextMaker instance
-    :param g_by_z: an array of gsim indices
-    :param iml2dict: a dictionary of arrays imt -> (P, Z)
+    :param g: a gsim index
+    :param iml2dict: a dictionary of arrays imt -> P
     :param eps_bands: an array of E elements obtained from the E+1 eps_edges
     :param sid: the site ID
     :param bin_edges: a tuple of 5 bin edges (mag, dist, lon, lat, eps)
@@ -198,14 +198,14 @@ def disaggregate(ctx, mea, std, cmaker, g_by_z, iml2dict, eps_bands,
     # Z - Number of realizations to consider
     epsilons = bin_edges[-1]
     U, E, M = len(ctx), len(eps_bands), len(iml2dict)
-    iml2 = next(iter(iml2dict.values()))
-    P, Z = iml2.shape
+    imls = next(iter(iml2dict.values()))
+    P = len(imls)
 
     # switch to logarithmic intensities
-    iml3 = numpy.zeros((M, P, Z))
-    for m, (imt, iml2) in enumerate(iml2dict.items()):
+    iml2 = numpy.zeros((M, P))
+    for m, (imt, imls) in enumerate(iml2dict.items()):
         # 0 values are converted into -inf
-        iml3[m] = to_distribution_values(iml2, imt)
+        iml2[m] = to_distribution_values(imls, imt)
 
     phi_b = cmaker.phi_b
     cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
@@ -213,18 +213,12 @@ def disaggregate(ctx, mea, std, cmaker, g_by_z, iml2dict, eps_bands,
     # U - Number of contexts (i.e. ruptures if there is a single site)
     # M - Number of IMTs
     # G - Number of gsims
-    poes = numpy.zeros((U, E, M, P, Z))
-    pnes = numpy.ones((U, E, M, P, Z))
+    poes = numpy.zeros((U, E, M, P))
+    pnes = numpy.ones((U, E, M, P))
     # Multi-dimensional iteration
     min_eps, max_eps = epsilons.min(), epsilons.max()
-    for (m, p, z), iml in numpy.ndenumerate(iml3):
+    for (m, p), iml in numpy.ndenumerate(iml2):
         if iml == -numpy.inf:  # zero hazard
-            continue
-        # discard the z contributions coming from wrong realizations: see
-        # the test disagg/case_2
-        try:
-            g = g_by_z[z]
-        except KeyError:
             continue
         lvls = (iml - mea[g, m]) / std[g, m]
         # Find the index in the epsilons-bins vector where lvls (which are
@@ -235,9 +229,9 @@ def disaggregate(ctx, mea, std, cmaker, g_by_z, iml2dict, eps_bands,
         if epsstar:
             ok = (lvls >= min_eps) & (lvls < max_eps)
             # The leftmost indexes are ruptures and epsilons
-            poes[ok, idxs[ok] - 1, m, p, z] = truncnorm_sf(phi_b, lvls[ok])
+            poes[ok, idxs[ok] - 1, m, p] = truncnorm_sf(phi_b, lvls[ok])
         else:
-            poes[:, :, m, p, z] = _disagg_eps(
+            poes[:, :, m, p] = _disagg_eps(
                 truncnorm_sf(phi_b, lvls), idxs, eps_bands, cum_bands)
     z0 = numpy.zeros(0)
     time_span = cmaker.tom.time_span
@@ -290,12 +284,12 @@ def _build_disagg_matrix(bdata, bins):
     dists_idx[dists_idx == dim1] = dim1 - 1
     lons_idx[lons_idx == dim2] = dim2 - 1
     lats_idx[lats_idx == dim3] = dim3 - 1
-    U, E, M, P, Z = bdata.pnes.shape
-    mat7D = numpy.ones(shape + [M, P, Z])
+    U, E, M, P = bdata.pnes.shape
+    mat6D = numpy.ones(shape + [M, P])
     for i_dist, i_lon, i_lat, pne in zip(
             dists_idx, lons_idx, lats_idx, bdata.pnes):
-        mat7D[i_dist, i_lon, i_lat] *= pne  # shape E, M, P, Z
-    return 1. - mat7D
+        mat6D[i_dist, i_lon, i_lat] *= pne  # shape E, M, P
+    return 1. - mat6D
 
 
 def uniform_bins(min_value, max_value, bin_width):
@@ -419,7 +413,7 @@ def disaggregation(
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}  # by trt, magi
     sitecol = SiteCollection([site])
-    iml2 = numpy.array([[iml]])
+    imls = numpy.array([iml])
 
     # Epsilon bins
     if 'eps' in bin_edges:
@@ -457,7 +451,7 @@ def disaggregation(
             ctxt = ctx[ctx.magi == magi]
             mea, std, _, _ = cm.get_mean_stds([ctxt], split_by_mag=True)
             bdata[trt, magi] = disaggregate(
-                ctxt, mea, std, cm, [0], {imt: iml2}, eps_bands, 0,
+                ctxt, mea, std, cm, 0, {imt: imls}, eps_bands, 0,
                 [eps_bins], epsstar)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
@@ -488,8 +482,8 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))  # 6D
     for trt, magi in bdata:
-        mat7 = _build_disagg_matrix(bdata[trt, magi], bin_edges[1:])
-        matrix[magi, ..., trt_num[trt]] = mat7[..., 0, 0, 0]
+        mat6 = _build_disagg_matrix(bdata[trt, magi], bin_edges[1:])
+        matrix[magi, ..., trt_num[trt]] = mat6[..., 0, 0]
     return bin_edges + (trts,), matrix
 
 

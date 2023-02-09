@@ -151,11 +151,21 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
                 # dist_bins, lon_bins, lat_bins, eps_bins
                 bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
                         bin_edges[4])
-                iml2 = dict(zip(imts, iml3))
+                shp = [len(b)-1 for b in bins[:4]] + [M, P, Z]
                 with dis_mon:
                     # 7D-matrix #disbins, #lonbins, #latbins, #epsbins, M, P, Z
-                    matrix = disaggregate(close, cmaker, g_by_z[s],
-                                          iml2, eps_bands, s, bins, epsstar)
+                    matrix = numpy.zeros(shp)
+                    for z in range(Z):
+                        # discard the z contributions coming from wrong
+                        # realizations: see the test disagg/case_2
+                        try:
+                            g = g_by_z[s][z]
+                        except KeyError:
+                            continue
+                        iml2 = dict(zip(imts, iml3[:, :, z]))
+                        matrix[..., z] = disaggregate(close, cmaker, g,
+                                                      iml2, eps_bands,
+                                                      s, bins, epsstar)
                     for m in range(M):
                         mat6 = matrix[..., m, :, :]
                         if mat6.any():
@@ -166,7 +176,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     # the matrices is fast and the data are not queuing up
 
 
-def disaggregate(close, cmaker, g_by_z, iml2, eps_bands, s, bins, epsstar):
+def disaggregate(close, cmaker, g, iml2, eps_bands, s, bins, epsstar):
     """
     :returns: a 7D disaggregation matrix, weighted if src_mutex is True
     """
@@ -179,13 +189,13 @@ def disaggregate(close, cmaker, g_by_z, iml2, eps_bands, s, bins, epsstar):
         mats = []
         for ctx in ctxs:
             mea, std, _, _ = cmaker.get_mean_stds([ctx], split_by_mag=True)
-            mat = disagg.disaggregate(ctx, mea, std, cmaker, g_by_z, iml2,
+            mat = disagg.disaggregate(ctx, mea, std, cmaker, g, iml2,
                                       eps_bands, s, bins, epsstar)
             mats.append(mat)
         return numpy.average(mats, weights=weights, axis=0)
     else:
         mea, std, _, _ = cmaker.get_mean_stds([close], split_by_mag=True)
-        return disagg.disaggregate(close, mea, std, cmaker, g_by_z, iml2,
+        return disagg.disaggregate(close, mea, std, cmaker, g, iml2,
                                    eps_bands, s, bins, epsstar)
 
 
