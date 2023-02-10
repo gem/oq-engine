@@ -18,6 +18,7 @@ https://wheelhouse.openquake.org/v3/windows/py39/pyproj-3.4.0-cp39-cp39-win_amd6
 https://wheelhouse.openquake.org/v3/windows/py39/scipy-1.8.1-cp39-cp39-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py39/Pillow-9.2.0-cp39-cp39-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py39/numba-0.56.2-cp39-cp39-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py39/llvmlite-0.39.1-cp39-cp39-win_amd64.whl
 #
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-2.4.0-py2.py3-none-any.whl
