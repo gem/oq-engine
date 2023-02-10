@@ -29,7 +29,7 @@ import numpy
 import scipy.stats
 
 from openquake.baselib.general import AccumDict, groupby, pprod
-from openquake.baselib.performance import split_array
+from openquake.baselib.performance import split_array, get_slices
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -379,14 +379,21 @@ pmf_map = dict([
     ('Lon_Lat_TRT', lon_lat_trt_pmf),
 ])
 
-# ####################### SourceSiteDisaggregator ############################ #
+# ########################## Disaggregator classes ########################## #
 
+    
 class SiteDisaggregator(object):
     """
     A class to perform single-site disaggregation
     """
-    def __init__(self, ctx, sid, cmaker, bin_edges, g_by_rlz):
-        self.ctx = ctx  # assume all in the same mag bin
+    def __init__(self, ctxs, sid, magi, cmaker, bin_edges, g_by_rlz):
+        # consider only the contexts affecting the given site
+        ctxs = [ctx[(ctx.sids == sid) & (ctx.magi == magi)] for ctx in ctxs]
+        # compute mea and std with shape (M, G, U)
+        mea, std, _, _ = cmaker.get_mean_stds(ctxs, split_by_mag=True)
+        self.ctx = numpy.concatenate(ctxs).view(numpy.recarray)
+        if len(self.ctx) == 0:
+            raise FarAwayRupture('No contexts for site #%d' % sid)
         self.cmaker = cmaker
         # dist_bins, lon_bins, lat_bins, eps_bins
         self.bin_edges = (bin_edges[1],
@@ -398,17 +405,16 @@ class SiteDisaggregator(object):
             # getting a context array and a weight for each source
             # NB: relies on ctx.weight having all equal weights, being
             # built as ctx['weight'] = src.mutex_weight in contexts.py
-            self.ctxs = split_array(ctx, ctx.src_id)
+            slices = get_slices(self.ctx.src_id).values()
+            self.ctxs = [self.ctx[s0:s1] for [(s0, s1)] in slices]
             self.weights = [ctx.weight[0] for ctx in self.ctxs]
+            self.meas = [mea[:, :, s0:s1] for [(s0, s1)] in slices]
+            self.stds = [std[:, :, s0:s1] for [(s0, s1)] in slices]
         else:
-            self.ctxs = [ctx]
-            self.weights = [ctx.weight[0]]
-        self.meas = []
-        self.stds = []
-        for ctx in self.ctxs:
-            mea, std, _, _ = cmaker.get_mean_stds([ctx], split_by_mag=True)
-            self.meas.append(mea)
-            self.stds.append(std)
+            self.ctxs = [self.ctx]
+            self.weights = [self.ctx.weight[0]]
+            self.meas = [mea]
+            self.stds = [std]
 
     def disagg(self, iml3, rlzs, epsstar):
         M, P, Z = iml3.shape
@@ -429,7 +435,6 @@ class SiteDisaggregator(object):
     def disagg6D(self, g, iml2, epsstar):
         mats = []
         for ctx, mea, std in zip(self.ctxs, self.meas, self.stds):
-            assert len(ctx) == mea.shape[-1]
             mat = _disaggregate(ctx, mea, std, self.cmaker, g, iml2,
                                 self.bin_edges, epsstar)
             mats.append(mat)
