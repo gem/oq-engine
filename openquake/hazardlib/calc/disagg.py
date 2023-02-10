@@ -174,28 +174,21 @@ def calc_eps_bands(truncation_level, eps):
 DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
 
 
-# this is inside an inner loop
+# this is the crucial bit for performance
 def _disaggregate(ctx, mea, std, cmaker, g, iml2dict, eps_bands,
                   bin_edges, epsstar=False):
-    """
-    :param ctx: a recarray of size U for a single site and magnitude bin
-    :param mea: array of shape (G, M, U)
-    :param std: array of shape (G, M, U)
-    :param cmaker: a ContextMaker instance
-    :param g: a gsim index
-    :param iml2dict: a dictionary of arrays imt -> P
-    :param eps_bands: an array of E elements obtained from the E+1 eps_edges
-    :param bin_edges: a tuple of 5 bin edges (mag, dist, lon, lat, eps)
-    :param epsstar: a boolean. When True, disaggregation contains eps* results
-    :returns: a 7D-array of shape (D, Lo, La, E, M, P, Z)
-    """
-    # disaggregate (separate) PoE in different contributions
-    # U - Number of contexts (i.e. ruptures)
-    # E - Number of epsilon bins between lower and upper truncation
-    # M - Number of IMTs
-    # P - Number of PoEs in poes_disagg
-    # Z - Number of realizations to consider
-    epsilons = bin_edges[-1]
+    # ctx: a recarray of size U for a single site and magnitude bin
+    # mea: array of shape (G, M, U)
+    # std: array of shape (G, M, U)
+    # cmaker: a ContextMaker instance
+    # g: a gsim index
+    # iml2dict: a dictionary of arrays imt -> P, then number of poes_disagg
+    # eps_bands: an array of E elements obtained from the E+1 eps_edges
+    # bin_edges: a tuple of 5 bin edges (mag, dist, lon, lat, eps)
+    # epsstar: a boolean. When True, disaggregation contains eps* results
+    # returns a 7D-array of shape (D, Lo, La, E, M, P, Z)
+
+    epsilons = bin_edges[-1]  # last edge
     U, E, M = len(ctx), len(eps_bands), len(iml2dict)
     imls = next(iter(iml2dict.values()))
     P = len(imls)
@@ -221,7 +214,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2dict, eps_bands,
             continue
         lvls = (iml - mea[g, m]) / std[g, m]
         # Find the index in the epsilons-bins vector where lvls (which are
-        # epsilons) should be included.
+        # epsilons) should be included
         idxs = numpy.searchsorted(epsilons, lvls)
         # Now we split the epsilons into parts (one for each epsilon-bin larger
         # than lvls)
