@@ -181,32 +181,38 @@ def get_eps4(eps_edges, truncation_level):
     return min(eps_edges), max(eps_edges), eps_bands, eps_cum
 
 
-# this is the crucial bit for performance
-def _disaggregate(ctx, mea, std, cmaker, g, iml2dict, bin_edges, epsstar=False):
+def imlog(iml2dict):
+    """
+    :param iml2dict: dictionary imt -> array of P intensities
+    :returns: array (M, P) of logarithmic intensities
+    """
+    imls = next(iter(iml2dict.values()))
+    M, P = len(iml2dict), len(imls)
+    iml2 = numpy.zeros((M, P))
+    for m, (imt, imls) in enumerate(iml2dict.items()):
+        # 0 values are converted into -inf
+        iml2[m] = to_distribution_values(imls, imt)
+    return iml2
+
+
+# NB: this function is the crucial bit for performance!
+def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False):
     # ctx: a recarray of size U for a single site and magnitude bin
     # mea: array of shape (G, M, U)
     # std: array of shape (G, M, U)
     # cmaker: a ContextMaker instance
     # g: a gsim index
-    # iml2dict: a dictionary of arrays imt -> P, then number of poes_disagg
+    # iml2: an array of shape (M, P)
     # eps_bands: an array of E elements obtained from the E+1 eps_edges
     # bin_edges: a tuple of 5 bin edges (mag, dist, lon, lat, eps)
     # epsstar: a boolean. When True, disaggregation contains eps* results
     # returns a 7D-array of shape (D, Lo, La, E, M, P, Z)
 
-    epsilons = tuple(bin_edges[-1])  # last edge
+    eps_edges = tuple(bin_edges[-1])  # last edge
     min_eps, max_eps, eps_bands, cum_bands = get_eps4(
-        epsilons, cmaker.truncation_level)
-    U, E, M = len(ctx), len(eps_bands), len(iml2dict)
-    imls = next(iter(iml2dict.values()))
-    P = len(imls)
-
-    # switch to logarithmic intensities
-    iml2 = numpy.zeros((M, P))
-    for m, (imt, imls) in enumerate(iml2dict.items()):
-        # 0 values are converted into -inf
-        iml2[m] = to_distribution_values(imls, imt)
-
+        eps_edges, cmaker.truncation_level)
+    U, E = len(ctx), len(eps_bands)
+    M, P = iml2.shape
     phi_b = cmaker.phi_b
     # Array with mean and total std values. Shape of this is:
     # U - Number of contexts (i.e. ruptures if there is a single site)
@@ -221,7 +227,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2dict, bin_edges, epsstar=False):
         lvls = (iml - mea[g, m]) / std[g, m]
         # Find the index in the epsilons-bins vector where lvls (which are
         # epsilons) should be included
-        idxs = numpy.searchsorted(epsilons, lvls)
+        idxs = numpy.searchsorted(eps_edges, lvls)
         # Now we split the epsilons into parts (one for each epsilon-bin larger
         # than lvls)
         if epsstar:
@@ -416,15 +422,15 @@ class SiteDisaggregator(object):
                 g = self.g_by_z[z]
             except KeyError:
                 continue
-            imls_by_imt = dict(zip(self.cmaker.imts, iml3[:, :, z]))
-            matrix[..., z] = self.disagg6D(g, imls_by_imt, epsstar)
+            iml2 = imlog(dict(zip(self.cmaker.imts, iml3[:, :, z])))
+            matrix[..., z] = self.disagg6D(g, iml2, epsstar)
         return matrix
 
-    def disagg6D(self, g, imls_by_imt, epsstar):
+    def disagg6D(self, g, iml2, epsstar):
         mats = []
         for ctx, mea, std in zip(self.ctxs, self.meas, self.stds):
             assert len(ctx) == mea.shape[-1]
-            mat = _disaggregate(ctx, mea, std, self.cmaker, g, imls_by_imt,
+            mat = _disaggregate(ctx, mea, std, self.cmaker, g, iml2,
                                 self.bin_edges, epsstar)
             mats.append(mat)
         if len(mats) == 1:
@@ -561,7 +567,7 @@ def disaggregation(
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}  # by trt, magi
     sitecol = SiteCollection([site])
-    imls = numpy.array([iml])
+    iml2 = imlog({imt: [iml]})
 
     # Epsilon bins
     if 'eps' in bin_edges:
@@ -597,7 +603,7 @@ def disaggregation(
             ctxt = ctx[ctx.magi == magi]
             mea, std, _, _ = cm.get_mean_stds([ctxt], split_by_mag=True)
             bdata[trt, magi] = _disaggregate(
-                ctxt, mea, std, cm, 0, {imt: imls}, [eps_bins], epsstar)
+                ctxt, mea, std, cm, 0, iml2, [eps_bins], epsstar)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(
