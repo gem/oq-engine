@@ -70,6 +70,7 @@ def _hmap4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     P = len(poes_disagg)
     M = len(imtls)
     arr = numpy.empty((N, M, P, Z))
+    acc = AccumDict(accum=[])  # site, imt, poe -> rlzs
     for m, imt in enumerate(imtls):
         for (s, z), rlz in numpy.ndenumerate(rlzs):
             curve = curves[s][z]
@@ -82,12 +83,14 @@ def _hmap4(rlzs, iml_disagg, imtls, poes_disagg, curves):
                     curve[imt], imtls[imt], poes_disagg)
                 for iml, poe in zip(arr[s, m, :, z], poes_disagg):
                     if iml == 0:
-                        logging.warning('Cannot disaggregate for site %d, %s, '
-                                        'poe=%s, rlz=%d: the hazard is zero',
-                                        s, imt, poe, rlz)
+                        acc[s, imt, poe].append(rlz)
                     elif poe > max_poe:
                         logging.warning(
                             POE_TOO_BIG, s, poe, max_poe, rlz, imt)
+    for (s, imt, poe), zero_rlzs in acc.items():
+        logging.warning('Cannot disaggregate for site %d, %s, '
+                        'poe=%s, rlzs=%s: the hazard is zero',
+                        s, imt, poe, zero_rlzs)
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
