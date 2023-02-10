@@ -198,12 +198,12 @@ class ClusterPoissonTOM(PoissonTOM):
 
 
 @compile(["(float64, float64[:], float64[:], float64)",
-          "(float64, float64[:], float64[:,:,:,:], float64)"])
+          "(float64, float64[:], float64[:,:,:], float64)"])
 def get_pnes(rate, probs, poes, time_span):
     """
     :param rate: occurrence rate in case of a poissonian rupture
     :param probs: probabilities of occurrence in the nonpoissonian case
-    :param poes: array of PoEs of shape 2D or 4D
+    :param poes: array of PoEs of shape 1D or 3D
     :param time_span: time span in the poissonian case (0. for FatedTOM)
 
     Fast way to return probabilities of no exceedence given an array
