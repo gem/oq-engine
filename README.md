@@ -29,16 +29,17 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 
 ### Current Long Term Support (LTS) release - for users wanting stability
 
-Current LTS version is the **OpenQuake Engine 3.11** 'Wegener':
+Current LTS version is the **OpenQuake Engine 3.16** 'Angela':
 
-* [What's new](../engine-3.11/doc/whats-new.md)
-* [Documentation 3.11](https://github.com/gem/oq-engine/tree/engine-3.11#openquake-engine)
+The code name for version 3.16 is **Angela**, in memory of the Italian science journalist [Piero Angela](https://en.wikipedia.org/wiki/Piero_Angela).
+* [What's new](../engine-3.16/doc/whats-new.md)
+* [Documentation 3.16](https://github.com/gem/oq-engine/tree/engine-3.16#openquake-engine)
 * [User's manual](https://docs.openquake.org/oq-engine/manual/latest/)
 
 
 ### Latest release - for users needing the latest features
 
-Latest stable version is the **OpenQuake Engine 3.15**.
+Latest stable version is the **OpenQuake Engine 3.16**.
 
 <!-- GEM END -->
 

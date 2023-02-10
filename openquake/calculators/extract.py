@@ -239,7 +239,8 @@ def extract_realizations(dstore, dummy):
         gsims = dstore.getitem('full_lt/gsim_lt')['uncertainty']
         if 'shakemap' in oq.inputs:
             gsims = ["[FromShakeMap]"]
-        arr['branch_path'] = ['"%s"' % repr(gsim)[1:-1].replace('"', '""')
+        # NOTE: repr(gsim) has a form like "b'[ChiouYoungs2008]'"
+        arr['branch_path'] = ['"%s"' % repr(gsim)[2:-1].replace('"', '""')
                               for gsim in gsims]  # quotes Excel-friendly
     else:
         arr['branch_path'] = encode(rlzs['branch_path'])
@@ -823,7 +824,7 @@ def extract_agg_damages(dstore, what):
         oq = dstore['oqparam']
         lti = oq.lti[loss_type]
         D = len(oq.limit_states) + 1
-        damages = dstore['damages-rlzs'][:, :, lti, :D]
+        damages = dstore['damages-rlzs'][:, :, lti]
     else:
         raise KeyError('No damages found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], damages, tags)
