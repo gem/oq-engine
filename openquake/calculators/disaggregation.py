@@ -120,10 +120,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, bin_edges, monitor):
     """
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        mags = dstore['rup/mag'][slc]
-        magidx = numpy.searchsorted(bin_edges[0], mags) - 1
-        magidx[magidx == -1] = 0  # when the magnitude is on the edge
-        ctxs = cmaker.read_ctxs(dstore, slc, magidx)
+        ctxs = cmaker.read_ctxs(dstore, slc)
     if cmaker.rup_mutex:
         raise NotImplementedError('Disaggregation with mutex ruptures')
 
@@ -142,7 +139,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, bin_edges, monitor):
                 ctxs, sid, cmaker, bin_edges, g_by_rlz)
         except FarAwayRupture:
             continue
-        for magi in numpy.unique(magidx):
+        for magi in sd.ctxs:
             res = {'trti': cmaker.trti, 'magi': magi}
             matrix = sd.disagg(iml3, hmap4.rlzs[sid], magi, epsstar)
             for m in range(M):

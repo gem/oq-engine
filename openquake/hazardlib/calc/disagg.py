@@ -399,11 +399,14 @@ class SiteDisaggregator(object):
         ctxs = [ctx[ctx.sids == sid] for ctx in ctxs]
 
         # build the magnitude bins
+        for ctx in ctxs:
+            magidx = numpy.searchsorted(bin_edges[0], ctx.mag) - 1
+            magidx[magidx == -1] = 0  # when the magnitude is on the edge
+            ctx.magi = magidx
+
         mags = numpy.concatenate([ctx.mag for ctx in ctxs])
         if len(mags) == 0:
             raise FarAwayRupture('No ruptures affecting site #%d' % sid)
-        magidx = numpy.searchsorted(bin_edges[0], mags) - 1
-        magidx[magidx == -1] = 0  # when the magnitude is on the edge
 
         # populate dictionaries magi-> list
         self.ctxs = {}
