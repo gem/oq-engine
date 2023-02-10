@@ -127,16 +127,11 @@ def compute_disagg(dstore, slc, cmaker, hmap4, bin_edges, monitor):
     # Set epsstar boolean variable
     epsstar = dstore['oqparam'].epsilon_star
     N, M, P, Z = hmap4.shape
-    g_by_rlz = {}  # dict rlz -> g
-    for g, rlzs in enumerate(cmaker.gsims.values()):
-        for rlz in rlzs:
-            g_by_rlz[rlz] = g
 
-    # disaggregate by site, IMT
+    # disaggregate by site
     for sid, iml3 in enumerate(hmap4):
         try:
-            sd = disagg.SiteDisaggregator(
-                ctxs, sid, cmaker, bin_edges, g_by_rlz)
+            sd = disagg.SiteDisaggregator(ctxs, sid, cmaker, bin_edges)
         except FarAwayRupture:
             continue
         for magi in sd.ctxs:
