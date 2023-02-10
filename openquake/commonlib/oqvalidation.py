@@ -176,7 +176,7 @@ continuous_fragility_discretization:
 coordinate_bin_width:
   Used in disaggregation calculations.
   Example: *coordinate_bin_width = 1.0*.
-  Default: no default
+  Default: 100 degrees, meaning don't disaggregate by lon, lat
 
 cross_correlation:
   When used in Conditional Spectrum calculation is the name of a cross
@@ -192,7 +192,7 @@ description:
   Default: "no description"
 
 disagg_bin_edges:
-  A dictionary where the keys can be: mag, eps, dist, lon, lat and the
+  A dictionary where the keys can be: mag, dist, lon, lat, eps and the
   values are lists of floats indicating the edges of the bins used to
   perform the disaggregation.
   Example: *disagg_bin_edges = {'mag': [5.0, 5.5, 6.0, 6.5]}*.
@@ -404,7 +404,7 @@ lrem_steps_per_interval:
 mag_bin_width:
   Width of the magnitude bin used in disaggregation calculations.
   Example: *mag_bin_width = 0.5*.
-  Default: no default
+  Default: 1.
 
 master_seed:
   Seed used to control the generation of the epsilons, relevant for risk
@@ -858,7 +858,7 @@ class OqParam(valid.ParamSet):
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_level = valid.Param(int, -1)
     collect_rlzs = valid.Param(valid.boolean, None)
-    coordinate_bin_width = valid.Param(valid.positivefloat)
+    coordinate_bin_width = valid.Param(valid.positivefloat, 100.)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
         valid.positiveint, multiprocessing.cpu_count() * 2)  # by M. Simionato
@@ -877,7 +877,7 @@ class OqParam(valid.ParamSet):
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
     discrete_damage_distribution = valid.Param(valid.boolean, False)
     distance_bin_width = valid.Param(valid.positivefloat)
-    mag_bin_width = valid.Param(valid.positivefloat)
+    mag_bin_width = valid.Param(valid.positivefloat, 1.)
     floating_x_step = valid.Param(valid.positivefloat, 0)
     floating_y_step = valid.Param(valid.positivefloat, 0)
     ignore_encoding_errors = valid.Param(valid.boolean, False)

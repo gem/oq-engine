@@ -1244,8 +1244,8 @@ def extract_disagg_layer(dstore, what):
     sitecol = dstore['sitecol']
     poes_disagg = oq.poes_disagg or (None,)
     realizations = numpy.array(dstore['full_lt'].get_realizations())
-    edges, shapedic = disagg.get_edges_shapedic(
-        oq, sitecol, dstore['source_mags'], len(realizations))
+    oq.mags_by_trt = dstore['source_mags']
+    edges, shapedic = disagg.get_edges_shapedic(oq, sitecol, len(realizations))
     dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
     out = numpy.zeros(len(sitecol), dt)
     hmap4 = dstore['hmap4'][:]

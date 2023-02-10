@@ -226,8 +226,9 @@ class DisaggregationCalculator(base.HazardCalculator):
             raise ValueError(
                 'The number of sites is to disaggregate is %d, but you have '
                 'max_sites_disagg=%d' % (self.N, few))
+        self.oqparam.mags_by_trt = self.datastore['source_mags']
         all_edges, shapedic = disagg.get_edges_shapedic(
-            self.oqparam, self.sitecol, self.datastore['source_mags'], self.R)
+            self.oqparam, self.sitecol, self.R)
         *b, trts = all_edges
         T = len(trts)
         shape = [len(bin) - 1 for bin in
@@ -273,8 +274,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         ws = [rlz.weight for rlz in full_lt.get_realizations()]
         if oq.rlz_index is None and oq.num_rlzs_disagg == 0:
             oq.num_rlzs_disagg = len(ws)  # 0 means all rlzs
+        self.oqparam.mags_by_trt = self.datastore['source_mags']
         edges, self.shapedic = disagg.get_edges_shapedic(
-            oq, self.sitecol, self.datastore['source_mags'], self.R)
+            oq, self.sitecol, self.R)
         self.save_bin_edges(edges)
         self.full_lt = self.datastore['full_lt']
         self.poes_disagg = oq.poes_disagg or (None,)
