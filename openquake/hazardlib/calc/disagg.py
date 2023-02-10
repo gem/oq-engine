@@ -330,162 +330,6 @@ def _digitize_lons(lons, lon_bins):
         return numpy.digitize(lons, lon_bins) - 1
 
 
-# this is used in the hazardlib tests, not in the engine
-def disaggregation(
-        sources, site, imt, iml, gsim_by_trt, truncation_level,
-        n_epsilons=None, mag_bin_width=None, dist_bin_width=None,
-        coord_bin_width=None, source_filter=filters.nofilter,
-        epsstar=False, bin_edges={}, **kwargs):
-    """
-    Compute "Disaggregation" matrix representing conditional probability of an
-    intensity measure type ``imt`` exceeding, at least once, an intensity
-    measure level ``iml`` at a geographical location ``site``, given rupture
-    scenarios classified in terms of:
-
-    - rupture magnitude
-    - Joyner-Boore distance from rupture surface to site
-    - longitude and latitude of the surface projection of a rupture's point
-      closest to ``site``
-    - epsilon: number of standard deviations by which an intensity measure
-      level deviates from the median value predicted by a GSIM, given the
-      rupture parameters
-    - rupture tectonic region type
-
-    In other words, the disaggregation matrix allows to compute the probability
-    of each scenario with the specified properties (e.g., magnitude, or the
-    magnitude and distance) to cause one or more exceedences of a given hazard
-    level.
-
-    For more detailed information about the disaggregation, see for instance
-    "Disaggregation of Seismic Hazard", Paolo Bazzurro, C. Allin Cornell,
-    Bulletin of the Seismological Society of America, Vol. 89, pp. 501-520,
-    April 1999.
-
-    :param sources:
-        Seismic source model, as for
-        :mod:`PSHA <openquake.hazardlib.calc.hazard_curve>` calculator it
-        should be an iterator of seismic sources.
-    :param site:
-        :class:`~openquake.hazardlib.site.Site` of interest to calculate
-        disaggregation matrix for.
-    :param imt:
-        Instance of :mod:`intensity measure type <openquake.hazardlib.imt>`
-        class.
-    :param iml:
-        Intensity measure level. A float value in units of ``imt``.
-    :param gsim_by_trt:
-        Tectonic region type to GSIM objects mapping.
-    :param truncation_level:
-        Float, number of standard deviations for truncation of the intensity
-        distribution.
-    :param n_epsilons:
-        Integer number of epsilon histogram bins in the result matrix.
-    :param mag_bin_width:
-        Magnitude discretization step, width of one magnitude histogram bin.
-    :param dist_bin_width:
-        Distance histogram discretization step, in km.
-    :param coord_bin_width:
-        Longitude and latitude histograms discretization step,
-        in decimal degrees.
-    :param source_filter:
-        Optional source-site filter function. See
-        :mod:`openquake.hazardlib.calc.filters`.
-    :param epsstar:
-        A boolean. When true disaggregations results including epsilon are
-        in terms of epsilon star rather then epsilon.
-    :param bin_edges:
-        Bin edges provided by the users. These override the ones automatically
-        computed by the OQ Engine.
-    :returns:
-        A tuple of two items. First is itself a tuple of bin edges information
-        for (in specified order) magnitude, distance, longitude, latitude,
-        epsilon and tectonic region types.
-
-        Second item is 6d-array representing the full disaggregation matrix.
-        Dimensions are in the same order as bin edges in the first item
-        of the result tuple. The matrix can be used directly by pmf-extractor
-        functions.
-    """
-    trts = sorted(set(src.tectonic_region_type for src in sources))
-    trt_num = dict((trt, i) for i, trt in enumerate(trts))
-    rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
-    by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
-    bdata = {}  # by trt, magi
-    sitecol = SiteCollection([site])
-    imls = numpy.array([iml])
-
-    # Epsilon bins
-    if 'eps' in bin_edges:
-        eps_bins = bin_edges['eps']
-        n_epsilons = len(eps_bins) - 1
-    else:
-        eps_bins = numpy.linspace(-truncation_level, truncation_level,
-                                  n_epsilons + 1)
-    eps_bands = calc_eps_bands(truncation_level, eps_bins)
-
-    # Create contexts
-    rups = AccumDict(accum=[])
-    cmaker = {}  # trt -> cmaker
-    for trt, srcs in by_trt.items():
-        cmaker[trt] = cm = ContextMaker(
-            trt, rlzs_by_gsim,
-            {'truncation_level': truncation_level,
-             'maximum_distance': source_filter.integration_distance(trt),
-             'imtls': {str(imt): [iml]}})
-        cm.tom = srcs[0].temporal_occurrence_model
-        rups[trt].extend(cm.from_srcs(srcs, sitecol))
-
-    # Set the magnitude bins
-    if 'mag' in bin_edges:
-        mag_bins = bin_edges['mag']
-    else:
-        mags = numpy.array([r.mag for rs in rups.values() for r in rs])
-        mag_bins = uniform_bins(mags.min(), mags.max(), mag_bin_width)
-
-    # Compute disaggregation per TRT
-    for trt, cm in cmaker.items():
-        [ctx] = rups[trt]
-        ctx.magi = numpy.searchsorted(mag_bins, ctx.mag) - 1
-        for magi in numpy.unique(ctx.magi):
-            ctxt = ctx[ctx.magi == magi]
-            mea, std, _, _ = cm.get_mean_stds([ctxt], split_by_mag=True)
-            bdata[trt, magi] = _disaggregate(
-                ctxt, mea, std, cm, {imt: imls}, eps_bands, 0,
-                [eps_bins], epsstar)
-
-    if sum(len(bd.dists) for bd in bdata.values()) == 0:
-        warnings.warn(
-            f'No ruptures have contributed to the hazard at site {site}',
-            RuntimeWarning)
-        return None, None
-
-    # Distance bins
-    min_dist = min(bd.dists.min() for bd in bdata.values())
-    max_dist = max(bd.dists.max() for bd in bdata.values())
-    if 'dist' in bin_edges:
-        dist_bins = bin_edges['dist']
-    else:
-        dist_bins = uniform_bins(min_dist, max_dist, dist_bin_width)
-
-    # Lon, Lat bins
-    if 'lon' in bin_edges and 'lat' in bin_edges:
-        lon_bins = bin_edges['lon']
-        lat_bins = bin_edges['lat']
-    else:
-        lon_bins, lat_bins = lon_lat_bins(site.location.x, site.location.y,
-                                          max_dist, coord_bin_width)
-
-    # Bin edges
-    bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins)
-    matrix = numpy.zeros((len(mag_bins) - 1, len(dist_bins) - 1,
-                          len(lon_bins) - 1, len(lat_bins) - 1,
-                          len(eps_bins) - 1, len(trts)))  # 6D
-    for trt, magi in bdata:
-        mat6 = _build_disagg_matrix(bdata[trt, magi], bin_edges[1:])
-        matrix[magi, ..., trt_num[trt]] = mat6[..., 0, 0]
-    return bin_edges + (trts,), matrix
-
-
 MAG, DIS, LON, LAT, EPS = 0, 1, 2, 3, 4
 
 mag_pmf = partial(pprod, axis=(DIS, LON, LAT, EPS))
@@ -636,3 +480,159 @@ class SourceSiteDisaggregator(object):
     def disagg_dist_eps(self, ctx, imt, iml, rlz, epsstar=False):
         mat4 = self.disaggregate(ctx, imt, iml, rlz, epsstar)
         return mag_dist_eps_pmf(mat4)  # shape (D, E)
+
+
+# this is used in the hazardlib tests, not in the engine
+def disaggregation(
+        sources, site, imt, iml, gsim_by_trt, truncation_level,
+        n_epsilons=None, mag_bin_width=None, dist_bin_width=None,
+        coord_bin_width=None, source_filter=filters.nofilter,
+        epsstar=False, bin_edges={}, **kwargs):
+    """
+    Compute "Disaggregation" matrix representing conditional probability of an
+    intensity measure type ``imt`` exceeding, at least once, an intensity
+    measure level ``iml`` at a geographical location ``site``, given rupture
+    scenarios classified in terms of:
+
+    - rupture magnitude
+    - Joyner-Boore distance from rupture surface to site
+    - longitude and latitude of the surface projection of a rupture's point
+      closest to ``site``
+    - epsilon: number of standard deviations by which an intensity measure
+      level deviates from the median value predicted by a GSIM, given the
+      rupture parameters
+    - rupture tectonic region type
+
+    In other words, the disaggregation matrix allows to compute the probability
+    of each scenario with the specified properties (e.g., magnitude, or the
+    magnitude and distance) to cause one or more exceedences of a given hazard
+    level.
+
+    For more detailed information about the disaggregation, see for instance
+    "Disaggregation of Seismic Hazard", Paolo Bazzurro, C. Allin Cornell,
+    Bulletin of the Seismological Society of America, Vol. 89, pp. 501-520,
+    April 1999.
+
+    :param sources:
+        Seismic source model, as for
+        :mod:`PSHA <openquake.hazardlib.calc.hazard_curve>` calculator it
+        should be an iterator of seismic sources.
+    :param site:
+        :class:`~openquake.hazardlib.site.Site` of interest to calculate
+        disaggregation matrix for.
+    :param imt:
+        Instance of :mod:`intensity measure type <openquake.hazardlib.imt>`
+        class.
+    :param iml:
+        Intensity measure level. A float value in units of ``imt``.
+    :param gsim_by_trt:
+        Tectonic region type to GSIM objects mapping.
+    :param truncation_level:
+        Float, number of standard deviations for truncation of the intensity
+        distribution.
+    :param n_epsilons:
+        Integer number of epsilon histogram bins in the result matrix.
+    :param mag_bin_width:
+        Magnitude discretization step, width of one magnitude histogram bin.
+    :param dist_bin_width:
+        Distance histogram discretization step, in km.
+    :param coord_bin_width:
+        Longitude and latitude histograms discretization step,
+        in decimal degrees.
+    :param source_filter:
+        Optional source-site filter function. See
+        :mod:`openquake.hazardlib.calc.filters`.
+    :param epsstar:
+        A boolean. When true disaggregations results including epsilon are
+        in terms of epsilon star rather then epsilon.
+    :param bin_edges:
+        Bin edges provided by the users. These override the ones automatically
+        computed by the OQ Engine.
+    :returns:
+        A tuple of two items. First is itself a tuple of bin edges information
+        for (in specified order) magnitude, distance, longitude, latitude,
+        epsilon and tectonic region types.
+
+        Second item is 6d-array representing the full disaggregation matrix.
+        Dimensions are in the same order as bin edges in the first item
+        of the result tuple. The matrix can be used directly by pmf-extractor
+        functions.
+    """
+    trts = sorted(set(src.tectonic_region_type for src in sources))
+    trt_num = dict((trt, i) for i, trt in enumerate(trts))
+    rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
+    by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
+    bdata = {}  # by trt, magi
+    sitecol = SiteCollection([site])
+    imls = numpy.array([iml])
+
+    # Epsilon bins
+    if 'eps' in bin_edges:
+        eps_bins = bin_edges['eps']
+        n_epsilons = len(eps_bins) - 1
+    else:
+        eps_bins = numpy.linspace(-truncation_level, truncation_level,
+                                  n_epsilons + 1)
+    eps_bands = calc_eps_bands(truncation_level, eps_bins)
+
+    # Create contexts
+    rups = AccumDict(accum=[])
+    cmaker = {}  # trt -> cmaker
+    for trt, srcs in by_trt.items():
+        cmaker[trt] = cm = ContextMaker(
+            trt, rlzs_by_gsim,
+            {'truncation_level': truncation_level,
+             'maximum_distance': source_filter.integration_distance(trt),
+             'imtls': {str(imt): [iml]}})
+        cm.tom = srcs[0].temporal_occurrence_model
+        rups[trt].extend(cm.from_srcs(srcs, sitecol))
+
+    # Set the magnitude bins
+    if 'mag' in bin_edges:
+        mag_bins = bin_edges['mag']
+    else:
+        mags = numpy.array([r.mag for rs in rups.values() for r in rs])
+        mag_bins = uniform_bins(mags.min(), mags.max(), mag_bin_width)
+
+    # Compute disaggregation per TRT
+    for trt, cm in cmaker.items():
+        [ctx] = rups[trt]
+        ctx.magi = numpy.searchsorted(mag_bins, ctx.mag) - 1
+        for magi in numpy.unique(ctx.magi):
+            ctxt = ctx[ctx.magi == magi]
+            mea, std, _, _ = cm.get_mean_stds([ctxt], split_by_mag=True)
+            bdata[trt, magi] = _disaggregate(
+                ctxt, mea, std, cm, 0, {imt: imls}, eps_bands,
+                [eps_bins], epsstar)
+
+    if sum(len(bd.dists) for bd in bdata.values()) == 0:
+        warnings.warn(
+            f'No ruptures have contributed to the hazard at site {site}',
+            RuntimeWarning)
+        return None, None
+
+    # Distance bins
+    min_dist = min(bd.dists.min() for bd in bdata.values())
+    max_dist = max(bd.dists.max() for bd in bdata.values())
+    if 'dist' in bin_edges:
+        dist_bins = bin_edges['dist']
+    else:
+        dist_bins = uniform_bins(min_dist, max_dist, dist_bin_width)
+
+    # Lon, Lat bins
+    if 'lon' in bin_edges and 'lat' in bin_edges:
+        lon_bins = bin_edges['lon']
+        lat_bins = bin_edges['lat']
+    else:
+        lon_bins, lat_bins = lon_lat_bins(site.location.x, site.location.y,
+                                          max_dist, coord_bin_width)
+
+    # Bin edges
+    bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins)
+    matrix = numpy.zeros((len(mag_bins) - 1, len(dist_bins) - 1,
+                          len(lon_bins) - 1, len(lat_bins) - 1,
+                          len(eps_bins) - 1, len(trts)))  # 6D
+    for trt, magi in bdata:
+        mat6 = _build_disagg_matrix(bdata[trt, magi], bin_edges[1:])
+        matrix[magi, ..., trt_num[trt]] = mat6[..., 0, 0]
+    return bin_edges + (trts,), matrix
