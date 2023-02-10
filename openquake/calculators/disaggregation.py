@@ -132,14 +132,13 @@ def compute_disagg(dstore, slc, cmaker, hmap4, bin_edges, monitor):
     N, M, P, Z = hmap4.shape
 
     # disaggregate by site
-    for sid, iml3 in enumerate(hmap4):
-        try:
-            sd = disagg.SiteDisaggregator(ctxs, sid, cmaker, bin_edges)
-        except FarAwayRupture:
+    disaggs = disagg.build_disaggregators(ctxs, range(N), cmaker, bin_edges)
+    for sid, dis in enumerate(disaggs):
+        if dis is None:  # no data for this site
             continue
-        for magi in sd.ctxs:
+        for magi in dis.ctxs:
             res = {'trti': cmaker.trti, 'magi': magi}
-            matrix = sd.disagg(iml3, hmap4.rlzs[sid], magi, epsstar)
+            matrix = dis.disagg(hmap4[sid], hmap4.rlzs[sid], magi, epsstar)
             for m in range(M):
                 mat6 = matrix[..., m, :, :]
                 if mat6.any():

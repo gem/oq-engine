@@ -381,23 +381,34 @@ pmf_map = dict([
 
 # ########################## Disaggregator classes ########################## #
 
-    
+def build_disaggregators(ctxs, sids, cmaker, bin_edges):
+    g_by_rlz = {}  # dict rlz -> g
+    for g, rlzs in enumerate(cmaker.gsims.values()):
+        for rlz in rlzs:
+            g_by_rlz[rlz] = g
+    out = []
+    for sid in sids:
+        try:
+            sd = SiteDisaggregator(ctxs, sid, cmaker, bin_edges, g_by_rlz)
+        except FarAwayRupture:
+            sd = None
+        out.append(sd)
+    return out
+
+
 class SiteDisaggregator(object):
     """
-    A class to perform single-site disaggregation
+    A class to perform single-site disaggregation. Use build_disaggregators
+    to instantiate it.
     """
-    def __init__(self, ctxs, sid, cmaker, bin_edges):
+    def __init__(self, ctxs, sid, cmaker, bin_edges, g_by_rlz):
         self.sid = sid
         self.cmaker = cmaker
         self.bin_edges = (bin_edges[1], # dist
                           bin_edges[2][sid], # lon
                           bin_edges[3][sid], # lat
                           bin_edges[4]) # eps
-        g_by_rlz = {}  # dict rlz -> g
-        for g, rlzs in enumerate(cmaker.gsims.values()):
-            for rlz in rlzs:
-                g_by_rlz[rlz] = g
-        self.g_by_rlz = g_by_rlz
+        self.g_by_rlz = g_by_rlz  # dict rlz -> g
 
         # consider only the contexts affecting the site
         ctxs = [ctx[ctx.sids == sid] for ctx in ctxs]
