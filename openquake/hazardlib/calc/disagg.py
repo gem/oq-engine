@@ -391,20 +391,21 @@ class SiteDisaggregator(object):
         self.g_by_z = g_by_z
         self.eps_bands = calc_eps_bands(
             cmaker.truncation_level, self.bin_edges[-1])
-        mea, std, _, _ = cmaker.get_mean_stds([ctx], split_by_mag=True)
         if self.cmaker.src_mutex:
             # getting a context array and a weight for each source
             # NB: relies on ctx.weight having all equal weights, being
             # built as ctx['weight'] = src.mutex_weight in contexts.py
             self.ctxs = split_array(ctx, ctx.src_id)
-            self.meas = split_array(mea, ctx.src_id)
-            self.stds = split_array(std, ctx.src_id)
             self.weights = [ctx.weight[0] for ctx in self.ctxs]
         else:
             self.ctxs = [ctx]
-            self.meas = [mea]
-            self.stds = [std]
-            self.weights = [1.]
+            self.weights = [ctx.weight[0]]
+        self.meas = []
+        self.stds = []
+        for ctx in self.ctxs:
+            mea, std, _, _ = cmaker.get_mean_stds([ctx], split_by_mag=True)
+            self.meas.append(mea)
+            self.stds.append(std)
 
     def disagg(self, iml3, epsstar):
         M, P, Z = iml3.shape
@@ -418,13 +419,14 @@ class SiteDisaggregator(object):
                 g = self.g_by_z[z]
             except KeyError:
                 continue
-            iml2 = dict(zip(self.cmaker.imts, iml3[:, :, z]))
-            matrix[..., z] = self.disagg6D(g, iml2, epsstar)
+            imls_by_imt = dict(zip(self.cmaker.imts, iml3[:, :, z]))
+            matrix[..., z] = self.disagg6D(g, imls_by_imt, epsstar)
         return matrix
 
     def disagg6D(self, g, imls_by_imt, epsstar):
         mats = []
         for ctx, mea, std in zip(self.ctxs, self.meas, self.stds):
+            assert len(ctx) == mea.shape[-1]
             mat = _disaggregate(ctx, mea, std, self.cmaker, g, imls_by_imt,
                                 self.eps_bands, self.bin_edges, epsstar)
             mats.append(mat)
@@ -470,16 +472,16 @@ class SourceSiteDisaggregator(object):
         idxs = numpy.argsort(magi)
         return split_array(ctx[idxs], magi[idxs])
 
-    def disaggregate(self, ctx, imt, iml, rlz, epsstar=False):
-        # for each z
-        iml2dict = {imt: numpy.array([[iml]])}
-        arr7D = _disaggregate(ctx, self.cmaker, self.g_by_z, iml2dict,
-                              self.eps_bands, self.bin_edges, epsstar)
-        return arr7D[..., 0, 0, 0]  # 4D array of shape (D, Lo, La, E)
+    #def disaggregate(self, ctx, imt, iml, rlz, epsstar=False):
+    #    # for each z
+    #    iml2dict = {imt: numpy.array([[iml]])}
+    #    arr7D = _disaggregate(ctx, self.cmaker, self.g_by_z, iml2dict,
+    #                          self.eps_bands, self.bin_edges, epsstar)
+    #    return arr7D[..., 0, 0, 0]  # 4D array of shape (D, Lo, La, E)
 
-    def disagg_dist_eps(self, ctx, imt, iml, rlz, epsstar=False):
-        mat4 = self.disaggregate(ctx, imt, iml, rlz, epsstar)
-        return mag_dist_eps_pmf(mat4)  # shape (D, E)
+    #def disagg_dist_eps(self, ctx, imt, iml, rlz, epsstar=False):
+    #    mat4 = self.disaggregate(ctx, imt, iml, rlz, epsstar)
+    #    return mag_dist_eps_pmf(mat4)  # shape (D, E)
 
 
 # this is used in the hazardlib tests, not in the engine

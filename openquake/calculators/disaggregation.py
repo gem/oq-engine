@@ -28,7 +28,6 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.commonlib import util, calc
 from openquake.calculators import getters
