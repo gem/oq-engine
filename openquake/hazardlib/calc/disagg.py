@@ -202,7 +202,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False):
     # std: array of shape (G, M, U)
     # cmaker: a ContextMaker instance
     # g: a gsim index
-    # iml2: an array of shape (M, P)
+    # iml2: an array of shape (M, P) of logarithmic intensities
     # eps_bands: an array of E elements obtained from the E+1 eps_edges
     # bin_edges: a tuple of 5 bin edges (mag, dist, lon, lat, eps)
     # epsstar: a boolean. When True, disaggregation contains eps* results
@@ -385,7 +385,7 @@ class SiteDisaggregator(object):
     """
     A class to perform single-site disaggregation
     """
-    def __init__(self, ctx, sid, cmaker, bin_edges, g_by_z):
+    def __init__(self, ctx, sid, cmaker, bin_edges, g_by_rlz):
         self.ctx = ctx  # assume all in the same mag bin
         self.cmaker = cmaker
         # dist_bins, lon_bins, lat_bins, eps_bins
@@ -393,7 +393,7 @@ class SiteDisaggregator(object):
                           bin_edges[2][sid],
                           bin_edges[3][sid],
                           bin_edges[4])
-        self.g_by_z = g_by_z
+        self.g_by_rlz = g_by_rlz
         if self.cmaker.src_mutex:
             # getting a context array and a weight for each source
             # NB: relies on ctx.weight having all equal weights, being
@@ -410,16 +410,16 @@ class SiteDisaggregator(object):
             self.meas.append(mea)
             self.stds.append(std)
 
-    def disagg(self, iml3, epsstar):
+    def disagg(self, iml3, rlzs, epsstar):
         M, P, Z = iml3.shape
         shp = [len(b)-1 for b in self.bin_edges[:4]] + [M, P, Z]
         # 7D-matrix #disbins, #lonbins, #latbins, #epsbins, M, P, Z
         matrix = numpy.zeros(shp)
-        for z in range(Z):
+        for z, rlz in enumerate(rlzs):
             # discard the z contributions coming from wrong
             # realizations: see the test disagg/case_2
             try:
-                g = self.g_by_z[z]
+                g = self.g_by_rlz[rlz]
             except KeyError:
                 continue
             iml2 = imlog(dict(zip(self.cmaker.imts, iml3[:, :, z])))

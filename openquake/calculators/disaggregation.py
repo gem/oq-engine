@@ -129,11 +129,10 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     # Set epsstar boolean variable
     epsstar = dstore['oqparam'].epsilon_star
     N, M, P, Z = hmap4.shape
-    g_by_z = AccumDict(accum={})  # dict s -> z -> g
+    g_by_rlz = {}  # dict rlz -> g
     for g, rlzs in enumerate(cmaker.gsims.values()):
-        for (s, z), r in numpy.ndenumerate(hmap4.rlzs):
-            if r in rlzs:
-                g_by_z[s][z] = g
+        for rlz in rlzs:
+            g_by_rlz[rlz] = g
     for magi in numpy.unique(magidx):
         for ctxt in ctxs:
             ctx = ctxt[ctxt.magi == magi]
@@ -141,12 +140,12 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
             # disaggregate by site, IMT
             for s, iml3 in enumerate(hmap4):
                 close = ctx[ctx.sids == s]
-                if len(g_by_z[s]) == 0 or len(close) == 0:
+                if len(g_by_rlz) == 0 or len(close) == 0:
                     # g_by_z[s] is empty in test case_7
                     continue
                 sd = disagg.SiteDisaggregator(
-                    close, s, cmaker, bin_edges, g_by_z[s])
-                matrix = sd.disagg(iml3, epsstar)
+                    close, s, cmaker, bin_edges, g_by_rlz)
+                matrix = sd.disagg(iml3, hmap4.rlzs[s], epsstar)
                 for m in range(M):
                     mat6 = matrix[..., m, :, :]
                     if mat6.any():
