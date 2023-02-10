@@ -754,7 +754,7 @@ def extract_agg_curves(dstore, what):
         P = len(rps)
         R = len(qdic['kind'])
         arr = numpy.zeros((P, R))
-        for rlz in range(R):
+        for rlz in df.rlz_id.unique():
             # NB: df may contains zeros but there are no missing periods
             # by construction (see build_aggcurves)
             arr[:, rlz] = df[df.rlz_id == rlz].loss
