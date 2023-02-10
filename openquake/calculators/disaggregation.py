@@ -129,15 +129,12 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
 
     # Set epsstar boolean variable
     epsstar = dstore['oqparam'].epsilon_star
-    dis_mon = monitor('disaggregate', measuremem=False)
     N, M, P, Z = hmap4.shape
     g_by_z = AccumDict(accum={})  # dict s -> z -> g
     for g, rlzs in enumerate(cmaker.gsims.values()):
         for (s, z), r in numpy.ndenumerate(hmap4.rlzs):
             if r in rlzs:
                 g_by_z[s][z] = g
-    eps_bands = disagg.calc_eps_bands(cmaker.truncation_level, bin_edges[4])
-    imts = [from_string(im) for im in cmaker.imtls]
     for magi in numpy.unique(magidx):
         for ctxt in ctxs:
             ctx = ctxt[ctxt.magi == magi]
@@ -148,55 +145,17 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
                 if len(g_by_z[s]) == 0 or len(close) == 0:
                     # g_by_z[s] is empty in test case_7
                     continue
-                # dist_bins, lon_bins, lat_bins, eps_bins
-                bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
-                        bin_edges[4])
-                shp = [len(b)-1 for b in bins[:4]] + [M, P, Z]
-                with dis_mon:
-                    # 7D-matrix #disbins, #lonbins, #latbins, #epsbins, M, P, Z
-                    matrix = numpy.zeros(shp)
-                    for z in range(Z):
-                        # discard the z contributions coming from wrong
-                        # realizations: see the test disagg/case_2
-                        try:
-                            g = g_by_z[s][z]
-                        except KeyError:
-                            continue
-                        iml2 = dict(zip(imts, iml3[:, :, z]))
-                        matrix[..., z] = disaggregate(close, cmaker, g,
-                                                      iml2, eps_bands,
-                                                      s, bins, epsstar)
-                    for m in range(M):
-                        mat6 = matrix[..., m, :, :]
-                        if mat6.any():
-                            res[s, m] = output(mat6)
+                sd = disagg.SiteDisaggregator(
+                    close, s, cmaker, bin_edges, g_by_z[s])
+                matrix = sd.disagg(iml3, epsstar)
+                for m in range(M):
+                    mat6 = matrix[..., m, :, :]
+                    if mat6.any():
+                        res[s, m] = output(mat6)
             # print(_collapse_res(res))
             yield res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
-
-
-def disaggregate(close, cmaker, g, iml2, eps_bands, s, bins, epsstar):
-    """
-    :returns: a 7D disaggregation matrix, weighted if src_mutex is True
-    """
-    if cmaker.src_mutex:
-        # getting a context array and a weight for each source
-        # NB: relies on ctx.weight having all equal weights, being
-        # built as ctx['weight'] = src.mutex_weight in contexts.py
-        ctxs = performance.split_array(close, close.src_id)
-        weights = [ctx.weight[0] for ctx in ctxs]
-        mats = []
-        for ctx in ctxs:
-            mea, std, _, _ = cmaker.get_mean_stds([ctx], split_by_mag=True)
-            mat = disagg.disaggregate(ctx, mea, std, cmaker, g, iml2,
-                                      eps_bands, s, bins, epsstar)
-            mats.append(mat)
-        return numpy.average(mats, weights=weights, axis=0)
-    else:
-        mea, std, _, _ = cmaker.get_mean_stds([close], split_by_mag=True)
-        return disagg.disaggregate(close, mea, std, cmaker, g, iml2,
-                                   eps_bands, s, bins, epsstar)
 
 
 def get_outputs_size(shapedic, disagg_outputs):

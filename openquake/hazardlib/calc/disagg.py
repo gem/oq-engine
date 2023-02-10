@@ -175,8 +175,8 @@ DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
 
 
 # this is inside an inner loop
-def disaggregate(ctx, mea, std, cmaker, g, iml2dict, eps_bands,
-                 sid, bin_edges, epsstar=False):
+def _disaggregate(ctx, mea, std, cmaker, g, iml2dict, eps_bands,
+                  bin_edges, epsstar=False):
     """
     :param ctx: a recarray of size U for a single site and magnitude bin
     :param mea: array of shape (G, M, U)
@@ -185,7 +185,6 @@ def disaggregate(ctx, mea, std, cmaker, g, iml2dict, eps_bands,
     :param g: a gsim index
     :param iml2dict: a dictionary of arrays imt -> P
     :param eps_bands: an array of E elements obtained from the E+1 eps_edges
-    :param sid: the site ID
     :param bin_edges: a tuple of 5 bin edges (mag, dist, lon, lat, eps)
     :param epsstar: a boolean. When True, disaggregation contains eps* results
     :returns: a 7D-array of shape (D, Lo, La, E, M, P, Z)
@@ -450,8 +449,8 @@ def disaggregation(
         for magi in numpy.unique(ctx.magi):
             ctxt = ctx[ctx.magi == magi]
             mea, std, _, _ = cm.get_mean_stds([ctxt], split_by_mag=True)
-            bdata[trt, magi] = disaggregate(
-                ctxt, mea, std, cm, 0, {imt: imls}, eps_bands, 0,
+            bdata[trt, magi] = _disaggregate(
+                ctxt, mea, std, cm, {imt: imls}, eps_bands, 0,
                 [eps_bins], epsstar)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
@@ -533,6 +532,62 @@ pmf_map = dict([
 
 # ####################### SourceSiteDisaggregator ############################ #
 
+class SiteDisaggregator(object):
+    """
+    A class to perform single-site disaggregation
+    """
+    def __init__(self, ctx, sid, cmaker, bin_edges, g_by_z):
+        self.ctx = ctx  # assume all in the same mag bin
+        self.cmaker = cmaker
+        # dist_bins, lon_bins, lat_bins, eps_bins
+        self.bin_edges = (bin_edges[1],
+                          bin_edges[2][sid],
+                          bin_edges[3][sid],
+                          bin_edges[4])
+        self.g_by_z = g_by_z
+        self.eps_bands = calc_eps_bands(
+            cmaker.truncation_level, self.bin_edges[-1])
+        mea, std, _, _ = cmaker.get_mean_stds([ctx], split_by_mag=True)
+        if self.cmaker.src_mutex:
+            # getting a context array and a weight for each source
+            # NB: relies on ctx.weight having all equal weights, being
+            # built as ctx['weight'] = src.mutex_weight in contexts.py
+            self.ctxs = split_array(ctx, ctx.src_id)
+            self.meas = split_array(mea, ctx.src_id)
+            self.stds = split_array(std, ctx.src_id)
+            self.weights = [ctx.weight[0] for ctx in self.ctxs]
+        else:
+            self.ctxs = [ctx]
+            self.meas = [mea]
+            self.stds = [std]
+            self.weights = [1.]
+
+    def disagg(self, iml3, epsstar):
+        M, P, Z = iml3.shape
+        shp = [len(b)-1 for b in self.bin_edges[:4]] + [M, P, Z]
+        # 7D-matrix #disbins, #lonbins, #latbins, #epsbins, M, P, Z
+        matrix = numpy.zeros(shp)
+        for z in range(Z):
+            # discard the z contributions coming from wrong
+            # realizations: see the test disagg/case_2
+            try:
+                g = self.g_by_z[z]
+            except KeyError:
+                continue
+            iml2 = dict(zip(self.cmaker.imts, iml3[:, :, z]))
+            matrix[..., z] = self.disagg6D(g, iml2, epsstar)
+        return matrix
+
+    def disagg6D(self, g, imls_by_imt, epsstar):
+        mats = []
+        for ctx, mea, std in zip(self.ctxs, self.meas, self.stds):
+            mat = _disaggregate(ctx, mea, std, self.cmaker, g, imls_by_imt,
+                                self.eps_bands, self.bin_edges, epsstar)
+            mats.append(mat)
+        if len(mats) == 1:
+            return mat
+        return numpy.average(mats, weights=self.weights, axis=0)
+
 
 class SourceSiteDisaggregator(object):
     """
@@ -574,8 +629,8 @@ class SourceSiteDisaggregator(object):
     def disaggregate(self, ctx, imt, iml, rlz, epsstar=False):
         # for each z
         iml2dict = {imt: numpy.array([[iml]])}
-        arr7D = disaggregate(ctx, self.cmaker, self.g_by_z, iml2dict,
-                             self.eps_bands, 0, self.bin_edges, epsstar)
+        arr7D = _disaggregate(ctx, self.cmaker, self.g_by_z, iml2dict,
+                              self.eps_bands, self.bin_edges, epsstar)
         return arr7D[..., 0, 0, 0]  # 4D array of shape (D, Lo, La, E)
 
     def disagg_dist_eps(self, ctx, imt, iml, rlz, epsstar=False):
