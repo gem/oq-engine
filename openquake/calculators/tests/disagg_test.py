@@ -157,10 +157,6 @@ class DisaggregationTestCase(CalculatorTestCase):
         [ctxs1] = cmakers[1].read_ctxs(self.calc.datastore)
         self.assertEqual(len(ctxs0), 7)  # rlz-0, the closest to the mean
         self.assertEqual(len(ctxs1), 2)  # rlz-1, the one to discard
-        # checking that the wrong realization is indeed discarded
-        pd = self.calc.datastore['performance_data'][:]
-        pd = pd[pd['operation'] == b'disaggregate']
-        self.assertEqual(pd['counts'], 1)  # because g_by_z is empty
 
         haz = self.calc.datastore['hmap4'][0, 0, :, 0]  # shape NMPZ
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard

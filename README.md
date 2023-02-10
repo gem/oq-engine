@@ -29,16 +29,17 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 
 ### Current Long Term Support (LTS) release - for users wanting stability
 
-Current LTS version is the **OpenQuake Engine 3.11** 'Wegener':
+Current LTS version is the **OpenQuake Engine 3.16** 'Angela':
 
-* [What's new](../engine-3.11/doc/whats-new.md)
-* [Documentation 3.11](https://github.com/gem/oq-engine/tree/engine-3.11#openquake-engine)
+The code name for version 3.16 is **Angela**, in memory of the Italian science journalist [Piero Angela](https://en.wikipedia.org/wiki/Piero_Angela).
+* [What's new](../engine-3.16/doc/whats-new.md)
+* [Documentation 3.16](https://github.com/gem/oq-engine/tree/engine-3.16#openquake-engine)
 * [User's manual](https://docs.openquake.org/oq-engine/manual/latest/)
 
 
 ### Latest release - for users needing the latest features
 
-Latest stable version is the **OpenQuake Engine 3.15**.
+Latest stable version is the **OpenQuake Engine 3.16**.
 
 <!-- GEM END -->
 
@@ -61,14 +62,10 @@ The OpenQuake Engine software provides calculation and assessment of seismic haz
 
 ## Visualizing outputs via QGIS
 
-![IRMT Logo](https://github.com/gem/oq-infrastructure/raw/master/icons/irmt_icon.png)
+<img src="https://github.com/gem/oq-infrastructure/raw/master/icons/irmt_icon.png" alt="IRMT Logo" width="50" >
 
-* [Installation](https://docs.openquake.org/oq-irmt-qgis/latest/00_installation.html)
-* [Driving the Engine](https://docs.openquake.org/oq-irmt-qgis/latest/14_driving_the_oqengine.html)
-* [Visualizing outputs](https://docs.openquake.org/oq-irmt-qgis/latest/15_viewer_dock.html)
-* [Repository](https://plugins.qgis.org/plugins/svir/)
-* [Source code](https://github.com/gem/oq-irmt-qgis)
-
+A [QGIS plug-in](https://plugins.qgis.org/plugins/svir/) is available for users that would like to visually explore the outputs from the engine. 
+Check the documentation for instructions on how to [drive the engine](https://docs.openquake.org/oq-irmt-qgis/latest/14_driving_the_oqengine.html) and [visualize outputs](https://docs.openquake.org/oq-irmt-qgis/latest/15_viewer_dock.html). [Source code](https://github.com/gem/oq-irmt-qgis) also available.
 
 ## For developers and contributors
 

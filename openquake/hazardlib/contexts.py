@@ -85,7 +85,7 @@ def is_modifiable(gsim):
 def concat(ctxs):
     """
     Concatenate context arrays.
-    :returns: list with 0, 1 or 2 elements
+    :returns: [] or [poisson_ctx] or [poisson_ctx, nonpoisson_ctx]
     """
     out, poisson, nonpoisson, nonparam = [], [], [], []
     for ctx in ctxs:

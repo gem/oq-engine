@@ -30,7 +30,6 @@ import numpy
 from openquake.baselib import parallel, general, hdf5
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, tom
 from openquake.hazardlib.contexts import ContextMaker, basename
-from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
@@ -444,14 +443,7 @@ class CompositeSourceModel:
         mags = general.AccumDict(accum=set())  # trt -> mags
         for sg in self.src_groups:
             for src in sg:
-                if hasattr(src, 'mags'):  # MultiFaultSource
-                    srcmags = {magstr(mag) for mag in src.mags}
-                elif hasattr(src, 'data'):  # nonparametric
-                    srcmags = {magstr(item[0].mag) for item in src.data}
-                else:
-                    srcmags = {magstr(item[0]) for item in
-                               src.get_annual_occurrence_rates()}
-                mags[sg.trt].update(srcmags)
+                mags[sg.trt].update(src.get_magstrs())
         return {trt: sorted(mags[trt]) for trt in mags}
 
     def get_floating_spinning_factors(self):
