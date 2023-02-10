@@ -123,27 +123,26 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt, num_tot_rlzs):
     return bin_edges + [trts], shapedic
 
 
-def _eps3(truncation_level, eps):
+def calc_eps_bands(truncation_level, eps):
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
-    eps_bands = tn.cdf(eps[1:]) - tn.cdf(eps[:-1])
-    return tn, eps, eps_bands
+    return tn.cdf(eps[1:]) - tn.cdf(eps[:-1])
 
 
 DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
 
 
 # this is inside an inner loop
-def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
+def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps_bands, sid, bin_edges,
                  epsstar=False):
     """
     :param ctx: a recarray of size U for a single site and magnitude bin
     :param cmaker: a ContextMaker instance
     :param g_by_z: an array of gsim indices
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
-    :param eps3: a triplet (truncnorm, epsilons, eps_bands)
+    :param eps_bands: an array of E elements obtained from the E+1 eps_edges
     :param sid: the site ID
-    :param bin_edges: a tuple of bin edges
+    :param bin_edges: a tuple of 5 bin edges (mag, dist, lon, lat, eps)
     :param epsstar: a boolean. When True, disaggregation contains eps* results
     """
     # disaggregate (separate) PoE in different contributions
@@ -152,7 +151,8 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
     # M - Number of IMTs
     # P - Number of PoEs in poes_disagg
     # Z - Number of realizations to consider
-    U, E, M = len(ctx), len(eps3[2]), len(iml2dict)
+    epsilons = bin_edges[-1]
+    U, E, M = len(ctx), len(eps_bands), len(iml2dict)
     iml2 = next(iter(iml2dict.values()))
     P, Z = iml2.shape
 
@@ -163,7 +163,6 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
         iml3[m] = to_distribution_values(iml2, imt)
 
     phi_b = cmaker.phi_b
-    truncnorm, epsilons, eps_bands = eps3
     cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
     # Array with mean and total std values. Shape of this is:
     # U - Number of contexts (i.e. ruptures if there is a single site)
@@ -204,7 +203,7 @@ def disaggregate(ctx, cmaker, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
                             getattr(rec, 'probs_occur', z0),
                             poes[u], time_span)
     bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
-    if not bin_edges:
+    if len(bin_edges) == 1:  # disagg.disaggregation passes only eps_edges
         return bindata
     return _build_disagg_matrix(bindata, bin_edges)
 
@@ -395,7 +394,6 @@ def disaggregation(
         of the result tuple. The matrix can be used directly by pmf-extractor
         functions.
     """
-    bine = bin_edges
     trts = sorted(set(src.tectonic_region_type for src in sources))
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
@@ -405,13 +403,13 @@ def disaggregation(
     iml2 = numpy.array([[iml]])
 
     # Epsilon bins
-    if 'eps' in bine:
-        eps_bins = bine['eps']
+    if 'eps' in bin_edges:
+        eps_bins = bin_edges['eps']
         n_epsilons = len(eps_bins) - 1
     else:
         eps_bins = numpy.linspace(-truncation_level, truncation_level,
                                   n_epsilons + 1)
-    eps3 = _eps3(truncation_level, eps_bins)
+    eps_bands = calc_eps_bands(truncation_level, eps_bins)
 
     # Create contexts
     rups = AccumDict(accum=[])
@@ -426,8 +424,8 @@ def disaggregation(
         rups[trt].extend(cm.from_srcs(srcs, sitecol))
 
     # Set the magnitude bins
-    if 'mag' in bine:
-        mag_bins = bine['mag']
+    if 'mag' in bin_edges:
+        mag_bins = bin_edges['mag']
     else:
         mags = numpy.array([r.mag for rs in rups.values() for r in rs])
         mag_bins = uniform_bins(mags.min(), mags.max(), mag_bin_width)
@@ -439,7 +437,7 @@ def disaggregation(
         for magi in numpy.unique(ctx.magi):
             bdata[trt, magi] = disaggregate(
                 ctx[ctx.magi == magi], cm, [0],
-                {imt: iml2}, eps3, epsstar=epsstar)
+                {imt: iml2}, eps_bands, 0, [eps_bins], epsstar)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(
@@ -450,15 +448,15 @@ def disaggregation(
     # Distance bins
     min_dist = min(bd.dists.min() for bd in bdata.values())
     max_dist = max(bd.dists.max() for bd in bdata.values())
-    if 'dist' in bine:
-        dist_bins = bine['dist']
+    if 'dist' in bin_edges:
+        dist_bins = bin_edges['dist']
     else:
         dist_bins = uniform_bins(min_dist, max_dist, dist_bin_width)
 
     # Lon, Lat bins
-    if 'lon' in bine and 'lat' in bine:
-        lon_bins = bine['lon']
-        lat_bins = bine['lat']
+    if 'lon' in bin_edges and 'lat' in bin_edges:
+        lon_bins = bin_edges['lon']
+        lat_bins = bin_edges['lat']
     else:
         lon_bins, lat_bins = lon_lat_bins(site.location.x, site.location.y,
                                           max_dist, coord_bin_width)
