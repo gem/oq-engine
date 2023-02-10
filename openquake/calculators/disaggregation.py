@@ -28,7 +28,7 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import read_cmakers, FarAwayRupture
 from openquake.commonlib import util, calc
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -99,7 +99,7 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
+def compute_disagg(dstore, slc, cmaker, hmap4, bin_edges, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -111,8 +111,6 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param hmap4:
         an ArrayWrapper of shape (N, M, P, Z)
-    :param magidx:
-        magnitude bin indices
     :param bin_egdes:
         a sextet (mag dist lon lat eps trt) edges
     :param monitor:
@@ -122,34 +120,27 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magidx, bin_edges, monitor):
     """
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        ctxs = cmaker.read_ctxs(dstore, slc, magidx)
+        ctxs = cmaker.read_ctxs(dstore, slc)
     if cmaker.rup_mutex:
         raise NotImplementedError('Disaggregation with mutex ruptures')
 
     # Set epsstar boolean variable
     epsstar = dstore['oqparam'].epsilon_star
     N, M, P, Z = hmap4.shape
-    g_by_rlz = {}  # dict rlz -> g
-    for g, rlzs in enumerate(cmaker.gsims.values()):
-        for rlz in rlzs:
-            g_by_rlz[rlz] = g
-    for magi in numpy.unique(magidx):
-        for ctxt in ctxs:
-            ctx = ctxt[ctxt.magi == magi]
+
+    # disaggregate by site
+    for sid, iml3 in enumerate(hmap4):
+        try:
+            sd = disagg.SiteDisaggregator(ctxs, sid, cmaker, bin_edges)
+        except FarAwayRupture:
+            continue
+        for magi in sd.ctxs:
             res = {'trti': cmaker.trti, 'magi': magi}
-            # disaggregate by site, IMT
-            for s, iml3 in enumerate(hmap4):
-                close = ctx[ctx.sids == s]
-                if len(g_by_rlz) == 0 or len(close) == 0:
-                    # g_by_z[s] is empty in test case_7
-                    continue
-                sd = disagg.SiteDisaggregator(
-                    close, s, cmaker, bin_edges, g_by_rlz)
-                matrix = sd.disagg(iml3, hmap4.rlzs[s], epsstar)
-                for m in range(M):
-                    mat6 = matrix[..., m, :, :]
-                    if mat6.any():
-                        res[s, m] = output(mat6)
+            matrix = sd.disagg(iml3, hmap4.rlzs[sid], magi, epsstar)
+            for m in range(M):
+                mat6 = matrix[..., m, :, :]
+                if mat6.any():
+                    res[sid, m] = output(mat6)
             # print(_collapse_res(res))
             yield res
     # NB: compressing the results is not worth it since the aggregation of
@@ -306,13 +297,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        magi = numpy.searchsorted(self.bin_edges[0], dstore['rup/mag'][:]) - 1
-        magi[magi == -1] = 0  # when the magnitude is on the edge
-        totrups = len(magi)
+        totrups = len(dstore['rup/mag'])
         logging.info('Reading {:_d} ruptures'.format(totrups))
         rdt = [('grp_id', U16), ('magi', U8), ('nsites', U16), ('idx', U32)]
         rdata = numpy.zeros(totrups, rdt)
-        rdata['magi'] = magi
         rdata['idx'] = numpy.arange(totrups)
         rdata['grp_id'] = dstore['rup/grp_id'][:]
         task_inputs = []
@@ -334,7 +322,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for slc in gen_slices(start, stop, 50_000):
                     U = max(U, slc.stop - slc.start)
                     smap.submit((dstore, slc, cmaker, self.hmap4,
-                                 magi[slc], self.bin_edges))
+                                 self.bin_edges))
                     task_inputs.append((grp_id, stop - start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
