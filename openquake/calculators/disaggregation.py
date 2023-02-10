@@ -28,7 +28,7 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.contexts import read_cmakers, FarAwayRupture
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.commonlib import util, calc
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -70,6 +70,7 @@ def _hmap4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     P = len(poes_disagg)
     M = len(imtls)
     arr = numpy.empty((N, M, P, Z))
+    acc = AccumDict(accum=[])  # site, imt, poe -> rlzs
     for m, imt in enumerate(imtls):
         for (s, z), rlz in numpy.ndenumerate(rlzs):
             curve = curves[s][z]
@@ -82,12 +83,14 @@ def _hmap4(rlzs, iml_disagg, imtls, poes_disagg, curves):
                     curve[imt], imtls[imt], poes_disagg)
                 for iml, poe in zip(arr[s, m, :, z], poes_disagg):
                     if iml == 0:
-                        logging.warning('Cannot disaggregate for site %d, %s, '
-                                        'poe=%s, rlz=%d: the hazard is zero',
-                                        s, imt, poe, rlz)
+                        acc[s, imt, poe].append(rlz)
                     elif poe > max_poe:
                         logging.warning(
                             POE_TOO_BIG, s, poe, max_poe, rlz, imt)
+    for (s, imt, poe), zero_rlzs in acc.items():
+        logging.warning('Cannot disaggregate for site %d, %s, '
+                        'poe=%s, rlzs=%s: the hazard is zero',
+                        s, imt, poe, zero_rlzs)
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
@@ -120,6 +123,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, bin_edges, monitor):
     """
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
+        sitecol = dstore['sitecol']
         ctxs = cmaker.read_ctxs(dstore, slc)
     if cmaker.rup_mutex:
         raise NotImplementedError('Disaggregation with mutex ruptures')
@@ -129,14 +133,13 @@ def compute_disagg(dstore, slc, cmaker, hmap4, bin_edges, monitor):
     N, M, P, Z = hmap4.shape
 
     # disaggregate by site
-    for sid, iml3 in enumerate(hmap4):
-        try:
-            sd = disagg.SiteDisaggregator(ctxs, sid, cmaker, bin_edges)
-        except FarAwayRupture:
+    disaggs = disagg.build_disaggregators(ctxs, sitecol, cmaker, bin_edges)
+    for sid, dis in enumerate(disaggs):
+        if dis is None:  # no data for this site
             continue
-        for magi in sd.ctxs:
+        for magi in dis.ctxs:
             res = {'trti': cmaker.trti, 'magi': magi}
-            matrix = sd.disagg(iml3, hmap4.rlzs[sid], magi, epsstar)
+            matrix = dis.disagg(hmap4[sid], hmap4.rlzs[sid], magi, epsstar)
             for m in range(M):
                 mat6 = matrix[..., m, :, :]
                 if mat6.any():
