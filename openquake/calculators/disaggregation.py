@@ -137,14 +137,14 @@ def compute_disagg(dstore, slc, cmaker, hmap4, bin_edges, monitor):
 
     # disaggregate by site, IMT
     for sid, iml3 in enumerate(hmap4):
+        try:
+            sd = disagg.SiteDisaggregator(
+                ctxs, sid, cmaker, bin_edges, g_by_rlz)
+        except FarAwayRupture:
+            continue
         for magi in numpy.unique(magidx):
-            try:
-                sd = disagg.SiteDisaggregator(
-                    ctxs, sid, magi, cmaker, bin_edges, g_by_rlz)
-            except FarAwayRupture:
-                continue
             res = {'trti': cmaker.trti, 'magi': magi}
-            matrix = sd.disagg(iml3, hmap4.rlzs[sid], epsstar)
+            matrix = sd.disagg(iml3, hmap4.rlzs[sid], magi, epsstar)
             for m in range(M):
                 mat6 = matrix[..., m, :, :]
                 if mat6.any():
