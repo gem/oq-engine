@@ -28,7 +28,7 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.contexts import read_cmakers, FarAwayRupture
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.commonlib import util, calc
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -123,6 +123,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, bin_edges, monitor):
     """
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
+        sitecol = dstore['sitecol']
         ctxs = cmaker.read_ctxs(dstore, slc)
     if cmaker.rup_mutex:
         raise NotImplementedError('Disaggregation with mutex ruptures')
@@ -132,7 +133,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, bin_edges, monitor):
     N, M, P, Z = hmap4.shape
 
     # disaggregate by site
-    disaggs = disagg.build_disaggregators(ctxs, range(N), cmaker, bin_edges)
+    disaggs = disagg.build_disaggregators(ctxs, sitecol, cmaker, bin_edges)
     for sid, dis in enumerate(disaggs):
         if dis is None:  # no data for this site
             continue

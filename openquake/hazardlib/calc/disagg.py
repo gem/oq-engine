@@ -105,7 +105,7 @@ def build_bin_edges(oq, sitecol):
     mag_edges = mag_bin_width * numpy.arange(n1, n2+1)
 
     # build dist_edges
-    maxdist = max(maximum_distance.max().values())
+    maxdist = filters.upper_maxdist(maximum_distance)
     dist_edges = distance_bin_width * numpy.arange(
         0, int(numpy.ceil(maxdist / distance_bin_width) + 1))
 
@@ -381,13 +381,17 @@ pmf_map = dict([
 
 # ########################## Disaggregator classes ########################## #
 
-def build_disaggregators(ctxs, sids, cmaker, bin_edges):
+def build_disaggregators(ctxs, sitecol, cmaker, bin_edges=None):
+    if bin_edges is None:
+        be = build_bin_edges(cmaker.oq, sitecol)
+        bin_edges = be['mag'], be['dist'], be['lon'], be['lat'], be['eps']
+
     g_by_rlz = {}  # dict rlz -> g
     for g, rlzs in enumerate(cmaker.gsims.values()):
         for rlz in rlzs:
             g_by_rlz[rlz] = g
     out = []
-    for sid in sids:
+    for sid in sitecol.sids:
         try:
             sd = SiteDisaggregator(ctxs, sid, cmaker, bin_edges, g_by_rlz)
         except FarAwayRupture:
