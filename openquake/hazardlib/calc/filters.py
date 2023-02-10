@@ -227,8 +227,6 @@ class IntegrationDistance(dict):
         >>> md = IntegrationDistance.new('50')
         >>> md
         {'default': [(2.5, 50), (10.2, 50)]}
-        >>> md.max()
-        {'default': 50}
         """
         items_by_trt = floatdict(value)
         self = cls()
