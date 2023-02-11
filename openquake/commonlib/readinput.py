@@ -45,7 +45,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
-    pmf, gsim_lt)
+    pmf, gsim_lt, get_smlt)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
@@ -679,14 +679,7 @@ def get_source_model_lt(oqparam, branchID=None):
         instance
     """
     fname = oqparam.inputs['source_model_logic_tree']
-    args = (fname, oqparam.random_seed, oqparam.number_of_logic_tree_samples,
-            oqparam.sampling_method, False, branchID)
-    smlt = logictree.SourceModelLogicTree(*args)
-    discard_trts = set(s.strip() for s in oqparam.discard_trts.split(','))
-    if discard_trts:
-        # smlt.tectonic_region_types comes from applyToTectonicRegionType
-        smlt.tectonic_region_types = smlt.tectonic_region_types - discard_trts
-    return smlt
+    return get_smlt(fname, vars(oqparam), branchID)
 
 
 def get_full_lt(oqparam, branchID=None):

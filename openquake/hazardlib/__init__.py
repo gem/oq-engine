@@ -28,7 +28,7 @@ import configparser
 import numpy
 from openquake.baselib import hdf5, general, InvalidFile
 from openquake.hazardlib import (
-    geo, site, nrml, sourceconverter, gsim_lt, contexts, valid)
+    geo, site, nrml, sourceconverter, gsim_lt, logictree, contexts, valid)
 from openquake.hazardlib.source.rupture import (
     EBRupture, get_ruptures, _get_rupture)
 from openquake.hazardlib.calc.filters import IntegrationDistance
@@ -158,6 +158,40 @@ def read_hparams(job_ini):
                         val = False
             params[key] = val
     return params
+
+
+def get_smlt(fname, hparams, branchID=None):
+    """
+    :param hparams:
+        dictionary of hazard parameters
+    :returns:
+        :class:`openquake.commonlib.logictree.SourceModelLogicTree` object
+    """
+    args = (fname, hparams.get('random_seed', 42),
+            hparams.get('number_of_logic_tree_samples', 0),
+            hparams.get('sampling_method', 'early_weights'), False, branchID)
+    smlt = logictree.SourceModelLogicTree(*args)
+    if 'discard_trts' in hparams:
+        discard_trts = {s.strip() for s in hparams['discard_trts'].split(',')}
+        # smlt.tectonic_region_types comes from applyToTectonicRegionType
+        smlt.tectonic_region_types = smlt.tectonic_region_types - discard_trts
+    return smlt
+
+
+def get_flt(hparams, branchID=None):
+    """
+    :param hparams:
+        dictionary of hazard parameters
+    :param branchID:
+        used to read a single sourceModel branch (if given)
+    :returns:
+        :class:`openquake.commonlib.logictree.FullLogicTree` object
+    """
+    gsim_file = hparams['gsim_logic_tree_file']
+    smlt = get_smlt(hparams, branchID)
+    trts = smlt.tectonic_region_types
+    gsimlt = logictree.GsimLogicTree(gsim_file, trts)
+    return logictree.FullLogicTree(smlt, gsimlt)
 
 
 def read_input(hparams, **extra):
