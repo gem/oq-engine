@@ -469,7 +469,7 @@ class SourceModelLogicTree(object):
                     continue
                 try:
                     for fname in value_node.text.strip().split():
-                        if (fname.endswith(('.xml', '.nrml'))  # except UCERF
+                        if (fname.endswith(('.xml', '.nrml'))
                                 and not self.test_mode):
                             self.collect_source_model_data(
                                 branchnode['branchID'], fname)
