@@ -44,13 +44,13 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
-    source, geo, site, imt, valid, sourceconverter, nrml, pmf, gsim_lt)
+    source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
+    pmf, gsim_lt)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.source_reader import get_csm
 from openquake.commonlib import logictree
 
 F32 = numpy.float32
@@ -822,7 +822,7 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
             return csm
 
     # read and process the composite source model from the input files
-    csm = get_csm(oqparam, full_lt, h5)
+    csm = source_reader.get_csm(oqparam, full_lt, h5)
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(csm.get_trt_smrs())
     ngsims = sum(len(rbg) for rbg in rlzs_by_gsim_list)
     logging.info('There are %d gsims in the CompositeSourceModel', ngsims)
