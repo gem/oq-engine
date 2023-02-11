@@ -18,7 +18,7 @@
 
 import logging
 from openquake.baselib.writers import write_csv
-from openquake.commonlib.logictree import SourceModelLogicTree
+from openquake.hazardlib.logictree import SourceModelLogicTree
 
 
 def main(fname, out=None):
