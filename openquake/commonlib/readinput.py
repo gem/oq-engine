@@ -678,8 +678,7 @@ def get_source_model_lt(oqparam, branchID=None):
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree`
         instance
     """
-    fname = oqparam.inputs['source_model_logic_tree']
-    return get_smlt(fname, vars(oqparam), branchID)
+    return get_smlt(vars(oqparam), branchID)
 
 
 def get_full_lt(oqparam, branchID=None):

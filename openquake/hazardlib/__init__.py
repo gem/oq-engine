@@ -136,7 +136,7 @@ def read_hparams(job_ini):
     jobdir = os.path.dirname(job_ini)
     cp = configparser.ConfigParser()
     cp.read([job_ini], encoding='utf8')
-    params = {}
+    params = {'inputs': {}}
     for sect in cp.sections():
         for key, val in cp.items(sect):
             if key == 'intensity_measure_types_and_levels':
@@ -156,18 +156,22 @@ def read_hparams(job_ini):
                         val = True
                     elif val == 'false':
                         val = False
-            params[key] = val
+            if key.endswith('_file'):
+                params['inputs'][key[:-5]] = val
+            else:
+                params[key] = val
     return params
 
 
-def get_smlt(fname, hparams, branchID=None):
+def get_smlt(hparams, branchID=None):
     """
     :param hparams:
         dictionary of hazard parameters
     :returns:
         :class:`openquake.commonlib.logictree.SourceModelLogicTree` object
     """
-    args = (fname, hparams.get('random_seed', 42),
+    args = (hparams['inputs']['source_model_logic_tree'],
+            hparams.get('random_seed', 42),
             hparams.get('number_of_logic_tree_samples', 0),
             hparams.get('sampling_method', 'early_weights'), False, branchID)
     smlt = logictree.SourceModelLogicTree(*args)
