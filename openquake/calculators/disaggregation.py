@@ -102,53 +102,31 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dstore, slc, cmaker, hmap4, bin_edges, monitor):
+def compute_disagg(dis, hmap3, rlzs, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
-    :param dstore:
-        a DataStore instance
-    :param slc:
-        a slice of contexts
-    :param cmaker:
-        a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
-    :param hmap4:
-        an ArrayWrapper of shape (N, M, P, Z)
-    :param bin_egdes:
-        a sextet (mag dist lon lat eps trt) edges
+    :param dis:
+        a Disaggregator instance
+    :param hmap3:
+        an array of shape (M, P, Z)
     :param monitor:
         monitor of the currently running job
     :returns:
         a dictionary sid, imti -> 6D-array
     """
-    with monitor('reading contexts', measuremem=True):
-        dstore.open('r')
-        sitecol = dstore['sitecol']
-        ctxs = cmaker.read_ctxs(dstore, slc)
-    if cmaker.rup_mutex:
-        raise NotImplementedError('Disaggregation with mutex ruptures')
-
     # Set epsstar boolean variable
-    epsstar = dstore['oqparam'].epsilon_star
-    N, M, P, Z = hmap4.shape
-
-    # disaggregate by site
-    for site in sitecol:
-        try:
-            dis = disagg.Disaggregator(
-                ctxs, site, cmaker, bin_edges, mon=monitor)
-        except FarAwayRupture:  # no data for this site
-            continue
-        sid = site.id
-        for magi in dis.ctxs:
-            res = {'trti': cmaker.trti, 'magi': magi}
-            mat7 = dis.disagg7D(hmap4[sid], hmap4.rlzs[sid], magi, epsstar)
-            for m in range(M):
-                mat6 = mat7[..., m, :, :]
-                if mat6.any():
-                    res[sid, m] = output(mat6)
+    dis.init(monitor)
+    M = len(hmap3)
+    for magi in dis.ctxs:
+        res = {'trti': dis.cmaker.trti, 'magi': magi}
+        mat7 = dis.disagg7D(hmap3, rlzs, magi, dis.epsstar)
+        for m in range(M):
+            mat6 = mat7[..., m, :, :]
+            if mat6.any():
+                res[dis.sid, m] = output(mat6)
             # print(_collapse_res(res))
-            yield res
+        yield res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
 
@@ -324,12 +302,20 @@ class DisaggregationCalculator(base.HazardCalculator):
         G = max(len(cmaker.gsims) for cmaker in cmakers)
         for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
-            for start, stop in slices:
-                for slc in gen_slices(start, stop, 50_000):
-                    U = max(U, slc.stop - slc.start)
-                    smap.submit((dstore, slc, cmaker, self.hmap4,
-                                 self.bin_edges))
-                    task_inputs.append((grp_id, stop - start))
+            for site in self.sitecol:
+                sid = site.id
+                for start, stop in slices:
+                    for slc in gen_slices(start, stop, 50_000):
+                        U = max(U, slc.stop - slc.start)
+                        ctxs = cmaker.read_ctxs(self.datastore, slc)
+                        if cmaker.rup_mutex:
+                            raise NotImplementedError('Disaggregation with mutex ruptures')
+                        try:
+                            dis = disagg.Disaggregator(ctxs, site, cmaker, self.bin_edges)
+                        except FarAwayRupture:  # no data for this site
+                            continue
+                        smap.submit((dis, self.hmap4[sid], self.hmap4.rlzs[sid]))
+                        task_inputs.append((grp_id, stop - start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
