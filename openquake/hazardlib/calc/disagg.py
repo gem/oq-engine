@@ -24,6 +24,7 @@ extracting a specific PMF from the result of :func:`disaggregation`.
 import warnings
 import operator
 import collections
+import itertools
 from functools import partial, lru_cache
 import numpy
 import scipy.stats
@@ -237,12 +238,15 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False):
         else:
             poes[:, :, m, p] = _disagg_eps(
                 truncnorm_sf(phi_b, lvls), idxs, eps_bands, cum_bands)
-    z0 = numpy.zeros(0)
     time_span = cmaker.tom.time_span
-    for u, rec in enumerate(ctx):
-        pnes[u] *= get_pnes(rec.occurrence_rate,
-                            getattr(rec, 'probs_occur', z0),
-                            poes[u], time_span)
+    if any(len(probs) for probs in ctx.probs_occur):  # any probs_occur
+        for u, rec in enumerate(ctx):
+            pnes[u] *= get_pnes(rec.occurrence_rate, rec.probs_occur,
+                                poes[u], time_span)
+    else:  # poissonian context, use the fast lane
+        for e, m, p in itertools.product(range(E), range(M), range(P)):
+            pnes[:, e, m, p] *= numpy.exp(
+                -ctx.occurrence_rate * poes[:, e, m, p] * time_span)
     bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
     if len(bin_edges) == 1:  # disagg.disaggregation passes only eps_edges
         return bindata
