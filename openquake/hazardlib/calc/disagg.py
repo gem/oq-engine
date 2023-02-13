@@ -621,7 +621,7 @@ def disaggregation(
         Dimensions are in the same order as bin edges in the first item
         of the result tuple. The matrix can be used directly by pmf-extractor
         functions.
-    """    
+    """
     trts = sorted(set(src.tectonic_region_type for src in sources))
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
