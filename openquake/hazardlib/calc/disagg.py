@@ -641,7 +641,7 @@ def disaggregation(
              'maximum_distance': source_filter.integration_distance(trt),
              'imtls': {str(imt): [iml]}})
         cm.tom = srcs[0].temporal_occurrence_model
-        cm.src_mutex = False
+        cm.src_mutex = False  # FIXME
         ctxs[trt].extend(cm.from_srcs(srcs, sitecol))
         for ctx in ctxs[trt]:
             mags_by_trt[trt] |= set(ctx.mag)
