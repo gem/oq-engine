@@ -235,20 +235,6 @@ def get_eps4(eps_edges, truncation_level):
     return min(eps_edges), max(eps_edges), eps_bands, eps_cum
 
 
-def imlog(iml2dict):
-    """
-    :param iml2dict: dictionary imt -> array of P intensities
-    :returns: array (M, P) of logarithmic intensities
-    """
-    imls = next(iter(iml2dict.values()))
-    M, P = len(iml2dict), len(imls)
-    iml2 = numpy.zeros((M, P))
-    for m, (imt, imls) in enumerate(iml2dict.items()):
-        # 0 values are converted into -inf
-        iml2[m] = to_distribution_values(imls, imt)
-    return iml2
-
-
 # NB: this function is the crucial bit for performance!
 def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False):
     # ctx: a recarray of size U for a single site and magnitude bin
@@ -524,8 +510,7 @@ class Disaggregator(object):
         # 7D-matrix #disbins, #lonbins, #latbins, #epsbins, M, P, Z
         matrix = numpy.zeros(shp)
         for z, rlzi in enumerate(rlzs):
-            iml2 = imlog(dict(zip(self.cmaker.imts, iml3[:, :, z])))
-            matrix[..., z] = self.disagg6D(iml2, rlzi, magi, epsstar)
+            matrix[..., z] = self.disagg6D(iml3[:, :, z], rlzi, magi, epsstar)
         return matrix
 
     def disagg6D(self, iml2, rlzi, magi, epsstar):
@@ -536,10 +521,15 @@ class Disaggregator(object):
         except KeyError:
             return 0
 
+        # compute the logarithmic intensities
+        imlog2 = numpy.zeros_like(iml2)
+        for m, imt in enumerate(self.cmaker.imts):
+            imlog2[m] = to_distribution_values(iml2[m], imt)
+
         mats = []
         for ctx, mea, std in zip(
                 self.ctxs[magi], self.meas[magi], self.stds[magi]):
-            mat = _disaggregate(ctx, mea, std, self.cmaker, g, iml2,
+            mat = _disaggregate(ctx, mea, std, self.cmaker, g, imlog2,
                                 self.bin_edges, epsstar)
             mats.append(mat)
         if len(mats) == 1:
