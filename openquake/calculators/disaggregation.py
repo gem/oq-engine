@@ -135,7 +135,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, bin_edges, monitor):
     # disaggregate by site
     for site in sitecol:
         try:
-            dis = disagg.Disaggregator(ctxs, site, cmaker, bin_edges)
+            dis = disagg.Disaggregator(ctxs, site, cmaker, bin_edges, monitor)
         except FarAwayRupture:  # no data for this site
             continue
         sid = site.id

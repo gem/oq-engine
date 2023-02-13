@@ -30,7 +30,7 @@ import numpy
 import scipy.stats
 
 from openquake.baselib.general import AccumDict, groupby, pprod
-from openquake.baselib.performance import get_slices
+from openquake.baselib.performance import get_slices, Monitor
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -236,7 +236,8 @@ def get_eps4(eps_edges, truncation_level):
 
 
 # NB: this function is the crucial bit for performance!
-def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False):
+def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False,
+                  mon=Monitor()):
     # ctx: a recarray of size U for a single site and magnitude bin
     # mea: array of shape (G, M, U)
     # std: array of shape (G, M, U)
@@ -277,19 +278,21 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False):
         else:
             poes[:, :, m, p] = _disagg_eps(
                 truncnorm_sf(phi_b, lvls), idxs, eps_bands, cum_bands)
-    time_span = cmaker.tom.time_span
-    if any(len(probs) for probs in ctx.probs_occur):  # any probs_occur
-        for u, rec in enumerate(ctx):
-            pnes[u] *= get_pnes(rec.occurrence_rate, rec.probs_occur,
-                                poes[u], time_span)
-    else:  # poissonian context, use the fast lane
-        for e, m, p in itertools.product(range(E), range(M), range(P)):
-            pnes[:, e, m, p] *= numpy.exp(
-                -ctx.occurrence_rate * poes[:, e, m, p] * time_span)
-    bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
-    if len(bin_edges) == 1:  # disagg.disaggregation passes only eps_edges
-        return bindata
-    return _build_disagg_matrix(bindata, bin_edges)
+
+    with mon('building pnes', measuremem=False):
+        time_span = cmaker.tom.time_span
+        if any(len(probs) for probs in ctx.probs_occur):  # any probs_occur
+            for u, rec in enumerate(ctx):
+                pnes[u] *= get_pnes(rec.occurrence_rate, rec.probs_occur,
+                                    poes[u], time_span)
+        else:  # poissonian context, use the fast lane
+            for e, m, p in itertools.product(range(E), range(M), range(P)):
+                pnes[:, e, m, p] *= numpy.exp(
+                    -ctx.occurrence_rate * poes[:, e, m, p] * time_span)
+
+    with mon('building disagg matrix', measuremem=False):
+        bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
+        return _build_disagg_matrix(bindata, bin_edges)
 
 
 def _disagg_eps(survival, bins, eps_bands, cum_bands):
@@ -430,7 +433,7 @@ class Disaggregator(object):
     A class to perform single-site disaggregation. Use build_disaggregators
     to instantiate it.
     """
-    def __init__(self, ctxs, site, cmaker, bin_edges):
+    def __init__(self, ctxs, site, cmaker, bin_edges, mon=Monitor()):
         if isinstance(site, Site):
             if not hasattr(site, 'id'):
                 site.id = 0
@@ -444,6 +447,7 @@ class Disaggregator(object):
                           bin_edges[2][sid], # lon
                           bin_edges[3][sid], # lat
                           bin_edges[4]) # eps
+        self.mon = mon
         self.g_by_rlz = {}  # dict rlz -> g
         for g, rlzs in enumerate(cmaker.gsims.values()):
             for rlz in rlzs:
@@ -512,7 +516,7 @@ class Disaggregator(object):
         for ctx, mea, std in zip(
                 self.ctxs[magi], self.meas[magi], self.stds[magi]):
             mat = _disaggregate(ctx, mea, std, self.cmaker, g, imlog2,
-                                self.bin_edges, epsstar)
+                                self.bin_edges, epsstar, self.mon)
             mats.append(mat)
         if len(mats) == 1:
             return mat
