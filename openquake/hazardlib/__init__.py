@@ -236,7 +236,7 @@ def read_input(hparams, **extra):
         hparams.update(extra)
     assert 'imts' in hparams or 'imtls' in hparams
     assert isinstance(hparams['maximum_distance'], IntegrationDistance)
-    smfname = hparams.get('source_model_file')
+    smfname = hparams['inputs'].get('source_model')
     srcstring = hparams.get('source_string')
     if smfname:  # nonscenario
         itime = hparams['investigation_time']
@@ -273,7 +273,7 @@ def read_input(hparams, **extra):
     if 'gsim' in hparams:
         gslt = gsim_lt.GsimLogicTree.from_(hparams['gsim'])
     else:
-        gslt = gsim_lt.GsimLogicTree(hparams['gsim_logic_tree_file'], trts)
+        gslt = gsim_lt.GsimLogicTree(hparams['inputs']['gsim_logic_tree'], trts)
 
     # fix source attributes
     idx = 0
