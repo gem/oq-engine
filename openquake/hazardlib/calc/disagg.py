@@ -430,8 +430,7 @@ pmf_map = dict([
 
 class Disaggregator(object):
     """
-    A class to perform single-site disaggregation. Use build_disaggregators
-    to instantiate it.
+    A class to perform single-site disaggregation.
     """
     def __init__(self, ctxs, site, cmaker, bin_edges, mon=Monitor()):
         if isinstance(site, Site):
