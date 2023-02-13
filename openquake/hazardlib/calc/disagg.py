@@ -249,37 +249,37 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False,
     # epsstar: a boolean. When True, disaggregation contains eps* results
     # returns a 7D-array of shape (D, Lo, La, E, M, P, Z)
 
-    eps_edges = tuple(bin_edges[-1])  # last edge
-    min_eps, max_eps, eps_bands, cum_bands = get_eps4(
-        eps_edges, cmaker.truncation_level)
-    U, E = len(ctx), len(eps_bands)
-    M, P = iml2.shape
-    phi_b = cmaker.phi_b
-    # Array with mean and total std values. Shape of this is:
-    # U - Number of contexts (i.e. ruptures if there is a single site)
-    # M - Number of IMTs
-    # G - Number of gsims
-    poes = numpy.zeros((U, E, M, P))
-    pnes = numpy.ones((U, E, M, P))
-    # Multi-dimensional iteration
-    for (m, p), iml in numpy.ndenumerate(iml2):
-        if iml == -numpy.inf:  # zero hazard
-            continue
-        lvls = (iml - mea[g, m]) / std[g, m]
-        # Find the index in the epsilons-bins vector where lvls (which are
-        # epsilons) should be included
-        idxs = numpy.searchsorted(eps_edges, lvls)
-        # Now we split the epsilons into parts (one for each epsilon-bin larger
-        # than lvls)
-        if epsstar:
-            ok = (lvls >= min_eps) & (lvls < max_eps)
-            # The leftmost indexes are ruptures and epsilons
-            poes[ok, idxs[ok] - 1, m, p] = truncnorm_sf(phi_b, lvls[ok])
-        else:
-            poes[:, :, m, p] = _disagg_eps(
-                truncnorm_sf(phi_b, lvls), idxs, eps_bands, cum_bands)
+    with mon('disagg by eps', measuremem=False):
+        eps_edges = tuple(bin_edges[-1])  # last edge
+        min_eps, max_eps, eps_bands, cum_bands = get_eps4(
+            eps_edges, cmaker.truncation_level)
+        U, E = len(ctx), len(eps_bands)
+        M, P = iml2.shape
+        phi_b = cmaker.phi_b
+        # Array with mean and total std values. Shape of this is:
+        # U - Number of contexts (i.e. ruptures if there is a single site)
+        # M - Number of IMTs
+        # G - Number of gsims
+        poes = numpy.zeros((U, E, M, P))
+        pnes = numpy.ones((U, E, M, P))
+        # Multi-dimensional iteration
+        for (m, p), iml in numpy.ndenumerate(iml2):
+            if iml == -numpy.inf:  # zero hazard
+                continue
+            lvls = (iml - mea[g, m]) / std[g, m]
+            # Find the index in the epsilons-bins vector where lvls (which are
+            # epsilons) should be included
+            idxs = numpy.searchsorted(eps_edges, lvls)
+            # Split the epsilons into parts (one for each bin larger than lvls)
+            if epsstar:
+                ok = (lvls >= min_eps) & (lvls < max_eps)
+                # The leftmost indexes are ruptures and epsilons
+                poes[ok, idxs[ok] - 1, m, p] = truncnorm_sf(phi_b, lvls[ok])
+            else:
+                poes[:, :, m, p] = _disagg_eps(
+                    truncnorm_sf(phi_b, lvls), idxs, eps_bands, cum_bands)
 
-    with mon('building pnes', measuremem=False):
+    with mon('multiplying pnes', measuremem=False):
         time_span = cmaker.tom.time_span
         if any(len(probs) for probs in ctx.probs_occur):  # any probs_occur
             for u, rec in enumerate(ctx):
