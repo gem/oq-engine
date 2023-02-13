@@ -115,8 +115,8 @@ def compute_disagg(dis, hmap3, rlzs, monitor):
     :returns:
         a dictionary sid, imti -> 6D-array
     """
-    # Set epsstar boolean variable
-    dis.init(monitor)
+    with monitor('building mean_std', measuremem=False):
+        dis.init(monitor)
     M = len(hmap3)
     for magi in dis.ctxs:
         res = {'trti': dis.cmaker.trti, 'magi': magi}
