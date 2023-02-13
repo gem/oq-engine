@@ -516,10 +516,10 @@ class EngineServerTestCase(django.test.TestCase):
                     sys.stderr.write('Empty traceback, please check!\n')
                 self.assertIn('ValueError: Site at lon=-86.0 lat=88.0 '
                               'is not covered by any model!', tb)
-                email_files = glob.glob('/tmp/app-messages/*')
-                email_file = max(email_files, key=os.path.getctime)
                 # FIXME: we should use the overridden EMAIL_FILE_PATH
-                # email_file = os.listdir(email_dir)[0]
+                # email_files = glob.glob('/tmp/app-messages/*')
+                # email_file = max(email_files, key=os.path.getctime)
+                email_file = os.listdir(email_dir)[0]
                 with open(os.path.join(email_dir, email_file), 'r') as f:
                     email_content = f.read()
                     print(email_content)

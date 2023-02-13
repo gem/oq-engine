@@ -215,7 +215,6 @@ except ImportError:
 
 if TEST:
     APPLICATION_MODE = 'AELO'
-    EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 
 if APPLICATION_MODE.upper() in ('RESTRICTED', 'AELO'):
     LOCKDOWN = True
