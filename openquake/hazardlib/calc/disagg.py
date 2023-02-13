@@ -385,11 +385,7 @@ pmf_map = dict([
 
 # ########################## Disaggregator classes ########################## #
 
-def build_disaggregators(ctxs, sitecol, cmaker, bin_edges=None):
-    if bin_edges is None:
-        be = build_bin_edges(cmaker.oq, sitecol)
-        bin_edges = be['mag'], be['dist'], be['lon'], be['lat'], be['eps']
-
+def build_disaggregators(ctxs, sitecol, cmaker, bin_edges):
     g_by_rlz = {}  # dict rlz -> g
     for g, rlzs in enumerate(cmaker.gsims.values()):
         for rlz in rlzs:
@@ -397,14 +393,14 @@ def build_disaggregators(ctxs, sitecol, cmaker, bin_edges=None):
     out = []
     for sid in sitecol.sids:
         try:
-            sd = SiteDisaggregator(ctxs, sid, cmaker, bin_edges, g_by_rlz)
+            sd = Disaggregator(ctxs, sid, cmaker, bin_edges, g_by_rlz)
         except FarAwayRupture:
             sd = None
         out.append(sd)
     return out
 
 
-class SiteDisaggregator(object):
+class Disaggregator(object):
     """
     A class to perform single-site disaggregation. Use build_disaggregators
     to instantiate it.
@@ -482,53 +478,6 @@ class SiteDisaggregator(object):
         if len(mats) == 1:
             return mat
         return numpy.average(mats, weights=self.weights[magi], axis=0)
-
-
-class SourceSiteDisaggregator(object):
-    """
-    A class to perform disaggregations when there is a single source and
-    a single site.
-    """
-    def __init__(self, src, site, cmaker):
-        self.src = src
-        if isinstance(site, Site):
-            self.sitecol = SiteCollection([site])
-        else:  # assume a length-1 site collection
-            assert isinstance(site, SiteCollection), site
-            assert len(site) == 1, site
-            self.sitecol = site
-        self.cmaker = cmaker
-        assert cmaker.grp_id == src.grp_id, (cmaker.grp_id == src.grp_id)
-        cmaker.oq.mags_by_trt = {src.tectonic_region_type: src.get_magstrs()}
-        self.edges = build_bin_edges(cmaker.oq, self.sitecol)
-
-    def make_ctxs(self):
-        """
-        Build a list of contexts, one for each non-empty magnitude bin
-        """
-        ctxs = self.cmaker.from_srcs([self.src], self.sitecol)
-        if not ctxs:
-            raise FarAwayRupture
-        elif len(ctxs) == 1:  # poissonian source
-            ctx = ctxs[0]
-        elif len(ctxs) == 2:  # nonpoissonian source
-            ctx = ctxs[1]
-
-        magi = numpy.searchsorted(self.edges['mag'], ctx.mag) - 1
-        magi[magi == -1] = 0  # when the magnitude is on the edge
-        idxs = numpy.argsort(magi)
-        return split_array(ctx[idxs], magi[idxs])
-
-    #def disaggregate(self, ctx, imt, iml, rlz, epsstar=False):
-    #    # for each z
-    #    iml2dict = {imt: numpy.array([[iml]])}
-    #    arr7D = _disaggregate(ctx, self.cmaker, self.g_by_z, iml2dict,
-    #                          self.bin_edges, epsstar)
-    #    return arr7D[..., 0, 0, 0]  # 4D array of shape (D, Lo, La, E)
-
-    #def disagg_dist_eps(self, ctx, imt, iml, rlz, epsstar=False):
-    #    mat4 = self.disaggregate(ctx, imt, iml, rlz, epsstar)
-    #    return mag_dist_eps_pmf(mat4)  # shape (D, E)
 
 
 # this is used in the hazardlib tests, not in the engine

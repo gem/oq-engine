@@ -145,16 +145,6 @@ class DisaggregateTestCase(unittest.TestCase):
         aaae = numpy.testing.assert_array_almost_equal
         aaae(matrix.sum(), 6.14179818e-11)
 
-
-    def test_SSD(self):
-        # test the SourceSiteDisaggregator
-        ssd = disagg.SourceSiteDisaggregator(
-            self.sources[0], self.site, self.cmaker)
-        ctxs = ssd.make_ctxs()
-        aac(ctxs[0].mag, [4.5, 4.5, 4.5, 4.5])
-        aac(ctxs[1].mag, [4.6, 4.6, 4.6, 4.6])
-        aac(ctxs[2].mag, [4.7, 4.7])
-
         
 class PMFExtractorsTestCase(unittest.TestCase):
     def setUp(self):
