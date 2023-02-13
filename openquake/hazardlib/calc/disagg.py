@@ -241,7 +241,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False,
 
     with mon('building disagg matrix', measuremem=False):
         bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
-        return _build_disagg_matrix(bindata, bin_edges)
+        return _build_disagg_matrix(bindata, bin_edges[1:])
 
 
 def _disagg_eps(survival, bins, eps_bands, cum_bands):
@@ -391,7 +391,8 @@ class Disaggregator(object):
             assert len(site) == 1, site
         sid = self.sitecol.sids[0]
         self.cmaker = cmaker
-        self.bin_edges = (bin_edges[1], # dist
+        self.bin_edges = (bin_edges[0], # mag
+                          bin_edges[1], # dist,
                           bin_edges[2][sid], # lon
                           bin_edges[3][sid], # lat
                           bin_edges[4]) # eps
@@ -446,7 +447,7 @@ class Disaggregator(object):
         :returns: a 7D matrix of shape (D, Lo, La, E, M, P, Z)
         """
         M, P, Z = iml3.shape
-        shp = [len(b)-1 for b in self.bin_edges[:4]] + [M, P, Z]
+        shp = [len(b)-1 for b in self.bin_edges[1:5]] + [M, P, Z]
         matrix = numpy.zeros(shp)
         for z, rlzi in enumerate(rlzs):
             try:
