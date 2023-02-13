@@ -64,7 +64,7 @@ def _matrix(matrices, num_trts, num_mag_bins):
     return mat
 
 
-def _hmap4(rlzs, iml_disagg, imtls, poes_disagg, curves):
+def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     # an ArrayWrapper of shape (N, M, P, Z)
     N, Z = rlzs.shape
     P = len(poes_disagg)
@@ -102,13 +102,13 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dis, hmap3, rlzs, monitor):
+def compute_disagg(dis, iml3, rlzs, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
     :param dis:
         a Disaggregator instance
-    :param hmap3:
+    :param iml3:
         an array of shape (M, P, Z)
     :param monitor:
         monitor of the currently running job
@@ -117,10 +117,10 @@ def compute_disagg(dis, hmap3, rlzs, monitor):
     """
     with monitor('building mean_std', measuremem=False):
         dis.init(monitor)
-    M = len(hmap3)
+    M = len(iml3)
     for magi in dis.ctxs:
         res = {'trti': dis.cmaker.trti, 'magi': magi}
-        mat7 = dis.disagg7D(hmap3, rlzs, magi)
+        mat7 = dis.disagg7D(iml3, rlzs, magi)
         for m in range(M):
             mat6 = mat7[..., m, :, :]
             if mat6.any():
@@ -266,12 +266,12 @@ class DisaggregationCalculator(base.HazardCalculator):
             self.poe_id = {poe: i for i, poe in enumerate(oq.poes_disagg)}
             curves = [self.get_curve(sid, rlzs[sid])
                       for sid in self.sitecol.sids]
-        self.hmap4 = _hmap4(rlzs, oq.iml_disagg, oq.imtls,
+        self.iml4 = _iml4(rlzs, oq.iml_disagg, oq.imtls,
                             self.poes_disagg, curves)
-        if self.hmap4.array.sum() == 0:
+        if self.iml4.array.sum() == 0:
             raise SystemExit('Cannot do any disaggregation: zero hazard')
-        self.datastore['hmap4'] = self.hmap4
-        self.datastore['poe4'] = numpy.zeros_like(self.hmap4.array)
+        self.datastore['hmap4'] = self.iml4
+        self.datastore['poe4'] = numpy.zeros_like(self.iml4.array)
         return self.compute()
 
     def compute(self):
@@ -314,7 +314,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                             dis = disagg.Disaggregator(ctxs, site, cmaker, self.bin_edges)
                         except FarAwayRupture:  # no data for this site
                             continue
-                        smap.submit((dis, self.hmap4[sid], self.hmap4.rlzs[sid]))
+                        smap.submit((dis, self.iml4[sid], self.iml4.rlzs[sid]))
                         task_inputs.append((grp_id, stop - start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
@@ -423,7 +423,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 self.datastore['poe4'][s, m, p] = poe2  # shape Z
                 poe_agg = poe2.mean()
                 if (poe and abs(1 - poe_agg / poe) > .1 and not count[s]
-                        and self.hmap4[s, m, p].any()):
+                        and self.iml4[s, m, p].any()):
                     logging.warning(
                         'Site #%d, IMT=%s: poe_agg=%s is quite different from '
                         'the expected poe=%s, perhaps not enough levels',
