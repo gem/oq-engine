@@ -490,10 +490,14 @@ class Disaggregator(object):
                 self.meas[magi] = [mea]
                 self.stds[magi] = [std]
 
-    def disagg(self, iml3, rlzs, magi, epsstar):
+    def disagg7D(self, iml3, rlzs, magi, epsstar):
+        """
+        Disaggregate multiple realizations.
+
+        :returns: a 7D matrix of shape (D, Lo, La, E, M, P, Z)
+        """
         M, P, Z = iml3.shape
         shp = [len(b)-1 for b in self.bin_edges[:4]] + [M, P, Z]
-        # 7D-matrix #disbins, #lonbins, #latbins, #epsbins, M, P, Z
         matrix = numpy.zeros(shp)
         for z, rlzi in enumerate(rlzs):
             try:
@@ -506,6 +510,11 @@ class Disaggregator(object):
         return matrix
 
     def disagg6D(self, iml2, g, magi, epsstar):
+        """
+        Disaggregate a single realization.
+
+        :returns: a 6D matrix of shape (D, Lo, La, E, M, P)
+        """
         # compute the logarithmic intensities
         imlog2 = numpy.zeros_like(iml2)
         for m, imt in enumerate(self.cmaker.imts):

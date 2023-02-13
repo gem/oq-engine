@@ -141,9 +141,9 @@ def compute_disagg(dstore, slc, cmaker, hmap4, bin_edges, monitor):
         sid = site.id
         for magi in dis.ctxs:
             res = {'trti': cmaker.trti, 'magi': magi}
-            matrix = dis.disagg(hmap4[sid], hmap4.rlzs[sid], magi, epsstar)
+            mat7 = dis.disagg7D(hmap4[sid], hmap4.rlzs[sid], magi, epsstar)
             for m in range(M):
-                mat6 = matrix[..., m, :, :]
+                mat6 = mat7[..., m, :, :]
                 if mat6.any():
                     res[sid, m] = output(mat6)
             # print(_collapse_res(res))
