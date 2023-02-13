@@ -381,7 +381,8 @@ class Disaggregator(object):
     """
     A class to perform single-site disaggregation.
     """
-    def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges, mon=Monitor()):
+    def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges, imts=None,
+                 mon=Monitor()):
         if isinstance(site, Site):
             if not hasattr(site, 'id'):
                 site.id = 0
@@ -390,6 +391,10 @@ class Disaggregator(object):
             self.sitecol = site
             assert len(site) == 1, site
         sid = self.sitecol.sids[0]
+        if self.imts is not None:
+            for imt in imts:
+                assert imt in cmaker.imtls, imt
+            cmaker.imts = imts
         self.cmaker = cmaker
         self.bin_edges = (bin_edges[0], # mag
                           bin_edges[1], # dist,
