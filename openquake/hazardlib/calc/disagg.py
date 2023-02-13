@@ -381,7 +381,7 @@ class Disaggregator(object):
     """
     A class to perform single-site disaggregation.
     """
-    def __init__(self, ctxs, site, cmaker, bin_edges, mon=Monitor()):
+    def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges, mon=Monitor()):
         if isinstance(site, Site):
             if not hasattr(site, 'id'):
                 site.id = 0
@@ -396,14 +396,22 @@ class Disaggregator(object):
                           bin_edges[2][sid], # lon
                           bin_edges[3][sid], # lat
                           bin_edges[4]) # eps
+        for i, name in enumerate(['Ma', 'D', 'Lo', 'La', 'E']):
+            setattr(self, name, len(self.bin_edges[i]) - 1)
+
         self.mon = mon
         self.g_by_rlz = {}  # dict rlz -> g
         for g, rlzs in enumerate(cmaker.gsims.values()):
             for rlz in rlzs:
                 self.g_by_rlz[rlz] = g
 
-        # consider only the contexts affecting the site
-        ctxs = [ctx[ctx.sids == sid] for ctx in ctxs]
+        if isinstance(srcs_or_ctxs[0], numpy.ndarray):  # passed contexts
+            # consider only the contexts affecting the site
+            ctxs = [ctx[ctx.sids == sid] for ctx in srcs_or_ctxs]
+        else:  # passed sources
+            ctxs = cmaker.from_srcs(srcs_or_ctxs, self.sitecol)
+            cmaker.src_mutex = getattr(srcs_or_ctxs[0], 'src_interdep', None) \
+                == 'mutex'
 
         # build the magnitude bins
         for ctx in ctxs:
@@ -479,6 +487,16 @@ class Disaggregator(object):
         if len(mats) == 1:
             return mat
         return numpy.average(mats, weights=self.weights[magi], axis=0)
+
+    def disagg_mag_dist_eps(self, iml2, rlzi, epsstar=False):
+        """
+        :returns: a 5D matrix of shape (Ma, D, E, M, P)
+        """
+        mat5 = numpy.zeros((self.Ma, self.D, self.E) + iml2.shape)
+        for magi in range(self.Ma):
+            mat6 = self.disagg6D(iml2, self.g_by_rlz[rlzi], magi, epsstar)
+            mat5[magi] = pprod(mat6, axis=(1, 2))
+        return mat5
 
 
 # this is used in the hazardlib tests, not in the engine
