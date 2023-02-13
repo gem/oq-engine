@@ -530,6 +530,8 @@ def export_disagg_csv(ekey, dstore):
     fnames = []
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
     ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d'
+    if oq.collect_rlzs:
+        ex = 'mean_' + ex
     if ekey[0] == 'disagg_traditional':
         ex += '&traditional=1'
         trad = '-traditional'
@@ -544,10 +546,14 @@ def export_disagg_csv(ekey, dstore):
         except IndexError:
             pass
     for s in range(N):
-        rlzcols = ['rlz%d' % r for r in best_rlzs[s]]
+        if oq.collect_rlzs:
+            rlzcols = ['mean']
+            weights = numpy.array([1.])
+        else:
+            rlzcols = ['rlz%d' % r for r in best_rlzs[s]]
+            weights = numpy.array([rlzs[r].weight['weight'] for r in best_rlzs[s]])
+            weights /= weights.sum()  # normalize to 1
         lon, lat = sitecol.lons[s], sitecol.lats[s]
-        weights = numpy.array([rlzs[r].weight['weight'] for r in best_rlzs[s]])
-        weights /= weights.sum()  # normalize to 1
         metadata.update(investigation_time=oq.investigation_time,
                         mag_bin_edges=bins['Mag'].tolist(),
                         dist_bin_edges=bins['Dist'].tolist(),
@@ -555,7 +561,7 @@ def export_disagg_csv(ekey, dstore):
                         lat_bin_edges=bins['Lat'][s].tolist(),
                         eps_bin_edges=bins['Eps'].tolist(),
                         tectonic_region_types=decode(bins['TRT'].tolist()),
-                        rlz_ids=best_rlzs[s].tolist(),
+                        rlz_ids=[0] if oq.collect_rlzs else best_rlzs[s].tolist(),
                         weights=weights.tolist(),
                         lon=lon, lat=lat)
         for k in oq.disagg_outputs:

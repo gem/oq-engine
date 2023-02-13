@@ -1174,6 +1174,59 @@ def extract_disagg(dstore, what):
     return ArrayWrapper(values.T, attrs)
 
 
+@extract.add('mean_disagg')
+def extract_mean_disagg(dstore, what):
+    """
+    Extract a disaggregation output averaged on the realizations as a 2D array.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/
+    mean_disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&traditional=1
+    """
+    qdict = parse(what)
+    label = qdict['kind'][0]
+    imt = qdict['imt'][0]
+    poe_id = int(qdict['poe_id'][0])
+    sid = int(qdict['site_id'][0])
+    traditional = qdict.get('traditional')
+
+    def get(v, sid):
+        if len(v.shape) == 2:
+            return v[sid]
+        return v[:]
+    oq = dstore['oqparam']
+    rlzs = dstore['best_rlzs'][sid]
+    weights = dstore['weights'][:][rlzs]
+    weights /= weights.sum()
+    imt2m = {imt: m for m, imt in enumerate(oq.imtls)}
+    bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
+    m = imt2m[imt]
+    matrix = dstore['disagg/' + label][sid, m, poe_id]  # shape (..., Z)
+    poe_agg = dstore['poe4'][sid, m, poe_id]
+    if traditional and traditional != '0':
+        if matrix.any():  # nonzero
+            matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
+
+    # adapted from the nrml_converters
+    disag_tup = tuple(label.split('_'))
+    axis = [bins[k] for k in disag_tup]
+
+    # compute axis mid points, except for the TRT axis
+    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype != object
+            else ax for ax in axis]
+    matrix = matrix @ weights  # compute means
+    if len(axis) == 1:  # i.e. Mag or Dist
+        values = numpy.array([axis[0], list(matrix)])
+    else:  # i.e. Mag_Dist
+        grids = numpy.meshgrid(*axis, indexing='ij')
+        values = [g.flatten() for g in grids] + [matrix.flatten()]
+        values = numpy.array(values)
+    attrs = qdict.copy()
+    for k in disag_tup:
+        attrs[k] = bins[k]
+    attrs['kind'] = disag_tup
+    return ArrayWrapper(values.T, attrs)
+
+
 def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):
     dt = [('site_id', U32), ('lon', F32), ('lat', F32),
           ('lon_bins', (F32, shapedic['lon'] + 1)),
