@@ -120,7 +120,7 @@ def compute_disagg(dis, hmap3, rlzs, monitor):
     M = len(hmap3)
     for magi in dis.ctxs:
         res = {'trti': dis.cmaker.trti, 'magi': magi}
-        mat7 = dis.disagg7D(hmap3, rlzs, magi, dis.epsstar)
+        mat7 = dis.disagg7D(hmap3, rlzs, magi)
         for m in range(M):
             mat6 = mat7[..., m, :, :]
             if mat6.any():
