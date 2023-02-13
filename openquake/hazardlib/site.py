@@ -376,13 +376,13 @@ class SiteCollection(object):
                   for p in ('sids', 'lon', 'lat', 'depth')] + extra
         self.array = arr = numpy.zeros(len(sites), dtlist)
         self.complete = self
-        for i in range(len(arr)):
-            arr['sids'][i] = i
-            arr['lon'][i] = sites[i].location.longitude
-            arr['lat'][i] = sites[i].location.latitude
-            arr['depth'][i] = sites[i].location.depth
+        for i, site in enumerate(sites):
+            arr['sids'][i] = getattr(site, 'id', i)
+            arr['lon'][i] = site.location.longitude
+            arr['lat'][i] = site.location.latitude
+            arr['depth'][i] = site.location.depth
             for p, dt in extra:
-                arr[p][i] = getattr(sites[i], p)
+                arr[p][i] = getattr(site, p)
 
         # NB: in test_correlation.py we define a SiteCollection with
         # non-unique sites, so we cannot do an
@@ -443,16 +443,16 @@ class SiteCollection(object):
             tiles.append(sc)
         return tiles
 
-    def split_in_tiles(self, max_sites):
+    def split_in_tiles(self, hint):
         """
         Split a SiteCollection into a set of tiles with contiguous site IDs
         """
-        hint = int(numpy.ceil(len(self) / max_sites))
         tiles = []
         for sids in numpy.array_split(self.sids, hint):
+            assert len(sids), 'Cannot split %s in %d tiles' % (self, hint)
             sc = SiteCollection.__new__(SiteCollection)
-            sc.array = self.array[sids]
-            sc.complete = self
+            sc.array = self.complete.array[sids]
+            sc.complete = self.complete
             tiles.append(sc)
         return tiles
 

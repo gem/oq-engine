@@ -185,9 +185,12 @@ calculations, as described in https://github.com/gem/oq-engine/issues/7886.
 
 We welcome users wanting to try the new features and understanding that
 usage and implementation details may change in future versions of the engine.
-We also welcome feedback from users on these experimental features.
+We also welcome feedback on these experimental features.
 
-We implemented also a major optimization in `event_based_risk` starting from
+We optimized the rupture sampling for MultiFaultSources and now the
+UCERF model is usable, even if still slow in the sampling part.
+
+We implemented a major optimization in `event_based_risk` starting from
 precomputed ground motion fields. As a matter of fact, it is now
 possible to compute GMFs at continental scale, producing hundreds
 of gigabytes of data, and then run risk calculations country-by-country

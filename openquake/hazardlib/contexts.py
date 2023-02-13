@@ -85,7 +85,7 @@ def is_modifiable(gsim):
 def concat(ctxs):
     """
     Concatenate context arrays.
-    :returns: list with 0, 1 or 2 elements
+    :returns: [] or [poisson_ctx] or [poisson_ctx, nonpoisson_ctx]
     """
     out, poisson, nonpoisson, nonparam = [], [], [], []
     for ctx in ctxs:
@@ -1056,7 +1056,7 @@ class ContextMaker(object):
         :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
         N = sum(len(ctx) for ctx in ctxs)
-        M = len(self.imtls)
+        M = len(self.imts)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
         if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
@@ -1065,8 +1065,8 @@ class ContextMaker(object):
         else:  # vectorize the contexts
             recarrays = [self.recarray(ctxs)]
         if split_by_mag:
-            assert len(recarrays) == 1, len(recarrays)
-            recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
+            recarr = numpy.concatenate(recarrays).view(numpy.recarray)
+            recarrays = split_array(recarr, U32(recarr.mag*100))
         self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
