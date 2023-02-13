@@ -50,5 +50,7 @@ jobs:
         ./openquake/server/manage.py migrate
         pip install pyshp pytest
         oq dbserver start
-        cd openquake && pytest -x --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
-        ./openquake/server/manage.py test server.tests.views_test
+        cd openquake
+        pytest -x --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
+        cd server
+        ./manage.py test server.tests.views_test
