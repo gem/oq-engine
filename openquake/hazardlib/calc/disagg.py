@@ -603,7 +603,6 @@ def disaggregation(
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     sitecol = SiteCollection([site])
-    iml2 = to_distribution_values([[iml]], imt)
 
     # Create contexts
     ctxs = AccumDict(accum=[])
@@ -648,6 +647,6 @@ def disaggregation(
     for trt in cmaker:
         dis = Disaggregator(ctxs[trt], sitecol, cmaker[trt], bin_edges)
         for magi in dis.ctxs:
-            mat4 = dis.disagg6D(iml2, 0, magi, epsstar)[..., 0, 0]
+            mat4 = dis.disagg6D([[iml]], 0, magi, epsstar)[..., 0, 0]
             matrix[magi, ..., trt_num[trt]] = mat4
     return bin_edges, matrix
