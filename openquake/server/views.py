@@ -881,7 +881,8 @@ def calc_datastore(request, job_id):
 
 def web_engine(request, **kwargs):
     return render(
-        request, "engine/index.html", {'aelo_mode': settings.AELO_MODE})
+        request, "engine/index.html", {
+            'aelo_mode': settings.APPLICATION_MODE.upper() == 'AELO'})
 
 
 @cross_domain_ajax
