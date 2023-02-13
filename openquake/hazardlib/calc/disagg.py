@@ -513,18 +513,13 @@ class Disaggregator(object):
             try:
                 g = self.g_by_rlz[rlzi]
             except KeyError:
+                # discard the z contributions coming from wrong
+                # realizations: see the test disagg/case_2
                 continue
-            matrix[..., z] = self.disagg6D(iml3[:, :, z], rlzi, magi, epsstar)
+            matrix[..., z] = self.disagg6D(iml3[:, :, z], g, magi, epsstar)
         return matrix
 
-    def disagg6D(self, iml2, rlzi, magi, epsstar):
-        # discard the z contributions coming from wrong
-        # realizations: see the test disagg/case_2
-        try:
-            g = self.g_by_rlz[rlzi]
-        except KeyError:
-            return 0
-
+    def disagg6D(self, iml2, g, magi, epsstar):
         # compute the logarithmic intensities
         imlog2 = numpy.zeros_like(iml2)
         for m, imt in enumerate(self.cmaker.imts):
