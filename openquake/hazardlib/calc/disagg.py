@@ -646,17 +646,18 @@ def disaggregation(
         for ctx in ctxs[trt]:
             mags_by_trt[trt] |= set(ctx.mag)
             dists.extend(ctx.rrup)
-    maxdist = max(dists)
-    maximum_distance = {
-        trt: [(filters.MINMAG, maxdist), (filters.MAXMAG, maxdist)]
-        for trt in trts}
+
+    if source_filter is filters.nofilter:
+        idist = filters.IntegrationDistance.new(str(max(dists)))
+    else:
+        idist = source_filter.integration_distance
 
     # Build bin edges
     oq = Mock(imtls={imt: [None]},
               poes_disagg=[None],
               rlz_index=[0],
               truncation_level=truncation_level,
-              maximum_distance=maximum_distance,
+              maximum_distance=idist,
               mags_by_trt=mags_by_trt,
               num_epsilon_bins=n_epsilons,
               mag_bin_width=mag_bin_width,
