@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import os
 import socket
 import getpass
@@ -28,6 +29,8 @@ try:
 except ImportError:
     STANDALONE = False
     STANDALONE_APPS = ()
+
+TEST = 'test' in sys.argv
 
 INSTALLED_APPS = ('openquake.server.db',)
 
@@ -209,6 +212,9 @@ except ImportError:
         # If a local_setting.py does not exist
         # settings in this file only will be used
         pass
+
+if TEST:
+    from openquake.server.tests.settings import *  # noqa
 
 if APPLICATION_MODE.upper() in ('RESTRICTED', 'AELO'):
     LOCKDOWN = True
