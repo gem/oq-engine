@@ -422,21 +422,7 @@ pmf_map = dict([
     ('Lon_Lat_TRT', lon_lat_trt_pmf),
 ])
 
-# ########################## Disaggregator classes ########################## #
-
-def build_disaggregators(ctxs, sitecol, cmaker, bin_edges):
-    g_by_rlz = {}  # dict rlz -> g
-    for g, rlzs in enumerate(cmaker.gsims.values()):
-        for rlz in rlzs:
-            g_by_rlz[rlz] = g
-    out = []
-    for site in sitecol:
-        try:
-            sd = Disaggregator(ctxs, site, cmaker, bin_edges, g_by_rlz)
-        except FarAwayRupture:
-            sd = None
-        out.append(sd)
-    return out
+# ########################## Disaggregator class ########################## #
 
 
 class Disaggregator(object):
@@ -444,7 +430,7 @@ class Disaggregator(object):
     A class to perform single-site disaggregation. Use build_disaggregators
     to instantiate it.
     """
-    def __init__(self, ctxs, site, cmaker, bin_edges, g_by_rlz=None):
+    def __init__(self, ctxs, site, cmaker, bin_edges):
         if isinstance(site, Site):
             if not hasattr(site, 'id'):
                 site.id = 0
@@ -458,13 +444,10 @@ class Disaggregator(object):
                           bin_edges[2][sid], # lon
                           bin_edges[3][sid], # lat
                           bin_edges[4]) # eps
-        if g_by_rlz is None:
-            self.g_by_rlz = {}  # dict rlz -> g
-            for g, rlzs in enumerate(cmaker.gsims.values()):
-                for rlz in rlzs:
-                    self.g_by_rlz[rlz] = g
-        else:
-            self.g_by_rlz = g_by_rlz  # dict rlz -> g
+        self.g_by_rlz = {}  # dict rlz -> g
+        for g, rlzs in enumerate(cmaker.gsims.values()):
+            for rlz in rlzs:
+                self.g_by_rlz[rlz] = g
 
         # consider only the contexts affecting the site
         ctxs = [ctx[ctx.sids == sid] for ctx in ctxs]
