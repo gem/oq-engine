@@ -58,7 +58,7 @@ class BuildDisaggDataTestCase(unittest.TestCase):
                                            n_epsilons, mag_bin_width,
                                            dist_bin_width, coord_bin_width)
         by_mag = disagg.mag_pmf(mtx[:, :, :, :, :, 0])
-        self.assertEqual(by_mag.shape, (30,))
+        self.assertEqual(by_mag.shape, (31,))
 
 
 class DigitizeLonsTestCase(unittest.TestCase):
@@ -121,14 +121,14 @@ class DisaggregateTestCase(unittest.TestCase):
         mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
         aaae = numpy.testing.assert_array_almost_equal
         aaae(mag_bins, [3, 6, 9])
-        aaae(dist_bins, [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52,
+        aaae(dist_bins, [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52,
                          56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 104,
                          108, 112])
-        aaae(lon_bins, [-0.904195, 0.1, 1.104195])
-        aaae(lat_bins, [-0.904194, 0.1, 1.104194])
+        aaae(lon_bins[0], [-0.904195, 0.1, 1.104195])
+        aaae(lat_bins[0], [-0.904194, 0.1, 1.104194])
         aaae(eps_bins, [-1, -0.3333333, 0.3333333, 1])
         self.assertEqual(trt_bins, [self.trt])
-        aaae(matrix.shape, (2, 27, 2, 2, 3, 1))
+        aaae(matrix.shape, (2, 28, 2, 2, 3, 1))
         aaae(matrix.sum(), 6.14179818e-11)
 
     def test_with_bins(self):
