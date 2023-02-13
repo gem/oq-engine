@@ -28,7 +28,7 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import read_cmakers, FarAwayRupture
 from openquake.commonlib import util, calc
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -133,15 +133,17 @@ def compute_disagg(dstore, slc, cmaker, hmap4, bin_edges, monitor):
     N, M, P, Z = hmap4.shape
 
     # disaggregate by site
-    disaggs = disagg.build_disaggregators(ctxs, sitecol, cmaker, bin_edges)
-    for sid, dis in enumerate(disaggs):
-        if dis is None:  # no data for this site
+    for site in sitecol:
+        try:
+            dis = disagg.Disaggregator(ctxs, site, cmaker, bin_edges, monitor)
+        except FarAwayRupture:  # no data for this site
             continue
+        sid = site.id
         for magi in dis.ctxs:
             res = {'trti': cmaker.trti, 'magi': magi}
-            matrix = dis.disagg(hmap4[sid], hmap4.rlzs[sid], magi, epsstar)
+            mat7 = dis.disagg7D(hmap4[sid], hmap4.rlzs[sid], magi, epsstar)
             for m in range(M):
-                mat6 = matrix[..., m, :, :]
+                mat6 = mat7[..., m, :, :]
                 if mat6.any():
                     res[sid, m] = output(mat6)
             # print(_collapse_res(res))
