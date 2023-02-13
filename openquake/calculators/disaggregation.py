@@ -302,14 +302,14 @@ class DisaggregationCalculator(base.HazardCalculator):
         G = max(len(cmaker.gsims) for cmaker in cmakers)
         for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
-            for site in self.sitecol:
-                sid = site.id
-                for start, stop in slices:
-                    for slc in gen_slices(start, stop, 50_000):
-                        U = max(U, slc.stop - slc.start)
-                        ctxs = cmaker.read_ctxs(self.datastore, slc)
-                        if cmaker.rup_mutex:
-                            raise NotImplementedError('Disaggregation with mutex ruptures')
+            for start, stop in slices:
+                for slc in gen_slices(start, stop, 50_000):
+                    ctxs = cmaker.read_ctxs(self.datastore, slc)
+                    if cmaker.rup_mutex:
+                        raise NotImplementedError('Disaggregation with mutex ruptures')
+                    U = max(U, slc.stop - slc.start)
+                    for site in self.sitecol:
+                        sid = site.id
                         try:
                             dis = disagg.Disaggregator(ctxs, site, cmaker, self.bin_edges)
                         except FarAwayRupture:  # no data for this site
