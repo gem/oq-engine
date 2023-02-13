@@ -17,14 +17,15 @@ import unittest
 import os.path
 import numpy
 
+from openquake.baselib.general import pprod
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.calc import disagg, filters
-from openquake.hazardlib import nrml
+from openquake.hazardlib import nrml, tom
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.gsim.campbell_2003 import Campbell2003
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.site import Site
+from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.gsim.bradley_2013 import Bradley2013
 from openquake.hazardlib import sourceconverter
@@ -102,17 +103,23 @@ class DisaggregateTestCase(unittest.TestCase):
         oq = unittest.mock.Mock(truncation_level=cls.truncation_level,
                                 imtls={'PGA': [cls.iml]},
                                 rlz_index=[0, 1],
+                                poes_disagg=[None],
                                 num_epsilon_bins=3,
                                 mag_bin_width=.075,
                                 distance_bin_width=10,
                                 coordinate_bin_width=100,
                                 maximum_distance=maxdist,
-                                mags_by_trt={cls.trt: mags})
-        cls.cmaker = ContextMaker(cls.trt, {gsim: [0, 1]}, oq)
+                                mags_by_trt={cls.trt: mags},
+                                disagg_bin_edges={})
+        sitecol = SiteCollection([cls.site])
+        cls.bin_edges, _ = disagg.get_edges_shapedic(oq, sitecol)
+        cls.cmaker = ContextMaker(cls.trt, {gsim: [0]}, oq)
+        cls.cmaker.tom = tom.PoissonTOM(50.)
         cls.sources[0].grp_id = 0
         cls.cmaker.grp_id = 0
+        cls.cmaker.poes = [.001]
 
-    def test(self):
+    def test_minimum_distance(self):
         # a test sensitive to gsim.minimum_distance
         bin_edges, matrix = disagg.disaggregation(
             self.sources, self.site, self.imt, self.iml, self.gsims,
@@ -130,6 +137,18 @@ class DisaggregateTestCase(unittest.TestCase):
         self.assertEqual(trt_bins, [self.trt])
         aaae(matrix.shape, (2, 28, 2, 2, 3, 1))
         aaae(matrix.sum(), 6.14179818e-11)
+
+    def test_disaggregator(self):
+        dis = disagg.Disaggregator([self.sources[0]], self.site, self.cmaker,
+                                   self.bin_edges)
+        magi = list(dis.ctxs)
+        aac(magi, [0, 1, 2])  # magnitude bins
+        iml2 = numpy.array([[.01]])
+        mat3 = dis.disagg_mag_dist_eps(iml2, rlzi=0)[..., 0, 0]
+        bymag = pprod(mat3, axis=(1, 2))
+        aac(bymag, [0.9873275537163634,
+                    0.9580616631998118,
+                    0.8081509254139463])
 
     def test_with_bins(self):
 
