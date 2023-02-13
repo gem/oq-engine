@@ -20,7 +20,6 @@ import os
 import unittest
 import numpy as np
 import matplotlib.pyplot as plt
-from openquake.baselib.general import DictArray
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.mrd import (
     update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
