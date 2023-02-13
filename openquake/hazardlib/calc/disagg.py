@@ -523,18 +523,19 @@ class Disaggregator(object):
         shp = [len(b)-1 for b in self.bin_edges[:4]] + [M, P, Z]
         # 7D-matrix #disbins, #lonbins, #latbins, #epsbins, M, P, Z
         matrix = numpy.zeros(shp)
-        for z, rlz in enumerate(rlzs):
-            # discard the z contributions coming from wrong
-            # realizations: see the test disagg/case_2
-            try:
-                g = self.g_by_rlz[rlz]
-            except KeyError:
-                continue
+        for z, rlzi in enumerate(rlzs):
             iml2 = imlog(dict(zip(self.cmaker.imts, iml3[:, :, z])))
-            matrix[..., z] = self.disagg6D(g, iml2, magi, epsstar)
+            matrix[..., z] = self.disagg6D(iml2, rlzi, magi, epsstar)
         return matrix
 
-    def disagg6D(self, g, iml2, magi, epsstar):
+    def disagg6D(self, iml2, rlzi, magi, epsstar):
+        # discard the z contributions coming from wrong
+        # realizations: see the test disagg/case_2
+        try:
+            g = self.g_by_rlz[rlzi]
+        except KeyError:
+            return 0
+
         mats = []
         for ctx, mea, std in zip(
                 self.ctxs[magi], self.meas[magi], self.stds[magi]):
@@ -672,6 +673,6 @@ def disaggregation(
     for trt in cmaker:
         dis = Disaggregator(ctxs[trt], sitecol, cmaker[trt], bin_edges)
         for magi in dis.ctxs:
-            mat4 = dis.disagg6D(0, iml2, magi, epsstar)[..., 0, 0]
+            mat4 = dis.disagg6D(iml2, 0, magi, epsstar)[..., 0, 0]
             matrix[magi, ..., trt_num[trt]] = mat4
     return bin_edges, matrix
