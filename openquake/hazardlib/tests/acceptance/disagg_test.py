@@ -77,14 +77,14 @@ class DisaggTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             dist_bins, [0., 10., 20., 30., 40., 50., 60., 70., 80.])
         numpy.testing.assert_allclose(
-            lat_bins, [-6.5544231e-01, -4.9158173e-01, -3.2772115e-01,
-                       -1.6386058e-01, 1.1102230e-16, 1.6386058e-01,
-                       3.2772115e-01,  4.9158173e-01, 6.5544231e-01],
+            lat_bins[0], [-6.5544231e-01, -4.9158173e-01, -3.2772115e-01,
+                          -1.6386058e-01, 1.1102230e-16, 1.6386058e-01,
+                          3.2772115e-01,  4.9158173e-01, 6.5544231e-01],
             atol=ATOL)
         numpy.testing.assert_allclose(
-            lon_bins, [-6.5544231e-01, -4.9158173e-01, -3.2772115e-01,
-                       -1.6386058e-01, 1.1102230e-16, 1.6386058e-01,
-                       3.2772115e-01, 4.9158173e-01, 6.5544231e-01],
+            lon_bins[0], [-6.5544231e-01, -4.9158173e-01, -3.2772115e-01,
+                          -1.6386058e-01, 1.1102230e-16, 1.6386058e-01,
+                          3.2772115e-01, 4.9158173e-01, 6.5544231e-01],
             atol=ATOL)
         numpy.testing.assert_allclose(eps_bins, [-3., -1., 1., 3.])
         self.assertEqual(trt_bins, ['Active Shallow Crust'])

@@ -627,7 +627,7 @@ def disaggregation(
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     sitecol = SiteCollection([site])
-    iml2 = numpy.array([[iml]])
+    iml2 = to_distribution_values([[iml]], imt)
 
     # Create contexts
     ctxs = AccumDict(accum=[])
