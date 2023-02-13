@@ -510,6 +510,10 @@ class Disaggregator(object):
         # 7D-matrix #disbins, #lonbins, #latbins, #epsbins, M, P, Z
         matrix = numpy.zeros(shp)
         for z, rlzi in enumerate(rlzs):
+            try:
+                g = self.g_by_rlz[rlzi]
+            except KeyError:
+                continue
             matrix[..., z] = self.disagg6D(iml3[:, :, z], rlzi, magi, epsstar)
         return matrix
 
