@@ -570,7 +570,7 @@ def aelo_callback(job_id, job_owner_email, hostname, inputs, exc=None):
     else:
         subject = f'Job {job_id} finished correctly'
         body += (f'Please find the results here:\n'
-                f'{hostname}/engine/{job_id}/outputs')
+                 f'{hostname}/engine/{job_id}/outputs')
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 

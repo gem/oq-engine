@@ -214,7 +214,8 @@ except ImportError:
         pass
 
 if TEST:
-    from openquake.server.tests.settings import *  # noqa
+    APPLICATION_MODE = 'AELO'
+    EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 
 if APPLICATION_MODE.upper() in ('RESTRICTED', 'AELO'):
     LOCKDOWN = True
