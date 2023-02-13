@@ -30,7 +30,7 @@ import numpy
 import scipy.stats
 
 from openquake.baselib.general import AccumDict, groupby, pprod
-from openquake.baselib.performance import split_array, get_slices
+from openquake.baselib.performance import get_slices
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -129,7 +129,68 @@ def build_bin_edges(oq, sitecol):
                 eps=eps_edges)
     
 
-def get_edges_shapedic(oq, sitecol, num_tot_rlzs):
+def _build_bin_edges(oq, sitecol):
+    # return [mag, dist, lon, lat, eps] edges
+
+    mag_bin_width = oq.mag_bin_width
+    distance_bin_width = oq.distance_bin_width
+    coordinate_bin_width = oq.coordinate_bin_width
+    maxdist = filters.upper_maxdist(oq.maximum_distance)
+    num_epsilon_bins = oq.num_epsilon_bins
+    truncation_level = oq.truncation_level
+    mags_by_trt = oq.mags_by_trt
+    
+    # build mag_edges
+    if 'mag' in oq.disagg_bin_edges:
+        mag_edges = oq.disagg_bin_edges['mag']
+    else:
+        mags = set()
+        trts = []
+        for trt, _mags in mags_by_trt.items():
+            mags.update(float(mag) for mag in _mags)
+            trts.append(trt)
+        mags = sorted(mags)
+        min_mag = mags[0]
+        max_mag = mags[-1]
+        n1 = int(numpy.floor(min_mag / mag_bin_width))
+        n2 = int(numpy.ceil(max_mag / mag_bin_width))
+        if n2 == n1 or max_mag >= round((mag_bin_width * n2), 3):
+            n2 += 1
+        mag_edges = mag_bin_width * numpy.arange(n1, n2+1)
+
+    # build dist_edges
+    if 'dist' in oq.disagg_bin_edges:
+        dist_edges = oq.disagg_bin_edges['dist']
+    else:
+        dist_edges = uniform_bins(0, maxdist, distance_bin_width)
+
+    # build lon_edges
+    if 'lon' in oq.disagg_bin_edges or 'lat' in oq.disagg_bin_edges:
+        assert len(sitecol) == 1, sitecol
+        lon_edges = {0: oq.disagg_bin_edges['lon']}
+        lat_edges = {0: oq.disagg_bin_edges['lat']}
+    else:
+        lon_edges, lat_edges = {}, {}  # by sid
+        for site in sitecol:
+            loc = site.location
+            lon_edges[site.id], lat_edges[site.id] = lon_lat_bins(
+                loc.x, loc.y, maxdist, coordinate_bin_width)
+
+    # sanity check: the shapes of the lon lat edges are consistent
+    assert_same_shape(list(lon_edges.values()))
+    assert_same_shape(list(lat_edges.values()))
+
+    # build eps_edges
+    if 'eps' in oq.disagg_bin_edges:
+        eps_edges = oq.disagg_bin_edges['eps']
+    else:
+        eps_edges = numpy.linspace(
+            -truncation_level, truncation_level, num_epsilon_bins + 1)
+
+    return [mag_edges, dist_edges, lon_edges, lat_edges, eps_edges]
+
+
+def get_edges_shapedic(oq, sitecol, num_tot_rlzs=None):
     """
     :returns: (mag dist lon lat eps trt) edges and shape dictionary
     """
@@ -141,29 +202,21 @@ def get_edges_shapedic(oq, sitecol, num_tot_rlzs):
     else:
         Z = len(oq.rlz_index)
 
-    edges = build_bin_edges(oq, sitecol)
-    # override the computed edges with the explicit disagg_bin_edges
-    for key, val in oq.disagg_bin_edges.items():
-        if key in ('lon', 'lat'):
-            edges[key] = {0: val}
-        else:
-            edges[key] = val
+    edges = _build_bin_edges(oq, sitecol)
     shapedic = {}
-    for name in BIN_NAMES:
+    for i, name in enumerate(BIN_NAMES):
         if name in ('lon', 'lat'):
             # taking the first, since the shape is the same for all sites
-            shapedic[name] = len(edges[name][0]) - 1
+            shapedic[name] = len(edges[i][0]) - 1
         elif name == 'trt':
             shapedic[name] = len(trts)
         else:
-            shapedic[name] = len(edges[name]) - 1
+            shapedic[name] = len(edges[i]) - 1
     shapedic['N'] = len(sitecol)
     shapedic['M'] = len(oq.imtls)
     shapedic['P'] = len(oq.poes_disagg or (None,))
     shapedic['Z'] = Z
-    all_edges = [edges['mag'], edges['dist'], edges['lon'], edges['lat'],
-                 edges['eps'], trts]
-    return all_edges, shapedic
+    return edges + [trts], shapedic
 
 
 DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
@@ -385,11 +438,7 @@ pmf_map = dict([
 
 # ########################## Disaggregator classes ########################## #
 
-def build_disaggregators(ctxs, sitecol, cmaker, bin_edges=None):
-    if bin_edges is None:
-        be = build_bin_edges(cmaker.oq, sitecol)
-        bin_edges = be['mag'], be['dist'], be['lon'], be['lat'], be['eps']
-
+def build_disaggregators(ctxs, sitecol, cmaker, bin_edges):
     g_by_rlz = {}  # dict rlz -> g
     for g, rlzs in enumerate(cmaker.gsims.values()):
         for rlz in rlzs:
@@ -397,26 +446,32 @@ def build_disaggregators(ctxs, sitecol, cmaker, bin_edges=None):
     out = []
     for sid in sitecol.sids:
         try:
-            sd = SiteDisaggregator(ctxs, sid, cmaker, bin_edges, g_by_rlz)
+            sd = Disaggregator(ctxs, sid, cmaker, bin_edges, g_by_rlz)
         except FarAwayRupture:
             sd = None
         out.append(sd)
     return out
 
 
-class SiteDisaggregator(object):
+class Disaggregator(object):
     """
     A class to perform single-site disaggregation. Use build_disaggregators
     to instantiate it.
     """
-    def __init__(self, ctxs, sid, cmaker, bin_edges, g_by_rlz):
+    def __init__(self, ctxs, sid, cmaker, bin_edges, g_by_rlz=None):
         self.sid = sid
         self.cmaker = cmaker
         self.bin_edges = (bin_edges[1], # dist
                           bin_edges[2][sid], # lon
                           bin_edges[3][sid], # lat
                           bin_edges[4]) # eps
-        self.g_by_rlz = g_by_rlz  # dict rlz -> g
+        if g_by_rlz is None:
+            self.g_by_rlz = {}  # dict rlz -> g
+            for g, rlzs in enumerate(cmaker.gsims.values()):
+                for rlz in rlzs:
+                    self.g_by_rlz[rlz] = g
+        else:
+            self.g_by_rlz = g_by_rlz  # dict rlz -> g
 
         # consider only the contexts affecting the site
         ctxs = [ctx[ctx.sids == sid] for ctx in ctxs]
@@ -482,53 +537,6 @@ class SiteDisaggregator(object):
         if len(mats) == 1:
             return mat
         return numpy.average(mats, weights=self.weights[magi], axis=0)
-
-
-class SourceSiteDisaggregator(object):
-    """
-    A class to perform disaggregations when there is a single source and
-    a single site.
-    """
-    def __init__(self, src, site, cmaker):
-        self.src = src
-        if isinstance(site, Site):
-            self.sitecol = SiteCollection([site])
-        else:  # assume a length-1 site collection
-            assert isinstance(site, SiteCollection), site
-            assert len(site) == 1, site
-            self.sitecol = site
-        self.cmaker = cmaker
-        assert cmaker.grp_id == src.grp_id, (cmaker.grp_id == src.grp_id)
-        cmaker.oq.mags_by_trt = {src.tectonic_region_type: src.get_magstrs()}
-        self.edges = build_bin_edges(cmaker.oq, self.sitecol)
-
-    def make_ctxs(self):
-        """
-        Build a list of contexts, one for each non-empty magnitude bin
-        """
-        ctxs = self.cmaker.from_srcs([self.src], self.sitecol)
-        if not ctxs:
-            raise FarAwayRupture
-        elif len(ctxs) == 1:  # poissonian source
-            ctx = ctxs[0]
-        elif len(ctxs) == 2:  # nonpoissonian source
-            ctx = ctxs[1]
-
-        magi = numpy.searchsorted(self.edges['mag'], ctx.mag) - 1
-        magi[magi == -1] = 0  # when the magnitude is on the edge
-        idxs = numpy.argsort(magi)
-        return split_array(ctx[idxs], magi[idxs])
-
-    #def disaggregate(self, ctx, imt, iml, rlz, epsstar=False):
-    #    # for each z
-    #    iml2dict = {imt: numpy.array([[iml]])}
-    #    arr7D = _disaggregate(ctx, self.cmaker, self.g_by_z, iml2dict,
-    #                          self.bin_edges, epsstar)
-    #    return arr7D[..., 0, 0, 0]  # 4D array of shape (D, Lo, La, E)
-
-    #def disagg_dist_eps(self, ctx, imt, iml, rlz, epsstar=False):
-    #    mat4 = self.disaggregate(ctx, imt, iml, rlz, epsstar)
-    #    return mag_dist_eps_pmf(mat4)  # shape (D, E)
 
 
 # this is used in the hazardlib tests, not in the engine
