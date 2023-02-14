@@ -113,7 +113,7 @@ def compute_disagg(dis, iml3, rlzs, monitor):
     :param monitor:
         monitor of the currently running job
     :returns:
-        a dictionary sid, imti -> 6D-array
+        a dictionary sid, imti -> (arr[D, E, P, Z], arr[Lo, La, P, Z])
     """
     with monitor('building mean_std', measuremem=False):
         dis.init(monitor)
