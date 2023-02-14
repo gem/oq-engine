@@ -55,13 +55,20 @@ def _collapse_res(rdic):
     return cdic
 
 
-def _matrix(matrices, num_trts, num_mag_bins):
-    # convert a dict trti, magi -> matrix into a single matrix
-    trti, magi = next(iter(matrices))
-    mat = numpy.zeros((num_trts, num_mag_bins) + matrices[trti, magi].shape)
-    for trti, magi in matrices:
-        mat[trti, magi] = matrices[trti, magi]
-    return mat
+def matrix_dict(acc, num_trts, num_mag_bins):
+    # # build a dictionary s, m, k -> matrix from a double dictionary
+    # s, m -> trti, magi -> output
+    out = {}
+    for s, m in acc:
+        output = acc[s, m]  # dictionary (trti, magi) -> output
+        trti, magi = next(iter(output))
+        for k in (0, 1):
+            shp = (num_trts, num_mag_bins) + output[trti, magi][k].shape
+            mat = numpy.zeros(shp)
+            for trti, magi in output:
+                mat[trti, magi] = output[trti, magi][k]
+            out[s, m, k] = mat
+    return out
 
 
 def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
@@ -113,7 +120,7 @@ def compute_disagg(dis, iml3, rlzs, monitor):
     :param monitor:
         monitor of the currently running job
     :returns:
-        a dictionary sid, imti -> (arr[D, E, P, Z], arr[Lo, La, P, Z])
+        a dictionary s, z, m -> (arr[D, E, P, Z], arr[Lo, La, P, Z])
     """
     with monitor('building mean_std', measuremem=False):
         dis.init(monitor)
@@ -121,10 +128,11 @@ def compute_disagg(dis, iml3, rlzs, monitor):
     [magi] = dis.ctxs
     res = {'trti': dis.cmaker.trti, 'magi': magi}
     mat7 = dis.disagg7D(iml3, rlzs, magi)
-    for m in range(M):
-        mat6 = mat7[..., m, :, :]
-        if mat6.any():
-            res[dis.sid, m] = output(mat6)
+    for z in range(len(rlzs)):
+        for m in range(M):
+            mat5 = mat7[..., m, :, z]
+            if mat5.any():
+                res[dis.sid, z, m] = output(mat5)
         # print(_collapse_res(res))
     return res
     # NB: compressing the results is not worth it since the aggregation of
@@ -334,26 +342,26 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         dt = numpy.dtype([('grp_id', U8), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
-        results = smap.reduce(self.agg_result)
-        return results  # s, m, k -> trti, magi -> 6D array
+        DEPZ = numpy.zeros((s['dist'], s['eps'], s['P'], s['Z']))
+        LLPZ = numpy.zeros((s['lon'], s['lat'], s['P'], s['Z']))
+        acc = AccumDict(accum=AccumDict(accum=(DEPZ, LLPZ)))
+        results = smap.reduce(self.agg_result, acc)
+        return results  # s, m -> trti, magi -> output
 
     def agg_result(self, acc, result):
         """
         Collect the results coming from compute_disagg into self.results.
 
-        :param acc: dictionary sid -> trti, magi -> 6D array
+        :param acc: dictionary sid -> trti, magi -> output
         :param result: dictionary with the result coming from a task
         """
-        # 7D array of shape (#distbins, #lonbins, #latbins, #epsbins, M, P, Z)
         with self.monitor('aggregating disagg matrices'):
             trti = result.pop('trti')
             magi = result.pop('magi')
-            for (s, m), out in result.items():
+            for (s, z, m), out in result.items():
                 for k in (0, 1):
-                    if (s, m, k) not in acc:
-                        acc[s, m, k] = {}
-                    x = acc[s, m, k].get((trti, magi), 0)
-                    acc[s, m, k][trti, magi] = agg_probs(x, out[k])
+                    accum = acc[s, m][trti, magi][k]
+                    accum[..., z] = agg_probs(accum[..., z], out[k])
         return acc
 
     def post_execute(self, results):
@@ -370,7 +378,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         T = len(self.trts)
         Ma = len(self.bin_edges[0]) - 1  # num_mag_bins
         # build a dictionary s, m, k -> matrices
-        results = {smk: _matrix(dic, T, Ma) for smk, dic in results.items()}
+        results = matrix_dict(results, T, Ma)
         # get the number of outputs
         shp = (self.N, len(self.poes_disagg), len(self.imts), self.Z)
         logging.info('Extracting and saving the PMFs for %d outputs '
