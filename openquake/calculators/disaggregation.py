@@ -308,6 +308,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         cmakers = read_cmakers(self.datastore)
         grp_ids = rdata['grp_id']
         G = max(len(cmaker.gsims) for cmaker in cmakers)
+        s = self.shapedic
+        nbytes = 0
         for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
             for start, stop in slices:
@@ -323,16 +325,19 @@ class DisaggregationCalculator(base.HazardCalculator):
                             ctxs, site, cmaker, self.bin_edges)
                     except FarAwayRupture:  # no data for this site
                         continue
+                    iml3 = self.iml4[sid]
+                    nonzero = (iml3 > 0).sum()
+                    nbytes += nonzero * 8
+                    if nonzero == 0:  # nothing to disaggregate
+                        continue
                     for magi, dis in dgator.split_by_magi():
-                        smap.submit((dis, self.iml4[sid], self.iml4.rlzs[sid]))
+                        smap.submit((dis, iml3, self.iml4.rlzs[sid]))
                         task_inputs.append((grp_id, stop - start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
 
-        s = self.shapedic
         Ta = len(task_inputs)
-        nbytes = s['N'] * s['M'] * s['P'] * s['Z'] * Ta * 8
         data_transfer = (s['dist'] * s['eps'] + s['lon'] * s['lat']) * nbytes
         if data_transfer > oq.max_data_transfer:
             raise ValueError(
