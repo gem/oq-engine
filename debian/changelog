@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the lon-lat binning algorithm to produce 4 times less bins
   * Fixed install.py: it must not set the shared_dir
   * Optimized disaggregation, both in performance and memory consumption
 
