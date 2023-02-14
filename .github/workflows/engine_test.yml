@@ -51,4 +51,5 @@ jobs:
         oq dbserver start
         cd openquake
         pytest -x --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
-        OQ_CONFIG_FILE=server/tests/data/openquake.cfg ./server/manage.py test tests.views_test
+        cd ..
+        OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test tests.views_test
