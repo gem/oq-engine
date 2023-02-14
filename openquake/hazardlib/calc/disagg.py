@@ -17,10 +17,12 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-:mod:`openquake.hazardlib.calc.disagg` contains
+:mod:`openquake.hazardlib.calc.disagg` contains :class:`Disaggregator`,
 :func:`disaggregation` as well as several aggregation functions for
 extracting a specific PMF from the result of :func:`disaggregation`.
 """
+
+import copy
 import operator
 import collections
 import itertools
@@ -459,6 +461,16 @@ class Disaggregator(object):
                 stds.append(std)
             self.meas[magi] = meas
             self.stds[magi] = stds
+
+    def split_by_magi(self):
+        """
+        :yields: pairs (magi, <Disaggregator>)
+        """
+        for magi in self.ctxs:
+            dis = copy.copy(self)
+            dis.ctxs = {magi: self.ctxs[magi]}
+            dis.weights = {magi: self.weights[magi]}
+            yield magi, dis
 
     def disagg7D(self, iml3, rlzs, magi):
         """
