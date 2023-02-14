@@ -83,7 +83,6 @@ class server:
     port = %d
     file = %s
     [directory]
-    shared_dir = /opt/openquake
     ''' % (DBPORT, DBPATH)
 
     @classmethod
@@ -111,7 +110,6 @@ class devel_server:
     port = %d
     file = %s
     [directory]
-    shared_dir = /opt/openquake
     ''' % (DBPORT, DBPATH)
     exit = server.exit
 
