@@ -233,6 +233,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.oqparam.mags_by_trt = self.datastore['source_mags']
         edges, self.shapedic = disagg.get_edges_shapedic(
             oq, self.sitecol, self.R)
+        logging.info(self.shapedic)
         self.save_bin_edges(edges)
         self.full_lt = self.datastore['full_lt']
         self.poes_disagg = oq.poes_disagg or (None,)
