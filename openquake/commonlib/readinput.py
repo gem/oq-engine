@@ -45,13 +45,12 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
-    pmf, gsim_lt, get_smlt)
+    pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import logictree
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -675,7 +674,7 @@ def get_source_model_lt(oqparam, branchID=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        a :class:`openquake.commonlib.logictree.SourceModelLogicTree`
+        a :class:`openquake.hazardlib.logictree.SourceModelLogicTree`
         instance
     """
     return get_smlt(vars(oqparam), branchID)
@@ -688,7 +687,7 @@ def get_full_lt(oqparam, branchID=None):
     :param branchID:
         used to read a single sourceModel branch (if given)
     :returns:
-        a :class:`openquake.commonlib.logictree.FullLogicTree`
+        a :class:`openquake.hazardlib.logictree.FullLogicTree`
         instance
     """
     source_model_lt = get_source_model_lt(oqparam, branchID)

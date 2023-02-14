@@ -12,6 +12,24 @@ Subpackages
     openquake.hazardlib.mfd
     openquake.hazardlib.scalerel
     openquake.hazardlib.source
+    openquake.hazardlib.source_reader
+
+source_reader module
+------------------------------------
+
+.. automodule:: openquake.hazardlib.source_reader
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+logictree module
+------------------------------------
+
+.. automodule:: openquake.hazardlib.logictree
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 contexts
 --------------------------------------

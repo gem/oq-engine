@@ -168,7 +168,7 @@ def get_smlt(hparams, branchID=None):
     :param hparams:
         dictionary of hazard parameters
     :returns:
-        :class:`openquake.commonlib.logictree.SourceModelLogicTree` object
+        :class:`openquake.hazardlib.logictree.SourceModelLogicTree` object
     """
     args = (hparams['inputs']['source_model_logic_tree'],
             hparams.get('random_seed', 42),
@@ -189,7 +189,7 @@ def get_flt(hparams, branchID=None):
     :param branchID:
         used to read a single sourceModel branch (if given)
     :returns:
-        :class:`openquake.commonlib.logictree.FullLogicTree` object
+        :class:`openquake.hazardlib.logictree.FullLogicTree` object
     """
     gsim_file = hparams['gsim_logic_tree_file']
     smlt = get_smlt(hparams, branchID)
