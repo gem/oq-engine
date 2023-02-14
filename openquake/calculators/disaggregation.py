@@ -109,14 +109,14 @@ def output(mat5):
     return pprod(mat5, axis=(1, 2)), pprod(mat5, axis=(0, 3))
 
 
-def compute_disagg(dis, iml3, rlzs, monitor):
+def compute_disagg(dis, triples, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
     :param dis:
         a Disaggregator instance
-    :param iml3:
-        an array of shape (M, P, Z)
+    :param triples:
+        a list of triples (g, rlz, iml2)
     :param monitor:
         monitor of the currently running job
     :returns:
@@ -124,15 +124,12 @@ def compute_disagg(dis, iml3, rlzs, monitor):
     """
     with monitor('building mean_std', measuremem=False):
         dis.init(monitor)
-    M = len(iml3)
     [magi] = dis.ctxs
     res = {'trti': dis.cmaker.trti, 'magi': magi}
-    mat7 = dis.disagg7D(iml3, rlzs, magi)
-    for z, rlz in enumerate(rlzs):
-        if (iml3[:, :, z] == 0).all():  # nothing to do
-            continue
-        for m in range(M):
-            mat5 = mat7[..., m, :, z]
+    for g, rlz, iml2 in triples:
+        mat6 = dis.disagg6D(iml2, g, magi)
+        for m in range(len(iml2)):
+            mat5 = mat6[..., m, :]
             if mat5.any():
                 res[dis.sid, rlz, m] = output(mat5)
         # print(_collapse_res(res))
@@ -331,6 +328,15 @@ class DisaggregationCalculator(base.HazardCalculator):
                     except FarAwayRupture:  # no data for this site
                         continue
                     iml3 = self.iml4[sid]
+                    triples = []
+                    for z, rlz in enumerate(self.iml4.rlzs[sid]):
+                        try:
+                            g = dgator.g_by_rlz[rlz]
+                        except KeyError:
+                            continue
+                        iml2 = iml3[:, :, z]
+                        if iml2.any():
+                            triples.append((g, rlz, iml2))
                     nonzero = (iml3 > 0).sum()
                     nbytes += nonzero * 8
                     if nonzero == 0:  # nothing to disaggregate
@@ -338,7 +344,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     for magi, dis in dgator.split_by_magi():
                         n = sum(len(ctx) for ctx in dis.ctxs[magi])
                         U = max(U, n)
-                        smap.submit((dis, iml3, self.iml4.rlzs[sid]))
+                        smap.submit((dis, triples))
                         task_inputs.append((grp_id, n))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))

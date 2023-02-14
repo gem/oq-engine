@@ -474,25 +474,6 @@ class Disaggregator(object):
             if dis.nbytes:  # non-empty
                 yield magi, dis
 
-    def disagg7D(self, iml3, rlzs, magi):
-        """
-        Disaggregate multiple realizations.
-
-        :returns: a 7D matrix of shape (D, Lo, La, E, M, P, Z)
-        """
-        M, P, Z = iml3.shape
-        shp = [len(b)-1 for b in self.bin_edges[1:5]] + [M, P, Z]
-        matrix = numpy.zeros(shp)
-        for z, rlzi in enumerate(rlzs):
-            try:
-                g = self.g_by_rlz[rlzi]
-            except KeyError:
-                # discard the z contributions coming from wrong
-                # realizations: see the test disagg/case_2
-                continue
-            matrix[..., z] = self.disagg6D(iml3[:, :, z], g, magi)
-        return matrix
-
     def disagg6D(self, iml2, g, magi):
         """
         Disaggregate a single realization.
