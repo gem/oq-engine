@@ -468,9 +468,11 @@ class Disaggregator(object):
         """
         for magi in self.ctxs:
             dis = copy.copy(self)
+            dis.nbytes = sum(c.nbytes for c in self.ctxs[magi])
             dis.ctxs = {magi: self.ctxs[magi]}
             dis.weights = {magi: self.weights[magi]}
-            yield magi, dis
+            if dis.nbytes:  # non-empty
+                yield magi, dis
 
     def disagg7D(self, iml3, rlzs, magi):
         """
