@@ -216,6 +216,7 @@ except ImportError:
 if TEST:
     APPLICATION_MODE = 'AELO'
     EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+    EMAIL_FILE_PATH = '/tmp/app-messages'  # change this to a proper location
 
 if APPLICATION_MODE.upper() in ('RESTRICTED', 'AELO'):
     LOCKDOWN = True

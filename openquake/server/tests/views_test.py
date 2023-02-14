@@ -495,6 +495,7 @@ class EngineServerTestCase(django.test.TestCase):
 
     def test_aelo_mosaic_model_not_found(self):
         with tempfile.TemporaryDirectory() as email_dir:
+            # FIXME: EMAIL_FILE_PATH is ignored
             with self.settings(EMAIL_FILE_PATH=email_dir):
                 params = dict(
                     lon='-86', lat='88', vs30='800', siteid='SOMEWHERE')
@@ -514,24 +515,23 @@ class EngineServerTestCase(django.test.TestCase):
                 self.assertIn('ValueError: Site at lon=-86.0 lat=88.0 '
                               'is not covered by any model!', tb)
                 # FIXME: we should use the overridden EMAIL_FILE_PATH
+                # email_file = os.listdir(email_dir)[0]
                 email_files = glob.glob('/tmp/app-messages/*')
-                # email_file = max(email_files, key=os.path.getctime)
                 print(f'email_dir: {email_dir}')
                 print(f'os.listdir(email_dir): {os.listdir(email_dir)}')
                 print(f"glob.glob('/tmp/app-messages/*'): {email_files}")
-                # email_file = os.listdir(email_dir)[0]
-                # email_file = max(email_files, key=os.path.getctime)
-                # with open(os.path.join(email_dir, email_file), 'r') as f:
-                #     email_content = f.read()
-                #     print(email_content)
-                # self.assertIn('failed', email_content)
-                # self.assertIn('From: aelonoreply@openquake.org', email_content)
-                # self.assertIn('To: openquake@email.test', email_content)
-                # self.assertIn('Reply-To: aelosupport@openquake.org',
-                #               email_content)
-                # self.assertIn(
-                #     'Input values: lon = -86.0, lat = 88.0,'
-                #     ' vs30 = 800.0, siteid = SOMEWHERE', email_content)
-                # self.assertIn(
-                #     'Site at lon=-86.0 lat=88.0 is not covered by any model!',
-                #     email_content)
+                email_file = max(email_files, key=os.path.getctime)
+                with open(os.path.join(email_dir, email_file), 'r') as f:
+                    email_content = f.read()
+                    print(email_content)
+                self.assertIn('failed', email_content)
+                self.assertIn('From: aelonoreply@openquake.org', email_content)
+                self.assertIn('To: openquake@email.test', email_content)
+                self.assertIn('Reply-To: aelosupport@openquake.org',
+                              email_content)
+                self.assertIn(
+                    'Input values: lon = -86.0, lat = 88.0,'
+                    ' vs30 = 800.0, siteid = SOMEWHERE', email_content)
+                self.assertIn(
+                    'Site at lon=-86.0 lat=88.0 is not covered by any model!',
+                    email_content)
