@@ -129,6 +129,8 @@ def compute_disagg(dis, iml3, rlzs, monitor):
     res = {'trti': dis.cmaker.trti, 'magi': magi}
     mat7 = dis.disagg7D(iml3, rlzs, magi)
     for z in range(len(rlzs)):
+        if (iml3[:, :, z] == 0).all():  # nothing to do
+            continue
         for m in range(M):
             mat5 = mat7[..., m, :, z]
             if mat5.any():
