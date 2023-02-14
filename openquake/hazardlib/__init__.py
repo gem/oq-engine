@@ -242,7 +242,7 @@ def read_input(hparams, **extra):
         itime = hparams['investigation_time']
     else:
         itime = 50.  # ignored in scenario
-    rmfname = hparams.get('rupture_model_file')
+    rmfname = hparams['inputs'].get('rupture_model')
     if rmfname:
         ngmfs = hparams["number_of_ground_motion_fields"]
         ses_seed = hparams["ses_seed"]
