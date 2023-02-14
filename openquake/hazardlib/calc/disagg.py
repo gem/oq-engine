@@ -17,10 +17,12 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-:mod:`openquake.hazardlib.calc.disagg` contains
+:mod:`openquake.hazardlib.calc.disagg` contains :class:`Disaggregator`,
 :func:`disaggregation` as well as several aggregation functions for
 extracting a specific PMF from the result of :func:`disaggregation`.
 """
+
+import copy
 import operator
 import collections
 import itertools
@@ -29,7 +31,7 @@ from functools import partial, lru_cache
 import numpy
 import scipy.stats
 
-from openquake.baselib.general import AccumDict, groupby, pprod
+from openquake.baselib.general import AccumDict, groupby, pprod, humansize
 from openquake.baselib.performance import get_slices, Monitor
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
@@ -381,7 +383,7 @@ class Disaggregator(object):
     """
     A class to perform single-site disaggregation.
     """
-    def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges, mon=Monitor()):
+    def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges, imts=None):
         if isinstance(site, Site):
             if not hasattr(site, 'id'):
                 site.id = 0
@@ -389,8 +391,13 @@ class Disaggregator(object):
         else:  # assume a site collection of length 1
             self.sitecol = site
             assert len(site) == 1, site
-        sid = self.sitecol.sids[0]
+        self.sid = sid = self.sitecol.sids[0]
+        if imts is not None:
+            for imt in imts:
+                assert imt in cmaker.imtls, imt
+            cmaker.imts = imts
         self.cmaker = cmaker
+        self.epsstar = cmaker.oq.epsilon_star
         self.bin_edges = (bin_edges[0], # mag
                           bin_edges[1], # dist,
                           bin_edges[2][sid], # lon
@@ -399,7 +406,6 @@ class Disaggregator(object):
         for i, name in enumerate(['Ma', 'D', 'Lo', 'La', 'E']):
             setattr(self, name, len(self.bin_edges[i]) - 1)
 
-        self.mon = mon
         self.g_by_rlz = {}  # dict rlz -> g
         for g, rlzs in enumerate(cmaker.gsims.values()):
             for rlz in rlzs:
@@ -426,13 +432,11 @@ class Disaggregator(object):
         # populate dictionaries magi-> list
         self.ctxs = {}
         self.weights = {}
-        self.meas = {}
-        self.stds = {}
+        self.nbytes = 0
         for magi in numpy.unique(magidx):
             thectxs = [c[c.magi == magi] for c in ctxs]
-            # compute mea and std with shape (M, G, U)
-            mea, std, _, _ = cmaker.get_mean_stds(thectxs, split_by_mag=True)
             ctx = numpy.concatenate(thectxs).view(numpy.recarray)
+            self.nbytes += ctx.nbytes
             if self.cmaker.src_mutex:
                 # getting a context array and a weight for each source
                 # NB: relies on ctx.weight having all equal weights, being
@@ -440,15 +444,37 @@ class Disaggregator(object):
                 slices = get_slices(ctx.src_id).values()
                 self.ctxs[magi] = [ctx[s0:s1] for [(s0, s1)] in slices]
                 self.weights[magi] = [c.weight[0] for c in self.ctxs[magi]]
-                self.meas[magi] = [mea[:, :, s0:s1] for [(s0, s1)] in slices]
-                self.stds[magi] = [std[:, :, s0:s1] for [(s0, s1)] in slices]
             else:
                 self.ctxs[magi] = [ctx]
                 self.weights[magi] = [1.]
-                self.meas[magi] = [mea]
-                self.stds[magi] = [std]
 
-    def disagg7D(self, iml3, rlzs, magi, epsstar):
+    def init(self, monitor=Monitor()):
+        self.mon = monitor
+        # set .meas, .stds
+        self.meas = {}
+        self.stds = {}
+        for magi, ctxs in self.ctxs.items():
+            meas, stds = [], []
+            for ctx in ctxs:
+                mea, std = self.cmaker.get_mean_stds([ctx], split_by_mag=1)[:2]
+                meas.append(mea)
+                stds.append(std)
+            self.meas[magi] = meas
+            self.stds[magi] = stds
+
+    def split_by_magi(self):
+        """
+        :yields: pairs (magi, <Disaggregator>)
+        """
+        for magi in self.ctxs:
+            dis = copy.copy(self)
+            dis.nbytes = sum(c.nbytes for c in self.ctxs[magi])
+            dis.ctxs = {magi: self.ctxs[magi]}
+            dis.weights = {magi: self.weights[magi]}
+            if dis.nbytes:  # non-empty
+                yield magi, dis
+
+    def disagg7D(self, iml3, rlzs, magi):
         """
         Disaggregate multiple realizations.
 
@@ -464,10 +490,10 @@ class Disaggregator(object):
                 # discard the z contributions coming from wrong
                 # realizations: see the test disagg/case_2
                 continue
-            matrix[..., z] = self.disagg6D(iml3[:, :, z], g, magi, epsstar)
+            matrix[..., z] = self.disagg6D(iml3[:, :, z], g, magi)
         return matrix
 
-    def disagg6D(self, iml2, g, magi, epsstar):
+    def disagg6D(self, iml2, g, magi):
         """
         Disaggregate a single realization.
 
@@ -482,21 +508,24 @@ class Disaggregator(object):
         for ctx, mea, std in zip(
                 self.ctxs[magi], self.meas[magi], self.stds[magi]):
             mat = _disaggregate(ctx, mea, std, self.cmaker, g, imlog2,
-                                self.bin_edges, epsstar, self.mon)
+                                self.bin_edges, self.epsstar, self.mon)
             mats.append(mat)
         if len(mats) == 1:
             return mat
         return numpy.average(mats, weights=self.weights[magi], axis=0)
 
-    def disagg_mag_dist_eps(self, iml2, rlzi, epsstar=False):
+    def disagg_mag_dist_eps(self, iml2, rlzi):
         """
         :returns: a 5D matrix of shape (Ma, D, E, M, P)
         """
         mat5 = numpy.zeros((self.Ma, self.D, self.E) + iml2.shape)
         for magi in range(self.Ma):
-            mat6 = self.disagg6D(iml2, self.g_by_rlz[rlzi], magi, epsstar)
+            mat6 = self.disagg6D(iml2, self.g_by_rlz[rlzi], magi)
             mat5[magi] = pprod(mat6, axis=(1, 2))
         return mat5
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__} {humansize(self.nbytes)} >'
 
 
 # this is used in the hazardlib tests, not in the engine
@@ -586,12 +615,20 @@ def disaggregation(
     cmaker = {}  # trt -> cmaker
     mags_by_trt = AccumDict(accum=set())
     dists = []
+    oq = Mock(imtls={str(imt): [iml]},
+              poes_disagg=[None],
+              rlz_index=[0],
+              epsstar=epsstar,
+              truncation_level=truncation_level,
+              maximum_distance=source_filter.integration_distance,
+              mags_by_trt=mags_by_trt,
+              num_epsilon_bins=n_epsilons,
+              mag_bin_width=mag_bin_width,
+              distance_bin_width=dist_bin_width,
+              coordinate_bin_width=coord_bin_width,
+              disagg_bin_edges=bin_edges)
     for trt, srcs in by_trt.items():
-        cmaker[trt] = cm = ContextMaker(
-            trt, rlzs_by_gsim,
-            {'truncation_level': truncation_level,
-             'maximum_distance': source_filter.integration_distance(trt),
-             'imtls': {str(imt): [iml]}})
+        cmaker[trt] = cm = ContextMaker(trt, rlzs_by_gsim, oq)
         cm.tom = srcs[0].temporal_occurrence_model
         cm.src_mutex = False  # FIXME
         ctxs[trt].extend(cm.from_srcs(srcs, sitecol))
@@ -600,22 +637,9 @@ def disaggregation(
             dists.extend(ctx.rrup)
 
     if source_filter is filters.nofilter:
-        idist = filters.IntegrationDistance.new(str(max(dists)))
-    else:
-        idist = source_filter.integration_distance
+        oq.maximum_distance = filters.IntegrationDistance.new(str(max(dists)))
 
     # Build bin edges
-    oq = Mock(imtls={imt: [None]},
-              poes_disagg=[None],
-              rlz_index=[0],
-              truncation_level=truncation_level,
-              maximum_distance=idist,
-              mags_by_trt=mags_by_trt,
-              num_epsilon_bins=n_epsilons,
-              mag_bin_width=mag_bin_width,
-              distance_bin_width=dist_bin_width,
-              coordinate_bin_width=coord_bin_width,
-              disagg_bin_edges=bin_edges)
     bin_edges, dic = get_edges_shapedic(oq, sitecol)
 
     # Compute disaggregation per TRT
@@ -623,7 +647,8 @@ def disaggregation(
                           dic['eps'], len(trts)])
     for trt in cmaker:
         dis = Disaggregator(ctxs[trt], sitecol, cmaker[trt], bin_edges)
+        dis.init()
         for magi in dis.ctxs:
-            mat4 = dis.disagg6D([[iml]], 0, magi, epsstar)[..., 0, 0]
+            mat4 = dis.disagg6D([[iml]], 0, magi)[..., 0, 0]
             matrix[magi, ..., trt_num[trt]] = mat4
     return bin_edges, matrix
