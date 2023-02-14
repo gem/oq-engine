@@ -28,9 +28,9 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import gettemp
 import openquake.hazardlib
-from openquake.hazardlib import geo, lt, gsim_lt
-from openquake.commonlib import logictree, readinput, tests
-from openquake.commonlib.source_reader import get_csm
+from openquake.hazardlib import geo, lt, gsim_lt, logictree
+from openquake.commonlib import readinput, tests
+from openquake.hazardlib.source_reader import get_csm
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD

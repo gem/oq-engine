@@ -497,7 +497,7 @@ class ContextMaker(object):
                 nbytes += arr.nbytes
         return nbytes
 
-    def read_ctxs(self, dstore, slc=None, magi=None):
+    def read_ctxs(self, dstore, slc=None):
         """
         :param dstore: a DataStore instance
         :param slice: a slice of contexts with the same grp_id
@@ -522,16 +522,12 @@ class ContextMaker(object):
         for par in sitecol.dtype.names:
             if par != 'sids':
                 dtlist.append((par, sitecol.dtype[par]))
-        if magi is not None:
-            dtlist.append(('magi', numpy.uint8))
         ctx = numpy.zeros(len(params['grp_id']), dtlist).view(numpy.recarray)
         for par, val in params.items():
             ctx[par] = val
         for par in sitecol.dtype.names:
             if par != 'sids':
                 ctx[par] = sitecol[par][ctx['sids']]
-        if magi is not None:
-            ctx['magi'] = magi
         # NB: sorting the contexts break the disaggregation! (see case_1)
 
         # split parametric vs nonparametric contexts
@@ -549,16 +545,13 @@ class ContextMaker(object):
         """
         return RecordBuilder(**self.defaultdict).zeros(size)
 
-    def recarray(self, ctxs, magi=None):
+    def recarray(self, ctxs):
         """
         :params ctxs: a non-empty list of homogeneous contexts
         :returns: a recarray, possibly collapsed
         """
         assert ctxs
         dd = self.defaultdict.copy()
-        if magi is not None:  # magnitude bin used in disaggregation
-            dd['magi'] = numpy.uint8(0)
-
         if not hasattr(ctxs[0], 'probs_occur'):
             for ctx in ctxs:
                 ctx.probs_occur = numpy.zeros(0)
@@ -579,8 +572,6 @@ class ContextMaker(object):
             for par in dd:
                 if par == 'rup_id':
                     val = getattr(ctx, par)
-                elif par == 'magi':  # in disaggregation
-                    val = magi
                 elif par == 'weight':
                     val = getattr(ctx, par, 0.)
                 else:

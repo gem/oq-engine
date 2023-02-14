@@ -500,7 +500,7 @@ class GsimLogicTree(object):
 
     def __iter__(self):
         """
-        Yield :class:`openquake.commonlib.logictree.Realization` instances
+        Yield :class:`openquake.hazardlib.logictree.Realization` instances
         """
         groups = []
         # NB: branches are already sorted
