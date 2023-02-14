@@ -118,15 +118,15 @@ def compute_disagg(dis, iml3, rlzs, monitor):
     with monitor('building mean_std', measuremem=False):
         dis.init(monitor)
     M = len(iml3)
-    for magi in dis.ctxs:
-        res = {'trti': dis.cmaker.trti, 'magi': magi}
-        mat7 = dis.disagg7D(iml3, rlzs, magi)
-        for m in range(M):
-            mat6 = mat7[..., m, :, :]
-            if mat6.any():
-                res[dis.sid, m] = output(mat6)
-            # print(_collapse_res(res))
-        yield res
+    [magi] = dis.ctxs
+    res = {'trti': dis.cmaker.trti, 'magi': magi}
+    mat7 = dis.disagg7D(iml3, rlzs, magi)
+    for m in range(M):
+        mat6 = mat7[..., m, :, :]
+        if mat6.any():
+            res[dis.sid, m] = output(mat6)
+        # print(_collapse_res(res))
+    return res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
 
