@@ -56,18 +56,18 @@ def _collapse_res(rdic):
 
 
 def matrix_dict(acc, num_trts, num_mag_bins):
-    # # build a dictionary s, m, k -> matrix from a double dictionary
-    # s, m -> trti, magi -> output
+    # # build a dictionary s, r, m, k -> matrix from a double dictionary
+    # s, r, m -> trti, magi -> output
     out = {}
-    for s, m in acc:
-        output = acc[s, m]  # dictionary (trti, magi) -> output
+    for s, r, m in acc:
+        output = acc[s, r, m]  # dictionary (trti, magi) -> output
         trti, magi = next(iter(output))
         for k in (0, 1):
             shp = (num_trts, num_mag_bins) + output[trti, magi][k].shape
             mat = numpy.zeros(shp)
             for trti, magi in output:
                 mat[trti, magi] = output[trti, magi][k]
-            out[s, m, k] = mat
+            out[s, r, m, k] = mat
     return out
 
 
@@ -101,12 +101,12 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def output(mat6):
+def output(mat5):
     """
-    :param mat6: a 6D matrix with axis (D, Lo, La, E, P, Z)
-    :returns: two matrices of shape (D, E, P, Z) and (Lo, La, P, Z)
+    :param mat5: a 5D matrix with axis (D, Lo, La, E, P)
+    :returns: two matrices of shape (D, E, P) and (Lo, La, P)
     """
-    return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
+    return pprod(mat5, axis=(1, 2)), pprod(mat5, axis=(0, 3))
 
 
 def compute_disagg(dis, iml3, rlzs, monitor):
@@ -128,13 +128,13 @@ def compute_disagg(dis, iml3, rlzs, monitor):
     [magi] = dis.ctxs
     res = {'trti': dis.cmaker.trti, 'magi': magi}
     mat7 = dis.disagg7D(iml3, rlzs, magi)
-    for z in range(len(rlzs)):
+    for z, rlz in enumerate(rlzs):
         if (iml3[:, :, z] == 0).all():  # nothing to do
             continue
         for m in range(M):
             mat5 = mat7[..., m, :, z]
             if mat5.any():
-                res[dis.sid, z, m] = output(mat5)
+                res[dis.sid, rlz, m] = output(mat5)
         # print(_collapse_res(res))
     return res
     # NB: compressing the results is not worth it since the aggregation of
@@ -264,6 +264,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             for z in range(Z):
                 rlzs[:, z] = oq.rlz_index[z]
             self.datastore['best_rlzs'] = rlzs
+    
         assert Z <= self.R, (Z, self.R)
         self.Z = Z
         self.rlzs = rlzs
@@ -283,6 +284,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             raise SystemExit('Cannot do any disaggregation: zero hazard')
         self.datastore['hmap4'] = self.iml4
         self.datastore['poe4'] = numpy.zeros_like(self.iml4.array)
+        self.sr2z = {(s, r): z for s in self.sitecol.sids
+                     for z, r in enumerate(rlzs[s])}
         return self.compute()
 
     def compute(self):
@@ -341,7 +344,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
 
-        Ta = len(task_inputs)
         data_transfer = (s['dist'] * s['eps'] + s['lon'] * s['lat']) * nbytes
         if data_transfer > oq.max_data_transfer:
             raise ValueError(
@@ -351,9 +353,9 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         dt = numpy.dtype([('grp_id', U8), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
-        DEPZ = numpy.zeros((s['dist'], s['eps'], s['P'], s['Z']))
-        LLPZ = numpy.zeros((s['lon'], s['lat'], s['P'], s['Z']))
-        acc = AccumDict(accum=AccumDict(accum=(DEPZ, LLPZ)))
+        DEP = numpy.zeros((s['dist'], s['eps'], s['P']))
+        LLP = numpy.zeros((s['lon'], s['lat'], s['P']))
+        acc = AccumDict(accum=AccumDict(accum=(DEP, LLP)))
         results = smap.reduce(self.agg_result, acc)
         return results  # s, m -> trti, magi -> output
 
@@ -367,10 +369,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         with self.monitor('aggregating disagg matrices'):
             trti = result.pop('trti')
             magi = result.pop('magi')
-            for (s, z, m), out in result.items():
+            for (s, r, m), out in result.items():
                 for k in (0, 1):
-                    accum = acc[s, m][trti, magi][k]
-                    accum[..., z] = agg_probs(accum[..., z], out[k])
+                    accum = acc[s, r, m][trti, magi][k]
+                    accum[:] = agg_probs(accum[:], out[k])
         return acc
 
     def post_execute(self, results):
@@ -421,26 +423,27 @@ class DisaggregationCalculator(base.HazardCalculator):
         Save the computed PMFs in the datastore
 
         :param results:
-            a dict s, m, k -> 6D-matrix of shape (T, Ma, Lo, La, P, Z) or
-            (T, Ma, D, E, P, Z) depending if k is 0 or k is 1
+            a dict s, r, m, k -> 5D-matrix of shape (T, Ma, Lo, La, P) or
+            (T, Ma, D, E, P) depending if k is 0 or k is 1
         """
         oq = self.oqparam
         out = output_dict(self.shapedic, oq.disagg_outputs)
         count = numpy.zeros(len(self.sitecol), U16)
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
         vcurves = []  # hazard curves with a vertical section for large poes
-        for (s, m, k), mat6 in sorted(results.items()):
+        for (s, r, m, k), mat5 in sorted(results.items()):
+            z = self.sr2z[s, r]
             # NB: k is an index with value 0 (MagDistEps) or 1 (LonLat)
             imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
-                mat5 = mat6[..., p, :]
-                # mat5 has shape (T, Ma, D, E, Z) for k == 0
-                # and (T, Ma, Lo, La, Z) for k == 1
+                mat4 = mat5[..., p]
+                # mat3 has shape (T, Ma, D, E) for k == 0
+                # and (T, Ma, Lo, La) for k == 1
                 if k == 0 and m == 0 and poe == self.poes_disagg[-1]:
                     _disagg_trt[s] = tuple(pprod(mat5[..., 0], axis=(1, 2, 3)))
-                poe2 = pprod(mat5, axis=(0, 1, 2, 3))
-                self.datastore['poe4'][s, m, p] = poe2  # shape Z
-                poe_agg = poe2.mean()
+                poe = pprod(mat4, axis=(0, 1, 2, 3))
+                self.datastore['poe4'][s, m, p, z] = poe
+                '''
                 if (poe and abs(1 - poe_agg / poe) > .1 and not count[s]
                         and self.iml4[s, m, p].any()):
                     logging.warning(
@@ -449,30 +452,31 @@ class DisaggregationCalculator(base.HazardCalculator):
                         s, imt, poe_agg, poe)
                     vcurves.append(self.curves[s])
                     count[s] += 1
-                mat4 = agg_probs(*mat5)  # shape (Ma D E Z) or (Ma Lo La Z)
+                '''
+                mat3 = agg_probs(*mat4)  # shape (Ma D E) or (Ma Lo La)
                 for key in oq.disagg_outputs:
                     if key == 'Mag' and k == 0:
-                        out[key][s, m, p, :] = pprod(mat4, axis=(1, 2))
+                        out[key][s, m, p, :, z] = pprod(mat3, axis=(1, 2))
                     elif key == 'Dist' and k == 0:
-                        out[key][s, m, p, :] = pprod(mat4, axis=(0, 2))
+                        out[key][s, m, p, :, z] = pprod(mat3, axis=(0, 2))
                     elif key == 'TRT' and k == 0:
-                        out[key][s, m, p, :] = pprod(mat5, axis=(1, 2, 3))
+                        out[key][s, m, p, :, z] = pprod(mat4, axis=(1, 2, 3))
                     elif key == 'Mag_Dist' and k == 0:
-                        out[key][s, m, p, :] = pprod(mat4, axis=2)
+                        out[key][s, m, p, ..., z] = pprod(mat3, axis=2)
                     elif key == 'Mag_Dist_Eps' and k == 0:
-                        out[key][s, m, p, :] = mat4
+                        out[key][s, m, p, ..., z] = mat3
                     elif key == 'Mag_Dist_TRT' and k == 0:
-                        out[key][s, m, p, :] = pprod(mat5, axis=(3)).transpose(
-                            1, 2, 0, 3)  # T Ma D Z -> Ma D T Z
+                        out[key][s, m, p, ..., z] = pprod(  # T Ma D -> Ma D T
+                            mat4, axis=(3)).transpose(1, 2, 0)
                     elif key == 'Mag_Dist_TRT_Eps' and k == 0:
-                        out[key][s, m, p, :] = mat5.transpose(1, 2, 0, 3, 4)
+                        out[key][s, m, p, ..., z] = mat4.transpose(1, 2, 0, 3)
                     elif key == 'Lon_Lat' and k == 1:
-                        out[key][s, m, p, :] = pprod(mat4, axis=0)
+                        out[key][s, m, p, ..., z] = pprod(mat3, axis=0)
                     elif key == 'Mag_Lon_Lat' and k == 1:
-                        out[key][s, m, p, :] = mat4
+                        out[key][s, m, p, ..., z] = mat3
                     elif key == 'Lon_Lat_TRT' and k == 1:
-                        out[key][s, m, p, :] = pprod(mat5, axis=1).transpose(
-                            1, 2, 0, 3)  # T Lo La Z -> Lo La T Z
+                        out[key][s, m, p, ..., z] = pprod(  # T Lo La -> Lo La T
+                            mat4, axis=1).transpose(1, 2, 0)
                     # shape NMP..Z
         self.datastore['disagg'] = out
         # below a dataset useful for debugging, at minimum IMT and maximum RP
