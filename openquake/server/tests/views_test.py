@@ -426,6 +426,7 @@ class EngineServerTestCase(django.test.TestCase):
 
     def test_aelo_successful_run(self):
         with tempfile.TemporaryDirectory() as email_dir:
+            # FIXME: EMAIL_FILE_PATH is ignored
             with self.settings(EMAIL_FILE_PATH=email_dir):
                 params = dict(
                     lon='-86', lat='12', vs30='800', siteid='CCA_SITE')
@@ -442,14 +443,12 @@ class EngineServerTestCase(django.test.TestCase):
                 self.assertGreater(
                     len(results), 0, 'The job produced no outputs!')
                 # FIXME: we should use the overridden EMAIL_FILE_PATH
-                # email_files = glob.glob('/tmp/app-messages/*')
-                # email_file = max(email_files, key=os.path.getctime)
-                print(f'email_dir: {email_dir}')
-                print(f'os.listdir(email_dir): {os.listdir(email_dir)}')
-                print(f"email_files: {glob.glob('/tmp/app-messages/*')}")
-                email_file = os.listdir(email_dir)[0]
+                # email_file = os.listdir(email_dir)[0]
+                email_files = glob.glob('/tmp/app-messages/*')
+                email_file = max(email_files, key=os.path.getctime)
                 with open(os.path.join(email_dir, email_file), 'r') as f:
                     email_content = f.read()
+                    print(email_content)
                 self.assertIn('finished correctly', email_content)
                 self.assertIn('From: aelonoreply@openquake.org', email_content)
                 self.assertIn('To: openquake@email.test', email_content)
@@ -517,9 +516,6 @@ class EngineServerTestCase(django.test.TestCase):
                 # FIXME: we should use the overridden EMAIL_FILE_PATH
                 # email_file = os.listdir(email_dir)[0]
                 email_files = glob.glob('/tmp/app-messages/*')
-                print(f'email_dir: {email_dir}')
-                print(f'os.listdir(email_dir): {os.listdir(email_dir)}')
-                print(f"glob.glob('/tmp/app-messages/*'): {email_files}")
                 email_file = max(email_files, key=os.path.getctime)
                 with open(os.path.join(email_dir, email_file), 'r') as f:
                     email_content = f.read()
