@@ -32,12 +32,16 @@
                                 applyToSources="1"
                                 branchSetID="bs5">
                 <logicTreeBranch branchID="b51">
-                    <uncertaintyModel>7.5</uncertaintyModel>
-                    <uncertaintyWeight>0.6</uncertaintyWeight>
+                    <uncertaintyModel>7.3</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
                 <logicTreeBranch branchID="b52">
-                    <uncertaintyModel>7.8</uncertaintyModel>
+                    <uncertaintyModel>7.4</uncertaintyModel>
                     <uncertaintyWeight>0.4</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b53">
+                  <uncertaintyModel>7.6</uncertaintyModel>
+                  <uncertaintyWeight>0.1</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
 
