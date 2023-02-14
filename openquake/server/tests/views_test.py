@@ -444,6 +444,8 @@ class EngineServerTestCase(django.test.TestCase):
                 # FIXME: we should use the overridden EMAIL_FILE_PATH
                 # email_files = glob.glob('/tmp/app-messages/*')
                 # email_file = max(email_files, key=os.path.getctime)
+                print(f'email_dir: {email_dir}')
+                print(f'os.listdir(email_dir): {os.listdir(email_dir)}')
                 email_file = os.listdir(email_dir)[0]
                 with open(os.path.join(email_dir, email_file), 'r') as f:
                     email_content = f.read()
@@ -513,6 +515,8 @@ class EngineServerTestCase(django.test.TestCase):
                 # FIXME: we should use the overridden EMAIL_FILE_PATH
                 # email_files = glob.glob('/tmp/app-messages/*')
                 # email_file = max(email_files, key=os.path.getctime)
+                print(f'email_dir: {email_dir}')
+                print(f'os.listdir(email_dir): {os.listdir(email_dir)}')
                 email_file = os.listdir(email_dir)[0]
                 with open(os.path.join(email_dir, email_file), 'r') as f:
                     email_content = f.read()
