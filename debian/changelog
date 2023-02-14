@@ -14,6 +14,9 @@
 
 python3-oq-engine (3.16.0-1~xenial01) xenial; urgency=low
 
+  [Matteo Nastasi]
+  * Bumped oq-libs to version 3.8.0
+
   [Michele Simionato, Paolo Tormene]
   * Fixed the `agg_curves` extractor to also extract individual curves, thus
     fixing the QGIS plugin visualization
