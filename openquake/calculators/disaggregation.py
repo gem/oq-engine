@@ -341,6 +341,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     nbytes += nonzero * 8
                     if nonzero == 0:  # nothing to disaggregate
                         continue
+                    del dgator.g_by_rlz  # save data transfer
                     for magi, dis in dgator.split_by_magi():
                         n = sum(len(ctx) for ctx in dis.ctxs[magi])
                         U = max(U, n)
