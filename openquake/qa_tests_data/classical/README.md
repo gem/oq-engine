@@ -77,3 +77,4 @@
 | case_75 | Tests calculation with multi-fault source |
 | case_76 | Tests for Canada SHM6 |
 | case_77 | Tests Modifiable GMPE with Tabular GMM |
+| case_82 | tests two mps, only one with reqv that should collapse points
