@@ -568,7 +568,7 @@ class BranchSet(object):
             Stable Shallow Crust, etc.) the uncertainty applies to. This
             filter is required for all branchsets in GMPE logic tree.
     """
-    applied = None  # to be replaced by a string in commonlib.logictree
+    applied = None  # to be replaced by a string in hazardlib.logictree
 
     def __init__(self, uncertainty_type, ordinal=0, filters=None,
                  collapsed=False):
