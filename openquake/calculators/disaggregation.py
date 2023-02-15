@@ -423,7 +423,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
         with self.monitor('saving disagg results'):
-            if self.oqparam.individual_rlzs or self.Z < self.R:
+            if self.Z == 1 or self.oqparam.individual_rlzs or self.Z < self.R:
                 res = {(s, self.sr2z[s, r], m, k): results[s, r, m, k]
                        for s, r, m, k in results}
                 self.save_disagg_results(res, 'disagg-rlzs')
