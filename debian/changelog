@@ -1,5 +1,16 @@
   [Michele Simionato]
-  * Optimized disaggregation, both in performance and memory consumption
+  * Added an exporter for disagg_by_src
+  * Implemented statistical disaggregation outputs
+
+  [Kendra Johnson]
+  * Corrected a bug when using the `reqv` feature: all sources were
+    collapsed instead of the ones with the specified tectonic region types
+
+  [Michele Simionato]
+  * Changed the lon-lat binning algorithm to produce 4 times less bins
+  * Fixed install.py: it must not set the shared_dir
+  * Optimized disaggregation in performance, memory consumption and data
+    transfer
 
 python3-oq-engine (3.16.0-1~xenial01) xenial; urgency=low
 

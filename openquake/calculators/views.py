@@ -935,7 +935,7 @@ def view_mean_disagg(token, dstore):
     """
     N, M, P, Z = dstore['hmap4'].shape
     tbl = []
-    kd = {key: dset[:] for key, dset in sorted(dstore['disagg'].items())}
+    kd = {key: dset[:] for key, dset in sorted(dstore['disagg-rlzs'].items())}
     oq = dstore['oqparam']
     for s in range(N):
         for m, imt in enumerate(oq.imtls):

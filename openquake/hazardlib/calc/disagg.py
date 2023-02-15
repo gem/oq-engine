@@ -72,9 +72,9 @@ def lon_lat_bins(lon, lat, size_km, coord_bin_width):
     delta_lat = min(size_km * KM_TO_DEGREES, 90)
     EPS = .001  # avoid discarding the last edge
     lon_bins = lon + numpy.arange(-delta_lon, delta_lon + EPS,
-                                  delta_lon / nbins)
+                                  2*delta_lon / nbins)
     lat_bins = lat + numpy.arange(-delta_lat, delta_lat + EPS,
-                                  delta_lat / nbins)
+                                  2*delta_lat / nbins)
     if cross_idl(*lon_bins):
         lon_bins %= 360
     return lon_bins, lat_bins
@@ -473,25 +473,6 @@ class Disaggregator(object):
             dis.weights = {magi: self.weights[magi]}
             if dis.nbytes:  # non-empty
                 yield magi, dis
-
-    def disagg7D(self, iml3, rlzs, magi):
-        """
-        Disaggregate multiple realizations.
-
-        :returns: a 7D matrix of shape (D, Lo, La, E, M, P, Z)
-        """
-        M, P, Z = iml3.shape
-        shp = [len(b)-1 for b in self.bin_edges[1:5]] + [M, P, Z]
-        matrix = numpy.zeros(shp)
-        for z, rlzi in enumerate(rlzs):
-            try:
-                g = self.g_by_rlz[rlzi]
-            except KeyError:
-                # discard the z contributions coming from wrong
-                # realizations: see the test disagg/case_2
-                continue
-            matrix[..., z] = self.disagg6D(iml3[:, :, z], g, magi)
-        return matrix
 
     def disagg6D(self, iml2, g, magi):
         """

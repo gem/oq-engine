@@ -1122,14 +1122,19 @@ def extract_disagg(dstore, what):
     Extract a disaggregation output as a 2D array.
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
-    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&traditional=1
+    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&spec=stats
     """
     qdict = parse(what)
+    spec = qdict['spec'][0]
     label = qdict['kind'][0]
     imt = qdict['imt'][0]
     poe_id = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
-    traditional = qdict.get('traditional')
+    if 'traditional' in spec:
+        spec = spec[:4]  # rlzs or stats
+        traditional = True
+    else:
+        traditional = False
 
     def get(v, sid):
         if len(v.shape) == 2:
@@ -1139,10 +1144,10 @@ def extract_disagg(dstore, what):
     imt2m = {imt: m for m, imt in enumerate(oq.imtls)}
     bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
     m = imt2m[imt]
-    matrix = dstore['disagg/' + label][sid, m, poe_id]  # shape (..., Z)
+    matrix = dstore['disagg-%s/%s' % (spec, label)][sid, m, poe_id]
+    Z = matrix.shape[-1]
     poe_agg = dstore['poe4'][sid, m, poe_id]
-    Z = len(poe_agg)
-    if traditional and traditional != '0':
+    if traditional:
         if matrix.any():  # nonzero
             matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
 
@@ -1250,7 +1255,7 @@ def extract_disagg_layer(dstore, what):
     out = numpy.zeros(len(sitecol), dt)
     hmap4 = dstore['hmap4'][:]
     best_rlzs = dstore['best_rlzs'][:]
-    arr = {kind: dstore['disagg/' + kind][:] for kind in kinds}
+    arr = {kind: dstore['disagg-rlzs/' + kind][:] for kind in kinds}
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
         rlzs = realizations[best_rlzs[sid]]
