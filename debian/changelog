@@ -1,5 +1,6 @@
   [Kendra Johnson]
-  * corrected a bug in collapsing point sources when using reqv
+  * Corrected a bug when using the `reqv` feature: all sources were
+    collapsed instead of the ones with the specified tectonic region types
 
   [Michele Simionato]
   * Changed the lon-lat binning algorithm to produce 4 times less bins
