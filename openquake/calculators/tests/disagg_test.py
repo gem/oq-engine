@@ -116,7 +116,7 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_5(self):
         # test gridded nonparametric sources
         self.run_calc(case_5.__file__, 'job.ini')
-        fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
+        fnames = export(('disagg-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
@@ -176,7 +176,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.run_calc(case_8.__file__, 'job.ini')
 
         # test mre results
-        [fname] = export(('disagg-stats', 'csv'), self.calc.datastore)
+        [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
 
         # test calculation with uneven user defined magnitude bin edges
@@ -188,14 +188,14 @@ class DisaggregationTestCase(CalculatorTestCase):
         # into a single value corresponding to 1 - (1-p1) * (1-p2) and the last
         # value is also the same provided to magnitude 7 in the first
         # calculation
-        [fname] = export(('disagg-stats', 'csv'), self.calc.datastore)
+        [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag_Dist-0.csv', fname)
 
     def test_case_9(self):
         # test mutex disaggregation. Results checked against hand-computed
         # values by Marco Pagani - 2022.06.28
         self.run_calc(case_9.__file__, 'job.ini', concurrent_tasks='2')
-        [f1, f2] = export(('disagg-stats', 'csv'), self.calc.datastore)
+        [f1, f2] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag-0.csv', f1)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', f2)
 
@@ -213,7 +213,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         # test mutex disagg by src when sources grouped by prefix
         # MDE results use same values as test_case_9
         self.run_calc(case_11.__file__, 'job.ini')
-        [fname] = export(('disagg-stats', 'csv'), self.calc.datastore)
+        [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
         #if platform.machine() == 'arm64':
         #    raise unittest.SkipTest('Temporarily skipped')
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)

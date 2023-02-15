@@ -680,7 +680,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     acc[g] = ProbabilityMap(sitecol.sids, L, 1).fill(1)
 
         totsize = sum(pmap.array.nbytes for pmap in acc.values())
-        logging.info('Global pmap size %s', humansize(totsize))
+        if totsize:
+            logging.info('Global pmap size %s', humansize(totsize))
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
