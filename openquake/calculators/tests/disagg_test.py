@@ -54,7 +54,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         hc_id = self.calc.datastore.calc_id
         out = self.run_calc(test_dir, 'job.ini', exports=fmt,
                             hazard_calculation_id=str(hc_id))
-        got = out['disagg', fmt]
+        got = out['disagg-rlzs', fmt]
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected_output/%s' % fname, actual)
@@ -102,7 +102,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         # a case with number of lon/lat bins different for site 0/site 1
         # this exercise sampling
         self.run_calc(case_4.__file__, 'job.ini')
-        fnames = export(('disagg', 'csv'), self.calc.datastore)
+        fnames = export(('disagg-rlzs', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 14)
         # Dist-0 Lon_Lat-0 Lon_Lat_TRT-0 Lon_Lat_TRT-1
         # Mag-0 Mag_Dist-0 Mag_Dist_Eps-0 Mag_Dist_TRT-0
@@ -116,7 +116,7 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_5(self):
         # test gridded nonparametric sources
         self.run_calc(case_5.__file__, 'job.ini')
-        fnames = export(('disagg', 'csv'), self.calc.datastore)
+        fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
@@ -127,7 +127,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.run_calc(case_6.__file__, 'job.ini')
 
         # test CSV export
-        fnames = export(('disagg', 'csv'), self.calc.datastore)
+        fnames = export(('disagg-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
@@ -163,33 +163,20 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertAlmostEqual(haz[1], 0.1875711524)
 
         # test normal disaggregation
-        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/TRT-0.csv', fname)
 
         # test conditional disaggregation
-        [fname] = export(('disagg_traditional', 'csv'), self.calc.datastore)
+        [fname] = export(('disagg-rlzs-traditional', 'csv'),
+                         self.calc.datastore)
         self.assertEqualFiles('expected/TRT-traditional-0.csv', fname)
-
-    def test_case_master(self):
-        # this tests exercise the case of a complex logic tree
-        self.run_calc(case_master.__file__, 'job.ini')
-        fname = gettemp(text_table(view('mean_disagg', self.calc.datastore)))
-        self.assertEqualFiles('expected/mean_disagg.rst', fname)
-        os.remove(fname)
-
-        fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 20)
-        for fname in fnames:
-            if 'Mag_Dist' in fname and 'Eps' not in fname:
-                self.assertEqualFiles(
-                    'expected_output/%s' % strip_calc_id(fname), fname)
 
     def test_case_8(self):
         # test epsilon star
         self.run_calc(case_8.__file__, 'job.ini')
 
         # test mre results
-        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        [fname] = export(('disagg-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
 
         # test calculation with uneven user defined magnitude bin edges
@@ -201,14 +188,14 @@ class DisaggregationTestCase(CalculatorTestCase):
         # into a single value corresponding to 1 - (1-p1) * (1-p2) and the last
         # value is also the same provided to magnitude 7 in the first
         # calculation
-        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        [fname] = export(('disagg-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag_Dist-0.csv', fname)
 
     def test_case_9(self):
         # test mutex disaggregation. Results checked against hand-computed
         # values by Marco Pagani - 2022.06.28
         self.run_calc(case_9.__file__, 'job.ini', concurrent_tasks='2')
-        [f1, f2] = export(('disagg', 'csv'), self.calc.datastore)
+        [f1, f2] = export(('disagg-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag-0.csv', f1)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', f2)
 
@@ -219,14 +206,14 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_10(self):
         # test single magnitude
         self.run_calc(case_10.__file__, 'job.ini')
-        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        [fname] = export(('disagg-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/Mag-0.csv', fname)
 
     def test_case_11(self):
         # test mutex disagg by src when sources grouped by prefix
         # MDE results use same values as test_case_9
         self.run_calc(case_11.__file__, 'job.ini')
-        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        [fname] = export(('disagg-stats', 'csv'), self.calc.datastore)
         #if platform.machine() == 'arm64':
         #    raise unittest.SkipTest('Temporarily skipped')
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
@@ -242,3 +229,17 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_13(self):
         # check split_by_mag, essential with GMPETable
         self.run_calc(case_13.__file__, 'job.ini')
+
+    def test_case_master(self):
+        # this tests exercise the case of a complex logic tree
+        self.run_calc(case_master.__file__, 'job.ini')
+        fname = gettemp(text_table(view('mean_disagg', self.calc.datastore)))
+        self.assertEqualFiles('expected/mean_disagg.rst', fname)
+        os.remove(fname)
+
+        fnames = export(('disagg-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 20)
+        for fname in fnames:
+            if 'Mag_Dist' in fname and 'Eps' not in fname:
+                self.assertEqualFiles(
+                    'expected_output/%s' % strip_calc_id(fname), fname)

@@ -20,7 +20,6 @@ import io
 import os
 import time
 import psutil
-import random
 import logging
 import operator
 import functools
@@ -230,9 +229,6 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    if 20 < monitor.task_no < pgetter.ntasks - 20:
-        # give time to the other tasks
-        time.sleep(pgetter.ntasks * random.random())
     with monitor('read PoEs', measuremem=True):
         pgetter.init()
 
