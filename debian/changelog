@@ -1,3 +1,7 @@
+  [Kendra Johnson]
+  * Corrected a bug when using the `reqv` feature: all sources were
+    collapsed instead of the ones with the specified tectonic region types
+
   [Michele Simionato]
   * Changed the lon-lat binning algorithm to produce 4 times less bins
   * Fixed install.py: it must not set the shared_dir
