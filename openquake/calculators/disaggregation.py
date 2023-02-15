@@ -463,7 +463,10 @@ class DisaggregationCalculator(base.HazardCalculator):
             the string "disagg-rlzs" or "disagg-stats"
         """
         oq = self.oqparam
-        Z = self.shapedic['Z'] if oq.individual_rlzs else len(oq.hazard_stats())
+        if name.endswith('rlzs'):
+            Z = self.shapedic['Z'] 
+        else:
+            Z = len(oq.hazard_stats())
         out = output_dict(self.shapedic, oq.disagg_outputs, Z)
         count = numpy.zeros(len(self.sitecol), U16)
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])

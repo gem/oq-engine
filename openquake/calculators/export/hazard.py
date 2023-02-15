@@ -535,7 +535,7 @@ def export_disagg_csv(ekey, dstore):
     fnames = []
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
     ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&spec=%s'
-    trad = '-traditional' if 'traditiona' in name else ''
+    trad = '-traditional' if 'traditional' in name else ''
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
     metadata = dstore.metadata
     poes_disagg = ['nan'] * P

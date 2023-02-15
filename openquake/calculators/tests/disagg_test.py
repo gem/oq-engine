@@ -102,7 +102,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         # a case with number of lon/lat bins different for site 0/site 1
         # this exercise sampling
         self.run_calc(case_4.__file__, 'job.ini')
-        fnames = export(('disagg-rlzs', 'csv'), self.calc.datastore)
+        fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 14)
         # Dist-0 Lon_Lat-0 Lon_Lat_TRT-0 Lon_Lat_TRT-1
         # Mag-0 Mag_Dist-0 Mag_Dist_Eps-0 Mag_Dist_TRT-0

@@ -1145,9 +1145,8 @@ def extract_disagg(dstore, what):
     bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
     m = imt2m[imt]
     matrix = dstore['disagg-%s/%s' % (spec, label)][sid, m, poe_id]
-    # shape (..., Z)
+    Z = matrix.shape[-1]
     poe_agg = dstore['poe4'][sid, m, poe_id]
-    Z = len(poe_agg)
     if traditional:
         if matrix.any():  # nonzero
             matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
