@@ -355,16 +355,13 @@ class DisaggregationCalculator(base.HazardCalculator):
                         iml2 = iml3[:, :, z]
                         if iml2.any():
                             triples.append((g, rlz, iml2))
-                    nonzero = (iml3 > 0).sum()
-                    nbytes += nonzero * 8
-                    if nonzero == 0:  # nothing to disaggregate
-                        continue
                     del dgator.g_by_rlz  # save data transfer
                     for magi, dis in dgator.split_by_magi():
                         n = sum(len(ctx) for ctx in dis.ctxs[magi])
                         U = max(U, n)
                         smap.submit((dis, triples))
                         task_inputs.append((grp_id, n))
+                        nbytes += len(triples) * s['M'] * s['P'] * 8
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
