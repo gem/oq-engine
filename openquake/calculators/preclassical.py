@@ -171,7 +171,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                 'Using equivalent distance approximation and '
                 'collapsing hypocenters and nodal planes')
         for sg in csm.src_groups:
-            if reqv:
+            if reqv and sg.trt in self.oqparam.inputs['reqv']:
                 for src in sg:
                     collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
