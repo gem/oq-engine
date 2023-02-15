@@ -24,10 +24,10 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 """
 import numpy as np
 
-from openquake.hazardlib.gsim.CanadaSHM6_InSlab import (
+from openquake.hazardlib.gsim.can20.can_shm6_inslab import (
     CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55, COEFFS_SITE_FACTORS,
     extrapolation_factor, CoeffsTable_CanadaSHM6)
-from openquake.hazardlib.gsim.CanadaSHM6_ActiveCrust import (
+from openquake.hazardlib.gsim.can20.can_shm6_active_crust import (
     CanadaSHM6_ActiveCrust_BooreEtAl2014, CanadaSHM6_hardrock_site_factor)
 from openquake.hazardlib.gsim.abrahamson_2015 import AbrahamsonEtAl2015SInter
 from openquake.hazardlib.gsim.atkinson_macias_2009 import AtkinsonMacias2009
@@ -53,17 +53,16 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
     experimental = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
-
-        CanadaSHM6 edits: Added PGV
-                          Limited GMM to the CSHM6 range of 0.05 - 10s.
-
-        """
-        # set correlated IMT for PGV and check T bounds
+                CanadaSHM6 edits: Added PGV
+#                          Limited GMM to the CSHM6 range of 0.05 - 10s.
+#
+#        """
+#        # set correlated IMT for PGV and check T bounds
         PGVimt = False
         if imt == PGV():
             PGVimt = True
@@ -74,22 +73,39 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
                              + 'range of ' + str(self.MIN_SA) + 's and '
                              + str(self.MAX_SA) + 's.')
 
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type and for PGA
-        C = self.COEFFS[imt]
-        dc1 = self._get_delta_c1(imt)
         C_PGA = self.COEFFS[PGA()]
-        dc1_pga = self._get_delta_c1(PGA())
+        dc1_pga = self.delta_c1 or self.COEFFS_MAG_SCALE[PGA()]["dc1"]
+
         # compute median pga on rock (vs30=1000), needed for site response
         # term calculation
-        pga1000 = np.exp(
-            self._compute_pga_rock(C_PGA, dc1_pga, sites, rup, dists))
-        mean = (self._compute_magnitude_term(C, dc1, rup.mag) +
-                self._compute_distance_term(C, rup.mag, dists) +
-                self._compute_focal_depth_term(C, rup) +
-                self._compute_forearc_backarc_term(C, sites, dists) +
-                self._compute_site_response_term(C, sites, pga1000))
-        stddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
+        pga1000 = np.exp(_compute_pga_rock(
+            self.kind, self.trt, self.theta6_adj, self.faba_model,
+            C_PGA, dc1_pga, ctx))
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            dc1 = self.delta_c1 or self.COEFFS_MAG_SCALE[imt]["dc1"]
+            mean[m] = (
+                _compute_magnitude_term(
+                    self.kind, C, dc1, ctx.mag) +
+                _compute_distance_term(
+                    self.kind, self.trt, self.theta6_adj, C, ctx) +
+                _compute_focal_depth_term(
+                    self.trt, C, ctx) +
+                _compute_forearc_backarc_term(
+                    self.trt, self.faba_model, C, ctx) +
+                _compute_site_response_term(
+                    C, ctx, pga1000))
+            if self.sigma_mu_epsilon:
+                sigma_mu = get_stress_factor(
+                    imt, self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
+                    const.TRT.SUBDUCTION_INTRASLAB)
+                mean[m] += sigma_mu * self.sigma_mu_epsilon
+
+            sig[m] = C["sigma"] if self.ergodic else C["sigma_ss"]
+            tau[m] = C['tau']
+            phi[m] = C["phi"] if self.ergodic else np.sqrt(
+                C["sigma_ss"] ** 2. - C["tau"] ** 2.)
+
 
         if PGVimt:
             mean = (0.897*mean) + 4.835
