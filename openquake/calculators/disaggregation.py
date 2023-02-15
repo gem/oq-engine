@@ -415,7 +415,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         # build a dictionary s, m, k -> matrices
         results = matrix_dict(results, T, Ma)
         # get the number of outputs
-        if self.oqparam.individual_rlzs:
+        if self.Z == 1 or self.oqparam.individual_rlzs:
             Z = self.Z
         else:
             Z = len(self.oqparam.hazard_stats())
