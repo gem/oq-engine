@@ -1140,21 +1140,6 @@ hazard_uhs-std.csv
     def test_case_82(self):
         # two mps, only one should be collapsed and use reqv
         self.run_calc(case_82.__file__, 'job.ini')
-        dbs = self.calc.datastore['disagg_by_src']
-        poes1 = dbs[0, :, 0, :, 0][0]
-        poes2 = dbs[0, :, 0, :, 1][0]
-        expected_1 = [9.987267E-01,9.902415E-01,9.541489E-01,
-                8.594934E-01,6.958312E-01,4.954897E-01,3.096500E-01,
-                1.708693E-01,8.350305E-02,3.599516E-02,1.356312E-02,
-                4.405316E-03,1.203383E-03,2.724673E-04,4.827820E-05,
-                5.867962E-06,3.095835E-07,0.000000E+00,0.000000E+00,
-                0.000000E+00]
-        expected_2 = [9.990786E-01,9.925799E-01,9.633750E-01,
-                8.824907E-01,7.349927E-01,5.448197E-01,3.591735E-01,
-                2.130423E-01,1.151815E-01,5.728857E-02,2.643275E-02,
-                1.146546E-02,4.718510E-03,1.832960E-03,6.482647E-04,
-                1.947026E-04,4.522584E-05,6.583957E-06,2.469326E-07,
-                0.000000E+00]
+        [f1] = export(('disagg_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/disagg_by_src.csv', f1)
 
-        aac(poes1, expected_1, atol=1E-7)
-        aac(poes2, expected_2, atol=1E-7)
