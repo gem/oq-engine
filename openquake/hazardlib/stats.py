@@ -281,7 +281,7 @@ def calc_stats(df, kfields, stats, weights):
             for vf in vfields:
                 values = numpy.zeros_like(weights)  # shape R
                 values[group.rlz_id] = getattr(group, vf).to_numpy()
-                v = apply_stat(func, values, weights)
+                v = func(values, weights)
                 acc[vf].append(v)
             acc['stat'].append(name)
     return pandas.DataFrame(acc)
