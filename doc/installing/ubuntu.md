@@ -1,8 +1,8 @@
 # Installing the OpenQuake Engine on Ubuntu Linux
 
 The OpenQuake Engine stable tree is available in the form of *deb* binary packages for the following Ubuntu releases:
+- **Ubuntu 20.04** LTS (Focal)
 - **Ubuntu 18.04** LTS (Bionic)
-- **Ubuntu 16.04** LTS (Xenial)
 
 Packages *may* work on Ubuntu derivatives (i.e. Mint Linux) and Debian, but this setup is not supported by GEM. See the **[FAQ](../faq.md#unsupported-operating-systems)**.
 
