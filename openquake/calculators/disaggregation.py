@@ -448,18 +448,16 @@ class DisaggregationCalculator(base.HazardCalculator):
                 # and (T, Ma, Lo, La) for k == 1
                 if k == 0 and m == 0 and poe == self.poes_disagg[-1]:
                     _disagg_trt[s] = tuple(pprod(mat5[..., 0], axis=(1, 2, 3)))
-                poe = pprod(mat4, axis=(0, 1, 2, 3))
-                self.datastore['poe4'][s, m, p, z] = poe
-                '''
-                if (poe and abs(1 - poe_agg / poe) > .1 and not count[s]
-                        and self.iml4[s, m, p].any()):
-                    logging.warning(
-                        'Site #%d, IMT=%s: poe_agg=%s is quite different from '
-                        'the expected poe=%s, perhaps not enough levels',
-                        s, imt, poe_agg, poe)
+                poe_agg = pprod(mat4, axis=(0, 1, 2, 3))
+                self.datastore['poe4'][s, m, p, z] = poe_agg
+                if poe and abs(1 - poe_agg / poe) > .1 and not count[s]:
+                    # warn only once per site
+                    msg = ('Site #%d, IMT=%s, rlz=#%d: poe_agg=%s is quite '
+                           'different from the expected poe=%s, perhaps not '
+                           'enough levels')
+                    logging.warning(msg,  s, imt, r, poe_agg, poe)
                     vcurves.append(self.curves[s])
                     count[s] += 1
-                '''
                 mat3 = agg_probs(*mat4)  # shape (Ma D E) or (Ma Lo La)
                 for key in oq.disagg_outputs:
                     if key == 'Mag' and k == 0:
