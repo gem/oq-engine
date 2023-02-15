@@ -1122,14 +1122,19 @@ def extract_disagg(dstore, what):
     Extract a disaggregation output as a 2D array.
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
-    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&traditional=1
+    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&spec=stats
     """
     qdict = parse(what)
+    spec = qdict['spec'][0]
     label = qdict['kind'][0]
     imt = qdict['imt'][0]
     poe_id = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
-    traditional = qdict.get('traditional')
+    if 'traditional' in spec:
+        spec = spec[:4]  # rlzs or stats
+        traditional = True
+    else:
+        traditional = False
 
     def get(v, sid):
         if len(v.shape) == 2:
@@ -1139,10 +1144,10 @@ def extract_disagg(dstore, what):
     imt2m = {imt: m for m, imt in enumerate(oq.imtls)}
     bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
     m = imt2m[imt]
-    matrix = dstore['disagg/' + label][sid, m, poe_id]  # shape (..., Z)
+    matrix = dstore['disagg-%s/%s' % (spec, label)][sid, m, poe_id]
+    Z = matrix.shape[-1]
     poe_agg = dstore['poe4'][sid, m, poe_id]
-    Z = len(poe_agg)
-    if traditional and traditional != '0':
+    if traditional:
         if matrix.any():  # nonzero
             matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
 
@@ -1171,59 +1176,6 @@ def extract_disagg(dstore, what):
     weights = numpy.array([dstore['weights'][r] for r in attrs['rlzs']])
     weights /= weights.sum()
     attrs['weights'] = weights
-    return ArrayWrapper(values.T, attrs)
-
-
-@extract.add('mean_disagg')
-def extract_mean_disagg(dstore, what):
-    """
-    Extract a disaggregation output averaged on the realizations as a 2D array.
-    Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/
-    mean_disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&traditional=1
-    """
-    qdict = parse(what)
-    label = qdict['kind'][0]
-    imt = qdict['imt'][0]
-    poe_id = int(qdict['poe_id'][0])
-    sid = int(qdict['site_id'][0])
-    traditional = qdict.get('traditional')
-
-    def get(v, sid):
-        if len(v.shape) == 2:
-            return v[sid]
-        return v[:]
-    oq = dstore['oqparam']
-    rlzs = dstore['best_rlzs'][sid]
-    weights = dstore['weights'][:][rlzs]
-    weights /= weights.sum()
-    imt2m = {imt: m for m, imt in enumerate(oq.imtls)}
-    bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
-    m = imt2m[imt]
-    matrix = dstore['disagg/' + label][sid, m, poe_id]  # shape (..., Z)
-    poe_agg = dstore['poe4'][sid, m, poe_id]
-    if traditional and traditional != '0':
-        if matrix.any():  # nonzero
-            matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
-
-    # adapted from the nrml_converters
-    disag_tup = tuple(label.split('_'))
-    axis = [bins[k] for k in disag_tup]
-
-    # compute axis mid points, except for the TRT axis
-    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype != object
-            else ax for ax in axis]
-    matrix = matrix @ weights  # compute means
-    if len(axis) == 1:  # i.e. Mag or Dist
-        values = numpy.array([axis[0], list(matrix)])
-    else:  # i.e. Mag_Dist
-        grids = numpy.meshgrid(*axis, indexing='ij')
-        values = [g.flatten() for g in grids] + [matrix.flatten()]
-        values = numpy.array(values)
-    attrs = qdict.copy()
-    for k in disag_tup:
-        attrs[k] = bins[k]
-    attrs['kind'] = disag_tup
     return ArrayWrapper(values.T, attrs)
 
 
@@ -1303,7 +1255,7 @@ def extract_disagg_layer(dstore, what):
     out = numpy.zeros(len(sitecol), dt)
     hmap4 = dstore['hmap4'][:]
     best_rlzs = dstore['best_rlzs'][:]
-    arr = {kind: dstore['disagg/' + kind][:] for kind in kinds}
+    arr = {kind: dstore['disagg-rlzs/' + kind][:] for kind in kinds}
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
         rlzs = realizations[best_rlzs[sid]]

@@ -151,13 +151,30 @@ def get_outputs_size(shapedic, disagg_outputs):
     return tot * shapedic['N'] * shapedic['M'] * shapedic['P'] * shapedic['Z']
 
 
-def output_dict(shapedic, disagg_outputs):
-    N, M, P, Z = shapedic['N'], shapedic['M'], shapedic['P'], shapedic['Z']
+def output_dict(shapedic, disagg_outputs, Z):
+    N, M, P = shapedic['N'], shapedic['M'], shapedic['P']
     dic = {}
     for out in disagg_outputs:
         shp = tuple(shapedic[key] for key in out.lower().split('_'))
         dic[out] = numpy.zeros((N, M, P) + shp + (Z,))
     return dic
+
+
+def calc_stats(results, hstats, weights):
+    """
+    Compute Z statistics from the realizations.
+    :returns: a dictionary (s, z, m, k) -> array
+    """
+    acc = AccumDict(accum={})
+    R = len(weights)
+    for s, r, m, k in results:
+        acc[s, m, k][r] = results[s, r, m, k]
+    out = {}
+    for (s, m, k), dic in acc.items():
+        for z, func in enumerate(hstats.values()):
+            values = [dic.get(r, 0) for r in range(R)]
+            out[s, z, m, k] = stats.apply_stat(func, values, weights)
+    return out
 
 
 @base.calculators.add('disaggregation')
@@ -405,7 +422,14 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
         with self.monitor('saving disagg results'):
-            self.save_disagg_results(results)
+            if self.oqparam.individual_rlzs or self.Z < self.R:
+                res = {(s, self.sr2z[s, r], m, k): results[s, r, m, k]
+                       for s, r, m, k in results}
+                self.save_disagg_results(res, 'disagg-rlzs')
+            else:  # save only the statistics
+                weights = self.datastore['weights'][:]
+                res = calc_stats(results, self.oqparam.hazard_stats(), weights)
+                self.save_disagg_results(res, 'disagg-stats')
 
     def save_bin_edges(self, all_edges):
         """
@@ -428,21 +452,27 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.datastore['disagg-bins/Eps'] = b[4]
         self.datastore['disagg-bins/TRT'] = encode(self.trts)
 
-    def save_disagg_results(self, results):
+    def save_disagg_results(self, results, name):
         """
-        Save the computed PMFs in the datastore
+        Save the computed PMFs in the datastore.
 
         :param results:
-            a dict s, r, m, k -> 5D-matrix of shape (T, Ma, Lo, La, P) or
+            a dict s, z, m, k -> 5D-matrix of shape (T, Ma, Lo, La, P) or
             (T, Ma, D, E, P) depending if k is 0 or k is 1
+        :param name:
+            the string "disagg-rlzs" or "disagg-stats"
         """
         oq = self.oqparam
-        out = output_dict(self.shapedic, oq.disagg_outputs)
+        if name.endswith('rlzs'):
+            Z = self.shapedic['Z'] 
+        else:
+            Z = len(oq.hazard_stats())
+        out = output_dict(self.shapedic, oq.disagg_outputs, Z)
         count = numpy.zeros(len(self.sitecol), U16)
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
         vcurves = []  # hazard curves with a vertical section for large poes
-        for (s, r, m, k), mat5 in sorted(results.items()):
-            z = self.sr2z[s, r]
+        best_rlzs = self.datastore['best_rlzs'][:]  # (shape N, Z)
+        for (s, z, m, k), mat5 in sorted(results.items()):
             # NB: k is an index with value 0 (MagDistEps) or 1 (LonLat)
             imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
@@ -451,16 +481,18 @@ class DisaggregationCalculator(base.HazardCalculator):
                 # and (T, Ma, Lo, La) for k == 1
                 if k == 0 and m == 0 and poe == self.poes_disagg[-1]:
                     _disagg_trt[s] = tuple(pprod(mat5[..., 0], axis=(1, 2, 3)))
-                poe_agg = pprod(mat4, axis=(0, 1, 2, 3))
-                self.datastore['poe4'][s, m, p, z] = poe_agg
-                if poe and abs(1 - poe_agg / poe) > .1 and not count[s]:
-                    # warn only once per site
-                    msg = ('Site #%d, IMT=%s, rlz=#%d: poe_agg=%s is quite '
-                           'different from the expected poe=%s, perhaps not '
-                           'enough levels')
-                    logging.warning(msg,  s, imt, r, poe_agg, poe)
-                    vcurves.append(self.curves[s])
-                    count[s] += 1
+                if name.endswith('-rlzs'):
+                    poe_agg = pprod(mat4, axis=(0, 1, 2, 3))
+                    self.datastore['poe4'][s, m, p, z] = poe_agg
+                    if poe and abs(1 - poe_agg / poe) > .1 and not count[s]:
+                        # warn only once per site
+                        msg = ('Site #%d, IMT=%s, rlz=#%d: poe_agg=%s is quite '
+                               'different from the expected poe=%s, perhaps '
+                               'not enough levels')
+                        logging.warning(msg,  s, imt, best_rlzs[s, z],
+                                        poe_agg, poe)
+                        vcurves.append(self.curves[s])
+                        count[s] += 1
                 mat3 = agg_probs(*mat4)  # shape (Ma D E) or (Ma Lo La)
                 for key in oq.disagg_outputs:
                     if key == 'Mag' and k == 0:
@@ -486,7 +518,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                         out[key][s, m, p, ..., z] = pprod(  # T Lo La -> Lo La T
                             mat4, axis=1).transpose(1, 2, 0)
                     # shape NMP..Z
-        self.datastore['disagg'] = out
+        self.datastore[name] = out
         # below a dataset useful for debugging, at minimum IMT and maximum RP
         self.datastore['_disagg_trt'] = _disagg_trt
         if len(vcurves):
@@ -495,12 +527,12 @@ class DisaggregationCalculator(base.HazardCalculator):
             self.datastore['_vcurves'].attrs['sids'] = numpy.where(count)[0]
 
         # check null realizations in the single site case, see disagg/case_2
-        best_rlzs = self.datastore['best_rlzs'][:]  # (shape N, Z)
-        for (s, z), r in numpy.ndenumerate(best_rlzs):
-            lst = []
-            for key in out:
-                if out[key][s, ..., z].sum() == 0:
-                    lst.append(key)
-            if lst:
-                logging.warning('No %s contributions for site=%d, rlz=%d',
-                                lst, s, r)
+        if name.endswith('-rlzs'):
+            for (s, z), r in numpy.ndenumerate(best_rlzs):
+                lst = []
+                for key in out:
+                    if out[key][s, ..., z].sum() == 0:
+                        lst.append(key)
+                if lst:
+                    logging.warning('No %s contributions for site=%d, rlz=%d',
+                                    lst, s, r)
