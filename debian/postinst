@@ -26,7 +26,7 @@ set -e
 GEM_DEB_PACKAGE="python3-oq-engine"
 
 LSB_RELEASE=$(lsb_release --codename --short)
-if [ "$LSB_RELEASE" != "xenial" -a "$LSB_RELEASE" != "bionic" ]; then
+if [ "$LSB_RELEASE" != "bionic" -a "$LSB_RELEASE" != "focal" ]; then
     db_input high python3-oq-engine/distro_alert || true
     db_go
 fi

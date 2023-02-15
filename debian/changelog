@@ -12,7 +12,7 @@
   * Optimized disaggregation in performance, memory consumption and data
     transfer
 
-python3-oq-engine (3.16.0-1~xenial01) xenial; urgency=low
+python3-oq-engine (3.16.0-2~xenial01) xenial; urgency=low
 
   [Matteo Nastasi]
   * Bumped oq-libs to version 3.8.0
