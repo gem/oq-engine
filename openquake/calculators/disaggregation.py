@@ -418,7 +418,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         # build a dictionary s, m, k -> matrices
         results = matrix_dict(results, T, Ma)
         # get the number of outputs
-        shp = (self.N, len(self.poes_disagg), len(self.imts), self.Z)
+        if self.oqparam.individual_rlzs or self.Z < self.R:
+            Z = self.Z
+        else:
+            Z = len(self.oqparam.hazard_stats())
+        shp = (self.N, len(self.poes_disagg), len(self.imts), Z)
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
         with self.monitor('saving disagg results'):
