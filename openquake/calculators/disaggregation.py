@@ -56,18 +56,17 @@ def _collapse_res(rdic):
 
 
 def matrix_dict(acc, num_trts, num_mag_bins):
-    # # build a dictionary s, r, m, k -> matrix from a double dictionary
-    # s, r, m -> trti, magi -> output
+    # # build a dictionary s, r, m, k -> mat5D from a double dictionary
+    # s, r, m -> trti, magi -> mat3D
     out = {}
-    for s, r, m in acc:
-        output = acc[s, r, m]  # dictionary (trti, magi) -> output
-        trti, magi = next(iter(output))
-        for k in (0, 1):
-            shp = (num_trts, num_mag_bins) + output[trti, magi][k].shape
-            mat = numpy.zeros(shp)
-            for trti, magi in output:
-                mat[trti, magi] = output[trti, magi][k]
-            out[s, r, m, k] = mat
+    for s, r, m, k in acc:
+        mat3D = acc[s, r, m, k]  # dictionary (trti, magi) -> array
+        trti, magi = next(iter(mat3D))
+        shp = (num_trts, num_mag_bins) + mat3D[trti, magi].shape
+        mat5D = numpy.zeros(shp)
+        for trti, magi in mat3D:
+            mat5D[trti, magi] = mat3D[trti, magi]
+        out[s, r, m, k] = mat5D
     return out
 
 
@@ -120,7 +119,7 @@ def compute_disagg(dis, triples, monitor):
     :param monitor:
         monitor of the currently running job
     :returns:
-        a dictionary s, z, m -> (arr[D, E, P, Z], arr[Lo, La, P, Z])
+        a dictionary s, z, m, k -> array3D
     """
     with monitor('building mean_std', measuremem=False):
         dis.init(monitor)
@@ -131,7 +130,9 @@ def compute_disagg(dis, triples, monitor):
         for m in range(len(iml2)):
             mat5 = mat6[..., m, :]
             if mat5.any():
-                res[dis.sid, rlz, m] = output(mat5)
+                out = output(mat5)
+                for k in (0, 1):
+                    res[dis.sid, rlz, m, k] = out[k]
         # print(_collapse_res(res))
     return res
     # NB: compressing the results is not worth it since the aggregation of
@@ -360,9 +361,9 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         dt = numpy.dtype([('grp_id', U8), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
-        DEP = numpy.zeros((s['dist'], s['eps'], s['P']))
-        LLP = numpy.zeros((s['lon'], s['lat'], s['P']))
-        acc = AccumDict(accum=AccumDict(accum=(DEP, LLP)))
+        self.DEP = numpy.zeros((s['dist'], s['eps'], s['P']))
+        self.LLP = numpy.zeros((s['lon'], s['lat'], s['P']))
+        acc = AccumDict(accum={})
         results = smap.reduce(self.agg_result, acc)
         return results  # s, m -> trti, magi -> output
 
@@ -376,10 +377,12 @@ class DisaggregationCalculator(base.HazardCalculator):
         with self.monitor('aggregating disagg matrices'):
             trti = result.pop('trti')
             magi = result.pop('magi')
-            for (s, r, m), out in result.items():
-                for k in (0, 1):
-                    accum = acc[s, r, m][trti, magi][k]
-                    accum[:] = agg_probs(accum[:], out[k])
+            for (s, r, m,  k), arr in result.items():
+                accum = acc[s, r, m, k]
+                if (trti, magi) in accum:
+                    accum[trti, magi][:] = agg_probs(accum[trti, magi], arr)
+                else:
+                    accum[trti, magi] = arr.copy()
         return acc
 
     def post_execute(self, results):
