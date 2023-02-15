@@ -68,7 +68,7 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
         submodel is one of: "low", "central" or "high"
         """
         self.submodel = submodel
-        PATH = os.path.join(os.path.dirname(__file__), 'CanadaSHM6_tables',
+        PATH = os.path.join(os.path.dirname(__file__),
                             'AA13', 'ENA_%s_cl450.hdf5' % submodel)
 
         super().__init__(gmpe_table=PATH)
@@ -226,7 +226,7 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
         """
 
         self.submodel = submodel
-        PATH = os.path.join(os.path.dirname(__file__), 'CanadaSHM6_tables',
+        PATH = os.path.join(os.path.dirname(__file__),
                             'NGA-East-13', ('CanadaSHM6-trial_NGA-East_Model'
                                             '_%s_AA13_sigma.vs3000.hdf5'
                                             % submodel))
