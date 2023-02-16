@@ -462,6 +462,10 @@ class Disaggregator(object):
             self.meas[magi] = meas
             self.stds[magi] = stds
 
+    @property
+    def num_rlzs(self):
+        return len(self.g_by_rlz)
+
     def split_by_magi(self):
         """
         :yields: pairs (magi, <Disaggregator>)

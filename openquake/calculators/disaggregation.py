@@ -355,7 +355,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                         iml2 = iml3[:, :, z]
                         if iml2.any():
                             triples.append((g, rlz, iml2))
-                    del dgator.g_by_rlz  # save data transfer
                     for magi, dis in dgator.split_by_magi():
                         n = sum(len(ctx) for ctx in dis.ctxs[magi])
                         U = max(U, n)
