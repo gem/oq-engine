@@ -357,7 +357,7 @@ pmf_map = dict([
     ('Mag_Dist_Eps', mag_dist_eps_pmf),
     ('Lon_Lat', lon_lat_pmf),
     ('Mag_Lon_Lat', mag_lon_lat_pmf),
-    ('TRT', None),
+    ('TRT', trt_pmf),
     ('TRT_Lon_Lat', None),
     ('TRT_Mag_Dist', None),
     ('TRT_Mag_Dist_Eps', None),
