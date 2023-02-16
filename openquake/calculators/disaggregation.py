@@ -365,7 +365,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
 
-        data_transfer = (s['dist'] * s['eps'] + s['lon'] * s['lat']) * \
+        data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \
             s['mag'] * s['M'] * s['P'] * 8 * n_outs
         if data_transfer > oq.max_data_transfer:
             raise ValueError(
