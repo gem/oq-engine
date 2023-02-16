@@ -93,7 +93,7 @@ The OpenQuake Engine has several installation methods. To choose the one that be
 Binary packages are provided for the following 64bit operating systems:
 - [Windows 10](installing/windows.md)
 - [macOS 11.6+](installing/macos.md)
-- Linux [Ubuntu 18.04+](installing/ubuntu.md) and [RedHat/CentOS 7/RockyLinux and 8 ](installing/rhel.md) via _deb_ and _rpm_
+- Linux [Ubuntu 18.04+](installing/ubuntu.md) and [RedHat/CentOS 7/RockyLinux 8 ](installing/rhel.md) via _deb_ and _rpm_
 - Any other generic Linux distribution via the [universal installer](installing/universal.md)
 - [Docker](installing/docker.md) hosts
 
