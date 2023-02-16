@@ -107,7 +107,7 @@ def output(mat5):
     return pprod(mat5, axis=(1, 2)), pprod(mat5, axis=(0, 3))
 
 
-def compute_disagg(dis, triples, monitor):
+def compute_disagg(dis_triples, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -120,21 +120,22 @@ def compute_disagg(dis, triples, monitor):
     :returns:
         a dictionary s, z, m -> array5D
     """
-    for magi in range(dis.Ma):
-        with monitor('building mean_std', measuremem=False):
-            try:
-                dis.init(magi, monitor)
-            except FarAwayRupture:
-                continue
-        res = {'trti': dis.cmaker.trti, 'magi': magi}
-        for g, rlz, iml2 in triples:
-            mat6 = dis.disagg6D(iml2, g)
-            for m in range(len(iml2)):
-                mat5 = mat6[..., m, :]
-                if mat5.any():
-                    res[dis.sid, rlz, m] = mat5
-            # print(_collapse_res(res))
-        yield res
+    for dis, triples in dis_triples:
+        for magi in range(dis.Ma):
+            with monitor('building mean_std', measuremem=False):
+                try:
+                    dis.init(magi, monitor)
+                except FarAwayRupture:
+                    continue
+            res = {'trti': dis.cmaker.trti, 'magi': magi}
+            for g, rlz, iml2 in triples:
+                mat6 = dis.disagg6D(iml2, g)
+                for m in range(len(iml2)):
+                    mat5 = mat6[..., m, :]
+                    if mat5.any():
+                        res[dis.sid, rlz, m] = mat5
+                # print(_collapse_res(res))
+            yield res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
 
@@ -339,6 +340,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             if cmaker.rup_mutex:  # set by read_ctxs
                 raise NotImplementedError(
                     'Disaggregation with mutex ruptures')
+            task_inputs.append((grp_id, sum(len(ctx) for ctx in ctxs)))
+            dis_triples = []
             for site in self.sitecol:
                 sid = site.id
                 try:
@@ -356,11 +359,11 @@ class DisaggregationCalculator(base.HazardCalculator):
                     iml2 = iml3[:, :, z]
                     if iml2.any():
                         triples.append((g, rlz, iml2))
+                dis_triples.append((dis, triples))
+                n_outs += len(triples)
                 n = sum(len(ctx) for ctx in dis.ctxs)
                 U = max(U, n)
-                smap.submit((dis, triples))
-                task_inputs.append((grp_id, n))
-                n_outs += len(triples)
+            smap.submit((dis_triples,))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
