@@ -419,15 +419,14 @@ class Disaggregator(object):
             cmaker.src_mutex = getattr(srcs_or_ctxs[0], 'src_interdep', None) \
                 == 'mutex'
 
-        # build the magnitude bins
-        for ctx in ctxs:
-            magidx = numpy.searchsorted(bin_edges[0], ctx.mag) - 1
-            magidx[magidx == -1] = 0  # when the magnitude is on the edge
-            ctx.magi = magidx
-
         ctx = numpy.concatenate(ctxs).view(numpy.recarray)
         if len(ctx) == 0:
             raise FarAwayRupture('No ruptures affecting site #%d' % sid)
+
+        # build the magnitude bins
+        magi = numpy.searchsorted(bin_edges[0], ctx.mag) - 1
+        magi[magi == -1] = 0  # when the magnitude is on the edge
+
         self.nbytes = ctx.nbytes
         if cmaker.src_mutex:
             # getting a context array and a weight for each source
@@ -436,9 +435,11 @@ class Disaggregator(object):
             slices = get_slices(ctx.src_id).values()
             self.ctxs = [ctx[s0:s1] for [(s0, s1)] in slices]
             self.weights = [c.weight[0] for c in self.ctxs]
+            self.magbins = [magi[s0:s1] for [(s0, s1)] in slices]
         else:
             self.ctxs = [ctx]
             self.weights = [1.]
+            self.magbins = [magi]
 
     def init(self, magi, monitor=Monitor()):
         self.magi = magi
@@ -447,8 +448,8 @@ class Disaggregator(object):
         self._meas = []
         self._stds = []
         self._weights = []
-        for fullctx, weight in zip(self.ctxs, self.weights):
-            ctx = fullctx[fullctx.magi == magi]
+        for fullctx, weight, mb in zip(self.ctxs, self.weights, self.magbins):
+            ctx = fullctx[mb == magi]
             if len(ctx):
                 mea, std = self.cmaker.get_mean_stds([ctx], split_by_mag=1)[:2]
                 self._ctxs.append(ctx)
@@ -460,6 +461,9 @@ class Disaggregator(object):
 
     @property
     def num_rlzs(self):
+        """
+        :returns: the maximum number of relevant realizations
+        """
         return len(self.g_by_rlz)
 
     def disagg6D(self, iml2, g):
@@ -488,7 +492,8 @@ class Disaggregator(object):
         """
         mat5 = numpy.zeros((self.Ma, self.D, self.E) + iml2.shape)
         for magi in range(self.Ma):
-            mat6 = self.disagg6D(iml2, self.g_by_rlz[rlzi], self.magi)
+            self.init(magi)
+            mat6 = self.disagg6D(iml2, self.g_by_rlz[rlzi])
             mat5[magi] = pprod(mat6, axis=(1, 2))
         return mat5
 
@@ -615,8 +620,11 @@ def disaggregation(
                           dic['eps'], len(trts)])
     for trt in cmaker:
         dis = Disaggregator(ctxs[trt], sitecol, cmaker[trt], bin_edges)
-        dis.init()
-        for magi in dis.ctxs:
-            mat4 = dis.disagg6D([[iml]], 0, magi)[..., 0, 0]
+        for magi in range(dis.Ma):
+            try:
+                dis.init(magi)
+            except FarAwayRupture:
+                continue                
+            mat4 = dis.disagg6D([[iml]], 0)[..., 0, 0]
             matrix[magi, ..., trt_num[trt]] = mat4
     return bin_edges, matrix

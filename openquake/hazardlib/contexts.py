@@ -519,7 +519,6 @@ class ContextMaker(object):
             else:
                 item = (par, val[0].dtype)
             dtlist.append(item)
-        dtlist.append(('magi', numpy.uint8))
         for par in sitecol.dtype.names:
             if par != 'sids':
                 dtlist.append((par, sitecol.dtype[par]))
