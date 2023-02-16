@@ -509,18 +509,16 @@ class DisaggregationCalculator(base.HazardCalculator):
                         out[key][s, m, p, ..., z] = pprod(mat3, axis=2)
                     elif key == 'Mag_Dist_Eps' and k == 0:
                         out[key][s, m, p, ..., z] = mat3
-                    elif key == 'Mag_Dist_TRT' and k == 0:
-                        out[key][s, m, p, ..., z] = pprod(  # T Ma D -> Ma D T
-                            mat4, axis=(3)).transpose(1, 2, 0)
-                    elif key == 'Mag_Dist_TRT_Eps' and k == 0:
-                        out[key][s, m, p, ..., z] = mat4.transpose(1, 2, 0, 3)
+                    elif key == 'TRT_Mag_Dist' and k == 0:
+                        out[key][s, m, p, ..., z] = pprod(mat4, axis=3)
+                    elif key == 'TRT_Mag_Dist_Eps' and k == 0:
+                        out[key][s, m, p, ..., z] = mat4
                     elif key == 'Lon_Lat' and k == 1:
                         out[key][s, m, p, ..., z] = pprod(mat3, axis=0)
                     elif key == 'Mag_Lon_Lat' and k == 1:
                         out[key][s, m, p, ..., z] = mat3
-                    elif key == 'Lon_Lat_TRT' and k == 1:
-                        out[key][s, m, p, ..., z] = pprod(  # T Lo La -> Lo La T
-                            mat4, axis=1).transpose(1, 2, 0)
+                    elif key == 'TRT_Lon_Lat' and k == 1:
+                        out[key][s, m, p, ..., z] = pprod(mat4, axis=1)
                     # shape NMP..Z
         self.datastore[name] = out
         # below a dataset useful for debugging, at minimum IMT and maximum RP
