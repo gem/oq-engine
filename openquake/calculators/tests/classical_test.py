@@ -41,7 +41,7 @@ from openquake.qa_tests_data.classical import (
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
     case_66, case_67, case_68, case_69, case_70, case_71, case_72, case_73,
     case_74, case_75, case_76, case_77, case_78, case_79, case_80, case_81,
-    case_82)
+    case_82, case_83)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -1142,4 +1142,12 @@ hazard_uhs-std.csv
         self.run_calc(case_82.__file__, 'job.ini')
         [f1] = export(('disagg_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/disagg_by_src.csv', f1)
+
+    def test_case_83(self):
+        # two mps, only one should be collapsed and use reqv
+        self.run_calc(case_83.__file__, 'job_extendModel.ini')
+        [fname_em] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.run_calc(case_83.__file__, 'job_expanded_LT.ini')
+        [fname_ex] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles(fname_em, fname_ex)
 
