@@ -459,13 +459,6 @@ class Disaggregator(object):
         if not self._ctxs:
             raise FarAwayRupture
 
-    @property
-    def num_rlzs(self):
-        """
-        :returns: the maximum number of relevant realizations
-        """
-        return len(self.g_by_rlz)
-
     def disagg6D(self, iml2, g):
         """
         Disaggregate a single realization.

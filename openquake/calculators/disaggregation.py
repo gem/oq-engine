@@ -333,7 +333,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         grp_ids = rdata['grp_id']
         G = max(len(cmaker.gsims) for cmaker in cmakers)
         s = self.shapedic
-        nbytes = 0
+        n_outs = 0
         for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
             for start, stop in slices:
@@ -362,12 +362,13 @@ class DisaggregationCalculator(base.HazardCalculator):
                     U = max(U, n)
                     smap.submit((dis, triples))
                     task_inputs.append((grp_id, n))
-                    nbytes += len(triples) * s['mag'] * s['M'] * s['P'] * 8
+                    n_outs += len(triples)
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
 
-        data_transfer = (s['dist'] * s['eps'] + s['lon'] * s['lat']) * nbytes
+        data_transfer = (s['dist'] * s['eps'] + s['lon'] * s['lat']) * \
+            s['mag'] * s['M'] * s['P'] * 8 * n_outs
         if data_transfer > oq.max_data_transfer:
             raise ValueError(
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
