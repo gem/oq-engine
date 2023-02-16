@@ -340,40 +340,25 @@ mag_dist_pmf = partial(pprod, axis=(LON, LAT, EPS))
 mag_dist_eps_pmf = partial(pprod, axis=(LON, LAT))
 lon_lat_pmf = partial(pprod, axis=(DIS, MAG, EPS))
 mag_lon_lat_pmf = partial(pprod, axis=(DIS, EPS))
-trt_pmf = partial(pprod, axis=(1, 2, 3, 4, 5))
-mag_dist_trt_pmf = partial(pprod, axis=(3, 4, 5))
-mag_dist_trt_eps_pmf = partial(pprod, axis=(3, 4))
-# applied on matrix TRT MAG DIS LON LAT EPS
+# applied on matrix MAG DIS LON LAT EPS
 
-
-def lon_lat_trt_pmf(matrices):
-    """
-    Fold full disaggregation matrices to lon / lat / TRT PMF.
-
-    :param matrices:
-        a matrix with T submatrices
-    :returns:
-        4d array. First dimension represents longitude histogram bins,
-        second one latitude histogram bins, third one trt histogram bins,
-        last dimension is the z index, associatd to the realization.
-    """
-    res = numpy.array([lon_lat_pmf(mat) for mat in matrices])
-    return res.transpose(1, 2, 0, 3)
-
+def trt_pmf(matrices):
+    # from T matrices to T floats
+    return numpy.array([pprod(mat) for mat in matrices])
 
 # this dictionary is useful to extract a fixed set of
 # submatrices from the full disaggregation matrix
 pmf_map = dict([
     ('Mag', mag_pmf),
     ('Dist', dist_pmf),
-    ('TRT', trt_pmf),
     ('Mag_Dist', mag_dist_pmf),
     ('Mag_Dist_Eps', mag_dist_eps_pmf),
-    ('Mag_Dist_TRT', mag_dist_trt_pmf),
-    ('Mag_Dist_TRT_Eps', mag_dist_trt_eps_pmf),
     ('Lon_Lat', lon_lat_pmf),
     ('Mag_Lon_Lat', mag_lon_lat_pmf),
-    ('Lon_Lat_TRT', lon_lat_trt_pmf),
+    ('TRT', None),
+    ('TRT_Lon_Lat', None),
+    ('TRT_Mag_Dist', None),
+    ('TRT_Mag_Dist_Eps', None),
 ])
 
 # ########################## Disaggregator class ########################## #
