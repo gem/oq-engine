@@ -22,7 +22,6 @@
 extracting a specific PMF from the result of :func:`disaggregation`.
 """
 
-import copy
 import operator
 import collections
 import itertools
@@ -348,6 +347,9 @@ def trt_pmf(matrices):
 
 # this dictionary is useful to extract a fixed set of
 # submatrices from the full disaggregation matrix
+# NB: the TRT keys have extractor None, since the extractor
+# without TRT can be used; we still need to populate the pmf_map
+# since it is used to validate the keys accepted by the job.ini file
 pmf_map = dict([
     ('Mag', mag_pmf),
     ('Dist', dist_pmf),
