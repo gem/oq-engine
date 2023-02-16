@@ -425,60 +425,44 @@ class Disaggregator(object):
             magidx[magidx == -1] = 0  # when the magnitude is on the edge
             ctx.magi = magidx
 
-        mags = numpy.concatenate([ctx.mag for ctx in ctxs])
-        if len(mags) == 0:
+        ctx = numpy.concatenate(ctxs).view(numpy.recarray)
+        if len(ctx) == 0:
             raise FarAwayRupture('No ruptures affecting site #%d' % sid)
+        self.nbytes = ctx.nbytes
+        if cmaker.src_mutex:
+            # getting a context array and a weight for each source
+            # NB: relies on ctx.weight having all equal weights, being
+            # built as ctx['weight'] = src.mutex_weight in contexts.py
+            slices = get_slices(ctx.src_id).values()
+            self.ctxs = [ctx[s0:s1] for [(s0, s1)] in slices]
+            self.weights = [c.weight[0] for c in self.ctxs]
+        else:
+            self.ctxs = [ctx]
+            self.weights = [1.]
 
-        # populate dictionaries magi-> list
-        self.ctxs = {}
-        self.weights = {}
-        self.nbytes = 0
-        for magi in numpy.unique(magidx):
-            thectxs = [c[c.magi == magi] for c in ctxs]
-            ctx = numpy.concatenate(thectxs).view(numpy.recarray)
-            self.nbytes += ctx.nbytes
-            if self.cmaker.src_mutex:
-                # getting a context array and a weight for each source
-                # NB: relies on ctx.weight having all equal weights, being
-                # built as ctx['weight'] = src.mutex_weight in contexts.py
-                slices = get_slices(ctx.src_id).values()
-                self.ctxs[magi] = [ctx[s0:s1] for [(s0, s1)] in slices]
-                self.weights[magi] = [c.weight[0] for c in self.ctxs[magi]]
-            else:
-                self.ctxs[magi] = [ctx]
-                self.weights[magi] = [1.]
-
-    def init(self, monitor=Monitor()):
+    def init(self, magi, monitor=Monitor()):
+        self.magi = magi
         self.mon = monitor
-        # set .meas, .stds
-        self.meas = {}
-        self.stds = {}
-        for magi, ctxs in self.ctxs.items():
-            meas, stds = [], []
-            for ctx in ctxs:
+        self._ctxs = []
+        self._meas = []
+        self._stds = []
+        self._weights = []
+        for fullctx, weight in zip(self.ctxs, self.weights):
+            ctx = fullctx[fullctx.magi == magi]
+            if len(ctx):
                 mea, std = self.cmaker.get_mean_stds([ctx], split_by_mag=1)[:2]
-                meas.append(mea)
-                stds.append(std)
-            self.meas[magi] = meas
-            self.stds[magi] = stds
+                self._ctxs.append(ctx)
+                self._meas.append(mea)
+                self._stds.append(std)
+                self._weights.append(weight)
+        if not self._ctxs:
+            raise FarAwayRupture
 
     @property
     def num_rlzs(self):
         return len(self.g_by_rlz)
 
-    def split_by_magi(self):
-        """
-        :yields: pairs (magi, <Disaggregator>)
-        """
-        for magi in self.ctxs:
-            dis = copy.copy(self)
-            dis.nbytes = sum(c.nbytes for c in self.ctxs[magi])
-            dis.ctxs = {magi: self.ctxs[magi]}
-            dis.weights = {magi: self.weights[magi]}
-            if dis.nbytes:  # non-empty
-                yield magi, dis
-
-    def disagg6D(self, iml2, g, magi):
+    def disagg6D(self, iml2, g):
         """
         Disaggregate a single realization.
 
@@ -490,14 +474,13 @@ class Disaggregator(object):
             imlog2[m] = to_distribution_values(iml2[m], imt)
 
         mats = []
-        for ctx, mea, std in zip(
-                self.ctxs[magi], self.meas[magi], self.stds[magi]):
+        for ctx, mea, std in zip(self._ctxs, self._meas, self._stds):
             mat = _disaggregate(ctx, mea, std, self.cmaker, g, imlog2,
                                 self.bin_edges, self.epsstar, self.mon)
             mats.append(mat)
         if len(mats) == 1:
             return mat
-        return numpy.average(mats, weights=self.weights[magi], axis=0)
+        return numpy.average(mats, weights=self._weights, axis=0)
 
     def disagg_mag_dist_eps(self, iml2, rlzi):
         """
@@ -505,7 +488,7 @@ class Disaggregator(object):
         """
         mat5 = numpy.zeros((self.Ma, self.D, self.E) + iml2.shape)
         for magi in range(self.Ma):
-            mat6 = self.disagg6D(iml2, self.g_by_rlz[rlzi], magi)
+            mat6 = self.disagg6D(iml2, self.g_by_rlz[rlzi], self.magi)
             mat5[magi] = pprod(mat6, axis=(1, 2))
         return mat5
 

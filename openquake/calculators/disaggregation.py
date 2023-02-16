@@ -121,20 +121,23 @@ def compute_disagg(dis, triples, monitor):
     :returns:
         a dictionary s, z, m, k -> array3D
     """
-    with monitor('building mean_std', measuremem=False):
-        dis.init(monitor)
-    [magi] = dis.ctxs
-    res = {'trti': dis.cmaker.trti, 'magi': magi}
-    for g, rlz, iml2 in triples:
-        mat6 = dis.disagg6D(iml2, g, magi)
-        for m in range(len(iml2)):
-            mat5 = mat6[..., m, :]
-            if mat5.any():
-                out = output(mat5)
-                for k in (0, 1):
-                    res[dis.sid, rlz, m, k] = out[k]
-        # print(_collapse_res(res))
-    return res
+    for magi in range(dis.Ma):
+        with monitor('building mean_std', measuremem=False):
+            try:
+                dis.init(magi, monitor)
+            except FarAwayRupture:
+                continue
+        res = {'trti': dis.cmaker.trti, 'magi': magi}
+        for g, rlz, iml2 in triples:
+            mat6 = dis.disagg6D(iml2, g)
+            for m in range(len(iml2)):
+                mat5 = mat6[..., m, :]
+                if mat5.any():
+                    out = output(mat5)
+                    for k in (0, 1):
+                        res[dis.sid, rlz, m, k] = out[k]
+            # print(_collapse_res(res))
+        yield res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
 
@@ -341,7 +344,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for site in self.sitecol:
                     sid = site.id
                     try:
-                        dgator = disagg.Disaggregator(
+                        dis = disagg.Disaggregator(
                             ctxs, site, cmaker, self.bin_edges)
                     except FarAwayRupture:  # no data for this site
                         continue
@@ -349,18 +352,17 @@ class DisaggregationCalculator(base.HazardCalculator):
                     triples = []
                     for z, rlz in enumerate(self.iml4.rlzs[sid]):
                         try:
-                            g = dgator.g_by_rlz[rlz]
+                            g = dis.g_by_rlz[rlz]
                         except KeyError:
                             continue
                         iml2 = iml3[:, :, z]
                         if iml2.any():
                             triples.append((g, rlz, iml2))
-                    for magi, dis in dgator.split_by_magi():
-                        n = sum(len(ctx) for ctx in dis.ctxs[magi])
-                        U = max(U, n)
-                        smap.submit((dis, triples))
-                        task_inputs.append((grp_id, n))
-                        nbytes += len(triples) * s['M'] * s['P'] * 8
+                    n = sum(len(ctx) for ctx in dis.ctxs)
+                    U = max(U, n)
+                    smap.submit((dis, triples))
+                    task_inputs.append((grp_id, n))
+                    nbytes += len(triples) * s['mag'] * s['M'] * s['P'] * 8
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
