@@ -1,16 +1,15 @@
-# Installing the OpenQuake Engine on RedHat Linux and its clones 
+# Installing the OpenQuake Engine on RedHat Linux and its clones
 
 <a href="https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/package/python3-oq-engine/"><img src="https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/package/python3-oq-engine/status_image/last_build.png" /></a>
 
 The OpenQuake Engine is available in the form of *rpm* binary packages for the following RHEL based distributions:
-- RedHat Enterprise Linux 7 
+- RedHat Enterprise Linux 7
 - CentOS 7
-- RedHat Enterprise Linux 8 
+- RedHat Enterprise Linux 8
 - RockyLinux 8
 
-For Fedora please check ["Installing the OpenQuake Engine on Fedora"](fedora.md).
 
-The [Extra Packages for Enterprise Linux (EPEL)](https://fedoraproject.org/wiki/EPEL) repository is required: 
+The [Extra Packages for Enterprise Linux (EPEL)](https://fedoraproject.org/wiki/EPEL) repository is required:
 
 ```bash
 sudo yum install epel-release
@@ -23,7 +22,7 @@ The following commands add the **official stable builds** package repository:
 ### RHEL/RockyLinux 8
 
 ```bash
-sudo yum copr enable gem/openquake-stable 
+sudo yum copr enable gem/openquake-stable
 ```
 
 ### RHEL/CentOS 7
