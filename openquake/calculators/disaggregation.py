@@ -56,17 +56,16 @@ def _collapse_res(rdic):
 
 
 def matrix_dict(acc, num_trts, num_mag_bins):
-    # # build a dictionary s, r, m, k -> mat5D from a double dictionary
-    # s, r, m -> trti, magi -> mat3D
+    # # build a dictionary s, r, m -> mat7D from a double dictionary
+    # s, r, m -> trti, magi -> mat5D
     out = {}
-    for s, r, m, k in acc:
-        mat3D = acc[s, r, m, k]  # dictionary (trti, magi) -> array
-        trti, magi = next(iter(mat3D))
-        shp = (num_trts, num_mag_bins) + mat3D[trti, magi].shape
-        mat5D = numpy.zeros(shp)
-        for trti, magi in mat3D:
-            mat5D[trti, magi] = mat3D[trti, magi]
-        out[s, r, m, k] = mat5D
+    for s, r, m in acc:
+        mat5D = acc[s, r, m]  # dictionary (trti, magi) -> array
+        trti, magi = next(iter(mat5D))
+        shp = (num_trts, num_mag_bins) + mat5D[trti, magi].shape
+        mat7D = out[s, r, m] = numpy.zeros(shp)
+        for trti, magi in mat5D:
+            mat7D[trti, magi, ...] = mat5D[trti, magi]
     return out
 
 
@@ -119,7 +118,7 @@ def compute_disagg(dis, triples, monitor):
     :param monitor:
         monitor of the currently running job
     :returns:
-        a dictionary s, z, m, k -> array3D
+        a dictionary s, z, m -> array5D
     """
     for magi in range(dis.Ma):
         with monitor('building mean_std', measuremem=False):
@@ -133,9 +132,7 @@ def compute_disagg(dis, triples, monitor):
             for m in range(len(iml2)):
                 mat5 = mat6[..., m, :]
                 if mat5.any():
-                    out = output(mat5)
-                    for k in (0, 1):
-                        res[dis.sid, rlz, m, k] = out[k]
+                    res[dis.sid, rlz, m] = mat5
             # print(_collapse_res(res))
         yield res
     # NB: compressing the results is not worth it since the aggregation of
@@ -170,13 +167,13 @@ def calc_stats(results, hstats, weights):
     """
     acc = AccumDict(accum={})
     R = len(weights)
-    for s, r, m, k in results:
-        acc[s, m, k][r] = results[s, r, m, k]
+    for s, r, m in results:
+        acc[s, m][r] = results[s, r, m]
     out = {}
-    for (s, m, k), dic in acc.items():
+    for (s, m), dic in acc.items():
         for z, func in enumerate(hstats.values()):
             values = [dic.get(r, 0) for r in range(R)]
-            out[s, z, m, k] = stats.apply_stat(func, values, weights)
+            out[s, z, m] = stats.apply_stat(func, values, weights)
     return out
 
 
@@ -368,18 +365,15 @@ class DisaggregationCalculator(base.HazardCalculator):
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
 
-        data_transfer = (s['dist'] * s['eps'] + s['lon'] * s['lat']) * \
+        data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \
             s['mag'] * s['M'] * s['P'] * 8 * n_outs
         if data_transfer > oq.max_data_transfer:
             raise ValueError(
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
                 (humansize(data_transfer), humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer: %s', humansize(data_transfer))
-
         dt = numpy.dtype([('grp_id', U8), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
-        self.DEP = numpy.zeros((s['dist'], s['eps'], s['P']))
-        self.LLP = numpy.zeros((s['lon'], s['lat'], s['P']))
         acc = AccumDict(accum={})
         results = smap.reduce(self.agg_result, acc)
         return results  # s, m -> trti, magi -> output
@@ -388,14 +382,14 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         Collect the results coming from compute_disagg into self.results.
 
-        :param acc: dictionary sid -> trti, magi -> output
+        :param acc: dictionary s, r, m -> trti, magi -> output
         :param result: dictionary with the result coming from a task
         """
         with self.monitor('aggregating disagg matrices'):
             trti = result.pop('trti')
             magi = result.pop('magi')
-            for (s, r, m,  k), arr in result.items():
-                accum = acc[s, r, m, k]
+            for (s, r, m), arr in result.items():
+                accum = acc[s, r, m]
                 if (trti, magi) in accum:
                     accum[trti, magi][:] = agg_probs(accum[trti, magi], arr)
                 else:
@@ -427,8 +421,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
         with self.monitor('saving disagg results'):
             if self.Z == 1 or self.oqparam.individual_rlzs:
-                res = {(s, self.sr2z[s, r], m, k): results[s, r, m, k]
-                       for s, r, m, k in results}
+                res = {(s, self.sr2z[s, r], m): results[s, r, m]
+                       for s, r, m in results}
                 self.save_disagg_results(res, 'disagg-rlzs')
             else:  # save only the statistics
                 weights = self.datastore['weights'][:]
@@ -476,17 +470,17 @@ class DisaggregationCalculator(base.HazardCalculator):
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
         vcurves = []  # hazard curves with a vertical section for large poes
         best_rlzs = self.datastore['best_rlzs'][:]  # (shape N, Z)
-        for (s, z, m, k), mat5 in sorted(results.items()):
+        for (s, z, m), mat7 in sorted(results.items()):
             # NB: k is an index with value 0 (MagDistEps) or 1 (LonLat)
             imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
-                mat4 = mat5[..., p]
-                # mat3 has shape (T, Ma, D, E) for k == 0
-                # and (T, Ma, Lo, La) for k == 1
-                if k == 0 and m == 0 and poe == self.poes_disagg[-1]:
-                    _disagg_trt[s] = tuple(pprod(mat5[..., 0], axis=(1, 2, 3)))
+                mat6 = mat7[..., p]
+                # mat6 has shape (T, Ma, D, Lo, La, E)
+                if m == 0 and poe == self.poes_disagg[-1]:
+                    _disagg_trt[s] = tuple(
+                        pprod(mat7[..., 0], axis=(1, 2, 3, 4, 5)))
                 if name.endswith('-rlzs'):
-                    poe_agg = pprod(mat4, axis=(0, 1, 2, 3))
+                    poe_agg = pprod(mat6, axis=(0, 1, 2, 3, 4, 5))
                     self.datastore['poe4'][s, m, p, z] = poe_agg
                     if poe and abs(1 - poe_agg / poe) > .1 and not count[s]:
                         # warn only once per site
@@ -497,29 +491,17 @@ class DisaggregationCalculator(base.HazardCalculator):
                                         poe_agg, poe)
                         vcurves.append(self.curves[s])
                         count[s] += 1
-                mat3 = agg_probs(*mat4)  # shape (Ma D E) or (Ma Lo La)
+                mat5 = agg_probs(*mat6)  # shape (Ma, D, Lo, La, E)
                 for key in oq.disagg_outputs:
-                    if key == 'Mag' and k == 0:
-                        out[key][s, m, p, :, z] = pprod(mat3, axis=(1, 2))
-                    elif key == 'Dist' and k == 0:
-                        out[key][s, m, p, :, z] = pprod(mat3, axis=(0, 2))
-                    elif key == 'TRT' and k == 0:
-                        out[key][s, m, p, :, z] = pprod(mat4, axis=(1, 2, 3))
-                    elif key == 'Mag_Dist' and k == 0:
-                        out[key][s, m, p, ..., z] = pprod(mat3, axis=2)
-                    elif key == 'Mag_Dist_Eps' and k == 0:
-                        out[key][s, m, p, ..., z] = mat3
-                    elif key == 'TRT_Mag_Dist' and k == 0:
-                        out[key][s, m, p, ..., z] = pprod(mat4, axis=3)
-                    elif key == 'TRT_Mag_Dist_Eps' and k == 0:
-                        out[key][s, m, p, ..., z] = mat4
-                    elif key == 'Lon_Lat' and k == 1:
-                        out[key][s, m, p, ..., z] = pprod(mat3, axis=0)
-                    elif key == 'Mag_Lon_Lat' and k == 1:
-                        out[key][s, m, p, ..., z] = mat3
-                    elif key == 'TRT_Lon_Lat' and k == 1:
-                        out[key][s, m, p, ..., z] = pprod(mat4, axis=1)
-                    # shape NMP..Z
+                    if key == 'TRT':
+                        out[key][s, m, p, :, z] = disagg.pmf_map[key](mat6)
+                    elif key.startswith('TRT_'):
+                        proj = disagg.pmf_map[key[4:]]
+                        Tlist = [proj(mat) for mat in mat6]
+                        out[key][s, m, p, ..., z] = Tlist
+                    else:
+                        out[key][s, m, p, ..., z] = disagg.pmf_map[key](mat5)
+
         self.datastore[name] = out
         # below a dataset useful for debugging, at minimum IMT and maximum RP
         self.datastore['_disagg_trt'] = _disagg_trt
