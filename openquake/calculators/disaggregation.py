@@ -335,8 +335,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             cmaker = cmakers[grp_id]
             ctxs = []
             for s0, s1 in slices:
-                ctxs.extend(cmaker.read_ctxs(self.datastore, slice(s0, s1)))
-            if cmaker.rup_mutex:  # set by read_ctxs
+                ctxs.append(cmaker.read_ctxt(self.datastore, slice(s0, s1)))
+            if cmaker.rup_mutex:  # set by read_ctxt
                 raise NotImplementedError(
                     'Disaggregation with mutex ruptures')
             for site in self.sitecol:

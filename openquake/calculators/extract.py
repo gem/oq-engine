@@ -36,7 +36,8 @@ from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib.gsim.base import ContextMaker, read_cmakers
+from openquake.hazardlib.gsim.base import (
+    ContextMaker, read_cmakers, split_by_rates)
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
@@ -542,7 +543,7 @@ def extract_mean_by_rup(dstore, what):
     assert N == 1
     out = []
     for cmaker in read_cmakers(dstore):
-        for ctx in cmaker.read_ctxs(dstore):
+        for ctx in split_by_rates(cmaker.read_ctxt(dstore)):
             # shape (4, G, M, U) => U
             means = cmaker.get_mean_stds([ctx])[0].mean(axis=(0, 1))
             out.extend(zip(ctx.src_id, ctx.rup_id, means))
