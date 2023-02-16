@@ -372,11 +372,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
                 (humansize(data_transfer), humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer: %s', humansize(data_transfer))
-
         dt = numpy.dtype([('grp_id', U8), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
-        self.DEP = numpy.zeros((s['dist'], s['eps'], s['P']))
-        self.LLP = numpy.zeros((s['lon'], s['lat'], s['P']))
         acc = AccumDict(accum={})
         results = smap.reduce(self.agg_result, acc)
         return results  # s, m -> trti, magi -> output
@@ -499,7 +496,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     if key == 'TRT':
                         out[key][s, m, p, :, z] = disagg.pmf_map[key](mat6)
                     elif key.startswith('TRT_'):
-                        proj = disagg.pmf_map[key[4:].lstrip('_')]
+                        proj = disagg.pmf_map[key[4:]]
                         Tlist = [proj(mat) for mat in mat6]
                         out[key][s, m, p, ..., z] = Tlist
                     else:
