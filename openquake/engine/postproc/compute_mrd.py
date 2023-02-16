@@ -40,7 +40,7 @@ def compute_mrd(dstore, slc, cmaker, crosscorr, imt1, imt2,
     """
     with dstore:
         N = len(dstore['sitecol'])
-        [ctx] = cmaker.read_ctxs(dstore, slc)
+        ctx = cmaker.read_ctxt(dstore, slc)
     mrd = calc_mean_rate_dist(ctx, N, cmaker, crosscorr,
                               imt1, imt2, meabins, sigbins)
     return {g: mrd[:, :, :, i] for i, g in enumerate(cmaker.gidx)}

@@ -82,10 +82,27 @@ def is_modifiable(gsim):
     return hasattr(gsim, 'gmpe') and hasattr(gsim, 'params')
 
 
+def split_by_occur(ctx):
+    """
+    :returns: [poissonian] or [poissonian, nonpoissonian,...]
+    """
+    nan = numpy.isnan(ctx.occurrence_rate)
+    out = []
+    if 0 < nan.sum() < len(ctx):
+        out.append(ctx[~nan])
+        nonpoisson = ctx[nan]
+        for shp in set(np.probs_occur.shape[1] for np in nonpoisson):
+            p_array = [p for p in nonpoisson if p.probs_occur.shape[1] == shp]
+            out.append(numpy.concatenate(p_array).view(numpy.recarray))
+    else:
+        out.append(ctx)
+    return out
+
+
 def concat(ctxs):
     """
     Concatenate context arrays.
-    :returns: [] or [poisson_ctx] or [poisson_ctx, nonpoisson_ctx]
+    :returns: [] or [poisson_ctx] or [poisson_ctx, nonpoisson_ctx, ...]
     """
     out, poisson, nonpoisson, nonparam = [], [], [], []
     for ctx in ctxs:
@@ -497,7 +514,7 @@ class ContextMaker(object):
                 nbytes += arr.nbytes
         return nbytes
 
-    def read_ctxs(self, dstore, slc=None):
+    def read_ctxt(self, dstore, slc=None):
         """
         :param dstore: a DataStore instance
         :param slice: a slice of contexts with the same grp_id
@@ -529,15 +546,7 @@ class ContextMaker(object):
             if par != 'sids':
                 ctx[par] = sitecol[par][ctx['sids']]
         # NB: sorting the contexts break the disaggregation! (see case_1)
-
-        # split parametric vs nonparametric contexts
-        nans = numpy.isnan(ctx.occurrence_rate)
-        if nans.sum() in (0, len(ctx)):  # no nans or all nans
-            ctxs = [ctx]
-        else:
-            # happens in the oq-risk-tests for NZ
-            ctxs = [ctx[nans], ctx[~nans]]
-        return ctxs
+        return ctx
 
     def new_ctx(self, size):
         """

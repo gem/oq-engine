@@ -37,7 +37,7 @@ def compute_hist(dstore, slc, cmaker, magbins, dstbins):
     :returns: a dictionary (site_index, mag_index, dist_index) -> counts
     """
     with dstore:
-        [fullctxt] = cmaker.read_ctxs(dstore, slc)
+        fullctxt = cmaker.read_ctxt(dstore, slc)
         return compute_histogram(fullctxt, cmaker, magbins, dstbins)
 
 
