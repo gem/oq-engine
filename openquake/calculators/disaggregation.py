@@ -336,33 +336,34 @@ class DisaggregationCalculator(base.HazardCalculator):
         n_outs = 0
         for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
-            for start, stop in slices:
-                ctxs = cmaker.read_ctxs(self.datastore, slice(start, stop))
-                if cmaker.rup_mutex:
-                    raise NotImplementedError(
-                        'Disaggregation with mutex ruptures')
-                for site in self.sitecol:
-                    sid = site.id
+            ctxs = []
+            for s0, s1 in slices:
+                ctxs.extend(cmaker.read_ctxs(self.datastore, slice(s0, s1)))
+            if cmaker.rup_mutex:  # set by read_ctxs
+                raise NotImplementedError(
+                    'Disaggregation with mutex ruptures')
+            for site in self.sitecol:
+                sid = site.id
+                try:
+                    dis = disagg.Disaggregator(
+                        ctxs, site, cmaker, self.bin_edges)
+                except FarAwayRupture:  # no data for this site
+                    continue
+                iml3 = self.iml4[sid]
+                triples = []
+                for z, rlz in enumerate(self.iml4.rlzs[sid]):
                     try:
-                        dis = disagg.Disaggregator(
-                            ctxs, site, cmaker, self.bin_edges)
-                    except FarAwayRupture:  # no data for this site
+                        g = dis.g_by_rlz[rlz]
+                    except KeyError:
                         continue
-                    iml3 = self.iml4[sid]
-                    triples = []
-                    for z, rlz in enumerate(self.iml4.rlzs[sid]):
-                        try:
-                            g = dis.g_by_rlz[rlz]
-                        except KeyError:
-                            continue
-                        iml2 = iml3[:, :, z]
-                        if iml2.any():
-                            triples.append((g, rlz, iml2))
-                    n = sum(len(ctx) for ctx in dis.ctxs)
-                    U = max(U, n)
-                    smap.submit((dis, triples))
-                    task_inputs.append((grp_id, n))
-                    n_outs += len(triples)
+                    iml2 = iml3[:, :, z]
+                    if iml2.any():
+                        triples.append((g, rlz, iml2))
+                n = sum(len(ctx) for ctx in dis.ctxs)
+                U = max(U, n)
+                smap.submit((dis, triples))
+                task_inputs.append((grp_id, n))
+                n_outs += len(triples)
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
