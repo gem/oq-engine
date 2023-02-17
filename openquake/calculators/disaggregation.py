@@ -371,6 +371,9 @@ class DisaggregationCalculator(base.HazardCalculator):
                     dis_triples.append((dis, triples))
                     ctxsize += n
                     if ctxsize > maxsize:
+                        logging.debug(
+                            'Sending task with %d/%d sites for grp_id=%d',
+                            len(dis_triples), self.N, grp_id)
                         smap.submit((dis_triples, magi, src_mutex))
                         dis_triples.clear()
                         ctxsize = 0
