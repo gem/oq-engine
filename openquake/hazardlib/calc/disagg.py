@@ -45,7 +45,6 @@ from openquake.hazardlib.contexts import (
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
-aae = numpy.testing.assert_array_equal
 
 
 def assert_same_shape(arrays):
@@ -411,18 +410,16 @@ class Disaggregator(object):
             raise FarAwayRupture('No ruptures affecting site #%d' % sid)
 
         # build the magnitude bins
-        magidx = numpy.searchsorted(bin_edges[0], ctx.mag) - 1
-        magidx[magidx == -1] = 0  # when the magnitude is on the edge
+        self.fullmagi = numpy.searchsorted(bin_edges[0], ctx.mag) - 1
+        self.fullmagi[self.fullmagi == -1] = 0  # magnitude on the edge
 
         self.fullctx = ctx
-        self.magidx = magidx
-        self.nbytes = ctx.nbytes
 
     def init(self, magi, src_mutex, monitor=Monitor()):
         self.magi = magi
         self.src_mutex = src_mutex
         self.mon = monitor
-        self.ctx = self.fullctx[self.magidx == magi]
+        self.ctx = self.fullctx[self.fullmagi == magi]
         if len(self.ctx) == 0:
             raise FarAwayRupture
         self.mea, self.std = self.cmaker.get_mean_stds(
@@ -474,7 +471,7 @@ class Disaggregator(object):
         return mat5
 
     def __repr__(self):
-        return f'<{self.__class__.__name__} {humansize(self.nbytes)} >'
+        return f'<{self.__class__.__name__} {humansize(self.ctx.nbytes)} >'
 
 
 # this is used in the hazardlib tests, not in the engine
