@@ -34,6 +34,26 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
 
+def to_rates(probs):
+    """
+    Convert an array of probabilities into an array of rates
+
+    >>> round(to_rates(.8), 6)
+    1.609438
+    """
+    return - numpy.log(1. - probs)
+
+
+def to_probs(rates):
+    """
+    Convert an array of rates into an array of probabilities
+
+    >>> round(to_probs(1.609438), 6)
+    0.8
+    """
+    return 1. - numpy.exp(- rates)
+
+
 @property
 def cmaker(self):
     if len(self.cmakerdict) == 1:
