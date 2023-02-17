@@ -1020,11 +1020,13 @@ class ContextMaker(object):
         self.update(pmap, ctxs, rup_indep)
         return ~pmap if rup_indep else pmap
 
-    def update(self, pmap, ctxs, mutex_weight=()):
+    def update(self, pmap, ctxs, mutex_weight={}):
         """
         :param pmap: probability map to update
         :param ctxs: a list of context arrays (only one for parametric ctxs)
-        :param rup_indep: False for mutex ruptures, default True
+        :param mutex_weight: dictionary (src_id, rup_id) -> weight
+
+        The mutex_weight dictionary is read-only and normally empty
         """
         rup_indep = len(mutex_weight) == 0
         if self.tom is None:
@@ -1237,7 +1239,7 @@ class PmapMaker(object):
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
         self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         if self.rup_indep:
-            self.mutex_weight = ()
+            self.mutex_weight = {}
         else:
             self.mutex_weight = {}  # src_id, rup_id -> rup_weight
             for src in group:
