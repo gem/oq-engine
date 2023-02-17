@@ -375,7 +375,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info('Maximum mean_std per task:\n%s', msg)
 
         data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \
-            s['mag'] * s['M'] * s['P'] * 8 * n_outs
+            s['M'] * s['P'] * 8 * n_outs
         if data_transfer > oq.max_data_transfer:
             raise ValueError(
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
