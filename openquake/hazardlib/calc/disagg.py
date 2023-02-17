@@ -31,7 +31,7 @@ import numpy
 import scipy.stats
 
 from openquake.baselib.general import AccumDict, groupby, pprod, humansize
-from openquake.baselib.performance import get_slices, Monitor
+from openquake.baselib.performance import idx_start_stop, Monitor
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -40,10 +40,12 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
 from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
+from openquake.hazardlib.contexts import (
+    ContextMaker, FarAwayRupture, get_src_mutex)
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
+aae = numpy.testing.assert_array_equal
 
 
 def assert_same_shape(arrays):
@@ -403,48 +405,36 @@ class Disaggregator(object):
             ctxs = [ctx[ctx.sids == sid] for ctx in srcs_or_ctxs]
         else:  # passed sources
             ctxs = cmaker.from_srcs(srcs_or_ctxs, self.sitecol)
-            cmaker.src_mutex = getattr(srcs_or_ctxs[0], 'src_interdep', None) \
-                == 'mutex'
 
         ctx = numpy.concatenate(ctxs).view(numpy.recarray)
         if len(ctx) == 0:
             raise FarAwayRupture('No ruptures affecting site #%d' % sid)
 
         # build the magnitude bins
-        magi = numpy.searchsorted(bin_edges[0], ctx.mag) - 1
-        magi[magi == -1] = 0  # when the magnitude is on the edge
+        magidx = numpy.searchsorted(bin_edges[0], ctx.mag) - 1
+        magidx[magidx == -1] = 0  # when the magnitude is on the edge
 
+        self.fullctx = ctx
+        self.magidx = magidx
         self.nbytes = ctx.nbytes
-        if cmaker.src_mutex:
-            # getting a context array and a weight for each source
-            # NB: relies on ctx.weight having all equal weights, being
-            # built as ctx['weight'] = src.mutex_weight in contexts.py
-            slices = get_slices(ctx.src_id).values()
-            self.ctxs = [ctx[s0:s1] for [(s0, s1)] in slices]
-            self.weights = [c.weight[0] for c in self.ctxs]
-            self.magbins = [magi[s0:s1] for [(s0, s1)] in slices]
-        else:
-            self.ctxs = [ctx]
-            self.weights = [1.]
-            self.magbins = [magi]
 
-    def init(self, magi, monitor=Monitor()):
+    def init(self, magi, src_mutex, monitor=Monitor()):
         self.magi = magi
+        self.src_mutex = src_mutex
         self.mon = monitor
-        self._ctxs = []
-        self._meas = []
-        self._stds = []
-        self._weights = []
-        for fullctx, weight, mb in zip(self.ctxs, self.weights, self.magbins):
-            ctx = fullctx[mb == magi]
-            if len(ctx):
-                mea, std = self.cmaker.get_mean_stds([ctx], split_by_mag=1)[:2]
-                self._ctxs.append(ctx)
-                self._meas.append(mea)
-                self._stds.append(std)
-                self._weights.append(weight)
-        if not self._ctxs:
+        self.ctx = self.fullctx[self.magidx == magi]
+        if len(self.ctx) == 0:
             raise FarAwayRupture
+        self.mea, self.std = self.cmaker.get_mean_stds(
+            [self.ctx], split_by_mag=True)[:2]
+        if self.src_mutex:
+            mat = idx_start_stop(self.ctx.src_id)  # shape (n, 3)
+            src_ids = mat[:, 0]  # subset contributing to the given magi
+            self.src_mutex['start'] = mat[:, 1]
+            self.src_mutex['stop'] = mat[:, 2]
+            self.weights = [w for s, w in zip(self.src_mutex['src_id'],
+                                              self.src_mutex['weight'])
+                            if s in src_ids]
 
     def disagg6D(self, iml2, g):
         """
@@ -456,23 +446,29 @@ class Disaggregator(object):
         imlog2 = numpy.zeros_like(iml2)
         for m, imt in enumerate(self.cmaker.imts):
             imlog2[m] = to_distribution_values(iml2[m], imt)
+        if not self.src_mutex:
+            return _disaggregate(self.ctx, self.mea, self.std, self.cmaker,
+                                 g, imlog2, self.bin_edges, self.epsstar,
+                                 self.mon)
 
+        # else average on the src_mutex weights
         mats = []
-        for ctx, mea, std in zip(self._ctxs, self._meas, self._stds):
+        for s1, s2 in zip(self.src_mutex['start'], self.src_mutex['stop']):
+            ctx = self.ctx[s1:s2]
+            mea = self.mea[:, :, s1:s2]  # shape (G, M, U)
+            std = self.std[:, :, s1:s2]  # shape (G, M, U)
             mat = _disaggregate(ctx, mea, std, self.cmaker, g, imlog2,
                                 self.bin_edges, self.epsstar, self.mon)
             mats.append(mat)
-        if len(mats) == 1:
-            return mat
-        return numpy.average(mats, weights=self._weights, axis=0)
+        return numpy.average(mats, weights=self.weights, axis=0)
 
-    def disagg_mag_dist_eps(self, iml2, rlzi):
+    def disagg_mag_dist_eps(self, iml2, rlzi, src_mutex):
         """
         :returns: a 5D matrix of shape (Ma, D, E, M, P)
         """
         mat5 = numpy.zeros((self.Ma, self.D, self.E) + iml2.shape)
         for magi in range(self.Ma):
-            self.init(magi)
+            self.init(magi, src_mutex)
             mat6 = self.disagg6D(iml2, self.g_by_rlz[rlzi])
             mat5[magi] = pprod(mat6, axis=(1, 2))
         return mat5
@@ -580,10 +576,11 @@ def disaggregation(
               distance_bin_width=dist_bin_width,
               coordinate_bin_width=coord_bin_width,
               disagg_bin_edges=bin_edges)
-    for trt, srcs in by_trt.items():
+    for grp_id, (trt, srcs) in enumerate(by_trt.items()):
+        for src in srcs:
+            src.grp_id = grp_id
         cmaker[trt] = cm = ContextMaker(trt, rlzs_by_gsim, oq)
         cm.tom = srcs[0].temporal_occurrence_model
-        cm.src_mutex = False  # FIXME
         ctxs[trt].extend(cm.from_srcs(srcs, sitecol))
         for ctx in ctxs[trt]:
             mags_by_trt[trt] |= set(ctx.mag)
@@ -598,11 +595,11 @@ def disaggregation(
     # Compute disaggregation per TRT
     matrix = numpy.zeros([dic['mag'], dic['dist'], dic['lon'], dic['lat'],
                           dic['eps'], len(trts)])
-    for trt in cmaker:
+    for grp_id, trt in enumerate(cmaker):
         dis = Disaggregator(ctxs[trt], sitecol, cmaker[trt], bin_edges)
         for magi in range(dis.Ma):
             try:
-                dis.init(magi)
+                dis.init(magi, src_mutex={})
             except FarAwayRupture:
                 continue                
             mat4 = dis.disagg6D([[iml]], 0)[..., 0, 0]
