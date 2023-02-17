@@ -414,14 +414,14 @@ class DisaggregationCalculator(base.HazardCalculator):
         to save is #sites * #rlzs * #disagg_poes * #IMTs.
 
         :param results:
-            a dictionary sid, imti, kind -> trti -> disagg matrix
+            a dictionary sid, rlz, imti -> trti -> disagg matrix
         """
         # the DEBUG dictionary is populated only for OQ_DISTRIBUTE=no
         for sid, pnes in disagg.DEBUG.items():
             print('site %d, mean pnes=%s' % (sid, pnes))
         T = len(self.trts)
         Ma = len(self.bin_edges[0]) - 1  # num_mag_bins
-        # build a dictionary s, m, k -> matrices
+        # build a dictionary s, r, m -> matrices
         results = matrix_dict(results, T, Ma)
         # get the number of outputs
         shp = (self.N, len(self.poes_disagg), len(self.imts), self.Z)
