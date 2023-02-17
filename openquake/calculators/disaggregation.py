@@ -330,7 +330,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         s = self.shapedic
         n_outs = 0
         size = 0
-        for grp_id, slices in performance.get_slices(grp_ids).items():
+        for grp_id, slices in sorted(performance.get_slices(grp_ids).items()):
             cmaker = cmakers[grp_id]
             src_mutex = src_mutex_by_grp.get(grp_id, {})
             ctxs = []
@@ -344,6 +344,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             magbins[magbins == -1] = 0  # bins on the edge
             idxs = numpy.argsort(magbins)  # used to sort fullctx
             fullctx = fullctx[idxs]
+            dmsg = 'Sending task with %d/%d sites for grp_id=%d, magbin=%d'
             for magi, start, stop in performance.idx_start_stop(magbins[idxs]):
                 ctx = fullctx[start:stop]
                 dis_triples = []
@@ -370,13 +371,13 @@ class DisaggregationCalculator(base.HazardCalculator):
                     dis_triples.append((dis, triples))
                     size += n * len(cmaker.gsims)
                     if size > maxsize:
-                        logging.debug(
-                            'Sending task with %d/%d sites for grp_id=%d',
-                            len(dis_triples), self.N, grp_id)
+                        logging.debug(dmsg, len(dis_triples),
+                                      self.N, grp_id, magi)
                         smap.submit((dis_triples, magi, src_mutex))
                         dis_triples.clear()
                         size = 0
                 if dis_triples:
+                    logging.debug(dmsg, len(dis_triples), self.N, grp_id, magi)
                     smap.submit((dis_triples, magi, src_mutex))
 
         data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \

@@ -501,6 +501,13 @@ class ContextMaker(object):
     def stop(self):
         return self.start + len(self.gsims)
 
+    @property
+    def Z(self):
+        """
+        :returns: the number of realizations associated to self
+        """
+        return sum(len(rlzs) for rlzs in self.gsims.values())
+
     def dcache_size(self):
         """
         :returns: the size in bytes of the distance cache
