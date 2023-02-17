@@ -75,6 +75,21 @@ def mutex_by_grp(src_groups):
     return numpy.array(lst, [('src_mutex', bool), ('rup_mutex', bool)])
 
 
+def build_rup_mutex(src_groups):
+    """
+    :returns: a composite array with fields (grp_id, src_id, rup_id, weight)
+    """
+    lst = []
+    dtlist = [('grp_id', numpy.uint16), ('src_id', numpy.uint32),
+              ('rup_id', numpy.uint32), ('weight', numpy.float64)]
+    for sg in src_groups:
+        if sg.rup_interdep == 'mutex':
+            for src in sg:
+                for i, (rup, _) in enumerate(src.data):
+                    lst.append((src.grp_id, src.id, i, rup.weight))
+    return numpy.array(lst, dtlist)
+
+
 def create_source_info(csm, h5):
     """
     Creates source_info, source_wkt, trt_smrs, toms
@@ -108,6 +123,7 @@ def create_source_info(csm, h5):
     # avoid hdf5 damned bug by creating source_info in advance
     h5.create_dataset('source_info',  (num_srcs,), source_info_dt)
     h5['mutex_by_grp'] = mutex_by_grp(csm.src_groups)
+    h5['rup_mutex'] = build_rup_mutex(csm.src_groups)
     h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
 
 
