@@ -82,10 +82,27 @@ def is_modifiable(gsim):
     return hasattr(gsim, 'gmpe') and hasattr(gsim, 'params')
 
 
+def split_by_occur(ctx):
+    """
+    :returns: [poissonian] or [poissonian, nonpoissonian,...]
+    """
+    nan = numpy.isnan(ctx.occurrence_rate)
+    out = []
+    if 0 < nan.sum() < len(ctx):
+        out.append(ctx[~nan])
+        nonpoisson = ctx[nan]
+        for shp in set(np.probs_occur.shape[1] for np in nonpoisson):
+            p_array = [p for p in nonpoisson if p.probs_occur.shape[1] == shp]
+            out.append(numpy.concatenate(p_array).view(numpy.recarray))
+    else:
+        out.append(ctx)
+    return out
+
+
 def concat(ctxs):
     """
     Concatenate context arrays.
-    :returns: list with 0, 1 or 2 elements
+    :returns: [] or [poisson_ctx] or [poisson_ctx, nonpoisson_ctx, ...]
     """
     out, poisson, nonpoisson, nonparam = [], [], [], []
     for ctx in ctxs:
@@ -497,7 +514,7 @@ class ContextMaker(object):
                 nbytes += arr.nbytes
         return nbytes
 
-    def read_ctxs(self, dstore, slc=None, magi=None):
+    def read_ctxt(self, dstore, slc=None):
         """
         :param dstore: a DataStore instance
         :param slice: a slice of contexts with the same grp_id
@@ -522,26 +539,14 @@ class ContextMaker(object):
         for par in sitecol.dtype.names:
             if par != 'sids':
                 dtlist.append((par, sitecol.dtype[par]))
-        if magi is not None:
-            dtlist.append(('magi', numpy.uint8))
         ctx = numpy.zeros(len(params['grp_id']), dtlist).view(numpy.recarray)
         for par, val in params.items():
             ctx[par] = val
         for par in sitecol.dtype.names:
             if par != 'sids':
                 ctx[par] = sitecol[par][ctx['sids']]
-        if magi is not None:
-            ctx['magi'] = magi
         # NB: sorting the contexts break the disaggregation! (see case_1)
-
-        # split parametric vs nonparametric contexts
-        nans = numpy.isnan(ctx.occurrence_rate)
-        if nans.sum() in (0, len(ctx)):  # no nans or all nans
-            ctxs = [ctx]
-        else:
-            # happens in the oq-risk-tests for NZ
-            ctxs = [ctx[nans], ctx[~nans]]
-        return ctxs
+        return ctx
 
     def new_ctx(self, size):
         """
@@ -549,16 +554,13 @@ class ContextMaker(object):
         """
         return RecordBuilder(**self.defaultdict).zeros(size)
 
-    def recarray(self, ctxs, magi=None):
+    def recarray(self, ctxs):
         """
         :params ctxs: a non-empty list of homogeneous contexts
         :returns: a recarray, possibly collapsed
         """
         assert ctxs
         dd = self.defaultdict.copy()
-        if magi is not None:  # magnitude bin used in disaggregation
-            dd['magi'] = numpy.uint8(0)
-
         if not hasattr(ctxs[0], 'probs_occur'):
             for ctx in ctxs:
                 ctx.probs_occur = numpy.zeros(0)
@@ -579,8 +581,6 @@ class ContextMaker(object):
             for par in dd:
                 if par == 'rup_id':
                     val = getattr(ctx, par)
-                elif par == 'magi':  # in disaggregation
-                    val = magi
                 elif par == 'weight':
                     val = getattr(ctx, par, 0.)
                 else:
@@ -1056,7 +1056,7 @@ class ContextMaker(object):
         :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
         N = sum(len(ctx) for ctx in ctxs)
-        M = len(self.imtls)
+        M = len(self.imts)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
         if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
@@ -1065,8 +1065,8 @@ class ContextMaker(object):
         else:  # vectorize the contexts
             recarrays = [self.recarray(ctxs)]
         if split_by_mag:
-            assert len(recarrays) == 1, len(recarrays)
-            recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
+            recarr = numpy.concatenate(recarrays).view(numpy.recarray)
+            recarrays = split_array(recarr, U32(recarr.mag*100))
         self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
@@ -1715,3 +1715,30 @@ def read_cmaker(dstore, trt_smr):
     trt = trts[trt_smr // len(full_lt.sm_rlzs)]
     rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
     return ContextMaker(trt, rlzs_by_gsim, oq)
+
+
+def read_src_mutex(dstore):
+    """
+    :param dstore: a DataStore-like object
+    :returns: a dictionary grp_id -> {'src_id': [...], 'weight': [...]}
+    """
+    info = dstore.read_df('source_info')
+    mutex_df = info[info.mutex_weight > 0][['grp_id', 'mutex_weight']]
+    return {grp_id: {'src_id': df.index.to_numpy(),
+                     'weight': df.mutex_weight.to_numpy()}
+            for grp_id, df in mutex_df.groupby('grp_id')}
+
+
+def get_src_mutex(srcs):
+    """
+    :param srcs: a list of sources with weights and the same grp_id
+    :returns: a dictionary grp_id -> {'src_id': [...], 'weight': [...]}
+    """
+    grp_ids = [src.grp_id for src in srcs]
+    [grp_id] = set(grp_ids)
+    ok = all(hasattr(src, 'mutex_weight') for src in srcs)
+    if not ok:
+        return {grp_id: {}}
+    dic = dict(src_ids=U32([src.id for src in srcs]),
+               weights=F64([src.mutex_weight for src in srcs]))
+    return {grp_id: dic}

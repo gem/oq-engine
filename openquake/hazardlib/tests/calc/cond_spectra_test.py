@@ -30,8 +30,8 @@ OVERWRITE_EXPECTED = False
 CWD = os.path.dirname(__file__)
 SOURCES_XML = os.path.join(CWD, 'data', 'sm01.xml')
 GSIM_XML = os.path.join(CWD, 'data', 'lt02.xml')
-PARAM = dict(source_model_file=SOURCES_XML,
-             gsim_logic_tree_file=GSIM_XML,
+PARAM = dict(inputs=dict(source_model=SOURCES_XML,
+                         gsim_logic_tree=GSIM_XML),
              sites=[(0, -0.8)],
              reference_vs30_value=600,
              reference_depth_to_2pt5km_per_sec=5,
@@ -99,8 +99,9 @@ class CondSpectraTestCase(unittest.TestCase):
 
     def test_1_rlz(self):
         # test with one GMPE, 1 TRT, checking additivity
-        inp = read_input(
-            PARAM, gsim_logic_tree_file=os.path.join(CWD, 'data', 'lt01.xml'))
+        inp = read_input(PARAM, inputs={
+            'source_model': SOURCES_XML,
+            'gsim_logic_tree': os.path.join(CWD, 'data', 'lt01.xml')})
         [cmaker] = inp.cmakerdict.values()
         [src_group] = inp.groups
         [ctx] = cmaker.from_srcs(src_group, inp.sitecol)

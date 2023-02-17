@@ -176,7 +176,7 @@ continuous_fragility_discretization:
 coordinate_bin_width:
   Used in disaggregation calculations.
   Example: *coordinate_bin_width = 1.0*.
-  Default: no default
+  Default: 100 degrees, meaning don't disaggregate by lon, lat
 
 cross_correlation:
   When used in Conditional Spectrum calculation is the name of a cross
@@ -192,7 +192,7 @@ description:
   Default: "no description"
 
 disagg_bin_edges:
-  A dictionary where the keys can be: mag, eps, dist, lon, lat and the
+  A dictionary where the keys can be: mag, dist, lon, lat, eps and the
   values are lists of floats indicating the edges of the bins used to
   perform the disaggregation.
   Example: *disagg_bin_edges = {'mag': [5.0, 5.5, 6.0, 6.5]}*.
@@ -404,7 +404,7 @@ lrem_steps_per_interval:
 mag_bin_width:
   Width of the magnitude bin used in disaggregation calculations.
   Example: *mag_bin_width = 0.5*.
-  Default: no default
+  Default: 1.
 
 master_seed:
   Seed used to control the generation of the epsilons, relevant for risk
@@ -449,12 +449,12 @@ max_sites_disagg:
   Default: 10
 
 pmap_max_gb:
-   Control the memory used in large classical calculations. The default is 1
+   Control the memory used in large classical calculations. The default is .5
    (meant for people with 2 GB per core or less) but you increase it if you
    have plenty of memory, thus producing less tiles and making the calculation
    more efficient. For small calculations it has basically no effect.
    Example: *pmap_max_gb = 2*
-   Default: 1
+   Default: .5
 
 max_weight:
   INTERNAL
@@ -858,7 +858,7 @@ class OqParam(valid.ParamSet):
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_level = valid.Param(int, -1)
     collect_rlzs = valid.Param(valid.boolean, None)
-    coordinate_bin_width = valid.Param(valid.positivefloat)
+    coordinate_bin_width = valid.Param(valid.positivefloat, 100.)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
         valid.positiveint, multiprocessing.cpu_count() * 2)  # by M. Simionato
@@ -877,7 +877,7 @@ class OqParam(valid.ParamSet):
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
     discrete_damage_distribution = valid.Param(valid.boolean, False)
     distance_bin_width = valid.Param(valid.positivefloat)
-    mag_bin_width = valid.Param(valid.positivefloat)
+    mag_bin_width = valid.Param(valid.positivefloat, 1.)
     floating_x_step = valid.Param(valid.positivefloat, 0)
     floating_y_step = valid.Param(valid.positivefloat, 0)
     ignore_encoding_errors = valid.Param(valid.boolean, False)
@@ -921,7 +921,7 @@ class OqParam(valid.ParamSet):
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
-    pmap_max_gb = valid.Param(valid.positivefloat, 1.)
+    pmap_max_gb = valid.Param(valid.positivefloat, .5)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)

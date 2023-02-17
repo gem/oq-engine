@@ -17,24 +17,26 @@ import unittest
 import os.path
 import numpy
 
+from openquake.baselib.general import pprod
 from openquake.hazardlib.nrml import to_python
-from openquake.hazardlib.calc import disagg
-from openquake.hazardlib import nrml
+from openquake.hazardlib.calc import disagg, filters
+from openquake.hazardlib import nrml, tom
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.gsim.campbell_2003 import Campbell2003
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.site import Site
+from openquake.hazardlib.site import Site, SiteCollection
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.gsim.bradley_2013 import Bradley2013
 from openquake.hazardlib import sourceconverter
 
 DATA_PATH = os.path.dirname(__file__)
+aac = numpy.testing.assert_allclose
 
 
 class BuildDisaggDataTestCase(unittest.TestCase):
 
-    def test_magnitude_bins(self):
-        """ Testing build disaggregation matrix """
+    def test_disagg_by_mag(self):
         fname = os.path.join(DATA_PATH, 'data', 'ssm.xml')
         converter = sourceconverter.SourceConverter(50., 1., 10, 0.1, 10)
         groups = to_python(fname, converter)
@@ -56,8 +58,8 @@ class BuildDisaggDataTestCase(unittest.TestCase):
                                            gsim_by_trt, truncation_level,
                                            n_epsilons, mag_bin_width,
                                            dist_bin_width, coord_bin_width)
-        tm = disagg.mag_pmf(mtx[:, :, :, :, :, 0])
-        numpy.testing.assert_array_less(numpy.zeros_like(tm[2:]), tm[2:])
+        by_mag = disagg.mag_pmf(mtx[:, :, :, :, :, 0])
+        self.assertEqual(by_mag.shape, (31,))
 
 
 class DigitizeLonsTestCase(unittest.TestCase):
@@ -82,20 +84,42 @@ class DigitizeLonsTestCase(unittest.TestCase):
 
 
 class DisaggregateTestCase(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        # reading two multifault sources and a site
         d = os.path.dirname(os.path.dirname(__file__))
         source_model = os.path.join(d, 'source_model/multi-point-source.xml')
-        [self.sources] = nrml.to_python(source_model, SourceConverter(
+        [cls.sources] = nrml.to_python(source_model, SourceConverter(
             investigation_time=50., rupture_mesh_spacing=2.))
-        self.site = Site(Point(0.1, 0.1), 800, z1pt0=100., z2pt5=1.)
-        self.imt = PGA()
-        self.iml = 0.1
-        self.truncation_level = 1
-        self.trt = 'Stable Continental Crust'
+        cls.site = Site(Point(0.1, 0.1), 800, z1pt0=100., z2pt5=1.)
+        cls.imt = PGA()
+        cls.iml = 0.1
+        cls.truncation_level = 1.
+        cls.trt = 'Stable Continental Crust'
         gsim = Campbell2003()
-        self.gsims = {self.trt: gsim}
+        cls.gsims = {cls.trt: gsim}
+        mags = cls.sources[0].get_mags()
+        maxdist = filters.IntegrationDistance.new('200.')
+        oq = unittest.mock.Mock(truncation_level=cls.truncation_level,
+                                imtls={'PGA': [cls.iml]},
+                                rlz_index=[0, 1],
+                                poes_disagg=[None],
+                                num_epsilon_bins=3,
+                                mag_bin_width=.075,
+                                distance_bin_width=10,
+                                coordinate_bin_width=100,
+                                maximum_distance=maxdist,
+                                mags_by_trt={cls.trt: mags},
+                                disagg_bin_edges={})
+        sitecol = SiteCollection([cls.site])
+        cls.bin_edges, _ = disagg.get_edges_shapedic(oq, sitecol)
+        cls.cmaker = ContextMaker(cls.trt, {gsim: [0]}, oq)
+        cls.cmaker.tom = tom.PoissonTOM(50.)
+        cls.sources[0].grp_id = 0
+        cls.cmaker.grp_id = 0
+        cls.cmaker.poes = [.001]
 
-    def test(self):
+    def test_minimum_distance(self):
         # a test sensitive to gsim.minimum_distance
         bin_edges, matrix = disagg.disaggregation(
             self.sources, self.site, self.imt, self.iml, self.gsims,
@@ -104,15 +128,25 @@ class DisaggregateTestCase(unittest.TestCase):
         mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
         aaae = numpy.testing.assert_array_almost_equal
         aaae(mag_bins, [3, 6, 9])
-        aaae(dist_bins, [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52,
+        aaae(dist_bins, [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52,
                          56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 104,
                          108, 112])
-        aaae(lon_bins, [-0.904195, 0.1, 1.104195])
-        aaae(lat_bins, [-0.904194, 0.1, 1.104194])
+        aaae(lon_bins[0], [-0.904195, 1.104195])
+        aaae(lat_bins[0], [-0.904194, 1.104194])
         aaae(eps_bins, [-1, -0.3333333, 0.3333333, 1])
         self.assertEqual(trt_bins, [self.trt])
-        aaae(matrix.shape, (2, 27, 2, 2, 3, 1))
+        aaae(matrix.shape, (2, 28, 1, 1, 3, 1))
         aaae(matrix.sum(), 6.14179818e-11)
+
+    def test_disaggregator(self):
+        dis = disagg.Disaggregator([self.sources[0]], self.site, self.cmaker,
+                                   self.bin_edges)
+        iml2 = numpy.array([[.01]])
+        mat3 = dis.disagg_mag_dist_eps(iml2, rlzi=0)[..., 0, 0]
+        bymag = pprod(mat3, axis=(1, 2))
+        aac(bymag, [0.9873275537163634,
+                    0.9580616631998118,
+                    0.8081509254139463])
 
     def test_with_bins(self):
 
@@ -127,7 +161,7 @@ class DisaggregateTestCase(unittest.TestCase):
         aaae = numpy.testing.assert_array_almost_equal
         aaae(matrix.sum(), 6.14179818e-11)
 
-
+        
 class PMFExtractorsTestCase(unittest.TestCase):
     def setUp(self):
         super().setUp()

@@ -6,7 +6,9 @@ A general rule is the more GB of RAM and the more GHz you have, the better it is
 
 Small to medium hazard calculations and small risk calculations can run on a laptop or an equivalent cloud server: 8GB of RAM and 4  physical cores with several GB of disk space. Using >= 7.2k RPM disks or solid-state drives (SSD) will improve the overall performance.
 
-It is very important to disable hyperthreading to save memory and to have a better performance. On some systems (for instance virtual CPUs in cloud machines) it may be impossible to disable hyperthreading. In such situations please follow the recommendations of your cloud provider for best performance.
+Recent processor have a large number of threads but often not enough
+memory, i.e. less than 2 GB per thread. In that case it is recommended to
+disable hyperthreading to save memory.
 
 More serious calculations would be better handled by a powerful server. In spring 2022 we bought a single server with 128 AMD Epyc Rome CPUs and 512 GB of RAM. This is the best machine we have. Even half of such specs are enough for running most hazard models.
 
@@ -42,6 +44,4 @@ https://learn.microsoft.com/en-us/azure/virtual-machines/acu
 **All product and company names are trademarks™ or registered trademarks© of their respective holders.**
 
 ## Getting help
-If you need help or have questions/comments/feedback for us, you can:
-  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users
-  * Contact us on IRC: irc.freenode.net, channel #openquake
+If you need help or have questions/comments/feedback for us, you can subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users

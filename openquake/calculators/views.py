@@ -935,7 +935,7 @@ def view_mean_disagg(token, dstore):
     """
     N, M, P, Z = dstore['hmap4'].shape
     tbl = []
-    kd = {key: dset[:] for key, dset in sorted(dstore['disagg'].items())}
+    kd = {key: dset[:] for key, dset in sorted(dstore['disagg-rlzs'].items())}
     oq = dstore['oqparam']
     for s in range(N):
         for m, imt in enumerate(oq.imtls):
@@ -945,20 +945,6 @@ def view_mean_disagg(token, dstore):
                     row.append(d[s, m, p].mean())
                 tbl.append(tuple(row))
     return numpy.array(sorted(tbl), dt(['key'] + list(kd)))
-
-
-@view.add('disagg_times')
-def view_disagg_times(token, dstore):
-    """
-    Display slow tasks for disaggregation
-    """
-    data = dstore['disagg_task'][:]
-    info = dstore.read_df('task_info', 'taskname').loc[b'compute_disagg']
-    tbl = []
-    for duration, task_no in zip(info['duration'], info['task_no']):
-        tbl.append((duration, task_no) + tuple(data[task_no]))
-    header = ('duration', 'task_no') + data.dtype.names
-    return numpy.array(sorted(tbl), dt(header))
 
 
 @view.add('bad_ruptures')

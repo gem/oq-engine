@@ -30,7 +30,6 @@ import numpy
 from openquake.baselib import parallel, general, hdf5
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, tom
 from openquake.hazardlib.contexts import ContextMaker, basename
-from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
@@ -258,14 +257,15 @@ def _build_groups(full_lt, smdict):
             smlt_dir, smdict, rlz.value[0].split())
         bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
         if bset_values and bset_values[0][0].uncertainty_type == 'extendModel':
-            (bset, value), *bset_values = bset_values
-            extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
-            common = source_ids & extra_ids
-            if common:
-                raise InvalidFile(
-                    '%s contains source(s) %s already present in %s' %
-                    (value, common, rlz.value))
-            src_groups.extend(extra)
+            while len(bset_values):
+                (bset, value), *bset_values = bset_values
+                extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
+                common = source_ids & extra_ids
+                if common:
+                    raise InvalidFile(
+                        '%s contains source(s) %s already present in %s' %
+                        (value, common, rlz.value))
+                src_groups.extend(extra)
         for src_group in src_groups:
             trt_smr = full_lt.get_trt_smr(src_group.trt, rlz.ordinal)
             sg = apply_uncertainties(bset_values, src_group)
@@ -444,14 +444,7 @@ class CompositeSourceModel:
         mags = general.AccumDict(accum=set())  # trt -> mags
         for sg in self.src_groups:
             for src in sg:
-                if hasattr(src, 'mags'):  # MultiFaultSource
-                    srcmags = {magstr(mag) for mag in src.mags}
-                elif hasattr(src, 'data'):  # nonparametric
-                    srcmags = {magstr(item[0].mag) for item in src.data}
-                else:
-                    srcmags = {magstr(item[0]) for item in
-                               src.get_annual_occurrence_rates()}
-                mags[sg.trt].update(srcmags)
+                mags[sg.trt].update(src.get_magstrs())
         return {trt: sorted(mags[trt]) for trt in mags}
 
     def get_floating_spinning_factors(self):

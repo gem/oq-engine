@@ -169,7 +169,7 @@ class WorkerMaster(object):
             if not general.socket_ready((host, self.ctrl_port)):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
-            with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
+            with z.Socket(ctrl_url, z.zmq.REQ, 'connect', timeout=120) as sock:
                 sock.send('restart')
         return 'restarted'
 

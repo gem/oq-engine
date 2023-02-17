@@ -111,9 +111,8 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         for gid, start, stop in performance.idx_start_stop(rdata['grp_id']):
             cmaker = self.cmakers[gid]
             cmaker.poes = oq.poes
-            ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
-            for ctx in ctxs:
-                out += get_cs_out(cmaker, ctx, imti, self.imls)
+            ctx = cmaker.read_ctxt(dstore, slice(start, stop))
+            out += get_cs_out(cmaker, ctx, imti, self.imls)
 
         # Apply weights and get two dictionaries with integer keys
         # (corresponding to the rlz ID) and array values
@@ -128,11 +127,10 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         for gid, start, stop in performance.idx_start_stop(rdata['grp_id']):
             cmaker = self.cmakers[gid]
             cmaker.poes = oq.poes
-            ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
-            for ctx in ctxs:
-                res = get_cs_out(cmaker, ctx, imti, self.imls, outmean[0])
-                for g in res:
-                    out[g][:, :, 2] += res[g][:, :, 2]  # STDDEV
+            ctx = cmaker.read_ctxt(dstore, slice(start, stop))
+            res = get_cs_out(cmaker, ctx, imti, self.imls, outmean[0])
+            for g in res:
+                out[g][:, :, 2] += res[g][:, :, 2]  # STDDEV
         return out
 
     def convert_and_save(self, dsetname, outdic):
