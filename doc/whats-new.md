@@ -1,6 +1,6 @@
 Version 3.16 is the second Long Term Support (LTS) release of the engine,
 replacing version 3.11 after a gap of two years. It is the result of five
-months of work involving nearly 300 pull requests, featuring major
+months of work involving over 320 pull requests, featuring major
 optimizations and new features.
 
 The complete list of changes is listed in the changelog:
@@ -236,6 +236,10 @@ We fixed a long standing a bug which entered in engine 3.9 and was
 affecting the USA model, specifically the area around the New Madrid 
 cluster, producing incorrect hazard curves and maps.
 
+We fixed a bug in models using the `reqv` feature to collapse point sources:
+all point sources were collapsed, and not only the ones with the
+tectonic region types specified in the `reqv` dictionary.
+
 We raised the recursion limit to work around an error
 `maximum recursion depth exceeded while pickling an object` happening in
 classical calculations with extra-large logic trees.
@@ -262,6 +266,9 @@ output was not stored and therefore not exportable
 We fixed a bug in vulnerability functions using the Beta distribution:
 the case of zero coefficients of variation was not treated correctly
 (see https://github.com/gem/oq-engine/pull/8060).
+
+We fixed a few bugs affecting the visualization of risk curves and
+aggregated risk via the QGIS plugin.
 
 oq commands
 -----------
