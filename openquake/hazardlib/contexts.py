@@ -956,7 +956,7 @@ class ContextMaker(object):
         return gmv
 
     # not used by the engine, is is meant for notebooks
-    def get_poes(self, srcs, sitecol, rup_indep=True, collapse_level=-1):
+    def get_poes(self, srcs, sitecol, rup_mutex={}, collapse_level=-1):
         """
         :param srcs: a list of sources with the same TRT
         :param sitecol: a SiteCollection instance with N sites
@@ -965,7 +965,7 @@ class ContextMaker(object):
         self.collapser.cfactor = numpy.zeros(3)
         ctxs = self.from_srcs(srcs, sitecol)
         with patch.object(self.collapser, 'collapse_level', collapse_level):
-            return self.get_pmap(ctxs, rup_indep).array
+            return self.get_pmap(ctxs, rup_mutex).array
 
     def _gen_poes(self, ctx):
         from openquake.hazardlib.site_amplification import get_poes_site
@@ -1008,27 +1008,28 @@ class ContextMaker(object):
                 poes = numpy.concatenate(list(self._gen_poes(kctx)))
                 yield poes, ctxt, invs
 
-    def get_pmap(self, ctxs, rup_indep=True):
+    def get_pmap(self, ctxs, rup_mutex={}):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
-        :param rup_indep: default True
+        :param rup_mutex: dictionary of weights (default empty)
         :returns: a ProbabilityMap
         """
+        rup_indep = not rup_mutex
         sids = numpy.unique(ctxs[0].sids)
         pmap = ProbabilityMap(sids, size(self.imtls), len(self.gsims))
         pmap.fill(rup_indep)
-        self.update(pmap, ctxs, rup_indep)
+        self.update(pmap, ctxs, rup_mutex)
         return ~pmap if rup_indep else pmap
 
-    def update(self, pmap, ctxs, mutex_weight={}):
+    def update(self, pmap, ctxs, rup_mutex={}):
         """
         :param pmap: probability map to update
         :param ctxs: a list of context arrays (only one for parametric ctxs)
-        :param mutex_weight: dictionary (src_id, rup_id) -> weight
+        :param rup_mutex: dictionary (src_id, rup_id) -> weight
 
-        The mutex_weight dictionary is read-only and normally empty
+        The rup_mutex dictionary is read-only and normally empty
         """
-        rup_indep = len(mutex_weight) == 0
+        rup_indep = len(rup_mutex) == 0
         if self.tom is None:
             itime = -1.  # test_hazard_curve_X
         elif isinstance(self.tom, FatedTOM):
@@ -1046,7 +1047,7 @@ class ContextMaker(object):
             for ctx in ctxs:
                 for poes, ctxt, invs in cm.gen_poes(ctx, rup_indep):
                     with self.pne_mon:
-                        pmap.update_(poes, invs, ctxt, itime, mutex_weight, idx)
+                        pmap.update_(poes, invs, ctxt, itime, rup_mutex, idx)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=False):
@@ -1239,12 +1240,12 @@ class PmapMaker(object):
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
         self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         if self.rup_indep:
-            self.mutex_weight = {}
+            self.rup_mutex = {}
         else:
-            self.mutex_weight = {}  # src_id, rup_id -> rup_weight
+            self.rup_mutex = {}  # src_id, rup_id -> rup_weight
             for src in group:
                 for i, (rup, _) in enumerate(src.data):
-                    self.mutex_weight[src.id, i] = rup.weight
+                    self.rup_mutex[src.id, i] = rup.weight
         self.fewsites = self.N <= cmaker.max_sites_disagg
         if hasattr(group, 'grp_probability'):
             self.grp_probability = group.grp_probability
@@ -1293,11 +1294,11 @@ class PmapMaker(object):
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > maxsize:
-                    cm.update(pmap, concat(allctxs), self.mutex_weight)
+                    cm.update(pmap, concat(allctxs), self.rup_mutex)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
-            cm.update(pmap, concat(allctxs), self.mutex_weight)
+            cm.update(pmap, concat(allctxs), self.rup_mutex)
             allctxs.clear()
         dt = time.time() - t0
         nsrcs = len(self.sources)
@@ -1325,7 +1326,7 @@ class PmapMaker(object):
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
-                cm.update(pm, ctxs, self.mutex_weight)
+                cm.update(pm, ctxs, self.rup_mutex)
             if hasattr(src, 'mutex_weight'):
                 arr = 1. - pm.array if self.rup_indep else pm.array
                 p = pm.new(arr * src.mutex_weight)
