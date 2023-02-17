@@ -108,7 +108,7 @@ def output(mat5):
     return pprod(mat5, axis=(1, 2)), pprod(mat5, axis=(0, 3))
 
 
-def compute_disagg(dis_triples, src_mutex, monitor):
+def compute_disagg(dis_triples, magi, src_mutex, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -122,21 +122,17 @@ def compute_disagg(dis_triples, src_mutex, monitor):
         a dictionary s, z, m -> array5D
     """
     for dis, triples in dis_triples:
-        for magi in range(dis.Ma):
-            with monitor('init disagg', measuremem=False):
-                try:
-                    dis.init(magi, src_mutex, monitor)
-                except FarAwayRupture:
-                    continue
-            res = {'trti': dis.cmaker.trti, 'magi': magi}
-            for g, rlz, iml2 in triples:
-                mat6 = dis.disagg6D(iml2, g)
-                for m in range(len(iml2)):
-                    mat5 = mat6[..., m, :]
-                    if mat5.any():
-                        res[dis.sid, rlz, m] = mat5
-                # print(_collapse_res(res))
-            yield res
+        with monitor('init disagg', measuremem=False):
+            dis.init(magi, src_mutex, monitor)
+        res = {'trti': dis.cmaker.trti, 'magi': magi}
+        for g, rlz, iml2 in triples:
+            mat6 = dis.disagg6D(iml2, g)
+            for m in range(len(iml2)):
+                mat5 = mat6[..., m, :]
+                if mat5.any():
+                    res[dis.sid, rlz, m] = mat5
+            # print(_collapse_res(res))
+        yield res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
 
@@ -343,31 +339,37 @@ class DisaggregationCalculator(base.HazardCalculator):
             if cmaker.rup_mutex:  # set by read_ctxt
                 raise NotImplementedError(
                     'Disaggregation with mutex ruptures')
-            dis_triples = []
-            for site in self.sitecol:
-                sid = site.id
-                try:
-                    dis = disagg.Disaggregator(
-                        ctxs, site, cmaker, self.bin_edges)
-                except FarAwayRupture:  # no data for this site
-                    continue
-                iml3 = self.iml4[sid]
-                triples = []
-                for z, rlz in enumerate(self.iml4.rlzs[sid]):
+            fullctx = numpy.concatenate(ctxs).view(numpy.recarray)
+            magbins = numpy.searchsorted(self.bin_edges[0], fullctx.mag) - 1
+            magbins[magbins == -1] = 0  # bins on the edge
+            idxs = numpy.argsort(magbins)  # used to sort fullctx
+            fullctx = fullctx[idxs]
+            for magi, start, stop in performance.idx_start_stop(magbins[idxs]):
+                ctx = fullctx[start:stop]
+                dis_triples = []
+                for site in self.sitecol:
+                    sid = site.id
                     try:
-                        g = dis.g_by_rlz[rlz]
-                    except KeyError:
+                        dis = disagg.Disaggregator(
+                            [ctx], site, cmaker, self.bin_edges)
+                    except FarAwayRupture:  # no data for this site
                         continue
-                    iml2 = iml3[:, :, z]
-                    if iml2.any():
-                        triples.append((g, rlz, iml2))
-                n = len(dis.fullctx)
-                U = max(U, n)
-                n_outs += len(triples)
-                dis_triples.append((dis, triples))
+                    iml3 = self.iml4[sid]
+                    triples = []
+                    for z, rlz in enumerate(self.iml4.rlzs[sid]):
+                        try:
+                            g = dis.g_by_rlz[rlz]
+                        except KeyError:
+                            continue
+                        iml2 = iml3[:, :, z]
+                        if iml2.any():
+                            triples.append((g, rlz, iml2))
+                    n = len(dis.fullctx)
+                    U = max(U, n)
+                    n_outs += len(triples)
+                    dis_triples.append((dis, triples))
 
-            smap.submit((dis_triples, src_mutex))
-            task_inputs.append((grp_id, n))
+                smap.submit((dis_triples, magi, src_mutex))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
