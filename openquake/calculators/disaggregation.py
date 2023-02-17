@@ -137,7 +137,7 @@ def compute_disagg(dis_triples, magi, src_mutex, monitor):
     # the matrices is fast and the data are not queuing up
 
 
-def get_outputs_size(shapedic, disagg_outputs):
+def get_outputs_size(shapedic, disagg_outputs, Z):
     """
     :returns: the total size of the outputs
     """
@@ -146,7 +146,7 @@ def get_outputs_size(shapedic, disagg_outputs):
         tot[out] = 8
         for key in out.lower().split('_'):
             tot[out] *= shapedic[key]
-    return tot * shapedic['N'] * shapedic['M'] * shapedic['P'] * shapedic['Z']
+    return tot * shapedic['N'] * shapedic['M'] * shapedic['P'] * Z
 
 
 def output_dict(shapedic, disagg_outputs, Z):
@@ -207,7 +207,12 @@ class DisaggregationCalculator(base.HazardCalculator):
             raise ValueError(
                 'The disaggregation matrix is too large '
                 '(%d elements): fix the binning!' % matrix_size)
-        tot = get_outputs_size(shapedic, self.oqparam.disagg_outputs)
+    
+        if self.Z == 1 or self.oqparam.individual_rlzs:
+            Z = self.Z
+        else:
+            Z = len(self.oqparam.hazard_stats())
+        tot = get_outputs_size(shapedic, self.oqparam.disagg_outputs, Z)
         logging.info('Total output size: %s', humansize(sum(tot.values())))
 
     def execute(self):
