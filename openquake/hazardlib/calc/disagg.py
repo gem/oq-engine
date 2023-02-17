@@ -422,6 +422,9 @@ class Disaggregator(object):
         self.ctx = self.fullctx[self.fullmagi == magi]
         if len(self.ctx) == 0:
             raise FarAwayRupture
+        if self.src_mutex:
+            # make sure we can use idx_start_stop below
+            self.ctx.sort(order='src_id')
         self.mea, self.std = self.cmaker.get_mean_stds(
             [self.ctx], split_by_mag=True)[:2]
         if self.src_mutex:
