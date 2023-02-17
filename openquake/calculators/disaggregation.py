@@ -124,7 +124,7 @@ def compute_disagg(dis, triples, src_mutex, monitor):
         a dictionary s, z, m -> array5D
     """
     for magi in range(dis.Ma):
-        with monitor('building mean_std', measuremem=False):
+        with monitor('init disagg', measuremem=False):
             try:
                 dis.init(magi, src_mutex, monitor)
             except FarAwayRupture:
@@ -366,9 +366,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                 smap.submit((dis, triples, src_mutex))
                 task_inputs.append((grp_id, n))
                 n_outs += len(triples)
-
-        nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
-        logging.info('Maximum mean_std per task:\n%s', msg)
 
         data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \
             s['mag'] * s['M'] * s['P'] * 8 * n_outs
