@@ -1715,3 +1715,30 @@ def read_cmaker(dstore, trt_smr):
     trt = trts[trt_smr // len(full_lt.sm_rlzs)]
     rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
     return ContextMaker(trt, rlzs_by_gsim, oq)
+
+
+def read_src_mutex(dstore):
+    """
+    :param dstore: a DataStore-like object
+    :returns: a dictionary grp_id -> {'src_id': [...], 'weight': [...]}
+    """
+    info = dstore.read_df('source_info')
+    mutex_df = info[info.mutex_weight > 0][['grp_id', 'mutex_weight']]
+    return {grp_id: {'src_id': df.index.to_numpy(),
+                     'weight': df.mutex_weight.to_numpy()}
+            for grp_id, df in mutex_df.groupby('grp_id')}
+
+
+def get_src_mutex(srcs):
+    """
+    :param srcs: a list of sources with weights and the same grp_id
+    :returns: a dictionary grp_id -> {'src_id': [...], 'weight': [...]}
+    """
+    grp_ids = [src.grp_id for src in srcs]
+    [grp_id] = set(grp_ids)
+    ok = all(hasattr(src, 'mutex_weight') for src in srcs)
+    if not ok:
+        return {grp_id: {}}
+    dic = dict(src_ids=U32([src.id for src in srcs]),
+               weights=F64([src.mutex_weight for src in srcs]))
+    return {grp_id: dic}
