@@ -508,8 +508,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                         out[key][s, m, p, :, z] = disagg.pmf_map[key](mat6)
                     elif key.startswith('TRT_'):
                         proj = disagg.pmf_map[key[4:]]
-                        Tlist = [proj(mat) for mat in mat6]
-                        out[key][s, m, p, ..., z] = Tlist
+                        out[key][s, m, p, ..., z] = [proj(mat) for mat in mat6]
                     else:
                         out[key][s, m, p, ..., z] = disagg.pmf_map[key](mat5)
 

@@ -462,16 +462,18 @@ class Disaggregator(object):
             mats.append(mat)
         return numpy.average(mats, weights=self.weights, axis=0)
 
-    def disagg_mag_dist_eps(self, iml2, rlzi, src_mutex=None):
+    def disagg_mag_dist_eps(self, iml2_by_rlz, src_mutex=None):
         """
-        :returns: a 5D matrix of shape (Ma, D, E, M, P)
+        :returns: a dict rlz -> 5D matrix of shape (Ma, D, E, M, P)
         """
-        mat5 = numpy.zeros((self.Ma, self.D, self.E) + iml2.shape)
+        M, P = iml2_by_rlz[next(iter(iml2_by_rlz))].shape
+        out = AccumDict(accum=numpy.zeros((self.Ma, self.D, self.E, M, P)))
         for magi in range(self.Ma):
             self.init(magi, src_mutex)
-            mat6 = self.disagg6D(iml2, self.g_by_rlz[rlzi])
-            mat5[magi] = pprod(mat6, axis=(1, 2))
-        return mat5
+            for rlz, iml2 in iml2_by_rlz.items():
+                mat6 = self.disagg6D(iml2, self.g_by_rlz[rlz])
+                out[rlz][magi] = pprod(mat6, axis=(1, 2))
+        return out
 
     def __repr__(self):
         return f'<{self.__class__.__name__} {humansize(self.ctx.nbytes)} >'
