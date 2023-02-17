@@ -462,8 +462,10 @@ class Disaggregator(object):
             mats.append(mat)
         return numpy.average(mats, weights=self.weights, axis=0)
 
-    def disagg_mag_dist_eps(self, iml2_by_rlz, src_mutex=None):
+    def disagg_mag_dist_eps(self, iml2_by_rlz, src_mutex={}):
         """
+        :param iml2_by_rlz: a dictionary rlz -> array of shape (M, P)
+        :param src_mutex: a dictionary src_id -> weight, default empty
         :returns: a dict rlz -> 5D matrix of shape (Ma, D, E, M, P)
         """
         M, P = iml2_by_rlz[next(iter(iml2_by_rlz))].shape
