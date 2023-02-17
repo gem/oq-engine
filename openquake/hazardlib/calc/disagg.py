@@ -459,7 +459,7 @@ class Disaggregator(object):
             mats.append(mat)
         return numpy.average(mats, weights=self.weights, axis=0)
 
-    def disagg_mag_dist_eps(self, iml2, rlzi, src_mutex):
+    def disagg_mag_dist_eps(self, iml2, rlzi, src_mutex=None):
         """
         :returns: a 5D matrix of shape (Ma, D, E, M, P)
         """
@@ -573,9 +573,7 @@ def disaggregation(
               distance_bin_width=dist_bin_width,
               coordinate_bin_width=coord_bin_width,
               disagg_bin_edges=bin_edges)
-    for grp_id, (trt, srcs) in enumerate(by_trt.items()):
-        for src in srcs:
-            src.grp_id = grp_id
+    for trt, srcs in by_trt.items():
         cmaker[trt] = cm = ContextMaker(trt, rlzs_by_gsim, oq)
         cm.tom = srcs[0].temporal_occurrence_model
         ctxs[trt].extend(cm.from_srcs(srcs, sitecol))
@@ -592,11 +590,11 @@ def disaggregation(
     # Compute disaggregation per TRT
     matrix = numpy.zeros([dic['mag'], dic['dist'], dic['lon'], dic['lat'],
                           dic['eps'], len(trts)])
-    for grp_id, trt in enumerate(cmaker):
+    for trt in cmaker:
         dis = Disaggregator(ctxs[trt], sitecol, cmaker[trt], bin_edges)
         for magi in range(dis.Ma):
             try:
-                dis.init(magi, src_mutex={})
+                dis.init(magi, src_mutex={})  # src_mutex not implemented yet
             except FarAwayRupture:
                 continue                
             mat4 = dis.disagg6D([[iml]], 0)[..., 0, 0]
