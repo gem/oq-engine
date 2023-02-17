@@ -424,21 +424,20 @@ class DisaggregationCalculator(base.HazardCalculator):
         # build a dictionary s, m, k -> matrices
         results = matrix_dict(results, T, Ma)
         # get the number of outputs
-        if self.Z == 1 or self.oqparam.individual_rlzs:
-            Z = self.Z
-        else:
-            Z = len(self.oqparam.hazard_stats())
-        shp = (self.N, len(self.poes_disagg), len(self.imts), Z)
-        logging.info('Extracting and saving the PMFs for %d outputs '
-                     '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
+        shp = (self.N, len(self.poes_disagg), len(self.imts), self.Z)
         with self.monitor('saving disagg results'):
             if self.Z == 1 or self.oqparam.individual_rlzs:
+                logging.info('Extracting and saving the PMFs for %d outputs '
+                             '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
                 res = {(s, self.sr2z[s, r], m): results[s, r, m]
                        for s, r, m in results}
                 self.save_disagg_results(res, 'disagg-rlzs')
             else:  # save only the statistics
+                logging.info('Computing the statistics for %d outputs '
+                             '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
                 weights = self.datastore['weights'][:]
                 res = calc_stats(results, self.oqparam.hazard_stats(), weights)
+                logging.info('Saving the PMFs')
                 self.save_disagg_results(res, 'disagg-stats')
 
     def save_bin_edges(self, all_edges):
