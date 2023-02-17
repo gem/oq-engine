@@ -49,7 +49,7 @@ class MRD01TestCase(unittest.TestCase):
         self.cmaker = cmaker.restrict(self.imts)
 
         # Read contexts
-        [self.ctx] = self.cmaker.read_ctxs(self.dstore)
+        self.ctx = self.cmaker.read_ctxt(self.dstore)
 
         # Set the cross correlation model
         self.crosscorr = BakerJayaram2008()

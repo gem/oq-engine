@@ -28,7 +28,8 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.contexts import read_cmakers, FarAwayRupture
+from openquake.hazardlib.contexts import (
+    read_cmakers, read_src_mutex, FarAwayRupture)
 from openquake.commonlib import util, calc
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -107,7 +108,7 @@ def output(mat5):
     return pprod(mat5, axis=(1, 2)), pprod(mat5, axis=(0, 3))
 
 
-def compute_disagg(dis_triples, monitor):
+def compute_disagg(dis_triples, src_mutex, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -122,9 +123,9 @@ def compute_disagg(dis_triples, monitor):
     """
     for dis, triples in dis_triples:
         for magi in range(dis.Ma):
-            with monitor('building mean_std', measuremem=False):
+            with monitor('init disagg', measuremem=False):
                 try:
-                    dis.init(magi, monitor)
+                    dis.init(magi, src_mutex, monitor)
                 except FarAwayRupture:
                     continue
             res = {'trti': dis.cmaker.trti, 'magi': magi}
@@ -328,19 +329,20 @@ class DisaggregationCalculator(base.HazardCalculator):
         # that would break the ordering of the indices causing an incredibly
         # worse performance, but visible only in extra-large calculations!
         cmakers = read_cmakers(self.datastore)
+        src_mutex_by_grp = read_src_mutex(self.datastore)
         grp_ids = rdata['grp_id']
         G = max(len(cmaker.gsims) for cmaker in cmakers)
         s = self.shapedic
         n_outs = 0
         for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
+            src_mutex = src_mutex_by_grp.get(grp_id, {})
             ctxs = []
             for s0, s1 in slices:
-                ctxs.extend(cmaker.read_ctxs(self.datastore, slice(s0, s1)))
-            if cmaker.rup_mutex:  # set by read_ctxs
+                ctxs.append(cmaker.read_ctxt(self.datastore, slice(s0, s1)))
+            if cmaker.rup_mutex:  # set by read_ctxt
                 raise NotImplementedError(
                     'Disaggregation with mutex ruptures')
-            task_inputs.append((grp_id, sum(len(ctx) for ctx in ctxs)))
             dis_triples = []
             for site in self.sitecol:
                 sid = site.id
@@ -359,11 +361,13 @@ class DisaggregationCalculator(base.HazardCalculator):
                     iml2 = iml3[:, :, z]
                     if iml2.any():
                         triples.append((g, rlz, iml2))
-                dis_triples.append((dis, triples))
-                n_outs += len(triples)
-                n = sum(len(ctx) for ctx in dis.ctxs)
+                n = len(dis.fullctx)
                 U = max(U, n)
-            smap.submit((dis_triples,))
+                n_outs += len(triples)
+                dis_triples.append((dis, triples))
+
+            smap.submit((dis_triples, src_mutex))
+            task_inputs.append((grp_id, n))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
@@ -375,8 +379,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
                 (humansize(data_transfer), humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer: %s', humansize(data_transfer))
-        dt = numpy.dtype([('grp_id', U8), ('nrups', U32)])
-        self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
         acc = AccumDict(accum={})
         results = smap.reduce(self.agg_result, acc)
         return results  # s, m -> trti, magi -> output

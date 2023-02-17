@@ -542,10 +542,10 @@ def extract_mean_by_rup(dstore, what):
     assert N == 1
     out = []
     for cmaker in read_cmakers(dstore):
-        for ctx in cmaker.read_ctxs(dstore):
-            # shape (4, G, M, U) => U
-            means = cmaker.get_mean_stds([ctx])[0].mean(axis=(0, 1))
-            out.extend(zip(ctx.src_id, ctx.rup_id, means))
+        ctx = cmaker.read_ctxt(dstore)
+        # shape (4, G, M, U) => U
+        means = cmaker.get_mean_stds([ctx])[0].mean(axis=(0, 1))
+        out.extend(zip(ctx.src_id, ctx.rup_id, means))
     out.sort(key=operator.itemgetter(0, 1))
     return numpy.array(out, [('src_id', U32), ('rup_id', U32), ('mean', F64)])
 
