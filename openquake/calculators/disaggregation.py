@@ -308,13 +308,14 @@ class DisaggregationCalculator(base.HazardCalculator):
         oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        totrups = len(dstore['rup/mag'])
-        logging.info('Reading {:_d} ruptures'.format(totrups))
+        totctxs = len(dstore['rup/mag'])
+        logging.info('Reading {:_d} contexts'.format(totctxs))
+        maxsize = max(totctxs / (oq.concurrent_tasks or 1), 1_000)
+        # for instance with 10M contexts and 640 task maxsize=15_625
         rdt = [('grp_id', U16), ('magi', U8), ('nsites', U16), ('idx', U32)]
-        rdata = numpy.zeros(totrups, rdt)
-        rdata['idx'] = numpy.arange(totrups)
+        rdata = numpy.zeros(totctxs, rdt)
+        rdata['idx'] = numpy.arange(totctxs)
         rdata['grp_id'] = dstore['rup/grp_id'][:]
-        task_inputs = []
         U = 0
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
@@ -327,9 +328,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         cmakers = read_cmakers(self.datastore)
         src_mutex_by_grp = read_src_mutex(self.datastore)
         grp_ids = rdata['grp_id']
-        G = max(len(cmaker.gsims) for cmaker in cmakers)
         s = self.shapedic
         n_outs = 0
+        ctxsize = 0
         for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
             src_mutex = src_mutex_by_grp.get(grp_id, {})
@@ -368,11 +369,13 @@ class DisaggregationCalculator(base.HazardCalculator):
                     U = max(U, n)
                     n_outs += len(triples)
                     dis_triples.append((dis, triples))
-
-                smap.submit((dis_triples, magi, src_mutex))
-
-        nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
-        logging.info('Maximum mean_std per task:\n%s', msg)
+                    ctxsize += n
+                    if ctxsize > maxsize:
+                        smap.submit((dis_triples, magi, src_mutex))
+                        dis_triples.clear()
+                        ctxsize = 0
+                if dis_triples:
+                    smap.submit((dis_triples, magi, src_mutex))
 
         data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \
             s['M'] * s['P'] * 8 * n_outs
