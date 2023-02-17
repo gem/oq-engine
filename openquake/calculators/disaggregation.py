@@ -208,13 +208,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                 'The disaggregation matrix is too large '
                 '(%d elements): fix the binning!' % matrix_size)
     
-        if self.Z == 1 or self.oqparam.individual_rlzs:
-            Z = self.Z
-        else:
-            Z = len(self.oqparam.hazard_stats())
-        tot = get_outputs_size(shapedic, self.oqparam.disagg_outputs, Z)
-        logging.info('Total output size: %s', humansize(sum(tot.values())))
-
     def execute(self):
         """Performs the disaggregation"""
         return self.full_disaggregation()
@@ -316,7 +309,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         totctxs = len(dstore['rup/mag'])
         logging.info('Reading {:_d} contexts'.format(totctxs))
         maxsize = numpy.clip(
-            totctxs / (oq.concurrent_tasks or 1), 1_000, 10_000)
+            totctxs / (oq.concurrent_tasks or 1), 1_000, 100_000)
         # for instance with 10M contexts and 640 task maxsize=15_625
         rdt = [('grp_id', U16), ('magi', U8), ('nsites', U16), ('idx', U32)]
         rdata = numpy.zeros(totctxs, rdt)
@@ -336,7 +329,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         grp_ids = rdata['grp_id']
         s = self.shapedic
         n_outs = 0
-        ctxsize = 0
+        size = 0
         for grp_id, slices in performance.get_slices(grp_ids).items():
             cmaker = cmakers[grp_id]
             src_mutex = src_mutex_by_grp.get(grp_id, {})
@@ -375,14 +368,14 @@ class DisaggregationCalculator(base.HazardCalculator):
                     U = max(U, n)
                     n_outs += len(triples)
                     dis_triples.append((dis, triples))
-                    ctxsize += n
-                    if ctxsize > maxsize:
+                    size += n * len(cmaker.gsims)
+                    if size > maxsize:
                         logging.debug(
                             'Sending task with %d/%d sites for grp_id=%d',
                             len(dis_triples), self.N, grp_id)
                         smap.submit((dis_triples, magi, src_mutex))
                         dis_triples.clear()
-                        ctxsize = 0
+                        size = 0
                 if dis_triples:
                     smap.submit((dis_triples, magi, src_mutex))
 
