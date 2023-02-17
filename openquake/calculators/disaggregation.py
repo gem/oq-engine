@@ -309,7 +309,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         totctxs = len(dstore['rup/mag'])
         logging.info('Reading {:_d} contexts'.format(totctxs))
         maxsize = numpy.clip(
-            totctxs / (oq.concurrent_tasks or 1), 1_000, 100_000)
+            totctxs / (oq.concurrent_tasks or 1), 1_000, 200_000)
         # for instance with 10M contexts and 640 task maxsize=15_625
         rdt = [('grp_id', U16), ('magi', U8), ('nsites', U16), ('idx', U32)]
         rdata = numpy.zeros(totctxs, rdt)
