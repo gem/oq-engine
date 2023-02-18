@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5, performance
 from openquake.baselib.general import (
-    AccumDict, get_nbytes_msg, humansize, pprod, agg_probs, gen_slices)
+    AccumDict, humansize, pprod, agg_probs)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -46,27 +46,17 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def _collapse_res(rdic):
-    # reduce the result dictionary for debugging purposes
-    # s, m -> (array, array)
-    cdic = {}
-    for tup, out in rdic.items():
-        if isinstance(tup, tuple):
-            cdic[tup] = pprod(out[0])
-    return cdic
-
-
 def matrix_dict(acc, num_trts, num_mag_bins):
-    # # build a dictionary s, r, m -> mat7D from a double dictionary
-    # s, r, m -> trti, magi -> mat5D
+    # # build a dictionary s, r -> mat8D from a double dictionary
+    # s, r -> trti, magi -> mat8D
     out = {}
-    for s, r, m in acc:
-        mat5D = acc[s, r, m]  # dictionary (trti, magi) -> array
-        trti, magi = next(iter(mat5D))
-        shp = (num_trts, num_mag_bins) + mat5D[trti, magi].shape
-        mat7D = out[s, r, m] = numpy.zeros(shp)
-        for trti, magi in mat5D:
-            mat7D[trti, magi, ...] = mat5D[trti, magi]
+    for s, r in acc:
+        mat6D = acc[s, r]  # dictionary (trti, magi) -> array
+        trti, magi = next(iter(mat6D))
+        shp = (num_trts, num_mag_bins) + mat6D[trti, magi].shape
+        mat8D = out[s, r] = numpy.zeros(shp)
+        for trti, magi in mat6D:
+            mat8D[trti, magi, ...] = mat6D[trti, magi]
     return out
 
 
@@ -100,41 +90,28 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def output(mat5):
-    """
-    :param mat5: a 5D matrix with axis (D, Lo, La, E, P)
-    :returns: two matrices of shape (D, E, P) and (Lo, La, P)
-    """
-    return pprod(mat5, axis=(1, 2)), pprod(mat5, axis=(0, 3))
-
-
 def compute_disagg(dis_triples, magi, src_mutex, monitor):
-    # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
-    # of the algorithm used
     """
     :param dis:
         a Disaggregator instance
     :param triples:
         a list of triples (g, rlz, iml2)
+    :param magi:
+        an integer magnitude bin
+    :param src_mutex:
+        a dictionary of weights (empty for independent sources)
     :param monitor:
         monitor of the currently running job
-    :returns:
-        a dictionary s, z, m -> array5D
+    :yields:
+        a dictionary for each site containing a 6D matrix of rates
     """
     for dis, triples in dis_triples:
         with monitor('init disagg', measuremem=False):
             dis.init(magi, src_mutex, monitor)
-        res = {'trti': dis.cmaker.trti, 'magi': magi}
+        res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
         for g, rlz, iml2 in triples:
-            mat6 = dis.disagg6D(iml2, g)
-            for m in range(len(iml2)):
-                mat5 = mat6[..., m, :]
-                if mat5.any():
-                    res[dis.sid, rlz, m] = disagg.to_rates(mat5)
-            # print(_collapse_res(res))
+            res[rlz] = disagg.to_rates(dis.disagg6D(iml2, g))
         yield res
-    # NB: compressing the results is not worth it since the aggregation of
-    # the matrices is fast and the data are not queuing up
 
 
 def get_outputs_size(shapedic, disagg_outputs, Z):
@@ -154,24 +131,24 @@ def output_dict(shapedic, disagg_outputs, Z):
     dic = {}
     for out in disagg_outputs:
         shp = tuple(shapedic[key] for key in out.lower().split('_'))
-        dic[out] = numpy.zeros((N, M, P) + shp + (Z,))
+        dic[out] = numpy.zeros((N,) + shp + (M, P, Z))
     return dic
 
 
 def calc_stats(results, hstats, weights):
     """
     Compute Z statistics from the realizations.
-    :returns: a dictionary (s, z, m, k) -> array
+    :returns: a dictionary (s, z) -> array
     """
     acc = AccumDict(accum={})
     R = len(weights)
-    for s, r, m in results:
-        acc[s, m][r] = results[s, r, m]
+    for s, r in results:
+        acc[s][r] = results[s, r]
     out = {}
-    for (s, m), dic in acc.items():
+    for s, dic in acc.items():
         for z, func in enumerate(hstats.values()):
             values = [dic.get(r, 0) for r in range(R)]
-            out[s, z, m] = stats.apply_stat(func, values, weights)
+            out[s, z] = stats.apply_stat(func, values, weights)
     return out
 
 
@@ -207,7 +184,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             raise ValueError(
                 'The disaggregation matrix is too large '
                 '(%d elements): fix the binning!' % matrix_size)
-    
+
     def execute(self):
         """Performs the disaggregation"""
         return self.full_disaggregation()
@@ -275,7 +252,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             for z in range(Z):
                 rlzs[:, z] = oq.rlz_index[z]
             self.datastore['best_rlzs'] = rlzs
-    
+
         assert Z <= self.R, (Z, self.R)
         self.Z = Z
         self.rlzs = rlzs
@@ -290,7 +267,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             curves = [self.get_curve(sid, rlzs[sid])
                       for sid in self.sitecol.sids]
         self.iml4 = _iml4(rlzs, oq.iml_disagg, oq.imtls,
-                            self.poes_disagg, curves)
+                          self.poes_disagg, curves)
         if self.iml4.array.sum() == 0:
             raise SystemExit('Cannot do any disaggregation: zero hazard')
         self.datastore['hmap4'] = self.iml4
@@ -308,6 +285,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                   else self.datastore)
         totctxs = len(dstore['rup/mag'])
         logging.info('Reading {:_d} contexts'.format(totctxs))
+
         rdt = [('grp_id', U16), ('magi', U8), ('nsites', U16), ('idx', U32)]
         rdata = numpy.zeros(totctxs, rdt)
         rdata['idx'] = numpy.arange(totctxs)
@@ -408,10 +386,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         with self.monitor('aggregating disagg matrices'):
             trti = result.pop('trti')
             magi = result.pop('magi')
-            for (s, r, m), arr in result.items():
-                accum = acc[s, r, m]
+            sid = result.pop('sid')
+            for rlz, arr in result.items():
+                accum = acc[sid, rlz]
                 if (trti, magi) in accum:
-                    accum[trti, magi][:] = accum[trti, magi] + arr
+                    accum[trti, magi] += arr
                 else:
                     accum[trti, magi] = arr.copy()
         return acc
@@ -437,8 +416,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             if self.Z == 1 or self.oqparam.individual_rlzs:
                 logging.info('Extracting and saving the PMFs for %d outputs '
                              '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
-                res = {(s, self.sr2z[s, r], m): results[s, r, m]
-                       for s, r, m in results}
+                res = {(s, self.sr2z[s, r]): results[s, r] for s, r in results}
                 self.save_disagg_results(res, 'disagg-rlzs')
             else:  # save only the statistics
                 logging.info('Computing the statistics for %d outputs '
@@ -474,13 +452,13 @@ class DisaggregationCalculator(base.HazardCalculator):
         Save the computed PMFs in the datastore.
 
         :param results:
-            a dict s, z, m -> 7D-matrix of shape (T, Ma, D, E, Lo, La, P)
+            a dict s, z -> 8D-matrix of shape (T, Ma, D, E, Lo, La, M, P)
         :param name:
             the string "disagg-rlzs" or "disagg-stats"
         """
         oq = self.oqparam
         if name.endswith('rlzs'):
-            Z = self.shapedic['Z'] 
+            Z = self.shapedic['Z']
         else:
             Z = len(oq.hazard_stats())
         out = output_dict(self.shapedic, oq.disagg_outputs, Z)
@@ -488,37 +466,37 @@ class DisaggregationCalculator(base.HazardCalculator):
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
         vcurves = []  # hazard curves with a vertical section for large poes
         best_rlzs = self.datastore['best_rlzs'][:]  # (shape N, Z)
-        for (s, z, m), mat7 in sorted(results.items()):
-            mat7 = disagg.to_probs(mat7)  # go back to probabilities
-            imt = self.imts[m]
-            for p, poe in enumerate(self.poes_disagg):
-                mat6 = mat7[..., p]
-                # mat6 has shape (T, Ma, D, Lo, La, E)
-                if m == 0 and poe == self.poes_disagg[-1]:
-                    _disagg_trt[s] = tuple(
-                        pprod(mat7[..., 0], axis=(1, 2, 3, 4, 5)))
-                if name.endswith('-rlzs'):
-                    poe_agg = pprod(mat6, axis=(0, 1, 2, 3, 4, 5))
-                    self.datastore['poe4'][s, m, p, z] = poe_agg
-                    if poe and abs(1 - poe_agg / poe) > .1 and not count[s]:
-                        # warn only once per site
-                        msg = ('Site #%d, IMT=%s, rlz=#%d: poe_agg=%s is quite '
-                               'different from the expected poe=%s, perhaps '
-                               'not enough levels')
-                        logging.warning(msg,  s, imt, best_rlzs[s, z],
-                                        poe_agg, poe)
-                        vcurves.append(self.curves[s])
-                        count[s] += 1
-                mat5 = agg_probs(*mat6)  # shape (Ma, D, Lo, La, E)
-                for key in oq.disagg_outputs:
-                    if key == 'TRT':
-                        out[key][s, m, p, :, z] = disagg.pmf_map[key](mat6)
-                    elif key.startswith('TRT_'):
-                        proj = disagg.pmf_map[key[4:]]
-                        out[key][s, m, p, ..., z] = [proj(mat) for mat in mat6]
-                    else:
-                        out[key][s, m, p, ..., z] = disagg.pmf_map[key](mat5)
+        for (s, z), mat8 in sorted(results.items()):
+            mat8 = disagg.to_probs(mat8)
+            mat7 = agg_probs(*mat8)  # shape (Ma, D, E, Lo, La, M, P)
+            for key in oq.disagg_outputs:
+                if key == 'TRT':
+                    out[key][s, ..., z] = disagg.pmf_map[key](mat8)  # T,M,P
+                elif key.startswith('TRT_'):
+                    proj = disagg.pmf_map[key[4:]]
+                    out[key][s, ..., z] = [proj(m7) for m7 in mat8]
+                else:
+                    out[key][s, ..., z] = disagg.pmf_map[key](mat7)
 
+            # display some warnings if needed
+            for m, imt in enumerate(self.imts):
+                for p, poe in enumerate(self.poes_disagg):
+                    mat6 = mat8[..., m, p]  # shape (T, Ma, D, Lo, La, E)
+                    if m == 0 and poe == self.poes_disagg[-1]:
+                        _disagg_trt[s] = tuple(
+                            pprod(mat8[..., 0, 0], axis=(1, 2, 3, 4, 5)))
+                    if name.endswith('-rlzs'):
+                        poe_agg = pprod(mat6, axis=(0, 1, 2, 3, 4, 5))
+                        self.datastore['poe4'][s, m, p, z] = poe_agg
+                        if poe and abs(1 - poe_agg/poe) > .1 and not count[s]:
+                            # warn only once per site
+                            msg = ('Site #%d, IMT=%s, rlz=#%d: poe_agg=%s is '
+                                   'quite different from the expected poe=%s,'
+                                   ' perhaps not enough levels')
+                            logging.warning(msg,  s, imt, best_rlzs[s, z],
+                                            poe_agg, poe)
+                            vcurves.append(self.curves[s])
+                            count[s] += 1
         self.datastore[name] = out
         # below a dataset useful for debugging, at minimum IMT and maximum RP
         self.datastore['_disagg_trt'] = _disagg_trt

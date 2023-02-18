@@ -1144,7 +1144,7 @@ def extract_disagg(dstore, what):
     imt2m = {imt: m for m, imt in enumerate(oq.imtls)}
     bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
     m = imt2m[imt]
-    matrix = dstore['disagg-%s/%s' % (spec, label)][sid, m, poe_id]
+    matrix = dstore['disagg-%s/%s' % (spec, label)][sid, ..., m, poe_id, :]
     Z = matrix.shape[-1]
     poe_agg = dstore['poe4'][sid, m, poe_id]
     if traditional:
@@ -1232,6 +1232,7 @@ def extract_disagg_by_src(dstore, what):
     return ArrayWrapper(arr[::-1], dict(site_id=site_id, imt=imt, poe=poe))
 
 
+# TODO: extract from disagg-stats, avoid computing means on the fly
 @extract.add('disagg_layer')
 def extract_disagg_layer(dstore, what):
     """
@@ -1270,7 +1271,7 @@ def extract_disagg_layer(dstore, what):
             for p, poe in enumerate(poes_disagg):
                 for kind in kinds:
                     key = '%s-%s-%s' % (kind, imt, poe)
-                    rec[key] = arr[kind][sid, m, p] @ ws
+                    rec[key] = arr[kind][sid, ..., m, p, :] @ ws
                 rec['iml-%s-%s' % (imt, poe)] = hmap4[sid, m, p]
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
                                   trt=numpy.array(encode(edges[-1]))))
