@@ -46,16 +46,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def _collapse_res(rdic):
-    # reduce the result dictionary for debugging purposes
-    # s, m -> (array, array)
-    cdic = {}
-    for tup, out in rdic.items():
-        if isinstance(tup, tuple):
-            cdic[tup] = pprod(out[0])
-    return cdic
-
-
 def matrix_dict(acc, num_trts, num_mag_bins):
     # # build a dictionary s, r -> mat8D from a double dictionary
     # s, r -> trti, magi -> mat8D
@@ -101,17 +91,19 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
 
 
 def compute_disagg(dis_triples, magi, src_mutex, monitor):
-    # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
-    # of the algorithm used
     """
     :param dis:
         a Disaggregator instance
     :param triples:
         a list of triples (g, rlz, iml2)
+    :param magi:
+        an integer magnitude bin
+    :param src_mutex:
+        a dictionary of weights (empty for independent sources)
     :param monitor:
         monitor of the currently running job
-    :returns:
-        a dictionary s, z -> array6D
+    :yields:
+        a dictionary for each site containing a 6D matrix of rates
     """
     for dis, triples in dis_triples:
         with monitor('init disagg', measuremem=False):
@@ -119,7 +111,6 @@ def compute_disagg(dis_triples, magi, src_mutex, monitor):
         res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
         for g, rlz, iml2 in triples:
             res[rlz] = disagg.to_rates(dis.disagg6D(iml2, g))
-        # print(_collapse_res(res))
         yield res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
