@@ -116,9 +116,9 @@ def compute_disagg(dis_triples, magi, src_mutex, monitor):
     for dis, triples in dis_triples:
         with monitor('init disagg', measuremem=False):
             dis.init(magi, src_mutex, monitor)
-        res = {'trti': dis.cmaker.trti, 'magi': magi}
+        res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
         for g, rlz, iml2 in triples:
-            res[dis.sid, rlz] = disagg.to_rates(dis.disagg6D(iml2, g))
+            res[rlz] = disagg.to_rates(dis.disagg6D(iml2, g))
         # print(_collapse_res(res))
         yield res
     # NB: compressing the results is not worth it since the aggregation of
@@ -397,8 +397,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         with self.monitor('aggregating disagg matrices'):
             trti = result.pop('trti')
             magi = result.pop('magi')
-            for (s, r), arr in result.items():
-                accum = acc[s, r]
+            sid = result.pop('sid')
+            for rlz, arr in result.items():
+                accum = acc[sid, rlz]
                 if (trti, magi) in accum:
                     accum[trti, magi][:] = accum[trti, magi] + arr
                 else:
