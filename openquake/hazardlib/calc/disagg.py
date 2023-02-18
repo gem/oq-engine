@@ -503,7 +503,7 @@ class Disaggregator(object):
         return out
 
     def __repr__(self):
-        return f'<{self.__class__.__name__} {humansize(self.ctx.nbytes)} >'
+        return f'<{self.__class__.__name__} {humansize(self.fullctx.nbytes)} >'
 
 
 # this is used in the hazardlib tests, not in the engine
