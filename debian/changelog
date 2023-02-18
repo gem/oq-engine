@@ -4,7 +4,8 @@
 
   [Michele Simionato]
   * Added an exporter for disagg_by_src
-  * Implemented statistical disaggregation outputs
+  * Implemented mean disaggregation outputs, with the means computed in terms
+    of rates, not probabilities
 
   [Kendra Johnson]
   * Corrected a bug when using the `reqv` feature: all sources were
