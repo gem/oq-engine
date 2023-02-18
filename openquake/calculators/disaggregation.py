@@ -46,20 +46,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def matrix_dict(acc, num_trts, num_mag_bins):
-    # # build a dictionary s, r -> mat8D from a double dictionary
-    # s, r -> trti, magi -> mat8D
-    out = {}
-    for s, r in acc:
-        mat6D = acc[s, r]  # dictionary (trti, magi) -> array
-        trti, magi = next(iter(mat6D))
-        shp = (num_trts, num_mag_bins) + mat6D[trti, magi].shape
-        mat8D = out[s, r] = numpy.zeros(shp)
-        for trti, magi in mat6D:
-            mat8D[trti, magi, ...] = mat6D[trti, magi]
-    return out
-
-
 def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     # an ArrayWrapper of shape (N, M, P, Z)
     N, Z = rlzs.shape
@@ -378,15 +364,18 @@ class DisaggregationCalculator(base.HazardCalculator):
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
                 (humansize(data_transfer), humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer: %s', humansize(data_transfer))
-        acc = AccumDict(accum={})
+
+        shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
+                   s['M'], s['P'])
+        acc = AccumDict(accum=numpy.zeros(shape8D))
         results = smap.reduce(self.agg_result, acc)
-        return results  # s, m -> trti, magi -> output
+        return results  # s, r -> array 8D
 
     def agg_result(self, acc, result):
         """
         Collect the results coming from compute_disagg into self.results.
 
-        :param acc: dictionary s, r, m -> trti, magi -> output
+        :param acc: dictionary s, r -> array8D
         :param result: dictionary with the result coming from a task
         """
         with self.monitor('aggregating disagg matrices'):
@@ -394,11 +383,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             magi = result.pop('magi')
             sid = result.pop('sid')
             for rlz, arr in result.items():
-                accum = acc[sid, rlz]
-                if (trti, magi) in accum:
-                    accum[trti, magi] += arr
-                else:
-                    accum[trti, magi] = arr.copy()
+                acc[sid, rlz][trti, magi] += arr
         return acc
 
     def post_execute(self, results):
@@ -407,22 +392,18 @@ class DisaggregationCalculator(base.HazardCalculator):
         to save is #sites * #rlzs * #disagg_poes * #IMTs.
 
         :param results:
-            a dictionary sid, rlz, imti -> trti -> disagg matrix
+            a dictionary sid, rlz -> 8D disagg matrix
         """
         # the DEBUG dictionary is populated only for OQ_DISTRIBUTE=no
         for sid, pnes in disagg.DEBUG.items():
             print('site %d, mean pnes=%s' % (sid, pnes))
-        T = len(self.trts)
-        Ma = len(self.bin_edges[0]) - 1  # num_mag_bins
-        # build a dictionary s, r, m -> matrices
-        res = matrix_dict(results, T, Ma)
         with self.monitor('saving disagg results'):
             logging.info('Extracting and saving the PMFs')
             if self.Z == 1 or self.oqparam.individual_rlzs:
-                res = {(s, self.sr2z[s, r]): res[s, r] for s, r in res}
+                res = {(s, self.sr2z[s, r]): results[s, r] for s, r in results}
                 self.save_disagg_results(res, 'disagg-rlzs')
             else:  # save mean PMFs
-                self.save_disagg_results(res, 'disagg-stats')
+                self.save_disagg_results(results, 'disagg-stats')
 
     def save_bin_edges(self, all_edges):
         """
