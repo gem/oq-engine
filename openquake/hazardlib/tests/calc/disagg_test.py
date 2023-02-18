@@ -141,8 +141,8 @@ class DisaggregateTestCase(unittest.TestCase):
     def test_disaggregator(self):
         dis = disagg.Disaggregator([self.sources[0]], self.site, self.cmaker,
                                    self.bin_edges)
-        iml2 = numpy.array([[.01]])
-        mat3 = dis.disagg_mag_dist_eps({0: iml2})[0][..., 0, 0]
+        iml3 = numpy.array([[[.01]]])
+        mat3 = dis.disagg_mag_dist_eps(iml3)[..., 0, 0, 0]
         bymag = pprod(mat3, axis=(1, 2))
         aac(bymag, [0.9873275537163634,
                     0.9580616631998118,

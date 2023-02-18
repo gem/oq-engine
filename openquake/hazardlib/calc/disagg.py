@@ -462,19 +462,22 @@ class Disaggregator(object):
             mats.append(mat)
         return numpy.average(mats, weights=self.weights, axis=0)
 
-    def disagg_mag_dist_eps(self, iml2_by_rlz, src_mutex={}):
+    def disagg_mag_dist_eps(self, iml3, src_mutex={}):
         """
-        :param iml2_by_rlz: a dictionary rlz -> array of shape (M, P)
+        :param iml3: an array of shape (M, P, Z)
         :param src_mutex: a dictionary src_id -> weight, default empty
-        :returns: a dict rlz -> 5D matrix of shape (Ma, D, E, M, P)
+        :returns: a 6D matrix of shape (Ma, D, E, M, P, Z)
         """
-        M, P = iml2_by_rlz[next(iter(iml2_by_rlz))].shape
-        out = AccumDict(accum=numpy.zeros((self.Ma, self.D, self.E, M, P)))
+        M, P, Z = iml3.shape
+        assert Z == self.cmaker.Z, (Z, self.cmaker.Z)
+        out = numpy.zeros((self.Ma, self.D, self.E, M, P, Z))
         for magi in range(self.Ma):
             self.init(magi, src_mutex)
-            for rlz, iml2 in iml2_by_rlz.items():
-                mat6 = self.disagg6D(iml2, self.g_by_rlz[rlz])
-                out[rlz][magi] = pprod(mat6, axis=(1, 2))
+            z = 0
+            for rlz, g in self.g_by_rlz.items():
+                mat6 = self.disagg6D(iml3[:, :, z], g)
+                out[magi, ..., z] = pprod(mat6, axis=(1, 2))
+                z += 1
         return out
 
     def __repr__(self):
