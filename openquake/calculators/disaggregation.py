@@ -308,9 +308,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                   else self.datastore)
         totctxs = len(dstore['rup/mag'])
         logging.info('Reading {:_d} contexts'.format(totctxs))
-        maxsize = numpy.clip(
-            totctxs / (oq.concurrent_tasks or 1), 1_000, 500_000)
-        # for instance with 10M contexts and 640 task maxsize=15_625
         rdt = [('grp_id', U16), ('magi', U8), ('nsites', U16), ('idx', U32)]
         rdata = numpy.zeros(totctxs, rdt)
         rdata['idx'] = numpy.arange(totctxs)
@@ -324,9 +321,19 @@ class DisaggregationCalculator(base.HazardCalculator):
         # we are NOT grouping by operator.itemgetter('grp_id', 'magi'):
         # that would break the ordering of the indices causing an incredibly
         # worse performance, but visible only in extra-large calculations!
+
+        # compute the total weight of the contexts and the maxsize
         cmakers = read_cmakers(self.datastore)
-        src_mutex_by_grp = read_src_mutex(self.datastore)
         grp_ids = rdata['grp_id']
+        totweight = 0
+        for cmaker in cmakers:
+            num_ctxs = (grp_ids == cmaker.grp_id).sum()
+            totweight += num_ctxs * len(cmaker.gsims)
+        maxsize = numpy.clip(
+            totweight / (oq.concurrent_tasks or 1), 1000, 200_000)
+        logging.debug(f'{maxsize=}')
+
+        src_mutex_by_grp = read_src_mutex(self.datastore)
         s = self.shapedic
         n_outs = 0
         size = 0
