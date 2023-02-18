@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5, performance
 from openquake.baselib.general import (
-    AccumDict, get_nbytes_msg, humansize, pprod, agg_probs, gen_slices)
+    AccumDict, humansize, pprod, agg_probs)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -195,7 +195,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             raise ValueError(
                 'The disaggregation matrix is too large '
                 '(%d elements): fix the binning!' % matrix_size)
-    
+
     def execute(self):
         """Performs the disaggregation"""
         return self.full_disaggregation()
@@ -263,7 +263,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             for z in range(Z):
                 rlzs[:, z] = oq.rlz_index[z]
             self.datastore['best_rlzs'] = rlzs
-    
+
         assert Z <= self.R, (Z, self.R)
         self.Z = Z
         self.rlzs = rlzs
@@ -278,7 +278,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             curves = [self.get_curve(sid, rlzs[sid])
                       for sid in self.sitecol.sids]
         self.iml4 = _iml4(rlzs, oq.iml_disagg, oq.imtls,
-                            self.poes_disagg, curves)
+                          self.poes_disagg, curves)
         if self.iml4.array.sum() == 0:
             raise SystemExit('Cannot do any disaggregation: zero hazard')
         self.datastore['hmap4'] = self.iml4
@@ -296,7 +296,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                   else self.datastore)
         totctxs = len(dstore['rup/mag'])
         logging.info('Reading {:_d} contexts'.format(totctxs))
-       
+
         rdt = [('grp_id', U16), ('magi', U8), ('nsites', U16), ('idx', U32)]
         rdata = numpy.zeros(totctxs, rdt)
         rdata['idx'] = numpy.arange(totctxs)
@@ -468,7 +468,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         if name.endswith('rlzs'):
-            Z = self.shapedic['Z'] 
+            Z = self.shapedic['Z']
         else:
             Z = len(oq.hazard_stats())
         out = output_dict(self.shapedic, oq.disagg_outputs, Z)
@@ -481,7 +481,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             mat7 = agg_probs(*mat8)  # shape (Ma, D, E, Lo, La, M, P)
             for key in oq.disagg_outputs:
                 if key == 'TRT':
-                    out[key][s, ..., z] = disagg.pmf_map[key](mat8)  # (T, M, P)
+                    out[key][s, ..., z] = disagg.pmf_map[key](mat8)  # T,M,P
                 elif key.startswith('TRT_'):
                     proj = disagg.pmf_map[key[4:]]
                     out[key][s, ..., z] = [proj(m7) for m7 in mat8]
@@ -498,11 +498,11 @@ class DisaggregationCalculator(base.HazardCalculator):
                     if name.endswith('-rlzs'):
                         poe_agg = pprod(mat6, axis=(0, 1, 2, 3, 4, 5))
                         self.datastore['poe4'][s, m, p, z] = poe_agg
-                        if poe and abs(1 - poe_agg / poe) > .1 and not count[s]:
+                        if poe and abs(1 - poe_agg/poe) > .1 and not count[s]:
                             # warn only once per site
-                            msg = ('Site #%d, IMT=%s, rlz=#%d: poe_agg=%s is quite '
-                                   'different from the expected poe=%s, perhaps '
-                                   'not enough levels')
+                            msg = ('Site #%d, IMT=%s, rlz=#%d: poe_agg=%s is '
+                                   'quite different from the expected poe=%s,'
+                                   ' perhaps not enough levels')
                             logging.warning(msg,  s, imt, best_rlzs[s, z],
                                             poe_agg, poe)
                             vcurves.append(self.curves[s])
