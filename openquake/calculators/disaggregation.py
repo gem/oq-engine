@@ -401,7 +401,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             for rlz, arr in result.items():
                 accum = acc[sid, rlz]
                 if (trti, magi) in accum:
-                    accum[trti, magi][:] = accum[trti, magi] + arr
+                    accum[trti, magi] += arr
                 else:
                     accum[trti, magi] = arr.copy()
         return acc
