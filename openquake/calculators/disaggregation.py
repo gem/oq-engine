@@ -329,7 +329,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         for cmaker in cmakers:
             num_ctxs = (grp_ids == cmaker.grp_id).sum()
             totweight += num_ctxs * len(cmaker.gsims)
-        maxsize = totweight / (oq.concurrent_tasks or 1)
+        maxsize = numpy.clip(
+            totweight / (oq.concurrent_tasks or 1), 1000, 200_000)
         logging.debug(f'{maxsize=}')
 
         src_mutex_by_grp = read_src_mutex(self.datastore)
