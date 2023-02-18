@@ -487,6 +487,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                     out[key][s, ..., z] = [proj(m7) for m7 in mat8]
                 else:
                     out[key][s, ..., z] = disagg.pmf_map[key](mat7)
+
+            # display some warnings if needed
             for m, imt in enumerate(self.imts):
                 for p, poe in enumerate(self.poes_disagg):
                     mat6 = mat8[..., m, p]  # shape (T, Ma, D, Lo, La, E)
