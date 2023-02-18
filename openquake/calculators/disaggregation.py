@@ -99,7 +99,7 @@ def compute_disagg(dis_triples, magi, src_mutex, wdic, monitor):
     :param magi:
         an integer magnitude bin
     :param src_mutex:
-        a dictionary of weights (empty for independent sources)
+        dictionary src_id -> weight (empty for independent sources)
     :param wdic:
         dictionary rlz -> weight, empty for individual realizations
     :param monitor:
