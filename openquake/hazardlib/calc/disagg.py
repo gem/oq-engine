@@ -343,8 +343,12 @@ mag_lon_lat_pmf = partial(pprod, axis=(DIS, EPS))
 # applied on matrix MAG DIS LON LAT EPS
 
 def trt_pmf(matrices):
-    # from T matrices to T floats
-    return numpy.array([pprod(mat) for mat in matrices])
+    """
+    From T matrices of shape (Ma, D, Lo, La, E, ...) into one matrix of
+    shape (T, ...)
+    """
+    return numpy.array([pprod(mat, axis=(MAG, DIS, LON, LAT, EPS))
+                        for mat in matrices])
 
 # this dictionary is useful to extract a fixed set of
 # submatrices from the full disaggregation matrix

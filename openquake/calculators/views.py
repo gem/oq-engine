@@ -942,7 +942,7 @@ def view_mean_disagg(token, dstore):
             for p in range(P):
                 row = ['%s-sid-%d-poe-%s' % (imt, s, p)]
                 for k, d in kd.items():
-                    row.append(d[s, m, p].mean())
+                    row.append(d[s, ..., m, p, :].mean())
                 tbl.append(tuple(row))
     return numpy.array(sorted(tbl), dt(['key'] + list(kd)))
 

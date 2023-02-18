@@ -472,7 +472,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             mat7 = agg_probs(*mat8)  # shape (Ma, D, E, Lo, La, M, P)
             for key in oq.disagg_outputs:
                 if key == 'TRT':
-                    out[key][s, ..., z] = disagg.pmf_map[key](mat8)
+                    out[key][s, ..., z] = disagg.pmf_map[key](mat8)  # (T, M, P)
                 elif key.startswith('TRT_'):
                     proj = disagg.pmf_map[key[4:]]
                     out[key][s, ..., z] = [proj(m7) for m7 in mat8]
