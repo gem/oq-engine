@@ -953,11 +953,7 @@ class HazardCalculator(BaseCalculator):
                 self.datastore['full_lt'] = self.full_lt
         else:  # scenario
             self.full_lt = self.datastore['full_lt']
-
-        rbglist = self.full_lt.get_rlzs_by_gsim_list(self.csm.get_trt_smrs())
-        rlzsum = '+'.join(str(sum(len(rlzs) for rlzs in rgb.values()))
-                          for rgb in rbglist)
-        logging.info('There are %s=%d realization(s)', rlzsum, self.R)
+        logging.info('There are %d realization(s)', self.R)
 
         self.datastore['weights'] = arr = build_weights(self.realizations)
         self.datastore.set_attrs('weights', nbytes=arr.nbytes)

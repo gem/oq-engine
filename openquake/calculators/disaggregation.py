@@ -118,7 +118,7 @@ def compute_disagg(dis_triples, magi, src_mutex, monitor):
             dis.init(magi, src_mutex, monitor)
         res = {'trti': dis.cmaker.trti, 'magi': magi}
         for g, rlz, iml2 in triples:
-            res[dis.sid, rlz] = dis.disagg6D(iml2, g)
+            res[dis.sid, rlz] = disagg.to_rates(dis.disagg6D(iml2, g))
         # print(_collapse_res(res))
         yield res
     # NB: compressing the results is not worth it since the aggregation of
@@ -296,9 +296,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                   else self.datastore)
         totctxs = len(dstore['rup/mag'])
         logging.info('Reading {:_d} contexts'.format(totctxs))
-        maxsize = numpy.clip(
-            totctxs / (oq.concurrent_tasks or 1), 1_000, 500_000)
-        # for instance with 10M contexts and 640 task maxsize=15_625
+       
         rdt = [('grp_id', U16), ('magi', U8), ('nsites', U16), ('idx', U32)]
         rdata = numpy.zeros(totctxs, rdt)
         rdata['idx'] = numpy.arange(totctxs)
@@ -312,9 +310,19 @@ class DisaggregationCalculator(base.HazardCalculator):
         # we are NOT grouping by operator.itemgetter('grp_id', 'magi'):
         # that would break the ordering of the indices causing an incredibly
         # worse performance, but visible only in extra-large calculations!
+
+        # compute the total weight of the contexts and the maxsize
         cmakers = read_cmakers(self.datastore)
-        src_mutex_by_grp = read_src_mutex(self.datastore)
         grp_ids = rdata['grp_id']
+        totweight = 0
+        for cmaker in cmakers:
+            num_ctxs = (grp_ids == cmaker.grp_id).sum()
+            totweight += num_ctxs * len(cmaker.gsims)
+        maxsize = numpy.clip(
+            totweight / (oq.concurrent_tasks or 1), 1000, 200_000)
+        logging.debug(f'{maxsize=}')
+
+        src_mutex_by_grp = read_src_mutex(self.datastore)
         s = self.shapedic
         n_outs = 0
         size = 0
@@ -392,7 +400,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             for (s, r), arr in result.items():
                 accum = acc[s, r]
                 if (trti, magi) in accum:
-                    accum[trti, magi][:] = agg_probs(accum[trti, magi], arr)
+                    accum[trti, magi][:] = accum[trti, magi] + arr
                 else:
                     accum[trti, magi] = arr.copy()
         return acc
@@ -469,6 +477,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         vcurves = []  # hazard curves with a vertical section for large poes
         best_rlzs = self.datastore['best_rlzs'][:]  # (shape N, Z)
         for (s, z), mat8 in sorted(results.items()):
+            mat8 = disagg.to_probs(mat8)
             mat7 = agg_probs(*mat8)  # shape (Ma, D, E, Lo, La, M, P)
             for key in oq.disagg_outputs:
                 if key == 'TRT':

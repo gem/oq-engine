@@ -40,11 +40,29 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
 from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import (
-    ContextMaker, FarAwayRupture, get_src_mutex)
+from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
+
+def to_rates(probs):
+    """
+    Convert an array of probabilities into an array of rates
+
+    >>> round(to_rates(.8), 6)
+    1.609438
+    """
+    return - numpy.log(1. - probs)
+
+
+def to_probs(rates):
+    """
+    Convert an array of rates into an array of probabilities
+
+    >>> round(to_probs(1.609438), 6)
+    0.8
+    """
+    return 1. - numpy.exp(- rates)
 
 
 def assert_same_shape(arrays):
@@ -230,7 +248,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False,
                 poes[:, :, m, p] = _disagg_eps(
                     truncnorm_sf(phi_b, lvls), idxs, eps_bands, cum_bands)
 
-    with mon('multiplying pnes', measuremem=False):
+    with mon('composing pnes', measuremem=False):
         time_span = cmaker.tom.time_span
         if any(len(probs) for probs in ctx.probs_occur):  # any probs_occur
             for u, rec in enumerate(ctx):
