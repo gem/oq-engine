@@ -130,7 +130,7 @@ def compute_disagg(dis_triples, magi, src_mutex, monitor):
             for m in range(len(iml2)):
                 mat5 = mat6[..., m, :]
                 if mat5.any():
-                    res[dis.sid, rlz, m] = mat5
+                    res[dis.sid, rlz, m] = disagg.to_rates(mat5)
             # print(_collapse_res(res))
         yield res
     # NB: compressing the results is not worth it since the aggregation of
@@ -411,7 +411,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             for (s, r, m), arr in result.items():
                 accum = acc[s, r, m]
                 if (trti, magi) in accum:
-                    accum[trti, magi][:] = agg_probs(accum[trti, magi], arr)
+                    accum[trti, magi][:] = accum[trti, magi] + arr
                 else:
                     accum[trti, magi] = arr.copy()
         return acc
@@ -474,8 +474,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         Save the computed PMFs in the datastore.
 
         :param results:
-            a dict s, z, m, k -> 5D-matrix of shape (T, Ma, Lo, La, P) or
-            (T, Ma, D, E, P) depending if k is 0 or k is 1
+            a dict s, z, m -> 7D-matrix of shape (T, Ma, D, E, Lo, La, P)
         :param name:
             the string "disagg-rlzs" or "disagg-stats"
         """
@@ -490,7 +489,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         vcurves = []  # hazard curves with a vertical section for large poes
         best_rlzs = self.datastore['best_rlzs'][:]  # (shape N, Z)
         for (s, z, m), mat7 in sorted(results.items()):
-            # NB: k is an index with value 0 (MagDistEps) or 1 (LonLat)
+            mat7 = disagg.to_probs(mat7)  # go back to probabilities
             imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
                 mat6 = mat7[..., p]
