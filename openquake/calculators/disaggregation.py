@@ -90,7 +90,7 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def compute_disagg(dis_triples, magi, src_mutex, monitor):
+def compute_disagg(dis_triples, magi, src_mutex, wdic, monitor):
     """
     :param dis:
         a Disaggregator instance
@@ -100,6 +100,8 @@ def compute_disagg(dis_triples, magi, src_mutex, monitor):
         an integer magnitude bin
     :param src_mutex:
         a dictionary of weights (empty for independent sources)
+    :param wdic:
+        dictionary rlz -> weight, empty for individual realizations
     :param monitor:
         monitor of the currently running job
     :yields:
@@ -110,7 +112,13 @@ def compute_disagg(dis_triples, magi, src_mutex, monitor):
             dis.init(magi, src_mutex, monitor)
         res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
         for g, rlz, iml2 in triples:
-            res[rlz] = disagg.to_rates(dis.disagg6D(iml2, g))
+            rates6D = disagg.to_rates(dis.disagg6D(iml2, g))
+            if wdic:
+                if 0 not in res:
+                    res[0] = 0
+                res[0] += rates6D * wdic[rlz]
+            else:
+                res[rlz] = rates6D
         yield res
 
 
@@ -133,23 +141,6 @@ def output_dict(shapedic, disagg_outputs, Z):
         shp = tuple(shapedic[key] for key in out.lower().split('_'))
         dic[out] = numpy.zeros((N,) + shp + (M, P, Z))
     return dic
-
-
-def calc_stats(results, hstats, weights):
-    """
-    Compute Z statistics from the realizations.
-    :returns: a dictionary (s, z) -> array
-    """
-    acc = AccumDict(accum={})
-    R = len(weights)
-    for s, r in results:
-        acc[s][r] = results[s, r]
-    out = {}
-    for s, dic in acc.items():
-        for z, func in enumerate(hstats.values()):
-            values = [dic.get(r, 0) for r in range(R)]
-            out[s, z] = stats.apply_stat(func, values, weights)
-    return out
 
 
 @base.calculators.add('disaggregation')
@@ -315,6 +306,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         s = self.shapedic
         n_outs = 0
         size = 0
+        if self.Z == 1 or oq.individual_rlzs:
+            weights = None
+        else:
+            weights = self.datastore['weights'][:]
         for grp_id, slices in sorted(performance.get_slices(grp_ids).items()):
             cmaker = cmakers[grp_id]
             src_mutex = src_mutex_by_grp.get(grp_id, {})
@@ -324,6 +319,14 @@ class DisaggregationCalculator(base.HazardCalculator):
             if cmaker.rup_mutex:  # set by read_ctxt
                 raise NotImplementedError(
                     'Disaggregation with mutex ruptures')
+            if weights is None:
+                wdic = {}  # don't compute means
+            else:
+                wdic = {}
+                for rlzs in cmaker.gsims.values():
+                    for rlz in rlzs:
+                        wdic[rlz] = weights[rlz]
+            
             fullctx = numpy.concatenate(ctxs).view(numpy.recarray)
             magbins = numpy.searchsorted(self.bin_edges[0], fullctx.mag) - 1
             magbins[magbins == -1] = 0  # bins on the edge
@@ -352,18 +355,21 @@ class DisaggregationCalculator(base.HazardCalculator):
                             triples.append((g, rlz, iml2))
                     n = len(dis.fullctx)
                     U = max(U, n)
-                    n_outs += len(triples)
+                    if wdic:  # one output per site (the mean)
+                        n_outs += 1
+                    else:  # one output per site and realization
+                        n_outs += len(triples)
                     dis_triples.append((dis, triples))
                     size += n * len(cmaker.gsims)
                     if size > maxsize:
                         logging.debug(dmsg, len(dis_triples),
                                       self.N, grp_id, magi)
-                        smap.submit((dis_triples, magi, src_mutex))
+                        smap.submit((dis_triples, magi, src_mutex, wdic))
                         dis_triples.clear()
                         size = 0
                 if dis_triples:
                     logging.debug(dmsg, len(dis_triples), self.N, grp_id, magi)
-                    smap.submit((dis_triples, magi, src_mutex))
+                    smap.submit((dis_triples, magi, src_mutex, wdic))
 
         data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \
             s['M'] * s['P'] * 8 * n_outs
@@ -409,21 +415,13 @@ class DisaggregationCalculator(base.HazardCalculator):
         T = len(self.trts)
         Ma = len(self.bin_edges[0]) - 1  # num_mag_bins
         # build a dictionary s, r, m -> matrices
-        results = matrix_dict(results, T, Ma)
-        # get the number of outputs
-        shp = (self.N, len(self.poes_disagg), len(self.imts), self.Z)
+        res = matrix_dict(results, T, Ma)
         with self.monitor('saving disagg results'):
+            logging.info('Extracting and saving the PMFs')
             if self.Z == 1 or self.oqparam.individual_rlzs:
-                logging.info('Extracting and saving the PMFs for %d outputs '
-                             '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
-                res = {(s, self.sr2z[s, r]): results[s, r] for s, r in results}
+                res = {(s, self.sr2z[s, r]): res[s, r] for s, r in res}
                 self.save_disagg_results(res, 'disagg-rlzs')
-            else:  # save only the statistics
-                logging.info('Computing the statistics for %d outputs '
-                             '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
-                weights = self.datastore['weights'][:]
-                res = calc_stats(results, self.oqparam.hazard_stats(), weights)
-                logging.info('Saving the PMFs')
+            else:  # save mean PMFs
                 self.save_disagg_results(res, 'disagg-stats')
 
     def save_bin_edges(self, all_edges):
