@@ -230,7 +230,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False,
                 poes[:, :, m, p] = _disagg_eps(
                     truncnorm_sf(phi_b, lvls), idxs, eps_bands, cum_bands)
 
-    with mon('multiplying pnes', measuremem=False):
+    with mon('composing pnes', measuremem=False):
         time_span = cmaker.tom.time_span
         if any(len(probs) for probs in ctx.probs_occur):  # any probs_occur
             for u, rec in enumerate(ctx):
