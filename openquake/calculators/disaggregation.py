@@ -312,7 +312,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for rlzs in cmaker.gsims.values():
                     for rlz in rlzs:
                         wdic[rlz] = weights[rlz]
-            
+
             fullctx = numpy.concatenate(ctxs).view(numpy.recarray)
             magbins = numpy.searchsorted(self.bin_edges[0], fullctx.mag) - 1
             magbins[magbins == -1] = 0  # bins on the edge
@@ -450,7 +450,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             mat7 = agg_probs(*mat8)  # shape (Ma, D, E, Lo, La, M, P)
             for key in oq.disagg_outputs:
                 if key == 'TRT':
-                    out[key][s, ..., z] = disagg.pmf_map[key](mat8)  # T,M,P
+                    out[key][s, ..., z] = disagg.pmf_map[key](mat8)  # (T,M,P)
                 elif key.startswith('TRT_'):
                     proj = disagg.pmf_map[key[4:]]
                     out[key][s, ..., z] = [proj(m7) for m7 in mat8]
