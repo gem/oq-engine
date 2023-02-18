@@ -112,8 +112,6 @@ def compute_disagg(dis_triples, magi, src_mutex, monitor):
         for g, rlz, iml2 in triples:
             res[rlz] = disagg.to_rates(dis.disagg6D(iml2, g))
         yield res
-    # NB: compressing the results is not worth it since the aggregation of
-    # the matrices is fast and the data are not queuing up
 
 
 def get_outputs_size(shapedic, disagg_outputs, Z):
