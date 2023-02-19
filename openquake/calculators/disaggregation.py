@@ -72,7 +72,7 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     for (s, imt, poe), zero_rlzs in acc.items():
         logging.warning('Cannot disaggregate for site %d, %s, '
                         'poe=%s, rlzs=%s: the hazard is zero',
-                        s, imt, poe, zero_rlzs)
+                        s, imt, poe, numpy.array(zero_rlzs))
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
