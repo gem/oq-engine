@@ -19,17 +19,17 @@
 import toml
 import logging
 import numpy
-from openquake.baselib import sap, parallel, performance, general
+from openquake.baselib import sap, parallel, general
 from openquake.hazardlib.calc.mrd import calc_mean_rate_dist
 from openquake.hazardlib import contexts, cross_correlation
 from openquake.commonlib import datastore
 
 
-def compute_mrd(dstore, slc, cmaker, crosscorr, imt1, imt2,
+def compute_mrd(ctx, N, cmaker, crosscorr, imt1, imt2,
                 meabins, sigbins, monitor):
     """
-    :param dstore: parent datastore
-    :param slc: a slice object referring to a slice of contexts
+    :param ctx: a context array
+    :param N: the total number of sites
     :param cmaker: a ContextMaker instance
     :param crosscorr: cross correlation model
     :param str imt1: the first Intensity Measure Type
@@ -38,9 +38,6 @@ def compute_mrd(dstore, slc, cmaker, crosscorr, imt1, imt2,
     :param sigbins: bins for the sigmas
     :returns: 4D-matrix with shape (L1, L1, N, G)
     """
-    with dstore:
-        N = len(dstore['sitecol'])
-        ctx = cmaker.read_ctxt(dstore, slc)
     mrd = calc_mean_rate_dist(ctx, N, cmaker, crosscorr,
                               imt1, imt2, meabins, sigbins)
     return {g: mrd[:, :, :, i] for i, g in enumerate(cmaker.gidx)}
@@ -84,16 +81,16 @@ def main(parent_id, config):
         assert N <= 10, 'Too many sites: %d' % N
         cmakers = contexts.read_cmakers(parent)
         grp_ids = dstore.parent['rup/grp_id'][:]
+        ctx_by_grp = contexts.read_ctx_by_grp(dstore)
         logging.info('Read {:_d} contexts'.format(len(grp_ids)))
         blocksize = numpy.ceil(len(grp_ids) / oq.concurrent_tasks)
         dstore.swmr_on()
         smap = parallel.Starmap(compute_mrd, h5=dstore)
-        for grp_id, slices in performance.get_slices(grp_ids).items():
+        for grp_id, ctx in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
-            for s0, s1 in slices:
-                for slc in general.gen_slices(s0, s1, blocksize):
-                    smap.submit((parent, slc, cmaker, crosscorr, imt1, imt2,
-                                 meabins, sigbins))
+            for slc in general.gen_slices(0, len(ctx), blocksize):
+                smap.submit((ctx[slc], N, cmaker, crosscorr, imt1, imt2,
+                             meabins, sigbins))
         acc = smap.reduce()
         mrd = dstore.create_dset('_mrd', float, (L1, L1, N))
         mrd[:] = combine_mrds(

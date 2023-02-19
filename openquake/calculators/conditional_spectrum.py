@@ -22,10 +22,10 @@ Conditional spectrum calculator, inspired by the disaggregation calculator
 import logging
 import numpy
 
-from openquake.baselib import general, performance
+from openquake.baselib import general
 from openquake.commonlib.calc import compute_hazard_maps, get_mean_curve
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.calc.cond_spectra import get_cs_out, outdict
 from openquake.calculators import base
 
@@ -108,10 +108,10 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         out = general.AccumDict()  # grp_id => dict
 
         # Computing CS
-        for gid, start, stop in performance.idx_start_stop(rdata['grp_id']):
+        ctx_by_grp = read_ctx_by_grp(dstore)
+        for gid, ctx in ctx_by_grp.items():
             cmaker = self.cmakers[gid]
             cmaker.poes = oq.poes
-            ctx = cmaker.read_ctxt(dstore, slice(start, stop))
             out += get_cs_out(cmaker, ctx, imti, self.imls)
 
         # Apply weights and get two dictionaries with integer keys
@@ -124,10 +124,9 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         outdic, outmean = self._apply_weights(out)
 
         # Computing standard deviation
-        for gid, start, stop in performance.idx_start_stop(rdata['grp_id']):
+        for gid, ctx in ctx_by_grp.items():
             cmaker = self.cmakers[gid]
             cmaker.poes = oq.poes
-            ctx = cmaker.read_ctxt(dstore, slice(start, stop))
             res = get_cs_out(cmaker, ctx, imti, self.imls, outmean[0])
             for g in res:
                 out[g][:, :, 2] += res[g][:, :, 2]  # STDDEV

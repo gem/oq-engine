@@ -29,7 +29,7 @@ from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.contexts import (
-    read_cmakers, read_src_mutex, FarAwayRupture)
+    read_cmakers, read_src_mutex, read_ctx_by_grp, FarAwayRupture)
 from openquake.commonlib import util, calc
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -281,16 +281,14 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         # compute the total weight of the contexts and the maxsize
         cmakers = read_cmakers(self.datastore)
-        grp_ids = rdata['grp_id']
-        totweight = 0
-        for cmaker in cmakers:
-            num_ctxs = (grp_ids == cmaker.grp_id).sum()
-            totweight += num_ctxs * len(cmaker.gsims)
-        maxsize = numpy.clip(
-            totweight / (oq.concurrent_tasks or 1), 1000, 200_000)
-        logging.debug(f'{maxsize=}')
-
+        ctx_by_grp = read_ctx_by_grp(self.datastore)
         src_mutex_by_grp = read_src_mutex(self.datastore)
+        grp_ids = rdata['grp_id']
+        totweight = sum(cmakers[grp_id].Z * len(ctx)
+                        for grp_id, ctx in ctx_by_grp.items())
+        maxsize = totweight / (oq.concurrent_tasks or 1)
+        logging.debug(f'{totweight=}, {maxsize=}')
+
         s = self.shapedic
         n_outs = 0
         size = 0
@@ -298,12 +296,11 @@ class DisaggregationCalculator(base.HazardCalculator):
             weights = None
         else:
             weights = self.datastore['weights'][:]
-        for grp_id, slices in sorted(performance.get_slices(grp_ids).items()):
+        mutex_by_grp = self.datastore['mutex_by_grp'][:]
+        for grp_id, fullctx in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
+            cmaker.src_mutex, cmaker.rup_mutex = mutex_by_grp[grp_id]
             src_mutex = src_mutex_by_grp.get(grp_id, {})
-            ctxs = []
-            for s0, s1 in slices:
-                ctxs.append(cmaker.read_ctxt(self.datastore, slice(s0, s1)))
             if cmaker.rup_mutex:  # set by read_ctxt
                 raise NotImplementedError(
                     'Disaggregation with mutex ruptures')
@@ -315,7 +312,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                     for rlz in rlzs:
                         wdic[rlz] = weights[rlz]
 
-            fullctx = numpy.concatenate(ctxs).view(numpy.recarray)
             magbins = numpy.searchsorted(self.bin_edges[0], fullctx.mag) - 1
             magbins[magbins == -1] = 0  # bins on the edge
             idxs = numpy.argsort(magbins)  # used to sort fullctx
@@ -348,7 +344,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     else:  # one output per site and realization
                         n_outs += len(triples)
                     dis_triples.append((dis, triples))
-                    size += n * len(cmaker.gsims)
+                    size += n * cmaker.Z
                     if size > maxsize:
                         logging.debug(dmsg, len(dis_triples),
                                       self.N, grp_id, magi)

@@ -520,40 +520,6 @@ class ContextMaker(object):
                 nbytes += arr.nbytes
         return nbytes
 
-    def read_ctxt(self, dstore, slc=None):
-        """
-        :param dstore: a DataStore instance
-        :param slice: a slice of contexts with the same grp_id
-        :returns: a list of contexts
-        """
-        self.src_mutex, self.rup_mutex = dstore['mutex_by_grp'][self.grp_id]
-        sitecol = dstore['sitecol'].complete.array
-        if slc is None:
-            slc = dstore['rup/grp_id'][:] == self.grp_id
-        params = {n: dstore['rup/' + n][slc] for n in dstore['rup']}
-        dtlist = []
-        for par, val in params.items():
-            if len(val) == 0:
-                return []
-            elif par == 'probs_occur':
-                item = (par, object)
-            elif par == 'occurrence_rate':
-                item = (par, F64)
-            else:
-                item = (par, val[0].dtype)
-            dtlist.append(item)
-        for par in sitecol.dtype.names:
-            if par != 'sids':
-                dtlist.append((par, sitecol.dtype[par]))
-        ctx = numpy.zeros(len(params['grp_id']), dtlist).view(numpy.recarray)
-        for par, val in params.items():
-            ctx[par] = val
-        for par in sitecol.dtype.names:
-            if par != 'sids':
-                ctx[par] = sitecol[par][ctx['sids']]
-        # NB: sorting the contexts break the disaggregation! (see case_1)
-        return ctx
-
     def new_ctx(self, size):
         """
         :returns: a recarray of the given size full of zeros
@@ -1753,3 +1719,34 @@ def get_src_mutex(srcs):
     dic = dict(src_ids=U32([src.id for src in srcs]),
                weights=F64([src.mutex_weight for src in srcs]))
     return {grp_id: dic}
+
+
+def read_ctx_by_grp(dstore):
+    """
+    :param dstore: DataStore instance
+    :returns: dictionary grp_id -> ctx
+    """
+    sitecol = dstore['sitecol'].complete.array
+    params = {n: dstore['rup/' + n][:] for n in dstore['rup']}
+    dtlist = []
+    for par, val in params.items():
+        if len(val) == 0:
+            return []
+        elif par == 'probs_occur':
+            item = (par, object)
+        elif par == 'occurrence_rate':
+            item = (par, F64)
+        else:
+            item = (par, val[0].dtype)
+        dtlist.append(item)
+    for par in sitecol.dtype.names:
+        if par != 'sids':
+            dtlist.append((par, sitecol.dtype[par]))
+    ctx = numpy.zeros(len(params['grp_id']), dtlist).view(numpy.recarray)
+    for par, val in params.items():
+        ctx[par] = val
+    for par in sitecol.dtype.names:
+        if par != 'sids':
+            ctx[par] = sitecol[par][ctx.sids]
+    grp_ids = numpy.unique(ctx.grp_id)
+    return {grp_id: ctx[ctx.grp_id == grp_id] for grp_id in grp_ids}

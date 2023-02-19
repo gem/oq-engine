@@ -20,7 +20,7 @@ import re
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -153,10 +153,9 @@ class DisaggregationTestCase(CalculatorTestCase):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
         self.run_calc(case_7.__file__, 'job.ini')
         cmakers = read_cmakers(self.calc.datastore)
-        ctxs0 = cmakers[0].read_ctxt(self.calc.datastore)
-        ctxs1 = cmakers[1].read_ctxt(self.calc.datastore)
-        self.assertEqual(len(ctxs0), 7)  # rlz-0, the closest to the mean
-        self.assertEqual(len(ctxs1), 2)  # rlz-1, the one to discard
+        ctx = read_ctx_by_grp(self.calc.datastore)
+        self.assertEqual(len(ctx[0]), 7)  # rlz-0, the closest to the mean
+        self.assertEqual(len(ctx[1]), 2)  # rlz-1, the one to discard
 
         haz = self.calc.datastore['hmap4'][0, 0, :, 0]  # shape NMPZ
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
