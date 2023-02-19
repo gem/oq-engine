@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5, performance
 from openquake.baselib.general import (
-    AccumDict, humansize, pprod, agg_probs)
+    AccumDict, humansize, pprod, agg_probs, shortlist)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -72,7 +72,7 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     for (s, imt, poe), zero_rlzs in acc.items():
         logging.warning('Cannot disaggregate for site %d, %s, '
                         'poe=%s, rlzs=%s: the hazard is zero',
-                        s, imt, poe, numpy.array(zero_rlzs))
+                        s, imt, poe, shortlist(zero_rlzs))
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
