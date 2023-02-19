@@ -88,8 +88,8 @@ def compute_disagg(dis_rlzs_iml2s, magi, src_mutex, wdic, monitor):
         dictionary rlz -> weight, empty for individual realizations
     :param monitor:
         monitor of the currently running job
-    :yields:
-        a dictionary for each site containing a 6D matrix of rates
+    :returns:
+        one 6D matrix of rates per site and realization
     """
     out = []
     for dis, rlzs, iml2s in dis_rlzs_iml2s:
@@ -337,10 +337,9 @@ class DisaggregationCalculator(base.HazardCalculator):
                     else:  # one output per site and realization
                         n_outs += len(rlzs)
                     triples.append((dis, rlzs, iml2s))
-                    size += n * cmaker.Z
+                    size += n * len(rlzs)
                     if size > maxsize:
-                        logging.debug(dmsg, len(triples),
-                                      self.N, grp_id, magi)
+                        logging.debug(dmsg, len(triples), self.N, grp_id, magi)
                         smap.submit((triples, magi, src_mutex, wdic))
                         triples.clear()
                         size = 0
