@@ -77,7 +77,7 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def compute_disagg(iml2dic, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic,
+def compute_disagg(iml4, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic,
                    monitor):
     """
     :param dis_rlzs_iml2s:
@@ -101,14 +101,17 @@ def compute_disagg(iml2dic, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic,
             dis = disagg.Disaggregator([ctxt], site, cmaker, bin_edges)
         except disagg.FarAwayRupture:
             continue
+        iml3 = iml4[dis.sid]
+        rlzs = iml4.rlzs[dis.sid]
         for magi in range(dis.Ma):
             try:
                 dis.init(magi, src_mutex, mon0, mon1, mon2, mon3)
             except disagg.FarAwayRupture:
                 continue
             res = {'trti': cmaker.trti, 'magi': dis.magi, 'sid': dis.sid}
-            for (s, rlz), iml2 in iml2dic.items():
-                if s != dis.sid:
+            for z, rlz in enumerate(rlzs):
+                iml2 = iml3[:, :, z]
+                if rlz not in dis.g_by_rlz or iml2.sum() == 0:
                     continue  # do not disaggregate
                 rates6D = disagg.to_rates(dis.disagg6D(iml2, rlz))
                 if wdic:  # compute mean rates and store them in the 0 key
@@ -330,15 +333,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                 ctxs = numpy.array_split(ctx, ntasks)
             else:
                 ctxs = [ctx]
-            iml2dic = {}
-            for (sid, z), rlz in numpy.ndenumerate(self.iml4.rlzs):
-                for rlzs in cmaker.gsims.values():
-                    if rlz in rlzs:
-                        iml2 = self.iml4[sid, :, :, z]
-                        if iml2.any():
-                            iml2dic[sid, rlz] = iml2
             for ctx in ctxs:
-                smap.submit((iml2dic, ctx, self.sitecol, cmaker,
+                smap.submit((self.iml4, ctx, self.sitecol, cmaker,
                              self.bin_edges, src_mutex, wdic))
 
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
