@@ -19,17 +19,18 @@
 """
 Disaggregation calculator core functionality
 """
+
 import logging
 import numpy
 
-from openquake.baselib import parallel, hdf5, performance
+from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, humansize, pprod, agg_probs, shortlist)
+    AccumDict, pprod, agg_probs, shortlist)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.contexts import (
-    read_cmakers, read_src_mutex, read_ctx_by_grp, FarAwayRupture)
+    read_cmakers, read_src_mutex, read_ctx_by_grp)
 from openquake.commonlib import util, calc
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -76,7 +77,8 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def compute_disagg(alldis, allrlzs, alliml2s, src_mutex, wdic, monitor):
+def compute_disagg(iml4, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic,
+                   monitor):
     """
     :param dis_rlzs_iml2s:
         a list of triples (dis, rlzs, iml2s)
@@ -94,15 +96,23 @@ def compute_disagg(alldis, allrlzs, alliml2s, src_mutex, wdic, monitor):
     mon1 = monitor('disagg by eps', measuremem=False)
     mon2 = monitor('composing pnes', measuremem=False)
     mon3 = monitor('disagg matrix', measuremem=False)
-    for dis, rlzs, iml2s in zip(alldis, allrlzs, alliml2s):
+    for site in sitecol:
+        try:
+            dis = disagg.Disaggregator([ctxt], site, cmaker, bin_edges)
+        except disagg.FarAwayRupture:
+            continue
+        iml3 = iml4[dis.sid]
+        rlzs = iml4.rlzs[dis.sid]
         for magi in range(dis.Ma):
-            with mon0:
-                try:
-                    dis.init(magi, src_mutex, mon1, mon2, mon3)
-                except disagg.FarAwayRupture:  # no data for this magbin
-                    continue
-            res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
-            for rlz, iml2 in zip(rlzs, iml2s):
+            try:
+                dis.init(magi, src_mutex, mon0, mon1, mon2, mon3)
+            except disagg.FarAwayRupture:
+                continue
+            res = {'trti': cmaker.trti, 'magi': dis.magi, 'sid': dis.sid}
+            for z, rlz in enumerate(rlzs):
+                iml2 = iml3[:, :, z]
+                if rlz not in dis.g_by_rlz or iml2.sum() == 0:
+                    continue  # do not disaggregate
                 rates6D = disagg.to_rates(dis.disagg6D(iml2, rlz))
                 if wdic:  # compute mean rates and store them in the 0 key
                     if 0 not in res:
@@ -275,7 +285,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        logging.info("Reading context makers")
+        logging.info("Reading contexts")
         cmakers = read_cmakers(dstore)
         src_mutex_by_grp = read_src_mutex(dstore)
         ctx_by_grp = read_ctx_by_grp(dstore)
@@ -293,25 +303,24 @@ class DisaggregationCalculator(base.HazardCalculator):
         # compute the total weight of the contexts and the maxsize
         totweight = sum(cmakers[grp_id].Z * len(ctx)
                         for grp_id, ctx in ctx_by_grp.items())
-        maxsize = totweight / (oq.concurrent_tasks or 1)
+        maxsize = int(numpy.ceil(totweight / (oq.concurrent_tasks or 1)))
         logging.debug(f'{totweight=}, {maxsize=}')
 
         s = self.shapedic
-        n_outs = 0
-        size = 0
         if self.Z == 1 or oq.individual_rlzs:
             weights = None
         else:
             weights = self.datastore['weights'][:]
         mutex_by_grp = self.datastore['mutex_by_grp'][:]
-        U = 0
-        for grp_id, fullctx in ctx_by_grp.items():
+        for grp_id, ctx in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
             cmaker.src_mutex, cmaker.rup_mutex = mutex_by_grp[grp_id]
             src_mutex = src_mutex_by_grp.get(grp_id, {})
             if cmaker.rup_mutex:  # set by read_ctxt
                 raise NotImplementedError(
                     'Disaggregation with mutex ruptures')
+
+            # build rlz weight dictionary
             if weights is None:
                 wdic = {}  # don't compute means
             else:
@@ -319,51 +328,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for rlzs in cmaker.gsims.values():
                     for rlz in rlzs:
                         wdic[rlz] = weights[rlz]
-
-            alldis, allrlzs, alliml2s = [], [], []
-            for site in self.sitecol:
-                sid = site.id
-                try:
-                    dis = disagg.Disaggregator(
-                        [fullctx], site, cmaker, self.bin_edges)
-                except FarAwayRupture:  # no data for this site
-                    continue
-                iml3 = self.iml4[sid]
-                rlzs, iml2s = [], []
-                for z, rlz in enumerate(self.iml4.rlzs[sid]):
-                    if rlz in dis.g_by_rlz:
-                        iml2 = iml3[:, :, z]
-                        if iml2.any():
-                            rlzs.append(rlz)
-                            iml2s.append(iml2)
-                n = len(dis.fullctx)
-                U = max(U, n)
-                if wdic:  # one output per site (the mean)
-                    n_outs += 1
-                else:  # one output per site and realization
-                    n_outs += len(rlzs)
-                alldis.append(dis)
-                allrlzs.append(rlzs)
-                alliml2s.append(iml2s)
-                size += n * len(rlzs)
-                if size > maxsize:
-                    logdebug(allrlzs, self.N, grp_id)
-                    smap.submit((alldis, allrlzs, alliml2s, src_mutex, wdic))
-                    alldis.clear()
-                    allrlzs.clear()
-                    alliml2s.clear()
-                    size = 0
-            if alldis:
-                logdebug(allrlzs, self.N, grp_id)
-                smap.submit((alldis, allrlzs, alliml2s, src_mutex, wdic))
-
-        data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \
-            s['mag'] * s['M'] * s['P'] * 8 * n_outs
-        if data_transfer > oq.max_data_transfer:
-            raise ValueError(
-                'Estimated data transfer too big\n%s > max_data_transfer=%s' %
-                (humansize(data_transfer), humansize(oq.max_data_transfer)))
-        logging.info('Estimated data transfer: %s', humansize(data_transfer))
+            smap.submit((self.iml4, ctx, self.sitecol, cmaker, self.bin_edges,
+                         src_mutex, wdic))
 
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
                    s['M'], s['P'])

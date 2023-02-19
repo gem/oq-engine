@@ -22,6 +22,7 @@
 extracting a specific PMF from the result of :func:`disaggregation`.
 """
 
+import copy
 import operator
 import collections
 import itertools
@@ -433,6 +434,7 @@ class Disaggregator(object):
         self.fullctx = ctx
 
     def init(self, magi, src_mutex,
+             mon0=Monitor('disagg mean_stds'),
              mon1=Monitor('disagg by eps'),
              mon2=Monitor('composing pnes'),
              mon3=Monitor('disagg matrix')):
@@ -453,7 +455,8 @@ class Disaggregator(object):
         if self.src_mutex:
             # make sure we can use idx_start_stop below
             self.ctx.sort(order='src_id')
-        self.mea, self.std = self.cmaker.get_mean_stds([self.ctx])[:2]
+        with mon0:
+            self.mea, self.std = self.cmaker.get_mean_stds([self.ctx])[:2]
         if self.src_mutex:
             mat = idx_start_stop(self.ctx.src_id)  # shape (n, 3)
             src_ids = mat[:, 0]  # subset contributing to the given magi
