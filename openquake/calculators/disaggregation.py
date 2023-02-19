@@ -245,6 +245,9 @@ class DisaggregationCalculator(base.HazardCalculator):
             self.poe_id = {poe: i for i, poe in enumerate(oq.poes_disagg)}
             curves = [self.get_curve(sid, rlzs[sid])
                       for sid in self.sitecol.sids]
+        s = self.shapedic
+        logging.info('Building N * M * P * Z = {:_d} intensities'.format(
+                     s['N'] * s['M'] * s['P'] * s['Z']))
         self.iml4 = _iml4(rlzs, oq.iml_disagg, oq.imtls,
                           self.poes_disagg, curves)
         if self.iml4.array.sum() == 0:
@@ -262,11 +265,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        ctx_by_grp = read_ctx_by_grp(self.datastore)
+        cmakers = read_cmakers(dstore)
+        src_mutex_by_grp = read_src_mutex(dstore)
+        ctx_by_grp = read_ctx_by_grp(dstore)
         totctxs = sum(len(ctx) for ctx in ctx_by_grp.values())
         logging.info('Read {:_d} contexts'.format(totctxs))
-        cmakers = read_cmakers(self.datastore)
-        src_mutex_by_grp = read_src_mutex(self.datastore)
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         # IMPORTANT!! we rely on the fact that the classical part
