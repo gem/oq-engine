@@ -92,9 +92,12 @@ def compute_disagg(dis_rlzs_iml2s, magi, src_mutex, wdic, monitor):
         one 6D matrix of rates per site and realization
     """
     out = []
+    mon1 = monitor('disagg by eps', measuremem=False)
+    mon2 = monitor('composing pnes', measuremem=False)
+    mon3 = monitor('disagg matrix', measuremem=False)
     for dis, rlzs, iml2s in dis_rlzs_iml2s:
         with monitor('mean_std disagg', measuremem=False):
-            dis.init(magi, src_mutex, monitor)
+            dis.init(magi, src_mutex, mon1, mon2, mon3)
         res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
         for rlz, iml2 in zip(rlzs, iml2s):
             rates6D = disagg.to_rates(dis.disagg6D(iml2, rlz))
