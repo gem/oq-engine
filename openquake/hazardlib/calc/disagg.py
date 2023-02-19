@@ -438,7 +438,7 @@ class Disaggregator(object):
         self.mon = monitor
         if not hasattr(self, 'fullmagi'):
             # the first time build the magnitude bins
-            self.fullctx.sort(order='mag')
+            self.fullctx = self.fullctx[numpy.argsort(self.fullctx.mag)]
             self.fullmagi = numpy.searchsorted(
                 self.bin_edges[0], self.fullctx.mag) - 1
             self.fullmagi[self.fullmagi == -1] = 0  # magnitude on the edge
