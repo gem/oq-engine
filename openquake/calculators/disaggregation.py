@@ -90,12 +90,13 @@ def compute_disagg(dis_rlzs_iml2s, src_mutex, wdic, monitor):
         one 6D matrix of rates per site and realization
     """
     out = []
+    mon0 = monitor('disagg mean_std', measuremem=False)
     mon1 = monitor('disagg by eps', measuremem=False)
     mon2 = monitor('composing pnes', measuremem=False)
     mon3 = monitor('disagg matrix', measuremem=False)
     for dis, rlzs, iml2s in dis_rlzs_iml2s:
         for magi in range(dis.Ma):
-            with monitor('mean_std disagg', measuremem=False):
+            with mon0:
                 try:
                     dis.init(magi, src_mutex, mon1, mon2, mon3)
                 except disagg.FarAwayRupture:  # no data for this magbin
