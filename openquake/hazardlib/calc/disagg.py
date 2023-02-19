@@ -458,7 +458,7 @@ class Disaggregator(object):
                                               self.src_mutex['weight'])
                             if s in src_ids]
 
-    def disagg6D(self, iml2, g):
+    def disagg6D(self, iml2, rlz):
         """
         Disaggregate a single realization.
 
@@ -468,6 +468,7 @@ class Disaggregator(object):
         imlog2 = numpy.zeros_like(iml2)
         for m, imt in enumerate(self.cmaker.imts):
             imlog2[m] = to_distribution_values(iml2[m], imt)
+        g = self.g_by_rlz[rlz]
         if not self.src_mutex:
             return _disaggregate(self.ctx, self.mea, self.std, self.cmaker,
                                  g, imlog2, self.bin_edges, self.epsstar,

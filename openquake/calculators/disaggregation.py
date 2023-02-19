@@ -99,11 +99,7 @@ def compute_disagg(dis_pairs, magi, src_mutex, wdic, monitor):
             dis.init(magi, src_mutex, monitor)
         res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
         for rlz, iml2 in pairs:
-            try:
-                g = dis.g_by_rlz[rlz]
-            except KeyError:
-                continue
-            rates6D = disagg.to_rates(dis.disagg6D(iml2, g))
+            rates6D = disagg.to_rates(dis.disagg6D(iml2, rlz))
             if wdic:
                 if 0 not in res:
                     res[0] = 0
@@ -333,7 +329,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     pairs = []
                     for z, rlz in enumerate(rlzs):
                         iml2 = iml3[:, :, z]
-                        if iml2.any():
+                        if iml2.any() and rlz in dis.g_by_rlz:
                             pairs.append((rlz, iml2))
                     n = len(dis.fullctx)
                     U = max(U, n)
