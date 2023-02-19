@@ -94,7 +94,7 @@ def compute_disagg(dis_triples, magi, src_mutex, wdic, monitor):
         a dictionary for each site containing a 6D matrix of rates
     """
     for dis, triples in dis_triples:
-        with monitor('init disagg', measuremem=False):
+        with monitor('mean_std disagg', measuremem=False):
             dis.init(magi, src_mutex, monitor)
         res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
         for g, rlz, iml2 in triples:
