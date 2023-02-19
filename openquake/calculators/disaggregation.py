@@ -76,7 +76,7 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def compute_disagg(dis_rlzs_iml2s, src_mutex, wdic, monitor):
+def compute_disagg(alldis, allrlzs, alliml2s, src_mutex, wdic, monitor):
     """
     :param dis_rlzs_iml2s:
         a list of triples (dis, rlzs, iml2s)
@@ -94,7 +94,7 @@ def compute_disagg(dis_rlzs_iml2s, src_mutex, wdic, monitor):
     mon1 = monitor('disagg by eps', measuremem=False)
     mon2 = monitor('composing pnes', measuremem=False)
     mon3 = monitor('disagg matrix', measuremem=False)
-    for dis, rlzs, iml2s in dis_rlzs_iml2s:
+    for dis, rlzs, iml2s in zip(alldis, allrlzs, alliml2s):
         for magi in range(dis.Ma):
             with mon0:
                 try:
@@ -135,10 +135,10 @@ def output_dict(shapedic, disagg_outputs, Z):
     return dic
 
 
-def logdebug(triples, N, grp_id):
+def logdebug(allrlzs, N, grp_id):
     msg = 'Sending task with %d/%d sites for grp_id=%d, %d rlzs'
-    num_rlzs = sum(len(rlzs) for dis, rlzs, iml2s in triples)
-    logging.debug(msg, len(triples), N, grp_id, num_rlzs)
+    num_rlzs = sum(len(rlzs) for rlzs in allrlzs)
+    logging.debug(msg, len(allrlzs), N, grp_id, num_rlzs)
 
 
 @base.calculators.add('disaggregation')
@@ -320,7 +320,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     for rlz in rlzs:
                         wdic[rlz] = weights[rlz]
 
-            triples = []
+            alldis, allrlzs, alliml2s = [], [], []
             for site in self.sitecol:
                 sid = site.id
                 try:
@@ -342,16 +342,20 @@ class DisaggregationCalculator(base.HazardCalculator):
                     n_outs += 1
                 else:  # one output per site and realization
                     n_outs += len(rlzs)
-                triples.append((dis, rlzs, iml2s))
+                alldis.append(dis)
+                allrlzs.append(rlzs)
+                alliml2s.append(iml2s)
                 size += n * len(rlzs)
                 if size > maxsize:
-                    logdebug(triples, self.N, grp_id)
-                    smap.submit((triples, src_mutex, wdic))
-                    triples.clear()
+                    logdebug(allrlzs, self.N, grp_id)
+                    smap.submit((alldis, allrlzs, alliml2s, src_mutex, wdic))
+                    alldis.clear()
+                    allrlzs.clear()
+                    alliml2s.clear()
                     size = 0
-            if triples:
-                logdebug(triples, self.N, grp_id)
-                smap.submit((triples, src_mutex, wdic))
+            if alldis:
+                logdebug(allrlzs, self.N, grp_id)
+                smap.submit((alldis, allrlzs, alliml2s, src_mutex, wdic))
 
         data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \
             s['mag'] * s['M'] * s['P'] * 8 * n_outs
