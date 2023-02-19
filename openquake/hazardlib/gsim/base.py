@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,12 +26,13 @@ import abc
 import inspect
 import warnings
 import functools
+import toml
 import numpy
 
 from openquake.baselib.general import DeprecationWarning
 from openquake.baselib.performance import compile
 from openquake.hazardlib import const
-from openquake.hazardlib.stats import ndtr
+from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, full_context, ContextMaker)
@@ -57,8 +58,7 @@ def add_alias(name, cls, **kw):
     """
     Add a GSIM alias to both gsim_aliases and the registry.
     """
-    text = '\n'.join('%s = %r' % it for it in kw.items())
-    gsim_aliases[name] = '[%s]\n%s' % (cls.__name__, text)
+    gsim_aliases[name] = toml.dumps({cls.__name__: kw})
     registry[name] = cls
 
 
@@ -86,20 +86,15 @@ class AdaptedWarning(UserWarning):
 # the performance is dominated by the CPU cache, i.e. large arrays are slow
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
-# collapse the ruptures, then _truncnorm_sf will be called less times
+# collapse the ruptures, then truncnorm_sf will be called less times
 @compile("(float64[:,:,:], float64[:,:], float64, float64[:,:])")
 def _set_poes(mean_std, loglevels, phi_b, out):
-    z = phi_b * 2. - 1.
     L1 = loglevels.size // len(loglevels)
     for m, levels in enumerate(loglevels):
         mL1 = m * L1
         mea, std = mean_std[:, m]  # shape N
         for lvl, iml in enumerate(levels):
-            if phi_b == 0.5:
-                out[mL1 + lvl] = iml <= mea  # shape N
-            else:
-                norm_sf = (phi_b - ndtr((iml - mea) / std)) / z
-                out[mL1 + lvl] = norm_sf.clip(0, 1)
+            out[mL1 + lvl] = truncnorm_sf(phi_b, (iml - mea) / std)
 
 
 def _get_poes(mean_std, loglevels, phi_b):
@@ -108,9 +103,9 @@ def _get_poes(mean_std, loglevels, phi_b):
     out = numpy.zeros((loglevels.size, N))  # shape (L, N)
     _set_poes(mean_std, loglevels, phi_b, out)
     return out.T
-    
 
-OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes',
+
+OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes', 'requires',
               'set_parameters', 'set_tables')
 
 
@@ -274,6 +269,15 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
                 if not attr.startswith('COEFFS'):
                     raise NameError('%s does not start with COEFFS' % attr)
         registry[cls.__name__] = cls
+
+    def requires(self):
+        """
+        :returns: ordered tuple with the required parameters except the mag
+        """
+        tot = set(self.REQUIRES_DISTANCES |
+                  self.REQUIRES_RUPTURE_PARAMETERS |
+                  self.REQUIRES_SITES_PARAMETERS)
+        return tuple(sorted(tot))
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
@@ -476,12 +480,13 @@ class GMPE(GroundShakingIntensityModel):
         phi_b = cmaker.phi_b
         M, L1 = loglevels.shape
         if hasattr(self, 'weights_signs'):  # for nshmp_2014, case_72
+            adj = cmaker.adj[self][cmaker.slc]
             outs = []
             weights, signs = zip(*self.weights_signs)
             for s in signs:
                 ms = numpy.array(mean_std)  # make a copy
                 for m in range(len(loglevels)):
-                    ms[0, m] += s * cmaker.adj[self][cmaker.slc]
+                    ms[0, m] += s * adj
                 outs.append(_get_poes(ms, loglevels, phi_b))
             out[:] = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):

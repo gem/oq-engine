@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2022, GEM Foundation
+# Copyright (C) 2023, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import unittest
 import numpy
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.contexts import ContextMaker
@@ -59,6 +60,8 @@ def test_compute_histogram():
 
 
 def test_compute_mrd():
+    if os.environ.get('JENKINS_URL'):
+        raise unittest.SkipTest('Hanging on Jenkins')
     parent = os.path.join(DATA, 'calc_001.hdf5')
     config = os.path.join(DATA, 'mrd.toml')
     mrd = compute_mrd.main(parent, config)

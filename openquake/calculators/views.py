@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,7 +34,6 @@ from openquake.baselib.general import (
     get_array, group_array, fast_agg)
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
-from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
@@ -42,7 +41,7 @@ from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
-from openquake.calculators.classical import decide_num_tasks, get_pmaps_size
+from openquake.calculators.classical import get_pmaps_gb
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
 
@@ -670,15 +669,15 @@ def view_required_params_per_trt(token, dstore):
     for trt in full_lt.trts:
         gsims = full_lt.gsim_lt.values[trt]
         # adding fake mags to the ContextMaker, needed for table-based GMPEs
-        maker = ContextMaker(trt, gsims, {'imtls': {}, 'mags': ['7.00']})
-        distances = sorted(maker.REQUIRES_DISTANCES)
-        siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
-        ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((trt, ' '.join(map(repr, gsims)).replace('\n', '\\n'),
-                    distances, siteparams, ruptparams))
-    return text_table(
-        tbl, header='trt_smr gsims distances siteparams ruptparams'.split(),
-        fmt=scientificformat)
+        cmaker = ContextMaker(trt, gsims, {'imtls': {}, 'mags': ['7.00']})
+        req = set()
+        for gsim in cmaker.gsims:
+            req.update(gsim.requires())
+        req_params = sorted(req - {'mag'})
+        gsim_str = ' '.join(map(repr, gsims)).replace('\n', '\\n')
+        tbl.append((trt, gsim_str, req_params))
+    return text_table(tbl, header='trt gsims req_params'.split(),
+                      fmt=scientificformat)
 
 
 @view.add('task_info')
@@ -936,30 +935,16 @@ def view_mean_disagg(token, dstore):
     """
     N, M, P, Z = dstore['hmap4'].shape
     tbl = []
-    kd = {key: dset[:] for key, dset in sorted(dstore['disagg'].items())}
+    kd = {key: dset[:] for key, dset in sorted(dstore['disagg-rlzs'].items())}
     oq = dstore['oqparam']
     for s in range(N):
         for m, imt in enumerate(oq.imtls):
             for p in range(P):
                 row = ['%s-sid-%d-poe-%s' % (imt, s, p)]
                 for k, d in kd.items():
-                    row.append(d[s, m, p].mean())
+                    row.append(d[s, ..., m, p, :].mean())
                 tbl.append(tuple(row))
     return numpy.array(sorted(tbl), dt(['key'] + list(kd)))
-
-
-@view.add('disagg_times')
-def view_disagg_times(token, dstore):
-    """
-    Display slow tasks for disaggregation
-    """
-    data = dstore['disagg_task'][:]
-    info = dstore.read_df('task_info', 'taskname').loc[b'compute_disagg']
-    tbl = []
-    for duration, task_no in zip(info['duration'], info['task_no']):
-        tbl.append((duration, task_no) + tuple(data[task_no]))
-    header = ('duration', 'task_no') + data.dtype.names
-    return numpy.array(sorted(tbl), dt(header))
 
 
 @view.add('bad_ruptures')
@@ -1365,33 +1350,10 @@ def view_mean_perils(token, dstore):
             out[peril] = fast_agg(sid, data * weights) / totw
     return out
 
-    
-@view.add('group_summary')
-def view_group_summary(token, dstore):
-    if ':' not in token:
-        ct = 1
-    else:
-        ct = int(token.split(':')[1])
-    L = dstore['oqparam'].imtls.size
-    N = len(dstore['sitecol'])
-    gb = L * N * 8
-    header = ['grp_id', 'ntasks', 'maxsize']
-    arr = decide_num_tasks(dstore, ct)
-    tbl = [(grp_id, gsims * tiles, humansize(gsims * gb))
-           for grp_id, gsims, tiles in arr]
-    totsize = arr['cmakers'].sum()
-    numtasks = (arr['cmakers'] * arr['tiles']).sum()
-    tbl.append(['tot', numtasks, humansize(totsize * gb)])
-    return text_table(tbl, header, ext='org')
-
 
 @view.add('pmaps_size')
 def view_pmaps_size(token, dstore):
-    if ':' not in token:
-        ct = Starmap.num_cores * 2
-    else:
-        ct = int(token.split(':')[1])
-    return humansize(get_pmaps_size(dstore, ct))
+    return humansize(get_pmaps_gb(dstore))
 
 
 @view.add('src_groups')
@@ -1440,11 +1402,11 @@ def view_collapsible(token, dstore):
     ctx_df['vs30'] = vs30[ctx_df.sids]
     has_vs30 = len(numpy.unique(vs30)) > 1
     c = Collapser(collapse_level, dist_types, has_vs30)
-    ctx_df['mdvbin'] = c.calc_mdvbin(ctx_df)
-    print('cfactor = %d/%d' % (len(ctx_df), len(ctx_df['mdvbin'].unique())))
+    ctx_df['mdbin'] = c.calc_mdbin(ctx_df)
+    print('cfactor = %d/%d' % (len(ctx_df), len(ctx_df['mdbin'].unique())))
     out = []
     for sid, df in ctx_df.groupby('sids'):
-        n, u = len(df), len(df.mdvbin.unique())
+        n, u = len(df), len(df.mdbin.unique())
         out.append((sid, u, n, n / u))
     return numpy.array(out, dt('site_id eff_rups num_rups cfactor'))
 
@@ -1457,3 +1419,18 @@ def view_event_based_mfd(token, dstore):
     """
     aw = extract(dstore, 'event_based_mfd?')
     return pandas.DataFrame(aw.to_dict()).set_index('mag')
+
+
+# used in the AELO project
+@view.add('relevant_sources')
+def view_relevant_sources(token, dstore):
+    """
+    Returns a table with the sources contributing more than 10%
+    of the highest source.
+    """
+    imt = token.split(':')[1]
+    poe = dstore['oqparam'].poes[0]
+    aw = extract(dstore, f'disagg_by_src?imt={imt}&poe={poe}')
+    poes = aw.array['poe']  # for each source in decreasing order
+    max_poe = poes[0]
+    return aw.array[poes > .1 * max_poe]

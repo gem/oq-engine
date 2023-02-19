@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -197,13 +197,13 @@ class ClusterPoissonTOM(PoissonTOM):
         self.occurrence_rate = occurrence_rate
 
 
-@compile(["(float64, float64[:], float64[:,:], float64)",
-          "(float64, float64[:], float64[:,:,:,:], float64)"])
+@compile(["(float64, float64[:], float64[:], float64)",
+          "(float64, float64[:], float64[:,:,:], float64)"])
 def get_pnes(rate, probs, poes, time_span):
     """
     :param rate: occurrence rate in case of a poissonian rupture
     :param probs: probabilities of occurrence in the nonpoissonian case
-    :param poes: array of PoEs of shape 2D or 4D
+    :param poes: array of PoEs of shape 1D or 3D
     :param time_span: time span in the poissonian case (0. for FatedTOM)
 
     Fast way to return probabilities of no exceedence given an array

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,7 +28,7 @@ import configparser
 import numpy
 from openquake.baselib import hdf5, general, InvalidFile
 from openquake.hazardlib import (
-    geo, site, nrml, sourceconverter, gsim_lt, contexts, valid)
+    geo, site, nrml, sourceconverter, gsim_lt, logictree, contexts, valid)
 from openquake.hazardlib.source.rupture import (
     EBRupture, get_ruptures, _get_rupture)
 from openquake.hazardlib.calc.filters import IntegrationDistance
@@ -113,8 +113,8 @@ def _get_ebruptures(fname, conv=None, ses_seed=None):
         [rup_node] = nrml.read(fname)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'  # no TRT for scenario ruptures
-        rup.rup_id = ses_seed
-        ebrs = [EBRupture(rup, 'NA', 0, id=rup.rup_id, scenario=True)]
+        rup.seed = ses_seed
+        ebrs = [EBRupture(rup, 'NA', 0, id=rup.seed, scenario=True)]
         return ebrs
 
     assert fname.endswith('.csv'), fname
@@ -136,7 +136,7 @@ def read_hparams(job_ini):
     jobdir = os.path.dirname(job_ini)
     cp = configparser.ConfigParser()
     cp.read([job_ini], encoding='utf8')
-    params = {}
+    params = {'inputs': {}}
     for sect in cp.sections():
         for key, val in cp.items(sect):
             if key == 'intensity_measure_types_and_levels':
@@ -156,8 +156,46 @@ def read_hparams(job_ini):
                         val = True
                     elif val == 'false':
                         val = False
-            params[key] = val
+            if key.endswith('_file'):
+                params['inputs'][key[:-5]] = val
+            else:
+                params[key] = val
     return params
+
+
+def get_smlt(hparams, branchID=None):
+    """
+    :param hparams:
+        dictionary of hazard parameters
+    :returns:
+        :class:`openquake.hazardlib.logictree.SourceModelLogicTree` object
+    """
+    args = (hparams['inputs']['source_model_logic_tree'],
+            hparams.get('random_seed', 42),
+            hparams.get('number_of_logic_tree_samples', 0),
+            hparams.get('sampling_method', 'early_weights'), False, branchID)
+    smlt = logictree.SourceModelLogicTree(*args)
+    if 'discard_trts' in hparams:
+        discard_trts = {s.strip() for s in hparams['discard_trts'].split(',')}
+        # smlt.tectonic_region_types comes from applyToTectonicRegionType
+        smlt.tectonic_region_types = smlt.tectonic_region_types - discard_trts
+    return smlt
+
+
+def get_flt(hparams, branchID=None):
+    """
+    :param hparams:
+        dictionary of hazard parameters
+    :param branchID:
+        used to read a single sourceModel branch (if given)
+    :returns:
+        :class:`openquake.hazardlib.logictree.FullLogicTree` object
+    """
+    gsim_file = hparams['gsim_logic_tree_file']
+    smlt = get_smlt(hparams, branchID)
+    trts = smlt.tectonic_region_types
+    gsimlt = logictree.GsimLogicTree(gsim_file, trts)
+    return logictree.FullLogicTree(smlt, gsimlt)
 
 
 def read_input(hparams, **extra):
@@ -198,13 +236,13 @@ def read_input(hparams, **extra):
         hparams.update(extra)
     assert 'imts' in hparams or 'imtls' in hparams
     assert isinstance(hparams['maximum_distance'], IntegrationDistance)
-    smfname = hparams.get('source_model_file')
+    smfname = hparams['inputs'].get('source_model')
     srcstring = hparams.get('source_string')
     if smfname:  # nonscenario
         itime = hparams['investigation_time']
     else:
         itime = 50.  # ignored in scenario
-    rmfname = hparams.get('rupture_model_file')
+    rmfname = hparams['inputs'].get('rupture_model')
     if rmfname:
         ngmfs = hparams["number_of_ground_motion_fields"]
         ses_seed = hparams["ses_seed"]
@@ -235,7 +273,7 @@ def read_input(hparams, **extra):
     if 'gsim' in hparams:
         gslt = gsim_lt.GsimLogicTree.from_(hparams['gsim'])
     else:
-        gslt = gsim_lt.GsimLogicTree(hparams['gsim_logic_tree_file'], trts)
+        gslt = gsim_lt.GsimLogicTree(hparams['inputs']['gsim_logic_tree'], trts)
 
     # fix source attributes
     idx = 0
@@ -260,7 +298,7 @@ def read_input(hparams, **extra):
     for trt, rlzs_by_gsim in gslt.get_rlzs_by_gsim_trt(n, s).items():
         hparams['mags'] = sorted(mags_by_trt[trt] or mags_by_trt['*'])
         cmakerdict[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, hparams)
-        cmakerdict[trt].start = start
+        cmakerdict[trt].gidx = numpy.arange(start, start + len(rlzs_by_gsim))
         start += len(rlzs_by_gsim)
     if rmfname:
         # for instance, for 2 TRTs with 5x2 GSIMs and ngmfs=10, the

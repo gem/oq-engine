@@ -27,7 +27,7 @@ RUP_XML = os.path.join(CWD, 'data', 'rup.xml')
 
 class ScenarioTestCase(unittest.TestCase):
     def test1rup(self):
-        param = dict(rupture_model_file=RUP_XML,
+        param = dict(inputs=dict(rupture_model=RUP_XML),
                      number_of_ground_motion_fields=10,
                      gsim='AtkinsonBoore2006',
                      ses_seed=42,

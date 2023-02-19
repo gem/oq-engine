@@ -50,6 +50,6 @@ if __name__ == '__main__':
                   ses_seed=24,
                   ses_per_logic_tree_path=20,
                   investigation_time=1,
-                  site_model_file="site_model.csv",
-                  gsim_logic_tree_file="gmpe_logic_tree.xml")
+                  inputs=dict(site_model="site_model.csv",
+                              gsim_logic_tree="gmpe_logic_tree.xml"))
     main(params)

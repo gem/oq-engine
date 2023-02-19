@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+  <sourceModel name="Source model with sources 1 and 2">
+    <pointSource
+        id="4"
+        name="point source 4"
+        tectonicRegion='active shallow crust'>
+      <pointGeometry>
+        <gml:Point><gml:pos>0.5 0.5</gml:pos></gml:Point>
+        <upperSeismoDepth>0</upperSeismoDepth>
+        <lowerSeismoDepth>10</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>PeerMSR</magScaleRel>
+      <ruptAspectRatio>1</ruptAspectRatio>
+      <incrementalMFD binWidth="1" minMag="4.5">
+        <occurRates>1</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>                    
+        <nodalPlane dip="90" probability="1" rake="0" strike="0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="4" probability="1"/>
+      </hypoDepthDist>
+    </pointSource>
+  </sourceModel>
+</nrml>

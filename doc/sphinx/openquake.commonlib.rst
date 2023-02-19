@@ -33,14 +33,6 @@ hazard_writers module
     :undoc-members:
     :show-inheritance:
 
-logictree module
-------------------------------------
-
-.. automodule:: openquake.commonlib.logictree
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 logs module
 -------------------------------
 
@@ -65,14 +57,6 @@ readinput module
     :undoc-members:
     :show-inheritance:
 
-
-source_reader module
----------------------------------
-
-.. automodule:: openquake.commonlib.source_reader
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 util module
 -------------------------------

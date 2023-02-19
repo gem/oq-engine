@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -484,6 +484,15 @@ class HazardCalculator(BaseCalculator):
             check_amplification(df, self.sitecol)
             self.af = AmplFunction.from_dframe(df)
 
+        if 'station_data' in oq.inputs:
+            logging.info('Reading station data from %s',
+                         oq.inputs['station_data'])
+            self.station_data, self.station_sites, self.observed_imts = \
+                readinput.get_station_data(oq)
+            self.datastore.create_df('station_data', self.station_data)
+            self.datastore.create_df('station_sites', self.station_sites)
+            oq.observed_imts = self.observed_imts
+
         if (oq.calculation_mode == 'disaggregation' and
                 oq.max_sites_disagg < len(self.sitecol)):
             raise ValueError(
@@ -664,7 +673,7 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: the number of realizations
         """
-        if self.oqparam.collect_rlzs:
+        if self.oqparam.collect_rlzs and self.oqparam.job_type == 'risk':
             return 1
         elif 'weights' in self.datastore:
             return len(self.datastore['weights'])
@@ -864,7 +873,7 @@ class HazardCalculator(BaseCalculator):
         if oq.job_type == 'risk':
             taxs = python3compat.decode(self.assetcol.tagcol.taxonomy)
             tmap = readinput.taxonomy_mapping(self.oqparam, taxs)
-            self.crmodel.tmap = tmap
+            self.crmodel.set_tmap(tmap)
             taxonomies = set()
             for ln in oq.loss_types:
                 for items in self.crmodel.tmap[ln]:
@@ -938,12 +947,13 @@ class HazardCalculator(BaseCalculator):
             self.realizations = self.full_lt.get_realizations()
             if not self.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
-            self.datastore['full_lt'] = self.full_lt
+            # if full_lt is stored in the parent, do not store it again
+            # this avoids breaking case_18 when starting from a preclassical
+            if self.oqparam.hazard_calculation_id is None:
+                self.datastore['full_lt'] = self.full_lt
         else:  # scenario
             self.full_lt = self.datastore['full_lt']
-
-        R = self.R
-        logging.info('There are %d realization(s)', R)
+        logging.info('There are %d realization(s)', self.R)
 
         self.datastore['weights'] = arr = build_weights(self.realizations)
         self.datastore.set_attrs('weights', nbytes=arr.nbytes)

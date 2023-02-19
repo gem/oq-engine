@@ -35,8 +35,8 @@ GLT_XML = os.path.join(CWD, 'data', 'CAN15', 'gmmLT.xml')
 # combinations used in the Canada model 2015
 class NBCC2015_AA13TestCase(unittest.TestCase):
     def test_gmf(self):
-        param = dict(rupture_model_file=RUP_XML,
-                     gsim_logic_tree_file=GLT_XML,
+        param = dict(inputs=dict(rupture_model=RUP_XML,
+                                 gsim_logic_tree=GLT_XML),
                      number_of_ground_motion_fields=1,
                      ses_seed=42,
                      sites=[(-123, 48), (-123, 48.5)],

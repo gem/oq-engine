@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -161,6 +161,28 @@ def compute_hazard_maps(curves, imls, poes):
     return hmap
 
 
+def get_lvl(hcurve, imls, poe):
+    """
+    :param hcurve: a hazard curve, i.e. array of L1 PoEs
+    :param imls: L1 intensity measure levels
+    :returns: index of the intensity measure level associated to the poe
+
+    >>> imls = numpy.array([.1, .2, .3, .4])
+    >>> hcurve = numpy.array([1., .99, .90, .8])
+    >>> get_lvl(hcurve, imls, 1)
+    0
+    >>> get_lvl(hcurve, imls, .99)
+    1
+    >>> get_lvl(hcurve, imls, .91)
+    2
+    >>> get_lvl(hcurve, imls, .8)
+    3
+    """
+    [[iml]] = compute_hazard_maps(hcurve, imls, poe)
+    iml -= 1E-10  # small buffer
+    return numpy.searchsorted(imls, iml)
+
+
 # #########################  GMF->curves #################################### #
 
 # NB (MS): the approach used here will not work for non-poissonian models
@@ -270,7 +292,7 @@ class RuptureImporter(object):
         eid_rlz = []
         for rup in proxies:
             ebr = EBRupture(
-                Mock(rup_id=rup['seed']), rup['source_id'],
+                Mock(seed=rup['seed']), rup['source_id'],
                 rup['trt_smr'], rup['n_occ'], e0=rup['e0'],
                 scenario='scenario' in self.oqparam.calculation_mode)
             for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -134,6 +134,18 @@ agg_id
                      'loss_type=structural&absolute=0&policy=A&taxonomy=RC')
         tmp = gettemp(text_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves7.csv', tmp)
+
+        self.assertEqual(aw.return_period, [30, 60, 120, 240, 480, 960])
+        self.assertEqual(aw.kind, ["mean"])
+        self.assertEqual(aw.units, ["EUR", "EUR"])
+        self.assertEqual(aw.policy, ["A"])
+        self.assertEqual(aw.taxonomy, ["RC"])
+
+        # extract individual curves
+        aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
+                     'loss_type=structural&absolute=0&policy=A&taxonomy=RC')
+        tmp = gettemp(text_table(aw.to_dframe()))
+        self.assertEqualFiles('expected/agg_curves3.csv', tmp)
 
         # test ct_independence
         loss4 = view('portfolio_losses', self.calc.datastore)

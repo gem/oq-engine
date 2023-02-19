@@ -21,7 +21,7 @@ from scipy.stats import norm
 import pandas as pd
 
 from openquake.baselib import hdf5
-from openquake.hazardlib.stats import norm_cdf, _truncnorm_sf
+from openquake.hazardlib.stats import norm_cdf, truncnorm_sf
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.probability_map import ProbabilityCurve
@@ -413,7 +413,7 @@ def get_poes_site(mean_std, cmaker, ctx):
     # C - Number of contexts
     # L - Number of intensity measure levels
     loglevels = cmaker.loglevels
-    truncation_level = cmaker.truncation_level
+    phi_b = cmaker.phi_b
     mean, stddev = mean_std  # shape (C, M)
     C, L = mean.shape[1], loglevels.size
     assert len(numpy.unique(ctx.sids)) == 1  # 1 site
@@ -452,16 +452,12 @@ def get_poes_site(mean_std, cmaker, ctx):
 
             # Set the arguments of the truncated normal distribution
             # function
-            if truncation_level == 0:
-                out_l = iml_l <= mean[m]
-                out_u = iml_u <= mean[m]
-            else:
-                out_l = (iml_l - mean[m]) / stddev[m]
-                out_u = (iml_u - mean[m]) / stddev[m]
+            out_l = (iml_l - mean[m]) / stddev[m]
+            out_u = (iml_u - mean[m]) / stddev[m]
 
             # Probability of occurrence on rock
-            pocc_rock = (_truncnorm_sf(truncation_level, out_l) -
-                         _truncnorm_sf(truncation_level, out_u))  # shape C
+            pocc_rock = (truncnorm_sf(phi_b, out_l) -
+                         truncnorm_sf(phi_b, out_u))  # shape C
 
             # Skipping cases where the pocc on rock is negligible
             if numpy.all(pocc_rock < 1e-10):

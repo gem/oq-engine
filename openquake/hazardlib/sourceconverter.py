@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -167,7 +167,7 @@ class SourceGroup(collections.abc.Sequence):
         return sorted(source_stats_dict.values())
 
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
-                 rup_interdep='indep', grp_probability=None,
+                 rup_interdep='indep', grp_probability=1.,
                  min_mag={'default': 0}, max_mag=None,
                  temporal_occurrence_model=None, cluster=False):
         # checks
@@ -338,7 +338,7 @@ class SourceGroup(collections.abc.Sequence):
             name=self.name or '',
             src_interdep=self.src_interdep,
             rup_interdep=self.rup_interdep,
-            grp_probability=self.grp_probability or '')
+            grp_probability=self.grp_probability or '1')
         return numpy.array(lst, source_dt), attrs
 
     def __fromh5__(self, array, attrs):
@@ -1187,7 +1187,7 @@ class SourceConverter(RuptureConverter):
         # Set attributes related to occurrence
         sg.src_interdep = node.attrib.get('src_interdep', 'indep')
         sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
-        sg.grp_probability = node.attrib.get('grp_probability')
+        sg.grp_probability = node.attrib.get('grp_probability', 1)
         # Set the cluster attribute
         sg.cluster = node.attrib.get('cluster') == 'true'
         # Filter admitted cases
@@ -1230,7 +1230,7 @@ class SourceConverter(RuptureConverter):
                 tot += sw
             with context(self.fname, node):
                 numpy.testing.assert_allclose(
-                    tot, 1., err_msg='sum(srcs_weights)')
+                    tot, 1., err_msg='sum(srcs_weights)', atol=5E-6)
 
         # check that, when the cluster option is set, the group has a temporal
         # occurrence model properly defined

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -108,7 +108,7 @@ def main(
         config.read(os.path.abspath(os.path.expanduser(config_file)),
                     limit=int, soft_mem_limit=int, hard_mem_limit=int,
                     port=int, serialize_jobs=valid.boolean,
-                    strict=valid.boolean, code=exec)
+                    strict=valid.boolean, code=exec, slowdown_rate=float)
 
     if no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'

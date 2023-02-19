@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2022 GEM Foundation
+# Copyright (C) 2010-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,9 +28,9 @@ from openquake.baselib.parallel import Starmap
 from openquake.hazardlib import site, geo, mfd, pmf, scalerel, tests as htests
 from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.commonlib import tests, readinput
-from openquake.commonlib.logictree import FullLogicTree
+from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib import nrml
+from openquake.commonlib import tests, readinput
 
 # directory where the example files are
 NRML_DIR = os.path.dirname(htests.__file__)

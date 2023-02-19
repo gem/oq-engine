@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2022, GEM Foundation
+# Copyright (C) 2010-2023, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -500,7 +500,7 @@ class GsimLogicTree(object):
 
     def __iter__(self):
         """
-        Yield :class:`openquake.commonlib.logictree.Realization` instances
+        Yield :class:`openquake.hazardlib.logictree.Realization` instances
         """
         groups = []
         # NB: branches are already sorted

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -678,15 +678,15 @@ class GPKG2NRMLTestCase(unittest.TestCase):
         expected_log_outputs = [
             'Skipping source of code "X" and attributes'
             ' "{\'id\': \'5\', \'name\': \'characteristic source,'
-            ' simple fault\'}"'
+            ' simple fault\', \'tectonicRegion\': \'Volcanic\'}"'
             ' (the converter is not implemented yet)',
             'Skipping source of code "X" and attributes'
             ' "{\'id\': \'6\', \'name\': \'characteristic source,'
-            ' complex fault\'}"'
+            ' complex fault\', \'tectonicRegion\': \'Volcanic\'}"'
             ' (the converter is not implemented yet)',
             'Skipping source of code "X" and attributes'
             ' "{\'id\': \'7\', \'name\': \'characteristic source,'
-            ' multi surface\'}"'
+            ' multi surface\', \'tectonicRegion\': \'Volcanic\'}"'
             ' (the converter is not implemented yet)']
         with mock.patch('logging.error') as error:
             sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')

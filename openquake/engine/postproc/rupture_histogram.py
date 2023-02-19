@@ -3,6 +3,7 @@ from openquake.baselib import sap, parallel, performance, general
 from openquake.hazardlib import contexts
 from openquake.commonlib import datastore
 
+
 # low-level function to be tested
 def compute_histogram(fullctxt, cmaker, magbins, dstbins):
     """
@@ -36,7 +37,7 @@ def compute_hist(dstore, slc, cmaker, magbins, dstbins):
     :returns: a dictionary (site_index, mag_index, dist_index) -> counts
     """
     with dstore:
-        [fullctxt] = cmaker.read_ctxs(dstore, slc)
+        fullctxt = cmaker.read_ctxt(dstore, slc)
         return compute_histogram(fullctxt, cmaker, magbins, dstbins)
 
 
@@ -45,7 +46,6 @@ def main(parent_id: int, mbins=100, dbins=100):
     :param parent_id: ID of the parent calculation with the contexts
     :param mbins: number of magnitude bins
     :param dbins: number of distance bins
-    
     NB: this is meant to work only for parametric ruptures!
     """
     parent = datastore.read(parent_id)

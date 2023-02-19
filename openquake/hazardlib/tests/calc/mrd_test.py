@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2022, GEM Foundation
+# Copyright (C) 2023, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,6 @@ import os
 import unittest
 import numpy as np
 import matplotlib.pyplot as plt
-from openquake.baselib.general import DictArray
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.mrd import (
     update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
@@ -50,7 +49,7 @@ class MRD01TestCase(unittest.TestCase):
         self.cmaker = cmaker.restrict(self.imts)
 
         # Read contexts
-        [self.ctx] = self.cmaker.read_ctxs(self.dstore)
+        self.ctx = self.cmaker.read_ctxt(self.dstore)
 
         # Set the cross correlation model
         self.crosscorr = BakerJayaram2008()

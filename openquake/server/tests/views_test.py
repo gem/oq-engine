@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -408,3 +408,9 @@ class EngineServerTestCase(unittest.TestCase):
             self.assertEqual(resp.status_code, 200)
             resp_text_dict = json.loads(resp.content.decode('utf8'))
             self.assertFalse(resp_text_dict['success'])
+
+    def test_aelo(self):
+        params = dict(lon='85', lat='27', vs30='600', siteid='KATMANDU')
+        resp = self.post('aelo_run', params)
+        self.assertEqual(resp.status_code, 200)
+        print(json.loads(resp.content.decode('utf8')))

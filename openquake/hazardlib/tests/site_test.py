@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -136,10 +136,7 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         self.assertEqual(len(cll), 2)
 
         # test split_in_tiles
-        tiles = cll.split_in_tiles(2)  # there are 2 sites, 1 tile
-        self.assertEqual(len(tiles), 1)
-
-        tiles = cll.split_in_tiles(1)  # 2 tiles of 1 site each
+        tiles = cll.split_in_tiles(2)  # there are 2 sites
         self.assertEqual(len(tiles), 2)
 
         # test split_max

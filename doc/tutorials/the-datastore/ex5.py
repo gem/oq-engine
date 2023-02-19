@@ -8,8 +8,8 @@ cmakers = read_cmakers(dstore)
 weights = dstore['weights'][:]
 allpoes = []
 for grp_id, cmaker in enumerate(cmakers):
-    ctxs = cmaker.read_ctxs(dstore)
-    allpoes.append(cmaker.get_pmap(ctxs).array)
+    ctxt = cmaker.read_ctxt(dstore)
+    allpoes.append(cmaker.get_pmap([ctxt]).array)
 mean = 0
 for rlz, weight in enumerate(weights):
     mean += combine_probs(allpoes, cmakers, rlz) * weight

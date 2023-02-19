@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2022 GEM Foundation
+# Copyright (C) 2016-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -290,6 +290,7 @@ DISPLAY_NAME = {
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Risk Distributions',
     'damages-stats': 'Asset Risk Statistics',
+    'disagg_by_src': 'Disaggregation by Source',
     'risk_by_event': 'Aggregated Risk By Event',
     'events': 'Events',
     'avg_losses-rlzs': 'Average Asset Losses',
@@ -315,7 +316,8 @@ DISPLAY_NAME = {
     'hcurves': 'Hazard Curves',
     'hmaps': 'Hazard Maps',
     'uhs': 'Uniform Hazard Spectra',
-    'disagg': 'Disaggregation Outputs',
+    'disagg-rlzs': 'Disaggregation Outputs Per Realization',
+    'disagg-stats': 'Statistical Disaggregation Outputs',
     'realizations': 'Realizations',
     'src_loss_table': 'Source Loss Table',
     'fullreport': 'Full Report',
@@ -437,7 +439,8 @@ def get_log(db, job_id):
     out = []
     for log in logs:
         time = str(log.timestamp)[:-4]  # strip decimals
-        out.append('[%s #%d %s] %s' % (time, job_id, log.level, log.message))
+        out.append('[%s #%d %s] %s %s' %
+                   (time, job_id, log.level, log.process, log.message))
     return out
 
 

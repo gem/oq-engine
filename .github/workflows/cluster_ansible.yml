@@ -1,5 +1,11 @@
 name: cluster_ansible
-'on':
+on:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
   schedule:
     - cron: "0 12 * * *"
   #push:
@@ -13,19 +19,18 @@ jobs:
     strategy:
       matrix:
         distro:
-          - ubuntu1804
           - ubuntu2004
     env:
       working-directory: ./ansible/cluster
 
     steps:
       - name: Check out the codebase.
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python 3.
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
-          python-version: '3.8'
+          python-version: '3.9'
 
       - name: Install test dependencies.
         run: pip3 install molecule[docker,ansible,lint]

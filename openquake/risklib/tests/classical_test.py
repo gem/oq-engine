@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2022 GEM Foundation
+# Copyright (C) 2010-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -171,19 +171,24 @@ class ClassicalTestCase(unittest.TestCase):
         ratios = tuple(vulnerability_function.mean_loss_ratios_with_steps(2))
 
         loss_ratio_curve = scientific.classical(
-            vulnerability_function, hazard_imls, hazard_curve, ratios)
+            vulnerability_function, hazard_imls, hazard_curve, ratios,
+            investigation_time=50, risk_investigation_time=1)
 
         expected_curve = [
-            (0.0, 0.96), (0.025, 0.96),
-            (0.05, 0.91), (0.065, 0.87),
-            (0.08, 0.83), (0.14, 0.75),
-            (0.2, 0.60), (0.3, 0.47),
-            (0.4, 0.23), (0.7, 0.00),
+            (0.0, 0.069),
+            (0.025, 0.066),
+            (0.05, 0.054),
+            (0.065, 0.046),
+            (0.08, 0.039),
+            (0.14, 0.029),
+            (0.2, 0.020),
+            (0.3, 0.013),
+            (0.4, 0.006),
+            (0.7, 0.00),
             (1.0, 0.00)]
 
         actual_poes_interp = interp1d(loss_ratio_curve[0],
                                       loss_ratio_curve[1])
-
         for loss, poe in expected_curve:
             numpy.testing.assert_allclose(
                 poe, actual_poes_interp(loss), atol=0.005)

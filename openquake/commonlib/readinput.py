@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,14 +44,13 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
-    source, geo, site, imt, valid, sourceconverter, nrml, pmf, gsim_lt)
+    source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
+    pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.source_reader import get_csm
-from openquake.commonlib import logictree
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -275,8 +274,19 @@ def get_params(job_ini, kw={}):
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     cp = configparser.ConfigParser()
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
+    dic = {}
     for sect in cp.sections():
-        _update(params, cp.items(sect), base_path)
+        dic.update(cp.items(sect))
+
+    # put source_model_logic_tree_file on top of the items so that
+    # oq-risk-tests alaska, which has a smmLT.zip file works, since
+    # it is unzipped before and therefore the files can be read later
+    if 'source_model_logic_tree_file' in dic:
+        fname = dic.pop('source_model_logic_tree_file')
+        items = [('source_model_logic_tree_file', fname)] + list(dic.items())
+    else:
+        items = list(dic.items())
+    _update(params, items, base_path)
 
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
@@ -655,7 +665,7 @@ def get_rupture(oqparam):
     conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
     rup = conv.convert_node(rup_node)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
-    rup.rup_id = oqparam.ses_seed
+    rup.seed = oqparam.ses_seed
     return rup
 
 
@@ -664,18 +674,10 @@ def get_source_model_lt(oqparam, branchID=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        a :class:`openquake.commonlib.logictree.SourceModelLogicTree`
+        a :class:`openquake.hazardlib.logictree.SourceModelLogicTree`
         instance
     """
-    fname = oqparam.inputs['source_model_logic_tree']
-    args = (fname, oqparam.random_seed, oqparam.number_of_logic_tree_samples,
-            oqparam.sampling_method, False, branchID)
-    smlt = logictree.SourceModelLogicTree(*args)
-    discard_trts = set(s.strip() for s in oqparam.discard_trts.split(','))
-    if discard_trts:
-        # smlt.tectonic_region_types comes from applyToTectonicRegionType
-        smlt.tectonic_region_types = smlt.tectonic_region_types - discard_trts
-    return smlt
+    return get_smlt(vars(oqparam), branchID)
 
 
 def get_full_lt(oqparam, branchID=None):
@@ -685,7 +687,7 @@ def get_full_lt(oqparam, branchID=None):
     :param branchID:
         used to read a single sourceModel branch (if given)
     :returns:
-        a :class:`openquake.commonlib.logictree.FullLogicTree`
+        a :class:`openquake.hazardlib.logictree.FullLogicTree`
         instance
     """
     source_model_lt = get_source_model_lt(oqparam, branchID)
@@ -811,7 +813,7 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
             return csm
 
     # read and process the composite source model from the input files
-    csm = get_csm(oqparam, full_lt, h5)
+    csm = source_reader.get_csm(oqparam, full_lt, h5)
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(csm.get_trt_smrs())
     ngsims = sum(len(rbg) for rbg in rlzs_by_gsim_list)
     logging.info('There are %d gsims in the CompositeSourceModel', ngsims)
@@ -920,6 +922,43 @@ def get_exposure(oqparam):
         with open(fname, 'wb') as f:
             pickle.dump(exposure, f)
     return exposure
+
+
+def get_station_data(oqparam):
+    """
+    Read the station data input file and build a list of
+    ground motion stations and recorded ground motion values
+    along with their uncertainty estimates
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns sd:
+        a Pandas dataframe with station ids and coordinates as the index and 
+        IMT names as the first level of column headers and
+        mean, std as the second level of column headers
+    :returns imts:
+        a list of observed intensity measure types
+    """
+    if 'station_data' in oqparam.inputs:
+        fname = oqparam.inputs['station_data']
+        sdata = pandas.read_csv(fname)
+
+        # Identify the columns with IM values
+        # Replace replace() with removesuffix() for pandas ≥ 1.4
+        imt_candidates = sdata.filter(regex="_VALUE$").columns.str.replace("_VALUE", "")
+        imts = [valid.intensity_measure_type(imt) for imt in imt_candidates]
+        im_cols = [imt + '_' + stat for imt in imts for stat in ["mean", "std"]]
+        station_cols = ["STATION_ID", "LONGITUDE", "LATITUDE"]
+        cols = []
+        for imt in imts:
+            stddev_str = "STDDEV" if imt == "MMI" else "LN_SIGMA"
+            cols.append(imt + '_VALUE')
+            cols.append(imt + '_' + stddev_str)
+        station_data = pandas.DataFrame(sdata[cols].values, columns=im_cols)
+        station_sites = pandas.DataFrame(
+            sdata[station_cols].values, columns=["station_id", "lon", "lat"]
+        ).astype({"station_id": str, "lon": F64, "lat": F64})
+    return station_data, station_sites, imts
 
 
 def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
@@ -1058,6 +1097,7 @@ def get_pmap_from_csv(oqparam, fnames):
         dic[wrapper.imt] = wrapper.array
         imtls[wrapper.imt] = levels_from(wrapper.dtype.names)
     oqparam.hazard_imtls = imtls
+    oqparam.investigation_time = wrapper.investigation_time
     oqparam.set_risk_imts(get_risk_functions(oqparam))
     array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])
@@ -1272,7 +1312,9 @@ def _checksum(fnames, checksum=0):
     :returns: the 32 bit checksum of a list of files
     """
     for fname in fnames:
-        if not os.path.exists(fname):
+        if fname == '<in-memory>':
+            pass
+        elif not os.path.exists(fname):
             zpath = os.path.splitext(fname)[0] + '.zip'
             if not os.path.exists(zpath):
                 raise OSError('No such file: %s or %s' % (fname, zpath))

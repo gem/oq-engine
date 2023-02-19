@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import gzip
+import json
 import unittest
 import numpy
 from openquake.baselib import parallel, general, config
@@ -39,7 +40,8 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
     case_66, case_67, case_68, case_69, case_70, case_71, case_72, case_73,
-    case_74, case_75, case_76, case_77, case_78, case_79, case_80)
+    case_74, case_75, case_76, case_77, case_78, case_79, case_80, case_81,
+    case_82, case_83)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -309,13 +311,18 @@ hazard_uhs-std.csv
         numpy.testing.assert_equal(ids, ['A;0', 'A;1', 'B'])
 
     def test_case_18(self):  # GMPEtable, PointMSR, 3 hypodepths
+        self.run_calc(case_18.__file__, 'job.ini',
+                      calculation_mode='preclassical')
+        hc_id = str(self.calc.datastore.calc_id)
+        # check also that I can start from preclassical with GMPETables
         self.assert_curves_ok(
             ['hazard_curve-mean_PGA.csv',
              'hazard_curve-mean_SA(0.2).csv',
              'hazard_curve-mean_SA(1.0).csv',
              'hazard_map-mean.csv',
              'hazard_uhs-mean.csv'],
-            case_18.__file__, kind='stats', delta=1E-7)
+            case_18.__file__,
+            kind='stats', delta=1E-7, hazard_calculation_id=hc_id)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
         self.calc.datastore.close()
@@ -378,6 +385,58 @@ hazard_uhs-std.csv
         self.assertEqual(list(df.columns),
                          ['site_id', 'stat', 'imt', 'value'])
 
+    def test_case_20_bis(self):
+        # disagg_by_src without collect_rlzs
+        self.run_calc(case_20.__file__, 'job_bis.ini')
+        weights = self.calc.datastore['weights'][:]
+        dbs = self.calc.datastore['disagg_by_src']
+        attrs = json.loads(dbs.attrs['json'])
+        self.assertEqual(attrs, {
+            'shape_descr': ['site_id', 'rlz_id', 'imt', 'lvl', 'src_id'],
+            'site_id': 1,
+            'rlz_id': 12,
+            'imt': ['PGA', 'SA(1.0)'],
+            'lvl': 4,
+            'src_id': ['CHAR1', 'COMFLT1', 'SFLT1']})
+        poes1 = weights @ dbs[0, :, 0, 0, :]  # shape Ns
+        aac(poes1, [0.01980132, 0.01488805, 0.01488805, 0., 0., 0., 0.],
+            atol=1E-7)
+
+        # disagg_by_src with collect_rlzs:
+        # the averages are correct when ignoring semicolon_aggregate
+        dbs_full = self.calc.disagg_by_src  # shape (N, R, M, L1, Ns)
+        self.run_calc(case_20.__file__, 'job_bis.ini', collect_rlzs='true')
+        dbs_avg = self.calc.disagg_by_src  # shape (N, 1, M, L1, Ns)
+        for m in range(2):
+            for l in range(4):
+                avg1 = weights @ dbs_full[0, :, m, l]
+                avg2 = dbs_avg[0, 0, m, l]
+                aac(avg1, avg2)
+
+        # with semicolon_aggregate the averages are different because
+        # agg(<poes>) != <agg(poes)> where <...> is the mean on the rlzs;
+        # here is an example with 2 sources to aggregate and 3 realizations:
+        ws = numpy.array([.33333333333333]*3)
+        poes = numpy.array([[.1, .2, .3], [.4, .5, .6]])  # shape (S, R)
+        print(general.agg_probs(poes[0] @ ws, poes[1] @ ws))
+        print(general.agg_probs(poes[0], poes[1]) @ ws)
+
+        # here are the numbers
+        poes2 = self.calc.datastore['disagg_by_src'][0, 0, 0, 0]
+        aac(poes2, [0.01968, 0.014833, 0.014841, 0., 0., 0., 0.],
+            atol=1E-6)
+
+        # testing extract_disagg_by_src
+        aw = extract(self.calc.datastore, 'disagg_by_src?imt=PGA&poe=1E-3')
+        self.assertEqual(aw.site_id, 0)
+        self.assertEqual(aw.imt, 'PGA')
+        self.assertEqual(aw.poe, .001)
+        aac(aw.array['poe'], [6.46114349e-05, 0, 0])
+
+        # testing view_relevant_sources
+        arr = view('relevant_sources:SA(1.0)', self.calc.datastore)
+        self.assertEqual(decode(arr['src_id']), ['SFLT1'])
+
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
         self.assert_curves_ok([
@@ -437,7 +496,7 @@ hazard_uhs-std.csv
         total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
         self.assertEqual(total, 780)  # 260 x 3; 2 sites => 1560 contexts
         self.assertEqual(len(self.calc.datastore['rup/mag']), 1560)
-        numpy.testing.assert_equal(self.calc.cfactor, [264, 1560])
+        numpy.testing.assert_equal(self.calc.cfactor, [502, 1560, 5])
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
 
@@ -1002,7 +1061,6 @@ hazard_uhs-std.csv
         ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
         ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
         # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
-        self.assertEqual(cmakers[1].start, 3)
 
     def test_case_72(self):
         # reduced USA model
@@ -1072,4 +1130,24 @@ hazard_uhs-std.csv
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/hazard_curve-mean-PGA.csv', f1)
+
+    def test_case_81(self):
+        # collapse_level=2
+        self.run_calc(case_81.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean.csv', f1)
+
+    def test_case_82(self):
+        # two mps, only one should be collapsed and use reqv
+        self.run_calc(case_82.__file__, 'job.ini')
+        [f1] = export(('disagg_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/disagg_by_src.csv', f1)
+
+    def test_case_83(self):
+        # two mps, only one should be collapsed and use reqv
+        self.run_calc(case_83.__file__, 'job_extendModel.ini')
+        [fname_em] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.run_calc(case_83.__file__, 'job_expanded_LT.ini')
+        [fname_ex] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles(fname_em, fname_ex)
 

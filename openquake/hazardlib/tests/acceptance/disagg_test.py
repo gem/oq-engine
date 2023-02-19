@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -77,19 +77,15 @@ class DisaggTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             dist_bins, [0., 10., 20., 30., 40., 50., 60., 70., 80.])
         numpy.testing.assert_allclose(
-            lat_bins, [-6.5544231e-01, -4.9158173e-01, -3.2772115e-01,
-                       -1.6386058e-01, 1.1102230e-16, 1.6386058e-01,
-                       3.2772115e-01,  4.9158173e-01, 6.5544231e-01],
+            lat_bins[0], [-0.655445, -0.327723, 0., 0.327723, 0.655445],
             atol=ATOL)
         numpy.testing.assert_allclose(
-            lon_bins, [-6.5544231e-01, -4.9158173e-01, -3.2772115e-01,
-                       -1.6386058e-01, 1.1102230e-16, 1.6386058e-01,
-                       3.2772115e-01, 4.9158173e-01, 6.5544231e-01],
+            lon_bins[0], [-0.655445, -0.327723, 0., 0.327723, 0.655445],
             atol=ATOL)
         numpy.testing.assert_allclose(eps_bins, [-3., -1., 1., 3.])
         self.assertEqual(trt_bins, ['Active Shallow Crust'])
 
-        self.assertEqual(diss_matrix.shape, (8, 8, 8, 8, 3, 1))
+        self.assertEqual(diss_matrix.shape, (8, 8, 4, 4, 3, 1))
         expected = [0.0245487, 0.0231275, 0.0210702, 0.0185196, 0.0157001,
                     0.0130175, 0.0107099, 0.0045489]
         numpy.testing.assert_allclose(

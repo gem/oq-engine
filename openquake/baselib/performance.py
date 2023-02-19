@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,7 +34,7 @@ try:
 except ImportError:
     numba = None
 
-from openquake.baselib.general import humansize
+from openquake.baselib.general import humansize, fast_agg
 from openquake.baselib import hdf5
 
 # NB: one can use vstr fields in extensible datasets, but then reading
@@ -49,6 +49,8 @@ task_info_dt = numpy.dtype(
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
 
+F16= numpy.float16
+F64= numpy.float64
 I64 = numpy.int64
 
 PStatData = collections.namedtuple(
@@ -182,6 +184,7 @@ class Monitor(object):
     address = None
     authkey = None
     calc_id = None
+    inject = None
 
     def __init__(self, operation='', measuremem=False, inner_loop=False,
                  h5=None, version=None):
@@ -190,7 +193,7 @@ class Monitor(object):
         self.inner_loop = inner_loop
         self.h5 = h5
         self.version = version
-        self.mem = 0
+        self._mem = 0
         self.duration = 0
         self._start_time = self._stop_time = time.time()
         self.children = []
@@ -198,6 +201,11 @@ class Monitor(object):
         self.address = None
         self.username = getpass.getuser()
         self.task_no = -1  # overridden in parallel
+
+    @property
+    def mem(self):
+        """Mean memory allocation"""
+        return self._mem / (self.counts or 1)
 
     @property
     def dt(self):
@@ -245,7 +253,7 @@ class Monitor(object):
         self.exc = exc
         if self.measuremem:
             self.stop_mem = self.measure_mem()
-            self.mem += self.stop_mem - self.start_mem
+            self._mem += self.stop_mem - self.start_mem
         self._stop_time = time.time()
         self.duration += self._stop_time - self._start_time
         self.counts += 1
@@ -272,7 +280,7 @@ class Monitor(object):
         Reset duration, mem, counts
         """
         self.duration = 0
-        self.mem = 0
+        self._mem = 0
         self.counts = 0
 
     def flush(self, h5):
@@ -347,7 +355,7 @@ class Monitor(object):
         """
         while True:
             try:
-                self.mem = 0
+                self._mem = 0
                 with self:
                     obj = next(genobj)
             except StopIteration:
@@ -504,4 +512,43 @@ def split_array(arr, indices, counts=None):
     # this part can be slow, but it is still 10x faster than pandas for EUR!
     cumcounts = counts.cumsum()
     out = _split(arr, indices, counts, cumcounts)
-    return [out[s1:s2] for s1, s2 in zip(cumcounts, cumcounts + counts)]
+    return [out[s1:s2][::-1] for s1, s2 in zip(cumcounts, cumcounts + counts)]
+
+
+def kround0(ctx, kfields):
+    """
+    half-precision rounding
+    """
+    out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
+    for kfield in kfields:
+        kval = ctx[kfield]
+        if kval.dtype == F64:
+            out[kfield] = F16(kval)
+        else:
+            out[kfield] = ctx[kfield]
+    return out
+
+
+# this is not so fast
+def kollapse(array, kfields, kround=kround0, mfields=(), afield=''):
+    """
+    Given a structured array of N elements with a discrete kfield with
+    K <= N unique values, returns a structured array of K elements
+    obtained by averaging the values associated to the kfield.
+    """
+    k_array = kround(array, kfields)
+    uniq, indices, counts = numpy.unique(
+        k_array, return_inverse=True, return_counts=True)
+    klist = [(k, k_array.dtype[k]) for k in kfields]
+    for mfield in mfields:
+        klist.append((mfield, array.dtype[mfield]))
+    res = numpy.zeros(len(uniq), klist)
+    for kfield in kfields:
+        res[kfield] = uniq[kfield]
+    for mfield in mfields:
+        values = array[mfield]
+        res[mfield] = fast_agg(indices, values) / (
+            counts if len(values.shape) == 1 else counts.reshape(-1, 1))
+    if afield:
+        return res, split_array(array[afield], indices, counts)
+    return res

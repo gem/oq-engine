@@ -1,4 +1,73 @@
+  [Kendra Johnson]
+  * Made it possible to use extendModel for multiple branchSets in the
+    source model logic tree
+
   [Michele Simionato]
+  * Added an exporter for disagg_by_src
+  * Implemented mean disaggregation outputs, with the means computed in terms
+    of rates, not probabilities
+
+  [Kendra Johnson]
+  * Corrected a bug when using the `reqv` feature: all sources were
+    collapsed instead of the ones with the specified tectonic region types
+
+  [Michele Simionato]
+  * Changed the lon-lat binning algorithm to produce 4 times less bins
+  * Fixed install.py: it must not set the shared_dir
+  * Optimized disaggregation in performance, memory consumption and data
+    transfer; also changed the task distribution algorithm
+
+python3-oq-engine (3.16.0-2~xenial01) xenial; urgency=low
+
+  [Matteo Nastasi]
+  * Bumped oq-libs to version 3.8.0
+
+  [Michele Simionato, Paolo Tormene]
+  * Fixed the `agg_curves` extractor to also extract individual curves, thus
+    fixing the QGIS plugin visualization
+
+  [Michele Simionato]
+  * Optimized the rupture sampling for MultiFaultSources
+  * Supported `collect_rlzs` together with `disagg_by_src` to avoid running
+    out of memory in models with many realizations and many sources
+
+  [Marco Pagani]
+  * Implemented the correction of Lanzano et al. (2019) as described in
+    Lanzano et al. (2022)
+
+  [Michele Simionato]
+  * Fixed disaggregation calculations when too few tasks were generated
+
+  [Anirudh Rao, Michele Simionato]
+  * Changed the algorithm used in classical_risk and classical_bcr
+    calculations to take into account the risk_investigation_time
+
+  [Michele Simionato]
+  * Added a warning for pointlike sources with magnitudes >= 8
+  * Optimized the disaggregation by using our own truncnorm_sf function and
+    not scipy
+
+  [Anirudh Rao]
+  * Implemented Conditioned GMFs as defined in Engler et al. (2022)
+
+  [Matteo Nastasi]
+  * Removed python3-engine-master and python3-engine-worker ubuntu packages
+
+  [Michele Simionato]
+  * Internal: renamed rup_id -> seed in event based calculations to avoid
+    confusion
+  * Parallelized the reinsurance calculation
+
+  [Marco Pagani]
+  * Completed implementation of `grp_probability` for SourceGroups with mutex
+    ruptures
+
+  [Michele Simionato]
+  * Huge improvement of the task distribution when using zmq; also, used
+    less memory on the master node
+  * Fixed context collapsing in the multi-site case
+  * Optimised postclassical, both in terms of memory in the master node
+    and reading performance in the workers
   * Added `parallel.multispawn` facility in `oq engine --multi --run`
   * Improved `oq engine --multi` to run at most 5 jobs at the time
   * Fixed bug introduced in engine 3.9 producing wrong numbers in the case of
@@ -25,7 +94,6 @@
   * Optimized the parsing of XML files (35x for the Alaska model)
   * Bug fix: ModifiableGMPEs with underlying tables were not receiving a
     single magnitude when calling the `compute` method
-  * Introduced `keep_source_groups` mode in classical calculations
   * Rewritten ModifiableGMPE to avoid a subtle memory leak
 
   [Matteo Nastasi]
@@ -111,6 +179,8 @@
     in insurance calculations (before we supported only fractions)
   * Reduced precision in the header of the UHS csv files
   * Managed the case with CoVs = 0 for the beta distribution
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 09 Feb 2023 15:26:59 +0000
 
 python3-oq-engine (3.15.0-1~xenial01) xenial; urgency=low
 

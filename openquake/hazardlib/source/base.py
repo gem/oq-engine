@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,6 +22,7 @@ import zlib
 import numpy
 from openquake.baselib import general
 from openquake.hazardlib import mfd
+from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import build_planar, PlanarSurface
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -114,13 +115,14 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         numpy.random.seed(seed)
         for trt_smr in self.trt_smrs:
             for rup, num_occ in self._sample_ruptures(eff_num_ses):
-                rup.rup_id = seed
+                rup.seed = seed
                 if hasattr(rup, 'occurrence_rate'):
                     # defined only for poissonian sources
                     rup.occurrence_rate *= self.smweight
                 seed += 1
                 yield rup, trt_smr, num_occ
 
+    # NB: overridden in MultiFaultSource
     def _sample_ruptures(self, eff_num_ses):
         tom = getattr(self, 'temporal_occurrence_model', None)
         if tom:  # time-independent source
@@ -144,15 +146,25 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         if hasattr(self, 'get_annual_occurrence_rates'):
             for mag, rate in self.get_annual_occurrence_rates():
                 mags.add(mag)
-        elif hasattr(self, 'source_file'):
-            # unbound UCERFSource
-            mags.add(numpy.nan)
         elif hasattr(self, 'mags'):  # MultiFaultSource
             mags.update(mag for mag in self.mags if mag >= self.min_mag)
         else:  # nonparametric
             for rup, pmf in self.data:
                 if rup.mag >= self.min_mag:
                     mags.add(rup.mag)
+        return sorted(mags)
+
+    def get_magstrs(self):
+        """
+        :returns: the magnitudes of the ruptures contained as strings
+        """
+        if hasattr(self, 'mags'):  # MultiFaultSource
+            mags = {magstr(mag) for mag in self.mags}
+        elif hasattr(self, 'data'):  # nonparametric
+            mags = {magstr(item[0].mag) for item in self.data}
+        else:
+            mags = {magstr(item[0]) for item in
+                    self.get_annual_occurrence_rates()}
         return sorted(mags)
 
     def sample_ruptures_poissonian(self, eff_num_ses):
@@ -364,7 +376,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         for i, rup in enumerate(self.iter_ruptures()):
             if i == idx:
                 if hasattr(self, 'rup_id'):
-                    rup.rup_id = self.rup_id
+                    rup.seed = self.seed
                 rup.idx = idx
                 return rup
 

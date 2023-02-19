@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,9 +44,8 @@ class PankowPechmann2004(GMPE):
 
     #: Supported intensity measure component is VECTORIAL
     #: :attr:`~openquake.hazardlib.const.IMC.VECTORIAL`,
-    #: NOTE: The paper indicates it as Geometric mean (to check)
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = {
-        const.IMC.VECTORIAL, const.IMC.RANDOM_HORIZONTAL}
+    #: NOTE: The paper indicates it as Geometric mean
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
