@@ -63,6 +63,7 @@ def main(parent_id, config):
     try:
         parent_id = int(parent_id)
     except ValueError:
+        # passing a filename is okay
         pass
     parent = datastore.read(parent_id)
     dstore, log = datastore.build_dstore_log(parent=parent)
@@ -80,10 +81,10 @@ def main(parent_id, config):
         assert L1 <= 24, 'Too many levels: %d' % L1
         assert N <= 10, 'Too many sites: %d' % N
         cmakers = contexts.read_cmakers(parent)
-        grp_ids = dstore.parent['rup/grp_id'][:]
         ctx_by_grp = contexts.read_ctx_by_grp(dstore)
-        logging.info('Read {:_d} contexts'.format(len(grp_ids)))
-        blocksize = numpy.ceil(len(grp_ids) / oq.concurrent_tasks)
+        n = sum(len(ctx) for ctx in ctx_by_grp.values())
+        logging.info('Read {:_d} contexts'.format(n))
+        blocksize = numpy.ceil(n / oq.concurrent_tasks)
         dstore.swmr_on()
         smap = parallel.Starmap(compute_mrd, h5=dstore)
         for grp_id, ctx in ctx_by_grp.items():
@@ -93,8 +94,7 @@ def main(parent_id, config):
                              meabins, sigbins))
         acc = smap.reduce()
         mrd = dstore.create_dset('_mrd', float, (L1, L1, N))
-        mrd[:] = combine_mrds(
-            acc, dstore['rlzs_by_g'][:], dstore['weights'][:])
+        mrd[:] = combine_mrds(acc, dstore['rlzs_by_g'][:], dstore['weights'][:])
         return mrd[:]
 
 
