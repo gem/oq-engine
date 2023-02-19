@@ -262,13 +262,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        totctxs = len(dstore['rup/mag'])
-        logging.info('Reading {:_d} contexts'.format(totctxs))
-        cmakers = read_cmakers(self.datastore)
         ctx_by_grp = read_ctx_by_grp(self.datastore)
+        totctxs = sum(len(ctx) for ctx in ctx_by_grp.values())
+        logging.info('Read {:_d} contexts'.format(totctxs))
+        cmakers = read_cmakers(self.datastore)
         src_mutex_by_grp = read_src_mutex(self.datastore)
-
-        U = 0
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         # IMPORTANT!! we rely on the fact that the classical part
@@ -292,6 +290,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         else:
             weights = self.datastore['weights'][:]
         mutex_by_grp = self.datastore['mutex_by_grp'][:]
+        U = 0
         for grp_id, fullctx in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
             cmaker.src_mutex, cmaker.rup_mutex = mutex_by_grp[grp_id]
