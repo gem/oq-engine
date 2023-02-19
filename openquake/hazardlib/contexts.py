@@ -980,7 +980,8 @@ class ContextMaker(object):
 
         # split large context arrays to avoid filling the CPU cache
         with self.gmf_mon:
-            mean_stdt = self.get_mean_stds([ctx])
+            # split_by_mag=False because already contains a single mag
+            mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
         for slc in split_in_slices(len(ctx), MULTIPLIER):
             ctxt = ctx[slc]
             self.slc = slc  # used in gsim/base.py
@@ -1057,10 +1058,10 @@ class ContextMaker(object):
                         pmap.update_(poes, invs, ctxt, itime, rup_mutex, idx)
 
     # called by gen_poes and by the GmfComputer
-    def get_mean_stds(self, ctxs, split_by_mag=False):
+    def get_mean_stds(self, ctxs, split_by_mag=True):
         """
         :param ctxs: a list of contexts with N=sum(len(ctx) for ctx in ctxs)
-        :param disagg: True when called from the disaggregation calculator
+        :param split_by_mag: where to split by magnitude
         :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
         N = sum(len(ctx) for ctx in ctxs)

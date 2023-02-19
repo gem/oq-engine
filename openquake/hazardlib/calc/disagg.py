@@ -448,8 +448,7 @@ class Disaggregator(object):
         if self.src_mutex:
             # make sure we can use idx_start_stop below
             self.ctx.sort(order='src_id')
-        self.mea, self.std = self.cmaker.get_mean_stds(
-            [self.ctx], split_by_mag=True)[:2]
+        self.mea, self.std = self.cmaker.get_mean_stds([self.ctx])[:2]
         if self.src_mutex:
             mat = idx_start_stop(self.ctx.src_id)  # shape (n, 3)
             src_ids = mat[:, 0]  # subset contributing to the given magi
