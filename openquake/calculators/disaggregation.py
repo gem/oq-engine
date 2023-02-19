@@ -264,11 +264,10 @@ class DisaggregationCalculator(base.HazardCalculator):
                   else self.datastore)
         totctxs = len(dstore['rup/mag'])
         logging.info('Reading {:_d} contexts'.format(totctxs))
+        cmakers = read_cmakers(self.datastore)
+        ctx_by_grp = read_ctx_by_grp(self.datastore)
+        src_mutex_by_grp = read_src_mutex(self.datastore)
 
-        rdt = [('grp_id', U16), ('magi', U8), ('nsites', U16), ('idx', U32)]
-        rdata = numpy.zeros(totctxs, rdt)
-        rdata['idx'] = numpy.arange(totctxs)
-        rdata['grp_id'] = dstore['rup/grp_id'][:]
         U = 0
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
@@ -280,10 +279,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         # worse performance, but visible only in extra-large calculations!
 
         # compute the total weight of the contexts and the maxsize
-        cmakers = read_cmakers(self.datastore)
-        ctx_by_grp = read_ctx_by_grp(self.datastore)
-        src_mutex_by_grp = read_src_mutex(self.datastore)
-        grp_ids = rdata['grp_id']
         totweight = sum(cmakers[grp_id].Z * len(ctx)
                         for grp_id, ctx in ctx_by_grp.items())
         maxsize = totweight / (oq.concurrent_tasks or 1)
