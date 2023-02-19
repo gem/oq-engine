@@ -93,6 +93,7 @@ def compute_disagg(dis_triples, magi, src_mutex, wdic, monitor):
     :yields:
         a dictionary for each site containing a 6D matrix of rates
     """
+    out = []
     for dis, triples in dis_triples:
         with monitor('mean_std disagg', measuremem=False):
             dis.init(magi, src_mutex, monitor)
@@ -105,7 +106,8 @@ def compute_disagg(dis_triples, magi, src_mutex, wdic, monitor):
                 res[0] += rates6D * wdic[rlz]
             else:
                 res[rlz] = rates6D
-        yield res
+        out.append(res)
+    return out
 
 
 def get_outputs_size(shapedic, disagg_outputs, Z):
@@ -371,7 +373,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         results = smap.reduce(self.agg_result, acc)
         return results  # s, r -> array 8D
 
-    def agg_result(self, acc, result):
+    def agg_result(self, acc, results):
         """
         Collect the results coming from compute_disagg into self.results.
 
@@ -379,11 +381,12 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param result: dictionary with the result coming from a task
         """
         with self.monitor('aggregating disagg matrices'):
-            trti = result.pop('trti')
-            magi = result.pop('magi')
-            sid = result.pop('sid')
-            for rlz, arr in result.items():
-                acc[sid, rlz][trti, magi] += arr
+            for res in results:
+                trti = res.pop('trti')
+                magi = res.pop('magi')
+                sid = res.pop('sid')
+                for rlz, arr in res.items():
+                    acc[sid, rlz][trti, magi] += arr
         return acc
 
     def post_execute(self, results):
