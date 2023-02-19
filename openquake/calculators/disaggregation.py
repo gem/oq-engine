@@ -354,7 +354,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 smap.submit((triples, src_mutex, wdic))
 
         data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \
-            s['M'] * s['P'] * 8 * n_outs
+            s['mag'] * s['M'] * s['P'] * 8 * n_outs
         if data_transfer > oq.max_data_transfer:
             raise ValueError(
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
