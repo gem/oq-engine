@@ -275,6 +275,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
+        logging.info("Reading context makers")
         cmakers = read_cmakers(dstore)
         src_mutex_by_grp = read_src_mutex(dstore)
         ctx_by_grp = read_ctx_by_grp(dstore)
