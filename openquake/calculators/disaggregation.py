@@ -91,11 +91,11 @@ def compute_disagg(iml4, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic,
     :returns:
         one 6D matrix of rates per site and realization
     """
-    out = []
     mon0 = monitor('disagg mean_std', measuremem=False)
     mon1 = monitor('disagg by eps', measuremem=False)
     mon2 = monitor('composing pnes', measuremem=False)
     mon3 = monitor('disagg matrix', measuremem=False)
+    out = []
     for site in sitecol:
         try:
             dis = disagg.Disaggregator([ctxt], site, cmaker, bin_edges)
@@ -314,9 +314,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         mutex_by_grp = self.datastore['mutex_by_grp'][:]
         for grp_id, ctx in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
-            cmaker.src_mutex, cmaker.rup_mutex = mutex_by_grp[grp_id]
+            src_mutex, rup_mutex = mutex_by_grp[grp_id]
             src_mutex = src_mutex_by_grp.get(grp_id, {})
-            if cmaker.rup_mutex:  # set by read_ctxt
+            if rup_mutex:  # set by read_ctxt
                 raise NotImplementedError(
                     'Disaggregation with mutex ruptures')
 
@@ -328,8 +328,14 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for rlzs in cmaker.gsims.values():
                     for rlz in rlzs:
                         wdic[rlz] = weights[rlz]
-            smap.submit((self.iml4, ctx, self.sitecol, cmaker, self.bin_edges,
-                         src_mutex, wdic))
+            ntasks = numpy.ceil(len(ctx) * cmaker.Z / maxsize)
+            if not src_mutex and rup_mutex:  # split context
+                ctxs = numpy.array_split(ctx, ntasks)
+            else:
+                ctxs = [ctx]
+            for ctx in ctxs:
+                smap.submit((self.iml4, ctx, self.sitecol, cmaker,
+                             self.bin_edges, src_mutex, wdic))
 
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
                    s['M'], s['P'])
