@@ -76,12 +76,12 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def compute_disagg(dis_triples, magi, src_mutex, wdic, monitor):
+def compute_disagg(dis_pairs, magi, src_mutex, wdic, monitor):
     """
     :param dis:
         a Disaggregator instance
-    :param triples:
-        a list of triples (g, rlz, iml2)
+    :param pairs:
+        a list of pairs (rlz, iml2)
     :param magi:
         an integer magnitude bin
     :param src_mutex:
@@ -94,11 +94,15 @@ def compute_disagg(dis_triples, magi, src_mutex, wdic, monitor):
         a dictionary for each site containing a 6D matrix of rates
     """
     out = []
-    for dis, triples in dis_triples:
+    for dis, pairs in dis_pairs:
         with monitor('mean_std disagg', measuremem=False):
             dis.init(magi, src_mutex, monitor)
         res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
-        for g, rlz, iml2 in triples:
+        for rlz, iml2 in pairs:
+            try:
+                g = dis.g_by_rlz[rlz]
+            except KeyError:
+                continue
             rates6D = disagg.to_rates(dis.disagg6D(iml2, g))
             if wdic:
                 if 0 not in res:
@@ -316,7 +320,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             dmsg = 'Sending task with %d/%d sites for grp_id=%d, magbin=%d'
             for magi, start, stop in performance.idx_start_stop(magbins[idxs]):
                 ctx = fullctx[start:stop]
-                dis_triples = []
+                dis_pairs = []
                 for site in self.sitecol:
                     sid = site.id
                     try:
@@ -325,32 +329,29 @@ class DisaggregationCalculator(base.HazardCalculator):
                     except FarAwayRupture:  # no data for this site
                         continue
                     iml3 = self.iml4[sid]
-                    triples = []
-                    for z, rlz in enumerate(self.iml4.rlzs[sid]):
-                        try:
-                            g = dis.g_by_rlz[rlz]
-                        except KeyError:
-                            continue
+                    rlzs = self.iml4.rlzs[sid]
+                    pairs = []
+                    for z, rlz in enumerate(rlzs):
                         iml2 = iml3[:, :, z]
                         if iml2.any():
-                            triples.append((g, rlz, iml2))
+                            pairs.append((rlz, iml2))
                     n = len(dis.fullctx)
                     U = max(U, n)
                     if wdic:  # one output per site (the mean)
                         n_outs += 1
                     else:  # one output per site and realization
-                        n_outs += len(triples)
-                    dis_triples.append((dis, triples))
+                        n_outs += len(pairs)
+                    dis_pairs.append((dis, pairs))
                     size += n * cmaker.Z
                     if size > maxsize:
-                        logging.debug(dmsg, len(dis_triples),
+                        logging.debug(dmsg, len(dis_pairs),
                                       self.N, grp_id, magi)
-                        smap.submit((dis_triples, magi, src_mutex, wdic))
-                        dis_triples.clear()
+                        smap.submit((dis_pairs, magi, src_mutex, wdic))
+                        dis_pairs.clear()
                         size = 0
-                if dis_triples:
-                    logging.debug(dmsg, len(dis_triples), self.N, grp_id, magi)
-                    smap.submit((dis_triples, magi, src_mutex, wdic))
+                if dis_pairs:
+                    logging.debug(dmsg, len(dis_pairs), self.N, grp_id, magi)
+                    smap.submit((dis_pairs, magi, src_mutex, wdic))
 
         data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \
             s['M'] * s['P'] * 8 * n_outs
