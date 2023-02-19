@@ -132,6 +132,12 @@ def output_dict(shapedic, disagg_outputs, Z):
     return dic
 
 
+def logdebug(triples, N, grp_id, magi):
+    msg = 'Sending task with %d/%d sites for grp_id=%d, magbin=%d, %d rlzs'
+    num_rlzs = sum(len(rlzs) for dis, rlzs, iml2s in triples)
+    logging.debug(msg, len(triples), N, grp_id, magi, num_rlzs)
+
+
 @base.calculators.add('disaggregation')
 class DisaggregationCalculator(base.HazardCalculator):
     """
@@ -314,7 +320,6 @@ class DisaggregationCalculator(base.HazardCalculator):
             magbins[magbins == -1] = 0  # bins on the edge
             idxs = numpy.argsort(magbins)  # used to sort fullctx
             fullctx = fullctx[idxs]
-            dmsg = 'Sending task with %d/%d sites for grp_id=%d, magbin=%d'
             for magi, start, stop in performance.idx_start_stop(magbins[idxs]):
                 ctx = fullctx[start:stop]
                 triples = []
@@ -342,12 +347,12 @@ class DisaggregationCalculator(base.HazardCalculator):
                     triples.append((dis, rlzs, iml2s))
                     size += n * len(rlzs)
                     if size > maxsize:
-                        logging.debug(dmsg, len(triples), self.N, grp_id, magi)
+                        logdebug(triples, self.N, grp_id, magi)
                         smap.submit((triples, magi, src_mutex, wdic))
                         triples.clear()
                         size = 0
                 if triples:
-                    logging.debug(dmsg, len(triples), self.N, grp_id, magi)
+                    logdebug(triples, self.N, grp_id, magi)
                     smap.submit((triples, magi, src_mutex, wdic))
 
         data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \
