@@ -329,7 +329,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     for rlz in rlzs:
                         wdic[rlz] = weights[rlz]
             ntasks = numpy.ceil(len(ctx) * cmaker.Z / maxsize)
-            if not src_mutex and rup_mutex:  # split context
+            if not src_mutex and not rup_mutex:  # split context
                 ctxs = numpy.array_split(ctx, ntasks)
             else:
                 ctxs = [ctx]
