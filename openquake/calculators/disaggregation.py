@@ -77,7 +77,7 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def compute_disagg(iml4, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic,
+def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic,
                    monitor):
     """
     :param dis_rlzs_iml2s:
@@ -101,8 +101,9 @@ def compute_disagg(iml4, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic,
             dis = disagg.Disaggregator([ctxt], site, cmaker, bin_edges)
         except disagg.FarAwayRupture:
             continue
-        iml3 = iml4[dis.sid]
-        rlzs = iml4.rlzs[dis.sid]
+        with dstore:
+            iml3 = dstore['hmap4'][dis.sid]
+            rlzs = dstore['best_rlzs'][dis.sid]
         for magi in range(dis.Ma):
             try:
                 dis.init(magi, src_mutex, mon0, mon1, mon2, mon3)
@@ -334,7 +335,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             else:
                 ctxs = [ctx]
             for ctx in ctxs:
-                smap.submit((self.iml4, ctx, self.sitecol, cmaker,
+                smap.submit((self.datastore, ctx, self.sitecol, cmaker,
                              self.bin_edges, src_mutex, wdic))
 
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
