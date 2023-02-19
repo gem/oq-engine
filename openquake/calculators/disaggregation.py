@@ -76,12 +76,10 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def compute_disagg(dis_rlzs_iml2s, magi, src_mutex, wdic, monitor):
+def compute_disagg(dis_rlzs_iml2s, src_mutex, wdic, monitor):
     """
     :param dis_rlzs_iml2s:
         a list of triples (dis, rlzs, iml2s)
-    :param magi:
-        an integer magnitude bin
     :param src_mutex:
         dictionary src_id -> weight (empty for independent sources)
     :param wdic:
@@ -96,18 +94,22 @@ def compute_disagg(dis_rlzs_iml2s, magi, src_mutex, wdic, monitor):
     mon2 = monitor('composing pnes', measuremem=False)
     mon3 = monitor('disagg matrix', measuremem=False)
     for dis, rlzs, iml2s in dis_rlzs_iml2s:
-        with monitor('mean_std disagg', measuremem=False):
-            dis.init(magi, src_mutex, mon1, mon2, mon3)
-        res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
-        for rlz, iml2 in zip(rlzs, iml2s):
-            rates6D = disagg.to_rates(dis.disagg6D(iml2, rlz))
-            if wdic:  # compute mean rates and store them in the 0 key
-                if 0 not in res:
-                    res[0] = 0
-                res[0] += rates6D * wdic[rlz]
-            else:  # store the rates in the rlz key
-                res[rlz] = rates6D
-        out.append(res)
+        for magi in range(dis.Ma):
+            with monitor('mean_std disagg', measuremem=False):
+                try:
+                    dis.init(magi, src_mutex, mon1, mon2, mon3)
+                except disagg.FarAwayRupture:  # no data for this magbin
+                    continue
+            res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
+            for rlz, iml2 in zip(rlzs, iml2s):
+                rates6D = disagg.to_rates(dis.disagg6D(iml2, rlz))
+                if wdic:  # compute mean rates and store them in the 0 key
+                    if 0 not in res:
+                        res[0] = 0
+                    res[0] += rates6D * wdic[rlz]
+                else:  # store the rates in the rlz key
+                    res[rlz] = rates6D
+            out.append(res)
     return out
 
 
@@ -132,10 +134,10 @@ def output_dict(shapedic, disagg_outputs, Z):
     return dic
 
 
-def logdebug(triples, N, grp_id, magi):
-    msg = 'Sending task with %d/%d sites for grp_id=%d, magbin=%d, %d rlzs'
+def logdebug(triples, N, grp_id):
+    msg = 'Sending task with %d/%d sites for grp_id=%d, %d rlzs'
     num_rlzs = sum(len(rlzs) for dis, rlzs, iml2s in triples)
-    logging.debug(msg, len(triples), N, grp_id, magi, num_rlzs)
+    logging.debug(msg, len(triples), N, grp_id, num_rlzs)
 
 
 @base.calculators.add('disaggregation')
@@ -316,44 +318,38 @@ class DisaggregationCalculator(base.HazardCalculator):
                     for rlz in rlzs:
                         wdic[rlz] = weights[rlz]
 
-            magbins = numpy.searchsorted(self.bin_edges[0], fullctx.mag) - 1
-            magbins[magbins == -1] = 0  # bins on the edge
-            idxs = numpy.argsort(magbins)  # used to sort fullctx
-            fullctx = fullctx[idxs]
-            for magi, start, stop in performance.idx_start_stop(magbins[idxs]):
-                ctx = fullctx[start:stop]
-                triples = []
-                for site in self.sitecol:
-                    sid = site.id
-                    try:
-                        dis = disagg.Disaggregator(
-                            [ctx], site, cmaker, self.bin_edges)
-                    except FarAwayRupture:  # no data for this site
-                        continue
-                    iml3 = self.iml4[sid]
-                    rlzs, iml2s = [], []
-                    for z, rlz in enumerate(self.iml4.rlzs[sid]):
-                        if rlz in dis.g_by_rlz:
-                            iml2 = iml3[:, :, z]
-                            if iml2.any():
-                                rlzs.append(rlz)
-                                iml2s.append(iml2)
-                    n = len(dis.fullctx)
-                    U = max(U, n)
-                    if wdic:  # one output per site (the mean)
-                        n_outs += 1
-                    else:  # one output per site and realization
-                        n_outs += len(rlzs)
-                    triples.append((dis, rlzs, iml2s))
-                    size += n * len(rlzs)
-                    if size > maxsize:
-                        logdebug(triples, self.N, grp_id, magi)
-                        smap.submit((triples, magi, src_mutex, wdic))
-                        triples.clear()
-                        size = 0
-                if triples:
-                    logdebug(triples, self.N, grp_id, magi)
-                    smap.submit((triples, magi, src_mutex, wdic))
+            triples = []
+            for site in self.sitecol:
+                sid = site.id
+                try:
+                    dis = disagg.Disaggregator(
+                        [fullctx], site, cmaker, self.bin_edges)
+                except FarAwayRupture:  # no data for this site
+                    continue
+                iml3 = self.iml4[sid]
+                rlzs, iml2s = [], []
+                for z, rlz in enumerate(self.iml4.rlzs[sid]):
+                    if rlz in dis.g_by_rlz:
+                        iml2 = iml3[:, :, z]
+                        if iml2.any():
+                            rlzs.append(rlz)
+                            iml2s.append(iml2)
+                n = len(dis.fullctx)
+                U = max(U, n)
+                if wdic:  # one output per site (the mean)
+                    n_outs += 1
+                else:  # one output per site and realization
+                    n_outs += len(rlzs)
+                triples.append((dis, rlzs, iml2s))
+                size += n * len(rlzs)
+                if size > maxsize:
+                    logdebug(triples, self.N, grp_id)
+                    smap.submit((triples, src_mutex, wdic))
+                    triples.clear()
+                    size = 0
+            if triples:
+                logdebug(triples, self.N, grp_id)
+                smap.submit((triples, src_mutex, wdic))
 
         data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \
             s['M'] * s['P'] * 8 * n_outs
