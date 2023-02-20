@@ -24,12 +24,12 @@ import numpy
 
 from openquake.baselib import parallel, hdf5, performance
 from openquake.baselib.general import (
-    AccumDict, humansize, pprod, agg_probs)
+    AccumDict, humansize, pprod, agg_probs, shortlist)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.contexts import (
-    read_cmakers, read_src_mutex, FarAwayRupture)
+    read_cmakers, read_src_mutex, read_ctx_by_grp, FarAwayRupture)
 from openquake.commonlib import util, calc
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -72,7 +72,7 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     for (s, imt, poe), zero_rlzs in acc.items():
         logging.warning('Cannot disaggregate for site %d, %s, '
                         'poe=%s, rlzs=%s: the hazard is zero',
-                        s, imt, poe, zero_rlzs)
+                        s, imt, poe, shortlist(zero_rlzs))
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
@@ -93,8 +93,9 @@ def compute_disagg(dis_triples, magi, src_mutex, wdic, monitor):
     :yields:
         a dictionary for each site containing a 6D matrix of rates
     """
+    out = []
     for dis, triples in dis_triples:
-        with monitor('init disagg', measuremem=False):
+        with monitor('mean_std disagg', measuremem=False):
             dis.init(magi, src_mutex, monitor)
         res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
         for g, rlz, iml2 in triples:
@@ -105,7 +106,8 @@ def compute_disagg(dis_triples, magi, src_mutex, wdic, monitor):
                 res[0] += rates6D * wdic[rlz]
             else:
                 res[rlz] = rates6D
-        yield res
+        out.append(res)
+    return out
 
 
 def get_outputs_size(shapedic, disagg_outputs, Z):
@@ -243,6 +245,9 @@ class DisaggregationCalculator(base.HazardCalculator):
             self.poe_id = {poe: i for i, poe in enumerate(oq.poes_disagg)}
             curves = [self.get_curve(sid, rlzs[sid])
                       for sid in self.sitecol.sids]
+        s = self.shapedic
+        logging.info('Building N * M * P * Z = {:_d} intensities'.format(
+                     s['N'] * s['M'] * s['P'] * s['Z']))
         self.iml4 = _iml4(rlzs, oq.iml_disagg, oq.imtls,
                           self.poes_disagg, curves)
         if self.iml4.array.sum() == 0:
@@ -260,14 +265,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        totctxs = len(dstore['rup/mag'])
-        logging.info('Reading {:_d} contexts'.format(totctxs))
-
-        rdt = [('grp_id', U16), ('magi', U8), ('nsites', U16), ('idx', U32)]
-        rdata = numpy.zeros(totctxs, rdt)
-        rdata['idx'] = numpy.arange(totctxs)
-        rdata['grp_id'] = dstore['rup/grp_id'][:]
-        U = 0
+        cmakers = read_cmakers(dstore)
+        src_mutex_by_grp = read_src_mutex(dstore)
+        ctx_by_grp = read_ctx_by_grp(dstore)
+        totctxs = sum(len(ctx) for ctx in ctx_by_grp.values())
+        logging.info('Read {:_d} contexts'.format(totctxs))
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         # IMPORTANT!! we rely on the fact that the classical part
@@ -278,17 +280,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         # worse performance, but visible only in extra-large calculations!
 
         # compute the total weight of the contexts and the maxsize
-        cmakers = read_cmakers(self.datastore)
-        grp_ids = rdata['grp_id']
-        totweight = 0
-        for cmaker in cmakers:
-            num_ctxs = (grp_ids == cmaker.grp_id).sum()
-            totweight += num_ctxs * len(cmaker.gsims)
-        maxsize = numpy.clip(
-            totweight / (oq.concurrent_tasks or 1), 1000, 200_000)
-        logging.debug(f'{maxsize=}')
+        totweight = sum(cmakers[grp_id].Z * len(ctx)
+                        for grp_id, ctx in ctx_by_grp.items())
+        maxsize = totweight / (oq.concurrent_tasks or 1)
+        logging.debug(f'{totweight=}, {maxsize=}')
 
-        src_mutex_by_grp = read_src_mutex(self.datastore)
         s = self.shapedic
         n_outs = 0
         size = 0
@@ -296,12 +292,12 @@ class DisaggregationCalculator(base.HazardCalculator):
             weights = None
         else:
             weights = self.datastore['weights'][:]
-        for grp_id, slices in sorted(performance.get_slices(grp_ids).items()):
+        mutex_by_grp = self.datastore['mutex_by_grp'][:]
+        U = 0
+        for grp_id, fullctx in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
+            cmaker.src_mutex, cmaker.rup_mutex = mutex_by_grp[grp_id]
             src_mutex = src_mutex_by_grp.get(grp_id, {})
-            ctxs = []
-            for s0, s1 in slices:
-                ctxs.append(cmaker.read_ctxt(self.datastore, slice(s0, s1)))
             if cmaker.rup_mutex:  # set by read_ctxt
                 raise NotImplementedError(
                     'Disaggregation with mutex ruptures')
@@ -313,7 +309,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                     for rlz in rlzs:
                         wdic[rlz] = weights[rlz]
 
-            fullctx = numpy.concatenate(ctxs).view(numpy.recarray)
             magbins = numpy.searchsorted(self.bin_edges[0], fullctx.mag) - 1
             magbins[magbins == -1] = 0  # bins on the edge
             idxs = numpy.argsort(magbins)  # used to sort fullctx
@@ -346,7 +341,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     else:  # one output per site and realization
                         n_outs += len(triples)
                     dis_triples.append((dis, triples))
-                    size += n * len(cmaker.gsims)
+                    size += n * cmaker.Z
                     if size > maxsize:
                         logging.debug(dmsg, len(dis_triples),
                                       self.N, grp_id, magi)
@@ -371,7 +366,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         results = smap.reduce(self.agg_result, acc)
         return results  # s, r -> array 8D
 
-    def agg_result(self, acc, result):
+    def agg_result(self, acc, results):
         """
         Collect the results coming from compute_disagg into self.results.
 
@@ -379,11 +374,12 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param result: dictionary with the result coming from a task
         """
         with self.monitor('aggregating disagg matrices'):
-            trti = result.pop('trti')
-            magi = result.pop('magi')
-            sid = result.pop('sid')
-            for rlz, arr in result.items():
-                acc[sid, rlz][trti, magi] += arr
+            for res in results:
+                trti = res.pop('trti')
+                magi = res.pop('magi')
+                sid = res.pop('sid')
+                for rlz, arr in res.items():
+                    acc[sid, rlz][trti, magi] += arr
         return acc
 
     def post_execute(self, results):

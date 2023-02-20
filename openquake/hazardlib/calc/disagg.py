@@ -430,25 +430,25 @@ class Disaggregator(object):
         ctx = numpy.concatenate(ctxs).view(numpy.recarray)
         if len(ctx) == 0:
             raise FarAwayRupture('No ruptures affecting site #%d' % sid)
-
-        # build the magnitude bins
-        self.fullmagi = numpy.searchsorted(bin_edges[0], ctx.mag) - 1
-        self.fullmagi[self.fullmagi == -1] = 0  # magnitude on the edge
-
         self.fullctx = ctx
 
     def init(self, magi, src_mutex, monitor=Monitor()):
         self.magi = magi
         self.src_mutex = src_mutex
         self.mon = monitor
+        if not hasattr(self, 'fullmagi'):
+            # the first time build the magnitude bins
+            self.fullctx = self.fullctx[numpy.argsort(self.fullctx.mag)]
+            self.fullmagi = numpy.searchsorted(
+                self.bin_edges[0], self.fullctx.mag) - 1
+            self.fullmagi[self.fullmagi == -1] = 0  # magnitude on the edge
         self.ctx = self.fullctx[self.fullmagi == magi]
         if len(self.ctx) == 0:
             raise FarAwayRupture
         if self.src_mutex:
             # make sure we can use idx_start_stop below
             self.ctx.sort(order='src_id')
-        self.mea, self.std = self.cmaker.get_mean_stds(
-            [self.ctx], split_by_mag=True)[:2]
+        self.mea, self.std = self.cmaker.get_mean_stds([self.ctx])[:2]
         if self.src_mutex:
             mat = idx_start_stop(self.ctx.src_id)  # shape (n, 3)
             src_ids = mat[:, 0]  # subset contributing to the given magi

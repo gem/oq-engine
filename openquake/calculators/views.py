@@ -947,6 +947,31 @@ def view_mean_disagg(token, dstore):
     return numpy.array(sorted(tbl), dt(['key'] + list(kd)))
 
 
+@view.add('disagg_by_mag')
+def view_disagg_by_mag(token, dstore):
+    """
+    Returns a table with the sources contributing more than 10%
+    of the highest source.
+    """
+    try:
+        site_id = int(token.split(':')[1])
+    except IndexError:
+        site_id = 0
+    if 'disagg-stats' in dstore:
+        data = dstore['disagg-stats/Mag'][site_id, ..., 0]  # (Ma, M, P)
+    else:
+        data = dstore['disagg-rlzs/Mag'][site_id, ..., 0]  # (Ma, M, P)
+    Ma, M, P = data.shape
+    oq = dstore['oqparam']
+    imts = list(oq.imtls)
+    dtlist = [('poe', float), ('imt', (numpy.string_, 10)),
+              ('magbin', int), ('prob', float)]
+    lst = []
+    for p, m, ma in itertools.product(range(P), range(M), range(Ma)):
+        lst.append((oq.poes[p], imts[m], ma, data[ma, m, p]))
+    return numpy.array(lst, dtlist)
+
+
 @view.add('bad_ruptures')
 def view_bad_ruptures(token, dstore):
     """
