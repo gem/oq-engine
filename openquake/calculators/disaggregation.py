@@ -19,17 +19,18 @@
 """
 Disaggregation calculator core functionality
 """
+
 import logging
 import numpy
 
-from openquake.baselib import parallel, hdf5, performance
+from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, humansize, pprod, agg_probs, shortlist)
+    AccumDict, pprod, agg_probs, shortlist)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.contexts import (
-    read_cmakers, read_src_mutex, read_ctx_by_grp, FarAwayRupture)
+    read_cmakers, read_src_mutex, read_ctx_by_grp)
 from openquake.commonlib import util, calc
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -46,7 +47,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
+def _hmap4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     # an ArrayWrapper of shape (N, M, P, Z)
     N, Z = rlzs.shape
     P = len(poes_disagg)
@@ -76,38 +77,56 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def compute_disagg(alldis, allrlzs, alliml2s, src_mutex, wdic, monitor):
+def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
+                   monitor):
     """
-    :param dis_rlzs_iml2s:
-        a list of triples (dis, rlzs, iml2s)
+    :param dstore:
+        a DataStore instance
+    :param ctxt:
+        a context array
+    :param sitecol:
+        a site collection
+    :param cmaker:
+        a ContextMaker instance
+    :param bin_edges:
+        a tuple of bin edges (mag, dist, lon, lat, eps, trt)
     :param src_mutex:
-        dictionary src_id -> weight (empty for independent sources)
-    :param wdic:
+        a dictionary src_id -> weight, usually empty
+    :param rwdic:
         dictionary rlz -> weight, empty for individual realizations
     :param monitor:
         monitor of the currently running job
     :returns:
         one 6D matrix of rates per site and realization
     """
-    out = []
     mon0 = monitor('disagg mean_std', measuremem=False)
     mon1 = monitor('disagg by eps', measuremem=False)
     mon2 = monitor('composing pnes', measuremem=False)
     mon3 = monitor('disagg matrix', measuremem=False)
-    for dis, rlzs, iml2s in zip(alldis, allrlzs, alliml2s):
+    out = []
+    for site in sitecol:
+        try:
+            dis = disagg.Disaggregator([ctxt], site, cmaker, bin_edges)
+        except disagg.FarAwayRupture:
+            continue
+        with dstore:
+            iml3 = dstore['hmap4'][dis.sid]
+            rlzs = dstore['best_rlzs'][dis.sid]
         for magi in range(dis.Ma):
-            with mon0:
-                try:
-                    dis.init(magi, src_mutex, mon1, mon2, mon3)
-                except disagg.FarAwayRupture:  # no data for this magbin
-                    continue
-            res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
-            for rlz, iml2 in zip(rlzs, iml2s):
+            try:
+                dis.init(magi, src_mutex, mon0, mon1, mon2, mon3)
+            except disagg.FarAwayRupture:
+                continue
+            res = {'trti': cmaker.trti, 'magi': dis.magi, 'sid': dis.sid}
+            for z, rlz in enumerate(rlzs):
+                iml2 = iml3[:, :, z]
+                if rlz not in dis.g_by_rlz or iml2.sum() == 0:
+                    continue  # do not disaggregate
                 rates6D = disagg.to_rates(dis.disagg6D(iml2, rlz))
-                if wdic:  # compute mean rates and store them in the 0 key
+                if rwdic:  # compute mean rates and store them in the 0 key
                     if 0 not in res:
                         res[0] = 0
-                    res[0] += rates6D * wdic[rlz]
+                    res[0] += rates6D * rwdic[rlz]
                 else:  # store the rates in the rlz key
                     res[rlz] = rates6D
             out.append(res)
@@ -135,10 +154,12 @@ def output_dict(shapedic, disagg_outputs, Z):
     return dic
 
 
-def logdebug(allrlzs, N, grp_id):
-    msg = 'Sending task with %d/%d sites for grp_id=%d, %d rlzs'
-    num_rlzs = sum(len(rlzs) for rlzs in allrlzs)
-    logging.debug(msg, len(allrlzs), N, grp_id, num_rlzs)
+def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic):
+    mags = list(numpy.unique(ctxt.mag))
+    logging.debug('Sending %d/%d sites for grp_id=%d, mags=%s',
+                  len(sitecol), len(sitecol.complete), ctxt.grp_id[0],
+                  shortlist(mags))
+    smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic))
 
 
 @base.calculators.add('disaggregation')
@@ -258,12 +279,12 @@ class DisaggregationCalculator(base.HazardCalculator):
         s = self.shapedic
         logging.info('Building N * M * P * Z = {:_d} intensities'.format(
                      s['N'] * s['M'] * s['P'] * s['Z']))
-        self.iml4 = _iml4(rlzs, oq.iml_disagg, oq.imtls,
-                          self.poes_disagg, curves)
-        if self.iml4.array.sum() == 0:
+        self.hmap4 = _hmap4(rlzs, oq.iml_disagg, oq.imtls,
+                            self.poes_disagg, curves)
+        if self.hmap4.array.sum() == 0:
             raise SystemExit('Cannot do any disaggregation: zero hazard')
-        self.datastore['hmap4'] = self.iml4
-        self.datastore['poe4'] = numpy.zeros_like(self.iml4.array)
+        self.datastore['hmap4'] = self.hmap4
+        self.datastore['poe4'] = numpy.zeros_like(self.hmap4.array)
         self.sr2z = {(s, r): z for s in self.sitecol.sids
                      for z, r in enumerate(rlzs[s])}
         return self.compute()
@@ -275,7 +296,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        logging.info("Reading context makers")
+        logging.info("Reading contexts")
         cmakers = read_cmakers(dstore)
         src_mutex_by_grp = read_src_mutex(dstore)
         ctx_by_grp = read_ctx_by_grp(dstore)
@@ -293,77 +314,58 @@ class DisaggregationCalculator(base.HazardCalculator):
         # compute the total weight of the contexts and the maxsize
         totweight = sum(cmakers[grp_id].Z * len(ctx)
                         for grp_id, ctx in ctx_by_grp.items())
-        maxsize = totweight / (oq.concurrent_tasks or 1)
+        maxsize = int(numpy.ceil(totweight / (oq.concurrent_tasks or 1)))
         logging.debug(f'{totweight=}, {maxsize=}')
 
         s = self.shapedic
-        n_outs = 0
-        size = 0
         if self.Z == 1 or oq.individual_rlzs:
             weights = None
         else:
             weights = self.datastore['weights'][:]
         mutex_by_grp = self.datastore['mutex_by_grp'][:]
-        U = 0
-        for grp_id, fullctx in ctx_by_grp.items():
+        for grp_id, ctxt in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
-            cmaker.src_mutex, cmaker.rup_mutex = mutex_by_grp[grp_id]
+            src_mutex, rup_mutex = mutex_by_grp[grp_id]
             src_mutex = src_mutex_by_grp.get(grp_id, {})
-            if cmaker.rup_mutex:  # set by read_ctxt
+            if rup_mutex:
                 raise NotImplementedError(
                     'Disaggregation with mutex ruptures')
+
+            # build rlz weight dictionary
             if weights is None:
-                wdic = {}  # don't compute means
+                rwdic = {}  # don't compute means
             else:
-                wdic = {}
+                rwdic = {}
                 for rlzs in cmaker.gsims.values():
                     for rlz in rlzs:
-                        wdic[rlz] = weights[rlz]
+                        rwdic[rlz] = weights[rlz]
 
-            alldis, allrlzs, alliml2s = [], [], []
-            for site in self.sitecol:
-                sid = site.id
-                try:
-                    dis = disagg.Disaggregator(
-                        [fullctx], site, cmaker, self.bin_edges)
-                except FarAwayRupture:  # no data for this site
-                    continue
-                iml3 = self.iml4[sid]
-                rlzs, iml2s = [], []
-                for z, rlz in enumerate(self.iml4.rlzs[sid]):
-                    if rlz in dis.g_by_rlz:
-                        iml2 = iml3[:, :, z]
-                        if iml2.any():
-                            rlzs.append(rlz)
-                            iml2s.append(iml2)
-                n = len(dis.fullctx)
-                U = max(U, n)
-                if wdic:  # one output per site (the mean)
-                    n_outs += 1
-                else:  # one output per site and realization
-                    n_outs += len(rlzs)
-                alldis.append(dis)
-                allrlzs.append(rlzs)
-                alliml2s.append(iml2s)
-                size += n * len(rlzs)
-                if size > maxsize:
-                    logdebug(allrlzs, self.N, grp_id)
-                    smap.submit((alldis, allrlzs, alliml2s, src_mutex, wdic))
-                    alldis.clear()
-                    allrlzs.clear()
-                    alliml2s.clear()
-                    size = 0
-            if alldis:
-                logdebug(allrlzs, self.N, grp_id)
-                smap.submit((alldis, allrlzs, alliml2s, src_mutex, wdic))
+            # submit single task
+            ntasks = len(ctxt) * cmaker.Z / maxsize
+            if ntasks < 1 or src_mutex or rup_mutex:
+                # do not split (test case_11)
+                submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
+                       self.bin_edges, src_mutex, rwdic)
+                continue
 
-        data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \
-            s['mag'] * s['M'] * s['P'] * 8 * n_outs
-        if data_transfer > oq.max_data_transfer:
-            raise ValueError(
-                'Estimated data transfer too big\n%s > max_data_transfer=%s' %
-                (humansize(data_transfer), humansize(oq.max_data_transfer)))
-        logging.info('Estimated data transfer: %s', humansize(data_transfer))
+            # submit tasks with splitting
+            for ctx in disagg.split_by_magbin(
+                    ctxt, self.bin_edges[0]).values():
+                sids = numpy.unique(ctx.sids)
+                sitecol = self.sitecol.filter(
+                    numpy.isin(self.sitecol.sids, sids))
+                ntasks = len(ctx) * cmaker.Z / maxsize
+                if len(sitecol) > ntasks:
+                    # split by magnitudes and tiles (test case_13)
+                    for tile in sitecol.split(ntasks):
+                        c = ctx[numpy.isin(ctx.sids, tile.sids)]
+                        if len(c):
+                            submit(smap, self.datastore, c, tile, cmaker,
+                                   self.bin_edges, src_mutex, rwdic)
+                else:
+                    # split by magnitude only (test case_1)
+                    submit(smap,self.datastore, ctx, sitecol, cmaker,
+                           self.bin_edges, src_mutex, rwdic)
 
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
                    s['M'], s['P'])
