@@ -57,6 +57,7 @@ from openquake.server import utils
 
 from django.conf import settings
 from django.http import FileResponse
+from django.urls import reverse
 from wsgiref.util import FileWrapper
 
 if settings.LOCKDOWN:
@@ -558,7 +559,7 @@ def calc_run(request):
                         status=status)
 
 
-def aelo_callback(job_id, job_owner_email, hostname, inputs, exc=None):
+def aelo_callback(job_id, job_owner_email, outputs_uri, inputs, exc=None):
     from_email = 'aelonoreply@openquake.org'
     to = [job_owner_email]
     reply_to = 'aelosupport@openquake.org'
@@ -569,8 +570,7 @@ def aelo_callback(job_id, job_owner_email, hostname, inputs, exc=None):
         body += f'There was an error running job {job_id}:\n{exc}'
     else:
         subject = f'Job {job_id} finished correctly'
-        body += (f'Please find the results here:\n'
-                 f'{hostname}/engine/{job_id}/outputs')
+        body += (f'Please find the results here:\n{outputs_uri}')
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
@@ -601,15 +601,17 @@ def aelo_run(request):
     [jobctx] = engine.create_jobs(
         [dict(calculation_mode='custom', description='AELO for ' + siteid)],
         config.distribution.log_level, None, utils.get_user(request), None)
-    response_data = dict(status='created', job_id=jobctx.calc_id)
+    job_id = jobctx.calc_id
+    response_data = dict(status='created', job_id=job_id)
 
-    # FIXME: should we make the user email mandatory?
+    # FIXME: we should make sure that 'email' is a mandatory field
     job_owner_email = request.user.email
-    hostname = request.get_host()
+    outputs_uri = request.build_absolute_uri(
+        reverse('outputs', args=[job_id]))
 
     # spawn the AELO main process
     mp.Process(target=aelo.main, args=(
-        lon, lat, vs30, siteid, job_owner_email, hostname, jobctx,
+        lon, lat, vs30, siteid, job_owner_email, outputs_uri, jobctx,
         aelo_callback)).start()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)

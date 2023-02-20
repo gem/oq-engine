@@ -46,7 +46,7 @@ def aelo_run(jobctx, lon, lat, vs30):
     engine.run_jobs([jobctx])
 
 
-def trivial_callback(job_id, job_owner_email, hostname, inputs, exc=None):
+def trivial_callback(job_id, job_owner_email, outputs_uri, inputs, exc=None):
     if exc:
         sys.exit('There was an error: %s' % exc)
     print('Finished job %d correctly' % job_id)
@@ -57,7 +57,7 @@ def main(lon: valid.longitude,
          vs30: valid.positivefloat,
          siteid: valid.simple_id,
          job_owner_email,
-         hostname,
+         outputs_uri,
          jobctx=None,
          callback=trivial_callback,
          ):
@@ -82,14 +82,14 @@ def main(lon: valid.longitude,
             # This can happen for instance:
             # - if no model covers the given coordinates.
             # - if no ini file was found
-            callback(jobctx.calc_id, job_owner_email, hostname, inputs, exc)
+            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
             raise exc
         try:
             aelo_run(jobctx, lon, lat, vs30)
         except Exception as exc:
-            callback(jobctx.calc_id, job_owner_email, hostname, inputs, exc)
+            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
         else:
-            callback(jobctx.calc_id, job_owner_email, hostname, inputs)
+            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs)
 
 
 if __name__ == '__main__':
