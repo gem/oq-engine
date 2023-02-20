@@ -1012,12 +1012,9 @@ class ContextMaker(object):
             itime = self.tom.time_span
         start = 0
         for cm in self.split_by_gsim():
-            try:
-                idx = cm.gidx - self.gidx[0]
-            except AttributeError:
-                stop = start + len(cm.gsims)
-                idx = range(start, stop)
-                start = stop
+            stop = start + len(cm.gsims)
+            idx = range(start, stop)
+            start = stop
             for ctx in ctxs:
                 for poes, ctxt, invs in cm.gen_poes(ctx, rup_indep):
                     with self.pne_mon:
