@@ -953,9 +953,7 @@ class HazardCalculator(BaseCalculator):
                 self.datastore['full_lt'] = self.full_lt
         else:  # scenario
             self.full_lt = self.datastore['full_lt']
-
-        R = self.R
-        logging.info('There are %d realization(s)', R)
+        logging.info('There are %d realization(s)', self.R)
 
         self.datastore['weights'] = arr = build_weights(self.realizations)
         self.datastore.set_attrs('weights', nbytes=arr.nbytes)

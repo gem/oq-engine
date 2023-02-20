@@ -1,6 +1,0 @@
-#,,,,,"generated_by='OpenQuake engine 3.16.0-git9788d09642', start_date='2022-12-12T08:52:30', checksum=4090087601, investigation_time=1.0, mag_bin_edges=[6.0, 7.0], dist_bin_edges=[0.0, 40.0, 80.0, 120.0, 160.0, 200.0], lon_bin_edges=[-75.80445236037271, -74.0, -72.19554763962729], lat_bin_edges=[2.80136, 4.6, 6.398639999999999], eps_bin_edges=[-3.0, -1.0, 1.0, 3.0], tectonic_region_types=['Deep Seismicity'], rlz_ids=[0], weights=[1.0], lon=-74.0, lat=4.6"
-imt,poe,lon,lat,trt,rlz0
-PGA,0.0001,-7.49022E+01,3.70068E+00,Deep Seismicity,0.00000E+00
-PGA,0.0001,-7.49022E+01,5.49932E+00,Deep Seismicity,5.83008E-06
-PGA,0.0001,-7.30978E+01,3.70068E+00,Deep Seismicity,0.00000E+00
-PGA,0.0001,-7.30978E+01,5.49932E+00,Deep Seismicity,9.46420E-05

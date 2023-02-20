@@ -889,7 +889,7 @@ class Starmap(object):
             return ()
 
         nbytes = sum(self.sent[self.task_func.__name__].values())
-        if nbytes > 1E6:
+        if nbytes > 1E5:
             logging.info('Sent %d %s tasks, %s in %d seconds', len(self.tasks),
                          self.name, humansize(nbytes), time.time() - self.t0)
 

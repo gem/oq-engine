@@ -22,7 +22,6 @@
 extracting a specific PMF from the result of :func:`disaggregation`.
 """
 
-import copy
 import operator
 import collections
 import itertools
@@ -32,7 +31,7 @@ import numpy
 import scipy.stats
 
 from openquake.baselib.general import AccumDict, groupby, pprod, humansize
-from openquake.baselib.performance import get_slices, Monitor
+from openquake.baselib.performance import idx_start_stop, Monitor
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -45,6 +44,25 @@ from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
+
+def to_rates(probs):
+    """
+    Convert an array of probabilities into an array of rates
+
+    >>> round(to_rates(.8), 6)
+    1.609438
+    """
+    return - numpy.log(1. - probs)
+
+
+def to_probs(rates):
+    """
+    Convert an array of rates into an array of probabilities
+
+    >>> round(to_probs(1.609438), 6)
+    0.8
+    """
+    return 1. - numpy.exp(- rates)
 
 
 def assert_same_shape(arrays):
@@ -72,9 +90,9 @@ def lon_lat_bins(lon, lat, size_km, coord_bin_width):
     delta_lat = min(size_km * KM_TO_DEGREES, 90)
     EPS = .001  # avoid discarding the last edge
     lon_bins = lon + numpy.arange(-delta_lon, delta_lon + EPS,
-                                  delta_lon / nbins)
+                                  2*delta_lon / nbins)
     lat_bins = lat + numpy.arange(-delta_lat, delta_lat + EPS,
-                                  delta_lat / nbins)
+                                  2*delta_lat / nbins)
     if cross_idl(*lon_bins):
         lon_bins %= 360
     return lon_bins, lat_bins
@@ -187,8 +205,8 @@ def get_eps4(eps_edges, truncation_level):
 
 
 # NB: this function is the crucial bit for performance!
-def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False,
-                  mon=Monitor()):
+def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
+                  mon1, mon2, mon3):
     # ctx: a recarray of size U for a single site and magnitude bin
     # mea: array of shape (G, M, U)
     # std: array of shape (G, M, U)
@@ -200,7 +218,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False,
     # epsstar: a boolean. When True, disaggregation contains eps* results
     # returns a 7D-array of shape (D, Lo, La, E, M, P, Z)
 
-    with mon('disagg by eps', measuremem=False):
+    with mon1:
         eps_edges = tuple(bin_edges[-1])  # last edge
         min_eps, max_eps, eps_bands, cum_bands = get_eps4(
             eps_edges, cmaker.truncation_level)
@@ -230,7 +248,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False,
                 poes[:, :, m, p] = _disagg_eps(
                     truncnorm_sf(phi_b, lvls), idxs, eps_bands, cum_bands)
 
-    with mon('multiplying pnes', measuremem=False):
+    with mon2:
         time_span = cmaker.tom.time_span
         if any(len(probs) for probs in ctx.probs_occur):  # any probs_occur
             for u, rec in enumerate(ctx):
@@ -241,7 +259,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False,
                 pnes[:, e, m, p] *= numpy.exp(
                     -ctx.occurrence_rate * poes[:, e, m, p] * time_span)
 
-    with mon('building disagg matrix', measuremem=False):
+    with mon3:
         bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
         return _build_disagg_matrix(bindata, bin_edges[1:])
 
@@ -340,43 +358,47 @@ mag_dist_pmf = partial(pprod, axis=(LON, LAT, EPS))
 mag_dist_eps_pmf = partial(pprod, axis=(LON, LAT))
 lon_lat_pmf = partial(pprod, axis=(DIS, MAG, EPS))
 mag_lon_lat_pmf = partial(pprod, axis=(DIS, EPS))
-trt_pmf = partial(pprod, axis=(1, 2, 3, 4, 5))
-mag_dist_trt_pmf = partial(pprod, axis=(3, 4, 5))
-mag_dist_trt_eps_pmf = partial(pprod, axis=(3, 4))
-# applied on matrix TRT MAG DIS LON LAT EPS
+# applied on matrix MAG DIS LON LAT EPS
 
-
-def lon_lat_trt_pmf(matrices):
+def trt_pmf(matrices):
     """
-    Fold full disaggregation matrices to lon / lat / TRT PMF.
-
-    :param matrices:
-        a matrix with T submatrices
-    :returns:
-        4d array. First dimension represents longitude histogram bins,
-        second one latitude histogram bins, third one trt histogram bins,
-        last dimension is the z index, associatd to the realization.
+    From T matrices of shape (Ma, D, Lo, La, E, ...) into one matrix of
+    shape (T, ...)
     """
-    res = numpy.array([lon_lat_pmf(mat) for mat in matrices])
-    return res.transpose(1, 2, 0, 3)
-
+    return numpy.array([pprod(mat, axis=(MAG, DIS, LON, LAT, EPS))
+                        for mat in matrices])
 
 # this dictionary is useful to extract a fixed set of
 # submatrices from the full disaggregation matrix
+# NB: the TRT keys have extractor None, since the extractor
+# without TRT can be used; we still need to populate the pmf_map
+# since it is used to validate the keys accepted by the job.ini file
 pmf_map = dict([
     ('Mag', mag_pmf),
     ('Dist', dist_pmf),
-    ('TRT', trt_pmf),
     ('Mag_Dist', mag_dist_pmf),
     ('Mag_Dist_Eps', mag_dist_eps_pmf),
-    ('Mag_Dist_TRT', mag_dist_trt_pmf),
-    ('Mag_Dist_TRT_Eps', mag_dist_trt_eps_pmf),
     ('Lon_Lat', lon_lat_pmf),
     ('Mag_Lon_Lat', mag_lon_lat_pmf),
-    ('Lon_Lat_TRT', lon_lat_trt_pmf),
+    ('TRT', trt_pmf),
+    ('TRT_Mag', None),
+    ('TRT_Lon_Lat', None),
+    ('TRT_Mag_Dist', None),
+    ('TRT_Mag_Dist_Eps', None),
 ])
 
 # ########################## Disaggregator class ########################## #
+
+def split_by_magbin(ctxt, mag_edges):
+    """
+    :param ctxt: a context array
+    :param mag_edges: magnitude bin edges
+    :returns: a dictionary magbin -> ctxt
+    """
+    ctx = ctxt[numpy.argsort(ctxt.mag)]
+    fullmagi = numpy.searchsorted(mag_edges, ctx.mag) - 1
+    fullmagi[fullmagi == -1] = 0  # magnitude on the edge
+    return {magi: ctx[fullmagi == magi] for magi in numpy.unique(fullmagi)}
 
 
 class Disaggregator(object):
@@ -416,84 +438,44 @@ class Disaggregator(object):
             ctxs = [ctx[ctx.sids == sid] for ctx in srcs_or_ctxs]
         else:  # passed sources
             ctxs = cmaker.from_srcs(srcs_or_ctxs, self.sitecol)
-            cmaker.src_mutex = getattr(srcs_or_ctxs[0], 'src_interdep', None) \
-                == 'mutex'
 
-        # build the magnitude bins
-        for ctx in ctxs:
-            magidx = numpy.searchsorted(bin_edges[0], ctx.mag) - 1
-            magidx[magidx == -1] = 0  # when the magnitude is on the edge
-            ctx.magi = magidx
-
-        mags = numpy.concatenate([ctx.mag for ctx in ctxs])
-        if len(mags) == 0:
+        ctx = numpy.concatenate(ctxs).view(numpy.recarray)
+        if len(ctx) == 0:
             raise FarAwayRupture('No ruptures affecting site #%d' % sid)
+        self.fullctx = ctx
 
-        # populate dictionaries magi-> list
-        self.ctxs = {}
-        self.weights = {}
-        self.nbytes = 0
-        for magi in numpy.unique(magidx):
-            thectxs = [c[c.magi == magi] for c in ctxs]
-            ctx = numpy.concatenate(thectxs).view(numpy.recarray)
-            self.nbytes += ctx.nbytes
-            if self.cmaker.src_mutex:
-                # getting a context array and a weight for each source
-                # NB: relies on ctx.weight having all equal weights, being
-                # built as ctx['weight'] = src.mutex_weight in contexts.py
-                slices = get_slices(ctx.src_id).values()
-                self.ctxs[magi] = [ctx[s0:s1] for [(s0, s1)] in slices]
-                self.weights[magi] = [c.weight[0] for c in self.ctxs[magi]]
-            else:
-                self.ctxs[magi] = [ctx]
-                self.weights[magi] = [1.]
+    def init(self, magi, src_mutex,
+             mon0=Monitor('disagg mean_stds'),
+             mon1=Monitor('disagg by eps'),
+             mon2=Monitor('composing pnes'),
+             mon3=Monitor('disagg matrix')):
+        self.magi = magi
+        self.src_mutex = src_mutex
+        self.mon1 = mon1
+        self.mon2 = mon2
+        self.mon3 = mon3
+        if not hasattr(self, 'ctx_by_magi'):
+            # the first time build the magnitude bins
+            self.ctx_by_magi = split_by_magbin(self.fullctx, self.bin_edges[0])
+        try:
+            self.ctx = self.ctx_by_magi[magi]
+        except KeyError:
+            raise FarAwayRupture
+        if self.src_mutex:
+            # make sure we can use idx_start_stop below
+            self.ctx.sort(order='src_id')
+        with mon0:
+            self.mea, self.std = self.cmaker.get_mean_stds([self.ctx])[:2]
+        if self.src_mutex:
+            mat = idx_start_stop(self.ctx.src_id)  # shape (n, 3)
+            src_ids = mat[:, 0]  # subset contributing to the given magi
+            self.src_mutex['start'] = mat[:, 1]
+            self.src_mutex['stop'] = mat[:, 2]
+            self.weights = [w for s, w in zip(self.src_mutex['src_id'],
+                                              self.src_mutex['weight'])
+                            if s in src_ids]
 
-    def init(self, monitor=Monitor()):
-        self.mon = monitor
-        # set .meas, .stds
-        self.meas = {}
-        self.stds = {}
-        for magi, ctxs in self.ctxs.items():
-            meas, stds = [], []
-            for ctx in ctxs:
-                mea, std = self.cmaker.get_mean_stds([ctx], split_by_mag=1)[:2]
-                meas.append(mea)
-                stds.append(std)
-            self.meas[magi] = meas
-            self.stds[magi] = stds
-
-    def split_by_magi(self):
-        """
-        :yields: pairs (magi, <Disaggregator>)
-        """
-        for magi in self.ctxs:
-            dis = copy.copy(self)
-            dis.nbytes = sum(c.nbytes for c in self.ctxs[magi])
-            dis.ctxs = {magi: self.ctxs[magi]}
-            dis.weights = {magi: self.weights[magi]}
-            if dis.nbytes:  # non-empty
-                yield magi, dis
-
-    def disagg7D(self, iml3, rlzs, magi):
-        """
-        Disaggregate multiple realizations.
-
-        :returns: a 7D matrix of shape (D, Lo, La, E, M, P, Z)
-        """
-        M, P, Z = iml3.shape
-        shp = [len(b)-1 for b in self.bin_edges[1:5]] + [M, P, Z]
-        matrix = numpy.zeros(shp)
-        for z, rlzi in enumerate(rlzs):
-            try:
-                g = self.g_by_rlz[rlzi]
-            except KeyError:
-                # discard the z contributions coming from wrong
-                # realizations: see the test disagg/case_2
-                continue
-            matrix[..., z] = self.disagg6D(iml3[:, :, z], g, magi)
-        return matrix
-
-    def disagg6D(self, iml2, g, magi):
+    def disagg6D(self, iml2, rlz):
         """
         Disaggregate a single realization.
 
@@ -503,29 +485,44 @@ class Disaggregator(object):
         imlog2 = numpy.zeros_like(iml2)
         for m, imt in enumerate(self.cmaker.imts):
             imlog2[m] = to_distribution_values(iml2[m], imt)
+        g = self.g_by_rlz[rlz]
+        if not self.src_mutex:
+            return _disaggregate(self.ctx, self.mea, self.std, self.cmaker,
+                                 g, imlog2, self.bin_edges, self.epsstar,
+                                 self.mon1, self.mon2, self.mon3)
 
+        # else average on the src_mutex weights
         mats = []
-        for ctx, mea, std in zip(
-                self.ctxs[magi], self.meas[magi], self.stds[magi]):
+        for s1, s2 in zip(self.src_mutex['start'], self.src_mutex['stop']):
+            ctx = self.ctx[s1:s2]
+            mea = self.mea[:, :, s1:s2]  # shape (G, M, U)
+            std = self.std[:, :, s1:s2]  # shape (G, M, U)
             mat = _disaggregate(ctx, mea, std, self.cmaker, g, imlog2,
-                                self.bin_edges, self.epsstar, self.mon)
+                                self.bin_edges, self.epsstar,
+                                self.mon1, self.mon2, self.mon3)
             mats.append(mat)
-        if len(mats) == 1:
-            return mat
-        return numpy.average(mats, weights=self.weights[magi], axis=0)
+        return numpy.average(mats, weights=self.weights, axis=0)
 
-    def disagg_mag_dist_eps(self, iml2, rlzi):
+    def disagg_mag_dist_eps(self, iml3, src_mutex={}):
         """
-        :returns: a 5D matrix of shape (Ma, D, E, M, P)
+        :param iml3: an array of shape (M, P, Z)
+        :param src_mutex: a dictionary src_id -> weight, default empty
+        :returns: a 6D matrix of shape (Ma, D, E, M, P, Z)
         """
-        mat5 = numpy.zeros((self.Ma, self.D, self.E) + iml2.shape)
+        M, P, Z = iml3.shape
+        assert Z == self.cmaker.Z, (Z, self.cmaker.Z)
+        out = numpy.zeros((self.Ma, self.D, self.E, M, P, Z))
         for magi in range(self.Ma):
-            mat6 = self.disagg6D(iml2, self.g_by_rlz[rlzi], magi)
-            mat5[magi] = pprod(mat6, axis=(1, 2))
-        return mat5
+            self.init(magi, src_mutex)
+            z = 0
+            for rlz, g in self.g_by_rlz.items():
+                mat6 = self.disagg6D(iml3[:, :, z], g)
+                out[magi, ..., z] = pprod(mat6, axis=(1, 2))
+                z += 1
+        return out
 
     def __repr__(self):
-        return f'<{self.__class__.__name__} {humansize(self.nbytes)} >'
+        return f'<{self.__class__.__name__} {humansize(self.fullctx.nbytes)} >'
 
 
 # this is used in the hazardlib tests, not in the engine
@@ -630,7 +627,6 @@ def disaggregation(
     for trt, srcs in by_trt.items():
         cmaker[trt] = cm = ContextMaker(trt, rlzs_by_gsim, oq)
         cm.tom = srcs[0].temporal_occurrence_model
-        cm.src_mutex = False  # FIXME
         ctxs[trt].extend(cm.from_srcs(srcs, sitecol))
         for ctx in ctxs[trt]:
             mags_by_trt[trt] |= set(ctx.mag)
@@ -647,8 +643,11 @@ def disaggregation(
                           dic['eps'], len(trts)])
     for trt in cmaker:
         dis = Disaggregator(ctxs[trt], sitecol, cmaker[trt], bin_edges)
-        dis.init()
-        for magi in dis.ctxs:
-            mat4 = dis.disagg6D([[iml]], 0, magi)[..., 0, 0]
+        for magi in range(dis.Ma):
+            try:
+                dis.init(magi, src_mutex={})  # src_mutex not implemented yet
+            except FarAwayRupture:
+                continue                
+            mat4 = dis.disagg6D([[iml]], 0)[..., 0, 0]
             matrix[magi, ..., trt_num[trt]] = mat4
     return bin_edges, matrix

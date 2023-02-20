@@ -131,21 +131,18 @@ class DisaggregateTestCase(unittest.TestCase):
         aaae(dist_bins, [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52,
                          56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 104,
                          108, 112])
-        aaae(lon_bins[0], [-0.904195, 0.1, 1.104195])
-        aaae(lat_bins[0], [-0.904194, 0.1, 1.104194])
+        aaae(lon_bins[0], [-0.904195, 1.104195])
+        aaae(lat_bins[0], [-0.904194, 1.104194])
         aaae(eps_bins, [-1, -0.3333333, 0.3333333, 1])
         self.assertEqual(trt_bins, [self.trt])
-        aaae(matrix.shape, (2, 28, 2, 2, 3, 1))
+        aaae(matrix.shape, (2, 28, 1, 1, 3, 1))
         aaae(matrix.sum(), 6.14179818e-11)
 
     def test_disaggregator(self):
         dis = disagg.Disaggregator([self.sources[0]], self.site, self.cmaker,
                                    self.bin_edges)
-        dis.init()
-        magi = list(dis.ctxs)
-        aac(magi, [0, 1, 2])  # magnitude bins
-        iml2 = numpy.array([[.01]])
-        mat3 = dis.disagg_mag_dist_eps(iml2, rlzi=0)[..., 0, 0]
+        iml3 = numpy.array([[[.01]]])
+        mat3 = dis.disagg_mag_dist_eps(iml3)[..., 0, 0, 0]
         bymag = pprod(mat3, axis=(1, 2))
         aac(bymag, [0.9873275537163634,
                     0.9580616631998118,

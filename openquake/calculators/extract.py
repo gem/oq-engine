@@ -36,7 +36,8 @@ from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib.gsim.base import ContextMaker, read_cmakers
+from openquake.hazardlib.gsim.base import (
+    ContextMaker, read_cmakers, read_ctx_by_grp)
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
@@ -541,11 +542,13 @@ def extract_mean_by_rup(dstore, what):
     N = len(dstore['sitecol'])
     assert N == 1
     out = []
-    for cmaker in read_cmakers(dstore):
-        for ctx in cmaker.read_ctxs(dstore):
-            # shape (4, G, M, U) => U
-            means = cmaker.get_mean_stds([ctx])[0].mean(axis=(0, 1))
-            out.extend(zip(ctx.src_id, ctx.rup_id, means))
+    ctx_by_grp = read_ctx_by_grp(dstore)
+    cmakers = read_cmakers(dstore)
+    for gid, ctx in ctx_by_grp.items():
+        # shape (4, G, M, U) => U
+        means = cmakers[gid].get_mean_stds([ctx], split_by_mag=True)[0].mean(
+            axis=(0, 1))
+        out.extend(zip(ctx.src_id, ctx.rup_id, means))
     out.sort(key=operator.itemgetter(0, 1))
     return numpy.array(out, [('src_id', U32), ('rup_id', U32), ('mean', F64)])
 
@@ -1122,14 +1125,19 @@ def extract_disagg(dstore, what):
     Extract a disaggregation output as a 2D array.
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
-    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&traditional=1
+    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&spec=stats
     """
     qdict = parse(what)
+    spec = qdict['spec'][0]
     label = qdict['kind'][0]
     imt = qdict['imt'][0]
     poe_id = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
-    traditional = qdict.get('traditional')
+    if 'traditional' in spec:
+        spec = spec[:4]  # rlzs or stats
+        traditional = True
+    else:
+        traditional = False
 
     def get(v, sid):
         if len(v.shape) == 2:
@@ -1139,10 +1147,10 @@ def extract_disagg(dstore, what):
     imt2m = {imt: m for m, imt in enumerate(oq.imtls)}
     bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
     m = imt2m[imt]
-    matrix = dstore['disagg/' + label][sid, m, poe_id]  # shape (..., Z)
+    matrix = dstore['disagg-%s/%s' % (spec, label)][sid, ..., m, poe_id, :]
+    Z = matrix.shape[-1]
     poe_agg = dstore['poe4'][sid, m, poe_id]
-    Z = len(poe_agg)
-    if traditional and traditional != '0':
+    if traditional:
         if matrix.any():  # nonzero
             matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
 
@@ -1171,59 +1179,6 @@ def extract_disagg(dstore, what):
     weights = numpy.array([dstore['weights'][r] for r in attrs['rlzs']])
     weights /= weights.sum()
     attrs['weights'] = weights
-    return ArrayWrapper(values.T, attrs)
-
-
-@extract.add('mean_disagg')
-def extract_mean_disagg(dstore, what):
-    """
-    Extract a disaggregation output averaged on the realizations as a 2D array.
-    Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/
-    mean_disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&traditional=1
-    """
-    qdict = parse(what)
-    label = qdict['kind'][0]
-    imt = qdict['imt'][0]
-    poe_id = int(qdict['poe_id'][0])
-    sid = int(qdict['site_id'][0])
-    traditional = qdict.get('traditional')
-
-    def get(v, sid):
-        if len(v.shape) == 2:
-            return v[sid]
-        return v[:]
-    oq = dstore['oqparam']
-    rlzs = dstore['best_rlzs'][sid]
-    weights = dstore['weights'][:][rlzs]
-    weights /= weights.sum()
-    imt2m = {imt: m for m, imt in enumerate(oq.imtls)}
-    bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
-    m = imt2m[imt]
-    matrix = dstore['disagg/' + label][sid, m, poe_id]  # shape (..., Z)
-    poe_agg = dstore['poe4'][sid, m, poe_id]
-    if traditional and traditional != '0':
-        if matrix.any():  # nonzero
-            matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
-
-    # adapted from the nrml_converters
-    disag_tup = tuple(label.split('_'))
-    axis = [bins[k] for k in disag_tup]
-
-    # compute axis mid points, except for the TRT axis
-    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype != object
-            else ax for ax in axis]
-    matrix = matrix @ weights  # compute means
-    if len(axis) == 1:  # i.e. Mag or Dist
-        values = numpy.array([axis[0], list(matrix)])
-    else:  # i.e. Mag_Dist
-        grids = numpy.meshgrid(*axis, indexing='ij')
-        values = [g.flatten() for g in grids] + [matrix.flatten()]
-        values = numpy.array(values)
-    attrs = qdict.copy()
-    for k in disag_tup:
-        attrs[k] = bins[k]
-    attrs['kind'] = disag_tup
     return ArrayWrapper(values.T, attrs)
 
 
@@ -1280,6 +1235,7 @@ def extract_disagg_by_src(dstore, what):
     return ArrayWrapper(arr[::-1], dict(site_id=site_id, imt=imt, poe=poe))
 
 
+# TODO: extract from disagg-stats, avoid computing means on the fly
 @extract.add('disagg_layer')
 def extract_disagg_layer(dstore, what):
     """
@@ -1303,7 +1259,7 @@ def extract_disagg_layer(dstore, what):
     out = numpy.zeros(len(sitecol), dt)
     hmap4 = dstore['hmap4'][:]
     best_rlzs = dstore['best_rlzs'][:]
-    arr = {kind: dstore['disagg/' + kind][:] for kind in kinds}
+    arr = {kind: dstore['disagg-rlzs/' + kind][:] for kind in kinds}
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
         rlzs = realizations[best_rlzs[sid]]
@@ -1318,7 +1274,7 @@ def extract_disagg_layer(dstore, what):
             for p, poe in enumerate(poes_disagg):
                 for kind in kinds:
                     key = '%s-%s-%s' % (kind, imt, poe)
-                    rec[key] = arr[kind][sid, m, p] @ ws
+                    rec[key] = arr[kind][sid, ..., m, p, :] @ ws
                 rec['iml-%s-%s' % (imt, poe)] = hmap4[sid, m, p]
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
                                   trt=numpy.array(encode(edges[-1]))))
