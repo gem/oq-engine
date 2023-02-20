@@ -191,11 +191,14 @@ def get_flt(hparams, branchID=None):
     :returns:
         :class:`openquake.hazardlib.logictree.FullLogicTree` object
     """
-    gsim_file = hparams['gsim_logic_tree_file']
     smlt = get_smlt(hparams, branchID)
     trts = smlt.tectonic_region_types
-    gsimlt = logictree.GsimLogicTree(gsim_file, trts)
-    return logictree.FullLogicTree(smlt, gsimlt)
+
+    if 'gsim' in hparams:
+        gslt = gsim_lt.GsimLogicTree.from_(hparams['gsim'])
+    else:
+        gslt = gsim_lt.GsimLogicTree(hparams['inputs']['gsim_logic_tree'], trts)
+    return logictree.FullLogicTree(smlt, gslt)
 
 
 def read_input(hparams, **extra):
@@ -267,8 +270,10 @@ def read_input(hparams, **extra):
         grp = sourceconverter.SourceGroup(src.tectonic_region_type)
         grp.sources = list(src)
         groups = [grp]
+    elif 'source_model_logic_tree' in hparams['inputs']:
+         flt = get_flt(hparams)
     else:
-        raise KeyError('Missing source_model_file or rupture_file')
+        raise KeyError('Missing source model or rupture')
     trts = set(grp.trt for grp in groups)
     if 'gsim' in hparams:
         gslt = gsim_lt.GsimLogicTree.from_(hparams['gsim'])
