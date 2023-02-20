@@ -341,14 +341,16 @@ class DisaggregationCalculator(base.HazardCalculator):
                         wdic[rlz] = weights[rlz]
 
             # submit tasks
+            sids = numpy.unique(ctxt.sids)
+            sitecol = self.sitecol.filter(numpy.isin(self.sitecols.sids, sids))
             ntasks = len(ctxt) * cmaker.Z / maxsize
             if ntasks < 2 or src_mutex or rup_mutex:
                 # do not split (see case_11)
                 submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
                        self.bin_edges, src_mutex, wdic)
-            elif self.N > ntasks:
+            elif len(sitecol) > ntasks:
                 # split context by tiles (see test_disagg_case_multi)
-                for tile in self.sitecol.split(ntasks):
+                for tile in sitecol.split(ntasks):
                     ctx = ctxt[numpy.isin(ctxt.sids, tile.sids)]
                     if len(ctx):
                         submit(smap, self.datastore, ctx, tile, cmaker,
@@ -357,7 +359,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 # split by magnitude (see case_1)
                 for ctx in disagg.split_by_magbin(
                         ctxt, self.bin_edges[0]).values():
-                    submit(smap,self.datastore, ctx, self.sitecol, cmaker,
+                    submit(smap,self.datastore, ctx, sitecol, cmaker,
                            self.bin_edges, src_mutex, wdic)
 
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
