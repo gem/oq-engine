@@ -127,10 +127,10 @@ class EngineServerTestCase(django.test.TestCase):
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
-        # let's impersonate the user openquake, the one running the WebUI:
-        # we need to set LOGNAME on Linux and USERNAME on Windows
-        env['LOGNAME'] = env['USERNAME'] = username = 'openquake'
-        email = 'openquake@email.test'
+        # let's impersonate the user django-test-user, the one running the
+        # WebUI: we need to set LOGNAME on Linux and USERNAME on Windows
+        env['LOGNAME'] = env['USERNAME'] = username = 'django-test-user'
+        email = 'django-test-user@email.test'
         password = '12345'
         cls.user, created = User.objects.get_or_create(
             username=username, email=email)
@@ -142,6 +142,7 @@ class EngineServerTestCase(django.test.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        cls.user.delete()
         c = dbcmd('SELECT count(*) FROM job WHERE status=?x', 'complete')[0][0]
         assert c > 0, 'There are no jobs??'
         cls.wait()
@@ -451,7 +452,7 @@ class EngineServerTestCase(django.test.TestCase):
                     print(email_content)
                 self.assertIn('finished correctly', email_content)
                 self.assertIn('From: aelonoreply@openquake.org', email_content)
-                self.assertIn('To: openquake@email.test', email_content)
+                self.assertIn('To: django-test-user@email.test', email_content)
                 self.assertIn('Reply-To: aelosupport@openquake.org',
                               email_content)
                 self.assertIn(
@@ -522,7 +523,7 @@ class EngineServerTestCase(django.test.TestCase):
                     print(email_content)
                 self.assertIn('failed', email_content)
                 self.assertIn('From: aelonoreply@openquake.org', email_content)
-                self.assertIn('To: openquake@email.test', email_content)
+                self.assertIn('To: django-test-user@email.test', email_content)
                 self.assertIn('Reply-To: aelosupport@openquake.org',
                               email_content)
                 self.assertIn(
