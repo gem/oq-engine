@@ -80,10 +80,18 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
 def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic,
                    monitor):
     """
-    :param dis_rlzs_iml2s:
-        a list of triples (dis, rlzs, iml2s)
+    :param dstore:
+        a DataStore instance
+    :param ctxt:
+        a context array
+    :param sitecol:
+        a site collection
+    :param cmaker:
+        a ContextMaker instance
+    :param bin_edges:
+        a tuple of bin edges (mag, dist, lon, lat, eps, trt)
     :param src_mutex:
-        dictionary src_id -> weight (empty for independent sources)
+        a dictionary src_id -> weight, usually empty
     :param wdic:
         dictionary rlz -> weight, empty for individual realizations
     :param monitor:
@@ -329,15 +337,24 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for rlzs in cmaker.gsims.values():
                     for rlz in rlzs:
                         wdic[rlz] = weights[rlz]
-            if (len(ctxt) * cmaker.Z > maxsize and
-                    not src_mutex and not rup_mutex):
-                # split context
-                ctxs = disagg.split_by_magbin(ctxt, self.bin_edges[0]).values()
-            else:
-                ctxs = [ctxt]
-            for ctx in ctxs:
-                smap.submit((self.datastore, ctx, self.sitecol, cmaker,
+
+            # submit tasks
+            ntasks = len(ctxt) * cmaker.Z / maxsize
+            if ntasks < 2 or src_mutex or rup_mutex:
+                # do not split
+                smap.submit((self.datastore, ctxt, self.sitecol, cmaker,
                              self.bin_edges, src_mutex, wdic))
+            elif self.N > 2:
+                # split context by site
+                for tile in self.sitecol.split(ntasks):
+                    smap.submit((self.datastore, ctxt, tile, cmaker,
+                                 self.bin_edges, src_mutex, wdic))
+            else:
+                # split by magnitude
+                for ctx in disagg.split_by_magbin(
+                        ctxt, self.bin_edges[0]).values():
+                    smap.submit((self.datastore, ctx, self.sitecol, cmaker,
+                                 self.bin_edges, src_mutex, wdic))
 
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
                    s['M'], s['P'])
