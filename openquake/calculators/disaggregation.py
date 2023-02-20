@@ -341,24 +341,28 @@ class DisaggregationCalculator(base.HazardCalculator):
                         wdic[rlz] = weights[rlz]
 
             # submit tasks
-            sids = numpy.unique(ctxt.sids)
-            sitecol = self.sitecol.filter(numpy.isin(self.sitecol.sids, sids))
             ntasks = len(ctxt) * cmaker.Z / maxsize
-            if ntasks < 2 or src_mutex or rup_mutex:
+            if ntasks < 1 or src_mutex or rup_mutex:
                 # do not split (see case_11)
-                submit(smap, self.datastore, ctxt, sitecol, cmaker,
+                submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
                        self.bin_edges, src_mutex, wdic)
-            elif len(sitecol) > ntasks:
-                # split context by tiles (see test_disagg_case_multi)
-                for tile in sitecol.split(ntasks):
-                    ctx = ctxt[numpy.isin(ctxt.sids, tile.sids)]
-                    if len(ctx):
-                        submit(smap, self.datastore, ctx, tile, cmaker,
-                               self.bin_edges, src_mutex, wdic)
-            else:
-                # split by magnitude (see case_1)
-                for ctx in disagg.split_by_magbin(
-                        ctxt, self.bin_edges[0]).values():
+                continue
+
+            # split by magnitude (see case_1)
+            for ctx in disagg.split_by_magbin(
+                    ctxt, self.bin_edges[0]).values():
+                sids = numpy.unique(ctx.sids)
+                sitecol = self.sitecol.filter(
+                    numpy.isin(self.sitecol.sids, sids))
+                ntasks = len(ctx) * cmaker.Z / maxsize
+                if len(sitecol) > ntasks:
+                    # split context by tiles (see test_disagg_case_multi)
+                    for tile in sitecol.split(ntasks):
+                        c = ctx[numpy.isin(ctx.sids, tile.sids)]
+                        if len(c):
+                            submit(smap, self.datastore, c, tile, cmaker,
+                                   self.bin_edges, src_mutex, wdic)
+                else:
                     submit(smap,self.datastore, ctx, sitecol, cmaker,
                            self.bin_edges, src_mutex, wdic)
 
