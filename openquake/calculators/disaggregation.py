@@ -77,7 +77,7 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic,
+def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
                    monitor):
     """
     :param dstore:
@@ -92,7 +92,7 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic,
         a tuple of bin edges (mag, dist, lon, lat, eps, trt)
     :param src_mutex:
         a dictionary src_id -> weight, usually empty
-    :param wdic:
+    :param rwdic:
         dictionary rlz -> weight, empty for individual realizations
     :param monitor:
         monitor of the currently running job
@@ -123,10 +123,10 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic,
                 if rlz not in dis.g_by_rlz or iml2.sum() == 0:
                     continue  # do not disaggregate
                 rates6D = disagg.to_rates(dis.disagg6D(iml2, rlz))
-                if wdic:  # compute mean rates and store them in the 0 key
+                if rwdic:  # compute mean rates and store them in the 0 key
                     if 0 not in res:
                         res[0] = 0
-                    res[0] += rates6D * wdic[rlz]
+                    res[0] += rates6D * rwdic[rlz]
                 else:  # store the rates in the rlz key
                     res[rlz] = rates6D
             out.append(res)
@@ -154,12 +154,12 @@ def output_dict(shapedic, disagg_outputs, Z):
     return dic
 
 
-def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic):
+def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic):
     mags = list(numpy.unique(ctxt.mag))
     logging.debug('Sending %d/%d sites for grp_id=%d, mags=%s',
                   len(sitecol), len(sitecol.complete), ctxt.grp_id[0],
                   shortlist(mags))
-    smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic))
+    smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic))
 
 
 @base.calculators.add('disaggregation')
@@ -333,19 +333,19 @@ class DisaggregationCalculator(base.HazardCalculator):
 
             # build rlz weight dictionary
             if weights is None:
-                wdic = {}  # don't compute means
+                rwdic = {}  # don't compute means
             else:
-                wdic = {}
+                rwdic = {}
                 for rlzs in cmaker.gsims.values():
                     for rlz in rlzs:
-                        wdic[rlz] = weights[rlz]
+                        rwdic[rlz] = weights[rlz]
 
             # submit single task
             ntasks = len(ctxt) * cmaker.Z / maxsize
             if ntasks < 1 or src_mutex or rup_mutex:
                 # do not split (test case_11)
                 submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
-                       self.bin_edges, src_mutex, wdic)
+                       self.bin_edges, src_mutex, rwdic)
                 continue
 
             # submit tasks with splitting
@@ -361,11 +361,11 @@ class DisaggregationCalculator(base.HazardCalculator):
                         c = ctx[numpy.isin(ctx.sids, tile.sids)]
                         if len(c):
                             submit(smap, self.datastore, c, tile, cmaker,
-                                   self.bin_edges, src_mutex, wdic)
+                                   self.bin_edges, src_mutex, rwdic)
                 else:
                     # split by magnitude only (test case_1)
                     submit(smap,self.datastore, ctx, sitecol, cmaker,
-                           self.bin_edges, src_mutex, wdic)
+                           self.bin_edges, src_mutex, rwdic)
 
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
                    s['M'], s['P'])
