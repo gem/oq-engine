@@ -293,21 +293,21 @@ class ProbabilityMap(object):
                     other.array[:, :, i])
         return self
 
-    def update_(self, poes, invs, ctxt, itime, mutex_weight, idx):
+    def update_(self, poes, invs, ctxt, itime, mutex_weight):
         """
         Update probabilities
         """
         rates = ctxt.occurrence_rate
         probs_occur = getattr(ctxt, 'probs_occur', numpy.zeros((len(ctxt), 0)))
         idxs = self.sidx[ctxt.sids]
-        for i, x in enumerate(idx):
+        for i in range(self.shape[-1]):  # G indices
             if len(mutex_weight) == 0:  # indep
-                update_pmap_i(self.array[:, :, x], poes[:, :, i], invs, rates,
+                update_pmap_i(self.array[:, :, i], poes[:, :, i], invs, rates,
                               probs_occur, idxs, itime)
             else:  # mutex
                 weights = [mutex_weight[src_id, rup_id]
                            for src_id, rup_id in zip(ctxt.src_id, ctxt.rup_id)]
-                update_pmap_m(self.array[:, :, x], poes[:, :, i],
+                update_pmap_m(self.array[:, :, i], poes[:, :, i],
                               invs, rates, probs_occur,
                               numpy.array(weights), idxs, itime)
 

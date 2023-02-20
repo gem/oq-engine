@@ -1010,15 +1010,10 @@ class ContextMaker(object):
             itime = 0.
         else:
             itime = self.tom.time_span
-        start = 0
-        for cm in self.split_by_gsim():
-            stop = start + len(cm.gsims)
-            idx = range(start, stop)
-            start = stop
-            for ctx in ctxs:
-                for poes, ctxt, invs in cm.gen_poes(ctx, rup_indep):
-                    with self.pne_mon:
-                        pmap.update_(poes, invs, ctxt, itime, rup_mutex, idx)
+        for ctx in ctxs:
+            for poes, ctxt, invs in self.gen_poes(ctx, rup_indep):
+                with self.pne_mon:
+                    pmap.update_(poes, invs, ctxt, itime, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=True):
@@ -1134,26 +1129,6 @@ class ContextMaker(object):
                             src.weight += 30.
                     else:
                         src.weight += 1.
-
-    def split_by_gsim(self):
-        """
-        Split the ContextMaker in multiple context makers, one per GSIM
-        """
-        if self.collapse_level < 0 or len(self.gsims) == 1:
-            return [self]
-        cmakers = []
-        for g, gsim in zip(self.gidx, self.gsims):
-            gsim.g = g
-        for dists, gsims in groupby(self.gsims, by_dists).items():
-            cm = self.__class__(self.trt, gsims, self.oq)
-            cm.gidx = numpy.array([gsim.g for gsim in gsims])
-            cm.grp_id = self.grp_id
-            cm.collapser.cfactor = self.collapser.cfactor
-            for attr in dir(self):
-                if attr.endswith('_mon'):
-                    setattr(cm, attr, getattr(self, attr))
-            cmakers.append(cm)
-        return cmakers
 
 
 def by_dists(gsim):
