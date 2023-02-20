@@ -76,37 +76,41 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def compute_disagg(dis_triples, magi, src_mutex, wdic, monitor):
+def compute_disagg(alldis, allrlzs, alliml2s, src_mutex, wdic, monitor):
     """
-    :param dis:
-        a Disaggregator instance
-    :param triples:
-        a list of triples (g, rlz, iml2)
-    :param magi:
-        an integer magnitude bin
+    :param dis_rlzs_iml2s:
+        a list of triples (dis, rlzs, iml2s)
     :param src_mutex:
         dictionary src_id -> weight (empty for independent sources)
     :param wdic:
         dictionary rlz -> weight, empty for individual realizations
     :param monitor:
         monitor of the currently running job
-    :yields:
-        a dictionary for each site containing a 6D matrix of rates
+    :returns:
+        one 6D matrix of rates per site and realization
     """
     out = []
-    for dis, triples in dis_triples:
-        with monitor('mean_std disagg', measuremem=False):
-            dis.init(magi, src_mutex, monitor)
-        res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
-        for g, rlz, iml2 in triples:
-            rates6D = disagg.to_rates(dis.disagg6D(iml2, g))
-            if wdic:
-                if 0 not in res:
-                    res[0] = 0
-                res[0] += rates6D * wdic[rlz]
-            else:
-                res[rlz] = rates6D
-        out.append(res)
+    mon0 = monitor('disagg mean_std', measuremem=False)
+    mon1 = monitor('disagg by eps', measuremem=False)
+    mon2 = monitor('composing pnes', measuremem=False)
+    mon3 = monitor('disagg matrix', measuremem=False)
+    for dis, rlzs, iml2s in zip(alldis, allrlzs, alliml2s):
+        for magi in range(dis.Ma):
+            with mon0:
+                try:
+                    dis.init(magi, src_mutex, mon1, mon2, mon3)
+                except disagg.FarAwayRupture:  # no data for this magbin
+                    continue
+            res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
+            for rlz, iml2 in zip(rlzs, iml2s):
+                rates6D = disagg.to_rates(dis.disagg6D(iml2, rlz))
+                if wdic:  # compute mean rates and store them in the 0 key
+                    if 0 not in res:
+                        res[0] = 0
+                    res[0] += rates6D * wdic[rlz]
+                else:  # store the rates in the rlz key
+                    res[rlz] = rates6D
+            out.append(res)
     return out
 
 
@@ -129,6 +133,12 @@ def output_dict(shapedic, disagg_outputs, Z):
         shp = tuple(shapedic[key] for key in out.lower().split('_'))
         dic[out] = numpy.zeros((N,) + shp + (M, P, Z))
     return dic
+
+
+def logdebug(allrlzs, N, grp_id):
+    msg = 'Sending task with %d/%d sites for grp_id=%d, %d rlzs'
+    num_rlzs = sum(len(rlzs) for rlzs in allrlzs)
+    logging.debug(msg, len(allrlzs), N, grp_id, num_rlzs)
 
 
 @base.calculators.add('disaggregation')
@@ -265,6 +275,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
+        logging.info("Reading context makers")
         cmakers = read_cmakers(dstore)
         src_mutex_by_grp = read_src_mutex(dstore)
         ctx_by_grp = read_ctx_by_grp(dstore)
@@ -309,51 +320,45 @@ class DisaggregationCalculator(base.HazardCalculator):
                     for rlz in rlzs:
                         wdic[rlz] = weights[rlz]
 
-            magbins = numpy.searchsorted(self.bin_edges[0], fullctx.mag) - 1
-            magbins[magbins == -1] = 0  # bins on the edge
-            idxs = numpy.argsort(magbins)  # used to sort fullctx
-            fullctx = fullctx[idxs]
-            dmsg = 'Sending task with %d/%d sites for grp_id=%d, magbin=%d'
-            for magi, start, stop in performance.idx_start_stop(magbins[idxs]):
-                ctx = fullctx[start:stop]
-                dis_triples = []
-                for site in self.sitecol:
-                    sid = site.id
-                    try:
-                        dis = disagg.Disaggregator(
-                            [ctx], site, cmaker, self.bin_edges)
-                    except FarAwayRupture:  # no data for this site
-                        continue
-                    iml3 = self.iml4[sid]
-                    triples = []
-                    for z, rlz in enumerate(self.iml4.rlzs[sid]):
-                        try:
-                            g = dis.g_by_rlz[rlz]
-                        except KeyError:
-                            continue
+            alldis, allrlzs, alliml2s = [], [], []
+            for site in self.sitecol:
+                sid = site.id
+                try:
+                    dis = disagg.Disaggregator(
+                        [fullctx], site, cmaker, self.bin_edges)
+                except FarAwayRupture:  # no data for this site
+                    continue
+                iml3 = self.iml4[sid]
+                rlzs, iml2s = [], []
+                for z, rlz in enumerate(self.iml4.rlzs[sid]):
+                    if rlz in dis.g_by_rlz:
                         iml2 = iml3[:, :, z]
                         if iml2.any():
-                            triples.append((g, rlz, iml2))
-                    n = len(dis.fullctx)
-                    U = max(U, n)
-                    if wdic:  # one output per site (the mean)
-                        n_outs += 1
-                    else:  # one output per site and realization
-                        n_outs += len(triples)
-                    dis_triples.append((dis, triples))
-                    size += n * cmaker.Z
-                    if size > maxsize:
-                        logging.debug(dmsg, len(dis_triples),
-                                      self.N, grp_id, magi)
-                        smap.submit((dis_triples, magi, src_mutex, wdic))
-                        dis_triples.clear()
-                        size = 0
-                if dis_triples:
-                    logging.debug(dmsg, len(dis_triples), self.N, grp_id, magi)
-                    smap.submit((dis_triples, magi, src_mutex, wdic))
+                            rlzs.append(rlz)
+                            iml2s.append(iml2)
+                n = len(dis.fullctx)
+                U = max(U, n)
+                if wdic:  # one output per site (the mean)
+                    n_outs += 1
+                else:  # one output per site and realization
+                    n_outs += len(rlzs)
+                alldis.append(dis)
+                allrlzs.append(rlzs)
+                alliml2s.append(iml2s)
+                size += n * len(rlzs)
+                if size > maxsize:
+                    logdebug(allrlzs, self.N, grp_id)
+                    smap.submit((alldis, allrlzs, alliml2s, src_mutex, wdic))
+                    alldis.clear()
+                    allrlzs.clear()
+                    alliml2s.clear()
+                    size = 0
+            if alldis:
+                logdebug(allrlzs, self.N, grp_id)
+                smap.submit((alldis, allrlzs, alliml2s, src_mutex, wdic))
 
         data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \
-            s['M'] * s['P'] * 8 * n_outs
+            s['mag'] * s['M'] * s['P'] * 8 * n_outs
         if data_transfer > oq.max_data_transfer:
             raise ValueError(
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
