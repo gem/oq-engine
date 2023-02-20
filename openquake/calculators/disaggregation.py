@@ -346,7 +346,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             ntasks = len(ctxt) * cmaker.Z / maxsize
             if ntasks < 2 or src_mutex or rup_mutex:
                 # do not split (see case_11)
-                submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
+                submit(smap, self.datastore, ctxt, sitecol, cmaker,
                        self.bin_edges, src_mutex, wdic)
             elif len(sitecol) > ntasks:
                 # split context by tiles (see test_disagg_case_multi)
