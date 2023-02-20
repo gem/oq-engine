@@ -1492,7 +1492,7 @@ def full_context(sites, rup, dctx=None):
 def get_mean_stds(gsim, ctx, imts, **kw):
     """
     :param gsim: a single GSIM or a a list of GSIMs
-    :param ctx: a RuptureContext or a recarray of size N
+    :param ctx: a RuptureContext or a recarray of size N with same magnitude
     :param imts: a list of M IMTs
     :param kw: additional keyword arguments
     :returns:
@@ -1502,7 +1502,7 @@ def get_mean_stds(gsim, ctx, imts, **kw):
     single = hasattr(gsim, 'compute')
     kw['imtls'] = {imt.string: [0] for imt in imts}
     cmaker = ContextMaker('*', [gsim] if single else gsim, kw)
-    out = cmaker.get_mean_stds([ctx])  # (4, G, M, N)
+    out = cmaker.get_mean_stds([ctx], split_by_mag=False)  # (4, G, M, N)
     return out[:, 0] if single else out
 
 
