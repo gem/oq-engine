@@ -342,7 +342,7 @@ class DisaggregationCalculator(base.HazardCalculator):
 
             # submit tasks
             sids = numpy.unique(ctxt.sids)
-            sitecol = self.sitecol.filter(numpy.isin(self.sitecols.sids, sids))
+            sitecol = self.sitecol.filter(numpy.isin(self.sitecol.sids, sids))
             ntasks = len(ctxt) * cmaker.Z / maxsize
             if ntasks < 2 or src_mutex or rup_mutex:
                 # do not split (see case_11)
