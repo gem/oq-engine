@@ -313,11 +313,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         else:
             weights = self.datastore['weights'][:]
         mutex_by_grp = self.datastore['mutex_by_grp'][:]
-        for grp_id, ctx in ctx_by_grp.items():
+        for grp_id, ctxt in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
             src_mutex, rup_mutex = mutex_by_grp[grp_id]
             src_mutex = src_mutex_by_grp.get(grp_id, {})
-            if rup_mutex:  # set by read_ctxt
+            if rup_mutex:
                 raise NotImplementedError(
                     'Disaggregation with mutex ruptures')
 
@@ -329,11 +329,12 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for rlzs in cmaker.gsims.values():
                     for rlz in rlzs:
                         wdic[rlz] = weights[rlz]
-            ntasks = numpy.ceil(len(ctx) * cmaker.Z / maxsize)
-            if not src_mutex and not rup_mutex:  # split context
-                ctxs = numpy.array_split(ctx, ntasks)
+            if (len(ctxt) * cmaker.Z > maxsize and
+                    not src_mutex and not rup_mutex):
+                # split context
+                ctxs = disagg.split_by_magbin(ctxt, self.bin_edges[0]).values()
             else:
-                ctxs = [ctx]
+                ctxs = [ctxt]
             for ctx in ctxs:
                 smap.submit((self.datastore, ctx, self.sitecol, cmaker,
                              self.bin_edges, src_mutex, wdic))

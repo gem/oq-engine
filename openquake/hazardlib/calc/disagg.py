@@ -22,7 +22,6 @@
 extracting a specific PMF from the result of :func:`disaggregation`.
 """
 
-import copy
 import operator
 import collections
 import itertools
@@ -389,6 +388,17 @@ pmf_map = dict([
 
 # ########################## Disaggregator class ########################## #
 
+def split_by_magbin(ctxt, mag_edges):
+    """
+    :param ctxt: a context array
+    :param mag_edges: magnitude bin edges
+    :returns: a dictionary magbin -> ctxt
+    """
+    ctx = ctxt[numpy.argsort(ctxt.mag)]
+    fullmagi = numpy.searchsorted(mag_edges, ctx.mag) - 1
+    fullmagi[fullmagi == -1] = 0  # magnitude on the edge
+    return {magi: ctx[fullmagi == magi] for magi in numpy.unique(fullmagi)}
+
 
 class Disaggregator(object):
     """
@@ -443,14 +453,12 @@ class Disaggregator(object):
         self.mon1 = mon1
         self.mon2 = mon2
         self.mon3 = mon3
-        if not hasattr(self, 'fullmagi'):
+        if not hasattr(self, 'ctx_by_magi'):
             # the first time build the magnitude bins
-            self.fullctx = self.fullctx[numpy.argsort(self.fullctx.mag)]
-            self.fullmagi = numpy.searchsorted(
-                self.bin_edges[0], self.fullctx.mag) - 1
-            self.fullmagi[self.fullmagi == -1] = 0  # magnitude on the edge
-        self.ctx = self.fullctx[self.fullmagi == magi]
-        if len(self.ctx) == 0:
+            self.ctx_by_magi = split_by_magbin(self.fullctx, self.bin_edges[0])
+        try:
+            self.ctx = self.ctx_by_magi[magi]
+        except KeyError:
             raise FarAwayRupture
         if self.src_mutex:
             # make sure we can use idx_start_stop below
