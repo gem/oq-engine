@@ -142,10 +142,13 @@ class EngineServerTestCase(django.test.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.user.delete()
-        c = dbcmd('SELECT count(*) FROM job WHERE status=?x', 'complete')[0][0]
-        assert c > 0, 'There are no jobs??'
-        cls.wait()
+        try:
+            c = dbcmd('SELECT count(*) FROM job WHERE status=?x',
+                      'complete')[0][0]
+            assert c > 0, 'There are no jobs??'
+            cls.wait()
+        finally:
+            cls.user.delete()
 
     # tests
 
