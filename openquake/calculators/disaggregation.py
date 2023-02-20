@@ -341,16 +341,16 @@ class DisaggregationCalculator(base.HazardCalculator):
             # submit tasks
             ntasks = len(ctxt) * cmaker.Z / maxsize
             if ntasks < 2 or src_mutex or rup_mutex:
-                # do not split
+                # do not split (see case_11)
                 smap.submit((self.datastore, ctxt, self.sitecol, cmaker,
                              self.bin_edges, src_mutex, wdic))
-            elif self.N > 2:
-                # split context by site
+            elif self.N > ntasks:
+                # split context by tiles (see test_disagg_case_multi)
                 for tile in self.sitecol.split(ntasks):
                     smap.submit((self.datastore, ctxt, tile, cmaker,
                                  self.bin_edges, src_mutex, wdic))
             else:
-                # split by magnitude
+                # split by magnitude (see case_1)
                 for ctx in disagg.split_by_magbin(
                         ctxt, self.bin_edges[0]).values():
                     smap.submit((self.datastore, ctx, self.sitecol, cmaker,
