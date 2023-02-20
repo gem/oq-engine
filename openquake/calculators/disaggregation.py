@@ -154,10 +154,12 @@ def output_dict(shapedic, disagg_outputs, Z):
     return dic
 
 
-def logdebug(allrlzs, N, grp_id):
-    msg = 'Sending task with %d/%d sites for grp_id=%d, %d rlzs'
-    num_rlzs = sum(len(rlzs) for rlzs in allrlzs)
-    logging.debug(msg, len(allrlzs), N, grp_id, num_rlzs)
+def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic):
+    mags = list(numpy.unique(ctxt.mag))
+    logging.debug('Sending %d/%d sites for grp_id=%d, mags=%s',
+                  len(sitecol), len(sitecol.complete), ctxt.grp_id[0],
+                  shortlist(mags))
+    smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, wdic))
 
 
 @base.calculators.add('disaggregation')
@@ -342,19 +344,19 @@ class DisaggregationCalculator(base.HazardCalculator):
             ntasks = len(ctxt) * cmaker.Z / maxsize
             if ntasks < 2 or src_mutex or rup_mutex:
                 # do not split (see case_11)
-                smap.submit((self.datastore, ctxt, self.sitecol, cmaker,
-                             self.bin_edges, src_mutex, wdic))
+                submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
+                       self.bin_edges, src_mutex, wdic)
             elif self.N > ntasks:
                 # split context by tiles (see test_disagg_case_multi)
                 for tile in self.sitecol.split(ntasks):
-                    smap.submit((self.datastore, ctxt, tile, cmaker,
-                                 self.bin_edges, src_mutex, wdic))
+                    submit(smap, self.datastore, ctxt, tile, cmaker,
+                           self.bin_edges, src_mutex, wdic)
             else:
                 # split by magnitude (see case_1)
                 for ctx in disagg.split_by_magbin(
                         ctxt, self.bin_edges[0]).values():
-                    smap.submit((self.datastore, ctx, self.sitecol, cmaker,
-                                 self.bin_edges, src_mutex, wdic))
+                    submit(smap,self.datastore, ctx, self.sitecol, cmaker,
+                           self.bin_edges, src_mutex, wdic)
 
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
                    s['M'], s['P'])
