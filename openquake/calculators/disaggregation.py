@@ -350,8 +350,9 @@ class DisaggregationCalculator(base.HazardCalculator):
                 # split context by tiles (see test_disagg_case_multi)
                 for tile in self.sitecol.split(ntasks):
                     ctx = ctxt[numpy.isin(ctxt.sids, tile.sids)]
-                    submit(smap, self.datastore, ctx, tile, cmaker,
-                           self.bin_edges, src_mutex, wdic)
+                    if len(ctx):
+                        submit(smap, self.datastore, ctx, tile, cmaker,
+                               self.bin_edges, src_mutex, wdic)
             else:
                 # split by magnitude (see case_1)
                 for ctx in disagg.split_by_magbin(
