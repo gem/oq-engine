@@ -34,6 +34,7 @@ import gzip
 import tempfile
 import string
 import random
+import secrets
 import django
 from django.test import Client
 from openquake.baselib.general import gettemp
@@ -127,11 +128,11 @@ class EngineServerTestCase(django.test.TestCase):
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
-        # let's impersonate the user django-test-user, the one running the
-        # WebUI: we need to set LOGNAME on Linux and USERNAME on Windows
-        env['LOGNAME'] = env['USERNAME'] = username = 'django-test-user'
+        username = 'django-test-user'
         email = 'django-test-user@email.test'
-        password = '12345'
+        password = ''.join((secrets.choice(
+            string.ascii_letters + string.digits + string.punctuation)
+            for i in range(8)))
         cls.user, created = User.objects.get_or_create(
             username=username, email=email)
         if created:
