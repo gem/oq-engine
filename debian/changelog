@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Sampling the ruptures was raising a BlockingIOError sometimes
+
   [Kendra Johnson]
   * Made it possible to use extendModel for multiple branchSets in the
     source model logic tree
