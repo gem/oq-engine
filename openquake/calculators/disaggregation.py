@@ -352,12 +352,13 @@ class DisaggregationCalculator(base.HazardCalculator):
             for tile in self.sitecol.split(ntasks):
                 ctx = ctxt[numpy.isin(ctxt.sids, tile.sids)]
                 if len(ctx) * cmaker.Z > maxsize:
-                    # split by magbin
+                    # split by magbin too
                     for c in disagg.split_by_magbin(
                             ctx, self.bin_edges[0]).values():
                         submit(smap, self.datastore, c, tile, cmaker,
                                self.bin_edges, src_mutex, rwdic)
                 elif len(ctx):
+                    # see case_multi in the oq-risk-tests
                     submit(smap, self.datastore, ctx, tile, cmaker,
                            self.bin_edges, src_mutex, rwdic)
 
