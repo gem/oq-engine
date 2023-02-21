@@ -73,7 +73,7 @@ def _get_sitecol(hparams, req_site_params):
     :param hparams: a dictionary of hazard parameters
     """
     if 'sites' in hparams:
-        sm = unittest.mock.Mock(**hparams)
+        sm = Oq(**hparams)
         mesh = geo.Mesh.from_coords(hparams['sites'])
     elif 'sites_csv' in hparams:
         data = open(hparams['sites_csv']).read().replace(',', ' ').strip()
@@ -191,14 +191,116 @@ def get_flt(hparams, branchID=None):
     :returns:
         :class:`openquake.hazardlib.logictree.FullLogicTree` object
     """
-    smlt = get_smlt(hparams, branchID)
-    trts = smlt.tectonic_region_types
-
+    if 'source_model_logic_tree' not in hparams['inputs']:
+        smlt = logictree.SourceModelLogicTree.fake()
+        trts = ()
+    else:
+        smlt = get_smlt(hparams, branchID)
+        trts = smlt.tectonic_region_types
     if 'gsim' in hparams:
         gslt = gsim_lt.GsimLogicTree.from_(hparams['gsim'])
     else:
         gslt = gsim_lt.GsimLogicTree(hparams['inputs']['gsim_logic_tree'], trts)
     return logictree.FullLogicTree(smlt, gslt)
+
+
+class Oq(object):
+    def __init__(self, **hparams):
+        vars(self).update(hparams)
+
+    def get_reqv(self):
+        return {}
+
+
+class Input(object):
+    def __init__(self, hparams, extra):
+        if isinstance(hparams, str):  # path to job.ini
+            hparams = read_hparams(hparams)
+        if extra:
+            hparams = hparams.copy()
+            hparams.update(extra)
+        M = len(hparams['imtls'])
+        assert isinstance(hparams['maximum_distance'], IntegrationDistance)
+        hparams.setdefault('cross_correl', None)
+        hparams.setdefault('number_of_logic_tree_samples', 0)
+        hparams.setdefault('random_seed', 42)
+        hparams.setdefault('reference_vs30_type', 600)
+        hparams.setdefault('split_sources', True)
+        hparams.setdefault('reqv', {})
+        hparams.setdefault('min_iml', numpy.zeros(M))
+        self.oq = Oq(**hparams)
+        self.full_lt = get_flt(hparams)
+        self.sitecol = _get_sitecol(
+            hparams, self.full_lt.gsim_lt.req_site_params)
+        self.srcstring = hparams.get('source_string')
+        self.converter = sourceconverter.SourceConverter(
+            hparams.get('investigation_time'),
+            hparams.get('rupture_mesh_spacing', 5.),
+            hparams.get('complex_fault_mesh_spacing'),
+            hparams.get('width_of_mfd_bin', 1.0),
+            hparams.get('area_source_discretization'),
+            hparams.get('minimum_magnitude', {'default': 0}),
+            hparams.get('source_id'),
+            discard_trts=hparams.get('discard_trts', ''))
+
+    def get_groups_cmakers(self):
+        smfname = self.oq.inputs.get('source_model')
+        rmfname = self.oq.inputs.get('rupture_model')
+        if rmfname:
+            ngmfs = self.oq.number_of_ground_motion_fields
+            ses_seed = self.oq.ses_seed
+        if smfname:
+            [sm] = nrml.read_source_models([smfname], self.converter)
+            groups = sm.src_groups
+        elif rmfname:
+            ebrs = _get_ebruptures(rmfname, self.converter, ses_seed)
+            groups = _rupture_groups(ebrs)
+        elif self.srcstring:
+            c = self.converter
+            src = nrml.get(self.srcstring, c.investigation_time,
+                           c.rupture_mesh_spacing, c.width_of_mfd_bin,
+                           c.area_source_discretization)
+            grp = sourceconverter.SourceGroup(src.tectonic_region_type)
+            grp.sources = list(src)
+            groups = [grp]
+        else:
+            raise KeyError('Missing source model or rupture')
+
+        # fix source attributes
+        gslt = self.full_lt.gsim_lt
+        idx = 0
+        num_rlzs = gslt.get_num_paths()
+        mags_by_trt = self.oq.mags_by_trt = general.AccumDict(accum=set())
+        for grp_id, sg in enumerate(groups):
+            assert len(sg)  # sanity check
+            for src in sg:
+                if hasattr(src, 'rupture'):
+                    mags_by_trt[sg.trt].add('%.2f' % src.rupture.mag)
+                src.id = idx
+                src.grp_id = grp_id
+                src.trt_smr = grp_id
+                src.samples = num_rlzs
+                src.smweight = 1. / num_rlzs
+                idx += 1
+
+        cmakerdict = {}  # trt => cmaker
+        start = 0
+        n = self.oq.number_of_logic_tree_samples
+        s = self.oq.random_seed
+        for trt, rlzs_by_gsim in gslt.get_rlzs_by_gsim_trt(n, s).items():
+            cmakerdict[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, self.oq)
+            cmakerdict[trt].gidx = numpy.arange(start, start+len(rlzs_by_gsim))
+            start += len(rlzs_by_gsim)
+        if rmfname:
+            # for instance, for 2 TRTs with 5x2 GSIMs and ngmfs=10, the
+            # number of occupation is 100 for each rupture, for a total
+            # of 200 events, see scenario/case_13
+            nrlzs = gslt.get_num_paths()
+            for grp in groups:
+                for ebr in grp:
+                    ebr.n_occ = ngmfs * nrlzs
+
+        return groups, cmakerdict.values()
 
 
 def read_input(hparams, **extra):
@@ -232,87 +334,4 @@ def read_input(hparams, **extra):
     - "number_of_logic_tree_samples" (default 0)
     - "ses_per_logic_tree_path" (default 1)
     """
-    if isinstance(hparams, str):
-        hparams = read_hparams(hparams)
-    if extra:
-        hparams = hparams.copy()
-        hparams.update(extra)
-    assert 'imts' in hparams or 'imtls' in hparams
-    assert isinstance(hparams['maximum_distance'], IntegrationDistance)
-    smfname = hparams['inputs'].get('source_model')
-    srcstring = hparams.get('source_string')
-    if smfname:  # nonscenario
-        itime = hparams['investigation_time']
-    else:
-        itime = 50.  # ignored in scenario
-    rmfname = hparams['inputs'].get('rupture_model')
-    if rmfname:
-        ngmfs = hparams["number_of_ground_motion_fields"]
-        ses_seed = hparams["ses_seed"]
-    converter = c = sourceconverter.SourceConverter(
-        itime,
-        hparams.get('rupture_mesh_spacing', 5.),
-        hparams.get('complex_fault_mesh_spacing'),
-        hparams.get('width_of_mfd_bin', 1.0),
-        hparams.get('area_source_discretization'),
-        hparams.get('minimum_magnitude', {'default': 0}),
-        hparams.get('source_id'),
-        discard_trts=hparams.get('discard_trts', ''))
-    if smfname:
-        [sm] = nrml.read_source_models([smfname], converter)
-        groups = sm.src_groups
-    elif rmfname:
-        ebrs = _get_ebruptures(rmfname, converter, ses_seed)
-        groups = _rupture_groups(ebrs)
-    elif srcstring:
-        src = nrml.get(srcstring, c.investigation_time, c.rupture_mesh_spacing,
-                       c.width_of_mfd_bin, c.area_source_discretization)
-        grp = sourceconverter.SourceGroup(src.tectonic_region_type)
-        grp.sources = list(src)
-        groups = [grp]
-    elif 'source_model_logic_tree' in hparams['inputs']:
-         flt = get_flt(hparams)
-    else:
-        raise KeyError('Missing source model or rupture')
-    trts = set(grp.trt for grp in groups)
-    if 'gsim' in hparams:
-        gslt = gsim_lt.GsimLogicTree.from_(hparams['gsim'])
-    else:
-        gslt = gsim_lt.GsimLogicTree(hparams['inputs']['gsim_logic_tree'], trts)
-
-    # fix source attributes
-    idx = 0
-    num_rlzs = gslt.get_num_paths()
-    mags_by_trt = general.AccumDict(accum=set())
-    for grp_id, sg in enumerate(groups):
-        assert len(sg)  # sanity check
-        for src in sg:
-            if hasattr(src, 'rupture'):
-                mags_by_trt[sg.trt].add('%.2f' % src.rupture.mag)
-            src.id = idx
-            src.grp_id = grp_id
-            src.trt_smr = grp_id
-            src.samples = num_rlzs
-            src.smweight = 1. / num_rlzs
-            idx += 1
-
-    cmakerdict = {}  # trt => cmaker
-    start = 0
-    n = hparams.get('number_of_logic_tree_samples', 0)
-    s = hparams.get('random_seed', 42)
-    for trt, rlzs_by_gsim in gslt.get_rlzs_by_gsim_trt(n, s).items():
-        hparams['mags'] = sorted(mags_by_trt[trt] or mags_by_trt['*'])
-        cmakerdict[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, hparams)
-        cmakerdict[trt].gidx = numpy.arange(start, start + len(rlzs_by_gsim))
-        start += len(rlzs_by_gsim)
-    if rmfname:
-        # for instance, for 2 TRTs with 5x2 GSIMs and ngmfs=10, the
-        # number of occupation is 100 for each rupture, for a total
-        # of 200 events, see scenario/case_13
-        nrlzs = gslt.get_num_paths()
-        for grp in groups:
-            for ebr in grp:
-                ebr.n_occ = ngmfs * nrlzs
-
-    sitecol = _get_sitecol(hparams, gslt.req_site_params)
-    return Input(groups, sitecol, gslt, cmakerdict)
+    return Input(hparams, extra)

@@ -185,8 +185,7 @@ class CollapseTestCase(unittest.TestCase):
 
     def test_collapse_small(self):
         inp = read_input(JOB)  # has pointsource_distance=50
-        cmaker = inp.cmaker
-        [[area]] = inp.groups  # there is a single AreaSource
+        [[area]], [cmaker] = inp.get_groups_cmakers()
         srcs = list(area)  # split in 3+3 PointSources
 
         # check the weights
@@ -228,8 +227,7 @@ class CollapseTestCase(unittest.TestCase):
             inputs=dict(source_model=smpath),
             area_source_discretization=1.)
         inp = read_input(params)
-        cmaker = inp.cmaker
-        [srcs] = inp.groups  # a single area source
+        [srcs], [cmaker] = inp.get_groups_cmakers()
         # get the context
         ctxs = cmaker.from_srcs(srcs, inp.sitecol)
         pcurve0 = cmaker.get_pmap(ctxs).array[0]
@@ -287,13 +285,12 @@ class CollapseTestCase(unittest.TestCase):
             gsim='YuEtAl2013Ms', inputs={},
             reference_vs30_value=600.)
         inp = read_input(params)
-        cmaker = inp.cmaker
-        [grp] = inp.groups
+        [grp], [cmaker] = inp.get_groups_cmakers()
         self.assertEqual(len(grp.sources), 1)  # not splittable source
         poes = cmaker.get_poes(grp, inp.sitecol)
         cmaker.collapser = Collapser(
             collapse_level=1, kfields=cmaker.REQUIRES_DISTANCES)
-        newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
+        newpoes = cmaker.get_poes(grp, inp.sitecol)
         if PLOTTING:
             import matplotlib.pyplot as plt
             imls = cmaker.imtls['PGA']
@@ -358,14 +355,12 @@ class CollapseTestCase(unittest.TestCase):
             gsim='YuEtAl2013Ms', inputs={},
             reference_vs30_value=600.)
         inp = read_input(params)
-        cmaker = inp.cmaker
-
-        [grp] = inp.groups
+        [grp], [cmaker] = inp.get_groups_cmakers()
         self.assertEqual(len(grp.sources), 52)  # point sources
         poes = cmaker.get_poes(grp, inp.sitecol)  # no collapse
 
         # collapse_level = 0
-        newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol, collapse_level=0)
+        newpoes = cmaker.get_poes(grp, inp.sitecol, collapse_level=0)
         if PLOTTING:
             import matplotlib.pyplot as plt
             imls = cmaker.imtls['PGA']
