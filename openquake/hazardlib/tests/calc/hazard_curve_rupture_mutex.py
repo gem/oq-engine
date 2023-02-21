@@ -40,7 +40,8 @@ class MutexRupturesTestCase(unittest.TestCase):
         sitecol = SiteCollection([site])
         imtls = DictArray({'PGA': [0.01, 0.1, 0.2, 0.5]})
         gsim_by_trt = {'Some TRT': Campbell2003()}
-        hcurves = calc_hazard_curves(groups, sitecol, imtls, gsim_by_trt)
+        hcurves = calc_hazard_curves(groups, sitecol, imtls, gsim_by_trt,
+                                     investigation_time=1.)
         # expected results obtained with an ipython notebook
         expected = [4.3998728e-01, 1.1011728e-01, 7.5495312e-03, 8.5812844e-06]
         npt.assert_almost_equal(hcurves['PGA'][0], expected)
