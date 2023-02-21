@@ -355,9 +355,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     # split by magbin
                     for c in disagg.split_by_magbin(
                             ctx, self.bin_edges[0]).values():
-                        sids = numpy.unique(c.sids)
-                        sites = tile.filter(numpy.isin(tile.sids, sids))
-                        submit(smap, self.datastore, c, sites, cmaker,
+                        submit(smap, self.datastore, c, tile, cmaker,
                                self.bin_edges, src_mutex, rwdic)
                 elif len(ctx):
                     submit(smap, self.datastore, ctx, tile, cmaker,
