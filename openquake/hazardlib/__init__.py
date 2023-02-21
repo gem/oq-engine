@@ -22,8 +22,6 @@ import os
 import ast
 import operator
 import itertools
-import unittest
-import collections
 import configparser
 import numpy
 from openquake.baselib import hdf5, general, InvalidFile
@@ -34,25 +32,7 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
 
-@property
-def cmaker(self):
-    if len(self.cmakerdict) == 1:
-        return list(self.cmakerdict.values())[0]
-    raise TypeError('There are multiple cmakers inside %s' % self.cmakerdict)
-
-
-@property
-def group(self):
-    if len(self.groups) == 1:
-        return self.groups[0]
-    raise TypeError('There are multiple groups inside %s' % self.groups)
-
-
 bytrt = operator.attrgetter('tectonic_region_type')
-Input = collections.namedtuple('Input', 'groups sitecol gsim_lt cmakerdict')
-Input.cmaker = cmaker
-Input.group = group
-
 
 def _get_site_model(fname, req_site_params):
     sm = hdf5.read_csv(fname, site.site_param_dt).array
@@ -193,7 +173,7 @@ def get_flt(hparams, branchID=None):
     """
     if 'source_model_logic_tree' not in hparams['inputs']:
         smlt = logictree.SourceModelLogicTree.fake()
-        trts = ()
+        trts = ['*']
     else:
         smlt = get_smlt(hparams, branchID)
         trts = smlt.tectonic_region_types
@@ -213,7 +193,12 @@ class Oq(object):
 
 
 class Input(object):
-    def __init__(self, hparams, extra):
+    """
+    An Input object has attributes
+
+    oq, sitecol, full_lt, gsim_lt, groups, cmakers
+    """
+    def __init__(self, hparams, extra, read_all=True):
         if isinstance(hparams, str):  # path to job.ini
             hparams = read_hparams(hparams)
         if extra:
@@ -242,6 +227,8 @@ class Input(object):
             hparams.get('minimum_magnitude', {'default': 0}),
             hparams.get('source_id'),
             discard_trts=hparams.get('discard_trts', ''))
+        if read_all:
+            self.groups, self.cmakers = self.get_groups_cmakers()
 
     def get_groups_cmakers(self):
         smfname = self.oq.inputs.get('source_model')
@@ -300,7 +287,20 @@ class Input(object):
                 for ebr in grp:
                     ebr.n_occ = ngmfs * nrlzs
 
-        return groups, cmakerdict.values()
+        return groups, list(cmakerdict.values())
+
+    @property
+    def cmaker(self):
+        if len(self.cmakers) == 1:
+            return self.cmakers[0]
+        raise ValueError('There are multiple cmakers inside %s' % self.cmakers)
+
+
+    @property
+    def group(self):
+        if len(self.groups) == 1:
+            return self.groups[0]
+        raise ValueError('There are multiple groups inside %s' % self.groups)
 
 
 def read_input(hparams, **extra):
