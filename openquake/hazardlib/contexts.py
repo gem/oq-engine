@@ -1642,7 +1642,6 @@ def read_cmakers(dstore, full_lt=None):
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         if aftershock:
             cmaker.deltagetter = DeltaRatesGetter(dstore)
-        cmaker.tom = valid.occurrence_model(toms[grp_id])
         cmaker.trti = trti
         cmaker.gidx = numpy.arange(start, start + G)
         cmaker.grp_id = grp_id
