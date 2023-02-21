@@ -171,6 +171,12 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
              z1pt0=22, z2pt5=11)
     ]
 
+    def test_split(self):
+        # splitting in more tiles than sites
+        col = SiteCollection(self.SITES)  # 4 sites
+        tiles = col.split(5)
+        self.assertEqual(len(tiles), 4)
+
     def test_filter(self):
         col = SiteCollection(self.SITES)
         filtered = col.filter(numpy.array([True, False, True, False]))

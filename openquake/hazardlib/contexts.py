@@ -34,9 +34,10 @@ from openquake.baselib.general import (
     sqrscale, groupby)
 from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import valid, imt as imt_module
+from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
-from openquake.hazardlib.tom import registry, FatedTOM, NegativeBinomialTOM
+from openquake.hazardlib.tom import (
+    registry, FatedTOM, NegativeBinomialTOM, PoissonTOM)
 from openquake.hazardlib.stats import ndtr
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.calc.filters import (
@@ -369,8 +370,6 @@ class ContextMaker(object):
                 param['pointsource_distance'], trt)
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
-        if self.investigation_time:
-            self.tom = registry['PoissonTOM'](self.investigation_time)
         self.ses_seed = param.get('ses_seed', 42)
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
         self.truncation_level = param.get('truncation_level', 99.)
@@ -982,9 +981,10 @@ class ContextMaker(object):
                 poes = numpy.concatenate(list(self._gen_poes(kctx)))
                 yield poes, ctxt, invs
 
-    def get_pmap(self, ctxs, rup_mutex={}):
+    def get_pmap(self, ctxs, tom=None, rup_mutex={}):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
+        :param tom: temporal occurrence model (default PoissonTom)
         :param rup_mutex: dictionary of weights (default empty)
         :returns: a ProbabilityMap
         """
@@ -992,10 +992,11 @@ class ContextMaker(object):
         sids = numpy.unique(ctxs[0].sids)
         pmap = ProbabilityMap(sids, size(self.imtls), len(self.gsims))
         pmap.fill(rup_indep)
-        self.update(pmap, ctxs, rup_mutex)
+        self.update(pmap, ctxs, tom or PoissonTOM(self.investigation_time),
+                    rup_mutex)
         return ~pmap if rup_indep else pmap
 
-    def update(self, pmap, ctxs, rup_mutex={}):
+    def update(self, pmap, ctxs, tom, rup_mutex={}):
         """
         :param pmap: probability map to update
         :param ctxs: a list of context arrays (only one for parametric ctxs)
@@ -1004,24 +1005,16 @@ class ContextMaker(object):
         The rup_mutex dictionary is read-only and normally empty
         """
         rup_indep = len(rup_mutex) == 0
-        if self.tom is None:
+        if tom is None:
             itime = -1.  # test_hazard_curve_X
-        elif isinstance(self.tom, FatedTOM):
+        elif isinstance(tom, FatedTOM):
             itime = 0.
         else:
-            itime = self.tom.time_span
-        start = 0
-        for cm in self.split_by_gsim():
-            try:
-                idx = cm.gidx - self.gidx[0]
-            except AttributeError:
-                stop = start + len(cm.gsims)
-                idx = range(start, stop)
-                start = stop
-            for ctx in ctxs:
-                for poes, ctxt, invs in cm.gen_poes(ctx, rup_indep):
-                    with self.pne_mon:
-                        pmap.update_(poes, invs, ctxt, itime, rup_mutex, idx)
+            itime = tom.time_span
+        for ctx in ctxs:
+            for poes, ctxt, invs in self.gen_poes(ctx, rup_indep):
+                with self.pne_mon:
+                    pmap.update(poes, invs, ctxt, itime, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=True):
@@ -1138,26 +1131,6 @@ class ContextMaker(object):
                     else:
                         src.weight += 1.
 
-    def split_by_gsim(self):
-        """
-        Split the ContextMaker in multiple context makers, one per GSIM
-        """
-        if self.collapse_level < 0 or len(self.gsims) == 1:
-            return [self]
-        cmakers = []
-        for g, gsim in zip(self.gidx, self.gsims):
-            gsim.g = g
-        for dists, gsims in groupby(self.gsims, by_dists).items():
-            cm = self.__class__(self.trt, gsims, self.oq)
-            cm.gidx = numpy.array([gsim.g for gsim in gsims])
-            cm.grp_id = self.grp_id
-            cm.collapser.cfactor = self.collapser.cfactor
-            for attr in dir(self):
-                if attr.endswith('_mon'):
-                    setattr(cm, attr, getattr(self, attr))
-            cmakers.append(cm)
-        return cmakers
-
 
 def by_dists(gsim):
     return tuple(sorted(gsim.REQUIRES_DISTANCES))
@@ -1261,6 +1234,8 @@ class PmapMaker(object):
         maxsize = get_maxsize(M, G)
         t0 = time.time()
         for src in self.sources:
+            tom = getattr(src, 'temporal_occurrence_model',
+                          PoissonTOM(self.cmaker.investigation_time))
             src.nsites = 0
             for ctx in self.gen_ctxs(src):
                 ctxlen += len(ctx)
@@ -1268,11 +1243,12 @@ class PmapMaker(object):
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > maxsize:
-                    cm.update(pmap, concat(allctxs), self.rup_mutex)
+                    cm.update(pmap, concat(allctxs), tom, self.rup_mutex)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
-            cm.update(pmap, concat(allctxs), self.rup_mutex)
+            # assume all sources have the same tom
+            cm.update(pmap, concat(allctxs), tom, self.rup_mutex)
             allctxs.clear()
         dt = time.time() - t0
         nsrcs = len(self.sources)
@@ -1293,6 +1269,8 @@ class PmapMaker(object):
         pmap_by_src = {}
         cm = self.cmaker
         for src in self.sources:
+            tom = getattr(src, 'temporal_occurrence_model',
+                          PoissonTOM(self.cmaker.investigation_time))
             t0 = time.time()
             pm = ProbabilityMap(pmap.sids, cm.imtls.size, len(cm.gsims))
             pm.fill(self.rup_indep)
@@ -1300,7 +1278,7 @@ class PmapMaker(object):
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
-                cm.update(pm, ctxs, self.rup_mutex)
+                cm.update(pm, ctxs, tom, self.rup_mutex)
             if hasattr(src, 'mutex_weight'):
                 arr = 1. - pm.array if self.rup_indep else pm.array
                 p = pm.new(arr * src.mutex_weight)
@@ -1644,7 +1622,6 @@ def read_cmakers(dstore, full_lt=None):
     oq = dstore['oqparam']
     full_lt = full_lt or dstore['full_lt']
     trt_smrs = dstore['trt_smrs'][:]
-    toms = decode(dstore['toms'][:])
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
@@ -1670,7 +1647,6 @@ def read_cmakers(dstore, full_lt=None):
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         if aftershock:
             cmaker.deltagetter = DeltaRatesGetter(dstore)
-        cmaker.tom = valid.occurrence_model(toms[grp_id])
         cmaker.trti = trti
         cmaker.gidx = numpy.arange(start, start + G)
         cmaker.grp_id = grp_id

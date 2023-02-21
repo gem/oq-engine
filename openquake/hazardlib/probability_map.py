@@ -159,12 +159,6 @@ def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, idxs, itime):
         arr[idx] += (1. - pne) * w
 
 
-# numbified below
-def update_pnes(arr, idxs, pnes):
-    for idx, pne in zip(idxs, pnes):
-        arr[idx] *= pne
-
-
 if numba:
     t = numba.types
     sig = t.void(t.float64[:, :],                        # pmap
@@ -185,11 +179,6 @@ if numba:
                  t.uint32[:],                            # sids
                  t.float64)                              # itime
     update_pmap_m = compile(sig)(update_pmap_m)
-
-    sig = t.void(t.float64[:, :],                        # pmap
-                 t.uint32[:],                            # idxs
-                 t.float64[:, :])                        # pnes
-    update_pnes = compile(sig)(update_pnes)
 
 
 class ProbabilityMap(object):
@@ -284,30 +273,28 @@ class ProbabilityMap(object):
         dic['poe'][dic['poe'] == 1.] = .9999999999999999  # avoids log(0)
         return pandas.DataFrame(dic)
 
-    def update(self, other, i):
+    def multiply_pnes(self, other, i):
         """
         Multiply by the probabilities of no exceedence
         """
         # assume other.sids are a subset of self.sids
-        update_pnes(self.array[:, :, 0], self.sidx[other.sids],
-                    other.array[:, :, i])
-        return self
+        self.array[self.sidx[other.sids], :, 0] *= other.array[:, :, i]
 
-    def update_(self, poes, invs, ctxt, itime, mutex_weight, idx):
+    def update(self, poes, invs, ctxt, itime, mutex_weight):
         """
         Update probabilities
         """
         rates = ctxt.occurrence_rate
         probs_occur = getattr(ctxt, 'probs_occur', numpy.zeros((len(ctxt), 0)))
         idxs = self.sidx[ctxt.sids]
-        for i, x in enumerate(idx):
+        for i in range(self.shape[-1]):  # G indices
             if len(mutex_weight) == 0:  # indep
-                update_pmap_i(self.array[:, :, x], poes[:, :, i], invs, rates,
+                update_pmap_i(self.array[:, :, i], poes[:, :, i], invs, rates,
                               probs_occur, idxs, itime)
             else:  # mutex
                 weights = [mutex_weight[src_id, rup_id]
                            for src_id, rup_id in zip(ctxt.src_id, ctxt.rup_id)]
-                update_pmap_m(self.array[:, :, x], poes[:, :, i],
+                update_pmap_m(self.array[:, :, i], poes[:, :, i],
                               invs, rates, probs_occur,
                               numpy.array(weights), idxs, itime)
 

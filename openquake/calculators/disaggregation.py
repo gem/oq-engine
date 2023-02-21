@@ -348,23 +348,18 @@ class DisaggregationCalculator(base.HazardCalculator):
                        self.bin_edges, src_mutex, rwdic)
                 continue
 
-            # submit tasks with splitting
-            for ctx in disagg.split_by_magbin(
-                    ctxt, self.bin_edges[0]).values():
-                sids = numpy.unique(ctx.sids)
-                sitecol = self.sitecol.filter(
-                    numpy.isin(self.sitecol.sids, sids))
-                ntasks = len(ctx) * cmaker.Z / maxsize
-                if len(sitecol) > ntasks:
-                    # split by magnitudes and tiles (test case_13)
-                    for tile in sitecol.split(ntasks):
-                        c = ctx[numpy.isin(ctx.sids, tile.sids)]
-                        if len(c):
-                            submit(smap, self.datastore, c, tile, cmaker,
-                                   self.bin_edges, src_mutex, rwdic)
-                else:
-                    # split by magnitude only (test case_1)
-                    submit(smap,self.datastore, ctx, sitecol, cmaker,
+            # split by tiles
+            for tile in self.sitecol.split(ntasks):
+                ctx = ctxt[numpy.isin(ctxt.sids, tile.sids)]
+                if len(ctx) * cmaker.Z > maxsize:
+                    # split by magbin too
+                    for c in disagg.split_by_magbin(
+                            ctx, self.bin_edges[0]).values():
+                        submit(smap, self.datastore, c, tile, cmaker,
+                               self.bin_edges, src_mutex, rwdic)
+                elif len(ctx):
+                    # see case_multi in the oq-risk-tests
+                    submit(smap, self.datastore, ctx, tile, cmaker,
                            self.bin_edges, src_mutex, rwdic)
 
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
