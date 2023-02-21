@@ -575,7 +575,7 @@ def get_site_collection(oqparam, h5=None):
             sitecol.add_col('custom_site_id', 'S6', gh)
         mask = (sitecol.sids >= ss[0]) & (sitecol.sids < ss[1])
         sitecol = sitecol.filter(mask)
-        #assert sitecol is not None, 'No sites in the slice %d:%d' % ss
+        assert sitecol is not None, 'No sites in the slice %d:%d' % ss
         sitecol.make_complete()
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
