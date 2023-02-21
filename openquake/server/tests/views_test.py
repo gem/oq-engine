@@ -34,7 +34,9 @@ import gzip
 import tempfile
 import string
 import random
+import unittest
 import secrets
+
 import django
 from django.test import Client
 from openquake.baselib.general import gettemp
@@ -48,7 +50,13 @@ from openquake.commands import engine
 #       otherwise it would raise:
 #       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
 django.setup()
-from django.contrib.auth.models import User  # noqa
+try:
+    from django.contrib.auth.models import User  # noqa
+except RuntimeError:
+    # Django tests are meant to be run with the command
+    # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
+    # ./openquake/server/manage.py test tests.views_test
+    raise unittest.SkipTest('Use Django to run such tests')
 
 
 def loadnpz(lines):
