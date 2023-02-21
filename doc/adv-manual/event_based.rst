@@ -2109,6 +2109,10 @@ or using the global site parameters, if any.
 If the site model is specified, but the closest site parameters are 
 too distant from the sites, a warning is logged for each site.
 
+It is possible to specify both ``sites.csv`` and ``site_model.csv``:
+in that case the sites in ``sites.csv`` are used, with parameters inferred
+from the closest site model parameters.
+
 There are a number of error situations:
 
 1. If both site model and global site parameters are missing, the engine
@@ -2116,11 +2120,7 @@ There are a number of error situations:
 2. If both site model and global site parameters are specified, the
    engine raises an error.
 3. Specifying both the sites.csv and a grid is an error.
-4. Specifying both the sites.csv and a site_model.csv is an error.
-   If you are in such situation you should consider using the command
-   ``oq prepare_site_model``
-   to manually prepare a site model on the location of the sites.
-5. Having duplicates (i.e. rows with identical lon, lat up to 5 digits)
+4. Having duplicates (i.e. rows with identical lon, lat up to 5 digits)
    in the site model is an error.
 
 If you want to compute the hazard on the locations specified by the site model
