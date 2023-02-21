@@ -1622,7 +1622,6 @@ def read_cmakers(dstore, full_lt=None):
     oq = dstore['oqparam']
     full_lt = full_lt or dstore['full_lt']
     trt_smrs = dstore['trt_smrs'][:]
-    toms = decode(dstore['toms'][:])
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
