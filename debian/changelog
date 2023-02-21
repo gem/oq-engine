@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added feature `infer_occur_rates` for multiFault sources
   * Sampling the ruptures was raising a BlockingIOError sometimes
 
   [Kendra Johnson]

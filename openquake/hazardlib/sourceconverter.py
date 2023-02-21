@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import math
 import operator
 import collections
 import pickle
@@ -687,7 +688,8 @@ class SourceConverter(RuptureConverter):
                  minimum_magnitude={'default': 0},
                  source_id=None, discard_trts=(),
                  floating_x_step=0, floating_y_step=0,
-                 source_nodes=()):
+                 source_nodes=(),
+                 infer_occur_rates=False):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
@@ -700,6 +702,7 @@ class SourceConverter(RuptureConverter):
         self.floating_x_step = floating_x_step
         self.floating_y_step = floating_y_step
         self.source_nodes = source_nodes
+        self.infer_occur_rates = infer_occur_rates
 
     def convert_node(self, node):
         """
@@ -1129,8 +1132,11 @@ class SourceConverter(RuptureConverter):
                 idxs = [x.decode('utf8').split() for x in dic['rupture_idxs']]
                 mags = rounded_unique(dic['mag'], idxs)
             # NB: the sections will be fixed later on, in source_reader
-            mfs = MultiFaultSource(sid, name, trt, idxs, dic['probs_occur'],
-                                   dic['mag'], dic['rake'])
+            mfs = MultiFaultSource(sid, name, trt, idxs,
+                                   dic['probs_occur'],
+                                   dic['mag'], dic['rake'],
+                                   self.investigation_time,
+                                   self.infer_occur_rates)
             return mfs
         probs = []
         mags = []
@@ -1158,7 +1164,9 @@ class SourceConverter(RuptureConverter):
             mags = rounded_unique(mags, idxs)
         rakes = numpy.array(rakes)
         # NB: the sections will be fixed later on, in source_reader
-        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes)
+        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes,
+                               self.investigation_time,
+                               self.infer_occur_rates)
         return mfs
 
     def convert_sourceModel(self, node):

@@ -367,6 +367,12 @@ individual_curves:
   Example: *individual_curves = true*.
   Default: False
 
+infer_occur_rates:
+   If set infer the occurrence rates from the first probs_occur in nonparametric
+   sources.
+   Example: *infer_occur_rates = true*
+   Default: False
+
 inputs:
   INTERNAL. Dictionary with the input files paths.
 
@@ -903,6 +909,7 @@ class OqParam(valid.ParamSet):
     individual_rlzs = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
+    infer_occur_rates = valid.Param(valid.boolean, False)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
