@@ -35,7 +35,7 @@ def get_params_from(lon, lat, siteid):
     from the mosaic files.
     """
     model = mosaic.MosaicGetter().get_model_by_lon_lat(lon, lat)
-    ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job.ini')
+    ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     params['description'] = 'AELO for ' + siteid
     # TODO: fix site params, add disaggregation parameters
