@@ -159,12 +159,6 @@ def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, idxs, itime):
         arr[idx] += (1. - pne) * w
 
 
-# numbified below
-def update_pnes(arr, idxs, pnes):
-    for idx, pne in zip(idxs, pnes):
-        arr[idx] *= pne
-
-
 if numba:
     t = numba.types
     sig = t.void(t.float64[:, :],                        # pmap
@@ -185,11 +179,6 @@ if numba:
                  t.uint32[:],                            # sids
                  t.float64)                              # itime
     update_pmap_m = compile(sig)(update_pmap_m)
-
-    sig = t.void(t.float64[:, :],                        # pmap
-                 t.uint32[:],                            # idxs
-                 t.float64[:, :])                        # pnes
-    update_pnes = compile(sig)(update_pnes)
 
 
 class ProbabilityMap(object):
@@ -284,13 +273,13 @@ class ProbabilityMap(object):
         dic['poe'][dic['poe'] == 1.] = .9999999999999999  # avoids log(0)
         return pandas.DataFrame(dic)
 
-    def update_pnes(self, other, i):
+    def multiply_pnes(self, other, i):
         """
         Multiply by the probabilities of no exceedence
         """
         # assume other.sids are a subset of self.sids
-        update_pnes(self.array[:, :, 0], self.sidx[other.sids],
-                    other.array[:, :, i])
+        for sidx, pnes in zip(self.sidx[other.sids], other.array[:, :, i]):
+            self.array[sidx, :, 0] *= pnes
         return self
 
     def update(self, poes, invs, ctxt, itime, mutex_weight):

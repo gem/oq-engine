@@ -450,7 +450,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pm.gidx = pnemap.gidx
         for i, g in enumerate(pnemap.gidx):
             if g in acc:
-                acc[g].update_pnes(pnemap, i)
+                acc[g].multiply_pnes(pnemap, i)
                 self.n_outs[g] -= 1
                 assert self.n_outs[g] > -1, (g, self.n_outs[g])
                 if self.n_outs[g] == 0:  # no other tasks for this g
