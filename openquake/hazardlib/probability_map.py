@@ -284,7 +284,7 @@ class ProbabilityMap(object):
         dic['poe'][dic['poe'] == 1.] = .9999999999999999  # avoids log(0)
         return pandas.DataFrame(dic)
 
-    def update(self, other, i):
+    def update_pnes(self, other, i):
         """
         Multiply by the probabilities of no exceedence
         """
@@ -293,7 +293,7 @@ class ProbabilityMap(object):
                     other.array[:, :, i])
         return self
 
-    def update_(self, poes, invs, ctxt, itime, mutex_weight):
+    def update(self, poes, invs, ctxt, itime, mutex_weight):
         """
         Update probabilities
         """

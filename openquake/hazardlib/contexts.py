@@ -34,7 +34,7 @@ from openquake.baselib.general import (
     sqrscale, groupby)
 from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import valid, imt as imt_module
+from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import registry, FatedTOM, NegativeBinomialTOM
 from openquake.hazardlib.stats import ndtr
@@ -1013,7 +1013,7 @@ class ContextMaker(object):
         for ctx in ctxs:
             for poes, ctxt, invs in self.gen_poes(ctx, rup_indep):
                 with self.pne_mon:
-                    pmap.update_(poes, invs, ctxt, itime, rup_mutex)
+                    pmap.update(poes, invs, ctxt, itime, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=True):
