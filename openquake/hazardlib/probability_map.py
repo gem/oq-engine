@@ -278,9 +278,7 @@ class ProbabilityMap(object):
         Multiply by the probabilities of no exceedence
         """
         # assume other.sids are a subset of self.sids
-        for sidx, pnes in zip(self.sidx[other.sids], other.array[:, :, i]):
-            self.array[sidx, :, 0] *= pnes
-        return self
+        self.array[self.sidx[other.sids], :, 0] *= other.array[:, :, i]
 
     def update(self, poes, invs, ctxt, itime, mutex_weight):
         """

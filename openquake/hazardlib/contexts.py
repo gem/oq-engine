@@ -981,9 +981,10 @@ class ContextMaker(object):
                 poes = numpy.concatenate(list(self._gen_poes(kctx)))
                 yield poes, ctxt, invs
 
-    def get_pmap(self, ctxs, rup_mutex={}):
+    def get_pmap(self, ctxs, tom=None, rup_mutex={}):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
+        :param tom: temporal occurrence model (default PoissonTom)
         :param rup_mutex: dictionary of weights (default empty)
         :returns: a ProbabilityMap
         """
@@ -991,7 +992,8 @@ class ContextMaker(object):
         sids = numpy.unique(ctxs[0].sids)
         pmap = ProbabilityMap(sids, size(self.imtls), len(self.gsims))
         pmap.fill(rup_indep)
-        self.update(pmap, ctxs, rup_mutex)
+        self.update(pmap, ctxs, tom or PoissonTOM(self.investigation_time),
+                    rup_mutex)
         return ~pmap if rup_indep else pmap
 
     def update(self, pmap, ctxs, tom, rup_mutex={}):
