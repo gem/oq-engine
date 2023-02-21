@@ -1006,6 +1006,13 @@ hazard_uhs-std.csv
         [fname2] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hmap2.csv', fname2, delta=1E-4)
 
+        # check that you can specify both a site and a site model and the
+        # engine will automatically get the closest site model parameters
+        self.run_calc(case_66.__file__, 'job1.ini',
+                      calculation_mode='preclassical')
+        self.assertEqual(self.calc.sitecol.vs30, [810.])
+        
+
     def test_case_67(self):
         # source specific logic tree with the following structure:
         # <CompositeSourceModel

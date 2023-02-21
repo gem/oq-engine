@@ -542,6 +542,7 @@ def get_site_collection(oqparam, h5=None):
     ss = oqparam.sites_slice  # can be None or (start, stop)
     if h5 and 'sitecol' in h5 and not ss:
         return h5['sitecol']
+
     mesh = get_mesh(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
@@ -574,6 +575,7 @@ def get_site_collection(oqparam, h5=None):
             sitecol.add_col('custom_site_id', 'S6', gh)
         mask = (sitecol.sids >= ss[0]) & (sitecol.sids < ss[1])
         sitecol = sitecol.filter(mask)
+        #assert sitecol is not None, 'No sites in the slice %d:%d' % ss
         sitecol.make_complete()
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
