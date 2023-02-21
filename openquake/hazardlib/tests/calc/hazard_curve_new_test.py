@@ -102,7 +102,8 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=99.)
+                                    truncation_level=99.,
+                                    investigation_time=1.)
         crv = curves[0][0]
         npt.assert_almost_equal([0.30000, 0.2785, 0.0891], crv, decimal=4)
 
@@ -154,6 +155,7 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
             src.tectonic_region_type, [src], 'test', 'mutex', 'mutex',
             grp_probability=1.0)
         param = dict(imtls=self.imtls,
+                     investigation_time=1.,
                      src_interdep=group.src_interdep,
                      rup_interdep=group.rup_interdep,
                      grp_probability=group.grp_probability)
@@ -208,7 +210,8 @@ class NankaiTestCase(unittest.TestCase):
         s_filter = SourceFilter(SiteCollection([site]))
         imtls = DictArray({'PGV': [20, 40, 80]})
         gsim_by_trt = {'Subduction Interface': SiMidorikawa1999SInter()}
-        hcurves = calc_hazard_curves(groups, s_filter, imtls, gsim_by_trt)
+        hcurves = calc_hazard_curves(groups, s_filter, imtls, gsim_by_trt,
+                                     investigation_time=1.)
         npt.assert_almost_equal(
             [1.1262869e-01, 3.9968668e-03, 3.1005840e-05],
             hcurves['PGV'][0])

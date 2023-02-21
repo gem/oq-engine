@@ -101,6 +101,7 @@ class DisaggregateTestCase(unittest.TestCase):
         mags = cls.sources[0].get_mags()
         maxdist = filters.IntegrationDistance.new('200.')
         oq = unittest.mock.Mock(truncation_level=cls.truncation_level,
+                                investigation_time=50.,
                                 imtls={'PGA': [cls.iml]},
                                 rlz_index=[0, 1],
                                 poes_disagg=[None],
@@ -114,7 +115,6 @@ class DisaggregateTestCase(unittest.TestCase):
         sitecol = SiteCollection([cls.site])
         cls.bin_edges, _ = disagg.get_edges_shapedic(oq, sitecol)
         cls.cmaker = ContextMaker(cls.trt, {gsim: [0]}, oq)
-        cls.cmaker.tom = tom.PoissonTOM(50.)
         cls.sources[0].grp_id = 0
         cls.cmaker.grp_id = 0
         cls.cmaker.poes = [.001]

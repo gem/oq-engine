@@ -249,7 +249,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
                     truncnorm_sf(phi_b, lvls), idxs, eps_bands, cum_bands)
 
     with mon2:
-        time_span = cmaker.tom.time_span
+        time_span = cmaker.investigation_time
         if any(len(probs) for probs in ctx.probs_occur):  # any probs_occur
             for u, rec in enumerate(ctx):
                 pnes[u] *= get_pnes(rec.occurrence_rate, rec.probs_occur,
@@ -612,11 +612,13 @@ def disaggregation(
     cmaker = {}  # trt -> cmaker
     mags_by_trt = AccumDict(accum=set())
     dists = []
+    tom = sources[0].temporal_occurrence_model
     oq = Mock(imtls={str(imt): [iml]},
               poes_disagg=[None],
               rlz_index=[0],
               epsstar=epsstar,
               truncation_level=truncation_level,
+              investigation_time=tom.time_span,
               maximum_distance=source_filter.integration_distance,
               mags_by_trt=mags_by_trt,
               num_epsilon_bins=n_epsilons,
@@ -626,7 +628,6 @@ def disaggregation(
               disagg_bin_edges=bin_edges)
     for trt, srcs in by_trt.items():
         cmaker[trt] = cm = ContextMaker(trt, rlzs_by_gsim, oq)
-        cm.tom = srcs[0].temporal_occurrence_model
         ctxs[trt].extend(cm.from_srcs(srcs, sitecol))
         for ctx in ctxs[trt]:
             mags_by_trt[trt] |= set(ctx.mag)

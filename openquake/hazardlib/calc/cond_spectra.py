@@ -87,7 +87,7 @@ def _cs_out(mean_stds, probs, rho, imti, imls, cs_poes,
 
 
 # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-def get_cs_out(cmaker, ctx, imti, imls, _c=None):
+def get_cs_out(cmaker, ctx, imti, imls, tom, _c=None):
     """
     Compute the contributions to the conditional spectra, in a form
     suitable for later composition.
@@ -101,6 +101,8 @@ def get_cs_out(cmaker, ctx, imti, imls, _c=None):
     :param imls:
         P intensity measure levels for the IMT specified by the index;
         they are in correspondence with the probabilities in cmaker.poes
+    :param tom:
+        a temporal occurrence model
     :param _c:
         The previously computed contribution. This is used for the
         calculation of the stddev contribution.
@@ -109,12 +111,10 @@ def get_cs_out(cmaker, ctx, imti, imls, _c=None):
         (M, N, O, P) with O=3
 
     """
-    assert cmaker.tom
     assert len(imls) == len(cmaker.poes), (len(cmaker.poes), len(imls))
     sids, counts = numpy.unique(ctx.sids, return_counts=True)
     assert len(set(counts)) == 1, counts  # must be all equal
     N = len(sids)
-    G = len(cmaker.gsims)
     M = len(cmaker.imtls)
     P = len(imls)
 
@@ -134,7 +134,7 @@ def get_cs_out(cmaker, ctx, imti, imls, _c=None):
     if len(ctx.probs_occur[0]):
         probs = numpy.array([numpy.sum(p[1:]) for p in ctx.probs_occur])
     else:
-        probs = cmaker.tom.get_probability_one_or_more_occurrences(
+        probs = tom.get_probability_one_or_more_occurrences(
             ctx.occurrence_rate)  # shape N * U
     # For every GMM
     for i, g in enumerate(cmaker.gidx):
@@ -156,9 +156,10 @@ def cond_spectra(cmaker, srcs, sitecol, imt_ref, imls):
     """
     imti = list(cmaker.imtls).index(imt_ref)
     [ctx] = cmaker.from_srcs(srcs, sitecol)
-    out0 = get_cs_out(cmaker, ctx, imti, imls)  # g -> MNOP
+    tom = getattr(srcs[0], 'temporal_occurrence_model')  # assume all equal
+    out0 = get_cs_out(cmaker, ctx, imti, imls, tom)  # g -> MNOP
     mean = numpy.mean([out0[g] for g in out0], axis=0)  # MNOP
-    out = get_cs_out(cmaker, ctx, imti, imls, mean)  # g -> MNOP
+    out = get_cs_out(cmaker, ctx, imti, imls, tom, mean)  # g -> MNOP
     G, M, N, P = len(cmaker.gsims), len(cmaker.imtls), len(sitecol), len(imls)
     spectra = numpy.zeros((G, M, N, P))
     s_sigma = numpy.zeros((G, M, N, P))

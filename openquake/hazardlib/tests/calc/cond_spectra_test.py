@@ -105,6 +105,7 @@ class CondSpectraTestCase(unittest.TestCase):
         [cmaker] = inp.cmakerdict.values()
         [src_group] = inp.groups
         [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
+        tom = src_group.temporal_occurrence_model
         assert len(ctx) == 100
         ctx1 = ctx[:50]
         ctx2 = ctx[50:]
@@ -113,9 +114,9 @@ class CondSpectraTestCase(unittest.TestCase):
         cmaker.poes = [0.000404]
         imls = [0.394359437]
 
-        mom1 = get_cs_out(cmaker, ctx1, imti, imls)[0]
-        mom2 = get_cs_out(cmaker, ctx2, imti, imls)[0]
-        mom = get_cs_out(cmaker, ctx, imti, imls)[0]
+        mom1 = get_cs_out(cmaker, ctx1, imti, imls, tom)[0]
+        mom2 = get_cs_out(cmaker, ctx2, imti, imls, tom)[0]
+        mom = get_cs_out(cmaker, ctx, imti, imls, tom)[0]
         aac(mom1 + mom2, mom)
 
         spectra, s_sigma = cond_spectra(
@@ -133,13 +134,14 @@ class CondSpectraTestCase(unittest.TestCase):
         [cmaker] = inp.cmakerdict.values()
         [src_group] = inp.groups
         [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
+        tom = src_group.temporal_occurrence_model
 
         # The hazard for the target IMT and poe=0.002105
         cmaker.poes = [0.002105]
         imls = [0.238531932]
 
         # Compute mean CS
-        outdic = get_cs_out(cmaker, ctx, imti, imls)
+        outdic = get_cs_out(cmaker, ctx, imti, imls, tom)
         # 0, 1 -> array (M, N, O, P) = (11, 1, 3, 1)
 
         # Compute mean across rlzs
@@ -148,7 +150,7 @@ class CondSpectraTestCase(unittest.TestCase):
         _c = outdic[0] * w1 + outdic[1] * w2
 
         # Compute std
-        outdic = get_cs_out(cmaker, ctx, imti, imls, _c)
+        outdic = get_cs_out(cmaker, ctx, imti, imls, tom, _c)
 
         # Create DF for test
         df = outdic_to_dframe(outdic, cmaker.imts, 0, 0)

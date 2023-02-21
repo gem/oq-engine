@@ -165,12 +165,7 @@ def calc_hazard_curves(
     for i, grp in enumerate(groups):
         for src in grp:
             tom = getattr(src, 'temporal_occurrence_model', None)
-            if tom:
-                span = tom.time_span
-            else:
-                span = kwargs.get('investigation_time')
-                if span:
-                    tom = PoissonTOM(span)
+            span = tom.time_span if tom else kwargs['investigation_time']
             src.weight = src.count_ruptures()
             src.grp_id = i
             src.id = idx
