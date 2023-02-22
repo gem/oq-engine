@@ -242,7 +242,6 @@ class Input(object):
         hparams.setdefault('split_sources', True)
         hparams.setdefault('reqv', {})
         hparams.setdefault('min_iml', numpy.zeros(M))
-        hparams.setdefault('collapse_level', -1)
         self.oq = Oq(**hparams)
         self.full_lt = get_flt(hparams)
         self.sitecol = _get_sitecol(
