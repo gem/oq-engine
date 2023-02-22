@@ -30,7 +30,7 @@
             {% endif %}
             <form id="aelo_run_form" method="post">
               {% csrf_token %}
-              <!-- FIXME: pre-filled with values that work for CCA -->
+              <!-- FIXME: pre-filled with values that work for CCA (an example valid for EUR would be lon=11, lat=44) -->
               <!-- <label for"lon">Longitude:</label> -->
               <input type="text" id="lon" name="lon" placeholder="Longitude" value="-86"/>
               <!-- <label for"lat">Latitude:</label> -->
