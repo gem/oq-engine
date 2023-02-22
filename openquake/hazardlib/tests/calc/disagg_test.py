@@ -16,6 +16,7 @@
 import unittest
 import os.path
 import numpy
+import pytest
 
 from openquake.baselib.general import pprod
 from openquake.hazardlib.nrml import to_python
@@ -267,27 +268,23 @@ class PMFExtractorsTestCase(unittest.TestCase):
             disagg.mag_pmf(mean), [0.99999944, 0.99999999])
 
 
-class SingleSourceTestCase(unittest.TestCase):
-    def setUp(self):
-        job_ini = os.path.join(DATA_PATH, 'data', 'disagg', 'job.ini')
-        self.inp = inp = read_input(job_ini)
-        oq = inp.oq
-        assert len(inp.sitecol) == 1  # single site test
-        L = sum(len(lvls) for lvls in inp.oq.imtls.values())
-        M = len(oq.imtls)
-        R = inp.full_lt.get_num_paths()
-        G = sum(len(cm.gsims) for cm in inp.cmakers)
-        pmap = probability_map.ProbabilityCurve(numpy.zeros((1, L, G)))
-        rlzs_by_g = []
-        for grp, cmaker in zip(inp.groups, inp.cmakers):
-            for rlzs in cmaker.gsims.values():
-                rlzs_by_g.append(rlzs)
-            ctxs = cmaker.from_srcs(grp, inp.sitecol)
-            pmap.array[:, :, cmaker.gidx] = cmaker.get_pmap(
-                ctxs).array  # shape (L, G)
+@pytest.mark.parametrize('job_ini', ['job.ini', 'job_sampling'])
+def test_single_source(job_ini):
+    job_ini = os.path.join(DATA_PATH, 'data', 'disagg', 'job.ini')
+    inp = read_input(job_ini)
+    oq = inp.oq
+    assert len(inp.sitecol) == 1  # single site test
+    L = oq.imtls.size
+    G = sum(len(cm.gsims) for cm in inp.cmakers)
+    pmap = probability_map.ProbabilityCurve(numpy.zeros((1, L, G)))
+    rlzs_by_g = []
+    for grp, cmaker in zip(inp.groups, inp.cmakers):
+        for rlzs in cmaker.gsims.values():
+            rlzs_by_g.append(rlzs)
+        ctxs = cmaker.from_srcs(grp, inp.sitecol)
+        pmap.array[:, :, cmaker.gidx] = cmaker.get_pmap(
+            ctxs).array  # shape (L, G)
 
-        pmap = probability_map.combine(pmap, rlzs_by_g, R)
-        self.hmap4 = probability_map.compute_hmap4(pmap, oq.imtls, oq.poes)
-
-    def test(self):
-        print(self.hmap4)
+    hmap4 = probability_map.combine(pmap, rlzs_by_g).interp4D(
+        oq.imtls, oq.poes)
+    print(hmap4)
