@@ -52,19 +52,20 @@ def _get_sitecol(hparams, req_site_params):
     """
     :param hparams: a dictionary of hazard parameters
     """
+    inputs = hparams['inputs']
     if 'sites' in hparams:
         sm = Oq(**hparams)
         mesh = geo.Mesh.from_coords(hparams['sites'])
-    elif 'sites_csv' in hparams:
-        data = open(hparams['sites_csv']).read().replace(',', ' ').strip()
+    elif 'sites' in inputs:
+        data = open(inputs['sites']).read().replace(',', ' ').strip()
         coords = valid.coordinates(','.join(data.split('\n')))
         dic = {site.param[p]: hparams[site.param[p]] for p in req_site_params}
         if 'reference_vs30_type' not in dic:
             dic['reference_vs30_type'] = 'measured'
         sm = type('FakeSM', (), dic)
         mesh = geo.Mesh.from_coords(coords)
-    elif 'site_model_file' in hparams:
-        sm = _get_site_model(hparams['site_model_file'], req_site_params)
+    elif 'site_model' in inputs:
+        sm = _get_site_model(inputs['site_model'], req_site_params)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
     else:
         raise KeyError('Missing sites or site_model_file')
@@ -257,19 +258,22 @@ class Input(object):
         gslt = self.full_lt.gsim_lt
         idx = 0
         num_rlzs = gslt.get_num_paths()
-        mags_by_trt = self.oq.mags_by_trt = general.AccumDict(accum=set())
+        mags_by_trt = general.AccumDict(accum=set())
         for grp_id, sg in enumerate(groups):
             assert len(sg)  # sanity check
             for src in sg:
                 if hasattr(src, 'rupture'):
                     mags_by_trt[sg.trt].add('%.2f' % src.rupture.mag)
+                else:
+                    mags_by_trt[sg.trt].update(src.get_magstrs())
                 src.id = idx
                 src.grp_id = grp_id
                 src.trt_smr = grp_id
                 src.samples = num_rlzs
                 src.smweight = 1. / num_rlzs
                 idx += 1
-
+        self.oq.mags_by_trt = {
+            trt: sorted(mags) for trt, mags in mags_by_trt.items()}
         cmakerdict = {}  # trt => cmaker
         start = 0
         n = self.oq.number_of_logic_tree_samples

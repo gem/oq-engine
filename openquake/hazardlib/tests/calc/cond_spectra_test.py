@@ -102,25 +102,24 @@ class CondSpectraTestCase(unittest.TestCase):
         inp = read_input(PARAM, inputs={
             'source_model': SOURCES_XML,
             'gsim_logic_tree': os.path.join(CWD, 'data', 'lt01.xml')})
-        [cmaker] = inp.cmakerdict.values()
-        [src_group] = inp.groups
-        [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
-        tom = src_group.temporal_occurrence_model
+
+        [ctx] = inp.cmaker.from_srcs(inp.group, inp.sitecol)
+        tom = inp.group.temporal_occurrence_model
         assert len(ctx) == 100
         ctx1 = ctx[:50]
         ctx2 = ctx[50:]
 
         # The hazard for the target IMT and poe
-        cmaker.poes = [0.000404]
+        inp.cmaker.poes = [0.000404]
         imls = [0.394359437]
 
-        mom1 = get_cs_out(cmaker, ctx1, imti, imls, tom)[0]
-        mom2 = get_cs_out(cmaker, ctx2, imti, imls, tom)[0]
-        mom = get_cs_out(cmaker, ctx, imti, imls, tom)[0]
+        mom1 = get_cs_out(inp.cmaker, ctx1, imti, imls, tom)[0]
+        mom2 = get_cs_out(inp.cmaker, ctx2, imti, imls, tom)[0]
+        mom = get_cs_out(inp.cmaker, ctx, imti, imls, tom)[0]
         aac(mom1 + mom2, mom)
 
         spectra, s_sigma = cond_spectra(
-            cmaker, src_group, inp.sitecol, 'SA(0.2)', imls)
+            inp.cmaker, inp.group, inp.sitecol, 'SA(0.2)', imls)
         aac(spectra.flatten(), [0.19236242, 0.23961989, 0.27838065, 0.35216192,
                                 0.39435944, 0.36501786, 0.34676928, 0.23458421,
                                 0.15669297, 0.11154595, 0.0409729], atol=2E-5)
@@ -131,8 +130,8 @@ class CondSpectraTestCase(unittest.TestCase):
     def test_2_rlzs(self):
         # test with two GMPEs, 1 TRT
         inp = read_input(PARAM)
-        [cmaker] = inp.cmakerdict.values()
-        [src_group] = inp.groups
+        cmaker = inp.cmaker
+        src_group = inp.group
         [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
         tom = src_group.temporal_occurrence_model
 

@@ -45,9 +45,10 @@ class NBCC2015_AA13TestCase(unittest.TestCase):
                      imtls={'PGA': [0], 'SA(0.1)': [0], 'SA(0.2)': [0]})
         inp = read_input(param)
         [[ebr]] = inp.groups
-        for trt, cmaker in inp.cmakerdict.items():
+        gsim_lt = inp.full_lt.gsim_lt
+        for grp_id, cmaker in enumerate(inp.cmakers):
             rlzs_by_gsim = {}
-            for g, gsim in enumerate(inp.gsim_lt.values[trt]):
+            for g, gsim in enumerate(gsim_lt.values[cmaker.trt]):
                 gsim.set_tables(['%.2f' % ebr.rupture.mag], cmaker.imtls)
                 rlzs_by_gsim[gsim] = [g]
             cmaker.gsims = rlzs_by_gsim
@@ -55,7 +56,7 @@ class NBCC2015_AA13TestCase(unittest.TestCase):
             gc = gmf.GmfComputer(ebr, inp.sitecol, cmaker)
             gmfdata = pandas.DataFrame(gc.compute_all())
             del gmfdata['rlz']  # the info is encoded in the eid
-            fname = 'NBCC2015_AA13_%s.csv' % trt.replace(' ', '')
+            fname = 'NBCC2015_AA13_%s.csv' % cmaker.trt.replace(' ', '')
             path = os.path.join(CWD, 'data', 'CAN15', fname)
             if OVERWRITE:
                 gmfdata.to_csv(path, index=False, line_terminator='\r\n')
