@@ -144,8 +144,9 @@ class CondSpectraTestCase(unittest.TestCase):
         # 0, 1 -> array (M, N, O, P) = (11, 1, 3, 1)
 
         # Compute mean across rlzs
-        w1 = inp.gsim_lt.branches[0].weight['weight']
-        w2 = inp.gsim_lt.branches[1].weight['weight']
+        gsim_lt = inp.full_lt.gsim_lt
+        w1 = gsim_lt.branches[0].weight['weight']
+        w2 = gsim_lt.branches[1].weight['weight']
         _c = outdic[0] * w1 + outdic[1] * w2
 
         # Compute std

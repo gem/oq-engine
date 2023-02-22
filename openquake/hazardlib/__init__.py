@@ -173,11 +173,13 @@ def get_flt(hparams, branchID=None):
         :class:`openquake.hazardlib.logictree.FullLogicTree` object
     """
     if 'source_model_logic_tree' not in hparams['inputs']:
+        smpath = hparams['inputs']['source_model']
         smlt = logictree.SourceModelLogicTree.fake()
-        trts = ['*']
+        smlt.basepath = os.path.dirname(smpath)
+        smlt.collect_source_model_data('b0', smpath)  # populate trts
     else:
         smlt = get_smlt(hparams, branchID)
-        trts = smlt.tectonic_region_types
+    trts = smlt.tectonic_region_types
     if 'gsim' in hparams:
         gslt = gsim_lt.GsimLogicTree.from_(hparams['gsim'])
     else:
