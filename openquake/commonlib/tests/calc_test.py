@@ -2,7 +2,7 @@ import unittest
 import numpy
 from openquake.baselib import general
 from openquake.hazardlib.sourceconverter import SourceConverter
-from openquake.commonlib import calc
+from openquake.hazardlib.probability_map import compute_hazard_maps
 
 converter = SourceConverter(
     investigation_time=50.,
@@ -45,7 +45,7 @@ class HazardMapsTestCase(unittest.TestCase):
         poe = 0.2
 
         expected = [[0.00847798, 0.00664814, 0.0098, 0, 0.007]]
-        actual = calc.compute_hazard_maps(numpy.array(curves), imls, poe)
+        actual = compute_hazard_maps(numpy.array(curves), imls, poe)
         aaae(expected, actual.T)
 
     def test_compute_hazard_map_multi_poe(self):
@@ -62,5 +62,5 @@ class HazardMapsTestCase(unittest.TestCase):
             [0.0098, 0.00792555, 0.0098, 0.005,  0.0098],
             [0.00847798, 0.00664814, 0.0098, 0, 0.007]
         ]
-        actual = calc.compute_hazard_maps(numpy.array(curves), imls, poes)
+        actual = compute_hazard_maps(numpy.array(curves), imls, poes)
         aaae(expected, actual.T)
