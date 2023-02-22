@@ -437,15 +437,13 @@ class EngineServerTestCase(django.test.TestCase):
             resp_text_dict = json.loads(resp.content.decode('utf8'))
             self.assertFalse(resp_text_dict['success'])
 
-    def test_aelo_successful_run(self):
+    def aelo_successful_run(self, params):
         with tempfile.TemporaryDirectory() as email_dir:
             # FIXME: EMAIL_FILE_PATH is ignored. This would cause concurrency
             # issues in case tests run in parallel, because we are checking the
             # last email that was created instead of the only email created in
             # a test-specific directory
             with self.settings(EMAIL_FILE_PATH=email_dir):
-                params = dict(
-                    lon='-86', lat='12', vs30='800', siteid='CCA_SITE')
                 resp = self.post('aelo_run', params)
                 self.assertEqual(resp.status_code, 200)
                 try:
@@ -472,9 +470,20 @@ class EngineServerTestCase(django.test.TestCase):
                 self.assertIn('Reply-To: aelosupport@openquake.org',
                               email_content)
                 self.assertIn(
-                    'Input values: lon = -86.0, lat = 12.0,'
-                    ' vs30 = 800.0, siteid = CCA_SITE', email_content)
+                    f"Input values: lon = {params['lon']},"
+                    f" lat = {params['lat']}, vs30 = {params['vs30']},"
+                    f" siteid = {params['siteid']}", email_content)
                 self.assertIn('Please find the results here:', email_content)
+
+    def test_aelo_successful_run_CCA(self):
+        params = dict(
+            lon='-86.0', lat='12.0', vs30='800.0', siteid='CCA_SITE')
+        self.aelo_successful_run(params)
+
+    def test_aelo_successful_run_EUR(self):
+        params = dict(
+            lon='11.0', lat='44.0', vs30='800.0', siteid='EUR_SITE')
+        self.aelo_successful_run(params)
 
     def test_aelo_invalid_latitude(self):
         params = dict(lon='-86', lat='100', vs30='800', siteid='CCA_SITE')
