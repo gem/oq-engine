@@ -105,7 +105,7 @@ class DisaggregateTestCase(unittest.TestCase):
                                 investigation_time=50.,
                                 imtls={'PGA': [cls.iml]},
                                 rlz_index=[0, 1],
-                                poes_disagg=[None],
+                                poes=[None],
                                 num_epsilon_bins=3,
                                 mag_bin_width=.075,
                                 distance_bin_width=10,
@@ -268,9 +268,9 @@ class PMFExtractorsTestCase(unittest.TestCase):
             disagg.mag_pmf(mean), [0.99999944, 0.99999999])
 
 
-@pytest.mark.parametrize('job_ini', ['job.ini', 'job_sampling'])
+@pytest.mark.parametrize('job_ini', ['job_sampling.ini', 'job.ini'])
 def test_single_source(job_ini):
-    job_ini = os.path.join(DATA_PATH, 'data', 'disagg', 'job.ini')
+    job_ini = os.path.join(DATA_PATH, 'data', 'disagg', job_ini)
     inp = read_input(job_ini)
     oq = inp.oq
     assert len(inp.sitecol) == 1  # single site test
@@ -286,8 +286,12 @@ def test_single_source(job_ini):
         pmap.array[:, :, cmaker.gidx] = cmaker.get_pmap(
             ctxs).array  # shape (L, G)
 
-    hmap4 = probability_map.combine(pmap, rlzs_by_g).interp4D(
+    iml4 = probability_map.combine(pmap, rlzs_by_g).interp4D(
         oq.imtls, oq.poes)
-    print(hmap4)
+
     edges, shapedic = disagg.get_edges_shapedic(oq, inp.sitecol, R)
-    import pdb; pdb.set_trace()
+    dis = disagg.Disaggregator(grp, inp.sitecol, cmaker, edges)
+    rlz = R - 1
+    for magi in range(dis.Ma):
+        dis.init(magi, src_mutex={})
+        print(dis.disagg6D(iml4[0, :, :, rlz], rlz))

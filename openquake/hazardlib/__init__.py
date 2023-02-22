@@ -264,6 +264,7 @@ class Input(object):
         hparams.setdefault('source_nodes', '')
         hparams.setdefault('rlz_index', None)
         hparams.setdefault('disagg_bin_edges', {})
+        hparams.setdefault('epsilon_star', False)
         self.oq = Oq(**hparams)
         self.full_lt = get_flt(hparams)
         self.sitecol = _get_sitecol(
