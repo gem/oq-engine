@@ -275,6 +275,7 @@ def test_single_source(job_ini):
     oq = inp.oq
     assert len(inp.sitecol) == 1  # single site test
     L = oq.imtls.size
+    R = inp.full_lt.get_num_paths()
     G = sum(len(cm.gsims) for cm in inp.cmakers)
     pmap = probability_map.ProbabilityCurve(numpy.zeros((1, L, G)))
     rlzs_by_g = []
@@ -288,3 +289,5 @@ def test_single_source(job_ini):
     hmap4 = probability_map.combine(pmap, rlzs_by_g).interp4D(
         oq.imtls, oq.poes)
     print(hmap4)
+    edges, shapedic = disagg.get_edges_shapedic(oq, inp.sitecol, R)
+    import pdb; pdb.set_trace()
