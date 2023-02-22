@@ -48,11 +48,8 @@ class NBCC2015_AA13TestCase(unittest.TestCase):
         param['mags'] = ['%.2f' % ebr.rupture.mag]
         gsim_lt = inp.full_lt.gsim_lt
         for trt in gsim_lt.values:
-            rlzs_by_gsim = {}
-            for g, gsim in enumerate(gsim_lt.values[trt]):
-                gsim.set_tables(param['mags'], param['imtls'])
-                rlzs_by_gsim[gsim] = [g]
-            cmaker = contexts.ContextMaker(trt, rlzs_by_gsim, param)
+            rbg = {gsim: [g] for g, gsim in enumerate(gsim_lt.values[trt])}
+            cmaker = contexts.ContextMaker(trt, rbg, param)
             ebr.n_occ = len(cmaker.gsims)
             gc = gmf.GmfComputer(ebr, inp.sitecol, cmaker)
             gmfdata = pandas.DataFrame(gc.compute_all())
