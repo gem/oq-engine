@@ -395,25 +395,6 @@ class CompositeSourceModel:
                     source_id = basename(src)
                     self.code[source_id] = src.code
 
-    # used for debugging; assume PoissonTOM; use read_cmakers instead
-    def _get_cmakers(self, oq):
-        cmakers = []
-        trt_smrs = self.get_trt_smrs()
-        rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
-        trts = list(self.full_lt.gsim_lt.values)
-        num_eff_rlzs = len(self.full_lt.sm_rlzs)
-        start = 0
-        for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
-            trti = trt_smrs[grp_id][0] // num_eff_rlzs
-            cmaker = ContextMaker(trts[trti], rlzs_by_gsim, oq)
-            cmaker.tom = tom.PoissonTOM(oq.investigation_time)
-            cmaker.trti = trti
-            cmaker.gidx = numpy.arange(start, start + len(rlzs_by_gsim))
-            cmaker.grp_id = grp_id
-            start += len(rlzs_by_gsim)
-            cmakers.append(cmaker)
-        return cmakers
-
     def get_trt_smrs(self):
         """
         :returns: an array of trt_smrs (to be stored as an hdf5.vuint32 array)

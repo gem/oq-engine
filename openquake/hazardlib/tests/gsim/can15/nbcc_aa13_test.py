@@ -20,7 +20,7 @@ import os
 import unittest
 import numpy
 import pandas
-from openquake.hazardlib import read_input, IntegrationDistance
+from openquake.hazardlib import read_input, IntegrationDistance, contexts
 from openquake.hazardlib.calc import gmf
 
 OVERWRITE = False
@@ -45,13 +45,14 @@ class NBCC2015_AA13TestCase(unittest.TestCase):
                      imtls={'PGA': [0], 'SA(0.1)': [0], 'SA(0.2)': [0]})
         inp = read_input(param)
         [[ebr]] = inp.groups
+        param['mags'] = ['%.2f' % ebr.rupture.mag]
         gsim_lt = inp.full_lt.gsim_lt
-        for grp_id, cmaker in enumerate(inp.cmakers):
+        for trt in gsim_lt.values:
             rlzs_by_gsim = {}
-            for g, gsim in enumerate(gsim_lt.values[cmaker.trt]):
-                gsim.set_tables(['%.2f' % ebr.rupture.mag], cmaker.imtls)
+            for g, gsim in enumerate(gsim_lt.values[trt]):
+                gsim.set_tables(param['mags'], param['imtls'])
                 rlzs_by_gsim[gsim] = [g]
-            cmaker.gsims = rlzs_by_gsim
+            cmaker = contexts.ContextMaker(trt, rlzs_by_gsim, param)
             ebr.n_occ = len(cmaker.gsims)
             gc = gmf.GmfComputer(ebr, inp.sitecol, cmaker)
             gmfdata = pandas.DataFrame(gc.compute_all())

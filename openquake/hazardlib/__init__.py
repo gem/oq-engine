@@ -172,18 +172,22 @@ def get_flt(hparams, branchID=None):
     :returns:
         :class:`openquake.hazardlib.logictree.FullLogicTree` object
     """
+    inputs = hparams['inputs']
     if 'source_model_logic_tree' not in hparams['inputs']:
-        smpath = hparams['inputs']['source_model']
         smlt = logictree.SourceModelLogicTree.fake()
-        smlt.basepath = os.path.dirname(smpath)
-        smlt.collect_source_model_data('b0', smpath)  # populate trts
+        if 'source_model' in inputs:
+            smpath = inputs['source_model']
+            smlt.basepath = os.path.dirname(smpath)
+            smlt.collect_source_model_data('b0', smpath)  # populate trts
+        else:  # rupture model
+            smlt.tectonic_region_types = ['*']
     else:
         smlt = get_smlt(hparams, branchID)
-    trts = smlt.tectonic_region_types
     if 'gsim' in hparams:
         gslt = gsim_lt.GsimLogicTree.from_(hparams['gsim'])
     else:
-        gslt = gsim_lt.GsimLogicTree(hparams['inputs']['gsim_logic_tree'], trts)
+        gslt = gsim_lt.GsimLogicTree(
+            inputs['gsim_logic_tree'], smlt.tectonic_region_types)
     return logictree.FullLogicTree(smlt, gslt)
 
 
@@ -192,7 +196,29 @@ class Oq(object):
         vars(self).update(hparams)
 
     def get_reqv(self):
-        return {}
+        if 'reqv' not in self.inputs:
+            return
+        return {key: valid.RjbEquivalent(value)
+                for key, value in self.inputs['reqv'].items()}
+
+
+# used for debugging; use read_cmakers instead
+def get_cmakers(src_groups, full_lt, oq):
+    cmakers = []
+    trt_smrs = [sg.sources[0].trt_smrs for sg in src_groups]
+    rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
+    trts = list(full_lt.gsim_lt.values)
+    num_eff_rlzs = len(full_lt.sm_rlzs)
+    start = 0
+    for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
+        trti = trt_smrs[grp_id][0] // num_eff_rlzs
+        cmaker = contexts.ContextMaker(trts[trti], rlzs_by_gsim, oq)
+        cmaker.trti = trti
+        cmaker.gidx = numpy.arange(start, start + len(rlzs_by_gsim))
+        cmaker.grp_id = grp_id
+        start += len(rlzs_by_gsim)
+        cmakers.append(cmaker)
+    return cmakers
 
 
 class Input(object):
@@ -216,6 +242,7 @@ class Input(object):
         hparams.setdefault('split_sources', True)
         hparams.setdefault('reqv', {})
         hparams.setdefault('min_iml', numpy.zeros(M))
+        hparams.setdefault('collapse_level', -1)
         self.oq = Oq(**hparams)
         self.full_lt = get_flt(hparams)
         self.sitecol = _get_sitecol(
@@ -257,13 +284,14 @@ class Input(object):
             raise KeyError('Missing source model or rupture')
 
         # fix source attributes
-        gslt = self.full_lt.gsim_lt
         idx = 0
-        num_rlzs = gslt.get_num_paths()
+        num_rlzs = self.full_lt.get_num_paths()
         mags_by_trt = general.AccumDict(accum=set())
+        trt_smrs = []
         for grp_id, sg in enumerate(groups):
             assert len(sg)  # sanity check
             for src in sg:
+                # src can a source or an EBRupture (for scenarios)
                 if hasattr(src, 'rupture'):
                     mags_by_trt[sg.trt].add('%.2f' % src.rupture.mag)
                 else:
@@ -274,26 +302,21 @@ class Input(object):
                 src.samples = num_rlzs
                 src.smweight = 1. / num_rlzs
                 idx += 1
+                if hasattr(src, 'trt_smrs'):
+                    trt_smrs.append(src.trt_smrs)
+                else:  # scenario
+                    trt_smrs.append([grp_id])
         self.oq.mags_by_trt = {
             trt: sorted(mags) for trt, mags in mags_by_trt.items()}
-        cmakerdict = {}  # trt => cmaker
-        start = 0
-        n = self.oq.number_of_logic_tree_samples
-        s = self.oq.random_seed
-        for trt, rlzs_by_gsim in gslt.get_rlzs_by_gsim_trt(n, s).items():
-            cmakerdict[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, self.oq)
-            cmakerdict[trt].gidx = numpy.arange(start, start+len(rlzs_by_gsim))
-            start += len(rlzs_by_gsim)
         if rmfname:
             # for instance, for 2 TRTs with 5x2 GSIMs and ngmfs=10, the
             # number of occupation is 100 for each rupture, for a total
             # of 200 events, see scenario/case_13
-            nrlzs = gslt.get_num_paths()
             for grp in groups:
                 for ebr in grp:
-                    ebr.n_occ = ngmfs * nrlzs
+                    ebr.n_occ = ngmfs * num_rlzs
 
-        return groups, list(cmakerdict.values())
+        return groups, get_cmakers(groups, self.full_lt, self.oq)
 
     @property
     def cmaker(self):
