@@ -560,6 +560,8 @@ def calc_run(request):
 
 
 def aelo_callback(job_id, job_owner_email, outputs_uri, inputs, exc=None):
+    if not job_owner_email:
+        return
     from_email = 'aelonoreply@openquake.org'
     to = [job_owner_email]
     reply_to = 'aelosupport@openquake.org'
@@ -602,12 +604,28 @@ def aelo_run(request):
         [dict(calculation_mode='custom', description='AELO for ' + siteid)],
         config.distribution.log_level, None, utils.get_user(request), None)
     job_id = jobctx.calc_id
-    response_data = dict(status='created', job_id=job_id)
 
-    # FIXME: we should make sure that 'email' is a mandatory field
-    job_owner_email = request.user.email
     outputs_uri = request.build_absolute_uri(
         reverse('outputs', args=[job_id]))
+
+    # FIXME: discuss if we want to make explicit that there is a url to
+    # retrieve the traceback
+    traceback_uri = request.build_absolute_uri(
+        reverse('traceback', args=[job_id]))
+
+    response_data = dict(
+        status='created', job_id=job_id, outputs_uri=outputs_uri,
+        traceback_uri=traceback_uri)
+
+    job_owner_email = request.user.email
+    if not job_owner_email:
+        response_data['WARNING'] = (
+            'No email address is speficied for your user account,'
+            ' therefore email notifications will be disabled. As soon as'
+            ' the job completes, you can access its outputs at the following'
+            ' link: %s. If the job fails, the error traceback will be'
+            ' accessible at the following link: %s'
+            % (outputs_uri, traceback_uri))
 
     # spawn the AELO main process
     mp.Process(target=aelo.main, args=(

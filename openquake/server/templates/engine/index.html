@@ -22,7 +22,12 @@
           </div>
           {% if aelo_mode %}
           <div>
-            <h3>Run AELO calculation</h3>
+            <h2>Run AELO calculation</h2>
+            {% if not user.email %}
+            <h3>
+              WARNING: no email address is speficied for your user account, therefore email notifications will be disabled
+            </h3>
+            {% endif %}
             <form id="aelo_run_form" method="post">
               {% csrf_token %}
               <!-- FIXME: pre-filled with values that work for CCA -->
