@@ -44,7 +44,6 @@ U8 = numpy.uint8
 I32 = numpy.int32
 F32 = numpy.float32
 MAX_RUPTURES = 2000
-by_grp = operator.attrgetter('grp_id')
 
 
 # this is used in acceptance/stochastic_test.py, not in the engine
