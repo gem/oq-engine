@@ -1633,6 +1633,7 @@ def read_cmakers(dstore, full_lt=None):
         weight = [1] * len(rlzs_by_gsim_list)
     start = 0
     aftershock = 'delta_rates' in dstore
+    oq.mags_by_trt = {k: decode(v[:]) for k, v in dstore['source_mags'].items()}
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
         G = len(rlzs_by_gsim)
         trti = trt_smrs[grp_id][0] // num_eff_rlzs
@@ -1643,8 +1644,6 @@ def read_cmakers(dstore, full_lt=None):
             oq.af = AmplFunction.from_dframe(df)
         else:
             oq.af = None
-        oq.mags_by_trt = {k: decode(v[:])
-                          for k, v in dstore['source_mags'].items()}
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         if aftershock:
             cmaker.deltagetter = DeltaRatesGetter(dstore)
