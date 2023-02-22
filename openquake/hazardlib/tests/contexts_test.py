@@ -25,7 +25,8 @@ from openquake.hazardlib import read_input, calc
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.contexts import ContextMaker, Collapser, get_distances
+from openquake.hazardlib.contexts import (
+    Effect, ContextMaker, Collapser, get_distances)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.rupture import \
@@ -164,6 +165,19 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         self.assertTrue(abs(dsts[1, 0]+0.1666) < 1e-2, msg)
         msg = 'The latitude of the second point is wrong'
         self.assertTrue(abs(dsts[1, 1]-0.0) < 1e-2, msg)
+
+
+class EffectTestCase(unittest.TestCase):
+    def test_dist_by_mag(self):
+        effect = Effect(intensities, dists)
+        dist = list(effect.dist_by_mag(0).values())
+        numpy.testing.assert_allclose(dist, [50, 50, 50, 50])
+
+        dist = list(effect.dist_by_mag(.9).values())
+        numpy.testing.assert_allclose(dist, [12, 15, 19.677419, 20])
+
+        dist = list(effect.dist_by_mag(1.1).values())
+        numpy.testing.assert_allclose(dist, [0, 10, 13.225806, 16.666667])
 
 
 # see also classical/case_24 and classical/case_69
