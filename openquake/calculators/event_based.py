@@ -258,7 +258,10 @@ class EventBasedCalculator(base.HazardCalculator):
             cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], oq)
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
-        self.datastore.swmr_on()
+        try:
+            self.datastore.swmr_on()
+        except OSError:  # seen sometimes in test_ebr[case_1f]
+            pass
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
