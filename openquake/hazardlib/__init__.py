@@ -204,12 +204,17 @@ class Oq(object):
 
 # used for debugging; use read_cmakers instead
 def get_cmakers(src_groups, full_lt, oq):
-    cmakers = []
-    trt_smrs = [sg.sources[0].trt_smrs for sg in src_groups]
+    trt_smrs = []
+    for sg in src_groups:
+        try:
+            trt_smrs.append(sg.sources[0].trt_smrs)
+        except AttributeError: # for scenarios
+            trt_smrs.append([sg.sources[0].trt_smr])
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
     start = 0
+    cmakers = []
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
         trti = trt_smrs[grp_id][0] // num_eff_rlzs
         cmaker = contexts.ContextMaker(trts[trti], rlzs_by_gsim, oq)

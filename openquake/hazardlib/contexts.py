@@ -378,7 +378,6 @@ class ContextMaker(object):
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = param.get('split_sources')
-        self.effect = param.get('effect')
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -1542,54 +1541,6 @@ class RuptureContext(BaseContext):
                     array.flags.writeable = False
                 setattr(ctx, dist, array)
         return ctx
-
-
-class Effect(object):
-    """
-    Compute the effect of a rupture of a given magnitude and distance.
-
-    :param effect_by_mag: a dictionary magstring -> intensities
-    :param dists: array of distances, one per each intensity
-    :param cdist: collapse distance
-    """
-    def __init__(self, effect_by_mag, dists, collapse_dist=None):
-        self.effect_by_mag = effect_by_mag
-        self.dists = dists
-        self.nbins = len(dists)
-
-    def collapse_value(self, collapse_dist):
-        """
-        :returns: intensity at collapse distance
-        """
-        # get the maximum magnitude with a cutoff at 7
-        for mag in self.effect_by_mag:
-            if mag > '7.00':
-                break
-        effect = self.effect_by_mag[mag]
-        idx = numpy.searchsorted(self.dists, collapse_dist)
-        return effect[idx-1 if idx == self.nbins else idx]
-
-    def __call__(self, mag, dist):
-        di = numpy.searchsorted(self.dists, dist)
-        if di == self.nbins:
-            di = self.nbins
-        eff = self.effect_by_mag['%.2f' % mag][di]
-        return eff
-
-    # this is used to compute the magnitude-dependent pointsource_distance
-    def dist_by_mag(self, intensity):
-        """
-        :returns: a dict magstring -> distance
-        """
-        dst = {}  # magnitude -> distance
-        for mag, intensities in self.effect_by_mag.items():
-            if intensity < intensities.min():
-                dst[mag] = self.dists[-1]  # largest distance
-            elif intensity > intensities.max():
-                dst[mag] = self.dists[0]  # smallest distance
-            else:
-                dst[mag] = interp1d(intensities, self.dists)(intensity)
-        return dst
 
 
 def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
