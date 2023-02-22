@@ -221,10 +221,11 @@ class PmapGetter(object):
         pmap = self.init()
         pc0 = probability_map.ProbabilityCurve(
             numpy.zeros((self.L, self.num_rlzs)))
-        try:
-            pc0.combine(pmap[sid], self.rlzs_by_g)
-        except KeyError:  # no hazard for sid
-            pass
+        if sid not in pmap:  # no hazard for sid
+            return pc0
+        for g, rlzs in enumerate(self.rlzs_by_g):
+            probability_map.combine_probs(
+                pc0.array, pmap[sid].array[:, g], rlzs)
         return pc0
 
     def get_mean(self):

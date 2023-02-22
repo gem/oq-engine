@@ -28,8 +28,8 @@ import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, tom
-from openquake.hazardlib.contexts import ContextMaker, basename
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 

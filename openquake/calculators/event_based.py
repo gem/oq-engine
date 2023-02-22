@@ -25,7 +25,7 @@ import pandas
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -40,7 +40,6 @@ from openquake.hazardlib.source.rupture import (
 from openquake.commonlib import (
     calc, util, logs, readinput, logictree, datastore)
 from openquake.risklib.riskinput import str2rsi, rsi2str
-from openquake.commonlib.calc import get_mean_curve
 from openquake.calculators import base, views
 from openquake.calculators.getters import (
     get_rupture_getters, sig_eps_dt, time_dt)

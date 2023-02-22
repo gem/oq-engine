@@ -30,6 +30,7 @@ from openquake.hazardlib import (
 from openquake.hazardlib.source.rupture import (
     EBRupture, get_ruptures, _get_rupture)
 from openquake.hazardlib.calc.filters import IntegrationDistance
+from openquake.hazardlib.source_reader import get_csm
 
 
 bytrt = operator.attrgetter('tectonic_region_type')
@@ -141,6 +142,9 @@ def read_hparams(job_ini):
                 params['inputs'][key[:-5]] = val
             else:
                 params[key] = val
+    params['imtls'] = general.DictArray(params['imtls'])
+    if 'poes' in params:
+        params['poes'] = valid.probabilities(params['poes'])
     return params
 
 
@@ -243,10 +247,24 @@ class Input(object):
         hparams.setdefault('cross_correl', None)
         hparams.setdefault('number_of_logic_tree_samples', 0)
         hparams.setdefault('random_seed', 42)
+        hparams.setdefault('ses_seed', 42)
         hparams.setdefault('reference_vs30_type', 600)
         hparams.setdefault('split_sources', True)
         hparams.setdefault('reqv', {})
         hparams.setdefault('min_iml', numpy.zeros(M))
+        hparams.setdefault('rupture_mesh_spacing', 5.),
+        hparams.setdefault('complex_fault_mesh_spacing', 5.)
+        hparams.setdefault('width_of_mfd_bin', 1.0),
+        hparams.setdefault('area_source_discretization', 10.)
+        hparams.setdefault('minimum_magnitude', {'default': 0})
+        hparams.setdefault('source_id', None)
+        hparams.setdefault('discard_trts', '')
+        hparams.setdefault('floating_x_step', 0)
+        hparams.setdefault('floating_y_step', 0)
+        hparams.setdefault('source_nodes', '')
+        hparams.setdefault('rlz_index', None)
+        hparams.setdefault('disagg_bin_edges', {})
+        hparams.setdefault('epsilon_star', False)
         self.oq = Oq(**hparams)
         self.full_lt = get_flt(hparams)
         self.sitecol = _get_sitecol(
@@ -254,13 +272,17 @@ class Input(object):
         self.srcstring = hparams.get('source_string')
         self.converter = sourceconverter.SourceConverter(
             hparams.get('investigation_time'),
-            hparams.get('rupture_mesh_spacing', 5.),
-            hparams.get('complex_fault_mesh_spacing'),
-            hparams.get('width_of_mfd_bin', 1.0),
-            hparams.get('area_source_discretization'),
-            hparams.get('minimum_magnitude', {'default': 0}),
-            hparams.get('source_id'),
-            discard_trts=hparams.get('discard_trts', ''))
+            hparams['rupture_mesh_spacing'],
+            hparams['complex_fault_mesh_spacing'],
+            hparams['width_of_mfd_bin'],
+            hparams['area_source_discretization'],
+            hparams['minimum_magnitude'],
+            hparams['source_id'],
+            hparams['discard_trts'],
+            hparams['floating_x_step'],
+            hparams['floating_y_step'],
+            hparams['source_nodes'],
+        )
         if read_all:
             self.groups, self.cmakers = self.get_groups_cmakers()
 
@@ -284,6 +306,8 @@ class Input(object):
             grp = sourceconverter.SourceGroup(src.tectonic_region_type)
             grp.sources = list(src)
             groups = [grp]
+        elif 'source_model_logic_tree' in self.oq.inputs:
+            groups = get_csm(self.oq, self.full_lt).src_groups
         else:
             raise KeyError('Missing source model or rupture')
 

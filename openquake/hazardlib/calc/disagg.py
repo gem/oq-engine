@@ -183,7 +183,7 @@ def get_edges_shapedic(oq, sitecol, num_tot_rlzs=None):
             shapedic[name] = len(edges[i]) - 1
     shapedic['N'] = len(sitecol)
     shapedic['M'] = len(oq.imtls)
-    shapedic['P'] = len(oq.poes_disagg or (None,))
+    shapedic['P'] = len(oq.poes or (None,))
     shapedic['Z'] = Z
     return edges + [trts], shapedic
 
@@ -614,7 +614,7 @@ def disaggregation(
     dists = []
     tom = sources[0].temporal_occurrence_model
     oq = Mock(imtls={str(imt): [iml]},
-              poes_disagg=[None],
+              poes=[None],
               rlz_index=[0],
               epsstar=epsstar,
               truncation_level=truncation_level,
