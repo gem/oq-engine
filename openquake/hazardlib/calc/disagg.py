@@ -128,7 +128,7 @@ def _build_bin_edges(oq, sitecol):
         dist_edges = oq.disagg_bin_edges['dist']
     elif hasattr(oq, 'distance_bin_width'):
         dist_edges = uniform_bins(0, maxdist, oq.distance_bin_width)
-    else:
+    else:  # make a single bin
         dist_edges = [0, maxdist]
 
     # build lon_edges
