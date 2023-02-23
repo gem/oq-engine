@@ -511,9 +511,10 @@ num_epsilon_bins:
 
 num_rlzs_disagg:
   Used in disaggregation calculation to specify how many outputs will be
-  generated. `0` means all realizations.
-  Example: *num_rlzs_disagg=0*.
-  Default: 1
+  generated. `0` means all realizations, `n` means the n closest to the mean
+  hazard curve.
+  Example: *num_rlzs_disagg=1*.
+  Default: 0
 
 number_of_ground_motion_fields:
   Used in scenario calculations to specify how many random ground motion
@@ -938,7 +939,7 @@ class OqParam(valid.ParamSet):
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
-    num_rlzs_disagg = valid.Param(valid.positiveint, 1)
+    num_rlzs_disagg = valid.Param(valid.positiveint, 0)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
