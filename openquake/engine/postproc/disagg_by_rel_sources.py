@@ -23,6 +23,8 @@ from openquake.hazardlib import contexts, calc
 from openquake.commonlib import datastore
 from openquake.calculators.extract import extract
 
+U32 = numpy.uint32
+
 
 def get_srcids(dstore, rel_source_ids):
     """
@@ -36,18 +38,20 @@ def get_srcids(dstore, rel_source_ids):
             if source_id == source or (source.startswith(source_id)
                                        and source[len(source_id)] in ':;'):
                 out[source_id].append(src_id)
-    return out
+    return {source_id: U32(out[source_id]) for source_id in out}
 
-def get_rel_source_ids(dstore, imts, poe):
+
+def get_rel_source_ids(dstore, imts, poes):
     """
     :returns: sorted list of relevant source IDs
     """
     source_ids = set()
     for imt in imts:
-        aw = extract(dstore, f'disagg_by_src?imt={imt}&poe={poe}')        
-        poes = aw.array['poe']  # for each source in decreasing order
-        max_poe = poes[0]
-        source_ids.update(aw.array[poes > .1 * max_poe]['source_id'])
+        for poe in poes:
+            aw = extract(dstore, f'disagg_by_src?imt={imt}&poe={poe}')        
+            poe_array = aw.array['poe']  # for each source in decreasing order
+            max_poe = poe_array[0]
+            source_ids.update(aw.array[poe_array > .1 * max_poe]['source_id'])
     return sorted(source_ids)
 
             
@@ -64,23 +68,28 @@ def main(parent_id, *imts):
         assert len(sitecol) == 1, sitecol
         for imt in imts:
             assert imt in oq.imtls, imt
+        arr = dstore['full_lt/gsim_lt'][:]
+        gsim_w = {trt: a['weight'] for trt, a in
+                  general.group_array(arr, 'trt')}
         cmakers = contexts.read_cmakers(parent)
         ctx_by_grp = contexts.read_ctx_by_grp(dstore)
         n = sum(len(ctx) for ctx in ctx_by_grp.values())
         logging.info('Read {:_d} contexts'.format(n))
-        rel_source_ids = get_rel_source_ids(dstore, imts, poe)
+        rel_source_ids = get_rel_source_ids(dstore, imts, oq.poes)
         srcids = get_srcids(dstore, rel_source_ids)
         bin_edges, shapedic = calc.disagg.get_edges_shapedic(oq, sitecol)
         for rel_id in rel_source_ids:
             for grp_id, ctx in ctx_by_grp.items():
-                cmaker = cmakers[grp_id]
+                # consider only the contexts coming from the relevant sources
                 ctxt = ctx[numpy.isin(ctx.src_id, srcids[rel_id])]
-                if len(ctxt):
+                if len(ctxt) == 0:
                     continue
+                cmaker = cmakers[grp_id]
                 dis = calc.disagg.Disaggregator(ctxt, sitecol, cmaker,
                                                 bin_edges, imts)
-                dis.disagg_mag_dist_eps(iml3)
-                
+                [iml3] = cmaker.get_pmap([ctxt]).interp4D(oq.imtls, oq.poes)
+                mat = dis.disagg_mag_dist_eps(iml3) @ gsim_w[cmaker.trt]
+                # shape (Ma, D, E, M, P)
 
 if __name__ == '__main__':
     sap.run(main)
