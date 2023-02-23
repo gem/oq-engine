@@ -44,7 +44,6 @@ from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
-from openquake.commands import engine
 
 # NOTE: before importing User or any other model, django.setup() is needed,
 #       otherwise it would raise:
@@ -123,9 +122,9 @@ class EngineServerTestCase(django.test.TestCase):
         except Exception:
             raise ValueError(b'Invalid JSON response: %r' % resp.content)
         if resp.status_code == 200:  # ok case
-            return js['job_id']
+            return dict(job_id=js['job_id'])
         else:  # error case
-            return ''.join(js)  # traceback string
+            return dict(tb_str='\n'.join(js['traceback']), job_id=js['job_id'])
 
     # start/stop server utilities
 
@@ -152,9 +151,6 @@ class EngineServerTestCase(django.test.TestCase):
     @classmethod
     def tearDownClass(cls):
         try:
-            c = dbcmd('SELECT count(*) FROM job WHERE status=?x',
-                      'complete')[0][0]
-            assert c > 0, 'There are no jobs??'
             cls.wait()
         finally:
             cls.user.delete()
@@ -167,7 +163,7 @@ class EngineServerTestCase(django.test.TestCase):
         assert resp.status_code == 404, resp
 
     def test_ok(self):
-        job_id = self.postzip('archive_ok.zip')
+        job_id = self.postzip('archive_ok.zip')['job_id']
         self.wait()
         log = self.get('%s/log/:' % job_id)
         self.assertGreater(len(log), 0)
@@ -277,8 +273,11 @@ class EngineServerTestCase(django.test.TestCase):
         got = loadnpz(self.c.get(extract_url))
         self.assertEqual(list(got), ['agg_id', 'loss_type', 'loss', 'stat'])
 
+        # cleanup
+        self.post('%s/remove' % job_id)
+
     def test_classical(self):
-        job_id = self.postzip('classical.zip')
+        job_id = self.postzip('classical.zip')['job_id']
         self.wait()
         # check that we get at least the following 4 outputs
         # fullreport, hcurves, hmaps, realizations
@@ -308,7 +307,7 @@ class EngineServerTestCase(django.test.TestCase):
         self.assertEqual(resp.status_code, 200)
 
         # check deleting job without the webAPI
-        engine.del_calculation(job_id, True)
+        dbcmd('del_calc', job_id, 'django-test-user')
 
     def test_abort(self):
         resp = self.c.post('/v1/calc/0/abort')  # 0 is a non-existing job
@@ -316,7 +315,7 @@ class EngineServerTestCase(django.test.TestCase):
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
-        job_id = self.postzip('archive_err_1.zip')
+        job_id = self.postzip('archive_err_1.zip')['job_id']
         self.wait()
 
         # there is no datastore since the calculation did not start
@@ -334,13 +333,15 @@ class EngineServerTestCase(django.test.TestCase):
 
     def test_err_2(self):
         # the file logic-tree-source-model.xml is missing
-        tb_str = self.postzip('archive_err_2.zip')
-        self.assertIn('No such file', tb_str)
+        resp = self.postzip('archive_err_2.zip')
+        self.assertIn('No such file', resp['tb_str'])
+        self.post('%s/remove' % resp['job_id'])
 
     def test_err_3(self):
         # there is no file job.ini, job_hazard.ini or job_risk.ini
-        tb_str = self.postzip('archive_err_3.zip')
-        self.assertIn('There are no .ini files in the archive', tb_str)
+        resp = self.postzip('archive_err_3.zip')
+        self.assertIn('There are no .ini files in the archive', resp['tb_str'])
+        self.post('%s/remove' % resp['job_id'])
 
     def test_available_gsims(self):
         resp = self.c.get('/v1/available_gsims')
@@ -474,6 +475,7 @@ class EngineServerTestCase(django.test.TestCase):
                     f" lat = {params['lat']}, vs30 = {params['vs30']},"
                     f" siteid = {params['siteid']}", email_content)
                 self.assertIn('Please find the results here:', email_content)
+        self.post('%s/remove' % job_id)
 
     def test_aelo_successful_run_CCA(self):
         params = dict(
@@ -561,3 +563,4 @@ class EngineServerTestCase(django.test.TestCase):
                 self.assertIn(
                     'Site at lon=-86.0 lat=88.0 is not covered by any model!',
                     email_content)
+        self.post('%s/remove' % job_id)

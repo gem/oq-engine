@@ -546,11 +546,11 @@ def calc_run(request):
     user = utils.get_user(request)
     try:
         job_id = submit_job(request.FILES, ini, user, hazard_job_id)
-    except Exception as exc:  # no job created, for instance missing .xml file
+    except Exception as exc:  # job failed, for instance missing .xml file
         # get the exception message
         exc_msg = traceback.format_exc() + str(exc)
         logging.error(exc_msg)
-        response_data = exc_msg.splitlines()
+        response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
         status = 500
     else:
         response_data = dict(status='created', job_id=job_id)
@@ -661,12 +661,13 @@ def submit_job(request_files, ini, username, hc_id):
                        description=oq.description, hazard_calculation_id=hc_id)
             logs.dbcmd('update_job', job.calc_id, dic)
             jobs = [job]
-    except Exception:
+    except Exception as exc:
         tb = traceback.format_exc()
         logs.dbcmd('log', job.calc_id, datetime.utcnow(), 'CRITICAL',
                    'before starting', tb)
         logs.dbcmd('finish', job.calc_id, 'failed')
-        raise
+        exc.job_id = job.calc_id
+        raise exc
 
     custom_tmp = os.path.dirname(job_ini)
     submit_cmd = config.distribution.submit_cmd.split()

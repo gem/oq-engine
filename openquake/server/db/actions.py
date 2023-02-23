@@ -400,11 +400,13 @@ def del_calc(db, job_id, user, force=False):
                 '%s and you are %s' % (job_id, owner, user)}
 
     fname = path + ".hdf5"
-    try:
-        os.remove(fname)
-    except OSError as exc:  # permission error
-        return {"error": 'Could not remove %s: %s' % (fname, exc)}
-    return {"success": fname}
+    # A calculation could fail before it produces a hdf5
+    if os.path.isfile(fname):
+        try:
+            os.remove(fname)
+        except OSError as exc:  # permission error
+            return {"error": 'Could not remove %s: %s' % (fname, exc)}
+    return {"success": str(job_id)}
 
 
 def log(db, job_id, timestamp, level, process, message):
