@@ -21,10 +21,14 @@ import unittest
 import numpy
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.contexts import ContextMaker
+from openquake.commonlib import logs
 from openquake.engine.postproc.rupture_histogram import compute_histogram
-from openquake.engine.postproc import compute_mrd
+from openquake.engine.postproc import compute_mrd, disagg_by_rel_sources
+from openquake.calculators import base
+from openquake.qa_tests_data import mosaic
 
 DATA = os.path.join(os.path.dirname(__file__), 'data')
+MOSAIC = os.path.dirname(mosaic.__file__)
 rupdata = '''\
 sids,mag,rrup
 0,5.5,100.
@@ -67,3 +71,11 @@ def test_compute_mrd():
     mrd = compute_mrd.main(parent, config)
     assert abs(mrd.mean() - 1.04e-05) < 1e-6
 
+
+def test_CCA():
+    job_ini = os.path.join(MOSAIC, 'CCA', 'in', 'job.ini')
+    with logs.init("job", job_ini) as log:
+        calc = base.calculators(log.get_oqparam(), log.calc_id)
+        calc.run()
+        calc.datastore.close()
+    disagg_by_rel_sources.main(calc.datastore.calc_id)

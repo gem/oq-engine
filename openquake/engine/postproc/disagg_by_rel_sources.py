@@ -64,13 +64,11 @@ def main(parent_id, *imts):
     dstore, log = datastore.build_dstore_log(parent=parent)
     with dstore, log:
         oq = parent['oqparam']
+        oq.mags_by_trt = parent['source_mags']
         sitecol = parent['sitecol']
         assert len(sitecol) == 1, sitecol
         for imt in imts:
             assert imt in oq.imtls, imt
-        arr = dstore['full_lt/gsim_lt'][:]
-        gsim_w = {trt: a['weight'] for trt, a in
-                  general.group_array(arr, 'trt')}
         cmakers = contexts.read_cmakers(parent)
         ctx_by_grp = contexts.read_ctx_by_grp(dstore)
         n = sum(len(ctx) for ctx in ctx_by_grp.values())
@@ -88,7 +86,8 @@ def main(parent_id, *imts):
                 dis = calc.disagg.Disaggregator(ctxt, sitecol, cmaker,
                                                 bin_edges, imts)
                 [iml3] = cmaker.get_pmap([ctxt]).interp4D(oq.imtls, oq.poes)
-                mat = dis.disagg_mag_dist_eps(iml3) @ gsim_w[cmaker.trt]
+                import pdb; pdb.set_trace()
+                mat = dis.disagg_mag_dist_eps(iml3)
                 # shape (Ma, D, E, M, P)
 
 if __name__ == '__main__':
