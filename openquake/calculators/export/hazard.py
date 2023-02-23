@@ -609,7 +609,8 @@ def export_disagg_csv(ekey, dstore):
                 com = {key: value for key, value in metadata.items()
                        if value is not None and key not in skip_keys}
                 com.update(metadata)
-                fname = dstore.export_path('%s%s-%d.csv' % (k, trad, s))
+                stat = '-mean' if name == 'disagg-stats' else ''
+                fname = dstore.export_path('%s%s%s-%d.csv' % (k, stat, trad, s))
                 writers.write_csv(fname, values, header=header,
                                   comment=com, fmt='%.5E')
                 fnames.append(fname)

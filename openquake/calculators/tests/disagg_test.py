@@ -52,13 +52,12 @@ class DisaggregationTestCase(CalculatorTestCase):
     def assert_curves_ok(self, expected, test_dir, fmt='csv', delta=None):
         self.run_calc(test_dir, 'job.ini', calculation_mode='classical')
         hc_id = self.calc.datastore.calc_id
-        out = self.run_calc(test_dir, 'job.ini', exports=fmt,
-                            hazard_calculation_id=str(hc_id))
-        got = out['disagg-rlzs', fmt]
+        self.run_calc(test_dir, 'job.ini', exports=fmt,
+                      hazard_calculation_id=str(hc_id))
+        got = export(('disagg-rlzs', fmt), self.calc.datastore)
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected_output/%s' % fname, actual)
-        return out
 
     def test_case_1(self):
         # case with split_source=false and collapse_level=2
