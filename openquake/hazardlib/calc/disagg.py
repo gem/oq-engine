@@ -192,7 +192,7 @@ def get_eps4(eps_edges, truncation_level):
     """
     :returns: eps_min, eps_max, eps_bands, eps_cum
     """
-    # this is ultra-slow due to the infamous doccer issue
+    # this is ultra-slow due to the infamous doccer issue, hence the lru_cache
     tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
     eps_bands = tn.cdf(eps_edges[1:]) - tn.cdf(eps_edges[:-1])
     elist = range(len(eps_bands))
@@ -221,13 +221,15 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
         U, E = len(ctx), len(eps_bands)
         M, P = iml2.shape
         phi_b = cmaker.phi_b
-        # Array with mean and total std values. Shape of this is:
         # U - Number of contexts (i.e. ruptures if there is a single site)
+        # E - Number of epsilons
         # M - Number of IMTs
+        # P - Number of PoEs
         # G - Number of gsims
         poes = numpy.zeros((U, E, M, P))
         pnes = numpy.ones((U, E, M, P))
-        # Multi-dimensional iteration
+
+        # disaggregate by epsilon
         for (m, p), iml in numpy.ndenumerate(iml2):
             if iml == -numpy.inf:  # zero hazard
                 continue
@@ -246,11 +248,11 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
 
     with mon2:
         time_span = cmaker.investigation_time
-        if any(len(probs) for probs in ctx.probs_occur):  # any probs_occur
+        if numpy.isnan(ctx.occurrence_rate).any():  # slow lane
             for u, rec in enumerate(ctx):
                 pnes[u] *= get_pnes(rec.occurrence_rate, rec.probs_occur,
                                     poes[u], time_span)
-        else:  # poissonian context, use the fast lane
+        else:  # poissonian context, fast lane
             for e, m, p in itertools.product(range(E), range(M), range(P)):
                 pnes[:, e, m, p] *= numpy.exp(
                     -ctx.occurrence_rate * poes[:, e, m, p] * time_span)
