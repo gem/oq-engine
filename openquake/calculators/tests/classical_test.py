@@ -165,9 +165,9 @@ class ClassicalTestCase(CalculatorTestCase):
             'hmaps-rlzs', imt="PGA", site_id=0).squeeze()
         aac(iml, [0.167078, 0.134646], atol=.0001)  # for the two realizations
 
-        # exercise the warning for no output when mean_hazard_curves='false'
+        # exercise the warning for no output when mean='false'
         self.run_calc(
-            case_7.__file__, 'job.ini', mean_hazard_curves='false',
+            case_7.__file__, 'job.ini', mean='false',
             calculation_mode='preclassical',  poes='0.1')
 
     def test_case_8(self):
@@ -954,7 +954,7 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurve-mean.csv', f)
 
     def test_case_65(self):
-        # running the calculation
+        # multiFaultSource with infer_occur_rates=true
         self.run_calc(case_65.__file__, 'job.ini')
 
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
@@ -967,35 +967,29 @@ hazard_uhs-std.csv
         src.rupture_idxs = [tuple(map(str, idxs)) for idxs in src.rupture_idxs]
         out = write_source_model(tmpname, csm.src_groups)
         self.assertEqual(out[0], tmpname)
-        # self.assertEqual(out[1], tmpname[:-4] + '_sections.xml')
+        self.assertEqual(out[1], tmpname + '.hdf5')
 
-        # make sure we are not breaking event_based
-        self.run_calc(case_65.__file__, 'job_eb.ini')
-        [f] = export(('ruptures', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.csv', f, delta=1E-5)
+        # test disaggregation
+        hc_str = str(self.calc.datastore.calc_id)
+        self.run_calc(
+            case_65.__file__, 'job.ini',
+            calculation_mode='disaggregation',
+            disagg_outputs='Mag',
+            disagg_bin_edges='{"mag": [5.6, 6.0, 6.4, 6.8, 7.0, 7.2]}',
+            hazard_calculation_id=hc_str)
+        dbm = view('disagg:Mag', self.calc.datastore)
+        fname = general.gettemp(text_table(dbm, ext='org'))
+        self.assertEqualFiles('expected/disagg_by_mag_true.org', fname)
 
-        # make sure we are not storing far away ruptures
-        r = self.calc.datastore['ruptures'][:]
-        [lon] = self.calc.sitecol.lons
-        [lat] = self.calc.sitecol.lats
-        # check bounding box close to the site
-        deltalon = (r['maxlon'] - lon).max()
-        deltalat = (r['maxlat'] - lat).max()
-        assert deltalon <= .65, deltalon
-        assert deltalat <= .49, deltalat
-        deltalon = (lon - r['minlon']).max()
-        deltalat = (lat - r['minlat']).max()
-        assert deltalon <= .35, deltalon
-        assert deltalat == .0, deltalat
-
-        # check ruptures.csv
-        rups = extract(self.calc.datastore, 'ruptures')
-        csv = general.gettemp(rups.array)
-        self.assertEqualFiles('expected/full_ruptures.csv', csv, delta=1E-5)
-
-        # check GMFs
-        files = export(('gmf_data', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/gmf_data.csv', files[0], delta=1E-4)
+        # multiFaultSource with infer_occur_rates=false
+        self.run_calc(case_65.__file__, 'job.ini',
+            calculation_mode='disaggregation',
+            infer_occur_rates='false',
+            disagg_outputs='Mag',
+            disagg_bin_edges='{"mag": [5.6, 6.0, 6.4, 6.8, 7.0, 7.2]}')
+        dbm = view('disagg:Mag', self.calc.datastore)
+        fname = general.gettemp(text_table(dbm, ext='org'))
+        self.assertEqualFiles('expected/disagg_by_mag_false.org', fname)
 
     def test_case_66(self):
         # sites_slice
@@ -1122,10 +1116,24 @@ hazard_uhs-std.csv
 
     def test_case_78(self):
         # test calculation for modifiable GMPE with original tabular GMM
+        # NB: this is using a NegativeBinomialTOM
         self.run_calc(case_78.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/hazard_curve-mean-PGA_NegBinomTest.csv', f1)
+
+        # also test disaggregation with NegativeBinomialTOM
+        # the model has only 2 ruptures
+        hc_str = str(self.calc.datastore.calc_id)
+        self.run_calc(
+            case_78.__file__, 'job.ini',
+            calculation_mode='disaggregation',
+            disagg_outputs='Dist',
+            disagg_bin_edges='{"dist": [0, 15, 30]}',
+            hazard_calculation_id=hc_str)
+        dbm = view('disagg:Dist', self.calc.datastore)
+        fname = general.gettemp(text_table(dbm, ext='org'))
+        self.assertEqualFiles('expected/disagg_by_dist.org', fname)
 
     def test_case_79(self):
         # disagg_by_src with semicolon sources

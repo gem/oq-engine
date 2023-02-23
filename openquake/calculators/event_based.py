@@ -25,7 +25,7 @@ import pandas
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -40,7 +40,6 @@ from openquake.hazardlib.source.rupture import (
 from openquake.commonlib import (
     calc, util, logs, readinput, logictree, datastore)
 from openquake.risklib.riskinput import str2rsi, rsi2str
-from openquake.commonlib.calc import get_mean_curve
 from openquake.calculators import base, views
 from openquake.calculators.getters import (
     get_rupture_getters, sig_eps_dt, time_dt)
@@ -259,7 +258,10 @@ class EventBasedCalculator(base.HazardCalculator):
             cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], oq)
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
-        # self.datastore.swmr_on() # removed to fix test_ebr[case_2b
+        try:
+            self.datastore.swmr_on()
+        except OSError:  # seen sometimes in test_ebr[case_1f]
+            pass
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')

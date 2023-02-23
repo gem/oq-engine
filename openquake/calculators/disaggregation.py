@@ -27,11 +27,11 @@ from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
     AccumDict, pprod, agg_probs, shortlist)
 from openquake.baselib.python3compat import encode
-from openquake.hazardlib import stats
+from openquake.hazardlib import stats, probability_map
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.contexts import (
     read_cmakers, read_src_mutex, read_ctx_by_grp)
-from openquake.commonlib import util, calc
+from openquake.commonlib import util
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -62,7 +62,7 @@ def _hmap4(rlzs, iml_disagg, imtls, poes_disagg, curves):
             elif curve:
                 rlz = rlzs[s, z]
                 max_poe = curve[imt].max()
-                arr[s, m, :, z] = calc.compute_hazard_maps(
+                arr[s, m, :, z] = probability_map.compute_hazard_maps(
                     curve[imt], imtls[imt], poes_disagg)
                 for iml, poe in zip(arr[s, m, :, z], poes_disagg):
                     if iml == 0:

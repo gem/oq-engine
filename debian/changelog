@@ -8,6 +8,10 @@
     existing tests for the webui were improved, cleaning up calculations after
     they have been checked.
 
+  [Michele Simionato]
+  * Added feature `infer_occur_rates` for multiFault sources
+  * Sampling the ruptures was raising a BlockingIOError sometimes
+
   [Kendra Johnson]
   * Made it possible to use extendModel for multiple branchSets in the
     source model logic tree

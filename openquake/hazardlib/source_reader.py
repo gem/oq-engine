@@ -28,8 +28,8 @@ import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, tom
-from openquake.hazardlib.contexts import ContextMaker, basename
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
@@ -173,7 +173,8 @@ def get_csm(oq, full_lt, h5=None):
         discard_trts=[s.strip() for s in oq.discard_trts.split(',')],
         floating_x_step=oq.floating_x_step,
         floating_y_step=oq.floating_y_step,
-        source_nodes=oq.source_nodes)
+        source_nodes=oq.source_nodes,
+        infer_occur_rates=oq.infer_occur_rates)
     full_lt.ses_seed = oq.ses_seed
     logging.info('Reading the source model(s) in parallel')
 
@@ -394,25 +395,6 @@ class CompositeSourceModel:
                 if src.code != b'P':
                     source_id = basename(src)
                     self.code[source_id] = src.code
-
-    # used for debugging; assume PoissonTOM; use read_cmakers instead
-    def _get_cmakers(self, oq):
-        cmakers = []
-        trt_smrs = self.get_trt_smrs()
-        rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
-        trts = list(self.full_lt.gsim_lt.values)
-        num_eff_rlzs = len(self.full_lt.sm_rlzs)
-        start = 0
-        for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
-            trti = trt_smrs[grp_id][0] // num_eff_rlzs
-            cmaker = ContextMaker(trts[trti], rlzs_by_gsim, oq)
-            cmaker.tom = tom.PoissonTOM(oq.investigation_time)
-            cmaker.trti = trti
-            cmaker.gidx = numpy.arange(start, start + len(rlzs_by_gsim))
-            cmaker.grp_id = grp_id
-            start += len(rlzs_by_gsim)
-            cmakers.append(cmaker)
-        return cmakers
 
     def get_trt_smrs(self):
         """

@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import math
 import copy
+import warnings
 import numpy
 import pandas
 from openquake.baselib.general import cached_property
@@ -43,6 +44,43 @@ else:
     def combine_probs(array, other, rlzs):
         for r in rlzs:
             array[:, r] = (1. - (1. - array[:, r]) * (1. - other))
+
+
+def combine(pmap, rlz_groups):
+    """
+    Convert a ProbabilityMap with shape (N, L, G) into a ProbabilityMap
+    with shape (N, L, R), being G the number of realization groups, which
+    are list of integers in the range 0..R-1.
+    """
+    N, L, G = pmap.array.shape
+    R = max(max(rlzs) for rlzs in rlz_groups) + 1
+    out = ProbabilityMap(range(N), L, R).fill(0.)
+    for g, rlz_group in enumerate(rlz_groups):
+        rlzs = U32(rlz_group)
+        for sid in range(N):
+            combine_probs(out.array[sid], pmap.array[sid, :, g], rlzs)
+    return out
+
+
+def get_mean_curve(dstore, imt, site_id=0):
+    """
+    Extract the mean hazard curve from the datastore for the first site.
+    """
+    if 'hcurves-stats' in dstore:  # shape (N, S, M, L1)
+        arr = dstore.sel('hcurves-stats', stat='mean', imt=imt)
+    else:  # there is only 1 realization
+        arr = dstore.sel('hcurves-rlzs', rlz_id=0, imt=imt)
+    return arr[site_id, 0, 0]
+
+
+def get_poe_from_mean_curve(dstore, imt, iml, site_id=0):
+    """
+    Extract the poe corresponding to the given iml by looking at the mean
+    curve for the given imt. `iml` can also be an array.
+    """
+    imls = dstore['oqparam'].imtls[imt]
+    mean_curve = get_mean_curve(dstore, imt, site_id)
+    return numpy.interp(imls, mean_curve)[iml]
 
 
 class ProbabilityCurve(object):
@@ -115,15 +153,6 @@ class ProbabilityCurve(object):
         array = self.array[:, inner_idx].reshape(-1, 1)
         return self.__class__(array)
 
-    def combine(self, other, rlz_groups):
-        """
-        Update a ProbabilityCurve with shape (L, R) with a pcurve with shape
-        (L, G), being G the number of realization groups, which are list
-        of integers in the range 0..R-1.
-        """
-        for g, rlz_group in enumerate(rlz_groups):
-            combine_probs(self.array, other.array[:, g], rlz_group)
-
     # used when exporting to HDF5
     def convert(self, imtls, idx=0):
         """
@@ -137,6 +166,96 @@ class ProbabilityCurve(object):
             curve[imt] = self.array[imtls(imt), idx]
         return curve[0]
 
+
+
+# ######################### hazard maps ################################### #
+
+# cutoff value for the poe
+EPSILON = 1E-30
+
+
+def compute_hazard_maps(curves, imls, poes):
+    """
+    Given a set of hazard curve poes, interpolate hazard maps at the specified
+    ``poes``.
+
+    :param curves:
+        Array of floats of shape N x L. Each row represents a curve, where the
+        values in the row are the PoEs (Probabilities of Exceedance)
+        corresponding to the ``imls``.
+        Each curve corresponds to a geographical location.
+    :param imls:
+        Intensity Measure Levels associated with these hazard ``curves``. Type
+        should be an array-like of floats.
+    :param poes:
+        Value(s) on which to interpolate a hazard map from the input
+        ``curves``. Can be an array-like or scalar value (for a single PoE).
+    :returns:
+        An array of shape N x P, where N is the number of curves and P the
+        number of poes.
+    """
+    log_poes = numpy.log(poes)
+    if len(log_poes.shape) == 0:
+        # `poes` was passed in as a scalar;
+        # convert it to 1D array of 1 element
+        log_poes = log_poes.reshape(1)
+    P = len(log_poes)
+
+    if len(curves.shape) == 1:
+        # `curves` was passed as 1 dimensional array, there is a single site
+        curves = curves.reshape((1,) + curves.shape)  # 1 x L
+
+    N, L = curves.shape  # number of levels
+    if L != len(imls):
+        raise ValueError('The curves have %d levels, %d were passed' %
+                         (L, len(imls)))
+
+    hmap = numpy.zeros((N, P))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        # avoid RuntimeWarning: divide by zero for zero levels
+        imls = numpy.log(numpy.array(imls[::-1]))
+    for n, curve in enumerate(curves):
+        # the hazard curve, having replaced the too small poes with EPSILON
+        log_curve = numpy.log([max(poe, EPSILON) for poe in curve[::-1]])
+        for p, log_poe in enumerate(log_poes):
+            if log_poe > log_curve[-1]:
+                # special case when the interpolation poe is bigger than the
+                # maximum, i.e the iml must be smaller than the minimum;
+                # extrapolate the iml to zero as per
+                # https://bugs.launchpad.net/oq-engine/+bug/1292093;
+                # then the hmap goes automatically to zero
+                pass
+            else:
+                # exp-log interpolation, to reduce numerical errors
+                # see https://bugs.launchpad.net/oq-engine/+bug/1252770
+                hmap[n, p] = numpy.exp(numpy.interp(log_poe, log_curve, imls))
+    return hmap
+
+    
+def get_lvl(hcurve, imls, poe):
+    """
+    :param hcurve: a hazard curve, i.e. array of L1 PoEs
+    :param imls: L1 intensity measure levels
+    :returns: index of the intensity measure level associated to the poe
+
+    >>> imls = numpy.array([.1, .2, .3, .4])
+    >>> hcurve = numpy.array([1., .99, .90, .8])
+    >>> get_lvl(hcurve, imls, 1)
+    0
+    >>> get_lvl(hcurve, imls, .99)
+    1
+    >>> get_lvl(hcurve, imls, .91)
+    2
+    >>> get_lvl(hcurve, imls, .8)
+    3
+    """
+    [[iml]] = compute_hazard_maps(hcurve, imls, poe)
+    iml -= 1E-10  # small buffer
+    return numpy.searchsorted(imls, iml)
+
+
+############################## probability maps ###############################
 
 # numbified below
 def update_pmap_i(arr, poes, inv, rates, probs_occur, idxs, itime):
@@ -247,6 +366,25 @@ class ProbabilityMap(object):
         for imt in curves.dtype.names:
             curves[imt][self.sids] = self.array[:, imtls(imt), idx]
         return curves
+
+    def interp4D(self, imtls, poes):
+        """
+        :param imtls: a dictionary imt->imls with M items
+        :param poes: a list of P PoEs
+        :returns: an array of shape (N, M, P, Z)
+        """
+        poes3 = self.array
+        N, L, Z = poes3.shape
+        M = len(imtls)
+        P = len(poes)
+        L1 = len(imtls[next(iter(imtls))])
+        hmap4 = numpy.zeros((N, M, P, Z))
+        for m, imt in enumerate(imtls):
+            slc = slice(m*L1, m*L1 + L1)
+            for z in range(Z):
+                hmap4[:, m, :, z] = compute_hazard_maps(
+                    poes3[:, slc, z], imtls[imt], poes)
+        return hmap4
 
     def remove_zeros(self):
         ok = self.array.sum(axis=(1, 2)) > 0

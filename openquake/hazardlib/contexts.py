@@ -928,7 +928,8 @@ class ContextMaker(object):
         return gmv
 
     # not used by the engine, is is meant for notebooks
-    def get_poes(self, srcs, sitecol, rup_mutex={}, collapse_level=-1):
+    def get_poes(self, srcs, sitecol, tom=None, rup_mutex={},
+                 collapse_level=-1):
         """
         :param srcs: a list of sources with the same TRT
         :param sitecol: a SiteCollection instance with N sites
@@ -937,7 +938,7 @@ class ContextMaker(object):
         self.collapser.cfactor = numpy.zeros(3)
         ctxs = self.from_srcs(srcs, sitecol)
         with patch.object(self.collapser, 'collapse_level', collapse_level):
-            return self.get_pmap(ctxs, rup_mutex).array
+            return self.get_pmap(ctxs, tom, rup_mutex).array
 
     def _gen_poes(self, ctx):
         from openquake.hazardlib.site_amplification import get_poes_site
@@ -1632,6 +1633,7 @@ def read_cmakers(dstore, full_lt=None):
         weight = [1] * len(rlzs_by_gsim_list)
     start = 0
     aftershock = 'delta_rates' in dstore
+    oq.mags_by_trt = {k: decode(v[:]) for k, v in dstore['source_mags'].items()}
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
         G = len(rlzs_by_gsim)
         trti = trt_smrs[grp_id][0] // num_eff_rlzs
@@ -1642,8 +1644,6 @@ def read_cmakers(dstore, full_lt=None):
             oq.af = AmplFunction.from_dframe(df)
         else:
             oq.af = None
-        oq.mags_by_trt = {k: decode(v[:])
-                          for k, v in dstore['source_mags'].items()}
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         if aftershock:
             cmaker.deltagetter = DeltaRatesGetter(dstore)

@@ -41,6 +41,7 @@ from openquake.hazardlib.gsim.base import (
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
+from openquake.hazardlib.probability_map import get_lvl
 from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
@@ -1221,7 +1222,7 @@ def extract_disagg_by_src(dstore, what):
     [site_id] = qdict.get('site_id', ['0'])
     site_id = int(site_id)
     mean = dstore.sel('hcurves-stats', imt=imt, stat='mean', site_id=site_id)[0, 0, 0]
-    lvl_id = calc.get_lvl(mean, oq.imtls[imt], float(poe))
+    lvl_id = get_lvl(mean, oq.imtls[imt], float(poe))
     imt_id = list(oq.imtls).index(imt)
     poes = dset[site_id, :, imt_id, lvl_id]  # shape (R, Ns)
     if oq.collect_rlzs:  # already averaged
