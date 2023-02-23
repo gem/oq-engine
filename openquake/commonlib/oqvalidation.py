@@ -1051,6 +1051,10 @@ class OqParam(valid.ParamSet):
         # support legacy names
         for name in list(names_vals):
             if name in self.ALIASES:
+                if self.ALIASES[name] in names_vals:
+                    # passed both the new (self.ALIASES[name]) and the old name
+                    raise NameError('Please remove %s, you should use only %s'
+                                    % (name, self.ALIASES[name]))
                 # use the new name instead of the old one
                 names_vals[self.ALIASES[name]] = names_vals.pop(name)
         super().__init__(**names_vals)
