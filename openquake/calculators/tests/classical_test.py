@@ -977,7 +977,7 @@ hazard_uhs-std.csv
             disagg_outputs='Mag',
             disagg_bin_edges='{"mag": [5.6, 6.0, 6.4, 6.8, 7.0, 7.2]}',
             hazard_calculation_id=hc_str)
-        dbm = view('disagg_by_mag', self.calc.datastore)
+        dbm = view('disagg:Mag', self.calc.datastore)
         fname = general.gettemp(text_table(dbm, ext='org'))
         self.assertEqualFiles('expected/disagg_by_mag_true.org', fname)
 
@@ -987,7 +987,7 @@ hazard_uhs-std.csv
             infer_occur_rates='false',
             disagg_outputs='Mag',
             disagg_bin_edges='{"mag": [5.6, 6.0, 6.4, 6.8, 7.0, 7.2]}')
-        dbm = view('disagg_by_mag', self.calc.datastore)
+        dbm = view('disagg:Mag', self.calc.datastore)
         fname = general.gettemp(text_table(dbm, ext='org'))
         self.assertEqualFiles('expected/disagg_by_mag_false.org', fname)
 
