@@ -209,9 +209,10 @@ def get_pnes(rate, probs, poes, time_span):
     Fast way to return probabilities of no exceedence given an array
     of PoEs and some parameter.
     """
+    # NB: the NegativeBinomialTOM creates probs_occur with a rate not NaN
     if time_span == 0.:  # FatedTOM
         return 1. - poes
-    elif not numpy.isnan(rate):  # poissonian
+    elif len(probs) == 0:  # poissonian
         return numpy.exp(-rate * time_span * poes)
     else:
         # Uses the formula
