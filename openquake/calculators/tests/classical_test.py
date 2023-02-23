@@ -165,9 +165,9 @@ class ClassicalTestCase(CalculatorTestCase):
             'hmaps-rlzs', imt="PGA", site_id=0).squeeze()
         aac(iml, [0.167078, 0.134646], atol=.0001)  # for the two realizations
 
-        # exercise the warning for no output when mean_hazard_curves='false'
+        # exercise the warning for no output when mean='false'
         self.run_calc(
-            case_7.__file__, 'job.ini', mean_hazard_curves='false',
+            case_7.__file__, 'job.ini', mean='false',
             calculation_mode='preclassical',  poes='0.1')
 
     def test_case_8(self):
