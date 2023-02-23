@@ -979,7 +979,7 @@ hazard_uhs-std.csv
             hazard_calculation_id=hc_str)
         dbm = view('disagg_by_mag', self.calc.datastore)
         fname = general.gettemp(text_table(dbm, ext='org'))
-        self.assertEqualFiles('expected/disagg_by_mag.org', fname)
+        self.assertEqualFiles('expected/disagg_by_mag_true.org', fname)
 
         # multiFaultSource with infer_occur_rates=false
         self.run_calc(case_65.__file__, 'job.ini',
@@ -989,7 +989,7 @@ hazard_uhs-std.csv
             disagg_bin_edges='{"mag": [5.6, 6.0, 6.4, 6.8, 7.0, 7.2]}')
         dbm = view('disagg_by_mag', self.calc.datastore)
         fname = general.gettemp(text_table(dbm, ext='org'))
-        self.assertEqualFiles('expected/disagg_by_mag2.org', fname)
+        self.assertEqualFiles('expected/disagg_by_mag_false.org', fname)
 
     def test_case_66(self):
         # sites_slice
