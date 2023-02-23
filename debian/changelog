@@ -1,3 +1,13 @@
+  [Paolo Tormene]
+  * Added AELO mode for the engine webui, providing a web form to insert input
+    values and launch a calculation. Input values are validated and the
+    progress of the calculation can be monitored through the webui. On
+    completion, the server sends an email to the job owner, providing feedback
+    about failure or completion, with a link to retrieve a traceback or to
+    browse the calculation outputs. Corresponding tests were added and the
+    existing tests for the webui were improved, cleaning up calculations after
+    they have been checked.
+
   [Michele Simionato]
   * Added feature `infer_occur_rates` for multiFault sources
   * Sampling the ruptures was raising a BlockingIOError sometimes
