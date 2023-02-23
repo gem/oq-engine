@@ -9,14 +9,14 @@ on:
         required: true
       pkg-num:
         description: Engine PKG number (for LTS Release)
-        default: 1.0
+        default: 1
         required: true
       git-ref:
         description: Git Ref Branch
         default: master
         required: true
       copr:
-        description: COPR Repository Staging for default
+        description: COPR Repository development for default
         default: openquake
         required: true
   schedule:

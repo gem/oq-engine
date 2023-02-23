@@ -34,9 +34,10 @@ from openquake.baselib.general import (
     sqrscale, groupby)
 from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import valid, imt as imt_module
+from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
-from openquake.hazardlib.tom import registry, FatedTOM, NegativeBinomialTOM
+from openquake.hazardlib.tom import (
+    registry, FatedTOM, NegativeBinomialTOM, PoissonTOM)
 from openquake.hazardlib.stats import ndtr
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.calc.filters import (
@@ -82,10 +83,27 @@ def is_modifiable(gsim):
     return hasattr(gsim, 'gmpe') and hasattr(gsim, 'params')
 
 
+def split_by_occur(ctx):
+    """
+    :returns: [poissonian] or [poissonian, nonpoissonian,...]
+    """
+    nan = numpy.isnan(ctx.occurrence_rate)
+    out = []
+    if 0 < nan.sum() < len(ctx):
+        out.append(ctx[~nan])
+        nonpoisson = ctx[nan]
+        for shp in set(np.probs_occur.shape[1] for np in nonpoisson):
+            p_array = [p for p in nonpoisson if p.probs_occur.shape[1] == shp]
+            out.append(numpy.concatenate(p_array).view(numpy.recarray))
+    else:
+        out.append(ctx)
+    return out
+
+
 def concat(ctxs):
     """
     Concatenate context arrays.
-    :returns: list with 0, 1 or 2 elements
+    :returns: [] or [poisson_ctx] or [poisson_ctx, nonpoisson_ctx, ...]
     """
     out, poisson, nonpoisson, nonparam = [], [], [], []
     for ctx in ctxs:
@@ -352,8 +370,6 @@ class ContextMaker(object):
                 param['pointsource_distance'], trt)
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
-        if self.investigation_time:
-            self.tom = registry['PoissonTOM'](self.investigation_time)
         self.ses_seed = param.get('ses_seed', 42)
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
         self.truncation_level = param.get('truncation_level', 99.)
@@ -401,7 +417,6 @@ class ContextMaker(object):
         dic['rup_id'] = U32(0)
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
-        dic['weight'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
         self.shift_hypo = param.get('shift_hypo')
@@ -485,6 +500,13 @@ class ContextMaker(object):
     def stop(self):
         return self.start + len(self.gsims)
 
+    @property
+    def Z(self):
+        """
+        :returns: the number of realizations associated to self
+        """
+        return sum(len(rlzs) for rlzs in self.gsims.values())
+
     def dcache_size(self):
         """
         :returns: the size in bytes of the distance cache
@@ -497,68 +519,19 @@ class ContextMaker(object):
                 nbytes += arr.nbytes
         return nbytes
 
-    def read_ctxs(self, dstore, slc=None, magi=None):
-        """
-        :param dstore: a DataStore instance
-        :param slice: a slice of contexts with the same grp_id
-        :returns: a list of contexts
-        """
-        self.src_mutex, self.rup_mutex = dstore['mutex_by_grp'][self.grp_id]
-        sitecol = dstore['sitecol'].complete.array
-        if slc is None:
-            slc = dstore['rup/grp_id'][:] == self.grp_id
-        params = {n: dstore['rup/' + n][slc] for n in dstore['rup']}
-        dtlist = []
-        for par, val in params.items():
-            if len(val) == 0:
-                return []
-            elif par == 'probs_occur':
-                item = (par, object)
-            elif par == 'occurrence_rate':
-                item = (par, F64)
-            else:
-                item = (par, val[0].dtype)
-            dtlist.append(item)
-        for par in sitecol.dtype.names:
-            if par != 'sids':
-                dtlist.append((par, sitecol.dtype[par]))
-        if magi is not None:
-            dtlist.append(('magi', numpy.uint8))
-        ctx = numpy.zeros(len(params['grp_id']), dtlist).view(numpy.recarray)
-        for par, val in params.items():
-            ctx[par] = val
-        for par in sitecol.dtype.names:
-            if par != 'sids':
-                ctx[par] = sitecol[par][ctx['sids']]
-        if magi is not None:
-            ctx['magi'] = magi
-        # NB: sorting the contexts break the disaggregation! (see case_1)
-
-        # split parametric vs nonparametric contexts
-        nans = numpy.isnan(ctx.occurrence_rate)
-        if nans.sum() in (0, len(ctx)):  # no nans or all nans
-            ctxs = [ctx]
-        else:
-            # happens in the oq-risk-tests for NZ
-            ctxs = [ctx[nans], ctx[~nans]]
-        return ctxs
-
     def new_ctx(self, size):
         """
         :returns: a recarray of the given size full of zeros
         """
         return RecordBuilder(**self.defaultdict).zeros(size)
 
-    def recarray(self, ctxs, magi=None):
+    def recarray(self, ctxs):
         """
         :params ctxs: a non-empty list of homogeneous contexts
         :returns: a recarray, possibly collapsed
         """
         assert ctxs
         dd = self.defaultdict.copy()
-        if magi is not None:  # magnitude bin used in disaggregation
-            dd['magi'] = numpy.uint8(0)
-
         if not hasattr(ctxs[0], 'probs_occur'):
             for ctx in ctxs:
                 ctx.probs_occur = numpy.zeros(0)
@@ -579,10 +552,6 @@ class ContextMaker(object):
             for par in dd:
                 if par == 'rup_id':
                     val = getattr(ctx, par)
-                elif par == 'magi':  # in disaggregation
-                    val = magi
-                elif par == 'weight':
-                    val = getattr(ctx, par, 0.)
                 else:
                     val = getattr(ctx, par, numpy.nan)
                 getattr(ra, par)[slc] = val
@@ -959,7 +928,8 @@ class ContextMaker(object):
         return gmv
 
     # not used by the engine, is is meant for notebooks
-    def get_poes(self, srcs, sitecol, rup_indep=True, collapse_level=-1):
+    def get_poes(self, srcs, sitecol, tom=None, rup_mutex={},
+                 collapse_level=-1):
         """
         :param srcs: a list of sources with the same TRT
         :param sitecol: a SiteCollection instance with N sites
@@ -968,7 +938,7 @@ class ContextMaker(object):
         self.collapser.cfactor = numpy.zeros(3)
         ctxs = self.from_srcs(srcs, sitecol)
         with patch.object(self.collapser, 'collapse_level', collapse_level):
-            return self.get_pmap(ctxs, rup_indep).array
+            return self.get_pmap(ctxs, tom, rup_mutex).array
 
     def _gen_poes(self, ctx):
         from openquake.hazardlib.site_amplification import get_poes_site
@@ -976,7 +946,8 @@ class ContextMaker(object):
 
         # split large context arrays to avoid filling the CPU cache
         with self.gmf_mon:
-            mean_stdt = self.get_mean_stds([ctx])
+            # split_by_mag=False because already contains a single mag
+            mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
         for slc in split_in_slices(len(ctx), MULTIPLIER):
             ctxt = ctx[slc]
             self.slc = slc  # used in gsim/base.py
@@ -1011,52 +982,50 @@ class ContextMaker(object):
                 poes = numpy.concatenate(list(self._gen_poes(kctx)))
                 yield poes, ctxt, invs
 
-    def get_pmap(self, ctxs, rup_indep=True):
+    def get_pmap(self, ctxs, tom=None, rup_mutex={}):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
-        :param rup_indep: default True
+        :param tom: temporal occurrence model (default PoissonTom)
+        :param rup_mutex: dictionary of weights (default empty)
         :returns: a ProbabilityMap
         """
+        rup_indep = not rup_mutex
         sids = numpy.unique(ctxs[0].sids)
         pmap = ProbabilityMap(sids, size(self.imtls), len(self.gsims))
         pmap.fill(rup_indep)
-        self.update(pmap, ctxs, rup_indep)
+        self.update(pmap, ctxs, tom or PoissonTOM(self.investigation_time),
+                    rup_mutex)
         return ~pmap if rup_indep else pmap
 
-    def update(self, pmap, ctxs, rup_indep=True):
+    def update(self, pmap, ctxs, tom, rup_mutex={}):
         """
         :param pmap: probability map to update
         :param ctxs: a list of context arrays (only one for parametric ctxs)
-        :param rup_indep: False for mutex ruptures, default True
+        :param rup_mutex: dictionary (src_id, rup_id) -> weight
+
+        The rup_mutex dictionary is read-only and normally empty
         """
-        if self.tom is None:
+        rup_indep = len(rup_mutex) == 0
+        if tom is None:
             itime = -1.  # test_hazard_curve_X
-        elif isinstance(self.tom, FatedTOM):
+        elif isinstance(tom, FatedTOM):
             itime = 0.
         else:
-            itime = self.tom.time_span
-        start = 0
-        for cm in self.split_by_gsim():
-            try:
-                idx = cm.gidx - self.gidx[0]
-            except AttributeError:
-                stop = start + len(cm.gsims)
-                idx = range(start, stop)
-                start = stop
-            for ctx in ctxs:
-                for poes, ctxt, invs in cm.gen_poes(ctx, rup_indep):
-                    with self.pne_mon:
-                        pmap.update_(poes, invs, ctxt, itime, rup_indep, idx)
+            itime = tom.time_span
+        for ctx in ctxs:
+            for poes, ctxt, invs in self.gen_poes(ctx, rup_indep):
+                with self.pne_mon:
+                    pmap.update(poes, invs, ctxt, itime, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
-    def get_mean_stds(self, ctxs, split_by_mag=False):
+    def get_mean_stds(self, ctxs, split_by_mag=True):
         """
         :param ctxs: a list of contexts with N=sum(len(ctx) for ctx in ctxs)
-        :param disagg: True when called from the disaggregation calculator
+        :param split_by_mag: where to split by magnitude
         :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
         N = sum(len(ctx) for ctx in ctxs)
-        M = len(self.imtls)
+        M = len(self.imts)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
         if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
@@ -1065,8 +1034,8 @@ class ContextMaker(object):
         else:  # vectorize the contexts
             recarrays = [self.recarray(ctxs)]
         if split_by_mag:
-            assert len(recarrays) == 1, len(recarrays)
-            recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
+            recarr = numpy.concatenate(recarrays).view(numpy.recarray)
+            recarrays = split_array(recarr, U32(recarr.mag*100))
         self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
@@ -1143,10 +1112,13 @@ class ContextMaker(object):
         for src in sources:
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.esites = 0
+                src.weight = .01
             else:
                 with mon:
                     src.weight, src.esites = self.estimate_weight(
                         src, srcfilter, multiplier)
+                    if src.weight == 0:
+                        src.weight = 0.001
                     src.weight *= G
                     if src.code == b'P':
                         src.weight += .1
@@ -1159,26 +1131,6 @@ class ContextMaker(object):
                             src.weight += 30.
                     else:
                         src.weight += 1.
-
-    def split_by_gsim(self):
-        """
-        Split the ContextMaker in multiple context makers, one per GSIM
-        """
-        if self.collapse_level < 0 or len(self.gsims) == 1:
-            return [self]
-        cmakers = []
-        for g, gsim in zip(self.gidx, self.gsims):
-            gsim.g = g
-        for dists, gsims in groupby(self.gsims, by_dists).items():
-            cm = self.__class__(self.trt, gsims, self.oq)
-            cm.gidx = numpy.array([gsim.g for gsim in gsims])
-            cm.grp_id = self.grp_id
-            cm.collapser.cfactor = self.collapser.cfactor
-            for attr in dir(self):
-                if attr.endswith('_mon'):
-                    setattr(cm, attr, getattr(self, attr))
-            cmakers.append(cm)
-        return cmakers
 
 
 def by_dists(gsim):
@@ -1235,6 +1187,13 @@ class PmapMaker(object):
             self.sources = group
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
         self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
+        if self.rup_indep:
+            self.rup_mutex = {}
+        else:
+            self.rup_mutex = {}  # src_id, rup_id -> rup_weight
+            for src in group:
+                for i, (rup, _) in enumerate(src.data):
+                    self.rup_mutex[src.id, i] = rup.weight
         self.fewsites = self.N <= cmaker.max_sites_disagg
         if hasattr(group, 'grp_probability'):
             self.grp_probability = group.grp_probability
@@ -1262,11 +1221,6 @@ class PmapMaker(object):
                 with self.cmaker.delta_mon:
                     delta = self.cmaker.deltagetter(src.id)
                     ctx.occurrence_rate += delta[ctx.rup_id]
-            if hasattr(src, 'mutex_weight'):
-                if ctx.weight.any():
-                    ctx['weight'] *= src.mutex_weight
-                else:
-                    ctx['weight'] = src.mutex_weight
             if self.fewsites:  # keep rupdata in memory (before collapse)
                 self.rupdata.append(ctx)
             yield ctx
@@ -1281,6 +1235,8 @@ class PmapMaker(object):
         maxsize = get_maxsize(M, G)
         t0 = time.time()
         for src in self.sources:
+            tom = getattr(src, 'temporal_occurrence_model',
+                          PoissonTOM(self.cmaker.investigation_time))
             src.nsites = 0
             for ctx in self.gen_ctxs(src):
                 ctxlen += len(ctx)
@@ -1288,11 +1244,12 @@ class PmapMaker(object):
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > maxsize:
-                    cm.update(pmap, concat(allctxs), self.rup_indep)
+                    cm.update(pmap, concat(allctxs), tom, self.rup_mutex)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
-            cm.update(pmap, concat(allctxs), self.rup_indep)
+            # assume all sources have the same tom
+            cm.update(pmap, concat(allctxs), tom, self.rup_mutex)
             allctxs.clear()
         dt = time.time() - t0
         nsrcs = len(self.sources)
@@ -1313,6 +1270,8 @@ class PmapMaker(object):
         pmap_by_src = {}
         cm = self.cmaker
         for src in self.sources:
+            tom = getattr(src, 'temporal_occurrence_model',
+                          PoissonTOM(self.cmaker.investigation_time))
             t0 = time.time()
             pm = ProbabilityMap(pmap.sids, cm.imtls.size, len(cm.gsims))
             pm.fill(self.rup_indep)
@@ -1320,7 +1279,7 @@ class PmapMaker(object):
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:
-                cm.update(pm, ctxs, self.rup_indep)
+                cm.update(pm, ctxs, tom, self.rup_mutex)
             if hasattr(src, 'mutex_weight'):
                 arr = 1. - pm.array if self.rup_indep else pm.array
                 p = pm.new(arr * src.mutex_weight)
@@ -1512,7 +1471,7 @@ def full_context(sites, rup, dctx=None):
 def get_mean_stds(gsim, ctx, imts, **kw):
     """
     :param gsim: a single GSIM or a a list of GSIMs
-    :param ctx: a RuptureContext or a recarray of size N
+    :param ctx: a RuptureContext or a recarray of size N with same magnitude
     :param imts: a list of M IMTs
     :param kw: additional keyword arguments
     :returns:
@@ -1522,7 +1481,7 @@ def get_mean_stds(gsim, ctx, imts, **kw):
     single = hasattr(gsim, 'compute')
     kw['imtls'] = {imt.string: [0] for imt in imts}
     cmaker = ContextMaker('*', [gsim] if single else gsim, kw)
-    out = cmaker.get_mean_stds([ctx])  # (4, G, M, N)
+    out = cmaker.get_mean_stds([ctx], split_by_mag=False)  # (4, G, M, N)
     return out[:, 0] if single else out
 
 
@@ -1664,7 +1623,6 @@ def read_cmakers(dstore, full_lt=None):
     oq = dstore['oqparam']
     full_lt = full_lt or dstore['full_lt']
     trt_smrs = dstore['trt_smrs'][:]
-    toms = decode(dstore['toms'][:])
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
@@ -1675,6 +1633,7 @@ def read_cmakers(dstore, full_lt=None):
         weight = [1] * len(rlzs_by_gsim_list)
     start = 0
     aftershock = 'delta_rates' in dstore
+    oq.mags_by_trt = {k: decode(v[:]) for k, v in dstore['source_mags'].items()}
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
         G = len(rlzs_by_gsim)
         trti = trt_smrs[grp_id][0] // num_eff_rlzs
@@ -1685,12 +1644,9 @@ def read_cmakers(dstore, full_lt=None):
             oq.af = AmplFunction.from_dframe(df)
         else:
             oq.af = None
-        oq.mags_by_trt = {k: decode(v[:])
-                          for k, v in dstore['source_mags'].items()}
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         if aftershock:
             cmaker.deltagetter = DeltaRatesGetter(dstore)
-        cmaker.tom = valid.occurrence_model(toms[grp_id])
         cmaker.trti = trti
         cmaker.gidx = numpy.arange(start, start + G)
         cmaker.grp_id = grp_id
@@ -1712,3 +1668,61 @@ def read_cmaker(dstore, trt_smr):
     trt = trts[trt_smr // len(full_lt.sm_rlzs)]
     rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
     return ContextMaker(trt, rlzs_by_gsim, oq)
+
+
+def read_src_mutex(dstore):
+    """
+    :param dstore: a DataStore-like object
+    :returns: a dictionary grp_id -> {'src_id': [...], 'weight': [...]}
+    """
+    info = dstore.read_df('source_info')
+    mutex_df = info[info.mutex_weight > 0][['grp_id', 'mutex_weight']]
+    return {grp_id: {'src_id': df.index.to_numpy(),
+                     'weight': df.mutex_weight.to_numpy()}
+            for grp_id, df in mutex_df.groupby('grp_id')}
+
+
+def get_src_mutex(srcs):
+    """
+    :param srcs: a list of sources with weights and the same grp_id
+    :returns: a dictionary grp_id -> {'src_id': [...], 'weight': [...]}
+    """
+    grp_ids = [src.grp_id for src in srcs]
+    [grp_id] = set(grp_ids)
+    ok = all(hasattr(src, 'mutex_weight') for src in srcs)
+    if not ok:
+        return {grp_id: {}}
+    dic = dict(src_ids=U32([src.id for src in srcs]),
+               weights=F64([src.mutex_weight for src in srcs]))
+    return {grp_id: dic}
+
+
+def read_ctx_by_grp(dstore):
+    """
+    :param dstore: DataStore instance
+    :returns: dictionary grp_id -> ctx
+    """
+    sitecol = dstore['sitecol'].complete.array
+    params = {n: dstore['rup/' + n][:] for n in dstore['rup']}
+    dtlist = []
+    for par, val in params.items():
+        if len(val) == 0:
+            return []
+        elif par == 'probs_occur':
+            item = (par, object)
+        elif par == 'occurrence_rate':
+            item = (par, F64)
+        else:
+            item = (par, val[0].dtype)
+        dtlist.append(item)
+    for par in sitecol.dtype.names:
+        if par != 'sids':
+            dtlist.append((par, sitecol.dtype[par]))
+    ctx = numpy.zeros(len(params['grp_id']), dtlist).view(numpy.recarray)
+    for par, val in params.items():
+        ctx[par] = val
+    for par in sitecol.dtype.names:
+        if par != 'sids':
+            ctx[par] = sitecol[par][ctx.sids]
+    grp_ids = numpy.unique(ctx.grp_id)
+    return {grp_id: ctx[ctx.grp_id == grp_id] for grp_id in grp_ids}

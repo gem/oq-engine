@@ -252,7 +252,7 @@ def stacked_bar(ax, x, ys, width):
 
 def make_figure_disagg(extractors, what):
     """
-    $ oq plot "disagg?kind=Mag&imt=PGA&poe_id=0"
+    $ oq plot "disagg?kind=Mag&imt=PGA&poe_id=0&spec=rlzs"
     """
     plt = import_plt()
     from matplotlib import cm

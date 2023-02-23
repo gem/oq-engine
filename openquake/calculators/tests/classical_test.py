@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import gzip
+import json
 import unittest
 import numpy
 from openquake.baselib import parallel, general, config
@@ -39,7 +40,8 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
     case_66, case_67, case_68, case_69, case_70, case_71, case_72, case_73,
-    case_74, case_75, case_76, case_77, case_78, case_79, case_80, case_81)
+    case_74, case_75, case_76, case_77, case_78, case_79, case_80, case_81,
+    case_82, case_83)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -163,9 +165,9 @@ class ClassicalTestCase(CalculatorTestCase):
             'hmaps-rlzs', imt="PGA", site_id=0).squeeze()
         aac(iml, [0.167078, 0.134646], atol=.0001)  # for the two realizations
 
-        # exercise the warning for no output when mean_hazard_curves='false'
+        # exercise the warning for no output when mean='false'
         self.run_calc(
-            case_7.__file__, 'job.ini', mean_hazard_curves='false',
+            case_7.__file__, 'job.ini', mean='false',
             calculation_mode='preclassical',  poes='0.1')
 
     def test_case_8(self):
@@ -204,9 +206,9 @@ class ClassicalTestCase(CalculatorTestCase):
             case_12.__file__)
 
         # test disagg_by_grp
-        # df = self.calc.datastore.read_df('disagg_by_grp')
-        # fname = general.gettemp(text_table(df))
-        # self.assertEqualFiles('expected/disagg_by_grp.rst', fname)
+        df = self.calc.datastore.read_df('disagg_by_grp')
+        fname = general.gettemp(text_table(df))
+        self.assertEqualFiles('expected/disagg_by_grp.rst', fname)
 
     def test_case_13(self):
         self.assert_curves_ok(
@@ -382,6 +384,58 @@ hazard_uhs-std.csv
         df = self.calc.datastore.read_df('hcurves-stats', 'lvl')
         self.assertEqual(list(df.columns),
                          ['site_id', 'stat', 'imt', 'value'])
+
+    def test_case_20_bis(self):
+        # disagg_by_src without collect_rlzs
+        self.run_calc(case_20.__file__, 'job_bis.ini')
+        weights = self.calc.datastore['weights'][:]
+        dbs = self.calc.datastore['disagg_by_src']
+        attrs = json.loads(dbs.attrs['json'])
+        self.assertEqual(attrs, {
+            'shape_descr': ['site_id', 'rlz_id', 'imt', 'lvl', 'src_id'],
+            'site_id': 1,
+            'rlz_id': 12,
+            'imt': ['PGA', 'SA(1.0)'],
+            'lvl': 4,
+            'src_id': ['CHAR1', 'COMFLT1', 'SFLT1']})
+        poes1 = weights @ dbs[0, :, 0, 0, :]  # shape Ns
+        aac(poes1, [0.01980132, 0.01488805, 0.01488805, 0., 0., 0., 0.],
+            atol=1E-7)
+
+        # disagg_by_src with collect_rlzs:
+        # the averages are correct when ignoring semicolon_aggregate
+        dbs_full = self.calc.disagg_by_src  # shape (N, R, M, L1, Ns)
+        self.run_calc(case_20.__file__, 'job_bis.ini', collect_rlzs='true')
+        dbs_avg = self.calc.disagg_by_src  # shape (N, 1, M, L1, Ns)
+        for m in range(2):
+            for l in range(4):
+                avg1 = weights @ dbs_full[0, :, m, l]
+                avg2 = dbs_avg[0, 0, m, l]
+                aac(avg1, avg2)
+
+        # with semicolon_aggregate the averages are different because
+        # agg(<poes>) != <agg(poes)> where <...> is the mean on the rlzs;
+        # here is an example with 2 sources to aggregate and 3 realizations:
+        ws = numpy.array([.33333333333333]*3)
+        poes = numpy.array([[.1, .2, .3], [.4, .5, .6]])  # shape (S, R)
+        print(general.agg_probs(poes[0] @ ws, poes[1] @ ws))
+        print(general.agg_probs(poes[0], poes[1]) @ ws)
+
+        # here are the numbers
+        poes2 = self.calc.datastore['disagg_by_src'][0, 0, 0, 0]
+        aac(poes2, [0.01968, 0.014833, 0.014841, 0., 0., 0., 0.],
+            atol=1E-6)
+
+        # testing extract_disagg_by_src
+        aw = extract(self.calc.datastore, 'disagg_by_src?imt=PGA&poe=1E-3')
+        self.assertEqual(aw.site_id, 0)
+        self.assertEqual(aw.imt, 'PGA')
+        self.assertEqual(aw.poe, .001)
+        aac(aw.array['poe'], [6.46114349e-05, 0, 0])
+
+        # testing view_relevant_sources
+        arr = view('relevant_sources:SA(1.0)', self.calc.datastore)
+        self.assertEqual(decode(arr['src_id']), ['SFLT1'])
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
@@ -900,7 +954,7 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurve-mean.csv', f)
 
     def test_case_65(self):
-        # running the calculation
+        # multiFaultSource with infer_occur_rates=true
         self.run_calc(case_65.__file__, 'job.ini')
 
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
@@ -913,35 +967,29 @@ hazard_uhs-std.csv
         src.rupture_idxs = [tuple(map(str, idxs)) for idxs in src.rupture_idxs]
         out = write_source_model(tmpname, csm.src_groups)
         self.assertEqual(out[0], tmpname)
-        # self.assertEqual(out[1], tmpname[:-4] + '_sections.xml')
+        self.assertEqual(out[1], tmpname + '.hdf5')
 
-        # make sure we are not breaking event_based
-        self.run_calc(case_65.__file__, 'job_eb.ini')
-        [f] = export(('ruptures', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.csv', f, delta=1E-5)
+        # test disaggregation
+        hc_str = str(self.calc.datastore.calc_id)
+        self.run_calc(
+            case_65.__file__, 'job.ini',
+            calculation_mode='disaggregation',
+            disagg_outputs='Mag',
+            disagg_bin_edges='{"mag": [5.6, 6.0, 6.4, 6.8, 7.0, 7.2]}',
+            hazard_calculation_id=hc_str)
+        dbm = view('disagg:Mag', self.calc.datastore)
+        fname = general.gettemp(text_table(dbm, ext='org'))
+        self.assertEqualFiles('expected/disagg_by_mag_true.org', fname)
 
-        # make sure we are not storing far away ruptures
-        r = self.calc.datastore['ruptures'][:]
-        [lon] = self.calc.sitecol.lons
-        [lat] = self.calc.sitecol.lats
-        # check bounding box close to the site
-        deltalon = (r['maxlon'] - lon).max()
-        deltalat = (r['maxlat'] - lat).max()
-        assert deltalon <= .65, deltalon
-        assert deltalat <= .49, deltalat
-        deltalon = (lon - r['minlon']).max()
-        deltalat = (lat - r['minlat']).max()
-        assert deltalon <= .35, deltalon
-        assert deltalat == .0, deltalat
-
-        # check ruptures.csv
-        rups = extract(self.calc.datastore, 'ruptures')
-        csv = general.gettemp(rups.array)
-        self.assertEqualFiles('expected/full_ruptures.csv', csv, delta=1E-5)
-
-        # check GMFs
-        files = export(('gmf_data', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/gmf_data.csv', files[0], delta=1E-4)
+        # multiFaultSource with infer_occur_rates=false
+        self.run_calc(case_65.__file__, 'job.ini',
+            calculation_mode='disaggregation',
+            infer_occur_rates='false',
+            disagg_outputs='Mag',
+            disagg_bin_edges='{"mag": [5.6, 6.0, 6.4, 6.8, 7.0, 7.2]}')
+        dbm = view('disagg:Mag', self.calc.datastore)
+        fname = general.gettemp(text_table(dbm, ext='org'))
+        self.assertEqualFiles('expected/disagg_by_mag_false.org', fname)
 
     def test_case_66(self):
         # sites_slice
@@ -951,6 +999,13 @@ hazard_uhs-std.csv
         self.run_calc(case_66.__file__, 'job.ini', sites_slice='0:50')
         [fname2] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hmap2.csv', fname2, delta=1E-4)
+
+        # check that you can specify both a site and a site model and the
+        # engine will automatically get the closest site model parameters
+        self.run_calc(case_66.__file__, 'job1.ini',
+                      calculation_mode='preclassical')
+        self.assertEqual(self.calc.sitecol.vs30, [810.])
+        
 
     def test_case_67(self):
         # source specific logic tree with the following structure:
@@ -1061,10 +1116,24 @@ hazard_uhs-std.csv
 
     def test_case_78(self):
         # test calculation for modifiable GMPE with original tabular GMM
+        # NB: this is using a NegativeBinomialTOM
         self.run_calc(case_78.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/hazard_curve-mean-PGA_NegBinomTest.csv', f1)
+
+        # also test disaggregation with NegativeBinomialTOM
+        # the model has only 2 ruptures
+        hc_str = str(self.calc.datastore.calc_id)
+        self.run_calc(
+            case_78.__file__, 'job.ini',
+            calculation_mode='disaggregation',
+            disagg_outputs='Dist',
+            disagg_bin_edges='{"dist": [0, 15, 30]}',
+            hazard_calculation_id=hc_str)
+        dbm = view('disagg:Dist', self.calc.datastore)
+        fname = general.gettemp(text_table(dbm, ext='org'))
+        self.assertEqualFiles('expected/disagg_by_dist.org', fname)
 
     def test_case_79(self):
         # disagg_by_src with semicolon sources
@@ -1082,3 +1151,18 @@ hazard_uhs-std.csv
         self.run_calc(case_81.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean.csv', f1)
+
+    def test_case_82(self):
+        # two mps, only one should be collapsed and use reqv
+        self.run_calc(case_82.__file__, 'job.ini')
+        [f1] = export(('disagg_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/disagg_by_src.csv', f1)
+
+    def test_case_83(self):
+        # two mps, only one should be collapsed and use reqv
+        self.run_calc(case_83.__file__, 'job_extendModel.ini')
+        [fname_em] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.run_calc(case_83.__file__, 'job_expanded_LT.ini')
+        [fname_ex] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles(fname_em, fname_ex)
+

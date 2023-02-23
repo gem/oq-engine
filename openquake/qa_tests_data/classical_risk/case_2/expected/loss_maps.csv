@@ -1,3 +1,3 @@
-#,,,,"generated_by='OpenQuake engine 3.8.0-git4c93a33098', start_date='2019-11-21T14:28:04', checksum=1235442580, kind='mean', risk_investigation_time=None"
+#,,,,"generated_by='OpenQuake engine 3.16.0-git2fcc728594', start_date='2023-01-24T15:14:53', checksum=2464245607, kind='mean', risk_investigation_time=50.0"
 asset_id,taxonomy,lon,lat,structural~poe-0.01
-"a1","VF",1.00000,1.00000,2.64871E-01
+a1,VF,1.00000,1.00000,2.65268E-01

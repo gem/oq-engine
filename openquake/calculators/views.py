@@ -34,7 +34,6 @@ from openquake.baselib.general import (
     get_array, group_array, fast_agg)
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
-from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
@@ -936,30 +935,40 @@ def view_mean_disagg(token, dstore):
     """
     N, M, P, Z = dstore['hmap4'].shape
     tbl = []
-    kd = {key: dset[:] for key, dset in sorted(dstore['disagg'].items())}
+    kd = {key: dset[:] for key, dset in sorted(dstore['disagg-rlzs'].items())}
     oq = dstore['oqparam']
     for s in range(N):
         for m, imt in enumerate(oq.imtls):
             for p in range(P):
                 row = ['%s-sid-%d-poe-%s' % (imt, s, p)]
                 for k, d in kd.items():
-                    row.append(d[s, m, p].mean())
+                    row.append(d[s, ..., m, p, :].mean())
                 tbl.append(tuple(row))
     return numpy.array(sorted(tbl), dt(['key'] + list(kd)))
 
 
-@view.add('disagg_times')
-def view_disagg_times(token, dstore):
+@view.add('disagg')
+def view_disagg(token, dstore):
     """
-    Display slow tasks for disaggregation
+    Example: $ oq show disagg Mag
+    Returns a table poe, imt, mag, contribution for the first site
     """
-    data = dstore['disagg_task'][:]
-    info = dstore.read_df('task_info', 'taskname').loc[b'compute_disagg']
-    tbl = []
-    for duration, task_no in zip(info['duration'], info['task_no']):
-        tbl.append((duration, task_no) + tuple(data[task_no]))
-    header = ('duration', 'task_no') + data.dtype.names
-    return numpy.array(sorted(tbl), dt(header))
+    kind = token.split(':')[1]
+    assert kind in ('Mag', 'Dist', 'TRT'), kind
+    site_id = 0
+    if 'disagg-stats' in dstore:
+        data = dstore['disagg-stats/' + kind][site_id, ..., 0]  # (:, M, P)
+    else:
+        data = dstore['disagg-rlzs/' + kind][site_id, ..., 0]  # (:, M, P)
+    Ma, M, P = data.shape
+    oq = dstore['oqparam']
+    imts = list(oq.imtls)
+    dtlist = [('poe', float), ('imt', (numpy.string_, 10)),
+              (kind.lower() + 'bin', int), ('prob', float)]
+    lst = []
+    for p, m, ma in itertools.product(range(P), range(M), range(Ma)):
+        lst.append((oq.poes[p], imts[m], ma, data[ma, m, p]))
+    return numpy.array(lst, dtlist)
 
 
 @view.add('bad_ruptures')
@@ -1434,3 +1443,18 @@ def view_event_based_mfd(token, dstore):
     """
     aw = extract(dstore, 'event_based_mfd?')
     return pandas.DataFrame(aw.to_dict()).set_index('mag')
+
+
+# used in the AELO project
+@view.add('relevant_sources')
+def view_relevant_sources(token, dstore):
+    """
+    Returns a table with the sources contributing more than 10%
+    of the highest source.
+    """
+    imt = token.split(':')[1]
+    poe = dstore['oqparam'].poes[0]
+    aw = extract(dstore, f'disagg_by_src?imt={imt}&poe={poe}')
+    poes = aw.array['poe']  # for each source in decreasing order
+    max_poe = poes[0]
+    return aw.array[poes > .1 * max_poe]

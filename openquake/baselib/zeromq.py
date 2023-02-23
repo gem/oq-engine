@@ -92,8 +92,10 @@ class Socket(object):
     :param end_point: zmq end point string
     :param socket_type: zmq socket type (integer)
     :param mode: default 'bind', accepts also 'connect'
-    :param timeout: default 30000 ms, used when polling the underlying socket
+    :param timeout: default 30s, used when polling the underlying socket
     """
+    # NB: the timeout has to be large since starting a workerpool can be
+    # slow due to numba compiling everything, so you have to wait
     def __init__(self, end_point, socket_type, mode, timeout=30):
         assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH)
         assert mode in ('bind', 'connect'), mode

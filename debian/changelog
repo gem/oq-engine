@@ -1,3 +1,63 @@
+  [Paolo Tormene]
+  * Added AELO mode for the engine webui, providing a web form to insert input
+    values and launch a calculation. Input values are validated and the
+    progress of the calculation can be monitored through the webui. On
+    completion, the server sends an email to the job owner, providing feedback
+    about failure or completion, with a link to retrieve a traceback or to
+    browse the calculation outputs. Corresponding tests were added and the
+    existing tests for the webui were improved, cleaning up calculations after
+    they have been checked.
+
+  [Michele Simionato]
+  * Changed the default: now all realizations are consider in disaggregation
+    calculations, not only the one closest to the mean hazard curve
+  * Added feature `infer_occur_rates` for multiFault sources
+  * Sampling the ruptures was raising a BlockingIOError sometimes
+
+  [Kendra Johnson]
+  * Made it possible to use extendModel for multiple branchSets in the
+    source model logic tree
+
+  [Michele Simionato]
+  * Added an exporter for disagg_by_src
+  * Implemented mean disaggregation outputs, with the means computed in terms
+    of rates, not probabilities
+
+  [Kendra Johnson]
+  * Corrected a bug when using the `reqv` feature: all sources were
+    collapsed instead of the ones with the specified tectonic region types
+
+  [Michele Simionato]
+  * Changed the lon-lat binning algorithm to produce 4 times less bins
+  * Fixed install.py: it must not set the shared_dir
+  * Optimized disaggregation in performance, memory consumption and data
+    transfer; also changed the task distribution algorithm
+
+python3-oq-engine (3.16.0-2~xenial01) xenial; urgency=low
+
+  [Matteo Nastasi]
+  * Bumped oq-libs to version 3.8.0
+
+  [Michele Simionato, Paolo Tormene]
+  * Fixed the `agg_curves` extractor to also extract individual curves, thus
+    fixing the QGIS plugin visualization
+
+  [Michele Simionato]
+  * Optimized the rupture sampling for MultiFaultSources
+  * Supported `collect_rlzs` together with `disagg_by_src` to avoid running
+    out of memory in models with many realizations and many sources
+
+  [Marco Pagani]
+  * Implemented the correction of Lanzano et al. (2019) as described in
+    Lanzano et al. (2022)
+
+  [Michele Simionato]
+  * Fixed disaggregation calculations when too few tasks were generated
+
+  [Anirudh Rao, Michele Simionato]
+  * Changed the algorithm used in classical_risk and classical_bcr
+    calculations to take into account the risk_investigation_time
+
   [Michele Simionato]
   * Added a warning for pointlike sources with magnitudes >= 8
   * Optimized the disaggregation by using our own truncnorm_sf function and
@@ -135,6 +195,8 @@
     in insurance calculations (before we supported only fractions)
   * Reduced precision in the header of the UHS csv files
   * Managed the case with CoVs = 0 for the beta distribution
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 09 Feb 2023 15:26:59 +0000
 
 python3-oq-engine (3.15.0-1~xenial01) xenial; urgency=low
 

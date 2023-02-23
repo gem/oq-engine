@@ -1,0 +1,26 @@
+#,,,,,"generated_by='OpenQuake engine 3.17.0-gite0174763a6', start_date='2023-02-23T15:25:38', checksum=3227839905, investigation_time=50.0, mag_bin_edges=[5.0, 6.0, 7.0, 8.0], dist_bin_edges=[0.0, 25.0, 50.0], lon_bin_edges=[9.59215336926904, 10.607846630730949], lat_bin_edges=[44.540272, 45.259727999999996], eps_bin_edges=[-3.0, -1.0, 1.0, 3.0], tectonic_region_types=['Active Shallow Crust'], lon=10.099999999999994, lat=44.9"
+imt,poe,trt,mag,dist,mean
+PGA,0.02,Active Shallow Crust,5.50000E+00,1.25000E+01,0.00000E+00
+PGA,0.02,Active Shallow Crust,5.50000E+00,3.75000E+01,0.00000E+00
+PGA,0.02,Active Shallow Crust,6.50000E+00,1.25000E+01,0.00000E+00
+PGA,0.02,Active Shallow Crust,6.50000E+00,3.75000E+01,0.00000E+00
+PGA,0.02,Active Shallow Crust,7.50000E+00,1.25000E+01,0.00000E+00
+PGA,0.02,Active Shallow Crust,7.50000E+00,3.75000E+01,0.00000E+00
+PGA,0.1,Active Shallow Crust,5.50000E+00,1.25000E+01,0.00000E+00
+PGA,0.1,Active Shallow Crust,5.50000E+00,3.75000E+01,0.00000E+00
+PGA,0.1,Active Shallow Crust,6.50000E+00,1.25000E+01,0.00000E+00
+PGA,0.1,Active Shallow Crust,6.50000E+00,3.75000E+01,0.00000E+00
+PGA,0.1,Active Shallow Crust,7.50000E+00,1.25000E+01,0.00000E+00
+PGA,0.1,Active Shallow Crust,7.50000E+00,3.75000E+01,0.00000E+00
+SA(0.025),0.02,Active Shallow Crust,5.50000E+00,1.25000E+01,0.00000E+00
+SA(0.025),0.02,Active Shallow Crust,5.50000E+00,3.75000E+01,0.00000E+00
+SA(0.025),0.02,Active Shallow Crust,6.50000E+00,1.25000E+01,0.00000E+00
+SA(0.025),0.02,Active Shallow Crust,6.50000E+00,3.75000E+01,0.00000E+00
+SA(0.025),0.02,Active Shallow Crust,7.50000E+00,1.25000E+01,0.00000E+00
+SA(0.025),0.02,Active Shallow Crust,7.50000E+00,3.75000E+01,0.00000E+00
+SA(0.025),0.1,Active Shallow Crust,5.50000E+00,1.25000E+01,0.00000E+00
+SA(0.025),0.1,Active Shallow Crust,5.50000E+00,3.75000E+01,0.00000E+00
+SA(0.025),0.1,Active Shallow Crust,6.50000E+00,1.25000E+01,0.00000E+00
+SA(0.025),0.1,Active Shallow Crust,6.50000E+00,3.75000E+01,0.00000E+00
+SA(0.025),0.1,Active Shallow Crust,7.50000E+00,1.25000E+01,0.00000E+00
+SA(0.025),0.1,Active Shallow Crust,7.50000E+00,3.75000E+01,0.00000E+00

@@ -281,7 +281,7 @@ def calc_stats(df, kfields, stats, weights):
             for vf in vfields:
                 values = numpy.zeros_like(weights)  # shape R
                 values[group.rlz_id] = getattr(group, vf).to_numpy()
-                v = apply_stat(func, values, weights)
+                v = func(values, weights)
                 acc[vf].append(v)
             acc['stat'].append(name)
     return pandas.DataFrame(acc)
@@ -345,8 +345,19 @@ def apply_stat(f, arraylist, *extra, **kw):
     >>> apply_stat(mean_curve, [a1, a2])
     array([([2.5, 3.5], 4.5)], dtype=[('a', '<f8', (2,)), ('b', '<f8')])
     """
-    dtype = arraylist[0].dtype
-    shape = arraylist[0].shape
+    # NB: we are extending the calculation of statistics to the case of an
+    # arraylist containing some scalars
+    for arr in arraylist:
+        if isinstance(arr, numpy.ndarray):
+            dtype = arr.dtype
+            shape = arr.shape
+            break
+    else:
+        raise ValueError('No array found in the arraylist %s' % arraylist)
+    # promote scalars to arrays of the given dtype and shape
+    for i, arr in enumerate(arraylist):
+        if numpy.isscalar(arr):
+            arraylist[i] = numpy.ones(shape, dtype) * arr
     if dtype.names:  # composite array
         new = numpy.zeros(shape, dtype)
         for name in dtype.names:

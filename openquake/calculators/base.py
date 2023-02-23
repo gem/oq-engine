@@ -673,7 +673,7 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: the number of realizations
         """
-        if self.oqparam.collect_rlzs:
+        if self.oqparam.collect_rlzs and self.oqparam.job_type == 'risk':
             return 1
         elif 'weights' in self.datastore:
             return len(self.datastore['weights'])
@@ -953,9 +953,7 @@ class HazardCalculator(BaseCalculator):
                 self.datastore['full_lt'] = self.full_lt
         else:  # scenario
             self.full_lt = self.datastore['full_lt']
-
-        R = self.R
-        logging.info('There are %d realization(s)', R)
+        logging.info('There are %d realization(s)', self.R)
 
         self.datastore['weights'] = arr = build_weights(self.realizations)
         self.datastore.set_attrs('weights', nbytes=arr.nbytes)
