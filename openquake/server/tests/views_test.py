@@ -491,6 +491,7 @@ class EngineServerTestCase(django.test.TestCase):
                 else:
                     self.assertIn('Please find the results here:',
                                   email_content)
+                    self.assertIn(f'engine/{job_id}/outputs', email_content)
         self.post('%s/remove' % job_id)
 
     def test_aelo_successful_run_CCA(self):
