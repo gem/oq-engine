@@ -438,7 +438,7 @@ class EngineServerTestCase(django.test.TestCase):
             resp_text_dict = json.loads(resp.content.decode('utf8'))
             self.assertFalse(resp_text_dict['success'])
 
-    def aelo_successful_run(self, params):
+    def aelo_run(self, params, failure_reason=None):
         with tempfile.TemporaryDirectory() as email_dir:
             # FIXME: EMAIL_FILE_PATH is ignored. This would cause concurrency
             # issues in case tests run in parallel, because we are checking the
@@ -447,6 +447,8 @@ class EngineServerTestCase(django.test.TestCase):
             with self.settings(EMAIL_FILE_PATH=email_dir):
                 resp = self.post('aelo_run', params)
                 self.assertEqual(resp.status_code, 200)
+                # the job is supposed to start
+                # and, if failure_reason is not None, to fail afterwards
                 try:
                     js = json.loads(resp.content.decode('utf8'))
                 except Exception:
@@ -454,9 +456,15 @@ class EngineServerTestCase(django.test.TestCase):
                         b'Invalid JSON response: %r' % resp.content)
                 job_id = js['job_id']
                 self.wait()
-                results = self.get('%s/results' % job_id)
-                self.assertGreater(
-                    len(results), 0, 'The job produced no outputs!')
+                if failure_reason:
+                    tb = self.get('%s/traceback' % job_id)
+                    if not tb:
+                        sys.stderr.write('Empty traceback, please check!\n')
+                    self.assertIn(failure_reason, '\n'.join(tb))
+                else:
+                    results = self.get('%s/results' % job_id)
+                    self.assertGreater(
+                        len(results), 0, 'The job produced no outputs!')
                 # # FIXME: we should use the overridden EMAIL_FILE_PATH,
                 # #        so email_dir would contain only one file
                 # email_file = os.listdir(email_dir)[0]
@@ -465,7 +473,10 @@ class EngineServerTestCase(django.test.TestCase):
                 with open(os.path.join(email_dir, email_file), 'r') as f:
                     email_content = f.read()
                     print(email_content)
-                self.assertIn('finished correctly', email_content)
+                if failure_reason:
+                    self.assertIn('failed', email_content)
+                else:
+                    self.assertIn('finished correctly', email_content)
                 self.assertIn('From: aelonoreply@openquake.org', email_content)
                 self.assertIn('To: django-test-user@email.test', email_content)
                 self.assertIn('Reply-To: aelosupport@openquake.org',
@@ -474,18 +485,31 @@ class EngineServerTestCase(django.test.TestCase):
                     f"Input values: lon = {params['lon']},"
                     f" lat = {params['lat']}, vs30 = {params['vs30']},"
                     f" siteid = {params['siteid']}", email_content)
-                self.assertIn('Please find the results here:', email_content)
+                if failure_reason:
+                    self.assertIn('Site at lon=-86.0 lat=88.0 is not covered'
+                                  ' by any model!', email_content)
+                else:
+                    self.assertIn('Please find the results here:',
+                                  email_content)
         self.post('%s/remove' % job_id)
 
     def test_aelo_successful_run_CCA(self):
         params = dict(
             lon='-86.0', lat='12.0', vs30='800.0', siteid='CCA_SITE')
-        self.aelo_successful_run(params)
+        self.aelo_run(params)
 
     def test_aelo_successful_run_EUR(self):
         params = dict(
             lon='11.0', lat='44.0', vs30='800.0', siteid='EUR_SITE')
-        self.aelo_successful_run(params)
+        self.aelo_run(params)
+
+    def test_aelo_failing_run_mosaic_model_not_found(self):
+        params = dict(
+            lon='-86.0', lat='88.0', vs30='800.0', siteid='SOMEWHERE')
+        failure_reason = (
+            f"Site at lon={params['lon']} lat={params['lat']}"
+            f" is not covered by any model!")
+        self.aelo_run(params, failure_reason)
 
     def test_aelo_invalid_latitude(self):
         params = dict(lon='-86', lat='100', vs30='800', siteid='CCA_SITE')
@@ -519,48 +543,3 @@ class EngineServerTestCase(django.test.TestCase):
         print(err_msg)
         self.assertIn("Invalid ID 'CCA SITE': "
                       "the only accepted chars are a-zA-Z0-9_-:", err_msg)
-
-    def test_aelo_mosaic_model_not_found(self):
-        with tempfile.TemporaryDirectory() as email_dir:
-            # FIXME: EMAIL_FILE_PATH is ignored. This would cause concurrency
-            # issues in case tests run in parallel, because we are checking the
-            # last email that was created instead of the only email created in
-            # a test-specific directory
-            with self.settings(EMAIL_FILE_PATH=email_dir):
-                params = dict(
-                    lon='-86', lat='88', vs30='800', siteid='SOMEWHERE')
-                resp = self.post('aelo_run', params)
-                self.assertEqual(resp.status_code, 200)
-                # the job is supposed to start and to give an error afterwards
-                try:
-                    js = json.loads(resp.content.decode('utf8'))
-                except Exception:
-                    raise ValueError(
-                        b'Invalid JSON response: %r' % resp.content)
-                job_id = js['job_id']
-                self.wait()
-                tb = self.get('%s/traceback' % job_id)
-                if not tb:
-                    sys.stderr.write('Empty traceback, please check!\n')
-                self.assertIn('ValueError: Site at lon=-86.0 lat=88.0 '
-                              'is not covered by any model!', tb)
-                # # FIXME: we should use the overridden EMAIL_FILE_PATH,
-                # #        so email_dir would contain only one file
-                # email_file = os.listdir(email_dir)[0]
-                email_files = glob.glob('/tmp/app-messages/*')
-                email_file = max(email_files, key=os.path.getctime)
-                with open(os.path.join(email_dir, email_file), 'r') as f:
-                    email_content = f.read()
-                    print(email_content)
-                self.assertIn('failed', email_content)
-                self.assertIn('From: aelonoreply@openquake.org', email_content)
-                self.assertIn('To: django-test-user@email.test', email_content)
-                self.assertIn('Reply-To: aelosupport@openquake.org',
-                              email_content)
-                self.assertIn(
-                    'Input values: lon = -86.0, lat = 88.0,'
-                    ' vs30 = 800.0, siteid = SOMEWHERE', email_content)
-                self.assertIn(
-                    'Site at lon=-86.0 lat=88.0 is not covered by any model!',
-                    email_content)
-        self.post('%s/remove' % job_id)
