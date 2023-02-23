@@ -211,7 +211,7 @@ def get_pnes(rate, probs, poes, time_span):
     """
     if time_span == 0.:  # FatedTOM
         return 1. - poes
-    elif len(probs) == 0:  # poissonian
+    elif not numpy.isnan(rate):  # poissonian
         return numpy.exp(-rate * time_span * poes)
     else:
         # Uses the formula
