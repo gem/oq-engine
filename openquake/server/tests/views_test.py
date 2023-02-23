@@ -486,8 +486,7 @@ class EngineServerTestCase(django.test.TestCase):
                     f" lat = {params['lat']}, vs30 = {params['vs30']},"
                     f" siteid = {params['siteid']}", email_content)
                 if failure_reason:
-                    self.assertIn('Site at lon=-86.0 lat=88.0 is not covered'
-                                  ' by any model!', email_content)
+                    self.assertIn(failure_reason, email_content)
                 else:
                     self.assertIn('Please find the results here:',
                                   email_content)
