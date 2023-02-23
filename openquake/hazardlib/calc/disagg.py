@@ -101,11 +101,7 @@ def lon_lat_bins(lon, lat, size_km, coord_bin_width):
 def _build_bin_edges(oq, sitecol):
     # return [mag, dist, lon, lat, eps] edges
 
-    mag_bin_width = oq.mag_bin_width
-    distance_bin_width = oq.distance_bin_width
-    coordinate_bin_width = oq.coordinate_bin_width
     maxdist = filters.upper_maxdist(oq.maximum_distance)
-    num_epsilon_bins = oq.num_epsilon_bins
     truncation_level = oq.truncation_level
     mags_by_trt = oq.mags_by_trt
     
@@ -121,17 +117,17 @@ def _build_bin_edges(oq, sitecol):
         mags = sorted(mags)
         min_mag = mags[0]
         max_mag = mags[-1]
-        n1 = int(numpy.floor(min_mag / mag_bin_width))
-        n2 = int(numpy.ceil(max_mag / mag_bin_width))
-        if n2 == n1 or max_mag >= round((mag_bin_width * n2), 3):
+        n1 = int(numpy.floor(min_mag / oq.mag_bin_width))
+        n2 = int(numpy.ceil(max_mag / oq.mag_bin_width))
+        if n2 == n1 or max_mag >= round((oq.mag_bin_width * n2), 3):
             n2 += 1
-        mag_edges = mag_bin_width * numpy.arange(n1, n2+1)
+        mag_edges = oq.mag_bin_width * numpy.arange(n1, n2+1)
 
     # build dist_edges
     if 'dist' in oq.disagg_bin_edges:
         dist_edges = oq.disagg_bin_edges['dist']
     else:
-        dist_edges = uniform_bins(0, maxdist, distance_bin_width)
+        dist_edges = uniform_bins(0, maxdist, oq.distance_bin_width)
 
     # build lon_edges
     if 'lon' in oq.disagg_bin_edges or 'lat' in oq.disagg_bin_edges:
@@ -143,7 +139,7 @@ def _build_bin_edges(oq, sitecol):
         for site in sitecol:
             loc = site.location
             lon_edges[site.id], lat_edges[site.id] = lon_lat_bins(
-                loc.x, loc.y, maxdist, coordinate_bin_width)
+                loc.x, loc.y, maxdist, oq.coordinate_bin_width)
 
     # sanity check: the shapes of the lon lat edges are consistent
     assert_same_shape(list(lon_edges.values()))
@@ -154,7 +150,7 @@ def _build_bin_edges(oq, sitecol):
         eps_edges = oq.disagg_bin_edges['eps']
     else:
         eps_edges = numpy.linspace(
-            -truncation_level, truncation_level, num_epsilon_bins + 1)
+            -truncation_level, truncation_level, oq.num_epsilon_bins + 1)
 
     return [mag_edges, dist_edges, lon_edges, lat_edges, eps_edges]
 
@@ -183,7 +179,7 @@ def get_edges_shapedic(oq, sitecol, num_tot_rlzs=None):
             shapedic[name] = len(edges[i]) - 1
     shapedic['N'] = len(sitecol)
     shapedic['M'] = len(oq.imtls)
-    shapedic['P'] = len(oq.poes_disagg or (None,))
+    shapedic['P'] = len(oq.poes or (None,))
     shapedic['Z'] = Z
     return edges + [trts], shapedic
 
@@ -614,7 +610,7 @@ def disaggregation(
     dists = []
     tom = sources[0].temporal_occurrence_model
     oq = Mock(imtls={str(imt): [iml]},
-              poes_disagg=[None],
+              poes=[None],
               rlz_index=[0],
               epsstar=epsstar,
               truncation_level=truncation_level,
