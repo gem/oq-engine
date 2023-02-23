@@ -608,8 +608,6 @@ def aelo_run(request):
     outputs_uri = request.build_absolute_uri(
         reverse('outputs', args=[job_id]))
 
-    # FIXME: discuss if we want to make explicit that there is a url to
-    # retrieve the traceback
     traceback_uri = request.build_absolute_uri(
         reverse('traceback', args=[job_id]))
 
