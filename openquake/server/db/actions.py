@@ -365,7 +365,9 @@ def del_calc(db, job_id, user, force=False):
     :param job_id: job ID, can be an integer or a string
     :param user: username
     :param force: delete even if there are dependent calculations
-    :returns: None if everything went fine or an error message
+    :returns: a dict with key "success" and value indicating
+        the job id of the calculation or of its ancestor, or key "error"
+        and value describing what went wrong
     """
     job_id = int(job_id)
     dependent = db(
