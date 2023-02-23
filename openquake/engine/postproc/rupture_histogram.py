@@ -26,21 +26,6 @@ def compute_histogram(fullctxt, cmaker, magbins, dstbins):
     return dic
 
 
-# task function
-def compute_hist(dstore, slc, cmaker, magbins, dstbins):
-    """
-    :param dstore: parent datastore
-    :param slc: a slice object referring to a slice of contexts
-    :param cmaker: a ContextMaker instance
-    :param magbins: array of magnitude bins
-    :param magbins: array of distance bins
-    :returns: a dictionary (site_index, mag_index, dist_index) -> counts
-    """
-    with dstore:
-        [fullctxt] = cmaker.read_ctxs(dstore, slc)
-        return compute_histogram(fullctxt, cmaker, magbins, dstbins)
-
-
 def main(parent_id: int, mbins=100, dbins=100):
     """
     :param parent_id: ID of the parent calculation with the contexts
@@ -58,13 +43,13 @@ def main(parent_id: int, mbins=100, dbins=100):
         cmakers = contexts.read_cmakers(parent)
         grp_ids = dstore.parent['rup/grp_id'][:]
         blocksize = numpy.ceil(len(grp_ids) / ct)
+        ctx_by_grp = contexts.read_ctx_by_grp(parent)
         dstore.swmr_on()
-        smap = parallel.Starmap(compute_hist, h5=dstore)
-        for grp_id, slices in performance.get_slices(grp_ids).items():
+        smap = parallel.Starmap(compute_histogram, h5=dstore)
+        for grp_id, ctx in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
-            for s0, s1 in slices:
-                for slc in general.gen_slices(s0, s1, blocksize):
-                    smap.submit((parent, slc, cmaker, magbins, dstbins))
+            for slc in general.gen_slices(0, len(ctx), blocksize):
+                smap.submit((ctx, cmaker, magbins, dstbins))
         acc = smap.reduce()
         counts = numpy.zeros((N, mbins, dbins), int)
         for k, v in acc.items():

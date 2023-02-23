@@ -518,8 +518,38 @@ def iproduct(*sizes):
     return itertools.product(*ranges)
 
 
-@export.add(('disagg', 'csv'), ('disagg_traditional', 'csv'))
+@export.add(('disagg_by_src', 'csv'))
+def export_disagg_by_src(ekey, dstore):
+    oq = dstore['oqparam']
+    if len(oq.poes) == 0:
+        raise ValueError('disagg_by_src cannot be exported, poes are missing')
+    sitecol = dstore['sitecol']
+    fnames = []
+    header=['imt', 'poe_id', 'src_id', 'value']
+    for site in sitecol:
+        sid = site.id
+        com = dict(lon=round(site.location.x, 3), lat=round(site.location.y, 3),
+                   poes=list(oq.poes))
+        out = []
+        for imt in oq.imtls:
+            for poe_id, poe in enumerate(oq.poes):
+                aw = extract(dstore, 'disagg_by_src?site_id=%d&imt=%s&poe=%s'%
+                             (sid, imt, poe))
+                for src_id, val in aw.array:
+                    out.append((imt, poe_id, src_id, val))
+        fname = dstore.export_path('disagg_by_src-%d.csv' % sid)
+        writers.write_csv(fname, out, header=header, comment=com, fmt='%.5E')
+        fnames.append(fname)
+    return fnames
+
+
+@export.add(('disagg-rlzs', 'csv'),
+            ('disagg-stats', 'csv'),
+            ('disagg-rlzs-traditional', 'csv'),
+            ('disagg-stats-traditional', 'csv'))
 def export_disagg_csv(ekey, dstore):
+    name, ext = ekey
+    spec = name[7:]  # rlzs, stats, rlzs-traditional, stats-traditional
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     hmap4 = dstore['hmap4']
@@ -529,12 +559,8 @@ def export_disagg_csv(ekey, dstore):
     imts = list(oq.imtls)
     fnames = []
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
-    ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d'
-    if ekey[0] == 'disagg_traditional':
-        ex += '&traditional=1'
-        trad = '-traditional'
-    else:
-        trad = ''
+    ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&spec=%s'
+    trad = '-traditional' if 'traditional' in name else ''
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
     metadata = dstore.metadata
     poes_disagg = ['nan'] * P
@@ -544,20 +570,25 @@ def export_disagg_csv(ekey, dstore):
         except IndexError:
             pass
     for s in range(N):
-        rlzcols = ['rlz%d' % r for r in best_rlzs[s]]
         lon, lat = sitecol.lons[s], sitecol.lats[s]
-        weights = numpy.array([rlzs[r].weight['weight'] for r in best_rlzs[s]])
-        weights /= weights.sum()  # normalize to 1
-        metadata.update(investigation_time=oq.investigation_time,
-                        mag_bin_edges=bins['Mag'].tolist(),
-                        dist_bin_edges=bins['Dist'].tolist(),
-                        lon_bin_edges=bins['Lon'][s].tolist(),
-                        lat_bin_edges=bins['Lat'][s].tolist(),
-                        eps_bin_edges=bins['Eps'].tolist(),
-                        tectonic_region_types=decode(bins['TRT'].tolist()),
-                        rlz_ids=best_rlzs[s].tolist(),
-                        weights=weights.tolist(),
-                        lon=lon, lat=lat)
+        md = dict(investigation_time=oq.investigation_time,
+                  mag_bin_edges=bins['Mag'].tolist(),
+                  dist_bin_edges=bins['Dist'].tolist(),
+                  lon_bin_edges=bins['Lon'][s].tolist(),
+                  lat_bin_edges=bins['Lat'][s].tolist(),
+                  eps_bin_edges=bins['Eps'].tolist(),
+                  tectonic_region_types=decode(bins['TRT'].tolist()),
+                  lon=lon, lat=lat)
+        if name == 'disagg-stats':
+            rlzcols = list(oq.hazard_stats())
+        else:
+            rlzcols = ['rlz%d' % r for r in best_rlzs[s]]
+            weights = numpy.array([rlzs[r].weight['weight']
+                                   for r in best_rlzs[s]])
+            weights /= weights.sum()  # normalize to 1
+            md['weights'] = weights.tolist()
+            md['rlz_ids'] = best_rlzs[s].tolist()
+        metadata.update(md)
         for k in oq.disagg_outputs:
             splits = k.lower().split('_')
             header = ['imt', 'poe'] + splits + rlzcols
@@ -565,7 +596,7 @@ def export_disagg_csv(ekey, dstore):
             nonzeros = []
             for m, p in iproduct(M, P):
                 imt = imts[m]
-                aw = extract(dstore, ex % (k, imt, s, p))
+                aw = extract(dstore, ex % (k, imt, s, p, spec))
                 # for instance for Mag_Dist [(mag, dist, poe0, poe1), ...]
                 poes = aw[:, len(splits):]
                 if 'trt' in header:

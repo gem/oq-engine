@@ -193,7 +193,7 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.set_weight(srcs, inp.sitecol)
         weights = [src.weight for src in srcs]  # 3 within, 3 outside
         numpy.testing.assert_allclose(
-            weights, [10.1, 10.1, 10.1, 0.1, 0.1, 0.1])
+            weights, [10.1, 10.1, 10.1, 0.101, 0.101, 0.101])
 
         # set different vs30s on the two sites
         inp.sitecol.array['vs30'] = [600., 700.]
@@ -225,7 +225,7 @@ class CollapseTestCase(unittest.TestCase):
             investigation_time=50.,
             gsim='BooreAtkinson2008',
             reference_vs30_value=600.,
-            source_model_file=smpath,
+            inputs=dict(source_model=smpath),
             area_source_discretization=1.)
         inp = read_input(params)
         cmaker = inp.cmaker
@@ -284,7 +284,7 @@ class CollapseTestCase(unittest.TestCase):
             source_string=src,
             rupture_mesh_spacing=10,
             width_of_mfd_bin=.5,  # so that there is a single magnitude
-            gsim='YuEtAl2013Ms',
+            gsim='YuEtAl2013Ms', inputs={},
             reference_vs30_value=600.)
         inp = read_input(params)
         cmaker = inp.cmaker
@@ -355,7 +355,7 @@ class CollapseTestCase(unittest.TestCase):
             source_string=src,
             area_source_discretization=10,
             width_of_mfd_bin=.5,  # so that there are only 3 magnitudes
-            gsim='YuEtAl2013Ms',
+            gsim='YuEtAl2013Ms', inputs={},
             reference_vs30_value=600.)
         inp = read_input(params)
         cmaker = inp.cmaker

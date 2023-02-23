@@ -35,7 +35,7 @@ def get_params_from(lon, lat, siteid):
     from the mosaic files.
     """
     model = mosaic.MosaicGetter().get_model_by_lon_lat(lon, lat)
-    ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job.ini')
+    ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     params['description'] = 'AELO for ' + siteid
     # TODO: fix site params, add disaggregation parameters
@@ -46,7 +46,7 @@ def aelo_run(jobctx, lon, lat, vs30):
     engine.run_jobs([jobctx])
 
 
-def trivial_callback(job_id, exc=None):
+def trivial_callback(job_id, job_owner_email, outputs_uri, inputs, exc=None):
     if exc:
         sys.exit('There was an error: %s' % exc)
     print('Finished job %d correctly' % job_id)
@@ -56,6 +56,8 @@ def main(lon: valid.longitude,
          lat: valid.latitude,
          vs30: valid.positivefloat,
          siteid: valid.simple_id,
+         job_owner_email,
+         outputs_uri,
          jobctx=None,
          callback=trivial_callback,
          ):
@@ -63,6 +65,7 @@ def main(lon: valid.longitude,
     This script is meant to be called from the WebUI in production mode,
     and from the command-line in testing mode.
     """
+    inputs = dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid)
     if jobctx is None:
         # in  testing mode create a new job context
         config.directory.mosaic_dir = os.path.join(
@@ -73,13 +76,20 @@ def main(lon: valid.longitude,
     with jobctx:
         if not config.directory.mosaic_dir:
             sys.exit('mosaic_dir is not specified in openquake.cfg')
-        jobctx.params.update(get_params_from(lon, lat, siteid))
+        try:
+            jobctx.params.update(get_params_from(lon, lat, siteid))
+        except Exception as exc:
+            # This can happen for instance:
+            # - if no model covers the given coordinates.
+            # - if no ini file was found
+            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
+            raise exc
         try:
             aelo_run(jobctx, lon, lat, vs30)
         except Exception as exc:
-            callback(jobctx.calc_id, exc)
+            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
         else:
-            callback(jobctx.calc_id)
+            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs)
 
 
 if __name__ == '__main__':

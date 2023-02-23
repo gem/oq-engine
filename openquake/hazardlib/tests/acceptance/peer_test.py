@@ -246,7 +246,8 @@ class Set1TestCase(unittest.TestCase):
         imts = {str(test_data.IMT): test_data.SET1_CASE2_IMLS}
 
         curves = calc_hazard_curves(
-            [npss], sites, imts, gsims, truncation_level)
+            [npss], sites, imts, gsims, truncation_level,
+            investigation_time=1.)
         s1hc, s2hc, s3hc, s4hc, s5hc, s6hc, s7hc = curves[str(test_data.IMT)]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE2_SITE1_POES,

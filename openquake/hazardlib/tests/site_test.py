@@ -136,10 +136,7 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         self.assertEqual(len(cll), 2)
 
         # test split_in_tiles
-        tiles = cll.split_in_tiles(2)  # there are 2 sites, 1 tile
-        self.assertEqual(len(tiles), 1)
-
-        tiles = cll.split_in_tiles(1)  # 2 tiles of 1 site each
+        tiles = cll.split_in_tiles(2)  # there are 2 sites
         self.assertEqual(len(tiles), 2)
 
         # test split_max
@@ -173,6 +170,12 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         Site(location=Point(1, 1, 3), vs30=4, vs30measured=False,
              z1pt0=22, z2pt5=11)
     ]
+
+    def test_split(self):
+        # splitting in more tiles than sites
+        col = SiteCollection(self.SITES)  # 4 sites
+        tiles = col.split(5)
+        self.assertEqual(len(tiles), 4)
 
     def test_filter(self):
         col = SiteCollection(self.SITES)

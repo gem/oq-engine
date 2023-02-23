@@ -21,7 +21,7 @@ from numpy.testing import assert_almost_equal as aae
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10, case_11, case_12, case_13, case_14, case_15,
-    case_16, case_17, case_18, case_19, case_20)
+    case_16, case_17, case_18, case_19, case_20, case_21)
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
@@ -209,3 +209,9 @@ class ScenarioTestCase(CalculatorTestCase):
         new = self.calc.datastore.read_df('gmf_data/sigma_epsilon', 'eid')
         aae(new.sig_inter_PGA.unique(), 0)
         aae(new.eps_inter_PGA.mean(), -0.025970920)
+
+    def test_case_21(self):
+        # conditioned gmfs
+        self.run_calc(case_21.__file__, 'job.ini', concurrent_tasks='0')
+        fname, _, _ = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('gmf-data.csv', fname)

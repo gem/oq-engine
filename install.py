@@ -83,7 +83,6 @@ class server:
     port = %d
     file = %s
     [directory]
-    shared_dir = /opt/openquake
     ''' % (DBPORT, DBPATH)
 
     @classmethod
@@ -111,7 +110,6 @@ class devel_server:
     port = %d
     file = %s
     [directory]
-    shared_dir = /opt/openquake
     ''' % (DBPORT, DBPATH)
     exit = server.exit
 
@@ -419,7 +417,7 @@ def install(inst, version):
         oqreal = '%s\\Scripts\\oq' % inst.VENV
     else:
         oqreal = '%s/bin/oq' % inst.VENV
-    print('Compiling numba modules')
+    print('Compiling python/numba modules')
     subprocess.run([oqreal, '--version'])  # compile numba
 
     if inst in (user, devel):  # create/upgrade the db in the default location

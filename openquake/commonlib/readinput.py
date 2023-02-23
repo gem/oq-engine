@@ -44,14 +44,13 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
-    source, geo, site, imt, valid, sourceconverter, nrml, pmf, gsim_lt)
+    source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
+    pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.source_reader import get_csm
-from openquake.commonlib import logictree
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -543,6 +542,7 @@ def get_site_collection(oqparam, h5=None):
     ss = oqparam.sites_slice  # can be None or (start, stop)
     if h5 and 'sitecol' in h5 and not ss:
         return h5['sitecol']
+
     mesh = get_mesh(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
@@ -575,6 +575,7 @@ def get_site_collection(oqparam, h5=None):
             sitecol.add_col('custom_site_id', 'S6', gh)
         mask = (sitecol.sids >= ss[0]) & (sitecol.sids < ss[1])
         sitecol = sitecol.filter(mask)
+        assert sitecol is not None, 'No sites in the slice %d:%d' % ss
         sitecol.make_complete()
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
@@ -675,18 +676,10 @@ def get_source_model_lt(oqparam, branchID=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        a :class:`openquake.commonlib.logictree.SourceModelLogicTree`
+        a :class:`openquake.hazardlib.logictree.SourceModelLogicTree`
         instance
     """
-    fname = oqparam.inputs['source_model_logic_tree']
-    args = (fname, oqparam.random_seed, oqparam.number_of_logic_tree_samples,
-            oqparam.sampling_method, False, branchID)
-    smlt = logictree.SourceModelLogicTree(*args)
-    discard_trts = set(s.strip() for s in oqparam.discard_trts.split(','))
-    if discard_trts:
-        # smlt.tectonic_region_types comes from applyToTectonicRegionType
-        smlt.tectonic_region_types = smlt.tectonic_region_types - discard_trts
-    return smlt
+    return get_smlt(vars(oqparam), branchID)
 
 
 def get_full_lt(oqparam, branchID=None):
@@ -696,7 +689,7 @@ def get_full_lt(oqparam, branchID=None):
     :param branchID:
         used to read a single sourceModel branch (if given)
     :returns:
-        a :class:`openquake.commonlib.logictree.FullLogicTree`
+        a :class:`openquake.hazardlib.logictree.FullLogicTree`
         instance
     """
     source_model_lt = get_source_model_lt(oqparam, branchID)
@@ -822,7 +815,7 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
             return csm
 
     # read and process the composite source model from the input files
-    csm = get_csm(oqparam, full_lt, h5)
+    csm = source_reader.get_csm(oqparam, full_lt, h5)
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(csm.get_trt_smrs())
     ngsims = sum(len(rbg) for rbg in rlzs_by_gsim_list)
     logging.info('There are %d gsims in the CompositeSourceModel', ngsims)
@@ -1106,6 +1099,7 @@ def get_pmap_from_csv(oqparam, fnames):
         dic[wrapper.imt] = wrapper.array
         imtls[wrapper.imt] = levels_from(wrapper.dtype.names)
     oqparam.hazard_imtls = imtls
+    oqparam.investigation_time = wrapper.investigation_time
     oqparam.set_risk_imts(get_risk_functions(oqparam))
     array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])
