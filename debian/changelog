@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the default: now all realizations are consider in disaggregation
+    calculations, not only the one closest to the mean hazard curve
   * Sampling the ruptures was raising a BlockingIOError sometimes
 
   [Kendra Johnson]
