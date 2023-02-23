@@ -204,7 +204,7 @@ def get_eps4(eps_edges, truncation_level):
 
 # NB: this function is the crucial bit for performance!
 def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
-                  mon1, mon2, mon3):
+                  infer_occur_rates, mon1, mon2, mon3):
     # ctx: a recarray of size U for a single site and magnitude bin
     # mea: array of shape (G, M, U)
     # std: array of shape (G, M, U)
@@ -250,11 +250,13 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
 
     with mon2:
         time_span = cmaker.investigation_time
-        if numpy.isnan(ctx.occurrence_rate).any():  # slow lane, case_65
+        if not infer_occur_rates and any(len(po) for po in ctx.probs_occur):
+            # slow lane, case_65
             for u, rec in enumerate(ctx):
                 pnes[u] *= get_pnes(rec.occurrence_rate, rec.probs_occur,
                                     poes[u], time_span)
-        else:  # poissonian context, fast lane
+        else:
+            # poissonian, fast lane
             for e, m, p in itertools.product(range(E), range(M), range(P)):
                 pnes[:, e, m, p] *= numpy.exp(
                     -ctx.occurrence_rate * poes[:, e, m, p] * time_span)
@@ -489,6 +491,7 @@ class Disaggregator(object):
         if not self.src_mutex:
             return _disaggregate(self.ctx, self.mea, self.std, self.cmaker,
                                  g, imlog2, self.bin_edges, self.epsstar,
+                                 self.cmaker.oq.infer_occur_rates,
                                  self.mon1, self.mon2, self.mon3)
 
         # else average on the src_mutex weights
@@ -499,6 +502,7 @@ class Disaggregator(object):
             std = self.std[:, :, s1:s2]  # shape (G, M, U)
             mat = _disaggregate(ctx, mea, std, self.cmaker, g, imlog2,
                                 self.bin_edges, self.epsstar,
+                                self.cmaker.oq.infer_occur_rates,
                                 self.mon1, self.mon2, self.mon3)
             mats.append(mat)
         return numpy.average(mats, weights=self.weights, axis=0)
