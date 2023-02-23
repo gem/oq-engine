@@ -262,6 +262,7 @@ class Input(object):
         hparams.setdefault('floating_x_step', 0)
         hparams.setdefault('floating_y_step', 0)
         hparams.setdefault('source_nodes', '')
+        hparams.setdefault('infer_occur_rates', False)
         hparams.setdefault('rlz_index', None)
         hparams.setdefault('disagg_bin_edges', {})
         hparams.setdefault('epsilon_star', False)
@@ -282,6 +283,7 @@ class Input(object):
             hparams['floating_x_step'],
             hparams['floating_y_step'],
             hparams['source_nodes'],
+            hparams['infer_occur_rates'],
         )
         if read_all:
             self.groups, self.cmakers = self.get_groups_cmakers()
