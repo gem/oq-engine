@@ -112,10 +112,12 @@ def read(calc_id, mode='r', datadir=None, parentdir=None, read_parent=True):
 
     Read the datastore, if it exists and it is accessible.
     """
-    if isinstance(calc_id, str):  # pathname
-        dstore = DataStore(calc_id, mode=mode)
-    else:
+    try:
+        calc_id = int(calc_id)
+    except ValueError:  # pathname
         dstore = _read(calc_id, datadir, mode)
+    else:
+        dstore = DataStore(calc_id, mode=mode)
     try:
         hc_id = dstore['oqparam'].hazard_calculation_id
     except KeyError:  # no oqparam
