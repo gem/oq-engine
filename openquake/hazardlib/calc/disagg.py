@@ -250,7 +250,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
 
     with mon2:
         time_span = cmaker.investigation_time
-        if numpy.isnan(ctx.occurrence_rate).any():  # slow lane
+        if numpy.isnan(ctx.occurrence_rate).any():  # slow lane, case_65
             for u, rec in enumerate(ctx):
                 pnes[u] *= get_pnes(rec.occurrence_rate, rec.probs_occur,
                                     poes[u], time_span)

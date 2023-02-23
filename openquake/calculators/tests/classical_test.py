@@ -954,7 +954,7 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurve-mean.csv', f)
 
     def test_case_65(self):
-        # running the calculation
+        # multiFaultSource with infer_occur_rates=true
         self.run_calc(case_65.__file__, 'job.ini')
 
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
@@ -980,6 +980,16 @@ hazard_uhs-std.csv
         dbm = view('disagg_by_mag', self.calc.datastore)
         fname = general.gettemp(text_table(dbm, ext='org'))
         self.assertEqualFiles('expected/disagg_by_mag.org', fname)
+
+        # multiFaultSource with infer_occur_rates=false
+        self.run_calc(case_65.__file__, 'job.ini',
+            calculation_mode='disaggregation',
+            infer_occur_rates='false',
+            disagg_outputs='Mag',
+            disagg_bin_edges='{"mag": [5.6, 6.0, 6.4, 6.8, 7.0, 7.2]}')
+        dbm = view('disagg_by_mag', self.calc.datastore)
+        fname = general.gettemp(text_table(dbm, ext='org'))
+        self.assertEqualFiles('expected/disagg_by_mag2.org', fname)
 
     def test_case_66(self):
         # sites_slice
