@@ -1221,7 +1221,8 @@ def extract_disagg_by_src(dstore, what):
     [poe] = qdict['poe']
     [site_id] = qdict.get('site_id', ['0'])
     site_id = int(site_id)
-    mean = dstore.sel('hcurves-stats', imt=imt, stat='mean', site_id=site_id)[0, 0, 0]
+    mean = dstore.sel(
+        'hcurves-stats', imt=imt, stat='mean', site_id=site_id)[0, 0, 0]
     lvl_id = get_lvl(mean, oq.imtls[imt], float(poe))
     imt_id = list(oq.imtls).index(imt)
     poes = dset[site_id, :, imt_id, lvl_id]  # shape (R, Ns)

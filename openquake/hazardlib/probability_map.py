@@ -300,6 +300,20 @@ if numba:
     update_pmap_m = compile(sig)(update_pmap_m)
 
 
+def fix_probs_occur(probs_occur):
+    """
+    Try to convert object arrays into regular arrays
+    """
+    if probs_occur.dtype.name == 'object':
+        n = len(probs_occur)
+        p = len(probs_occur[0])
+        po = numpy.zeros((n, p))
+        for p, probs in enumerate(probs_occur):
+            po[p] = probs_occur[p]
+        return po
+    return probs_occur
+
+
 class ProbabilityMap(object):
     """
     Thin wrapper over a 3D-array of probabilities.
@@ -423,7 +437,7 @@ class ProbabilityMap(object):
         Update probabilities
         """
         rates = ctxt.occurrence_rate
-        probs_occur = getattr(ctxt, 'probs_occur', numpy.zeros((len(ctxt), 0)))
+        probs_occur = fix_probs_occur(ctxt.probs_occur)
         idxs = self.sidx[ctxt.sids]
         for i in range(self.shape[-1]):  # G indices
             if len(mutex_weight) == 0:  # indep

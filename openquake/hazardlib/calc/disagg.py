@@ -32,6 +32,7 @@ import scipy.stats
 
 from openquake.baselib.general import AccumDict, groupby, pprod, humansize
 from openquake.baselib.performance import idx_start_stop, Monitor
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -419,7 +420,7 @@ class Disaggregator(object):
         if imts is not None:
             for imt in imts:
                 assert imt in cmaker.imtls, imt
-            cmaker.imts = imts
+            cmaker.imts = [from_string(imt) for imt in imts]
         self.cmaker = cmaker
         self.epsstar = cmaker.oq.epsilon_star
         self.bin_edges = (bin_edges[0], # mag
