@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Setting both `sites` and `site_model_file` now works also for models
+    with nonstandard site parameters, like EUR
+
   [Paolo Tormene]
   * Added AELO mode for the engine webui, providing a web form to insert input
     values and launch a calculation. Input values are validated and the

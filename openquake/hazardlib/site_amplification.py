@@ -414,6 +414,7 @@ def get_poes_site(mean_std, cmaker, ctx):
     # L - Number of intensity measure levels
     loglevels = cmaker.loglevels
     phi_b = cmaker.phi_b
+    af = cmaker.oq.af
     mean, stddev = mean_std  # shape (C, M)
     C, L = mean.shape[1], loglevels.size
     assert len(numpy.unique(ctx.sids)) == 1  # 1 site
@@ -429,7 +430,7 @@ def get_poes_site(mean_std, cmaker, ctx):
 
     # Compute the probability of exceedance for each in intensity
     # measure type IMT
-    sigma = cmaker.af.get_max_sigma()
+    sigma = af.get_max_sigma()
     mags = ctx.mag
     rrups = ctx.rrup
     [ampcode] = numpy.unique(ctx.ampcode)
@@ -468,7 +469,7 @@ def get_poes_site(mean_std, cmaker, ctx):
 
             # Get mean and std of the amplification function for this
             # magnitude, distance and IML
-            median_af, std_af = cmaker.af.get_mean_std(  # shape C
+            median_af, std_af = af.get_mean_std(  # shape C
                 ampcode, imt, iml_mid, mags, rrups)
 
             # Computing the probability of exceedance of the levels of
