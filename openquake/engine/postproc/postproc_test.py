@@ -18,7 +18,9 @@
 
 import os
 import unittest
+import pytest
 import numpy
+import pandas
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import logs
@@ -72,13 +74,17 @@ def test_compute_mrd():
     assert abs(mrd.mean() - 1.04e-05) < 1e-6
 
 
-def test_CCA():
-    job_ini = os.path.join(MOSAIC, 'CCA', 'in', 'job_vs30.ini')
+@pytest.mark.parametrize('model', ['CCA'])
+def test_mosaic(model):
+    fname = os.path.join(MOSAIC, 'test_sites.csv')
+    df = pandas.read_csv(fname).set_index('model')
+    sitedict = df.loc[model].to_dict()
+    job_ini = os.path.join(MOSAIC, model, 'in', 'job_vs30.ini')
     with logs.init("job", job_ini) as log:
         log.params['disagg_by_src'] = 'true'
         log.params['ps_grid_spacing'] = '0.'
         log.params['pointsource_distance'] = '40.'
-        #log.params['sites'] = '20 20'
+        log.params['sites'] = '%(lon)s %(lat)s' % sitedict
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
         calc.datastore.close()
