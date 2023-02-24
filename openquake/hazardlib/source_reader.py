@@ -173,7 +173,8 @@ def get_csm(oq, full_lt, h5=None):
         discard_trts=[s.strip() for s in oq.discard_trts.split(',')],
         floating_x_step=oq.floating_x_step,
         floating_y_step=oq.floating_y_step,
-        source_nodes=oq.source_nodes)
+        source_nodes=oq.source_nodes,
+        infer_occur_rates=oq.infer_occur_rates)
     full_lt.ses_seed = oq.ses_seed
     logging.info('Reading the source model(s) in parallel')
 
@@ -418,21 +419,6 @@ class CompositeSourceModel:
             elif atomic == src_group.atomic:
                 srcs.extend(src_group)
         return srcs
-
-    # used only in calc_by_rlz.py
-    def get_groups(self, smr):
-        """
-        :param smr: effective source model realization ID
-        :returns: SourceGroups associated to the given `smr`
-        """
-        src_groups = []
-        for sg in self.src_groups:
-            trt_smr = self.full_lt.get_trt_smr(sg.trt, smr)
-            src_group = copy.copy(sg)
-            src_group.sources = [src for src in sg if trt_smr in src.trt_smrs]
-            if len(src_group):
-                src_groups.append(src_group)
-        return src_groups
 
     def get_mags_by_trt(self):
         """

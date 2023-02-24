@@ -126,8 +126,10 @@ def _build_bin_edges(oq, sitecol):
     # build dist_edges
     if 'dist' in oq.disagg_bin_edges:
         dist_edges = oq.disagg_bin_edges['dist']
-    else:
+    elif hasattr(oq, 'distance_bin_width'):
         dist_edges = uniform_bins(0, maxdist, oq.distance_bin_width)
+    else:  # make a single bin
+        dist_edges = [0, maxdist]
 
     # build lon_edges
     if 'lon' in oq.disagg_bin_edges or 'lat' in oq.disagg_bin_edges:
@@ -192,7 +194,7 @@ def get_eps4(eps_edges, truncation_level):
     """
     :returns: eps_min, eps_max, eps_bands, eps_cum
     """
-    # this is ultra-slow due to the infamous doccer issue
+    # this is ultra-slow due to the infamous doccer issue, hence the lru_cache
     tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
     eps_bands = tn.cdf(eps_edges[1:]) - tn.cdf(eps_edges[:-1])
     elist = range(len(eps_bands))
@@ -202,7 +204,7 @@ def get_eps4(eps_edges, truncation_level):
 
 # NB: this function is the crucial bit for performance!
 def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
-                  mon1, mon2, mon3):
+                  infer_occur_rates, mon1, mon2, mon3):
     # ctx: a recarray of size U for a single site and magnitude bin
     # mea: array of shape (G, M, U)
     # std: array of shape (G, M, U)
@@ -221,13 +223,15 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
         U, E = len(ctx), len(eps_bands)
         M, P = iml2.shape
         phi_b = cmaker.phi_b
-        # Array with mean and total std values. Shape of this is:
         # U - Number of contexts (i.e. ruptures if there is a single site)
+        # E - Number of epsilons
         # M - Number of IMTs
+        # P - Number of PoEs
         # G - Number of gsims
         poes = numpy.zeros((U, E, M, P))
         pnes = numpy.ones((U, E, M, P))
-        # Multi-dimensional iteration
+
+        # disaggregate by epsilon
         for (m, p), iml in numpy.ndenumerate(iml2):
             if iml == -numpy.inf:  # zero hazard
                 continue
@@ -246,11 +250,13 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
 
     with mon2:
         time_span = cmaker.investigation_time
-        if any(len(probs) for probs in ctx.probs_occur):  # any probs_occur
+        if not infer_occur_rates and any(len(po) for po in ctx.probs_occur):
+            # slow lane, case_65
             for u, rec in enumerate(ctx):
                 pnes[u] *= get_pnes(rec.occurrence_rate, rec.probs_occur,
                                     poes[u], time_span)
-        else:  # poissonian context, use the fast lane
+        else:
+            # poissonian, fast lane
             for e, m, p in itertools.product(range(E), range(M), range(P)):
                 pnes[:, e, m, p] *= numpy.exp(
                     -ctx.occurrence_rate * poes[:, e, m, p] * time_span)
@@ -485,6 +491,7 @@ class Disaggregator(object):
         if not self.src_mutex:
             return _disaggregate(self.ctx, self.mea, self.std, self.cmaker,
                                  g, imlog2, self.bin_edges, self.epsstar,
+                                 self.cmaker.oq.infer_occur_rates,
                                  self.mon1, self.mon2, self.mon3)
 
         # else average on the src_mutex weights
@@ -495,6 +502,7 @@ class Disaggregator(object):
             std = self.std[:, :, s1:s2]  # shape (G, M, U)
             mat = _disaggregate(ctx, mea, std, self.cmaker, g, imlog2,
                                 self.bin_edges, self.epsstar,
+                                self.cmaker.oq.infer_occur_rates,
                                 self.mon1, self.mon2, self.mon3)
             mats.append(mat)
         return numpy.average(mats, weights=self.weights, axis=0)

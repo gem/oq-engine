@@ -591,12 +591,6 @@ def get_site_collection(oqparam, h5=None):
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
 
-    # sanity check on the site parameters
-    for param in req_site_params:
-        dt = site.site_param_dt[param]
-        if dt is F64 and (sitecol.array[param] == 0.).all():
-            raise ValueError('The site parameter %s is always zero: please '
-                             'check the site model' % param)
     return sitecol
 
 
@@ -709,6 +703,7 @@ def get_full_lt(oqparam, branchID=None):
         logging.info('Considering {:_d} logic tree paths out of {:_d}'.format(
             oqparam.number_of_logic_tree_samples, p))
     else:  # full enumeration
+        logging.info('There are {:_d} logic tree paths(s)'.format(p))
         if oqparam.hazard_curves and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
@@ -720,7 +715,6 @@ def get_full_lt(oqparam, branchID=None):
             logging.warning(
                 'There are many potential logic tree paths (%d): '
                 'try to use sampling or reduce the source model' % p)
-        logging.info('Total number of logic tree paths = {:_d}'.format(p))
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
     dupl = []

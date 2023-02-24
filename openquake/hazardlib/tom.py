@@ -209,6 +209,7 @@ def get_pnes(rate, probs, poes, time_span):
     Fast way to return probabilities of no exceedence given an array
     of PoEs and some parameter.
     """
+    # NB: the NegativeBinomialTOM creates probs_occur with a rate not NaN
     if time_span == 0.:  # FatedTOM
         return 1. - poes
     elif len(probs) == 0:  # poissonian
@@ -239,10 +240,7 @@ class NegativeBinomialTOM(BaseTOM):
         """
         :param time_span:
             The time interval of interest, in years.
-        :param occurrence_rate:
-            To initialize super_class (usually overriden by method
-            get_probability_no_exceedance())
-        :param parameters:
+        :param mu, alpha:
             (list/np.ndarray) Parameters of the negbinom temporal model, in
             form of mean rate/dispersion (μ / α)  Kagan and Jackson, (2010)
 
@@ -253,7 +251,6 @@ class NegativeBinomialTOM(BaseTOM):
                               (μ + τ)    (1 + μ/τ)
 
             where τ=1/α
-
         """
 
         super().__init__(time_span)

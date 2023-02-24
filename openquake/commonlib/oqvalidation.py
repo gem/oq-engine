@@ -367,6 +367,12 @@ individual_curves:
   Example: *individual_curves = true*.
   Default: False
 
+infer_occur_rates:
+   If set infer the occurrence rates from the first probs_occur in nonparametric
+   sources.
+   Example: *infer_occur_rates = true*
+   Default: False
+
 inputs:
   INTERNAL. Dictionary with the input files paths.
 
@@ -505,9 +511,10 @@ num_epsilon_bins:
 
 num_rlzs_disagg:
   Used in disaggregation calculation to specify how many outputs will be
-  generated. `0` means all realizations.
-  Example: *num_rlzs_disagg=0*.
-  Default: 1
+  generated. `0` means all realizations, `n` means the n closest to the mean
+  hazard curve.
+  Example: *num_rlzs_disagg=1*.
+  Default: 0
 
 number_of_ground_motion_fields:
   Used in scenario calculations to specify how many random ground motion
@@ -903,6 +910,7 @@ class OqParam(valid.ParamSet):
     individual_rlzs = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
+    infer_occur_rates = valid.Param(valid.boolean, False)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
@@ -931,7 +939,7 @@ class OqParam(valid.ParamSet):
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
-    num_rlzs_disagg = valid.Param(valid.positiveint, 1)
+    num_rlzs_disagg = valid.Param(valid.positiveint, 0)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
@@ -1044,6 +1052,10 @@ class OqParam(valid.ParamSet):
         # support legacy names
         for name in list(names_vals):
             if name in self.ALIASES:
+                if self.ALIASES[name] in names_vals:
+                    # passed both the new (self.ALIASES[name]) and the old name
+                    raise NameError('Please remove %s, you should use only %s'
+                                    % (name, self.ALIASES[name]))
                 # use the new name instead of the old one
                 names_vals[self.ALIASES[name]] = names_vals.pop(name)
         super().__init__(**names_vals)
@@ -1171,12 +1183,11 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile(
                     '%s: iml_disagg and poes_disagg cannot be set '
                     'at the same time' % job_ini)
-            bins = ['mag', 'dist', 'lon', 'eps']
-            for i, k in enumerate(['mag_bin_width', 'distance_bin_width',
-                                   'coordinate_bin_width', 'num_epsilon_bins']):
-                if (k not in vars(self) and
-                    bins[i] not in self.disagg_bin_edges):
-                    raise InvalidFile('%s must be set in %s' % (k, job_ini))
+            if not self.disagg_bin_edges:
+                for k in ('mag_bin_width', 'distance_bin_width',
+                          'coordinate_bin_width', 'num_epsilon_bins'):
+                    if k not in vars(self):
+                        raise InvalidFile('%s must be set in %s' % (k, job_ini))
             if self.disagg_outputs and not any(
                     'Eps' in out for out in self.disagg_outputs):
                 self.num_epsilon_bins = 1

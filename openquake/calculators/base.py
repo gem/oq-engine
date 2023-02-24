@@ -580,8 +580,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore.create_df('_poes', readinput.Global.pmap.to_dframe())
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
-            self.datastore['rlzs_by_g'] = sum(
-                fake.get_rlzs_by_grp().values(), [])
+            self.datastore['rlzs_by_g'] = U32([[0]])
             self.realizations = fake.get_realizations()
             self.save_crmodel()
             self.datastore.swmr_on()
@@ -805,8 +804,7 @@ class HazardCalculator(BaseCalculator):
             if hasattr(self, 'rup'):
                 # for scenario we reduce the site collection to the sites
                 # within the maximum distance from the rupture
-                haz_sitecol, _dctx = self.cmaker.filter(
-                    haz_sitecol, self.rup)
+                haz_sitecol, _dctx = self.cmaker.filter(haz_sitecol, self.rup)
                 haz_sitecol.make_complete()
 
             if 'site_model' in oq.inputs:
@@ -953,8 +951,6 @@ class HazardCalculator(BaseCalculator):
                 self.datastore['full_lt'] = self.full_lt
         else:  # scenario
             self.full_lt = self.datastore['full_lt']
-        logging.info('There are %d realization(s)', self.R)
-
         self.datastore['weights'] = arr = build_weights(self.realizations)
         self.datastore.set_attrs('weights', nbytes=arr.nbytes)
         if rel_ruptures:
