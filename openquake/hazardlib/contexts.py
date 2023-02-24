@@ -34,7 +34,7 @@ from openquake.baselib.general import (
     sqrscale, groupby)
 from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import (
     registry, FatedTOM, NegativeBinomialTOM, PoissonTOM)
@@ -155,6 +155,17 @@ def trivial(ctx, name):
     if name not in ctx.dtype.names:
         return True
     return len(numpy.unique(numpy.float32(ctx[name]))) == 1
+
+
+class Oq(object):
+    def __init__(self, **hparams):
+        vars(self).update(hparams)
+
+    def get_reqv(self):
+        if 'reqv' not in self.inputs:
+            return
+        return {key: valid.RjbEquivalent(value)
+                for key, value in self.inputs['reqv'].items()}
 
 
 class DeltaRatesGetter(object):
@@ -310,6 +321,7 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         if isinstance(oq, dict):
             param = oq
+            oq = Oq(param)
             self.mags = param.get('mags', ())
             self.cross_correl = param.get('cross_correl')  # cond_spectra_test
         else:  # OqParam
@@ -345,7 +357,6 @@ class ContextMaker(object):
             self.dcache.hit = 0
         else:
             self.dcache = None  # disabled
-        self.af = param.get('af')
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.time_per_task = param.get('time_per_task', 60)
         self.disagg_by_src = param.get('disagg_by_src')
@@ -383,7 +394,7 @@ class ContextMaker(object):
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
-                if self.af and req == 'SITES_PARAMETERS':
+                if getattr(self.oq, 'af', None) and req == 'SITES_PARAMETERS':
                     reqset.add('ampcode')
                 if is_modifiable(gsim) and req == 'SITES_PARAMETERS':
                     reqset.add('vs30')  # required by the ModifiableGMPE
@@ -958,7 +969,7 @@ class ContextMaker(object):
                 for g, gsim in enumerate(self.gsims):
                     ms = mean_stdt[:2, g, :, slc]
                     # builds poes of shape (n, L, G)
-                    if self.af:  # kernel amplification method
+                    if getattr(self.oq, 'af', None):  # amplification method
                         poes[:, :, g] = get_poes_site(ms, self, ctxt)
                     else:  # regular case
                         gsim.set_poes(ms, self, ctxt, poes[:, :, g])
@@ -1655,13 +1666,12 @@ def read_cmakers(dstore, full_lt=None):
     oq.mags_by_trt = {k: decode(v[:]) for k, v in dstore['source_mags'].items()}
     full_lt = full_lt or dstore['full_lt']
     trt_smrs = dstore['trt_smrs'][:]
-    cmakers = get_cmakers(trt_smrs, full_lt, oq)
-    if ('amplification' in oq.inputs and
-        oq.amplification_method == 'kernel'):
+    if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
         df = AmplFunction.read_df(oq.inputs['amplification'])
         oq.af = AmplFunction.from_dframe(df)
     else:
         oq.af = None
+    cmakers = get_cmakers(trt_smrs, full_lt, oq)
     if 'delta_rates' in dstore:  # aftershock
         for cmaker in cmakers:
             cmaker.deltagetter = DeltaRatesGetter(dstore)

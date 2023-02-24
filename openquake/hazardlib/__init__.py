@@ -55,7 +55,7 @@ def _get_sitecol(hparams, req_site_params):
     """
     inputs = hparams['inputs']
     if 'sites' in hparams:
-        sm = Oq(**hparams)
+        sm = contexts.Oq(**hparams)
         mesh = geo.Mesh.from_coords(hparams['sites'])
     elif 'sites' in inputs:
         data = open(inputs['sites']).read().replace(',', ' ').strip()
@@ -195,17 +195,6 @@ def get_flt(hparams, branchID=None):
     return logictree.FullLogicTree(smlt, gslt)
 
 
-class Oq(object):
-    def __init__(self, **hparams):
-        vars(self).update(hparams)
-
-    def get_reqv(self):
-        if 'reqv' not in self.inputs:
-            return
-        return {key: valid.RjbEquivalent(value)
-                for key, value in self.inputs['reqv'].items()}
-
-
 class Input(object):
     """
     An Input object has attributes
@@ -242,7 +231,7 @@ class Input(object):
         hparams.setdefault('rlz_index', None)
         hparams.setdefault('disagg_bin_edges', {})
         hparams.setdefault('epsilon_star', False)
-        self.oq = Oq(**hparams)
+        self.oq = contexts.Oq(**hparams)
         self.full_lt = get_flt(hparams)
         self.sitecol = _get_sitecol(
             hparams, self.full_lt.gsim_lt.req_site_params)
