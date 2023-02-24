@@ -38,7 +38,10 @@ def get_params_from(lon, lat, siteid):
     ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     params['description'] = 'AELO for ' + siteid
-    # TODO: fix site params, add disaggregation parameters
+    params['ps_grid_spacing'] = '0.'
+    params['pointsource_distance'] = '40.'
+    params['disagg_by_src'] = 'true'
+    params['sites'] = '%s %s' % (lon, lat)
     return params
 
 

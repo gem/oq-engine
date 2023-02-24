@@ -39,6 +39,7 @@ import secrets
 
 import django
 from django.test import Client
+from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
@@ -166,7 +167,10 @@ class EngineServerTestCase(django.test.TestCase):
         job_id = self.postzip('archive_ok.zip')['job_id']
         self.wait()
         log = self.get('%s/log/:' % job_id)
-        self.assertGreater(len(log), 0)
+        if config.distribution.log_level == 'error':
+            self.assertEqual(len(log), 0)
+        else:
+            self.assertGreater(len(log), 0)
         results = self.get('%s/results' % job_id)
         self.assertGreater(len(results), 0)
         for res in results:
@@ -500,7 +504,7 @@ class EngineServerTestCase(django.test.TestCase):
 
     def test_aelo_successful_run_EUR(self):
         params = dict(
-            lon='11.0', lat='44.0', vs30='800.0', siteid='EUR_SITE')
+            lon='25.0', lat='35.0', vs30='800.0', siteid='EUR_SITE')
         self.aelo_run(params)
 
     def test_aelo_failing_run_mosaic_model_not_found(self):
