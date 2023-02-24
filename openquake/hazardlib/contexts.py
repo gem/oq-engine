@@ -31,13 +31,12 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
-    sqrscale, groupby)
+    sqrscale)
 from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
-from openquake.hazardlib.tom import (
-    registry, FatedTOM, NegativeBinomialTOM, PoissonTOM)
+from openquake.hazardlib.tom import FatedTOM, NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.calc.filters import (
@@ -1637,7 +1636,7 @@ def get_cmakers(src_groups, full_lt, oq):
         for sg in src_groups:
             try:
                 trt_smrs.append(sg.sources[0].trt_smrs)
-            except AttributeError: # for scenarios
+            except AttributeError:  # for scenarios
                 trt_smrs.append([sg.sources[0].trt_smr])
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
@@ -1663,14 +1662,15 @@ def read_cmakers(dstore, full_lt=None):
     """
     from openquake.hazardlib.site_amplification import AmplFunction
     oq = dstore['oqparam']
-    oq.mags_by_trt = {k: decode(v[:]) for k, v in dstore['source_mags'].items()}
-    full_lt = full_lt or dstore['full_lt']
-    trt_smrs = dstore['trt_smrs'][:]
+    oq.mags_by_trt = {
+        k: decode(v[:]) for k, v in dstore['source_mags'].items()}
     if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
         df = AmplFunction.read_df(oq.inputs['amplification'])
         oq.af = AmplFunction.from_dframe(df)
     else:
         oq.af = None
+    trt_smrs = dstore['trt_smrs'][:]
+    full_lt = full_lt or dstore['full_lt']
     cmakers = get_cmakers(trt_smrs, full_lt, oq)
     if 'delta_rates' in dstore:  # aftershock
         for cmaker in cmakers:
