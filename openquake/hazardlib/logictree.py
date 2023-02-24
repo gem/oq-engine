@@ -992,17 +992,6 @@ class FullLogicTree(object):
                     rlz.weight = rlz.weight / tot_weight
         return rlzs
 
-    def get_rlzs_by_smr(self):
-        """
-        :returns: a dict smr -> rlzs
-        """
-        smltpath = operator.attrgetter('sm_lt_path')
-        smr_by_ltp = self.get_smr_by_ltp()
-        rlzs = self.get_realizations()
-        dic = {smr_by_ltp['~'.join(ltp)]: rlzs for ltp, rlzs in groupby(
-            rlzs, smltpath).items()}
-        return dic
-
     def get_rlzs_by_gsim(self, trt_smr):
         """
         :param trt_smr: integer index
