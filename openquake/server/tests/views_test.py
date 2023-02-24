@@ -500,7 +500,7 @@ class EngineServerTestCase(django.test.TestCase):
 
     def test_aelo_successful_run_EUR(self):
         params = dict(
-            lon='11.0', lat='44.0', vs30='800.0', siteid='EUR_SITE')
+            lon='25.0', lat='35.0', vs30='800.0', siteid='EUR_SITE')
         self.aelo_run(params)
 
     def test_aelo_failing_run_mosaic_model_not_found(self):
