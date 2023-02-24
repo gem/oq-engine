@@ -91,7 +91,7 @@ def main(parent_id, imts=['PGA']):
                 dis = calc.disagg.Disaggregator([ctxt], sitecol, cmaker,
                                                 bin_edges, imts)
                 [iml3] = cmaker.get_pmap([ctxt]).interp4D(oq.imtls, oq.poes)
-                mat = dis.disagg_mag_dist_eps(iml3)
+                # mat = dis.disagg_mag_dist_eps(iml3)
                 # shape (Ma, D, E, M, P)
 
 if __name__ == '__main__':

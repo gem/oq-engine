@@ -73,8 +73,12 @@ def test_compute_mrd():
 
 
 def test_CCA():
-    job_ini = os.path.join(MOSAIC, 'CCA', 'in', 'job.ini')
+    job_ini = os.path.join(MOSAIC, 'CCA', 'in', 'job_vs30.ini')
     with logs.init("job", job_ini) as log:
+        log.params['disagg_by_src'] = 'true'
+        log.params['ps_grid_spacing'] = '0.'
+        log.params['pointsource_distance'] = '40.'
+        #log.params['sites'] = '20 20'
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
         calc.datastore.close()
