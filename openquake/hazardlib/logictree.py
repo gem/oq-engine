@@ -1003,7 +1003,7 @@ class FullLogicTree(object):
             rlzs, smltpath).items()}
         return dic
 
-    def _rlzs_by_gsim(self, trt_smr):
+    def get_rlzs_by_gsim(self, trt_smr):
         """
         :param trt_smr: integer index
         :returns: a dictionary gsim -> array of rlz indices
@@ -1026,16 +1026,6 @@ class FullLogicTree(object):
                     gsim: U32(rlzs) for gsim, rlzs in sorted(dic.items())}
         return self._rlzs_by[trt_smr]
 
-    def get_rlzs_by_gsim(self):
-        """
-        :returns: a dictionary trt_smr -> gsim -> rlzs
-        """
-        dic = {}
-        for sm in self.sm_rlzs:
-            for trt_smr in self.get_trt_smrs(sm.ordinal):
-                dic[trt_smr] = self._rlzs_by_gsim(trt_smr)
-        return dic
-
     # converts grp_id -> trt_smrs indices
     def get_rlzs_by_gsim_list(self, list_of_trt_smrs):
         """
@@ -1046,7 +1036,7 @@ class FullLogicTree(object):
         for grp_id, trt_smrs in enumerate(list_of_trt_smrs):
             dic = AccumDict(accum=[])
             for trt_smr in trt_smrs:
-                for gsim, rlzs in self._rlzs_by_gsim(trt_smr).items():
+                for gsim, rlzs in self.get_rlzs_by_gsim(trt_smr).items():
                     dic[gsim].extend(rlzs)
             out.append(dic)
         return out
