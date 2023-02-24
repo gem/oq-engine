@@ -50,9 +50,9 @@ not specified in the job.ini file. Some other parameters have no default,
 which means that not specifying them will raise an error when running
 a calculation for which they are required.
 
-ovveride_vs30:
+override_vs30:
   Vs30 parameter passed by the user in AELO calculations.
-  Example: *ovveride_vs30 = 800*
+  Example: *override_vs30 = 800*
   Default: None
 
 aggregate_by:
@@ -854,7 +854,7 @@ class OqParam(valid.ParamSet):
                'max_hazard_curves': 'max'}
 
     hazard_imtls = {}
-    ovveride_vs30 = valid.Param(valid.positivefloat, None)
+    override_vs30 = valid.Param(valid.positivefloat, None)
     aggregate_by = valid.Param(valid.namelists, [])
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(

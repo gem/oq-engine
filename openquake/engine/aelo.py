@@ -45,7 +45,7 @@ def get_params_from(inputs):
     params['pointsource_distance'] = '40.'
     params['disagg_by_src'] = 'true'
     params['sites'] = '%(lon)s %(lat)s' % inputs
-    params['ovveride_vs30'] = '%(vs30)s' % inputs
+    params['override_vs30'] = '%(vs30)s' % inputs
     return params
 
 
