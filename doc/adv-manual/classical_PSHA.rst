@@ -1025,7 +1025,7 @@ the following::
 
 The number of columns will depend from the number of sites. The
 conditional spectrum calculator, like the disaggregation calculator,
-is mean to be run on a very small number of sites, normally one.
+is meant to be run on a very small number of sites, normally one.
 In this example there are two sites 0 and 1 and the columns ``val0``
 and ``val`` give the value of the conditional spectrum on such sites
 respectively, while the columns ``std0`` and ``std1`` give the corresponding
