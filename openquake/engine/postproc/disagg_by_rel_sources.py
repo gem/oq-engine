@@ -18,7 +18,7 @@
 
 import logging
 import numpy
-from openquake.baselib import sap, general
+from openquake.baselib import sap, general, python3compat
 from openquake.hazardlib import contexts, calc
 from openquake.commonlib import datastore
 from openquake.calculators.extract import extract
@@ -31,7 +31,7 @@ def get_srcids(dstore, rel_source_ids):
     :param rel_source_ids: relevant source IDs
     :returns: a dictionary source_id -> [source indices]
     """
-    all_source_ids = dstore['source_info']['source_id']
+    all_source_ids = python3compat.decode(dstore['source_info']['source_id'])
     out = general.AccumDict(accum=[])  # source_id -> src_ids
     for src_id, source in enumerate(all_source_ids):
         for source_id in rel_source_ids:
@@ -51,15 +51,19 @@ def get_rel_source_ids(dstore, imts, poes):
             aw = extract(dstore, f'disagg_by_src?imt={imt}&poe={poe}')        
             poe_array = aw.array['poe']  # for each source in decreasing order
             max_poe = poe_array[0]
-            source_ids.update(aw.array[poe_array > .1 * max_poe]['source_id'])
-    return sorted(source_ids)
+            source_ids.update(aw.array[poe_array > .1 * max_poe]['src_id'])
+    return python3compat.decode(sorted(source_ids))
 
             
-def main(parent_id, *imts):
+def main(parent_id, imts=['PGA']):
     """
     :param parent_id: filename or ID of the parent calculation
     :param imts: list of IMTs to consider
     """
+    try:
+        parent_id = int(parent_id)
+    except ValueError:
+        pass
     parent = datastore.read(parent_id)
     dstore, log = datastore.build_dstore_log(parent=parent)
     with dstore, log:
@@ -73,8 +77,9 @@ def main(parent_id, *imts):
         ctx_by_grp = contexts.read_ctx_by_grp(dstore)
         n = sum(len(ctx) for ctx in ctx_by_grp.values())
         logging.info('Read {:_d} contexts'.format(n))
-        rel_source_ids = get_rel_source_ids(dstore, imts, oq.poes)
-        srcids = get_srcids(dstore, rel_source_ids)
+        rel_source_ids = get_rel_source_ids(parent, imts, oq.poes)
+        srcids = get_srcids(parent, rel_source_ids)
+        print(srcids)
         bin_edges, shapedic = calc.disagg.get_edges_shapedic(oq, sitecol)
         for rel_id in rel_source_ids:
             for grp_id, ctx in ctx_by_grp.items():
@@ -83,10 +88,9 @@ def main(parent_id, *imts):
                 if len(ctxt) == 0:
                     continue
                 cmaker = cmakers[grp_id]
-                dis = calc.disagg.Disaggregator(ctxt, sitecol, cmaker,
+                dis = calc.disagg.Disaggregator([ctxt], sitecol, cmaker,
                                                 bin_edges, imts)
                 [iml3] = cmaker.get_pmap([ctxt]).interp4D(oq.imtls, oq.poes)
-                import pdb; pdb.set_trace()
                 mat = dis.disagg_mag_dist_eps(iml3)
                 # shape (Ma, D, E, M, P)
 
