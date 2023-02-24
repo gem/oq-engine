@@ -74,7 +74,7 @@ def test_compute_mrd():
     assert abs(mrd.mean() - 1.04e-05) < 1e-6
 
 
-@pytest.mark.parametrize('model', ['CCA'])
+@pytest.mark.parametrize('model', ['CCA', 'EUR'])
 def test_mosaic(model):
     fname = os.path.join(MOSAIC, 'test_sites.csv')
     df = pandas.read_csv(fname).set_index('model')

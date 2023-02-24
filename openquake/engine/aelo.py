@@ -29,24 +29,24 @@ from openquake.engine import engine
 CDIR = os.path.dirname(__file__)  # openquake/engine
 
 
-def get_params_from(lon, lat, siteid):
+def get_params_from(inputs):
     """
+    :param inputs: a dictionary with lon, lat, vs30, siteid
+
     Build the job.ini parameters for the given lon, lat extracting them
     from the mosaic files.
     """
-    model = mosaic.MosaicGetter().get_model_by_lon_lat(lon, lat)
+    getter = mosaic.MosaicGetter()
+    model = getter.get_model_by_lon_lat(inputs['lon'], inputs['lat'])
     ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
-    params['description'] = 'AELO for ' + siteid
+    params['description'] = 'AELO for ' + inputs['siteid']
     params['ps_grid_spacing'] = '0.'
     params['pointsource_distance'] = '40.'
     params['disagg_by_src'] = 'true'
-    params['sites'] = '%s %s' % (lon, lat)
+    params['sites'] = '%(lon)s %(lat)s' % inputs
+    params['ovveride_vs30'] = '%(vs30)s' % inputs
     return params
-
-
-def aelo_run(jobctx, lon, lat, vs30):
-    engine.run_jobs([jobctx])
 
 
 def trivial_callback(job_id, job_owner_email, outputs_uri, inputs, exc=None):
@@ -80,7 +80,7 @@ def main(lon: valid.longitude,
         if not config.directory.mosaic_dir:
             sys.exit('mosaic_dir is not specified in openquake.cfg')
         try:
-            jobctx.params.update(get_params_from(lon, lat, siteid))
+            jobctx.params.update(get_params_from(inputs))
         except Exception as exc:
             # This can happen for instance:
             # - if no model covers the given coordinates.
@@ -88,7 +88,7 @@ def main(lon: valid.longitude,
             callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
             raise exc
         try:
-            aelo_run(jobctx, lon, lat, vs30)
+            engine.run_jobs([jobctx])
         except Exception as exc:
             callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
         else:
