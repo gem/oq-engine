@@ -1658,7 +1658,7 @@ def read_cmakers(dstore, full_lt=None):
     """
     :param dstore: a DataStore-like object
     :param full_lt: a FullLogicTree instance, if given
-    :returns: a list of ContextMaker instance, one per source group
+    :returns: a list of ContextMaker instances, one per source group
     """
     from openquake.hazardlib.site_amplification import AmplFunction
     oq = dstore['oqparam']
