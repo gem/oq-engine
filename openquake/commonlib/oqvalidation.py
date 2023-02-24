@@ -50,6 +50,11 @@ not specified in the job.ini file. Some other parameters have no default,
 which means that not specifying them will raise an error when running
 a calculation for which they are required.
 
+override_vs30:
+  Optional Vs30 parameter to override the site model Vs30
+  Example: *override_vs30 = 800*
+  Default: None
+
 aggregate_by:
   Used to compute aggregate losses and aggregate loss curves in risk
   calculations. Takes in input one or more exposure tags.
@@ -849,6 +854,7 @@ class OqParam(valid.ParamSet):
                'max_hazard_curves': 'max'}
 
     hazard_imtls = {}
+    override_vs30 = valid.Param(valid.positivefloat, None)
     aggregate_by = valid.Param(valid.namelists, [])
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
