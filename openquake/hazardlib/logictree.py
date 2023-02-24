@@ -1003,27 +1003,28 @@ class FullLogicTree(object):
             rlzs, smltpath).items()}
         return dic
 
-    def _rlzs_by_gsim(self, grp_id):
+    def _rlzs_by_gsim(self, trt_smr):
         """
+        :param trt_smr: integer index
         :returns: a dictionary gsim -> array of rlz indices
         """
-        if not hasattr(self, '_rlzs_by_grp'):
+        if not hasattr(self, '_rlzs_by'):
             smr_by_ltp = self.get_smr_by_ltp()
             rlzs = self.get_realizations()
             acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
             for sm in self.sm_rlzs:
-                for gid in self.get_trt_smrs(sm.ordinal):
-                    trti, smr = divmod(gid, len(self.sm_rlzs))
+                for trtsmr in self.get_trt_smrs(sm.ordinal):
+                    trti, smr = divmod(trtsmr, len(self.sm_rlzs))
                     for rlz in rlzs:
                         idx = smr_by_ltp['~'.join(rlz.sm_lt_path)]
                         if idx == smr:
-                            acc[gid][rlz.gsim_rlz.value[trti]].append(
+                            acc[trtsmr][rlz.gsim_rlz.value[trti]].append(
                                 rlz.ordinal)
-            self._rlzs_by_grp = {}
-            for gid, dic in acc.items():
-                self._rlzs_by_grp[gid] = {
+            self._rlzs_by = {}
+            for trtsmr, dic in acc.items():
+                self._rlzs_by[trtsmr] = {
                     gsim: U32(rlzs) for gsim, rlzs in sorted(dic.items())}
-        return self._rlzs_by_grp[grp_id]
+        return self._rlzs_by[trt_smr]
 
     def get_rlzs_by_gsim(self):
         """
@@ -1035,19 +1036,10 @@ class FullLogicTree(object):
                 dic[trt_smr] = self._rlzs_by_gsim(trt_smr)
         return dic
 
-    def get_rlzs_by_grp(self):
-        """
-        :returns: a dictionary grp_id -> [rlzis, ...]
-        """
-        dic = {}
-        for sm in self.sm_rlzs:
-            for trt_smr in self.get_trt_smrs(sm.ordinal):
-                grp = 'grp-%02d' % trt_smr
-                dic[grp] = list(self._rlzs_by_gsim(trt_smr).values())
-        return {grp_id: dic[grp_id] for grp_id in sorted(dic)}
-
+    # converts grp_id -> trt_smrs indices
     def get_rlzs_by_gsim_list(self, list_of_trt_smrs):
         """
+        :param list_of_trt_smrs: lists of indices, one per source group
         :returns: a list of dictionaries rlzs_by_gsim, one for each grp_id
         """
         out = []
