@@ -51,7 +51,7 @@ which means that not specifying them will raise an error when running
 a calculation for which they are required.
 
 override_vs30:
-  Vs30 parameter passed by the user in AELO calculations.
+  Optional Vs30 parameter to override the site model Vs30
   Example: *override_vs30 = 800*
   Default: None
 
