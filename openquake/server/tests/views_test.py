@@ -503,6 +503,11 @@ class EngineServerTestCase(django.test.TestCase):
             lon='11.0', lat='44.0', vs30='800.0', siteid='EUR_SITE')
         self.aelo_run(params)
 
+    def test_aelo_successful_run_JPN(self):
+        params = dict(
+            lon='138.0', lat='36.0', vs30='800.0', siteid='JPN_SITE')
+        self.aelo_run(params)
+
     def test_aelo_failing_run_mosaic_model_not_found(self):
         params = dict(
             lon='-86.0', lat='88.0', vs30='800.0', siteid='SOMEWHERE')
