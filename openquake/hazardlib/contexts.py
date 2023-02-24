@@ -31,13 +31,12 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
-    sqrscale, groupby)
+    sqrscale)
 from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
-from openquake.hazardlib.tom import (
-    registry, FatedTOM, NegativeBinomialTOM, PoissonTOM)
+from openquake.hazardlib.tom import FatedTOM, NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.calc.filters import (
@@ -155,6 +154,17 @@ def trivial(ctx, name):
     if name not in ctx.dtype.names:
         return True
     return len(numpy.unique(numpy.float32(ctx[name]))) == 1
+
+
+class Oq(object):
+    def __init__(self, **hparams):
+        vars(self).update(hparams)
+
+    def get_reqv(self):
+        if 'reqv' not in self.inputs:
+            return
+        return {key: valid.RjbEquivalent(value)
+                for key, value in self.inputs['reqv'].items()}
 
 
 class DeltaRatesGetter(object):
@@ -310,6 +320,7 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         if isinstance(oq, dict):
             param = oq
+            oq = Oq(**param)
             self.mags = param.get('mags', ())
             self.cross_correl = param.get('cross_correl')  # cond_spectra_test
         else:  # OqParam
@@ -345,7 +356,6 @@ class ContextMaker(object):
             self.dcache.hit = 0
         else:
             self.dcache = None  # disabled
-        self.af = param.get('af')
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.time_per_task = param.get('time_per_task', 60)
         self.disagg_by_src = param.get('disagg_by_src')
@@ -383,7 +393,7 @@ class ContextMaker(object):
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
-                if self.af and req == 'SITES_PARAMETERS':
+                if getattr(self.oq, 'af', None) and req == 'SITES_PARAMETERS':
                     reqset.add('ampcode')
                 if is_modifiable(gsim) and req == 'SITES_PARAMETERS':
                     reqset.add('vs30')  # required by the ModifiableGMPE
@@ -958,7 +968,7 @@ class ContextMaker(object):
                 for g, gsim in enumerate(self.gsims):
                     ms = mean_stdt[:2, g, :, slc]
                     # builds poes of shape (n, L, G)
-                    if self.af:  # kernel amplification method
+                    if getattr(self.oq, 'af', None):  # amplification method
                         poes[:, :, g] = get_poes_site(ms, self, ctxt)
                     else:  # regular case
                         gsim.set_poes(ms, self, ctxt, poes[:, :, g])
@@ -1612,41 +1622,59 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     return dict(zip(mags, gmv))
 
 
-def read_cmakers(dstore, full_lt=None):
+def get_cmakers(src_groups, full_lt, oq):
     """
-    :param dstore: a DataStore-like object
-    :param full_lt: a FullLogicTree instance, if given
-    :returns: a list of ContextMaker instance, one per source group
+    :params src_groups: a list of SourceGroups (or trt_smrs arrays)
+    :param full_lt: a FullLogicTree instance
+    :param oq: object containing the calculation parameters
+    :returns: list of ContextMakers associated to the given src_groups
     """
-    from openquake.hazardlib.site_amplification import AmplFunction
-    cmakers = []
-    oq = dstore['oqparam']
-    full_lt = full_lt or dstore['full_lt']
-    trt_smrs = dstore['trt_smrs'][:]
+    if isinstance(src_groups, numpy.ndarray):  # passed trt_smrs
+        trt_smrs = src_groups
+    else:
+        trt_smrs = []
+        for sg in src_groups:
+            try:
+                trt_smrs.append(sg.sources[0].trt_smrs)
+            except AttributeError:  # for scenarios
+                trt_smrs.append([sg.sources[0].trt_smr])
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
     start = 0
-    aftershock = 'delta_rates' in dstore
-    oq.mags_by_trt = {k: decode(v[:]) for k, v in dstore['source_mags'].items()}
+    cmakers = []
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
-        G = len(rlzs_by_gsim)
         trti = trt_smrs[grp_id][0] // num_eff_rlzs
-        trt = trts[trti]
-        if ('amplification' in oq.inputs and
-                oq.amplification_method == 'kernel'):
-            df = AmplFunction.read_df(oq.inputs['amplification'])
-            oq.af = AmplFunction.from_dframe(df)
-        else:
-            oq.af = None
-        cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
-        if aftershock:
-            cmaker.deltagetter = DeltaRatesGetter(dstore)
+        cmaker = ContextMaker(trts[trti], rlzs_by_gsim, oq)
         cmaker.trti = trti
-        cmaker.gidx = numpy.arange(start, start + G)
+        cmaker.gidx = numpy.arange(start, start + len(rlzs_by_gsim))
         cmaker.grp_id = grp_id
-        start += G
+        start += len(rlzs_by_gsim)
         cmakers.append(cmaker)
+    return cmakers
+
+
+def read_cmakers(dstore, full_lt=None):
+    """
+    :param dstore: a DataStore-like object
+    :param full_lt: a FullLogicTree instance, if given
+    :returns: a list of ContextMaker instances, one per source group
+    """
+    from openquake.hazardlib.site_amplification import AmplFunction
+    oq = dstore['oqparam']
+    oq.mags_by_trt = {
+        k: decode(v[:]) for k, v in dstore['source_mags'].items()}
+    if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
+        df = AmplFunction.read_df(oq.inputs['amplification'])
+        oq.af = AmplFunction.from_dframe(df)
+    else:
+        oq.af = None
+    trt_smrs = dstore['trt_smrs'][:]
+    full_lt = full_lt or dstore['full_lt']
+    cmakers = get_cmakers(trt_smrs, full_lt, oq)
+    if 'delta_rates' in dstore:  # aftershock
+        for cmaker in cmakers:
+            cmaker.deltagetter = DeltaRatesGetter(dstore)
     return cmakers
 
 

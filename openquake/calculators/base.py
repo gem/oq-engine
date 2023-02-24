@@ -580,8 +580,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore.create_df('_poes', readinput.Global.pmap.to_dframe())
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
-            self.datastore['rlzs_by_g'] = sum(
-                fake.get_rlzs_by_grp().values(), [])
+            self.datastore['rlzs_by_g'] = U32([[0]])
             self.realizations = fake.get_realizations()
             self.save_crmodel()
             self.datastore.swmr_on()

@@ -420,21 +420,6 @@ class CompositeSourceModel:
                 srcs.extend(src_group)
         return srcs
 
-    # used only in calc_by_rlz.py
-    def get_groups(self, smr):
-        """
-        :param smr: effective source model realization ID
-        :returns: SourceGroups associated to the given `smr`
-        """
-        src_groups = []
-        for sg in self.src_groups:
-            trt_smr = self.full_lt.get_trt_smr(sg.trt, smr)
-            src_group = copy.copy(sg)
-            src_group.sources = [src for src in sg if trt_smr in src.trt_smrs]
-            if len(src_group):
-                src_groups.append(src_group)
-        return src_groups
-
     def get_mags_by_trt(self):
         """
         :returns: a dictionary trt -> magnitudes in the sources as strings
