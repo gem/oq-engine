@@ -529,6 +529,8 @@ class SiteCollection(object):
 
         # sanity check
         for param in self.req_site_params:
+            if param in ignore:
+                continue
             dt = site_param_dt[param]
             if dt is numpy.float64 and (self.array[param] == 0.).all():
                 raise ValueError('The site parameter %s is always zero: please '
