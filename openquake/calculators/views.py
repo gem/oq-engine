@@ -296,7 +296,7 @@ def view_full_lt(token, dstore):
     if not full_lt.num_samples and num_paths > 15000:
         return '<%d realizations>' % num_paths
     try:
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['trt_smrs'])
+        rlzs_by_gsim_list = map(full_lt.get_rlzs_by_gsim, dstore['trt_smrs'])
     except KeyError:  # for scenario trt_smrs is missing
         rlzs_by_gsim_list = [full_lt._rlzs_by_gsim(0)]
     header = ['grp_id', 'gsim', 'rlzs']
