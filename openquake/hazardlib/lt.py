@@ -703,7 +703,10 @@ class BranchSet(object):
         return repr(self.branches)
 
     def __repr__(self):
-        return '<%s(%d)>' % (self.uncertainty_type, len(self))
+        kvs = ', '.join('%s=%s' % item for item in self.filters.items())
+        if kvs:
+            kvs = ', ' + kvs
+        return '<%s(%d%s)>' % (self.uncertainty_type, len(self), kvs)
 
 
 # NB: this function cannot be used with monster logic trees like the one for

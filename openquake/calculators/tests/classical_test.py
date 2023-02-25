@@ -614,10 +614,16 @@ hazard_uhs-std.csv
         self.run_calc(case_36.__file__, 'job.ini', hazard_calculation_id=hc_id,
                       calculation_mode='classical')
         self.assertEqual(self.calc.R, 9)  # there are 9 realizations
+        dstore = self.calc.datastore
 
-        tbl = general.gettemp(text_table(view('rlz:8', self.calc.datastore)))
+        # test `oq show rlz:`
+        tbl = general.gettemp(text_table(view('rlz:8', dstore)))
         self.assertEqualFiles('expected/show-rlz8.org', tbl)
 
+        # test `oq show branchsets`
+        tbl = general.gettemp(view('branchsets', dstore))
+        self.assertEqualFiles('expected/branchsets.org', tbl)
+        
     def test_case_37(self):
         # Christchurch
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
