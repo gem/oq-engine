@@ -1,26 +1,26 @@
 | Test ID | Description |
 |---------|-------------|
-| case_1  | Checks .npz export, raises error when all source are discarded and checks wrong .ini | 
-| case_2  | | 
-| case_3  | | 
-| case_4  | | 
-| case_5  | |
-| case_6  | | 
-| case_7  | | 
-| case_8  | | 
-| case_9  | |
-| case_10 | | 
-| case_11 | | 
-| case_12 | | 
-| case_13 | | 
-| case_14 | | 
-| case_15 | | 
+| case_1  | Test .npz export, raises error when all source are discarded and test wrong .ini |
+| case_2  | Test reqv, 1 rlz, 1 site|
+| case_3  | Test AreaSource, 1 rlz, 1 site|
+| case_4  | Test SimpleFault, 1 rlz, 1 site|
+| case_5  | Test ComplexFault, 1 rlz, 1 site|
+| case_6  | Test 2 sources, 1 rlz, 1 site|
+| case_7  | Test 2 source models with a duplicate source, i.e. nontrivial trt_smrs|
+| case_8  | Source Specific Logic Tree on 1 source, the other ignored|
+| case_9  | Source Specific Logic Tree on 1 source|
+| case_10 | Source Specific Logic Tree on 1 source|
+| case_11 | Source Specific Logic Tree on 1 source, test disagg_by_src|
+| case_12 | Two TRTs, 1 rlz|
+| case_13 | 2x2 rlz, duplicated sources, discarding mags|
+| case_14 | Test reqv |
+| case_15 | Nontrivial source model logic tree with 8+4 realizations|
 | case_16 | Sampling 10 logic tree paths out of 759_375 |
-| case_17 | | 
-| case_18 | | 
-| case_19 | Test AvgGMPE | 
-| case_20 | | 
-| case_21 | | 
+| case_17 | Sampling 5 logic tree paths out of 2|
+| case_18 | 3 GMPETables|
+| case_19 | Test AvgGMPE |
+| case_20 | Nontrivial source model logic tree with 8+4 realizations changing surfaces|
+| case_21 | |
 | case_22 | Test tiling|
 | case_23 | | 
 | case_24 | Test collapsing rjb-independent GMPE |

@@ -734,7 +734,7 @@ time_event:
   Default: None
 
 time_per_task:
-  Used in calculatins with task splitting. If a task slice takes longer
+  Used in calculations with task splitting. If a task slice takes longer
   then *time_per_task* seconds, then spawn subtasks for the other slices.
   Example: *time_per_task=600*
   Default: 2000
