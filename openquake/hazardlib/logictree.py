@@ -87,7 +87,7 @@ def get_trt_by_src(source_model_file):
     """
     pieces = TRT_REGEX.split(source_model_file.read())
     trt_by_src = {}
-    for text, trt in zip(pieces[0::2], pieces[1::2]):
+    for text, trt in zip(pieces[2::2], pieces[1::2]):
         for src_id in ID_REGEX.findall(text):
             trt_by_src[src_id] = trt
     return trt_by_src
@@ -380,12 +380,17 @@ class SourceModelLogicTree(object):
             self.num_paths = count_paths(self.root_branchset.branches)
 
     def reduce(self, src_id):
+        """
+        Reduce the logic tree to a single source. Works by side effects.
+        """
         self.tectonic_region_types = {self.trt_by_src[src_id]}
         for bset, dic in zip(self.branchsets, self.bsetdict.values()):
             ats = dic.get('applyToSources')
             if ats and src_id not in ats:
                 bset.collapsed = True
-                bset.branches = [bset.branches[0]]
+                b0 = bset.branches[0]
+                b0.branch_id = '.'
+                bset.branches = [b0]
                 del dic['applyToSources']
         self.num_paths = count_paths(self.root_branchset.branches)
 
