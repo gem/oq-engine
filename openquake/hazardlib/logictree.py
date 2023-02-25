@@ -48,9 +48,6 @@ from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
     dummy_branchset, LogicTreeError, parse_uncertainty, random)
 
-TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
-ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
-
 U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
@@ -79,6 +76,21 @@ src_group_dt = numpy.dtype(
 
 branch_dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
              ('utype', hdf5.vstr), ('uvalue', hdf5.vstr), ('weight', float)]
+
+TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
+ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
+
+# this is very fast
+def get_trt_by_src(source_model_file):
+    """
+    :returns: a dictionary source ID -> tectonic region type of the source
+    """
+    pieces = TRT_REGEX.split(source_model_file.read())
+    trt_by_src = {}
+    for text, trt in zip(pieces[0::2], pieces[1::2]):
+        for src_id in ID_REGEX.findall(text):
+            trt_by_src[src_id] = trt
+    return trt_by_src
 
 
 def prod(iterator):
@@ -333,7 +345,12 @@ class SourceModelLogicTree(object):
         self.shortener = {}
         self.branchsets = []
         self.parse_tree(tree)
+        self.set_num_paths()
 
+    def set_num_paths(self):
+        """
+        Count the total number of paths in a smart way
+        """
         # determine if the logic tree is source specific
         dicts = list(self.bsetdict.values())[1:]
         if not dicts:
@@ -362,13 +379,24 @@ class SourceModelLogicTree(object):
         else:  # slow algorithm
             self.num_paths = count_paths(self.root_branchset.branches)
 
+    def reduce(self, src_id):
+        self.tectonic_region_types = {self.trt_by_src[src_id]}
+        for bset, dic in zip(self.branchsets, self.bsetdict.values()):
+            ats = dic.get('applyToSources')
+            if ats and src_id not in ats:
+                bset.collapsed = True
+                bset.branches = [bset.branches[0]]
+                del dic['applyToSources']
+        self.num_paths = count_paths(self.root_branchset.branches)
+
     def parse_tree(self, tree_node):
         """
         Parse the whole tree and point ``root_branchset`` attribute
         to the tree's root.
         """
         self.info = collect_info(self.filename, self.branchID)
-        self.source_ids = collections.defaultdict(list)  # src_id->branchIDs
+        self.source_ids = collections.defaultdict(list)  # src_id -> branchIDs
+        self.trt_by_src = {}  # src_id -> trt
         t0 = time.time()
         for depth, blnode in enumerate(tree_node.nodes):
             [bsnode] = bsnodes(self.filename, blnode)
@@ -675,20 +703,12 @@ class SourceModelLogicTree(object):
         information is used then for :meth:`validate_filters` and
         :meth:`validate_uncertainty_value`.
         """
-        # using regular expressions is a lot faster than parsing
         with self._get_source_model(source_model) as sm:
-            xml = sm.read()
-        self.tectonic_region_types.update(TRT_REGEX.findall(xml))
-        for src_id in ID_REGEX.findall(xml):
+            trt_by_src = get_trt_by_src(sm)
+        for src_id, trt in trt_by_src.items():
             self.source_ids[src_id].append(branch_id)
-
-    def collapse(self, branchset_ids):
-        """
-        Set the attribute .collapsed on the given branchsets
-        """
-        for bsid, bset in self.bsetdict.items():
-            if bsid in branchset_ids:
-                bset.collapsed = True
+            self.trt_by_src[src_id] = trt
+            self.tectonic_region_types.add(trt)
 
     def bset_values(self, lt_path):
         """

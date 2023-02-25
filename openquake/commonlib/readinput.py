@@ -673,7 +673,10 @@ def get_source_model_lt(oqparam, branchID=None):
         a :class:`openquake.hazardlib.logictree.SourceModelLogicTree`
         instance
     """
-    return get_smlt(vars(oqparam), branchID)
+    smlt = get_smlt(vars(oqparam), branchID)
+    if len(oqparam.source_id) == 1:  # reduce to a single source
+        smlt.reduce(oqparam.source_id[0])
+    return smlt
 
 
 def get_full_lt(oqparam, branchID=None):

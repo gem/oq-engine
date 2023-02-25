@@ -627,6 +627,7 @@ class BranchSet(object):
         """
         if self.collapsed:
             b0 = copy.copy(self.branches[0])
+            # b0.branch_id = '.'
             b0.weight = 1.0
             branches = [b0]
         else:
