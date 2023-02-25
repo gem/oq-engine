@@ -449,7 +449,7 @@ class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
 
 
 # Add aliases of the ESHM20 model selection
-MILLER_RICE_GAUSS_5PNT = [-2.856970, -1.355630, 0.0, 1.355630, -2.856970]
+MILLER_RICE_GAUSS_5PNT = [-2.856970, -1.355630, 0.0, 1.355630, 2.856970]
 THETA_6_ADJUSTMENTS = [-0.0015, 0.0000, 0.0015]
 STRESS_BRANCHES = ["VLow", "Low", "Mid", "High", "VHigh"]
 ATTEN_BRANCHES = ["Fast", "Mid", "Slow"]
@@ -460,9 +460,9 @@ for stress, eps1 in zip(STRESS_BRANCHES, MILLER_RICE_GAUSS_5PNT):
         alias_sslab = "ESHM20SSlab{:s}Stress{:s}Atten".format(stress, atten)
         # Subduction Interface
         add_alias(alias_sinter, BCHydroESHM20SInter, sigma_mu_epsilon=eps1,
-                  theta_6_adjustment=theta6adj, faba_taper_model="SFunc",
+                  theta6_adjustment=theta6adj, faba_taper_model="SFunc",
                   a=-100, b=100)
         # Subduction Slab
         add_alias(alias_sslab, BCHydroESHM20SSlab, sigma_mu_epsilon=eps1,
-                  theta_6_adjustment=theta6adj, faba_taper_model="SFunc",
+                  theta6_adjustment=theta6adj, faba_taper_model="SFunc",
                   a=-100, b=100)
