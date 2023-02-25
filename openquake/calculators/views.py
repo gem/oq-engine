@@ -35,9 +35,10 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
+from openquake.hazardlib import logictree
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
-from openquake.commonlib import util, logictree
+from openquake.commonlib import util
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
@@ -1266,7 +1267,7 @@ def view_branchsets(token, dstore):
     Show the branchsets in the logic tree
     """
     flt = dstore['full_lt']
-    clt = logictree.compose(flt.gsim_lt, flt.source_model_lt)
+    clt = logictree.compose(flt.source_model_lt, flt.gsim_lt)
     return text_table(enumerate(map(repr, clt.branchsets)),
                       header=['bsno', 'bset'], ext='org')
 
