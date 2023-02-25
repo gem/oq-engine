@@ -20,34 +20,34 @@
 | case_18 | 3 GMPETables|
 | case_19 | Test AvgGMPE |
 | case_20 | Nontrivial source model logic tree with 8+4 realizations changing surfaces|
-| case_21 | |
-| case_22 | Test tiling|
-| case_23 | | 
+| case_21 | Source Specific Logic Tree with 27 realizations|
+| case_22 | Test tiling and International Date Line|
+| case_23 | Filtering away a TRT| 
 | case_24 | Test collapsing rjb-independent GMPE |
-| case_25 | |
-| case_26 | |
-| case_27 | |
-| case_28 | |
+| case_25 | Test negative depths|
+| case_26 | Test YoungsCoppersmith1985MFD|
+| case_27 | Nankai mutex model, including disaggregation|
+| case_28 | MultiPointSource with modify MFD logic tree|
 | case_29 | Non-parametric source with one rupture represente by 2 kite surfaces |
-| case_30 | |
-| case_31 | |
-| case_32 | |
-| case_33 | |
-| case_34 | |
-| case_35 | |
-| case_36 | |
-| case_37 | |
-| case_38 | Example with custom_site_id|
-| case_39 | |
-| case_40 | |
-| case_41 | |
-| case_42 | |
+| case_30 | IMT-dependent weights, sampling with cheating|
+| case_31 | Source Specific Logic Tree|
+| case_32 | Source Specific Logic Tree|
+| case_33 | Directivity|
+| case_34 | AvgSA|
+| case_35 | Test cluster feature|
+| case_36 | Advanced applyToSources|
+| case_37 | Christchurch GMPEs|
+| case_38 | Example with custom_site_id and BCHydro GMPEs|
+| case_39 |  0-IMT-weights, pointsource_distance=0 and ruptures collapsing|
+| case_40 | NGAEast GMPEs |
+| case_41 | SERA Site Amplification Models including EC8 Site Classes and Geology |
+| case_42 | Split/filter a long complex fault source with maxdist=1000 km|
 | case_43 | Test for ps_grid_spacing |
-| case_44 | |
-| case_45 | |
-| case_46 | |
-| case_47 | |
-| case_48 | |
+| case_44 | Test for shift_hypo feature|
+| case_45 | MMI with disagg_by_src and sampling|
+| case_46 | Test applyToBranches|
+| case_47 | Mixture Model for Sigma using PEER (2018) Test Case 2.5b|
+| case_48 | Precise test of pointsource_distance|
 | case_49 | Test the use of the convolution method to amplify the motion |
 | case_50 | Test the use of the kernel method to amplify the motion |
 | case_51 | Test the use of a modifiable GMPE |
@@ -59,18 +59,18 @@
 | case_57 | Test for sampling AvgPoeGMPE |
 | case_58 | Test for the truncatedGRFromSlipAbsolute epistemic uncertainty |
 | case_59 | Test for NRCan15SiteTerm |
-| case_60 | |
-| case_61 | |
+| case_60 | Test CampbellBozorgnia2003NSHMP2007|
+| case_61 | Test KiteFault source|
 | case_62 | Tests a sample model from SHERIFS |
 | case_63 | Test for GMM with soiltype |
-| case_64 | |
+| case_64 | LanzanoEtAl2016 with bas term|
 | case_65 | Test for the multi fault source |
-| case_66 | |
-| case_67 | |
-| case_68 | |
+| case_66 | Tests sites_slice and site <-> sitemodel association|
+| case_67 | Tricky Source Specific Logic Tree|
+| case_68 | Test extendModel|
 | case_69 | Collapse area source, 1 site|
-| case_70 | |
-| case_71 | |
+| case_70 | Test abrahamson_gulerce_2020|
+| case_71 | Test oversampling|
 | case_72 | Test calculation with a subset of the 2014 US model | 
 | case_73 | Tests some epistemic uncertainties in a source-specific LT | 
 | case_74 | Tests EAS-based calculation |

@@ -633,7 +633,7 @@ hazard_uhs-std.csv
                               case_38.__file__)
 
     def test_case_39(self):
-        # 0-IMT-weights, pointsource_distance=0 and iruptures collapsing
+        # 0-IMT-weights, pointsource_distance=0 and ruptures collapsing
         self.assert_curves_ok([
             'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1).csv',
             'hazard_curve-mean-SA(0.5).csv', 'hazard_curve-mean-SA(2.0).csv',
@@ -1005,7 +1005,6 @@ hazard_uhs-std.csv
         self.run_calc(case_66.__file__, 'job1.ini',
                       calculation_mode='preclassical')
         self.assertEqual(self.calc.sitecol.vs30, [810.])
-        
 
     def test_case_67(self):
         # source specific logic tree with the following structure:
@@ -1032,7 +1031,7 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
     def test_case_68(self):
-        # expandModel feature
+        # extendModel feature
         self.run_calc(case_68.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
