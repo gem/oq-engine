@@ -110,13 +110,13 @@ def get_effective_rlzs(rlzs):
     """
     Group together realizations with the same path
     and yield the first representative of each group.
+
+    :param rlzs: a list of Realization instances with a .pid property
     """
     effective = []
     ordinal = 0
     for group in groupby(rlzs, operator.attrgetter('pid')).values():
         rlz = group[0]
-        if all(path == '@' for path in rlz.lt_path):  # empty realization
-            continue
         effective.append(
             Realization(rlz.value, sum(r.weight for r in group),
                         ordinal, rlz.lt_path, len(group)))
