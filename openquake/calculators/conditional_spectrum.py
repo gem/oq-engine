@@ -24,7 +24,8 @@ import numpy
 
 from openquake.baselib import general
 from openquake.baselib.python3compat import decode
-from openquake.commonlib.calc import compute_hazard_maps, get_mean_curve
+from openquake.hazardlib.probability_map import (
+    compute_hazard_maps, get_mean_curve)
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp

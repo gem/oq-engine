@@ -19,7 +19,7 @@ import os
 import logging
 import cProfile
 from openquake.baselib import general, performance, sap
-from openquake.hazardlib import get_cmakers
+from openquake.hazardlib.contexts import get_cmakers
 from openquake.commonlib import readinput, datastore
 from openquake.calculators.views import text_table
 

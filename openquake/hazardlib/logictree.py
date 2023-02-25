@@ -992,72 +992,37 @@ class FullLogicTree(object):
                     rlz.weight = rlz.weight / tot_weight
         return rlzs
 
-    def get_rlzs_by_smr(self):
-        """
-        :returns: a dict smr -> rlzs
-        """
-        smltpath = operator.attrgetter('sm_lt_path')
-        smr_by_ltp = self.get_smr_by_ltp()
-        rlzs = self.get_realizations()
-        dic = {smr_by_ltp['~'.join(ltp)]: rlzs for ltp, rlzs in groupby(
-            rlzs, smltpath).items()}
-        return dic
-
-    def _rlzs_by_gsim(self, grp_id):
-        """
-        :returns: a dictionary gsim -> array of rlz indices
-        """
-        if not hasattr(self, '_rlzs_by_grp'):
+    def _rlzs_by_gsim(self, trt_smr):
+        if not hasattr(self, '_rlzs_by'):
             smr_by_ltp = self.get_smr_by_ltp()
             rlzs = self.get_realizations()
             acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
             for sm in self.sm_rlzs:
-                for gid in self.get_trt_smrs(sm.ordinal):
-                    trti, smr = divmod(gid, len(self.sm_rlzs))
+                for trtsmr in self.get_trt_smrs(sm.ordinal):
+                    trti, smr = divmod(trtsmr, len(self.sm_rlzs))
                     for rlz in rlzs:
                         idx = smr_by_ltp['~'.join(rlz.sm_lt_path)]
                         if idx == smr:
-                            acc[gid][rlz.gsim_rlz.value[trti]].append(
+                            acc[trtsmr][rlz.gsim_rlz.value[trti]].append(
                                 rlz.ordinal)
-            self._rlzs_by_grp = {}
-            for gid, dic in acc.items():
-                self._rlzs_by_grp[gid] = {
+            self._rlzs_by = {}
+            for trtsmr, dic in acc.items():
+                self._rlzs_by[trtsmr] = {
                     gsim: U32(rlzs) for gsim, rlzs in sorted(dic.items())}
-        return self._rlzs_by_grp[grp_id]
+        return self._rlzs_by[trt_smr]
 
-    def get_rlzs_by_gsim(self):
+    def get_rlzs_by_gsim(self, trt_smr):
         """
-        :returns: a dictionary trt_smr -> gsim -> rlzs
+        :param trt_smr: index or array of indices
+        :returns: a dictionary gsim -> array of rlz indices
         """
-        dic = {}
-        for sm in self.sm_rlzs:
-            for trt_smr in self.get_trt_smrs(sm.ordinal):
-                dic[trt_smr] = self._rlzs_by_gsim(trt_smr)
-        return dic
-
-    def get_rlzs_by_grp(self):
-        """
-        :returns: a dictionary grp_id -> [rlzis, ...]
-        """
-        dic = {}
-        for sm in self.sm_rlzs:
-            for trt_smr in self.get_trt_smrs(sm.ordinal):
-                grp = 'grp-%02d' % trt_smr
-                dic[grp] = list(self._rlzs_by_gsim(trt_smr).values())
-        return {grp_id: dic[grp_id] for grp_id in sorted(dic)}
-
-    def get_rlzs_by_gsim_list(self, list_of_trt_smrs):
-        """
-        :returns: a list of dictionaries rlzs_by_gsim, one for each grp_id
-        """
-        out = []
-        for grp_id, trt_smrs in enumerate(list_of_trt_smrs):
+        if isinstance(trt_smr, (numpy.ndarray, list, tuple)):
             dic = AccumDict(accum=[])
-            for trt_smr in trt_smrs:
-                for gsim, rlzs in self._rlzs_by_gsim(trt_smr).items():
+            for t in trt_smr:
+                for gsim, rlzs in self._rlzs_by_gsim(t).items():
                     dic[gsim].extend(rlzs)
-            out.append(dic)
-        return out
+            return dic
+        return self._rlzs_by_gsim(trt_smr)
 
     # FullLogicTree
     def __toh5__(self):

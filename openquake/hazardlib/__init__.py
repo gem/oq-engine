@@ -30,6 +30,7 @@ from openquake.hazardlib import (
 from openquake.hazardlib.source.rupture import (
     EBRupture, get_ruptures, _get_rupture)
 from openquake.hazardlib.calc.filters import IntegrationDistance
+from openquake.hazardlib.source_reader import get_csm
 
 
 bytrt = operator.attrgetter('tectonic_region_type')
@@ -54,7 +55,7 @@ def _get_sitecol(hparams, req_site_params):
     """
     inputs = hparams['inputs']
     if 'sites' in hparams:
-        sm = Oq(**hparams)
+        sm = contexts.Oq(**hparams)
         mesh = geo.Mesh.from_coords(hparams['sites'])
     elif 'sites' in inputs:
         data = open(inputs['sites']).read().replace(',', ' ').strip()
@@ -141,6 +142,9 @@ def read_hparams(job_ini):
                 params['inputs'][key[:-5]] = val
             else:
                 params[key] = val
+    params['imtls'] = general.DictArray(params['imtls'])
+    if 'poes' in params:
+        params['poes'] = valid.probabilities(params['poes'])
     return params
 
 
@@ -191,41 +195,6 @@ def get_flt(hparams, branchID=None):
     return logictree.FullLogicTree(smlt, gslt)
 
 
-class Oq(object):
-    def __init__(self, **hparams):
-        vars(self).update(hparams)
-
-    def get_reqv(self):
-        if 'reqv' not in self.inputs:
-            return
-        return {key: valid.RjbEquivalent(value)
-                for key, value in self.inputs['reqv'].items()}
-
-
-# used for debugging; use read_cmakers instead
-def get_cmakers(src_groups, full_lt, oq):
-    trt_smrs = []
-    for sg in src_groups:
-        try:
-            trt_smrs.append(sg.sources[0].trt_smrs)
-        except AttributeError: # for scenarios
-            trt_smrs.append([sg.sources[0].trt_smr])
-    rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
-    trts = list(full_lt.gsim_lt.values)
-    num_eff_rlzs = len(full_lt.sm_rlzs)
-    start = 0
-    cmakers = []
-    for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
-        trti = trt_smrs[grp_id][0] // num_eff_rlzs
-        cmaker = contexts.ContextMaker(trts[trti], rlzs_by_gsim, oq)
-        cmaker.trti = trti
-        cmaker.gidx = numpy.arange(start, start + len(rlzs_by_gsim))
-        cmaker.grp_id = grp_id
-        start += len(rlzs_by_gsim)
-        cmakers.append(cmaker)
-    return cmakers
-
-
 class Input(object):
     """
     An Input object has attributes
@@ -243,24 +212,44 @@ class Input(object):
         hparams.setdefault('cross_correl', None)
         hparams.setdefault('number_of_logic_tree_samples', 0)
         hparams.setdefault('random_seed', 42)
+        hparams.setdefault('ses_seed', 42)
         hparams.setdefault('reference_vs30_type', 600)
         hparams.setdefault('split_sources', True)
         hparams.setdefault('reqv', {})
         hparams.setdefault('min_iml', numpy.zeros(M))
-        self.oq = Oq(**hparams)
+        hparams.setdefault('rupture_mesh_spacing', 5.),
+        hparams.setdefault('complex_fault_mesh_spacing', 5.)
+        hparams.setdefault('width_of_mfd_bin', 1.0),
+        hparams.setdefault('area_source_discretization', 10.)
+        hparams.setdefault('minimum_magnitude', {'default': 0})
+        hparams.setdefault('source_id', None)
+        hparams.setdefault('discard_trts', '')
+        hparams.setdefault('floating_x_step', 0)
+        hparams.setdefault('floating_y_step', 0)
+        hparams.setdefault('source_nodes', '')
+        hparams.setdefault('infer_occur_rates', False)
+        hparams.setdefault('rlz_index', None)
+        hparams.setdefault('disagg_bin_edges', {})
+        hparams.setdefault('epsilon_star', False)
+        self.oq = contexts.Oq(**hparams)
         self.full_lt = get_flt(hparams)
         self.sitecol = _get_sitecol(
             hparams, self.full_lt.gsim_lt.req_site_params)
         self.srcstring = hparams.get('source_string')
         self.converter = sourceconverter.SourceConverter(
             hparams.get('investigation_time'),
-            hparams.get('rupture_mesh_spacing', 5.),
-            hparams.get('complex_fault_mesh_spacing'),
-            hparams.get('width_of_mfd_bin', 1.0),
-            hparams.get('area_source_discretization'),
-            hparams.get('minimum_magnitude', {'default': 0}),
-            hparams.get('source_id'),
-            discard_trts=hparams.get('discard_trts', ''))
+            hparams['rupture_mesh_spacing'],
+            hparams['complex_fault_mesh_spacing'],
+            hparams['width_of_mfd_bin'],
+            hparams['area_source_discretization'],
+            hparams['minimum_magnitude'],
+            hparams['source_id'],
+            hparams['discard_trts'],
+            hparams['floating_x_step'],
+            hparams['floating_y_step'],
+            hparams['source_nodes'],
+            hparams['infer_occur_rates'],
+        )
         if read_all:
             self.groups, self.cmakers = self.get_groups_cmakers()
 
@@ -284,6 +273,8 @@ class Input(object):
             grp = sourceconverter.SourceGroup(src.tectonic_region_type)
             grp.sources = list(src)
             groups = [grp]
+        elif 'source_model_logic_tree' in self.oq.inputs:
+            groups = get_csm(self.oq, self.full_lt).src_groups
         else:
             raise KeyError('Missing source model or rupture')
 
@@ -320,7 +311,7 @@ class Input(object):
                 for ebr in grp:
                     ebr.n_occ = ngmfs * num_rlzs
 
-        return groups, get_cmakers(groups, self.full_lt, self.oq)
+        return groups, contexts.get_cmakers(groups, self.full_lt, self.oq)
 
     @property
     def cmaker(self):

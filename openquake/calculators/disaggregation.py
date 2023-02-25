@@ -27,11 +27,11 @@ from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
     AccumDict, pprod, agg_probs, shortlist)
 from openquake.baselib.python3compat import encode
-from openquake.hazardlib import stats
+from openquake.hazardlib import stats, probability_map
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.contexts import (
     read_cmakers, read_src_mutex, read_ctx_by_grp)
-from openquake.commonlib import util, calc
+from openquake.commonlib import util
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -62,7 +62,7 @@ def _hmap4(rlzs, iml_disagg, imtls, poes_disagg, curves):
             elif curve:
                 rlz = rlzs[s, z]
                 max_poe = curve[imt].max()
-                arr[s, m, :, z] = calc.compute_hazard_maps(
+                arr[s, m, :, z] = probability_map.compute_hazard_maps(
                     curve[imt], imtls[imt], poes_disagg)
                 for iml, poe in zip(arr[s, m, :, z], poes_disagg):
                     if iml == 0:
@@ -122,13 +122,12 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
                 iml2 = iml3[:, :, z]
                 if rlz not in dis.g_by_rlz or iml2.sum() == 0:
                     continue  # do not disaggregate
-                rates6D = disagg.to_rates(dis.disagg6D(iml2, rlz))
+                res[rlz] = rates6D = disagg.to_rates(dis.disagg6D(iml2, rlz))
                 if rwdic:  # compute mean rates and store them in the 0 key
-                    if 0 not in res:
-                        res[0] = 0
-                    res[0] += rates6D * rwdic[rlz]
-                else:  # store the rates in the rlz key
-                    res[rlz] = rates6D
+                    if 'mean' not in res:
+                        res['mean'] = rates6D * rwdic[rlz]
+                    else:
+                        res['mean'] += rates6D * rwdic[rlz]
             out.append(res)
     return out
 
@@ -318,10 +317,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.debug(f'{totweight=}, {maxsize=}')
 
         s = self.shapedic
-        if self.Z == 1 or oq.individual_rlzs:
-            weights = None
-        else:
+        if self.Z > 1:
             weights = self.datastore['weights'][:]
+        else:
+            weights = None
         mutex_by_grp = self.datastore['mutex_by_grp'][:]
         for grp_id, ctxt in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
@@ -335,10 +334,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             if weights is None:
                 rwdic = {}  # don't compute means
             else:
-                rwdic = {}
-                for rlzs in cmaker.gsims.values():
-                    for rlz in rlzs:
-                        rwdic[rlz] = weights[rlz]
+                rwdic = {rlz: weights[rlz]
+                         for rlzs in cmaker.gsims.values() for rlz in rlzs}
 
             # submit single task
             ntasks = len(ctxt) * cmaker.Z / maxsize
@@ -395,13 +392,19 @@ class DisaggregationCalculator(base.HazardCalculator):
         # the DEBUG dictionary is populated only for OQ_DISTRIBUTE=no
         for sid, pnes in disagg.DEBUG.items():
             print('site %d, mean pnes=%s' % (sid, pnes))
+        mean = {}
+        indv = {}
+        for s, r in results:
+            if r == 'mean':
+                mean[s, 0] = results[s, r]
+            else:
+                indv[s, self.sr2z[s, r]] = results[s, r]
         with self.monitor('saving disagg results'):
             logging.info('Extracting and saving the PMFs')
-            if self.Z == 1 or self.oqparam.individual_rlzs:
-                res = {(s, self.sr2z[s, r]): results[s, r] for s, r in results}
-                self.save_disagg_results(res, 'disagg-rlzs')
-            else:  # save mean PMFs
-                self.save_disagg_results(results, 'disagg-stats')
+            if indv:  # save individual realizations
+                self.save_disagg_results(indv, 'disagg-rlzs')
+            if mean:  # save mean PMFs
+                self.save_disagg_results(mean, 'disagg-stats')
 
     def save_bin_edges(self, all_edges):
         """

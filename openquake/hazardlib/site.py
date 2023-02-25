@@ -206,6 +206,7 @@ class SiteCollection(object):
     """ % '\n'.join('    - %s: %s' % item
                     for item in sorted(site_param_dt.items())
                     if item[0] not in ('lon', 'lat'))
+    req_site_params = ()
 
     @classmethod
     def from_usgs_shakemap(cls, shakemap_array):
@@ -249,6 +250,7 @@ class SiteCollection(object):
                                                        len(depths))
         self = object.__new__(cls)
         self.complete = self
+        self.req_site_params = req_site_params
         req = ['sids', 'lon', 'lat', 'depth'] + sorted(
             par for par in req_site_params if par not in ('lon', 'lat'))
         if 'vs30' in req and 'vs30measured' not in req:
@@ -524,6 +526,15 @@ class SiteCollection(object):
                 self._set(name, 0)  # default
                 # NB: by default reference_vs30_type == 'measured' is 1
                 # but vs30measured is 0 (the opposite!!)
+
+        # sanity check
+        for param in self.req_site_params:
+            if param in ignore:
+                continue
+            dt = site_param_dt[param]
+            if dt is numpy.float64 and (self.array[param] == 0.).all():
+                raise ValueError('The site parameter %s is always zero: please '
+                                 'check the site model' % param)
         return site_model
 
     def within(self, region):

@@ -296,7 +296,7 @@ def view_full_lt(token, dstore):
     if not full_lt.num_samples and num_paths > 15000:
         return '<%d realizations>' % num_paths
     try:
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['trt_smrs'])
+        rlzs_by_gsim_list = map(full_lt.get_rlzs_by_gsim, dstore['trt_smrs'])
     except KeyError:  # for scenario trt_smrs is missing
         rlzs_by_gsim_list = [full_lt._rlzs_by_gsim(0)]
     header = ['grp_id', 'gsim', 'rlzs']
@@ -947,25 +947,24 @@ def view_mean_disagg(token, dstore):
     return numpy.array(sorted(tbl), dt(['key'] + list(kd)))
 
 
-@view.add('disagg_by_mag')
-def view_disagg_by_mag(token, dstore):
+@view.add('disagg')
+def view_disagg(token, dstore):
     """
-    Returns a table with the sources contributing more than 10%
-    of the highest source.
+    Example: $ oq show disagg Mag
+    Returns a table poe, imt, mag, contribution for the first site
     """
-    try:
-        site_id = int(token.split(':')[1])
-    except IndexError:
-        site_id = 0
+    kind = token.split(':')[1]
+    assert kind in ('Mag', 'Dist', 'TRT'), kind
+    site_id = 0
     if 'disagg-stats' in dstore:
-        data = dstore['disagg-stats/Mag'][site_id, ..., 0]  # (Ma, M, P)
+        data = dstore['disagg-stats/' + kind][site_id, ..., 0]  # (:, M, P)
     else:
-        data = dstore['disagg-rlzs/Mag'][site_id, ..., 0]  # (Ma, M, P)
+        data = dstore['disagg-rlzs/' + kind][site_id, ..., 0]  # (:, M, P)
     Ma, M, P = data.shape
     oq = dstore['oqparam']
     imts = list(oq.imtls)
     dtlist = [('poe', float), ('imt', (numpy.string_, 10)),
-              ('magbin', int), ('prob', float)]
+              (kind.lower() + 'bin', int), ('prob', float)]
     lst = []
     for p, m, ma in itertools.product(range(P), range(M), range(Ma)):
         lst.append((oq.poes[p], imts[m], ma, data[ma, m, p]))
