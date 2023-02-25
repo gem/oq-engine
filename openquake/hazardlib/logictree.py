@@ -1012,11 +1012,7 @@ class FullLogicTree(object):
                     rlz.weight = rlz.weight / tot_weight
         return rlzs
 
-    def get_rlzs_by_gsim(self, trt_smr):
-        """
-        :param trt_smr: integer index
-        :returns: a dictionary gsim -> array of rlz indices
-        """
+    def _rlzs_by_gsim(self, trt_smr):
         if not hasattr(self, '_rlzs_by'):
             smr_by_ltp = self.get_smr_by_ltp()
             rlzs = self.get_realizations()
@@ -1035,20 +1031,18 @@ class FullLogicTree(object):
                     gsim: U32(rlzs) for gsim, rlzs in sorted(dic.items())}
         return self._rlzs_by[trt_smr]
 
-    # converts grp_id -> trt_smrs indices
-    def get_rlzs_by_gsim_list(self, list_of_trt_smrs):
+    def get_rlzs_by_gsim(self, trt_smr):
         """
-        :param list_of_trt_smrs: lists of indices, one per source group
-        :returns: a list of dictionaries rlzs_by_gsim, one for each grp_id
+        :param trt_smr: index or array of indices
+        :returns: a dictionary gsim -> array of rlz indices
         """
-        out = []
-        for grp_id, trt_smrs in enumerate(list_of_trt_smrs):
+        if isinstance(trt_smr, (numpy.ndarray, list, tuple)):
             dic = AccumDict(accum=[])
-            for trt_smr in trt_smrs:
-                for gsim, rlzs in self.get_rlzs_by_gsim(trt_smr).items():
+            for t in trt_smr:
+                for gsim, rlzs in self._rlzs_by_gsim(t).items():
                     dic[gsim].extend(rlzs)
-            out.append(dic)
-        return out
+            return dic
+        return self._rlzs_by_gsim(trt_smr)
 
     # FullLogicTree
     def __toh5__(self):
