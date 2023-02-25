@@ -522,18 +522,6 @@ class ClassicalCalculator(base.HazardCalculator):
     def init_poes(self):
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
-        if self.oqparam.hazard_calculation_id:
-            full_lt = self.datastore.parent['full_lt']
-            trt_smrs = self.datastore.parent['trt_smrs'][:]
-        else:
-            full_lt = self.csm.full_lt
-            trt_smrs = self.csm.get_trt_smrs()
-        self.grp_ids = numpy.arange(len(trt_smrs))
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
-        rlzs_by_g = []
-        for rlzs_by_gsim in rlzs_by_gsim_list:
-            for rlzs in rlzs_by_gsim.values():
-                rlzs_by_g.append(rlzs)
         self.datastore.create_df('_poes', poes_dt.items())
         self.datastore.create_dset('_poes/slice_by_sid', slice_dt)
         # NB: compressing the dataset causes a big slowdown in writing :-(
