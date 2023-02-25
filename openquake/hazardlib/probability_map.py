@@ -46,22 +46,6 @@ else:
             array[:, r] = (1. - (1. - array[:, r]) * (1. - other))
 
 
-def combine(pmap, rlz_groups):
-    """
-    Convert a ProbabilityMap with shape (N, L, G) into a ProbabilityMap
-    with shape (N, L, R), being G the number of realization groups, which
-    are list of integers in the range 0..R-1.
-    """
-    N, L, G = pmap.array.shape
-    R = max(max(rlzs) for rlzs in rlz_groups) + 1
-    out = ProbabilityMap(range(N), L, R).fill(0.)
-    for g, rlz_group in enumerate(rlz_groups):
-        rlzs = U32(rlz_group)
-        for sid in range(N):
-            combine_probs(out.array[sid], pmap.array[sid, :, g], rlzs)
-    return out
-
-
 def get_mean_curve(dstore, imt, site_id=0):
     """
     Extract the mean hazard curve from the datastore for the first site.
@@ -362,6 +346,22 @@ class ProbabilityMap(object):
         :returns: a new Pmap associated to a reshaped array
         """
         return self.new(self.array.reshape(N, M, P))
+
+    # used in calc/disagg_test.py
+    def expand(self, rlz_groups):
+        """
+        Convert a ProbabilityMap with shape (N, L, G) into a ProbabilityMap
+        with shape (N, L, R), being G the number of realization groups, which
+        are list of integers in the range 0..R-1.
+        """
+        N, L, G = self.array.shape
+        R = max(max(rlzs) for rlzs in rlz_groups) + 1
+        out = ProbabilityMap(range(N), L, R).fill(0.)
+        for g, rlz_group in enumerate(rlz_groups):
+            rlzs = U32(rlz_group)
+            for sid in range(N):
+                combine_probs(out.array[sid], self.array[sid, :, g], rlzs)
+        return out
 
     # used in calc_hazard_curves
     def convert(self, imtls, nsites, idx=0):

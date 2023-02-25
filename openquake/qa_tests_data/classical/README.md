@@ -59,7 +59,7 @@
 | case_57 | Test for sampling AvgPoeGMPE |
 | case_58 | Test for the truncatedGRFromSlipAbsolute epistemic uncertainty |
 | case_59 | Test for NRCan15SiteTerm |
-| case_60 | Test CampbellBozorgnia2003NSHMP2007|
+| case_60 | Test CampbellBozorgnia2003NSHMP2007 and no hazard|
 | case_61 | Test KiteFault source|
 | case_62 | Tests a sample model from SHERIFS |
 | case_63 | Test for GMM with soiltype |
