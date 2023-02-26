@@ -85,9 +85,12 @@ def get_trt_by_src(source_model_file):
     """
     :returns: a dictionary source ID -> tectonic region type of the source
     """
-    pieces = TRT_REGEX.split(source_model_file.read())
+    xml = source_model_file.read()
+    pieces = TRT_REGEX.split(xml)
+    nrml05 = re.search('<sourceGroup', pieces[0])
+    start = 2 if nrml05 else 0  # trt before (start=2) or after src_id (start=0)
     trt_by_src = {}
-    for text, trt in zip(pieces[2::2], pieces[1::2]):
+    for text, trt in zip(pieces[start::2], pieces[1::2]):
         for src_id in ID_REGEX.findall(text):
             trt_by_src[src_id] = trt
     return trt_by_src
