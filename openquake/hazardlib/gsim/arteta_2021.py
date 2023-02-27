@@ -83,14 +83,6 @@ def _compute_site_term(C_SITE, vs30):
     return f_sites
 
 
-def _compute_forearc_backarc_term(vs30):
-    """
-    Computes the forearc/backarc scaling term given by equation (4)
-    """
-    f_faba = np.zeros(len(vs30))
-    return f_faba
-
-
 class ArtetaEtAl2021InterVs30(GMPE):
     """
     Implements the model of Arteta et al (2021) as described in "Ground-motion
@@ -114,11 +106,8 @@ class ArtetaEtAl2021InterVs30(GMPE):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see section 4.5
 
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Site amplification is dependent only upon Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -148,8 +137,7 @@ class ArtetaEtAl2021InterVs30(GMPE):
             mean[m] = (_compute_base_term(C) +
                        _compute_magnitude_term(C, ctx.mag) +
                        _compute_distance_term(C, ctx.rrup, ctx.mag) +
-                       _compute_site_term(C_SITE, ctx.vs30) +
-                       _compute_forearc_backarc_term(ctx.vs30))
+                       _compute_site_term(C_SITE, ctx.vs30))
             sig[m], tau[m], phi[m] = _get_stddevs(C, ctx.rrup)
 
     # Actualizado, los terminos de la incertidumbre se ajustaron paro T 0.03
@@ -247,13 +235,10 @@ class ArtetaEtAl2021Inter(ArtetaEtAl2021InterVs30):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see section 4.5
 
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
-    #: Site amplification is dependent on the period and amplitude of HVRSR spectra
+    #: Amplification is dependent on the period and amplitude of HVRSR spectra
     REQUIRES_SITES_PARAMETERS = {'THV', 'PHV'}
 
     #: Required rupture parameters are only magnitude for the interface model
@@ -281,8 +266,7 @@ class ArtetaEtAl2021Inter(ArtetaEtAl2021InterVs30):
             mean[m] = (_compute_base_term(C) +
                        _compute_magnitude_term(C, ctx.mag) +
                        _compute_distance_term(C, ctx.rrup, ctx.mag) +
-                       _compute_site_term_Period(C_SITE, ctx.THV, ctx.PHV) +
-                       _compute_forearc_backarc_term(ctx.THV))
+                       _compute_site_term_Period(C_SITE, ctx.THV, ctx.PHV))
             sig[m], tau[m], phi[m] = _get_stddevs(C, ctx.rrup)
 
 
@@ -291,7 +275,7 @@ def _compute_magnitude_term_slab(C, mag):
     Returns the magnitude scaling term
     """
     idx = mag <= CONSTS['C1Slab']
-    fmag = C["Teta3"] * ((10.0 - mag) ** 2.)
+    fmag = C["Teta3"] * (10.0 - mag) ** 2.
     fmag[idx] = C["Teta2"] * (mag[idx] - CONSTS['C1Slab']) + fmag[idx]
     return fmag
 
@@ -336,8 +320,8 @@ class ArtetaEtAl2021SlabVs30(ArtetaEtAl2021InterVs30):
     model for subduction earthquakes in northern South America" by Arteta et
     al. (2021) - Earthquake Spectra, https://doi.org/10.1177/87552930211027585
 
-    Soil term is associated with Vs30 using the simplification given in terms of natural period
-    of HVRSR and mean value of P*
+    Soil term is associated with Vs30 using the simplification given in terms
+    of natural period of HVRSR and mean value of P*
     """
     #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
@@ -427,7 +411,6 @@ class ArtetaEtAl2021SlabVs30(ArtetaEtAl2021InterVs30):
 
 
 class ArtetaEtAl2021Slab(ArtetaEtAl2021SlabVs30):
-
     """
     Implements the model of Arteta et al (2021) as described in "Ground-motion
     model for subduction earthquakes in northern South America" by Arteta et
@@ -435,10 +418,9 @@ class ArtetaEtAl2021Slab(ArtetaEtAl2021SlabVs30):
 
     Soil term depends of natural perod and pick value of HVRSR spectra
     """
-
     #: Site amplification is dependent on the period and amplitude of HVRSR
     #: spectra
-    REQUIRES_SITES_PARAMETERS = {'THV', 'PHV'}
+    REQUIRES_SITES_PARAMETERS = {'THV', 'PHV', 'backarc'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -455,7 +437,6 @@ class ArtetaEtAl2021Slab(ArtetaEtAl2021SlabVs30):
             C_SITE = self.COEFFS_SITE[imt]
 
             # Get full model
-
             mean[m] = (_compute_base_term(C) +
                        _compute_magnitude_term_slab(C, ctx.mag) +
                        _compute_distance_term_slab(C, ctx.rhypo, ctx.mag) +
