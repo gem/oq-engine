@@ -1,3 +1,7 @@
+  [Julián Santiago Montejo Espitia]
+  * Contributed the GMPE Arteta et al. (2023) for crustal events on northern
+    South America
+
   [Michele Simionato]
   * Setting both `sites` and `site_model_file` now works also for models
     with nonstandard site parameters, like EUR
