@@ -36,6 +36,7 @@ import string
 import random
 import unittest
 import secrets
+import csv
 
 import django
 from django.test import Client
@@ -497,15 +498,36 @@ class EngineServerTestCase(django.test.TestCase):
                     self.assertIn(f'engine/{job_id}/outputs', email_content)
         self.post('%s/remove' % job_id)
 
+    def get_tested_lon_lat(self, model):
+        test_sites_csv = 'openquake/qa_tests_data/mosaic/test_sites.csv'
+        with open(test_sites_csv, 'r') as csv_file:
+            csv_reader = csv.DictReader(csv_file)
+            for row in csv_reader:
+                if row['model'] == model:
+                    break
+            else:
+                raise ValueError(f'No tested site was found for {model}')
+            return float(row['lon']), float(row['lat'])
+
     def test_aelo_successful_run_CCA(self):
+        lon, lat = self.get_tested_lon_lat('CCA')
         params = dict(
-            lon='-86.0', lat='12.0', vs30='800.0', siteid='CCA_SITE')
+            lon=lon, lat=lat, vs30='800.0', siteid='CCA_SITE')
         self.aelo_run(params)
 
-    def test_aelo_successful_run_EUR(self):
-        params = dict(
-            lon='25.0', lat='35.0', vs30='800.0', siteid='EUR_SITE')
-        self.aelo_run(params)
+    # NOTE: we can easily add tests for other models as follows:
+
+    # def test_aelo_successful_run_EUR(self):
+    #     lon, lat = self.get_tested_lon_lat('EUR')
+    #     params = dict(
+    #         lon=lon, lat=lat, vs30='800.0', siteid='EUR_SITE')
+    #     self.aelo_run(params)
+
+    # def test_aelo_successful_run_JPN(self):
+    #     lon, lat = self.get_tested_lon_lat('JPN')
+    #     params = dict(
+    #         lon=lon, lat=lat, vs30='800.0', siteid='JPN_SITE')
+    #     self.aelo_run(params)
 
     def test_aelo_failing_run_mosaic_model_not_found(self):
         params = dict(
