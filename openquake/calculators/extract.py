@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.parse import parse_qs
-from unittest.mock import Mock
 from functools import lru_cache
 import operator
 import logging
@@ -867,16 +866,16 @@ def extract_aggregate(dstore, what):
 def extract_losses_by_asset(dstore, what):
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt(F32)
-    rlzs = dstore['full_lt'].get_realizations()
+    R = dstore['full_lt'].get_num_paths()
     stats = oq.hazard_stats()  # statname -> statfunc
     assets = util.get_assets(dstore)
     if 'losses_by_asset' in dstore:
         losses_by_asset = dstore['losses_by_asset'][()]
-        for rlz in rlzs:
+        for r in range(R):
             # I am exporting the 'mean' and ignoring the 'stddev'
-            losses = cast(losses_by_asset[:, rlz.ordinal]['mean'], loss_dt)
+            losses = cast(losses_by_asset[:, r]['mean'], loss_dt)
             data = util.compose_arrays(assets, losses)
-            yield 'rlz-%03d' % rlz.ordinal, data
+            yield 'rlz-%03d' % r, data
     elif 'avg_losses-stats' in dstore:
         # only QGIS is testing this
         avg_losses = avglosses(dstore, loss_dt.names, 'stats')  # shape ASL
@@ -989,15 +988,14 @@ def build_damage_array(data, damage_dt):
 def extract_damages_npz(dstore, what):
     oq = dstore['oqparam']
     damage_dt = build_damage_dt(dstore)
-    rlzs = dstore['full_lt'].get_realizations()
+    R = dstore['full_lt'].get_num_paths()
     if oq.collect_rlzs:
-        rlzs = [Mock(ordinal=0)]
+        R = 1
     data = dstore['damages-rlzs']
     assets = util.get_assets(dstore)
-    for rlz in rlzs:
-        damages = build_damage_array(data[:, rlz.ordinal], damage_dt)
-        yield 'rlz-%03d' % rlz.ordinal, util.compose_arrays(
-            assets, damages)
+    for r in range(R):
+        damages = build_damage_array(data[:, r], damage_dt)
+        yield 'rlz-%03d' % r, util.compose_arrays(assets, damages)
 
 
 # tested on oq-risk-tests event_based/etna
