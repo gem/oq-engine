@@ -502,7 +502,7 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_with_site_model(self):
         oq = readinput.get_oqparam('job.ini', case_34)
         ssclt = readinput.get_composite_source_model(oq)
-        self.assertEqual(ssclt.source_model_lt.source_ids['956'], ['b1'])
+        self.assertEqual(ssclt.source_model_lt.sms_by_src['956'], ['b1'])
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):
