@@ -6,7 +6,7 @@
 | case_4  | Test SimpleFault, 1 rlz, 1 site|
 | case_5  | Test ComplexFault, 1 rlz, 1 site|
 | case_6  | Test 2 sources, 1 rlz, 1 site|
-| case_7  | Test 2 source models with a duplicate source, i.e. nontrivial trt_smrs|
+| case_7  | Test 3 source models with a duplicate source, i.e. nontrivial trt_smrs|
 | case_8  | Source Specific Logic Tree on 1 source, the other ignored|
 | case_9  | Source Specific Logic Tree on 1 source|
 | case_10 | Source Specific Logic Tree on 1 source|

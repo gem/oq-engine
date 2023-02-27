@@ -2,7 +2,7 @@
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
       xmlns:gml="http://www.opengis.net/gml">
     <sourceModel name="Classical Hazard QA Test, Case 7 source model 3">
-        <simpleFaultSource id="1" name="simple fault source" tectonicRegion="active shallow crust">
+        <simpleFaultSource id="3" name="fault3" tectonicRegion="active shallow crust">
             <simpleFaultGeometry>
                 <gml:LineString>
                     <gml:posList>

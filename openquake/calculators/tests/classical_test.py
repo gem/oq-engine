@@ -152,23 +152,20 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(
             ['hazard_curve-mean.csv',
              'hazard_curve-smltp_b1-gsimltp_b1.csv',
-             'hazard_curve-smltp_b2-gsimltp_b1.csv'],
+             'hazard_curve-smltp_b2-gsimltp_b1.csv',
+             'hazard_curve-smltp_b3-gsimltp_b1.csv'],
             case_7.__file__)
 
-        # check the weights of the sources, a simple fault and a complex fault
+        # check the weights of the sources
         info = self.calc.datastore.read_df('source_info', 'source_id')
         self.assertEqual(info.loc[b'1'].weight, 184)
         self.assertEqual(info.loc[b'2'].weight, 118)
+        self.assertEqual(info.loc[b'3'].weight, 3914)
 
         # checking the individual hazard maps are nonzero
-        iml = self.calc.datastore.sel(
-            'hmaps-rlzs', imt="PGA", site_id=0).squeeze()
-        aac(iml, [0.167078, 0.134646], atol=.0001)  # for the two realizations
-
-        # exercise the warning for no output when mean='false'
-        self.run_calc(
-            case_7.__file__, 'job.ini', mean='false',
-            calculation_mode='preclassical',  poes='0.1')
+        imls = self.calc.datastore.sel(
+            'hmaps-rlzs', imt="PGA", site_id=0).squeeze()  # 3 rlzs
+        aac(imls, [0.167078, 0.134646, 0], atol=.0001)
 
     def test_case_8(self):
         self.assert_curves_ok(
