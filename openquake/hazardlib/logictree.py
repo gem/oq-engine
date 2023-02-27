@@ -400,13 +400,18 @@ class SourceModelLogicTree(object):
                         same.append(br)
                     else:
                         zero.append(br)
-                b0 = zero[0]
-                for br in zero[1:]:
-                    b0.weight += br.weight
-                b1 = same[0]
-                for br in same[1:]:
-                    b1.weight += br.weight
-                bset.branches = [b1, b0]
+                newbranches = []
+                if same:
+                    b1 = same[0]
+                    for br in same[1:]:
+                        b1.weight += br.weight
+                    newbranches.append(b1)
+                if zero:
+                    b0 = zero[0]
+                    for br in zero[1:]:
+                        b0.weight += br.weight
+                    newbranches.append(b0)
+                bset.branches = newbranches
             ats = dic.get('applyToSources')
             if ats and src_id not in ats:
                 bset.collapse()
