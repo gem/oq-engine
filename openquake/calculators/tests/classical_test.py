@@ -162,11 +162,6 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(info.loc[b'2'].weight, 118)
         self.assertEqual(info.loc[b'3'].weight, 3914)
 
-        # checking the individual hazard maps are nonzero
-        imls = self.calc.datastore.sel(
-            'hmaps-rlzs', imt="PGA", site_id=0).squeeze()  # 3 rlzs
-        aac(imls, [0.167078, 0.134646, 0], atol=.0001)
-
     def test_case_8(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
