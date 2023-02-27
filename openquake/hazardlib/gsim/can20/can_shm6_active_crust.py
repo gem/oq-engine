@@ -27,6 +27,7 @@ import numpy as np
 
 import openquake.hazardlib.gsim.boore_2014 as BA14
 import openquake.hazardlib.gsim.abrahamson_2014 as ASK14
+import openquake.hazardlib.gsim.campbell_bozorgnia_2014 as CB14
 
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
@@ -37,6 +38,9 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 
 METRES_PER_KM = 1000.
+
+MAX_SA = 10.
+MIN_SA = 0.05
 
 
 def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
@@ -86,8 +90,6 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
     See also header in CanadaSHM6_ActiveCrust.py
     """
     experimental = True
-    MAX_SA = 10.
-    MIN_SA = 0.05
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -101,10 +103,10 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
         for imt in imts:
             if (imt != PGV() and
                 (imt.period != 0 and
-                    (imt.period < self.MIN_SA or imt.period > self.MAX_SA))):
+                    (imt.period < MIN_SA or imt.period > MAX_SA))):
                 raise ValueError(str(imt) + ' is not supported. SA must be in '
-                                 + 'range of ' + str(self.MIN_SA) + 's and '
-                                 + str(self.MAX_SA) + 's.')
+                                 + 'range of ' + str(MIN_SA) + 's and '
+                                 + str(MAX_SA) + 's.')
 
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
@@ -136,8 +138,6 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(GMPE):
     See also header in CanadaSHM6_ActiveCrust.py
     """
     experimental = True
-    MAX_SA = 10.
-    MIN_SA = 0.05
 
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -184,11 +184,11 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(GMPE):
         """
 
         # CSHM6 results only valid for PGV, PGA and 0.05 - 10s
-        if imt != PGV() and (imt.period != 0 and (imt.period < self.MIN_SA or
-                             imt.period > self.MAX_SA)):
+        if imt != PGV() and (imt.period != 0 and (imt.period < MIN_SA or
+                             imt.period > MAX_SA)):
             raise ValueError(str(imt) + ' is not supported. SA must be in '
-                             + 'range of ' + str(self.MIN_SA) + 's and '
-                             + str(self.MAX_SA) + 's.')
+                             + 'range of ' + str(MIN_SA) + 's and '
+                             + str(MAX_SA) + 's.')
 
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
@@ -460,8 +460,6 @@ class CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
     """
     REQUIRES_SITES_PARAMETERS = {'vs30measured', 'vs30'}
     experimental = True
-    MAX_SA = 10.
-    MIN_SA = 0.05
 
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
@@ -474,11 +472,11 @@ class CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
         for m, imt in enumerate(imts):
             # CSHM6 results only valid for PGV, PGA and 0.05 - 10s
             if (imt != PGV() and
-                    (imt.period != 0 and (imt.period < self.MIN_SA or
-                     imt.period > self.MAX_SA))):
+                    (imt.period != 0 and (imt.period < MIN_SA or
+                     imt.period > MAX_SA))):
                 raise ValueError(str(imt) + ' is not supported. SA must be in '
-                                + 'range of ' + str(self.MIN_SA) + 's and '
-                                + str(self.MAX_SA) + 's.')
+                                + 'range of ' + str(MIN_SA) + 's and '
+                                + str(MAX_SA) + 's.')
 
         # sites.vs30 = sites.vs30.astype(float) # bug in ASK14 if vs30 is int?
 
@@ -506,6 +504,60 @@ class CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
                 self.region, C, imt, ctx, sa1180)
 
 
+def _get_shallow_site_response_term_cb14(C, vs30, pga_rock, imt):
+    """
+    Returns the mean values for a specific IMT
+
+    CanadaSHM6 edits: modified linear site term for Vs30 > 1100
+    """
+    # Native site factor for CB14
+    cb14_vs = CB14._get_shallow_site_response_term(C, vs30, pga_rock)
+
+    # Need site factors at Vs30 = 760, 1100 and 2000 to calculate
+    # CanadaSHM6 hard rock site factors
+    cb14_1100 = CB14._get_shallow_site_response_term(C, np.array([1100.]),
+                                                        np.array([0.]))
+    cb14_760 = CB14._get_shallow_site_response_term(C, np.array([760.]),
+                                                    np.array([0.]))
+    cb14_2000 = CB14._get_shallow_site_response_term(C, np.array([2000.]),
+                                                        np.array([0.]))
+
+    # CB14 amplification factors relative to Vs30=760 to be consistent
+    # with CanadaSHM6 hardrock site factor
+    cb14_2000div760 = cb14_2000[0] - cb14_760[0]
+    cb14_1100div760 = cb14_1100[0] - cb14_760[0]
+
+    # CanadaSHM6 hard rock site factor
+    F = CanadaSHM6_hardrock_site_factor(cb14_1100div760, cb14_2000div760,
+                                        vs30[vs30 >= 1100], imt)
+
+    # for Vs30 > 1100 add CB14 amplification at 760 and CanadaSHM6 factor
+    cb14_vs[vs30 >= 1100] = F + cb14_760
+
+    return CB14_vs
+
+
+def get_mean_values_cb14(C, ctx, imt, a1100=None):
+    """
+    Returns the mean values for a specific IMT
+    """
+    if isinstance(a1100, np.ndarray):
+        # Site model defined
+        temp_vs30 = ctx.vs30
+    else:
+        # Default site model
+        temp_vs30 = 1100.0 * np.ones(len(ctx))
+
+    return (CB14._get_magnitude_term(C, ctx.mag) +
+            CB14._get_geometric_attenuation_term(C, ctx.mag, ctx.rrup) +
+            CB14._get_style_of_faulting_term(C, ctx) +
+            CB14._get_hanging_wall_term(C, ctx) +
+            _get_shallow_site_response_term_cb14(C, temp_vs30, a1100, imt) +
+            CB14._get_hypocentral_depth_term(C, ctx) +
+            CB14._get_fault_dip_term(C, ctx) +
+            CB14._get_anelastic_attenuation_term(C, ctx.rrup))
+
+
 class CanadaSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
     """
     Campbell and Bozorgnia, 2014 with CanadaSHM6 modifications to amplification
@@ -513,115 +565,68 @@ class CanadaSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
     mean values on the GMM-centered z1pt0 value) and limited to the period
     range of 0.05 - 10s.
 
-    See also header in CanadaSHM6_ActiveCrust.py
+    See also description in the header
     """
     REQUIRES_SITES_PARAMETERS = {'vs30'}
     experimental = True
-    MAX_SA = 10.
-    MIN_SA = 0.05
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
-
-        CanadaSHM6 edits: added IMT to get_mean_values()
-                          limited to the period range of 0.05 - 10s
         """
 
-        # CSHM6 results only valid for PGV, PGA and 0.05 - 10s
-        if imt != PGV() and (imt.period != 0 and (imt.period < self.MIN_SA or
-                             imt.period > self.MAX_SA)):
-            raise ValueError(str(imt) + ' is not supported. SA must be in '
-                             + 'range of ' + str(self.MIN_SA) + 's and '
-                             + str(self.MAX_SA) + 's.')
+        for m, imt in enumerate(imts):
+            # CSHM6 results only valid for PGV, PGA and 0.05 - 10s
+            if (imt != PGV() and
+                    (imt.period != 0 and (imt.period < MIN_SA or
+                     imt.period > MAX_SA))):
+                raise ValueError(str(imt) + ' is not supported. SA must be in '
+                                + 'range of ' + str(MIN_SA) + 's and '
+                                + str(MAX_SA) + 's.')
 
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type and for PGA
-        C = self.COEFFS[imt]
+        CB14._update_ctx(self, ctx)
         C_PGA = self.COEFFS[PGA()]
-
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
-        pga1100 = np.exp(self.get_mean_values(C_PGA, sites, rup, dists, None,
-                                              imt))
-        # Get mean and standard deviations for IMT
-        mean = self.get_mean_values(C, sites, rup, dists, pga1100, imt)
-        if isinstance(imt, PGV) is False and imt.period <= 0.25:
-            # According to Campbell & Bozorgnia (2013) [NGA West 2 Report]
-            # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
-            # Get PGA on soil
-            pga = self.get_mean_values(C_PGA, sites, rup, dists, pga1100, imt)
-            idx = mean <= pga
-            mean[idx] = pga[idx]
+        pga1100 = np.exp(get_mean_values_cb14(C_PGA, ctx, imt))
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            # Get mean and standard deviations for IMT
+            mean[m] = get_mean_values_cb14(C, ctx, imt, pga1100)
+            if imt.string[:2] == "SA" and imt.period < 0.25:
+                # According to Campbell & Bozorgnia (2013) [NGA West 2 Report]
+                # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
+                # Get PGA on soil
+                pga = get_mean_values_cb14(C_PGA, ctx, imt, pga1100)
+                idx = mean[m] <= pga
+                mean[m, idx] = pga[idx]
 
-        # Get standard deviations
-        stddevs = self._get_stddevs(C,
-                                    C_PGA,
-                                    rup,
-                                    sites,
-                                    pga1100,
-                                    stddev_types)
-        return mean, stddevs
+            # Get stddevs for PGA on basement rock
+            tau_lnpga_b = CB14._get_taulny(C_PGA, ctx.mag)
+            phi_lnpga_b = np.sqrt(CB14._get_philny(C_PGA, ctx.mag) ** 2. -
+                                  CB14.CONSTS["philnAF"] ** 2.)
 
-    def get_mean_values(self, C, sites, rup, dists, a1100, imt):
-        """
-        Returns the mean values for a specific IMT
+            # Get tau_lny on the basement rock
+            tau_lnyb = CB14._get_taulny(C, ctx.mag)
+            # Get phi_lny on the basement rock
+            phi_lnyb = np.sqrt(CB14._get_philny(C, ctx.mag) ** 2. -
+                               CB14.CONSTS["philnAF"] ** 2.)
+            # Get site scaling term
+            alpha = CB14._get_alpha(C, ctx.vs30, pga1100)
+            # Evaluate tau according to equation 29
+            t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
+                        2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b)
 
-        CanadaSHM6 edits: added IMT to get_mean_values(),
-                          modified shallow site response term
-                          removed basin term
-        """
-        if isinstance(a1100, np.ndarray):
-            # Site model defined
-            temp_vs30 = sites.vs30
-
-        else:
-            # Default site and basin model
-            temp_vs30 = 1100.0 * np.ones(len(sites.vs30))
-
-        return (self._get_magnitude_term(C, rup.mag) +
-                self._get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
-                self._get_style_of_faulting_term(C, rup) +
-                self._get_hanging_wall_term(C, rup, dists) +
-                self._get_shallow_site_response_term_CanadaSHM6(C, temp_vs30,
-                                                                a1100, imt) +
-                self._get_hypocentral_depth_term(C, rup) +
-                self._get_fault_dip_term(C, rup) +
-                self._get_anelastic_attenuation_term(C, dists.rrup))
-
-    def _get_shallow_site_response_term_CanadaSHM6(self, C, vs30, pga_rock,
-                                                   imt):
-        """
-        Returns the mean values for a specific IMT
-
-        CanadaSHM6 edits: modified linear site term for Vs30 > 1100
-        """
-        # Native site factor for CB14
-        CB14_vs = self._get_shallow_site_response_term(C, vs30, pga_rock)
-
-        # Need site factors at Vs30 = 760, 1100 and 2000 to calculate
-        # CanadaSHM6 hard rock site factors
-        CB14_1100 = self._get_shallow_site_response_term(C, np.array([1100.]),
-                                                         np.array([0.]))
-        CB14_760 = self._get_shallow_site_response_term(C, np.array([760.]),
-                                                        np.array([0.]))
-        CB14_2000 = self._get_shallow_site_response_term(C, np.array([2000.]),
-                                                         np.array([0.]))
-
-        # CB14 amplification factors relative to Vs30=760 to be consistent
-        # with CanadaSHM6 hardrock site factor
-        CB14_2000div760 = CB14_2000[0] - CB14_760[0]
-        CB14_1100div760 = CB14_1100[0] - CB14_760[0]
-
-        # CanadaSHM6 hard rock site factor
-        F = CanadaSHM6_hardrock_site_factor(CB14_1100div760, CB14_2000div760,
-                                            vs30[vs30 >= 1100], imt)
-
-        # for Vs30 > 1100 add CB14 amplification at 760 and CanadaSHM6 factor
-        CB14_vs[vs30 >= 1100] = F + CB14_760
-
-        return CB14_vs
+            # Evaluate phi according to equation 30
+            p = np.sqrt(
+                phi_lnyb**2 + CB14.CONSTS["philnAF"]**2 +
+                alpha**2 * phi_lnpga_b**2 +
+                2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b)
+            sig[m] = np.sqrt(t**2 + p**2)
+            tau[m] = t
+            phi[m] = p
 
 
 def CanadaSHM6_hardrock_site_factor(A1100, A2000, vs30, imt):
