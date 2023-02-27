@@ -17,8 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`ArtetaEtAl2023_NoSAm_Vs30`
-               :class:`ArtetaEtAl2023_NoSAm`
+Module exports :class:`ArtetaEtAl2023_Vs30`
+               :class:`ArtetaEtAl2023`
 """
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -33,10 +33,11 @@ def _get_stddevs(C):
     """
     Return standard deviations as defined in Table 3
     """
-    Sigma=C['Sigma']
-    phi=C['Phi']
+    Sigma = C['Sigma']
+    phi = C['Phi']
     tau = C['Tau']
     return [Sigma, tau, phi]
+
 
 def _compute_base_term(C):
     """
@@ -61,17 +62,16 @@ def _compute_distance_term(C, rhypo, mag):
     Returns the distance attenuation adding the equations for global and regional terms (eq 7. and 8.)
     """
     scale = C["Tetha4"] + 0.275 * (mag - C["M1"])
-    fdist = scale * np.log((rhypo**2 + 4.5**2)**0.5)    
+    fdist = scale * np.log((rhypo**2 + 4.5**2)**0.5)
     return fdist + C["Tetha5"] * rhypo
 
 
-def _compute_RVolc_term(C,rvolc):
+def _compute_RVolc_term(C, rvolc):
     """
     Computes the term of attenuation by the path portion crossing the volcanic region
     """
     f_RVolc = C["Tetha6"]*rvolc
     return f_RVolc
-
 
 
 def _compute_site_term(C_SITE, vs30):
@@ -85,6 +85,7 @@ def _compute_site_term(C_SITE, vs30):
     f_sites[(vs30 >= 0.0) & (vs30 < 200)] = C_SITE["s5"] * np.log(3.2)
     return f_sites
 
+
 def _compute_Depth_term(C, hypo_depth):
     """
     Returns the depth term
@@ -92,15 +93,17 @@ def _compute_Depth_term(C, hypo_depth):
     return C["Tetha7"]*hypo_depth
 
 
-
-class ArtetaEtAl2023_NoSAm_Vs30(GMPE):
+class ArtetaEtAl2023_Vs30(GMPE):
     """
-    Implements the model of Arteta et al (2021) as described in "Ground‐Motion Model (GMM) for Crustal Earthquakes in Northern South America (NoSAm Crustal GMM)"
-    published on the Bulletin of the Seismological Society of America 2023 ( doi: https://doi.org/10.1785/0120220168)
-    by Carlos A. Arteta, Cesar A. Pajaro, Vicente Mercado, Julián Montejo, Mónica Arcila, Norman A. Abrahamson;
-    
-    Soil term is associated with Vs30 using the simplification given in terms of natural period
-    of HVRSR and mean value of P* 
+    Implements the model of Arteta et al (2021) as described in "Ground‐Motion
+    Model (GMM) for Crustal Earthquakes in Northern South America (NoSAm
+    Crustal GMM)" published on the Bulletin of the Seismological Society of
+    America 2023 ( doi: https://doi.org/10.1785/0120220168) by Carlos A.
+    Arteta, Cesar A. Pajaro, Vicente Mercado, Julián Montejo, Mónica Arcila,
+    Norman A. Abrahamson;
+
+    Soil term is associated with Vs30 using the simplification given in terms
+    of natural period of HVRSR and mean value of P*
     """
 
     #: Supported tectonic region type is subduction interface
@@ -126,7 +129,7 @@ class ArtetaEtAl2023_NoSAm_Vs30(GMPE):
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are only magnitude for the interface model
-    REQUIRES_RUPTURE_PARAMETERS = {'mag','hypo_depth'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     #: Required distance measure is closest distance to rupture, for
     #: interface events
@@ -151,11 +154,10 @@ class ArtetaEtAl2023_NoSAm_Vs30(GMPE):
                        _compute_magnitude_term(C, ctx.mag) +
                        _compute_distance_term(C, ctx.rhypo, ctx.mag) +
                        _compute_site_term(C_SITE, ctx.vs30) +
-                       _compute_RVolc_term(C, ctx.rvolc)+
+                       _compute_RVolc_term(C, ctx.rvolc) +
                        _compute_Depth_term(C, ctx.hypo_depth))
-            
-            sig[m], tau[m], phi[m] = _get_stddevs(C)
 
+            sig[m], tau[m], phi[m] = _get_stddevs(C)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
         imt	Tetha1	Tetha2	Tetha3	Tetha4	Tetha5	Tetha6	Tetha7	M1	Tau	Phi	Sigma
@@ -212,9 +214,9 @@ class ArtetaEtAl2023_NoSAm_Vs30(GMPE):
         10	-0.210	0.028	0.203	0.597
 
     """)
-    
-#Actualizado
-def _compute_site_term_Period(C_SITE, Periods,Amplitudes):
+
+
+def _compute_site_term_Period(C_SITE, Periods, Amplitudes):
     """
     Returns the site amplification from periods and P* list
     """
@@ -226,17 +228,18 @@ def _compute_site_term_Period(C_SITE, Periods,Amplitudes):
     f_sites[Amplitudes < 2] = 0
     return f_sites
 
-class ArtetaEtAl2023_NoSAm(ArtetaEtAl2023_NoSAm_Vs30):
 
+class ArtetaEtAl2023(ArtetaEtAl2023_Vs30):
     """
-    
-    Implements the model of Arteta et al (2021) as described in "Ground‐Motion Model (GMM) for Crustal Earthquakes in Northern South America (NoSAm Crustal GMM)"
-    published on the Bulletin of the Seismological Society of America 2023 ( doi: https://doi.org/10.1785/0120220168)
-    by Carlos A. Arteta, Cesar A. Pajaro, Vicente Mercado, Julián Montejo, Mónica Arcila, Norman A. Abrahamson;
-    
+    Implements the model of Arteta et al (2021) as described in "Ground‐Motion
+    Model (GMM) for Crustal Earthquakes in Northern South America (NoSAm
+    Crustal GMM)" published on the Bulletin of the Seismological Society of
+    America 2023 ( doi: https://doi.org/10.1785/0120220168) by Carlos A.
+    Arteta, Cesar A. Pajaro, Vicente Mercado, Julián Montejo, Mónica Arcila,
+    Norman A. Abrahamson;
+
     Soil term depends of natural perod and peak value of HVRSR spectra
     """
-
 
     #: Supported tectonic region type is subduction interface
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -258,14 +261,14 @@ class ArtetaEtAl2023_NoSAm(ArtetaEtAl2023_NoSAm_Vs30):
     ])
 
     #: Site amplification is dependent on the period and amplitude of HVRSR spectra
-    REQUIRES_SITES_PARAMETERS = {'THV','PHV'}
+    REQUIRES_SITES_PARAMETERS = {'THV', 'PHV'}
 
     #: Required rupture parameters are only magnitude for the interface model
-    REQUIRES_RUPTURE_PARAMETERS = {'mag','hypo_depth'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     #: Required distance measure is closest distance to rupture, for
     #: interface events
-    REQUIRES_DISTANCES = {'rhypo','rvolc'}
+    REQUIRES_DISTANCES = {'rhypo', 'rvolc'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -286,8 +289,7 @@ class ArtetaEtAl2023_NoSAm(ArtetaEtAl2023_NoSAm_Vs30):
                        _compute_magnitude_term(C, ctx.mag) +
                        _compute_distance_term(C, ctx.rrup, ctx.mag) +
                        _compute_site_term_Period(C_SITE, ctx.THV, ctx.PHV) +
-                       _compute_RVolc_term(C, ctx.rvolc)+
+                       _compute_RVolc_term(C, ctx.rvolc) +
                        _compute_Depth_term(C, ctx.hypo_depth))
-            
-            sig[m], tau[m], phi[m] = _get_stddevs(C)
 
+            sig[m], tau[m], phi[m] = _get_stddevs(C)

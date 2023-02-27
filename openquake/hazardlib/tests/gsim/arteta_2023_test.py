@@ -17,21 +17,22 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.arteta_2023_nosam import (
-    ArtetaEtAl2023_NoSAm_Vs30, ArtetaEtAl2023_NoSAm)
+    ArtetaEtAl2023_Vs30, ArtetaEtAl2023)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 """
-Module imports :class:`ArtetaEtAl2023_NoSAm_Vs30`,`ArtetaEtAl2023_NoSAm`
+Module imports :class:`ArtetaEtAl2023_Vs30`,`ArtetaEtAl2023`
 The test tables were created from a *.xlsx file created by the authors
 """
 
-class ArtetaEtAl2023_NoSAm_Vs30Test(BaseGSIMTestCase):
+
+class ArtetaEtAl2023_Vs30Test(BaseGSIMTestCase):
     """
     Test the default model, the total standard deviation and the within-event
     standard deviation. The between events std is implicitly tested
     """
 
-    GSIM_CLASS = ArtetaEtAl2023_NoSAm_Vs30
+    GSIM_CLASS = ArtetaEtAl2023_Vs30
 
     def test_median(self):
         self.check('arteta2023_NoSam/ARTETAETAL2023_Vs30_NoSAm_MEAN.csv',
@@ -44,13 +45,13 @@ class ArtetaEtAl2023_NoSAm_Vs30Test(BaseGSIMTestCase):
                    max_discrep_percentage=0.1)
 
 
-class ArtetaEtAl2023_NoSAm_Test(BaseGSIMTestCase):
+class ArtetaEtAl2023_Test(BaseGSIMTestCase):
     """
     Test the default model, the total standard deviation and the within-event
     standard deviation. The between events std is implicitly tested
     """
 
-    GSIM_CLASS = ArtetaEtAl2023_NoSAm
+    GSIM_CLASS = ArtetaEtAl2023
 
     def test_median(self):
         self.check('arteta2023_NoSam/ARTETAETAL2023_NoSAm_MEAN.csv',
@@ -61,5 +62,3 @@ class ArtetaEtAl2023_NoSAm_Test(BaseGSIMTestCase):
                    'arteta2023_NoSam/ARTETAETAL2023_NoSAm_Phi.csv',
                    'arteta2023_NoSam/ARTETAETAL2023_NoSAm_Tau.csv',
                    max_discrep_percentage=0.1)
-
-
