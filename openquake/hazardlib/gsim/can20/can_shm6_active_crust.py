@@ -25,6 +25,7 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 import math
 import numpy as np
 
+import openquake.hazardlib.gsim.boore_2014 as BA14
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
     CampbellBozorgnia2014)
@@ -34,6 +35,45 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 
 METRES_PER_KM = 1000.
+
+
+def _get_site_scaling(kind, region, C, pga_rock, sites, period, rjb):
+    """
+    Returns the site-scaling term (equation 5), broken down into a
+    linear scaling, a nonlinear scaling and a basin scaling
+
+    CanadaSHM6 edits: modified linear site term for Vs30 > 1100
+    """
+    # Native site factor for BSSA14
+    flin = BA14._get_linear_site_term(C, sites.vs30)
+
+    # Need site factors at Vs30 = 1100 and 2000 to calculate
+    # CanadaSHM6 hard rock site factors
+    BSSA14_1100 = BA14._get_linear_site_term(C, np.array([1100.0]))
+    BSSA14_2000 = BA14._get_linear_site_term(C, np.array([2000.0]))
+
+    # Need OQ IMT for CanadaSHM6 hard rock factor
+    if period == 0.0:
+        imt = PGA()
+    elif period == -1.0:
+        imt = PGV()
+    else:
+        try:
+            imt = SA(period)
+        except TypeError:
+            imt = period  # for some versions of OQ period=imt
+
+    # CanadaSHM6 hard rock site factor
+    flin[sites.vs30 > 1100] = CanadaSHM6_hardrock_site_factor(
+                                            BSSA14_1100[0],
+                                            BSSA14_2000[0],
+                                            sites.vs30[sites.vs30 > 1100],
+                                            imt)
+
+    fnl = BA14._get_nonlinear_site_term(C, sites.vs30, pga_rock)
+    fbd = BA14._get_basin_depth_term(region, C, sites, period)  # returns 0
+
+    return flin + fnl + fbd
 
 
 class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
@@ -47,7 +87,7 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
     MAX_SA = 10.
     MIN_SA = 0.05
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
@@ -55,63 +95,28 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
 
         CanadaSHM6 edits: limited to the period range of 0.05 - 10s
         """
-
         # CSHM6 results only valid for PGV, PGA and 0.05 - 10s
-        if imt != PGV() and (imt.period != 0 and (imt.period < self.MIN_SA or
-                             imt.period > self.MAX_SA)):
-            raise ValueError(str(imt) + ' is not supported. SA must be in '
-                             + 'range of ' + str(self.MIN_SA) + 's and '
-                             + str(self.MAX_SA) + 's.')
+        for imt in imts:
+            if (imt != PGV() and
+                (imt.period != 0 and
+                    (imt.period < self.MIN_SA or imt.period > self.MAX_SA))):
+                raise ValueError(str(imt) + ' is not supported. SA must be in '
+                                 + 'range of ' + str(self.MIN_SA) + 's and '
+                                 + str(self.MAX_SA) + 's.')
 
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
-        C = self.COEFFS[imt]
-        C_PGA = self.COEFFS[PGA()]
-        imt_per = 0 if imt.name == 'PGV' else imt.period
-        pga_rock = self._get_pga_on_rock(C_PGA, rup, dists)
-        mean = (self._get_magnitude_scaling_term(C, rup) +
-                self._get_path_scaling(C, dists, rup.mag) +
-                self._get_site_scaling(C, pga_rock, sites, imt_per, dists.rjb))
-        stddevs = self._get_stddevs(C, rup, dists, sites, stddev_types)
-        return mean, stddevs
-
-    def _get_site_scaling(self, C, pga_rock, sites, period, rjb):
-        """
-        Returns the site-scaling term (equation 5), broken down into a
-        linear scaling, a nonlinear scaling and a basin scaling
-
-        CanadaSHM6 edits: modified linear site term for Vs30 > 1100
-        """
-        # Native site factor for BSSA14
-        flin = self._get_linear_site_term(C, sites.vs30)
-
-        # Need site factors at Vs30 = 1100 and 2000 to calculate
-        # CanadaSHM6 hard rock site factors
-        BSSA14_1100 = self._get_linear_site_term(C, np.array([1100.0]))
-        BSSA14_2000 = self._get_linear_site_term(C, np.array([2000.0]))
-
-        # Need OQ IMT for CanadaSHM6 hard rock factor
-        if period == 0.0:
-            imt = PGA()
-        elif period == -1.0:
-            imt = PGV()
-        else:
-            try:
-                imt = SA(period)
-            except TypeError:
-                imt = period  # for some versions of OQ period=imt
-
-        # CanadaSHM6 hard rock site factor
-        flin[sites.vs30 > 1100] = CanadaSHM6_hardrock_site_factor(
-                                                BSSA14_1100[0],
-                                                BSSA14_2000[0],
-                                                sites.vs30[sites.vs30 > 1100],
-                                                imt)
-
-        fnl = self._get_nonlinear_site_term(C, sites.vs30, pga_rock)
-        fbd = self._get_basin_depth_term(C, sites, period)  # returns 0
-
-        return flin + fnl + fbd
+        c_pga = self.COEFFS[PGA()]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            pga_rock = BA14._get_pga_on_rock(
+                self.kind, self.region, self.sof, c_pga, ctx)
+            mean[m] = (
+                BA14._get_magnitude_scaling_term(self.sof, C, ctx) +
+                BA14._get_path_scaling(self.kind, self.region, C, ctx) +
+                _get_site_scaling(self.kind, self.region, C, pga_rock, ctx,
+                                  imt.period, ctx.rjb))
+            sig[m], tau[m], phi[m] = BA14._get_stddevs(self.kind, C, ctx)
 
 
 class CanadaSHM6_ActiveCrust_ChiouYoungs2014(GMPE):

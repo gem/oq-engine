@@ -25,8 +25,8 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 import numpy as np
 
 from openquake.hazardlib.gsim.garcia_2005 import GarciaEtAl2005SSlab
-from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SSlabCascadia as ZS
-from openquake.hazardlib.gsim.abrahamson_2015 import (AbrahamsonEtAl2015SSlab, 
+from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SSlabCascadia
+from openquake.hazardlib.gsim.abrahamson_2015 import (AbrahamsonEtAl2015SSlab,
         _compute_distance_term, _compute_pga_rock, _compute_magnitude_term,
         _compute_forearc_backarc_term, _compute_site_response_term)
 from openquake.hazardlib.gsim.atkinson_boore_2003 import (
@@ -204,7 +204,7 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
 
         """
         ctx.hypo_depth = self.HYPO_DEPTH
-        for m, imt in enumerate(imts): 
+        for m, imt in enumerate(imts):
             # set correlated IMT for PGV and check T bounds
             PGVimt = False
             if imt == PGV():
@@ -216,16 +216,16 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
                 raise ValueError(str(imt) + ' is not supported. SA must be in '
                                  + 'range of ' + str(self.MIN_SA) + 's and '
                                  + str(self.MAX_SA) + 's.')
-    
+
             C_PGA = self.COEFFS[PGA()]
             dc1_pga = self.delta_c1 or self.COEFFS_MAG_SCALE[PGA()]["dc1"]
-    
+
             # compute median pga on rock (vs30=1000), needed for site response
             # term calculation
             pga1000 = np.exp(_compute_pga_rock(
                     self.kind, self.trt, self.theta6_adj, self.faba_model,
             C_PGA, dc1_pga, ctx))
-        
+
             C = self.COEFFS[imt]
             dc1 = self.delta_c1 or self.COEFFS_MAG_SCALE[imt]["dc1"]
             mean[m] = (
@@ -249,7 +249,7 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
             tau[m] = C['tau']
             phi[m] = C["phi"] if self.ergodic else np.sqrt(
                 C["sigma_ss"] ** 2. - C["tau"] ** 2.)
-    
+
             if PGVimt:
                 mean = (0.995*mean) + 3.937
 
@@ -279,7 +279,7 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab30(
 
         """
         ctx.hypo_depth = self.HYPO_DEPTH
-        for m, imt in enumerate(imts): 
+        for m, imt in enumerate(imts):
             # set correlated IMT for PGV and check T bounds
             PGVimt = False
             if imt == PGV():
@@ -290,16 +290,16 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab30(
                 raise ValueError(str(imt) + ' is not supported. SA must be in '
                                  + 'range of ' + str(self.MIN_SA) + 's and '
                                  + str(self.MAX_SA) + 's.')
-    
+
             C_PGA = self.COEFFS[PGA()]
             dc1_pga = self.delta_c1 or self.COEFFS_MAG_SCALE[PGA()]["dc1"]
-    
+
             # compute median pga on rock (vs30=1000), needed for site response
             # term calculation
             pga1000 = np.exp(_compute_pga_rock(
                     self.kind, self.trt, self.theta6_adj, self.faba_model,
             C_PGA, dc1_pga, ctx))
-        
+
             C = self.COEFFS[imt]
             dc1 = self.delta_c1 or self.COEFFS_MAG_SCALE[imt]["dc1"]
             mean[m] = (
@@ -323,7 +323,7 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab30(
             tau[m] = C['tau']
             phi[m] = C["phi"] if self.ergodic else np.sqrt(
                 C["sigma_ss"] ** 2. - C["tau"] ** 2.)
-    
+
             if PGVimt:
                 mean = (0.995*mean) + 3.937
 
@@ -379,7 +379,7 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
         for m, imt in enumerate(imts):
             extrapolate = False
             PGVimt = False
-    
+
             if imt == PGV():
                 PGVimt = True
                 imt = SA(0.5)
@@ -394,7 +394,7 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
 
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
-        
+
             # extracting dictionary of coefficients specific to required
             # intensity measure type.
             C = self.COEFFS_ASC[imt]
@@ -427,11 +427,11 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
             # values then convert from cm/s**2 to g
             mean[m] = np.log((np.exp(mean[m]) * C_SF["MF"]) * 1e-2 / g)
             _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SSLAB['tauS'])
-        
+
         # add extrapolation factor if outside SA range (0.05 - 5.0)
         if extrapolate:
             ctx.rhypo = ctx.rrup  # approximation for extrapolation only
-            mean += extrapolation_factor(self.extrapolate_GMM, 
+            mean += extrapolation_factor(self.extrapolate_GMM,
                                          ctx, imt, target_imt)
 
         if PGVimt:
@@ -439,7 +439,7 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
 
         return mean, stddevs
 
-    
+
 
 class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia30(
                                 CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55):
@@ -492,7 +492,7 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
-        
+
         CanadaSHM6 edits: added extrapolation beyond MAX_SA and MIN_SA to 0.05
                           - 10s
                           limted to the period range of 0.05 - 10s
@@ -552,7 +552,7 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
         # add extrapolation factor if outside SA range (0.07 - 9.09)
         if extrapolate:
             ctx.rhypo = ctx.rrup  # approximation for extrapolation only
-            mean += extrapolation_factor(self.extrapolate_GMM, 
+            mean += extrapolation_factor(self.extrapolate_GMM,
                                          ctx, imt, target_imt)
 
         if PGVimt:
@@ -560,7 +560,7 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
 
         return mean, stddevs
 
-    
+
 
 
 class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia30(
@@ -660,7 +660,7 @@ class CanadaSHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
 
         return mean, stddevs
 
-    
+
 
 
 class CanadaSHM6_InSlab_GarciaEtAl2005SSlab30(
