@@ -723,8 +723,8 @@ def get_full_lt(oqparam, branchID=None):
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
     dupl = []
-    for src_id, branchIDs in source_model_lt.source_ids.items():
-        if len(branchIDs) > 1:
+    for src_id, sms in source_model_lt.sms_by_src.items():
+        if len(sms) > 1:
             dupl.append(src_id)
     if dupl:
         logging.info('There are %d non-unique source IDs', len(dupl))

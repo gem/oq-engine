@@ -317,7 +317,7 @@ class SourceModelLogicTree(object):
                           branch_dt)
         dic = dict(filename='fake.xml', seed=0, num_samples=0,
                    sampling_method='early_weights', num_paths=1,
-                   source_ids=AccumDict(accum=[]), is_source_specific=0,
+                   sms_by_src=AccumDict(accum=[]), is_source_specific=0,
                    tectonic_region_types=set(),
                    bsetdict='{"bs0": {"uncertaintyType": "sourceModel"}}')
         self.__fromh5__(arr, dic)
@@ -403,7 +403,7 @@ class SourceModelLogicTree(object):
         to the tree's root.
         """
         self.info = collect_info(self.filename, self.branchID)
-        self.source_ids = collections.defaultdict(list)  # src_id -> branchIDs
+        self.sms_by_src = collections.defaultdict(list)  # src_id -> branchIDs
         self.trt_by_src = {}  # src_id -> trt
         t0 = time.time()
         for depth, blnode in enumerate(tree_node.nodes):
@@ -632,7 +632,7 @@ class SourceModelLogicTree(object):
 
         if 'applyToSources' in f:
             for source_id in f['applyToSources'].split():
-                branchIDs = self.source_ids[source_id]
+                branchIDs = self.sms_by_src[source_id]
                 if not branchIDs:
                     raise LogicTreeError(
                         branchset_node, self.filename,
@@ -714,7 +714,7 @@ class SourceModelLogicTree(object):
         with self._get_source_model(source_model) as sm:
             trt_by_src = get_trt_by_src(sm)
         for src_id, trt in trt_by_src.items():
-            self.source_ids[src_id].append(branch_id)
+            self.sms_by_src[src_id].append(branch_id)
             self.trt_by_src[src_id] = trt
             self.tectonic_region_types.add(trt)
 
