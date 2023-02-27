@@ -162,7 +162,7 @@ attach the second ``extendModel`` to everything and get 8 paths:
  >>> logictree.get_all_paths()  # 3 * 2 + 2 paths
  ['ACF', 'ACG', 'ADF', 'ADG', 'AEF', 'AEG', 'B.F', 'B.G']
 
-The complete realizations can be obtained by not specifying ``applyToSources``:
+The complete realizations can be obtained by not specifying ``applyToBranches``:
 
 .. code-block:: python
 
@@ -302,7 +302,7 @@ branch IDs by using the command ``oq show branches``::
 The first character of the ``abbrev`` specifies the branch number ("A"
 means the first branch, "B" the second, etc) while the other characters
 are the branch set number starting from zero. The format works up to
-184 branches per branchset, bu using printable UTF8 characters.
+184 branches per branchset, using printable UTF8 characters.
 For instance the realization #322 has the following branch path in
 compact form::
 

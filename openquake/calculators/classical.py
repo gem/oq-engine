@@ -838,7 +838,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('There are %d slices of poes [%.1f per task]',
                      nslices, nslices / len(slicedic))
         allargs = [
-            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes, ct),
+            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in allslices]
         self.hazard = {}  # kind -> array

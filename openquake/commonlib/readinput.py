@@ -673,7 +673,10 @@ def get_source_model_lt(oqparam, branchID=None):
         a :class:`openquake.hazardlib.logictree.SourceModelLogicTree`
         instance
     """
-    return get_smlt(vars(oqparam), branchID)
+    smlt = get_smlt(vars(oqparam), branchID)
+    if len(oqparam.source_id) == 1:  # reduce to a single source
+        smlt.reduce(oqparam.source_id[0])
+    return smlt
 
 
 def get_full_lt(oqparam, branchID=None):
@@ -700,8 +703,10 @@ def get_full_lt(oqparam, branchID=None):
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
     if oqparam.number_of_logic_tree_samples:
-        logging.info('Considering {:_d} logic tree paths out of {:_d}'.format(
-            oqparam.number_of_logic_tree_samples, p))
+        unique = numpy.unique(full_lt.rlzs['branch_path'])
+        logging.info('Considering {:_d} logic tree paths out of {:_d}, unique'
+                     ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
+                                     len(unique)))
     else:  # full enumeration
         logging.info('There are {:_d} logic tree paths(s)'.format(p))
         if oqparam.hazard_curves and p > oqparam.max_potential_paths:
@@ -718,8 +723,8 @@ def get_full_lt(oqparam, branchID=None):
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
     dupl = []
-    for src_id, branchIDs in source_model_lt.source_ids.items():
-        if len(branchIDs) > 1:
+    for src_id, sms in source_model_lt.sms_by_src.items():
+        if len(sms) > 1:
             dupl.append(src_id)
     if dupl:
         logging.info('There are %d non-unique source IDs', len(dupl))
