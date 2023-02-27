@@ -123,6 +123,36 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
             sig[m], tau[m], phi[m] = BA14._get_stddevs(self.kind, C, ctx)
 
 
+
+def get_mean_stddevs_cy14(name, C, ctx):
+    """
+    Return mean and standard deviation values
+    """
+    # Get ground motion on reference rock
+    ln_y_ref = get_ln_y_ref(name, C, ctx)
+    y_ref = np.exp(ln_y_ref)
+    # Get the site amplification
+    # Get basin depth
+    dz1pt0 = _get_centered_z1pt0(name, ctx)
+    # for Z1.0 = 0.0 no deep soil correction is applied
+    dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
+    f_z1pt0 = get_basin_depth_term(name, C, dz1pt0)
+    # Get linear amplification term
+    f_lin = get_linear_site_term(name, C, ctx)
+    # Get nonlinear amplification term
+    f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
+
+    # Add on the site amplification
+    mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)
+    # Get standard deviations
+    sig, tau, phi = get_stddevs(
+        name, C, ctx, ctx.mag, y_ref, f_nl_scaling)
+
+    return mean, sig, tau, phi
+
+
+
+
 class CanadaSHM6_ActiveCrust_ChiouYoungs2014(GMPE):
     """
     Chiou and Youngs 2014 with CanadaSHM6 modifications to amplification
@@ -135,7 +165,7 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(GMPE):
     here. CanadaSHM6_CY14 should be updated to maintain compatibility with the
     refactored CY14.
 
-    See also header in CanadaSHM6_ActiveCrust.py
+    See also header.
     """
     experimental = True
 
@@ -172,6 +202,46 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(GMPE):
 
     #: Required distance measures are RRup, Rjb and Rx.
     REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx'))
+
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.compute>`
+        for spec of input and result values.
+        """
+        name = self.__class__.__name__
+        # reference to page 1144, PSA might need PGA value
+        pga_mean, pga_sig, pga_tau, pga_phi = \
+            get_mean_stddevs_cy14(name, self.COEFFS[PGA()], ctx)
+        for m, imt in enumerate(imts):
+            if repr(imt) == "PGA":
+                mean[m] = pga_mean
+                sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
+            else:
+                imt_mean, imt_sig, imt_tau, imt_phi = \
+                    get_mean_stddevs_cy14(name, self.COEFFS[imt], ctx)
+                # reference to page 1144 Predicted PSA value at T ≤ 0.3s should
+                # be set equal to the value of PGA when it falls below the
+                # predicted PGA
+                mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
+                    if repr(imt).startswith("SA") and imt.period <= 0.3 \
+                    else imt_mean
+
+                sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
