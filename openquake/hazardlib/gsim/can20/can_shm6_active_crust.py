@@ -26,6 +26,8 @@ import math
 import numpy as np
 
 import openquake.hazardlib.gsim.boore_2014 as BA14
+import openquake.hazardlib.gsim.abrahamson_2014 as ASK14
+
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
     CampbellBozorgnia2014)
@@ -37,7 +39,7 @@ from openquake.hazardlib import const
 METRES_PER_KM = 1000.
 
 
-def _get_site_scaling(kind, region, C, pga_rock, sites, period, rjb):
+def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
     """
     Returns the site-scaling term (equation 5), broken down into a
     linear scaling, a nonlinear scaling and a basin scaling
@@ -114,8 +116,8 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
             mean[m] = (
                 BA14._get_magnitude_scaling_term(self.sof, C, ctx) +
                 BA14._get_path_scaling(self.kind, self.region, C, ctx) +
-                _get_site_scaling(self.kind, self.region, C, pga_rock, ctx,
-                                  imt.period, ctx.rjb))
+                _get_site_scaling_ba14(self.kind, self.region, C, pga_rock,
+                                       ctx, imt.period, ctx.rjb))
             sig[m], tau[m], phi[m] = BA14._get_stddevs(self.kind, C, ctx)
 
 
@@ -415,6 +417,38 @@ pgv    2.3549  0.165  -0.0626 -0.165  0.0626  3.3024  5.423   1.06  2.3152  -2.1
 """)
 
 
+def _get_site_response_term_ask14(C, imt, vs30, sa1180):
+    """
+    CanadaSHM6 edits: modified linear site term for Vs30 > 1100
+    """
+    # Native site factor for ASK14
+    ask14_vs = ASK14._get_site_response_term(C, imt, vs30, sa1180)
+
+    # Need site factors at Vs30 = 760, 1100 and 2000 to calculate
+    # CanadaSHM6 hard rock site factors
+    ask14_1100 = ASK14._get_site_response_term(C, imt, np.array([1100.]),
+                                                np.array([0.]))
+    ask14_760 = ASK14._get_site_response_term(C, imt, np.array([760.]),
+                                                np.array([0.]))
+    ask14_2000 = ASK14._get_site_response_term(C, imt, np.array([2000.]),
+                                                np.array([0.]))
+
+    # ASK14 amplification factors relative to Vs30=760 to be consistent
+    # with CanadaSHM6 hardrock site factor
+    ask14_1100div760 = ask14_1100[0] - ask14_760[0]
+    ask14_2000div760 = ask14_2000[0] - ask14_760[0]
+
+    # CanadaSHM6 hard rock site factor
+    F = CanadaSHM6_hardrock_site_factor(ask14_1100div760,
+                                        ask14_2000div760,
+                                        vs30[vs30 >= 1100.], imt)
+
+    # for Vs30 > 1100 add ASK14 amplification at 760 and CanadaSHM6 factor
+    ask14_vs[vs30 >= 1100.] = F + ask14_760
+
+    return ask14_vs
+
+
 class CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
     """
     Abrahamson et al., 2014 with CanadaSHM6 modifications to amplification
@@ -429,76 +463,47 @@ class CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
     MAX_SA = 10.
     MIN_SA = 0.05
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
-
-        CanadaSHM6 edits: modified linear site term for Vs30 > 1100
-                          removed basin term
-                          limited to the period range of 0.05 - 10s
         """
 
-        # CSHM6 results only valid for PGV, PGA and 0.05 - 10s
-        if imt != PGV() and (imt.period != 0 and (imt.period < self.MIN_SA or
-                             imt.period > self.MAX_SA)):
-            raise ValueError(str(imt) + ' is not supported. SA must be in '
-                             + 'range of ' + str(self.MIN_SA) + 's and '
-                             + str(self.MAX_SA) + 's.')
+        for m, imt in enumerate(imts):
+            # CSHM6 results only valid for PGV, PGA and 0.05 - 10s
+            if (imt != PGV() and
+                    (imt.period != 0 and (imt.period < self.MIN_SA or
+                     imt.period > self.MAX_SA))):
+                raise ValueError(str(imt) + ' is not supported. SA must be in '
+                                + 'range of ' + str(self.MIN_SA) + 's and '
+                                + str(self.MAX_SA) + 's.')
 
-        sites.vs30 = sites.vs30.astype(float)  # bug in ASK14 if vs30 is int?
+        # sites.vs30 = sites.vs30.astype(float) # bug in ASK14 if vs30 is int?
 
-        # get the necessary set of coefficients
-        C = self.COEFFS[imt]
-        # compute median sa on rock (vs30=1180m/s). Used for site response
-        # term calculation
-        sa1180 = np.exp(self._get_sa_at_1180(C, imt, sites, rup, dists))
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        # get the mean value
-        mean = (self._get_basic_term(C, rup, dists) +
-                self._get_faulting_style_term(C, rup) +
-                self._get_site_response_term_CanadaSHM6(C, imt, sites.vs30,
-                                                        sa1180) +
-                self._get_hanging_wall_term(C, dists, rup) +
-                self._get_top_of_rupture_depth_term(C, imt, rup)
-                )
-        mean += self._get_regional_term(C, imt, sites.vs30, dists.rrup)
-        # get standard deviations
-        stddevs = self._get_stddevs(C, imt, rup, sites, stddev_types, sa1180,
-                                    dists)
-        return mean, stddevs
+            # compute median sa on rock (vs30=1180m/s). Used for site response
+            # term calculation
+            sa1180 = np.exp(ASK14._get_sa_at_1180(self.region, C, imt, ctx))
 
-    def _get_site_response_term_CanadaSHM6(self, C, imt, vs30, sa1180):
-        """
-        CanadaSHM6 edits: modified linear site term for Vs30 > 1100
-        """
-        # Native site factor for ASK14
-        ASK14_vs = self._get_site_response_term(C, imt, vs30, sa1180)
+            # Get the mean value. Note that in this version the
+            # `soil_depth_term` has been removed
+            mean[m] = (ASK14._get_basic_term(C, ctx) +
+                       ASK14._get_faulting_style_term(C, ctx) +
+                       _get_site_response_term_ask14(
+                           C, imt, ctx.vs30, sa1180) +
+                       ASK14._get_hanging_wall_term(C, ctx) +
+                       ASK14._get_top_of_rupture_depth_term(C, imt, ctx))
 
-        # Need site factors at Vs30 = 760, 1100 and 2000 to calculate
-        # CanadaSHM6 hard rock site factors
-        ASK14_1100 = self._get_site_response_term(C, imt, np.array([1100.]),
-                                                  np.array([0.]))
-        ASK14_760 = self._get_site_response_term(C, imt, np.array([760.]),
-                                                 np.array([0.]))
-        ASK14_2000 = self._get_site_response_term(C, imt, np.array([2000.]),
-                                                  np.array([0.]))
+            mean[m] += ASK14._get_regional_term(
+                self.region, C, imt, ctx.vs30, ctx.rrup)
 
-        # ASK14 amplification factors relative to Vs30=760 to be consistent
-        # with CanadaSHM6 hardrock site factor
-        ASK14_1100div760 = ASK14_1100[0] - ASK14_760[0]
-        ASK14_2000div760 = ASK14_2000[0] - ASK14_760[0]
-
-        # CanadaSHM6 hard rock site factor
-        F = CanadaSHM6_hardrock_site_factor(ASK14_1100div760,
-                                            ASK14_2000div760,
-                                            vs30[vs30 >= 1100.], imt)
-
-        # for Vs30 > 1100 add ASK14 amplification at 760 and CanadaSHM6 factor
-        ASK14_vs[vs30 >= 1100.] = F + ASK14_760
-
-        return ASK14_vs
+            # get standard deviations
+            sig[m], tau[m], phi[m] = ASK14._get_stddevs(
+                self.region, C, imt, ctx, sa1180)
 
 
 class CanadaSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
