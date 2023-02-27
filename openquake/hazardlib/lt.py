@@ -687,6 +687,16 @@ class BranchSet(object):
                 bset = br.bset
         return pairs
 
+    def collapse(self):
+        """
+        Collapse to the first branch (with side effects)
+        """
+        self.collapsed = True
+        b0 = self.branches[0]
+        b0.branch_id = '.'
+        b0.weight = 1.
+        self.branches = [b0]
+
     def to_list(self):
         """
         :returns: a literal list describing the branchset

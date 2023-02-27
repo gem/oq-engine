@@ -386,16 +386,14 @@ class SourceModelLogicTree(object):
         """
         Reduce the logic tree to a single source. Works by side effects.
         """
-        self.tectonic_region_types = {self.trt_by_src[src_id]}
+        oksms = self.sms_by_src[src_id]
+        self.sms_by_src = {src_id: oksms}
         self.trt_by_src = {src_id: self.trt_by_src[src_id]}
-        self.sms_by_src = {src_id: self.sms_by_src[src_id]}
+        self.tectonic_region_types = {self.trt_by_src[src_id]}
         for bset, dic in zip(self.branchsets, self.bsetdict.values()):
             ats = dic.get('applyToSources')
             if ats and src_id not in ats:
-                bset.collapsed = True
-                b0 = bset.branches[0]
-                b0.branch_id = '.'
-                bset.branches = [b0]
+                bset.collapse()
                 del dic['applyToSources']
         self.num_paths = count_paths(self.root_branchset.branches)
 
