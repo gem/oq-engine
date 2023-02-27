@@ -156,10 +156,10 @@ arteta_2021
     :undoc-members:
     :show-inheritance:
 
-arteta_2023
+arteta_2023_nosam
 ---------------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.arteta_2023
+.. automodule:: openquake.hazardlib.gsim.arteta_2023_nosam
     :members:
     :undoc-members:
     :show-inheritance:
