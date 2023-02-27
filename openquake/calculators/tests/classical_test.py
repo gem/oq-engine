@@ -162,6 +162,13 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(info.loc[b'2'].weight, 118)
         self.assertEqual(info.loc[b'3'].weight, 3914)
 
+        # now restrict the logic tree to the duplicated source "1"
+        self.run_calc(case_7.__file__, 'job1.ini')
+        fnames = export(('hcurves', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-5)
+
     def test_case_8(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',

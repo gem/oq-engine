@@ -392,6 +392,23 @@ class SourceModelLogicTree(object):
         self.trt_by_src = {src_id: self.trt_by_src[src_id]}
         self.tectonic_region_types = {self.trt_by_src[src_id]}
         for bset, dic in zip(self.branchsets, self.bsetdict.values()):
+            '''
+            if bset.uncertainty_type == 'sourceModel':
+                same = []  # branches with the source, all same contribution
+                zero = []  # branches without the source, all zeros
+                for br in bset.branches:
+                    if br.branch_id in oksms:
+                        same.append(br)
+                    else:
+                        zero.append(br)
+                b0 = zero[0]
+                for br in zero[1:]:
+                    b0.weight += br.weight
+                b1 = same[0]
+                for br in same[1:]:
+                    b1.weight += br.weight
+                bset.branches = [b1, b0]
+            '''
             ats = dic.get('applyToSources')
             if ats and src_id not in ats:
                 bset.collapse()
