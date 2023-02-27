@@ -387,6 +387,8 @@ class SourceModelLogicTree(object):
         Reduce the logic tree to a single source. Works by side effects.
         """
         self.tectonic_region_types = {self.trt_by_src[src_id]}
+        self.trt_by_src = {src_id: self.trt_by_src[src_id]}
+        self.sms_by_src = {src_id: self.sms_by_src[src_id]}
         for bset, dic in zip(self.branchsets, self.bsetdict.values()):
             ats = dic.get('applyToSources')
             if ats and src_id not in ats:
@@ -403,8 +405,11 @@ class SourceModelLogicTree(object):
         to the tree's root.
         """
         self.info = collect_info(self.filename, self.branchID)
-        self.sms_by_src = collections.defaultdict(list)  # src_id -> branchIDs
-        self.trt_by_src = {}  # src_id -> trt
+
+        # the following two dicts are populated in collect_source_model_data
+        self.sms_by_src = collections.defaultdict(list)
+        self.trt_by_src = {}
+
         t0 = time.time()
         for depth, blnode in enumerate(tree_node.nodes):
             [bsnode] = bsnodes(self.filename, blnode)
