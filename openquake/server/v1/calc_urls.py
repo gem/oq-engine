@@ -29,7 +29,7 @@ urlpatterns = [
     re_path(r'^(\d+)/extract/([-/_\.\w]+)$', views.extract),
     re_path(r'^(\d+)/results$', views.calc_results),
     re_path(r'^(\d+)/hmap_(\d+)_(\d+)$', views.hmap_png),
-    re_path(r'^(\d+)/traceback$', views.calc_traceback),
+    re_path(r'^(\d+)/traceback$', views.calc_traceback, name="traceback"),
     re_path(r'^(\d+)/log/size$', views.calc_log_size),
     re_path(r'^(\d+)/log/(\d*):(\d*)$', views.calc_log),
     re_path(r'^(\d+)/remove$', views.calc_remove),

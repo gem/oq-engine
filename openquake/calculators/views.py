@@ -35,9 +35,10 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
+from openquake.hazardlib import logictree
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
-from openquake.commonlib import util, logictree
+from openquake.commonlib import util
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
@@ -296,7 +297,7 @@ def view_full_lt(token, dstore):
     if not full_lt.num_samples and num_paths > 15000:
         return '<%d realizations>' % num_paths
     try:
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['trt_smrs'])
+        rlzs_by_gsim_list = map(full_lt.get_rlzs_by_gsim, dstore['trt_smrs'])
     except KeyError:  # for scenario trt_smrs is missing
         rlzs_by_gsim_list = [full_lt._rlzs_by_gsim(0)]
     header = ['grp_id', 'gsim', 'rlzs']
@@ -942,9 +943,33 @@ def view_mean_disagg(token, dstore):
             for p in range(P):
                 row = ['%s-sid-%d-poe-%s' % (imt, s, p)]
                 for k, d in kd.items():
-                    row.append(d[s, m, p].mean())
+                    row.append(d[s, ..., m, p, :].mean())
                 tbl.append(tuple(row))
     return numpy.array(sorted(tbl), dt(['key'] + list(kd)))
+
+
+@view.add('disagg')
+def view_disagg(token, dstore):
+    """
+    Example: $ oq show disagg Mag
+    Returns a table poe, imt, mag, contribution for the first site
+    """
+    kind = token.split(':')[1]
+    assert kind in ('Mag', 'Dist', 'TRT'), kind
+    site_id = 0
+    if 'disagg-stats' in dstore:
+        data = dstore['disagg-stats/' + kind][site_id, ..., 0]  # (:, M, P)
+    else:
+        data = dstore['disagg-rlzs/' + kind][site_id, ..., 0]  # (:, M, P)
+    Ma, M, P = data.shape
+    oq = dstore['oqparam']
+    imts = list(oq.imtls)
+    dtlist = [('poe', float), ('imt', (numpy.string_, 10)),
+              (kind.lower() + 'bin', int), ('prob', float)]
+    lst = []
+    for p, m, ma in itertools.product(range(P), range(M), range(Ma)):
+        lst.append((oq.poes[p], imts[m], ma, data[ma, m, p]))
+    return numpy.array(lst, dtlist)
 
 
 @view.add('bad_ruptures')
@@ -1252,7 +1277,7 @@ def view_branchsets(token, dstore):
     Show the branchsets in the logic tree
     """
     flt = dstore['full_lt']
-    clt = logictree.compose(flt.gsim_lt, flt.source_model_lt)
+    clt = logictree.compose(flt.source_model_lt, flt.gsim_lt)
     return text_table(enumerate(map(repr, clt.branchsets)),
                       header=['bsno', 'bset'], ext='org')
 

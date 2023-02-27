@@ -16,11 +16,12 @@
 import unittest
 import os.path
 import numpy
+import pytest
 
 from openquake.baselib.general import pprod
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.calc import disagg, filters
-from openquake.hazardlib import nrml, tom
+from openquake.hazardlib import nrml, read_input
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.gsim.campbell_2003 import Campbell2003
 from openquake.hazardlib.geo import Point
@@ -28,7 +29,7 @@ from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.gsim.bradley_2013 import Bradley2013
-from openquake.hazardlib import sourceconverter
+from openquake.hazardlib import sourceconverter, probability_map
 
 DATA_PATH = os.path.dirname(__file__)
 aac = numpy.testing.assert_allclose
@@ -101,9 +102,10 @@ class DisaggregateTestCase(unittest.TestCase):
         mags = cls.sources[0].get_mags()
         maxdist = filters.IntegrationDistance.new('200.')
         oq = unittest.mock.Mock(truncation_level=cls.truncation_level,
+                                investigation_time=50.,
                                 imtls={'PGA': [cls.iml]},
                                 rlz_index=[0, 1],
-                                poes_disagg=[None],
+                                poes=[None],
                                 num_epsilon_bins=3,
                                 mag_bin_width=.075,
                                 distance_bin_width=10,
@@ -114,7 +116,6 @@ class DisaggregateTestCase(unittest.TestCase):
         sitecol = SiteCollection([cls.site])
         cls.bin_edges, _ = disagg.get_edges_shapedic(oq, sitecol)
         cls.cmaker = ContextMaker(cls.trt, {gsim: [0]}, oq)
-        cls.cmaker.tom = tom.PoissonTOM(50.)
         cls.sources[0].grp_id = 0
         cls.cmaker.grp_id = 0
         cls.cmaker.poes = [.001]
@@ -141,8 +142,8 @@ class DisaggregateTestCase(unittest.TestCase):
     def test_disaggregator(self):
         dis = disagg.Disaggregator([self.sources[0]], self.site, self.cmaker,
                                    self.bin_edges)
-        iml2 = numpy.array([[.01]])
-        mat3 = dis.disagg_mag_dist_eps(iml2, rlzi=0)[..., 0, 0]
+        iml3 = numpy.array([[[.01]]])
+        mat3 = dis.disagg_mag_dist_eps(iml3)[..., 0, 0, 0]
         bymag = pprod(mat3, axis=(1, 2))
         aac(bymag, [0.9873275537163634,
                     0.9580616631998118,
@@ -265,3 +266,30 @@ class PMFExtractorsTestCase(unittest.TestCase):
             (pmf1 + pmf2) / 2, [1, 1])
         numpy.testing.assert_allclose(
             disagg.mag_pmf(mean), [0.99999944, 0.99999999])
+
+
+@pytest.mark.parametrize('job_ini', ['job_sampling.ini', 'job.ini'])
+def test_single_source(job_ini):
+    job_ini = os.path.join(DATA_PATH, 'data', 'disagg', job_ini)
+    inp = read_input(job_ini)
+    oq = inp.oq
+    assert len(inp.sitecol) == 1  # single site test
+    L = oq.imtls.size
+    R = inp.full_lt.get_num_paths()
+    G = sum(len(cm.gsims) for cm in inp.cmakers)
+    pmap = probability_map.ProbabilityMap(inp.sitecol.sids, L, G).fill(0)
+    rlzs_by_g = []
+    for grp, cmaker in zip(inp.groups, inp.cmakers):
+        for rlzs in cmaker.gsims.values():
+            rlzs_by_g.append(rlzs)
+        ctxs = cmaker.from_srcs(grp, inp.sitecol)
+        pmap.array[:, :, cmaker.gidx] = cmaker.get_pmap(
+            ctxs).array  # shape (L, G)
+
+    iml4 = pmap.expand(rlzs_by_g).interp4D(oq.imtls, oq.poes)
+    edges, shapedic = disagg.get_edges_shapedic(oq, inp.sitecol)
+    dis = disagg.Disaggregator(grp, inp.sitecol, cmaker, edges)
+    rlz = R - 1
+    for magi in range(dis.Ma):
+        dis.init(magi, src_mutex={})
+        print(dis.disagg6D(iml4[0, :, :, rlz], rlz))

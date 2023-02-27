@@ -28,8 +28,8 @@ import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, tom
-from openquake.hazardlib.contexts import ContextMaker, basename
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
@@ -75,6 +75,21 @@ def mutex_by_grp(src_groups):
     return numpy.array(lst, [('src_mutex', bool), ('rup_mutex', bool)])
 
 
+def build_rup_mutex(src_groups):
+    """
+    :returns: a composite array with fields (grp_id, src_id, rup_id, weight)
+    """
+    lst = []
+    dtlist = [('grp_id', numpy.uint16), ('src_id', numpy.uint32),
+              ('rup_id', numpy.uint32), ('weight', numpy.float64)]
+    for sg in src_groups:
+        if sg.rup_interdep == 'mutex':
+            for src in sg:
+                for i, (rup, _) in enumerate(src.data):
+                    lst.append((src.grp_id, src.id, i, rup.weight))
+    return numpy.array(lst, dtlist)
+
+
 def create_source_info(csm, h5):
     """
     Creates source_info, source_wkt, trt_smrs, toms
@@ -108,6 +123,7 @@ def create_source_info(csm, h5):
     # avoid hdf5 damned bug by creating source_info in advance
     h5.create_dataset('source_info',  (num_srcs,), source_info_dt)
     h5['mutex_by_grp'] = mutex_by_grp(csm.src_groups)
+    h5['rup_mutex'] = build_rup_mutex(csm.src_groups)
     h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
 
 
@@ -157,7 +173,8 @@ def get_csm(oq, full_lt, h5=None):
         discard_trts=[s.strip() for s in oq.discard_trts.split(',')],
         floating_x_step=oq.floating_x_step,
         floating_y_step=oq.floating_y_step,
-        source_nodes=oq.source_nodes)
+        source_nodes=oq.source_nodes,
+        infer_occur_rates=oq.infer_occur_rates)
     full_lt.ses_seed = oq.ses_seed
     logging.info('Reading the source model(s) in parallel')
 
@@ -379,25 +396,6 @@ class CompositeSourceModel:
                     source_id = basename(src)
                     self.code[source_id] = src.code
 
-    # used for debugging; assume PoissonTOM; use read_cmakers instead
-    def _get_cmakers(self, oq):
-        cmakers = []
-        trt_smrs = self.get_trt_smrs()
-        rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
-        trts = list(self.full_lt.gsim_lt.values)
-        num_eff_rlzs = len(self.full_lt.sm_rlzs)
-        start = 0
-        for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
-            trti = trt_smrs[grp_id][0] // num_eff_rlzs
-            cmaker = ContextMaker(trts[trti], rlzs_by_gsim, oq)
-            cmaker.tom = tom.PoissonTOM(oq.investigation_time)
-            cmaker.trti = trti
-            cmaker.gidx = numpy.arange(start, start + len(rlzs_by_gsim))
-            cmaker.grp_id = grp_id
-            start += len(rlzs_by_gsim)
-            cmakers.append(cmaker)
-        return cmakers
-
     def get_trt_smrs(self):
         """
         :returns: an array of trt_smrs (to be stored as an hdf5.vuint32 array)
@@ -421,21 +419,6 @@ class CompositeSourceModel:
             elif atomic == src_group.atomic:
                 srcs.extend(src_group)
         return srcs
-
-    # used only in calc_by_rlz.py
-    def get_groups(self, smr):
-        """
-        :param smr: effective source model realization ID
-        :returns: SourceGroups associated to the given `smr`
-        """
-        src_groups = []
-        for sg in self.src_groups:
-            trt_smr = self.full_lt.get_trt_smr(sg.trt, smr)
-            src_group = copy.copy(sg)
-            src_group.sources = [src for src in sg if trt_smr in src.trt_smrs]
-            if len(src_group):
-                src_groups.append(src_group)
-        return src_groups
 
     def get_mags_by_trt(self):
         """

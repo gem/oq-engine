@@ -450,7 +450,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pm.gidx = pnemap.gidx
         for i, g in enumerate(pnemap.gidx):
             if g in acc:
-                acc[g].update(pnemap, i)
+                acc[g].multiply_pnes(pnemap, i)
                 self.n_outs[g] -= 1
                 assert self.n_outs[g] > -1, (g, self.n_outs[g])
                 if self.n_outs[g] == 0:  # no other tasks for this g
@@ -522,18 +522,6 @@ class ClassicalCalculator(base.HazardCalculator):
     def init_poes(self):
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
-        if self.oqparam.hazard_calculation_id:
-            full_lt = self.datastore.parent['full_lt']
-            trt_smrs = self.datastore.parent['trt_smrs'][:]
-        else:
-            full_lt = self.csm.full_lt
-            trt_smrs = self.csm.get_trt_smrs()
-        self.grp_ids = numpy.arange(len(trt_smrs))
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
-        rlzs_by_g = []
-        for rlzs_by_gsim in rlzs_by_gsim_list:
-            for rlzs in rlzs_by_gsim.values():
-                rlzs_by_g.append(rlzs)
         self.datastore.create_df('_poes', poes_dt.items())
         self.datastore.create_dset('_poes/slice_by_sid', slice_dt)
         # NB: compressing the dataset causes a big slowdown in writing :-(
@@ -850,7 +838,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('There are %d slices of poes [%.1f per task]',
                      nslices, nslices / len(slicedic))
         allargs = [
-            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes, ct),
+            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in allslices]
         self.hazard = {}  # kind -> array

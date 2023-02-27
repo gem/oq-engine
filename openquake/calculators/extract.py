@@ -36,10 +36,12 @@ from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib.gsim.base import ContextMaker, read_cmakers
+from openquake.hazardlib.gsim.base import (
+    ContextMaker, read_cmakers, read_ctx_by_grp)
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
+from openquake.hazardlib.probability_map import get_lvl
 from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
@@ -541,10 +543,12 @@ def extract_mean_by_rup(dstore, what):
     N = len(dstore['sitecol'])
     assert N == 1
     out = []
-    for cmaker in read_cmakers(dstore):
-        ctx = cmaker.read_ctxt(dstore)
+    ctx_by_grp = read_ctx_by_grp(dstore)
+    cmakers = read_cmakers(dstore)
+    for gid, ctx in ctx_by_grp.items():
         # shape (4, G, M, U) => U
-        means = cmaker.get_mean_stds([ctx])[0].mean(axis=(0, 1))
+        means = cmakers[gid].get_mean_stds([ctx], split_by_mag=True)[0].mean(
+            axis=(0, 1))
         out.extend(zip(ctx.src_id, ctx.rup_id, means))
     out.sort(key=operator.itemgetter(0, 1))
     return numpy.array(out, [('src_id', U32), ('rup_id', U32), ('mean', F64)])
@@ -1144,7 +1148,7 @@ def extract_disagg(dstore, what):
     imt2m = {imt: m for m, imt in enumerate(oq.imtls)}
     bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
     m = imt2m[imt]
-    matrix = dstore['disagg-%s/%s' % (spec, label)][sid, m, poe_id]
+    matrix = dstore['disagg-%s/%s' % (spec, label)][sid, ..., m, poe_id, :]
     Z = matrix.shape[-1]
     poe_agg = dstore['poe4'][sid, m, poe_id]
     if traditional:
@@ -1217,8 +1221,9 @@ def extract_disagg_by_src(dstore, what):
     [poe] = qdict['poe']
     [site_id] = qdict.get('site_id', ['0'])
     site_id = int(site_id)
-    mean = dstore.sel('hcurves-stats', imt=imt, stat='mean', site_id=site_id)[0, 0, 0]
-    lvl_id = calc.get_lvl(mean, oq.imtls[imt], float(poe))
+    mean = dstore.sel(
+        'hcurves-stats', imt=imt, stat='mean', site_id=site_id)[0, 0, 0]
+    lvl_id = get_lvl(mean, oq.imtls[imt], float(poe))
     imt_id = list(oq.imtls).index(imt)
     poes = dset[site_id, :, imt_id, lvl_id]  # shape (R, Ns)
     if oq.collect_rlzs:  # already averaged
@@ -1232,6 +1237,7 @@ def extract_disagg_by_src(dstore, what):
     return ArrayWrapper(arr[::-1], dict(site_id=site_id, imt=imt, poe=poe))
 
 
+# TODO: extract from disagg-stats, avoid computing means on the fly
 @extract.add('disagg_layer')
 def extract_disagg_layer(dstore, what):
     """
@@ -1270,7 +1276,7 @@ def extract_disagg_layer(dstore, what):
             for p, poe in enumerate(poes_disagg):
                 for kind in kinds:
                     key = '%s-%s-%s' % (kind, imt, poe)
-                    rec[key] = arr[kind][sid, m, p] @ ws
+                    rec[key] = arr[kind][sid, ..., m, p, :] @ ws
                 rec['iml-%s-%s' % (imt, poe)] = hmap4[sid, m, p]
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
                                   trt=numpy.array(encode(edges[-1]))))

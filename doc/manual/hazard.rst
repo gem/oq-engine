@@ -2177,7 +2177,8 @@ description of each parameter is provided below.
 
 -  ``num_rlzs_disagg``: optional; specifies the number of realizations
    to be used, selecting those that yield intensity measure levels
-   closest to the mean.
+   closest to the mean. Starting from engine 3.17 the default is 0,
+   which means considering all realizations.
 
 Alternatively to ``num_rlzs_disagg``, the user can specify the index or
 indices of the realizations to disaggregate as a list of comma-separated
@@ -2192,9 +2193,7 @@ integers. For example:
 If ``num_rlzs_disagg`` is specified, the user cannot specify
 ``rlz_index``, and vice versa. If ``num_rlzs_disagg`` or ``rlz_index``
 are specified, the mean disaggregation is automatically computed from
-the selected realizations. If neither is specified, the realization that
-yields the intensity measure level closest to the mean level will be
-selected.
+the selected realizations.
 
 As mentioned above, the user also has the option to perform
 disaggregation by directly specifying the intensity measure level to be

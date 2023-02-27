@@ -32,7 +32,7 @@ class MosaicGetter:
             models = [polygon['properties']['code'] for polygon in shp]
         return models
 
-    def get_model_by_lon_lat(self, lon, lat):
+    def get_model_by_lon_lat(self, lon, lat, strict=True):
         """
         Given a longitude and latitude, finds the corresponding hazard model
         in the global mosaic.
@@ -41,6 +41,8 @@ class MosaicGetter:
             The site longitude
         :param lat:
             The site latitude
+        :param strict:
+             If True (the default) raise an error, otherwise log an error
         """
         t0 = time.time()
         lon = float(lon)
@@ -70,9 +72,13 @@ class MosaicGetter:
         }
         num_close_models = len(close_models)
         if num_close_models < 1:
-            logging.error(
-                f'Site at lon={lon} lat={lat} is not covered by any model!')
-            return
+            if strict:
+                raise ValueError(
+                    f'Site at lon={lon} lat={lat} is not covered by any model!')
+            else:
+                logging.error(
+                    f'Site at lon={lon} lat={lat} is not covered by any model!')
+                model = None
         elif num_close_models > 1:
             model = min(close_models, key=close_models.get)
             logging.warning(
@@ -104,7 +110,8 @@ class MosaicGetter:
                 except KeyError:
                     lon = site['lon']
                     lat = site['lat']
-                model_by_site[(lon, lat)] = self.get_model_by_lon_lat(lon, lat)
+                model_by_site[(lon, lat)] = self.get_model_by_lon_lat(
+                    lon, lat, strict=False)
         logging.info(Counter(model_by_site.values()))
         return model_by_site
 

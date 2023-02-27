@@ -44,7 +44,6 @@ U8 = numpy.uint8
 I32 = numpy.int32
 F32 = numpy.float32
 MAX_RUPTURES = 2000
-by_trt = operator.attrgetter('tectonic_region_type')
 
 
 # this is used in acceptance/stochastic_test.py, not in the engine
@@ -299,46 +298,3 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
         rup_array = get_rup_array(eb_ruptures, srcfilter)
         yield AccumDict(dict(rup_array=rup_array, source_data=source_data,
                              eff_ruptures={grp_id: eff_ruptures}))
-
-
-def sample_ebruptures(src_groups, cmakerdict):
-    """
-    Sample independent sources without filtering.
-
-    :param src_groups: a list of source groups
-    :param cmakerdict: a dictionary TRT -> cmaker
-    :returns: a list of EBRuptures
-    """
-    ebrs = []
-    e0 = 0
-    ordinal = 0
-    for sg in src_groups:
-        cmaker = cmakerdict[sg.trt]
-        for src in sg:
-            samples = getattr(src, 'samples', 1)
-            for rup, trt_smr, n_occ in src.sample_ruptures(
-                    samples * cmaker.ses_per_logic_tree_path, cmaker.ses_seed):
-                ebr = EBRupture(rup, src.source_id, trt_smr, n_occ, e0=e0)
-                ebr.ordinal = ordinal
-                ebrs.append(ebr)
-                e0 += n_occ
-                ordinal += 1
-    return ebrs
-
-
-def get_ebr_df(ebruptures, cmakerdict):
-    """
-    :param ebruptures: the output of sample_ebruptures
-    :param rlzs_by_gsim_trt: a double dictionary trt -> gsim -> rlzs
-    :returns: a DataFrame with fields eid, rlz indexed by rupture ordinal
-    """
-    eids, rups, rlzs = [], [], []
-    for trt, ebrs in itertools.groupby(ebruptures, by_trt):
-        rlzs_by_gsim = cmakerdict[trt].gsims
-        for ebr in ebrs:
-            for rlz_id, eids_ in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
-                for eid in eids_:
-                    eids.append(eid)
-                    rups.append(ebr.ordinal)
-                    rlzs.append(rlz_id)
-    return pandas.DataFrame(dict(eid=eids, rlz=rlzs), rups)

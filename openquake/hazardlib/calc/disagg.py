@@ -32,6 +32,7 @@ import scipy.stats
 
 from openquake.baselib.general import AccumDict, groupby, pprod, humansize
 from openquake.baselib.performance import idx_start_stop, Monitor
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -40,11 +41,29 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
 from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import (
-    ContextMaker, FarAwayRupture, get_src_mutex)
+from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
+
+def to_rates(probs):
+    """
+    Convert an array of probabilities into an array of rates
+
+    >>> round(to_rates(.8), 6)
+    1.609438
+    """
+    return - numpy.log(1. - probs)
+
+
+def to_probs(rates):
+    """
+    Convert an array of rates into an array of probabilities
+
+    >>> round(to_probs(1.609438), 6)
+    0.8
+    """
+    return 1. - numpy.exp(- rates)
 
 
 def assert_same_shape(arrays):
@@ -83,11 +102,7 @@ def lon_lat_bins(lon, lat, size_km, coord_bin_width):
 def _build_bin_edges(oq, sitecol):
     # return [mag, dist, lon, lat, eps] edges
 
-    mag_bin_width = oq.mag_bin_width
-    distance_bin_width = oq.distance_bin_width
-    coordinate_bin_width = oq.coordinate_bin_width
     maxdist = filters.upper_maxdist(oq.maximum_distance)
-    num_epsilon_bins = oq.num_epsilon_bins
     truncation_level = oq.truncation_level
     mags_by_trt = oq.mags_by_trt
     
@@ -103,17 +118,19 @@ def _build_bin_edges(oq, sitecol):
         mags = sorted(mags)
         min_mag = mags[0]
         max_mag = mags[-1]
-        n1 = int(numpy.floor(min_mag / mag_bin_width))
-        n2 = int(numpy.ceil(max_mag / mag_bin_width))
-        if n2 == n1 or max_mag >= round((mag_bin_width * n2), 3):
+        n1 = int(numpy.floor(min_mag / oq.mag_bin_width))
+        n2 = int(numpy.ceil(max_mag / oq.mag_bin_width))
+        if n2 == n1 or max_mag >= round((oq.mag_bin_width * n2), 3):
             n2 += 1
-        mag_edges = mag_bin_width * numpy.arange(n1, n2+1)
+        mag_edges = oq.mag_bin_width * numpy.arange(n1, n2+1)
 
     # build dist_edges
     if 'dist' in oq.disagg_bin_edges:
         dist_edges = oq.disagg_bin_edges['dist']
-    else:
-        dist_edges = uniform_bins(0, maxdist, distance_bin_width)
+    elif hasattr(oq, 'distance_bin_width'):
+        dist_edges = uniform_bins(0, maxdist, oq.distance_bin_width)
+    else:  # make a single bin
+        dist_edges = [0, maxdist]
 
     # build lon_edges
     if 'lon' in oq.disagg_bin_edges or 'lat' in oq.disagg_bin_edges:
@@ -125,7 +142,7 @@ def _build_bin_edges(oq, sitecol):
         for site in sitecol:
             loc = site.location
             lon_edges[site.id], lat_edges[site.id] = lon_lat_bins(
-                loc.x, loc.y, maxdist, coordinate_bin_width)
+                loc.x, loc.y, maxdist, oq.coordinate_bin_width)
 
     # sanity check: the shapes of the lon lat edges are consistent
     assert_same_shape(list(lon_edges.values()))
@@ -136,7 +153,7 @@ def _build_bin_edges(oq, sitecol):
         eps_edges = oq.disagg_bin_edges['eps']
     else:
         eps_edges = numpy.linspace(
-            -truncation_level, truncation_level, num_epsilon_bins + 1)
+            -truncation_level, truncation_level, oq.num_epsilon_bins + 1)
 
     return [mag_edges, dist_edges, lon_edges, lat_edges, eps_edges]
 
@@ -165,7 +182,7 @@ def get_edges_shapedic(oq, sitecol, num_tot_rlzs=None):
             shapedic[name] = len(edges[i]) - 1
     shapedic['N'] = len(sitecol)
     shapedic['M'] = len(oq.imtls)
-    shapedic['P'] = len(oq.poes_disagg or (None,))
+    shapedic['P'] = len(oq.poes or (None,))
     shapedic['Z'] = Z
     return edges + [trts], shapedic
 
@@ -178,7 +195,7 @@ def get_eps4(eps_edges, truncation_level):
     """
     :returns: eps_min, eps_max, eps_bands, eps_cum
     """
-    # this is ultra-slow due to the infamous doccer issue
+    # this is ultra-slow due to the infamous doccer issue, hence the lru_cache
     tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
     eps_bands = tn.cdf(eps_edges[1:]) - tn.cdf(eps_edges[:-1])
     elist = range(len(eps_bands))
@@ -187,8 +204,8 @@ def get_eps4(eps_edges, truncation_level):
 
 
 # NB: this function is the crucial bit for performance!
-def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False,
-                  mon=Monitor()):
+def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
+                  infer_occur_rates, mon1, mon2, mon3):
     # ctx: a recarray of size U for a single site and magnitude bin
     # mea: array of shape (G, M, U)
     # std: array of shape (G, M, U)
@@ -200,20 +217,22 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False,
     # epsstar: a boolean. When True, disaggregation contains eps* results
     # returns a 7D-array of shape (D, Lo, La, E, M, P, Z)
 
-    with mon('disagg by eps', measuremem=False):
+    with mon1:
         eps_edges = tuple(bin_edges[-1])  # last edge
         min_eps, max_eps, eps_bands, cum_bands = get_eps4(
             eps_edges, cmaker.truncation_level)
         U, E = len(ctx), len(eps_bands)
         M, P = iml2.shape
         phi_b = cmaker.phi_b
-        # Array with mean and total std values. Shape of this is:
         # U - Number of contexts (i.e. ruptures if there is a single site)
+        # E - Number of epsilons
         # M - Number of IMTs
+        # P - Number of PoEs
         # G - Number of gsims
         poes = numpy.zeros((U, E, M, P))
         pnes = numpy.ones((U, E, M, P))
-        # Multi-dimensional iteration
+
+        # disaggregate by epsilon
         for (m, p), iml in numpy.ndenumerate(iml2):
             if iml == -numpy.inf:  # zero hazard
                 continue
@@ -230,18 +249,20 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar=False,
                 poes[:, :, m, p] = _disagg_eps(
                     truncnorm_sf(phi_b, lvls), idxs, eps_bands, cum_bands)
 
-    with mon('multiplying pnes', measuremem=False):
-        time_span = cmaker.tom.time_span
-        if any(len(probs) for probs in ctx.probs_occur):  # any probs_occur
+    with mon2:
+        time_span = cmaker.investigation_time
+        if not infer_occur_rates and any(len(po) for po in ctx.probs_occur):
+            # slow lane, case_65
             for u, rec in enumerate(ctx):
                 pnes[u] *= get_pnes(rec.occurrence_rate, rec.probs_occur,
                                     poes[u], time_span)
-        else:  # poissonian context, use the fast lane
+        else:
+            # poissonian, fast lane
             for e, m, p in itertools.product(range(E), range(M), range(P)):
                 pnes[:, e, m, p] *= numpy.exp(
                     -ctx.occurrence_rate * poes[:, e, m, p] * time_span)
 
-    with mon('building disagg matrix', measuremem=False):
+    with mon3:
         bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
         return _build_disagg_matrix(bindata, bin_edges[1:])
 
@@ -343,8 +364,12 @@ mag_lon_lat_pmf = partial(pprod, axis=(DIS, EPS))
 # applied on matrix MAG DIS LON LAT EPS
 
 def trt_pmf(matrices):
-    # from T matrices to T floats
-    return numpy.array([pprod(mat) for mat in matrices])
+    """
+    From T matrices of shape (Ma, D, Lo, La, E, ...) into one matrix of
+    shape (T, ...)
+    """
+    return numpy.array([pprod(mat, axis=(MAG, DIS, LON, LAT, EPS))
+                        for mat in matrices])
 
 # this dictionary is useful to extract a fixed set of
 # submatrices from the full disaggregation matrix
@@ -359,12 +384,24 @@ pmf_map = dict([
     ('Lon_Lat', lon_lat_pmf),
     ('Mag_Lon_Lat', mag_lon_lat_pmf),
     ('TRT', trt_pmf),
+    ('TRT_Mag', None),
     ('TRT_Lon_Lat', None),
     ('TRT_Mag_Dist', None),
     ('TRT_Mag_Dist_Eps', None),
 ])
 
 # ########################## Disaggregator class ########################## #
+
+def split_by_magbin(ctxt, mag_edges):
+    """
+    :param ctxt: a context array
+    :param mag_edges: magnitude bin edges
+    :returns: a dictionary magbin -> ctxt
+    """
+    ctx = ctxt[numpy.argsort(ctxt.mag)]
+    fullmagi = numpy.searchsorted(mag_edges, ctx.mag) - 1
+    fullmagi[fullmagi == -1] = 0  # magnitude on the edge
+    return {magi: ctx[fullmagi == magi] for magi in numpy.unique(fullmagi)}
 
 
 class Disaggregator(object):
@@ -383,7 +420,7 @@ class Disaggregator(object):
         if imts is not None:
             for imt in imts:
                 assert imt in cmaker.imtls, imt
-            cmaker.imts = imts
+            cmaker.imts = [from_string(imt) for imt in imts]
         self.cmaker = cmaker
         self.epsstar = cmaker.oq.epsilon_star
         self.bin_edges = (bin_edges[0], # mag
@@ -408,25 +445,30 @@ class Disaggregator(object):
         ctx = numpy.concatenate(ctxs).view(numpy.recarray)
         if len(ctx) == 0:
             raise FarAwayRupture('No ruptures affecting site #%d' % sid)
-
-        # build the magnitude bins
-        self.fullmagi = numpy.searchsorted(bin_edges[0], ctx.mag) - 1
-        self.fullmagi[self.fullmagi == -1] = 0  # magnitude on the edge
-
         self.fullctx = ctx
 
-    def init(self, magi, src_mutex, monitor=Monitor()):
+    def init(self, magi, src_mutex,
+             mon0=Monitor('disagg mean_stds'),
+             mon1=Monitor('disagg by eps'),
+             mon2=Monitor('composing pnes'),
+             mon3=Monitor('disagg matrix')):
         self.magi = magi
         self.src_mutex = src_mutex
-        self.mon = monitor
-        self.ctx = self.fullctx[self.fullmagi == magi]
-        if len(self.ctx) == 0:
+        self.mon1 = mon1
+        self.mon2 = mon2
+        self.mon3 = mon3
+        if not hasattr(self, 'ctx_by_magi'):
+            # the first time build the magnitude bins
+            self.ctx_by_magi = split_by_magbin(self.fullctx, self.bin_edges[0])
+        try:
+            self.ctx = self.ctx_by_magi[magi]
+        except KeyError:
             raise FarAwayRupture
         if self.src_mutex:
             # make sure we can use idx_start_stop below
             self.ctx.sort(order='src_id')
-        self.mea, self.std = self.cmaker.get_mean_stds(
-            [self.ctx], split_by_mag=True)[:2]
+        with mon0:
+            self.mea, self.std = self.cmaker.get_mean_stds([self.ctx])[:2]
         if self.src_mutex:
             mat = idx_start_stop(self.ctx.src_id)  # shape (n, 3)
             src_ids = mat[:, 0]  # subset contributing to the given magi
@@ -436,7 +478,7 @@ class Disaggregator(object):
                                               self.src_mutex['weight'])
                             if s in src_ids]
 
-    def disagg6D(self, iml2, g):
+    def disagg6D(self, iml2, rlz):
         """
         Disaggregate a single realization.
 
@@ -446,10 +488,12 @@ class Disaggregator(object):
         imlog2 = numpy.zeros_like(iml2)
         for m, imt in enumerate(self.cmaker.imts):
             imlog2[m] = to_distribution_values(iml2[m], imt)
+        g = self.g_by_rlz[rlz]
         if not self.src_mutex:
             return _disaggregate(self.ctx, self.mea, self.std, self.cmaker,
                                  g, imlog2, self.bin_edges, self.epsstar,
-                                 self.mon)
+                                 self.cmaker.oq.infer_occur_rates,
+                                 self.mon1, self.mon2, self.mon3)
 
         # else average on the src_mutex weights
         mats = []
@@ -458,23 +502,32 @@ class Disaggregator(object):
             mea = self.mea[:, :, s1:s2]  # shape (G, M, U)
             std = self.std[:, :, s1:s2]  # shape (G, M, U)
             mat = _disaggregate(ctx, mea, std, self.cmaker, g, imlog2,
-                                self.bin_edges, self.epsstar, self.mon)
+                                self.bin_edges, self.epsstar,
+                                self.cmaker.oq.infer_occur_rates,
+                                self.mon1, self.mon2, self.mon3)
             mats.append(mat)
         return numpy.average(mats, weights=self.weights, axis=0)
 
-    def disagg_mag_dist_eps(self, iml2, rlzi, src_mutex=None):
+    def disagg_mag_dist_eps(self, iml3, src_mutex={}):
         """
-        :returns: a 5D matrix of shape (Ma, D, E, M, P)
+        :param iml3: an array of shape (M, P, Z)
+        :param src_mutex: a dictionary src_id -> weight, default empty
+        :returns: a 6D matrix of shape (Ma, D, E, M, P, Z)
         """
-        mat5 = numpy.zeros((self.Ma, self.D, self.E) + iml2.shape)
+        M, P, Z = iml3.shape
+        assert Z == self.cmaker.Z, (Z, self.cmaker.Z)
+        out = numpy.zeros((self.Ma, self.D, self.E, M, P, Z))
         for magi in range(self.Ma):
             self.init(magi, src_mutex)
-            mat6 = self.disagg6D(iml2, self.g_by_rlz[rlzi])
-            mat5[magi] = pprod(mat6, axis=(1, 2))
-        return mat5
+            z = 0
+            for rlz, g in self.g_by_rlz.items():
+                mat6 = self.disagg6D(iml3[:, :, z], g)
+                out[magi, ..., z] = pprod(mat6, axis=(1, 2))
+                z += 1
+        return out
 
     def __repr__(self):
-        return f'<{self.__class__.__name__} {humansize(self.ctx.nbytes)} >'
+        return f'<{self.__class__.__name__} {humansize(self.fullctx.nbytes)} >'
 
 
 # this is used in the hazardlib tests, not in the engine
@@ -564,11 +617,13 @@ def disaggregation(
     cmaker = {}  # trt -> cmaker
     mags_by_trt = AccumDict(accum=set())
     dists = []
+    tom = sources[0].temporal_occurrence_model
     oq = Mock(imtls={str(imt): [iml]},
-              poes_disagg=[None],
+              poes=[None],
               rlz_index=[0],
               epsstar=epsstar,
               truncation_level=truncation_level,
+              investigation_time=tom.time_span,
               maximum_distance=source_filter.integration_distance,
               mags_by_trt=mags_by_trt,
               num_epsilon_bins=n_epsilons,
@@ -578,7 +633,6 @@ def disaggregation(
               disagg_bin_edges=bin_edges)
     for trt, srcs in by_trt.items():
         cmaker[trt] = cm = ContextMaker(trt, rlzs_by_gsim, oq)
-        cm.tom = srcs[0].temporal_occurrence_model
         ctxs[trt].extend(cm.from_srcs(srcs, sitecol))
         for ctx in ctxs[trt]:
             mags_by_trt[trt] |= set(ctx.mag)

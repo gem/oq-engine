@@ -542,6 +542,7 @@ def get_site_collection(oqparam, h5=None):
     ss = oqparam.sites_slice  # can be None or (start, stop)
     if h5 and 'sitecol' in h5 and not ss:
         return h5['sitecol']
+
     mesh = get_mesh(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
@@ -574,6 +575,7 @@ def get_site_collection(oqparam, h5=None):
             sitecol.add_col('custom_site_id', 'S6', gh)
         mask = (sitecol.sids >= ss[0]) & (sitecol.sids < ss[1])
         sitecol = sitecol.filter(mask)
+        assert sitecol is not None, 'No sites in the slice %d:%d' % ss
         sitecol.make_complete()
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
@@ -589,12 +591,6 @@ def get_site_collection(oqparam, h5=None):
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
 
-    # sanity check on the site parameters
-    for param in req_site_params:
-        dt = site.site_param_dt[param]
-        if dt is F64 and (sitecol.array[param] == 0.).all():
-            raise ValueError('The site parameter %s is always zero: please '
-                             'check the site model' % param)
     return sitecol
 
 
@@ -677,7 +673,10 @@ def get_source_model_lt(oqparam, branchID=None):
         a :class:`openquake.hazardlib.logictree.SourceModelLogicTree`
         instance
     """
-    return get_smlt(vars(oqparam), branchID)
+    smlt = get_smlt(vars(oqparam), branchID)
+    if len(oqparam.source_id) == 1:  # reduce to a single source
+        smlt.reduce(oqparam.source_id[0])
+    return smlt
 
 
 def get_full_lt(oqparam, branchID=None):
@@ -704,9 +703,12 @@ def get_full_lt(oqparam, branchID=None):
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
     if oqparam.number_of_logic_tree_samples:
-        logging.info('Considering {:_d} logic tree paths out of {:_d}'.format(
-            oqparam.number_of_logic_tree_samples, p))
+        unique = numpy.unique(full_lt.rlzs['branch_path'])
+        logging.info('Considering {:_d} logic tree paths out of {:_d}, unique'
+                     ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
+                                     len(unique)))
     else:  # full enumeration
+        logging.info('There are {:_d} logic tree paths(s)'.format(p))
         if oqparam.hazard_curves and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
@@ -718,12 +720,11 @@ def get_full_lt(oqparam, branchID=None):
             logging.warning(
                 'There are many potential logic tree paths (%d): '
                 'try to use sampling or reduce the source model' % p)
-        logging.info('Total number of logic tree paths = {:_d}'.format(p))
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
     dupl = []
-    for src_id, branchIDs in source_model_lt.source_ids.items():
-        if len(branchIDs) > 1:
+    for src_id, sms in source_model_lt.sms_by_src.items():
+        if len(sms) > 1:
             dupl.append(src_id)
     if dupl:
         logging.info('There are %d non-unique source IDs', len(dupl))
@@ -814,9 +815,6 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
 
     # read and process the composite source model from the input files
     csm = source_reader.get_csm(oqparam, full_lt, h5)
-    rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(csm.get_trt_smrs())
-    ngsims = sum(len(rbg) for rbg in rlzs_by_gsim_list)
-    logging.info('There are %d gsims in the CompositeSourceModel', ngsims)
     if oqparam.cachedir:
         logging.info('Saving %s', fname)
         with open(fname, 'wb') as f:
