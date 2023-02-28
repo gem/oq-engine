@@ -226,7 +226,8 @@ if APPLICATION_MODE.upper() in ('RESTRICTED', 'AELO'):
 
 STATIC_URL = '%s/static/' % WEBUI_PATHPREFIX
 
-if LOCKDOWN:
+if LOCKDOWN and APPLICATION_MODE == 'AELO':
+    # check essential constants are defined
     try:
         EMAIL_BACKEND  # noqa
     except NameError:
@@ -246,6 +247,7 @@ if LOCKDOWN:
                 f' EMAIL_<HOST|PORT|USE_TLS|HOST_USER|HOST_PASSWORD>'
                 f' must all be defined')
 
+if LOCKDOWN:
     AUTHENTICATION_BACKENDS += (
         'django.contrib.auth.backends.ModelBackend',
         # 'dpam.backends.PAMBackend',
