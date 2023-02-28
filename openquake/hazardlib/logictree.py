@@ -390,7 +390,7 @@ class SourceModelLogicTree(object):
         oksms = self.sms_by_src[src_id]
         self.sms_by_src = {src_id: oksms}
         self.trt_by_src = {src_id: self.trt_by_src[src_id]}
-        self.srcs_by_path = {
+        self.srcs_by_path = {  # relative paths
             path: [src_id] for path, srcs in self.srcs_by_path.items()
             if src_id in srcs}
         self.tectonic_region_types = {self.trt_by_src[src_id]}
@@ -745,7 +745,7 @@ class SourceModelLogicTree(object):
         """
         with self._get_source_model(source_model) as sm:
             trt_by_src = get_trt_by_src(sm)
-        path = sm.name[len(self.basepath):]
+        path = sm.name[len(self.basepath) + 1:]
         for src_id, trt in trt_by_src.items():
             self.srcs_by_path[path].append(src_id)
             self.sms_by_src[src_id].append(branch_id)
