@@ -1062,16 +1062,16 @@ hazard_uhs-std.csv
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)
 
-        #cmakers = contexts.read_cmakers(self.calc.datastore)
-        #ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
-        #ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
+        cmakers = contexts.read_cmakers(self.calc.datastore)
+        ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
+        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
         # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
 
         # testing unique_paths mode
-        #self.run_calc(case_71.__file__, 'job.ini', concurrent_tasks='0',
-        #              sampling_method='unique_paths')
-        #[fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        #self.assertEqualFiles('expected/hcurves.csv', fname)
+        self.run_calc(case_71.__file__, 'job.ini', concurrent_tasks='0',
+                      sampling_method='unique_paths')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurves.csv', fname)
         
     def test_case_72(self):
         # reduced USA model

@@ -1065,14 +1065,14 @@ class FullLogicTree(object):
                       else self.sampling_method)
             gsim_rlzs = self.gsim_lt.sample(
                 self.num_samples, self.seed + 1, method)
-            if self.sampling_method == 'early_weights':
+            if self.sampling_method == 'unique_paths':
                 rlzs.extend(get_eff_rlzs(sm_rlzs, gsim_rlzs))
             else:
                 for i, gsim_rlz in enumerate(gsim_rlzs):
                     rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
                                         sm_rlzs[i].weight * gsim_rlz.weight)
                     rlzs.append(rlz)
-                if method.startswith('early_'):
+                if self.sampling_method.startswith('early_'):
                     for rlz in rlzs:
                         for k in rlz.weight.dic:
                             rlz.weight.dic[k] = 1. / self.num_samples
