@@ -38,7 +38,7 @@ import operator
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.node import node_from_elem, context
+from openquake.baselib.node import node_from_elem, context, Node
 from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -318,7 +318,7 @@ class SourceModelLogicTree(object):
         dic = dict(filename='fake.xml', seed=0, num_samples=0,
                    sampling_method='early_weights', num_paths=1,
                    sms_by_src=AccumDict(accum=[]), trt_by_src={},
-                   is_source_specific=0,
+                   srcs_by_path=AccumDict(accum=[]), is_source_specific=0,
                    tectonic_region_types=set(),
                    bsetdict='{"bs0": {"uncertaintyType": "sourceModel"}}')
         self.__fromh5__(arr, dic)
@@ -390,9 +390,12 @@ class SourceModelLogicTree(object):
         oksms = self.sms_by_src[src_id]
         self.sms_by_src = {src_id: oksms}
         self.trt_by_src = {src_id: self.trt_by_src[src_id]}
+        self.srcs_by_path = {  # relative paths
+            path: [src_id] for path, srcs in self.srcs_by_path.items()
+            if src_id in srcs}
         self.tectonic_region_types = {self.trt_by_src[src_id]}
         for bset, dic in zip(self.branchsets, self.bsetdict.values()):
-            if bset.uncertainty_type == 'sourceModel':
+            if bset.uncertainty_type in ('sourceModel', 'extendModel'):
                 same = []  # branches with the source, all same contribution
                 zero = []  # branches without the source, all zeros
                 for br in bset.branches:
@@ -403,11 +406,14 @@ class SourceModelLogicTree(object):
                 newbranches = []
                 if same:
                     b1 = same[0]
+                    b1.value =  ' '.join(p for p in b1.value.split()
+                                         if p in self.srcs_by_path)
                     for br in same[1:]:
                         b1.weight += br.weight
                     newbranches.append(b1)
                 if zero:
                     b0 = zero[0]
+                    b0.value = ''
                     for br in zero[1:]:
                         b0.weight += br.weight
                     newbranches.append(b0)
@@ -425,7 +431,8 @@ class SourceModelLogicTree(object):
         """
         self.info = collect_info(self.filename, self.branchID)
 
-        # the following two dicts are populated in collect_source_model_data
+        # the following dicts are populated in collect_source_model_data
+        self.srcs_by_path = collections.defaultdict(list)
         self.sms_by_src = collections.defaultdict(list)
         self.trt_by_src = {}
 
@@ -435,7 +442,8 @@ class SourceModelLogicTree(object):
             self.parse_branchset(bsnode, depth)
         dt = time.time() - t0
         bname = os.path.basename(self.filename)
-        logging.info('Validated %s in %.2f seconds', bname, dt)
+        logging.info('Validated %s (with %d files) in %.2f seconds', bname,
+                     len(self.srcs_by_path), dt)
 
     def parse_branchset(self, branchset_node, depth):
         """
@@ -737,7 +745,12 @@ class SourceModelLogicTree(object):
         """
         with self._get_source_model(source_model) as sm:
             trt_by_src = get_trt_by_src(sm)
+        if self.basepath:
+            path = sm.name[len(self.basepath) + 1:]
+        else:
+            path = sm.name
         for src_id, trt in trt_by_src.items():
+            self.srcs_by_path[path].append(src_id)
             self.sms_by_src[src_id].append(branch_id)
             self.trt_by_src[src_id] = trt
             self.tectonic_region_types.add(trt)
@@ -773,6 +786,24 @@ class SourceModelLogicTree(object):
             out[src_id] = SourceLogicTree(
                 src_id, bsets[src_id], bsetdict[src_id])
         return out
+
+    def to_node(self):
+        """
+        :returns: a logicTree Node convertible into NRML format
+        """
+        bsnodes = []
+        for bset in self.branchsets:
+            dic = dict(branchSetID='bs%02d' % bset.ordinal,
+                       uncertaintyType=bset.uncertainty_type)
+            brnodes = []
+            for br in bset.branches:
+                um = Node('uncertaintyModel', {}, br.value)
+                uw = Node('uncertaintyWeight', {}, br.weight)
+                brnode = Node('logicTreeBranch', {'branchID': br.branch_id},
+                              nodes=[um, uw])
+                brnodes.append(brnode)
+            bsnodes.append(Node('logicTreeBranchSet', dic, nodes=brnodes))
+        return Node('logicTree', {'logicTreeID': 'lt'}, nodes=bsnodes)
 
     # SourceModelLogicTree
     def __toh5__(self):
