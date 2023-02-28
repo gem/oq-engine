@@ -30,18 +30,18 @@ def main(smlt_path, src_id):
     smlt = SourceModelLogicTree(smlt_path)
     smlt.reduce(src_id)
     ltnode = smlt.to_node()
-    redpath = 'reduced/' + smlt_path
+    redpath = 'reduced/' + smlt_path[len(smlt.basepath):]
     logging.info('Creating %s', redpath)
     with open(redpath, 'wb') as f:
         nrml.write([ltnode], f)
 
     # reduce the source model files
     for path, srcs in smlt.srcs_by_path.items():
-        redpath = 'reduced/' + path[len(smlt.basepath):]
+        redpath = 'reduced/' + path
         logging.info('Creating %s', redpath)
         if not os.path.exists(os.path.dirname(redpath)):
             os.makedirs(os.path.dirname(redpath))
-        sm = nrml.read(path).sourceModel
+        sm = nrml.read(os.path.join(smlt.basepath, path)).sourceModel
         for grp in sm:
             grp.nodes = [src for src in grp if src['id'] in srcs]
         with open(redpath, 'wb') as f:

@@ -745,7 +745,10 @@ class SourceModelLogicTree(object):
         """
         with self._get_source_model(source_model) as sm:
             trt_by_src = get_trt_by_src(sm)
-        path = sm.name[len(self.basepath) + 1:]
+        if self.basepath:
+            path = sm.name[len(self.basepath) + 1:]
+        else:
+            path = sm.name
         for src_id, trt in trt_by_src.items():
             self.srcs_by_path[path].append(src_id)
             self.sms_by_src[src_id].append(branch_id)
