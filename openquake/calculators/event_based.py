@@ -231,7 +231,6 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
-        gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
         sources = self.csm.get_sources()
         # weighting the heavy sources
         nrups = parallel.Starmap(
@@ -255,7 +254,8 @@ class EventBasedCalculator(base.HazardCalculator):
             if not sg.sources:
                 continue
             logging.info('Sending %s', sg)
-            cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], oq)
+            rgb = self.full_lt.get_rlzs_by_gsim(sg.sources[0].trt_smr)
+            cmaker = ContextMaker(sg.trt, rgb, oq)
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
         try:

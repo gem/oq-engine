@@ -468,10 +468,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
                   'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
-        gsims_by_trt = self.full_lt.get_gsims_by_trt()
-
-        for trt, gsims in gsims_by_trt.items():
-            cm = ContextMaker(trt, gsims, self.oqparam)
+        for cm in read_cmakers(self.datastore):
             params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
             params.update(cm.REQUIRES_DISTANCES)
         if self.few_sites:
