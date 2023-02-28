@@ -29,29 +29,11 @@ def main(smlt_path, src_id):
     # reduce the logic tree file
     smlt = SourceModelLogicTree(smlt_path)
     smlt.reduce(src_id)
-    lt = nrml.read(smlt_path).logicTree
-    for bset in lt:
-        if bset['uncertaintyType'] not in {'sourceModel', 'extendModel'}:
-            continue
-        branches = []
-        for br in bset:
-            paths = (~br.uncertaintyModel).split()
-            br.uncertaintyModel.text = ' '.join(
-                p for p in paths if p in smlt.srcs_by_path)
-            if br.uncertaintyModel.text and not branches:  # first time
-                import pdb; pdb.set_trace()
-                branches.append(br)
-            elif branches:
-                branches[0].uncertaintyWeight.text += br.uncertaintyWeight.text
-        bset.nodes = branches
-    lt.nodes = [bset for bset in lt.nodes if bset.nodes]
-    if lt.nodes[0]['uncertaintyType'] == 'extendModel':
-        # this happens if the source is in the extendModel files
-        lt.nodes[0]['uncertaintyType'] = 'sourceModel'
+    ltnode = smlt.to_node()
     redpath = 'reduced/' + smlt_path
     logging.info('Creating %s', redpath)
     with open(redpath, 'wb') as f:
-        nrml.write([lt], f)
+        nrml.write([ltnode], f)
 
     # reduce the source model files
     for path, srcs in smlt.srcs_by_path.items():
