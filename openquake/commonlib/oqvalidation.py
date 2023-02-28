@@ -629,7 +629,7 @@ rupture_mesh_spacing:
   Default: 5.0
 
 sampling_method:
-  One of early_weights, late_weights, early_latin, late_latin)
+  One of early_weights, late_weights, early_latin, late_latin, unique_paths)
   Example: *sampling_method = early_latin*.
   Default: 'early_weights'
 
@@ -971,8 +971,8 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, [])
     sampling_method = valid.Param(
-        valid.Choice('early_weights', 'late_weights',
-                     'early_latin', 'late_latin'), 'early_weights')
+        valid.Choice('early_weights', 'late_weights', 'early_latin',
+                     'late_latin', 'unique_paths'), 'early_weights')
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})

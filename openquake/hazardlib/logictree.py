@@ -43,7 +43,7 @@ from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
-    GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
+    GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths, ImtWeight)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
     dummy_branchset, LogicTreeError, parse_uncertainty, random)
@@ -135,6 +135,25 @@ def get_effective_rlzs(rlzs):
         effective.append(
             Realization(rlz.value, sum(r.weight for r in group),
                         ordinal, rlz.lt_path, len(group)))
+        ordinal += 1
+    return effective
+
+
+def get_eff_rlzs(sm_rlzs, gsim_rlzs):
+    """
+    Group together realizations with the same path
+    and yield the first representative of each group
+    """
+    triples = []  # pid, sm_rlz, gsim_rlz
+    for sm_rlz, gsim_rlz in zip(sm_rlzs, gsim_rlzs):
+        triples.append((sm_rlz.pid + '~' + gsim_rlz.pid, sm_rlz, gsim_rlz))
+    ordinal = 0
+    effective = []
+    for rows in groupby(triples, operator.itemgetter(0)).values():
+        pid, sm_rlz, gsim_rlz = rows[0]
+        weight = ImtWeight.new(len(rows) / len(triples))
+        effective.append(
+            LtRealization(ordinal, sm_rlz.lt_path, gsim_rlz, weight))
         ordinal += 1
     return effective
 
@@ -582,7 +601,8 @@ class SourceModelLogicTree(object):
                     probs, self.sampling_method):
                 value = [br.value for br in branches]
                 smlt_path_ids = [br.branch_id for br in branches]
-                if self.sampling_method.startswith('early_'):
+                if (self.sampling_method.startswith('early_') or
+                        self.sampling_method == 'unique_paths'):
                     weight = 1. / self.num_samples  # already accounted
                 elif self.sampling_method.startswith('late_'):
                     weight = numpy.prod([br.weight for br in branches])
@@ -1041,12 +1061,21 @@ class FullLogicTree(object):
             sm_rlzs = []
             for sm_rlz in self.sm_rlzs:
                 sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
-            gsim_rlzs = self.gsim_lt.sample(self.num_samples, self.seed + 1,
-                                            self.sampling_method)
-            for i, gsim_rlz in enumerate(gsim_rlzs):
-                rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
-                                    sm_rlzs[i].weight * gsim_rlz.weight)
-                rlzs.append(rlz)
+            method = ('early_weights' if self.sampling_method == 'unique_paths'
+                      else self.sampling_method)
+            gsim_rlzs = self.gsim_lt.sample(
+                self.num_samples, self.seed + 1, method)
+            if self.sampling_method == 'early_weights':
+                rlzs.extend(get_eff_rlzs(sm_rlzs, gsim_rlzs))
+            else:
+                for i, gsim_rlz in enumerate(gsim_rlzs):
+                    rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
+                                        sm_rlzs[i].weight * gsim_rlz.weight)
+                    rlzs.append(rlz)
+                if method.startswith('early_'):
+                    for rlz in rlzs:
+                        for k in rlz.weight.dic:
+                            rlz.weight.dic[k] = 1. / self.num_samples
         else:  # full enumeration
             gsim_rlzs = list(self.gsim_lt)
             i = 0
@@ -1056,19 +1085,12 @@ class FullLogicTree(object):
                                         sm_rlz.weight * gsim_rlz.weight)
                     rlzs.append(rlz)
                     i += 1
-        assert rlzs, 'No realizations found??'
-        if self.num_samples and self.sampling_method.startswith('early_'):
-            assert len(rlzs) == self.num_samples, (len(rlzs), self.num_samples)
-            for rlz in rlzs:
-                for k in rlz.weight.dic:
-                    rlz.weight.dic[k] = 1. / self.num_samples
-        else:  # keep the weights
+            # rescale the weights if not one due to numerics
             tot_weight = sum(rlz.weight for rlz in rlzs)
             if not tot_weight.is_one():
-                # this may happen for rounding errors; we ensure the sum of
-                # the weights is 1
                 for rlz in rlzs:
                     rlz.weight = rlz.weight / tot_weight
+        assert rlzs, 'No realizations found??'
         return rlzs
 
     def _rlzs_by_gsim(self, trt_smr):
