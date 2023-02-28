@@ -1037,22 +1037,18 @@ class FullLogicTree(object):
         :returns: the complete list of LtRealizations
         """
         rlzs = []
-        self._gsims_by_trt = AccumDict(accum=set())  # trt -> gsims
         if self.num_samples:  # sampling
             sm_rlzs = []
             for sm_rlz in self.sm_rlzs:
                 sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
             gsim_rlzs = self.gsim_lt.sample(self.num_samples, self.seed + 1,
                                             self.sampling_method)
-            for t, trt in enumerate(self.gsim_lt.values):
-                self._gsims_by_trt[trt].update(g.value[t] for g in gsim_rlzs)
             for i, gsim_rlz in enumerate(gsim_rlzs):
                 rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
                                     sm_rlzs[i].weight * gsim_rlz.weight)
                 rlzs.append(rlz)
         else:  # full enumeration
             gsim_rlzs = list(self.gsim_lt)
-            self._gsims_by_trt = self.gsim_lt.values
             i = 0
             for sm_rlz in self.sm_rlzs:
                 for gsim_rlz in gsim_rlzs:
@@ -1164,14 +1160,6 @@ class FullLogicTree(object):
                               shorten(r.gsim_rlz.lt_path, sh2))
             tups.append((r.ordinal, path, r.weight['weight']))
         return numpy.array(tups, rlz_dt)
-
-    def get_gsims_by_trt(self):
-        """
-        :returns: a dictionary trt -> sorted gsims
-        """
-        if not hasattr(self, '_gsims_by_trt'):
-            self.get_realizations()
-        return {trt: sorted(gs) for trt, gs in self._gsims_by_trt.items()}
 
     def get_sm_by_grp(self):
         """
