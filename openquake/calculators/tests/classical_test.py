@@ -1069,7 +1069,7 @@ hazard_uhs-std.csv
 
         # testing unique_paths mode
         self.run_calc(case_71.__file__, 'job.ini', concurrent_tasks='0',
-                      sampling_method='unique_paths')
+                      oversamplig='reduce-rlzs')
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)
         

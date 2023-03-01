@@ -705,7 +705,8 @@ def get_full_lt(oqparam, branchID=None):
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
     if oqparam.number_of_logic_tree_samples:
         if (oqparam.oversampling == 'forbid' and
-                oqparam.number_of_logic_tree_samples >= p):
+                oqparam.number_of_logic_tree_samples >= p
+                and 'event' not in oqparam.calculation_mode):
             raise ValueError('Use full enumeration since there are only '
                              '{:_d} realizations'.format(p))
         unique = numpy.unique(full_lt.rlzs['branch_path'])

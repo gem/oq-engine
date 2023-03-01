@@ -1083,11 +1083,11 @@ class FullLogicTree(object):
                                         sm_rlz.weight * gsim_rlz.weight)
                     rlzs.append(rlz)
                     i += 1
-            # rescale the weights if not one due to numerics
-            tot_weight = sum(rlz.weight for rlz in rlzs)
-            if not tot_weight.is_one():
-                for rlz in rlzs:
-                    rlz.weight = rlz.weight / tot_weight
+        # rescale the weights if not one, see case_52
+        tot_weight = sum(rlz.weight for rlz in rlzs)
+        if not tot_weight.is_one():
+            for rlz in rlzs:
+                rlz.weight = rlz.weight / tot_weight
         assert rlzs, 'No realizations found??'
         return rlzs
 
