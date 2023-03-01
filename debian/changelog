@@ -4,6 +4,7 @@ python3-oq-engine (3.16.1-1~xenial01) xenial; urgency=low
   * Fixed event based calculations running out of memory due to hazard curve
     arrays being instantiated without need
   * Sampling the ruptures was raising a BlockingIOError sometimes
+  * Fixed install.py to not set the shared_dir
 
   [Kendra Johnson]
   * Fixed bug in extendModel with multiple branchsets
