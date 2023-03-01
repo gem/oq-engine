@@ -468,6 +468,7 @@ class Disaggregator(object):
             # make sure we can use idx_start_stop below
             self.ctx.sort(order='src_id')
         with mon0:
+            # shape (G, M, U)
             self.mea, self.std = self.cmaker.get_mean_stds([self.ctx])[:2]
         if self.src_mutex:
             mat = idx_start_stop(self.ctx.src_id)  # shape (n, 3)
@@ -518,7 +519,10 @@ class Disaggregator(object):
         assert Z == self.cmaker.Z, (Z, self.cmaker.Z)
         out = numpy.zeros((self.Ma, self.D, self.E, M, P, Z))
         for magi in range(self.Ma):
-            self.init(magi, src_mutex)
+            try:
+                self.init(magi, src_mutex)
+            except FarAwayRupture:
+                continue
             z = 0
             for rlz, g in self.g_by_rlz.items():
                 mat6 = self.disagg6D(iml3[:, :, z], g)

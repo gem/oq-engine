@@ -404,16 +404,17 @@ class SourceModelLogicTree(object):
 
     def reduce(self, src_id):
         """
-        Reduce the logic tree to a single source. Works by side effects.
+        :returns: a new logic tree reduced to a single source
         """
-        oksms = self.sms_by_src[src_id]
-        self.sms_by_src = {src_id: oksms}
-        self.trt_by_src = {src_id: self.trt_by_src[src_id]}
-        self.srcs_by_path = {  # relative paths
-            path: [src_id] for path, srcs in self.srcs_by_path.items()
+        new = copy.deepcopy(self)
+        oksms = new.sms_by_src[src_id]
+        new.sms_by_src = {src_id: oksms}
+        new.trt_by_src = {src_id: new.trt_by_src[src_id]}
+        new.srcs_by_path = {  # relative paths
+            path: [src_id] for path, srcs in new.srcs_by_path.items()
             if src_id in srcs}
-        self.tectonic_region_types = {self.trt_by_src[src_id]}
-        for bset, dic in zip(self.branchsets, self.bsetdict.values()):
+        new.tectonic_region_types = {new.trt_by_src[src_id]}
+        for bset, dic in zip(new.branchsets, new.bsetdict.values()):
             if bset.uncertainty_type in ('sourceModel', 'extendModel'):
                 same = []  # branches with the source, all same contribution
                 zero = []  # branches without the source, all zeros
@@ -441,7 +442,8 @@ class SourceModelLogicTree(object):
             if ats and src_id not in ats:
                 bset.collapse()
                 del dic['applyToSources']
-        self.num_paths = count_paths(self.root_branchset.branches)
+        new.num_paths = count_paths(self.root_branchset.branches)
+        return new
 
     def parse_tree(self, tree_node):
         """

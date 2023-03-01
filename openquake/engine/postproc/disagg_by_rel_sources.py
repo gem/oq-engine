@@ -16,29 +16,28 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import logging
 import numpy
 from openquake.baselib import sap, general, python3compat
-from openquake.hazardlib import contexts, calc
+from openquake.hazardlib import contexts, calc, imt
 from openquake.commonlib import datastore
 from openquake.calculators.extract import extract
 
 U32 = numpy.uint32
 
 
-def get_srcids(dstore, rel_source_ids):
+def get_sources(dstore, rel_source_ids):
     """
     :param rel_source_ids: relevant source IDs
-    :returns: a dictionary source_id -> [source indices]
+    :returns: a list of sources
     """
-    all_source_ids = python3compat.decode(dstore['source_info']['source_id'])
-    out = general.AccumDict(accum=[])  # source_id -> src_ids
-    for src_id, source in enumerate(all_source_ids):
-        for source_id in rel_source_ids:
-            if source_id == source or (source.startswith(source_id)
-                                       and source[len(source_id)] in ':;'):
-                out[source_id].append(src_id)
-    return {source_id: U32(out[source_id]) for source_id in out}
+    acc = general.AccumDict(accum=[])  # source_id -> sources
+    for src in dstore['_csm'].get_sources():
+        source_id = re.split('[:;.]', src.source_id)[0]
+        if source_id in rel_source_ids:
+            acc[source_id].append(src)
+    return acc
 
 
 def get_rel_source_ids(dstore, imts, poes):
@@ -46,15 +45,22 @@ def get_rel_source_ids(dstore, imts, poes):
     :returns: sorted list of relevant source IDs
     """
     source_ids = set()
-    for imt in imts:
+    for im in imts:
         for poe in poes:
-            aw = extract(dstore, f'disagg_by_src?imt={imt}&poe={poe}')        
+            aw = extract(dstore, f'disagg_by_src?imt={im}&poe={poe}')
             poe_array = aw.array['poe']  # for each source in decreasing order
             max_poe = poe_array[0]
             source_ids.update(aw.array[poe_array > .1 * max_poe]['src_id'])
     return python3compat.decode(sorted(source_ids))
 
-            
+
+def compute_disagg(source_id, dis, gsim_weights):
+    pmap = dis.cmaker.get_pmap([dis.fullctx])
+    [iml3] = pmap.interp4D(dis.cmaker.imtls, dis.cmaker.poes)
+    mat5D = dis.disagg_mag_dist_eps(iml3) @ gsim_weights
+    return {source_id: mat5D}  # shape (Ma, D, E, M, P)
+
+
 def main(parent_id, imts=['PGA']):
     """
     :param parent_id: filename or ID of the parent calculation
@@ -71,28 +77,29 @@ def main(parent_id, imts=['PGA']):
         oq.mags_by_trt = parent['source_mags']
         sitecol = parent['sitecol']
         assert len(sitecol) == 1, sitecol
-        for imt in imts:
-            assert imt in oq.imtls, imt
-        cmakers = contexts.read_cmakers(parent)
-        ctx_by_grp = contexts.read_ctx_by_grp(dstore)
-        n = sum(len(ctx) for ctx in ctx_by_grp.values())
-        logging.info('Read {:_d} contexts'.format(n))
+        gsim_lt = parent['full_lt/gsim_lt']
+        gsim_weights = [br.weight['weight'] for br in gsim_lt.branches]
+        assert len(sitecol) == 1, sitecol
+        for im in imts:
+            assert im in oq.imtls, im
+        imtls = general.DictArray({im: oq.imtls[im] for im in imts})
+
+        logging.info('Reading CompositeSourceModel')
         rel_source_ids = get_rel_source_ids(parent, imts, oq.poes)
-        srcids = get_srcids(parent, rel_source_ids)
-        print(srcids)
         bin_edges, shapedic = calc.disagg.get_edges_shapedic(oq, sitecol)
-        for rel_id in rel_source_ids:
-            for grp_id, ctx in ctx_by_grp.items():
-                # consider only the contexts coming from the relevant sources
-                ctxt = ctx[numpy.isin(ctx.src_id, srcids[rel_id])]
-                if len(ctxt) == 0:
-                    continue
-                cmaker = cmakers[grp_id]
-                dis = calc.disagg.Disaggregator([ctxt], sitecol, cmaker,
-                                                bin_edges, imts)
-                [iml3] = cmaker.get_pmap([ctxt]).interp4D(oq.imtls, oq.poes)
-                # mat = dis.disagg_mag_dist_eps(iml3)
-                # shape (Ma, D, E, M, P)
+        mat_by_src = {}
+        for source_id, srcs in get_sources(parent, rel_source_ids).items():
+            trt = srcs[0].tectonic_region_type
+            rlzs_by_gsim = {
+                gsim: [g] for g, gsim in enumerate(gsim_lt.values[trt])}
+            cmaker = contexts.ContextMaker(trt, rlzs_by_gsim, oq)
+            cmaker.imtls = imtls
+            ctxs = cmaker.from_srcs(srcs, sitecol)
+            dis = calc.disagg.Disaggregator(
+                ctxs, sitecol, cmaker, bin_edges, imts)
+            mat_by_src.update(compute_disagg(source_id, dis, gsim_weights))
+
+
 
 if __name__ == '__main__':
     sap.run(main)
