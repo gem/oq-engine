@@ -1115,6 +1115,15 @@ class OqParam(valid.ParamSet):
             self.hazard_imtls = dict.fromkeys(
                 self.intensity_measure_types, [0])
             delattr(self, 'intensity_measure_types')
+        if 'minimum_intensity' in names_vals:
+            dic = {}
+            for imt, iml in self.minimum_intensity.items():
+                if imt == 'default':
+                    dic[imt] = iml
+                else:
+                    # normalize IMT, for instance SA(1.) => SA(1.0)
+                    dic[from_string(imt).string] = iml
+            self.minimum_intensity = dic
         if ('ps_grid_spacing' in names_vals and
                 float(names_vals['ps_grid_spacing']) and
                 'pointsource_distance' not in names_vals):
