@@ -94,7 +94,7 @@ def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
     return flin + fnl + fbd
 
 
-class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
+class SHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
     """
     Boore et al., 2014 with CanadaSHM6 modifications to amplification factors
     for vs30 > 1100 and limited period range to 0.05 - 10s.
@@ -195,7 +195,7 @@ def get_mean_stddevs_cy14(name, C, ctx):
     return mean, sig, tau, phi
 
 
-class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
+class SHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
     """
     Chiou and Youngs 2014 with CanadaSHM6 modifications to amplification
     factors for vs30 > 1100, the removal of the basin term (i.e., returns
@@ -292,7 +292,7 @@ def _get_site_response_term_ask14(C, imt, vs30, sa1180):
     return ask14_vs
 
 
-class CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
+class SHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
     """
     Abrahamson et al., 2014 with CanadaSHM6 modifications to amplification
     factors for vs30 > 1100, the removal of the basin term (i.e., returns
@@ -395,7 +395,7 @@ def get_mean_values_cb14(C, ctx, imt, a1100=None):
             CB14._get_anelastic_attenuation_term(C, ctx.rrup))
 
 
-class CanadaSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
+class SHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
     """
     Campbell and Bozorgnia, 2014 with CanadaSHM6 modifications to amplification
     factors for vs30 > 1100, the removal of the basin term (i.e., returns

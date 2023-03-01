@@ -24,23 +24,25 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 """
 import numpy as np
 import openquake.hazardlib.gsim.abrahamson_2015 as A15
+import openquake.hazardlib.gsim.atkinson_macias_2009 as AM09
 
 from scipy.constants import g
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA, PGV
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.can20.can_shm6_inslab import (
-    CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55, COEFFS_SITE_FACTORS,
+    SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55, COEFFS_SITE_FACTORS,
     extrapolation_factor, CoeffsTable_CanadaSHM6)
 from openquake.hazardlib.gsim.can20.can_shm6_active_crust import (
-    CanadaSHM6_ActiveCrust_BooreEtAl2014, CanadaSHM6_hardrock_site_factor)
+    SHM6_ActiveCrust_BooreEtAl2014, SHM6_hardrock_site_factor)
 from openquake.hazardlib.gsim.abrahamson_2015 import AbrahamsonEtAl2015SInter
 from openquake.hazardlib.gsim.atkinson_macias_2009 import AtkinsonMacias2009
+from openquake.hazardlib.gsim.can20.can_shm6_active_crust import _check_imts
 from openquake.hazardlib.gsim.ghofrani_atkinson_2014 import (
     GhofraniAtkinson2014Cascadia)
 
 
-class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
+class SHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
     """
     The Abrahramson et al., 2015 (BCHydro) Inteface GMM with CanadaSHM6
     modifications to include PGV and limit the defined period range.
@@ -64,6 +66,10 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
 
         """
 
+        # Checking the IMTs used to compute ground-motion
+        _check_imts(imts)
+
+        # Get PGA coeffs
         C_PGA = self.COEFFS[PGA()]
         dc1_pga = self.delta_c1 or self.COEFFS_MAG_SCALE[PGA()]["dc1"]
 
@@ -74,8 +80,10 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
             C_PGA, dc1_pga, ctx))
         for m, imt in enumerate(imts):
 
+            fix = False
             if imt == PGV():
                 imt = SA(1.92)
+                fix = True
 
             # Get the coeffs
             C = self.COEFFS[imt]
@@ -95,7 +103,7 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
                     C, ctx, pga1000))
 
             # Convert to velocity
-            if imt == PGV():
+            if fix:
                 mean[m] = (0.897*mean[m]) + 4.835
 
             if self.sigma_mu_epsilon:
@@ -114,8 +122,8 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
 # =============================================================================
 
 
-class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
-                                CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55):
+class SHM6_Interface_ZhaoEtAl2006SInterCascadia(
+                                SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55):
     """
     Zhao et al., 2006 Interface with Cascadia adjustment at a fixed hypo depth
     of 30 km, extrapolated to 0.05 - 10s and with modifications to the site
@@ -142,13 +150,7 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
                                                     self.MAX_SA_EXTRAP,
                                                     self.MIN_SA_EXTRAP)
 
-
-
-
-
-
-
-
+    # REMOVE vvvvvvvvv
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -238,81 +240,78 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
         5.00  -0.498 -0.1578  0.1090  0.272
         """)
 
+# =============================================================================
+# =============================================================================
 
-class CanadaSHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
+
+def _get_mean_760_am09(ctx, imt):
+
+    """
+    See get_mean_and_stddevs in AtkinsonMacias2009
+    """
+    coeffs = AM09.COEFFS[imt]
+    imean = (AM09._get_magnitude_term(coeffs, ctx.mag) +
+             AM09._get_distance_term(coeffs, ctx.rrup, ctx.mag))
+    # Convert mean from cm/s and cm/s/s and from common logarithm to
+    # natural logarithm
+    mean = np.log((10.0 ** (imean - 2.0)) / g)
+    return mean
+
+
+def _site_term_am09(ctx, imt):
+    """
+    Site term for AM09 using the CanadaSHM6 implementation of BSSA14
+    (see CanadaSHM6_ActiveCrust_BooreEtAl2014)
+    """
+    # get PGA for non-linear term in BSSA14
+    pga760 = _get_mean_760_am09(ctx, PGA())
+    BSSA14 = CanadaSHM6_ActiveCrust_BooreEtAl2014()
+    C = BSSA14.COEFFS[imt]
+    F = BSSA14._get_site_scaling_ba14(
+        "", "", C, np.exp(pga760), ctx, imt.period, ctx.rjb)
+    return F
+
+
+class SHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
     """
     Atkinson and Macias, 2009 Interface GMM with an added site term following
     a modified version of BSSA14 (SS14) as implemented for CanadaSHM6.
 
     See also header in CanadaSHM6_Interface.py
     """
-    MAX_SA = 10.
-    MIN_SA = 0.05
+
     REQUIRES_SITES_PARAMETERS = set(('vs30',))
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
-    BSSA14 = CanadaSHM6_ActiveCrust_BooreEtAl2014()
     experimental = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
-
-        CanadaSHM6 edits: Added site term (from CanadaSHM6 implementation of
-                                           BSSA14)
-                          limited to the period range of 0.05 - 10s
+                CanadaSHM6 edits: Added PGV
+                          Limited GMM to the CSHM6 range of 0.05 - 10s.
         """
-        PGVimt = False
-        if imt == PGV():
-            PGVimt = True
-            imt = SA(1.92)
-        elif imt.period != 0 and (imt.period < self.MIN_SA or
-                                  imt.period > self.MAX_SA):
-            raise ValueError(str(imt) + ' is not supported. SA must be in '
-                             + 'range of ' + str(self.MIN_SA) + 's and '
-                             + str(self.MAX_SA) + 's.')
+        for m, imt in enumerate(imts):
 
-        C = self.COEFFS[imt]
-        mean = self._get_mean_760(rup, dists, imt)  # AM09 is for Vs30 = 760m/s
-        mean += self.site_term(rup, dists, sites, imt)
-        stddevs = self._get_stddevs(C, len(dists.rrup), stddev_types)
+            fix = False
+            if imt == PGV():
+                imt = SA(1.92)
+                fix = True
 
-        if PGVimt:
-            mean = (0.897*mean) + 4.835
+            # Get the coeffs
+            C = self.COEFFS[imt]
 
-        return mean, stddevs
+            # AM09 is for Vs30 = 760m/s
+            mean = _get_mean_760_am09(ctx, imt)
+            mean += _site_term_am09(ctx, imt)
+            sig[m] = np.log(10.0 ** C["sigma"])
 
-    def _get_mean_760(self, rup, dists, imt):
-
-        """
-        See get_mean_and_stddevs in AtkinsonMacias2009
-        """
-        C = self.COEFFS[imt]
-        imean = (self._get_magnitude_term(C, rup.mag) +
-                 self._get_distance_term(C, dists.rrup, rup.mag))
-        # Convert mean from cm/s and cm/s/s and from common logarithm to
-        # natural logarithm
-        mean = np.log((10.0 ** (imean - 2.0)) / g)
-
-        return mean
-
-    def site_term(self, rup, dists, sites, imt):
-        """
-        Site term for AM09 using the CanadaSHM6 implementation of BSSA14
-        (see CanadaSHM6_ActiveCrust_BooreEtAl2014)
-        """
-        # get PGA for non-linear term in BSSA14
-        pga760 = self._get_mean_760(rup, dists, PGA())
-
-        C = self.BSSA14.COEFFS[imt]
-        F = self.BSSA14._get_site_scaling(C, np.exp(pga760), sites,
-                                          imt, [])
-
-        return F
+            if fix:
+                mean[m] = (0.897*mean) + 4.835
 
 
-class CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia(
+class SHM6_Interface_GhofraniAtkinson2014Cascadia(
                                                 GhofraniAtkinson2014Cascadia):
     """
     Ghofrani and Atkinson 2014 Interface GMM with Cascadia adjustment,

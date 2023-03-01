@@ -124,7 +124,7 @@ def AB06_BA08_aa13(vs30, imt, PGA760):
     return AB06_BA08
 
 
-class CanadaSHM6_StableCrust_AA13(GMPETable):
+class SHM6_StableCrust_AA13(GMPETable):
     """
     Implementation of the Atkinson and Adams, 2013 representative suite of
     GMMs for CanadaSHM6 (low, central and high branch).
@@ -135,7 +135,7 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
 
     References:
 
-        See header in CanadaSHM6_StableCrust.py
+        See header in can_shm6_stable.py
 
         Atkinson, GM, Adams, J (2013): Ground motion prediction equations
         for application to the 2015 Canadian national seismic hazard maps,
@@ -472,7 +472,7 @@ def BC17_amp(self, imt, rctx, dist):
     return np.array(BC17)
 
 
-class CanadaSHM6_StableCrust_NGAEast(GMPETable):
+class SHM6_StableCrust_NGAEast(GMPETable):
     """
     6th Generation Seismic Hazard Model of Canada (CanadaSHM6) implementation
     of the 13 NGA-East Ground-Motion Models as described in PEER Report No.
