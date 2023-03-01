@@ -23,7 +23,12 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 
 """
 import numpy as np
+import openquake.hazardlib.gsim.abrahamson_2015 as A15
 
+from scipy.constants import g
+from openquake.hazardlib import const
+from openquake.hazardlib.imt import PGA, SA, PGV
+from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.can20.can_shm6_inslab import (
     CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55, COEFFS_SITE_FACTORS,
     extrapolation_factor, CoeffsTable_CanadaSHM6)
@@ -33,10 +38,6 @@ from openquake.hazardlib.gsim.abrahamson_2015 import AbrahamsonEtAl2015SInter
 from openquake.hazardlib.gsim.atkinson_macias_2009 import AtkinsonMacias2009
 from openquake.hazardlib.gsim.ghofrani_atkinson_2014 import (
     GhofraniAtkinson2014Cascadia)
-from openquake.hazardlib.imt import PGA, SA, PGV
-from openquake.hazardlib.gsim.base import CoeffsTable
-from openquake.hazardlib import const
-from scipy.constants import g
 
 
 class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
@@ -59,44 +60,46 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
                 CanadaSHM6 edits: Added PGV
-#                          Limited GMM to the CSHM6 range of 0.05 - 10s.
-#
-#        """
-#        # set correlated IMT for PGV and check T bounds
-        PGVimt = False
-        if imt == PGV():
-            PGVimt = True
-            imt = SA(1.92)
-        elif imt.period != 0 and (imt.period < self.MIN_SA or
-                                  imt.period > self.MAX_SA):
-            raise ValueError(str(imt) + ' is not supported. SA must be in '
-                             + 'range of ' + str(self.MIN_SA) + 's and '
-                             + str(self.MAX_SA) + 's.')
+                          Limited GMM to the CSHM6 range of 0.05 - 10s.
+
+        """
 
         C_PGA = self.COEFFS[PGA()]
         dc1_pga = self.delta_c1 or self.COEFFS_MAG_SCALE[PGA()]["dc1"]
 
         # compute median pga on rock (vs30=1000), needed for site response
         # term calculation
-        pga1000 = np.exp(_compute_pga_rock(
+        pga1000 = np.exp(A15._compute_pga_rock(
             self.kind, self.trt, self.theta6_adj, self.faba_model,
             C_PGA, dc1_pga, ctx))
         for m, imt in enumerate(imts):
+
+            if imt == PGV():
+                imt = SA(1.92)
+
+            # Get the coeffs
             C = self.COEFFS[imt]
             dc1 = self.delta_c1 or self.COEFFS_MAG_SCALE[imt]["dc1"]
+
+            # Compute the mean
             mean[m] = (
-                _compute_magnitude_term(
+                A15._compute_magnitude_term(
                     self.kind, C, dc1, ctx.mag) +
-                _compute_distance_term(
+                A15._compute_distance_term(
                     self.kind, self.trt, self.theta6_adj, C, ctx) +
-                _compute_focal_depth_term(
+                A15._compute_focal_depth_term(
                     self.trt, C, ctx) +
-                _compute_forearc_backarc_term(
+                A15._compute_forearc_backarc_term(
                     self.trt, self.faba_model, C, ctx) +
-                _compute_site_response_term(
+                A15._compute_site_response_term(
                     C, ctx, pga1000))
+
+            # Convert to velocity
+            if imt == PGV():
+                mean[m] = (0.897*mean[m]) + 4.835
+
             if self.sigma_mu_epsilon:
-                sigma_mu = get_stress_factor(
+                sigma_mu = A15.get_stress_factor(
                     imt, self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
                     const.TRT.SUBDUCTION_INTRASLAB)
                 mean[m] += sigma_mu * self.sigma_mu_epsilon
@@ -107,10 +110,8 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
                 C["sigma_ss"] ** 2. - C["tau"] ** 2.)
 
 
-        if PGVimt:
-            mean = (0.897*mean) + 4.835
-
-        return mean, stddevs
+# =============================================================================
+# =============================================================================
 
 
 class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
@@ -140,6 +141,13 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
                                                     self.MAX_SA, self.MIN_SA,
                                                     self.MAX_SA_EXTRAP,
                                                     self.MIN_SA_EXTRAP)
+
+
+
+
+
+
+
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
