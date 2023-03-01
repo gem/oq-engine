@@ -534,10 +534,12 @@ number_of_logic_tree_samples:
   Default: 0
 
 oversampling:
-  When equal to "forbid" (the default) raise an error if tot_samples > num_paths
-  in classical calculations; when equal to "tolerate" do not raise the error;
+  When equal to "forbid" raise an error if tot_samples > num_paths in classical
+  calculations; when equal to "tolerate" do not raise the error (the default);
   when equal to "reduce_rlzs" reduce the realizations to the unique paths with
   weights num_samples/tot_samples
+  Example: *oversampling = reduce_rlzs*
+  Default: tolerate
 
 poes:
   Probabilities of Exceedance used to specify the hazard maps or hazard spectra
@@ -953,7 +955,7 @@ class OqParam(valid.ParamSet):
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
     num_rlzs_disagg = valid.Param(valid.positiveint, 0)
     oversampling = valid.Param(
-        valid.Choice('forbid', 'tolerate', 'reduce-rlzs'), 'forbid')
+        valid.Choice('forbid', 'tolerate', 'reduce-rlzs'), 'tolerate')
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
