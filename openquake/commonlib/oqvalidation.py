@@ -534,9 +534,9 @@ number_of_logic_tree_samples:
   Default: 0
 
 oversampling:
-  When equal to "forbid" (the default) raise an error if num_samples > num_rlzs
+  When equal to "forbid" (the default) raise an error if num_samples > num_paths
   in classical calculations; when equal to "tolerate" do not raise the error;
-  when equal "reduce_rlzs" reduce the realizations to the number of unique
+  when equal to "reduce_rlzs" reduce the realizations to the number of unique
   paths and multiply the weight of the paths sampled multiple times
 
 poes:
