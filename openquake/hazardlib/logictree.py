@@ -43,7 +43,7 @@ from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
-    GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
+    GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths, ImtWeight)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
     dummy_branchset, LogicTreeError, parse_uncertainty, random)
@@ -135,6 +135,25 @@ def get_effective_rlzs(rlzs):
         effective.append(
             Realization(rlz.value, sum(r.weight for r in group),
                         ordinal, rlz.lt_path, len(group)))
+        ordinal += 1
+    return effective
+
+
+def get_eff_rlzs(sm_rlzs, gsim_rlzs):
+    """
+    Group together realizations with the same path
+    and yield the first representative of each group
+    """
+    triples = []  # pid, sm_rlz, gsim_rlz
+    for sm_rlz, gsim_rlz in zip(sm_rlzs, gsim_rlzs):
+        triples.append((sm_rlz.pid + '~' + gsim_rlz.pid, sm_rlz, gsim_rlz))
+    ordinal = 0
+    effective = []
+    for rows in groupby(triples, operator.itemgetter(0)).values():
+        pid, sm_rlz, gsim_rlz = rows[0]
+        weight = ImtWeight.new(len(rows) / len(triples))
+        effective.append(
+            LtRealization(ordinal, sm_rlz.lt_path, gsim_rlz, weight))
         ordinal += 1
     return effective
 
@@ -924,6 +943,8 @@ class FullLogicTree(object):
     :param source_model_lt: :class:`SourceModelLogicTree` object
     :param gsim_lt: :class:`GsimLogicTree` object
     """
+    oversampling = 'forbid'
+
     @classmethod
     def fake(cls, gsimlt=None):
         """
@@ -940,9 +961,10 @@ class FullLogicTree(object):
         self.sm_rlzs = [fakeSM]
         return self
 
-    def __init__(self, source_model_lt, gsim_lt):
+    def __init__(self, source_model_lt, gsim_lt, oversampling='tolerate'):
         self.source_model_lt = source_model_lt
         self.gsim_lt = gsim_lt
+        self.oversampling = oversampling
         self.init()  # set .sm_rlzs and .trts
 
     def init(self):
@@ -1041,12 +1063,19 @@ class FullLogicTree(object):
             sm_rlzs = []
             for sm_rlz in self.sm_rlzs:
                 sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
-            gsim_rlzs = self.gsim_lt.sample(self.num_samples, self.seed + 1,
-                                            self.sampling_method)
-            for i, gsim_rlz in enumerate(gsim_rlzs):
-                rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
-                                    sm_rlzs[i].weight * gsim_rlz.weight)
-                rlzs.append(rlz)
+            gsim_rlzs = self.gsim_lt.sample(
+                self.num_samples, self.seed + 1, self.sampling_method)
+            if self.oversampling == 'reduce-rlzs':
+                rlzs.extend(get_eff_rlzs(sm_rlzs, gsim_rlzs))
+            else:
+                for i, gsim_rlz in enumerate(gsim_rlzs):
+                    rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
+                                        sm_rlzs[i].weight * gsim_rlz.weight)
+                    rlzs.append(rlz)
+                if self.sampling_method.startswith('early_'):
+                    for rlz in rlzs:
+                        for k in rlz.weight.dic:
+                            rlz.weight.dic[k] = 1. / self.num_samples
         else:  # full enumeration
             gsim_rlzs = list(self.gsim_lt)
             i = 0
@@ -1056,19 +1085,12 @@ class FullLogicTree(object):
                                         sm_rlz.weight * gsim_rlz.weight)
                     rlzs.append(rlz)
                     i += 1
-        assert rlzs, 'No realizations found??'
-        if self.num_samples and self.sampling_method.startswith('early_'):
-            assert len(rlzs) == self.num_samples, (len(rlzs), self.num_samples)
+        # rescale the weights if not one, see case_52
+        tot_weight = sum(rlz.weight for rlz in rlzs)
+        if not tot_weight.is_one():
             for rlz in rlzs:
-                for k in rlz.weight.dic:
-                    rlz.weight.dic[k] = 1. / self.num_samples
-        else:  # keep the weights
-            tot_weight = sum(rlz.weight for rlz in rlzs)
-            if not tot_weight.is_one():
-                # this may happen for rounding errors; we ensure the sum of
-                # the weights is 1
-                for rlz in rlzs:
-                    rlz.weight = rlz.weight / tot_weight
+                rlz.weight = rlz.weight / tot_weight
+        assert rlzs, 'No realizations found??'
         return rlzs
 
     def _rlzs_by_gsim(self, trt_smr):
@@ -1114,7 +1136,8 @@ class FullLogicTree(object):
             gsim_lt=self.gsim_lt,
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     trts=hdf5.array_of_vstr(self.gsim_lt.values)))
+                     trts=hdf5.array_of_vstr(self.gsim_lt.values),
+                     oversampling=self.oversampling))
 
     # FullLogicTree
     def __fromh5__(self, dic, attrs):

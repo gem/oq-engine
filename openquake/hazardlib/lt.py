@@ -423,7 +423,7 @@ def sample(weighted_objects, probabilities, sampling_method):
     :return:
         A list of S objects extracted randomly
     """
-    if sampling_method.startswith('early'):  # consider the weights
+    if sampling_method.startswith('early'):  # consider the weights different
         idxs = numpy.searchsorted(_cdf(weighted_objects), probabilities)
     elif sampling_method.startswith('late'):
         n = len(weighted_objects)  # consider all weights equal

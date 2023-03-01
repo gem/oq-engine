@@ -70,6 +70,12 @@ class ImtWeight(object):
     """
     A composite weight by IMTs extracted from the gsim_logic_tree_file
     """
+    @classmethod
+    def new(cls, weight):
+        self = object.__new__(cls)
+        self.dic = {'weight': weight}
+        return self
+
     def __init__(self, branch, fname):
         with context(fname, branch.uncertaintyWeight):
             nodes = list(branch.getnodes('uncertaintyWeight'))

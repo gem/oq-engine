@@ -700,9 +700,15 @@ def get_full_lt(oqparam, branchID=None):
             raise ValueError('Unknown TRT=%s in %s [reqv]' %
                              (trt, oqparam.inputs['job_ini']))
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
-    full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
+    full_lt = logictree.FullLogicTree(
+        source_model_lt, gsim_lt, oqparam.oversampling)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
     if oqparam.number_of_logic_tree_samples:
+        if (oqparam.oversampling == 'forbid' and
+                oqparam.number_of_logic_tree_samples >= p
+                and 'event' not in oqparam.calculation_mode):
+            raise ValueError('Use full enumeration since there are only '
+                             '{:_d} realizations'.format(p))
         unique = numpy.unique(full_lt.rlzs['branch_path'])
         logging.info('Considering {:_d} logic tree paths out of {:_d}, unique'
                      ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
