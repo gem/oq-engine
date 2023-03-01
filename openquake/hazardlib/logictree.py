@@ -943,7 +943,7 @@ class FullLogicTree(object):
     :param source_model_lt: :class:`SourceModelLogicTree` object
     :param gsim_lt: :class:`GsimLogicTree` object
     """
-    oversampling = False
+    oversampling = 'forbid'
 
     @classmethod
     def fake(cls, gsimlt=None):

@@ -534,10 +534,10 @@ number_of_logic_tree_samples:
   Default: 0
 
 oversampling:
-  When equal to "forbid" (the default) raise an error if num_samples > num_rlzs;
-  when equal to "tolerate" does not raise the error;
+  When equal to "forbid" (the default) raise an error if num_samples > num_rlzs
+  in classical calculations; when equal to "tolerate" do not raise the error;
   when equal "reduce_rlzs" reduce the realizations to the number of unique
-  paths and multiple the weight of the paths sampled multiple times
+  paths and multiply the weight of the paths sampled multiple times
 
 poes:
   Probabilities of Exceedance used to specify the hazard maps or hazard spectra
