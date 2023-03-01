@@ -601,8 +601,7 @@ class SourceModelLogicTree(object):
                     probs, self.sampling_method):
                 value = [br.value for br in branches]
                 smlt_path_ids = [br.branch_id for br in branches]
-                if (self.sampling_method.startswith('early_') or
-                        self.sampling_method == 'unique_paths'):
+                if self.sampling_method.startswith('early_'):
                     weight = 1. / self.num_samples  # already accounted
                 elif self.sampling_method.startswith('late_'):
                     weight = numpy.prod([br.weight for br in branches])
@@ -960,9 +959,10 @@ class FullLogicTree(object):
         self.sm_rlzs = [fakeSM]
         return self
 
-    def __init__(self, source_model_lt, gsim_lt):
+    def __init__(self, source_model_lt, gsim_lt, oversampling='tolerate'):
         self.source_model_lt = source_model_lt
         self.gsim_lt = gsim_lt
+        self.oversampling = oversampling
         self.init()  # set .sm_rlzs and .trts
 
     def init(self):
@@ -1061,11 +1061,9 @@ class FullLogicTree(object):
             sm_rlzs = []
             for sm_rlz in self.sm_rlzs:
                 sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
-            method = ('early_weights' if self.sampling_method == 'unique_paths'
-                      else self.sampling_method)
             gsim_rlzs = self.gsim_lt.sample(
-                self.num_samples, self.seed + 1, method)
-            if self.sampling_method == 'unique_paths':
+                self.num_samples, self.seed + 1, self.sampling_method)
+            if self.oversampling == 'reduce-rlzs':
                 rlzs.extend(get_eff_rlzs(sm_rlzs, gsim_rlzs))
             else:
                 for i, gsim_rlz in enumerate(gsim_rlzs):
@@ -1136,7 +1134,8 @@ class FullLogicTree(object):
             gsim_lt=self.gsim_lt,
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     trts=hdf5.array_of_vstr(self.gsim_lt.values)))
+                     trts=hdf5.array_of_vstr(self.gsim_lt.values),
+                     oversampling=self.oversampling))
 
     # FullLogicTree
     def __fromh5__(self, dic, attrs):

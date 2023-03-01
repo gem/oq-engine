@@ -533,6 +533,12 @@ number_of_logic_tree_samples:
   Example: *number_of_logic_tree_samples = 0*.
   Default: 0
 
+oversampling:
+  When equal to "forbid" (the default) raise an error if num_samples > num_rlzs;
+  when equal to "tolerate" does not raise the error;
+  when equal "reduce_rlzs" reduce the realizations to the number of unique
+  paths and multiple the weight of the paths sampled multiple times
+
 poes:
   Probabilities of Exceedance used to specify the hazard maps or hazard spectra
   to compute.
@@ -629,7 +635,7 @@ rupture_mesh_spacing:
   Default: 5.0
 
 sampling_method:
-  One of early_weights, late_weights, early_latin, late_latin, unique_paths)
+  One of early_weights, late_weights, early_latin, late_latin)
   Example: *sampling_method = early_latin*.
   Default: 'early_weights'
 
@@ -946,6 +952,8 @@ class OqParam(valid.ParamSet):
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
     num_rlzs_disagg = valid.Param(valid.positiveint, 0)
+    oversampling = valid.Param(
+        valid.Choice('forbid', 'tolerate', 'reduce-rlzs'), 'forbid')
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
@@ -971,8 +979,8 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, [])
     sampling_method = valid.Param(
-        valid.Choice('early_weights', 'late_weights', 'early_latin',
-                     'late_latin', 'unique_paths'), 'early_weights')
+        valid.Choice('early_weights', 'late_weights',
+                     'early_latin', 'late_latin'), 'early_weights')
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})
