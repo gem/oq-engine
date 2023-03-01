@@ -258,14 +258,15 @@ def _build_groups(full_lt, smdict):
             smlt_dir, smdict, rlz.value[0].split())
         bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
         if bset_values and bset_values[0][0].uncertainty_type == 'extendModel':
-            (bset, value), *bset_values = bset_values
-            extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
-            common = source_ids & extra_ids
-            if common:
-                raise InvalidFile(
-                    '%s contains source(s) %s already present in %s' %
-                    (value, common, rlz.value))
-            src_groups.extend(extra)
+            while len(bset_values):
+                (bset, value), *bset_values = bset_values
+                extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
+                common = source_ids & extra_ids
+                if common:
+                    raise InvalidFile(
+                        '%s contains source(s) %s already present in %s' %
+                        (value, common, rlz.value))
+                src_groups.extend(extra)
         for src_group in src_groups:
             trt_smr = full_lt.get_trt_smr(src_group.trt, rlz.ordinal)
             sg = apply_uncertainties(bset_values, src_group)
