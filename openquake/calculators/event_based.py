@@ -219,14 +219,6 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore.create_dset('ruptures', rupture_dt)
             self.datastore.create_dset('rupgeoms', hdf5.vfloat32)
 
-    def acc0(self):
-        """
-        Initial accumulator, a dictionary rlz -> ProbabilityMap
-        """
-        self.L = self.oqparam.imtls.size
-        return {r: ProbabilityMap(self.sitecol.sids, self.L, 1).fill(0)
-                for r in range(self.R)}
-
     def build_events_from_sources(self):
         """
         Prefilter the composite source model and store the source_info
@@ -460,7 +452,13 @@ class EventBasedCalculator(base.HazardCalculator):
             concurrent_tasks=oq.concurrent_tasks or 1,
             duration=oq.time_per_task,
             outs_per_task=oq.outs_per_task)
-        acc = smap.reduce(self.agg_dicts, self.acc0())
+        if oq.hazard_curves_from_gmfs:
+            self.L = oq.imtls.size
+            acc0 = {r: ProbabilityMap(self.sitecol.sids, self.L, 1).fill(0)
+                    for r in range(self.R)}
+        else:
+            acc0 = {}
+        acc = smap.reduce(self.agg_dicts, acc0)
         if 'gmf_data' not in dstore:
             return acc
         if oq.ground_motion_fields:

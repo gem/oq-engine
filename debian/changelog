@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed event based calculations running out of memory due to hazard curve
+    arrays being instantiated without need
+
 python3-oq-engine (3.16.0-3~xenial01) xenial; urgency=low
 
   [Matteo Nastasi]
