@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed event based calculations running out of memory due to hazard curve
+    arrays being instantiated without need
+
   [Julián Santiago Montejo Espitia]
   * Contributed the GMPE Arteta et al. (2023) for crustal events on northern
     South America
