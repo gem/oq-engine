@@ -1059,6 +1059,7 @@ hazard_uhs-std.csv
         # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
         # rlzs_by_g is 135 2 04, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
         self.run_calc(case_71.__file__, 'job.ini', concurrent_tasks='0')
+        self.assertEqual(len(self.calc.realizations), 10)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)
 
@@ -1069,7 +1070,8 @@ hazard_uhs-std.csv
 
         # testing unique_paths mode
         self.run_calc(case_71.__file__, 'job.ini', concurrent_tasks='0',
-                      oversamplig='reduce-rlzs')
+                      oversampling='reduce-rlzs')
+        self.assertEqual(len(self.calc.realizations), 5)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)
         
