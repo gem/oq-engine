@@ -130,5 +130,6 @@ else:  # linux
     install_user = pwd.getpwuid(os.stat(__file__).st_uid).pw_name
     config.multi_user = install_user in ('root', 'openquake')
 
+
 # the version is managed by packager.sh with a sed
 __version__ = '3.16.1'
