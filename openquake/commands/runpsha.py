@@ -28,19 +28,18 @@ from openquake.engine import engine
 from openquake.engine.aelo import get_params_from
 
 
-def engine_profile(jobctx):
-    os.environ['OQ_DISTRIBUTE'] = 'no'
+def engine_profile(jobctx, nrows):
     prof = cProfile.Profile()
     prof.runctx('engine.run_jobs([jobctx])', globals(), locals())
     pstat = 'calc_%d.pstat' % jobctx.calc_id
     prof.dump_stats(pstat)
     print('Saved profiling info in %s' % pstat)
-    data = performance.get_pstats(pstat, 50)
+    data = performance.get_pstats(pstat, nrows)
     print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                            ext='org'))
 
 
-def main(lon: valid.longitude, lat: valid.latitude, profile: bool=False):
+def main(lon: valid.longitude, lat: valid.latitude, *, slowest: int=40):
     """
     Run a PSHA analysis on the given lon, lat
     """
@@ -51,12 +50,12 @@ def main(lon: valid.longitude, lat: valid.latitude, profile: bool=False):
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), None)
     with jobctx:
-        if profile:
-            engine_profile(jobctx)
+        if slowest:
+            engine_profile(jobctx, slowest)
         else:
             engine.run_jobs([jobctx])
     #disagg_by_rel_sources.main(jobctx.calc_id)
 
 main.lon = 'longitude of the site to analyze'
 main.lat = 'latitude of the site to analyze'
-main.profile = 'use the Python profiler'
+main.slowest = 'profile and show the slowest operations'
