@@ -803,8 +803,20 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
          an open hdf5.File where to store the source info
     """
     full_lt = get_full_lt(oqparam, branchID)
-    csm = source_reader.get_csm(oqparam, full_lt, h5)
-    _check_csm(csm, oqparam, h5)
+    if oqparam.cachedir:
+        checksum = get_checksum32(oqparam, h5)
+        fname = os.path.join(oqparam.cachedir, 'csm_%d.hdf5' % checksum)
+        if os.path.exists(fname):
+            with datastore.read(os.path.realpath(fname)) as ds:
+                csm = ds['_csm']
+                csm.init()
+                csm.full_lt = full_lt
+        else:
+            csm = source_reader.get_csm(oqparam, full_lt, h5)
+            _check_csm(csm, oqparam, h5)
+    else:
+        csm = source_reader.get_csm(oqparam, full_lt, h5)
+        _check_csm(csm, oqparam, h5)
     return csm
 
 
