@@ -50,7 +50,6 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
-from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 
 F32 = numpy.float32
@@ -807,6 +806,7 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
         checksum = get_checksum32(oqparam, h5)
         fname = os.path.join(oqparam.cachedir, 'csm_%d.hdf5' % checksum)
         if os.path.exists(fname):
+            from openquake.commonlib import datastore  # avoid circular import
             with datastore.read(os.path.realpath(fname)) as ds:
                 csm = ds['_csm']
                 csm.init()
@@ -927,15 +927,16 @@ def get_station_data(oqparam):
 
         # Identify the columns with IM values
         # Replace replace() with removesuffix() for pandas ≥ 1.4
-        imt_candidates = sdata.filter(regex="_VALUE$").columns.str.replace("_VALUE", "")
+        imt_candidates = sdata.filter(regex="_VALUE$").columns.str.replace(
+            "_VALUE", "")
         imts = [valid.intensity_measure_type(imt) for imt in imt_candidates]
         im_cols = [imt + '_' + stat for imt in imts for stat in ["mean", "std"]]
         station_cols = ["STATION_ID", "LONGITUDE", "LATITUDE"]
         cols = []
-        for imt in imts:
+        for im in imts:
             stddev_str = "STDDEV" if imt == "MMI" else "LN_SIGMA"
-            cols.append(imt + '_VALUE')
-            cols.append(imt + '_' + stddev_str)
+            cols.append(im + '_VALUE')
+            cols.append(im + '_' + stddev_str)
         station_data = pandas.DataFrame(sdata[cols].values, columns=im_cols)
         station_sites = pandas.DataFrame(
             sdata[station_cols].values, columns=["station_id", "lon", "lat"]
