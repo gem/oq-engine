@@ -398,6 +398,7 @@ def split_by_magbin(ctxt, mag_edges):
     :param mag_edges: magnitude bin edges
     :returns: a dictionary magbin -> ctxt
     """
+    # NB: using ctxt.sort(order='mag') would cause a ValueError
     ctx = ctxt[numpy.argsort(ctxt.mag)]
     fullmagi = numpy.searchsorted(mag_edges, ctx.mag) - 1
     fullmagi[fullmagi == -1] = 0  # magnitude on the edge
@@ -466,7 +467,8 @@ class Disaggregator(object):
             raise FarAwayRupture
         if self.src_mutex:
             # make sure we can use idx_start_stop below
-            self.ctx.sort(order='src_id')
+            # NB: using ctx.sort(order='src_id') would cause a ValueError
+            self.ctx = self.ctx[numpy.argsort(self.ctx.src_id)]
         with mon0:
             # shape (G, M, U)
             self.mea, self.std = self.cmaker.get_mean_stds([self.ctx])[:2]
