@@ -283,6 +283,8 @@ def _build_groups(full_lt, smdict):
                         '%s contains source(s) %s already present in %s' %
                         (value, common, rlz.value))
                 src_groups.extend(extra)
+            else:
+                break
         for src_group in src_groups:
             trt_smr = full_lt.get_trt_smr(src_group.trt, rlz.ordinal)
             sg = apply_uncertainties(bset_values, src_group)
