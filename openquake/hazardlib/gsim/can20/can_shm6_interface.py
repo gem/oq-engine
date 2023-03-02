@@ -177,7 +177,7 @@ class SHM6_Interface_ZhaoEtAl2006SInterCascadia(
             # correction factor (equation 5 p. 909)
             mean[m] = ZH06._compute_magnitude_term(C, ctx.mag) +\
                 ZH06._compute_distance_term(C, ctx.mag, ctx.rrup) +\
-                ZH06._compute_focal_depth_term(C, ctx.hypo_depth) +\
+                ZH06._compute_focal_depth_term(C, self.HYPO_DEPTH) +\
                 ZH06._compute_site_class_term(C, ctx.vs30) + \
                 ZH06._compute_magnitude_squared_term(P=0.0, M=6.3,
                                                 Q=C_SINTER['QI'],
