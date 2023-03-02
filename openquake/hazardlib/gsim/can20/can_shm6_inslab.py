@@ -25,6 +25,8 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 import numpy as np
 
 from openquake.hazardlib.gsim.garcia_2005 import GarciaEtAl2005SSlab
+from openquake.hazardlib.gsim.garcia_2005 import _get_stddevs as _get_stddevs_ga
+from openquake.hazardlib.gsim.garcia_2005 import _compute_mean as _compute_mean_ga
 from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SSlabCascadia, _compute_slab_correction_term, _compute_magnitude_squared_term, _set_stddevs
 from openquake.hazardlib.gsim.zhao_2006 import _compute_magnitude_term as _compute_magnitude_term_zh
 from openquake.hazardlib.gsim.zhao_2006 import _compute_focal_depth_term as _compute_focal_depth_term_zh
@@ -40,9 +42,11 @@ from openquake.hazardlib.gsim.atkinson_boore_2003 import (
     AtkinsonBoore2003SSlabCascadia)
 from openquake.hazardlib.imt import PGA, SA, PGV
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.gsim.base import (CoeffsTable, SitesContext,
-                                           DistancesContext)
-from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
+from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.gsim.base import CoeffsTable #SitesContext,
+#                                           DistancesContext)
+from openquake.hazardlib.gsim.boore_2014 import (BooreEtAl2014, 
+                    _get_linear_site_term, _get_site_scaling)
 from scipy.constants import g
 
 
@@ -112,7 +116,7 @@ def _compute_soil_amplification(self, C, ctx, pga_rock, imt):
         return site_term
 
 
-def site_amplification(self, sites, imt, pga1100):
+def site_amplification(ctx, imt, pga1100):
         """
         For CanadaSHM6 a site term is added to GarciaEtAl2005SSlab which is
         defined as:
@@ -130,7 +134,7 @@ def site_amplification(self, sites, imt, pga1100):
         amp = np.zeros_like(pga1100)
 
         # Amplification for Vs30 >= 1100 m/s
-        vs30_gte1100 = sites.vs30[sites.vs30 >= 1100.]
+        vs30_gte1100 = ctx.vs30[ctx.vs30 >= 1100.]
         # AB06 / AA13 factor for 1100 to 2000
         AB06 = np.log(1./COEFFS_AB06[imt]['c'])
         AB06_1100 = np.interp(np.log(1100), np.log([760, 2000]), [0, AB06])
@@ -139,35 +143,36 @@ def site_amplification(self, sites, imt, pga1100):
                             [0, AB06_2000div1100])
 
         # BSSA14 factor relative to 1100
-        C = self.BSSA14.COEFFS[imt]
-        BSSA14_vs = (self.BSSA14._get_linear_site_term(C, vs30_gte1100)
-                     - self.BSSA14._get_linear_site_term(C, np.array([1100.])))
+        BSSA14 = BooreEtAl2014()
+        C = BSSA14.COEFFS[imt]
+        BSSA14_vs = (_get_linear_site_term(C, vs30_gte1100)
+                     - _get_linear_site_term(C, np.array([1100.])))
 
         # Larger of BSSA14 and AB06/AA13 factor
         F_gte1100 = np.maximum.reduce([AB06_vs, BSSA14_vs])
 
         # Amplification for Vs30 < 1100 m/s
-        sites_lt1100 = SitesContext()
-        sites_lt1100.vs30 = sites.vs30[sites.vs30 < 1100.]
+        sites_lt1100 = ctx[ctx.vs30 < 1100.]
+        if 'z1pt0' not in sites_lt1100.dtype.names:
+            sites_lt1100.z1pt0 = np.array([0]*len(sites_lt1100.vs30))
 
         # Correct PGA to 760 m/s using BSSA14
-        C_pga = self.BSSA14.COEFFS[PGA()]
-        BSSA14_pga1100 = self.BSSA14._get_linear_site_term(C_pga,
-                                                           np.array([1100.0]))
-        pga760 = pga1100[sites.vs30 < 1100.] - BSSA14_pga1100
+        C_pga = BSSA14.COEFFS[PGA()]
+        BSSA14_pga1100 = _get_linear_site_term(C_pga, np.array([1100.0]))
+        pga760 = pga1100[ctx.vs30 < 1100.] - BSSA14_pga1100
 
         # IMT amplification relative to 1100 m/s following BSSA14
-        C = self.BSSA14.COEFFS[imt]
+        C = BSSA14.COEFFS[imt]
         imt_per = 0 if imt == PGV() else imt.period
 
-        BSSA14_Vs = self.BSSA14._get_site_scaling(C, np.exp(pga760),
+        BSSA14_Vs = _get_site_scaling('', '', C, pga760,
                                                   sites_lt1100, imt_per, [])
-        BSSA14_1100 = self.BSSA14._get_linear_site_term(C, np.array([1100.0]))
+        BSSA14_1100 = _get_linear_site_term(C, np.array([1100.0]))
         F_lt1100 = BSSA14_Vs - BSSA14_1100
 
         # Set amplifiation above/below 1100 m/s
-        amp[sites.vs30 >= 1100.] = F_gte1100
-        amp[sites.vs30 < 1100.] = F_lt1100
+        amp[ctx.vs30 >= 1100.] = F_gte1100
+        amp[ctx.vs30 < 1100.] = F_lt1100
 
         return amp
 
@@ -536,7 +541,6 @@ class SHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
     MAX_SA_EXTRAP = 10.0
     MIN_SA_EXTRAP = 0.05
     extrapolate_GMM = SHM6_InSlab_AbrahamsonEtAl2015SSlab55()
-    BSSA14 = BooreEtAl2014()
 
     HYPO_DEPTH = 55.
     experimental = True
@@ -563,46 +567,44 @@ class SHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
                           forced rrup = rhypo (to be inline with the
                                                CanadaSHM6-table implementation)
         """
-        if imt == PGV():
-            extrapolate = False
-        elif imt.period < self.MIN_SA and imt.period >= self.MIN_SA_EXTRAP:
-            target_imt = imt
-            imt = SA(self.MIN_SA)
-            extrapolate = True
-        elif imt.period > self.MAX_SA and imt.period <= self.MAX_SA_EXTRAP:
-            target_imt = imt
-            imt = SA(self.MAX_SA)
-            extrapolate = True
-        else:
-            extrapolate = False
-
-        # Approximation made to match the table-GMM implementation of
-        # GarciaEtAl2005SSlab used to generate CanadaSHM6 and NBCC2020 values.
-        # For CanadaSHM6 the net effect on mean hazard is small.
-        ctx.rrup = ctx.rhypo
-
-        # Extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        mag = ctx.mag
-
-        #mean = self._compute_mean(C, g, mag, self.HYPO_DEPTH, dctx, imt)
-        #stddevs = self._get_stddevs(C, stddev_types, sites.vs30.shape[0])
-
+        ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
+            if imt == PGV():
+                extrapolate = False
+            elif imt.period < self.MIN_SA and imt.period >= self.MIN_SA_EXTRAP:
+                target_imt = imt
+                imt = SA(self.MIN_SA)
+                extrapolate = True
+            elif imt.period > self.MAX_SA and imt.period <= self.MAX_SA_EXTRAP:
+                target_imt = imt
+                imt = SA(self.MAX_SA)
+                extrapolate = True
+            else:
+                extrapolate = False
+    
+            # Approximation made to match the table-GMM implementation of
+            # GarciaEtAl2005SSlab used to generate CanadaSHM6 and NBCC2020 values.
+            # For CanadaSHM6 the net effect on mean hazard is small.
+            ctx.rrup = ctx.rhypo
+    
+            # Extracting dictionary of coefficients specific to required
+            # intensity measure type.
             C = self.COEFFS[imt]
-            mean[m] = _compute_mean(C, g, ctx, imt)
-            sig[m], tau[m], phi[m] = _get_stddevs(C)
-
-        pga1100 = self._compute_mean(self.COEFFS[PGA()], g, ctx, PGA())
-
-        mean += self.site_amplification(sites, imt, pga1100)
-
-        # add extrapolation factor if outside SA range 0.04 - 5.0
-        if extrapolate:
-            mean += extrapolation_factor(self.extrapolate_GMM, ctx, imt, target_imt)
-
-        return mean, stddevs
+            mag = ctx.mag
+    
+    
+            C = self.COEFFS[imt]
+            mean[m] = _compute_mean_ga(C, g, ctx, imt)
+            sig[m], tau[m], phi[m] = _get_stddevs_ga(C)
+    
+            pga1100 = _compute_mean_ga(self.COEFFS[PGA()], g, ctx, PGA())
+    
+            mean += site_amplification(ctx, imt, pga1100)
+    
+            # add extrapolation factor if outside SA range 0.04 - 5.0
+            if extrapolate:
+                mean += extrapolation_factor(self.extrapolate_GMM, ctx, imt, target_imt)
+    
 
 
 class SHM6_InSlab_GarciaEtAl2005SSlab30(SHM6_InSlab_GarciaEtAl2005SSlab55):
@@ -615,7 +617,6 @@ class SHM6_InSlab_GarciaEtAl2005SSlab30(SHM6_InSlab_GarciaEtAl2005SSlab55):
     extrapolate_GMM = SHM6_InSlab_AbrahamsonEtAl2015SSlab30()
 
 
-#def extrapolation_factor(GMM, rctx, sctx, dctx, boundingIMT, extrapIMT):
 def extrapolation_factor(GMM, ctx, boundingIMT, extrapIMT):
     """
     Returns the log-difference in ground motion between two IMTs.
