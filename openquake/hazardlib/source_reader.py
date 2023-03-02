@@ -387,8 +387,12 @@ class CompositeSourceModel:
         self.sm_rlzs = full_lt.sm_rlzs
         self.full_lt = full_lt
         self.src_groups = src_groups
+        self.init()
+
+    def init(self):
+        # initialize the code dictionary
         self.code = {}  # srcid -> code
-        for grp_id, sg in enumerate(src_groups):
+        for grp_id, sg in enumerate(self.src_groups):
             assert len(sg)  # sanity check
             for src in sg:
                 src.grp_id = grp_id

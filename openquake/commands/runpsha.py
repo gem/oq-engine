@@ -37,7 +37,7 @@ def main(lon: valid.longitude, lat: valid.latitude):
                                   None, getpass.getuser(), None)
     with jobctx:
         engine.run_jobs([jobctx])
-    disagg_by_rel_sources.main(jobctx.calc_id)
+    #disagg_by_rel_sources.main(jobctx.calc_id)
 
 main.lon = 'longitude of the site to analyze'
 main.lat = 'latitude of the site to analyze'
