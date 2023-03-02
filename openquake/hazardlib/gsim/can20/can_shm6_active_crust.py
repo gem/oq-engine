@@ -461,7 +461,7 @@ class SHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
             phi[m] = p
 
 
-def CanadaSHM6_hardrock_site_factor(A1100, A2000, vs30, imt):
+def SHM6_hardrock_site_factor(A1100, A2000, vs30, imt):
     """
     Returns CanadaSHM6 hard rock (Vs30 > 1100 m/s) amplification factors in
     log units.

@@ -136,13 +136,13 @@ class SHM6_Interface_ZhaoEtAl2006SInterCascadia(
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
-    extrapolate_GMM = CanadaSHM6_Interface_AbrahamsonEtAl2015SInter()
+    extrapolate_GMM = SHM6_Interface_AbrahamsonEtAl2015SInter()
 
     HYPO_DEPTH = 30.
     experimental = True
 
     def __init__(self):
-        super(CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia,
+        super(SHM6_Interface_ZhaoEtAl2006SInterCascadia,
               self).__init__()
 
         self.COEFFS_SINTER = CoeffsTable_CanadaSHM6(self.COEFFS_SINTER,
@@ -325,7 +325,7 @@ class SHM6_Interface_GhofraniAtkinson2014Cascadia(
     MIN_SA = 0.07
     MAX_SA_EXTRAP = 10.0
     MIN_SA_EXTRAP = 0.05
-    extrapolate_GMM = CanadaSHM6_Interface_AbrahamsonEtAl2015SInter()
+    extrapolate_GMM = SHM6_Interface_AbrahamsonEtAl2015SInter()
 
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
@@ -333,7 +333,7 @@ class SHM6_Interface_GhofraniAtkinson2014Cascadia(
 
     def __init__(self):
 
-        super(CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia,
+        super(SHM6_Interface_GhofraniAtkinson2014Cascadia,
               self).__init__()
 
         # Need to use new CoeffsTable to be able to handle extrapolation

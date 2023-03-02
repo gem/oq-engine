@@ -258,7 +258,7 @@ class SHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
 class SHM6_InSlab_AbrahamsonEtAl2015SSlab30(
     SHM6_InSlab_AbrahamsonEtAl2015SSlab55):
     """
-    Variant of CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55 with a hypo depth
+    Variant of SHM6_InSlab_AbrahamsonEtAl2015SSlab55 with a hypo depth
     of 30 km.
     """
 
@@ -354,7 +354,7 @@ class SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
     delta_c1 = None
 
     def __init__(self):
-        super(CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55,
+        super(SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55,
               self).__init__()
 
         self.COEFFS_SSLAB = CoeffsTable_CanadaSHM6(self.COEFFS_SSLAB,
@@ -475,7 +475,7 @@ class SHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
     experimental = True
 
     def __init__(self):
-        super(CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55,
+        super(SHM6_InSlab_AtkinsonBoore2003SSlabCascadia55,
               self).__init__()
 
         self.COEFFS_SSLAB = CoeffsTable_CanadaSHM6(self.COEFFS_SSLAB,
@@ -571,7 +571,7 @@ class SHM6_InSlab_AtkinsonBoore2003SSlabCascadia30(
     """
 
     HYPO_DEPTH = 30.
-    extrapolate_GMM = CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab30()
+    extrapolate_GMM = SHM6_InSlab_AbrahamsonEtAl2015SSlab30()
 
 
 class SHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
