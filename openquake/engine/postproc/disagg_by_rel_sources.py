@@ -20,7 +20,7 @@ import re
 import logging
 import numpy
 from openquake.baselib import sap, general, python3compat
-from openquake.hazardlib import contexts, calc, imt
+from openquake.hazardlib import contexts, calc
 from openquake.commonlib import datastore
 from openquake.calculators.extract import extract
 

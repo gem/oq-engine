@@ -40,12 +40,16 @@ def get_params_from(inputs):
     model = getter.get_model_by_lon_lat(inputs['lon'], inputs['lat'])
     ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
-    params['description'] = 'AELO for ' + inputs['siteid']
+    if 'siteid' in inputs:
+        params['description'] = 'AELO for ' + inputs['siteid']
+    else:
+        params['description'] += ' (%(lon)s, %(lat)s)' % inputs
     params['ps_grid_spacing'] = '0.'
     params['pointsource_distance'] = '40.'
     params['disagg_by_src'] = 'true'
     params['sites'] = '%(lon)s %(lat)s' % inputs
-    params['override_vs30'] = '%(vs30)s' % inputs
+    if 'vs30' in inputs:
+        params['override_vs30'] = '%(vs30)s' % inputs
     return params
 
 
