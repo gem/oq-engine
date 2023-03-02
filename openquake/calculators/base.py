@@ -677,9 +677,9 @@ class HazardCalculator(BaseCalculator):
         elif 'weights' in self.datastore:
             return len(self.datastore['weights'])
         try:
-            return self.csm.full_lt.get_num_rlzs()
+            return self.csm.full_lt.get_num_paths()
         except AttributeError:  # no self.csm
-            return self.datastore['full_lt'].get_num_rlzs()
+            return self.datastore['full_lt'].get_num_paths()
 
     def read_exposure(self, haz_sitecol):  # after load_risk_model
         """
@@ -1201,7 +1201,7 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
     Create and possibly populate the datasets in the gmf_data group
     """
     oq = dstore['oqparam']
-    R = dstore['full_lt'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_paths()
     M = len(prim_imts)
     n = 0 if data is None else len(data['sid'])
     items = [('sid', U32 if n == 0 else data['sid']),

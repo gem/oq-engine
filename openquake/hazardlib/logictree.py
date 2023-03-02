@@ -1159,17 +1159,6 @@ class FullLogicTree(object):
                 rec['name'], rec['weight'], sm_id, path, rec['samples'])
             self.sm_rlzs.append(sm)
 
-    def get_num_rlzs(self, sm_rlz=None):
-        """
-        :param sm_rlz: a Realization instance (or None)
-        :returns: the number of realizations per source model (or all)
-        """
-        if sm_rlz is None:
-            return sum(self.get_num_rlzs(sm) for sm in self.sm_rlzs)
-        if self.num_samples:
-            return sm_rlz.samples
-        return self.gsim_lt.get_num_paths()
-
     def get_num_potential_paths(self):
         """
          :returns: the number of potential realizations
@@ -1201,9 +1190,8 @@ class FullLogicTree(object):
         info_by_model = {}
         for sm in self.sm_rlzs:
             info_by_model[sm.lt_path] = (
-                '~'.join(map(decode, sm.lt_path)),
-                decode(sm.value), sm.weight, self.get_num_rlzs(sm))
-        summary = ['%s, %s, weight=%s: %d realization(s)' % ibm
+                '~'.join(map(decode, sm.lt_path)), decode(sm.value), sm.weight)
+        summary = ['%s, %s, weight=%s' % ibm
                    for ibm in info_by_model.values()]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(summary))
 

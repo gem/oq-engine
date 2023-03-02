@@ -178,7 +178,7 @@ def export_hcurves_csv(ekey, dstore):
     """
     oq = dstore['oqparam']
     info = get_info(dstore)
-    R = dstore['full_lt'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_paths()
     sitecol = dstore['sitecol']
     sitemesh = get_sites(sitecol)
     key, kind, fmt = get_kkf(ekey)

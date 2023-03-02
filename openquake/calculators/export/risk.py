@@ -329,7 +329,7 @@ def export_loss_maps_npz(ekey, dstore):
     kind = ekey[0].split('-')[1]  # rlzs or stats
     assets = get_assets(dstore)
     value = get_loss_maps(dstore, kind)
-    R = dstore['full_lt'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_paths()
     if kind == 'rlzs':
         rlzs_or_stats = ['rlz-%03d' % r for r in range(R)]
     else:
