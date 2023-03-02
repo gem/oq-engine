@@ -190,7 +190,8 @@ class SHM6_Interface_ZhaoEtAl2006SInterCascadia(
 
             # convert from cm/s**2 to g
             mean[m] = np.log(np.exp(mean[m]) * 1e-2 / g)
-            _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SINTER['tauI'])
+            ZH06._set_stddevs(
+                sig[m], tau[m], phi[m], C['sigma'], C_SINTER['tauI'])
 
 
 
