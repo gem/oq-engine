@@ -25,6 +25,7 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 import numpy as np
 import openquake.hazardlib.gsim.abrahamson_2015 as A15
 import openquake.hazardlib.gsim.atkinson_macias_2009 as AM09
+import openquake.hazardlib.gsim.can20.can_shm6_active_crust as SHM6_ASC
 
 from scipy.constants import g
 from openquake.hazardlib import const
@@ -249,7 +250,7 @@ def _get_mean_760_am09(ctx, imt):
     """
     See get_mean_and_stddevs in AtkinsonMacias2009
     """
-    coeffs = AM09.COEFFS[imt]
+    coeffs = AtkinsonMacias2009.COEFFS[imt]
     imean = (AM09._get_magnitude_term(coeffs, ctx.mag) +
              AM09._get_distance_term(coeffs, ctx.rrup, ctx.mag))
     # Convert mean from cm/s and cm/s/s and from common logarithm to
@@ -265,9 +266,9 @@ def _site_term_am09(ctx, imt):
     """
     # get PGA for non-linear term in BSSA14
     pga760 = _get_mean_760_am09(ctx, PGA())
-    BSSA14 = CanadaSHM6_ActiveCrust_BooreEtAl2014()
+    BSSA14 = SHM6_ActiveCrust_BooreEtAl2014()
     C = BSSA14.COEFFS[imt]
-    F = BSSA14._get_site_scaling_ba14(
+    F = SHM6_ASC._get_site_scaling_ba14(
         "", "", C, np.exp(pga760), ctx, imt.period, ctx.rjb)
     return F
 
@@ -280,7 +281,8 @@ class SHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
     See also header in CanadaSHM6_Interface.py
     """
 
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
+    REQUIRES_DISTANCES = {'rrup', 'rjb'}
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
     experimental = True
 
@@ -300,7 +302,7 @@ class SHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
                 fix = True
 
             # Get the coeffs
-            C = self.COEFFS[imt]
+            C = AtkinsonMacias2009.COEFFS[imt]
 
             # AM09 is for Vs30 = 760m/s
             mean = _get_mean_760_am09(ctx, imt)

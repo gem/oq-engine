@@ -82,11 +82,8 @@ def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
             imt = period  # for some versions of OQ period=imt
 
     # CanadaSHM6 hard rock site factor
-    flin[sites.vs30 > 1100] = CanadaSHM6_hardrock_site_factor(
-                                            BSSA14_1100[0],
-                                            BSSA14_2000[0],
-                                            sites.vs30[sites.vs30 > 1100],
-                                            imt)
+    flin[sites.vs30 > 1100] = SHM6_hardrock_site_factor(
+        BSSA14_1100[0], BSSA14_2000[0], sites.vs30[sites.vs30 > 1100], imt)
 
     fnl = BA14._get_nonlinear_site_term(C, sites.vs30, pga_rock)
     fbd = BA14._get_basin_depth_term(region, C, sites, period)  # returns 0
