@@ -29,9 +29,13 @@ from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SSlabCascadia, _compu
 from openquake.hazardlib.gsim.zhao_2006 import _compute_magnitude_term as _compute_magnitude_term_zh
 from openquake.hazardlib.gsim.zhao_2006 import _compute_focal_depth_term as _compute_focal_depth_term_zh
 from openquake.hazardlib.gsim.zhao_2006 import _compute_distance_term as _compute_distance_term_zh
+from openquake.hazardlib.gsim.abrahamson_2015 import _compute_distance_term as _compute_distance_term_abr
+from openquake.hazardlib.gsim.abrahamson_2015 import _compute_magnitude_term as _compute_magnitude_term_abr
+from openquake.hazardlib.gsim.abrahamson_2015 import _compute_focal_depth_term as _compute_focal_depth_term_abr
 from openquake.hazardlib.gsim.abrahamson_2015 import (AbrahamsonEtAl2015SSlab,
-        _compute_distance_term, _compute_pga_rock, _compute_magnitude_term,
+        _compute_pga_rock, 
         _compute_forearc_backarc_term, _compute_site_response_term)
+from openquake.hazardlib.gsim.atkinson_boore_2003 import _compute_mean as _compute_mean_ab
 from openquake.hazardlib.gsim.atkinson_boore_2003 import (
     AtkinsonBoore2003SSlabCascadia)
 from openquake.hazardlib.imt import PGA, SA, PGV
@@ -41,16 +45,6 @@ from openquake.hazardlib.gsim.base import (CoeffsTable, SitesContext,
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from scipy.constants import g
 
-
-def _compute_focal_depth_term(self, C, ctx):
-        """
-        Computes the hypocentral depth scaling term - as indicated by
-        equation (3)
-
-        CanadaSHM6 edits: hard-coded the hypo depth
-        """
-
-        return C['theta11'] * (ctx.hypo_depth - 60.)
 
 
 def _compute_site_class_term_CanadaSHM6(C, ctx, imt):
@@ -245,11 +239,11 @@ class SHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
             C = self.COEFFS[imt]
             dc1 = self.delta_c1 or COEFFS_MAG_SCALE[imt]["dc1"]
             mean[m] = (
-                _compute_magnitude_term(
+                _compute_magnitude_term_abr(
                     self.kind, C, dc1, ctx.mag) +
-                _compute_distance_term(
+                _compute_distance_term_abr(
                     self.kind, self.trt, self.theta6_adj, C, ctx) +
-                _compute_focal_depth_term(
+                _compute_focal_depth_term_abr(
                     self.trt, C, ctx) +
                 _compute_forearc_backarc_term(
                     self.trt, self.faba_model, C, ctx) +
@@ -279,70 +273,6 @@ class SHM6_InSlab_AbrahamsonEtAl2015SSlab30(
     """
 
     HYPO_DEPTH = 30.
-    MAX_SA = 10.
-    MIN_SA = 0.05
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
-    experimental = True
-
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-
-        CanadaSHM6 edits: added PGV
-                          limited to the period range of 0.05 - 10s
-
-        """
-        ctx.hypo_depth = self.HYPO_DEPTH
-        for m, imt in enumerate(imts):
-            # set correlated IMT for PGV and check T bounds
-            PGVimt = False
-            if imt == PGV():
-                PGVimt = True
-                imt = SA(0.5)
-            elif imt.period != 0 and (imt.period < self.MIN_SA or
-                                      imt.period > self.MAX_SA):
-                raise ValueError(str(imt) + ' is not supported. SA must be in '
-                                 + 'range of ' + str(self.MIN_SA) + 's and '
-                                 + str(self.MAX_SA) + 's.')
-
-            C_PGA = self.COEFFS[PGA()]
-            dc1_pga = self.delta_c1 or COEFFS_MAG_SCALE[PGA()]["dc1"]
-
-            # compute median pga on rock (vs30=1000), needed for site response
-            # term calculation
-            pga1000 = np.exp(_compute_pga_rock(
-                    self.kind, self.trt, self.theta6_adj, self.faba_model,
-            C_PGA, dc1_pga, ctx))
-
-            C = self.COEFFS[imt]
-            dc1 = self.delta_c1 or COEFFS_MAG_SCALE[imt]["dc1"]
-            mean[m] = (
-                _compute_magnitude_term(
-                    self.kind, C, dc1, ctx.mag) +
-                _compute_distance_term(
-                    self.kind, self.trt, self.theta6_adj, C, ctx) +
-                _compute_focal_depth_term(
-                    self.trt, C, ctx) +
-                _compute_forearc_backarc_term(
-                    self.trt, self.faba_model, C, ctx) +
-                _compute_site_response_term(
-                    C, ctx, pga1000))
-            if self.sigma_mu_epsilon:
-                sigma_mu = get_stress_factor(
-                    imt, self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
-                    const.TRT.SUBDUCTION_INTRASLAB)
-                mean[m] += sigma_mu * self.sigma_mu_epsilon
-
-            sig[m] = C["sigma"] if self.ergodic else C["sigma_ss"]
-            tau[m] = C['tau']
-            phi[m] = C["phi"] if self.ergodic else np.sqrt(
-                C["sigma_ss"] ** 2. - C["tau"] ** 2.)
-
-            if PGVimt:
-                mean = (0.995*mean) + 3.937
-
 
 
 class SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
@@ -392,6 +322,7 @@ class SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
                           added extrapolation beyond MAX_SA and MIN_SA to 0.05
                           - 10s
         """
+        ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
             extrapolate = False
             PGVimt = False
@@ -514,44 +445,45 @@ class SHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
         extrapolate = False
         PGVimt = False
 
-        if imt == PGV():
-            PGVimt = True
-            imt = SA(0.5)
-        elif imt.period < self.MIN_SA and imt.period >= self.MIN_SA_EXTRAP:
-            target_imt = imt
-            imt = SA(self.MIN_SA)
-            extrapolate = True
-        elif imt.period > self.MAX_SA and imt.period <= self.MAX_SA_EXTRAP:
-            target_imt = imt
-            imt = SA(self.MAX_SA)
-            extrapolate = True
-
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS_SSLAB[imt]
-
-        # cap magnitude values at 8.0, see page 1709
-        mag = np.clip(ctx.mag, 0, 8.0)
-
-        # compute PGA on rock (needed for site amplification calculation)
-        G = 10 ** (0.301 - 0.01 * mag)
-        pga_rock = self._compute_mean(self.COEFFS_SSLAB[PGA()], G, mag,
-                                      ctx.hypo_depth, ctx.rrup, ctx.vs30,
-                                      # by passing pga_rock > 500 the soil
-                                      # amplification is 0
-                                      np.zeros_like(ctx.vs30) + 600,
-                                      PGA())
-        pga_rock = 10 ** (pga_rock)
-
-        # compute actual mean and convert from log10 to ln and units from
-        # cm/s**2 to g
+        ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
+            if imt == PGV():
+                PGVimt = True
+                imt = SA(0.5)
+            elif imt.period < self.MIN_SA and imt.period >= self.MIN_SA_EXTRAP:
+                target_imt = imt
+                imt = SA(self.MIN_SA)
+                extrapolate = True
+            elif imt.period > self.MAX_SA and imt.period <= self.MAX_SA_EXTRAP:
+                target_imt = imt
+                imt = SA(self.MAX_SA)
+                extrapolate = True
+    
+            # extracting dictionary of coefficients specific to required
+            # intensity measure type.
+            C = self.COEFFS_SSLAB[imt]
+    
+            # cap magnitude values at 8.0, see page 1709
+            mag = np.clip(ctx.mag, 0, 8.0)
+    
+            # compute PGA on rock (needed for site amplification calculation)
+            G = 10 ** (0.301 - 0.01 * mag)
+            pga_rock = _compute_mean_ab(self.kind, self.COEFFS_SSLAB[PGA()], G, mag,
+                                          ctx.hypo_depth, ctx.rrup, ctx.vs30,
+                                          # by passing pga_rock > 500 the soil
+                                          # amplification is 0
+                                          np.zeros_like(ctx.vs30) + 600,
+                                          PGA())
+            pga_rock = 10 ** (pga_rock)
+    
+            # compute actual mean and convert from log10 to ln and units from
+            # cm/s**2 to g
 
             C = self.COEFFS_SSLAB[imt]
 
             # compute actual mean and convert from log10 to ln and units from
             # cm/s**2 to g
-            mean[m] = _compute_mean(
+            mean[m] = _compute_mean_ab(
                 self.kind, C, G, mag, ctx.hypo_depth, ctx.rrup,
                 ctx.vs30, pga_rock, imt)
             mean[m] = np.log((10 ** mean[m]) * 1e-2 / g)
@@ -571,8 +503,6 @@ class SHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
 
         if PGVimt:
             mean = (0.995*mean) + 3.937
-
-        return mean, stddevs
 
 
 
