@@ -23,7 +23,7 @@ import sys
 import getpass
 from openquake.baselib import config, sap
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, mosaic
+from openquake.commonlib import datastore, readinput, mosaic
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
@@ -46,6 +46,7 @@ def get_params_from(inputs):
     params['disagg_by_src'] = 'true'
     params['sites'] = '%(lon)s %(lat)s' % inputs
     params['override_vs30'] = '%(vs30)s' % inputs
+    params['cachedir'] = datastore.get_datadir()
     return params
 
 

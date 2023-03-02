@@ -23,7 +23,7 @@ import numpy
 import pandas
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.contexts import ContextMaker
-from openquake.commonlib import logs
+from openquake.commonlib import logs, datastore
 from openquake.engine.postproc.rupture_histogram import compute_histogram
 from openquake.engine.postproc import compute_mrd, disagg_by_rel_sources
 from openquake.calculators import base
@@ -85,6 +85,7 @@ def test_mosaic(model):
         log.params['ps_grid_spacing'] = '0.'
         log.params['pointsource_distance'] = '40.'
         log.params['sites'] = '%(lon)s %(lat)s' % sitedict
+        log.params['cachedir'] = datastore.get_datadir()
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
         calc.datastore.close()

@@ -29,6 +29,7 @@ from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
 from openquake.hazardlib.scalerel.point import PointMSR
+from openquake.commonlib import readinput, datastore
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -137,26 +138,30 @@ class PreClassicalCalculator(base.HazardCalculator):
     def init(self):
         super().init()
         if self.oqparam.hazard_calculation_id:
-            full_lt = self.datastore.parent['full_lt']
+            self.full_lt = self.datastore.parent['full_lt']
             trt_smrs = self.datastore.parent['trt_smrs'][:]
         else:
-            full_lt = self.csm.full_lt
+            self.full_lt = self.csm.full_lt
             trt_smrs = self.csm.get_trt_smrs()
         self.grp_ids = numpy.arange(len(trt_smrs))
         rlzs_by_g = []
         for t in trt_smrs:
-            for rlzs in full_lt.get_rlzs_by_gsim(t).values():
+            for rlzs in self.full_lt.get_rlzs_by_gsim(t).values():
                 rlzs_by_g.append(rlzs)
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
 
-    def populate_csm(self):
-        # and store full_lt and source_info
-        csm = self.csm
-        self.datastore['trt_smrs'] = csm.get_trt_smrs()
+    def store(self):
+        # store full_lt, trt_smrs, toms
+        self.datastore['full_lt'] = self.csm.full_lt
+        self.datastore['trt_smrs'] = self.csm.get_trt_smrs()
         self.datastore['toms'] = numpy.array(
             [sg.get_tom_toml(self.oqparam.investigation_time)
-             for sg in csm.src_groups], hdf5.vstr)
+             for sg in self.csm.src_groups], hdf5.vstr)
+
+    def populate_csm(self):
+        csm = self.csm
+        self.store()
         cmakers = read_cmakers(self.datastore, csm.full_lt)
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         if sites is None:
@@ -186,7 +191,6 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         # run preclassical for non-atomic sources
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
-        self.datastore.hdf5['full_lt'] = csm.full_lt
         logging.info('Starting preclassical with %d source groups',
                      len(sources_by_key))
         self.datastore.swmr_on()
@@ -262,7 +266,20 @@ class PreClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        self.populate_csm()
+        oq = self.oqparam
+        checksum = readinput.get_checksum32(oq, self.datastore.hdf5)
+        if oq.cachedir:
+            fname = os.path.join(oq.cachedir, 'csm_%d.hdf5' % checksum)
+            if os.path.exists(fname):
+                with datastore.read(os.path.realpath(fname)) as ds:
+                    self.csm = ds['_csm']
+                    self.csm.init(self.full_lt)
+                self.store()
+            else:
+                self.populate_csm()
+                os.symlink(self.datastore.filename, fname)
+        else:
+            self.populate_csm()
         self.max_weight = self.csm.get_max_weight(self.oqparam)
         return self.csm
 

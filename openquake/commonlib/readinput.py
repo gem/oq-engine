@@ -801,32 +801,21 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
     :param h5:
          an open hdf5.File where to store the source info
     """
-    # first read the logic tree
     full_lt = get_full_lt(oqparam, branchID)
-
-    # then read the composite source model from the cache if possible
-    if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
-        os.makedirs(oqparam.cachedir)
     if oqparam.cachedir:
-        # for UCERF pickling the csm is slower
         checksum = get_checksum32(oqparam, h5)
-        fname = os.path.join(oqparam.cachedir, 'csm_%s.pik' % checksum)
+        fname = os.path.join(oqparam.cachedir, 'csm_%d.hdf5' % checksum)
         if os.path.exists(fname):
-            logging.info('Reading %s', fname)
-            with open(fname, 'rb') as f:
-                csm = pickle.load(f)
-                csm.full_lt = full_lt
+            from openquake.commonlib import datastore  # avoid circular import
+            with datastore.read(os.path.realpath(fname)) as ds:
+                csm = ds['_csm']
+                csm.init(full_lt)
+        else:
+            csm = source_reader.get_csm(oqparam, full_lt, h5)
             _check_csm(csm, oqparam, h5)
-            return csm
-
-    # read and process the composite source model from the input files
-    csm = source_reader.get_csm(oqparam, full_lt, h5)
-    if oqparam.cachedir:
-        logging.info('Saving %s', fname)
-        with open(fname, 'wb') as f:
-            pickle.dump(csm, f)
-
-    _check_csm(csm, oqparam, h5)
+    else:
+        csm = source_reader.get_csm(oqparam, full_lt, h5)
+        _check_csm(csm, oqparam, h5)
     return csm
 
 
@@ -907,24 +896,12 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
-        os.makedirs(oqparam.cachedir)
-    checksum = _checksum(oqparam.inputs['exposure'])
-    fname = os.path.join(oqparam.cachedir, 'exp_%s.pik' % checksum)
-    if os.path.exists(fname):
-        logging.info('Reading %s', fname)
-        with open(fname, 'rb') as f:
-            return pickle.load(f)
     exposure = Global.exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs,
         by_country='country' in asset.tagset(oqparam.aggregate_by),
         errors='ignore' if oqparam.ignore_encoding_errors else None)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
-    if oqparam.cachedir:
-        logging.info('Saving %s', fname)
-        with open(fname, 'wb') as f:
-            pickle.dump(exposure, f)
     return exposure
 
 
@@ -949,15 +926,16 @@ def get_station_data(oqparam):
 
         # Identify the columns with IM values
         # Replace replace() with removesuffix() for pandas ≥ 1.4
-        imt_candidates = sdata.filter(regex="_VALUE$").columns.str.replace("_VALUE", "")
+        imt_candidates = sdata.filter(regex="_VALUE$").columns.str.replace(
+            "_VALUE", "")
         imts = [valid.intensity_measure_type(imt) for imt in imt_candidates]
         im_cols = [imt + '_' + stat for imt in imts for stat in ["mean", "std"]]
         station_cols = ["STATION_ID", "LONGITUDE", "LATITUDE"]
         cols = []
-        for imt in imts:
+        for im in imts:
             stddev_str = "STDDEV" if imt == "MMI" else "LN_SIGMA"
-            cols.append(imt + '_VALUE')
-            cols.append(imt + '_' + stddev_str)
+            cols.append(im + '_VALUE')
+            cols.append(im + '_' + stddev_str)
         station_data = pandas.DataFrame(sdata[cols].values, columns=im_cols)
         station_sites = pandas.DataFrame(
             sdata[station_cols].values, columns=["station_id", "lon", "lat"]
