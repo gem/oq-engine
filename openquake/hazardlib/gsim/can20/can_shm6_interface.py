@@ -26,6 +26,7 @@ import numpy as np
 import openquake.hazardlib.gsim.abrahamson_2015 as A15
 import openquake.hazardlib.gsim.atkinson_macias_2009 as AM09
 import openquake.hazardlib.gsim.can20.can_shm6_active_crust as SHM6_ASC
+import openquake.hazardlib.gsim.ghofrani_atkinson_2014 as GA14
 
 from scipy.constants import g
 from openquake.hazardlib import const
@@ -312,6 +313,50 @@ class SHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
             if fix:
                 mean[m] = (0.897*mean) + 4.835
 
+# =============================================================================
+# =============================================================================
+
+
+def _get_site_term_ga14(C, vs30, imt):
+    """
+    Returns the linear site scaling term following GA14 for Vs30 < 1100 m/s
+    and the CanadaSHM6 hard-rock approach for Vs30 >= 1100 m/s.
+    """
+    # Native site factor for GA14
+    GA14_vs = GA14._get_site_term(C, vs30)
+
+    # Need log site factors at Vs30 = 1100 and 2000 to calculate
+    # CanadaSHM6 hard rock site factors
+    GA14_1100 = np.log(10**GA14._get_site_term(C, 1100.))
+    GA14_2000 = np.log(10**GA14._get_site_term(C, 2000.))
+
+    # CanadaSHM6 hard rock site factor
+    F = SHM6_hardrock_site_factor(GA14_1100, GA14_2000,
+                                  vs30[vs30 >= 1100], imt)
+
+    # for Vs30 > 1100 set to CanadaSHM6 factor
+    GA14_vs[vs30 >= 1100] = np.log10(np.exp(F))
+
+    return GA14_vs
+
+
+def _set_extrapolation(imt):
+    ga14 = SHM6_Interface_GhofraniAtkinson2014Cascadia
+    target_imt = None
+    if imt == PGV():
+        extrapolate = False
+    elif imt.period < ga14.MIN_SA and imt.period >= ga14.MIN_SA_EXTRAP:
+        target_imt = imt
+        imt = SA(ga14.MIN_SA)
+        extrapolate = True
+    elif imt.period > ga14.MAX_SA and imt.period <= ga14.MAX_SA_EXTRAP:
+        target_imt = imt
+        imt = SA(ga14.MAX_SA)
+        extrapolate = True
+    else:
+        extrapolate = False
+    return extrapolate, imt, target_imt
+
 
 class SHM6_Interface_GhofraniAtkinson2014Cascadia(
                                                 GhofraniAtkinson2014Cascadia):
@@ -323,14 +368,12 @@ class SHM6_Interface_GhofraniAtkinson2014Cascadia(
     See also header in CanadaSHM6_Interface.py
     """
     # Parameters used to extrapolate to 0.05s <= T <= 10s
+
     MAX_SA = 9.09
     MIN_SA = 0.07
     MAX_SA_EXTRAP = 10.0
     MIN_SA_EXTRAP = 0.05
     extrapolate_GMM = SHM6_Interface_AbrahamsonEtAl2015SInter()
-
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
     experimental = True
 
     def __init__(self):
@@ -339,74 +382,43 @@ class SHM6_Interface_GhofraniAtkinson2014Cascadia(
               self).__init__()
 
         # Need to use new CoeffsTable to be able to handle extrapolation
-        self.COEFFS = CoeffsTable_CanadaSHM6(self.COEFFS, self.MAX_SA,
-                                             self.MIN_SA, self.MAX_SA_EXTRAP,
-                                             self.MIN_SA_EXTRAP)
+        self.COEFFS = CoeffsTable_CanadaSHM6(
+            GhofraniAtkinson2014Cascadia.COEFFS, self.MAX_SA, self.MIN_SA,
+            self.MAX_SA_EXTRAP, self.MIN_SA_EXTRAP)
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
-
-        CanadaSHM6 edits: added extrapolation beyond MAX_SA and MIN_SA to 0.05
-                          - 10s
-                          modified site amplification term for Vs30 >= 1100 m/s
-
         """
-        if imt == PGV():
-            extrapolate = False
-        elif imt.period < self.MIN_SA and imt.period >= self.MIN_SA_EXTRAP:
-            target_imt = imt
-            imt = SA(self.MIN_SA)
-            extrapolate = True
-        elif imt.period > self.MAX_SA and imt.period <= self.MAX_SA_EXTRAP:
-            target_imt = imt
-            imt = SA(self.MAX_SA)
-            extrapolate = True
-        else:
-            extrapolate = False
+        for m, imt in enumerate(imts):
 
-        C = self.COEFFS[imt]
+            # Extrapolation
+            extrapolate, imt, target_imt = _set_extrapolation(imt)
 
-        imean = (self._get_magnitude_term(C, rup.mag) +
-                 self._get_distance_term(C, dists.rrup, sites.backarc) +
-                 self._get_site_term_CanadaSHM6(C, sites.vs30, imt) +
-                 self._get_scaling_term(C, dists.rrup))
-        # Convert mean from cm/s and cm/s/s and from common logarithm to
-        # natural logarithm
-        if imt.name in "SA PGA":
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:
-            mean = np.log((10.0 ** (imean)))
+            # Get coefficients
+            C = self.COEFFS[imt]
 
-        stddevs = self._get_stddevs(C, len(dists.rrup), stddev_types)
+            # Compute the median
+            imean = (GA14._get_magnitude_term(C, ctx.mag) +
+                     GA14._get_distance_term(
+                         C, ctx.rrup, np.bool_(ctx.backarc)) +
+                     _get_site_term_ga14(C, ctx.vs30, imt) +
+                     GA14._get_scaling_term(self.kind, C, ctx.rrup))
 
-        # add extrapolation factor if outside SA range (0.07 - 9.09)
-        if extrapolate:
-            mean += extrapolation_factor(self.extrapolate_GMM, rup, sites,
-                                         dists, imt, target_imt)
+            # Convert mean from cm/s and cm/s/s and from common logarithm to
+            # natural logarithm
+            if imt.string.startswith(('PGA', 'SA')):
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:
+                mean[m] = np.log((10.0 ** (imean)))
 
-        return mean, stddevs
+            if extrapolate:
+                mean += extrapolation_factor(
+                    self.extrapolate_GMM, ctx, imt, target_imt)
 
-    def _get_site_term_CanadaSHM6(self, C, vs30, imt):
-        """
-        Returns the linear site scaling term following GA14 for Vs30 < 1100 m/s
-        and the CanadaSHM6 hard-rock approach for Vs30 >= 1100 m/s.
-        """
-        # Native site factor for GA14
-        GA14_vs = self._get_site_term(C, vs30)
-
-        # Need log site factors at Vs30 = 1100 and 2000 to calculate
-        # CanadaSHM6 hard rock site factors
-        GA14_1100 = np.log(10**self._get_site_term(C, 1100.))
-        GA14_2000 = np.log(10**self._get_site_term(C, 2000.))
-
-        # CanadaSHM6 hard rock site factor
-        F = CanadaSHM6_hardrock_site_factor(GA14_1100, GA14_2000,
-                                            vs30[vs30 >= 1100], imt)
-
-        # for Vs30 > 1100 set to CanadaSHM6 factor
-        GA14_vs[vs30 >= 1100] = np.log10(np.exp(F))
-
-        return GA14_vs
+            sig[m] = np.log(10.0 ** np.sqrt(C["tau"] ** 2. + C["sigma"] ** 2.))
+            tau[m] = np.log(10.0 ** C["tau"])
+            phi[m] = np.log(10.0 ** C["sigma"])

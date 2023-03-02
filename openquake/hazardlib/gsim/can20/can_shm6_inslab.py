@@ -684,14 +684,14 @@ def extrapolation_factor(GMM, ctx, boundingIMT, extrapIMT):
     extrapIMT: IMT for the SA being extrapolated to
     """
 
-    #bounding_vals, _ = GMM.get_mean_and_stddevs(ctx, boundingIMT,
-    bounding_vals, _ = GMM.compute(ctx, boundingIMT,
-                                                [StdDev.TOTAL])
-    #extrap_vals, _ = GMM.get_mean_and_stddevs(ctx, extrapIMT,
-    extrap_vals, _ = GMM.compute(ctx, extrapIMT,
-                                              [StdDev.TOTAL])
+    mean_ext = np.zeros((1, len(ctx.vs30)))
+    mean_bounding = np.zeros((1, len(ctx.vs30)))
+    sig = tau = phi = np.zeros((1, len(ctx.vs30)))
 
-    return extrap_vals - bounding_vals
+    GMM.compute(ctx, [boundingIMT], mean_ext, sig, tau, phi)
+    GMM.compute(ctx, [extrapIMT], mean_bounding, sig, tau, phi)
+
+    return mean_ext - mean_bounding
 
 
 class CoeffsTable_CanadaSHM6(object):
@@ -710,8 +710,6 @@ class CoeffsTable_CanadaSHM6(object):
 
     def __getitem__(self, key):
 
-        if key.string != 'PGA':
-            import pdb; pdb.set_trace()
         if (key.string == 'SA') and (key.period > self.max_SA
                                    and key.period <= self.max_SA_extrap):
             return self.coeff[SA(self.max_SA)]
