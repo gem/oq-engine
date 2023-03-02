@@ -25,7 +25,10 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 import numpy as np
 
 from openquake.hazardlib.gsim.garcia_2005 import GarciaEtAl2005SSlab
-from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SSlabCascadia
+from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SSlabCascadia, _compute_slab_correction_term, _compute_magnitude_squared_term, _set_stddevs
+from openquake.hazardlib.gsim.zhao_2006 import _compute_magnitude_term as _compute_magnitude_term_zh
+from openquake.hazardlib.gsim.zhao_2006 import _compute_focal_depth_term as _compute_focal_depth_term_zh
+from openquake.hazardlib.gsim.zhao_2006 import _compute_distance_term as _compute_distance_term_zh
 from openquake.hazardlib.gsim.abrahamson_2015 import (AbrahamsonEtAl2015SSlab,
         _compute_distance_term, _compute_pga_rock, _compute_magnitude_term,
         _compute_forearc_backarc_term, _compute_site_response_term)
@@ -50,7 +53,7 @@ def _compute_focal_depth_term(self, C, ctx):
         return C['theta11'] * (ctx.hypo_depth - 60.)
 
 
-def _compute_site_class_term_CanadaSHM6(self, C, cxt, imt):
+def _compute_site_class_term_CanadaSHM6(C, ctx, imt):
         """
         For CanadaSHM6 the ZhaoEtAl2006 site term is replaced with:
             Vs30
@@ -175,6 +178,19 @@ def site_amplification(self, sites, imt, pga1100):
         return amp
 
 
+COEFFS_MAG_SCALE = CoeffsTable(sa_damping=5, table="""
+    IMT    dc1
+    pga    0.2
+    0.02   0.2
+    0.30   0.2
+    0.50   0.1
+    1.00   0.0
+    2.00  -0.1
+    3.00  -0.2
+    10.0  -0.2
+    """)
+
+
 class SHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
     """
     Abrahramson et al., 2015 (BCHydro) InSlab GMM with a fixed hypo depth of
@@ -218,7 +234,7 @@ class SHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
                                  + str(self.MAX_SA) + 's.')
 
             C_PGA = self.COEFFS[PGA()]
-            dc1_pga = self.delta_c1 or self.COEFFS_MAG_SCALE[PGA()]["dc1"]
+            dc1_pga = self.delta_c1 or COEFFS_MAG_SCALE[PGA()]["dc1"]
 
             # compute median pga on rock (vs30=1000), needed for site response
             # term calculation
@@ -227,7 +243,7 @@ class SHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
             C_PGA, dc1_pga, ctx))
 
             C = self.COEFFS[imt]
-            dc1 = self.delta_c1 or self.COEFFS_MAG_SCALE[imt]["dc1"]
+            dc1 = self.delta_c1 or COEFFS_MAG_SCALE[imt]["dc1"]
             mean[m] = (
                 _compute_magnitude_term(
                     self.kind, C, dc1, ctx.mag) +
@@ -292,7 +308,7 @@ class SHM6_InSlab_AbrahamsonEtAl2015SSlab30(
                                  + str(self.MAX_SA) + 's.')
 
             C_PGA = self.COEFFS[PGA()]
-            dc1_pga = self.delta_c1 or self.COEFFS_MAG_SCALE[PGA()]["dc1"]
+            dc1_pga = self.delta_c1 or COEFFS_MAG_SCALE[PGA()]["dc1"]
 
             # compute median pga on rock (vs30=1000), needed for site response
             # term calculation
@@ -301,7 +317,7 @@ class SHM6_InSlab_AbrahamsonEtAl2015SSlab30(
             C_PGA, dc1_pga, ctx))
 
             C = self.COEFFS[imt]
-            dc1 = self.delta_c1 or self.COEFFS_MAG_SCALE[imt]["dc1"]
+            dc1 = self.delta_c1 or COEFFS_MAG_SCALE[imt]["dc1"]
             mean[m] = (
                 _compute_magnitude_term(
                     self.kind, C, dc1, ctx.mag) +
@@ -406,16 +422,14 @@ class SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
             d = np.array(ctx.rrup)  # make a copy
             d[d == 0.0] = 0.1
 
-            dc1 = self.delta_c1 or self.COEFFS_MAG_SCALE[imt]["dc1"]
 
             # mean value as given by equation 1, p. 901, without considering
             # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
             # inter and intra event terms, plus the magnitude-squared term
             # correction factor (equation 5 p. 909)
-            mean[m] = _compute_magnitude_term(
-                    self.kind, C, dc1, ctx.mag) +\
-                _compute_distance_term(C, ctx, d) +\
-                _compute_focal_depth_term(C, ctx) +\
+            mean[m] = _compute_magnitude_term_zh(C, ctx.mag) +\
+                _compute_distance_term_zh(C, ctx.mag, d) +\
+                _compute_focal_depth_term_zh(C, self.HYPO_DEPTH) +\
                 _compute_site_class_term_CanadaSHM6(C, ctx, imt) +\
                 _compute_magnitude_squared_term(P=C_SSLAB['PS'], M=6.5,
                                                 Q=C_SSLAB['QS'],
@@ -437,7 +451,7 @@ class SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
         if PGVimt:
             mean = (0.995*mean) + 3.937
 
-        return mean, stddevs
+        #return mean, stddevs
 
 
 
