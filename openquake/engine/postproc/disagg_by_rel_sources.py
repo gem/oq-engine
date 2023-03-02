@@ -21,19 +21,20 @@ import logging
 import numpy
 from openquake.baselib import sap, general, python3compat
 from openquake.hazardlib import contexts, calc
-from openquake.commonlib import datastore
+from openquake.commonlib import datastore, readinput
 from openquake.calculators.extract import extract
 
 U32 = numpy.uint32
 
 
-def get_sources(dstore, rel_source_ids):
+def get_sources(oq, rel_source_ids):
     """
     :param rel_source_ids: relevant source IDs
     :returns: a list of sources
     """
+    csm = readinput.get_composite_source_model(oq)
     acc = general.AccumDict(accum=[])  # source_id -> sources
-    for src in dstore['_csm'].get_sources():
+    for src in csm.get_sources():
         source_id = re.split('[:;.]', src.source_id)[0]
         if source_id in rel_source_ids:
             acc[source_id].append(src)
@@ -88,7 +89,7 @@ def main(parent_id, imts=['PGA']):
         rel_source_ids = get_rel_source_ids(parent, imts, oq.poes)
         bin_edges, shapedic = calc.disagg.get_edges_shapedic(oq, sitecol)
         mat_by_src = {}
-        for source_id, srcs in get_sources(parent, rel_source_ids).items():
+        for source_id, srcs in get_sources(oq, rel_source_ids).items():
             trt = srcs[0].tectonic_region_type
             rlzs_by_gsim = {
                 gsim: [g] for g, gsim in enumerate(gsim_lt.values[trt])}
