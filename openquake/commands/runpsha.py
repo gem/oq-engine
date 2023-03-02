@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import sys
 import getpass
 import cProfile
@@ -39,7 +38,7 @@ def engine_profile(jobctx, nrows):
                            ext='org'))
 
 
-def main(lon: valid.longitude, lat: valid.latitude, *, slowest: int=40):
+def main(lon: valid.longitude, lat: valid.latitude, *, slowest: int=None):
     """
     Run a PSHA analysis on the given lon, lat
     """
@@ -51,7 +50,7 @@ def main(lon: valid.longitude, lat: valid.latitude, *, slowest: int=40):
                                   None, getpass.getuser(), None)
     with jobctx:
         if slowest:
-            engine_profile(jobctx, slowest)
+            engine_profile(jobctx, slowest or 40)
         else:
             engine.run_jobs([jobctx])
     #disagg_by_rel_sources.main(jobctx.calc_id)

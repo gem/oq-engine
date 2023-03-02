@@ -266,21 +266,15 @@ class PreClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        oq = self.oqparam
-        checksum = readinput.get_checksum32(oq, self.datastore.hdf5)
-        if oq.cachedir:
-            fname = os.path.join(oq.cachedir, 'csm_%d.hdf5' % checksum)
-            if os.path.exists(fname):
-                logging.info('Reading CompositeSourceModel')
-                with datastore.read(os.path.realpath(fname)) as ds:
-                    self.csm = ds['_csm']
-                    self.csm.init(self.full_lt)
-                self.store()
-            else:
-                self.populate_csm()
-                os.symlink(self.datastore.filename, fname)
+        self.cachepath = cachepath = readinput.get_cache_path(
+            self.oqparam, self.datastore.hdf5)
+        if cachepath:
+            # self.csm already set
+            self.store()
         else:
             self.populate_csm()
+            if self.oqparam.cachedir:
+                os.symlink(self.datastore.filename, cachepath)
         self.max_weight = self.csm.get_max_weight(self.oqparam)
         return self.csm
 
@@ -289,7 +283,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         Store the CompositeSourceModel in binary format
         """
         try:
-            self.datastore['_csm'] = csm
+            if not self.cachepath:
+                self.datastore['_csm'] = csm
         except RuntimeError as exc:
             # this happens when setrecursionlimit is too low
             # we can continue anyway, this is not critical
