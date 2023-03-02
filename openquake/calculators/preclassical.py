@@ -273,18 +273,19 @@ class PreClassicalCalculator(base.HazardCalculator):
             self.store()
         else:
             self.populate_csm()
-            if cachepath:
-                os.symlink(self.datastore.filename, cachepath)
+            try:
+                self.datastore['_csm'] = self.csm
+            except RuntimeError as exc:
+                # this happens when setrecursionlimit is too low
+                # we can continue anyway, this is not critical
+                logging.error(str(exc), exc_info=True)
+            else:
+                if cachepath:
+                    os.symlink(self.datastore.filename, cachepath)
         self.max_weight = self.csm.get_max_weight(self.oqparam)
         return self.csm
 
     def post_execute(self, csm):
         """
-        Store the CompositeSourceModel in binary format
+        Do nothing
         """
-        try:
-            self.datastore['_csm'] = csm
-        except RuntimeError as exc:
-            # this happens when setrecursionlimit is too low
-            # we can continue anyway, this is not critical
-            logging.error(str(exc), exc_info=True)
