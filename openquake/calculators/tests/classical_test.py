@@ -1041,6 +1041,13 @@ hazard_uhs-std.csv
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
+    def test_case_68bis(self):
+        # extendModel with sampling and reduction to single source
+        self.run_calc(case_68.__file__, 'job1.ini')
+        fnames = export(('hcurves', 'csv'), self.calc.datastore)
+        #self.assertEqualFiles('expected/hcurve1-mean.csv', f1)
+        import pdb; pdb.set_trace()
+
     def test_case_69(self):
         # collapse areaSource with no nodal planes/hypocenters
         self.run_calc(case_69.__file__, 'job.ini')
