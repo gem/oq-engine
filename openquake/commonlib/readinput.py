@@ -907,24 +907,12 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
-        os.makedirs(oqparam.cachedir)
-    checksum = _checksum(oqparam.inputs['exposure'])
-    fname = os.path.join(oqparam.cachedir, 'exp_%s.pik' % checksum)
-    if os.path.exists(fname):
-        logging.info('Reading %s', fname)
-        with open(fname, 'rb') as f:
-            return pickle.load(f)
     exposure = Global.exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs,
         by_country='country' in asset.tagset(oqparam.aggregate_by),
         errors='ignore' if oqparam.ignore_encoding_errors else None)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
-    if oqparam.cachedir:
-        logging.info('Saving %s', fname)
-        with open(fname, 'wb') as f:
-            pickle.dump(exposure, f)
     return exposure
 
 
