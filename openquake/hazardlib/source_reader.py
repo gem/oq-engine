@@ -382,14 +382,15 @@ class CompositeSourceModel:
         a flag True for event based calculations, flag otherwise
     """
     def __init__(self, full_lt, src_groups):
+        self.src_groups = src_groups
+        self.init(full_lt)
+
+    def init(self, full_lt):
+        self.full_lt = full_lt
         self.gsim_lt = full_lt.gsim_lt
         self.source_model_lt = full_lt.source_model_lt
         self.sm_rlzs = full_lt.sm_rlzs
-        self.full_lt = full_lt
-        self.src_groups = src_groups
-        self.init()
 
-    def init(self):
         # initialize the code dictionary
         self.code = {}  # srcid -> code
         for grp_id, sg in enumerate(self.src_groups):
