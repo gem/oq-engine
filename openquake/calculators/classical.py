@@ -58,21 +58,6 @@ disagg_grp_dt = numpy.dtype([
 slice_dt = numpy.dtype([('sid', U32), ('start', int), ('stop', int)])
 
 
-def get_rel_source_ids(dstore, imts, poes, threshold=.1):
-    """
-    :returns: sorted list of relevant source IDs
-    """
-    source_ids = set()
-    for im in imts:
-        for poe in poes:
-            aw = extract.extract(dstore, f'disagg_by_src?imt={im}&poe={poe}')
-            poe_array = aw.array['poe']  # for each source in decreasing order
-            max_poe = poe_array[0]
-            rel = aw.array[poe_array > threshold * max_poe]
-            source_ids.update(rel['src_id'])
-    return python3compat.decode(sorted(source_ids))
-
-
 def get_pmaps_gb(dstore):
     """
     :returns: memory required on the master node to keep the pmaps
@@ -760,7 +745,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if 'disagg_by_src' in self.datastore and not oq.collect_rlzs:
             logging.info('Comparing disagg_by_src vs mean curves')
             check_disagg_by_src(self.datastore)
-        if 'disagg_by_src' in self.datastore and self.N == 1:
+        if 'disagg_by_src' in self.datastore and self.N == 1 and len(oq.poes):
             rel_ids = get_rel_source_ids(
                 self.datastore, oq.imtls, oq.poes, threshold=.1)
             logging.info('The following source(s) dominate the hazard: %s',
@@ -906,3 +891,22 @@ class ClassicalCalculator(base.HazardCalculator):
             smap = parallel.Starmap(make_hmap_png, allargs)
             for dic in smap:
                 self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
+
+
+# ######################### postprocessing ################################### #
+
+
+def get_rel_source_ids(dstore, imts, poes, threshold=.1):
+    """
+    :returns: sorted list of relevant source IDs
+    """
+    source_ids = set()
+    for im in imts:
+        for poe in poes:
+            aw = extract.extract(dstore, f'disagg_by_src?imt={im}&poe={poe}')
+            poe_array = aw.array['poe']  # for each source in decreasing order
+            max_poe = poe_array[0]
+            rel = aw.array[poe_array > threshold * max_poe]
+            source_ids.update(rel['src_id'])
+    return python3compat.decode(sorted(source_ids))
+
