@@ -809,8 +809,7 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
             from openquake.commonlib import datastore  # avoid circular import
             with datastore.read(os.path.realpath(fname)) as ds:
                 csm = ds['_csm']
-                csm.init()
-                csm.full_lt = full_lt
+                csm.init(full_lt)
         else:
             csm = source_reader.get_csm(oqparam, full_lt, h5)
             _check_csm(csm, oqparam, h5)

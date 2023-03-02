@@ -273,8 +273,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             if os.path.exists(fname):
                 with datastore.read(os.path.realpath(fname)) as ds:
                     self.csm = ds['_csm']
-                    self.csm.init()
-                    self.csm.full_lt = self.full_lt
+                    self.csm.init(self.full_lt)
                 self.store()
             else:
                 self.populate_csm()
