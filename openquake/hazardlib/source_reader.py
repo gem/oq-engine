@@ -273,8 +273,8 @@ def _build_groups(full_lt, smdict):
         src_groups, source_ids = _groups_ids(
             smlt_dir, smdict, rlz.value[0].split())
         bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
-        if bset_values and bset_values[0][0].uncertainty_type == 'extendModel':
-            while len(bset_values):
+        while bset_values:
+            if bset_values[0][0].uncertainty_type == 'extendModel':
                 (bset, value), *bset_values = bset_values
                 extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
                 common = source_ids & extra_ids
