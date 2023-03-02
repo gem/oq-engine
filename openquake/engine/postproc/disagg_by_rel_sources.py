@@ -75,6 +75,7 @@ def main(parent_id, imts=['PGA']):
     dstore, log = datastore.build_dstore_log(parent=parent)
     with dstore, log:
         oq = parent['oqparam']
+        oq.cachedir = datastore.get_datadir()
         oq.mags_by_trt = parent['source_mags']
         sitecol = parent['sitecol']
         assert len(sitecol) == 1, sitecol
