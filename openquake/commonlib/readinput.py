@@ -564,6 +564,8 @@ def get_site_collection(oqparam, h5=None):
               'exposure' not in oqparam.inputs):
             # tested in test_with_site_model
             sm = get_site_model(oqparam)
+            if len(sm) > len(mesh):  # the association will happen in base.py
+                sm = oqparam
         else:
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
@@ -792,14 +794,14 @@ def _check_csm(csm, oqparam, h5):
             'the globe: %d degrees' % (bbox[2] - bbox[0]))
 
 
+# tested in test_mosaic
 def get_cache_path(oqparam, h5=None):
     """
-    :returns: path to the cache file of the form OQ_DATA/csm_<checksum>.hdf5
+    :returns: cache path of the form OQ_DATA/csm_<checksum>.hdf5
     """
     if oqparam.cachedir:
         checksum = get_checksum32(oqparam, h5)
-        fname = os.path.join(oqparam.cachedir, 'csm_%d.hdf5' % checksum)
-        return fname if os.path.exists(fname) else ''
+        return os.path.join(oqparam.cachedir, 'csm_%d.hdf5' % checksum)
     return ''
 
 
@@ -814,7 +816,7 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
     """
     full_lt = get_full_lt(oqparam, branchID)
     path = get_cache_path(oqparam, h5)
-    if path:
+    if os.path.exists(path):
         from openquake.commonlib import datastore  # avoid circular import
         with datastore.read(os.path.realpath(path)) as ds:
             csm = ds['_csm']

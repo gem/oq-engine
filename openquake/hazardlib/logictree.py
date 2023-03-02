@@ -407,6 +407,7 @@ class SourceModelLogicTree(object):
         :returns: a new logic tree reduced to a single source
         """
         new = copy.deepcopy(self)
+        new.oversampling = 'reduce-rlzs'
         oksms = new.sms_by_src[src_id]
         new.sms_by_src = {src_id: oksms}
         new.trt_by_src = {src_id: new.trt_by_src[src_id]}

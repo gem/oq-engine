@@ -29,7 +29,7 @@ from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
 from openquake.hazardlib.scalerel.point import PointMSR
-from openquake.commonlib import readinput, datastore
+from openquake.commonlib import readinput
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -268,24 +268,24 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         self.cachepath = cachepath = readinput.get_cache_path(
             self.oqparam, self.datastore.hdf5)
-        if cachepath:
+        if os.path.exists(cachepath):
             # self.csm already set
             self.store()
         else:
             self.populate_csm()
-            if self.oqparam.cachedir:
-                os.symlink(self.datastore.filename, cachepath)
+            try:
+                self.datastore['_csm'] = self.csm
+            except RuntimeError as exc:
+                # this happens when setrecursionlimit is too low
+                # we can continue anyway, this is not critical
+                logging.error(str(exc), exc_info=True)
+            else:
+                if cachepath:
+                    os.symlink(self.datastore.filename, cachepath)
         self.max_weight = self.csm.get_max_weight(self.oqparam)
         return self.csm
 
     def post_execute(self, csm):
         """
-        Store the CompositeSourceModel in binary format
+        Do nothing
         """
-        try:
-            if not self.cachepath:
-                self.datastore['_csm'] = csm
-        except RuntimeError as exc:
-            # this happens when setrecursionlimit is too low
-            # we can continue anyway, this is not critical
-            logging.error(str(exc), exc_info=True)
