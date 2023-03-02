@@ -1041,6 +1041,20 @@ hazard_uhs-std.csv
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
+    def test_case_68bis(self):
+        # extendModel with sampling and reduction to single source
+        self.run_calc(case_68.__file__, 'job1.ini')
+
+        # check the reduction from 1o to 2 realizations
+        rlzs = extract(self.calc.datastore, 'realizations').array
+        ae(rlzs['branch_path'], [b'AA~A', b'B.~A'])
+        aac(rlzs['weight'], [.7, .3])
+
+        # check the hazard curves
+        fnames = export(('hcurves', 'csv'), self.calc.datastore)
+        for f in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(f), f)
+
     def test_case_69(self):
         # collapse areaSource with no nodal planes/hypocenters
         self.run_calc(case_69.__file__, 'job.ini')

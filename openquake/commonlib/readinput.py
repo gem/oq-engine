@@ -21,7 +21,6 @@ import ast
 import csv
 import copy
 import zlib
-import pickle
 import shutil
 import zipfile
 import pathlib
@@ -702,8 +701,11 @@ def get_full_lt(oqparam, branchID=None):
             raise ValueError('Unknown TRT=%s in %s [reqv]' %
                              (trt, oqparam.inputs['job_ini']))
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
-    full_lt = logictree.FullLogicTree(
-        source_model_lt, gsim_lt, oqparam.oversampling)
+    if len(oqparam.source_id) == 1:
+        oversampling = 'reduce-rlzs'
+    else:
+        oversampling = oqparam.oversampling
+    full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
     if oqparam.number_of_logic_tree_samples:
         if (oqparam.oversampling == 'forbid' and

@@ -85,7 +85,7 @@ def get_trt_by_src(source_model_file):
     """
     :returns: a dictionary source ID -> tectonic region type of the source
     """
-    xml = source_model_file.read()
+    xml = source_model_file.read().replace("'", '"')  # fix single quotes
     pieces = TRT_REGEX.split(xml)
     nrml05 = re.search('<sourceGroup', pieces[0])
     start = 2 if nrml05 else 0  # trt before (start=2) or after src_id (start=0)
@@ -407,7 +407,6 @@ class SourceModelLogicTree(object):
         :returns: a new logic tree reduced to a single source
         """
         new = copy.deepcopy(self)
-        new.oversampling = 'reduce-rlzs'
         oksms = new.sms_by_src[src_id]
         new.sms_by_src = {src_id: oksms}
         new.trt_by_src = {src_id: new.trt_by_src[src_id]}
@@ -946,7 +945,7 @@ class FullLogicTree(object):
     :param source_model_lt: :class:`SourceModelLogicTree` object
     :param gsim_lt: :class:`GsimLogicTree` object
     """
-    oversampling = 'forbid'
+    oversampling = 'tolerate'
 
     @classmethod
     def fake(cls, gsimlt=None):
@@ -1011,6 +1010,8 @@ class FullLogicTree(object):
         """
         :returns: the source_model_lt ``num_samples`` parameter
         """
+        if self.oversampling == 'reduce-rlzs':
+            return len(self.get_realizations())
         return self.source_model_lt.num_samples
 
     @property
@@ -1062,14 +1063,16 @@ class FullLogicTree(object):
         :returns: the complete list of LtRealizations
         """
         rlzs = []
-        if self.num_samples:  # sampling
+        num_samples = self.source_model_lt.num_samples
+        if num_samples:  # sampling
             sm_rlzs = []
             for sm_rlz in self.sm_rlzs:
                 sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
             gsim_rlzs = self.gsim_lt.sample(
-                self.num_samples, self.seed + 1, self.sampling_method)
+                num_samples, self.seed + 1, self.sampling_method)
             if self.oversampling == 'reduce-rlzs':
-                rlzs.extend(get_eff_rlzs(sm_rlzs, gsim_rlzs))
+                eff_rlzs = get_eff_rlzs(sm_rlzs, gsim_rlzs)
+                rlzs.extend(eff_rlzs)
             else:
                 for i, gsim_rlz in enumerate(gsim_rlzs):
                     rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
@@ -1078,7 +1081,7 @@ class FullLogicTree(object):
                 if self.sampling_method.startswith('early_'):
                     for rlz in rlzs:
                         for k in rlz.weight.dic:
-                            rlz.weight.dic[k] = 1. / self.num_samples
+                            rlz.weight.dic[k] = 1. / num_samples
         else:  # full enumeration
             gsim_rlzs = list(self.gsim_lt)
             i = 0
@@ -1156,17 +1159,6 @@ class FullLogicTree(object):
                 rec['name'], rec['weight'], sm_id, path, rec['samples'])
             self.sm_rlzs.append(sm)
 
-    def get_num_rlzs(self, sm_rlz=None):
-        """
-        :param sm_rlz: a Realization instance (or None)
-        :returns: the number of realizations per source model (or all)
-        """
-        if sm_rlz is None:
-            return sum(self.get_num_rlzs(sm) for sm in self.sm_rlzs)
-        if self.num_samples:
-            return sm_rlz.samples
-        return self.gsim_lt.get_num_paths()
-
     def get_num_potential_paths(self):
         """
          :returns: the number of potential realizations
@@ -1198,9 +1190,8 @@ class FullLogicTree(object):
         info_by_model = {}
         for sm in self.sm_rlzs:
             info_by_model[sm.lt_path] = (
-                '~'.join(map(decode, sm.lt_path)),
-                decode(sm.value), sm.weight, self.get_num_rlzs(sm))
-        summary = ['%s, %s, weight=%s: %d realization(s)' % ibm
+                '~'.join(map(decode, sm.lt_path)), decode(sm.value), sm.weight)
+        summary = ['%s, %s, weight=%s' % ibm
                    for ibm in info_by_model.values()]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(summary))
 

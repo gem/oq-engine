@@ -402,7 +402,7 @@ def avglosses_data_transfer(token, dstore):
     """
     oq = dstore['oqparam']
     N = len(dstore['assetcol'])
-    R = dstore['full_lt'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_paths()
     L = len(dstore.get_attr('crm', 'loss_types'))
     ct = oq.concurrent_tasks
     size_bytes = N * R * L * 8 * ct  # 8 byte floats
@@ -451,7 +451,7 @@ def alt_to_many_columns(alt, loss_types):
 
 def _portfolio_loss(dstore):
     oq = dstore['oqparam']
-    R = dstore['full_lt'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_paths()
     K = dstore['risk_by_event'].attrs.get('K', 0)
     alt = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
     df = alt_to_many_columns(alt, oq.loss_types)
@@ -487,7 +487,7 @@ def view_portfolio_loss(token, dstore):
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
-    R = dstore['full_lt'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_paths()
     K = dstore['risk_by_event'].attrs.get('K', 0)
     alt_df = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
     weights = dstore['weights'][:]
@@ -1301,7 +1301,7 @@ def view_event_rates(token, dstore):
     Show the number of events per realization multiplied by risk_time/eff_time
     """
     oq = dstore['oqparam']
-    R = dstore['full_lt'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_paths()
     if oq.calculation_mode != 'event_based_damage':
         return numpy.ones(R)
     time_ratio = (oq.risk_investigation_time or oq.investigation_time) / (
