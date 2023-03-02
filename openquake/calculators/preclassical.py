@@ -271,6 +271,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         if oq.cachedir:
             fname = os.path.join(oq.cachedir, 'csm_%d.hdf5' % checksum)
             if os.path.exists(fname):
+                logging.info('Reading CompositeSourceModel')
                 with datastore.read(os.path.realpath(fname)) as ds:
                     self.csm = ds['_csm']
                     self.csm.init(self.full_lt)

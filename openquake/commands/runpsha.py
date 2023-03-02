@@ -16,16 +16,31 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
 import getpass
-from openquake.baselib import config
+import cProfile
+from openquake.baselib import config, performance
 from openquake.hazardlib import valid
+from openquake.calculators import views
 from openquake.engine import engine
-from openquake.engine.postproc import disagg_by_rel_sources
+#from openquake.engine.postproc import disagg_by_rel_sources
 from openquake.engine.aelo import get_params_from
 
 
-def main(lon: valid.longitude, lat: valid.latitude):
+def engine_profile(jobctx):
+    os.environ['OQ_DISTRIBUTE'] = 'no'
+    prof = cProfile.Profile()
+    prof.runctx('engine.run_jobs([jobctx])', globals(), locals())
+    pstat = 'calc_%d.pstat' % jobctx.calc_id
+    prof.dump_stats(pstat)
+    print('Saved profiling info in %s' % pstat)
+    data = performance.get_pstats(pstat, 50)
+    print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
+                           ext='org'))
+
+
+def main(lon: valid.longitude, lat: valid.latitude, profile: bool=False):
     """
     Run a PSHA analysis on the given lon, lat
     """
@@ -36,8 +51,12 @@ def main(lon: valid.longitude, lat: valid.latitude):
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), None)
     with jobctx:
-        engine.run_jobs([jobctx])
+        if profile:
+            engine_profile(jobctx)
+        else:
+            engine.run_jobs([jobctx])
     #disagg_by_rel_sources.main(jobctx.calc_id)
 
 main.lon = 'longitude of the site to analyze'
 main.lat = 'latitude of the site to analyze'
+main.profile = 'use the Python profiler'
