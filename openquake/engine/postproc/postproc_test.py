@@ -82,6 +82,7 @@ def test_mosaic(model):
     job_ini = os.path.join(MOSAIC, model, 'in', 'job_vs30.ini')
     with logs.init("job", job_ini) as log:
         log.params['disagg_by_src'] = 'true'
+        log.params['collect_rlzs'] = 'true'
         log.params['ps_grid_spacing'] = '0.'
         log.params['pointsource_distance'] = '40.'
         log.params['sites'] = '%(lon)s %(lat)s' % sitedict

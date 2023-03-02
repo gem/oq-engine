@@ -23,7 +23,7 @@ from openquake.baselib import config, performance
 from openquake.hazardlib import valid
 from openquake.calculators import views
 from openquake.engine import engine
-#from openquake.engine.postproc import disagg_by_rel_sources
+from openquake.engine.postproc import disagg_by_rel_sources
 from openquake.engine.aelo import get_params_from
 
 

@@ -717,6 +717,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Check for slow tasks and fix disagg_by_src if needed
         """
+        oq = self.oqparam
         task_info = self.datastore.read_df('task_info', 'taskname')
         try:
             dur = task_info.loc[b'classical'].duration
@@ -725,8 +726,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             slow_tasks = len(dur[dur > 3 * dur.mean()]) and dur.max() > 180
             msg = 'There were %d slow task(s)' % slow_tasks
-            if (slow_tasks and self.SLOW_TASK_ERROR and
-                    not self.oqparam.disagg_by_src):
+            if slow_tasks and self.SLOW_TASK_ERROR and not oq.disagg_by_src:
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
             elif slow_tasks:
                 logging.info(msg)
@@ -738,13 +738,18 @@ class ClassicalCalculator(base.HazardCalculator):
                 arr = self.disagg_by_src = self.datastore['disagg_by_src'][:]
                 arr, srcids = semicolon_aggregate(arr, srcids)
                 self.datastore['disagg_by_src'][:] = arr
-                R = 1 if self.oqparam.collect_rlzs else self.R
+                R = 1 if oq.collect_rlzs else self.R
                 self.datastore.set_shape_descr(
                     'disagg_by_src', site_id=self.N, rlz_id=R,
-                    imt=list(self.oqparam.imtls), lvl=self.L1, src_id=srcids)
-        if 'disagg_by_src' in self.datastore and not self.oqparam.collect_rlzs:
+                    imt=list(oq.imtls), lvl=self.L1, src_id=srcids)
+        if 'disagg_by_src' in self.datastore and not oq.collect_rlzs:
             logging.info('Comparing disagg_by_src vs mean curves')
             check_disagg_by_src(self.datastore)
+        if 'disagg_by_src' in self.datastore and self.N == 1 and len(oq.poes):
+            rel_ids = get_rel_source_ids(
+                self.datastore, oq.imtls, oq.poes, threshold=.1)
+            logging.info('The following source(s) dominate the hazard: %s',
+                         ' '.join(rel_ids))
 
     def _create_hcurves_maps(self):
         oq = self.oqparam
@@ -886,3 +891,22 @@ class ClassicalCalculator(base.HazardCalculator):
             smap = parallel.Starmap(make_hmap_png, allargs)
             for dic in smap:
                 self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
+
+
+# ######################### postprocessing ################################### #
+
+
+def get_rel_source_ids(dstore, imts, poes, threshold=.1):
+    """
+    :returns: sorted list of relevant source IDs
+    """
+    source_ids = set()
+    for im in imts:
+        for poe in poes:
+            aw = extract.extract(dstore, f'disagg_by_src?imt={im}&poe={poe}')
+            poe_array = aw.array['poe']  # for each source in decreasing order
+            max_poe = poe_array[0]
+            rel = aw.array[poe_array > threshold * max_poe]
+            source_ids.update(rel['src_id'])
+    return python3compat.decode(sorted(source_ids))
+
