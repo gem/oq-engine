@@ -264,7 +264,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
 
     with mon3:
         bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
-        return _build_disagg_matrix(bindata, bin_edges[1:])
+        return to_rates(_build_disagg_matrix(bindata, bin_edges[1:]))
 
 
 def _disagg_eps(survival, bins, eps_bands, cum_bands):
@@ -515,7 +515,7 @@ class Disaggregator(object):
         """
         :param iml3: an array of shape (M, P, Z)
         :param src_mutex: a dictionary src_id -> weight, default empty
-        :returns: a 6D matrix of shape (Ma, D, E, M, P, Z)
+        :returns: a 6D matrix of rates of shape (Ma, D, E, M, P, Z)
         """
         M, P, Z = iml3.shape
         assert Z == self.cmaker.Z, (Z, self.cmaker.Z)
@@ -662,4 +662,4 @@ def disaggregation(
                 continue                
             mat4 = dis.disagg6D([[iml]], 0)[..., 0, 0]
             matrix[magi, ..., trt_num[trt]] = mat4
-    return bin_edges, matrix
+    return bin_edges, to_probs(matrix)

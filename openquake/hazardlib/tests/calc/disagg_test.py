@@ -144,7 +144,7 @@ class DisaggregateTestCase(unittest.TestCase):
                                    self.bin_edges)
         iml3 = numpy.array([[[.01]]])
         mat3 = dis.disagg_mag_dist_eps(iml3)[..., 0, 0, 0]
-        bymag = pprod(mat3, axis=(1, 2))
+        bymag = pprod(disagg.to_probs(mat3), axis=(1, 2))
         aac(bymag, [0.9873275537163634,
                     0.9580616631998118,
                     0.8081509254139463])

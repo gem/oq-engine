@@ -122,7 +122,7 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
                 iml2 = iml3[:, :, z]
                 if rlz not in dis.g_by_rlz or iml2.sum() == 0:
                     continue  # do not disaggregate
-                res[rlz] = rates6D = disagg.to_rates(dis.disagg6D(iml2, rlz))
+                res[rlz] = rates6D = dis.disagg6D(iml2, rlz)
                 if rwdic:  # compute mean rates and store them in the 0 key
                     if 'mean' not in res:
                         res['mean'] = rates6D * rwdic[rlz]
