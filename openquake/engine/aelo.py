@@ -47,6 +47,7 @@ def get_params_from(inputs):
     params['ps_grid_spacing'] = '0.'
     params['pointsource_distance'] = '40.'
     params['disagg_by_src'] = 'true'
+    params['collect_rlzs'] = 'true'
     params['sites'] = '%(lon)s %(lat)s' % inputs
     if 'vs30' in inputs:
         params['override_vs30'] = '%(vs30)s' % inputs
