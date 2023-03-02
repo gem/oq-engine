@@ -50,6 +50,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
+from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 
 F32 = numpy.float32
@@ -801,31 +802,8 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
     :param h5:
          an open hdf5.File where to store the source info
     """
-    # first read the logic tree
     full_lt = get_full_lt(oqparam, branchID)
-
-    # then read the composite source model from the cache if possible
-    if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
-        os.makedirs(oqparam.cachedir)
-    if oqparam.cachedir:
-        # for UCERF pickling the csm is slower
-        checksum = get_checksum32(oqparam, h5)
-        fname = os.path.join(oqparam.cachedir, 'csm_%s.pik' % checksum)
-        if os.path.exists(fname):
-            logging.info('Reading %s', fname)
-            with open(fname, 'rb') as f:
-                csm = pickle.load(f)
-                csm.full_lt = full_lt
-            _check_csm(csm, oqparam, h5)
-            return csm
-
-    # read and process the composite source model from the input files
     csm = source_reader.get_csm(oqparam, full_lt, h5)
-    if oqparam.cachedir:
-        logging.info('Saving %s', fname)
-        with open(fname, 'wb') as f:
-            pickle.dump(csm, f)
-
     _check_csm(csm, oqparam, h5)
     return csm
 
