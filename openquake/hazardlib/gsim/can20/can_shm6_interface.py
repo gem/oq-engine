@@ -27,6 +27,7 @@ import openquake.hazardlib.gsim.abrahamson_2015 as A15
 import openquake.hazardlib.gsim.atkinson_macias_2009 as AM09
 import openquake.hazardlib.gsim.can20.can_shm6_active_crust as SHM6_ASC
 import openquake.hazardlib.gsim.ghofrani_atkinson_2014 as GA14
+import openquake.hazardlib.gsim.zhao_2006 as ZH06
 
 from scipy.constants import g
 from openquake.hazardlib import const
@@ -152,18 +153,51 @@ class SHM6_Interface_ZhaoEtAl2006SInterCascadia(
                                                     self.MAX_SA_EXTRAP,
                                                     self.MIN_SA_EXTRAP)
 
-    # REMOVE vvvvvvvvv
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
-
-        CanadaSHM6 edits: modified site amplification term
-                          added extrapolation beyond MAX_SA and MIN_SA to 0.05
-                          - 10s
-                          hard-coded hypo depth of 30km
         """
+        for m, imt in enumerate(imts):
+
+            # Extrapolation
+            extrapolate, imt, target_imt = _set_extrapolation(imt, self)
+
+            # extracting dictionary of coefficients specific to required
+            # intensity measure type.
+            C = self.COEFFS_ASC[imt]
+            C_SINTER = self.COEFFS_SINTER[imt]
+
+            # mean value as given by equation 1, p. 901, without considering
+            # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
+            # inter and intra event terms, plus the magnitude-squared term
+            # correction factor (equation 5 p. 909)
+            mean[m] = ZH06._compute_magnitude_term(C, ctx.mag) +\
+                ZH06._compute_distance_term(C, ctx.mag, ctx.rrup) +\
+                ZH06._compute_focal_depth_term(C, ctx.hypo_depth) +\
+                ZH06._compute_site_class_term(C, ctx.vs30) + \
+                ZH06._compute_magnitude_squared_term(P=0.0, M=6.3,
+                                                Q=C_SINTER['QI'],
+                                                W=C_SINTER['WI'],
+                                                mag=ctx.mag) +\
+                C_SINTER['SI']
+
+            if target_imt == PGV():
+                mean[m] = (0.897*mean[m]) + 4.835
+
+            # convert from cm/s**2 to g
+            mean[m] = np.log(np.exp(mean[m]) * 1e-2 / g)
+            _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SINTER['tauI'])
+
+
+
+
+    # REMOVE vvvvvvvvv
+    """
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         extrapolate = False
         PGVimt = False
 
@@ -215,6 +249,8 @@ class SHM6_Interface_ZhaoEtAl2006SInterCascadia(
             mean = (0.897*mean) + 4.835
 
         return mean, stddevs
+    """
+
 
     # Coefs taken from ZhaoEtAl2006SInter
     COEFFS_SINTER = CoeffsTable(sa_damping=5, table="""\
@@ -340,18 +376,17 @@ def _get_site_term_ga14(C, vs30, imt):
     return GA14_vs
 
 
-def _set_extrapolation(imt):
-    ga14 = SHM6_Interface_GhofraniAtkinson2014Cascadia
+def _set_extrapolation(imt, model):
     target_imt = None
     if imt == PGV():
         extrapolate = False
-    elif imt.period < ga14.MIN_SA and imt.period >= ga14.MIN_SA_EXTRAP:
+    elif imt.period < model.MIN_SA and imt.period >= model.MIN_SA_EXTRAP:
         target_imt = imt
-        imt = SA(ga14.MIN_SA)
+        imt = SA(model.MIN_SA)
         extrapolate = True
-    elif imt.period > ga14.MAX_SA and imt.period <= ga14.MAX_SA_EXTRAP:
+    elif imt.period > model.MAX_SA and imt.period <= model.MAX_SA_EXTRAP:
         target_imt = imt
-        imt = SA(ga14.MAX_SA)
+        imt = SA(model.MAX_SA)
         extrapolate = True
     else:
         extrapolate = False
@@ -396,7 +431,7 @@ class SHM6_Interface_GhofraniAtkinson2014Cascadia(
         for m, imt in enumerate(imts):
 
             # Extrapolation
-            extrapolate, imt, target_imt = _set_extrapolation(imt)
+            extrapolate, imt, target_imt = _set_extrapolation(imt, self)
 
             # Get coefficients
             C = self.COEFFS[imt]
