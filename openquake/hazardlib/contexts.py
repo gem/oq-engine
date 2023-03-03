@@ -358,7 +358,6 @@ class ContextMaker(object):
             self.dcache = None  # disabled
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.time_per_task = param.get('time_per_task', 60)
-        self.disagg_by_src = param.get('disagg_by_src')
         self.collapse_level = int(param.get('collapse_level', -1))
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
@@ -1342,8 +1341,9 @@ class PmapMaker(object):
         elif self.disagg_by_src:
             # all the sources in the group have the same source_id because
             # of the groupby(group, get_source_id) in classical.py
-            srcid = basename(self.sources[0])
-            dic['pmap_by_src'] = {srcid: pmap}
+            srcids = set(map(basename, self.sources))
+            # assert len(srcids) == 1, srcids
+            dic['pmap_by_src'] = {srcids.pop(): pmap}
         return dic
 
 

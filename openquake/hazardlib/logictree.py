@@ -409,7 +409,10 @@ class SourceModelLogicTree(object):
         new = copy.deepcopy(self)
         oksms = new.sms_by_src[src_id]
         new.sms_by_src = {src_id: oksms}
-        new.trt_by_src = {src_id: new.trt_by_src[src_id]}
+        try:
+            new.trt_by_src = {src_id: new.trt_by_src[src_id]}
+        except:
+            import pdb; pdb.set_trace()
         new.srcs_by_path = {  # relative paths
             path: [src_id] for path, srcs in new.srcs_by_path.items()
             if src_id in srcs}
@@ -1191,8 +1194,7 @@ class FullLogicTree(object):
         for sm in self.sm_rlzs:
             info_by_model[sm.lt_path] = (
                 '~'.join(map(decode, sm.lt_path)), decode(sm.value), sm.weight)
-        summary = ['%s, %s, weight=%s' % ibm
-                   for ibm in info_by_model.values()]
+        summary = ['%s, %s, weight=%s' % ibm for ibm in info_by_model.values()]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(summary))
 
 

@@ -22,11 +22,13 @@
 extracting a specific PMF from the result of :func:`disaggregation`.
 """
 
+import re
+import copy
 import operator
 import collections
 import itertools
 from unittest.mock import Mock
-from functools import partial, lru_cache
+from functools import lru_cache
 import numpy
 import scipy.stats
 
@@ -35,13 +37,15 @@ from openquake.baselib.performance import idx_start_stop, Monitor
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
+from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
 from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
+from openquake.hazardlib.contexts import (
+    ContextMaker, FarAwayRupture, get_cmakers)
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
@@ -353,43 +357,6 @@ def _digitize_lons(lons, lon_bins):
         return numpy.digitize(lons, lon_bins) - 1
 
 
-MAG, DIS, LON, LAT, EPS = 0, 1, 2, 3, 4
-
-mag_pmf = partial(pprod, axis=(DIS, LON, LAT, EPS))
-dist_pmf = partial(pprod, axis=(MAG, LON, LAT, EPS))
-mag_dist_pmf = partial(pprod, axis=(LON, LAT, EPS))
-mag_dist_eps_pmf = partial(pprod, axis=(LON, LAT))
-lon_lat_pmf = partial(pprod, axis=(DIS, MAG, EPS))
-mag_lon_lat_pmf = partial(pprod, axis=(DIS, EPS))
-# applied on matrix MAG DIS LON LAT EPS
-
-def trt_pmf(matrices):
-    """
-    From T matrices of shape (Ma, D, Lo, La, E, ...) into one matrix of
-    shape (T, ...)
-    """
-    return numpy.array([pprod(mat, axis=(MAG, DIS, LON, LAT, EPS))
-                        for mat in matrices])
-
-# this dictionary is useful to extract a fixed set of
-# submatrices from the full disaggregation matrix
-# NB: the TRT keys have extractor None, since the extractor
-# without TRT can be used; we still need to populate the pmf_map
-# since it is used to validate the keys accepted by the job.ini file
-pmf_map = dict([
-    ('Mag', mag_pmf),
-    ('Dist', dist_pmf),
-    ('Mag_Dist', mag_dist_pmf),
-    ('Mag_Dist_Eps', mag_dist_eps_pmf),
-    ('Lon_Lat', lon_lat_pmf),
-    ('Mag_Lon_Lat', mag_lon_lat_pmf),
-    ('TRT', trt_pmf),
-    ('TRT_Mag', None),
-    ('TRT_Lon_Lat', None),
-    ('TRT_Mag_Dist', None),
-    ('TRT_Mag_Dist_Eps', None),
-])
-
 # ########################## Disaggregator class ########################## #
 
 def split_by_magbin(ctxt, mag_edges):
@@ -442,10 +409,10 @@ class Disaggregator(object):
             ctxs = [ctx[ctx.sids == sid] for ctx in srcs_or_ctxs]
         else:  # passed sources
             ctxs = cmaker.from_srcs(srcs_or_ctxs, self.sitecol)
+        if sum(len(c) for c in ctxs) == 0:
+            raise FarAwayRupture('No ruptures affecting site #%d' % sid)
 
         ctx = numpy.concatenate(ctxs).view(numpy.recarray)
-        if len(ctx) == 0:
-            raise FarAwayRupture('No ruptures affecting site #%d' % sid)
         self.fullctx = ctx
 
     def init(self, magi, src_mutex,
@@ -663,3 +630,46 @@ def disaggregation(
             mat4 = dis.disagg6D([[iml]], 0)[..., 0, 0]
             matrix[magi, ..., trt_num[trt]] = mat4
     return bin_edges, to_probs(matrix)
+
+
+# ###################### disagg by source ################################ #
+
+def get_smr(source_id):
+    # i.e. SHD-AS-ITAS318;0.0 => 0
+    try:
+        suffix = source_id.split(';')[1]
+    except IndexError:  # no ";"
+        return 0
+    smr = int(suffix.split('.')[0])
+    return smr
+
+
+def build_disaggs(source_id, full_lt, src_groups, sitecol, bin_edges, oq):
+    """
+    Build Disaggregation instances for the given source
+    """
+    smlt = full_lt.source_model_lt.reduce(source_id)
+    gslt = full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
+    flt = FullLogicTree(smlt, gslt, 'reduce-rlzs')
+    groups = []
+    for sg in src_groups:
+        ok = []
+        for src in sg:
+            if re.split('[:;.]', src.source_id)[0] == source_id:
+                src.trt_smr = get_smr(src.source_id)
+                ok.append(src)
+        if ok:
+            grp = copy.copy(sg)
+            grp.sources = ok
+            groups.append(grp)
+    disaggs = []
+    cmakers = get_cmakers(groups, flt, oq)
+    for c, cmaker in enumerate(cmakers):
+        try:
+            dis = Disaggregator(groups[c], sitecol, cmaker, bin_edges)
+        except FarAwayRupture:
+            pass  # source corresponding to a noncontributing realization
+        else:
+            disaggs.append(dis)
+    assert disaggs, '%s does not contribute??' % source_id
+    return disaggs

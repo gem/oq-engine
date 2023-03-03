@@ -589,7 +589,8 @@ class HazardCalculator(BaseCalculator):
             oqparent = parent['oqparam']
             if 'weights' in parent:
                 weights = numpy.unique(parent['weights'][:])
-                if oq.collect_rlzs and len(weights) > 1:
+                if (oq.job_type == 'risk' and oq.collect_rlzs and
+                        len(weights) > 1):
                     raise ValueError(
                         'collect_rlzs=true can be specified only if '
                         'the realizations have identical weights')

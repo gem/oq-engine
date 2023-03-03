@@ -37,9 +37,10 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import (
     ContextMaker, read_cmakers, basename, get_maxsize)
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
+from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.probability_map import (
     ProbabilityMap, poes_dt, combine_probs)
-from openquake.commonlib import calc
+from openquake.commonlib import calc, readinput
 from openquake.calculators import base, getters, extract
 
 U16 = numpy.uint16
@@ -548,19 +549,19 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         if oq.hazard_calculation_id:
+            logging.info('Reading from parent calculation')
             parent = self.datastore.parent
+            self.full_lt = readinput.get_full_lt(oq)
+            self.csm = parent['_csm']
+            self.csm.init(self.full_lt)
+            self.datastore['source_info'] = parent['source_info'][:]
+            maxw = self.csm.get_max_weight(oq)
+            oq.mags_by_trt = {
+                trt: python3compat.decode(dset[:])
+                for trt, dset in parent['source_mags'].items()}
             if '_poes' in parent:
                 self.build_curves_maps()  # repeat post-processing
                 return {}
-            else:  # after preclassical, like in case_36
-                logging.info('Reading from parent calculation')
-                self.csm = parent['_csm']
-                oq.mags_by_trt = {
-                    trt: python3compat.decode(dset[:])
-                    for trt, dset in parent['source_mags'].items()}
-                self.full_lt = parent['full_lt']
-                self.datastore['source_info'] = parent['source_info'][:]
-                maxw = self.csm.get_max_weight(oq)
         else:
             maxw = self.max_weight
         self.init_poes()
@@ -748,8 +749,18 @@ class ClassicalCalculator(base.HazardCalculator):
         if 'disagg_by_src' in self.datastore and self.N == 1 and len(oq.poes):
             rel_ids = get_rel_source_ids(
                 self.datastore, oq.imtls, oq.poes, threshold=.1)
-            logging.info('The following source(s) dominate the hazard: %s',
-                         ' '.join(rel_ids))
+            logging.info('There are %d relevant sources: %s', len(rel_ids),
+                         rel_ids)
+            '''
+            mon = self.monitor('building disaggs', measuremem=True)
+            bin_edges, shapedic = disagg.get_edges_shapedic(oq, self.sitecol)
+            for source_id in rel_ids:
+                logging.info('Disaggregating source %s', source_id)
+                with mon:
+                    disaggs = disagg.build_disaggs(
+                        source_id, self.full_lt, self.csm.src_groups,
+                        self.sitecol, bin_edges, oq)
+            '''
 
     def _create_hcurves_maps(self):
         oq = self.oqparam

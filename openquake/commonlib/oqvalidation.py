@@ -891,8 +891,7 @@ class OqParam(valid.ParamSet):
     cache_distances = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
     disagg_by_src = valid.Param(valid.boolean, False)
-    disagg_outputs = valid.Param(valid.disagg_outputs,
-                                 list(calc.disagg.pmf_map))
+    disagg_outputs = valid.Param(valid.disagg_outputs, list(valid.pmf_map))
     disagg_bin_edges = valid.Param(valid.dictionary, {})
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
