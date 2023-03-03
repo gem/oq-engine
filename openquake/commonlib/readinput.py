@@ -760,13 +760,7 @@ def _check_csm(csm, oqparam, h5):
         source.check_complex_faults(srcs)
 
     # build a smart SourceFilter
-    if h5 and 'site_model' in h5 and oqparam.cachedir:
-        # use the full site collection in preclassical
-        sm = h5['site_model']
-        req_site_params = get_gsim_lt(oqparam).req_site_params
-        csm.sitecol = site.SiteCollection.from_points(
-            sm['lon'], sm['lat'], None, sm, req_site_params)
-    elif h5 and 'sitecol' in h5:
+    if h5 and 'sitecol' in h5:
         csm.sitecol = h5['sitecol']
     else:
         csm.sitecol = get_site_collection(oqparam, h5)
@@ -1336,7 +1330,7 @@ def get_checksum32(oqparam, h5=None):
         if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
                    'width_of_mfd_bin', 'area_source_discretization',
                    'random_seed', 'number_of_logic_tree_samples',
-                   'minimum_magnitude', 'source_id',
+                   'minimum_magnitude', 'source_id', 'sites',
                    'floating_x_step', 'floating_y_step'):
             hazard_params.append('%s = %s' % (key, val))
     data = '\n'.join(hazard_params).encode('utf8')
