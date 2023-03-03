@@ -551,7 +551,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id:
             logging.info('Reading from parent calculation')
             parent = self.datastore.parent
-            self.full_lt = readinput.get_full_lt(oq)
+            self.full_lt = readinput.get_full_lt(parent['oqparam'])
             self.csm = parent['_csm']
             self.csm.init(self.full_lt)
             self.datastore['source_info'] = parent['source_info'][:]
