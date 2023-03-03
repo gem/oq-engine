@@ -21,7 +21,7 @@ import pytest
 from openquake.baselib.general import pprod
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.calc import disagg, filters
-from openquake.hazardlib import nrml, read_input, valid
+from openquake.hazardlib import nrml, read_input
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.gsim.campbell_2003 import Campbell2003
 from openquake.hazardlib.geo import Point
@@ -59,7 +59,7 @@ class BuildDisaggDataTestCase(unittest.TestCase):
                                            gsim_by_trt, truncation_level,
                                            n_epsilons, mag_bin_width,
                                            dist_bin_width, coord_bin_width)
-        by_mag = valid.mag_pmf(mtx[:, :, :, :, :, 0])
+        by_mag = disagg.mag_pmf(mtx[:, :, :, :, :, 0])
         self.assertEqual(by_mag.shape, (31,))
 
 
@@ -219,37 +219,37 @@ class PMFExtractorsTestCase(unittest.TestCase):
                                 0.14, 0.61, 0.67]]]]])
 
     def test_mag(self):
-        pmf = valid.mag_pmf(self.matrix)
+        pmf = disagg.mag_pmf(self.matrix)
         self.aae(pmf, [1.0, 1.0])
 
     def test_dist(self):
-        pmf = valid.dist_pmf(self.matrix)
+        pmf = disagg.dist_pmf(self.matrix)
         self.aae(pmf, [1.0, 1.0])
 
     def test_trt(self):
-        pmf = valid.trt_pmf(self.matrix[None])
+        pmf = disagg.trt_pmf(self.matrix[None])
         # NB: self.matrix.shape -> (2, 2, 2, 2, 3)
         # self.matrix[None].shape -> (1, 2, 2, 2, 2, 3)
         self.aae(pmf, [1.0])
 
     def test_mag_dist(self):
-        pmf = valid.mag_dist_pmf(self.matrix)
+        pmf = disagg.mag_dist_pmf(self.matrix)
         self.aae(pmf, [[0.9989792, 0.999985], [0.9999897, 0.999996]])
 
     def test_mag_dist_eps(self):
-        pmf = valid.mag_dist_eps_pmf(self.matrix)
+        pmf = disagg.mag_dist_eps_pmf(self.matrix)
         self.aae(pmf, [[[0.88768, 0.673192, 0.972192],
                         [0.9874, 0.98393824, 0.9260596]],
                        [[0.9784078, 0.99751528, 0.8089168],
                         [0.84592498, 0.9988768, 0.976636]]])
 
     def test_lon_Lat(self):
-        pmf = valid.lon_lat_pmf(self.matrix)
+        pmf = disagg.lon_lat_pmf(self.matrix)
         self.aae(pmf, [[0.9991665, 0.9999943],
                        [0.9999982, 0.9999268]])
 
     def test_mag_lon_lat(self):
-        pmf = valid.mag_lon_lat_pmf(self.matrix)
+        pmf = disagg.mag_lon_lat_pmf(self.matrix)
         self.aae(pmf, [[[0.89146822, 0.9836056],
                         [0.9993916, 0.98589012]],
                        [[0.99232001, 0.99965328],
@@ -259,13 +259,13 @@ class PMFExtractorsTestCase(unittest.TestCase):
         # for doc purposes: the mean of PMFs is not the PMF of the mean
         numpy.random.seed(42)
         matrix = numpy.random.random(self.matrix.shape)
-        pmf1 = valid.mag_pmf(self.matrix)
-        pmf2 = valid.mag_pmf(matrix)
+        pmf1 = disagg.mag_pmf(self.matrix)
+        pmf2 = disagg.mag_pmf(matrix)
         mean = (matrix + self.matrix) / 2
         numpy.testing.assert_allclose(
             (pmf1 + pmf2) / 2, [1, 1])
         numpy.testing.assert_allclose(
-            valid.mag_pmf(mean), [0.99999944, 0.99999999])
+            disagg.mag_pmf(mean), [0.99999944, 0.99999999])
 
 
 @pytest.mark.parametrize('job_ini', ['job_sampling.ini', 'job.ini'])
