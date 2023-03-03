@@ -421,12 +421,23 @@ class LanzanoEtAl2019_RJB_OMO_RefRock(GMPE):
     COEFFS = LanzanoEtAl2019_RJB_OMO.COEFFS
     COEFFS_SITE = LanzanoEtAl2019_RJB_OMO.COEFFS_SITE
 
+    def __init__(self, kappa0=None, **kwargs):
+        """
+        Instantiate the model. When the kappa0 value is provided when
+        initializing the class, this overrides the kappa0 value assigned to
+        the site.
+        """
+        super().__init__(kappa0=kappa0, **kwargs)
+        self.kappa0 = kappa0
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        if self.kappa0 is not None:
+            ctx.kappa0 = self.kapp0
         [dist_type] = self.REQUIRES_DISTANCES
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]

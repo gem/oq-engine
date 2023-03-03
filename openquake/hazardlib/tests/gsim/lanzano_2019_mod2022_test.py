@@ -32,3 +32,11 @@ class LanzanoEtAl2019_RJB_OMO_RefRock_TestCase(BaseGSIMTestCase):
     def test_all(self):
         self.check(self.MEAN_FILE, self.STD_FILE,
                    max_discrep_percentage=0.1)
+
+class LanzanoEtAl2019_RJB_OMO_RefRock_kappa0_TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = LanzanoEtAl2019_RJB_OMO_RefRock
+
+    MEAN_FILE = "LAN2019/ITA18_MOD22_RJB_MEAN_kappa0.csv"
+
+    def test_kappa0_init(self):
+        gmm = LanzanoEtAl2019_RJB_OMO_RefRock(kappa0=0.025)
