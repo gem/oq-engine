@@ -591,7 +591,6 @@ def get_site_collection(oqparam, h5=None):
     if ('vs30' in sitecol.array.dtype.names and
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
-
     return sitecol
 
 
@@ -761,14 +760,20 @@ def _check_csm(csm, oqparam, h5):
         source.check_complex_faults(srcs)
 
     # build a smart SourceFilter
-    if h5 and 'sitecol' in h5:
+    if h5 and 'site_model' in h5 and oqparam.cachedir:
+        # use the full site collection in preclassical
+        sm = h5['site_model']
+        req_site_params = get_gsim_lt(oqparam).req_site_params
+        csm.sitecol = site.SiteCollection.from_points(
+            sm['lon'], sm['lat'], None, sm, req_site_params)
+    elif h5 and 'sitecol' in h5:
         csm.sitecol = h5['sitecol']
     else:
         csm.sitecol = get_site_collection(oqparam, h5)
     if csm.sitecol is None:  # missing sites.csv (test_case_1_ruptures)
         return
     srcfilter = SourceFilter(csm.sitecol, oqparam.maximum_distance)
-    logging.info('Checking the sources bounding box')
+    logging.info('Checking sources bounding box using %s', csm.sitecol)
     lons = []
     lats = []
     for src in srcs:
