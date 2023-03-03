@@ -643,21 +643,18 @@ class ClassicalCalculator(base.HazardCalculator):
             if ntiles > 1:
                 logging.debug('Producing %d inner tiles', ntiles)
 
-            if sg.atomic or sg.weight <= maxw:
+            if oq.disagg_by_src:  # possible only with a single tile
+                blks = groupby(sg, basename).values()
+            elif sg.atomic or sg.weight <= maxw:
+                blks = [sg]
+            else:
+                blks = block_splitter(sg, maxw, get_weight, sort=True)
+            for block in blks:
+                logging.debug('Sending %d source(s) with weight %d',
+                              len(block), sg.weight)
                 for g in cm.gidx:
                     self.n_outs[g] += cm.ntiles
-                allargs.append((sg, sitecol, cm))
-            else:
-                if oq.disagg_by_src:  # possible only with a single tile
-                    blks = groupby(sg, basename).values()
-                else:
-                    blks = block_splitter(sg, maxw, get_weight, sort=True)
-                for block in blks:
-                    logging.debug('Sending %d source(s) with weight %d',
-                                  len(block), sg.weight)
-                    for g in cm.gidx:
-                        self.n_outs[g] += cm.ntiles
-                    allargs.append((block, sitecol, cm))
+                allargs.append((block, sitecol, cm))
 
             # allocate memory
             for g in cm.gidx:
