@@ -37,7 +37,6 @@ from openquake.baselib.performance import idx_start_stop, Monitor
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
-from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
