@@ -1340,9 +1340,9 @@ class PmapMaker(object):
             dic['pmap_by_src'] = pmap_by_src
         elif self.disagg_by_src:
             # all the sources in the group have the same source_id because
-            # of the groupby(group, get_source_id) in classical.py
+            # of the groupby(group, basename) in classical.py
             srcids = set(map(basename, self.sources))
-            # assert len(srcids) == 1, srcids
+            assert len(srcids) == 1, srcids
             dic['pmap_by_src'] = {srcids.pop(): pmap}
         return dic
 
