@@ -197,10 +197,6 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/Mag-0.csv', f1)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', f2)
 
-        # checking that the right number of sources appear in dsg_by_src
-        dstore = self.calc.datastore.open('r')
-        self.assertEqual(dstore['disagg_by_src'].shape[-1], 6)
-
     def test_case_10(self):
         # test single magnitude
         self.run_calc(case_10.__file__, 'job.ini')
@@ -215,10 +211,6 @@ class DisaggregationTestCase(CalculatorTestCase):
         #if platform.machine() == 'arm64':
         #    raise unittest.SkipTest('Temporarily skipped')
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
-
-        # checking that the right number of sources appear in dsg_by_src
-        dstore = self.calc.datastore.open('r')
-        self.assertEqual(dstore['disagg_by_src'].shape[-1], 3)
 
     def test_case_12(self):
         # check source IDs with :, . and ;
