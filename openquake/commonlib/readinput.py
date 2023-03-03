@@ -591,7 +591,6 @@ def get_site_collection(oqparam, h5=None):
     if ('vs30' in sitecol.array.dtype.names and
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
-
     return sitecol
 
 
@@ -768,7 +767,7 @@ def _check_csm(csm, oqparam, h5):
     if csm.sitecol is None:  # missing sites.csv (test_case_1_ruptures)
         return
     srcfilter = SourceFilter(csm.sitecol, oqparam.maximum_distance)
-    logging.info('Checking the sources bounding box')
+    logging.info('Checking sources bounding box using %s', csm.sitecol)
     lons = []
     lats = []
     for src in srcs:
@@ -1331,7 +1330,7 @@ def get_checksum32(oqparam, h5=None):
         if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
                    'width_of_mfd_bin', 'area_source_discretization',
                    'random_seed', 'number_of_logic_tree_samples',
-                   'minimum_magnitude', 'source_id',
+                   'minimum_magnitude', 'source_id', 'sites',
                    'floating_x_step', 'floating_y_step'):
             hazard_params.append('%s = %s' % (key, val))
     data = '\n'.join(hazard_params).encode('utf8')
