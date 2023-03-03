@@ -644,6 +644,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 logging.debug('Producing %d inner tiles', ntiles)
 
             if oq.disagg_by_src:  # possible only with a single tile
+                if sg.src_interdep == 'mutex':
+                    raise RuntimeError(
+                        'You cannot use disagg_by_src with mutex sources')
                 blks = groupby(sg, basename).values()
             elif sg.atomic or sg.weight <= maxw:
                 blks = [sg]
