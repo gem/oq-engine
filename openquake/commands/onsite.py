@@ -38,7 +38,8 @@ def engine_profile(jobctx, nrows):
                            ext='org'))
 
 
-def main(lon: valid.longitude, lat: valid.latitude, *, slowest: int=None):
+def main(lon: valid.longitude, lat: valid.latitude, *,
+         hc: int=None, slowest: int=None):
     """
     Run a PSHA analysis on the given lon, lat
     """
@@ -47,7 +48,7 @@ def main(lon: valid.longitude, lat: valid.latitude, *, slowest: int=None):
 
     params = get_params_from(dict(lon=lon, lat=lat))
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
-                                  None, getpass.getuser(), None)
+                                  None, getpass.getuser(), hc)
     with jobctx:
         if slowest:
             engine_profile(jobctx, slowest or 40)
@@ -57,4 +58,5 @@ def main(lon: valid.longitude, lat: valid.latitude, *, slowest: int=None):
 
 main.lon = 'longitude of the site to analyze'
 main.lat = 'latitude of the site to analyze'
+main.hc = 'previous calculation ID'
 main.slowest = 'profile and show the slowest operations'

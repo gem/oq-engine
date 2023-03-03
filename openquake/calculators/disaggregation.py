@@ -27,7 +27,7 @@ from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
     AccumDict, pprod, agg_probs, shortlist)
 from openquake.baselib.python3compat import encode
-from openquake.hazardlib import stats, probability_map
+from openquake.hazardlib import stats, probability_map, valid
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.contexts import (
     read_cmakers, read_src_mutex, read_ctx_by_grp)
@@ -451,12 +451,12 @@ class DisaggregationCalculator(base.HazardCalculator):
             mat7 = agg_probs(*mat8)  # shape (Ma, D, E, Lo, La, M, P)
             for key in oq.disagg_outputs:
                 if key == 'TRT':
-                    out[key][s, ..., z] = disagg.pmf_map[key](mat8)  # (T,M,P)
+                    out[key][s, ..., z] = valid.pmf_map[key](mat8)  # (T,M,P)
                 elif key.startswith('TRT_'):
-                    proj = disagg.pmf_map[key[4:]]
+                    proj = valid.pmf_map[key[4:]]
                     out[key][s, ..., z] = [proj(m7) for m7 in mat8]
                 else:
-                    out[key][s, ..., z] = disagg.pmf_map[key](mat7)
+                    out[key][s, ..., z] = valid.pmf_map[key](mat7)
 
             # display some warnings if needed
             for m, imt in enumerate(self.imts):
