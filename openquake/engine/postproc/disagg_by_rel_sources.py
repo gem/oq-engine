@@ -18,10 +18,9 @@
 
 import logging
 import numpy
-from openquake.baselib import sap, general, python3compat
-from openquake.hazardlib import contexts, calc
+from openquake.baselib import sap, performance
+from openquake.hazardlib import logictree, calc
 from openquake.commonlib import datastore, readinput
-from openquake.calculators.extract import extract
 from openquake.calculators.classical import get_rel_source_ids
 
 U32 = numpy.uint32
@@ -35,10 +34,9 @@ def compute_disagg(source_id, disaggs, gsim_weights):
     return {source_id: mat5D}  # shape (Ma, D, E, M, P)
 
 
-def main(parent_id, imts=['PGA']):
+def main(parent_id):
     """
     :param parent_id: filename or ID of the parent calculation
-    :param imts: list of IMTs to consider
     """
     try:
         parent_id = int(parent_id)
@@ -52,19 +50,24 @@ def main(parent_id, imts=['PGA']):
         oq.mags_by_trt = parent['source_mags']
         sitecol = parent['sitecol']
         assert len(sitecol) == 1, sitecol
-        gsim_lt = parent['full_lt/gsim_lt']
-        gsim_weights = [br.weight['weight'] for br in gsim_lt.branches]
-        mon = Monitor('building disaggs', measuremem=True)
+        full_lt = readinput.get_full_lt(oq)
+        csm = parent['_csm']
+        csm.init(full_lt)
+        mon = performance.Monitor(
+            'building disaggs', measuremem=True, h5=dstore.hdf5)
         bin_edges, shapedic = calc.disagg.get_edges_shapedic(oq, sitecol)
         rel_ids = get_rel_source_ids(
-            dstore, oq.imtls, oq.poes, threshold=.1)
+            parent, oq.imtls, oq.poes, threshold=.1)
         for source_id in rel_ids:
             logging.info('Disaggregating source %s', source_id)
+            smlt = full_lt.source_model_lt.reduce(source_id)
+            gslt = full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
+            relt = logictree.FullLogicTree(smlt, gslt, 'reduce-rlzs')
+            groups = calc.disagg.reduce_groups(csm.src_groups, source_id)
             with mon:
-                disaggs = calc.disagg.build_disaggs(
-                    source_id, full_lt, csm.src_groups,
-                    sitecol, bin_edges, oq)
-                compute_disagg(source_id, disaggs, gsim_weights)
+                disaggs = calc.disagg.by_source(
+                    relt, groups, sitecol, bin_edges, oq)
+
 
 if __name__ == '__main__':
     sap.run(main)

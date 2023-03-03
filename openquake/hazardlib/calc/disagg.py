@@ -644,13 +644,10 @@ def get_smr(source_id):
     return smr
 
 
-def build_disaggs(source_id, full_lt, src_groups, sitecol, bin_edges, oq):
+def reduce_groups(src_groups, source_id):
     """
-    Build Disaggregation instances for the given source
+    :returns: a reduced list of groups containing fragments of the same source
     """
-    smlt = full_lt.source_model_lt.reduce(source_id)
-    gslt = full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
-    flt = FullLogicTree(smlt, gslt, 'reduce-rlzs')
     groups = []
     for sg in src_groups:
         ok = []
@@ -662,14 +659,23 @@ def build_disaggs(source_id, full_lt, src_groups, sitecol, bin_edges, oq):
             grp = copy.copy(sg)
             grp.sources = ok
             groups.append(grp)
+    return groups
+
+
+def by_source(reduced_lt, groups, sitecol, bin_edges, oq):
+    """
+    Compute disaggregation for the given source
+    """
+    rlzs = reduced_lt.rlzs
     disaggs = []
-    cmakers = get_cmakers(groups, flt, oq)
+    cmakers = get_cmakers(groups, reduced_lt, oq)
     for c, cmaker in enumerate(cmakers):
+        print(list(cmaker.gsims.values()))
         try:
             dis = Disaggregator(groups[c], sitecol, cmaker, bin_edges)
         except FarAwayRupture:
             pass  # source corresponding to a noncontributing realization
         else:
             disaggs.append(dis)
-    assert disaggs, '%s does not contribute??' % source_id
+    assert disaggs, '%s does not contribute??' % reduced_lt.source_id
     return disaggs

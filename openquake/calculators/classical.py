@@ -891,7 +891,6 @@ class ClassicalCalculator(base.HazardCalculator):
             for dic in smap:
                 self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
 
-
 # ######################### postprocessing ################################### #
 
 
