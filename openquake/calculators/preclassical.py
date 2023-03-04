@@ -267,8 +267,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        self.cachepath = cachepath = readinput.get_cache_path(
-            self.oqparam, self.datastore.hdf5)
+        cachepath = readinput.get_cache_path(self.oqparam, self.datastore.hdf5)
         if os.path.exists(cachepath):
             realpath = os.path.realpath(cachepath)
             logging.info('Copying csm from %s', realpath)
