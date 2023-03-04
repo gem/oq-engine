@@ -20,6 +20,7 @@ import os
 import logging
 import operator
 import numpy
+import h5py
 from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby, block_splitter
@@ -269,8 +270,11 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.cachepath = cachepath = readinput.get_cache_path(
             self.oqparam, self.datastore.hdf5)
         if os.path.exists(cachepath):
-            # self.csm already set
-            self.store()
+            realpath = os.path.realpath(cachepath)
+            logging.info('Copying csm from %s', realpath)
+            with h5py.File(realpath, 'r') as cache:  # copy _csm
+                cache.copy(cache['_csm'], self.datastore.hdf5)
+            self.store()  # full_lt, trt_smrs, toms
         else:
             self.populate_csm()
             try:
