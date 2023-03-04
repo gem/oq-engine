@@ -33,11 +33,9 @@ from openquake.baselib import (
     performance, parallel, hdf5, config, python3compat, workerpool as w)
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
-    get_nbytes_msg, agg_probs, pprod)
-from openquake.hazardlib.contexts import (
-    ContextMaker, read_cmakers, basename, get_maxsize)
+    get_nbytes_msg, pprod)
+from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
-from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.probability_map import (
     ProbabilityMap, poes_dt, combine_probs)
 from openquake.commonlib import calc, readinput
@@ -751,16 +749,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore, oq.imtls, oq.poes, threshold=.1)
             logging.info('There are %d relevant sources: %s', len(rel_ids),
                          rel_ids)
-            '''
-            mon = self.monitor('building disaggs', measuremem=True)
-            bin_edges, shapedic = disagg.get_edges_shapedic(oq, self.sitecol)
-            for source_id in rel_ids:
-                logging.info('Disaggregating source %s', source_id)
-                with mon:
-                    disaggs = disagg.build_disaggs(
-                        source_id, self.full_lt, self.csm.src_groups,
-                        self.sitecol, bin_edges, oq)
-            '''
 
     def _create_hcurves_maps(self):
         oq = self.oqparam
@@ -902,7 +890,6 @@ class ClassicalCalculator(base.HazardCalculator):
             smap = parallel.Starmap(make_hmap_png, allargs)
             for dic in smap:
                 self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
-
 
 # ######################### postprocessing ################################### #
 

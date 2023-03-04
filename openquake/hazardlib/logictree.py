@@ -402,21 +402,19 @@ class SourceModelLogicTree(object):
         else:  # slow algorithm
             self.num_paths = count_paths(self.root_branchset.branches)
 
-    def reduce(self, src_id):
+    def reduce(self, source_id):
         """
         :returns: a new logic tree reduced to a single source
         """
         new = copy.deepcopy(self)
-        oksms = new.sms_by_src[src_id]
-        new.sms_by_src = {src_id: oksms}
-        try:
-            new.trt_by_src = {src_id: new.trt_by_src[src_id]}
-        except:
-            import pdb; pdb.set_trace()
+        new.source_id = source_id
+        oksms = new.sms_by_src[source_id]
+        new.sms_by_src = {source_id: oksms}
+        new.trt_by_src = {source_id: new.trt_by_src[source_id]}
         new.srcs_by_path = {  # relative paths
-            path: [src_id] for path, srcs in new.srcs_by_path.items()
-            if src_id in srcs}
-        new.tectonic_region_types = {new.trt_by_src[src_id]}
+            path: [source_id] for path, srcs in new.srcs_by_path.items()
+            if source_id in srcs}
+        new.tectonic_region_types = {new.trt_by_src[source_id]}
         for bset, dic in zip(new.branchsets, new.bsetdict.values()):
             if bset.uncertainty_type in ('sourceModel', 'extendModel'):
                 same = []  # branches with the source, all same contribution
@@ -442,7 +440,7 @@ class SourceModelLogicTree(object):
                     newbranches.append(b0)
                 bset.branches = newbranches
             ats = dic.get('applyToSources')
-            if ats and src_id not in ats:
+            if ats and source_id not in ats:
                 bset.collapse()
                 del dic['applyToSources']
         new.num_paths = count_paths(self.root_branchset.branches)

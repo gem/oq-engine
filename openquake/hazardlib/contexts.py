@@ -1635,9 +1635,10 @@ def get_cmakers(src_groups, full_lt, oq):
         all_trt_smrs = []
         for sg in src_groups:
             try:
-                all_trt_smrs.append(sg.sources[0].trt_smrs)
+                trt_smrs = sg.sources[0].trt_smrs
             except AttributeError:  # for scenarios
-                all_trt_smrs.append([sg.sources[0].trt_smr])
+                trt_smrs = [sg.sources[0].trt_smr]
+            all_trt_smrs.append(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
     start = 0
