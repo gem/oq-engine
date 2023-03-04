@@ -229,7 +229,7 @@ That takes into account the logic tree automatically.
 3. each group corresponds to a TRT and a list of
    SM realizations denoted by indices *trt_smr*
 4. the following relation holds on the indices:
-   *trt, smr = divmod(trt_smr, num_sm_rlzs)*
+   *trt, smr = divmod(trt_smr, 2**24)*
 
 ** Case with a trivial logic tree
 

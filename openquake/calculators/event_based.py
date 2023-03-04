@@ -51,6 +51,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
 
 
@@ -83,7 +84,7 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
     fmon = monitor('filtering ruptures', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     with dstore:
-        trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
+        trt = full_lt.trts[trt_smr // TWO24]
         sitecol = dstore['sitecol']
         extra = sitecol.array.dtype.names
         srcfilter = SourceFilter(
