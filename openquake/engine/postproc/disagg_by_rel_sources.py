@@ -59,10 +59,11 @@ def main(parent_id):
         rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
         out = {}
         for source_id in rel_ids:
-            logging.info('Disaggregating source %s', source_id)
             smlt = full_lt.source_model_lt.reduce(source_id)
             gslt = full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
             relt = logictree.FullLogicTree(smlt, gslt, 'reduce-rlzs')
+            logging.info('Disaggregating source %s (%d realizations)',
+                         source_id, relt.get_num_paths())
             groups = calc.disagg.reduce_groups(csm.src_groups, source_id)
             out.update(calc.disagg.by_source(
                 groups, sitecol, relt, edges_shapedic, oq, mon))
