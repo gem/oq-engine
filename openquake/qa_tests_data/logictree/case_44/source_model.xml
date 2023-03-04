@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel name="Example Source Model Containing — Area Source" >
+        <sourceGroup name="group 1" tectonicRegion="Active Shallow Crust" >
+            <areaSource id="1" name="test" tectonicRegion="Active Shallow Crust" >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    -0.1 -0.1 0.1 -0.1 0.1 0.1 -0.1 0.1
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth> 1.0 </upperSeismoDepth>
+                    <lowerSeismoDepth> 11.0 </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel> WC1994 </magScaleRel>
+                <ruptAspectRatio> 1.0 </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="1.0" bValue="1.0" maxMag="6.0" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90." probability="1.0" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="2.0" probability="0.2" />
+                    <hypoDepth depth="4.0" probability="0.2" />
+                    <hypoDepth depth="6.0" probability="0.2" />
+                    <hypoDepth depth="8.0" probability="0.2" />
+                    <hypoDepth depth="10.0" probability="0.2" />
+                </hypoDepthDist>
+            </areaSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
