@@ -54,20 +54,20 @@ def main(parent_id):
         csm = parent['_csm']
         csm.init(full_lt)
         mon = performance.Monitor(
-            'building disaggs', measuremem=True, h5=dstore.hdf5)
+            'disaggregate by source', measuremem=True, h5=dstore.hdf5)
         edges_shapedic = calc.disagg.get_edges_shapedic(oq, sitecol)
-        rel_ids = get_rel_source_ids(
-            parent, oq.imtls, oq.poes, threshold=.1)
+        rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
+        out = {}
         for source_id in rel_ids:
             logging.info('Disaggregating source %s', source_id)
             smlt = full_lt.source_model_lt.reduce(source_id)
             gslt = full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
             relt = logictree.FullLogicTree(smlt, gslt, 'reduce-rlzs')
             groups = calc.disagg.reduce_groups(csm.src_groups, source_id)
-            with mon:
-                disaggs = calc.disagg.by_source(
-                    groups, sitecol, relt, edges_shapedic, oq)
-
+            out.update(calc.disagg.by_source(
+                groups, sitecol, relt, edges_shapedic, oq, mon))
+        for source_id, rates in out.items():
+            dstore['disagg/' + source_id] = rates
 
 if __name__ == '__main__':
     sap.run(main)

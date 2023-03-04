@@ -661,9 +661,11 @@ def reduce_groups(src_groups, source_id):
     return groups
 
 
-def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq):
+def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq, monitor):
     """
-    Compute disaggregation for the given source
+    Compute disaggregation for the given source.
+
+    :returns: {source_id: rates of shape (Ma, D, E, M, P)}
     """
     assert len(sitecol) == 1, sitecol
     edges, s = edges_shapedic
@@ -674,12 +676,12 @@ def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq):
     num_rlzs = [cm.Z for cm in cmakers]
     assert R == sum(num_rlzs), (R, num_rlzs)
     for c, cmaker in enumerate(cmakers):
-        rlzs = sum(cmaker.gsims.values(), [])  # Z disjoint realizations
         try:
             dis = Disaggregator(groups[c], sitecol, cmaker, edges)
         except FarAwayRupture:
             continue  # source corresponding to a noncontributing realization
         pmap = dis.cmaker.get_pmap([dis.fullctx])
         iml3 = pmap.interp4D(dis.cmaker.imtls, dis.cmaker.poes)[0]  # (M, P, Z)
+        rlzs = sum(cmaker.gsims.values(), [])  # Z disjoint realizations
         rates5D += dis.disagg_mag_dist_eps(iml3) @ weight[rlzs]
     return {reduced_lt.source_model_lt.source_id: rates5D}
