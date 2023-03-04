@@ -494,7 +494,7 @@ class Disaggregator(object):
             z = 0
             for rlz, g in self.g_by_rlz.items():
                 mat6 = self.disagg6D(iml3[:, :, z], g)
-                out[magi, ..., z] = pprod(mat6, axis=(1, 2))
+                out[magi, ..., z] = mat6.sum(axis=(1, 2))
                 z += 1
         return out
 
@@ -661,20 +661,25 @@ def reduce_groups(src_groups, source_id):
     return groups
 
 
-def by_source(reduced_lt, groups, sitecol, bin_edges, oq):
+def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq):
     """
     Compute disaggregation for the given source
     """
-    rlzs = reduced_lt.rlzs
-    disaggs = []
+    assert len(sitecol) == 1, sitecol
+    edges, s = edges_shapedic
+    weight = reduced_lt.rlzs['weight']
+    R = len(weight)
+    rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
     cmakers = get_cmakers(groups, reduced_lt, oq)
+    num_rlzs = [cm.Z for cm in cmakers]
+    assert R == sum(num_rlzs), (R, num_rlzs)
     for c, cmaker in enumerate(cmakers):
-        print(list(cmaker.gsims.values()))
+        rlzs = sum(cmaker.gsims.values(), [])  # Z disjoint realizations
         try:
-            dis = Disaggregator(groups[c], sitecol, cmaker, bin_edges)
+            dis = Disaggregator(groups[c], sitecol, cmaker, edges)
         except FarAwayRupture:
-            pass  # source corresponding to a noncontributing realization
-        else:
-            disaggs.append(dis)
-    assert disaggs, '%s does not contribute??' % reduced_lt.source_id
-    return disaggs
+            continue  # source corresponding to a noncontributing realization
+        pmap = dis.cmaker.get_pmap([dis.fullctx])
+        iml3 = pmap.interp4D(dis.cmaker.imtls, dis.cmaker.poes)[0]  # (M, P, Z)
+        rates5D += dis.disagg_mag_dist_eps(iml3) @ weight[rlzs]
+    return {reduced_lt.source_model_lt.source_id: rates5D}

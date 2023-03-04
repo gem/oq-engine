@@ -55,7 +55,7 @@ def main(parent_id):
         csm.init(full_lt)
         mon = performance.Monitor(
             'building disaggs', measuremem=True, h5=dstore.hdf5)
-        bin_edges, shapedic = calc.disagg.get_edges_shapedic(oq, sitecol)
+        edges_shapedic = calc.disagg.get_edges_shapedic(oq, sitecol)
         rel_ids = get_rel_source_ids(
             parent, oq.imtls, oq.poes, threshold=.1)
         for source_id in rel_ids:
@@ -66,7 +66,7 @@ def main(parent_id):
             groups = calc.disagg.reduce_groups(csm.src_groups, source_id)
             with mon:
                 disaggs = calc.disagg.by_source(
-                    relt, groups, sitecol, bin_edges, oq)
+                    groups, sitecol, relt, edges_shapedic, oq)
 
 
 if __name__ == '__main__':
