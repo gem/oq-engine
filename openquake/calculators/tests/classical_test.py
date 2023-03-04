@@ -26,8 +26,7 @@ from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.tests import (
-    CalculatorTestCase, NOT_DARWIN, strip_calc_id)
+from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_12, case_14,
     case_18, case_19, case_22, case_23, case_24, case_25,
@@ -313,7 +312,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # cluster
         self.assert_curves_ok(['hazard_curve-rlz-000-PGA.csv'],
                               case_35.__file__)
-        
+
     def test_case_37(self):
         # Christchurch
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
@@ -390,6 +389,7 @@ class ClassicalTestCase(CalculatorTestCase):
                               shift_hypo='true')
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv"], case_44.__file__,
                               shift_hypo='false')
+
     def test_case_47(self):
         # Mixture Model for Sigma using PEER (2018) Test Case 2.5b
         self.assert_curves_ok(["hazard_curve-rlz-000-PGA.csv",
@@ -631,7 +631,8 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/disagg_by_mag_true.org', fname)
 
         # multiFaultSource with infer_occur_rates=false
-        self.run_calc(case_65.__file__, 'job.ini',
+        self.run_calc(
+            case_65.__file__, 'job.ini',
             calculation_mode='disaggregation',
             infer_occur_rates='false',
             disagg_outputs='Mag',
@@ -666,7 +667,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_70.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
-        
+
     def test_case_72(self):
         # reduced USA model
         self.run_calc(case_72.__file__, 'job.ini')

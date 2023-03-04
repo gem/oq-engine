@@ -25,8 +25,7 @@ from openquake.hazardlib import contexts
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.tests import (
-    CalculatorTestCase, NOT_DARWIN, strip_calc_id)
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
     case_07, case_08, case_09,
     case_10, case_11, case_13, case_15, case_16, case_17,
@@ -261,9 +260,9 @@ hazard_uhs-std.csv
         self.run_calc(case_20.__file__, 'job_bis.ini', collect_rlzs='true')
         dbs_avg = self.calc.disagg_by_src  # shape (N, 1, M, L1, Ns)
         for m in range(2):
-            for l in range(4):
-                avg1 = weights @ dbs_full[0, :, m, l]
-                avg2 = dbs_avg[0, 0, m, l]
+            for i in range(4):
+                avg1 = weights @ dbs_full[0, :, m, i]
+                avg2 = dbs_avg[0, 0, m, i]
                 aac(avg1, avg2)
 
         # with semicolon_aggregate the averages are different because
@@ -487,4 +486,3 @@ hazard_uhs-std.csv
         self.run_calc(case_83.__file__, 'job_expanded_LT.ini')
         [fname_ex] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles(fname_em, fname_ex)
-
