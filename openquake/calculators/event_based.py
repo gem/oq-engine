@@ -226,6 +226,7 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         sources = self.csm.get_sources()
         # weighting the heavy sources
+        self.datastore.swmr_on()
         nrups = parallel.Starmap(
             count_ruptures, [(src,) for src in sources if src.code in b'AMC'],
             progress=logging.debug
@@ -251,10 +252,7 @@ class EventBasedCalculator(base.HazardCalculator):
             cmaker = ContextMaker(sg.trt, rgb, oq)
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
-        try:
-            self.datastore.swmr_on()
-        except OSError:  # seen sometimes in test_ebr[case_1f]
-            pass
+        self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
