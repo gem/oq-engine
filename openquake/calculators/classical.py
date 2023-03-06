@@ -168,32 +168,6 @@ def semicolon_aggregate(probs, source_ids):
     return new, unique
 
 
-def check_disagg_by_src(dstore):
-    """
-    Make sure that by composing disagg_by_src one gets the hazard curves
-    """
-    info = dstore['source_info'][:]
-    mutex = info['mutex_weight'] > 0
-    mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
-    dbs = dstore.sel('disagg_by_src')  # N, R, M, L1, Ns
-    if mutex.sum():
-        dbs_indep = dbs[:, :, :, :, ~mutex]
-        dbs_mutex = dbs[:, :, :, :, mutex]
-        poes_indep = dbs_indep.sum(axis=4)  # N, R, M, L1
-        poes_mutex = dbs_mutex.sum(axis=4)  # N, R, M, L1
-        poes = poes_indep + poes_mutex
-    else:
-        poes = dbs.sum(axis=4)  # N, R, M, L1
-    rlz_weights = dstore['weights'][:]
-    mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L1
-    if not numpy.allclose(mean, mean2, atol=1E-6):
-        logging.error('check_disagg_src fails: %s =! %s', mean[0], mean2[0])
-
-    # check the extract call is not broken
-    for imt in dstore['oqparam'].imtls:
-        aw = extract.extract(dstore, f'disagg_by_src?imt={imt}&poe=1E-4')
-        assert aw.array.dtype.names == ('src_id', 'poe')
-
 #  ########################### task functions ############################ #
 
 
@@ -740,9 +714,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.set_shape_descr(
                     'disagg_by_src', site_id=self.N, rlz_id=R,
                     imt=list(oq.imtls), lvl=self.L1, src_id=srcids)
-        if 'disagg_by_src' in self.datastore and not oq.collect_rlzs:
-            logging.info('Comparing disagg_by_src vs mean curves')
-            check_disagg_by_src(self.datastore)
+
         if 'disagg_by_src' in self.datastore and self.N == 1 and len(oq.poes):
             rel_ids = get_rel_source_ids(
                 self.datastore, oq.imtls, oq.poes, threshold=.1)
