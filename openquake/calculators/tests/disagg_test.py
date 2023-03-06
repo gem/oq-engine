@@ -151,7 +151,6 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_7(self):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
         self.run_calc(case_7.__file__, 'job.ini')
-        cmakers = read_cmakers(self.calc.datastore)
         ctx = read_ctx_by_grp(self.calc.datastore)
         self.assertEqual(len(ctx[0]), 7)  # rlz-0, the closest to the mean
         self.assertEqual(len(ctx[1]), 2)  # rlz-1, the one to discard
