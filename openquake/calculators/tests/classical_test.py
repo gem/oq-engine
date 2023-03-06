@@ -28,7 +28,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
 from openquake.qa_tests_data.classical import (
-    case_1, case_2, case_12, case_14, case_18, case_19, case_22, case_23,
+    case_01, case_02, case_12, case_14, case_18, case_19, case_22, case_23,
     case_24, case_25, case_26, case_27, case_29, case_30, case_32, case_33,
     case_34, case_35, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_47, case_48, case_49,
@@ -64,10 +64,10 @@ class ClassicalTestCase(CalculatorTestCase):
                                   delta=delta)
         return got
 
-    def test_case_1(self):
+    def test_case_01(self):
         self.assert_curves_ok(
             ['hazard_curve-PGA.csv', 'hazard_curve-SA(0.1).csv'],
-            case_1.__file__)
+            case_01.__file__)
 
         if parallel.oq_distribute() != 'no':
             info = text_table(view('job_info', self.calc.datastore))
@@ -91,25 +91,25 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check minimum_magnitude discards the source
         with self.assertRaises(RuntimeError) as ctx:
-            self.run_calc(case_1.__file__, 'job.ini', minimum_magnitude='4.5')
+            self.run_calc(case_01.__file__, 'job.ini', minimum_magnitude='4.5')
         self.assertEqual(str(ctx.exception), 'All sources were discarded!?')
 
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):
-            self.run_calc(case_1.__file__, 'job_wrong.ini')
+            self.run_calc(case_01.__file__, 'job_wrong.ini')
 
     def test_sa_period_too_big(self):
         imtls = '{"SA(4.1)": [0.1, 0.4, 0.6]}'
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(
-                case_1.__file__, 'job.ini',
+                case_01.__file__, 'job.ini',
                 intensity_measure_types_and_levels=imtls)
         self.assertEqual(
             'SA(4.1) is out of the period range defined for [SadighEtAl1997]',
             str(ctx.exception))
 
-    def test_case_2(self):
-        self.run_calc(case_2.__file__, 'job.ini')
+    def test_case_02(self):
+        self.run_calc(case_02.__file__, 'job.ini')
 
         # check view inputs
         lines = text_table(view('inputs', self.calc.datastore)).splitlines()
