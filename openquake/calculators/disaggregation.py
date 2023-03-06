@@ -463,18 +463,19 @@ class DisaggregationCalculator(base.HazardCalculator):
                     if m == 0 and poe == self.poes_disagg[-1]:
                         _disagg_trt[s] = tuple(
                             pprod(mat8[..., 0, 0], axis=(1, 2, 3, 4, 5)))
+                    poe_agg = pprod(mat6, axis=(0, 1, 2, 3, 4, 5))
+                    if poe and abs(1 - poe_agg/poe) > .1 and not count[s]:
+                        # warn only once per site
+                        msg = ('Site #%d, IMT=%s, rlz=#%d: poe_agg=%s is '
+                               'quite different from the expected poe=%s,'
+                               ' perhaps not enough levels')
+                        logging.warning(msg,  s, imt, best_rlzs[s, z],
+                                        poe_agg, poe)
+                        vcurves.append(self.curves[s])
+                        count[s] += 1
                     if name.endswith('-rlzs'):
-                        poe_agg = pprod(mat6, axis=(0, 1, 2, 3, 4, 5))
                         self.datastore['poe4'][s, m, p, z] = poe_agg
-                        if poe and abs(1 - poe_agg/poe) > .1 and not count[s]:
-                            # warn only once per site
-                            msg = ('Site #%d, IMT=%s, rlz=#%d: poe_agg=%s is '
-                                   'quite different from the expected poe=%s,'
-                                   ' perhaps not enough levels')
-                            logging.warning(msg,  s, imt, best_rlzs[s, z],
-                                            poe_agg, poe)
-                            vcurves.append(self.curves[s])
-                            count[s] += 1
+
         self.datastore[name] = out
         # below a dataset useful for debugging, at minimum IMT and maximum RP
         self.datastore['_disagg_trt'] = _disagg_trt
