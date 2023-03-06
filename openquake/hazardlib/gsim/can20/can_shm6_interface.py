@@ -25,7 +25,7 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 import numpy as np
 import openquake.hazardlib.gsim.abrahamson_2015 as A15
 import openquake.hazardlib.gsim.atkinson_macias_2009 as AM09
-import openquake.hazardlib.gsim.can20.can_shm6_active_crust as SHM6_ASC
+import openquake.hazardlib.gsim.can20.can_shm6_active_crust as CanadSHM6_ASC
 import openquake.hazardlib.gsim.ghofrani_atkinson_2014 as GA14
 import openquake.hazardlib.gsim.zhao_2006 as ZH06
 
@@ -34,10 +34,10 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA, PGV
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.can20.can_shm6_inslab import (
-    SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55, COEFFS_SITE_FACTORS,
+    CanadSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55, COEFFS_SITE_FACTORS,
     extrapolation_factor, CoeffsTable_CanadaSHM6)
 from openquake.hazardlib.gsim.can20.can_shm6_active_crust import (
-    SHM6_ActiveCrust_BooreEtAl2014, SHM6_hardrock_site_factor)
+    CanadSHM6_ActiveCrust_BooreEtAl2014, CanadSHM6_hardrock_site_factor)
 from openquake.hazardlib.gsim.abrahamson_2015 import AbrahamsonEtAl2015SInter
 from openquake.hazardlib.gsim.atkinson_macias_2009 import AtkinsonMacias2009
 from openquake.hazardlib.gsim.can20.can_shm6_active_crust import _check_imts
@@ -45,12 +45,12 @@ from openquake.hazardlib.gsim.ghofrani_atkinson_2014 import (
     GhofraniAtkinson2014Cascadia)
 
 
-class SHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
+class CanadSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
     """
     The Abrahramson et al., 2015 (BCHydro) Inteface GMM with CanadaSHM6
     modifications to include PGV and limit the defined period range.
 
-    See also header in CanadaSHM6_Interface.py
+    See also header in CanadaCanadSHM6_Interface.py
     """
 
     MAX_SA = 10.
@@ -125,27 +125,27 @@ class SHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
 # =============================================================================
 
 
-class SHM6_Interface_ZhaoEtAl2006SInterCascadia(
-                                SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55):
+class CanadSHM6_Interface_ZhaoEtAl2006SInterCascadia(
+                                CanadSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55):
     """
     Zhao et al., 2006 Interface with Cascadia adjustment at a fixed hypo depth
     of 30 km, extrapolated to 0.05 - 10s and with modifications to the site
     term as implemented for CanadaSHM6 (see also
-    CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia).
+    CanadaCanadSHM6_InSlab_ZhaoEtAl2006SSlabCascadia).
 
-    See also header in CanadaSHM6_Interface.py
+    See also header in CanadaCanadSHM6_Interface.py
     """
 
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
-    extrapolate_GMM = SHM6_Interface_AbrahamsonEtAl2015SInter()
+    extrapolate_GMM = CanadSHM6_Interface_AbrahamsonEtAl2015SInter()
 
     HYPO_DEPTH = 30.
     experimental = True
 
     def __init__(self):
-        super(SHM6_Interface_ZhaoEtAl2006SInterCascadia,
+        super(CanadSHM6_Interface_ZhaoEtAl2006SInterCascadia,
               self).__init__()
 
         self.COEFFS_SINTER = CoeffsTable_CanadaSHM6(self.COEFFS_SINTER,
@@ -300,23 +300,23 @@ def _get_mean_760_am09(ctx, imt):
 def _site_term_am09(ctx, imt):
     """
     Site term for AM09 using the CanadaSHM6 implementation of BSSA14
-    (see CanadaSHM6_ActiveCrust_BooreEtAl2014)
+    (see CanadaCanadSHM6_ActiveCrust_BooreEtAl2014)
     """
     # get PGA for non-linear term in BSSA14
     pga760 = _get_mean_760_am09(ctx, PGA())
-    BSSA14 = SHM6_ActiveCrust_BooreEtAl2014()
+    BSSA14 = CanadSHM6_ActiveCrust_BooreEtAl2014()
     C = BSSA14.COEFFS[imt]
-    F = SHM6_ASC._get_site_scaling_ba14(
+    F = CanadSHM6_ASC._get_site_scaling_ba14(
         "", "", C, np.exp(pga760), ctx, imt.period, ctx.rjb)
     return F
 
 
-class SHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
+class CanadSHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
     """
     Atkinson and Macias, 2009 Interface GMM with an added site term following
     a modified version of BSSA14 (SS14) as implemented for CanadaSHM6.
 
-    See also header in CanadaSHM6_Interface.py
+    See also header in CanadaCanadSHM6_Interface.py
     """
 
     REQUIRES_DISTANCES = {'rrup', 'rjb'}
@@ -368,7 +368,7 @@ def _get_site_term_ga14(C, vs30, imt):
     GA14_2000 = np.log(10**GA14._get_site_term(C, 2000.))
 
     # CanadaSHM6 hard rock site factor
-    F = SHM6_hardrock_site_factor(GA14_1100, GA14_2000,
+    F = CanadSHM6_hardrock_site_factor(GA14_1100, GA14_2000,
                                   vs30[vs30 >= 1100], imt)
 
     # for Vs30 > 1100 set to CanadaSHM6 factor
@@ -394,14 +394,14 @@ def _set_extrapolation(imt, model):
     return extrapolate, imt, target_imt
 
 
-class SHM6_Interface_GhofraniAtkinson2014Cascadia(
+class CanadSHM6_Interface_GhofraniAtkinson2014Cascadia(
                                                 GhofraniAtkinson2014Cascadia):
     """
     Ghofrani and Atkinson 2014 Interface GMM with Cascadia adjustment,
     extrapolated to 0.05 - 10s and modifications to the site term as
     implemented for CanadaSHM6.
 
-    See also header in CanadaSHM6_Interface.py
+    See also header in CanadaCanadSHM6_Interface.py
     """
     # Parameters used to extrapolate to 0.05s <= T <= 10s
 
@@ -409,12 +409,12 @@ class SHM6_Interface_GhofraniAtkinson2014Cascadia(
     MIN_SA = 0.07
     MAX_SA_EXTRAP = 10.0
     MIN_SA_EXTRAP = 0.05
-    extrapolate_GMM = SHM6_Interface_AbrahamsonEtAl2015SInter()
+    extrapolate_GMM = CanadSHM6_Interface_AbrahamsonEtAl2015SInter()
     experimental = True
 
     def __init__(self):
 
-        super(SHM6_Interface_GhofraniAtkinson2014Cascadia,
+        super(CanadSHM6_Interface_GhofraniAtkinson2014Cascadia,
               self).__init__()
 
         # Need to use new CoeffsTable to be able to handle extrapolation

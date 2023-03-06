@@ -70,7 +70,7 @@ def _compute_site_class_term_CanadaSHM6(C, ctx, imt):
         ref_values = np.array([0.0, 0.5*(C['CH'] + C['C1']), C['C1'], C['C2'],
                                C['C3'], C['C4']])
 
-        # Equivalent to CanadaSHM6_hardrock_site_factor but reproduced here
+        # Equivalent to CanadaCanadSHM6_hardrock_site_factor but reproduced here
         # to avoid using np.interp twice.
         fac_760_2000 = np.log(1./COEFFS_AB06[imt]['c'])
         ref_values[0] = np.min([0.5*(C['CH'] + C['C1']), np.max([C['CH'],
@@ -104,7 +104,7 @@ def _compute_soil_amplification(self, C, ctx, pga_rock, imt):
         ref_values = np.array([0.0, 0.0, C['c5']*0.41367, C['c5'], C['c6'],
                               C['c7']])
 
-        # Equivalent to CanadaSHM6_hardrock_site_factor but reproduced here
+        # Equivalent to CanadaCanadSHM6_hardrock_site_factor but reproduced here
         # to avoid using np.interp twice.
         ref_values[0] = np.min([0, np.log10(1./COEFFS_AB06[imt]['c']) +
                                 ref_values[2]])
@@ -190,13 +190,13 @@ COEFFS_MAG_SCALE = CoeffsTable(sa_damping=5, table="""
     """)
 
 
-class SHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
+class CanadSHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
     """
     Abrahramson et al., 2015 (BCHydro) InSlab GMM with a fixed hypo depth of
     55 km, the addition of PGV (scaled from Sa[0.5]) and limited to the CSHM6
     period range of 0.05 <= T <= 10.
 
-    See also header in CanadaSHM6_InSlab.py
+    See also header in CanadaCanadSHM6_InSlab.py
     """
 
     HYPO_DEPTH = 55.
@@ -270,23 +270,23 @@ class SHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
 
 
 
-class SHM6_InSlab_AbrahamsonEtAl2015SSlab30(
-    SHM6_InSlab_AbrahamsonEtAl2015SSlab55):
+class CanadSHM6_InSlab_AbrahamsonEtAl2015SSlab30(
+    CanadSHM6_InSlab_AbrahamsonEtAl2015SSlab55):
     """
-    Variant of SHM6_InSlab_AbrahamsonEtAl2015SSlab55 with a hypo depth
+    Variant of CanadSHM6_InSlab_AbrahamsonEtAl2015SSlab55 with a hypo depth
     of 30 km.
     """
 
     HYPO_DEPTH = 30.
 
 
-class SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
+class CanadSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
     """
     Zhao et al., 2006 InSlab with Cascadia adjustment, at a fixed hypo depth of
     55 km, extrapolated to 0.05 - 10s and with modifications to the site term
     as implemented for CanadaSHM6.
 
-    See also header in CanadaSHM6_InSlab.py
+    See also header in CanadaCanadSHM6_InSlab.py
     """
 
     # Parameters used to extrapolate to 0.05s <= T <= 10s
@@ -294,7 +294,7 @@ class SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
     MIN_SA = 0.05
     MAX_SA_EXTRAP = 10.0
     MIN_SA_EXTRAP = 0.05
-    extrapolate_GMM = SHM6_InSlab_AbrahamsonEtAl2015SSlab55()
+    extrapolate_GMM = CanadSHM6_InSlab_AbrahamsonEtAl2015SSlab55()
 
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
@@ -305,7 +305,7 @@ class SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
     delta_c1 = None
 
     def __init__(self):
-        super(SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55,
+        super(CanadSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55,
               self).__init__()
 
         self.COEFFS_SSLAB = CoeffsTable_CanadaSHM6(self.COEFFS_SSLAB,
@@ -391,32 +391,32 @@ class SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
 
 
 
-class SHM6_InSlab_ZhaoEtAl2006SSlabCascadia30(
-                                SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55):
+class CanadSHM6_InSlab_ZhaoEtAl2006SSlabCascadia30(
+                                CanadSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55):
     """
-    Variant of SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55 with a hypo depth
+    Variant of CanadSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55 with a hypo depth
     of 30 km.
     """
 
     HYPO_DEPTH = 30.
-    extrapolate_GMM = SHM6_InSlab_AbrahamsonEtAl2015SSlab30()
+    extrapolate_GMM = CanadSHM6_InSlab_AbrahamsonEtAl2015SSlab30()
 
 
-class SHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
+class CanadSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
                                             AtkinsonBoore2003SSlabCascadia):
     """
     Atkinson and Boore 2003 InSlab with Cascadia adjustment, at a fixed hypo
     depth of 55 km, extrapolated to 0.05 - 10s and with modifications to the
     site term as implemented for CanadaSHM6.
 
-    See also header in CanadaSHM6_InSlab.py
+    See also header in CanadaCanadSHM6_InSlab.py
     """
     # Parameters used to extrapolate to 0.05s <= T <= 10s
     MAX_SA = 3.0
     MIN_SA = 0.04
     MAX_SA_EXTRAP = 10.0
     MIN_SA_EXTRAP = 0.05
-    extrapolate_GMM = SHM6_InSlab_AbrahamsonEtAl2015SSlab55()
+    extrapolate_GMM = CanadSHM6_InSlab_AbrahamsonEtAl2015SSlab55()
 
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
@@ -425,7 +425,7 @@ class SHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
     experimental = True
 
     def __init__(self):
-        super(SHM6_InSlab_AtkinsonBoore2003SSlabCascadia55,
+        super(CanadSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55,
               self).__init__()
 
         self.COEFFS_SSLAB = CoeffsTable_CanadaSHM6(self.COEFFS_SSLAB,
@@ -512,24 +512,24 @@ class SHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
 
 
 
-class SHM6_InSlab_AtkinsonBoore2003SSlabCascadia30(
-                        SHM6_InSlab_AtkinsonBoore2003SSlabCascadia55):
+class CanadSHM6_InSlab_AtkinsonBoore2003SSlabCascadia30(
+                        CanadSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55):
     """
-    Variant of SHM6_InSlab_AtkinsonBoore2003SSlabCascadia55 with a hypo
+    Variant of CanadSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55 with a hypo
     depth of 30 km.
     """
 
     HYPO_DEPTH = 30.
-    extrapolate_GMM = SHM6_InSlab_AbrahamsonEtAl2015SSlab30()
+    extrapolate_GMM = CanadSHM6_InSlab_AbrahamsonEtAl2015SSlab30()
 
 
-class SHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
+class CanadSHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
     """
     Garcia et al., 2005 (horizontal) GMM at a fixed hypo depth of 55 km,
     extraploted to 0.05 - 10s and with an added site term (modified version of
     BSSA14 / SS14) as implemented for CanadaSHM6.
 
-    See also header in CanadaSHM6_InSlab.py
+    See also header in CanadaCanadSHM6_InSlab.py
     """
 
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
@@ -540,14 +540,14 @@ class SHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
     MIN_SA = 0.04
     MAX_SA_EXTRAP = 10.0
     MIN_SA_EXTRAP = 0.05
-    extrapolate_GMM = SHM6_InSlab_AbrahamsonEtAl2015SSlab55()
+    extrapolate_GMM = CanadSHM6_InSlab_AbrahamsonEtAl2015SSlab55()
 
     HYPO_DEPTH = 55.
     experimental = True
 
     def __init__(self):
 
-        super(SHM6_InSlab_GarciaEtAl2005SSlab55,
+        super(CanadSHM6_InSlab_GarciaEtAl2005SSlab55,
               self).__init__()
 
         # Need to use new CoeffsTable to be able to handle extrapolation
@@ -607,14 +607,14 @@ class SHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
     
 
 
-class SHM6_InSlab_GarciaEtAl2005SSlab30(SHM6_InSlab_GarciaEtAl2005SSlab55):
+class CanadSHM6_InSlab_GarciaEtAl2005SSlab30(CanadSHM6_InSlab_GarciaEtAl2005SSlab55):
     """
-    Variant of SHM6_InSlab_GarciaEtAl2005SSlab55 with a hypo depth
+    Variant of CanadSHM6_InSlab_GarciaEtAl2005SSlab55 with a hypo depth
     of 30 km.
     """
 
     HYPO_DEPTH = 30
-    extrapolate_GMM = SHM6_InSlab_AbrahamsonEtAl2015SSlab30()
+    extrapolate_GMM = CanadSHM6_InSlab_AbrahamsonEtAl2015SSlab30()
 
 
 def extrapolation_factor(GMM, ctx, boundingIMT, extrapIMT):
