@@ -36,6 +36,7 @@ from openquake.baselib.general import (
     get_nbytes_msg, pprod)
 from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
+from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.probability_map import (
     ProbabilityMap, poes_dt, combine_probs)
 from openquake.commonlib import calc, readinput
@@ -141,7 +142,7 @@ def semicolon_aggregate(probs, source_ids):
     :param source_ids: list of source IDs (some with semicolons) of length Ns
     :returns: array of shape (..., Ns) and list of length N with N < Ns
 
-    This is used to aggregate array of probabilities in the case of sources
+    This is used to aggregate array of rates in the case of sources
     which are variations of a base source. Here is an example with Ns=7
     sources reducible to N=4 base sources:
 
@@ -149,15 +150,13 @@ def semicolon_aggregate(probs, source_ids):
     >>> probs = numpy.array([[.01, .02, .03, .04, .05, .06, .07],
     ...                      [.00, .01, .02, .03, .04, .05, .06]])
 
-    `semicolon_aggregate` effectively reduces the array of probabilities
+    `semicolon_aggregate` effectively reduces the array of rates
     from 7 to 4 components, however for storage convenience it does not
     change the shape, so the missing components are zeros:
 
     >>> semicolon_aggregate(probs, source_ids)  # (2, 7) => (2, 4)
-    (array([[0.058906, 0.04    , 0.05    , 0.1258  , 0.      , 0.      ,
-            0.      ],
-           [0.0298  , 0.03    , 0.04    , 0.107   , 0.      , 0.      ,
-            0.      ]]), array(['A', 'B', 'C', 'D'], dtype='<U1'))
+    (array([[0.06, 0.04, 0.05, 0.13, 0.  , 0.  , 0.  ],
+           [0.03, 0.03, 0.04, 0.11, 0.  , 0.  , 0.  ]]), array(['A', 'B', 'C', 'D'], dtype='<U1'))
 
     It is assumed that the semicolon sources are independent, i.e. not mutex.
     """
@@ -165,35 +164,9 @@ def semicolon_aggregate(probs, source_ids):
     unique, indices = numpy.unique(srcids, return_inverse=True)
     new = numpy.zeros_like(probs)
     for i, s1, s2 in performance.idx_start_stop(indices):
-        new[..., i] = pprod(probs[..., s1:s2], axis=-1)
+        new[..., i] = probs[..., s1:s2].sum(axis=-1)
     return new, unique
 
-
-def check_disagg_by_src(dstore):
-    """
-    Make sure that by composing disagg_by_src one gets the hazard curves
-    """
-    info = dstore['source_info'][:]
-    mutex = info['mutex_weight'] > 0
-    mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
-    dbs = dstore.sel('disagg_by_src')  # N, R, M, L1, Ns
-    if mutex.sum():
-        dbs_indep = dbs[:, :, :, :, ~mutex]
-        dbs_mutex = dbs[:, :, :, :, mutex]
-        poes_indep = pprod(dbs_indep, axis=4)  # N, R, M, L1
-        poes_mutex = dbs_mutex.sum(axis=4)  # N, R, M, L1
-        poes = poes_indep + poes_mutex - poes_indep * poes_mutex
-    else:
-        poes = pprod(dbs, axis=4)  # N, R, M, L1
-    rlz_weights = dstore['weights'][:]
-    mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L1
-    if not numpy.allclose(mean, mean2, atol=1E-6):
-        logging.error('check_disagg_src fails: %s =! %s', mean[0], mean2[0])
-
-    # check the extract call is not broken
-    for imt in dstore['oqparam'].imtls:
-        aw = extract.extract(dstore, f'disagg_by_src?imt={imt}&poe=1E-4')
-        assert aw.array.dtype.names == ('src_id', 'poe')
 
 #  ########################### task functions ############################ #
 
@@ -328,11 +301,12 @@ class Hazard:
         self.acc = AccumDict(accum={})
         self.offset = 0
 
-    def get_poes(self, pmap, cmaker):  # used in in disagg_by_src
+    # used in in disagg_by_src
+    def get_rates(self, pmap, cmaker):
         """
         :param pmap: a ProbabilityMap
         :param cmaker: a ContextMaker
-        :returns: an array of PoEs of shape (N, R, M, L1)
+        :returns: an array of rates of shape (N, R, M, L1)
         """
         R = 1 if self.collect_rlzs else self.R
         M = len(self.imtls)
@@ -345,9 +319,9 @@ class Hazard:
             for i, g in enumerate(pmap.gidx):
                 combine_probs(res, pmap.array[:, lvl, i], U32(dic[g]))
             if self.collect_rlzs:
-                out[:, 0, m, l] = res @ self.weights
+                out[:, 0, m, l] = disagg.to_rates(res) @ self.weights
             else:
-                out[:, :, m, l] = res
+                out[:, :, m, l] = disagg.to_rates(res)
         return out
 
     def store_poes(self, g, pnes, pnes_sids):
@@ -397,7 +371,7 @@ class Hazard:
                 if isinstance(key, str):
                     # in case of disagg_by_src key is a source ID
                     disagg_by_src[..., self.srcidx[key]] = (
-                        self.get_poes(pmap, self.cmakers[pmap.grp_id]))
+                        self.get_rates(pmap, self.cmakers[pmap.grp_id]))
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
@@ -740,9 +714,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.set_shape_descr(
                     'disagg_by_src', site_id=self.N, rlz_id=R,
                     imt=list(oq.imtls), lvl=self.L1, src_id=srcids)
-        if 'disagg_by_src' in self.datastore and not oq.collect_rlzs:
-            logging.info('Comparing disagg_by_src vs mean curves')
-            check_disagg_by_src(self.datastore)
+
         if 'disagg_by_src' in self.datastore and self.N == 1 and len(oq.poes):
             rel_ids = get_rel_source_ids(
                 self.datastore, oq.imtls, oq.poes, threshold=.1)
