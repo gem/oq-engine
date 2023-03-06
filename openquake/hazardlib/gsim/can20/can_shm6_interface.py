@@ -170,6 +170,7 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
             # intensity measure type.
             C = self.COEFFS_ASC[imt]
             C_SINTER = self.COEFFS_SINTER[imt]
+            C_SF = COEFFS_SITE_FACTORS[imt]
 
             # mean value as given by equation 1, p. 901, without considering
             # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
@@ -189,68 +190,9 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
                 mean[m] = (0.897*mean[m]) + 4.835
 
             # convert from cm/s**2 to g
-            mean[m] = np.log(np.exp(mean[m]) * 1e-2 / g)
+            mean[m] = np.log(np.exp(mean[m] * C_SF["MF"]) * 1e-2 / g)
             ZH06._set_stddevs(
                 sig[m], tau[m], phi[m], C['sigma'], C_SINTER['tauI'])
-
-
-
-
-    # REMOVE vvvvvvvvv
-    """
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        extrapolate = False
-        PGVimt = False
-
-        if imt == PGV():
-            PGVimt = True
-            imt = SA(1.92)
-        elif imt.period < self.MIN_SA and imt.period >= self.MIN_SA_EXTRAP:
-            target_imt = imt
-            imt = SA(self.MIN_SA)
-            extrapolate = True
-        elif imt.period > self.MAX_SA and imt.period <= self.MAX_SA_EXTRAP:
-            target_imt = imt
-            imt = SA(self.MAX_SA)
-            extrapolate = True
-
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS_ASC[imt]
-        C_SINTER = self.COEFFS_SINTER[imt]
-        C_SF = COEFFS_SITE_FACTORS[imt]
-
-        # mean value as given by equation 1, p. 901, without considering the
-        # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
-        # inter and intra event terms, plus the magnitude-squared term
-        # correction factor (equation 5 p. 909)
-        mean = self._compute_magnitude_term(C, rup.mag) +\
-            self._compute_distance_term(C, rup.mag, dists.rrup) +\
-            self._compute_focal_depth_term(C, self.HYPO_DEPTH) +\
-            self._compute_site_class_term_CanadaSHM6(C, sites.vs30, imt) + \
-            self._compute_magnitude_squared_term(P=0.0, M=6.3,
-                                                 Q=C_SINTER['QI'],
-                                                 W=C_SINTER['WI'],
-                                                 mag=rup.mag) +\
-            C_SINTER['SI']
-
-        # multiply by site factor to "convert" Japan values to Cascadia values
-        # then convert from cm/s**2 to g
-        mean = np.log((np.exp(mean) * C_SF["MF"]) * 1e-2 / g)
-
-        stddevs = self._get_stddevs(C['sigma'], C_SINTER['tauI'], stddev_types,
-                                    num_sites=len(sites.vs30))
-
-        # add extrapolation factor if outside SA range (0.07 - 9.09)
-        if extrapolate:
-            mean += extrapolation_factor(self.extrapolate_GMM, rup, sites,
-                                         dists, imt, target_imt)
-
-        if PGVimt:
-            mean = (0.897*mean) + 4.835
-
-        return mean, stddevs
-    """
 
 
     # Coefs taken from ZhaoEtAl2006SInter
@@ -343,12 +285,12 @@ class CanadaSHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
             C = AtkinsonMacias2009.COEFFS[imt]
 
             # AM09 is for Vs30 = 760m/s
-            mean = _get_mean_760_am09(ctx, imt)
-            mean += _site_term_am09(ctx, imt)
+            imean = _get_mean_760_am09(ctx, imt)
+            imean += _site_term_am09(ctx, imt)
             sig[m] = np.log(10.0 ** C["sigma"])
 
             if fix:
-                mean[m] = (0.897*mean) + 4.835
+                mean[m] = (0.897*imean) + 4.835
 
 # =============================================================================
 # =============================================================================
@@ -381,6 +323,7 @@ def _set_extrapolation(imt, model):
     target_imt = None
     if imt == PGV():
         extrapolate = False
+        imt = SA(1.92)
     elif imt.period < model.MIN_SA and imt.period >= model.MIN_SA_EXTRAP:
         target_imt = imt
         imt = SA(model.MIN_SA)

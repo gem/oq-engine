@@ -345,15 +345,15 @@ def _get_shallow_site_response_term_cb14(C, vs30, pga_rock, imt):
     CanadaSHM6 edits: modified linear site term for Vs30 > 1100
     """
     # Native site factor for CB14
-    cb14_vs = CB14._get_shallow_site_response_term(C, vs30, pga_rock)
+    cb14_vs = CB14._get_shallow_site_response_term(0, C, vs30, pga_rock)
 
     # Need site factors at Vs30 = 760, 1100 and 2000 to calculate
     # CanadaSHM6 hard rock site factors
-    cb14_1100 = CB14._get_shallow_site_response_term(C, np.array([1100.]),
+    cb14_1100 = CB14._get_shallow_site_response_term(0, C, np.array([1100.]),
                                                      np.array([0.]))
-    cb14_760 = CB14._get_shallow_site_response_term(C, np.array([760.]),
+    cb14_760 = CB14._get_shallow_site_response_term(0, C, np.array([760.]),
                                                     np.array([0.]))
-    cb14_2000 = CB14._get_shallow_site_response_term(C, np.array([2000.]),
+    cb14_2000 = CB14._get_shallow_site_response_term(0, C, np.array([2000.]),
                                                      np.array([0.]))
 
     # CB14 amplification factors relative to Vs30=760 to be consistent
@@ -372,7 +372,7 @@ def _get_shallow_site_response_term_cb14(C, vs30, pga_rock, imt):
 
 
 def get_mean_values_cb14(C, ctx, imt, a1100=None):
-    """
+    """()
     Returns the mean values for a specific IMT
     """
     if isinstance(a1100, np.ndarray):
@@ -414,10 +414,11 @@ class CanadaSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
         # Checking the IMTs used to compute ground-motion
         _check_imts(imts)
 
+        # Updating context
         CB14._update_ctx(self, ctx)
-        C_PGA = self.COEFFS[PGA()]
 
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
+        C_PGA = self.COEFFS[PGA()]
         pga1100 = np.exp(get_mean_values_cb14(C_PGA, ctx, PGA()))
 
         for m, imt in enumerate(imts):
@@ -428,7 +429,7 @@ class CanadaSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
                 # According to Campbell & Bozorgnia (2013) [NGA West 2 Report]
                 # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
                 # Get PGA on soil
-                pga = get_mean_values_cb14(C_PGA, ctx, imt, pga1100)
+                pga = get_mean_values_cb14(C_PGA, ctx, PGA(), pga1100)
                 idx = mean[m] <= pga
                 mean[m, idx] = pga[idx]
 

@@ -30,6 +30,7 @@ import openquake.hazardlib.gsim.atkinson_boore_2006 as AB06
 from scipy import interpolate
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.base import add_alias
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.gsim.can20.can_shm6_active_crust import _check_imts
@@ -143,10 +144,11 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
     """
 
     AA13_TABLE = ""
-    DEFINED_FOR_TECTONIC_REGION_TYPE = ""
+    DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Shallow Crust"
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
+    REQUIRES_DISTANCES = set(('rhypo',))
     REQUIRES_SITES_PARAMETERS = set(('vs30',))
     REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
     experimental = True
@@ -165,9 +167,6 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
             kwargs['gmpe_table'] = os.path.join(
                 os.path.dirname(__file__), fname)
         super().__init__(**kwargs)
-        self.REQUIRES_DISTANCES = frozenset(kwargs['REQUIRES_DISTANCES'])
-        self.DEFINED_FOR_TECTONIC_REGION_TYPE = kwargs[
-            'DEFINED_FOR_TECTONIC_REGION_TYPE']
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -495,12 +494,12 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
     """
 
     NGA_EAST_TABLE = ""
-    DEFINED_FOR_TECTONIC_REGION_TYPE = ""
+    DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Shallow Crust"
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
     REQUIRES_SITES_PARAMETERS = set(('vs30',))
-    REQUIRES_DISTANCES = set(('rrup',))
+    REQUIRES_DISTANCES = set(('rhypo',))
     REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
     experimental = True
 
@@ -520,9 +519,9 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
             kwargs['gmpe_table'] = os.path.join(
                 os.path.dirname(__file__), fname)
         super().__init__(**kwargs)
-        self.REQUIRES_DISTANCES = frozenset(kwargs['REQUIRES_DISTANCES'])
-        self.DEFINED_FOR_TECTONIC_REGION_TYPE = kwargs[
-            'DEFINED_FOR_TECTONIC_REGION_TYPE']
+        #self.REQUIRES_DISTANCES = frozenset(kwargs['REQUIRES_DISTANCES'])
+        #self.DEFINED_FOR_TECTONIC_REGION_TYPE = kwargs[
+        #    'DEFINED_FOR_TECTONIC_REGION_TYPE']
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
