@@ -251,8 +251,7 @@ hazard_uhs-std.csv
             'lvl': 4,
             'src_id': ['CHAR1', 'COMFLT1', 'SFLT1']})
         poes1 = weights @ dbs[0, :, 0, 0, :]  # shape Ns
-        aac(poes1, [0.01980132, 0.01488805, 0.01488805, 0., 0., 0., 0.],
-            atol=1E-7)
+        aac(poes1, [.02 , 0.015, 0.015, 0., 0., 0., 0.], atol=1E-7)
 
         # disagg_by_src with collect_rlzs:
         # the averages are correct when ignoring semicolon_aggregate
@@ -275,15 +274,14 @@ hazard_uhs-std.csv
 
         # here are the numbers
         poes2 = self.calc.datastore['disagg_by_src'][0, 0, 0, 0]
-        aac(poes2, [0.01968, 0.014833, 0.014841, 0., 0., 0., 0.],
-            atol=1E-6)
+        aac(poes2, [.02 , 0.015, 0.015, 0., 0., 0., 0.], atol=1E-7)
 
         # testing extract_disagg_by_src
         aw = extract(self.calc.datastore, 'disagg_by_src?imt=PGA&poe=1E-3')
         self.assertEqual(aw.site_id, 0)
         self.assertEqual(aw.imt, 'PGA')
         self.assertEqual(aw.poe, .001)
-        aac(aw.array['poe'], [6.46114349e-05, 0, 0])
+        aac(aw.array['poe'], [6.467104e-05, 0, 0])
 
         # testing view_relevant_sources
         arr = view('relevant_sources:SA(1.0)', self.calc.datastore)
