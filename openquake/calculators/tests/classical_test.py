@@ -675,8 +675,11 @@ class ClassicalTestCase(CalculatorTestCase):
         gsims = [br.gsim for br in branches]
         df = self.calc.datastore.read_df('_poes')
         del df['sid']
+        L = self.calc.oqparam.imtls.size  # 25 levels x 8 IMTs
         for gid, gsim in enumerate(gsims):
-            poes = df[df.gid == gid].poe.to_numpy()
+            df_for_gid = df[df.gid == gid]
+            poes = numpy.zeros(L)
+            poes[df_for_gid.lid] = df_for_gid.poe
             csv = general.gettemp('\r\n'.join('%.6f' % poe for poe in poes))
             gsim_str = gsim.__class__.__name__
             if hasattr(gsim, 'submodel'):
