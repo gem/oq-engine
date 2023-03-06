@@ -98,8 +98,6 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
 
     See also header in CanadaSHM6_ActiveCrust.py
     """
-    experimental = True
-
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -206,8 +204,6 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
 
     See also header.
     """
-    experimental = True
-
     #: Required site parameters are Vs30, Vs30 measured flag
     #: and Z1.0.
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'vs30measured'))
@@ -299,7 +295,6 @@ class CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
     See also header in CanadaSHM6_ActiveCrust.py
     """
     REQUIRES_SITES_PARAMETERS = {'vs30measured', 'vs30'}
-    experimental = True
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -402,7 +397,6 @@ class CanadaSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
     See also description in the header
     """
     REQUIRES_SITES_PARAMETERS = {'vs30'}
-    experimental = True
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

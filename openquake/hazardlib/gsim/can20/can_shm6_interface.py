@@ -52,12 +52,9 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
 
     See also header in CanadaSHM6_Interface.py
     """
-
     MAX_SA = 10.
     MIN_SA = 0.05
-
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
-    experimental = True
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -140,9 +137,7 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
     extrapolate_GMM = CanadaSHM6_Interface_AbrahamsonEtAl2015SInter()
-
     HYPO_DEPTH = 30.
-    experimental = True
 
     def __init__(self):
         super(CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia,
@@ -264,7 +259,6 @@ class CanadaSHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
     REQUIRES_DISTANCES = {'rrup', 'rjb'}
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
-    experimental = True
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -347,13 +341,11 @@ class CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia(
     See also header in CanadaSHM6_Interface.py
     """
     # Parameters used to extrapolate to 0.05s <= T <= 10s
-
     MAX_SA = 9.09
     MIN_SA = 0.07
     MAX_SA_EXTRAP = 10.0
     MIN_SA_EXTRAP = 0.05
     extrapolate_GMM = CanadaSHM6_Interface_AbrahamsonEtAl2015SInter()
-    experimental = True
 
     def __init__(self):
 

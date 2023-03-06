@@ -30,7 +30,6 @@ import openquake.hazardlib.gsim.atkinson_boore_2006 as AB06
 from scipy import interpolate
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
-from openquake.hazardlib.gsim.base import add_alias
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.gsim.can20.can_shm6_active_crust import _check_imts
@@ -151,7 +150,6 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
     REQUIRES_DISTANCES = set(('rhypo',))
     REQUIRES_SITES_PARAMETERS = set(('vs30',))
     REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
-    experimental = True
 
     def __init__(self, **kwargs):
         """
@@ -501,7 +499,6 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
     REQUIRES_SITES_PARAMETERS = set(('vs30',))
     REQUIRES_DISTANCES = set(('rhypo',))
     REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
-    experimental = True
 
     def __init__(self, **kwargs):
         """

@@ -41,8 +41,6 @@ from openquake.hazardlib.gsim.atkinson_boore_2003 import _compute_mean as _compu
 from openquake.hazardlib.gsim.atkinson_boore_2003 import (
     AtkinsonBoore2003SSlabCascadia)
 from openquake.hazardlib.imt import PGA, SA, PGV
-from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.gsim.base import CoeffsTable #SitesContext,
 #                                           DistancesContext)
 from openquake.hazardlib.gsim.boore_2014 import (BooreEtAl2014,
@@ -203,7 +201,6 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
     MAX_SA = 10.
     MIN_SA = 0.05
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
-    experimental = True
 
     delta_c1 = None
     kind = "base"
@@ -300,7 +297,6 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
 
     HYPO_DEPTH = 55.
-    experimental = True
     kind = "base"
     delta_c1 = None
 
@@ -420,9 +416,7 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
 
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
-
     HYPO_DEPTH = 55.
-    experimental = True
 
     def __init__(self):
         super(CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55,
@@ -541,9 +535,7 @@ class CanadaSHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
     MAX_SA_EXTRAP = 10.0
     MIN_SA_EXTRAP = 0.05
     extrapolate_GMM = CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55()
-
     HYPO_DEPTH = 55.
-    experimental = True
 
     def __init__(self):
 
