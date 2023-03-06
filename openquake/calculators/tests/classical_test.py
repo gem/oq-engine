@@ -673,8 +673,10 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_76.__file__, 'job.ini')
         branches = self.calc.datastore['full_lt/gsim_lt'].branches
         gsims = [br.gsim for br in branches]
-        _poes = self.calc.datastore['_poes'][:, 0, :]  # shape (20, 200)
-        for gsim, poes in zip(gsims, _poes):
+        df = self.calc.datastore.read_df('_poes')
+        del df['sid']
+        for gid, gsim in enumerate(gsims):
+            poes = df[df.gid == gid].poe.to_numpy()
             csv = general.gettemp('\r\n'.join('%.6f' % poe for poe in poes))
             gsim_str = gsim.__class__.__name__
             if hasattr(gsim, 'submodel'):
