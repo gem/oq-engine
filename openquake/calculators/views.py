@@ -35,9 +35,10 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
+from openquake.hazardlib import logictree
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
-from openquake.commonlib import util, logictree
+from openquake.commonlib import util
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
@@ -296,7 +297,7 @@ def view_full_lt(token, dstore):
     if not full_lt.num_samples and num_paths > 15000:
         return '<%d realizations>' % num_paths
     try:
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['trt_smrs'])
+        rlzs_by_gsim_list = map(full_lt.get_rlzs_by_gsim, dstore['trt_smrs'])
     except KeyError:  # for scenario trt_smrs is missing
         rlzs_by_gsim_list = [full_lt._rlzs_by_gsim(0)]
     header = ['grp_id', 'gsim', 'rlzs']
@@ -401,7 +402,7 @@ def avglosses_data_transfer(token, dstore):
     """
     oq = dstore['oqparam']
     N = len(dstore['assetcol'])
-    R = dstore['full_lt'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_paths()
     L = len(dstore.get_attr('crm', 'loss_types'))
     ct = oq.concurrent_tasks
     size_bytes = N * R * L * 8 * ct  # 8 byte floats
@@ -450,7 +451,7 @@ def alt_to_many_columns(alt, loss_types):
 
 def _portfolio_loss(dstore):
     oq = dstore['oqparam']
-    R = dstore['full_lt'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_paths()
     K = dstore['risk_by_event'].attrs.get('K', 0)
     alt = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
     df = alt_to_many_columns(alt, oq.loss_types)
@@ -486,7 +487,7 @@ def view_portfolio_loss(token, dstore):
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
-    R = dstore['full_lt'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_paths()
     K = dstore['risk_by_event'].attrs.get('K', 0)
     alt_df = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
     weights = dstore['weights'][:]
@@ -947,6 +948,30 @@ def view_mean_disagg(token, dstore):
     return numpy.array(sorted(tbl), dt(['key'] + list(kd)))
 
 
+@view.add('disagg')
+def view_disagg(token, dstore):
+    """
+    Example: $ oq show disagg Mag
+    Returns a table poe, imt, mag, contribution for the first site
+    """
+    kind = token.split(':')[1]
+    assert kind in ('Mag', 'Dist', 'TRT'), kind
+    site_id = 0
+    if 'disagg-stats' in dstore:
+        data = dstore['disagg-stats/' + kind][site_id, ..., 0]  # (:, M, P)
+    else:
+        data = dstore['disagg-rlzs/' + kind][site_id, ..., 0]  # (:, M, P)
+    Ma, M, P = data.shape
+    oq = dstore['oqparam']
+    imts = list(oq.imtls)
+    dtlist = [('poe', float), ('imt', (numpy.string_, 10)),
+              (kind.lower() + 'bin', int), ('prob', float)]
+    lst = []
+    for p, m, ma in itertools.product(range(P), range(M), range(Ma)):
+        lst.append((oq.poes[p], imts[m], ma, data[ma, m, p]))
+    return numpy.array(lst, dtlist)
+
+
 @view.add('bad_ruptures')
 def view_bad_ruptures(token, dstore):
     """
@@ -1100,7 +1125,7 @@ def view_gsim_for_event(token, dstore):
     full_lt = dstore['full_lt']
     rup_id, rlz_id = dstore['events'][eid][['rup_id', 'rlz_id']]
     trt_smr = dstore['ruptures'][rup_id]['trt_smr']
-    trti = trt_smr // len(full_lt.sm_rlzs)
+    trti = trt_smr // 2**24
     gsim = full_lt.get_realizations()[rlz_id].gsim_rlz.value[trti]
     return gsim
 
@@ -1196,10 +1221,9 @@ def view_composite_source_model(token, dstore):
     Show the structure of the CompositeSourceModel in terms of grp_id
     """
     lst = []
-    n = len(dstore['full_lt'].sm_rlzs)
     trt_smrs = dstore['trt_smrs'][:]
     for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
-        trts, sm_rlzs = numpy.divmod(trt_smrs[grp_id], n)
+        trts, sm_rlzs = numpy.divmod(trt_smrs[grp_id], 2**24)
         lst.append((str(grp_id), to_str(trts), to_str(sm_rlzs), len(df)))
     return numpy.array(lst, dt('grp_id trt smrs num_sources'))
 
@@ -1252,7 +1276,7 @@ def view_branchsets(token, dstore):
     Show the branchsets in the logic tree
     """
     flt = dstore['full_lt']
-    clt = logictree.compose(flt.gsim_lt, flt.source_model_lt)
+    clt = logictree.compose(flt.source_model_lt, flt.gsim_lt)
     return text_table(enumerate(map(repr, clt.branchsets)),
                       header=['bsno', 'bset'], ext='org')
 
@@ -1276,7 +1300,7 @@ def view_event_rates(token, dstore):
     Show the number of events per realization multiplied by risk_time/eff_time
     """
     oq = dstore['oqparam']
-    R = dstore['full_lt'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_paths()
     if oq.calculation_mode != 'event_based_damage':
         return numpy.ones(R)
     time_ratio = (oq.risk_investigation_time or oq.investigation_time) / (

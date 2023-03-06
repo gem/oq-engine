@@ -36,6 +36,7 @@ from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
     HttpResponseForbidden)
+from django.core.mail import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
@@ -56,6 +57,7 @@ from openquake.server import utils
 
 from django.conf import settings
 from django.http import FileResponse
+from django.urls import reverse
 from wsgiref.util import FileWrapper
 
 if settings.LOCKDOWN:
@@ -544,11 +546,11 @@ def calc_run(request):
     user = utils.get_user(request)
     try:
         job_id = submit_job(request.FILES, ini, user, hazard_job_id)
-    except Exception as exc:  # no job created, for instance missing .xml file
+    except Exception as exc:  # job failed, for instance missing .xml file
         # get the exception message
         exc_msg = traceback.format_exc() + str(exc)
         logging.error(exc_msg)
-        response_data = exc_msg.splitlines()
+        response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
         status = 500
     else:
         response_data = dict(status='created', job_id=job_id)
@@ -557,12 +559,21 @@ def calc_run(request):
                         status=status)
 
 
-def aelo_callback(job_id, exc=None):
-    # TODO: replace this with something better
+def aelo_callback(job_id, job_owner_email, outputs_uri, inputs, exc=None):
+    if not job_owner_email:
+        return
+    from_email = 'aelonoreply@openquake.org'
+    to = [job_owner_email]
+    reply_to = 'aelosupport@openquake.org'
+    body = (f"Input values: lon = {inputs['lon']}, lat = {inputs['lat']},"
+            f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']}\n\n")
     if exc:
-        print('sending email with error %s' % exc)
+        subject = f'Job {job_id} failed'
+        body += f'There was an error running job {job_id}:\n{exc}'
     else:
-        print('sending dowload link for %d' % job_id)
+        subject = f'Job {job_id} finished correctly'
+        body += (f'Please find the results here:\n{outputs_uri}')
+    EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
 @csrf_exempt
@@ -586,17 +597,38 @@ def aelo_run(request):
         logging.error(exc_msg)
         response_data = exc_msg.splitlines()
         return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=500)
+                            content_type=JSON, status=400)
 
     # build a LogContext object associated to a database job
     [jobctx] = engine.create_jobs(
         [dict(calculation_mode='custom', description='AELO for ' + siteid)],
         config.distribution.log_level, None, utils.get_user(request), None)
-    response_data = dict(status='created', job_id=jobctx.calc_id)
+    job_id = jobctx.calc_id
+
+    outputs_uri = request.build_absolute_uri(
+        reverse('outputs', args=[job_id]))
+
+    traceback_uri = request.build_absolute_uri(
+        reverse('traceback', args=[job_id]))
+
+    response_data = dict(
+        status='created', job_id=job_id, outputs_uri=outputs_uri,
+        traceback_uri=traceback_uri)
+
+    job_owner_email = request.user.email
+    if not job_owner_email:
+        response_data['WARNING'] = (
+            'No email address is speficied for your user account,'
+            ' therefore email notifications will be disabled. As soon as'
+            ' the job completes, you can access its outputs at the following'
+            ' link: %s. If the job fails, the error traceback will be'
+            ' accessible at the following link: %s'
+            % (outputs_uri, traceback_uri))
 
     # spawn the AELO main process
-    mp.Process(target=aelo.main, args=(lon, lat, vs30, siteid, jobctx,
-                                       aelo_callback)).start()
+    mp.Process(target=aelo.main, args=(
+        lon, lat, vs30, siteid, job_owner_email, outputs_uri, jobctx,
+        aelo_callback)).start()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
 
@@ -627,12 +659,13 @@ def submit_job(request_files, ini, username, hc_id):
                        description=oq.description, hazard_calculation_id=hc_id)
             logs.dbcmd('update_job', job.calc_id, dic)
             jobs = [job]
-    except Exception:
+    except Exception as exc:
         tb = traceback.format_exc()
         logs.dbcmd('log', job.calc_id, datetime.utcnow(), 'CRITICAL',
                    'before starting', tb)
         logs.dbcmd('finish', job.calc_id, 'failed')
-        raise
+        exc.job_id = job.calc_id
+        raise exc
 
     custom_tmp = os.path.dirname(job_ini)
     submit_cmd = config.distribution.submit_cmd.split()
@@ -866,7 +899,9 @@ def calc_datastore(request, job_id):
 
 
 def web_engine(request, **kwargs):
-    return render(request, "engine/index.html", {})
+    return render(
+        request, "engine/index.html", {
+            'aelo_mode': settings.APPLICATION_MODE.upper() == 'AELO'})
 
 
 @cross_domain_ajax

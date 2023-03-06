@@ -1,3 +1,34 @@
+  [Michele Simionato]
+  * Added command `oq runpsha <lon> <lat>` for mosaic PSHA calculations
+  * Enhanced --reuse-input to reuse preclassical calculations if possible
+  * Normalized IMTs in the `minimum_intensity` dictionary (i.e. SA(1.)=>SA(1.0))
+  * Fixed event based calculations running out of memory due to hazard curve
+    arrays being instantiated without need
+
+  [Julián Santiago Montejo Espitia]
+  * Contributed the GMPE Arteta et al. (2023) for crustal events on northern
+    South America
+
+  [Michele Simionato]
+  * Setting both `sites` and `site_model_file` now works also for models
+    with nonstandard site parameters, like EUR
+
+  [Paolo Tormene]
+  * Added AELO mode for the engine webui, providing a web form to insert input
+    values and launch a calculation. Input values are validated and the
+    progress of the calculation can be monitored through the webui. On
+    completion, the server sends an email to the job owner, providing feedback
+    about failure or completion, with a link to retrieve a traceback or to
+    browse the calculation outputs. Corresponding tests were added and the
+    existing tests for the webui were improved, cleaning up calculations after
+    they have been checked.
+
+  [Michele Simionato]
+  * Changed the default: now all realizations are consider in disaggregation
+    calculations, not only the one closest to the mean hazard curve
+  * Added feature `infer_occur_rates` for multiFault sources
+  * Sampling the ruptures was raising a BlockingIOError sometimes
+
   [Kendra Johnson]
   * Made it possible to use extendModel for multiple branchSets in the
     source model logic tree

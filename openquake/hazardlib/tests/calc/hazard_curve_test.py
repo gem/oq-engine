@@ -288,6 +288,7 @@ class NewApiTestCase(unittest.TestCase):
         assert len(imtls) == 13  # 13 periods
         oq = unittest.mock.Mock(
             imtls=DictArray(imtls),
+            investigation_time=1.0,
             maximum_distance=IntegrationDistance.new('300'))
         mon = Monitor()
         hcurve = calc_hazard_curve(

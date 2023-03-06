@@ -70,7 +70,7 @@ rupture_dt = numpy.dtype([
     ('id', U32),
     ('seed', U32),
     ('source_id', '<S16'),
-    ('trt_smr', U16),
+    ('trt_smr', U32),
     ('code', U8),
     ('n_occ', U32),
     ('mag', F32),
@@ -843,7 +843,8 @@ def get_ruptures(fname_csv):
         rec['mag'] = row['mag']
         rec['hypo'] = hypo
         rate = dic.get('occurrence_rate', numpy.nan)
-        tup = (u, row['seed'], 'no-source', aw.trts.index(row['trt']),
+        trt_smr = aw.trts.index(row['trt']) * 2**24
+        tup = (u, row['seed'], 'no-source', trt_smr,
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, 0)
         rups.append(tup)

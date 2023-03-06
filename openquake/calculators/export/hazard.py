@@ -178,7 +178,7 @@ def export_hcurves_csv(ekey, dstore):
     """
     oq = dstore['oqparam']
     info = get_info(dstore)
-    R = dstore['full_lt'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_paths()
     sitecol = dstore['sitecol']
     sitemesh = get_sites(sitecol)
     key, kind, fmt = get_kkf(ekey)
@@ -222,10 +222,10 @@ def export_hcurves_csv(ekey, dstore):
 UHS = collections.namedtuple('UHS', 'imls location')
 
 
-def get_metadata(realizations, kind):
+def get_metadata(rlzs, kind):
     """
-    :param list realizations:
-        realization objects
+    :param rlzs:
+        realization array with field 'branch_path'
     :param str kind:
         kind of data, i.e. a key in the datastore
     :returns:
@@ -233,9 +233,9 @@ def get_metadata(realizations, kind):
     """
     metadata = {}
     if kind.startswith('rlz-'):
-        rlz = realizations[int(kind[4:])]
-        metadata['smlt_path'] = '_'.join(rlz.sm_lt_path)
-        metadata['gsimlt_path'] = rlz.gsim_rlz.pid
+        smlt_path, gslt_path = rlzs[int(kind[4:])]['branch_path'].split('~')
+        metadata['smlt_path'] = smlt_path
+        metadata['gsimlt_path'] = gslt_path
     elif kind.startswith('quantile-'):
         metadata['statistics'] = 'quantile'
         metadata['quantile_value'] = float(kind[9:])
@@ -252,7 +252,7 @@ def get_metadata(realizations, kind):
 @deprecated(msg='Use the CSV exporter instead')
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
-    rlzs = dstore['full_lt'].get_realizations()
+    rlzs = dstore['full_lt'].rlzs
     R = len(rlzs)
     sitemesh = get_sites(dstore['sitecol'].complete)
     key, kind, fmt = get_kkf(ekey)
@@ -609,7 +609,8 @@ def export_disagg_csv(ekey, dstore):
                 com = {key: value for key, value in metadata.items()
                        if value is not None and key not in skip_keys}
                 com.update(metadata)
-                fname = dstore.export_path('%s%s-%d.csv' % (k, trad, s))
+                stat = '-mean' if name == 'disagg-stats' else ''
+                fname = dstore.export_path('%s%s%s-%d.csv' % (k, stat, trad, s))
                 writers.write_csv(fname, values, header=header,
                                   comment=com, fmt='%.5E')
                 fnames.append(fname)

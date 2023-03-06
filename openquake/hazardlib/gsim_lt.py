@@ -70,6 +70,12 @@ class ImtWeight(object):
     """
     A composite weight by IMTs extracted from the gsim_logic_tree_file
     """
+    @classmethod
+    def new(cls, weight):
+        self = object.__new__(cls)
+        self.dic = {'weight': weight}
+        return self
+
     def __init__(self, branch, fname):
         with context(fname, branch.uncertaintyWeight):
             nodes = list(branch.getnodes('uncertaintyWeight'))
@@ -459,7 +465,7 @@ class GsimLogicTree(object):
             for brlist in brlists:  # there is branch list for each TRT
                 branch = brlist[i]
                 lt_path.append(branch.id)
-                lt_uid.append(branch.id if branch.effective else '@')
+                lt_uid.append(branch.id if branch.effective else '.')
                 weight *= branch.weight
                 value.append(branch.gsim)
             rlz = lt.Realization(tuple(value), weight, i, tuple(lt_uid))
@@ -514,7 +520,7 @@ class GsimLogicTree(object):
             value = []
             for trt, branch in zip(self.values, branches):
                 lt_path.append(branch.id)
-                lt_uid.append(branch.id if branch.effective else '@')
+                lt_uid.append(branch.id if branch.effective else '.')
                 weight *= branch.weight
                 value.append(branch.gsim)
             yield lt.Realization(tuple(value), weight, i, tuple(lt_uid))

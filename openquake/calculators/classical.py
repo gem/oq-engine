@@ -33,13 +33,12 @@ from openquake.baselib import (
     performance, parallel, hdf5, config, python3compat, workerpool as w)
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
-    get_nbytes_msg, agg_probs, pprod)
-from openquake.hazardlib.contexts import (
-    ContextMaker, read_cmakers, basename, get_maxsize)
+    get_nbytes_msg, pprod)
+from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import (
     ProbabilityMap, poes_dt, combine_probs)
-from openquake.commonlib import calc
+from openquake.commonlib import calc, readinput
 from openquake.calculators import base, getters, extract
 
 U16 = numpy.uint16
@@ -384,12 +383,11 @@ class Hazard:
         """
         Store data inside disagg_by_grp (optionally disagg_by_src)
         """
-        n = len(self.full_lt.sm_rlzs)
         lst = []
         for grp_id, indices in enumerate(self.datastore['trt_smrs']):
             dic = self.acc[grp_id]
             if dic:
-                trti, smrs = numpy.divmod(indices, n)
+                trti, smrs = numpy.divmod(indices, 2**24)
                 trt = self.full_lt.trts[trti[0]]
                 lst.append((trt, dic['avg_poe'], dic['nsites']))
         self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
@@ -450,7 +448,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pm.gidx = pnemap.gidx
         for i, g in enumerate(pnemap.gidx):
             if g in acc:
-                acc[g].update(pnemap, i)
+                acc[g].multiply_pnes(pnemap, i)
                 self.n_outs[g] -= 1
                 assert self.n_outs[g] > -1, (g, self.n_outs[g])
                 if self.n_outs[g] == 0:  # no other tasks for this g
@@ -468,10 +466,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
                   'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
-        gsims_by_trt = self.full_lt.get_gsims_by_trt()
-
-        for trt, gsims in gsims_by_trt.items():
-            cm = ContextMaker(trt, gsims, self.oqparam)
+        for cm in read_cmakers(self.datastore):
             params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
             params.update(cm.REQUIRES_DISTANCES)
         if self.few_sites:
@@ -522,18 +517,6 @@ class ClassicalCalculator(base.HazardCalculator):
     def init_poes(self):
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
-        if self.oqparam.hazard_calculation_id:
-            full_lt = self.datastore.parent['full_lt']
-            trt_smrs = self.datastore.parent['trt_smrs'][:]
-        else:
-            full_lt = self.csm.full_lt
-            trt_smrs = self.csm.get_trt_smrs()
-        self.grp_ids = numpy.arange(len(trt_smrs))
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
-        rlzs_by_g = []
-        for rlzs_by_gsim in rlzs_by_gsim_list:
-            for rlzs in rlzs_by_gsim.values():
-                rlzs_by_g.append(rlzs)
         self.datastore.create_df('_poes', poes_dt.items())
         self.datastore.create_dset('_poes/slice_by_sid', slice_dt)
         # NB: compressing the dataset causes a big slowdown in writing :-(
@@ -563,19 +546,19 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         if oq.hazard_calculation_id:
+            logging.info('Reading from parent calculation')
             parent = self.datastore.parent
+            self.full_lt = readinput.get_full_lt(parent['oqparam'])
+            self.csm = parent['_csm']
+            self.csm.init(self.full_lt)
+            self.datastore['source_info'] = parent['source_info'][:]
+            maxw = self.csm.get_max_weight(oq)
+            oq.mags_by_trt = {
+                trt: python3compat.decode(dset[:])
+                for trt, dset in parent['source_mags'].items()}
             if '_poes' in parent:
                 self.build_curves_maps()  # repeat post-processing
                 return {}
-            else:  # after preclassical, like in case_36
-                logging.info('Reading from parent calculation')
-                self.csm = parent['_csm']
-                oq.mags_by_trt = {
-                    trt: python3compat.decode(dset[:])
-                    for trt, dset in parent['source_mags'].items()}
-                self.full_lt = parent['full_lt']
-                self.datastore['source_info'] = parent['source_info'][:]
-                maxw = self.csm.get_max_weight(oq)
         else:
             maxw = self.max_weight
         self.init_poes()
@@ -658,21 +641,21 @@ class ClassicalCalculator(base.HazardCalculator):
             if ntiles > 1:
                 logging.debug('Producing %d inner tiles', ntiles)
 
-            if sg.atomic or sg.weight <= maxw:
+            if oq.disagg_by_src:  # possible only with a single tile
+                if sg.src_interdep == 'mutex':
+                    raise RuntimeError(
+                        'You cannot use disagg_by_src with mutex sources')
+                blks = groupby(sg, basename).values()
+            elif sg.atomic or sg.weight <= maxw:
+                blks = [sg]
+            else:
+                blks = block_splitter(sg, maxw, get_weight, sort=True)
+            for block in blks:
+                logging.debug('Sending %d source(s) with weight %d',
+                              len(block), sg.weight)
                 for g in cm.gidx:
                     self.n_outs[g] += cm.ntiles
-                allargs.append((sg, sitecol, cm))
-            else:
-                if oq.disagg_by_src:  # possible only with a single tile
-                    blks = groupby(sg, basename).values()
-                else:
-                    blks = block_splitter(sg, maxw, get_weight, sort=True)
-                for block in blks:
-                    logging.debug('Sending %d source(s) with weight %d',
-                                  len(block), sg.weight)
-                    for g in cm.gidx:
-                        self.n_outs[g] += cm.ntiles
-                    allargs.append((block, sitecol, cm))
+                allargs.append((block, sitecol, cm))
 
             # allocate memory
             for g in cm.gidx:
@@ -732,6 +715,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Check for slow tasks and fix disagg_by_src if needed
         """
+        oq = self.oqparam
         task_info = self.datastore.read_df('task_info', 'taskname')
         try:
             dur = task_info.loc[b'classical'].duration
@@ -740,8 +724,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             slow_tasks = len(dur[dur > 3 * dur.mean()]) and dur.max() > 180
             msg = 'There were %d slow task(s)' % slow_tasks
-            if (slow_tasks and self.SLOW_TASK_ERROR and
-                    not self.oqparam.disagg_by_src):
+            if slow_tasks and self.SLOW_TASK_ERROR and not oq.disagg_by_src:
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
             elif slow_tasks:
                 logging.info(msg)
@@ -753,13 +736,18 @@ class ClassicalCalculator(base.HazardCalculator):
                 arr = self.disagg_by_src = self.datastore['disagg_by_src'][:]
                 arr, srcids = semicolon_aggregate(arr, srcids)
                 self.datastore['disagg_by_src'][:] = arr
-                R = 1 if self.oqparam.collect_rlzs else self.R
+                R = 1 if oq.collect_rlzs else self.R
                 self.datastore.set_shape_descr(
                     'disagg_by_src', site_id=self.N, rlz_id=R,
-                    imt=list(self.oqparam.imtls), lvl=self.L1, src_id=srcids)
-        if 'disagg_by_src' in self.datastore and not self.oqparam.collect_rlzs:
+                    imt=list(oq.imtls), lvl=self.L1, src_id=srcids)
+        if 'disagg_by_src' in self.datastore and not oq.collect_rlzs:
             logging.info('Comparing disagg_by_src vs mean curves')
             check_disagg_by_src(self.datastore)
+        if 'disagg_by_src' in self.datastore and self.N == 1 and len(oq.poes):
+            rel_ids = get_rel_source_ids(
+                self.datastore, oq.imtls, oq.poes, threshold=.1)
+            logging.info('There are %d relevant sources: %s', len(rel_ids),
+                         rel_ids)
 
     def _create_hcurves_maps(self):
         oq = self.oqparam
@@ -850,7 +838,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('There are %d slices of poes [%.1f per task]',
                      nslices, nslices / len(slicedic))
         allargs = [
-            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes, ct),
+            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in allslices]
         self.hazard = {}  # kind -> array
@@ -901,3 +889,21 @@ class ClassicalCalculator(base.HazardCalculator):
             smap = parallel.Starmap(make_hmap_png, allargs)
             for dic in smap:
                 self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
+
+# ######################### postprocessing ################################### #
+
+
+def get_rel_source_ids(dstore, imts, poes, threshold=.1):
+    """
+    :returns: sorted list of relevant source IDs
+    """
+    source_ids = set()
+    for im in imts:
+        for poe in poes:
+            aw = extract.extract(dstore, f'disagg_by_src?imt={im}&poe={poe}')
+            poe_array = aw.array['poe']  # for each source in decreasing order
+            max_poe = poe_array[0]
+            rel = aw.array[poe_array > threshold * max_poe]
+            source_ids.update(rel['src_id'])
+    return python3compat.decode(sorted(source_ids))
+

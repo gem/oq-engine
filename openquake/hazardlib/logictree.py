@@ -38,23 +38,21 @@ import operator
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.node import node_from_elem, context
+from openquake.baselib.node import node_from_elem, context, Node
 from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
-    GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
+    GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths, ImtWeight)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
     dummy_branchset, LogicTreeError, parse_uncertainty, random)
-
-TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
-ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
 
 U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
+TWO24 = 2 ** 24
 
 rlz_dt = numpy.dtype([
     ('ordinal', U32),
@@ -79,6 +77,24 @@ src_group_dt = numpy.dtype(
 
 branch_dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
              ('utype', hdf5.vstr), ('uvalue', hdf5.vstr), ('weight', float)]
+
+TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
+ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
+
+# this is very fast
+def get_trt_by_src(source_model_file):
+    """
+    :returns: a dictionary source ID -> tectonic region type of the source
+    """
+    xml = source_model_file.read().replace("'", '"')  # fix single quotes
+    pieces = TRT_REGEX.split(xml)
+    nrml05 = re.search('<sourceGroup', pieces[0])
+    start = 2 if nrml05 else 0  # trt before (start=2) or after src_id (start=0)
+    trt_by_src = {}
+    for text, trt in zip(pieces[start::2], pieces[1::2]):
+        for src_id in ID_REGEX.findall(text):
+            trt_by_src[src_id] = trt
+    return trt_by_src
 
 
 def prod(iterator):
@@ -110,16 +126,35 @@ def get_effective_rlzs(rlzs):
     """
     Group together realizations with the same path
     and yield the first representative of each group.
+
+    :param rlzs: a list of Realization instances with a .pid property
     """
     effective = []
     ordinal = 0
     for group in groupby(rlzs, operator.attrgetter('pid')).values():
         rlz = group[0]
-        if all(path == '@' for path in rlz.lt_path):  # empty realization
-            continue
         effective.append(
             Realization(rlz.value, sum(r.weight for r in group),
                         ordinal, rlz.lt_path, len(group)))
+        ordinal += 1
+    return effective
+
+
+def get_eff_rlzs(sm_rlzs, gsim_rlzs):
+    """
+    Group together realizations with the same path
+    and yield the first representative of each group
+    """
+    triples = []  # pid, sm_rlz, gsim_rlz
+    for sm_rlz, gsim_rlz in zip(sm_rlzs, gsim_rlzs):
+        triples.append((sm_rlz.pid + '~' + gsim_rlz.pid, sm_rlz, gsim_rlz))
+    ordinal = 0
+    effective = []
+    for rows in groupby(triples, operator.itemgetter(0)).values():
+        pid, sm_rlz, gsim_rlz = rows[0]
+        weight = ImtWeight.new(len(rows) / len(triples))
+        effective.append(
+            LtRealization(ordinal, sm_rlz.lt_path, gsim_rlz, weight))
         ordinal += 1
     return effective
 
@@ -302,7 +337,9 @@ class SourceModelLogicTree(object):
                           branch_dt)
         dic = dict(filename='fake.xml', seed=0, num_samples=0,
                    sampling_method='early_weights', num_paths=1,
-                   source_ids="{}", is_source_specific=0,
+                   sms_by_src=AccumDict(accum=[]), trt_by_src={},
+                   srcs_by_path=AccumDict(accum=[]), is_source_specific=0,
+                   tectonic_region_types=set(),
                    bsetdict='{"bs0": {"uncertaintyType": "sourceModel"}}')
         self.__fromh5__(arr, dic)
         return self
@@ -332,7 +369,12 @@ class SourceModelLogicTree(object):
         self.shortener = {}
         self.branchsets = []
         self.parse_tree(tree)
+        self.set_num_paths()
 
+    def set_num_paths(self):
+        """
+        Count the total number of paths in a smart way
+        """
         # determine if the logic tree is source specific
         dicts = list(self.bsetdict.values())[1:]
         if not dicts:
@@ -361,20 +403,70 @@ class SourceModelLogicTree(object):
         else:  # slow algorithm
             self.num_paths = count_paths(self.root_branchset.branches)
 
+    def reduce(self, source_id):
+        """
+        :returns: a new logic tree reduced to a single source
+        """
+        new = copy.deepcopy(self)
+        new.source_id = source_id
+        oksms = new.sms_by_src[source_id]
+        new.sms_by_src = {source_id: oksms}
+        new.trt_by_src = {source_id: new.trt_by_src[source_id]}
+        new.srcs_by_path = {  # relative paths
+            path: [source_id] for path, srcs in new.srcs_by_path.items()
+            if source_id in srcs}
+        new.tectonic_region_types = {new.trt_by_src[source_id]}
+        for bset, dic in zip(new.branchsets, new.bsetdict.values()):
+            if bset.uncertainty_type in ('sourceModel', 'extendModel'):
+                same = []  # branches with the source, all same contribution
+                zero = []  # branches without the source, all zeros
+                for br in bset.branches:
+                    if br.branch_id in oksms:
+                        same.append(br)
+                    else:
+                        zero.append(br)
+                newbranches = []
+                if same:
+                    b1 = same[0]
+                    b1.value =  ' '.join(p for p in b1.value.split()
+                                         if p in self.srcs_by_path)
+                    for br in same[1:]:
+                        b1.weight += br.weight
+                    newbranches.append(b1)
+                if zero:
+                    b0 = zero[0]
+                    b0.value = ''
+                    for br in zero[1:]:
+                        b0.weight += br.weight
+                    newbranches.append(b0)
+                bset.branches = newbranches
+            ats = dic.get('applyToSources')
+            if ats and source_id not in ats:
+                bset.collapse()
+                del dic['applyToSources']
+        new.num_paths = count_paths(self.root_branchset.branches)
+        return new
+
     def parse_tree(self, tree_node):
         """
         Parse the whole tree and point ``root_branchset`` attribute
         to the tree's root.
         """
         self.info = collect_info(self.filename, self.branchID)
-        self.source_ids = collections.defaultdict(list)  # src_id->branchIDs
+
+        # the following dicts are populated in collect_source_model_data
+        self.srcs_by_path = collections.defaultdict(list)
+        self.sms_by_src = collections.defaultdict(list)
+        self.trt_by_src = {}
+
         t0 = time.time()
         for depth, blnode in enumerate(tree_node.nodes):
             [bsnode] = bsnodes(self.filename, blnode)
             self.parse_branchset(bsnode, depth)
         dt = time.time() - t0
         bname = os.path.basename(self.filename)
-        logging.info('Validated %s in %.2f seconds', bname, dt)
+        logging.info('Validated %s (with %d files) in %.2f seconds', bname,
+                     len(self.srcs_by_path), dt)
 
     def parse_branchset(self, branchset_node, depth):
         """
@@ -595,7 +687,7 @@ class SourceModelLogicTree(object):
 
         if 'applyToSources' in f:
             for source_id in f['applyToSources'].split():
-                branchIDs = self.source_ids[source_id]
+                branchIDs = self.sms_by_src[source_id]
                 if not branchIDs:
                     raise LogicTreeError(
                         branchset_node, self.filename,
@@ -674,20 +766,17 @@ class SourceModelLogicTree(object):
         information is used then for :meth:`validate_filters` and
         :meth:`validate_uncertainty_value`.
         """
-        # using regular expressions is a lot faster than parsing
         with self._get_source_model(source_model) as sm:
-            xml = sm.read()
-        self.tectonic_region_types.update(TRT_REGEX.findall(xml))
-        for src_id in ID_REGEX.findall(xml):
-            self.source_ids[src_id].append(branch_id)
-
-    def collapse(self, branchset_ids):
-        """
-        Set the attribute .collapsed on the given branchsets
-        """
-        for bsid, bset in self.bsetdict.items():
-            if bsid in branchset_ids:
-                bset.collapsed = True
+            trt_by_src = get_trt_by_src(sm)
+        if self.basepath:
+            path = sm.name[len(self.basepath) + 1:]
+        else:
+            path = sm.name
+        for src_id, trt in trt_by_src.items():
+            self.srcs_by_path[path].append(src_id)
+            self.sms_by_src[src_id].append(branch_id)
+            self.trt_by_src[src_id] = trt
+            self.tectonic_region_types.add(trt)
 
     def bset_values(self, lt_path):
         """
@@ -720,6 +809,24 @@ class SourceModelLogicTree(object):
             out[src_id] = SourceLogicTree(
                 src_id, bsets[src_id], bsetdict[src_id])
         return out
+
+    def to_node(self):
+        """
+        :returns: a logicTree Node convertible into NRML format
+        """
+        bsnodes = []
+        for bset in self.branchsets:
+            dic = dict(branchSetID='bs%02d' % bset.ordinal,
+                       uncertaintyType=bset.uncertainty_type)
+            brnodes = []
+            for br in bset.branches:
+                um = Node('uncertaintyModel', {}, br.value)
+                uw = Node('uncertaintyWeight', {}, br.weight)
+                brnode = Node('logicTreeBranch', {'branchID': br.branch_id},
+                              nodes=[um, uw])
+                brnodes.append(brnode)
+            bsnodes.append(Node('logicTreeBranchSet', dic, nodes=brnodes))
+        return Node('logicTree', {'logicTreeID': 'lt'}, nodes=bsnodes)
 
     # SourceModelLogicTree
     def __toh5__(self):
@@ -840,6 +947,8 @@ class FullLogicTree(object):
     :param source_model_lt: :class:`SourceModelLogicTree` object
     :param gsim_lt: :class:`GsimLogicTree` object
     """
+    oversampling = 'tolerate'
+
     @classmethod
     def fake(cls, gsimlt=None):
         """
@@ -856,9 +965,10 @@ class FullLogicTree(object):
         self.sm_rlzs = [fakeSM]
         return self
 
-    def __init__(self, source_model_lt, gsim_lt):
+    def __init__(self, source_model_lt, gsim_lt, oversampling='tolerate'):
         self.source_model_lt = source_model_lt
         self.gsim_lt = gsim_lt
+        self.oversampling = oversampling
         self.init()  # set .sm_rlzs and .trts
 
     def init(self):
@@ -872,6 +982,7 @@ class FullLogicTree(object):
             for sm_rlz in self.source_model_lt:
                 sm_rlz.samples = samples
                 self.sm_rlzs.append(sm_rlz)
+        assert len(self.sm_rlzs) <= TWO24, len(self.sm_rlzs)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
         self.trts = list(self.gsim_lt.values)
 
@@ -888,7 +999,7 @@ class FullLogicTree(object):
         """
         if len(self.trts) == 1:
             return self.trts[0]
-        return self.trts[trt_smr // len(self.sm_rlzs)]
+        return self.trts[trt_smr // TWO24]
 
     @property
     def seed(self):
@@ -902,6 +1013,8 @@ class FullLogicTree(object):
         """
         :returns: the source_model_lt ``num_samples`` parameter
         """
+        if self.oversampling == 'reduce-rlzs':
+            return len(self.get_realizations())
         return self.source_model_lt.num_samples
 
     @property
@@ -915,7 +1028,7 @@ class FullLogicTree(object):
         """
         :returns: (trti, smr)
         """
-        return divmod(trt_smr, len(self.sm_rlzs))
+        return divmod(trt_smr, TWO24)
 
     def get_trt_smr(self, trt, smr):
         """
@@ -923,7 +1036,7 @@ class FullLogicTree(object):
         """
         if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
             return int(smr)
-        return self.trti[trt] * len(self.sm_rlzs) + int(smr)
+        return self.trti[trt] * TWO24 + int(smr)
 
     def get_trt_smrs(self, smr):
         """
@@ -931,8 +1044,7 @@ class FullLogicTree(object):
         :returns: array of T group IDs, being T the number of TRTs
         """
         nt = len(self.gsim_lt.values)
-        ns = len(self.sm_rlzs)
-        return smr + numpy.arange(nt) * ns
+        return smr + numpy.arange(nt) * TWO24
 
     def gsim_by_trt(self, rlz):
         """
@@ -953,22 +1065,27 @@ class FullLogicTree(object):
         :returns: the complete list of LtRealizations
         """
         rlzs = []
-        self._gsims_by_trt = AccumDict(accum=set())  # trt -> gsims
-        if self.num_samples:  # sampling
+        num_samples = self.source_model_lt.num_samples
+        if num_samples:  # sampling
             sm_rlzs = []
             for sm_rlz in self.sm_rlzs:
                 sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
-            gsim_rlzs = self.gsim_lt.sample(self.num_samples, self.seed + 1,
-                                            self.sampling_method)
-            for t, trt in enumerate(self.gsim_lt.values):
-                self._gsims_by_trt[trt].update(g.value[t] for g in gsim_rlzs)
-            for i, gsim_rlz in enumerate(gsim_rlzs):
-                rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
-                                    sm_rlzs[i].weight * gsim_rlz.weight)
-                rlzs.append(rlz)
+            gsim_rlzs = self.gsim_lt.sample(
+                num_samples, self.seed + 1, self.sampling_method)
+            if self.oversampling == 'reduce-rlzs':
+                eff_rlzs = get_eff_rlzs(sm_rlzs, gsim_rlzs)
+                rlzs.extend(eff_rlzs)
+            else:
+                for i, gsim_rlz in enumerate(gsim_rlzs):
+                    rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
+                                        sm_rlzs[i].weight * gsim_rlz.weight)
+                    rlzs.append(rlz)
+                if self.sampling_method.startswith('early_'):
+                    for rlz in rlzs:
+                        for k in rlz.weight.dic:
+                            rlz.weight.dic[k] = 1. / num_samples
         else:  # full enumeration
             gsim_rlzs = list(self.gsim_lt)
-            self._gsims_by_trt = self.gsim_lt.values
             i = 0
             for sm_rlz in self.sm_rlzs:
                 for gsim_rlz in gsim_rlzs:
@@ -976,87 +1093,45 @@ class FullLogicTree(object):
                                         sm_rlz.weight * gsim_rlz.weight)
                     rlzs.append(rlz)
                     i += 1
-        assert rlzs, 'No realizations found??'
-        if self.num_samples and self.sampling_method.startswith('early_'):
-            assert len(rlzs) == self.num_samples, (len(rlzs), self.num_samples)
+        # rescale the weights if not one, see case_52
+        tot_weight = sum(rlz.weight for rlz in rlzs)
+        if not tot_weight.is_one():
             for rlz in rlzs:
-                for k in rlz.weight.dic:
-                    rlz.weight.dic[k] = 1. / self.num_samples
-        else:  # keep the weights
-            tot_weight = sum(rlz.weight for rlz in rlzs)
-            if not tot_weight.is_one():
-                # this may happen for rounding errors; we ensure the sum of
-                # the weights is 1
-                for rlz in rlzs:
-                    rlz.weight = rlz.weight / tot_weight
+                rlz.weight = rlz.weight / tot_weight
+        assert rlzs, 'No realizations found??'
         return rlzs
 
-    def get_rlzs_by_smr(self):
-        """
-        :returns: a dict smr -> rlzs
-        """
-        smltpath = operator.attrgetter('sm_lt_path')
-        smr_by_ltp = self.get_smr_by_ltp()
-        rlzs = self.get_realizations()
-        dic = {smr_by_ltp['~'.join(ltp)]: rlzs for ltp, rlzs in groupby(
-            rlzs, smltpath).items()}
-        return dic
-
-    def _rlzs_by_gsim(self, grp_id):
-        """
-        :returns: a dictionary gsim -> array of rlz indices
-        """
-        if not hasattr(self, '_rlzs_by_grp'):
+    def _rlzs_by_gsim(self, trt_smr):
+        if not hasattr(self, '_rlzs_by'):
             smr_by_ltp = self.get_smr_by_ltp()
             rlzs = self.get_realizations()
             acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
             for sm in self.sm_rlzs:
-                for gid in self.get_trt_smrs(sm.ordinal):
-                    trti, smr = divmod(gid, len(self.sm_rlzs))
+                for trtsmr in self.get_trt_smrs(sm.ordinal):
+                    trti, smr = divmod(trtsmr, TWO24)
                     for rlz in rlzs:
                         idx = smr_by_ltp['~'.join(rlz.sm_lt_path)]
                         if idx == smr:
-                            acc[gid][rlz.gsim_rlz.value[trti]].append(
+                            acc[trtsmr][rlz.gsim_rlz.value[trti]].append(
                                 rlz.ordinal)
-            self._rlzs_by_grp = {}
-            for gid, dic in acc.items():
-                self._rlzs_by_grp[gid] = {
+            self._rlzs_by = {}
+            for trtsmr, dic in acc.items():
+                self._rlzs_by[trtsmr] = {
                     gsim: U32(rlzs) for gsim, rlzs in sorted(dic.items())}
-        return self._rlzs_by_grp[grp_id]
+        return self._rlzs_by[trt_smr]
 
-    def get_rlzs_by_gsim(self):
+    def get_rlzs_by_gsim(self, trt_smr):
         """
-        :returns: a dictionary trt_smr -> gsim -> rlzs
+        :param trt_smr: index or array of indices
+        :returns: a dictionary gsim -> array of rlz indices
         """
-        dic = {}
-        for sm in self.sm_rlzs:
-            for trt_smr in self.get_trt_smrs(sm.ordinal):
-                dic[trt_smr] = self._rlzs_by_gsim(trt_smr)
-        return dic
-
-    def get_rlzs_by_grp(self):
-        """
-        :returns: a dictionary grp_id -> [rlzis, ...]
-        """
-        dic = {}
-        for sm in self.sm_rlzs:
-            for trt_smr in self.get_trt_smrs(sm.ordinal):
-                grp = 'grp-%02d' % trt_smr
-                dic[grp] = list(self._rlzs_by_gsim(trt_smr).values())
-        return {grp_id: dic[grp_id] for grp_id in sorted(dic)}
-
-    def get_rlzs_by_gsim_list(self, list_of_trt_smrs):
-        """
-        :returns: a list of dictionaries rlzs_by_gsim, one for each grp_id
-        """
-        out = []
-        for grp_id, trt_smrs in enumerate(list_of_trt_smrs):
+        if isinstance(trt_smr, (numpy.ndarray, list, tuple)):
             dic = AccumDict(accum=[])
-            for trt_smr in trt_smrs:
-                for gsim, rlzs in self._rlzs_by_gsim(trt_smr).items():
+            for t in trt_smr:
+                for gsim, rlzs in self._rlzs_by_gsim(t).items():
                     dic[gsim].extend(rlzs)
-            out.append(dic)
-        return out
+            return dic
+        return self._rlzs_by_gsim(trt_smr)
 
     # FullLogicTree
     def __toh5__(self):
@@ -1069,7 +1144,8 @@ class FullLogicTree(object):
             gsim_lt=self.gsim_lt,
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     trts=hdf5.array_of_vstr(self.gsim_lt.values)))
+                     trts=hdf5.array_of_vstr(self.gsim_lt.values),
+                     oversampling=self.oversampling))
 
     # FullLogicTree
     def __fromh5__(self, dic, attrs):
@@ -1084,17 +1160,6 @@ class FullLogicTree(object):
             sm = Realization(
                 rec['name'], rec['weight'], sm_id, path, rec['samples'])
             self.sm_rlzs.append(sm)
-
-    def get_num_rlzs(self, sm_rlz=None):
-        """
-        :param sm_rlz: a Realization instance (or None)
-        :returns: the number of realizations per source model (or all)
-        """
-        if sm_rlz is None:
-            return sum(self.get_num_rlzs(sm) for sm in self.sm_rlzs)
-        if self.num_samples:
-            return sm_rlz.samples
-        return self.gsim_lt.get_num_paths()
 
     def get_num_potential_paths(self):
         """
@@ -1116,14 +1181,6 @@ class FullLogicTree(object):
             tups.append((r.ordinal, path, r.weight['weight']))
         return numpy.array(tups, rlz_dt)
 
-    def get_gsims_by_trt(self):
-        """
-        :returns: a dictionary trt -> sorted gsims
-        """
-        if not hasattr(self, '_gsims_by_trt'):
-            self.get_realizations()
-        return {trt: sorted(gs) for trt, gs in self._gsims_by_trt.items()}
-
     def get_sm_by_grp(self):
         """
         :returns: a dictionary trt_smr -> sm_id
@@ -1135,10 +1192,8 @@ class FullLogicTree(object):
         info_by_model = {}
         for sm in self.sm_rlzs:
             info_by_model[sm.lt_path] = (
-                '~'.join(map(decode, sm.lt_path)),
-                decode(sm.value), sm.weight, self.get_num_rlzs(sm))
-        summary = ['%s, %s, weight=%s: %d realization(s)' % ibm
-                   for ibm in info_by_model.values()]
+                '~'.join(map(decode, sm.lt_path)), decode(sm.value), sm.weight)
+        summary = ['%s, %s, weight=%s' % ibm for ibm in info_by_model.values()]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(summary))
 
 

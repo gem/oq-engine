@@ -19,6 +19,7 @@ import os
 import logging
 import cProfile
 from openquake.baselib import general, performance, sap
+from openquake.hazardlib.contexts import get_cmakers
 from openquake.commonlib import readinput, datastore
 from openquake.calculators.views import text_table
 
@@ -52,7 +53,7 @@ def main(job_ini):
         csm = readinput.get_composite_source_model(oq, h5)
         sitecol = readinput.get_site_collection(oq)
         logging.info(sitecol)
-        cmakers = csm._get_cmakers(oq)
+        cmakers = get_cmakers(csm.src_groups, csm.full_lt, oq)
         logging.info('Storing performance info in %s', pstat)
         prof.runctx('build_ctxs(cmakers, csm.src_groups, sitecol)',
                     globals(), locals())

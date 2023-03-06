@@ -28,8 +28,8 @@ import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, tom
-from openquake.hazardlib.contexts import ContextMaker, basename
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
@@ -173,7 +173,8 @@ def get_csm(oq, full_lt, h5=None):
         discard_trts=[s.strip() for s in oq.discard_trts.split(',')],
         floating_x_step=oq.floating_x_step,
         floating_y_step=oq.floating_y_step,
-        source_nodes=oq.source_nodes)
+        source_nodes=oq.source_nodes,
+        infer_occur_rates=oq.infer_occur_rates)
     full_lt.ses_seed = oq.ses_seed
     logging.info('Reading the source model(s) in parallel')
 
@@ -272,16 +273,15 @@ def _build_groups(full_lt, smdict):
         src_groups, source_ids = _groups_ids(
             smlt_dir, smdict, rlz.value[0].split())
         bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
-        if bset_values and bset_values[0][0].uncertainty_type == 'extendModel':
-            while len(bset_values):
-                (bset, value), *bset_values = bset_values
-                extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
-                common = source_ids & extra_ids
-                if common:
-                    raise InvalidFile(
-                        '%s contains source(s) %s already present in %s' %
-                        (value, common, rlz.value))
-                src_groups.extend(extra)
+        while bset_values and bset_values[0][0].uncertainty_type == 'extendModel':
+            (bset, value), *bset_values = bset_values
+            extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
+            common = source_ids & extra_ids
+            if common:
+                raise InvalidFile(
+                    '%s contains source(s) %s already present in %s' %
+                    (value, common, rlz.value))
+            src_groups.extend(extra)
         for src_group in src_groups:
             trt_smr = full_lt.get_trt_smr(src_group.trt, rlz.ordinal)
             sg = apply_uncertainties(bset_values, src_group)
@@ -381,38 +381,24 @@ class CompositeSourceModel:
         a flag True for event based calculations, flag otherwise
     """
     def __init__(self, full_lt, src_groups):
+        self.src_groups = src_groups
+        self.init(full_lt)
+
+    def init(self, full_lt):
+        self.full_lt = full_lt
         self.gsim_lt = full_lt.gsim_lt
         self.source_model_lt = full_lt.source_model_lt
         self.sm_rlzs = full_lt.sm_rlzs
-        self.full_lt = full_lt
-        self.src_groups = src_groups
+
+        # initialize the code dictionary
         self.code = {}  # srcid -> code
-        for grp_id, sg in enumerate(src_groups):
+        for grp_id, sg in enumerate(self.src_groups):
             assert len(sg)  # sanity check
             for src in sg:
                 src.grp_id = grp_id
                 if src.code != b'P':
                     source_id = basename(src)
                     self.code[source_id] = src.code
-
-    # used for debugging; assume PoissonTOM; use read_cmakers instead
-    def _get_cmakers(self, oq):
-        cmakers = []
-        trt_smrs = self.get_trt_smrs()
-        rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
-        trts = list(self.full_lt.gsim_lt.values)
-        num_eff_rlzs = len(self.full_lt.sm_rlzs)
-        start = 0
-        for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
-            trti = trt_smrs[grp_id][0] // num_eff_rlzs
-            cmaker = ContextMaker(trts[trti], rlzs_by_gsim, oq)
-            cmaker.tom = tom.PoissonTOM(oq.investigation_time)
-            cmaker.trti = trti
-            cmaker.gidx = numpy.arange(start, start + len(rlzs_by_gsim))
-            cmaker.grp_id = grp_id
-            start += len(rlzs_by_gsim)
-            cmakers.append(cmaker)
-        return cmakers
 
     def get_trt_smrs(self):
         """
@@ -437,21 +423,6 @@ class CompositeSourceModel:
             elif atomic == src_group.atomic:
                 srcs.extend(src_group)
         return srcs
-
-    # used only in calc_by_rlz.py
-    def get_groups(self, smr):
-        """
-        :param smr: effective source model realization ID
-        :returns: SourceGroups associated to the given `smr`
-        """
-        src_groups = []
-        for sg in self.src_groups:
-            trt_smr = self.full_lt.get_trt_smr(sg.trt, smr)
-            src_group = copy.copy(sg)
-            src_group.sources = [src for src in sg if trt_smr in src.trt_smrs]
-            if len(src_group):
-                src_groups.append(src_group)
-        return src_groups
 
     def get_mags_by_trt(self):
         """

@@ -21,7 +21,6 @@ import ast
 import csv
 import copy
 import zlib
-import pickle
 import shutil
 import zipfile
 import pathlib
@@ -542,6 +541,7 @@ def get_site_collection(oqparam, h5=None):
     ss = oqparam.sites_slice  # can be None or (start, stop)
     if h5 and 'sitecol' in h5 and not ss:
         return h5['sitecol']
+
     mesh = get_mesh(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
@@ -563,6 +563,8 @@ def get_site_collection(oqparam, h5=None):
               'exposure' not in oqparam.inputs):
             # tested in test_with_site_model
             sm = get_site_model(oqparam)
+            if len(sm) > len(mesh):  # the association will happen in base.py
+                sm = oqparam
         else:
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
@@ -574,6 +576,7 @@ def get_site_collection(oqparam, h5=None):
             sitecol.add_col('custom_site_id', 'S6', gh)
         mask = (sitecol.sids >= ss[0]) & (sitecol.sids < ss[1])
         sitecol = sitecol.filter(mask)
+        assert sitecol is not None, 'No sites in the slice %d:%d' % ss
         sitecol.make_complete()
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
@@ -588,13 +591,6 @@ def get_site_collection(oqparam, h5=None):
     if ('vs30' in sitecol.array.dtype.names and
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
-
-    # sanity check on the site parameters
-    for param in req_site_params:
-        dt = site.site_param_dt[param]
-        if dt is F64 and (sitecol.array[param] == 0.).all():
-            raise ValueError('The site parameter %s is always zero: please '
-                             'check the site model' % param)
     return sitecol
 
 
@@ -677,7 +673,10 @@ def get_source_model_lt(oqparam, branchID=None):
         a :class:`openquake.hazardlib.logictree.SourceModelLogicTree`
         instance
     """
-    return get_smlt(vars(oqparam), branchID)
+    smlt = get_smlt(vars(oqparam), branchID)
+    if len(oqparam.source_id) == 1:  # reduce to a single source
+        return smlt.reduce(oqparam.source_id[0])
+    return smlt
 
 
 def get_full_lt(oqparam, branchID=None):
@@ -701,12 +700,24 @@ def get_full_lt(oqparam, branchID=None):
             raise ValueError('Unknown TRT=%s in %s [reqv]' %
                              (trt, oqparam.inputs['job_ini']))
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
-    full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
+    if len(oqparam.source_id) == 1:
+        oversampling = 'reduce-rlzs'
+    else:
+        oversampling = oqparam.oversampling
+    full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
     if oqparam.number_of_logic_tree_samples:
-        logging.info('Considering {:_d} logic tree paths out of {:_d}'.format(
-            oqparam.number_of_logic_tree_samples, p))
+        if (oqparam.oversampling == 'forbid' and
+                oqparam.number_of_logic_tree_samples >= p
+                and 'event' not in oqparam.calculation_mode):
+            raise ValueError('Use full enumeration since there are only '
+                             '{:_d} realizations'.format(p))
+        unique = numpy.unique(full_lt.rlzs['branch_path'])
+        logging.info('Considering {:_d} logic tree paths out of {:_d}, unique'
+                     ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
+                                     len(unique)))
     else:  # full enumeration
+        logging.info('There are {:_d} logic tree paths(s)'.format(p))
         if oqparam.hazard_curves and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
@@ -718,12 +729,11 @@ def get_full_lt(oqparam, branchID=None):
             logging.warning(
                 'There are many potential logic tree paths (%d): '
                 'try to use sampling or reduce the source model' % p)
-        logging.info('Total number of logic tree paths = {:_d}'.format(p))
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
     dupl = []
-    for src_id, branchIDs in source_model_lt.source_ids.items():
-        if len(branchIDs) > 1:
+    for src_id, sms in source_model_lt.sms_by_src.items():
+        if len(sms) > 1:
             dupl.append(src_id)
     if dupl:
         logging.info('There are %d non-unique source IDs', len(dupl))
@@ -757,7 +767,7 @@ def _check_csm(csm, oqparam, h5):
     if csm.sitecol is None:  # missing sites.csv (test_case_1_ruptures)
         return
     srcfilter = SourceFilter(csm.sitecol, oqparam.maximum_distance)
-    logging.info('Checking the sources bounding box')
+    logging.info('Checking sources bounding box using %s', csm.sitecol)
     lons = []
     lats = []
     for src in srcs:
@@ -785,6 +795,17 @@ def _check_csm(csm, oqparam, h5):
             'the globe: %d degrees' % (bbox[2] - bbox[0]))
 
 
+# tested in test_mosaic
+def get_cache_path(oqparam, h5=None):
+    """
+    :returns: cache path of the form OQ_DATA/csm_<checksum>.hdf5
+    """
+    if oqparam.cachedir:
+        checksum = get_checksum32(oqparam, h5)
+        return os.path.join(oqparam.cachedir, 'csm_%d.hdf5' % checksum)
+    return ''
+
+
 def get_composite_source_model(oqparam, h5=None, branchID=None):
     """
     Parse the XML and build a complete composite source model in memory.
@@ -794,35 +815,16 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
     :param h5:
          an open hdf5.File where to store the source info
     """
-    # first read the logic tree
     full_lt = get_full_lt(oqparam, branchID)
-
-    # then read the composite source model from the cache if possible
-    if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
-        os.makedirs(oqparam.cachedir)
-    if oqparam.cachedir:
-        # for UCERF pickling the csm is slower
-        checksum = get_checksum32(oqparam, h5)
-        fname = os.path.join(oqparam.cachedir, 'csm_%s.pik' % checksum)
-        if os.path.exists(fname):
-            logging.info('Reading %s', fname)
-            with open(fname, 'rb') as f:
-                csm = pickle.load(f)
-                csm.full_lt = full_lt
-            _check_csm(csm, oqparam, h5)
-            return csm
-
-    # read and process the composite source model from the input files
-    csm = source_reader.get_csm(oqparam, full_lt, h5)
-    rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(csm.get_trt_smrs())
-    ngsims = sum(len(rbg) for rbg in rlzs_by_gsim_list)
-    logging.info('There are %d gsims in the CompositeSourceModel', ngsims)
-    if oqparam.cachedir:
-        logging.info('Saving %s', fname)
-        with open(fname, 'wb') as f:
-            pickle.dump(csm, f)
-
-    _check_csm(csm, oqparam, h5)
+    path = get_cache_path(oqparam, h5)
+    if os.path.exists(path):
+        from openquake.commonlib import datastore  # avoid circular import
+        with datastore.read(os.path.realpath(path)) as ds:
+            csm = ds['_csm']
+            csm.init(full_lt)
+    else:
+        csm = source_reader.get_csm(oqparam, full_lt, h5)
+        _check_csm(csm, oqparam, h5)
     return csm
 
 
@@ -903,24 +905,12 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
-        os.makedirs(oqparam.cachedir)
-    checksum = _checksum(oqparam.inputs['exposure'])
-    fname = os.path.join(oqparam.cachedir, 'exp_%s.pik' % checksum)
-    if os.path.exists(fname):
-        logging.info('Reading %s', fname)
-        with open(fname, 'rb') as f:
-            return pickle.load(f)
     exposure = Global.exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs,
         by_country='country' in asset.tagset(oqparam.aggregate_by),
         errors='ignore' if oqparam.ignore_encoding_errors else None)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
-    if oqparam.cachedir:
-        logging.info('Saving %s', fname)
-        with open(fname, 'wb') as f:
-            pickle.dump(exposure, f)
     return exposure
 
 
@@ -945,15 +935,16 @@ def get_station_data(oqparam):
 
         # Identify the columns with IM values
         # Replace replace() with removesuffix() for pandas ≥ 1.4
-        imt_candidates = sdata.filter(regex="_VALUE$").columns.str.replace("_VALUE", "")
+        imt_candidates = sdata.filter(regex="_VALUE$").columns.str.replace(
+            "_VALUE", "")
         imts = [valid.intensity_measure_type(imt) for imt in imt_candidates]
         im_cols = [imt + '_' + stat for imt in imts for stat in ["mean", "std"]]
         station_cols = ["STATION_ID", "LONGITUDE", "LATITUDE"]
         cols = []
-        for imt in imts:
+        for im in imts:
             stddev_str = "STDDEV" if imt == "MMI" else "LN_SIGMA"
-            cols.append(imt + '_VALUE')
-            cols.append(imt + '_' + stddev_str)
+            cols.append(im + '_VALUE')
+            cols.append(im + '_' + stddev_str)
         station_data = pandas.DataFrame(sdata[cols].values, columns=im_cols)
         station_sites = pandas.DataFrame(
             sdata[station_cols].values, columns=["station_id", "lon", "lat"]
@@ -1339,7 +1330,7 @@ def get_checksum32(oqparam, h5=None):
         if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
                    'width_of_mfd_bin', 'area_source_discretization',
                    'random_seed', 'number_of_logic_tree_samples',
-                   'minimum_magnitude', 'source_id',
+                   'minimum_magnitude', 'source_id', 'sites',
                    'floating_x_step', 'floating_y_step'):
             hazard_params.append('%s = %s' % (key, val))
     data = '\n'.join(hazard_params).encode('utf8')

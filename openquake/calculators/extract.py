@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.parse import parse_qs
-from unittest.mock import Mock
 from functools import lru_cache
 import operator
 import logging
@@ -36,10 +35,12 @@ from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib.gsim.base import ContextMaker, read_cmakers
+from openquake.hazardlib.gsim.base import (
+    ContextMaker, read_cmakers, read_ctx_by_grp)
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
+from openquake.hazardlib.probability_map import get_lvl
 from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
@@ -541,10 +542,12 @@ def extract_mean_by_rup(dstore, what):
     N = len(dstore['sitecol'])
     assert N == 1
     out = []
-    for cmaker in read_cmakers(dstore):
-        ctx = cmaker.read_ctxt(dstore)
+    ctx_by_grp = read_ctx_by_grp(dstore)
+    cmakers = read_cmakers(dstore)
+    for gid, ctx in ctx_by_grp.items():
         # shape (4, G, M, U) => U
-        means = cmaker.get_mean_stds([ctx])[0].mean(axis=(0, 1))
+        means = cmakers[gid].get_mean_stds([ctx], split_by_mag=True)[0].mean(
+            axis=(0, 1))
         out.extend(zip(ctx.src_id, ctx.rup_id, means))
     out.sort(key=operator.itemgetter(0, 1))
     return numpy.array(out, [('src_id', U32), ('rup_id', U32), ('mean', F64)])
@@ -863,16 +866,16 @@ def extract_aggregate(dstore, what):
 def extract_losses_by_asset(dstore, what):
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt(F32)
-    rlzs = dstore['full_lt'].get_realizations()
+    R = dstore['full_lt'].get_num_paths()
     stats = oq.hazard_stats()  # statname -> statfunc
     assets = util.get_assets(dstore)
     if 'losses_by_asset' in dstore:
         losses_by_asset = dstore['losses_by_asset'][()]
-        for rlz in rlzs:
+        for r in range(R):
             # I am exporting the 'mean' and ignoring the 'stddev'
-            losses = cast(losses_by_asset[:, rlz.ordinal]['mean'], loss_dt)
+            losses = cast(losses_by_asset[:, r]['mean'], loss_dt)
             data = util.compose_arrays(assets, losses)
-            yield 'rlz-%03d' % rlz.ordinal, data
+            yield 'rlz-%03d' % r, data
     elif 'avg_losses-stats' in dstore:
         # only QGIS is testing this
         avg_losses = avglosses(dstore, loss_dt.names, 'stats')  # shape ASL
@@ -985,15 +988,14 @@ def build_damage_array(data, damage_dt):
 def extract_damages_npz(dstore, what):
     oq = dstore['oqparam']
     damage_dt = build_damage_dt(dstore)
-    rlzs = dstore['full_lt'].get_realizations()
+    R = dstore['full_lt'].get_num_paths()
     if oq.collect_rlzs:
-        rlzs = [Mock(ordinal=0)]
+        R = 1
     data = dstore['damages-rlzs']
     assets = util.get_assets(dstore)
-    for rlz in rlzs:
-        damages = build_damage_array(data[:, rlz.ordinal], damage_dt)
-        yield 'rlz-%03d' % rlz.ordinal, util.compose_arrays(
-            assets, damages)
+    for r in range(R):
+        damages = build_damage_array(data[:, r], damage_dt)
+        yield 'rlz-%03d' % r, util.compose_arrays(assets, damages)
 
 
 # tested on oq-risk-tests event_based/etna
@@ -1217,8 +1219,9 @@ def extract_disagg_by_src(dstore, what):
     [poe] = qdict['poe']
     [site_id] = qdict.get('site_id', ['0'])
     site_id = int(site_id)
-    mean = dstore.sel('hcurves-stats', imt=imt, stat='mean', site_id=site_id)[0, 0, 0]
-    lvl_id = calc.get_lvl(mean, oq.imtls[imt], float(poe))
+    mean = dstore.sel(
+        'hcurves-stats', imt=imt, stat='mean', site_id=site_id)[0, 0, 0]
+    lvl_id = get_lvl(mean, oq.imtls[imt], float(poe))
     imt_id = list(oq.imtls).index(imt)
     poes = dset[site_id, :, imt_id, lvl_id]  # shape (R, Ns)
     if oq.collect_rlzs:  # already averaged

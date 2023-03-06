@@ -621,65 +621,6 @@ Users wanting to know the nitty-gritty details should look at the
 code, inside hazardlib/source/base.py, in the method
 ``src.sample_ruptures(eff_num_ses, ses_seed)``.
 
-The case of multiple tectonic region types and realizations
------------------------------------------------------------
-
-Since engine 3.13 hazardlib contains some helper functions that
-allow users to compute stochastic event sets manually. Such functions
-are in the module `openquake.hazardlib.calc.stochastic`. Internally,
-the engine does not use directly such functions, since it needs to
-follow a slightly more complex logic in order to make the calculations
-parallelizable. Also, the engine is able to manage general source model
-logic trees, while the helper functions are meant to work in a situation
-with a single source model and a trivial source model logic tree.
-However, in spirit, the idea is the same.
-
-As a concrete example, consider the event based logic tree demo
-which is part of the engine distribution (search for
-demos/hazard/EventBasedPSHA). This is a case with a trivial
-source model logic tree, a source model with two tectonic region
-types and a GSIM logic tree generating 2x2 = 4 realizations with
-weights .36, .24, .24, .16 respectively. The effective investigation
-time is
-
-``eff_time = 50 years x 250 ses x 4 rlz = 50,000 years``
-
-You can sample the ruptures with the following commands,
-assuming you are inside the demo directory::
-
- >> from openquake.hazardlib.contexts import ContextMaker
- >> from openquake.commonlib import readinput
- >> from openquake.hazardlib.calc.stochastic import sample_ebruptures
- >> oq = readinput.get_oqparam('job.ini')
- >> gsim_lt = readinput.get_gsim_lt(oq)
- >> csm = readinput.get_composite_source_model(oq)
- >> rlzs_by_gsim_trt = gsim_lt.get_rlzs_by_gsim_trt(
- ..     oq.number_of_logic_tree_samples, oq.random_seed)
- >> cmakerdict = {trt: ContextMaker(trt, rbg, vars(oq))
- ..                    for trt, rbg in rlzs_by_gsim_trt.items()}
- >> ebruptures = sample_ebruptures(csm.src_groups, cmakerdict)
-
-Then you can extract the events associated to the ruptures with
-the function `get_ebr_df` which returns a DataFrame::
-
-  >> from openquake.hazardlib.calc.stochastic import get_ebr_df
-  >> ebr_df = get_ebr_df(ebruptures, cmakerdict)
-
-This DataFrame has fields `eid` (event ID) and `rlz` (realization number)
-and it is indexed by the ordinal of the rupture. For instance it can be
-used to determine the number of events per realization::
-
- >> ebr_df.groupby('rlz').count()
- eid   rlz      
- 0    7842
- 1    7709
- 2    7893
- 3    7856
-
-Notice that the number of events is more or less the same for each realization.
-This is a general fact, valid also in the case of sampling, a consequence
-of the random algorithm used to associate the events to the realizations.
-
 The difference between full enumeration and sampling
 --------------------------------------------------------------
 
@@ -2109,6 +2050,10 @@ or using the global site parameters, if any.
 If the site model is specified, but the closest site parameters are 
 too distant from the sites, a warning is logged for each site.
 
+It is possible to specify both ``sites.csv`` and ``site_model.csv``:
+in that case the sites in ``sites.csv`` are used, with parameters inferred
+from the closest site model parameters.
+
 There are a number of error situations:
 
 1. If both site model and global site parameters are missing, the engine
@@ -2116,11 +2061,7 @@ There are a number of error situations:
 2. If both site model and global site parameters are specified, the
    engine raises an error.
 3. Specifying both the sites.csv and a grid is an error.
-4. Specifying both the sites.csv and a site_model.csv is an error.
-   If you are in such situation you should consider using the command
-   ``oq prepare_site_model``
-   to manually prepare a site model on the location of the sites.
-5. Having duplicates (i.e. rows with identical lon, lat up to 5 digits)
+4. Having duplicates (i.e. rows with identical lon, lat up to 5 digits)
    in the site model is an error.
 
 If you want to compute the hazard on the locations specified by the site model

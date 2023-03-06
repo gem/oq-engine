@@ -416,10 +416,10 @@ class HazardCalculator(BaseCalculator):
     @property
     def N(self):
         """
-        :returns: the total number of sites
+        :returns: the number of sites
         """
         if hasattr(self, 'sitecol'):
-            return len(self.sitecol.complete) if self.sitecol else 0
+            return len(self.sitecol) if self.sitecol else 0
         if 'sitecol' not in self.datastore:
             return 0
         return len(self.datastore['sitecol'])
@@ -580,8 +580,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore.create_df('_poes', readinput.Global.pmap.to_dframe())
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
-            self.datastore['rlzs_by_g'] = sum(
-                fake.get_rlzs_by_grp().values(), [])
+            self.datastore['rlzs_by_g'] = U32([[0]])
             self.realizations = fake.get_realizations()
             self.save_crmodel()
             self.datastore.swmr_on()
@@ -590,7 +589,8 @@ class HazardCalculator(BaseCalculator):
             oqparent = parent['oqparam']
             if 'weights' in parent:
                 weights = numpy.unique(parent['weights'][:])
-                if oq.collect_rlzs and len(weights) > 1:
+                if (oq.job_type == 'risk' and oq.collect_rlzs and
+                        len(weights) > 1):
                     raise ValueError(
                         'collect_rlzs=true can be specified only if '
                         'the realizations have identical weights')
@@ -678,9 +678,9 @@ class HazardCalculator(BaseCalculator):
         elif 'weights' in self.datastore:
             return len(self.datastore['weights'])
         try:
-            return self.csm.full_lt.get_num_rlzs()
+            return self.csm.full_lt.get_num_paths()
         except AttributeError:  # no self.csm
-            return self.datastore['full_lt'].get_num_rlzs()
+            return self.datastore['full_lt'].get_num_paths()
 
     def read_exposure(self, haz_sitecol):  # after load_risk_model
         """
@@ -805,8 +805,7 @@ class HazardCalculator(BaseCalculator):
             if hasattr(self, 'rup'):
                 # for scenario we reduce the site collection to the sites
                 # within the maximum distance from the rupture
-                haz_sitecol, _dctx = self.cmaker.filter(
-                    haz_sitecol, self.rup)
+                haz_sitecol, _dctx = self.cmaker.filter(haz_sitecol, self.rup)
                 haz_sitecol.make_complete()
 
             if 'site_model' in oq.inputs:
@@ -903,6 +902,8 @@ class HazardCalculator(BaseCalculator):
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq)
                 self.sitecol.assoc(sm, assoc_dist)
+                if oq.override_vs30:
+                    self.sitecol.array['vs30'] = oq.override_vs30
                 self.datastore['sitecol'] = self.sitecol
 
         # store amplification functions if any
@@ -953,8 +954,6 @@ class HazardCalculator(BaseCalculator):
                 self.datastore['full_lt'] = self.full_lt
         else:  # scenario
             self.full_lt = self.datastore['full_lt']
-        logging.info('There are %d realization(s)', self.R)
-
         self.datastore['weights'] = arr = build_weights(self.realizations)
         self.datastore.set_attrs('weights', nbytes=arr.nbytes)
         if rel_ruptures:
@@ -964,11 +963,10 @@ class HazardCalculator(BaseCalculator):
         """
         Check if logic tree reduction is possible
         """
-        n = len(self.full_lt.sm_rlzs)
         keep_trts = set()
         nrups = []
         for grp_id, trt_smrs in enumerate(self.datastore['trt_smrs']):
-            trti, smrs = numpy.divmod(trt_smrs, n)
+            trti, smrs = numpy.divmod(trt_smrs, 2**24)
             trt = self.full_lt.trts[trti[0]]
             nr = rel_ruptures.get(grp_id, 0)
             nrups.append(nr)
@@ -1203,7 +1201,7 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
     Create and possibly populate the datasets in the gmf_data group
     """
     oq = dstore['oqparam']
-    R = dstore['full_lt'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_paths()
     M = len(prim_imts)
     n = 0 if data is None else len(data['sid'])
     items = [('sid', U32 if n == 0 else data['sid']),

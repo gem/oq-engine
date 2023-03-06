@@ -19,18 +19,19 @@
 """
 Disaggregation calculator core functionality
 """
+
 import logging
 import numpy
 
-from openquake.baselib import parallel, hdf5, performance
+from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, humansize, pprod, agg_probs)
+    AccumDict, pprod, agg_probs, shortlist)
 from openquake.baselib.python3compat import encode
-from openquake.hazardlib import stats
+from openquake.hazardlib import stats, probability_map, valid
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.contexts import (
-    read_cmakers, read_src_mutex, FarAwayRupture)
-from openquake.commonlib import util, calc
+    read_cmakers, read_src_mutex, read_ctx_by_grp)
+from openquake.commonlib import util
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -46,7 +47,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
+def _hmap4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     # an ArrayWrapper of shape (N, M, P, Z)
     N, Z = rlzs.shape
     P = len(poes_disagg)
@@ -61,7 +62,7 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
             elif curve:
                 rlz = rlzs[s, z]
                 max_poe = curve[imt].max()
-                arr[s, m, :, z] = calc.compute_hazard_maps(
+                arr[s, m, :, z] = probability_map.compute_hazard_maps(
                     curve[imt], imtls[imt], poes_disagg)
                 for iml, poe in zip(arr[s, m, :, z], poes_disagg):
                     if iml == 0:
@@ -72,40 +73,63 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     for (s, imt, poe), zero_rlzs in acc.items():
         logging.warning('Cannot disaggregate for site %d, %s, '
                         'poe=%s, rlzs=%s: the hazard is zero',
-                        s, imt, poe, zero_rlzs)
+                        s, imt, poe, shortlist(zero_rlzs))
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def compute_disagg(dis_triples, magi, src_mutex, wdic, monitor):
+def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
+                   monitor):
     """
-    :param dis:
-        a Disaggregator instance
-    :param triples:
-        a list of triples (g, rlz, iml2)
-    :param magi:
-        an integer magnitude bin
+    :param dstore:
+        a DataStore instance
+    :param ctxt:
+        a context array
+    :param sitecol:
+        a site collection
+    :param cmaker:
+        a ContextMaker instance
+    :param bin_edges:
+        a tuple of bin edges (mag, dist, lon, lat, eps, trt)
     :param src_mutex:
-        dictionary src_id -> weight (empty for independent sources)
-    :param wdic:
+        a dictionary src_id -> weight, usually empty
+    :param rwdic:
         dictionary rlz -> weight, empty for individual realizations
     :param monitor:
         monitor of the currently running job
-    :yields:
-        a dictionary for each site containing a 6D matrix of rates
+    :returns:
+        one 6D matrix of rates per site and realization
     """
-    for dis, triples in dis_triples:
-        with monitor('init disagg', measuremem=False):
-            dis.init(magi, src_mutex, monitor)
-        res = {'trti': dis.cmaker.trti, 'magi': magi, 'sid': dis.sid}
-        for g, rlz, iml2 in triples:
-            rates6D = disagg.to_rates(dis.disagg6D(iml2, g))
-            if wdic:
-                if 0 not in res:
-                    res[0] = 0
-                res[0] += rates6D * wdic[rlz]
-            else:
-                res[rlz] = rates6D
-        yield res
+    mon0 = monitor('disagg mean_std', measuremem=False)
+    mon1 = monitor('disagg by eps', measuremem=False)
+    mon2 = monitor('composing pnes', measuremem=False)
+    mon3 = monitor('disagg matrix', measuremem=False)
+    out = []
+    for site in sitecol:
+        try:
+            dis = disagg.Disaggregator([ctxt], site, cmaker, bin_edges)
+        except disagg.FarAwayRupture:
+            continue
+        with dstore:
+            iml3 = dstore['hmap4'][dis.sid]
+            rlzs = dstore['best_rlzs'][dis.sid]
+        for magi in range(dis.Ma):
+            try:
+                dis.init(magi, src_mutex, mon0, mon1, mon2, mon3)
+            except disagg.FarAwayRupture:
+                continue
+            res = {'trti': cmaker.trti, 'magi': dis.magi, 'sid': dis.sid}
+            for z, rlz in enumerate(rlzs):
+                iml2 = iml3[:, :, z]
+                if rlz not in dis.g_by_rlz or iml2.sum() == 0:
+                    continue  # do not disaggregate
+                res[rlz] = rates6D = dis.disagg6D(iml2, rlz)
+                if rwdic:  # compute mean rates and store them in the 0 key
+                    if 'mean' not in res:
+                        res['mean'] = rates6D * rwdic[rlz]
+                    else:
+                        res['mean'] += rates6D * rwdic[rlz]
+            out.append(res)
+    return out
 
 
 def get_outputs_size(shapedic, disagg_outputs, Z):
@@ -127,6 +151,14 @@ def output_dict(shapedic, disagg_outputs, Z):
         shp = tuple(shapedic[key] for key in out.lower().split('_'))
         dic[out] = numpy.zeros((N,) + shp + (M, P, Z))
     return dic
+
+
+def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic):
+    mags = list(numpy.unique(ctxt.mag))
+    logging.debug('Sending %d/%d sites for grp_id=%d, mags=%s',
+                  len(sitecol), len(sitecol.complete), ctxt.grp_id[0],
+                  shortlist(mags))
+    smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic))
 
 
 @base.calculators.add('disaggregation')
@@ -243,12 +275,15 @@ class DisaggregationCalculator(base.HazardCalculator):
             self.poe_id = {poe: i for i, poe in enumerate(oq.poes_disagg)}
             curves = [self.get_curve(sid, rlzs[sid])
                       for sid in self.sitecol.sids]
-        self.iml4 = _iml4(rlzs, oq.iml_disagg, oq.imtls,
-                          self.poes_disagg, curves)
-        if self.iml4.array.sum() == 0:
+        s = self.shapedic
+        logging.info('Building N * M * P * Z = {:_d} intensities'.format(
+                     s['N'] * s['M'] * s['P'] * s['Z']))
+        self.hmap4 = _hmap4(rlzs, oq.iml_disagg, oq.imtls,
+                            self.poes_disagg, curves)
+        if self.hmap4.array.sum() == 0:
             raise SystemExit('Cannot do any disaggregation: zero hazard')
-        self.datastore['hmap4'] = self.iml4
-        self.datastore['poe4'] = numpy.zeros_like(self.iml4.array)
+        self.datastore['hmap4'] = self.hmap4
+        self.datastore['poe4'] = numpy.zeros_like(self.hmap4.array)
         self.sr2z = {(s, r): z for s in self.sitecol.sids
                      for z, r in enumerate(rlzs[s])}
         return self.compute()
@@ -260,14 +295,12 @@ class DisaggregationCalculator(base.HazardCalculator):
         oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        totctxs = len(dstore['rup/mag'])
-        logging.info('Reading {:_d} contexts'.format(totctxs))
-
-        rdt = [('grp_id', U16), ('magi', U8), ('nsites', U16), ('idx', U32)]
-        rdata = numpy.zeros(totctxs, rdt)
-        rdata['idx'] = numpy.arange(totctxs)
-        rdata['grp_id'] = dstore['rup/grp_id'][:]
-        U = 0
+        logging.info("Reading contexts")
+        cmakers = read_cmakers(dstore)
+        src_mutex_by_grp = read_src_mutex(dstore)
+        ctx_by_grp = read_ctx_by_grp(dstore)
+        totctxs = sum(len(ctx) for ctx in ctx_by_grp.values())
+        logging.info('Read {:_d} contexts'.format(totctxs))
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         # IMPORTANT!! we rely on the fact that the classical part
@@ -278,92 +311,53 @@ class DisaggregationCalculator(base.HazardCalculator):
         # worse performance, but visible only in extra-large calculations!
 
         # compute the total weight of the contexts and the maxsize
-        cmakers = read_cmakers(self.datastore)
-        grp_ids = rdata['grp_id']
-        totweight = 0
-        for cmaker in cmakers:
-            num_ctxs = (grp_ids == cmaker.grp_id).sum()
-            totweight += num_ctxs * len(cmaker.gsims)
-        maxsize = numpy.clip(
-            totweight / (oq.concurrent_tasks or 1), 1000, 200_000)
-        logging.debug(f'{maxsize=}')
+        totweight = sum(cmakers[grp_id].Z * len(ctx)
+                        for grp_id, ctx in ctx_by_grp.items())
+        maxsize = int(numpy.ceil(totweight / (oq.concurrent_tasks or 1)))
+        logging.debug(f'{totweight=}, {maxsize=}')
 
-        src_mutex_by_grp = read_src_mutex(self.datastore)
         s = self.shapedic
-        n_outs = 0
-        size = 0
-        if self.Z == 1 or oq.individual_rlzs:
-            weights = None
-        else:
+        if self.Z > 1:
             weights = self.datastore['weights'][:]
-        for grp_id, slices in sorted(performance.get_slices(grp_ids).items()):
+        else:
+            weights = None
+        mutex_by_grp = self.datastore['mutex_by_grp'][:]
+        for grp_id, ctxt in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
+            src_mutex, rup_mutex = mutex_by_grp[grp_id]
             src_mutex = src_mutex_by_grp.get(grp_id, {})
-            ctxs = []
-            for s0, s1 in slices:
-                ctxs.append(cmaker.read_ctxt(self.datastore, slice(s0, s1)))
-            if cmaker.rup_mutex:  # set by read_ctxt
+            if rup_mutex:
                 raise NotImplementedError(
                     'Disaggregation with mutex ruptures')
+
+            # build rlz weight dictionary
             if weights is None:
-                wdic = {}  # don't compute means
+                rwdic = {}  # don't compute means
             else:
-                wdic = {}
-                for rlzs in cmaker.gsims.values():
-                    for rlz in rlzs:
-                        wdic[rlz] = weights[rlz]
+                rwdic = {rlz: weights[rlz]
+                         for rlzs in cmaker.gsims.values() for rlz in rlzs}
 
-            fullctx = numpy.concatenate(ctxs).view(numpy.recarray)
-            magbins = numpy.searchsorted(self.bin_edges[0], fullctx.mag) - 1
-            magbins[magbins == -1] = 0  # bins on the edge
-            idxs = numpy.argsort(magbins)  # used to sort fullctx
-            fullctx = fullctx[idxs]
-            dmsg = 'Sending task with %d/%d sites for grp_id=%d, magbin=%d'
-            for magi, start, stop in performance.idx_start_stop(magbins[idxs]):
-                ctx = fullctx[start:stop]
-                dis_triples = []
-                for site in self.sitecol:
-                    sid = site.id
-                    try:
-                        dis = disagg.Disaggregator(
-                            [ctx], site, cmaker, self.bin_edges)
-                    except FarAwayRupture:  # no data for this site
-                        continue
-                    iml3 = self.iml4[sid]
-                    triples = []
-                    for z, rlz in enumerate(self.iml4.rlzs[sid]):
-                        try:
-                            g = dis.g_by_rlz[rlz]
-                        except KeyError:
-                            continue
-                        iml2 = iml3[:, :, z]
-                        if iml2.any():
-                            triples.append((g, rlz, iml2))
-                    n = len(dis.fullctx)
-                    U = max(U, n)
-                    if wdic:  # one output per site (the mean)
-                        n_outs += 1
-                    else:  # one output per site and realization
-                        n_outs += len(triples)
-                    dis_triples.append((dis, triples))
-                    size += n * len(cmaker.gsims)
-                    if size > maxsize:
-                        logging.debug(dmsg, len(dis_triples),
-                                      self.N, grp_id, magi)
-                        smap.submit((dis_triples, magi, src_mutex, wdic))
-                        dis_triples.clear()
-                        size = 0
-                if dis_triples:
-                    logging.debug(dmsg, len(dis_triples), self.N, grp_id, magi)
-                    smap.submit((dis_triples, magi, src_mutex, wdic))
+            # submit single task
+            ntasks = len(ctxt) * cmaker.Z / maxsize
+            if ntasks < 1 or src_mutex or rup_mutex:
+                # do not split (test case_11)
+                submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
+                       self.bin_edges, src_mutex, rwdic)
+                continue
 
-        data_transfer = s['dist'] * s['eps'] * s['lon'] * s['lat'] * \
-            s['M'] * s['P'] * 8 * n_outs
-        if data_transfer > oq.max_data_transfer:
-            raise ValueError(
-                'Estimated data transfer too big\n%s > max_data_transfer=%s' %
-                (humansize(data_transfer), humansize(oq.max_data_transfer)))
-        logging.info('Estimated data transfer: %s', humansize(data_transfer))
+            # split by tiles
+            for tile in self.sitecol.split(ntasks):
+                ctx = ctxt[numpy.isin(ctxt.sids, tile.sids)]
+                if len(ctx) * cmaker.Z > maxsize:
+                    # split by magbin too
+                    for c in disagg.split_by_magbin(
+                            ctx, self.bin_edges[0]).values():
+                        submit(smap, self.datastore, c, tile, cmaker,
+                               self.bin_edges, src_mutex, rwdic)
+                elif len(ctx):
+                    # see case_multi in the oq-risk-tests
+                    submit(smap, self.datastore, ctx, tile, cmaker,
+                           self.bin_edges, src_mutex, rwdic)
 
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
                    s['M'], s['P'])
@@ -371,7 +365,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         results = smap.reduce(self.agg_result, acc)
         return results  # s, r -> array 8D
 
-    def agg_result(self, acc, result):
+    def agg_result(self, acc, results):
         """
         Collect the results coming from compute_disagg into self.results.
 
@@ -379,11 +373,12 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param result: dictionary with the result coming from a task
         """
         with self.monitor('aggregating disagg matrices'):
-            trti = result.pop('trti')
-            magi = result.pop('magi')
-            sid = result.pop('sid')
-            for rlz, arr in result.items():
-                acc[sid, rlz][trti, magi] += arr
+            for res in results:
+                trti = res.pop('trti')
+                magi = res.pop('magi')
+                sid = res.pop('sid')
+                for rlz, arr in res.items():
+                    acc[sid, rlz][trti, magi] += arr
         return acc
 
     def post_execute(self, results):
@@ -397,13 +392,19 @@ class DisaggregationCalculator(base.HazardCalculator):
         # the DEBUG dictionary is populated only for OQ_DISTRIBUTE=no
         for sid, pnes in disagg.DEBUG.items():
             print('site %d, mean pnes=%s' % (sid, pnes))
+        mean = {}
+        indv = {}
+        for s, r in results:
+            if r == 'mean':
+                mean[s, 0] = results[s, r]
+            else:
+                indv[s, self.sr2z[s, r]] = results[s, r]
         with self.monitor('saving disagg results'):
             logging.info('Extracting and saving the PMFs')
-            if self.Z == 1 or self.oqparam.individual_rlzs:
-                res = {(s, self.sr2z[s, r]): results[s, r] for s, r in results}
-                self.save_disagg_results(res, 'disagg-rlzs')
-            else:  # save mean PMFs
-                self.save_disagg_results(results, 'disagg-stats')
+            if indv:  # save individual realizations
+                self.save_disagg_results(indv, 'disagg-rlzs')
+            if mean:  # save mean PMFs
+                self.save_disagg_results(mean, 'disagg-stats')
 
     def save_bin_edges(self, all_edges):
         """
@@ -450,12 +451,12 @@ class DisaggregationCalculator(base.HazardCalculator):
             mat7 = agg_probs(*mat8)  # shape (Ma, D, E, Lo, La, M, P)
             for key in oq.disagg_outputs:
                 if key == 'TRT':
-                    out[key][s, ..., z] = disagg.pmf_map[key](mat8)  # (T,M,P)
+                    out[key][s, ..., z] = valid.pmf_map[key](mat8)  # (T,M,P)
                 elif key.startswith('TRT_'):
-                    proj = disagg.pmf_map[key[4:]]
+                    proj = valid.pmf_map[key[4:]]
                     out[key][s, ..., z] = [proj(m7) for m7 in mat8]
                 else:
-                    out[key][s, ..., z] = disagg.pmf_map[key](mat7)
+                    out[key][s, ..., z] = valid.pmf_map[key](mat7)
 
             # display some warnings if needed
             for m, imt in enumerate(self.imts):
@@ -464,18 +465,17 @@ class DisaggregationCalculator(base.HazardCalculator):
                     if m == 0 and poe == self.poes_disagg[-1]:
                         _disagg_trt[s] = tuple(
                             pprod(mat8[..., 0, 0], axis=(1, 2, 3, 4, 5)))
-                    if name.endswith('-rlzs'):
-                        poe_agg = pprod(mat6, axis=(0, 1, 2, 3, 4, 5))
-                        self.datastore['poe4'][s, m, p, z] = poe_agg
-                        if poe and abs(1 - poe_agg/poe) > .1 and not count[s]:
-                            # warn only once per site
-                            msg = ('Site #%d, IMT=%s, rlz=#%d: poe_agg=%s is '
-                                   'quite different from the expected poe=%s,'
-                                   ' perhaps not enough levels')
-                            logging.warning(msg,  s, imt, best_rlzs[s, z],
-                                            poe_agg, poe)
-                            vcurves.append(self.curves[s])
-                            count[s] += 1
+                    poe_agg = pprod(mat6, axis=(0, 1, 2, 3, 4, 5))  # scalar
+                    self.datastore['poe4'][s, m, p, z] = poe_agg
+                    if poe and abs(1 - poe_agg/poe) > .1 and not count[s]:
+                        # warn only once per site
+                        msg = ('Site #%d, IMT=%s: poe_agg=%s is '
+                               'quite different from the expected poe=%s,'
+                               ' perhaps not enough levels')
+                        logging.warning(msg, s, imt, poe_agg, poe)
+                        vcurves.append(self.curves[s])
+                        count[s] += 1
+
         self.datastore[name] = out
         # below a dataset useful for debugging, at minimum IMT and maximum RP
         self.datastore['_disagg_trt'] = _disagg_trt

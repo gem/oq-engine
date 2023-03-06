@@ -25,7 +25,7 @@ import pandas
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -40,7 +40,6 @@ from openquake.hazardlib.source.rupture import (
 from openquake.commonlib import (
     calc, util, logs, readinput, logictree, datastore)
 from openquake.risklib.riskinput import str2rsi, rsi2str
-from openquake.commonlib.calc import get_mean_curve
 from openquake.calculators import base, views
 from openquake.calculators.getters import (
     get_rupture_getters, sig_eps_dt, time_dt)
@@ -52,6 +51,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
 
 
@@ -84,13 +84,13 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
     fmon = monitor('filtering ruptures', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     with dstore:
-        trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
+        trt = full_lt.trts[trt_smr // TWO24]
         sitecol = dstore['sitecol']
         extra = sitecol.array.dtype.names
         srcfilter = SourceFilter(
             sitecol, oqparam.maximum_distance(trt))
         rupgeoms = dstore['rupgeoms']
-        rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
+        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oqparam, extraparams=extra)
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         for proxy in proxies:
@@ -219,22 +219,14 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore.create_dset('ruptures', rupture_dt)
             self.datastore.create_dset('rupgeoms', hdf5.vfloat32)
 
-    def acc0(self):
-        """
-        Initial accumulator, a dictionary rlz -> ProbabilityMap
-        """
-        self.L = self.oqparam.imtls.size
-        return {r: ProbabilityMap(self.sitecol.sids, self.L, 1).fill(0)
-                for r in range(self.R)}
-
     def build_events_from_sources(self):
         """
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
-        gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
         sources = self.csm.get_sources()
         # weighting the heavy sources
+        self.datastore.swmr_on()
         nrups = parallel.Starmap(
             count_ruptures, [(src,) for src in sources if src.code in b'AMC'],
             progress=logging.debug
@@ -256,10 +248,11 @@ class EventBasedCalculator(base.HazardCalculator):
             if not sg.sources:
                 continue
             logging.info('Sending %s', sg)
-            cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], oq)
+            rgb = self.full_lt.get_rlzs_by_gsim(sg.sources[0].trt_smr)
+            cmaker = ContextMaker(sg.trt, rgb, oq)
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
-        # self.datastore.swmr_on() # removed to fix test_ebr[case_2b
+        self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
@@ -460,7 +453,13 @@ class EventBasedCalculator(base.HazardCalculator):
             concurrent_tasks=oq.concurrent_tasks or 1,
             duration=oq.time_per_task,
             outs_per_task=oq.outs_per_task)
-        acc = smap.reduce(self.agg_dicts, self.acc0())
+        if oq.hazard_curves_from_gmfs:
+            self.L = oq.imtls.size
+            acc0 = {r: ProbabilityMap(self.sitecol.sids, self.L, 1).fill(0)
+                    for r in range(self.R)}
+        else:
+            acc0 = {}
+        acc = smap.reduce(self.agg_dicts, acc0)
         if 'gmf_data' not in dstore:
             return acc
         if oq.ground_motion_fields:

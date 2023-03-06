@@ -64,7 +64,7 @@ class ReportWriter(object):
         self.oq = oq = dstore['oqparam']
         self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
         try:
-            num_rlzs = dstore['full_lt'].get_num_rlzs()
+            num_rlzs = dstore['full_lt'].get_num_paths()
         except KeyError:
             num_rlzs = '?'
         versions = sorted(dstore['/'].attrs.items())

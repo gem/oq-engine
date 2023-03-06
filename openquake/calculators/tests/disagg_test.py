@@ -20,7 +20,7 @@ import re
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -52,13 +52,12 @@ class DisaggregationTestCase(CalculatorTestCase):
     def assert_curves_ok(self, expected, test_dir, fmt='csv', delta=None):
         self.run_calc(test_dir, 'job.ini', calculation_mode='classical')
         hc_id = self.calc.datastore.calc_id
-        out = self.run_calc(test_dir, 'job.ini', exports=fmt,
-                            hazard_calculation_id=str(hc_id))
-        got = out['disagg-rlzs', fmt]
+        self.run_calc(test_dir, 'job.ini', exports=fmt,
+                      hazard_calculation_id=str(hc_id))
+        got = export(('disagg-rlzs', fmt), self.calc.datastore)
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected_output/%s' % fname, actual)
-        return out
 
     def test_case_1(self):
         # case with split_source=false and collapse_level=2
@@ -103,7 +102,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         # this exercise sampling
         self.run_calc(case_4.__file__, 'job.ini')
         fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 14)
+        self.assertEqual(len(fnames), 16)
         # Dist-0 Lon_Lat-0 Lon_Lat_TRT-0 Lon_Lat_TRT-1
         # Mag-0 Mag_Dist-0 Mag_Dist_Eps-0 Mag_Dist_TRT-0
         # Mag_Dist_TRT-1 Mag_Dist_TRT_Eps-0 Mag_Dist_TRT_Eps-1
@@ -153,10 +152,9 @@ class DisaggregationTestCase(CalculatorTestCase):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
         self.run_calc(case_7.__file__, 'job.ini')
         cmakers = read_cmakers(self.calc.datastore)
-        ctxs0 = cmakers[0].read_ctxt(self.calc.datastore)
-        ctxs1 = cmakers[1].read_ctxt(self.calc.datastore)
-        self.assertEqual(len(ctxs0), 7)  # rlz-0, the closest to the mean
-        self.assertEqual(len(ctxs1), 2)  # rlz-1, the one to discard
+        ctx = read_ctx_by_grp(self.calc.datastore)
+        self.assertEqual(len(ctx[0]), 7)  # rlz-0, the closest to the mean
+        self.assertEqual(len(ctx[1]), 2)  # rlz-1, the one to discard
 
         haz = self.calc.datastore['hmap4'][0, 0, :, 0]  # shape NMPZ
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
@@ -199,10 +197,6 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/Mag-0.csv', f1)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', f2)
 
-        # checking that the right number of sources appear in dsg_by_src
-        dstore = self.calc.datastore.open('r')
-        self.assertEqual(dstore['disagg_by_src'].shape[-1], 6)
-
     def test_case_10(self):
         # test single magnitude
         self.run_calc(case_10.__file__, 'job.ini')
@@ -217,10 +211,6 @@ class DisaggregationTestCase(CalculatorTestCase):
         #if platform.machine() == 'arm64':
         #    raise unittest.SkipTest('Temporarily skipped')
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
-
-        # checking that the right number of sources appear in dsg_by_src
-        dstore = self.calc.datastore.open('r')
-        self.assertEqual(dstore['disagg_by_src'].shape[-1], 3)
 
     def test_case_12(self):
         # check source IDs with :, . and ;
@@ -238,7 +228,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         os.remove(fname)
 
         fnames = export(('disagg-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 20)
+        self.assertEqual(len(fnames), 22)
         for fname in fnames:
             if 'Mag_Dist' in fname and 'Eps' not in fname:
                 self.assertEqualFiles(

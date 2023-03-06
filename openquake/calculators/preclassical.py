@@ -20,6 +20,7 @@ import os
 import logging
 import operator
 import numpy
+import h5py
 from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby, block_splitter
@@ -29,6 +30,7 @@ from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
 from openquake.hazardlib.scalerel.point import PointMSR
+from openquake.commonlib import readinput
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -137,27 +139,30 @@ class PreClassicalCalculator(base.HazardCalculator):
     def init(self):
         super().init()
         if self.oqparam.hazard_calculation_id:
-            full_lt = self.datastore.parent['full_lt']
+            self.full_lt = self.datastore.parent['full_lt']
             trt_smrs = self.datastore.parent['trt_smrs'][:]
         else:
-            full_lt = self.csm.full_lt
+            self.full_lt = self.csm.full_lt
             trt_smrs = self.csm.get_trt_smrs()
         self.grp_ids = numpy.arange(len(trt_smrs))
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
         rlzs_by_g = []
-        for rlzs_by_gsim in rlzs_by_gsim_list:
-            for rlzs in rlzs_by_gsim.values():
+        for t in trt_smrs:
+            for rlzs in self.full_lt.get_rlzs_by_gsim(t).values():
                 rlzs_by_g.append(rlzs)
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
 
-    def populate_csm(self):
-        # and store full_lt and source_info
-        csm = self.csm
-        self.datastore['trt_smrs'] = csm.get_trt_smrs()
+    def store(self):
+        # store full_lt, trt_smrs, toms
+        self.datastore['full_lt'] = self.csm.full_lt
+        self.datastore['trt_smrs'] = self.csm.get_trt_smrs()
         self.datastore['toms'] = numpy.array(
             [sg.get_tom_toml(self.oqparam.investigation_time)
-             for sg in csm.src_groups], hdf5.vstr)
+             for sg in self.csm.src_groups], hdf5.vstr)
+
+    def populate_csm(self):
+        csm = self.csm
+        self.store()
         cmakers = read_cmakers(self.datastore, csm.full_lt)
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         if sites is None:
@@ -187,7 +192,6 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         # run preclassical for non-atomic sources
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
-        self.datastore.hdf5['full_lt'] = csm.full_lt
         logging.info('Starting preclassical with %d source groups',
                      len(sources_by_key))
         self.datastore.swmr_on()
@@ -263,17 +267,28 @@ class PreClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        self.populate_csm()
+        cachepath = readinput.get_cache_path(self.oqparam, self.datastore.hdf5)
+        if os.path.exists(cachepath):
+            realpath = os.path.realpath(cachepath)
+            logging.info('Copying csm from %s', realpath)
+            with h5py.File(realpath, 'r') as cache:  # copy _csm
+                cache.copy(cache['_csm'], self.datastore.hdf5)
+            self.store()  # full_lt, trt_smrs, toms
+        else:
+            self.populate_csm()
+            try:
+                self.datastore['_csm'] = self.csm
+            except RuntimeError as exc:
+                # this happens when setrecursionlimit is too low
+                # we can continue anyway, this is not critical
+                logging.error(str(exc), exc_info=True)
+            else:
+                if cachepath:
+                    os.symlink(self.datastore.filename, cachepath)
         self.max_weight = self.csm.get_max_weight(self.oqparam)
         return self.csm
 
     def post_execute(self, csm):
         """
-        Store the CompositeSourceModel in binary format
+        Do nothing
         """
-        try:
-            self.datastore['_csm'] = csm
-        except RuntimeError as exc:
-            # this happens when setrecursionlimit is too low
-            # we can continue anyway, this is not critical
-            logging.error(str(exc), exc_info=True)
