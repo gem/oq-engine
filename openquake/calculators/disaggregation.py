@@ -56,14 +56,14 @@ def _hmap4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     acc = AccumDict(accum=[])  # site, imt, poe -> rlzs
     for m, imt in enumerate(imtls):
         for (s, z), rlz in numpy.ndenumerate(rlzs):
-            curve = curves[s][z]
+            curve = curves[s][z][imtls(imt)]
             if poes_disagg == (None,):
                 arr[s, m, 0, z] = imtls[imt]
-            elif curve:
+            elif curve.any():
                 rlz = rlzs[s, z]
-                max_poe = curve[imt].max()
+                max_poe = curve.max()
                 arr[s, m, :, z] = probability_map.compute_hazard_maps(
-                    curve[imt], imtls[imt], poes_disagg)
+                    curve, imtls[imt], poes_disagg)
                 for iml, poe in zip(arr[s, m, :, z], poes_disagg):
                     if iml == 0:
                         acc[s, imt, poe].append(rlz)
@@ -212,7 +212,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             pc = pcurve.extract(rlz)
             if z == 0:
                 self.curves.append(pc.array[:, 0])
-            poes.append(pc.convert(self.oqparam.imtls))
+            poes.append(pc.array[:, 0])
         return poes
 
     def full_disaggregation(self):
@@ -241,6 +241,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         nrows = len(dstore['_poes/sid'])
         self.pgetter = getters.PmapGetter(
             dstore, ws, [(0, nrows + 1)], oq.imtls, oq.poes)
+        weights = numpy.array([w['weight'] for w in ws])
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
@@ -265,14 +266,17 @@ class DisaggregationCalculator(base.HazardCalculator):
         assert Z <= self.R, (Z, self.R)
         self.Z = Z
         self.rlzs = rlzs
-        self.curves = []
-
+        self.curves = []  # curves for z=0, populated in self.get_curves
+        curves = [self.get_curve(sid, rlzs[sid]) for sid in self.sitecol.sids]
         if oq.iml_disagg:
-            # no hazard curves are needed
+            poes = numpy.array(curves)  # shape (N, R, M)
+            mean = numpy.array([poes[:, :, m] @ weights for m in range(self.M)])
+            # shape (M, N)
+            logging.info('mean poes corresponding to the given iml_disagg: %s',
+                         dict(zip(oq.imtls, mean)))
             self.poe_id = {None: 0}
         else:
             self.poe_id = {poe: i for i, poe in enumerate(oq.poes_disagg)}
-        curves = [self.get_curve(sid, rlzs[sid]) for sid in self.sitecol.sids]
         s = self.shapedic
         logging.info('Building N * M * P * Z = {:_d} intensities'.format(
                      s['N'] * s['M'] * s['P'] * s['Z']))
