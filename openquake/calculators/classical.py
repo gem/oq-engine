@@ -36,6 +36,7 @@ from openquake.baselib.general import (
     get_nbytes_msg, pprod)
 from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
+from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.probability_map import (
     ProbabilityMap, poes_dt, combine_probs)
 from openquake.commonlib import calc, readinput
@@ -141,7 +142,7 @@ def semicolon_aggregate(probs, source_ids):
     :param source_ids: list of source IDs (some with semicolons) of length Ns
     :returns: array of shape (..., Ns) and list of length N with N < Ns
 
-    This is used to aggregate array of probabilities in the case of sources
+    This is used to aggregate array of rates in the case of sources
     which are variations of a base source. Here is an example with Ns=7
     sources reducible to N=4 base sources:
 
@@ -149,15 +150,13 @@ def semicolon_aggregate(probs, source_ids):
     >>> probs = numpy.array([[.01, .02, .03, .04, .05, .06, .07],
     ...                      [.00, .01, .02, .03, .04, .05, .06]])
 
-    `semicolon_aggregate` effectively reduces the array of probabilities
+    `semicolon_aggregate` effectively reduces the array of rates
     from 7 to 4 components, however for storage convenience it does not
     change the shape, so the missing components are zeros:
 
     >>> semicolon_aggregate(probs, source_ids)  # (2, 7) => (2, 4)
-    (array([[0.058906, 0.04    , 0.05    , 0.1258  , 0.      , 0.      ,
-            0.      ],
-           [0.0298  , 0.03    , 0.04    , 0.107   , 0.      , 0.      ,
-            0.      ]]), array(['A', 'B', 'C', 'D'], dtype='<U1'))
+    (array([[0.06, 0.04, 0.05, 0.13, 0.  , 0.  , 0.  ],
+           [0.03, 0.03, 0.04, 0.11, 0.  , 0.  , 0.  ]]), array(['A', 'B', 'C', 'D'], dtype='<U1'))
 
     It is assumed that the semicolon sources are independent, i.e. not mutex.
     """
@@ -165,7 +164,7 @@ def semicolon_aggregate(probs, source_ids):
     unique, indices = numpy.unique(srcids, return_inverse=True)
     new = numpy.zeros_like(probs)
     for i, s1, s2 in performance.idx_start_stop(indices):
-        new[..., i] = pprod(probs[..., s1:s2], axis=-1)
+        new[..., i] = probs[..., s1:s2].sum(axis=-1)
     return new, unique
 
 
@@ -180,11 +179,11 @@ def check_disagg_by_src(dstore):
     if mutex.sum():
         dbs_indep = dbs[:, :, :, :, ~mutex]
         dbs_mutex = dbs[:, :, :, :, mutex]
-        poes_indep = pprod(dbs_indep, axis=4)  # N, R, M, L1
+        poes_indep = dbs_indep.sum(axis=4)  # N, R, M, L1
         poes_mutex = dbs_mutex.sum(axis=4)  # N, R, M, L1
-        poes = poes_indep + poes_mutex - poes_indep * poes_mutex
+        poes = poes_indep + poes_mutex
     else:
-        poes = pprod(dbs, axis=4)  # N, R, M, L1
+        poes = dbs.sum(axis=4)  # N, R, M, L1
     rlz_weights = dstore['weights'][:]
     mean2 = numpy.einsum('sr...,r->s...', poes, rlz_weights)  # N, M, L1
     if not numpy.allclose(mean, mean2, atol=1E-6):
@@ -396,7 +395,7 @@ class Hazard:
             for key, pmap in pmaps.items():
                 if isinstance(key, str):
                     # in case of disagg_by_src key is a source ID
-                    disagg_by_src[..., self.srcidx[key]] = (
+                    disagg_by_src[..., self.srcidx[key]] = disagg.to_rates(
                         self.get_poes(pmap, self.cmakers[pmap.grp_id]))
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
