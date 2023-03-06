@@ -26,14 +26,6 @@ from openquake.calculators.classical import get_rel_source_ids
 U32 = numpy.uint32
 
 
-def compute_disagg(source_id, disaggs, gsim_weights):
-    for dis in disaggs:
-        pmap = dis.cmaker.get_pmap([dis.fullctx])
-        [iml3] = pmap.interp4D(dis.cmaker.imtls, dis.cmaker.poes)
-        mat5D = dis.disagg_mag_dist_eps(iml3) @ gsim_weights
-    return {source_id: mat5D}  # shape (Ma, D, E, M, P)
-
-
 def main(parent_id):
     """
     :param parent_id: filename or ID of the parent calculation

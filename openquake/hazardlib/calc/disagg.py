@@ -32,7 +32,7 @@ from functools import lru_cache
 import numpy
 import scipy.stats
 
-from openquake.baselib.general import AccumDict, groupby, pprod, humansize
+from openquake.baselib.general import AccumDict, groupby, humansize
 from openquake.baselib.performance import idx_start_stop, Monitor
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
