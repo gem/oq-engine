@@ -2,10 +2,6 @@
 |---------|-------------|
 | case_1  | Test .npz export, raises error when all source are discarded and test wrong .ini |
 | case_2  | Test reqv, 1 rlz, 1 site|
-| case_3  | Test AreaSource, 1 rlz, 1 site|
-| case_4  | Test SimpleFault, 1 rlz, 1 site|
-| case_5  | Test ComplexFault, 1 rlz, 1 site|
-| case_6  | Test 2 sources, 1 rlz, 1 site|
 | case_12 | Two TRTs, 1 rlz|
 | case_14 | Test reqv |
 | case_18 | 3 GMPETables|
