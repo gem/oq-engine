@@ -40,7 +40,7 @@ from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
 from openquake.qa_tests_data.event_based_damage import case_15
 from openquake.qa_tests_data.logictree import case_09, case_56
-from openquake.qa_tests_data.classical import case_1, case_18
+from openquake.qa_tests_data.classical import case_01, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5, case_16, case_21
@@ -251,7 +251,7 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         Build a datastore instance to show what it is inside
         """
-        job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
+        job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
         with Print.patch() as cls.p:
             calc = sap.runline(f'openquake.commands run {job_ini} -c 0')
         cls.calc_id = calc.datastore.calc_id
