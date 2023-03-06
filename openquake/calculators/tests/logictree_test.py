@@ -27,7 +27,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
-    case_07, case_08, case_09,
+    case_06, case_07, case_08, case_09,
     case_10, case_11, case_13, case_15, case_16, case_17,
     case_20, case_21, case_28, case_31, case_36, case_45, case_46,
     case_56, case_58, case_59, case_67, case_68, case_71, case_73,
@@ -51,6 +51,12 @@ class ClassicalTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % fname, actual,
                                   delta=delta)
         return got
+
+    def test_case_06(self):
+        # two source model, use_rates=True
+        self.assert_curves_ok(
+            ['curve-mean.csv', 'curve-rlz0.csv', 'curve-rlz1.csv'],
+            case_06.__file__)
 
     def test_case_07(self):
         # this is a case with duplicated sources

@@ -765,6 +765,11 @@ uniform_hazard_spectra:
   Example: *uniform_hazard_spectra = true*.
   Default: False
 
+use_rates:
+  When set, convert to rates before computing the statistical hazard curves
+  Example: *use_rates = true*.
+  Default: False
+
 vs30_tolerance:
   Used when amplification_method = convolution.
   Example: *vs30_tolerance = 20*.
@@ -1013,6 +1018,7 @@ class OqParam(valid.ParamSet):
     truncation_level = valid.Param(
         lambda s: valid.positivefloat(s) or 1E-9, 99.)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
+    use_rates = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
 
