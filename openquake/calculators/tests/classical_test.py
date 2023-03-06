@@ -669,8 +669,7 @@ class ClassicalTestCase(CalculatorTestCase):
                           source_model_logic_tree_file='wrong_ssmLT.xml')
 
     def test_case_76(self):
-        # reserving the test number for CanadaSHM6
-        """
+        # CanadaSHM6 GMPEs
         self.run_calc(case_76.__file__, 'job.ini')
         branches = self.calc.datastore['full_lt/gsim_lt'].branches
         gsims = [br.gsim for br in branches]
@@ -681,7 +680,6 @@ class ClassicalTestCase(CalculatorTestCase):
             if hasattr(gsim, 'submodel'):
                 gsim_str += '_' + gsim.submodel
             self.assertEqualFiles('expected/%s.csv' % gsim_str, csv)
-        """
 
     def test_case_77(self):
         # test calculation for modifiable GMPE with original tabular GMM
