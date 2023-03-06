@@ -1125,7 +1125,7 @@ def view_gsim_for_event(token, dstore):
     full_lt = dstore['full_lt']
     rup_id, rlz_id = dstore['events'][eid][['rup_id', 'rlz_id']]
     trt_smr = dstore['ruptures'][rup_id]['trt_smr']
-    trti = trt_smr // len(full_lt.sm_rlzs)
+    trti = trt_smr // 2**24
     gsim = full_lt.get_realizations()[rlz_id].gsim_rlz.value[trti]
     return gsim
 
@@ -1221,10 +1221,9 @@ def view_composite_source_model(token, dstore):
     Show the structure of the CompositeSourceModel in terms of grp_id
     """
     lst = []
-    n = len(dstore['full_lt'].sm_rlzs)
     trt_smrs = dstore['trt_smrs'][:]
     for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
-        trts, sm_rlzs = numpy.divmod(trt_smrs[grp_id], n)
+        trts, sm_rlzs = numpy.divmod(trt_smrs[grp_id], 2**24)
         lst.append((str(grp_id), to_str(trts), to_str(sm_rlzs), len(df)))
     return numpy.array(lst, dt('grp_id trt smrs num_sources'))
 

@@ -52,6 +52,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
+TWO24 = 2 ** 24
 
 rlz_dt = numpy.dtype([
     ('ordinal', U32),
@@ -402,21 +403,19 @@ class SourceModelLogicTree(object):
         else:  # slow algorithm
             self.num_paths = count_paths(self.root_branchset.branches)
 
-    def reduce(self, src_id):
+    def reduce(self, source_id):
         """
         :returns: a new logic tree reduced to a single source
         """
         new = copy.deepcopy(self)
-        oksms = new.sms_by_src[src_id]
-        new.sms_by_src = {src_id: oksms}
-        try:
-            new.trt_by_src = {src_id: new.trt_by_src[src_id]}
-        except:
-            import pdb; pdb.set_trace()
+        new.source_id = source_id
+        oksms = new.sms_by_src[source_id]
+        new.sms_by_src = {source_id: oksms}
+        new.trt_by_src = {source_id: new.trt_by_src[source_id]}
         new.srcs_by_path = {  # relative paths
-            path: [src_id] for path, srcs in new.srcs_by_path.items()
-            if src_id in srcs}
-        new.tectonic_region_types = {new.trt_by_src[src_id]}
+            path: [source_id] for path, srcs in new.srcs_by_path.items()
+            if source_id in srcs}
+        new.tectonic_region_types = {new.trt_by_src[source_id]}
         for bset, dic in zip(new.branchsets, new.bsetdict.values()):
             if bset.uncertainty_type in ('sourceModel', 'extendModel'):
                 same = []  # branches with the source, all same contribution
@@ -442,7 +441,7 @@ class SourceModelLogicTree(object):
                     newbranches.append(b0)
                 bset.branches = newbranches
             ats = dic.get('applyToSources')
-            if ats and src_id not in ats:
+            if ats and source_id not in ats:
                 bset.collapse()
                 del dic['applyToSources']
         new.num_paths = count_paths(self.root_branchset.branches)
@@ -983,6 +982,7 @@ class FullLogicTree(object):
             for sm_rlz in self.source_model_lt:
                 sm_rlz.samples = samples
                 self.sm_rlzs.append(sm_rlz)
+        assert len(self.sm_rlzs) <= TWO24, len(self.sm_rlzs)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
         self.trts = list(self.gsim_lt.values)
 
@@ -999,7 +999,7 @@ class FullLogicTree(object):
         """
         if len(self.trts) == 1:
             return self.trts[0]
-        return self.trts[trt_smr // len(self.sm_rlzs)]
+        return self.trts[trt_smr // TWO24]
 
     @property
     def seed(self):
@@ -1028,7 +1028,7 @@ class FullLogicTree(object):
         """
         :returns: (trti, smr)
         """
-        return divmod(trt_smr, len(self.sm_rlzs))
+        return divmod(trt_smr, TWO24)
 
     def get_trt_smr(self, trt, smr):
         """
@@ -1036,7 +1036,7 @@ class FullLogicTree(object):
         """
         if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
             return int(smr)
-        return self.trti[trt] * len(self.sm_rlzs) + int(smr)
+        return self.trti[trt] * TWO24 + int(smr)
 
     def get_trt_smrs(self, smr):
         """
@@ -1044,8 +1044,7 @@ class FullLogicTree(object):
         :returns: array of T group IDs, being T the number of TRTs
         """
         nt = len(self.gsim_lt.values)
-        ns = len(self.sm_rlzs)
-        return smr + numpy.arange(nt) * ns
+        return smr + numpy.arange(nt) * TWO24
 
     def gsim_by_trt(self, rlz):
         """
@@ -1109,7 +1108,7 @@ class FullLogicTree(object):
             acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
             for sm in self.sm_rlzs:
                 for trtsmr in self.get_trt_smrs(sm.ordinal):
-                    trti, smr = divmod(trtsmr, len(self.sm_rlzs))
+                    trti, smr = divmod(trtsmr, TWO24)
                     for rlz in rlzs:
                         idx = smr_by_ltp['~'.join(rlz.sm_lt_path)]
                         if idx == smr:

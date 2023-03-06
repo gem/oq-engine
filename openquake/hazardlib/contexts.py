@@ -1635,16 +1635,16 @@ def get_cmakers(src_groups, full_lt, oq):
         all_trt_smrs = []
         for sg in src_groups:
             try:
-                all_trt_smrs.append(sg.sources[0].trt_smrs)
+                trt_smrs = sg.sources[0].trt_smrs
             except AttributeError:  # for scenarios
-                all_trt_smrs.append([sg.sources[0].trt_smr])
+                trt_smrs = [sg.sources[0].trt_smr]
+            all_trt_smrs.append(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
-    num_eff_rlzs = len(full_lt.sm_rlzs)
     start = 0
     cmakers = []
     for grp_id, trt_smrs in enumerate(all_trt_smrs):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smrs)
-        trti = trt_smrs[0] // num_eff_rlzs
+        trti = trt_smrs[0] // TWO24
         cmaker = ContextMaker(trts[trti], rlzs_by_gsim, oq)
         cmaker.trti = trti
         cmaker.gidx = numpy.arange(start, start + len(rlzs_by_gsim))

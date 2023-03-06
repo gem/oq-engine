@@ -51,6 +51,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
 
 
@@ -83,7 +84,7 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
     fmon = monitor('filtering ruptures', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     with dstore:
-        trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
+        trt = full_lt.trts[trt_smr // TWO24]
         sitecol = dstore['sitecol']
         extra = sitecol.array.dtype.names
         srcfilter = SourceFilter(
@@ -225,6 +226,7 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         sources = self.csm.get_sources()
         # weighting the heavy sources
+        self.datastore.swmr_on()
         nrups = parallel.Starmap(
             count_ruptures, [(src,) for src in sources if src.code in b'AMC'],
             progress=logging.debug
@@ -250,10 +252,7 @@ class EventBasedCalculator(base.HazardCalculator):
             cmaker = ContextMaker(sg.trt, rgb, oq)
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
-        try:
-            self.datastore.swmr_on()
-        except OSError:  # seen sometimes in test_ebr[case_1f]
-            pass
+        self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')

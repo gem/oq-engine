@@ -963,11 +963,10 @@ class HazardCalculator(BaseCalculator):
         """
         Check if logic tree reduction is possible
         """
-        n = len(self.full_lt.sm_rlzs)
         keep_trts = set()
         nrups = []
         for grp_id, trt_smrs in enumerate(self.datastore['trt_smrs']):
-            trti, smrs = numpy.divmod(trt_smrs, n)
+            trti, smrs = numpy.divmod(trt_smrs, 2**24)
             trt = self.full_lt.trts[trti[0]]
             nr = rel_ruptures.get(grp_id, 0)
             nrups.append(nr)

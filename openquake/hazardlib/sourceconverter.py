@@ -268,6 +268,12 @@ class SourceGroup(collections.abc.Sequence):
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag = max_mag
 
+    def get_trt_smr(self):
+        """
+        :returns: the .trt_smr attribute of the underlying sources
+        """
+        return self.sources[0].trt_smr
+
     def count_ruptures(self):
         """
         Set src.num_ruptures on each source in the group

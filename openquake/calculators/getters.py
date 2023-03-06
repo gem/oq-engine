@@ -22,6 +22,7 @@ import numpy
 from openquake.baselib import general, hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import probability_map, stats
+from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
     BaseRupture, RuptureProxy, to_arrays)
 from openquake.commonlib import datastore
@@ -38,7 +39,7 @@ class NotFound(Exception):
     pass
 
 
-def build_stat_curve(pcurve, imtls, stat, weights):
+def build_stat_curve(pcurve, imtls, stat, weights, use_rates=False):
     """
     Build statistics by taking into account IMT-dependent weights
     """
@@ -53,9 +54,15 @@ def build_stat_curve(pcurve, imtls, stat, weights):
             ws = [w[imt] for w in weights]
             if sum(ws) == 0:  # expect no data for this IMT
                 continue
-            array[slc, 0] = stat(poes[:, slc], ws)
+            if use_rates:
+                array[slc, 0] = to_probs(stat(to_rates(poes[:, slc]), ws))
+            else:
+                array[slc, 0] = stat(poes[:, slc], ws)
     else:
-        array[:, 0] = stat(poes, weights)
+        if use_rates:
+            array[:, 0] = to_probs(stat(to_rates(poes), weights))
+        else:
+            array[:, 0] = stat(poes, weights)
     return probability_map.ProbabilityCurve(array)
 
 
@@ -139,7 +146,7 @@ class PmapGetter(object):
     :param dstore: a DataStore instance or file system path to it
     :param sids: the subset of sites to consider (if None, all sites)
     """
-    def __init__(self, dstore, weights, slices, imtls=(), poes=()):
+    def __init__(self, dstore, weights, slices, imtls=(), poes=(), use_rates=0):
         self.filename = dstore if isinstance(dstore, str) else dstore.filename
         if len(weights[0].dic) == 1:  # no weights by IMT
             self.weights = numpy.array([w['weight'] for w in weights])
@@ -147,6 +154,7 @@ class PmapGetter(object):
             self.weights = weights
         self.imtls = imtls
         self.poes = poes
+        self.use_rates = use_rates
         self.num_rlzs = len(weights)
         self.eids = None
         self.rlzs_by_g = dstore['rlzs_by_g'][()]
