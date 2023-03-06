@@ -82,7 +82,7 @@ def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
             imt = period  # for some versions of OQ period=imt
 
     # CanadaSHM6 hard rock site factor
-    flin[sites.vs30 > 1100] = SHM6_hardrock_site_factor(
+    flin[sites.vs30 > 1100] = CanadaSHM6_hardrock_site_factor(
         BSSA14_1100[0], BSSA14_2000[0], sites.vs30[sites.vs30 > 1100], imt)
 
     fnl = BA14._get_nonlinear_site_term(C, sites.vs30, pga_rock)
@@ -91,7 +91,7 @@ def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
     return flin + fnl + fbd
 
 
-class SHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
+class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
     """
     Boore et al., 2014 with CanadaSHM6 modifications to amplification factors
     for vs30 > 1100 and limited period range to 0.05 - 10s.
@@ -192,7 +192,7 @@ def get_mean_stddevs_cy14(name, C, ctx):
     return mean, sig, tau, phi
 
 
-class SHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
+class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
     """
     Chiou and Youngs 2014 with CanadaSHM6 modifications to amplification
     factors for vs30 > 1100, the removal of the basin term (i.e., returns
@@ -289,7 +289,7 @@ def _get_site_response_term_ask14(C, imt, vs30, sa1180):
     return ask14_vs
 
 
-class SHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
+class CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
     """
     Abrahamson et al., 2014 with CanadaSHM6 modifications to amplification
     factors for vs30 > 1100, the removal of the basin term (i.e., returns
@@ -392,7 +392,7 @@ def get_mean_values_cb14(C, ctx, imt, a1100=None):
             CB14._get_anelastic_attenuation_term(C, ctx.rrup))
 
 
-class SHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
+class CanadaSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
     """
     Campbell and Bozorgnia, 2014 with CanadaSHM6 modifications to amplification
     factors for vs30 > 1100, the removal of the basin term (i.e., returns
@@ -458,7 +458,7 @@ class SHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
             phi[m] = p
 
 
-def SHM6_hardrock_site_factor(A1100, A2000, vs30, imt):
+def CanadaSHM6_hardrock_site_factor(A1100, A2000, vs30, imt):
     """
     Returns CanadaSHM6 hard rock (Vs30 > 1100 m/s) amplification factors in
     log units.
