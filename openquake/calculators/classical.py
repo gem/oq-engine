@@ -243,7 +243,8 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
                         pc.array[:, r].reshape(M, L1))
             if hstats:
                 for s, (statname, stat) in enumerate(hstats.items()):
-                    sc = getters.build_stat_curve(pc, imtls, stat, weights)
+                    sc = getters.build_stat_curve(
+                        pc, imtls, stat, weights, pgetter.use_rates)
                     arr = sc.array.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
@@ -810,7 +811,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('There are %d slices of poes [%.1f per task]',
                      nslices, nslices / len(slicedic))
         allargs = [
-            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
+            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes,
+                                oq.use_rates),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in allslices]
         self.hazard = {}  # kind -> array
