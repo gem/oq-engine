@@ -930,7 +930,9 @@ class SourceConverter(RuptureConverter):
             location=geo.Point(*lon_lat),
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hddist(node),
+            reqv=node.attrib.get('reqv'),
             temporal_occurrence_model=self.get_tom(node))
+
 
     def convert_multiPointSource(self, node):
         """
@@ -954,6 +956,7 @@ class SourceConverter(RuptureConverter):
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hddist(node),
             mesh=geo.Mesh(F32(lons), F32(lats)),
+            reqv=node.attrib.get('reqv'),
             temporal_occurrence_model=self.get_tom(node))
 
     def convert_simpleFaultSource(self, node):

@@ -53,19 +53,20 @@ class MultiPointSource(ParametricSeismicSource):
                  # point-specific parameters (excluding location)
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  nodal_plane_distribution, hypocenter_distribution,
-                 mesh, temporal_occurrence_model=None):
+                 mesh, reqv, temporal_occurrence_model=None):
         assert len(mfd) == len(mesh), (len(mfd), len(mesh))
         rupture_mesh_spacing = None
         super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship,
-            rupture_aspect_ratio,
+            rupture_aspect_ratio, reqv,
             temporal_occurrence_model)
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
         self.nodal_plane_distribution = nodal_plane_distribution
         self.hypocenter_distribution = hypocenter_distribution
         self.mesh = mesh
+        self.reqv = reqv
 
     def __iter__(self):
         for i, (mfd, point) in enumerate(zip(self.mfd, self.mesh)):
@@ -80,7 +81,7 @@ class MultiPointSource(ParametricSeismicSource):
                 self.lower_seismogenic_depth,
                 point,
                 self.nodal_plane_distribution,
-                self.hypocenter_distribution)
+                self.hypocenter_distribution, self.reqv)
             ps.num_ruptures = ps.count_ruptures()
             ps.scaling_rate = getattr(self, 'scaling_rate', 1)
             yield ps

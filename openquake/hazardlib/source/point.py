@@ -157,10 +157,11 @@ class PointSource(ParametricSeismicSource):
                  temporal_occurrence_model,
                  # point-specific parameters
                  upper_seismogenic_depth, lower_seismogenic_depth,
-                 location, nodal_plane_distribution, hypocenter_distribution):
+                 location, nodal_plane_distribution, hypocenter_distribution,
+                 reqv):
         super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
-            magnitude_scaling_relationship, rupture_aspect_ratio,
+            magnitude_scaling_relationship, rupture_aspect_ratio, reqv,
             temporal_occurrence_model)
 
         if not lower_seismogenic_depth > upper_seismogenic_depth:
