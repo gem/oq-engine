@@ -16,12 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import logging
 import numpy
 from openquake.baselib import sap, performance
-from openquake.hazardlib import logictree, calc
 from openquake.commonlib import datastore, readinput
-from openquake.calculators.classical import get_rel_source_ids
+from openquake.calculators.classical import disagg_by_source
 
 U32 = numpy.uint32
 
@@ -37,30 +35,14 @@ def main(parent_id):
     parent = datastore.read(parent_id)
     dstore, log = datastore.build_dstore_log(parent=parent)
     with dstore, log:
-        oq = parent['oqparam']
-        oq.cachedir = datastore.get_datadir()
-        oq.mags_by_trt = parent['source_mags']
-        sitecol = parent['sitecol']
-        assert len(sitecol) == 1, sitecol
-        full_lt = readinput.get_full_lt(oq)
+        full_lt = readinput.get_full_lt(parent['oqparam'])
         csm = parent['_csm']
         csm.init(full_lt)
         mon = performance.Monitor(
             'disaggregate by source', measuremem=True, h5=dstore.hdf5)
-        edges_shapedic = calc.disagg.get_edges_shapedic(oq, sitecol)
-        rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
-        out = {}
-        for source_id in rel_ids:
-            smlt = full_lt.source_model_lt.reduce(source_id)
-            gslt = full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
-            relt = logictree.FullLogicTree(smlt, gslt, 'reduce-rlzs')
-            logging.info('Disaggregating source %s (%d realizations)',
-                         source_id, relt.get_num_paths())
-            groups = calc.disagg.reduce_groups(csm.src_groups, source_id)
-            out.update(calc.disagg.by_source(
-                groups, sitecol, relt, edges_shapedic, oq, mon))
-        for source_id, rates in out.items():
-            dstore['disagg/' + source_id] = rates
+        for source_id, disagg_rates in disagg_by_source(parent, csm, mon):
+            dstore['disagg/' + source_id] = disagg_rates
+
 
 if __name__ == '__main__':
     sap.run(main)

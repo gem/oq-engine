@@ -18,6 +18,7 @@
 
 import io
 import os
+import json
 import time
 import psutil
 import logging
@@ -37,9 +38,10 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib.probability_map import (
     ProbabilityMap, poes_dt, combine_probs)
-from openquake.commonlib import calc, readinput
+from openquake.commonlib import calc, readinput, datastore
 from openquake.calculators import base, getters, extract
 
 U16 = numpy.uint16
@@ -715,6 +717,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore, oq.imtls, oq.poes, threshold=.1)
             logging.info('There are %d relevant sources: %s', len(rel_ids),
                          rel_ids)
+        if 'disagg_by_src' in self.datastore and self.N == 1 and oq.use_rates:
+            mon = self.monitor('disaggregate bv source')
+            disagg_by_source(self.datastore, self.csm, mon)
 
     def _create_hcurves_maps(self):
         oq = self.oqparam
@@ -875,3 +880,43 @@ def get_rel_source_ids(dstore, imts, poes, threshold=.1):
             source_ids.update(rel['src_id'])
     return python3compat.decode(sorted(source_ids))
 
+
+
+def sanity_check(source_id, rates, disagg_by_src):
+    """
+    Check that the rates computed with the restricted logic tree and
+    restricted groups are consistent with the full rates.
+    """
+    js = json.loads(disagg_by_src.attrs['json'])
+    srcidx = js['src_id'].index(source_id)
+    rates2D = disagg_by_src[0, :, :, srcidx]  # shape (M, L1)
+    numpy.testing.assert_allclose(rates2D.flatten(), rates)
+
+
+def disagg_by_source(parent, csm, mon):
+    """
+    :returns: pairs (source_id, disagg_rates)
+    """
+    oq = parent['oqparam']
+    oq.cachedir = datastore.get_datadir()
+    oq.mags_by_trt = parent['source_mags']
+    sitecol = parent['sitecol']
+    assert len(sitecol) == 1, sitecol
+    edges_shapedic = disagg.get_edges_shapedic(oq, sitecol)
+    rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
+    out = {}
+    for source_id in rel_ids:
+        smlt = csm.full_lt.source_model_lt.reduce(source_id)
+        gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
+        relt = FullLogicTree(smlt, gslt, 'reduce-rlzs')
+        logging.info('Disaggregating source %s (%d realizations)',
+                     source_id, relt.get_num_paths())
+        groups = disagg.reduce_groups(csm.src_groups, source_id)
+        out.update(disagg.by_source(
+            groups, sitecol, relt, edges_shapedic, oq, mon))
+    items = []
+    for source_id, (disagg_rates, rates) in out.items():
+        if oq.use_rates:
+            sanity_check(source_id, rates, parent.get('disagg_by_src'))
+        items.append((source_id, disagg_rates))
+    return items
