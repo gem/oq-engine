@@ -53,13 +53,15 @@ class ClassicalTestCase(CalculatorTestCase):
         return got
 
     def test_case_06(self):
-        # two source model, use_rates=True
+        # two source model, use_rates and disagg_by_src
         self.assert_curves_ok(
             ['curve-mean.csv', 'curve-rlz0.csv', 'curve-rlz1.csv'],
             case_06.__file__)
 
     def test_case_07(self):
-        # this is a case with duplicated sources
+        # this is a case with 3 source models and a source ("1") belonging
+        # both to source_model_1 and source_model_2
+        # we are checking use_rates and disagg_by_src
         self.assert_curves_ok(
             ['hazard_curve-mean.csv',
              'hazard_curve-smltp_b1-gsimltp_b1.csv',
@@ -73,8 +75,8 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(info.loc[b'2'].weight, 118)
         self.assertEqual(info.loc[b'3'].weight, 3914)
 
-        # now restrict the logic tree to the duplicated source "1"
-        self.run_calc(case_07.__file__, 'job1.ini')
+        # check disagg_by_source with sampling
+        self.run_calc(case_07.__file__, 'sampling.ini')
         fnames = export(('hcurves', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,

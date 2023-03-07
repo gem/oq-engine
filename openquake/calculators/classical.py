@@ -718,7 +718,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('There are %d relevant sources: %s', len(rel_ids),
                          rel_ids)
         if 'disagg_by_src' in self.datastore and self.N == 1 and oq.use_rates:
-            mon = self.monitor('disaggregate bv source')
+            mon = self.monitor('disaggregate by source')
             disagg_by_source(self.datastore, self.csm, mon)
 
     def _create_hcurves_maps(self):
@@ -881,7 +881,6 @@ def get_rel_source_ids(dstore, imts, poes, threshold=.1):
     return python3compat.decode(sorted(source_ids))
 
 
-
 def sanity_check(source_id, rates, disagg_by_src):
     """
     Check that the rates computed with the restricted logic tree and
@@ -902,8 +901,8 @@ def disagg_by_source(parent, csm, mon):
     oq.mags_by_trt = parent['source_mags']
     sitecol = parent['sitecol']
     assert len(sitecol) == 1, sitecol
-    edges_shapedic = disagg.get_edges_shapedic(oq, sitecol)
-    if oq.use_rates:
+    edges_shp = disagg.get_edges_shapedic(oq, sitecol)
+    if oq.use_rates and len(oq.poes) == 0:
         rel_ids = sorted(set(map(basename, csm.get_sources())))
     else:
         rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
@@ -911,12 +910,11 @@ def disagg_by_source(parent, csm, mon):
     for source_id in rel_ids:
         smlt = csm.full_lt.source_model_lt.reduce(source_id)
         gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
-        relt = FullLogicTree(smlt, gslt, 'reduce-rlzs')
-        logging.info('Disaggregating source %s (%d realizations)',
+        relt = FullLogicTree(smlt, gslt, 'tolerate')
+        logging.info('Considering source %s (%d realizations)',
                      source_id, relt.get_num_paths())
         groups = disagg.reduce_groups(csm.src_groups, source_id)
-        out.update(disagg.by_source(
-            groups, sitecol, relt, edges_shapedic, oq, mon))
+        out.update(disagg.by_source(groups, sitecol, relt, edges_shp, oq, mon))
     items = []
     for source_id, (disagg_rates, rates2D) in out.items():
         if oq.use_rates:
