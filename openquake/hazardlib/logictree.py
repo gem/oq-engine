@@ -337,7 +337,7 @@ class SourceModelLogicTree(object):
                           branch_dt)
         dic = dict(filename='fake.xml', seed=0, num_samples=0,
                    sampling_method='early_weights', num_paths=1,
-                   sms_by_src=AccumDict(accum=[]), trt_by_src={},
+                   brs_by_src=AccumDict(accum=[]), trt_by_src={},
                    srcs_by_path=AccumDict(accum=[]), is_source_specific=0,
                    tectonic_region_types=set(),
                    bsetdict='{"bs0": {"uncertaintyType": "sourceModel"}}')
@@ -409,8 +409,8 @@ class SourceModelLogicTree(object):
         """
         new = copy.deepcopy(self)
         new.source_id = source_id
-        oksms = new.sms_by_src[source_id]
-        new.sms_by_src = {source_id: oksms}
+        oksms = new.brs_by_src[source_id]
+        new.brs_by_src = {source_id: oksms}
         new.trt_by_src = {source_id: new.trt_by_src[source_id]}
         new.srcs_by_path = {  # relative paths
             path: [source_id] for path, srcs in new.srcs_by_path.items()
@@ -456,7 +456,7 @@ class SourceModelLogicTree(object):
 
         # the following dicts are populated in collect_source_model_data
         self.srcs_by_path = collections.defaultdict(list)
-        self.sms_by_src = collections.defaultdict(list)
+        self.brs_by_src = collections.defaultdict(list)
         self.trt_by_src = {}
 
         t0 = time.time()
@@ -687,7 +687,7 @@ class SourceModelLogicTree(object):
 
         if 'applyToSources' in f:
             for source_id in f['applyToSources'].split():
-                branchIDs = self.sms_by_src[source_id]
+                branchIDs = self.brs_by_src[source_id]
                 if not branchIDs:
                     raise LogicTreeError(
                         branchset_node, self.filename,
@@ -774,7 +774,7 @@ class SourceModelLogicTree(object):
             path = sm.name
         for src_id, trt in trt_by_src.items():
             self.srcs_by_path[path].append(src_id)
-            self.sms_by_src[src_id].append(branch_id)
+            self.brs_by_src[src_id].append(branch_id)
             self.trt_by_src[src_id] = trt
             self.tectonic_region_types.add(trt)
 
