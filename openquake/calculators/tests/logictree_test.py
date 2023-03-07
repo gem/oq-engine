@@ -27,7 +27,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
-    case_07, case_08, case_09,
+    case_06, case_07, case_08, case_09,
     case_10, case_11, case_13, case_15, case_16, case_17,
     case_20, case_21, case_28, case_31, case_36, case_45, case_46,
     case_56, case_58, case_59, case_67, case_68, case_71, case_73,
@@ -51,6 +51,12 @@ class ClassicalTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % fname, actual,
                                   delta=delta)
         return got
+
+    def test_case_06(self):
+        # two source model, use_rates=True
+        self.assert_curves_ok(
+            ['curve-mean.csv', 'curve-rlz0.csv', 'curve-rlz1.csv'],
+            case_06.__file__)
 
     def test_case_07(self):
         # this is a case with duplicated sources
@@ -238,7 +244,7 @@ hazard_uhs-std.csv
                          ['site_id', 'stat', 'imt', 'value'])
 
     def test_case_20_bis(self):
-        # disagg_by_src without collect_rlzs
+        # disagg_by_src
         self.run_calc(case_20.__file__, 'job_bis.ini')
         weights = self.calc.datastore['weights'][:]
         dbs = self.calc.datastore['disagg_by_src']
@@ -250,31 +256,6 @@ hazard_uhs-std.csv
             'imt': ['PGA', 'SA(1.0)'],
             'lvl': 4,
             'src_id': ['CHAR1', 'COMFLT1', 'SFLT1']})
-        poes1 = weights @ dbs[0, :, 0, 0, :]  # shape Ns
-        aac(poes1, [.02 , 0.015, 0.015, 0., 0., 0., 0.], atol=1E-7)
-
-        # disagg_by_src with collect_rlzs:
-        # the averages are correct when ignoring semicolon_aggregate
-        dbs_full = self.calc.disagg_by_src  # shape (N, R, M, L1, Ns)
-        self.run_calc(case_20.__file__, 'job_bis.ini', collect_rlzs='true')
-        dbs_avg = self.calc.disagg_by_src  # shape (N, 1, M, L1, Ns)
-        for m in range(2):
-            for i in range(4):
-                avg1 = weights @ dbs_full[0, :, m, i]
-                avg2 = dbs_avg[0, 0, m, i]
-                aac(avg1, avg2)
-
-        # with semicolon_aggregate the averages are different because
-        # agg(<poes>) != <agg(poes)> where <...> is the mean on the rlzs;
-        # here is an example with 2 sources to aggregate and 3 realizations:
-        ws = numpy.array([.33333333333333]*3)
-        poes = numpy.array([[.1, .2, .3], [.4, .5, .6]])  # shape (S, R)
-        print(general.agg_probs(poes[0] @ ws, poes[1] @ ws))
-        print(general.agg_probs(poes[0], poes[1]) @ ws)
-
-        # here are the numbers
-        poes2 = self.calc.datastore['disagg_by_src'][0, 0, 0, 0]
-        aac(poes2, [.02 , 0.015, 0.015, 0., 0., 0., 0.], atol=1E-7)
 
         # testing extract_disagg_by_src
         aw = extract(self.calc.datastore, 'disagg_by_src?imt=PGA&poe=1E-3')

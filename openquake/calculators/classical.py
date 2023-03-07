@@ -243,7 +243,8 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
                         pc.array[:, r].reshape(M, L1))
             if hstats:
                 for s, (statname, stat) in enumerate(hstats.items()):
-                    sc = getters.build_stat_curve(pc, imtls, stat, weights)
+                    sc = getters.build_stat_curve(
+                        pc, imtls, stat, weights, pgetter.use_rates)
                     arr = sc.array.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
@@ -308,20 +309,16 @@ class Hazard:
         :param cmaker: a ContextMaker
         :returns: an array of rates of shape (N, R, M, L1)
         """
-        R = 1 if self.collect_rlzs else self.R
         M = len(self.imtls)
         L1 = self.L // M
-        out = numpy.zeros((self.N, R, M, L1))
+        out = numpy.zeros((self.N, M, L1))
         dic = dict(zip(cmaker.gidx, cmaker.gsims.values()))
         for lvl in range(self.L):
             m, l = divmod(lvl, L1)
             res = numpy.zeros((len(pmap.sids), self.R))
             for i, g in enumerate(pmap.gidx):
                 combine_probs(res, pmap.array[:, lvl, i], U32(dic[g]))
-            if self.collect_rlzs:
-                out[:, 0, m, l] = disagg.to_rates(res) @ self.weights
-            else:
-                out[:, :, m, l] = disagg.to_rates(res)
+            out[:, m, l] = disagg.to_rates(res) @ self.weights
         return out
 
     def store_poes(self, g, pnes, pnes_sids):
@@ -472,19 +469,18 @@ class ClassicalCalculator(base.HazardCalculator):
         self.M = len(oq.imtls)
         self.L1 = oq.imtls.size // self.M
         sources = list(self.csm.source_info)
-        R = 1 if oq.collect_rlzs else self.R
         size, msg = get_nbytes_msg(
-            dict(N=self.N, R=R, M=self.M, L1=self.L1, Ns=len(sources)))
+            dict(N=self.N, M=self.M, L1=self.L1, Ns=len(sources)))
         if size > TWO32:
-            raise RuntimeError('The matrix disagg_by_src is too large, '
-                               'use collect_rlzs=true\n%s' % msg)
-        size = self.N * R * self.M * self.L1 * len(sources) * 8
+            raise RuntimeError(
+                'The matrix disagg_by_src is too large: %s' % msg)
+        size = self.N * self.M * self.L1 * len(sources) * 8
         logging.info('Creating disagg_by_src of size %s', humansize(size))
         self.datastore.create_dset(
             'disagg_by_src', F32,
-            (self.N, R, self.M, self.L1, len(sources)))
+            (self.N,self.M, self.L1, len(sources)))
         self.datastore.set_shape_descr(
-            'disagg_by_src', site_id=self.N, rlz_id=R,
+            'disagg_by_src', site_id=self.N,
             imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
         return sources
 
@@ -710,9 +706,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 arr = self.disagg_by_src = self.datastore['disagg_by_src'][:]
                 arr, srcids = semicolon_aggregate(arr, srcids)
                 self.datastore['disagg_by_src'][:] = arr
-                R = 1 if oq.collect_rlzs else self.R
                 self.datastore.set_shape_descr(
-                    'disagg_by_src', site_id=self.N, rlz_id=R,
+                    'disagg_by_src', site_id=self.N,
                     imt=list(oq.imtls), lvl=self.L1, src_id=srcids)
 
         if 'disagg_by_src' in self.datastore and self.N == 1 and len(oq.poes):
@@ -810,7 +805,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('There are %d slices of poes [%.1f per task]',
                      nslices, nslices / len(slicedic))
         allargs = [
-            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
+            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes,
+                                oq.use_rates),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in allslices]
         self.hazard = {}  # kind -> array

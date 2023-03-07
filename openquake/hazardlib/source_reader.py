@@ -321,7 +321,7 @@ def reduce_sources(sources_with_same_id):
             sources_with_same_id, operator.attrgetter('checksum')).values():
         # duplicate sources: same id, same checksum
         src = srcs[0]
-        if len(srcs) > 1:  # happens in classical/case_20
+        if len(srcs) > 1:  # happens in logictree/case_07
             src.trt_smr = tuple(s.trt_smr for s in srcs)
         else:
             src.trt_smr = src.trt_smr,
