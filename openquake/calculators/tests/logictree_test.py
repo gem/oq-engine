@@ -250,9 +250,8 @@ hazard_uhs-std.csv
         dbs = self.calc.datastore['disagg_by_src']
         attrs = json.loads(dbs.attrs['json'])
         self.assertEqual(attrs, {
-            'shape_descr': ['site_id', 'rlz_id', 'imt', 'lvl', 'src_id'],
+            'shape_descr': ['site_id', 'imt', 'lvl', 'src_id'],
             'site_id': 1,
-            'rlz_id': 12,
             'imt': ['PGA', 'SA(1.0)'],
             'lvl': 4,
             'src_id': ['CHAR1', 'COMFLT1', 'SFLT1']})
