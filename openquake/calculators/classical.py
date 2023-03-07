@@ -890,7 +890,7 @@ def sanity_check(source_id, rates, disagg_by_src):
     js = json.loads(disagg_by_src.attrs['json'])
     srcidx = js['src_id'].index(source_id)
     rates2D = disagg_by_src[0, :, :, srcidx]  # shape (M, L1)
-    numpy.testing.assert_allclose(rates2D.flatten(), rates)
+    numpy.testing.assert_allclose(rates2D, rates)
 
 
 def disagg_by_source(parent, csm, mon):
@@ -903,7 +903,10 @@ def disagg_by_source(parent, csm, mon):
     sitecol = parent['sitecol']
     assert len(sitecol) == 1, sitecol
     edges_shapedic = disagg.get_edges_shapedic(oq, sitecol)
-    rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
+    if oq.use_rates:
+        rel_ids = sorted(set(map(basename, csm.get_sources())))
+    else:
+        rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
     out = {}
     for source_id in rel_ids:
         smlt = csm.full_lt.source_model_lt.reduce(source_id)
@@ -915,8 +918,8 @@ def disagg_by_source(parent, csm, mon):
         out.update(disagg.by_source(
             groups, sitecol, relt, edges_shapedic, oq, mon))
     items = []
-    for source_id, (disagg_rates, rates) in out.items():
+    for source_id, (disagg_rates, rates2D) in out.items():
         if oq.use_rates:
-            sanity_check(source_id, rates, parent.get('disagg_by_src'))
+            sanity_check(source_id, rates2D, parent.getitem('disagg_by_src'))
         items.append((source_id, disagg_rates))
     return items

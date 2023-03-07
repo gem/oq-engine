@@ -670,18 +670,21 @@ def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq, monitor):
     assert len(sitecol) == 1, sitecol
     edges, s = edges_shapedic
     weight = reduced_lt.rlzs['weight']
-    R = len(weight)
+    L1 = oq.imtls.size // len(oq.imtls)
+    rates2D = numpy.zeros((s['M'], L1))
     rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
     cmakers = get_cmakers(groups, reduced_lt, oq)
-    num_rlzs = [cm.Z for cm in cmakers]
-    assert R == sum(num_rlzs), (R, num_rlzs)
     for c, cmaker in enumerate(cmakers):
         try:
             dis = Disaggregator(groups[c], sitecol, cmaker, edges)
         except FarAwayRupture:
             continue  # source corresponding to a noncontributing realization
+        rlzs = sum(cmaker.gsims.values(), [])
         pmap = dis.cmaker.get_pmap([dis.fullctx])
-        iml3 = pmap.interp4D(dis.cmaker.imtls, dis.cmaker.poes)[0]  # (M, P, Z)
-        rlzs = sum(cmaker.gsims.values(), [])  # Z disjoint realizations
-        rates5D += dis.disagg_mag_dist_eps(iml3) @ weight[rlzs]
-    return {reduced_lt.source_model_lt.source_id: rates5D}
+        for m, imt in enumerate(oq.imtls):
+            poes = pmap.array[0, oq.imtls(imt), 0]  # shape NLG -> L1
+            rates2D[m] += to_rates(poes) @ weight[rlzs]
+        if hasattr(dis.cmaker, 'poes'):
+            iml3 = pmap.interp4D(dis.cmaker.imtls, dis.cmaker.poes)[0]  # MPZ
+            rates5D += dis.disagg_mag_dist_eps(iml3) @ weight[rlzs]
+    return {reduced_lt.source_model_lt.source_id: (rates5D, rates2D)}
