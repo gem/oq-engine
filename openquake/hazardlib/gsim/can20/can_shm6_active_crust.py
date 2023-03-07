@@ -82,7 +82,7 @@ def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
             imt = period  # for some versions of OQ period=imt
 
     # CanadaSHM6 hard rock site factor
-    flin[sites.vs30 > 1100] = SHM6_hardrock_site_factor(
+    flin[sites.vs30 > 1100] = CanadaSHM6_hardrock_site_factor(
         BSSA14_1100[0], BSSA14_2000[0], sites.vs30[sites.vs30 > 1100], imt)
 
     fnl = BA14._get_nonlinear_site_term(C, sites.vs30, pga_rock)
@@ -91,15 +91,13 @@ def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
     return flin + fnl + fbd
 
 
-class SHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
+class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
     """
     Boore et al., 2014 with CanadaSHM6 modifications to amplification factors
     for vs30 > 1100 and limited period range to 0.05 - 10s.
 
     See also header in CanadaSHM6_ActiveCrust.py
     """
-    experimental = True
-
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -192,7 +190,7 @@ def get_mean_stddevs_cy14(name, C, ctx):
     return mean, sig, tau, phi
 
 
-class SHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
+class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
     """
     Chiou and Youngs 2014 with CanadaSHM6 modifications to amplification
     factors for vs30 > 1100, the removal of the basin term (i.e., returns
@@ -206,8 +204,6 @@ class SHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
 
     See also header.
     """
-    experimental = True
-
     #: Required site parameters are Vs30, Vs30 measured flag
     #: and Z1.0.
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'vs30measured'))
@@ -289,7 +285,7 @@ def _get_site_response_term_ask14(C, imt, vs30, sa1180):
     return ask14_vs
 
 
-class SHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
+class CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
     """
     Abrahamson et al., 2014 with CanadaSHM6 modifications to amplification
     factors for vs30 > 1100, the removal of the basin term (i.e., returns
@@ -299,7 +295,6 @@ class SHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
     See also header in CanadaSHM6_ActiveCrust.py
     """
     REQUIRES_SITES_PARAMETERS = {'vs30measured', 'vs30'}
-    experimental = True
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -345,15 +340,15 @@ def _get_shallow_site_response_term_cb14(C, vs30, pga_rock, imt):
     CanadaSHM6 edits: modified linear site term for Vs30 > 1100
     """
     # Native site factor for CB14
-    cb14_vs = CB14._get_shallow_site_response_term(C, vs30, pga_rock)
+    cb14_vs = CB14._get_shallow_site_response_term(0, C, vs30, pga_rock)
 
     # Need site factors at Vs30 = 760, 1100 and 2000 to calculate
     # CanadaSHM6 hard rock site factors
-    cb14_1100 = CB14._get_shallow_site_response_term(C, np.array([1100.]),
+    cb14_1100 = CB14._get_shallow_site_response_term(0, C, np.array([1100.]),
                                                      np.array([0.]))
-    cb14_760 = CB14._get_shallow_site_response_term(C, np.array([760.]),
+    cb14_760 = CB14._get_shallow_site_response_term(0, C, np.array([760.]),
                                                     np.array([0.]))
-    cb14_2000 = CB14._get_shallow_site_response_term(C, np.array([2000.]),
+    cb14_2000 = CB14._get_shallow_site_response_term(0, C, np.array([2000.]),
                                                      np.array([0.]))
 
     # CB14 amplification factors relative to Vs30=760 to be consistent
@@ -372,7 +367,7 @@ def _get_shallow_site_response_term_cb14(C, vs30, pga_rock, imt):
 
 
 def get_mean_values_cb14(C, ctx, imt, a1100=None):
-    """
+    """()
     Returns the mean values for a specific IMT
     """
     if isinstance(a1100, np.ndarray):
@@ -392,7 +387,7 @@ def get_mean_values_cb14(C, ctx, imt, a1100=None):
             CB14._get_anelastic_attenuation_term(C, ctx.rrup))
 
 
-class SHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
+class CanadaSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
     """
     Campbell and Bozorgnia, 2014 with CanadaSHM6 modifications to amplification
     factors for vs30 > 1100, the removal of the basin term (i.e., returns
@@ -402,7 +397,6 @@ class SHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
     See also description in the header
     """
     REQUIRES_SITES_PARAMETERS = {'vs30'}
-    experimental = True
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -414,10 +408,11 @@ class SHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
         # Checking the IMTs used to compute ground-motion
         _check_imts(imts)
 
+        # Updating context
         CB14._update_ctx(self, ctx)
-        C_PGA = self.COEFFS[PGA()]
 
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
+        C_PGA = self.COEFFS[PGA()]
         pga1100 = np.exp(get_mean_values_cb14(C_PGA, ctx, PGA()))
 
         for m, imt in enumerate(imts):
@@ -428,7 +423,7 @@ class SHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
                 # According to Campbell & Bozorgnia (2013) [NGA West 2 Report]
                 # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
                 # Get PGA on soil
-                pga = get_mean_values_cb14(C_PGA, ctx, imt, pga1100)
+                pga = get_mean_values_cb14(C_PGA, ctx, PGA(), pga1100)
                 idx = mean[m] <= pga
                 mean[m, idx] = pga[idx]
 
@@ -458,7 +453,7 @@ class SHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
             phi[m] = p
 
 
-def SHM6_hardrock_site_factor(A1100, A2000, vs30, imt):
+def CanadaSHM6_hardrock_site_factor(A1100, A2000, vs30, imt):
     """
     Returns CanadaSHM6 hard rock (Vs30 > 1100 m/s) amplification factors in
     log units.
