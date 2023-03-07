@@ -87,6 +87,7 @@ def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
 
     fnl = BA14._get_nonlinear_site_term(C, sites.vs30, pga_rock)
     fbd = BA14._get_basin_depth_term(region, C, sites, period)  # returns 0
+    fbd = 0.0
 
     return flin + fnl + fbd
 
@@ -116,6 +117,7 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
             C = self.COEFFS[imt]
             pga_rock = BA14._get_pga_on_rock(
                 self.kind, self.region, self.sof, c_pga, ctx)
+            breakpoint()
             mean[m] = (
                 BA14._get_magnitude_scaling_term(self.sof, C, ctx) +
                 BA14._get_path_scaling(self.kind, self.region, C, ctx) +
