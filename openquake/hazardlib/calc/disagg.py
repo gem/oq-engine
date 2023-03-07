@@ -683,7 +683,7 @@ def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq, monitor):
         ws = [weight[rlzs].sum() for rlzs in cmaker.gsims.values()]
         pmap = dis.cmaker.get_pmap([dis.fullctx])
         for m, imt in enumerate(oq.imtls):
-            poes = pmap.array[0, oq.imtls(imt), 0]  # shape NLG -> L1
+            poes = pmap.array[0, oq.imtls(imt)]  # shape NLG -> (L1, G)
             rates2D[m] += to_rates(poes) @ ws
         if hasattr(dis.cmaker, 'poes'):
             iml3 = pmap.interp4D(dis.cmaker.imtls, dis.cmaker.poes)[0]  # MPZ

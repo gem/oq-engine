@@ -910,7 +910,7 @@ def disagg_by_source(parent, csm, mon):
     for source_id in rel_ids:
         smlt = csm.full_lt.source_model_lt.reduce(source_id)
         gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
-        relt = FullLogicTree(smlt, gslt, 'tolerate')
+        relt = FullLogicTree(smlt, gslt, 'reduce-rlzs')
         logging.info('Considering source %s (%d realizations)',
                      source_id, relt.get_num_paths())
         groups = disagg.reduce_groups(csm.src_groups, source_id)
