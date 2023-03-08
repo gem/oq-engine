@@ -53,7 +53,7 @@ class MultiPointSource(ParametricSeismicSource):
                  # point-specific parameters (excluding location)
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  nodal_plane_distribution, hypocenter_distribution,
-                 mesh, reqv, temporal_occurrence_model=None):
+                 mesh, reqv=None, temporal_occurrence_model=None):
         assert len(mfd) == len(mesh), (len(mfd), len(mesh))
         rupture_mesh_spacing = None
         super().__init__(
