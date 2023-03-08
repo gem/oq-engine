@@ -383,7 +383,8 @@ class PostRiskCalculator(base.RiskCalculator):
             self.policy_df = self.datastore.read_df('policy')
             self.treaty_df = self.datastore.read_df('treaty_df')
             # there must be a single loss type (possibly a total type)
-            if self.datastore['assetcol/array']['ideductible'].any():
+            if oq.total_losses and self.datastore[
+                    'assetcol/array']['ideductible'].any():
                 lt = 'claim'
             else:
                 [lt] = oq.inputs['reinsurance']
