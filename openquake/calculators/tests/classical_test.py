@@ -36,7 +36,7 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_52, case_53, case_54, case_55, case_57,
     case_60, case_61, case_62, case_63, case_64, case_65,
     case_66, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
-    case_78, case_80, case_81, case_82)
+    case_78, case_80, case_81, case_82, case_84)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -733,3 +733,11 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_82.__file__, 'job.ini')
         [f1] = export(('disagg_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/disagg_by_src.csv', f1)
+
+    def test_case_84(self):
+        # three sources are identical except for their source_ids.
+        # one is collapsed using reqv, while the other two are specified 
+        # as 'not collapsed' in the job file field reqv_ignore_sources
+        self.run_calc(case_84.__file__, 'job.ini')
+        [f] = export(('disagg_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/dbs.csv', f)

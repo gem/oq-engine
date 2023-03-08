@@ -171,13 +171,15 @@ class PreClassicalCalculator(base.HazardCalculator):
         atomic_sources = []
         normal_sources = []
         reqv = 'reqv' in self.oqparam.inputs
+        skip_list = self.oqparam.reqv_ignore_sources.split(' ')
         if reqv:
             logging.warning(
                 'Using equivalent distance approximation and '
                 'collapsing hypocenters and nodal planes')
         for sg in csm.src_groups:
             if reqv and sg.trt in self.oqparam.inputs['reqv']:
-                for src in sg:
+                subsrc = [s for s in sg if s.source_id not in skip_list]
+                for src in subsrc:
                     collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
             if sg.atomic:
