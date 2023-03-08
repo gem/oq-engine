@@ -82,7 +82,7 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
-def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
+def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
     """
@@ -90,13 +90,15 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
     mon_avg = monitor('averaging losses', measuremem=False)
     oq = crmodel.oqparam
     xtypes = oq.ext_loss_types
+    if ideduc:
+        xtypes.append('claim')
     loss_by_AR = {ln: [] for ln in xtypes}
     correl = int(oq.asset_correlation)
     (A, R, K), L = ARK, len(xtypes)
     acc = general.AccumDict(accum=numpy.zeros((L, 2)))  # u8idx->array
     value_cols = ['variance', 'loss']
     for out in outputs:
-        for li, ln in enumerate(oq.ext_loss_types):
+        for li, ln in enumerate(xtypes):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln]
@@ -202,7 +204,9 @@ def event_based_risk(df, oqparam, monitor):
     """
     with monitor('reading assets/crmodel', measuremem=True):
         # can aggregate millions of asset by using few GBs of RAM
-        items = monitor.read('assets').groupby('taxonomy')
+        adf = monitor.read('assets')
+        ideduc = adf.ideductible.any()
+        items = adf.groupby('taxonomy')
         taxo_assets = [(t, a.set_index('ordinal')) for t, a in items]
         aggids = monitor.read('aggids')
         crmodel = monitor.read('crmodel')
@@ -218,7 +222,7 @@ def event_based_risk(df, oqparam, monitor):
                             int(oqparam.asset_correlation))
 
     avg, alt = aggreg(outputs(taxo_assets, df, crmodel, rng, monitor),
-                      crmodel, ARK, aggids, rlz_id, monitor)
+                      crmodel, ARK, aggids, rlz_id, ideduc, monitor)
     return dict(avg=avg, alt=alt)
 
 
@@ -330,6 +334,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         base.create_risk_by_event(self)
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
+        self.xtypes = oq.ext_loss_types
+        if self.assetcol['ideductible'].any():
+            self.xtypes.append('claim')
+
         if oq.avg_losses:
             self.create_avg_losses()
         alt_nbytes = 4 * self.E * L
@@ -352,7 +360,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             else:  # scenario
                 self.avg_ratio = 1. / self.num_events
         self.avg_losses = {}
-        for lt in oq.ext_loss_types:
+        for lt in self.xtypes:
             self.avg_losses[lt] = numpy.zeros((self.A, R), F32)
             self.datastore.create_dset(
                 'avg_losses-rlzs/' + lt, F32, (self.A, R))
@@ -445,7 +453,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # sanity check on the risk_by_event
         alt = self.datastore.read_df('risk_by_event')
         K = self.datastore['risk_by_event'].attrs.get('K', 0)
-        upper_limit = self.E * (K + 1) * len(oq.ext_loss_types)
+        upper_limit = self.E * (K + 1) * len(self.xtypes)
         size = len(alt)
         assert size <= upper_limit, (size, upper_limit)
         # sanity check on uniqueness by (agg_id, loss_id, event_id)
@@ -456,7 +464,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                                (len(arr) - len(uni)))
 
         if oq.avg_losses:
-            for lt in oq.ext_loss_types:
+            for lt in self.xtypes:
                 al = self.avg_losses[lt]
                 for r in range(self.R):
                     al[:, r] *= self.avg_ratio[r]

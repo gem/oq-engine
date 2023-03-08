@@ -870,8 +870,6 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if oq.job_type == 'risk':
-            if oq.total_losses and (self.assetcol['ideductible'] == 0).all():
-                self.oqparam.ext_loss_types.remove('claim')
             taxs = python3compat.decode(self.assetcol.tagcol.taxonomy)
             tmap = readinput.taxonomy_mapping(self.oqparam, taxs)
             self.crmodel.set_tmap(tmap)
