@@ -695,6 +695,10 @@ class ReinsuranceTestCase(CalculatorTestCase):
 
     def test_ideductible(self):
         self.run_calc(reinsurance_4.__file__, 'job.ini')
+        f1, f2 = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', f1)
+        self.assertEqualFiles('expected/aggrisk-policy.csv', f2)
+        
         [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-aggcurves.csv', fname)
         [fname] = export(('reinsurance-avg_portfolio', 'csv'),

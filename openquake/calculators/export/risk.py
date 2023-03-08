@@ -89,6 +89,8 @@ def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
         for (agg_id, lid), df in aggrisk[ok].groupby(['agg_id', 'loss_id']):
             n = len(df)
             loss_type = scientific.LOSSTYPE[lid]
+            if loss_type == 'claim':  # temporary hack
+                continue
             out['loss_type'].extend([loss_type] * n)
             if tagnames:
                 for tagname, tag in zip(tagnames, aggtags[agg_id]):
