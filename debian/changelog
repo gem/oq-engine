@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Extended (re)insurance calculations to manage insurance deductibles at asset
+    level
   * Internal: added a parameter `use_rates` to compute statistical hazard curves
     in terms of rates, not probabilities
   * Changed `disagg_by_src` to work in terms of rates, not probabilities
