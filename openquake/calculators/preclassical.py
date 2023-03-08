@@ -178,7 +178,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         for sg in csm.src_groups:
             if reqv and sg.trt in self.oqparam.inputs['reqv']:
                 for src in sg:
-                    if src.reqv and src.reqv == 'True':
+                    if not src.reqv and not src.reqv == 'False':
                         collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
             if sg.atomic:
