@@ -24,6 +24,7 @@ A logic tree object must be iterable and yielding realizations, i.e. objects
 with attributes `value`, `weight`, `lt_path` and `ordinal`.
 """
 
+import io
 import os
 import re
 import ast
@@ -36,7 +37,7 @@ import itertools
 import collections
 import operator
 import numpy
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, context, Node
 from openquake.baselib.general import groupby, AccumDict
@@ -86,14 +87,17 @@ def get_trt_by_src(source_model_file):
     """
     :returns: a dictionary source ID -> tectonic region type of the source
     """
-    xml = source_model_file.read().replace("'", '"')  # fix single quotes
-    pieces = TRT_REGEX.split(xml)
-    nrml05 = re.search('<sourceGroup', pieces[0])
-    start = 2 if nrml05 else 0  # trt before (start=2) or after src_id (start=0)
+    xml = source_model_file.read()
     trt_by_src = {}
-    for text, trt in zip(pieces[start::2], pieces[1::2]):
-        for src_id in ID_REGEX.findall(text):
-            trt_by_src[src_id] = trt
+    if "http://openquake.org/xmlns/nrml/0.5" in xml:
+        # fast lane using regex, tectonicRegion is always before Source id
+        pieces = TRT_REGEX.split(xml.replace("'", '"'))  # fix single quotes
+        for text, trt in zip(pieces[2::2], pieces[1::2]):
+            for src_id in ID_REGEX.findall(text):
+                trt_by_src[src_id] = trt
+    else:  # parse the XML with ElementTree
+        for src in node.fromstring(xml)[0]:
+            trt_by_src[src.attrib['id']] = src.attrib['tectonicRegion']
     return trt_by_src
 
 
