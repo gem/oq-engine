@@ -307,7 +307,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             sec_losses.append(
                 partial(insurance_losses, policy_df=self.policy_df))
         if oq.total_losses:
-            sec_losses.append(partial(total_losses, kind=oq.total_losses))
+            ideduc = self.assetcol['ideductible'].any()
+            sec_losses.append(
+                partial(total_losses, kind=oq.total_losses, ideduc=ideduc))
         oq._sec_losses = sec_losses
         oq.M = len(oq.all_imts())
         oq.N = self.N

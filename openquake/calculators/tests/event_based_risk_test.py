@@ -31,7 +31,7 @@ from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_5, case_6c, case_master,
     case_miriam, occupants, case_1f, case_1g, case_7a, case_8,
-    recompute, reinsurance_1, reinsurance_2, reinsurance_3)
+    recompute, reinsurance_1, reinsurance_2, reinsurance_3, reinsurance_4)
 
 aac = numpy.testing.assert_allclose
 
@@ -692,3 +692,12 @@ class ReinsuranceTestCase(CalculatorTestCase):
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
                               fname, delta=4E-5)
+
+    def test_ideductible(self):
+        self.run_calc(reinsurance_4.__file__, 'job.ini')
+        [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggcurves.csv', fname)
+        [fname] = export(('reinsurance-avg_portfolio', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
+                              fname)
