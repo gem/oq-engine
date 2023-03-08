@@ -25,7 +25,8 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, performance, parallel, general
+from openquake.baselib import (
+    hdf5, performance, parallel, general, python3compat)
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.commonlib.calc import starmap_from_gmfs
@@ -82,17 +83,18 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
-def debugprint(ln, asset_loss_table):
+def debugprint(ln, asset_loss_table, adf):
     """
     Print risk_by_event in a reasonable format. To be used with --nd
     """
-    df = asset_loss_table.set_index('aid')
-    del df['variance']
-    print(ln)
-    print(df)
+    if '+' in ln or ln == 'claim':
+        df = asset_loss_table.set_index('aid').rename(columns={'loss': ln})
+        df['asset_id'] = python3compat.decode(adf.id[df.index].to_numpy())
+        del df['variance']
+        print(df)
 
 
-def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
+def aggreg(outputs, crmodel, ARK, aggids, rlz_id, adf, ideduc, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
     """
@@ -112,8 +114,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln]
-            # if '+' in ln or ln == 'claim':
-            #     debugprint(ln, alt)
+            # debugprint(ln, alt, adf)
             if oq.avg_losses:
                 with mon_avg:
                     coo = average_losses(
@@ -234,7 +235,7 @@ def event_based_risk(df, oqparam, monitor):
                             int(oqparam.asset_correlation))
 
     avg, alt = aggreg(outputs(taxo_assets, df, crmodel, rng, monitor),
-                      crmodel, ARK, aggids, rlz_id, ideduc, monitor)
+                      crmodel, ARK, aggids, rlz_id, adf, ideduc, monitor)
     return dict(avg=avg, alt=alt)
 
 
