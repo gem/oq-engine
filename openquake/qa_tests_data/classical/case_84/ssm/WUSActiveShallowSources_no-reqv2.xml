@@ -10,7 +10,6 @@ xmlns:gml="http://www.opengis.net/gml"
         id="pnt_no_reqv2"
         name="Point 12267 - USD 1.0"
         tectonicRegion="Active Shallow Crust"
-	reqv="False"
         >
             <pointGeometry>
                 <gml:Point>
