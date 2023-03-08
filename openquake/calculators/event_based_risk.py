@@ -82,6 +82,16 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
+def debugprint(ln, asset_loss_table):
+    """
+    Print risk_by_event in a reasonable format. To be used with --nd
+    """
+    df = asset_loss_table.set_index('aid')
+    del df['variance']
+    print(ln)
+    print(df)
+
+
 def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
@@ -102,6 +112,8 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln]
+            # if '+' in ln or ln == 'claim':
+            #     debugprint(ln, alt)
             if oq.avg_losses:
                 with mon_avg:
                     coo = average_losses(
@@ -132,9 +144,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
                     for c, col in enumerate(['variance', 'loss']):
                         dic[col].append(arr[li, c])
         fix_dtypes(dic)
-    rbe_df = pandas.DataFrame(dic)
-    print(rbe_df)
-    return loss_by_AR, rbe_df
+    return loss_by_AR, pandas.DataFrame(dic)
 
 
 def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
