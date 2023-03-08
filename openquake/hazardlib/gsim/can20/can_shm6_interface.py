@@ -25,7 +25,7 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 import numpy as np
 import openquake.hazardlib.gsim.abrahamson_2015 as A15
 import openquake.hazardlib.gsim.atkinson_macias_2009 as AM09
-import openquake.hazardlib.gsim.can20.can_shm6_active_crust as SHM6_ASC
+import openquake.hazardlib.gsim.can20.can_shm6_active_crust as CanadaSHM6_ASC
 import openquake.hazardlib.gsim.ghofrani_atkinson_2014 as GA14
 import openquake.hazardlib.gsim.zhao_2006 as ZH06
 
@@ -34,10 +34,10 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA, PGV
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.can20.can_shm6_inslab import (
-    SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55, COEFFS_SITE_FACTORS,
+    CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55, COEFFS_SITE_FACTORS,
     extrapolation_factor, CoeffsTable_CanadaSHM6)
 from openquake.hazardlib.gsim.can20.can_shm6_active_crust import (
-    SHM6_ActiveCrust_BooreEtAl2014, SHM6_hardrock_site_factor)
+    CanadaSHM6_ActiveCrust_BooreEtAl2014, CanadaSHM6_hardrock_site_factor)
 from openquake.hazardlib.gsim.abrahamson_2015 import AbrahamsonEtAl2015SInter
 from openquake.hazardlib.gsim.atkinson_macias_2009 import AtkinsonMacias2009
 from openquake.hazardlib.gsim.can20.can_shm6_active_crust import _check_imts
@@ -45,19 +45,16 @@ from openquake.hazardlib.gsim.ghofrani_atkinson_2014 import (
     GhofraniAtkinson2014Cascadia)
 
 
-class SHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
+class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
     """
     The Abrahramson et al., 2015 (BCHydro) Inteface GMM with CanadaSHM6
     modifications to include PGV and limit the defined period range.
 
     See also header in CanadaSHM6_Interface.py
     """
-
     MAX_SA = 10.
     MIN_SA = 0.05
-
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
-    experimental = True
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -125,8 +122,8 @@ class SHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
 # =============================================================================
 
 
-class SHM6_Interface_ZhaoEtAl2006SInterCascadia(
-                                SHM6_InSlab_ZhaoEtAl2006SSlabCascadia55):
+class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
+                                CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55):
     """
     Zhao et al., 2006 Interface with Cascadia adjustment at a fixed hypo depth
     of 30 km, extrapolated to 0.05 - 10s and with modifications to the site
@@ -139,13 +136,11 @@ class SHM6_Interface_ZhaoEtAl2006SInterCascadia(
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
-    extrapolate_GMM = SHM6_Interface_AbrahamsonEtAl2015SInter()
-
+    extrapolate_GMM = CanadaSHM6_Interface_AbrahamsonEtAl2015SInter()
     HYPO_DEPTH = 30.
-    experimental = True
 
     def __init__(self):
-        super(SHM6_Interface_ZhaoEtAl2006SInterCascadia,
+        super(CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia,
               self).__init__()
 
         self.COEFFS_SINTER = CoeffsTable_CanadaSHM6(self.COEFFS_SINTER,
@@ -170,6 +165,7 @@ class SHM6_Interface_ZhaoEtAl2006SInterCascadia(
             # intensity measure type.
             C = self.COEFFS_ASC[imt]
             C_SINTER = self.COEFFS_SINTER[imt]
+            C_SF = COEFFS_SITE_FACTORS[imt]
 
             # mean value as given by equation 1, p. 901, without considering
             # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
@@ -189,68 +185,9 @@ class SHM6_Interface_ZhaoEtAl2006SInterCascadia(
                 mean[m] = (0.897*mean[m]) + 4.835
 
             # convert from cm/s**2 to g
-            mean[m] = np.log(np.exp(mean[m]) * 1e-2 / g)
+            mean[m] = np.log(np.exp(mean[m] * C_SF["MF"]) * 1e-2 / g)
             ZH06._set_stddevs(
                 sig[m], tau[m], phi[m], C['sigma'], C_SINTER['tauI'])
-
-
-
-
-    # REMOVE vvvvvvvvv
-    """
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        extrapolate = False
-        PGVimt = False
-
-        if imt == PGV():
-            PGVimt = True
-            imt = SA(1.92)
-        elif imt.period < self.MIN_SA and imt.period >= self.MIN_SA_EXTRAP:
-            target_imt = imt
-            imt = SA(self.MIN_SA)
-            extrapolate = True
-        elif imt.period > self.MAX_SA and imt.period <= self.MAX_SA_EXTRAP:
-            target_imt = imt
-            imt = SA(self.MAX_SA)
-            extrapolate = True
-
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS_ASC[imt]
-        C_SINTER = self.COEFFS_SINTER[imt]
-        C_SF = COEFFS_SITE_FACTORS[imt]
-
-        # mean value as given by equation 1, p. 901, without considering the
-        # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
-        # inter and intra event terms, plus the magnitude-squared term
-        # correction factor (equation 5 p. 909)
-        mean = self._compute_magnitude_term(C, rup.mag) +\
-            self._compute_distance_term(C, rup.mag, dists.rrup) +\
-            self._compute_focal_depth_term(C, self.HYPO_DEPTH) +\
-            self._compute_site_class_term_CanadaSHM6(C, sites.vs30, imt) + \
-            self._compute_magnitude_squared_term(P=0.0, M=6.3,
-                                                 Q=C_SINTER['QI'],
-                                                 W=C_SINTER['WI'],
-                                                 mag=rup.mag) +\
-            C_SINTER['SI']
-
-        # multiply by site factor to "convert" Japan values to Cascadia values
-        # then convert from cm/s**2 to g
-        mean = np.log((np.exp(mean) * C_SF["MF"]) * 1e-2 / g)
-
-        stddevs = self._get_stddevs(C['sigma'], C_SINTER['tauI'], stddev_types,
-                                    num_sites=len(sites.vs30))
-
-        # add extrapolation factor if outside SA range (0.07 - 9.09)
-        if extrapolate:
-            mean += extrapolation_factor(self.extrapolate_GMM, rup, sites,
-                                         dists, imt, target_imt)
-
-        if PGVimt:
-            mean = (0.897*mean) + 4.835
-
-        return mean, stddevs
-    """
 
 
     # Coefs taken from ZhaoEtAl2006SInter
@@ -304,14 +241,14 @@ def _site_term_am09(ctx, imt):
     """
     # get PGA for non-linear term in BSSA14
     pga760 = _get_mean_760_am09(ctx, PGA())
-    BSSA14 = SHM6_ActiveCrust_BooreEtAl2014()
+    BSSA14 = CanadaSHM6_ActiveCrust_BooreEtAl2014()
     C = BSSA14.COEFFS[imt]
-    F = SHM6_ASC._get_site_scaling_ba14(
+    F = CanadaSHM6_ASC._get_site_scaling_ba14(
         "", "", C, np.exp(pga760), ctx, imt.period, ctx.rjb)
     return F
 
 
-class SHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
+class CanadaSHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
     """
     Atkinson and Macias, 2009 Interface GMM with an added site term following
     a modified version of BSSA14 (SS14) as implemented for CanadaSHM6.
@@ -322,7 +259,6 @@ class SHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
     REQUIRES_DISTANCES = {'rrup', 'rjb'}
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
-    experimental = True
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -343,12 +279,12 @@ class SHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
             C = AtkinsonMacias2009.COEFFS[imt]
 
             # AM09 is for Vs30 = 760m/s
-            mean = _get_mean_760_am09(ctx, imt)
-            mean += _site_term_am09(ctx, imt)
+            imean = _get_mean_760_am09(ctx, imt)
+            imean += _site_term_am09(ctx, imt)
             sig[m] = np.log(10.0 ** C["sigma"])
 
             if fix:
-                mean[m] = (0.897*mean) + 4.835
+                mean[m] = (0.897*imean) + 4.835
 
 # =============================================================================
 # =============================================================================
@@ -368,7 +304,7 @@ def _get_site_term_ga14(C, vs30, imt):
     GA14_2000 = np.log(10**GA14._get_site_term(C, 2000.))
 
     # CanadaSHM6 hard rock site factor
-    F = SHM6_hardrock_site_factor(GA14_1100, GA14_2000,
+    F = CanadaSHM6_hardrock_site_factor(GA14_1100, GA14_2000,
                                   vs30[vs30 >= 1100], imt)
 
     # for Vs30 > 1100 set to CanadaSHM6 factor
@@ -381,6 +317,7 @@ def _set_extrapolation(imt, model):
     target_imt = None
     if imt == PGV():
         extrapolate = False
+        imt = SA(1.92)
     elif imt.period < model.MIN_SA and imt.period >= model.MIN_SA_EXTRAP:
         target_imt = imt
         imt = SA(model.MIN_SA)
@@ -394,7 +331,7 @@ def _set_extrapolation(imt, model):
     return extrapolate, imt, target_imt
 
 
-class SHM6_Interface_GhofraniAtkinson2014Cascadia(
+class CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia(
                                                 GhofraniAtkinson2014Cascadia):
     """
     Ghofrani and Atkinson 2014 Interface GMM with Cascadia adjustment,
@@ -404,17 +341,15 @@ class SHM6_Interface_GhofraniAtkinson2014Cascadia(
     See also header in CanadaSHM6_Interface.py
     """
     # Parameters used to extrapolate to 0.05s <= T <= 10s
-
     MAX_SA = 9.09
     MIN_SA = 0.07
     MAX_SA_EXTRAP = 10.0
     MIN_SA_EXTRAP = 0.05
-    extrapolate_GMM = SHM6_Interface_AbrahamsonEtAl2015SInter()
-    experimental = True
+    extrapolate_GMM = CanadaSHM6_Interface_AbrahamsonEtAl2015SInter()
 
     def __init__(self):
 
-        super(SHM6_Interface_GhofraniAtkinson2014Cascadia,
+        super(CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia,
               self).__init__()
 
         # Need to use new CoeffsTable to be able to handle extrapolation

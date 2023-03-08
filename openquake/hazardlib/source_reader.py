@@ -273,7 +273,8 @@ def _build_groups(full_lt, smdict):
         src_groups, source_ids = _groups_ids(
             smlt_dir, smdict, rlz.value[0].split())
         bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
-        while bset_values and bset_values[0][0].uncertainty_type == 'extendModel':
+        while (bset_values and
+               bset_values[0][0].uncertainty_type == 'extendModel'):
             (bset, value), *bset_values = bset_values
             extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
             common = source_ids & extra_ids
@@ -321,7 +322,7 @@ def reduce_sources(sources_with_same_id):
             sources_with_same_id, operator.attrgetter('checksum')).values():
         # duplicate sources: same id, same checksum
         src = srcs[0]
-        if len(srcs) > 1:  # happens in classical/case_20
+        if len(srcs) > 1:  # happens in logictree/case_07
             src.trt_smr = tuple(s.trt_smr for s in srcs)
         else:
             src.trt_smr = src.trt_smr,

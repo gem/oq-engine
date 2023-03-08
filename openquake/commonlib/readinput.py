@@ -732,7 +732,7 @@ def get_full_lt(oqparam, branchID=None):
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
     dupl = []
-    for src_id, sms in source_model_lt.sms_by_src.items():
+    for src_id, sms in source_model_lt.brs_by_src.items():
         if len(sms) > 1:
             dupl.append(src_id)
     if dupl:
@@ -815,6 +815,7 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
     :param h5:
          an open hdf5.File where to store the source info
     """
+    logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
     full_lt = get_full_lt(oqparam, branchID)
     path = get_cache_path(oqparam, h5)
     if os.path.exists(path):

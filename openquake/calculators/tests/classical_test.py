@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import gzip
+import unittest
 import numpy
 from openquake.baselib import parallel, general
 from openquake.baselib.python3compat import decode
@@ -669,19 +670,23 @@ class ClassicalTestCase(CalculatorTestCase):
                           source_model_logic_tree_file='wrong_ssmLT.xml')
 
     def test_case_76(self):
-        # reserving the test number for CanadaSHM6
-        """
+        # CanadaSHM6 GMPEs
         self.run_calc(case_76.__file__, 'job.ini')
         branches = self.calc.datastore['full_lt/gsim_lt'].branches
         gsims = [br.gsim for br in branches]
-        _poes = self.calc.datastore['_poes'][:, 0, :]  # shape (20, 200)
-        for gsim, poes in zip(gsims, _poes):
+        df = self.calc.datastore.read_df('_poes')
+        del df['sid']
+        L = self.calc.oqparam.imtls.size  # 25 levels x 8 IMTs
+        for gid, gsim in enumerate(gsims):
+            df_for_gid = df[df.gid == gid]
+            poes = numpy.zeros(L)
+            poes[df_for_gid.lid] = df_for_gid.poe
             csv = general.gettemp('\r\n'.join('%.6f' % poe for poe in poes))
             gsim_str = gsim.__class__.__name__
             if hasattr(gsim, 'submodel'):
                 gsim_str += '_' + gsim.submodel
+            raise unittest.SkipTest('Not passing yet')
             self.assertEqualFiles('expected/%s.csv' % gsim_str, csv)
-        """
 
     def test_case_77(self):
         # test calculation for modifiable GMPE with original tabular GMM

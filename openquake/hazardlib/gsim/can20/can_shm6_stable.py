@@ -124,7 +124,7 @@ def AB06_BA08_aa13(vs30, imt, PGA760):
     return AB06_BA08
 
 
-class SHM6_StableCrust_AA13(GMPETable):
+class CanadaSHM6_StableCrust_AA13(GMPETable):
     """
     Implementation of the Atkinson and Adams, 2013 representative suite of
     GMMs for CanadaSHM6 (low, central and high branch).
@@ -143,13 +143,13 @@ class SHM6_StableCrust_AA13(GMPETable):
     """
 
     AA13_TABLE = ""
-    DEFINED_FOR_TECTONIC_REGION_TYPE = ""
+    DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Shallow Crust"
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
+    REQUIRES_DISTANCES = set(('rhypo',))
     REQUIRES_SITES_PARAMETERS = set(('vs30',))
     REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
-    experimental = True
 
     def __init__(self, **kwargs):
         """
@@ -165,9 +165,6 @@ class SHM6_StableCrust_AA13(GMPETable):
             kwargs['gmpe_table'] = os.path.join(
                 os.path.dirname(__file__), fname)
         super().__init__(**kwargs)
-        self.REQUIRES_DISTANCES = frozenset(kwargs['REQUIRES_DISTANCES'])
-        self.DEFINED_FOR_TECTONIC_REGION_TYPE = kwargs[
-            'DEFINED_FOR_TECTONIC_REGION_TYPE']
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -472,7 +469,7 @@ def BC17_amp(self, imt, rctx, dist):
     return np.array(BC17)
 
 
-class SHM6_StableCrust_NGAEast(GMPETable):
+class CanadaSHM6_StableCrust_NGAEast(GMPETable):
     """
     6th Generation Seismic Hazard Model of Canada (CanadaSHM6) implementation
     of the 13 NGA-East Ground-Motion Models as described in PEER Report No.
@@ -495,14 +492,13 @@ class SHM6_StableCrust_NGAEast(GMPETable):
     """
 
     NGA_EAST_TABLE = ""
-    DEFINED_FOR_TECTONIC_REGION_TYPE = ""
+    DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Shallow Crust"
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
     REQUIRES_SITES_PARAMETERS = set(('vs30',))
-    REQUIRES_DISTANCES = set(('rrup',))
+    REQUIRES_DISTANCES = set(('rhypo',))
     REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
-    experimental = True
 
     def __init__(self, **kwargs):
         """
@@ -520,9 +516,9 @@ class SHM6_StableCrust_NGAEast(GMPETable):
             kwargs['gmpe_table'] = os.path.join(
                 os.path.dirname(__file__), fname)
         super().__init__(**kwargs)
-        self.REQUIRES_DISTANCES = frozenset(kwargs['REQUIRES_DISTANCES'])
-        self.DEFINED_FOR_TECTONIC_REGION_TYPE = kwargs[
-            'DEFINED_FOR_TECTONIC_REGION_TYPE']
+        #self.REQUIRES_DISTANCES = frozenset(kwargs['REQUIRES_DISTANCES'])
+        #self.DEFINED_FOR_TECTONIC_REGION_TYPE = kwargs[
+        #    'DEFINED_FOR_TECTONIC_REGION_TYPE']
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

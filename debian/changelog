@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Internal: added a parameter `use_rates` to compute statistical hazard curves
+    in terms of rates, not probabilities
+  * Changed `disagg_by_src` to work in terms of rates, not probabilities
   * Added command `oq runpsha <lon> <lat>` for mosaic PSHA calculations
   * Enhanced --reuse-input to reuse preclassical calculations if possible
   * Normalized IMTs in the `minimum_intensity` dictionary (i.e. SA(1.)=>SA(1.0))
