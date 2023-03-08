@@ -1,0 +1,3 @@
+rup_mag,rup_rake,dist_rjb,site_kappa0,site_vs30,result_type,damping,0.1,0.3
+6.5,0,0,0.001,850,TOTAL_STDDEV,5,0.880421972,0.779036298
+7.5,0,0,0.001,850,TOTAL_STDDEV,5,0.880421972,0.779036298

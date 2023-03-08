@@ -96,6 +96,7 @@ def _get_mechanism(ctx, C):
     SS, NF, TF = utils.get_fault_type_dummy_variables(ctx)
     return C['f1'] * SS + C['f2'] * TF
 
+
 class LanzanoEtAl2019_RJB_OMO(GMPE):
     """
     Implements GMPE developed by G.Lanzano, L.Luzi, F.Pacor, L.Luzi,
@@ -421,14 +422,14 @@ class LanzanoEtAl2019_RJB_OMO_RefRock(GMPE):
     COEFFS = LanzanoEtAl2019_RJB_OMO.COEFFS
     COEFFS_SITE = LanzanoEtAl2019_RJB_OMO.COEFFS_SITE
 
-    def __init__(self, **kwargs):
+    def __init__(self, kappa0=None, **kwargs):
         """
         Instantiate the model. When the kappa0 value is provided when
         initializing the class, this overrides the kappa0 value assigned to
         the site.
         """
-        super().__init__(**kwargs)
-        self.kappa0 = kwargs.get('kappa0')
+        super().__init__(kappa0=kappa0, **kwargs)
+        self.kappa0 = kappa0
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -437,7 +438,7 @@ class LanzanoEtAl2019_RJB_OMO_RefRock(GMPE):
         for spec of input and result values.
         """
         if self.kappa0 is not None:
-            ctx.kappa0 = self.kapp0
+            ctx.kappa0 = self.kappa0
         [dist_type] = self.REQUIRES_DISTANCES
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
