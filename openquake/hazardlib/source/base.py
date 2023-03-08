@@ -304,6 +304,10 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         Instance of
         :class:`openquake.hazardlib.tom.PoissonTOM` defining temporal
         occurrence model for calculating rupture occurrence probabilities
+    :param reqv:
+        False if the equivalent distance simplification is applied via the job
+        file to the respective tectonic_region_type but should not be applied 
+        to this source 
 
     :raises ValueError:
         If either rupture aspect ratio or rupture mesh spacing is not positive

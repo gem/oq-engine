@@ -733,3 +733,22 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_82.__file__, 'job.ini')
         [f1] = export(('disagg_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/disagg_by_src.csv', f1)
+
+    def test_case_84(self):
+        # multipoint source computed using reqv as expected 
+        self.run_calc(case_84.__file__, 'job_reqv.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve_reqv.csv', f1)
+
+        # reqv is still specified in the job file but disabled in
+        # the xml
+        self.run_calc(case_84.__file__, 'job_noreqv.ini')
+        [f2] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve_noreqv.csv', f2)
+
+        # when the two are run together, the contribution from each
+        # is different despite being the same src; the only difference
+        # is that one is collapsed with reqv while the other is not
+        self.run_calc(case_84.__file__, 'job_noreqv.ini')
+        [f3] = export(('disagg_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/dbs.csv', f3)
