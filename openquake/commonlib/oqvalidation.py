@@ -617,7 +617,7 @@ return_periods:
   Default: empty list.
 
 reqv_ignore_sources:
-  Used when some sources in a TRT that uses the equivalent distance term 
+  Used when some sources in a TRT that uses the equivalent distance term
   should not be collapsed.
   Example: *reqv_ignore_sources = src1 src2 src3*
   Default: empty list
@@ -1072,7 +1072,7 @@ class OqParam(valid.ParamSet):
         if 'reqv' not in self.inputs:
             return
         return {key: valid.RjbEquivalent(value)
-                for key, value in self.inputs['reqv'].items()} 
+                for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
         if '_log' in names_vals:  # called from engine
