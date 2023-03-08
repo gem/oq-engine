@@ -1527,7 +1527,7 @@ class OqParam(valid.ParamSet):
         """
         etypes = self.loss_types
         if self.total_losses:
-            etypes = self.loss_types + [self.total_losses]
+            etypes = self.loss_types + [self.total_losses, 'claim']
         if 'insurance' in self.inputs:
             itypes = [lt + '_ins' for lt in self.inputs['insurance']]
             etypes = self.loss_types + itypes

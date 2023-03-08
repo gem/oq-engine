@@ -1171,7 +1171,7 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
         losses_by_lt[lt + '_ins'] = new
 
 
-def total_losses(asset_df, losses_by_lt, kind, ideduc):
+def total_losses(asset_df, losses_by_lt, kind, ideduc=False):
     """
     :param asset_df: DataFrame of assets
     :param losses_by_lt: lt -> DataFrame[eid, aid]
