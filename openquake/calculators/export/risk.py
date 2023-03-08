@@ -592,6 +592,8 @@ def export_aggcurves_csv(ekey, dstore):
         edic = general.AccumDict(accum=[])
         for (agg_id, rlz_id, loss_id), d in dataf[ok].groupby(
                 ['agg_id', 'rlz_id', 'loss_id']):
+            if loss_id == scientific.LOSSID['claim']:  # temporary hack
+                continue
             if tagnames:
                 for tagname, tag in zip(tagnames, aggtags[agg_id]):
                     edic[tagname].extend([tag] * len(d))

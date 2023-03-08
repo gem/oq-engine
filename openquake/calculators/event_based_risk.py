@@ -132,7 +132,9 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
                     for c, col in enumerate(['variance', 'loss']):
                         dic[col].append(arr[li, c])
         fix_dtypes(dic)
-    return loss_by_AR, pandas.DataFrame(dic)
+    rbe_df = pandas.DataFrame(dic)
+    print(rbe_df)
+    return loss_by_AR, rbe_df
 
 
 def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
