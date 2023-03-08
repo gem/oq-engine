@@ -47,7 +47,7 @@ class KiteFaultSource(ParametricSeismicSource):
                  floating_y_step=0, profiles_sampling=None):
         super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
-            magnitude_scaling_relationship, rupture_aspect_ratio,
+            magnitude_scaling_relationship, rupture_aspect_ratio, None,
             temporal_occurrence_model)
 
         # TODO add checks

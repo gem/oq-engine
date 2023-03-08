@@ -51,7 +51,7 @@ class AreaSource(ParametricSeismicSource):
                  polygon, area_discretization):
         super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
-            magnitude_scaling_relationship, rupture_aspect_ratio,
+            magnitude_scaling_relationship, rupture_aspect_ratio, None,
             temporal_occurrence_model)
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
@@ -148,7 +148,8 @@ class AreaSource(ParametricSeismicSource):
                 location=geo.Point(lon, lat),
                 nodal_plane_distribution=self.nodal_plane_distribution,
                 hypocenter_distribution=self.hypocenter_distribution,
-                temporal_occurrence_model=self.temporal_occurrence_model)
+                temporal_occurrence_model=self.temporal_occurrence_model,
+                reqv=None)
             pt.num_ruptures = pt.count_ruptures()
             yield pt
 

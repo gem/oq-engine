@@ -59,7 +59,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
                  surface_node=None):
         super().__init__(
             source_id, name, tectonic_region_type, mfd, None, None, None,
-            temporal_occurrence_model)
+            None, temporal_occurrence_model)
         NodalPlane.check_rake(rake)
         self.surface = surface
         self.rake = rake

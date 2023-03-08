@@ -1390,6 +1390,7 @@ class RowConverter(SourceConverter):
             'A',
             node.get('groupname', ''),
             node.get('tectonicRegion', ''),
+            node.get('reqv'),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
             ~node.ruptAspectRatio,

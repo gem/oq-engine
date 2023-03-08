@@ -96,7 +96,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                  fault_trace, dip, rake, hypo_list=(), slip_list=()):
         super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
-            magnitude_scaling_relationship, rupture_aspect_ratio,
+            magnitude_scaling_relationship, rupture_aspect_ratio, None,
             temporal_occurrence_model)
         NodalPlane.check_rake(rake)
         SimpleFaultSurface.check_fault_data(

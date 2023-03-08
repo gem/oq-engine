@@ -155,7 +155,7 @@ class ComplexFaultSource(ParametricSeismicSource):
                  edges, rake):
         super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
-            magnitude_scaling_relationship, rupture_aspect_ratio,
+            magnitude_scaling_relationship, rupture_aspect_ratio, None,
             temporal_occurrence_model)
         NodalPlane.check_rake(rake)
         ComplexFaultSurface.check_fault_data(edges, rupture_mesh_spacing)
