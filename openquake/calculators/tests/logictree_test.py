@@ -264,7 +264,7 @@ hazard_uhs-std.csv
         self.assertEqual(aw.site_id, 0)
         self.assertEqual(aw.imt, 'PGA')
         self.assertEqual(aw.poe, .001)
-        # the numbers are quite different on macOS :-(
+        # the numbers are quite different on macOS, 6.461143e-05 :-(
         aac(aw.array['poe'], [6.467104e-05, 0, 0], atol=1E-7)
 
         # testing view_relevant_sources
