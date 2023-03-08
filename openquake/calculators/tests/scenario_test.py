@@ -175,7 +175,7 @@ class ScenarioTestCase(CalculatorTestCase):
             sorted(['id', 'ordinal', 'lon', 'lat', 'site_id', 'area',
                     'value-contents', 'value-nonstructural', 'value-number',
                     'value-occupants', 'occupants_night', 'value-structural',
-                    'taxonomy', 'NAME_2', 'ID_2', 'ID_1',
+                    'ideductible', 'taxonomy', 'NAME_2', 'ID_2', 'ID_1',
                     'OCCUPANCY', 'NAME_1']))
 
     def test_case_17(self):
