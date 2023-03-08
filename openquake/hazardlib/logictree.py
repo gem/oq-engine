@@ -464,9 +464,8 @@ class SourceModelLogicTree(object):
             [bsnode] = bsnodes(self.filename, blnode)
             self.parse_branchset(bsnode, depth)
         dt = time.time() - t0
-        bname = os.path.basename(self.filename)
-        logging.info('Validated %s (with %d files) in %.2f seconds', bname,
-                     len(self.srcs_by_path), dt)
+        logging.info('Validated source model logic tree with %d underlying '
+                     'files in %.2f seconds', len(self.srcs_by_path), dt)
 
     def parse_branchset(self, branchset_node, depth):
         """
