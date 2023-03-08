@@ -984,7 +984,7 @@ class OqParam(valid.ParamSet):
     reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
-    reqv_ignore_sources = valid.Param(str, '')
+    reqv_ignore_sources = valid.Param(valid.namelist, [])
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rlz_index = valid.Param(valid.positiveints, None)
