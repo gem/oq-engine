@@ -749,6 +749,6 @@ class ClassicalTestCase(CalculatorTestCase):
         # when the two are run together, the contribution from each
         # is different despite being the same src; the only difference
         # is that one is collapsed with reqv while the other is not
-        self.run_calc(case_84.__file__, 'job_noreqv.ini')
+        self.run_calc(case_84.__file__, 'job_both.ini')
         [f3] = export(('disagg_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/dbs.csv', f3)
