@@ -823,11 +823,8 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
             csm = ds['_csm']
             csm.init(full_lt)
     else:
-        try:
-            csm = source_reader.get_csm(oqparam, full_lt, h5)
-            _check_csm(csm, oqparam, h5)
-        except Exception:
-            raise RuntimeError('processing %s' % oqparam.inputs['job_ini'])
+        csm = source_reader.get_csm(oqparam, full_lt, h5)
+        _check_csm(csm, oqparam, h5)
     return csm
 
 
