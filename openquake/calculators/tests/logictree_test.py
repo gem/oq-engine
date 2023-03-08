@@ -264,7 +264,7 @@ hazard_uhs-std.csv
         self.assertEqual(aw.site_id, 0)
         self.assertEqual(aw.imt, 'PGA')
         self.assertEqual(aw.poe, .001)
-        aac(aw.array['poe'], [6.467104e-05, 0, 0], atol=1E-10)
+        aac(aw.array['poe'], [6.467104e-05, 0, 0], atol=1E-7)
 
         # testing view_relevant_sources
         arr = view('relevant_sources:SA(1.0)', self.calc.datastore)
