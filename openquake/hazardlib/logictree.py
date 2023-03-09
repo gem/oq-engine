@@ -1049,6 +1049,7 @@ class FullLogicTree(object):
         :returns: list of sources with the same base source ID
         """
         out = []
+        sd = self.source_model_lt.source_data
         for src in srcs:
             srcid = re.split('[:;.]', src.source_id)[0]
             if source_id and srcid != source_id:
@@ -1057,7 +1058,7 @@ class FullLogicTree(object):
                 trti = 0
             else:
                 trti = self.trti[src.tectonic_region_type]
-            brids = set(self.source_model_lt.brs_by_src[srcid])
+            brids = set(sd[sd['source'] == srcid]['branch'])
             if smr is None:
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs
