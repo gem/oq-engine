@@ -24,6 +24,7 @@ A logic tree object must be iterable and yielding realizations, i.e. objects
 with attributes `value`, `weight`, `lt_path` and `ordinal`.
 """
 
+import io
 import os
 import re
 import ast
@@ -48,7 +49,6 @@ from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
     dummy_branchset, LogicTreeError, parse_uncertainty, random)
 
-U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
