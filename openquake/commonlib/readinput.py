@@ -674,6 +674,10 @@ def get_source_model_lt(oqparam, branchID=None):
         instance
     """
     smlt = get_smlt(vars(oqparam), branchID)
+    for src in oqparam.reqv_ignore_sources:
+        if src not in smlt.trt_by_src:
+            raise NameError('The source %r in reqv_ignore_sources does '
+                            'not exist in the source model(s)' % src)
     if len(oqparam.source_id) == 1:  # reduce to a single source
         return smlt.reduce(oqparam.source_id[0])
     return smlt
