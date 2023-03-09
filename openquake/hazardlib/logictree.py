@@ -24,7 +24,6 @@ A logic tree object must be iterable and yielding realizations, i.e. objects
 with attributes `value`, `weight`, `lt_path` and `ordinal`.
 """
 
-import io
 import os
 import re
 import ast
@@ -1042,13 +1041,33 @@ class FullLogicTree(object):
         """
         return divmod(trt_smr, TWO24)
 
-    def get_trt_smr(self, trt, smr):
+    def set_trt_smr(self, srcs, source_id=None, smr=None):
         """
-        :returns: trt_smr
+        :param srcs: source objects
+        :param source_id: base source ID
+        :param srm: source model realization index
+        :returns: list of sources with the same base source ID
         """
-        if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
-            return int(smr)
-        return self.trti[trt] * TWO24 + int(smr)
+        out = []
+        for src in srcs:
+            srcid = re.split('[:;.]', src.source_id)[0]
+            if source_id and srcid != source_id:
+                continue  # filter
+            if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
+                trti = 0
+            else:
+                trti = self.trti[src.tectonic_region_type]
+            brids = set(self.source_model_lt.brs_by_src[srcid])
+            if smr is None:
+                tup = tuple(trti * TWO24 + sm_rlz.ordinal
+                            for sm_rlz in self.sm_rlzs
+                            if set(sm_rlz.lt_path) & brids)
+            else:
+                tup = trti * TWO24 + smr
+            # print('Setting %s on %s' % (tup, src))
+            src.trt_smr = tup  # realizations impacted by the source
+            out.append(src)
+        return out
 
     def get_trt_smrs(self, smr):
         """
@@ -1057,6 +1076,20 @@ class FullLogicTree(object):
         """
         nt = len(self.gsim_lt.values)
         return smr + numpy.arange(nt) * TWO24
+
+    def reduce_groups(self, src_groups, source_id=None):
+        """
+        Filter the sources and set the tuple .trt_smr
+        """
+        groups = []
+        source_id = source_id or self.source_model_lt.source_id
+        for sg in src_groups:
+            ok = self.set_trt_smr(sg, source_id)
+            if ok:
+                grp = copy.copy(sg)
+                grp.sources = ok
+                groups.append(grp)
+        return groups
 
     def gsim_by_trt(self, rlz):
         """
