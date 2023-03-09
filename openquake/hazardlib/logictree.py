@@ -1032,18 +1032,11 @@ class FullLogicTree(object):
         """
         return divmod(trt_smr, TWO24)
 
-    def get_trt_smr(self, trt, smr):
-        """
-        :returns: trt_smr
-        """
-        if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
-            return int(smr)
-        return self.trti[trt] * TWO24 + int(smr)
-
-    def set_trt_smr(self, srcs, source_id=None):
+    def set_trt_smr(self, srcs, source_id=None, smr=None):
         """
         :param srcs: source objects
         :param source_id: base source ID
+        :param srm: source model realization index
         :returns: list of sources with the same base source ID
         """
         out = []
@@ -1051,12 +1044,17 @@ class FullLogicTree(object):
             srcid = re.split('[:;.]', src.source_id)[0]
             if source_id and srcid != source_id:
                 continue  # filter
-            trti = self.trti[src.tectonic_region_type]
-            sd = self.source_model_lt.source_data
-            brids = set(sd[sd['source'] == srcid]['branch'])
-            tup = tuple(trti * TWO24 + sm_rlz.ordinal
-                        for sm_rlz in self.sm_rlzs
-                        if set(sm_rlz.lt_path) & brids)
+            if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
+                trti = 0
+            else:
+                trti = self.trti[src.tectonic_region_type]
+            brids = set(self.source_model_lt.brs_by_src[srcid])
+            if smr is None:
+                tup = tuple(trti * TWO24 + sm_rlz.ordinal
+                            for sm_rlz in self.sm_rlzs
+                            if set(sm_rlz.lt_path) & brids)
+            else:
+                tup = trti * TWO24 + smr
             # print('Setting %s on %s' % (tup, src))
             src.trt_smr = tup  # realizations impacted by the source
             out.append(src)
