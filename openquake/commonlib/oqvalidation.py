@@ -616,6 +616,12 @@ return_periods:
   Example: *return_periods = 200 500 1000*.
   Default: empty list.
 
+reqv_ignore_sources:
+  Used when some sources in a TRT that uses the equivalent distance term
+  should not be collapsed.
+  Example: *reqv_ignore_sources = src1 src2 src3*
+  Default: empty list
+
 risk_imtls:
   INTERNAL. Automatically set by the engine.
 
@@ -845,6 +851,7 @@ class OqParam(valid.ParamSet):
                     'insurance', 'reinsurance', 'ins_loss',
                     'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
                     'fragility', 'consequence', 'reqv', 'input_zip',
+                    'reqv_ignore_sources',
                     'amplification', 'station_data',
                     'nonstructural_vulnerability',
                     'nonstructural_fragility',
@@ -977,6 +984,7 @@ class OqParam(valid.ParamSet):
     reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
+    reqv_ignore_sources = valid.Param(valid.namelist, [])
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rlz_index = valid.Param(valid.positiveints, None)

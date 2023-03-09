@@ -692,6 +692,7 @@ class HazardCalculator(BaseCalculator):
             self.sitecol, self.assetcol, discarded = (
                 readinput.get_sitecol_assetcol(
                     oq, haz_sitecol, self.crmodel.loss_types))
+            # this is overriding the sitecol in test_case_miriam
             self.datastore['sitecol'] = self.sitecol
             if len(discarded):
                 self.datastore['discarded'] = discarded
@@ -948,9 +949,7 @@ class HazardCalculator(BaseCalculator):
             self.realizations = self.full_lt.get_realizations()
             if not self.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
-            # if full_lt is stored in the parent, do not store it again
-            # this avoids breaking case_18 when starting from a preclassical
-            if self.oqparam.hazard_calculation_id is None:
+            if 'full_lt' not in self.datastore:
                 self.datastore['full_lt'] = self.full_lt
         else:  # scenario
             self.full_lt = self.datastore['full_lt']

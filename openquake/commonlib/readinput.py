@@ -674,6 +674,10 @@ def get_source_model_lt(oqparam, branchID=None):
         instance
     """
     smlt = get_smlt(vars(oqparam), branchID)
+    for src in oqparam.reqv_ignore_sources:
+        if src not in smlt.trt_by_src:
+            raise NameError('The source %r in reqv_ignore_sources does '
+                            'not exist in the source model(s)' % src)
     if len(oqparam.source_id) == 1:  # reduce to a single source
         return smlt.reduce(oqparam.source_id[0])
     return smlt
@@ -815,6 +819,7 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
     :param h5:
          an open hdf5.File where to store the source info
     """
+    logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
     full_lt = get_full_lt(oqparam, branchID)
     path = get_cache_path(oqparam, h5)
     if os.path.exists(path):

@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+
+    <logicTree logicTreeID="US14_all_excl_cali">
+
+        <logicTreeBranchingLevel branchingLevelID="WUS_ASC">
+            <logicTreeBranchSet
+            applyToTectonicRegionType="Active Shallow Crust"
+            branchSetID="WUS_Shal"
+            uncertaintyType="gmpeModel">
+                <logicTreeBranch branchID="ASK14_MEAN">
+                    <uncertaintyModel>AbrahamsonEtAl2014NSHMPMean</uncertaintyModel>
+                    <uncertaintyWeight>0.22</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="BSSA14_MEAN">
+                    <uncertaintyModel>BooreEtAl2014NSHMPMean</uncertaintyModel>
+                    <uncertaintyWeight>0.22</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="CB14_MEAN">
+                    <uncertaintyModel>CampbellBozorgnia2014NSHMPMean</uncertaintyModel>
+                    <uncertaintyWeight>0.22</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="CY14_MEAN">
+                    <uncertaintyModel>ChiouYoungs2014NSHMPMean</uncertaintyModel>
+                    <uncertaintyWeight>0.22</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="I14_MEAN">
+                    <uncertaintyModel>Idriss2014NSHMPMean</uncertaintyModel>
+                    <uncertaintyWeight>0.12</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        
+        <logicTreeBranchingLevel
+        branchingLevelID="PacificNWDeep">
+            <logicTreeBranchSet
+            applyToTectonicRegionType="Subduction Inslab"
+            branchSetID="PCNWDeep"
+            uncertaintyType="gmpeModel">
+                <logicTreeBranch branchID="BCHydSS">
+                    <uncertaintyModel>AbrahamsonEtAl2015SSlab</uncertaintyModel>
+                    <uncertaintyWeight>0.333</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="Z06SS">
+                    <uncertaintyModel>ZhaoEtAl2006SSlabNSHMP2014</uncertaintyModel>
+                    <uncertaintyWeight>0.334</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AB03SSGl">
+                    <uncertaintyModel>AtkinsonBoore2003SSlabNSHMP2008</uncertaintyModel>
+                    <uncertaintyWeight>0.1665</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AB03SSCa">
+                    <uncertaintyModel>AtkinsonBoore2003SSlabCascadiaNSHMP2008</uncertaintyModel>
+                    <uncertaintyWeight>0.1665</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="CASC">
+            <logicTreeBranchSet
+            applyToTectonicRegionType="Subduction Interface"
+            branchSetID="Cascadia"
+            uncertaintyType="gmpeModel">
+                <logicTreeBranch branchID="BCHydSI">
+                    <uncertaintyModel>AbrahamsonEtAl2015SInter</uncertaintyModel>
+                    <uncertaintyWeight> 0.3 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AM09" >
+                    <uncertaintyModel> AtkinsonMacias2009 </uncertaintyModel>
+                    <uncertaintyWeight> 0.3 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="Z06SI" >
+                    <uncertaintyModel> ZhaoEtAl2006SInter </uncertaintyModel>
+                    <uncertaintyWeight> 0.3 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AB03SI">
+                    <uncertaintyModel>AtkinsonBoore2003SInterNSHMP2008</uncertaintyModel>
+                    <uncertaintyWeight> 0.1 </uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="ceus_gms_f">
+            <logicTreeBranchSet
+            applyToTectonicRegionType="Stable Shallow Faults"
+            branchSetID="ceus_flt"
+            uncertaintyType="gmpeModel">
+                <logicTreeBranch branchID="F96f">
+                    <uncertaintyModel>FrankelEtAl1996MwNSHMP2008</uncertaintyModel>
+                    <uncertaintyWeight>0.06</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="T02f">
+                    <uncertaintyModel>ToroEtAl2002SHARE </uncertaintyModel>
+                    <uncertaintyWeight>0.11</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="S02f" >
+                    <uncertaintyModel>SilvaEtAl2002MwNSHMP2008 </uncertaintyModel>
+                    <uncertaintyWeight>0.06</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="C03f">
+                    <uncertaintyModel>Campbell2003MwNSHMP2008</uncertaintyModel>
+                    <uncertaintyWeight>0.11</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="TP05f">
+                    <uncertaintyModel>TavakoliPezeshk2005MwNSHMP2008</uncertaintyModel>
+                    <uncertaintyWeight>0.11</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AB11f">
+                    <uncertaintyModel>AtkinsonBoore2006Modified2011</uncertaintyModel>
+                    <uncertaintyWeight>0.22</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="PEA11f">
+                    <uncertaintyModel> PezeshkEtAl2011NEHRPBC </uncertaintyModel>
+                    <uncertaintyWeight> 0.15 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="So01f" >
+                    <uncertaintyModel> SomervilleEtAl2001NSHMP2008 </uncertaintyModel>
+                    <uncertaintyWeight> 0.1 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="BA11f" >
+                    <uncertaintyModel> BooreAtkinson2011 </uncertaintyModel>
+                    <uncertaintyWeight> 0.08 </uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="ceus_gms_g">
+            <logicTreeBranchSet
+            applyToTectonicRegionType="Stable Shallow Gridded"
+            branchSetID="ceus_grd"
+            uncertaintyType="gmpeModel">
+                <logicTreeBranch branchID="F96g">
+                    <uncertaintyModel>FrankelEtAl1996MwNSHMP2008 </uncertaintyModel>
+                    <uncertaintyWeight>0.06</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="T02g">
+                    <uncertaintyModel>ToroEtAl2002SHARE</uncertaintyModel>
+                    <uncertaintyWeight> 0.13 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="S02g" >
+                    <uncertaintyModel>SilvaEtAl2002MwNSHMP2008 </uncertaintyModel>
+                    <uncertaintyWeight> 0.06 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="C03g" >
+                    <uncertaintyModel>Campbell2003MwNSHMP2008 </uncertaintyModel>
+                    <uncertaintyWeight> 0.13 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="TP05g" >
+                    <uncertaintyModel>TavakoliPezeshk2005MwNSHMP2008</uncertaintyModel>
+                    <uncertaintyWeight> 0.13 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AB11g" >
+                    <uncertaintyModel>AtkinsonBoore2006Modified2011</uncertaintyModel>
+                    <uncertaintyWeight> 0.25 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="PEA11g" >
+                    <uncertaintyModel>PezeshkEtAl2011NEHRPBC</uncertaintyModel>
+                    <uncertaintyWeight> 0.16 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="A08pg" >
+                    <uncertaintyModel>Atkinson2008prime</uncertaintyModel>
+                    <uncertaintyWeight>0.08</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+    </logicTree>
+</nrml>
