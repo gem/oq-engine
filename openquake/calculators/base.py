@@ -950,7 +950,8 @@ class HazardCalculator(BaseCalculator):
                 raise RuntimeError('Empty logic tree: too much filtering?')
             # if full_lt is stored in the parent, do not store it again
             # this avoids breaking case_18 when starting from a preclassical
-            if self.oqparam.hazard_calculation_id is None:
+            if (self.oqparam.hazard_calculation_id is None and
+                    'full_lt' not in self.datastore):
                 self.datastore['full_lt'] = self.full_lt
         else:  # scenario
             self.full_lt = self.datastore['full_lt']
