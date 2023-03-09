@@ -1164,10 +1164,10 @@ class FullLogicTree(object):
     def __fromh5__(self, dic, attrs):
         # TODO: this is called more times than needed, maybe we should cache it
         sm_data = dic['sm_data']
-        sd = dic.pop('source_data')
+        sd = dic.pop('source_data', numpy.zeros(0))  # empty for engine <= 3.16
         vars(self).update(attrs)
         self.source_model_lt = dic['source_model_lt']
-        self.source_model_lt.source_data = sd
+        self.source_model_lt.source_data = sd[:]
         self.gsim_lt = dic['gsim_lt']
         self.sm_rlzs = []
         for sm_id, rec in enumerate(sm_data):
