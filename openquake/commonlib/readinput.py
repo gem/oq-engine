@@ -674,6 +674,10 @@ def get_source_model_lt(oqparam, branchID=None):
         instance
     """
     smlt = get_smlt(vars(oqparam), branchID)
+    for src in oqparam.reqv_ignore_sources:
+        if src not in smlt.trt_by_src:
+            raise NameError('The source %r in reqv_ignore_sources does '
+                            'not exist in the source model(s)' % src)
     if len(oqparam.source_id) == 1:  # reduce to a single source
         return smlt.reduce(oqparam.source_id[0])
     return smlt
@@ -1235,7 +1239,18 @@ def get_reinsurance(oqparam, assetcol=None):
         raise InvalidFile('%s: aggregate_by=%s' %
                           (fname, oqparam.aggregate_by))
     [(key, fname)] = oqparam.inputs['reinsurance'].items()
-    return reinsurance.parse(fname, assetcol.tagcol.policy_idx)
+    p, t, f = reinsurance.parse(fname, assetcol.tagcol.policy_idx)
+    
+    # check ideductible
+    arr = assetcol.array
+    for pol_no, deduc in zip(p.policy, p.deductible):
+        if deduc:
+            ideduc = arr[arr['policy'] == pol_no]['ideductible']
+            if ideduc.any():
+                pol = assetcol.tagcol.policy[pol_no]
+                raise InvalidFile('%s: for policy %s there is a deductible '
+                                  'also in the exposure!' % (fname, pol))
+    return p, t, f
 
 
 def get_input_files(oqparam):

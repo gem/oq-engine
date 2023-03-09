@@ -692,8 +692,8 @@ class HazardCalculator(BaseCalculator):
             self.sitecol, self.assetcol, discarded = (
                 readinput.get_sitecol_assetcol(
                     oq, haz_sitecol, self.crmodel.loss_types))
-            if 'sitecol' not in self.datastore:
-                self.datastore['sitecol'] = self.sitecol
+            # this is overriding the sitecol in test_case_miriam
+            self.datastore['sitecol'] = self.sitecol
             if len(discarded):
                 self.datastore['discarded'] = discarded
                 if 'scenario' in oq.calculation_mode:
