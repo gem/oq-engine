@@ -24,7 +24,6 @@ A logic tree object must be iterable and yielding realizations, i.e. objects
 with attributes `value`, `weight`, `lt_path` and `ordinal`.
 """
 
-import io
 import os
 import re
 import ast
@@ -426,20 +425,20 @@ class SourceModelLogicTree(object):
                 zero = []  # branches without the source, all zeros
                 for br in bset.branches:
                     if br.branch_id in oksms:
+                        br.value =  ' '.join(p for p in br.value.split()
+                                             if p in new.srcs_by_path)
                         same.append(br)
                     else:
+                        br.value = ''
                         zero.append(br)
                 newbranches = []
                 if same:
                     b1 = same[0]
-                    b1.value =  ' '.join(p for p in b1.value.split()
-                                         if p in self.srcs_by_path)
                     for br in same[1:]:
                         b1.weight += br.weight
                     newbranches.append(b1)
                 if zero:
                     b0 = zero[0]
-                    b0.value = ''
                     for br in zero[1:]:
                         b0.weight += br.weight
                     newbranches.append(b0)
@@ -448,7 +447,7 @@ class SourceModelLogicTree(object):
             if ats and source_id not in ats:
                 bset.collapse()
                 del dic['applyToSources']
-        new.num_paths = count_paths(self.root_branchset.branches)
+        new.num_paths = count_paths(new.root_branchset.branches)
         return new
 
     def parse_tree(self, tree_node):
@@ -1041,6 +1040,28 @@ class FullLogicTree(object):
             return int(smr)
         return self.trti[trt] * TWO24 + int(smr)
 
+    def set_trt_smr(self, srcs, source_id=None):
+        """
+        :param srcs: source objects
+        :param source_id: base source ID
+        :returns: list of sources with the same base source ID
+        """
+        out = []
+        for src in srcs:
+            srcid = re.split('[:;.]', src.source_id)[0]
+            if source_id and srcid != source_id:
+                continue  # filter
+            trti = self.trti[src.tectonic_region_type]
+            sd = self.source_model_lt.source_data
+            brids = set(sd[sd['source'] == srcid]['branch'])
+            tup = tuple(trti * TWO24 + sm_rlz.ordinal
+                        for sm_rlz in self.sm_rlzs
+                        if set(sm_rlz.lt_path) & brids)
+            # print('Setting %s on %s' % (tup, src))
+            src.trt_smr = tup  # realizations impacted by the source
+            out.append(src)
+        return out
+
     def get_trt_smrs(self, smr):
         """
         :param smr: effective realization index
@@ -1048,6 +1069,20 @@ class FullLogicTree(object):
         """
         nt = len(self.gsim_lt.values)
         return smr + numpy.arange(nt) * TWO24
+
+    def reduce_groups(self, src_groups, source_id=None):
+        """
+        Filter the sources and set the tuple .trt_smr
+        """
+        groups = []
+        source_id = source_id or self.source_model_lt.source_id
+        for sg in src_groups:
+            ok = self.set_trt_smr(sg, source_id)
+            if ok:
+                grp = copy.copy(sg)
+                grp.sources = ok
+                groups.append(grp)
+        return groups
 
     def gsim_by_trt(self, rlz):
         """
