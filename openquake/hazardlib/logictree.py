@@ -425,10 +425,10 @@ class SourceModelLogicTree(object):
         :returns: a new logic tree reduced to a single source
         """
         new = copy.deepcopy(self)
-        sdata = self.get_source_data()
+        sd = self.source_data
         new.source_id = source_id
-        new.source_data = sdata[sdata['source'] == source_id]
-        oksms = new.source_data['branch']
+        new.source_data = sd[sd['source'] == source_id]
+        okbranches = set(new.source_data['branch'])
         okpaths = group_array(new.source_data, 'fname')
         new.tectonic_region_types = set(new.source_data['trt'])
         for bset, dic in zip(new.branchsets, new.bsetdict.values()):
@@ -436,21 +436,21 @@ class SourceModelLogicTree(object):
                 same = []  # branches with the source, all same contribution
                 zero = []  # branches without the source, all zeros
                 for br in bset.branches:
-                    if br.branch_id in oksms:
+                    if br.branch_id in okbranches:
+                        br.value =  ' '.join(p for p in br.value.split()
+                                             if p in okpaths)
                         same.append(br)
                     else:
+                        br.value = ''
                         zero.append(br)
                 newbranches = []
                 if same:
                     b1 = same[0]
-                    b1.value =  ' '.join(p for p in b1.value.split()
-                                         if p in okpaths)
                     for br in same[1:]:
                         b1.weight += br.weight
                     newbranches.append(b1)
                 if zero:
                     b0 = zero[0]
-                    b0.value = ''
                     for br in zero[1:]:
                         b0.weight += br.weight
                     newbranches.append(b0)
@@ -459,7 +459,7 @@ class SourceModelLogicTree(object):
             if ats and source_id not in ats:
                 bset.collapse()
                 del dic['applyToSources']
-        new.num_paths = count_paths(self.root_branchset.branches)
+        new.num_paths = count_paths(new.root_branchset.branches)
         return new
 
     def parse_tree(self, tree_node):
@@ -1164,8 +1164,10 @@ class FullLogicTree(object):
     def __fromh5__(self, dic, attrs):
         # TODO: this is called more times than needed, maybe we should cache it
         sm_data = dic['sm_data']
+        sd = dic.pop('source_data')
         vars(self).update(attrs)
         self.source_model_lt = dic['source_model_lt']
+        self.source_model_lt.source_data = sd
         self.gsim_lt = dic['gsim_lt']
         self.sm_rlzs = []
         for sm_id, rec in enumerate(sm_data):
