@@ -1,3 +1,8 @@
+  [Kendra Johnson]
+  * Added a job parameter 'reqv_ignore_sources', which indicates which
+    sources - specified as a list of thier source ids - should not be collapsed 
+    using the equivalent distance
+
   [Michele Simionato]
   * Internal: added a parameter `use_rates` to compute statistical hazard curves
     in terms of rates, not probabilities
