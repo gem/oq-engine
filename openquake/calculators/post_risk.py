@@ -383,7 +383,11 @@ class PostRiskCalculator(base.RiskCalculator):
             self.policy_df = self.datastore.read_df('policy')
             self.treaty_df = self.datastore.read_df('treaty_df')
             # there must be a single loss type (possibly a total type)
-            [lt] = oq.inputs['reinsurance']
+            if oq.total_losses and self.datastore[
+                    'assetcol/array']['ideductible'].any():
+                lt = 'claim'
+            else:
+                [lt] = oq.inputs['reinsurance']
             loss_id = scientific.LOSSID[lt]
             parent = self.datastore.parent
             if parent and 'risk_by_event' in parent:
@@ -391,6 +395,8 @@ class PostRiskCalculator(base.RiskCalculator):
             else:
                 dstore = self.datastore
             ct = oq.concurrent_tasks or 1
+
+            # now aggregate risk_by_event by policy
             allargs = [(dstore, pdf, self.treaty_df, loss_id)
                        for pdf in numpy.array_split(self.policy_df, ct)]
             self.datastore.swmr_on()
@@ -398,7 +404,7 @@ class PostRiskCalculator(base.RiskCalculator):
                                     h5=self.datastore.hdf5)
             rbp = pandas.concat(list(smap))
             if len(rbp) == 0:
-                raise ValueError('No losses for reinsurance %s' % lt)
+                raise ValueError('No data in risk_by_event for %r' % lt)
             rbe = reinsurance._by_event(rbp, self.treaty_df, self._monitor)
             self.datastore.create_df('reinsurance_by_policy', rbp)
             self.datastore.create_df('reinsurance-risk_by_event', rbe)
