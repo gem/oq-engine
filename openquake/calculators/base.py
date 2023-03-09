@@ -503,6 +503,7 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
+                self.datastore['full_lt'] = csm.full_lt
                 oq.mags_by_trt = csm.get_mags_by_trt()
                 for trt in oq.mags_by_trt:
                     mags = oq.mags_by_trt[trt]
@@ -949,8 +950,6 @@ class HazardCalculator(BaseCalculator):
             self.realizations = self.full_lt.get_realizations()
             if not self.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
-            if 'full_lt' not in self.datastore:
-                self.datastore['full_lt'] = self.full_lt
         else:  # scenario
             self.full_lt = self.datastore['full_lt']
         self.datastore['weights'] = arr = build_weights(self.realizations)

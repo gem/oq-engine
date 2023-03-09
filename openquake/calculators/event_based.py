@@ -226,7 +226,7 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         sources = self.csm.get_sources()
         # weighting the heavy sources
-        self.datastore.swmr_on()
+        #self.datastore.swmr_on()
         nrups = parallel.Starmap(
             count_ruptures, [(src,) for src in sources if src.code in b'AMC'],
             progress=logging.debug
@@ -443,10 +443,10 @@ class EventBasedCalculator(base.HazardCalculator):
             # expensive, so we want to avoid repeating it num_gmfs times)
             # TODO: this is ugly and must be improved upon!
             proxies = proxies[0:1]
-        full_lt = self.datastore['full_lt']
         dstore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap.apply_split(
-            self.core_task.__func__, (proxies, full_lt, oq, self.datastore),
+            self.core_task.__func__,
+            (proxies, self.full_lt, oq, self.datastore),
             key=operator.itemgetter('trt_smr'),
             weight=operator.itemgetter('n_occ'),
             h5=dstore.hdf5,
@@ -520,7 +520,7 @@ class EventBasedCalculator(base.HazardCalculator):
             msg = views.view('extreme_gmvs', self.datastore)
             logging.warning(msg)
         if oq.hazard_curves_from_gmfs:
-            rlzs = self.datastore['full_lt'].get_realizations()
+            rlzs = self.full_lt.get_realizations()
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
             weights = [rlz.weight['weight'] for rlz in rlzs]
