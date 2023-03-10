@@ -80,7 +80,7 @@ def main(parent_id, config):
         L1 = oq.imtls.size // len(oq.imtls) - 1
         if L1 > 24:
             logging.warning('There are many levels (%d), the calculation can '
-                            'be pretty slow', L1)
+                            'be pretty slow', L1 + 1)
         assert N <= 10, 'Too many sites: %d' % N
         cmakers = contexts.read_cmakers(parent)
         ctx_by_grp = contexts.read_ctx_by_grp(dstore)
