@@ -736,10 +736,7 @@ def get_full_lt(oqparam, branchID=None):
                 'try to use sampling or reduce the source model' % p)
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
-    dupl = []
-    for sms, trt, fname, src_id in source_model_lt.source_data:
-        if len(sms) > 1:
-            dupl.append(src_id)
+    dupl = source_model_lt.get_nontrivial_sources()
     if dupl:
         logging.info('There are %d non-unique source IDs', len(dupl))
     return full_lt
