@@ -1470,5 +1470,5 @@ def view_sources_branches(token, dstore):
     for src, trt in numpy.unique(sd[['source', 'trt']]):
         brs = b' '.join(sorted(sd[sd['source'] == src]['branch']))
         acc[brs, trt].append(src)
-    out = [(t, s, b) for ((b, t), s) in sorted(acc.items())]
+    out = [(t, b' '.join(sorted(s)), b) for ((b, t), s) in sorted(acc.items())]
     return numpy.array(out, dt('trt sources branches'))
