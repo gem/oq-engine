@@ -226,13 +226,14 @@ def check_tricky_ids(smdict):
             gb = general.groupby(srcs, operator.attrgetter('checksum'))
             if len(gb) > 1:
                 logging.warning('Found different sources with ID %s', srcid)
+            '''# it would break test_reduce_sm_with_duplicate_source_ids 
             for i, srclist in enumerate(gb.values()):
                 # all sources in srclist have same checksum and same ID
                 # NB: the event based seed depend on the source ID!
                 # see the method .serial
                 for src in srclist:
                     src.source_id = '%s;%d' % (srcid, i)
-
+            '''
 
 def fix_geometry_sections(smdict, h5):
     """
