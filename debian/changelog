@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Replaced hard-coded limit to 25 levels in the MRD postprocessor
+    with a simple warning
+
   [Kendra Johnson]
   * Added a job parameter 'reqv_ignore_sources', which indicates which
     sources - specified as a list of thier source ids - should not be collapsed
