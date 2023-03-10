@@ -697,17 +697,18 @@ class ReinsuranceTestCase(CalculatorTestCase):
         # the deltas are there so that the tests on macos pass
         self.run_calc(reinsurance_4.__file__, 'job.ini')
         f1, f2 = export(('aggrisk', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggrisk.csv', f1, delta=4E-5)
-        self.assertEqualFiles('expected/aggrisk-policy.csv', f2, delta=4E-5)
+        # abs difference of 1E-4 on macos (57.0276 => 57.0277)
+        self.assertEqualFiles('expected/aggrisk.csv', f1, delta=2E-4)
+        self.assertEqualFiles('expected/aggrisk-policy.csv', f2, delta=2E-4)
 
         f1, f2 = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggcurves.csv', f1, delta=4E-5)
-        self.assertEqualFiles('expected/aggcurves-policy.csv', f2, delta=4E-5)
+        self.assertEqualFiles('expected/aggcurves.csv', f1, delta=2E-4)
+        self.assertEqualFiles('expected/aggcurves-policy.csv', f2, delta=2E-4)
         
         [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-aggcurves.csv',
-                              fname, delta=4E-5)
+                              fname, delta=2E-4)
         [fname] = export(('reinsurance-avg_portfolio', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
-                              fname, delta=4E-5)
+                              fname, delta=2E-4)
