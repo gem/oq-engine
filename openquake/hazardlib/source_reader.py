@@ -227,12 +227,11 @@ def check_tricky_ids(smdict):
             if len(gb) > 1:
                 logging.warning('Found different sources with ID %s', srcid)
             for i, srclist in enumerate(gb.values()):
-                if i == 0:
-                    prev = srclist[0]
-                else:
-                    # all sources in srclist have same checksum and same ID
-                    for src in srclist:
-                        src.source_id = '%s;%d' % (srcid, i)
+                # all sources in srclist have same checksum and same ID
+                # NB: the event based seed depend on the source ID!
+                # see the method .serial
+                for src in srclist:
+                    src.source_id = '%s;%d' % (srcid, i)
 
 
 def fix_geometry_sections(smdict, h5):
