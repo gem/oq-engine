@@ -31,6 +31,7 @@ from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SSlabCascadia, _compu
 from openquake.hazardlib.gsim.zhao_2006 import _compute_magnitude_term as _compute_magnitude_term_zh
 from openquake.hazardlib.gsim.zhao_2006 import _compute_focal_depth_term as _compute_focal_depth_term_zh
 from openquake.hazardlib.gsim.zhao_2006 import _compute_distance_term as _compute_distance_term_zh
+from openquake.hazardlib.gsim.zhao_2006 import _compute_site_class_term 
 from openquake.hazardlib.gsim.abrahamson_2015 import _compute_distance_term as _compute_distance_term_abr
 from openquake.hazardlib.gsim.abrahamson_2015 import _compute_magnitude_term as _compute_magnitude_term_abr
 from openquake.hazardlib.gsim.abrahamson_2015 import _compute_focal_depth_term as _compute_focal_depth_term_abr
@@ -263,7 +264,7 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
                 C["sigma_ss"] ** 2. - C["tau"] ** 2.)
 
             if PGVimt:
-                mean = (0.995*mean) + 3.937
+                mean[m] = (0.995*mean[m]) + 3.937
 
 
 
@@ -297,8 +298,6 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
 
     HYPO_DEPTH = 55.
-    kind = "base"
-    delta_c1 = None
 
     def __init__(self):
         super(CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55,
@@ -324,6 +323,7 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
                           - 10s
         """
         ctx.hypo_depth = self.HYPO_DEPTH
+
         for m, imt in enumerate(imts):
             extrapolate = False
             PGVimt = False
@@ -359,6 +359,8 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
             # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
             # inter and intra event terms, plus the magnitude-squared term
             # correction factor (equation 5 p. 909)
+
+                #_compute_site_class_term(C, ctx.vs30) +\
             mean[m] = _compute_magnitude_term_zh(C, ctx.mag) +\
                 _compute_distance_term_zh(C, ctx.mag, d) +\
                 _compute_focal_depth_term_zh(C, self.HYPO_DEPTH) +\
@@ -377,11 +379,11 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
         # add extrapolation factor if outside SA range (0.05 - 5.0)
         if extrapolate:
             ctx.rhypo = ctx.rrup  # approximation for extrapolation only
-            mean += extrapolation_factor(self.extrapolate_GMM,
+            mean[m] += extrapolation_factor(self.extrapolate_GMM,
                                          ctx, imt, target_imt)
 
         if PGVimt:
-            mean = (0.995*mean) + 3.937
+            mean[m] = (0.995*mean[m]) + 3.937
 
         #return mean, stddevs
 
@@ -441,11 +443,32 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
                           - 10s
                           limted to the period range of 0.05 - 10s
         """
-        extrapolate = False
-        PGVimt = False
+        
 
+        # cap magnitude values at 8.0, see page 1709
+        mag = np.clip(ctx.mag, 0, 8.0)
+
+        # compute PGA on rock (needed for site amplification calculation)
+        G = 10 ** (0.301 - 0.01 * mag)
+        pga_rock = _compute_mean_ab(self.kind, self.COEFFS_SSLAB[PGA()], G, mag,
+                                          ctx.hypo_depth, ctx.rrup, ctx.vs30,
+                                          # by passing pga_rock > 500 the soil
+                                          # amplification is 0
+                                          np.zeros_like(ctx.vs30) + 600,
+                                          PGA())
+        pga_rock = 10 ** (pga_rock)
+
+            # compute actual mean and convert from log10 to ln and units from
+           # cm/s**2 to g
+
+        #C = self.COEFFS_SSLAB[imt]
+        
         ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
+
+            extrapolate = False
+            PGVimt = False
+
             if imt == PGV():
                 PGVimt = True
                 imt = SA(0.5)
@@ -457,28 +480,11 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
                 target_imt = imt
                 imt = SA(self.MAX_SA)
                 extrapolate = True
-
+        
             # extracting dictionary of coefficients specific to required
             # intensity measure type.
             C = self.COEFFS_SSLAB[imt]
-
-            # cap magnitude values at 8.0, see page 1709
-            mag = np.clip(ctx.mag, 0, 8.0)
-
-            # compute PGA on rock (needed for site amplification calculation)
-            G = 10 ** (0.301 - 0.01 * mag)
-            pga_rock = _compute_mean_ab(self.kind, self.COEFFS_SSLAB[PGA()], G, mag,
-                                          ctx.hypo_depth, ctx.rrup, ctx.vs30,
-                                          # by passing pga_rock > 500 the soil
-                                          # amplification is 0
-                                          np.zeros_like(ctx.vs30) + 600,
-                                          PGA())
-            pga_rock = 10 ** (pga_rock)
-
-            # compute actual mean and convert from log10 to ln and units from
-            # cm/s**2 to g
-
-            C = self.COEFFS_SSLAB[imt]
+            
 
             # compute actual mean and convert from log10 to ln and units from
             # cm/s**2 to g
@@ -497,11 +503,11 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
         # add extrapolation factor if outside SA range (0.07 - 9.09)
         if extrapolate:
             ctx.rhypo = ctx.rrup  # approximation for extrapolation only
-            mean += extrapolation_factor(self.extrapolate_GMM,
+            mean[m] += extrapolation_factor(self.extrapolate_GMM,
                                          ctx, imt, target_imt)
 
         if PGVimt:
-            mean = (0.995*mean) + 3.937
+            mean[m] = (0.995*mean[m]) + 3.937
 
 
 
@@ -591,11 +597,11 @@ class CanadaSHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
 
             pga1100 = _compute_mean_ga(self.COEFFS[PGA()], g, ctx, PGA())
 
-            mean += site_amplification(ctx, imt, np.exp(pga1100))
+            mean[m] += site_amplification(ctx, imt, np.exp(pga1100))
 
             # add extrapolation factor if outside SA range 0.04 - 5.0
             if extrapolate:
-                mean += extrapolation_factor(self.extrapolate_GMM, ctx, imt, target_imt)
+                mean[m] += extrapolation_factor(self.extrapolate_GMM, ctx, imt, target_imt)
 
 
 
