@@ -1481,4 +1481,4 @@ def view_sources_branches(token, dstore):
         acc[brs, trt].append(src.decode('utf8'))
     out = [(t, ' '.join(shorten(s)), b)
            for ((b, t), s) in sorted(acc.items())]
-    return numpy.array(out, dt('trt sources branches'))
+    return numpy.array(sorted(out), dt('trt sources branches'))
