@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import copy
 import os.path
 import pickle
 import operator
@@ -190,6 +189,7 @@ def get_csm(oq, full_lt, h5=None):
                               h5=h5 if h5 else None).reduce()
     parallel.Starmap.shutdown()  # save memory
     fix_geometry_sections(smdict, h5)
+    check_tricky_ids(smdict)
     logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
 
@@ -200,6 +200,40 @@ def get_csm(oq, full_lt, h5=None):
                      format(changes))
     return _get_csm(full_lt, groups)
 
+
+def add_checksums(srcs):
+    """
+    Build and attach a checksum to each source
+    """
+    for src in srcs:
+        dic = {k: v for k, v in vars(src).items()
+               if k not in 'source_id trt_smr smweight samples'}
+        src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
+
+
+def check_tricky_ids(smdict):
+    """
+    Discriminated different sources with same ID by changing the ID
+    """
+    acc = general.AccumDict(accum=[])
+    for smodel in smdict.values():
+        for sgroup in smodel.src_groups:
+            for src in sgroup:
+                acc[src.source_id].append(src)
+    for srcid, srcs in acc.items():
+        if len(srcs) > 1:  # duplicated ID
+            add_checksums(srcs)
+            gb = general.groupby(srcs, operator.attrgetter('checksum'))
+            if len(gb) > 1:
+                logging.warning('Found different sources with ID %s', srcid)
+            '''# it would break test_reduce_sm_with_duplicate_source_ids 
+            for i, srclist in enumerate(gb.values()):
+                # all sources in srclist have same checksum and same ID
+                # NB: the event based seed depend on the source ID!
+                # see the method .serial
+                for src in srclist:
+                    src.source_id = '%s;%d' % (srcid, i)
+            '''
 
 def fix_geometry_sections(smdict, h5):
     """
@@ -313,10 +347,7 @@ def reduce_sources(sources_with_same_id):
     :returns: a list of truly unique sources, ordered by trt_smr
     """
     out = []
-    for src in sources_with_same_id:
-        dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id trt_smr smweight samples'}
-        src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
+    add_checksums(sources_with_same_id)
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():
         # duplicate sources: same id, same checksum

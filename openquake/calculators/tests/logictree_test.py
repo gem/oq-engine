@@ -203,7 +203,7 @@ hazard_uhs-std.csv
 
     def test_case_17(self):  # oversampling
         # this is a test with 4 sources A and B with the same ID
-        # sources A's are false duplicates, while the B's are true duplicates
+        # sources A's are actually different, while the B's are identical
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_1.csv',
