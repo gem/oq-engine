@@ -1460,6 +1460,15 @@ def view_relevant_sources(token, dstore):
     return aw.array[poes > .1 * max_poe]
 
 
+def shorten(lst):
+    """
+    Shorten a list of strings
+    """
+    if len(lst) <= 7:
+        return lst
+    return lst[:3] + ['...'] + lst[-3:]
+
+
 @view.add('sources_branches')
 def view_sources_branches(token, dstore):
     """
@@ -1469,6 +1478,7 @@ def view_sources_branches(token, dstore):
     acc = AccumDict(accum=[])
     for src, trt in numpy.unique(sd[['source', 'trt']]):
         brs = b' '.join(sorted(sd[sd['source'] == src]['branch']))
-        acc[brs, trt].append(src)
-    out = [(t, b' '.join(sorted(s)), b) for ((b, t), s) in sorted(acc.items())]
+        acc[brs, trt].append(src.decode('utf8'))
+    out = [(t, ' '.join(shorten(s)), b)
+           for ((b, t), s) in sorted(acc.items())]
     return numpy.array(out, dt('trt sources branches'))
