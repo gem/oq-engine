@@ -226,7 +226,7 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         sources = self.csm.get_sources()
         # weighting the heavy sources
-        #self.datastore.swmr_on()
+        self.datastore.swmr_on()
         nrups = parallel.Starmap(
             count_ruptures, [(src,) for src in sources if src.code in b'AMC'],
             progress=logging.debug
