@@ -501,7 +501,9 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_with_site_model(self):
         oq = readinput.get_oqparam('job.ini', case_34)
         ssclt = readinput.get_composite_source_model(oq)
-        self.assertEqual(ssclt.source_model_lt.brs_by_src['956'], ['b1'])
+        self.assertEqual(
+            list(ssclt.source_model_lt.source_data[0]),
+            ['b1', 'Active Shallow Crust', 'source_model.xml', '956'])
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):

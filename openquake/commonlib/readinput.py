@@ -674,8 +674,9 @@ def get_source_model_lt(oqparam, branchID=None):
         instance
     """
     smlt = get_smlt(vars(oqparam), branchID)
+    srcids = set(smlt.source_data['source'])
     for src in oqparam.reqv_ignore_sources:
-        if src not in smlt.trt_by_src:
+        if src not in srcids:
             raise NameError('The source %r in reqv_ignore_sources does '
                             'not exist in the source model(s)' % src)
     if len(oqparam.source_id) == 1:  # reduce to a single source
@@ -735,12 +736,9 @@ def get_full_lt(oqparam, branchID=None):
                 'try to use sampling or reduce the source model' % p)
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
-    dupl = []
-    for src_id, sms in source_model_lt.brs_by_src.items():
-        if len(sms) > 1:
-            dupl.append(src_id)
+    dupl = source_model_lt.get_nontrivial_sources()
     if dupl:
-        logging.info('There are %d non-unique source IDs', len(dupl))
+        logging.info('There are {:_d} nontrivial sources'.format(len(dupl)))
     return full_lt
 
 

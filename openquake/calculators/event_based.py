@@ -400,6 +400,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
             dstore.parent = datastore.read(oq.hazard_calculation_id)
+            self.full_lt = dstore.parent['full_lt']
         elif hasattr(self, 'csm'):  # from sources
             self.build_events_from_sources()
             if (oq.ground_motion_fields is False and
@@ -443,10 +444,10 @@ class EventBasedCalculator(base.HazardCalculator):
             # expensive, so we want to avoid repeating it num_gmfs times)
             # TODO: this is ugly and must be improved upon!
             proxies = proxies[0:1]
-        full_lt = self.datastore['full_lt']
         dstore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap.apply_split(
-            self.core_task.__func__, (proxies, full_lt, oq, self.datastore),
+            self.core_task.__func__,
+            (proxies, self.full_lt, oq, self.datastore),
             key=operator.itemgetter('trt_smr'),
             weight=operator.itemgetter('n_occ'),
             h5=dstore.hdf5,
@@ -520,7 +521,7 @@ class EventBasedCalculator(base.HazardCalculator):
             msg = views.view('extreme_gmvs', self.datastore)
             logging.warning(msg)
         if oq.hazard_curves_from_gmfs:
-            rlzs = self.datastore['full_lt'].get_realizations()
+            rlzs = self.full_lt.get_realizations()
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
             weights = [rlz.weight['weight'] for rlz in rlzs]
