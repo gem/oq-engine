@@ -839,6 +839,14 @@ class SourceModelLogicTree(object):
             bsnodes.append(Node('logicTreeBranchSet', dic, nodes=brnodes))
         return Node('logicTree', {'logicTreeID': 'lt'}, nodes=bsnodes)
 
+    def get_nontrivial_sources(self):
+        """
+        :returns: {src_id: affected branches}
+        """
+        sd = self.source_data
+        u, c = numpy.unique(sd['source'], return_counts=1)
+        return {src: sd[sd['source'] == src]['branch'] for src in u[c > 1]}
+
     # SourceModelLogicTree
     def __toh5__(self):
         tbl = []

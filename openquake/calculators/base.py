@@ -503,7 +503,7 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
-                self.datastore['full_lt'] = csm.full_lt
+                self.datastore['full_lt'] = self.full_lt = csm.full_lt
                 oq.mags_by_trt = csm.get_mags_by_trt()
                 for trt in oq.mags_by_trt:
                     mags = oq.mags_by_trt[trt]
@@ -522,7 +522,6 @@ class HazardCalculator(BaseCalculator):
                             interp.x[-2], interp.y[-2],
                             interp.x[-1], interp.y[-1])
                         logging.info('max_dist %s: %s', trt, md)
-                self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
         self.pre_checks()
         if oq.calculation_mode == 'multi_risk':
@@ -654,17 +653,12 @@ class HazardCalculator(BaseCalculator):
             if self.datastore.parent:
                 oq.risk_imtls = (
                     self.datastore.parent['oqparam'].risk_imtls)
-        if 'full_lt' in self.datastore:
-            full_lt = self.datastore['full_lt']
-            self.realizations = full_lt.get_realizations()
-            if oq.hazard_calculation_id and 'gsim_logic_tree' in oq.inputs:
-                # redefine the realizations by reading the weights from the
-                # gsim_logic_tree_file that could be different from the parent
-                full_lt.gsim_lt = logictree.GsimLogicTree(
-                    oq.inputs['gsim_logic_tree'], set(full_lt.trts))
-        elif hasattr(self, 'csm'):
+        if hasattr(self, 'csm'):
             self.check_floating_spinning()
             self.realizations = self.csm.full_lt.get_realizations()
+        elif 'full_lt' in self.datastore:
+            # for instance in classical damage case_8a
+            self.realizations = self.datastore['full_lt'].get_realizations()
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.realizations = fake.get_realizations()

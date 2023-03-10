@@ -400,6 +400,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
             dstore.parent = datastore.read(oq.hazard_calculation_id)
+            self.full_lt = dstore.parent['full_lt']
         elif hasattr(self, 'csm'):  # from sources
             self.build_events_from_sources()
             if (oq.ground_motion_fields is False and
