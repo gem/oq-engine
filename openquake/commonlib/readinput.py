@@ -738,7 +738,7 @@ def get_full_lt(oqparam, branchID=None):
         logging.info('There is a source specific logic tree')
     dupl = source_model_lt.get_nontrivial_sources()
     if dupl:
-        logging.info('There are %d non-unique source IDs', len(dupl))
+        logging.info('There are {:_d} nontrivial sources'.format(len(dupl)))
     return full_lt
 
 

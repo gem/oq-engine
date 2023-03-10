@@ -143,6 +143,12 @@ class LogicTreeTestCase(CalculatorTestCase):
                           '0.0269', '0.0376', '0.0527', '0.0738', '0.103',
                           '0.145', '0.203', '0.284'))
 
+        # checking sources_branches
+        tbl = general.gettemp(
+            text_table(view('sources_branches', self.calc.datastore),
+                       ext='org'))
+        self.assertEqualFiles('expected/source_branches.org', tbl)
+
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources
         self.assert_curves_ok('''\

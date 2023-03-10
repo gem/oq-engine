@@ -1458,3 +1458,17 @@ def view_relevant_sources(token, dstore):
     poes = aw.array['poe']  # for each source in decreasing order
     max_poe = poes[0]
     return aw.array[poes > .1 * max_poe]
+
+
+@view.add('sources_branches')
+def view_sources_branches(token, dstore):
+    """
+    Returns a table with the sources in the logic tree by branches
+    """
+    sd = dstore['full_lt/source_data']
+    acc = AccumDict(accum=[])
+    for src in numpy.unique(sd['source']):
+        brs = b' '.join(sorted(sd[sd['source'] == src]['branch']))
+        acc[brs].append(src)
+    out = [(s, b) for (b, s) in sorted(acc.items())]
+    return numpy.array(out, dt('sources branches'))
