@@ -142,21 +142,16 @@ def read_source_model(fname, converter, monitor):
 
 
 # NB: called after the .checksum has been stored in reduce_sources
-def _check_dupl_ids(src_groups):
+def _fix_dupl_ids(src_groups):
     sources = general.AccumDict(accum=[])
     for sg in src_groups:
         for src in sg.sources:
             sources[src.source_id].append(src)
-    first = True
     for src_id, srcs in sources.items():
         if len(srcs) > 1:
             # duplicate IDs with different checksums, see cases 11, 13, 20
             for i, src in enumerate(srcs):
                 src.source_id = '%s;%d' % (src.source_id, i)
-            if first:
-                logging.info('There are multiple different sources with '
-                             'the same ID %s', srcs)
-                first = False
 
 
 def get_csm(oq, full_lt, h5=None):
@@ -396,7 +391,7 @@ def _get_csm(full_lt, groups):
         for src in ag:
             src._wkt = src.wkt()
     src_groups.extend(atomic)
-    _check_dupl_ids(src_groups)
+    _fix_dupl_ids(src_groups)
     for sg in src_groups:
         sg.sources.sort(key=operator.attrgetter('source_id'))
     return CompositeSourceModel(full_lt, src_groups)
