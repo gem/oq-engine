@@ -1001,9 +1001,25 @@ class FullLogicTree(object):
             for sm_rlz in self.source_model_lt:
                 sm_rlz.samples = samples
                 self.sm_rlzs.append(sm_rlz)
-        assert len(self.sm_rlzs) <= TWO24, len(self.sm_rlzs)
+        self.Re = len(self.sm_rlzs)
+        assert self.Re <= TWO24, len(self.sm_rlzs)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
         self.trts = list(self.gsim_lt.values)
+        self.Gs = sum(len(gsims) for gsims in self.gsim_lt.values.values())
+        self.Gt = self.Gs * self.Re
+
+    def build_gdict(self):
+        """
+        :returns: a dictionary trt_smr -> g-indices
+        """
+        dic = {}
+        g = 0
+        for smr in range(self.Re):
+            for trti, trt in enumerate(self.trts):
+                G = len(self.gsim_lt[trt])
+                dic[trti * TWO24 + smr] = numpy.arange(g, g + G)
+                g += G
+        return dic
 
     def get_smr_by_ltp(self):
         """

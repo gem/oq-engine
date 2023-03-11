@@ -506,10 +506,6 @@ class ContextMaker(object):
                 si[:] = ((si**2 - conv_sigma**2) / rstd**2)**0.5
 
     @property
-    def stop(self):
-        return self.start + len(self.gsims)
-
-    @property
     def Z(self):
         """
         :returns: the number of realizations associated to self
