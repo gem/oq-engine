@@ -1089,14 +1089,6 @@ class FullLogicTree(object):
             out.append(src)
         return out
 
-    def get_trt_smrs(self, smr):
-        """
-        :param smr: effective realization index
-        :returns: array of T group IDs, being T the number of TRTs
-        """
-        nt = len(self.gsim_lt.values)
-        return smr + numpy.arange(nt) * TWO24
-
     def reduce_groups(self, src_groups, source_id=None):
         """
         Filter the sources and set the tuple .trt_smr
@@ -1172,7 +1164,9 @@ class FullLogicTree(object):
             rlzs = self.get_realizations()
             acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
             for sm in self.sm_rlzs:
-                for trtsmr in self.get_trt_smrs(sm.ordinal):
+                trtsmrs = sm.ordinal + numpy.arange(
+                    len(self.gsim_lt.values)) * TWO24
+                for trtsmr in trtsmrs:
                     trti, smr = divmod(trtsmr, TWO24)
                     for rlz in rlzs:
                         idx = smr_by_ltp['~'.join(rlz.sm_lt_path)]
@@ -1253,8 +1247,13 @@ class FullLogicTree(object):
         """
         :returns: a dictionary trt_smr -> sm_id
         """
-        return {trt_smr: sm.ordinal for sm in self.sm_rlzs
-                for trt_smr in self.get_trt_smrs(sm.ordinal)}
+        dic = {}
+        for sm in self.sm_rlzs:
+            trt_smrs = sm.ordinal + numpy.arange(
+                len(self.gsim_lt.values)) * TWO24
+            for trt_smr in trt_smrs:
+                dic[trt_smr] = sm.ordinal
+        return dic
 
     def __repr__(self):
         info_by_model = {}
