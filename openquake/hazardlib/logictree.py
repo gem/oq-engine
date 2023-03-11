@@ -1012,13 +1012,13 @@ class FullLogicTree(object):
         """
         :returns: a dictionary trt_smr -> g-indices
         """
-        dic = {}
         g = 0
-        ns = self.num_samples
+        dic = {}
         for smr in range(self.Re):
             for trti, trt in enumerate(self.trts):
-                G = ns if ns else len(self.gsim_lt.values[trt])
-                dic[trti * TWO24 + smr] = numpy.arange(g, g + G)
+                trt_smr = trti * TWO24 + smr
+                G = len(self.get_rlzs_by_gsim(trt_smr))
+                dic[trt_smr] = numpy.arange(g, g + G)
                 g += G
         return dic
 

@@ -360,12 +360,14 @@ class Hazard:
         Store data inside disagg_by_grp (optionally disagg_by_src)
         """
         lst = []
+        '''
         for grp_id, indices in enumerate(self.datastore['trt_smrs']):
             dic = self.acc[grp_id]
             if dic:
                 trti, smrs = numpy.divmod(indices, 2**24)
                 trt = self.full_lt.trts[trti[0]]
                 lst.append((trt, dic['avg_poe'], dic['nsites']))
+        '''
         self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
         if pmaps:  # called inside a loop
             disagg_by_src = self.datastore['disagg_by_src'][()]
