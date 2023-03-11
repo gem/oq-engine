@@ -428,17 +428,8 @@ class ClassicalCalculator(base.HazardCalculator):
         for trt_smr in pnemap.trt_smrs:
             gidx = self.gdict[trt_smr]
             for i, g in enumerate(gidx):
-                if g in acc:
-                    acc[g].multiply_pnes(pnemap, i)
-                    if self.n_outs[grp_id] == 0:  # no other tasks for this g
-                        with self.monitor('storing PoEs', measuremem=True):
-                            pne = acc[g]
-                            self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
-                else:  # single output
-                    with self.monitor('storing PoEs', measuremem=True):
-                        self.haz.store_poes(
-                            g, pnemap.array[:, :, i], pnemap.sids)
-            return acc
+                acc[g].multiply_pnes(pnemap, i)
+        return acc
 
     def create_dsets(self):
         """
@@ -576,8 +567,19 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Regular case
         """
-        self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
+        # create the rup/ datasets BEFORE swmr_on()
+        self.create_dsets()
+
+        # populate the Pmaps
         acc = self.run_one(self.sitecol, maxw)
+
+        # store the Pmaps
+        with self.monitor('storing PoEs', measuremem=True):
+            for g, pne in acc.items():
+                if isinstance(g, int):  # string for disagg_by_src
+                    self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
+
+        # store disagg_by_src, if any
         if self.oqparam.disagg_by_src:
             self.haz.store_disagg(acc)
 
