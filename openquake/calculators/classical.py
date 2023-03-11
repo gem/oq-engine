@@ -304,17 +304,16 @@ class Hazard:
         self.offset = 0
 
     # used in in disagg_by_src
-    def get_rates(self, pmap, cmaker):
+    def get_rates(self, pmap):
         """
         :param pmap: a ProbabilityMap
-        :param cmaker: a ContextMaker
         :returns: an array of rates of shape (N, M, L1)
         """
         M = len(self.imtls)
         L1 = self.L // M
         out = numpy.zeros((self.N, self.L))
         rates = disagg.to_rates(pmap.array)  # shape (N, L, G)
-        for trt_smr in cmaker.trt_smrs:
+        for trt_smr in pmap.trt_smrs:
             allrlzs = self.full_lt.get_rlzs_by_gsim(trt_smr).values()
             for i, rlzs in enumerate(allrlzs):
                 for rlz in rlzs:
@@ -358,8 +357,7 @@ class Hazard:
         for key, pmap in pmaps.items():
             if isinstance(key, str):
                 # in case of disagg_by_src key is a source ID
-                disagg_by_src[..., self.srcidx[key]] = (
-                    self.get_rates(pmap, self.cmakers[pmap.grp_id]))
+                disagg_by_src[..., self.srcidx[key]] = self.get_rates(pmap)
         self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
