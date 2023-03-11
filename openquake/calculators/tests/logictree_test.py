@@ -27,7 +27,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
-    case_06, case_07, case_08, case_09,
+    case_01, case_06, case_07, case_08, case_09,
     case_10, case_11, case_13, case_15, case_16, case_17,
     case_20, case_21, case_28, case_31, case_36, case_45, case_46,
     case_56, case_58, case_59, case_67, case_68, case_71, case_73,
@@ -52,6 +52,10 @@ class LogicTreeTestCase(CalculatorTestCase):
                                   delta=delta)
         return got
 
+    def test_case_01(self):
+        # same source in two source models, use_rates
+        self.assert_curves_ok(['curve-mean.csv'], case_01.__file__)
+        
     def test_case_06(self):
         # two source model, use_rates and disagg_by_src
         self.assert_curves_ok(
