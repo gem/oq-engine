@@ -1630,11 +1630,8 @@ def get_cmakers(src_groups, full_lt, oq):
     else:
         all_trt_smrs = []
         for sg in src_groups:
-            try:
-                trt_smrs = sg.sources[0].trt_smrs
-            except AttributeError:  # for scenarios
-                trt_smrs = [sg.sources[0].trt_smr]
-            all_trt_smrs.append(trt_smrs)
+            src = sg.sources[0]
+            all_trt_smrs.append(full_lt.get_trt_smrs(src))
     trts = list(full_lt.gsim_lt.values)
     cmakers = []
     for grp_id, trt_smrs in enumerate(all_trt_smrs):

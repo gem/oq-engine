@@ -1060,6 +1060,18 @@ class FullLogicTree(object):
         """
         return self.source_model_lt.sampling_method
 
+    def get_trt_smrs(self, src):
+        """
+        :returns: a tuple of indices trt_smr for the given source
+        """
+        src_id = src.source_id.split(';')[0]
+        trti = self.trti.get(src.tectonic_region_type, 0)  # missing trt='*'
+        sd = self.source_model_lt.source_data
+        brids = set(sd[sd['source'] == src_id]['branch'])
+        return tuple(trti * TWO24 + sm_rlz.ordinal
+                     for sm_rlz in self.sm_rlzs
+                     if set(sm_rlz.lt_path) & brids)
+
     def set_trt_smr(self, srcs, source_id=None, smr=None):
         """
         :param srcs: source objects
