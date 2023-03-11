@@ -372,10 +372,10 @@ class Hazard:
         if pmaps:  # called inside a loop
             disagg_by_src = self.datastore['disagg_by_src'][()]
             for key, pmap in pmaps.items():
-                if isinstance(key, str):
-                    # in case of disagg_by_src key is a source ID
-                    disagg_by_src[..., self.srcidx[key]] = (
-                        self.get_rates(pmap, self.cmakers[pmap.grp_id]))
+                assert isinstance(key, str), key
+                # in case of disagg_by_src key is a source ID
+                disagg_by_src[..., self.srcidx[key]] = (
+                    self.get_rates(pmap, self.cmakers[pmap.grp_id]))
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
