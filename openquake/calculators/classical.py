@@ -64,9 +64,9 @@ def get_pmaps_gb(dstore):
     """
     N = len(dstore['sitecol'])
     L = dstore['oqparam'].imtls.size
-    cmakers = read_cmakers(dstore)
-    num_gs = [len(cm.gsims) for cm in cmakers]
-    return sum(num_gs) * N * L * 8 / 1024**3
+    full_lt = dstore['full_lt']
+    full_lt.init()
+    return full_lt.Gt * N * L * 8 / 1024**3
 
 
 def build_slice_by_sid(sids, offset=0):
