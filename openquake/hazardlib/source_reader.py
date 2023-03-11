@@ -50,6 +50,9 @@ source_info_dt = numpy.dtype([
     ('trti', numpy.uint8),             # 8
 ])
 
+checksum = operator.attrgetter('checksum')
+
+
 def gzpik(obj):
     """
     gzip and pickle a python object
@@ -215,20 +218,15 @@ def check_tricky_ids(smdict):
         for sgroup in smodel.src_groups:
             for src in sgroup:
                 acc[src.source_id].append(src)
+    found = []
     for srcid, srcs in acc.items():
         if len(srcs) > 1:  # duplicated ID
             add_checksums(srcs)
-            gb = general.groupby(srcs, operator.attrgetter('checksum'))
-            if len(gb) > 1:
-                logging.warning('Found different sources with ID %s', srcid)
-            '''# it would break test_reduce_sm_with_duplicate_source_ids 
-            for i, srclist in enumerate(gb.values()):
-                # all sources in srclist have same checksum and same ID
-                # NB: the event based seed depend on the source ID!
-                # see the method .serial
-                for src in srclist:
-                    src.source_id = '%s;%d' % (srcid, i)
-            '''
+            if len(general.groupby(srcs, checksum)) > 1:
+                found.append(srcid)
+    if found:
+        logging.warning('Found different sources with same ID %s', found)
+
 
 def fix_geometry_sections(smdict, h5):
     """
@@ -343,8 +341,7 @@ def reduce_sources(sources_with_same_id):
     """
     out = []
     add_checksums(sources_with_same_id)
-    for srcs in general.groupby(
-            sources_with_same_id, operator.attrgetter('checksum')).values():
+    for srcs in general.groupby(sources_with_same_id, checksum).values():
         # duplicate sources: same id, same checksum
         src = srcs[0]
         if len(srcs) > 1:  # happens in logictree/case_07
