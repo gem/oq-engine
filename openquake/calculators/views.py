@@ -178,7 +178,7 @@ def text_table(data, header=None, fmt=None, ext='rst'):
         if data.index.name:
             data = data.reset_index()
         header = header or list(data.columns)
-        data = data.to_numpy()
+        data = zip(*[data[col].to_numpy() for col in data.columns])
     if header is None and hasattr(data, '_fields'):
         header = data._fields
     try:

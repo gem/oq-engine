@@ -39,8 +39,7 @@ from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.logictree import FullLogicTree
-from openquake.hazardlib.probability_map import (
-    ProbabilityMap, poes_dt, combine_probs)
+from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
 from openquake.commonlib import calc, readinput, datastore
 from openquake.calculators import base, getters, extract
 
@@ -55,8 +54,7 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
-disagg_grp_dt = numpy.dtype([
-    ('grp_trt', hdf5.vstr), ('avg_poe', F32), ('nsites', U32)])
+disagg_grp_dt = numpy.dtype([('gidx', U16), ('avg_poe', F32), ('nsites', U32)])
 slice_dt = numpy.dtype([('sid', U32), ('start', int), ('stop', int)])
 
 
@@ -316,14 +314,13 @@ class Hazard:
         L1 = self.L // M
         out = numpy.zeros((self.N, M, L1))
         for trt_smr in cmaker.trt_smrs:
-            gidx = self.gdict[trt_smr]
-            dic = dict(zip(gidx, cmaker.gsims.values()))
+            allrlzs = list(self.full_lt.get_rlzs_by_gsim(trt_smr).values())
             for lvl in range(self.L):
                 m, l = divmod(lvl, L1)
-                res = numpy.zeros((len(pmap.sids), self.R))
-                for i, g in enumerate(gidx):
-                    combine_probs(res, pmap.array[:, lvl, i], U32(dic[g]))
-                out[:, m, l] += disagg.to_rates(res) @ self.weights
+                rates = disagg.to_rates(pmap.array[:, lvl, :])  # shape (N, G)
+                for i, rlzs in enumerate(allrlzs):
+                    for rlz in rlzs:
+                        out[:, m, l] += rates[:, i] * self.weights[rlz]
         return out
 
     def store_poes(self, g, pnes, pnes_sids):
@@ -355,28 +352,17 @@ class Hazard:
         self.acc[g]['avg_poe'] = poes.mean(axis=0) @ self.level_weights
         self.acc[g]['nsites'] = len(pnes_sids)
 
-    def store_disagg(self, pmaps=None):
+    def store_disagg(self, pmaps):
         """
         Store data inside disagg_by_grp (optionally disagg_by_src)
         """
-        lst = []
-        '''
-        for grp_id, indices in enumerate(self.datastore['trt_smrs']):
-            dic = self.acc[grp_id]
-            if dic:
-                trti, smrs = numpy.divmod(indices, 2**24)
-                trt = self.full_lt.trts[trti[0]]
-                lst.append((trt, dic['avg_poe'], dic['nsites']))
-        '''
-        self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
-        if pmaps:  # called inside a loop
-            disagg_by_src = self.datastore['disagg_by_src'][()]
-            for key, pmap in pmaps.items():
-                if isinstance(key, str):
-                    # in case of disagg_by_src key is a source ID
-                    disagg_by_src[..., self.srcidx[key]] = (
-                        self.get_rates(pmap, self.cmakers[pmap.grp_id]))
-            self.datastore['disagg_by_src'][:] = disagg_by_src
+        disagg_by_src = self.datastore['disagg_by_src'][()]
+        for key, pmap in pmaps.items():
+            if isinstance(key, str):
+                # in case of disagg_by_src key is a source ID
+                disagg_by_src[..., self.srcidx[key]] = (
+                    self.get_rates(pmap, self.cmakers[pmap.grp_id]))
+        self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
 @base.calculators.add('classical', 'ucerf_classical')
@@ -573,11 +559,17 @@ class ClassicalCalculator(base.HazardCalculator):
         # populate the Pmaps
         acc = self.run_one(self.sitecol, maxw)
 
-        # store the Pmaps
+        # store _poes
         with self.monitor('storing PoEs', measuremem=True):
             for g, pne in acc.items():
                 if isinstance(g, int):  # string for disagg_by_src
                     self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
+
+        # store disagg_by_grp
+        lst = []
+        for g, dic in self.haz.acc.items():
+            lst.append((g, dic['avg_poe'], dic['nsites']))
+        self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
 
         # store disagg_by_src, if any
         if self.oqparam.disagg_by_src:
