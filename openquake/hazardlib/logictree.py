@@ -1014,9 +1014,10 @@ class FullLogicTree(object):
         """
         dic = {}
         g = 0
+        ns = self.num_samples
         for smr in range(self.Re):
             for trti, trt in enumerate(self.trts):
-                G = len(self.gsim_lt[trt])
+                G = ns if ns else len(self.gsim_lt.values[trt])
                 dic[trti * TWO24 + smr] = numpy.arange(g, g + G)
                 g += G
         return dic

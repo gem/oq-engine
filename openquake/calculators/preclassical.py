@@ -140,14 +140,11 @@ class PreClassicalCalculator(base.HazardCalculator):
         super().init()
         if self.oqparam.hazard_calculation_id:
             self.full_lt = self.datastore.parent['full_lt']
-            trt_smrs = self.datastore.parent['trt_smrs'][:]
         else:
             self.full_lt = self.csm.full_lt
-            trt_smrs = self.csm.get_trt_smrs()
-        self.grp_ids = numpy.arange(len(trt_smrs))
         rlzs_by_g = []
-        for t in trt_smrs:
-            for rlzs in self.full_lt.get_rlzs_by_gsim(t).values():
+        for trt_smr in self.full_lt.build_gdict():
+            for rlzs in self.full_lt.get_rlzs_by_gsim(trt_smr).values():
                 rlzs_by_g.append(rlzs)
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])

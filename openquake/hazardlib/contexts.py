@@ -1636,16 +1636,14 @@ def get_cmakers(src_groups, full_lt, oq):
                 trt_smrs = [sg.sources[0].trt_smr]
             all_trt_smrs.append(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
-    start = 0
     cmakers = []
     for grp_id, trt_smrs in enumerate(all_trt_smrs):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smrs)
         trti = trt_smrs[0] // TWO24
         cmaker = ContextMaker(trts[trti], rlzs_by_gsim, oq)
         cmaker.trti = trti
-        cmaker.gidx = numpy.arange(start, start + len(rlzs_by_gsim))
+        cmaker.trt_smrs = trt_smrs
         cmaker.grp_id = grp_id
-        start += len(rlzs_by_gsim)
         cmakers.append(cmaker)
     return cmakers
 

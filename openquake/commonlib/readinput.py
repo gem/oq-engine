@@ -610,8 +610,8 @@ def get_gsim_lt(oqparam, trts=('*',)):
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
     key = (gsim_file,) + tuple(sorted(trts))
-    if key in Global.gsim_lt_cache:
-        return Global.gsim_lt_cache[key]
+    #if key in Global.gsim_lt_cache:
+    #    return Global.gsim_lt_cache[key]
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
     gmfcorr = oqparam.correl_model
     for trt, gsims in gsim_lt.values.items():

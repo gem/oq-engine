@@ -184,7 +184,7 @@ def classical(srcs, sitecol, cmaker, monitor):
             sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
         result = hazclassical(srcs, sites, cmaker, pmap)
         result['pnemap'] = ~pmap.remove_zeros()
-        result['pnemap'].gidx = cmaker.gidx
+        result['pnemap'].trt_smrs = cmaker.trt_smrs
         yield result
 
 
@@ -289,6 +289,7 @@ class Hazard:
         self.datastore = dstore
         oq = dstore['oqparam']
         self.full_lt = full_lt
+        self.gdict = full_lt.build_gdict()
         self.weights = numpy.array(
             [r.weight['weight'] for r in full_lt.get_realizations()])
         self.cmakers = read_cmakers(dstore, full_lt)
@@ -309,18 +310,20 @@ class Hazard:
         """
         :param pmap: a ProbabilityMap
         :param cmaker: a ContextMaker
-        :returns: an array of rates of shape (N, R, M, L1)
+        :returns: an array of rates of shape (N, M, L1)
         """
         M = len(self.imtls)
         L1 = self.L // M
         out = numpy.zeros((self.N, M, L1))
-        dic = dict(zip(cmaker.gidx, cmaker.gsims.values()))
-        for lvl in range(self.L):
-            m, l = divmod(lvl, L1)
-            res = numpy.zeros((len(pmap.sids), self.R))
-            for i, g in enumerate(pmap.gidx):
-                combine_probs(res, pmap.array[:, lvl, i], U32(dic[g]))
-            out[:, m, l] = disagg.to_rates(res) @ self.weights
+        for trt_smr in cmaker.trt_smrs:
+            gidx = self.gdict[trt_smr]
+            dic = dict(zip(gidx, cmaker.gsims.values()))
+            for lvl in range(self.L):
+                m, l = divmod(lvl, L1)
+                res = numpy.zeros((len(pmap.sids), self.R))
+                for i, g in enumerate(gidx):
+                    combine_probs(res, pmap.array[:, lvl, i], U32(dic[g]))
+                out[:, m, l] += disagg.to_rates(res) @ self.weights
         return out
 
     def store_poes(self, g, pnes, pnes_sids):
@@ -418,20 +421,23 @@ class ClassicalCalculator(base.HazardCalculator):
             # store the poes for the given source
             acc[source_id] = pm
             pm.grp_id = grp_id
-            pm.gidx = pnemap.gidx
-        for i, g in enumerate(pnemap.gidx):
-            if g in acc:
-                acc[g].multiply_pnes(pnemap, i)
-                self.n_outs[g] -= 1
-                assert self.n_outs[g] > -1, (g, self.n_outs[g])
-                if self.n_outs[g] == 0:  # no other tasks for this g
+            pm.trt_smrs = pnemap.trt_smrs
+        for trt_smr in pnemap.trt_smrs:
+            gidx = self.gdict[trt_smr]
+            for i, g in enumerate(gidx):
+                if g in acc:
+                    acc[g].multiply_pnes(pnemap, i)
+                    self.n_outs[g] -= 1
+                    assert self.n_outs[g] > -1, (g, self.n_outs[g])
+                    if self.n_outs[g] == 0:  # no other tasks for this g
+                        with self.monitor('storing PoEs', measuremem=True):
+                            pne = acc.pop(g)
+                            self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
+                else:  # single output
                     with self.monitor('storing PoEs', measuremem=True):
-                        pne = acc.pop(g)
-                        self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
-            else:  # single output
-                with self.monitor('storing PoEs', measuremem=True):
-                    self.haz.store_poes(g, pnemap.array[:, :, i], pnemap.sids)
-        return acc
+                        self.haz.store_poes(
+                            g, pnemap.array[:, :, i], pnemap.sids)
+            return acc
 
     def create_dsets(self):
         """
@@ -536,6 +542,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.init_poes()
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
+        self.gdict = self.full_lt.build_gdict()  # trt_smr -> gidx
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         self.source_data = AccumDict(accum=[])
         if not performance.numba:
@@ -625,14 +632,16 @@ class ClassicalCalculator(base.HazardCalculator):
             for block in blks:
                 logging.debug('Sending %d source(s) with weight %d',
                               len(block), sg.weight)
-                for g in cm.gidx:
-                    self.n_outs[g] += cm.ntiles
+                for trt_smr in cm.trt_smrs:
+                    for g in self.gdict[trt_smr]:
+                        self.n_outs[g] += cm.ntiles
                 allargs.append((block, sitecol, cm))
 
             # allocate memory
-            for g in cm.gidx:
-                if self.n_outs[g] > 1:
-                    acc[g] = ProbabilityMap(sitecol.sids, L, 1).fill(1)
+            for trt_smr in cm.trt_smrs:
+                for g in self.gdict[trt_smr]:
+                    if self.n_outs[g] > 1:
+                        acc[g] = ProbabilityMap(sitecol.sids, L, 1).fill(1)
 
         totsize = sum(pmap.array.nbytes for pmap in acc.values())
         if totsize:
