@@ -372,10 +372,10 @@ class Hazard:
         if pmaps:  # called inside a loop
             disagg_by_src = self.datastore['disagg_by_src'][()]
             for key, pmap in pmaps.items():
-                assert isinstance(key, str), key
-                # in case of disagg_by_src key is a source ID
-                disagg_by_src[..., self.srcidx[key]] = (
-                    self.get_rates(pmap, self.cmakers[pmap.grp_id]))
+                if isinstance(key, str):
+                    # in case of disagg_by_src key is a source ID
+                    disagg_by_src[..., self.srcidx[key]] = (
+                        self.get_rates(pmap, self.cmakers[pmap.grp_id]))
             self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
@@ -424,16 +424,15 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[source_id] = pm
             pm.grp_id = grp_id
             pm.trt_smrs = pnemap.trt_smrs
+        self.n_outs[grp_id] -= 1
         for trt_smr in pnemap.trt_smrs:
             gidx = self.gdict[trt_smr]
             for i, g in enumerate(gidx):
                 if g in acc:
                     acc[g].multiply_pnes(pnemap, i)
-                    self.n_outs[g] -= 1
-                    assert self.n_outs[g] > -1, (g, self.n_outs[g])
-                    if self.n_outs[g] == 0:  # no other tasks for this g
+                    if self.n_outs[grp_id] == 0:  # no other tasks for this g
                         with self.monitor('storing PoEs', measuremem=True):
-                            pne = acc.pop(g)
+                            pne = acc[g]
                             self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
                 else:  # single output
                     with self.monitor('storing PoEs', measuremem=True):
@@ -579,7 +578,8 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         acc = self.run_one(self.sitecol, maxw)
-        self.haz.store_disagg(acc)
+        if self.oqparam.disagg_by_src:
+            self.haz.store_disagg(acc)
 
     def execute_seq(self, maxw, ntiles):
         """
@@ -601,9 +601,11 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Run a subset of sites and update the accumulator
         """
-        acc = {}  # g -> pmap
         oq = self.oqparam
         L = oq.imtls.size
+        # allocate memory
+        acc = {g: ProbabilityMap(sitecol.sids, L, 1).fill(1)
+               for g in range(self.full_lt.Gt)}
         allargs = []
         for cm in self.cmakers:
             G = len(cm.gsims)
@@ -634,16 +636,8 @@ class ClassicalCalculator(base.HazardCalculator):
             for block in blks:
                 logging.debug('Sending %d source(s) with weight %d',
                               len(block), sg.weight)
-                for trt_smr in cm.trt_smrs:
-                    for g in self.gdict[trt_smr]:
-                        self.n_outs[g] += cm.ntiles
+                self.n_outs[cm.grp_id] += cm.ntiles
                 allargs.append((block, sitecol, cm))
-
-            # allocate memory
-            for trt_smr in cm.trt_smrs:
-                for g in self.gdict[trt_smr]:
-                    if self.n_outs[g] > 1:
-                        acc[g] = ProbabilityMap(sitecol.sids, L, 1).fill(1)
 
         totsize = sum(pmap.array.nbytes for pmap in acc.values())
         if totsize:
