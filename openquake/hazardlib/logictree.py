@@ -1060,12 +1060,6 @@ class FullLogicTree(object):
         """
         return self.source_model_lt.sampling_method
 
-    def get_trti_smr(self, trt_smr):
-        """
-        :returns: (trti, smr)
-        """
-        return divmod(trt_smr, TWO24)
-
     def set_trt_smr(self, srcs, source_id=None, smr=None):
         """
         :param srcs: source objects
