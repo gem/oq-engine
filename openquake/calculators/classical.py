@@ -312,16 +312,14 @@ class Hazard:
         """
         M = len(self.imtls)
         L1 = self.L // M
-        out = numpy.zeros((self.N, M, L1))
+        out = numpy.zeros((self.N, self.L))
         rates = disagg.to_rates(pmap.array)  # shape (N, L, G)
         for trt_smr in cmaker.trt_smrs:
             allrlzs = self.full_lt.get_rlzs_by_gsim(trt_smr).values()
-            for lvl in range(self.L):
-                m, l = divmod(lvl, L1)
-                for i, rlzs in enumerate(allrlzs):
-                    for rlz in rlzs:
-                        out[:, m, l] += rates[:, lvl, i] * self.weights[rlz]
-        return out
+            for i, rlzs in enumerate(allrlzs):
+                for rlz in rlzs:
+                    out[:, :] += rates[:, :, i] * self.weights[rlz]
+        return out.reshape((self.N, M, L1))
 
     def store_poes(self, g, pnes, pnes_sids):
         """
