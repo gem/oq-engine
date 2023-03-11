@@ -354,7 +354,7 @@ class Hazard:
 
     def store_disagg(self, pmaps):
         """
-        Store data inside disagg_by_grp (optionally disagg_by_src)
+        Store data inside disagg_by_src
         """
         disagg_by_src = self.datastore['disagg_by_src'][()]
         for key, pmap in pmaps.items():
@@ -564,12 +564,6 @@ class ClassicalCalculator(base.HazardCalculator):
             for g, pne in acc.items():
                 if isinstance(g, int):  # string for disagg_by_src
                     self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
-
-        # store disagg_by_grp
-        lst = []
-        for g, dic in self.haz.acc.items():
-            lst.append((g, dic['avg_poe'], dic['nsites']))
-        self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
 
         # store disagg_by_src, if any
         if self.oqparam.disagg_by_src:

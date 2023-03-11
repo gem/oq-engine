@@ -89,21 +89,13 @@ class HcurvesGetter(object):
         self.full_lt = dstore['full_lt']
         self.sslt = self.full_lt.source_model_lt.decompose()
         self.source_info = dstore['source_info'][:]
-        self.disagg_by_grp = dstore['disagg_by_grp'][:]
-        gsim_lt = self.full_lt.gsim_lt
-        self.bysrc = {}  # src_id -> (start, gsims, weights)
-        for row in self.source_info:
-            dis = self.disagg_by_grp[row['grp_id']]
-            trt = decode(dis['grp_trt'])
-            weights = gsim_lt.get_weights(trt)
-            self.bysrc[decode(row['source_id'])] = (
-                dis['grp_start'], gsim_lt.values[trt], weights)
 
     def get_hcurve(self, src_id, imt=None, site_id=0, gsim_idx=None):
         """
         Return the curve associated to the given src_id, imt and gsim_idx
         as an array of length L
         """
+        1/0
         assert ';' in src_id, src_id  # must be a realization specific src_id
         imt_slc = self.imtls(imt) if imt else slice(None)
         start, gsims, weights = self.bysrc[src_id]

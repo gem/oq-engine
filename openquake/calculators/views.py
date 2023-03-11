@@ -988,16 +988,6 @@ Source = collections.namedtuple(
     'Source', 'source_id code num_ruptures checksum')
 
 
-@view.add('disagg_by_grp')
-def view_disagg_by_grp(token, dstore):
-    """
-    Show the source groups contributing the most to the highest IML
-    """
-    data = dstore['disagg_by_grp'][()]
-    data.sort(order='avg_poe')
-    return data[::-1]
-
-
 @view.add('gmvs_to_hazard')
 def view_gmvs_to_hazard(token, dstore):
     """
@@ -1378,27 +1368,6 @@ def view_mean_perils(token, dstore):
 @view.add('pmaps_size')
 def view_pmaps_size(token, dstore):
     return humansize(get_pmaps_gb(dstore))
-
-
-@view.add('src_groups')
-def view_src_groups(token, dstore):
-    """
-    Show the hazard contribution of each source group
-    """
-    disagg = dstore['disagg_by_grp'][:]
-    contrib = disagg['avg_poe'] / disagg['avg_poe'].sum()
-    source_info = dstore['source_info'][:]
-    tbl = []
-    for grp_id, rows in group_array(source_info, 'grp_id').items():
-        srcs = decode(rows['source_id'])
-        if len(srcs) > 2:
-            text = ' '.join(srcs[:2]) + ' ...'
-        else:
-            text = ' '.join(srcs)
-        tbl.append((grp_id, contrib[grp_id], text))
-    tbl.sort(key=operator.itemgetter(1), reverse=True)
-    return text_table(tbl, header=['grp_id', 'contrib', 'sources'],
-                      ext='org')
 
 
 @view.add('rup_stats')
