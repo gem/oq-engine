@@ -54,7 +54,6 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
-disagg_grp_dt = numpy.dtype([('gidx', U16), ('avg_poe', F32), ('nsites', U32)])
 slice_dt = numpy.dtype([('sid', U32), ('start', int), ('stop', int)])
 
 
@@ -182,6 +181,7 @@ def classical(srcs, sitecol, cmaker, monitor):
             sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
         result = hazclassical(srcs, sites, cmaker, pmap)
         result['pnemap'] = ~pmap.remove_zeros()
+        result['pnemap'].gidx = cmaker.gidx
         result['pnemap'].trt_smrs = cmaker.trt_smrs
         yield result
 
@@ -287,7 +287,6 @@ class Hazard:
         self.datastore = dstore
         oq = dstore['oqparam']
         self.full_lt = full_lt
-        self.gdict = full_lt.build_gdict()
         self.weights = numpy.array(
             [r.weight['weight'] for r in full_lt.get_realizations()])
         self.cmakers = read_cmakers(dstore, full_lt)
@@ -405,12 +404,21 @@ class ClassicalCalculator(base.HazardCalculator):
             # store the poes for the given source
             acc[source_id] = pm
             pm.grp_id = grp_id
+            pm.gidx = pnemap.gidx
             pm.trt_smrs = pnemap.trt_smrs
-        self.n_outs[grp_id] -= 1
-        for trt_smr in pnemap.trt_smrs:
-            gidx = self.gdict[trt_smr]
-            for i, g in enumerate(gidx):
+        for c, g in enumerate(pnemap.gidx):
+            i = c % pnemap.array.shape[2]
+            if g in acc:
                 acc[g].multiply_pnes(pnemap, i)
+                self.n_outs[g] -= 1
+                assert self.n_outs[g] > -1, (g, self.n_outs[g])
+                if self.n_outs[g] == 0:  # no other tasks for this g
+                    with self.monitor('storing PoEs', measuremem=True):
+                        pne = acc.pop(g)
+                        self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
+            else:  # single output
+                with self.monitor('storing PoEs', measuremem=True):
+                    self.haz.store_poes(g, pnemap.array[:, :, i], pnemap.sids)
         return acc
 
     def create_dsets(self):
@@ -516,7 +524,6 @@ class ClassicalCalculator(base.HazardCalculator):
         self.init_poes()
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
-        self.gdict = self.full_lt.build_gdict()  # trt_smr -> gidx
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         self.source_data = AccumDict(accum=[])
         if not performance.numba:
@@ -549,19 +556,8 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Regular case
         """
-        # create the rup/ datasets BEFORE swmr_on()
-        self.create_dsets()
-
-        # populate the Pmaps
+        self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         acc = self.run_one(self.sitecol, maxw)
-
-        # store _poes
-        with self.monitor('storing PoEs', measuremem=True):
-            for g, pne in acc.items():
-                if isinstance(g, int):  # string for disagg_by_src
-                    self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
-
-        # store disagg_by_src, if any
         if self.oqparam.disagg_by_src:
             self.haz.store_disagg(acc)
 
@@ -585,11 +581,9 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Run a subset of sites and update the accumulator
         """
+        acc = {}  # g -> pmap
         oq = self.oqparam
         L = oq.imtls.size
-        # allocate memory
-        acc = {g: ProbabilityMap(sitecol.sids, L, 1).fill(1)
-               for g in range(self.full_lt.Gt)}
         allargs = []
         for cm in self.cmakers:
             G = len(cm.gsims)
@@ -620,8 +614,14 @@ class ClassicalCalculator(base.HazardCalculator):
             for block in blks:
                 logging.debug('Sending %d source(s) with weight %d',
                               len(block), sg.weight)
-                self.n_outs[cm.grp_id] += cm.ntiles
+                for g in cm.gidx:
+                    self.n_outs[g] += cm.ntiles
                 allargs.append((block, sitecol, cm))
+
+            # allocate memory
+            for g in cm.gidx:
+                if self.n_outs[g] > 1:
+                    acc[g] = ProbabilityMap(sitecol.sids, L, 1).fill(1)
 
         totsize = sum(pmap.array.nbytes for pmap in acc.values())
         if totsize:

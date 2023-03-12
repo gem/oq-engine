@@ -143,7 +143,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         else:
             self.full_lt = self.csm.full_lt
         rlzs_by_g = []
-        for trt_smr in self.full_lt.build_gdict():
+        for trt_smr in self.full_lt.gdict:
             for rlzs in self.full_lt.get_rlzs_by_gsim(trt_smr).values():
                 rlzs_by_g.append(rlzs)
         self.datastore.hdf5.save_vlen(
