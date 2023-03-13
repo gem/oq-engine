@@ -990,6 +990,11 @@ class FullLogicTree(object):
         self.oversampling = oversampling
         self.init()  # set .sm_rlzs and .trts
 
+    def __getstate__(self):
+        return {'source_model_lt': self.source_model_lt,
+                'gsim_lt': self.gsim_lt,
+                'oversampling': self.oversampling}
+
     def init(self):
         if self.source_model_lt.num_samples:
             # NB: the number of effective rlzs can be less than the number
@@ -1001,9 +1006,29 @@ class FullLogicTree(object):
             for sm_rlz in self.source_model_lt:
                 sm_rlz.samples = samples
                 self.sm_rlzs.append(sm_rlz)
-        assert len(self.sm_rlzs) <= TWO24, len(self.sm_rlzs)
+        self.Re = len(self.sm_rlzs)
+        assert self.Re <= TWO24, len(self.sm_rlzs)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
         self.trts = list(self.gsim_lt.values)
+        self.gdict = {}
+        g = 0
+        rlzs_by_g = []
+        for smr in range(self.Re):
+            for trti, trt in enumerate(self.trts):
+                trt_smr = trti * TWO24 + smr
+                rgb = self.get_rlzs_by_gsim(trt_smr)
+                self.gdict[trt_smr] = numpy.arange(g, g + len(rgb)) 
+                for rlzs in rgb.values():
+                    rlzs_by_g.append(rlzs)
+                    g += 1
+        self.Gt = g
+        self.rlzs_by_g = [U32(rlzs) for rlzs in rlzs_by_g]
+
+    def get_gidx(self, trt_smrs):
+        """
+        :returns: an array of g-indices
+        """
+        return numpy.concatenate([self.gdict[ts] for ts in trt_smrs])
 
     def get_smr_by_ltp(self):
         """
@@ -1043,11 +1068,19 @@ class FullLogicTree(object):
         """
         return self.source_model_lt.sampling_method
 
-    def get_trti_smr(self, trt_smr):
+    def get_trt_smrs(self, src):
         """
-        :returns: (trti, smr)
+        :returns: a tuple of indices trt_smr for the given source
         """
-        return divmod(trt_smr, TWO24)
+        if not hasattr(self, 'source_data'):  # fake logic tree
+            return 0,
+        src_id = src.source_id.split(';')[0]
+        trti = self.trti.get(src.tectonic_region_type, 0)  # missing trt='*'
+        sd = self.source_model_lt.source_data
+        brids = set(sd[sd['source'] == src_id]['branch'])
+        return tuple(trti * TWO24 + sm_rlz.ordinal
+                     for sm_rlz in self.sm_rlzs
+                     if set(sm_rlz.lt_path) & brids)
 
     def set_trt_smr(self, srcs, source_id=None, smr=None):
         """
@@ -1077,14 +1110,6 @@ class FullLogicTree(object):
             src.trt_smr = tup  # realizations impacted by the source
             out.append(src)
         return out
-
-    def get_trt_smrs(self, smr):
-        """
-        :param smr: effective realization index
-        :returns: array of T group IDs, being T the number of TRTs
-        """
-        nt = len(self.gsim_lt.values)
-        return smr + numpy.arange(nt) * TWO24
 
     def reduce_groups(self, src_groups, source_id=None):
         """
@@ -1161,7 +1186,9 @@ class FullLogicTree(object):
             rlzs = self.get_realizations()
             acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
             for sm in self.sm_rlzs:
-                for trtsmr in self.get_trt_smrs(sm.ordinal):
+                trtsmrs = sm.ordinal + numpy.arange(
+                    len(self.gsim_lt.values)) * TWO24
+                for trtsmr in trtsmrs:
                     trti, smr = divmod(trtsmr, TWO24)
                     for rlz in rlzs:
                         idx = smr_by_ltp['~'.join(rlz.sm_lt_path)]
@@ -1242,8 +1269,13 @@ class FullLogicTree(object):
         """
         :returns: a dictionary trt_smr -> sm_id
         """
-        return {trt_smr: sm.ordinal for sm in self.sm_rlzs
-                for trt_smr in self.get_trt_smrs(sm.ordinal)}
+        dic = {}
+        for sm in self.sm_rlzs:
+            trt_smrs = sm.ordinal + numpy.arange(
+                len(self.gsim_lt.values)) * TWO24
+            for trt_smr in trt_smrs:
+                dic[trt_smr] = sm.ordinal
+        return dic
 
     def __repr__(self):
         info_by_model = {}
