@@ -945,7 +945,7 @@ def get_station_data(oqparam):
         station_cols = ["STATION_ID", "LONGITUDE", "LATITUDE"]
         cols = []
         for im in imts:
-            stddev_str = "STDDEV" if imt == "MMI" else "LN_SIGMA"
+            stddev_str = "STDDEV" if im == "MMI" else "LN_SIGMA"
             cols.append(im + '_VALUE')
             cols.append(im + '_' + stddev_str)
         station_data = pandas.DataFrame(sdata[cols].values, columns=im_cols)
