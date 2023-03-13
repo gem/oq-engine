@@ -1068,6 +1068,8 @@ class FullLogicTree(object):
         """
         :returns: a tuple of indices trt_smr for the given source
         """
+        if not hasattr(self, 'source_data'):  # fake logic tree
+            return 0,
         src_id = src.source_id.split(';')[0]
         trti = self.trti.get(src.tectonic_region_type, 0)  # missing trt='*'
         sd = self.source_model_lt.source_data
