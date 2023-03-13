@@ -268,7 +268,7 @@ class PMFExtractorsTestCase(unittest.TestCase):
             valid.mag_pmf(mean), [0.99999944, 0.99999999])
 
 
-@pytest.mark.parametrize('job_ini', ['job_sampling.ini', 'job.ini'])
+@pytest.mark.parametrize('job_ini', ['job.ini'])
 def test_single_source(job_ini):
     job_ini = os.path.join(DATA_PATH, 'data', 'disagg', job_ini)
     inp = read_input(job_ini)

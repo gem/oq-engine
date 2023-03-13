@@ -1023,6 +1023,9 @@ class FullLogicTree(object):
                     g += 1
         self.Gt = g
         self.rlzs_by_g = {g: U32(rlzs) for g, rlzs in enumerate(rlzs_by_g)}
+        self.weights = ws = numpy.array([rlz.weight['weight'] for rlz in
+                                         self.get_realizations()])
+        self.g_weights = numpy.array([ws[rlzs].sum() for rlzs in rlzs_by_g])
 
         # sanity check on Gt
         if self.num_samples == 0:  # easy formula
@@ -1073,13 +1076,18 @@ class FullLogicTree(object):
         """
         return self.source_model_lt.sampling_method
 
-    def get_trt_smrs(self, src_id):
+    def get_trt_smrs(self, src_id=None):
         """
         :returns: a tuple of indices trt_smr for the given source
         """
         if not hasattr(self, 'source_data'):  # fake logic tree
             return 0,
         sd = self.source_model_lt.source_data
+        if src_id is None:
+            return tuple(trti * TWO24 + sm_rlz.ordinal
+                         for sm_rlz in self.sm_rlzs
+                         for trti in self.trti)
+
         sd = sd[sd['source'] == src_id]
         trt = sd['trt'][0]  # all same trt
         trti = 0 if trt == '*' else self.trti[trt]
