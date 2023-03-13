@@ -25,12 +25,13 @@ from openquake.hazardlib import contexts
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.tests import (
+    CalculatorTestCase, strip_calc_id, NOT_DARWIN)
 from openquake.qa_tests_data.logictree import (
-    case_01, case_06, case_07, case_08, case_09,
-    case_10, case_11, case_13, case_15, case_16, case_17,
-    case_20, case_21, case_28, case_31, case_36, case_45, case_46,
-    case_56, case_58, case_59, case_67, case_68, case_71, case_73,
+    case_01, case_02, case_06, case_07, case_08, case_09, case_10, case_11,
+    case_13, case_14, case_15, case_16, case_17,
+    case_20, case_21, case_28, case_30, case_31, case_36, case_45, case_46,
+    case_52, case_56, case_58, case_59, case_67, case_68, case_71, case_73,
     case_79, case_83)
 
 ae = numpy.testing.assert_equal
@@ -55,7 +56,17 @@ class LogicTreeTestCase(CalculatorTestCase):
     def test_case_01(self):
         # same source in two source models, use_rates
         self.assert_curves_ok(['curve-mean.csv'], case_01.__file__)
-        
+
+    def test_case_02(self):
+        self.run_calc(case_02.__file__, 'job.ini')
+
+        # check view inputs
+        lines = text_table(view('inputs', self.calc.datastore)).splitlines()
+        self.assertEqual(len(lines), 13)  # rst table with 13 rows
+
+        [fname] = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve.csv', fname)
+
     def test_case_06(self):
         # two source model, use_rates and disagg_by_src
         self.assert_curves_ok(
@@ -152,6 +163,11 @@ class LogicTreeTestCase(CalculatorTestCase):
             text_table(view('sources_branches', self.calc.datastore),
                        ext='org'))
         self.assertEqualFiles('expected/source_branches.org', tbl)
+
+    def test_case_14(self):
+        # test classical with 2 gsims and 1 sample
+        self.assert_curves_ok(['hazard_curve-rlz-000_PGA.csv'],
+                              case_14.__file__)
 
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources
@@ -326,6 +342,20 @@ hazard_uhs-std.csv
         ae(info['weight'] > 0, [True, True, True])
         ae(info['trti'], [0, 0, 1])
 
+    def test_case_30(self):
+        # point on the international data line
+        # this is also a test with IMT-dependent weights
+        if NOT_DARWIN:  # broken on macOS
+            self.assert_curves_ok(['hazard_curve-PGA.csv',
+                                   'hazard_curve-SA(1.0).csv'],
+                                  case_30.__file__)
+
+    def test_case_30_sampling(self):
+        # IMT-dependent weights with sampling by cheating
+        self.assert_curves_ok(
+            ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
+            case_30.__file__, number_of_logic_tree_samples='10', delta=1E-5)
+
     def test_case_31(self):
         # source specific logic tree
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv',
@@ -357,6 +387,50 @@ hazard_uhs-std.csv
         # SMLT with applyToBranches
         self.assert_curves_ok(["hazard_curve-mean.csv"], case_46.__file__,
                               delta=1E-6)
+
+    def test_case_52(self):
+        # case with 2 GSIM realizations b1 (w=.9) and b2 (w=.1), 10 samples
+
+        # late_weights
+        self.run_calc(case_52.__file__, 'job.ini')
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.563831, rtol=1E-6)
+        ws = extract(self.calc.datastore, 'weights')
+        # sampled 8 times b1 and 2 times b2
+        aac(ws, [0.029412, 0.029412, 0.029412, 0.264706, 0.264706, 0.029412,
+                 0.029412, 0.264706, 0.029412, 0.029412], rtol=1E-5)
+
+        # early_weights
+        self.run_calc(case_52.__file__, 'job.ini',
+                      sampling_method='early_weights')
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.56355, rtol=1E-6)
+        ws = extract(self.calc.datastore, 'weights')
+        aac(ws, [0.1] * 10)  # all equal
+
+        # full enum, rlz-0: 0.554007, rlz-1: 0.601722
+        self.run_calc(case_52.__file__, 'job.ini',
+                      number_of_logic_tree_samples='0')
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.558779, rtol=1E-6)
+        ws = extract(self.calc.datastore, 'weights')
+        aac(ws, [0.9, 0.1])
+
+    def test_case_52_bis(self):
+        self.run_calc(case_52.__file__, 'job.ini',
+                      sampling_method='late_latin')
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.558779, rtol=1E-6)
+        ws = extract(self.calc.datastore, 'weights')
+        # sampled 5 times b1 and 5 times b2
+        aac(ws, [0.18, 0.02, 0.18, 0.18, 0.02, 0.02, 0.02, 0.02, 0.18, 0.18])
+
+        self.run_calc(case_52.__file__, 'job.ini',
+                      sampling_method='early_latin')
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.558779, rtol=1E-6)
+        ws = extract(self.calc.datastore, 'weights')
+        aac(ws, [0.1] * 10)  # equal weights
 
     def test_case_56(self):
         # test with a discardable source model (#2)

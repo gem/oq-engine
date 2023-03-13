@@ -27,8 +27,8 @@ from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
-from openquake.qa_tests_data.logictree import case_15, case_21
-from openquake.qa_tests_data.classical import case_02, case_34
+from openquake.qa_tests_data.logictree import case_02, case_15, case_21
+from openquake.qa_tests_data.classical import case_34
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import case_2, case_caracas
 
