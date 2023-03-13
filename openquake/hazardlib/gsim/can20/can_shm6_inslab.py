@@ -40,7 +40,7 @@ from openquake.hazardlib.gsim.abrahamson_2015 import (AbrahamsonEtAl2015SSlab,
         _compute_forearc_backarc_term, _compute_site_response_term)
 from openquake.hazardlib.gsim.atkinson_boore_2003 import _compute_mean as _compute_mean_ab
 from openquake.hazardlib.gsim.atkinson_boore_2003 import (
-    AtkinsonBoore2003SSlabCascadia)
+    AtkinsonBoore2003SSlabCascadia, _compute_soil_linear_factor)
 from openquake.hazardlib.imt import PGA, SA, PGV
 from openquake.hazardlib.gsim.base import CoeffsTable #SitesContext,
 #                                           DistancesContext)
@@ -77,10 +77,11 @@ def _compute_site_class_term_CanadaSHM6(C, ctx, imt):
         site_term = np.interp(np.log(ctx.vs30), np.log(np.flip(ref_vs30, axis=0)),
                               np.flip(ref_values, axis=0))
 
+
         return site_term
 
 
-def _compute_soil_amplification(self, C, ctx, pga_rock, imt):
+def _compute_soil_amplification(C, ctx, pga_rock, imt):
         """
         For CanadaSHM6 the AtkinsonBoore2003 site term is replaced.
         The site term is defined as:
@@ -97,7 +98,7 @@ def _compute_soil_amplification(self, C, ctx, pga_rock, imt):
 
         """
         # factor controlling degree of linearity
-        sl = self._compute_soil_linear_factor(pga_rock, imt)
+        sl = _compute_soil_linear_factor(pga_rock, imt)
 
         ref_vs30 = np.array([2000., 1100., 760., 450., 250., 160., ])
         ref_values = np.array([0.0, 0.0, C['c5']*0.41367, C['c5'], C['c6'],
@@ -113,6 +114,21 @@ def _compute_soil_amplification(self, C, ctx, pga_rock, imt):
         site_term[ctx.vs30 < 1100.] *= sl[ctx.vs30 < 1100.]
 
         return site_term
+
+def _get_stddevs(self, C, stddev_types, num_sites):
+        """
+        Return standard deviations as defined in table 1, pag 1715.
+        """
+        stddevs = []
+        for stddev_type in stddev_types:
+            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            if stddev_type == const.StdDev.TOTAL:
+                stddevs.append(np.log(10 ** C['sigma']) + np.zeros(num_sites))
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                stddevs.append(np.log(10 ** C['s1']) + np.zeros(num_sites))
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                stddevs.append(np.log(10 ** C['s2']) + np.zeros(num_sites))
+        return stddevs
 
 
 def site_amplification(ctx, imt, pga1100):
@@ -225,7 +241,6 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
                 imt = SA(0.5)
             elif imt.period != 0 and (imt.period < self.MIN_SA or
                                       imt.period > self.MAX_SA):
-                import pdb; pdb.set_trace()
                 raise ValueError(str(imt) + ' is not supported. SA must be in '
                                  + 'range of ' + str(self.MIN_SA) + 's and '
                                  + str(self.MAX_SA) + 's.')
@@ -327,7 +342,6 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
         for m, imt in enumerate(imts):
             extrapolate = False
             PGVimt = False
-
             if imt == PGV():
                 PGVimt = True
                 imt = SA(0.5)
@@ -382,10 +396,10 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
             mean[m] += extrapolation_factor(self.extrapolate_GMM,
                                          ctx, imt, target_imt)
 
+
         if PGVimt:
             mean[m] = (0.995*mean[m]) + 3.937
 
-        #return mean, stddevs
 
 
 
@@ -444,26 +458,23 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
                           limted to the period range of 0.05 - 10s
         """
         
+        ctx.hypo_depth = self.HYPO_DEPTH
 
         # cap magnitude values at 8.0, see page 1709
         mag = np.clip(ctx.mag, 0, 8.0)
 
         # compute PGA on rock (needed for site amplification calculation)
         G = 10 ** (0.301 - 0.01 * mag)
+        self.kind = 'SSlab2008'
         pga_rock = _compute_mean_ab(self.kind, self.COEFFS_SSLAB[PGA()], G, mag,
-                                          ctx.hypo_depth, ctx.rrup, ctx.vs30,
+                                          self.HYPO_DEPTH, ctx.rrup, ctx.vs30,
                                           # by passing pga_rock > 500 the soil
                                           # amplification is 0
                                           np.zeros_like(ctx.vs30) + 600,
                                           PGA())
         pga_rock = 10 ** (pga_rock)
 
-            # compute actual mean and convert from log10 to ln and units from
-           # cm/s**2 to g
-
-        #C = self.COEFFS_SSLAB[imt]
         
-        ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
 
             extrapolate = False
@@ -488,9 +499,26 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
 
             # compute actual mean and convert from log10 to ln and units from
             # cm/s**2 to g
-            mean[m] = _compute_mean_ab(
-                self.kind, C, G, mag, ctx.hypo_depth, ctx.rrup,
-                ctx.vs30, pga_rock, imt)
+            hypo_depth = np.clip(ctx.hypo_depth, 0, 100.) 
+            delta = 0.00724 * 10 ** (0.507 * mag)
+            R = np.sqrt(ctx.rrup ** 2 + delta ** 2)
+
+            s_amp = _compute_soil_amplification(C, ctx, pga_rock, imt)
+
+            #mean[m] = _compute_mean_ab(
+                #self.kind, C, G, mag, ctx.hypo_depth, ctx.rrup,
+                #ctx.vs30, pga_rock, imt)
+            mean[m] =  (
+                # 1st term
+                C['c1'] + C['c2'] * mag +
+                # 2nd term
+                C['c3'] * hypo_depth +
+                # 3rd term
+                C['c4'] * R -
+                # 4th term
+                G * np.log10(R) +
+                # 5th, 6th and 7th terms
+                s_amp)
             mean[m] = np.log((10 ** mean[m]) * 1e-2 / g)
 
             if imt.period == 4.0:
@@ -500,14 +528,16 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
             if 's2' in C.dtype.names:  # in the Gupta subclass
                 tau[m] = np.log(10 ** C['s2'])
                 phi[m] = np.log(10 ** C['s1'])
+
+
         # add extrapolation factor if outside SA range (0.07 - 9.09)
-        if extrapolate:
-            ctx.rhypo = ctx.rrup  # approximation for extrapolation only
-            mean[m] += extrapolation_factor(self.extrapolate_GMM,
+            if extrapolate:
+                ctx.rhypo = ctx.rrup  # approximation for extrapolation only
+                mean[m] += extrapolation_factor(self.extrapolate_GMM,
                                          ctx, imt, target_imt)
 
-        if PGVimt:
-            mean[m] = (0.995*mean[m]) + 3.937
+            if PGVimt:
+                mean[m] = (0.995*mean[m]) + 3.937
 
 
 
@@ -567,6 +597,7 @@ class CanadaSHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
         """
         ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
+
             if imt == PGV():
                 extrapolate = False
             elif imt.period < self.MIN_SA and imt.period >= self.MIN_SA_EXTRAP:
