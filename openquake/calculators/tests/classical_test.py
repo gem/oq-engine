@@ -125,11 +125,6 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-smltp_b1-gsimltp_b1_b2.csv'],
             case_12.__file__)
 
-        # test disagg_by_grp
-        df = self.calc.datastore.read_df('disagg_by_grp')
-        fname = general.gettemp(text_table(df))
-        self.assertEqualFiles('expected/disagg_by_grp.rst', fname)
-
     def test_case_14(self):
         # test classical with 2 gsims and 1 sample
         self.assert_curves_ok(['hazard_curve-rlz-000_PGA.csv'],
