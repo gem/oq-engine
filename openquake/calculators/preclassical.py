@@ -142,12 +142,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             self.full_lt = self.datastore.parent['full_lt']
         else:
             self.full_lt = self.csm.full_lt
-        rlzs_by_g = []
-        for trt_smr in self.full_lt.gdict:
-            for rlzs in self.full_lt.get_rlzs_by_gsim(trt_smr).values():
-                rlzs_by_g.append(rlzs)
-        self.datastore.hdf5.save_vlen(
-            'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
+        self.datastore.hdf5.save_vlen('rlzs_by_g', self.full_lt.rlzs_by_g)
 
     def store(self):
         # store full_lt, trt_smrs, toms

@@ -1012,13 +1012,17 @@ class FullLogicTree(object):
         self.trts = list(self.gsim_lt.values)
         self.gdict = {}
         g = 0
+        rlzs_by_g = []
         for smr in range(self.Re):
             for trti, trt in enumerate(self.trts):
                 trt_smr = trti * TWO24 + smr
-                G = len(self.get_rlzs_by_gsim(trt_smr))
-                self.gdict[trt_smr] = numpy.arange(g, g + G)
-                g += G
+                rgb = self.get_rlzs_by_gsim(trt_smr)
+                self.gdict[trt_smr] = numpy.arange(g, g + len(rgb)) 
+                for rlzs in rgb.values():
+                    rlzs_by_g.append(rlzs)
+                    g += 1
         self.Gt = g
+        self.rlzs_by_g = [U32(rlzs) for rlzs in rlzs_by_g]
 
     def get_gidx(self, trt_smrs):
         """
