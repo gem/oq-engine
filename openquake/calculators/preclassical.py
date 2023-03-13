@@ -142,7 +142,8 @@ class PreClassicalCalculator(base.HazardCalculator):
             self.full_lt = self.datastore.parent['full_lt']
         else:
             self.full_lt = self.csm.full_lt
-        self.datastore.hdf5.save_vlen('rlzs_by_g', self.full_lt.rlzs_by_g)
+        self.datastore.hdf5.save_vlen(
+            'rlzs_by_g', list(self.full_lt.rlzs_by_g.values()))
 
     def store(self):
         # store full_lt, trt_smrs, toms
