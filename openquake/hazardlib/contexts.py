@@ -1640,6 +1640,7 @@ def get_cmakers(src_groups, full_lt, oq):
         cmaker = ContextMaker(trts[trti], rlzs_by_gsim, oq)
         cmaker.trti = trti
         cmaker.trt_smrs = trt_smrs
+        cmaker.gidx = full_lt.get_gidx(trt_smrs)
         cmaker.grp_id = grp_id
         cmakers.append(cmaker)
     return cmakers
@@ -1661,7 +1662,9 @@ def read_cmakers(dstore, full_lt=None):
     else:
         oq.af = None
     trt_smrs = dstore['trt_smrs'][:]
-    full_lt = full_lt or dstore['full_lt']
+    if full_lt is None:
+        full_lt = dstore['full_lt']
+        full_lt.init()
     cmakers = get_cmakers(trt_smrs, full_lt, oq)
     if 'delta_rates' in dstore:  # aftershock
         for cmaker in cmakers:

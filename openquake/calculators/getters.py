@@ -20,7 +20,6 @@ import operator
 import numpy
 
 from openquake.baselib import general, hdf5
-from openquake.baselib.python3compat import decode
 from openquake.hazardlib import probability_map, stats
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
@@ -95,7 +94,6 @@ class HcurvesGetter(object):
         Return the curve associated to the given src_id, imt and gsim_idx
         as an array of length L
         """
-        1/0
         assert ';' in src_id, src_id  # must be a realization specific src_id
         imt_slc = self.imtls(imt) if imt else slice(None)
         start, gsims, weights = self.bysrc[src_id]
@@ -105,6 +103,7 @@ class HcurvesGetter(object):
             return weights @ curves
         return dset[start + gsim_idx, site_id, imt_slc]
 
+    # NB: not used right now
     def get_hcurves(self, src, imt=None, site_id=0, gsim_idx=None):
         """
         Return the curves associated to the given src, imt and gsim_idx

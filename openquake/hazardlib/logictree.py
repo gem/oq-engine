@@ -990,6 +990,11 @@ class FullLogicTree(object):
         self.oversampling = oversampling
         self.init()  # set .sm_rlzs and .trts
 
+    def __getstate__(self):
+        return {'source_model_lt': self.source_model_lt,
+                'gsim_lt': self.gsim_lt,
+                'oversampling': self.oversampling}
+
     def init(self):
         if self.source_model_lt.num_samples:
             # NB: the number of effective rlzs can be less than the number
@@ -1005,22 +1010,21 @@ class FullLogicTree(object):
         assert self.Re <= TWO24, len(self.sm_rlzs)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
         self.trts = list(self.gsim_lt.values)
-        self.Gs = sum(len(gsims) for gsims in self.gsim_lt.values.values())
-        self.Gt = self.Gs * self.Re
-
-    def build_gdict(self):
-        """
-        :returns: a dictionary trt_smr -> g-indices
-        """
+        self.gdict = {}
         g = 0
-        dic = {}
         for smr in range(self.Re):
             for trti, trt in enumerate(self.trts):
                 trt_smr = trti * TWO24 + smr
                 G = len(self.get_rlzs_by_gsim(trt_smr))
-                dic[trt_smr] = numpy.arange(g, g + G)
+                self.gdict[trt_smr] = numpy.arange(g, g + G)
                 g += G
-        return dic
+        self.Gt = g
+
+    def get_gidx(self, trt_smrs):
+        """
+        :returns: an array of g-indices
+        """
+        return numpy.concatenate([self.gdict[ts] for ts in trt_smrs])
 
     def get_smr_by_ltp(self):
         """

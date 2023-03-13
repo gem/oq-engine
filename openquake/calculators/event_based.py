@@ -83,6 +83,7 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
     trt_smr = proxies[0]['trt_smr']
     fmon = monitor('filtering ruptures', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
+    full_lt.init()
     with dstore:
         trt = full_lt.trts[trt_smr // TWO24]
         sitecol = dstore['sitecol']
