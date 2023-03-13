@@ -1010,8 +1010,6 @@ class FullLogicTree(object):
         assert self.Re <= TWO24, len(self.sm_rlzs)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
         self.trts = list(self.gsim_lt.values)
-        self.Gs = sum(len(gsims) for gsims in self.gsim_lt.values.values())
-        self.Gt = self.Gs * self.Re
         self.gdict = {}
         g = 0
         for smr in range(self.Re):
@@ -1020,6 +1018,7 @@ class FullLogicTree(object):
                 G = len(self.get_rlzs_by_gsim(trt_smr))
                 self.gdict[trt_smr] = numpy.arange(g, g + G)
                 g += G
+        self.Gt = g
 
     def get_gidx(self, trt_smrs):
         """
