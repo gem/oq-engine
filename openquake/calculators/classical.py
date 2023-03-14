@@ -881,14 +881,16 @@ def disagg_by_source(parent, csm, mon):
     """
     oq = parent['oqparam']
     oq.cachedir = datastore.get_datadir()
-    oq.mags_by_trt = parent['source_mags']
+    oq.mags_by_trt = {
+                trt: python3compat.decode(dset[:])
+                for trt, dset in parent['source_mags'].items()}
     sitecol = parent['sitecol']
     assert len(sitecol) == 1, sitecol
     edges_shp = disagg.get_edges_shapedic(oq, sitecol)
     rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
     logging.info('There are %d relevant sources: %s', len(rel_ids), rel_ids)
 
-    out = {}
+    smap = parallel.Starmap(disagg.by_source, h5=mon.h5)
     for source_id in rel_ids:
         smlt = csm.full_lt.source_model_lt.reduce(source_id)
         gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
@@ -896,11 +898,9 @@ def disagg_by_source(parent, csm, mon):
         logging.info('Considering source %s (%d realizations)',
                      source_id, relt.get_num_paths())
         groups = disagg.reduce_groups(csm.src_groups, source_id)
-        out[source_id] = disagg.by_source(
-            groups, sitecol, relt, edges_shp, oq, mon)
-
+        smap.submit((groups, sitecol, relt, edges_shp, oq))
     items = []
-    for source_id, (rates5D, rates2D) in out.items():
+    for source_id, rates5D, rates2D in smap:
         if oq.use_rates:
             sanity_check(source_id, rates2D, parent.getitem('disagg_by_src'))
         items.append((source_id, rates5D))

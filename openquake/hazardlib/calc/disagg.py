@@ -667,10 +667,13 @@ def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     :returns: rates of shape (Ma, D, E, M, P), rates of shape (M, L1)
     """
     assert len(sitecol) == 1, sitecol
+    if not hasattr(reduced_lt, 'rlzs_by_g'):
+        reduced_lt.init()
     edges, s = edges_shapedic
     L = oq.imtls.size
     rates1D = numpy.zeros(L)
     rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
+    source_id = groups[0].sources[0].source_id.split(';')[0]
     cmakers = get_cmakers(groups, reduced_lt, oq)
     ws = reduced_lt.rlzs['weight']
     pmap = ProbabilityMap(sitecol.sids, L, reduced_lt.Gt).fill(0)
@@ -693,4 +696,4 @@ def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     iml3 = pmap.expand(reduced_lt).interp4D(oq.imtls, oq.poes)[0]  # MPZ
     for dis in disaggs:
         rates5D += dis.disagg_mag_dist_eps(iml3, ws)
-    return rates5D, rates1D.reshape(s['M'], L // len(oq.imtls))
+    return source_id, rates5D, rates1D.reshape(s['M'], L // len(oq.imtls))
