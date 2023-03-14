@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import copy
 import os.path
 import pickle
 import operator
@@ -50,6 +49,9 @@ source_info_dt = numpy.dtype([
     ('mutex_weight', numpy.float64),   # 7
     ('trti', numpy.uint8),             # 8
 ])
+
+checksum = operator.attrgetter('checksum')
+
 
 def gzpik(obj):
     """
@@ -143,21 +145,16 @@ def read_source_model(fname, converter, monitor):
 
 
 # NB: called after the .checksum has been stored in reduce_sources
-def _check_dupl_ids(src_groups):
+def _fix_dupl_ids(src_groups):
     sources = general.AccumDict(accum=[])
     for sg in src_groups:
         for src in sg.sources:
             sources[src.source_id].append(src)
-    first = True
     for src_id, srcs in sources.items():
         if len(srcs) > 1:
             # duplicate IDs with different checksums, see cases 11, 13, 20
             for i, src in enumerate(srcs):
                 src.source_id = '%s;%d' % (src.source_id, i)
-            if first:
-                logging.info('There are multiple different sources with '
-                             'the same ID %s', srcs)
-                first = False
 
 
 def get_csm(oq, full_lt, h5=None):
@@ -190,6 +187,7 @@ def get_csm(oq, full_lt, h5=None):
                               h5=h5 if h5 else None).reduce()
     parallel.Starmap.shutdown()  # save memory
     fix_geometry_sections(smdict, h5)
+    check_tricky_ids(smdict)
     logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
 
@@ -199,6 +197,35 @@ def get_csm(oq, full_lt, h5=None):
         logging.info('Applied {:_d} changes to the composite source model'.
                      format(changes))
     return _get_csm(full_lt, groups)
+
+
+def add_checksums(srcs):
+    """
+    Build and attach a checksum to each source
+    """
+    for src in srcs:
+        dic = {k: v for k, v in vars(src).items()
+               if k not in 'source_id trt_smr smweight samples'}
+        src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
+
+
+def check_tricky_ids(smdict):
+    """
+    Discriminated different sources with same ID by changing the ID
+    """
+    acc = general.AccumDict(accum=[])
+    for smodel in smdict.values():
+        for sgroup in smodel.src_groups:
+            for src in sgroup:
+                acc[src.source_id].append(src)
+    found = []
+    for srcid, srcs in acc.items():
+        if len(srcs) > 1:  # duplicated ID
+            add_checksums(srcs)
+            if len(general.groupby(srcs, checksum)) > 1:
+                found.append(srcid)
+    if found:
+        logging.warning('Found different sources with same ID %s', found)
 
 
 def fix_geometry_sections(smdict, h5):
@@ -273,7 +300,8 @@ def _build_groups(full_lt, smdict):
         src_groups, source_ids = _groups_ids(
             smlt_dir, smdict, rlz.value[0].split())
         bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
-        while bset_values and bset_values[0][0].uncertainty_type == 'extendModel':
+        while (bset_values and
+               bset_values[0][0].uncertainty_type == 'extendModel'):
             (bset, value), *bset_values = bset_values
             extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
             common = source_ids & extra_ids
@@ -283,10 +311,9 @@ def _build_groups(full_lt, smdict):
                     (value, common, rlz.value))
             src_groups.extend(extra)
         for src_group in src_groups:
-            trt_smr = full_lt.get_trt_smr(src_group.trt, rlz.ordinal)
             sg = apply_uncertainties(bset_values, src_group)
+            full_lt.set_trt_smr(sg, smr=rlz.ordinal)
             for src in sg:
-                src.trt_smr = trt_smr
                 # the smweight is used in event based sampling:
                 # see oq-risk-tests etna
                 src.smweight = rlz.weight if full_lt.num_samples else frac
@@ -313,12 +340,8 @@ def reduce_sources(sources_with_same_id):
     :returns: a list of truly unique sources, ordered by trt_smr
     """
     out = []
-    for src in sources_with_same_id:
-        dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id trt_smr smweight samples'}
-        src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
-    for srcs in general.groupby(
-            sources_with_same_id, operator.attrgetter('checksum')).values():
+    add_checksums(sources_with_same_id)
+    for srcs in general.groupby(sources_with_same_id, checksum).values():
         # duplicate sources: same id, same checksum
         src = srcs[0]
         if len(srcs) > 1:  # happens in logictree/case_07
@@ -365,7 +388,7 @@ def _get_csm(full_lt, groups):
         for src in ag:
             src._wkt = src.wkt()
     src_groups.extend(atomic)
-    _check_dupl_ids(src_groups)
+    _fix_dupl_ids(src_groups)
     for sg in src_groups:
         sg.sources.sort(key=operator.attrgetter('source_id'))
     return CompositeSourceModel(full_lt, src_groups)

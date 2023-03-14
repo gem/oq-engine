@@ -32,7 +32,7 @@ from functools import lru_cache
 import numpy
 import scipy.stats
 
-from openquake.baselib.general import AccumDict, groupby, pprod, humansize
+from openquake.baselib.general import AccumDict, groupby, humansize
 from openquake.baselib.performance import idx_start_stop, Monitor
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
@@ -494,7 +494,7 @@ class Disaggregator(object):
             z = 0
             for rlz, g in self.g_by_rlz.items():
                 mat6 = self.disagg6D(iml3[:, :, z], g)
-                out[magi, ..., z] = pprod(mat6, axis=(1, 2))
+                out[magi, ..., z] = mat6.sum(axis=(1, 2))
                 z += 1
         return out
 
@@ -661,20 +661,31 @@ def reduce_groups(src_groups, source_id):
     return groups
 
 
-def by_source(reduced_lt, groups, sitecol, bin_edges, oq):
+def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq, monitor):
     """
-    Compute disaggregation for the given source
+    Compute disaggregation for the given source.
+
+    :returns: {source_id: rates of shape (Ma, D, E, M, P)}
     """
-    rlzs = reduced_lt.rlzs
-    disaggs = []
+    assert len(sitecol) == 1, sitecol
+    edges, s = edges_shapedic
+    weight = reduced_lt.rlzs['weight']
+    L1 = oq.imtls.size // len(oq.imtls)
+    rates2D = numpy.zeros((s['M'], L1))
+    rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
+    source_id = reduced_lt.source_model_lt.source_id
     cmakers = get_cmakers(groups, reduced_lt, oq)
     for c, cmaker in enumerate(cmakers):
-        print(list(cmaker.gsims.values()))
         try:
-            dis = Disaggregator(groups[c], sitecol, cmaker, bin_edges)
+            dis = Disaggregator(groups[c], sitecol, cmaker, edges)
         except FarAwayRupture:
-            pass  # source corresponding to a noncontributing realization
-        else:
-            disaggs.append(dis)
-    assert disaggs, '%s does not contribute??' % reduced_lt.source_id
-    return disaggs
+            continue  # source corresponding to a noncontributing realization
+        ws = [weight[rlzs].sum() for rlzs in cmaker.gsims.values()]
+        pmap = dis.cmaker.get_pmap([dis.fullctx])
+        for m, imt in enumerate(oq.imtls):
+            poes = pmap.array[0, oq.imtls(imt)]  # shape NLG -> (L1, G)
+            rates2D[m] += to_rates(poes) @ ws
+        if hasattr(dis.cmaker, 'poes'):
+            iml3 = pmap.interp4D(dis.cmaker.imtls, dis.cmaker.poes)[0]  # MPZ
+            rates5D += dis.disagg_mag_dist_eps(iml3) @ ws
+    return {source_id: (rates5D, rates2D)}

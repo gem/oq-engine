@@ -78,7 +78,9 @@ def main(parent_id, config):
         oq = parent['oqparam']
         N = len(parent['sitecol'])
         L1 = oq.imtls.size // len(oq.imtls) - 1
-        assert L1 <= 24, 'Too many levels: %d' % L1
+        if L1 > 24:
+            logging.warning('There are many intensity levels (%d), the '
+                            'calculation can be pretty slow', L1 + 1)
         assert N <= 10, 'Too many sites: %d' % N
         cmakers = contexts.read_cmakers(parent)
         ctx_by_grp = contexts.read_ctx_by_grp(dstore)

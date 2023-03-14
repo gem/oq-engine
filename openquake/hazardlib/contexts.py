@@ -506,10 +506,6 @@ class ContextMaker(object):
                 si[:] = ((si**2 - conv_sigma**2) / rstd**2)**0.5
 
     @property
-    def stop(self):
-        return self.start + len(self.gsims)
-
-    @property
     def Z(self):
         """
         :returns: the number of realizations associated to self
@@ -1634,22 +1630,18 @@ def get_cmakers(src_groups, full_lt, oq):
     else:
         all_trt_smrs = []
         for sg in src_groups:
-            try:
-                trt_smrs = sg.sources[0].trt_smrs
-            except AttributeError:  # for scenarios
-                trt_smrs = [sg.sources[0].trt_smr]
-            all_trt_smrs.append(trt_smrs)
+            src = sg.sources[0]
+            all_trt_smrs.append(full_lt.get_trt_smrs(src))
     trts = list(full_lt.gsim_lt.values)
-    start = 0
     cmakers = []
     for grp_id, trt_smrs in enumerate(all_trt_smrs):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smrs)
         trti = trt_smrs[0] // TWO24
         cmaker = ContextMaker(trts[trti], rlzs_by_gsim, oq)
         cmaker.trti = trti
-        cmaker.gidx = numpy.arange(start, start + len(rlzs_by_gsim))
+        cmaker.trt_smrs = trt_smrs
+        cmaker.gidx = full_lt.get_gidx(trt_smrs)
         cmaker.grp_id = grp_id
-        start += len(rlzs_by_gsim)
         cmakers.append(cmaker)
     return cmakers
 
@@ -1670,7 +1662,9 @@ def read_cmakers(dstore, full_lt=None):
     else:
         oq.af = None
     trt_smrs = dstore['trt_smrs'][:]
-    full_lt = full_lt or dstore['full_lt']
+    if full_lt is None:
+        full_lt = dstore['full_lt']
+        full_lt.init()
     cmakers = get_cmakers(trt_smrs, full_lt, oq)
     if 'delta_rates' in dstore:  # aftershock
         for cmaker in cmakers:

@@ -616,6 +616,12 @@ return_periods:
   Example: *return_periods = 200 500 1000*.
   Default: empty list.
 
+reqv_ignore_sources:
+  Used when some sources in a TRT that uses the equivalent distance term
+  should not be collapsed.
+  Example: *reqv_ignore_sources = src1 src2 src3*
+  Default: empty list
+
 risk_imtls:
   INTERNAL. Automatically set by the engine.
 
@@ -765,6 +771,11 @@ uniform_hazard_spectra:
   Example: *uniform_hazard_spectra = true*.
   Default: False
 
+use_rates:
+  When set, convert to rates before computing the statistical hazard curves
+  Example: *use_rates = true*.
+  Default: False
+
 vs30_tolerance:
   Used when amplification_method = convolution.
   Example: *vs30_tolerance = 20*.
@@ -840,6 +851,7 @@ class OqParam(valid.ParamSet):
                     'insurance', 'reinsurance', 'ins_loss',
                     'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
                     'fragility', 'consequence', 'reqv', 'input_zip',
+                    'reqv_ignore_sources',
                     'amplification', 'station_data',
                     'nonstructural_vulnerability',
                     'nonstructural_fragility',
@@ -972,6 +984,7 @@ class OqParam(valid.ParamSet):
     reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
+    reqv_ignore_sources = valid.Param(valid.namelist, [])
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rlz_index = valid.Param(valid.positiveints, None)
@@ -1013,6 +1026,7 @@ class OqParam(valid.ParamSet):
     truncation_level = valid.Param(
         lambda s: valid.positivefloat(s) or 1E-9, 99.)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
+    use_rates = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
 

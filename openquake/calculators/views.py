@@ -178,7 +178,7 @@ def text_table(data, header=None, fmt=None, ext='rst'):
         if data.index.name:
             data = data.reset_index()
         header = header or list(data.columns)
-        data = data.to_numpy()
+        data = zip(*[data[col].to_numpy() for col in data.columns])
     if header is None and hasattr(data, '_fields'):
         header = data._fields
     try:
@@ -988,16 +988,6 @@ Source = collections.namedtuple(
     'Source', 'source_id code num_ruptures checksum')
 
 
-@view.add('disagg_by_grp')
-def view_disagg_by_grp(token, dstore):
-    """
-    Show the source groups contributing the most to the highest IML
-    """
-    data = dstore['disagg_by_grp'][()]
-    data.sort(order='avg_poe')
-    return data[::-1]
-
-
 @view.add('gmvs_to_hazard')
 def view_gmvs_to_hazard(token, dstore):
     """
@@ -1380,27 +1370,6 @@ def view_pmaps_size(token, dstore):
     return humansize(get_pmaps_gb(dstore))
 
 
-@view.add('src_groups')
-def view_src_groups(token, dstore):
-    """
-    Show the hazard contribution of each source group
-    """
-    disagg = dstore['disagg_by_grp'][:]
-    contrib = disagg['avg_poe'] / disagg['avg_poe'].sum()
-    source_info = dstore['source_info'][:]
-    tbl = []
-    for grp_id, rows in group_array(source_info, 'grp_id').items():
-        srcs = decode(rows['source_id'])
-        if len(srcs) > 2:
-            text = ' '.join(srcs[:2]) + ' ...'
-        else:
-            text = ' '.join(srcs)
-        tbl.append((grp_id, contrib[grp_id], text))
-    tbl.sort(key=operator.itemgetter(1), reverse=True)
-    return text_table(tbl, header=['grp_id', 'contrib', 'sources'],
-                      ext='org')
-
-
 @view.add('rup_stats')
 def view_rup_stats(token, dstore):
     """
@@ -1458,3 +1427,27 @@ def view_relevant_sources(token, dstore):
     poes = aw.array['poe']  # for each source in decreasing order
     max_poe = poes[0]
     return aw.array[poes > .1 * max_poe]
+
+
+def shorten(lst):
+    """
+    Shorten a list of strings
+    """
+    if len(lst) <= 7:
+        return lst
+    return lst[:3] + ['...'] + lst[-3:]
+
+
+@view.add('sources_branches')
+def view_sources_branches(token, dstore):
+    """
+    Returns a table with the sources in the logic tree by branches
+    """
+    sd = dstore['full_lt/source_data'][:]
+    acc = AccumDict(accum=[])
+    for src, trt in numpy.unique(sd[['source', 'trt']]):
+        brs = b' '.join(sorted(sd[sd['source'] == src]['branch']))
+        acc[brs, trt].append(src.decode('utf8'))
+    out = [(t, ' '.join(shorten(s)), b)
+           for ((b, t), s) in sorted(acc.items())]
+    return numpy.array(sorted(out), dt('trt sources branches'))

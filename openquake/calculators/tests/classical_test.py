@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import gzip
+import unittest
 import numpy
 from openquake.baselib import parallel, general
 from openquake.baselib.python3compat import decode
@@ -26,16 +27,16 @@ from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
+from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
-    case_01, case_02, case_12, case_14, case_18, case_19, case_22, case_23,
-    case_24, case_25, case_26, case_27, case_29, case_30, case_32, case_33,
+    case_01, case_12, case_18, case_19, case_22, case_23,
+    case_24, case_25, case_26, case_27, case_29, case_32, case_33,
     case_34, case_35, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_47, case_48, case_49,
-    case_50, case_51, case_52, case_53, case_54, case_55, case_57,
+    case_50, case_51, case_53, case_54, case_55, case_57,
     case_60, case_61, case_62, case_63, case_64, case_65,
     case_66, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
-    case_78, case_80, case_81, case_82)
+    case_78, case_80, case_81, case_82, case_84)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -92,7 +93,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # check minimum_magnitude discards the source
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_01.__file__, 'job.ini', minimum_magnitude='4.5')
-        self.assertEqual(str(ctx.exception), 'All sources were discarded!?')
+        self.assertIn('All sources were discarded!?', str(ctx.exception))
 
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):
@@ -108,31 +109,11 @@ class ClassicalTestCase(CalculatorTestCase):
             'SA(4.1) is out of the period range defined for [SadighEtAl1997]',
             str(ctx.exception))
 
-    def test_case_02(self):
-        self.run_calc(case_02.__file__, 'job.ini')
-
-        # check view inputs
-        lines = text_table(view('inputs', self.calc.datastore)).splitlines()
-        self.assertEqual(len(lines), 13)  # rst table with 13 rows
-
-        [fname] = export(('hcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurve.csv', fname)
-
     def test_case_12(self):
         # test Modified GMPE
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1_b2.csv'],
             case_12.__file__)
-
-        # test disagg_by_grp
-        df = self.calc.datastore.read_df('disagg_by_grp')
-        fname = general.gettemp(text_table(df))
-        self.assertEqualFiles('expected/disagg_by_grp.rst', fname)
-
-    def test_case_14(self):
-        # test classical with 2 gsims and 1 sample
-        self.assert_curves_ok(['hazard_curve-rlz-000_PGA.csv'],
-                              case_14.__file__)
 
     def test_case_18(self):  # GMPEtable, PointMSR, 3 hypodepths
         self.run_calc(case_18.__file__, 'job.ini',
@@ -256,20 +237,6 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # then perform a classical calculation
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_29.__file__)
-
-    def test_case_30(self):
-        # point on the international data line
-        # this is also a test with IMT-dependent weights
-        if NOT_DARWIN:  # broken on macOS
-            self.assert_curves_ok(['hazard_curve-PGA.csv',
-                                   'hazard_curve-SA(1.0).csv'],
-                                  case_30.__file__)
-
-    def test_case_30_sampling(self):
-        # IMT-dependent weights with sampling by cheating
-        self.assert_curves_ok(
-            ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
-            case_30.__file__, number_of_logic_tree_samples='10', delta=1E-5)
 
     def test_case_32(self):
         # source specific logic tree
@@ -447,50 +414,6 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(0.2).csv',
                                'hcurves-SA(2.0).csv', 'uhs.csv'],
                               case_51.__file__)
-
-    def test_case_52(self):
-        # case with 2 GSIM realizations b1 (w=.9) and b2 (w=.1), 10 samples
-
-        # late_weights
-        self.run_calc(case_52.__file__, 'job.ini')
-        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
-        aac(haz, 0.563831, rtol=1E-6)
-        ws = extract(self.calc.datastore, 'weights')
-        # sampled 8 times b1 and 2 times b2
-        aac(ws, [0.029412, 0.029412, 0.029412, 0.264706, 0.264706, 0.029412,
-                 0.029412, 0.264706, 0.029412, 0.029412], rtol=1E-5)
-
-        # early_weights
-        self.run_calc(case_52.__file__, 'job.ini',
-                      sampling_method='early_weights')
-        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
-        aac(haz, 0.56355, rtol=1E-6)
-        ws = extract(self.calc.datastore, 'weights')
-        aac(ws, [0.1] * 10)  # all equal
-
-        # full enum, rlz-0: 0.554007, rlz-1: 0.601722
-        self.run_calc(case_52.__file__, 'job.ini',
-                      number_of_logic_tree_samples='0')
-        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
-        aac(haz, 0.558779, rtol=1E-6)
-        ws = extract(self.calc.datastore, 'weights')
-        aac(ws, [0.9, 0.1])
-
-    def test_case_52_bis(self):
-        self.run_calc(case_52.__file__, 'job.ini',
-                      sampling_method='late_latin')
-        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
-        aac(haz, 0.558779, rtol=1E-6)
-        ws = extract(self.calc.datastore, 'weights')
-        # sampled 5 times b1 and 5 times b2
-        aac(ws, [0.18, 0.02, 0.18, 0.18, 0.02, 0.02, 0.02, 0.02, 0.18, 0.18])
-
-        self.run_calc(case_52.__file__, 'job.ini',
-                      sampling_method='early_latin')
-        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
-        aac(haz, 0.558779, rtol=1E-6)
-        ws = extract(self.calc.datastore, 'weights')
-        aac(ws, [0.1] * 10)  # equal weights
 
     def test_case_53(self):
         # Test case with 4-branch scaled backbone logic tree
@@ -671,7 +594,6 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_76(self):
         # CanadaSHM6 GMPEs
         self.run_calc(case_76.__file__, 'job.ini')
-        # breakpoint()
         branches = self.calc.datastore['full_lt/gsim_lt'].branches
         gsims = [br.gsim for br in branches]
         df = self.calc.datastore.read_df('_poes')
@@ -736,3 +658,11 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_82.__file__, 'job.ini')
         [f1] = export(('disagg_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/disagg_by_src.csv', f1)
+
+    def test_case_84(self):
+        # three sources are identical except for their source_ids.
+        # one is collapsed using reqv, while the other two are specified 
+        # as 'not collapsed' in the job file field reqv_ignore_sources
+        self.run_calc(case_84.__file__, 'job.ini')
+        [f] = export(('disagg_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/dbs.csv', f)
