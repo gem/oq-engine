@@ -126,7 +126,7 @@ class EasternCan15Mid(GMPE):
             mean_stds.append(contexts.get_mean_stds(gsim, c, imts))
 
         for m, imt in enumerate(imts):
-            cff = self.COEFFS_SITE[imt]
+            cff = None if imt == PGA() else self.COEFFS_SITE[imt]
 
             # Pezeshk et al. 2011 - Rrup
             mean1, stds1 = mean_stds[0][:2, m]
