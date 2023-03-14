@@ -1200,6 +1200,7 @@ class FullLogicTree(object):
         return rlzs
 
     def _rlzs_by_gsim(self, trt_smr):
+        # return dictionary gsim->rlzs
         if not hasattr(self, '_rlzs_by'):
             smr_by_ltp = self.get_smr_by_ltp()
             rlzs = self.get_realizations()
@@ -1218,6 +1219,8 @@ class FullLogicTree(object):
             for trtsmr, dic in acc.items():
                 self._rlzs_by[trtsmr] = {
                     gsim: U32(rlzs) for gsim, rlzs in sorted(dic.items())}
+        if not self._rlzs_by:
+            return {}
         return self._rlzs_by[trt_smr]
 
     def get_rlzs_by_gsim(self, trt_smr):
