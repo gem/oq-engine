@@ -29,7 +29,7 @@ from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.gsim.bradley_2013 import Bradley2013
-from openquake.hazardlib import sourceconverter, probability_map
+from openquake.hazardlib import sourceconverter
 
 DATA_PATH = os.path.dirname(__file__)
 aac = numpy.testing.assert_allclose
@@ -143,7 +143,7 @@ class DisaggregateTestCase(unittest.TestCase):
         dis = disagg.Disaggregator([self.sources[0]], self.site, self.cmaker,
                                    self.bin_edges)
         iml3 = numpy.array([[[.01]]])
-        mat3 = dis.disagg_mag_dist_eps(iml3)[..., 0, 0, 0]
+        mat3 = dis.disagg_mag_dist_eps(iml3, [1.])[..., 0, 0]
         bymag = pprod(disagg.to_probs(mat3), axis=(1, 2))
         aac(bymag, [0.9873275537163634,
                     0.9580616631998118,
