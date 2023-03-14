@@ -391,14 +391,14 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
             _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SSLAB['tauS'])
 
         # add extrapolation factor if outside SA range (0.05 - 5.0)
-        if extrapolate:
-            ctx.rhypo = ctx.rrup  # approximation for extrapolation only
-            mean[m] += extrapolation_factor(self.extrapolate_GMM,
+            if extrapolate:
+                ctx.rhypo = ctx.rrup  # approximation for extrapolation only
+                mean[m] += extrapolation_factor(self.extrapolate_GMM,
                                          ctx, imt, target_imt)
 
 
-        if PGVimt:
-            mean[m] = (0.995*mean[m]) + 3.937
+            if PGVimt:
+                mean[m] = (0.995*mean[m]) + 3.937
 
 
 
@@ -519,6 +519,7 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
                 G * np.log10(R) +
                 # 5th, 6th and 7th terms
                 s_amp)
+
             mean[m] = np.log((10 ** mean[m]) * 1e-2 / g)
 
             if imt.period == 4.0:
