@@ -37,6 +37,7 @@ from openquake.baselib.performance import idx_start_stop, Monitor
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
+from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
@@ -658,31 +659,38 @@ def reduce_groups(src_groups, source_id):
     return groups
 
 
-def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq, monitor):
+def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
+              monitor=Monitor()):
     """
     Compute disaggregation for the given source.
 
-    :returns: {source_id: rates of shape (Ma, D, E, M, P)}
+    :returns: rates of shape (Ma, D, E, M, P), rates of shape (M, L1)
     """
     assert len(sitecol) == 1, sitecol
     edges, s = edges_shapedic
-    weight = reduced_lt.rlzs['weight']
-    L1 = oq.imtls.size // len(oq.imtls)
-    rates2D = numpy.zeros((s['M'], L1))
+    L = oq.imtls.size
+    rates1D = numpy.zeros(L)
     rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
-    source_id = reduced_lt.source_model_lt.source_id
     cmakers = get_cmakers(groups, reduced_lt, oq)
+    ws = reduced_lt.rlzs['weight']
+    pmap = ProbabilityMap(sitecol.sids, L, reduced_lt.Gt).fill(0)
+    disaggs = []
     for c, cmaker in enumerate(cmakers):
+        all_rlzs = list(cmaker.gsims.values())
+        G = len(all_rlzs)
+        ctxs = cmaker.from_srcs(groups[c], sitecol)
+        poes = cmaker.get_pmap(ctxs).array[0]  # shape (L, G)
+        for c, g in enumerate(cmaker.gidx):
+            i = c % G
+            pmap.array[0, :, g] += poes[:, i]
+            rates1D += to_rates(poes[:, i]) * ws[all_rlzs[i]].sum()
         try:
-            dis = Disaggregator(groups[c], sitecol, cmaker, edges)
+            dis = Disaggregator(ctxs, sitecol, cmaker, edges)
         except FarAwayRupture:
             continue  # source corresponding to a noncontributing realization
-        ws = [weight[rlzs].sum() for rlzs in cmaker.gsims.values()]
-        pmap = dis.cmaker.get_pmap([dis.fullctx])
-        for m, imt in enumerate(oq.imtls):
-            poes = pmap.array[0, oq.imtls(imt)]  # shape NLG -> (L1, G)
-            rates2D[m] += to_rates(poes) @ ws
-        if hasattr(dis.cmaker, 'poes'):
-            iml3 = pmap.interp4D(dis.cmaker.imtls, dis.cmaker.poes)[0]  # MPZ
-            rates5D += dis.disagg_mag_dist_eps(iml3) @ ws
-    return {source_id: (rates5D, rates2D)}
+        else:
+            disaggs.append(dis)
+    iml3 = pmap.expand(reduced_lt).interp4D(oq.imtls, oq.poes)[0]  # MPZ
+    for dis in disaggs:
+        rates5D += dis.disagg_mag_dist_eps(iml3, ws)
+    return rates5D, rates1D.reshape(s['M'], L // len(oq.imtls))

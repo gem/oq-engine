@@ -902,10 +902,12 @@ def disagg_by_source(parent, csm, mon):
         logging.info('Considering source %s (%d realizations)',
                      source_id, relt.get_num_paths())
         groups = disagg.reduce_groups(csm.src_groups, source_id)
-        out.update(disagg.by_source(groups, sitecol, relt, edges_shp, oq, mon))
+        out[source_id] = disagg.by_source(
+            groups, sitecol, relt, edges_shp, oq, mon)
+
     items = []
-    for source_id, (disagg_rates, rates2D) in out.items():
+    for source_id, (rates5D, rates2D) in out.items():
         if oq.use_rates:
             sanity_check(source_id, rates2D, parent.getitem('disagg_by_src'))
-        items.append((source_id, disagg_rates))
+        items.append((source_id, rates5D))
     return items

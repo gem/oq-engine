@@ -273,18 +273,9 @@ def test_single_source(job_ini):
     job_ini = os.path.join(DATA_PATH, 'data', 'disagg', job_ini)
     inp = read_input(job_ini)
     oq = inp.oq
-    assert len(inp.sitecol) == 1  # single site test
-    L = oq.imtls.size
-    Gt = inp.full_lt.Gt
-    ws = [w['weight'] for w in inp.full_lt.weights]
-    edges, shapedic = disagg.get_edges_shapedic(oq, inp.sitecol)
-    pmap = probability_map.ProbabilityMap(inp.sitecol.sids, L, Gt).fill(0)
-    disaggs = []
-    for grp, cmaker in zip(inp.groups, inp.cmakers):
-        ctxs = cmaker.from_srcs(grp, inp.sitecol)
-        pmap.array[:, :, cmaker.gidx] = cmaker.get_pmap(ctxs).array
-        disaggs.append(disagg.Disaggregator(grp, inp.sitecol, cmaker, edges))
-    iml4 = pmap.expand(inp.full_lt).interp4D(oq.imtls, oq.poes)
-    res = sum([dis.disagg_mag_dist_eps(iml4[0], ws) for dis in disaggs])
-    # shape (Ma, D, E, M, P)
-    print(res.sum(axis=(1, 2)))
+    edges_shapedic = disagg.get_edges_shapedic(oq, inp.sitecol)
+    rates5D, rates2D = disagg.by_source(inp.groups, inp.sitecol, inp.full_lt,
+                                        edges_shapedic, oq)
+    # rates5D has shape (Ma, D, E, M, P), rates2D shape (M, L1)
+    print(rates5D.sum(axis=(1, 2)))
+    print(rates2D)
