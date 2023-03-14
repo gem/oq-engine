@@ -212,7 +212,7 @@ def update_mrd_indirect(ctx, cm, corrm, be_mea, be_sig, mrd, monitor=Monitor()):
 
 
 def calc_mean_rate_dist(ctxt, nsites, cmaker, crosscorr, imt1, imt2,
-                        bins_mea, bins_sig, method, mon=Monitor()):
+                        bins_mea, bins_sig, method='indirect', mon=Monitor()):
     """
     :param ctxt: a sequence of parametric sources
     :param num_sites: total number of sites (small)
