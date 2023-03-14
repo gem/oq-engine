@@ -175,10 +175,11 @@ class LogContext:
     oqparam = None
 
     def __init__(self, job_ini, calc_id, log_level='info', log_file=None,
-                 user_name=None, hc_id=None, host=None):
+                 user_name=None, hc_id=None, host=None, tag=''):
         self.log_level = log_level
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()
+        self.tag = tag
         if isinstance(job_ini, dict):  # dictionary of parameters
             self.params = job_ini
         else:  # path to job.ini file
@@ -216,7 +217,8 @@ class LogContext:
         if not logging.root.handlers:  # first time
             level = LEVELS.get(self.log_level, self.log_level)
             logging.basicConfig(level=level)
-        f = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(self.calc_id)
+        f = '[%(asctime)s #{} {}%(levelname)s] %(message)s'.format(
+            self.calc_id, self.tag)
         for handler in logging.root.handlers:
             fmt = logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S')
             handler.setFormatter(fmt)
@@ -256,7 +258,7 @@ class LogContext:
 
 
 def init(job_or_calc, job_ini, log_level='info', log_file=None,
-         user_name=None, hc_id=None, host=None):
+         user_name=None, hc_id=None, host=None, tag=''):
     """
     :param job_or_calc: the string "job" or "calcXXX"
     :param job_ini: path to the job.ini file or dictionary of parameters
@@ -265,6 +267,7 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
     :param user_name: user running the job (None means current user)
     :param hc_id: parent calculation ID (default None)
     :param host: machine where the calculation is running (default None)
+    :param tag: tag (for instance the model name) to show before the log message
     :returns: a LogContext instance
 
     1. initialize the root logger (if not already initialized)
@@ -281,4 +284,4 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
     else:
         raise ValueError(job_or_calc)
     return LogContext(job_ini, calc_id, log_level, log_file,
-                      user_name, hc_id, host)
+                      user_name, hc_id, host, tag)
