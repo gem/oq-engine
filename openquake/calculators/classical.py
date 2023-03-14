@@ -702,13 +702,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     imt=list(oq.imtls), lvl=self.L1, src_id=srcids)
 
         if 'disagg_by_src' in self.datastore and self.N == 1 and len(oq.poes):
-            rel_ids = get_rel_source_ids(
-                self.datastore, oq.imtls, oq.poes, threshold=.1)
-            logging.info('There are %d relevant sources: %s', len(rel_ids),
-                         rel_ids)
-        if 'disagg_by_src' in self.datastore and self.N == 1 and oq.use_rates:
-            mon = self.monitor('disaggregate by source')
-            disagg_by_source(self.datastore, self.csm, mon)
+            disagg_by_source(self.datastore, self.csm,
+                             self.monitor('disaggregate by source'))
 
     def _create_hcurves_maps(self):
         oq = self.oqparam
@@ -890,10 +885,9 @@ def disagg_by_source(parent, csm, mon):
     sitecol = parent['sitecol']
     assert len(sitecol) == 1, sitecol
     edges_shp = disagg.get_edges_shapedic(oq, sitecol)
-    if oq.use_rates and len(oq.poes) == 0:
-        rel_ids = sorted(set(map(basename, csm.get_sources())))
-    else:
-        rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
+    rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
+    logging.info('There are %d relevant sources: %s', len(rel_ids), rel_ids)
+
     out = {}
     for source_id in rel_ids:
         smlt = csm.full_lt.source_model_lt.reduce(source_id)
