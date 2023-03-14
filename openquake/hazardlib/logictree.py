@@ -1032,6 +1032,9 @@ class FullLogicTree(object):
             tot_gsims = sum(len(vals) for vals in self.gsim_lt.values.values())
             assert self.Gt == len(self.sm_rlzs) * tot_gsims
 
+        RT = self.get_num_paths() * len(self.trts)
+        assert sum(len(rlzs) for rlzs in rlzs_by_g) == RT
+
     def get_gidx(self, trt_smrs):
         """
         :returns: an array of g-indices
