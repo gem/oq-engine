@@ -147,6 +147,7 @@ def site_amplification(ctx, imt, pga1100):
 
         """
         amp = np.zeros_like(pga1100)
+       # breakpoint()
 
         # Amplification for Vs30 >= 1100 m/s
         vs30_gte1100 = ctx.vs30[ctx.vs30 >= 1100.]
@@ -168,8 +169,6 @@ def site_amplification(ctx, imt, pga1100):
 
         # Amplification for Vs30 < 1100 m/s
         sites_lt1100 = ctx[ctx.vs30 < 1100.]
-        if 'z1pt0' not in sites_lt1100.dtype.names:
-            sites_lt1100.z1pt0 = np.array([0]*len(sites_lt1100.vs30))
 
         # Correct PGA to 760 m/s using BSSA14
         C_pga = BSSA14.COEFFS[PGA()]
@@ -181,7 +180,7 @@ def site_amplification(ctx, imt, pga1100):
         imt_per = 0 if imt == PGV() else imt.period
 
         BSSA14_Vs = _get_site_scaling(
-            '', '', C, pga760, sites_lt1100, imt_per, [])
+            '', "nobasin", C, pga760, sites_lt1100, imt_per, [])
         BSSA14_1100 = _get_linear_site_term(C, np.array([1100.0]))
         F_lt1100 = BSSA14_Vs - BSSA14_1100
 
