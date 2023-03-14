@@ -51,7 +51,7 @@ def get_params_from(inputs):
     params['sites'] = '%(lon)s %(lat)s' % inputs
     if 'vs30' in inputs:
         params['override_vs30'] = '%(vs30)s' % inputs
-    params['cachedir'] = datastore.get_datadir()
+    # params['cachedir'] = datastore.get_datadir()
     return params
 
 

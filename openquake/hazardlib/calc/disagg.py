@@ -682,6 +682,8 @@ def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
         all_rlzs = list(cmaker.gsims.values())
         G = len(all_rlzs)
         ctxs = cmaker.from_srcs(groups[c], sitecol)
+        if not ctxs:
+            continue
         poes = cmaker.get_pmap(ctxs).array[0]  # shape (L, G)
         for c, g in enumerate(cmaker.gidx):
             i = c % G

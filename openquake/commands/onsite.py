@@ -23,7 +23,6 @@ from openquake.baselib import config, performance
 from openquake.hazardlib import valid
 from openquake.calculators import views
 from openquake.engine import engine
-#from openquake.engine.postproc import disagg_by_rel_sources
 from openquake.engine.aelo import get_params_from
 
 
@@ -54,7 +53,6 @@ def main(lon: valid.longitude, lat: valid.latitude, *,
             engine_profile(jobctx, slowest or 40)
         else:
             engine.run_jobs([jobctx])
-    #disagg_by_rel_sources.main(jobctx.calc_id)
 
 main.lon = 'longitude of the site to analyze'
 main.lat = 'latitude of the site to analyze'
