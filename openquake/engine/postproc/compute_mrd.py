@@ -26,7 +26,7 @@ from openquake.commonlib import datastore
 
 
 def compute_mrd(ctx, N, cmaker, crosscorr, imt1, imt2,
-                meabins, sigbins, monitor):
+                meabins, sigbins, method, monitor):
     """
     :param ctx: a context array
     :param N: the total number of sites
@@ -36,10 +36,11 @@ def compute_mrd(ctx, N, cmaker, crosscorr, imt1, imt2,
     :param str imt1: the second Intensity Measure Type
     :param meabins: bins for the means
     :param sigbins: bins for the sigmas
+    :param method: a string 'direct' or 'indirect'
     :returns: 4D-matrix with shape (L1, L1, N, G)
     """
     mrd = calc_mean_rate_dist(ctx, N, cmaker, crosscorr,
-                              imt1, imt2, meabins, sigbins)
+                              imt1, imt2, meabins, sigbins, method)
     return {g: mrd[:, :, :, i] for i, g in enumerate(cmaker.gidx)}
 
 
@@ -71,6 +72,7 @@ def main(parent_id, config):
         dic = toml.load(f)
     imt1 = dic['imt1']
     imt2 = dic['imt2']
+    method = dic.get('method', 'indirect')
     crosscorr = getattr(cross_correlation, dic['cross_correlation'])()
     meabins = dic['meabins']
     sigbins = dic['sigbins']
@@ -93,7 +95,7 @@ def main(parent_id, config):
             cmaker = cmakers[grp_id]
             for slc in general.gen_slices(0, len(ctx), blocksize):
                 smap.submit((ctx[slc], N, cmaker, crosscorr, imt1, imt2,
-                             meabins, sigbins))
+                             meabins, sigbins, method))
         acc = smap.reduce()
         mrd = dstore.create_dset('_mrd', float, (L1, L1, N))
         mrd[:] = combine_mrds(acc, dstore['rlzs_by_g'][:], dstore['weights'][:])
