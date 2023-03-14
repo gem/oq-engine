@@ -268,20 +268,23 @@ class PMFExtractorsTestCase(unittest.TestCase):
             valid.mag_pmf(mean), [0.99999944, 0.99999999])
 
 
-@pytest.mark.parametrize('job_ini', ['job.ini'])
+@pytest.mark.parametrize('job_ini', ['job_sampling.ini', 'job.ini'])
 def test_single_source(job_ini):
     job_ini = os.path.join(DATA_PATH, 'data', 'disagg', job_ini)
     inp = read_input(job_ini)
     oq = inp.oq
     assert len(inp.sitecol) == 1  # single site test
     L = oq.imtls.size
-    G = inp.full_lt.Gt
-    pmap = probability_map.ProbabilityMap(inp.sitecol.sids, L, G).fill(0)
+    Gt = inp.full_lt.Gt
+    ws = [w['weight'] for w in inp.full_lt.weights]
+    edges, shapedic = disagg.get_edges_shapedic(oq, inp.sitecol)
+    pmap = probability_map.ProbabilityMap(inp.sitecol.sids, L, Gt).fill(0)
+    disaggs = []
     for grp, cmaker in zip(inp.groups, inp.cmakers):
         ctxs = cmaker.from_srcs(grp, inp.sitecol)
         pmap.array[:, :, cmaker.gidx] = cmaker.get_pmap(ctxs).array
-
+        disaggs.append(disagg.Disaggregator(grp, inp.sitecol, cmaker, edges))
     iml4 = pmap.expand(inp.full_lt).interp4D(oq.imtls, oq.poes)
-    edges, shapedic = disagg.get_edges_shapedic(oq, inp.sitecol)
-    dis = disagg.Disaggregator(grp, inp.sitecol, cmaker, edges)
-    print(dis.disagg_mag_dist_eps(iml4[0]))
+    res = sum([dis.disagg_mag_dist_eps(iml4[0], ws) for dis in disaggs])
+    # shape (Ma, D, E, M, P)
+    print(res.sum(axis=(1, 2)))
