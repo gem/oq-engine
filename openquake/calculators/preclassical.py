@@ -147,7 +147,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         arr = numpy.zeros(self.full_lt.Gt, rlzs_by_g_dt)
         for g, rlzs in enumerate(self.full_lt.rlzs_by_g.values()):
             arr[g]['rlzs'] = rlzs
-            arr[g]['weight'] = self.full_lt.g_weights[g]
+            arr[g]['weight'] = self.full_lt.g_weights[g]['weight']
         dset = self.datastore.create_dset(
             'rlzs_by_g', rlzs_by_g_dt, (self.full_lt.Gt,), fillvalue=None)
         dset[:] = arr

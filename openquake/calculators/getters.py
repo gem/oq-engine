@@ -137,18 +137,18 @@ class PmapGetter(object):
     :param dstore: a DataStore instance or file system path to it
     :param sids: the subset of sites to consider (if None, all sites)
     """
-    def __init__(self, dstore, weights, slices, imtls=(), poes=(), use_rates=0):
+    def __init__(self, dstore, full_lt, slices, imtls=(), poes=(), use_rates=0):
         self.filename = dstore if isinstance(dstore, str) else dstore.filename
-        if len(weights[0].dic) == 1:  # no weights by IMT
-            self.weights = numpy.array([w['weight'] for w in weights])
+        if len(full_lt.weights[0].dic) == 1:  # no weights by IMT
+            self.weights = numpy.array([w['weight'] for w in full_lt.weights])
         else:
-            self.weights = weights
+            self.weights = full_lt.weights
         self.imtls = imtls
         self.poes = poes
         self.use_rates = use_rates
-        self.num_rlzs = len(weights)
+        self.num_rlzs = len(full_lt.weights)
         self.eids = None
-        self.rlzs_by_g = dstore['rlzs_by_g']['rlzs']
+        self.rlzs_by_g = full_lt.rlzs_by_g
         self.slices = slices
         self._pmap = {}
 
@@ -221,7 +221,7 @@ class PmapGetter(object):
             numpy.zeros((self.L, self.num_rlzs)))
         if sid not in pmap:  # no hazard for sid
             return pc0
-        for g, rlzs in enumerate(self.rlzs_by_g):
+        for g, rlzs in self.rlzs_by_g.items():
             probability_map.combine_probs(
                 pc0.array, pmap[sid].array[:, g], rlzs)
         return pc0

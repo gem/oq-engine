@@ -1023,9 +1023,9 @@ class FullLogicTree(object):
                     g += 1
         self.Gt = g
         self.rlzs_by_g = {g: U32(rlzs) for g, rlzs in enumerate(rlzs_by_g)}
-        self.weights = ws = numpy.array([rlz.weight['weight'] for rlz in
-                                         self.get_realizations()])
-        self.g_weights = numpy.array([ws[rlzs].sum() for rlzs in rlzs_by_g])
+        self.weights = [rlz.weight for rlz in self.get_realizations()]
+        ws = numpy.array(self.weights)
+        self.g_weights = [ws[rlzs].sum() for rlzs in rlzs_by_g]
 
         # sanity check on Gt
         if self.num_samples == 0:  # easy formula
@@ -1034,6 +1034,8 @@ class FullLogicTree(object):
 
         RT = self.get_num_paths() * len(self.trts)
         assert sum(len(rlzs) for rlzs in rlzs_by_g) == RT
+
+        return self
 
     def get_gidx(self, trt_smrs):
         """

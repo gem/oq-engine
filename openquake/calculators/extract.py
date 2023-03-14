@@ -1017,20 +1017,6 @@ def extract_mfd(dstore, what):
     return ArrayWrapper((), {k: numpy.array(v) for k, v in dic.items()})
 
 
-@extract.add('mean_std_curves')
-def extract_mean_std_curves(dstore, what):
-    """
-    Yield imls/IMT and poes/IMT containg mean and stddev for all sites
-    """
-    rlzs = dstore['full_lt'].get_realizations()
-    w = [rlz.weight for rlz in rlzs]
-    getter = getters.PmapGetter(dstore, w)
-    arr = getter.get_mean().array
-    for imt in getter.imtls:
-        yield 'imls/' + imt, getter.imtls[imt]
-        yield 'poes/' + imt, arr[:, getter.imtls(imt)]
-
-
 @extract.add('composite_risk_model.attrs')
 def crm_attrs(dstore, what):
     """

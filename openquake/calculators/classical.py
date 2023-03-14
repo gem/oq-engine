@@ -769,7 +769,6 @@ class ClassicalCalculator(base.HazardCalculator):
             ct = int(poes_gb) + 18  # number of tasks > number of GB
         if ct > 1:
             logging.info('Producing %d postclassical tasks', ct)
-        self.weights = ws = [rlz.weight for rlz in self.realizations]
         if '_poes' in set(self.datastore):
             dstore = self.datastore
         else:
@@ -799,8 +798,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('There are %d slices of poes [%.1f per task]',
                      nslices, nslices / len(slicedic))
         allargs = [
-            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes,
-                                oq.use_rates),
+            (getters.PmapGetter(dstore, self.full_lt, slices,
+                                oq.imtls, oq.poes, oq.use_rates),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in allslices]
         self.hazard = {}  # kind -> array
