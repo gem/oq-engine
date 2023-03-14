@@ -699,32 +699,6 @@ for the case of few sites, i.e. if the number of sites is less than
 the parameter ``max_sites_disagg`` which by default is 10.
 
 
-Sampling of the logic tree
-----------------------------------------------------
-
-There are real life examples of very large logic trees, like the model
-for South Africa which features 3,194,799,993,706,229,268,480 branches.
-In such situations it is impossible to perform a computation with full
-enumeration. However, the engine allows to
-sample the branches of the complete logic tree. More precisely,
-for each branch sampled from the source model logic tree,
-a branch of the GMPE logic tree is chosen randomly,
-by taking into account the weights in the GMPE logic tree file.
-
-It should be noticed that even if source model path is sampled several
-times, the model is parsed and sent to the workers *only once*. In
-particular if there is a single source model (like for South America)
-and ``number_of_logic_tree_samples =100``, we generate effectively 1
-source model realization and not 100 equivalent source model
-realizations, as we did in past (actually in the engine version 1.3).
-The engine keeps track of how many times a model has been sampled (say
-`Ns`) and in the event based case it produce ruptures (*with different
-seeds*) by calling the appropriate hazardlib function `Ns` times. This
-is done inside the worker nodes. In the classical case, all the
-ruptures are identical and there are no seeds, so the computation is
-done only once, in an efficient way.
-
-
 Convergency of the GMFs for non-trivial logic trees
 ---------------------------------------------------------------------------
 
@@ -1654,18 +1628,18 @@ non-proportional treaties.
 - Surplus
 - Facultative
 
-NOTE: proportional treaties may have a parameter "max_cession_event"
+*NOTE: proportional treaties may have a parameter "max_cession_event"
 limiting the total losses per event that can be ceded to the
 reinsurer. The excess of loss generated
 by events that exceed the maximum cession per event (overspill losses)
-is going back to the insurer.
+is going back to the insurer.*
 
 **Non-proportional treaties**
 
 - Working excess of loss per risk, WXL/R (``wxlr``).
   The unit of loss under this treaty is the "risk". The engine
   aggregates the losses per "risk" at the policy level, which
-  can include single or multiple assests.
+  can include single or multiple assets.
 - Catastrophic excess of loss per event, CatXL (``catxl``).
   The unit of loss under this treaty is the "event".
 
@@ -1675,9 +1649,9 @@ is going back to the insurer.
   first the ``wxlr`` are estimated, and then the successive layers
   of CatXL are applied over the net loss retention
         
-NOTE: The CatXL is applied over the net loss retention per event
+*NOTE: The CatXL is applied over the net loss retention per event
 coming from the proportional layers and therefore it includes the
-overspill losses.
+overspill losses.*
 
 Reinsurance calculations provide, in addition to the ground up losses, 
 the losses allocated to different treaties  during a single event or 
@@ -1692,23 +1666,28 @@ To run reinsurance calculations, in addition to the required files for
 performing event-based or scenario risk calculations, it is required to adjust
 the exposure information, and to include two additional files:
 
-1. Insurance and reinsurance information: an ``.xml`` file defining the
-   insurance and reinsurance treaties (e.g., "reinsurance.xml").
+1. Reinsurance information: an ``.xml`` file defining the characteristics of
+   the reinsurance treaties (e.g., "reinsurance.xml").
 2. Policy information: a ``.csv`` file with details of each policy
    indicated in the exposure model and the associated reinsurance
    treaties (e.g., "policy.csv").
 
+The insurance information includes the allocation of assets into a given policy, 
+the liability and the deductible. The deductible can be defined at asset level
+(therefore indicated in the exposure model ``csv`` file), or in at the policy level
+(therefore indicated in the policy ``csv`` file).
+The current implementation only supports liability at policy level.
 
 Exposure file
 ~~~~~~~~~~~~~~
 
 The exposure input file (csv and xml with metadata) needs to be adjusted
 to include a ``policy`` tag that indicates the type of policy 
-(and therefore the reinsurance contracts) associated to each asset.
+(and therefore the reinsurance contracts) associated with each asset.
 
 Policies can be defined for single or multiple assets. When multiple assets 
 are allocated to the same policy, losses are aggregated at the policy level
-before applying the insurance and reinsurance deductions.
+before applying the insurance and reinsurance deductions. 
 
 Below we present an example of an exposure model considering the
 policy information and its associated metadata:
@@ -1757,12 +1736,22 @@ policy information and its associated metadata:
     </nrml>
 
 This example presents 7 assets (a1 to a7) with 4 associated policies.
-Notice that the column ``policy`` is mandatory, as
+Notice that the column ``policy`` is mandatory, as 
 well as the line ``<tagNames>policy</tagNames>`` in
 the xml. Additional tags can be included as needed.
 
-Insurance reinsurance information (``reinsurance.xml``)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Starting from OpenQuake 3.17, the exposure module can also include 
+deductibles at asset level (called ``ideductible``).
+In this case, the deductions are applied at asset level, and later
+aggregated at the policy level before applying the liability and 
+reinsurance allocations.
+
+*NOTE: It is not possible to have a policy with ``ideductible`` at asset
+and ``deductible`` at policy level. The engine only accepts one value.*
+
+
+Insurance and reinsurance information (``reinsurance.xml``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The insurance and reinsurance information is defined by a ``reinsurance.xml`` 
 that includes the metadata and treaty characteristics for each treaty
@@ -1778,7 +1767,11 @@ input file:
           xmlns:gml="http://www.opengis.net/gml">
       <reinsuranceModel>
         <description>reinsurance model</description>
+
         <fieldMap>
+          <field oq="liability" input="Limit" />
+          <field oq="deductible" input="Deductible" />
+
           <field input="treaty_1" type="prop" max_cession_event="400" />
           <field input="treaty_2" type="prop" max_cession_event="400" />
           <field input="xlr1" type="wxlr" deductible="200" limit="1000" />
@@ -1795,13 +1788,14 @@ is used to define the reinsurance treaties and their parameters.
 
 The ``oq`` and ``input`` parameters are used to specify the *key* used
 in the engine (``oq``) and its equivalent column header in the policy
-file (``input``).  All reinsurance calculations must include, at
-least, the insurance characteristics of each policy: deductible and
-liability. Then, the definition of reinsurance treaties depends on the
+file (``input``).  All reinsurance calculations must include, at least, 
+the insurance characteristics of each policy: liability and deductible
+(that can be at asset or policy level, depending on the portfolio characteristics). 
+Then, the definition of reinsurance treaties depends on the
 treaty type: proportional or non proportional.
 
 *Proportional* treaties are identified by the parameter
-``type="prop"``.  The fraction of losses ceeded to each treaty is
+``type="prop"``.  The fraction of losses ceded to each treaty is
 specified for each policy covered by the treaty, and the retention is
 calculated as 1 minus all the fractions specified in the multiple
 layers of proportional treaties. For each proportional treaty it is
@@ -1817,10 +1811,16 @@ of type "catxl".*
 
 - **insurance deductible**: the amount (economic value) that the insurer will
   "deduct" from the ground up losses before paying up to its policy
-  limits. The claim is calculated as ``claim = ground_up_loss -
-  deductible`` The units of the deductible must be compatible with
-  the units indicated in the exposure model (e.g. USD dollars or
-  Euros).
+  limits. The units of the deductible must be compatible with
+  the units indicated in the exposure model (e.g. USD dollars or Euros).
+  The deductible can be specified at policy (``deductible``) or asset level
+  (``ideductible``) depending on the insurance contract.
+  
+  The claim is calculated as ``claim = ground_up_loss - deductible`` for
+  policies with deductibles defined at the policy level, or
+  ``claim = ground_up_loss - ideductible`` 
+  for policies with deductibles defined at the asset level.
+
 
 - **insurance liability**: the maximum economic amount that can be covered by
   the insurance, according to the policy characteristics. The
@@ -1850,6 +1850,7 @@ of type "catxl".*
 *Note: the current engine implementation does not support an "annual
 aggregate limit" for non-proportional reinsurance treaties.*
 
+
 Policy information (``policy.csv``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1868,7 +1869,7 @@ of the exposure model and the reinsurance presented above:
 ``policy.csv``
 
     +--------+-----------+------------+----------+----------+------+
-    | policy | liability | deductible | treaty_1 | treaty_2 | xlr1 |
+    | policy | Limit     | Deductible | treaty_1 | treaty_2 | xlr1 |
     +========+===========+============+==========+==========+======+
     | p1_a1  | 2000      | 400        | 0.1      | 0.2      | 1    |
     +--------+-----------+------------+----------+----------+------+
@@ -1921,7 +1922,7 @@ calculations::
   to a given the loss_type (the engine supports structural, nonstructural, 
   contents or its sum). The insurance and reinsurance calculations are applied 
   over the indicated loss_types, i.e. to the sum of the ground up losses 
-  associated to the specified loss_types.
+  associated with the specified loss_types.
 
   *NOTE: The current implementation works only with a single reinsurance file.*
 
@@ -2011,10 +2012,11 @@ The parameters indicated in the previous outputs include:
   per event ("max_cession_event") for *proportional* and/or *catxl*
   treaties.
 
-NOTE: The sum of the claim is not equal to the ground up losses, since
+*NOTE: The sum of the claim is not equal to the ground up losses, since
 usually the deductible is nonzero. Moreover there could be
 "non-insured" losses corresponding to policies with no insurance
-contracts or that exceed the policy liability.
+contracts or that exceed the policy liability.*
+
 
 How the hazard sites are determined
 ===================================
@@ -2423,66 +2425,6 @@ This avoids producing extremely large (and physically unrealistic)
 ground-motion values at small distances. The minimum distance is somewhat
 heuristic. It may be useful to experiment with different values of the
 ``minimum_distance``, to see how the hazard and risk change.
-
-GMPE logic trees with weighted IMTs
------------------------------------
-
-In order to support Canada's 6th Generation seismic hazard model, the engine now
-has the ability to manage GMPE logic trees where the weight assigned to each
-GMPE may be different for each IMT. For instance you could have a particular
-GMPE applied to PGA with a certain weight, to SA(0.1) with a different weight,
-and to SA(1.0) with yet another weight. The user may want to assign a higher
-weight to the IMTs where the GMPE has a small uncertainty and a lower weight to
-the IMTs with a large uncertainty. Moreover a particular GMPE may not be
-applicable for some periods, and in that case the user can assign to a zero
-weight for those periods, in which case the engine will ignore it entirely for
-those IMTs. This is useful when you have a logic tree with multiple GMPEs per
-branchset, some of which are applicable for some IMTs and not for others.  Here
-is an example:
-
-.. code-block:: xml
-
-    <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
-            applyToTectonicRegionType="Volcanic">
-        <logicTreeBranch branchID="BooreEtAl1997GeometricMean">
-            <uncertaintyModel>BooreEtAl1997GeometricMean</uncertaintyModel>
-            <uncertaintyWeight>0.33</uncertaintyWeight>
-            <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(0.5)">0.5</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(1.0)">0.5</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(2.0)">0.5</uncertaintyWeight>
-        </logicTreeBranch>
-        <logicTreeBranch branchID="SadighEtAl1997">
-            <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
-            <uncertaintyWeight>0.33</uncertaintyWeight>
-            <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(0.5)">0.5</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(1.0)">0.5</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(2.0)">0.5</uncertaintyWeight>
-        </logicTreeBranch>
-        <logicTreeBranch branchID="MunsonThurber1997Hawaii">
-            <uncertaintyModel>MunsonThurber1997Hawaii</uncertaintyModel>
-            <uncertaintyWeight>0.34</uncertaintyWeight>
-            <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(0.5)">0.0</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(1.0)">0.0</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(2.0)">0.0</uncertaintyWeight>
-        </logicTreeBranch>
-        <logicTreeBranch branchID="Campbell1997">
-            <uncertaintyModel>Campbell1997</uncertaintyModel>
-            <uncertaintyWeight>0.0</uncertaintyWeight>
-            <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(0.5)">0.0</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(1.0)">0.0</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(2.0)">0.0</uncertaintyWeight>
-        </logicTreeBranch>
-    </logicTreeBranchSet>        
-
-Clearly the weights for each IMT must sum up to 1, otherwise the engine
-will complain. Note that this feature only works for the classical and
-disaggregation calculators: in the event based case only the default
-``uncertaintyWeight`` (i.e. the first in the list of weights, the one
-without ``imt`` attribute) would be taken for all IMTs.
 
 Equivalent Epicenter Distance Approximation
 -------------------------------------------

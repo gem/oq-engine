@@ -18,6 +18,7 @@
 
 import io
 import os
+import json
 import time
 import psutil
 import logging
@@ -37,9 +38,9 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.probability_map import (
-    ProbabilityMap, poes_dt, combine_probs)
-from openquake.commonlib import calc, readinput
+from openquake.hazardlib.logictree import FullLogicTree
+from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
+from openquake.commonlib import calc, readinput, datastore
 from openquake.calculators import base, getters, extract
 
 U16 = numpy.uint16
@@ -53,8 +54,6 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
-disagg_grp_dt = numpy.dtype([
-    ('grp_trt', hdf5.vstr), ('avg_poe', F32), ('nsites', U32)])
 slice_dt = numpy.dtype([('sid', U32), ('start', int), ('stop', int)])
 
 
@@ -64,9 +63,9 @@ def get_pmaps_gb(dstore):
     """
     N = len(dstore['sitecol'])
     L = dstore['oqparam'].imtls.size
-    cmakers = read_cmakers(dstore)
-    num_gs = [len(cm.gsims) for cm in cmakers]
-    return sum(num_gs) * N * L * 8 / 1024**3
+    full_lt = dstore['full_lt']
+    full_lt.init()
+    return full_lt.Gt * N * L * 8 / 1024**3
 
 
 def build_slice_by_sid(sids, offset=0):
@@ -183,6 +182,7 @@ def classical(srcs, sitecol, cmaker, monitor):
         result = hazclassical(srcs, sites, cmaker, pmap)
         result['pnemap'] = ~pmap.remove_zeros()
         result['pnemap'].gidx = cmaker.gidx
+        result['pnemap'].trt_smrs = cmaker.trt_smrs
         yield result
 
 
@@ -243,7 +243,8 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
                         pc.array[:, r].reshape(M, L1))
             if hstats:
                 for s, (statname, stat) in enumerate(hstats.items()):
-                    sc = getters.build_stat_curve(pc, imtls, stat, weights)
+                    sc = getters.build_stat_curve(
+                        pc, imtls, stat, weights, pgetter.use_rates)
                     arr = sc.array.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
@@ -302,27 +303,21 @@ class Hazard:
         self.offset = 0
 
     # used in in disagg_by_src
-    def get_rates(self, pmap, cmaker):
+    def get_rates(self, pmap):
         """
         :param pmap: a ProbabilityMap
-        :param cmaker: a ContextMaker
-        :returns: an array of rates of shape (N, R, M, L1)
+        :returns: an array of rates of shape (N, M, L1)
         """
-        R = 1 if self.collect_rlzs else self.R
         M = len(self.imtls)
         L1 = self.L // M
-        out = numpy.zeros((self.N, R, M, L1))
-        dic = dict(zip(cmaker.gidx, cmaker.gsims.values()))
-        for lvl in range(self.L):
-            m, l = divmod(lvl, L1)
-            res = numpy.zeros((len(pmap.sids), self.R))
-            for i, g in enumerate(pmap.gidx):
-                combine_probs(res, pmap.array[:, lvl, i], U32(dic[g]))
-            if self.collect_rlzs:
-                out[:, 0, m, l] = disagg.to_rates(res) @ self.weights
-            else:
-                out[:, :, m, l] = disagg.to_rates(res)
-        return out
+        out = numpy.zeros((self.N, self.L))
+        rates = disagg.to_rates(pmap.array)  # shape (N, L, G)
+        for trt_smr in pmap.trt_smrs:
+            allrlzs = self.full_lt.get_rlzs_by_gsim(trt_smr).values()
+            for i, rlzs in enumerate(allrlzs):
+                for rlz in rlzs:
+                    out[:, :] += rates[:, :, i] * self.weights[rlz]
+        return out.reshape((self.N, M, L1))
 
     def store_poes(self, g, pnes, pnes_sids):
         """
@@ -353,26 +348,16 @@ class Hazard:
         self.acc[g]['avg_poe'] = poes.mean(axis=0) @ self.level_weights
         self.acc[g]['nsites'] = len(pnes_sids)
 
-    def store_disagg(self, pmaps=None):
+    def store_disagg(self, pmaps):
         """
-        Store data inside disagg_by_grp (optionally disagg_by_src)
+        Store data inside disagg_by_src
         """
-        lst = []
-        for grp_id, indices in enumerate(self.datastore['trt_smrs']):
-            dic = self.acc[grp_id]
-            if dic:
-                trti, smrs = numpy.divmod(indices, 2**24)
-                trt = self.full_lt.trts[trti[0]]
-                lst.append((trt, dic['avg_poe'], dic['nsites']))
-        self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
-        if pmaps:  # called inside a loop
-            disagg_by_src = self.datastore['disagg_by_src'][()]
-            for key, pmap in pmaps.items():
-                if isinstance(key, str):
-                    # in case of disagg_by_src key is a source ID
-                    disagg_by_src[..., self.srcidx[key]] = (
-                        self.get_rates(pmap, self.cmakers[pmap.grp_id]))
-            self.datastore['disagg_by_src'][:] = disagg_by_src
+        disagg_by_src = self.datastore['disagg_by_src'][()]
+        for key, pmap in pmaps.items():
+            if isinstance(key, str):
+                # in case of disagg_by_src key is a source ID
+                disagg_by_src[..., self.srcidx[key]] = self.get_rates(pmap)
+        self.datastore['disagg_by_src'][:] = disagg_by_src
 
 
 @base.calculators.add('classical', 'ucerf_classical')
@@ -420,7 +405,9 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[source_id] = pm
             pm.grp_id = grp_id
             pm.gidx = pnemap.gidx
-        for i, g in enumerate(pnemap.gidx):
+            pm.trt_smrs = pnemap.trt_smrs
+        for c, g in enumerate(pnemap.gidx):
+            i = c % pnemap.array.shape[2]
             if g in acc:
                 acc[g].multiply_pnes(pnemap, i)
                 self.n_outs[g] -= 1
@@ -472,19 +459,18 @@ class ClassicalCalculator(base.HazardCalculator):
         self.M = len(oq.imtls)
         self.L1 = oq.imtls.size // self.M
         sources = list(self.csm.source_info)
-        R = 1 if oq.collect_rlzs else self.R
         size, msg = get_nbytes_msg(
-            dict(N=self.N, R=R, M=self.M, L1=self.L1, Ns=len(sources)))
+            dict(N=self.N, M=self.M, L1=self.L1, Ns=len(sources)))
         if size > TWO32:
-            raise RuntimeError('The matrix disagg_by_src is too large, '
-                               'use collect_rlzs=true\n%s' % msg)
-        size = self.N * R * self.M * self.L1 * len(sources) * 8
+            raise RuntimeError(
+                'The matrix disagg_by_src is too large: %s' % msg)
+        size = self.N * self.M * self.L1 * len(sources) * 8
         logging.info('Creating disagg_by_src of size %s', humansize(size))
         self.datastore.create_dset(
             'disagg_by_src', F32,
-            (self.N, R, self.M, self.L1, len(sources)))
+            (self.N,self.M, self.L1, len(sources)))
         self.datastore.set_shape_descr(
-            'disagg_by_src', site_id=self.N, rlz_id=R,
+            'disagg_by_src', site_id=self.N,
             imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
         return sources
 
@@ -572,7 +558,8 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         acc = self.run_one(self.sitecol, maxw)
-        self.haz.store_disagg(acc)
+        if self.oqparam.disagg_by_src:
+            self.haz.store_disagg(acc)
 
     def execute_seq(self, maxw, ntiles):
         """
@@ -710,9 +697,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 arr = self.disagg_by_src = self.datastore['disagg_by_src'][:]
                 arr, srcids = semicolon_aggregate(arr, srcids)
                 self.datastore['disagg_by_src'][:] = arr
-                R = 1 if oq.collect_rlzs else self.R
                 self.datastore.set_shape_descr(
-                    'disagg_by_src', site_id=self.N, rlz_id=R,
+                    'disagg_by_src', site_id=self.N,
                     imt=list(oq.imtls), lvl=self.L1, src_id=srcids)
 
         if 'disagg_by_src' in self.datastore and self.N == 1 and len(oq.poes):
@@ -720,6 +706,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore, oq.imtls, oq.poes, threshold=.1)
             logging.info('There are %d relevant sources: %s', len(rel_ids),
                          rel_ids)
+        if 'disagg_by_src' in self.datastore and self.N == 1 and oq.use_rates:
+            mon = self.monitor('disaggregate by source')
+            disagg_by_source(self.datastore, self.csm, mon)
 
     def _create_hcurves_maps(self):
         oq = self.oqparam
@@ -810,7 +799,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('There are %d slices of poes [%.1f per task]',
                      nslices, nslices / len(slicedic))
         allargs = [
-            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
+            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes,
+                                oq.use_rates),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in allslices]
         self.hazard = {}  # kind -> array
@@ -879,3 +869,44 @@ def get_rel_source_ids(dstore, imts, poes, threshold=.1):
             source_ids.update(rel['src_id'])
     return python3compat.decode(sorted(source_ids))
 
+
+def sanity_check(source_id, rates, disagg_by_src):
+    """
+    Check that the rates computed with the restricted logic tree and
+    restricted groups are consistent with the full rates.
+    """
+    js = json.loads(disagg_by_src.attrs['json'])
+    srcidx = js['src_id'].index(source_id)
+    rates2D = disagg_by_src[0, :, :, srcidx]  # shape (M, L1)
+    numpy.testing.assert_allclose(rates2D, rates)
+
+
+def disagg_by_source(parent, csm, mon):
+    """
+    :returns: pairs (source_id, disagg_rates)
+    """
+    oq = parent['oqparam']
+    oq.cachedir = datastore.get_datadir()
+    oq.mags_by_trt = parent['source_mags']
+    sitecol = parent['sitecol']
+    assert len(sitecol) == 1, sitecol
+    edges_shp = disagg.get_edges_shapedic(oq, sitecol)
+    if oq.use_rates and len(oq.poes) == 0:
+        rel_ids = sorted(set(map(basename, csm.get_sources())))
+    else:
+        rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
+    out = {}
+    for source_id in rel_ids:
+        smlt = csm.full_lt.source_model_lt.reduce(source_id)
+        gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
+        relt = FullLogicTree(smlt, gslt, 'reduce-rlzs')
+        logging.info('Considering source %s (%d realizations)',
+                     source_id, relt.get_num_paths())
+        groups = disagg.reduce_groups(csm.src_groups, source_id)
+        out.update(disagg.by_source(groups, sitecol, relt, edges_shp, oq, mon))
+    items = []
+    for source_id, (disagg_rates, rates2D) in out.items():
+        if oq.use_rates:
+            sanity_check(source_id, rates2D, parent.getitem('disagg_by_src'))
+        items.append((source_id, disagg_rates))
+    return items

@@ -50,7 +50,6 @@ class ReportWriter(object):
         'biggest_ebr_gmf': 'Maximum memory allocated for the GMFs',
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',
-        'disagg_by_grp': 'Disaggregation by source group',
         'slow_sources': 'Slowest sources',
         'task:start_classical:0': 'Fastest task',
         'task:start_classical:-1': 'Slowest task',
@@ -101,8 +100,6 @@ class ReportWriter(object):
             self.add('avglosses_data_transfer')
         if 'exposure' in oq.inputs:
             self.add('exposure_info')
-        if 'disagg_by_grp' in ds:
-            self.add('disagg_by_grp')
         if 'source_info' in ds:
             self.add('slow_sources')
             self.add('weight_by_src')

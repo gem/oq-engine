@@ -19,6 +19,7 @@
 import io
 import os
 import ast
+import copy
 import json
 import logging
 import operator
@@ -290,14 +291,14 @@ class GsimLogicTree(object):
         :param trts: a subset of tectonic region types
         :returns: a reduced GsimLogicTree instance
         """
-        new = object.__new__(self.__class__)
-        vars(new).update(vars(self))
+        new = copy.deepcopy(self)
+        new.values = {trt: self.values[trt] for trt in trts}
         if trts != {'*'}:
             new.branches = []
             for br in self.branches:
-                branch = BranchTuple(br.trt, br.id, br.gsim, br.weight,
-                                     br.trt in trts)
-                new.branches.append(branch)
+                if br.trt in trts:
+                    branch = BranchTuple(br.trt, br.id, br.gsim, br.weight, 1)
+                    new.branches.append(branch)
         return new
 
     def collapse(self, branchset_ids):
@@ -494,15 +495,6 @@ class GsimLogicTree(object):
                                 if rlz.value[i] == gsim]
                          for gsim in self.values[trt]}
         return ddic
-
-    def get_rlzs_by_g(self):
-        """
-        :returns: an array of lists of g-indices
-        """
-        lst = []
-        for rlzs_by_gsim in self.get_rlzs_by_gsim_trt().values():
-            lst.extend(rlzs_by_gsim.values())
-        return numpy.array(lst)
 
     def __iter__(self):
         """

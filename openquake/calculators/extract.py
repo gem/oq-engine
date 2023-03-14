@@ -1223,11 +1223,7 @@ def extract_disagg_by_src(dstore, what):
         'hcurves-stats', imt=imt, stat='mean', site_id=site_id)[0, 0, 0]
     lvl_id = get_lvl(mean, oq.imtls[imt], float(poe))
     imt_id = list(oq.imtls).index(imt)
-    rates = dset[site_id, :, imt_id, lvl_id]  # shape (R, Ns)
-    if oq.collect_rlzs:  # already averaged
-        rates = rates[0, :]
-    else:  # compute the average
-        rates = dstore['weights'][:] @ rates
+    rates = dset[site_id, imt_id, lvl_id]  # shape Ns
     arr = numpy.zeros(len(src_id), [('src_id', '<S16'), ('poe', '<f8')])
     arr['src_id'] = src_id
     arr['poe'] = disagg.to_probs(rates[:len(src_id)])

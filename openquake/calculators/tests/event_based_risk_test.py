@@ -31,7 +31,7 @@ from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_5, case_6c, case_master,
     case_miriam, occupants, case_1f, case_1g, case_7a, case_8,
-    recompute, reinsurance_1, reinsurance_2, reinsurance_3)
+    recompute, reinsurance_1, reinsurance_2, reinsurance_3, reinsurance_4)
 
 aac = numpy.testing.assert_allclose
 
@@ -692,3 +692,23 @@ class ReinsuranceTestCase(CalculatorTestCase):
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
                               fname, delta=4E-5)
+
+    def test_ideductible(self):
+        # the deltas are there so that the tests on macos pass
+        self.run_calc(reinsurance_4.__file__, 'job.ini')
+        f1, f2 = export(('aggrisk', 'csv'), self.calc.datastore)
+        # abs difference of 1E-4 on macos (57.0276 => 57.0277)
+        self.assertEqualFiles('expected/aggrisk.csv', f1, delta=2E-4)
+        self.assertEqualFiles('expected/aggrisk-policy.csv', f2, delta=2E-4)
+
+        f1, f2 = export(('aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggcurves.csv', f1, delta=2E-4)
+        self.assertEqualFiles('expected/aggcurves-policy.csv', f2, delta=2E-4)
+        
+        [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggcurves.csv',
+                              fname, delta=2E-4)
+        [fname] = export(('reinsurance-avg_portfolio', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
+                              fname, delta=2E-4)

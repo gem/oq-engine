@@ -1,0 +1,5 @@
+#,,,"lon=-123.4, lat=46.4, poes=[0.000404]"
+imt,poe_id,src_id,value
+PGA,0,pnt_no_reqv2,1.11282E-04
+PGA,0,pnt_no_reqv,1.11282E-04
+PGA,0,pnt_reqv,1.65105E-05

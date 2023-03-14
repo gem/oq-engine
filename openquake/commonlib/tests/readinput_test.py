@@ -27,8 +27,8 @@ from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
-from openquake.qa_tests_data.logictree import case_15, case_21
-from openquake.qa_tests_data.classical import case_02, case_34
+from openquake.qa_tests_data.logictree import case_02, case_15, case_21
+from openquake.qa_tests_data.classical import case_34
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import case_2, case_caracas
 
@@ -501,7 +501,9 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_with_site_model(self):
         oq = readinput.get_oqparam('job.ini', case_34)
         ssclt = readinput.get_composite_source_model(oq)
-        self.assertEqual(ssclt.source_model_lt.sms_by_src['956'], ['b1'])
+        self.assertEqual(
+            list(ssclt.source_model_lt.source_data[0]),
+            ['b1', 'Active Shallow Crust', 'source_model.xml', '956'])
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):

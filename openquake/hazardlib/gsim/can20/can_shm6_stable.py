@@ -163,7 +163,6 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
         """
         # Check input imts
         _check_imts(imts)
-
         # Magnitudes
         [mag] = np.unique(np.round(ctx.mag, 6))
 
@@ -176,14 +175,14 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
         for m, imt in enumerate(imts):
             key = ('%.2f' % mag, imt.string)
             imls = self.mean_table[key]
-
             # Compute mean on reference conditions
             mean[m] = np.log(_get_mean(self.kind, imls, dst, dists))
 
             # Correct PGV to units of cm/s (tables for PGV are scaled
             # by a factor of g in cm/s)
+
             if imt == PGV():
-                mean[m] = mean[m] - np.log(980.665)
+                mean[m] = mean[m] - np.log(9.81)
 
             # Add site-term
             mean[m] += site_term_aa13(self, mag, ctx, dists, imt)

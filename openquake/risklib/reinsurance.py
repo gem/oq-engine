@@ -364,10 +364,10 @@ def clever_agg(ukeys, datalist, treaty_df, idx, overdict, eids):
 
 
 # tested in reinsurance_test.py
-def by_policy(agglosses_df, pol_dict, treaty_df):
+def by_policy(rbe, pol_dict, treaty_df):
     '''
-    :param DataFrame agglosses_df:
-        losses aggregated by policy (keys agg_id, event_id)
+    :param DataFrame rbe:
+        losses aggregated by policy (agg_id) and event_id
     :param dict pol_dict:
         Policy parameters, with pol_dict['policy'] being an integer >= 1
     :param DataFrame treaty_df:
@@ -376,7 +376,7 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
         DataFrame of reinsurance losses by event ID and policy ID
     '''
     out = {}
-    df = agglosses_df[agglosses_df.agg_id == pol_dict['policy'] - 1]
+    df = rbe[rbe.agg_id == pol_dict['policy'] - 1]
     losses = df.loss.to_numpy()
     ded, lim = pol_dict['deductible'], pol_dict['liability']
     claim = scientific.insured_losses(losses, ded, lim)

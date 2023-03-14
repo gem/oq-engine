@@ -190,7 +190,7 @@ class MRD01TestCase(unittest.TestCase):
 
             fig, axs = plt.subplots(1, 1)
             fig.set_size_inches(9, 6)
-            plt1 = plt.contourf(np.log(imlc1), np.log(imlc2), mrdd[:, :, 0, 0])
+            plt1 = plt.contourf(np.log(imlc1), np.log(imlc2), mrdd[:, :, 0])
             _ = plt.contour(np.log(imlc1), np.log(imlc2), mrdi[:, :, 0, 0],
                             colors='orange', linestyles='dashed')
             _ = plt.colorbar(mappable=plt1)
