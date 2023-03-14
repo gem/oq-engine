@@ -1022,7 +1022,20 @@ class FullLogicTree(object):
                     rlzs_by_g.append(rlzs)
                     g += 1
         self.Gt = g
-        self.rlzs_by_g = [U32(rlzs) for rlzs in rlzs_by_g]
+        self.rlzs_by_g = {g: U32(rlzs) for g, rlzs in enumerate(rlzs_by_g)}
+        self.weights = [rlz.weight for rlz in self.get_realizations()]
+        ws = numpy.array(self.weights)
+        self.g_weights = [ws[rlzs].sum() for rlzs in rlzs_by_g]
+
+        # sanity check on Gt
+        if self.num_samples == 0:  # easy formula
+            tot_gsims = sum(len(vals) for vals in self.gsim_lt.values.values())
+            assert self.Gt == len(self.sm_rlzs) * tot_gsims
+
+        RT = self.get_num_paths() * len(self.trts)
+        assert sum(len(rlzs) for rlzs in rlzs_by_g) == RT
+
+        return self
 
     def get_gidx(self, trt_smrs):
         """
@@ -1068,16 +1081,22 @@ class FullLogicTree(object):
         """
         return self.source_model_lt.sampling_method
 
-    def get_trt_smrs(self, src):
+    def get_trt_smrs(self, src_id=None):
         """
         :returns: a tuple of indices trt_smr for the given source
         """
         if not hasattr(self, 'source_data'):  # fake logic tree
             return 0,
-        src_id = src.source_id.split(';')[0]
-        trti = self.trti.get(src.tectonic_region_type, 0)  # missing trt='*'
         sd = self.source_model_lt.source_data
-        brids = set(sd[sd['source'] == src_id]['branch'])
+        if src_id is None:
+            return tuple(trti * TWO24 + sm_rlz.ordinal
+                         for sm_rlz in self.sm_rlzs
+                         for trti in self.trti)
+
+        sd = sd[sd['source'] == src_id]
+        trt = sd['trt'][0]  # all same trt
+        trti = 0 if trt == '*' else self.trti[trt]
+        brids = set(sd['branch'])
         return tuple(trti * TWO24 + sm_rlz.ordinal
                      for sm_rlz in self.sm_rlzs
                      if set(sm_rlz.lt_path) & brids)
@@ -1181,6 +1200,7 @@ class FullLogicTree(object):
         return rlzs
 
     def _rlzs_by_gsim(self, trt_smr):
+        # return dictionary gsim->rlzs
         if not hasattr(self, '_rlzs_by'):
             smr_by_ltp = self.get_smr_by_ltp()
             rlzs = self.get_realizations()
@@ -1199,6 +1219,8 @@ class FullLogicTree(object):
             for trtsmr, dic in acc.items():
                 self._rlzs_by[trtsmr] = {
                     gsim: U32(rlzs) for gsim, rlzs in sorted(dic.items())}
+        if not self._rlzs_by:
+            return {}
         return self._rlzs_by[trt_smr]
 
     def get_rlzs_by_gsim(self, trt_smr):

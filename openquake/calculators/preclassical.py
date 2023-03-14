@@ -39,6 +39,8 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
 
+rlzs_by_g_dt = numpy.dtype([('rlzs', hdf5.vuint32), ('weight', float)])
+
 
 def source_data(sources):
     data = AccumDict(accum=[])
@@ -142,7 +144,13 @@ class PreClassicalCalculator(base.HazardCalculator):
             self.full_lt = self.datastore.parent['full_lt']
         else:
             self.full_lt = self.csm.full_lt
-        self.datastore.hdf5.save_vlen('rlzs_by_g', self.full_lt.rlzs_by_g)
+        arr = numpy.zeros(self.full_lt.Gt, rlzs_by_g_dt)
+        for g, rlzs in enumerate(self.full_lt.rlzs_by_g.values()):
+            arr[g]['rlzs'] = rlzs
+            arr[g]['weight'] = self.full_lt.g_weights[g]['weight']
+        dset = self.datastore.create_dset(
+            'rlzs_by_g', rlzs_by_g_dt, (self.full_lt.Gt,), fillvalue=None)
+        dset[:] = arr
 
     def store(self):
         # store full_lt, trt_smrs, toms

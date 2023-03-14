@@ -1636,6 +1636,8 @@ def get_cmakers(src_groups, full_lt, oq):
     cmakers = []
     for grp_id, trt_smrs in enumerate(all_trt_smrs):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smrs)
+        if not rlzs_by_gsim:  # happens for gsim_lt.reduce() on empty TRTs
+            continue
         trti = trt_smrs[0] // TWO24
         cmaker = ContextMaker(trts[trti], rlzs_by_gsim, oq)
         cmaker.trti = trti

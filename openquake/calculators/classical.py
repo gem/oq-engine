@@ -702,13 +702,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     imt=list(oq.imtls), lvl=self.L1, src_id=srcids)
 
         if 'disagg_by_src' in self.datastore and self.N == 1 and len(oq.poes):
-            rel_ids = get_rel_source_ids(
-                self.datastore, oq.imtls, oq.poes, threshold=.1)
-            logging.info('There are %d relevant sources: %s', len(rel_ids),
-                         rel_ids)
-        if 'disagg_by_src' in self.datastore and self.N == 1 and oq.use_rates:
-            mon = self.monitor('disaggregate by source')
-            disagg_by_source(self.datastore, self.csm, mon)
+            disagg_by_source(self.datastore, self.csm,
+                             self.monitor('disaggregate by source'))
 
     def _create_hcurves_maps(self):
         oq = self.oqparam
@@ -769,7 +764,6 @@ class ClassicalCalculator(base.HazardCalculator):
             ct = int(poes_gb) + 18  # number of tasks > number of GB
         if ct > 1:
             logging.info('Producing %d postclassical tasks', ct)
-        self.weights = ws = [rlz.weight for rlz in self.realizations]
         if '_poes' in set(self.datastore):
             dstore = self.datastore
         else:
@@ -799,8 +793,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('There are %d slices of poes [%.1f per task]',
                      nslices, nslices / len(slicedic))
         allargs = [
-            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes,
-                                oq.use_rates),
+            (getters.PmapGetter(dstore, self.full_lt, slices,
+                                oq.imtls, oq.poes, oq.use_rates),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in allslices]
         self.hazard = {}  # kind -> array
@@ -891,10 +885,9 @@ def disagg_by_source(parent, csm, mon):
     sitecol = parent['sitecol']
     assert len(sitecol) == 1, sitecol
     edges_shp = disagg.get_edges_shapedic(oq, sitecol)
-    if oq.use_rates and len(oq.poes) == 0:
-        rel_ids = sorted(set(map(basename, csm.get_sources())))
-    else:
-        rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
+    rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
+    logging.info('There are %d relevant sources: %s', len(rel_ids), rel_ids)
+
     out = {}
     for source_id in rel_ids:
         smlt = csm.full_lt.source_model_lt.reduce(source_id)
@@ -903,10 +896,12 @@ def disagg_by_source(parent, csm, mon):
         logging.info('Considering source %s (%d realizations)',
                      source_id, relt.get_num_paths())
         groups = disagg.reduce_groups(csm.src_groups, source_id)
-        out.update(disagg.by_source(groups, sitecol, relt, edges_shp, oq, mon))
+        out[source_id] = disagg.by_source(
+            groups, sitecol, relt, edges_shp, oq, mon)
+
     items = []
-    for source_id, (disagg_rates, rates2D) in out.items():
+    for source_id, (rates5D, rates2D) in out.items():
         if oq.use_rates:
             sanity_check(source_id, rates2D, parent.getitem('disagg_by_src'))
-        items.append((source_id, disagg_rates))
+        items.append((source_id, rates5D))
     return items

@@ -348,17 +348,16 @@ class ProbabilityMap(object):
         return self.new(self.array.reshape(N, M, P))
 
     # used in calc/disagg_test.py
-    def expand(self, rlz_groups):
+    def expand(self, full_lt):
         """
-        Convert a ProbabilityMap with shape (N, L, G) into a ProbabilityMap
-        with shape (N, L, R), being G the number of realization groups, which
-        are list of integers in the range 0..R-1.
+        Convert a ProbabilityMap with shape (N, L, Gt) into a ProbabilityMap
+        with shape (N, L, R)
         """
         N, L, G = self.array.shape
-        R = max(max(rlzs) for rlzs in rlz_groups) + 1
+        assert G == full_lt.Gt, (G, full_lt.Gt)
+        R = full_lt.get_num_paths()
         out = ProbabilityMap(range(N), L, R).fill(0.)
-        for g, rlz_group in enumerate(rlz_groups):
-            rlzs = U32(rlz_group)
+        for g, rlzs in full_lt.rlzs_by_g.items():
             for sid in range(N):
                 combine_probs(out.array[sid], self.array[sid, :, g], rlzs)
         return out
