@@ -671,6 +671,7 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_76(self):
         # CanadaSHM6 GMPEs
         self.run_calc(case_76.__file__, 'job.ini')
+        # breakpoint()
         branches = self.calc.datastore['full_lt/gsim_lt'].branches
         gsims = [br.gsim for br in branches]
         df = self.calc.datastore.read_df('_poes')
@@ -688,7 +689,7 @@ class ClassicalTestCase(CalculatorTestCase):
             with open(expected_csv, 'r') as f:
                 expected_poes = numpy.array([float(line.strip()) for line in f])
             for i in range(len(poes)):
-                self.assertAlmostEqual(poes[i], expected_poes[i], delta = 0.4)
+                self.assertAlmostEqual(poes[i], expected_poes[i], delta = 0.01)
 
     def test_case_77(self):
         # test calculation for modifiable GMPE with original tabular GMM
