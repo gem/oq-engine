@@ -240,7 +240,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         nrows = len(dstore['_poes/sid'])
         self.pgetter = getters.PmapGetter(
             dstore, full_lt, [(0, nrows + 1)], oq.imtls, oq.poes)
-        weights = [w['weight'] for w in full_lt.weights]
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
@@ -269,8 +268,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         curves = [self.get_curve(sid, rlzs[sid]) for sid in self.sitecol.sids]
         if oq.iml_disagg:
             poes = numpy.array(curves)  # shape (N, R, M)
-            mean = numpy.array([poes[:, :, m] @ weights for m in range(self.M)])
-            # shape (M, N)
+            mean = numpy.zeros((self.M, self.N))
+            for m in range(self.M):
+                for sid in self.sitecol.sids:
+                    ws = full_lt.rlzs[rlzs[sid]]['weight']  # shape Z
+                    mean[m, sid] = poes[sid, :, m] @ ws
             logging.info('mean poes corresponding to the given iml_disagg: %s',
                          dict(zip(oq.imtls, mean)))
             self.poe_id = {None: 0}
