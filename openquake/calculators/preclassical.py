@@ -118,8 +118,10 @@ def preclassical(srcs, sites, cmaker, monitor):
         dic['after'] = len(split_sources)
         yield dic
     else:
+        cnt = 0
         for msr, block in groupby(split_sources, msr_name).items():
-            dic = grid_point_sources(block, spacing, msr, monitor)
+            dic = grid_point_sources(block, spacing, msr, cnt, monitor)
+            cnt = dic.pop('cnt')
             for src in dic[grp_id]:
                 src.num_ruptures = src.count_ruptures()
             # this is also prefiltering the split sources
