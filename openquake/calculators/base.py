@@ -1027,14 +1027,14 @@ class RiskCalculator(HazardCalculator):
 
     # used only for classical_risk and classical_damage
     def _gen_riskinputs(self, dstore):
+        full_lt = dstore['full_lt'].init()
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
         slices = performance.get_slices(dstore['_poes/sid'][:])
         for sid, assets in asset_df.groupby(asset_df.index):
             # hcurves, shape (R, N)
-            ws = [rlz.weight for rlz in self.realizations]
             getter = getters.PmapGetter(
-                dstore, ws, slices.get(sid, []), self.oqparam.imtls)
+                dstore, full_lt, slices.get(sid, []), self.oqparam.imtls)
             for slc in general.split_in_slices(
                     len(assets), self.oqparam.assets_per_site_limit):
                 out.append(riskinput.RiskInput(getter, assets[slc]))

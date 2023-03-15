@@ -29,8 +29,8 @@ from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, NOT_DARWIN)
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_06, case_07, case_08, case_09, case_10, case_11,
-    case_13, case_14, case_15, case_16, case_17,
-    case_20, case_21, case_28, case_30, case_31, case_36, case_45, case_46,
+    case_13, case_14, case_15, case_16, case_17, case_20, case_21, case_28,
+    case_30, case_31, case_36, case_39, case_45, case_46,
     case_52, case_56, case_58, case_59, case_67, case_68, case_71, case_73,
     case_79, case_83)
 
@@ -378,6 +378,18 @@ hazard_uhs-std.csv
         # test `oq show branchsets`
         tbl = general.gettemp(view('branchsets', dstore))
         self.assertEqualFiles('expected/branchsets.org', tbl)
+
+    def test_case_39(self):
+        # 0-IMT-weights
+        self.assert_curves_ok([
+            'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1).csv',
+            'hazard_curve-mean-SA(0.5).csv', 'hazard_curve-mean-SA(2.0).csv',
+            'hazard_map-mean.csv'], case_39.__file__, delta=2E-5)        
+
+        # check realizations
+        aw = extract(self.calc.datastore, 'realizations')
+        tbl = general.gettemp(text_table(aw.array, ext='org'))
+        self.assertEqualFiles('expected/realizations.org', tbl)
 
     def test_case_45(self):
         # this is a test for MMI with disagg_by_src and sampling

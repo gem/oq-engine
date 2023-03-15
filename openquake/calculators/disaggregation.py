@@ -223,10 +223,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         try:
             full_lt = self.full_lt
         except AttributeError:
-            full_lt = self.datastore['full_lt']
-        ws = [rlz.weight for rlz in full_lt.get_realizations()]
+            full_lt = self.datastore['full_lt'].init()
         if oq.rlz_index is None and oq.num_rlzs_disagg == 0:
-            oq.num_rlzs_disagg = len(ws)  # 0 means all rlzs
+            oq.num_rlzs_disagg = self.R  # 0 means all rlzs
         self.oqparam.mags_by_trt = self.datastore['source_mags']
         edges, self.shapedic = disagg.get_edges_shapedic(
             oq, self.sitecol, self.R)
@@ -240,8 +239,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                   else self.datastore)
         nrows = len(dstore['_poes/sid'])
         self.pgetter = getters.PmapGetter(
-            dstore, ws, [(0, nrows + 1)], oq.imtls, oq.poes)
-        weights = numpy.array([w['weight'] for w in ws])
+            dstore, full_lt, [(0, nrows + 1)], oq.imtls, oq.poes)
+        weights = [w['weight'] for w in full_lt.weights]
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
@@ -251,7 +250,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for sid in self.sitecol.sids:
                     pcurve = self.pgetter.get_pcurve(sid)
                     mean = getters.build_stat_curve(
-                        pcurve, oq.imtls, stats.mean_curve, ws)
+                        pcurve, oq.imtls, stats.mean_curve, full_lt.weights)
                     # get the closest realization to the mean
                     rlzs[sid] = util.closest_to_ref(
                         pcurve.array.T, mean.array)[:Z]

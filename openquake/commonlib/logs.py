@@ -26,7 +26,7 @@ import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, dbapi
+from openquake.commonlib import readinput, dbapi, mosaic
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -35,6 +35,16 @@ LEVELS = {'debug': logging.DEBUG,
           'critical': logging.CRITICAL}
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 DATABASE = '%s:%d' % valid.host_port()
+
+
+def get_tag(job_ini):
+    """
+    :returns: the name of the model if job_ini belongs to the mosaic_dir
+    """
+    splits = job_ini.split('/')  # es. /home/michele/mosaic/EUR/in/job.ini
+    if len(splits) > 3 and splits[-3] in mosaic.MODELS:
+        return splits[-3]  # EUR
+    return ''
 
 
 def dbcmd(action, *args):
@@ -175,7 +185,7 @@ class LogContext:
     oqparam = None
 
     def __init__(self, job_ini, calc_id, log_level='info', log_file=None,
-                 user_name=None, hc_id=None, host=None):
+                 user_name=None, hc_id=None, host=None, tag=''):
         self.log_level = log_level
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()
@@ -183,6 +193,10 @@ class LogContext:
             self.params = job_ini
         else:  # path to job.ini file
             self.params = readinput.get_params(job_ini)
+        if 'inputs' not in self.params:  # for reaggregate
+            self.tag = tag
+        else:
+            self.tag = tag or get_tag(self.params['inputs']['job_ini'])
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
         if calc_id == 0:
@@ -216,7 +230,8 @@ class LogContext:
         if not logging.root.handlers:  # first time
             level = LEVELS.get(self.log_level, self.log_level)
             logging.basicConfig(level=level)
-        f = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(self.calc_id)
+        f = '[%(asctime)s #{} {}%(levelname)s] %(message)s'.format(
+            self.calc_id, self.tag + ' ' if self.tag else '')
         for handler in logging.root.handlers:
             fmt = logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S')
             handler.setFormatter(fmt)
@@ -247,7 +262,8 @@ class LogContext:
         # ensure pickleability
         return dict(calc_id=self.calc_id, params=self.params, usedb=self.usedb,
                     log_level=self.log_level, log_file=self.log_file,
-                    user_name=self.user_name, oqparam=self.oqparam)
+                    user_name=self.user_name, oqparam=self.oqparam,
+                    tag=self.tag)
 
     def __repr__(self):
         hc_id = self.params.get('hazard_calculation_id')
@@ -256,7 +272,7 @@ class LogContext:
 
 
 def init(job_or_calc, job_ini, log_level='info', log_file=None,
-         user_name=None, hc_id=None, host=None):
+         user_name=None, hc_id=None, host=None, tag=''):
     """
     :param job_or_calc: the string "job" or "calcXXX"
     :param job_ini: path to the job.ini file or dictionary of parameters
@@ -265,6 +281,7 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
     :param user_name: user running the job (None means current user)
     :param hc_id: parent calculation ID (default None)
     :param host: machine where the calculation is running (default None)
+    :param tag: tag (for instance the model name) to show before the log message
     :returns: a LogContext instance
 
     1. initialize the root logger (if not already initialized)
@@ -281,4 +298,4 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
     else:
         raise ValueError(job_or_calc)
     return LogContext(job_ini, calc_id, log_level, log_file,
-                      user_name, hc_id, host)
+                      user_name, hc_id, host, tag)

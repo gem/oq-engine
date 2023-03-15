@@ -225,7 +225,8 @@ def check_tricky_ids(smdict):
             if len(general.groupby(srcs, checksum)) > 1:
                 found.append(srcid)
     if found:
-        logging.warning('Found different sources with same ID %s', found)
+        logging.warning('Found different sources with same ID %s',
+                        ' '.join(found))
 
 
 def fix_geometry_sections(smdict, h5):

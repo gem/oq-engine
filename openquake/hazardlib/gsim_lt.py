@@ -417,7 +417,8 @@ class GsimLogicTree(object):
                     bt.weight.dic['weight'] = 1.
                     break
             tot = sum(weights)
-            assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
+            assert tot.is_one(), '%s in branchset %s' % (
+                tot, branchset.attrib['branchSetID'])
             if duplicated(branch_ids):
                 raise InvalidLogicTree(
                     'There where duplicated branchIDs in %s' %
@@ -459,7 +460,7 @@ class GsimLogicTree(object):
                    for i, trt in enumerate(self.values)]
         rlzs = []
         for i in range(n):
-            weight = 1
+            weight = ImtWeight.new(1.)
             lt_path = []
             lt_uid = []
             value = []
@@ -506,7 +507,7 @@ class GsimLogicTree(object):
             groups.append([b for b in self.branches if b.trt == trt])
         # with T tectonic region types there are T groups and T branches
         for i, branches in enumerate(itertools.product(*groups)):
-            weight = 1
+            weight = ImtWeight.new(1.)
             lt_path = []
             lt_uid = []
             value = []
