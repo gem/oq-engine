@@ -133,7 +133,6 @@ def site_amplification(ctx, imt, pga1100):
                               and PGA.
         """
         amp = np.zeros_like(pga1100)
-       # breakpoint()
 
         # Amplification for Vs30 >= 1100 m/s
         vs30_gte1100 = ctx.vs30[ctx.vs30 >= 1100.]
@@ -348,12 +347,11 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
             d = np.array(ctx.rrup)  # make a copy
             d[d == 0.0] = 0.1
 
-
             # mean value as given by equation 1, p. 901, without considering
             # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
             # inter and intra event terms, plus the magnitude-squared term
             # correction factor (equation 5 p. 909)
-            breakpoint()
+
                 #_compute_site_class_term(C, ctx.vs30) +\
             mean[m] = _compute_magnitude_term_zh(C, ctx.mag) +\
                 _compute_distance_term_zh(C, ctx.mag, d) +\
@@ -483,9 +481,6 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
 
             s_amp = _compute_soil_amplification(C, ctx, pga_rock, imt)
 
-            #mean[m] = _compute_mean_ab(
-                #self.kind, C, G, mag, ctx.hypo_depth, ctx.rrup,
-                #ctx.vs30, pga_rock, imt)
             mean[m] =  (
                 # 1st term
                 C['c1'] + C['c2'] * mag +
@@ -587,11 +582,10 @@ class CanadaSHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
                 extrapolate = True
             else:
                 extrapolate = False
-
             # Approximation made to match the table-GMM implementation of
             # GarciaEtAl2005SSlab used to generate CanadaSHM6 and NBCC2020 values.
             # For CanadaSHM6 the net effect on mean hazard is small.
-            ctx.rrup = ctx.rhypo
+            # ctx.rrup = ctx.rhypo
 
             # Extracting dictionary of coefficients specific to required
             # intensity measure type.
