@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the error message for wrong weights in the gsim logic tree file
   * Fixed KeyError in calculations using the EasternCan15Mid with PGA
   * Replaced hard-coded limit to 25 levels in the MRD postprocessor
     with a simple warning
