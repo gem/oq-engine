@@ -26,7 +26,7 @@ import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, dbapi
+from openquake.commonlib import readinput, dbapi, mosaic
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -35,6 +35,16 @@ LEVELS = {'debug': logging.DEBUG,
           'critical': logging.CRITICAL}
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 DATABASE = '%s:%d' % valid.host_port()
+
+
+def get_tag(job_ini):
+    """
+    :returns: the name of the model if job_ini belongs to the mosaic_dir
+    """
+    splits = job_ini.split('/')  # es. /home/michele/mosaic/EUR/in/job.ini
+    if len(splits) > 3 and splits[-3] in mosaic.MODELS:
+        return splits[-3]  # EUR
+    return ''
 
 
 def dbcmd(action, *args):
@@ -179,11 +189,11 @@ class LogContext:
         self.log_level = log_level
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()
-        self.tag = tag
         if isinstance(job_ini, dict):  # dictionary of parameters
             self.params = job_ini
         else:  # path to job.ini file
             self.params = readinput.get_params(job_ini)
+        self.tag = tag or get_tag(self.params['inputs']['job_ini'])
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
         if calc_id == 0:
@@ -218,7 +228,7 @@ class LogContext:
             level = LEVELS.get(self.log_level, self.log_level)
             logging.basicConfig(level=level)
         f = '[%(asctime)s #{} {}%(levelname)s] %(message)s'.format(
-            self.calc_id, self.tag)
+            self.calc_id, self.tag + ' ' if self.tag else '')
         for handler in logging.root.handlers:
             fmt = logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S')
             handler.setFormatter(fmt)
