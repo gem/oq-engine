@@ -2,25 +2,19 @@
 # -*- coding: utf-8 -*-
 """
 6th Generation Seismic Hazard Model of Canada (CanadaSHM6) InSlab GMMs.
-
 The final documentation for the GMMs is being prepared. The GMMs are subject
 to change up until the release of the documentation.
-
 Preliminary documentation is available in:
-
 Kolaj, M., Halchuk, S., Adams, J., Allen, T.I. (2020): Sixth Generation Seismic
 Hazard Model of Canada: input files to produce values proposed for the 2020
 National Building Code of Canada; Geological Survey of Canada, Open File 8630,
 2020, 15 pages, https://doi.org/10.4095/327322
-
 Kolaj, M., Adams, J., Halchuk, S (2020): The 6th Generation seismic hazard
 model of Canada. 17th World Conference on Earthquake Engineering, Sendai,
 Japan. Paper 1c-0028.
-
 Kolaj, M., Allen, T., Mayfield, R., Adams, J., Halchuk, S (2019): Ground-motion
 models for the 6th Generation Seismic Hazard Model of Canada. 12th Canadian
 Conference on Earthquake Engineering, Quebec City, Canada.
-
 """
 import numpy as np
 
@@ -60,9 +54,7 @@ def _compute_site_class_term_CanadaSHM6(C, ctx, imt):
             450 = SC II
             250 = SC III
             160 = SC IV
-
             log-log interpolation for intermediate values
-
         """
 
         ref_vs30 = np.array([2000., 1100., 760., 450., 250., 160., ])
@@ -85,7 +77,6 @@ def _compute_soil_amplification(C, ctx, pga_rock, imt):
         """
         For CanadaSHM6 the AtkinsonBoore2003 site term is replaced.
         The site term is defined as:
-
             Vs30
             2000 = min(0, AA13/AB06 factor relative to 1100)
             1100 = 0 (GMM base condition is Site Class B = 1100 m/s)
@@ -93,9 +84,7 @@ def _compute_soil_amplification(C, ctx, pga_rock, imt):
             450 = Site Class C (c5)
             250 = Site Class D (c6)
             160 = Site Class E (c7)
-
             log-log interpolation for intermediate values
-
         """
         # factor controlling degree of linearity
         sl = _compute_soil_linear_factor(pga_rock, imt)
@@ -135,16 +124,13 @@ def site_amplification(ctx, imt, pga1100):
         """
         For CanadaSHM6 a site term is added to GarciaEtAl2005SSlab which is
         defined as:
-
             Vs30 < 1100 m/s: BSSA14 relative to Vs30=1100m/s
-
             Vs30 >= 1100 m/s: The larger of AB06/AA13 760-to-2000 factor
                               (interpolated for 1100-to-2000) and BSSA14.
                               Note: this slightly differs from other western
                               CanadaSHM6 hard rock site terms as it allows for
                               the AB06/AA13 amplification for short-periods
                               and PGA.
-
         """
         amp = np.zeros_like(pga1100)
        # breakpoint()
@@ -209,7 +195,6 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
     Abrahramson et al., 2015 (BCHydro) InSlab GMM with a fixed hypo depth of
     55 km, the addition of PGV (scaled from Sa[0.5]) and limited to the CSHM6
     period range of 0.05 <= T <= 10.
-
     See also header in CanadaSHM6_InSlab.py
     """
 
@@ -226,10 +211,8 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
-
         CanadaSHM6 edits: added PGV
                           limited to the period range of 0.05 - 10s
-
         """
         ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
@@ -297,7 +280,6 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
     Zhao et al., 2006 InSlab with Cascadia adjustment, at a fixed hypo depth of
     55 km, extrapolated to 0.05 - 10s and with modifications to the site term
     as implemented for CanadaSHM6.
-
     See also header in CanadaSHM6_InSlab.py
     """
 
@@ -331,7 +313,6 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
-
         CanadaSHM6 edits: modified site amplification term
                           added extrapolation beyond MAX_SA and MIN_SA to 0.05
                           - 10s
@@ -372,7 +353,7 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
             # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
             # inter and intra event terms, plus the magnitude-squared term
             # correction factor (equation 5 p. 909)
-
+            breakpoint()
                 #_compute_site_class_term(C, ctx.vs30) +\
             mean[m] = _compute_magnitude_term_zh(C, ctx.mag) +\
                 _compute_distance_term_zh(C, ctx.mag, d) +\
@@ -419,7 +400,6 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
     Atkinson and Boore 2003 InSlab with Cascadia adjustment, at a fixed hypo
     depth of 55 km, extrapolated to 0.05 - 10s and with modifications to the
     site term as implemented for CanadaSHM6.
-
     See also header in CanadaSHM6_InSlab.py
     """
     # Parameters used to extrapolate to 0.05s <= T <= 10s
@@ -451,7 +431,6 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
-
         CanadaSHM6 edits: added extrapolation beyond MAX_SA and MIN_SA to 0.05
                           - 10s
                           limted to the period range of 0.05 - 10s
@@ -558,7 +537,6 @@ class CanadaSHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
     Garcia et al., 2005 (horizontal) GMM at a fixed hypo depth of 55 km,
     extraploted to 0.05 - 10s and with an added site term (modified version of
     BSSA14 / SS14) as implemented for CanadaSHM6.
-
     See also header in CanadaSHM6_InSlab.py
     """
 
@@ -588,7 +566,6 @@ class CanadaSHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
-
         CanadaSHM6 edits: added extrapolation beyond MAX_SA and MIN_SA to 0.05
                           - 10s
                           added site amplification term
@@ -651,7 +628,6 @@ def extrapolation_factor(GMM, ctx, boundingIMT, extrapIMT):
     Returns the log-difference in ground motion between two IMTs.
     with CanadaSHM6 this is used to extrapolate GMMs which are not valid over
     the desired UHS range of 0.05 - 10 s using comparable GMMs which are.
-
     GMM: OQ gsim
     rctx, sctx, dctx: OQ rupture, site and distance contexts
     boundingIMT: IMT for the bounding period
@@ -662,10 +638,10 @@ def extrapolation_factor(GMM, ctx, boundingIMT, extrapIMT):
     mean_bounding = np.zeros((1, len(ctx.vs30)))
     sig = tau = phi = np.zeros((1, len(ctx.vs30)))
 
-    GMM.compute(ctx, [boundingIMT], mean_ext, sig, tau, phi)
-    GMM.compute(ctx, [extrapIMT], mean_bounding, sig, tau, phi)
+    GMM.compute(ctx, [boundingIMT], mean_bounding, sig, tau, phi)
+    GMM.compute(ctx, [extrapIMT], mean_ext, sig, tau, phi)
 
-    return mean_ext - mean_bounding
+    return (mean_ext - mean_bounding)[0]
 
 
 class CoeffsTable_CanadaSHM6(object):
