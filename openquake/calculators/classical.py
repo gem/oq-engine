@@ -898,6 +898,7 @@ def disagg_by_source(parent, csm, mon):
         logging.info('Considering source %s (%d realizations)',
                      source_id, relt.get_num_paths())
         groups = disagg.reduce_groups(csm.src_groups, source_id)
+        assert groups, 'No groups for %s' % source_id
         smap.submit((groups, sitecol, relt, edges_shp, oq))
     items = []
     for source_id, rates5D, rates2D in smap:
