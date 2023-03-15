@@ -193,7 +193,10 @@ class LogContext:
             self.params = job_ini
         else:  # path to job.ini file
             self.params = readinput.get_params(job_ini)
-        self.tag = tag or get_tag(self.params['inputs']['job_ini'])
+        if 'inputs' not in self.params:  # for reaggregate
+            self.tag = tag
+        else:
+            self.tag = tag or get_tag(self.params['inputs']['job_ini'])
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
         if calc_id == 0:
