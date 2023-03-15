@@ -20,7 +20,7 @@ import numpy as np
 
 from openquake.hazardlib.gsim.garcia_2005 import GarciaEtAl2005SSlab
 from openquake.hazardlib.gsim.garcia_2005 import _get_stddevs as _get_stddevs_ga
-from openquake.hazardlib.gsim.garcia_2005 import _compute_mean as _compute_mean_ga
+#from openquake.hazardlib.gsim.garcia_2005 import _compute_mean as _compute_mean_ga
 from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SSlabCascadia, _compute_slab_correction_term, _compute_magnitude_squared_term, _set_stddevs
 from openquake.hazardlib.gsim.zhao_2006 import _compute_magnitude_term as _compute_magnitude_term_zh
 from openquake.hazardlib.gsim.zhao_2006 import _compute_focal_depth_term as _compute_focal_depth_term_zh
@@ -42,6 +42,35 @@ from openquake.hazardlib.gsim.boore_2014 import (BooreEtAl2014,
                     _get_linear_site_term, _get_site_scaling)
 from scipy.constants import g
 
+
+def _compute_mean_ga(C, g, ctx, imt):
+    """
+    Compute mean according to equation on Table 2, page 2275.
+    """
+    mag = ctx.mag
+    hypo_depth = ctx.hypo_depth
+    delta = 0.00750 * 10 ** (0.507 * mag)
+
+    # computing R for different values of mag
+    R = np.where(mag < 6.5, np.sqrt(ctx.rhypo ** 2 + delta ** 2),
+                 np.sqrt(ctx.rhypo ** 2 + delta ** 2))
+
+    mean = (
+        # 1st term
+        C['c1'] + C['c2'] * mag +
+        # 2nd term
+        C['c3'] * R -
+        # 3rd term
+        C['c4'] * np.log10(R) +
+        # 4th term
+        C['c5'] * hypo_depth)
+    # convert from base 10 to base e
+    if imt == PGV():
+        mean = np.log(10 ** mean)
+    else:
+        # convert from cm/s**2 to g
+        mean = np.log((10 ** mean) * 1e-2 / g)
+    return mean
 
 
 def _compute_site_class_term_CanadaSHM6(C, ctx, imt):
@@ -291,6 +320,8 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
 
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    REQUIRES_DISTANCES = {'rrup'}#,'rhypo'}
+
 
     HYPO_DEPTH = 55.
 
@@ -317,6 +348,8 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
                           - 10s
         """
         ctx.hypo_depth = self.HYPO_DEPTH
+
+
 
         for m, imt in enumerate(imts):
             extrapolate = False
@@ -346,12 +379,15 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
             # slab correction term), replace 0 values with 0.1
             d = np.array(ctx.rrup)  # make a copy
             d[d == 0.0] = 0.1
+            #breakpoint()
+
+
+
 
             # mean value as given by equation 1, p. 901, without considering
             # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
             # inter and intra event terms, plus the magnitude-squared term
             # correction factor (equation 5 p. 909)
-
                 #_compute_site_class_term(C, ctx.vs30) +\
             mean[m] = _compute_magnitude_term_zh(C, ctx.mag) +\
                 _compute_distance_term_zh(C, ctx.mag, d) +\
@@ -585,7 +621,7 @@ class CanadaSHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
             # Approximation made to match the table-GMM implementation of
             # GarciaEtAl2005SSlab used to generate CanadaSHM6 and NBCC2020 values.
             # For CanadaSHM6 the net effect on mean hazard is small.
-            # ctx.rrup = ctx.rhypo
+            #ctx.rrup = ctx.rhypo
 
             # Extracting dictionary of coefficients specific to required
             # intensity measure type.
