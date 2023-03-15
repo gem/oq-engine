@@ -232,8 +232,7 @@ def calc_mean_rate_dist(ctxt, nsites, cmaker, crosscorr, imt1, imt2,
     for sid in range(nsites):
         if method == 'direct':
             update_mrd(
-                ctxt[ctxt.sids == sid], cmaker, corrm,
-                bins_mea, bins_sig, mrd[:, :, sid], mon)
+                ctxt[ctxt.sids == sid], cmaker, crosscorr, mrd[:, :, sid], mon)
         else:
             update_mrd_indirect(
                 ctxt[ctxt.sids == sid], cmaker, corrm,
