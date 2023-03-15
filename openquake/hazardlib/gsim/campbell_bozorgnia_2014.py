@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -317,52 +317,20 @@ def get_mean_values(SJ, C, ctx, a1100=None):
             _get_fault_dip_term(C, ctx) +
             _get_anelastic_attenuation_term(C, ctx.rrup))
 
+def get_epistemic_sigma(ctx):
+    """This function gives the epistemic sigma computed following USGS-2014 approach. Also, note that the events are counted in each magnitude and distance bins.
+    However, the epistemic sigma is based on NZ SMDB v1.0"""
 
-def _update_ctx(gsim, ctx):
-    """
-    Use the ztor, width and hypo_depth formula to estimate
-    if the estimate attribute is set.
-    """
-    if gsim.estimate_ztor:
-        # Equation 4 and 5 of Chiou & Youngs 2014
-        ctx.ztor = np.where(
-            (ctx.rake > 30.) & (ctx.rake < 150.),
-            np.maximum(2.704-1.226 * np.maximum(ctx.mag-5.849, 0), 0)**2,
-            np.maximum(2.673-1.136 * np.maximum(ctx.mag-4.970, 0), 0)**2)
+    n = 2
+    dist_func_5_6 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/11), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/38), 0.4*np.sqrt(n/94)))
 
-    if gsim.estimate_width:
-        # width estimation requires Zbot
-        # where Zbot is the depth to the bottom of the seismogenic crust
-        if not hasattr(ctx, "zbot"):
-            raise KeyError('Zbot is required if width is unknown.')
+    dist_func_6_7 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/7), 0.4*np.sqrt(n/13)))
 
-        # Equation 39 of Campbell & Bozorgnia 2014
-        mask = np.absolute(np.sin(np.radians(ctx.dip))) > 0
-        ctx.width = np.sqrt(10**((ctx.mag - 4.07) / 0.98))
-        ctx.width[mask] = np.minimum(
-            ctx.width[mask], (ctx.zbot[mask] - ctx.ztor[mask]) /
-            np.sin(np.radians(ctx.dip[mask])))
+    dist_func_7_above = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/2), 0.4*np.sqrt(n/4)))
 
-    if gsim.estimate_hypo_depth:
-        # Equation 36 of Campbell & Bozorgnia 2014
-        fdz_m = np.where(
-            ctx.mag < 6.75, -4.317 + 0.984 * ctx.mag, 2.325)
+    sigma_epi = np.where((ctx.mag>=5) & (ctx.mag<6), dist_func_5_6, np.where((ctx.mag >=6) & (ctx.mag < 7), dist_func_6_7, dist_func_7_above))
 
-        # Equation 37 of Campbell & Bozorgnia 2014
-        fdz_d = np.where(
-            ctx.dip <= 40, 0.0445 * (ctx.dip - 40), 0)
-
-        # The depth to the bottom of the rupture plane
-        zbor = ctx.ztor + ctx.width * np.sin(np.radians(ctx.dip))
-
-        # Equation 35 of Campbell & Bozorgnia 2014
-        mask = zbor > ctx.ztor
-        dz = np.zeros_like(ctx.ztor)
-        dz[mask] = np.exp(
-            np.minimum(
-                fdz_m[mask] + fdz_d[mask],
-                np.log(0.9 * (zbor[mask] - ctx.ztor[mask]))))
-        ctx.hypo_depth = ctx.ztor + dz
+    return sigma_epi
 
 
 class CampbellBozorgnia2014(GMPE):
@@ -403,15 +371,21 @@ class CampbellBozorgnia2014(GMPE):
 
     SJ = 0  # 1 for Japan
 
-    def __init__(self, **kwargs):
+    def __init__(self, sigma_mu_epsilon=0.0, **kwargs):
         self.kwargs = kwargs
-        self.estimate_ztor = int(kwargs.get('estimate_ztor', 0))
-        self.estimate_width = int(kwargs.get('estimate_width', 0))
-        self.estimate_hypo_depth = int(kwargs.get('estimate_hypo_depth', 0))
+        self.better_ztor = int(kwargs.get('better_ztor', 0))
+        self.sigma_mu_epsilon = sigma_mu_epsilon
 
-        if self.estimate_width:
-            # To estimate a width, the GMPE needs Zbot
-            self.REQUIRES_RUPTURE_PARAMETERS |= {"zbot"}
+    def set_parameters(self, ctx):
+        """
+        Use the ztor formula in equation 4 and 5 of Chiou & Youngs 2014
+        if the attribute .better_ztor is set.
+        """
+        if self.better_ztor:
+            ctx.ztor = np.where(
+                (ctx.rake > 30.) & (ctx.rake < 150.),
+                np.maximum(2.704-1.226 * np.maximum(ctx.mag-5.849, 0), 0)**2,
+                np.maximum(2.673-1.136 * np.maximum(ctx.mag-4.970, 0), 0)**2)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -419,7 +393,6 @@ class CampbellBozorgnia2014(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        _update_ctx(self, ctx)
         C_PGA = self.COEFFS[PGA()]
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
         pga1100 = np.exp(get_mean_values(self.SJ, C_PGA, ctx))
@@ -427,6 +400,8 @@ class CampbellBozorgnia2014(GMPE):
             C = self.COEFFS[imt]
             # Get mean and standard deviations for IMT
             mean[m] = get_mean_values(self.SJ, C, ctx, pga1100)
+            if self.sigma_mu_epsilon:
+                mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             if imt.string[:2] == "SA" and imt.period < 0.25:
                 # According to Campbell & Bozorgnia (2013) [NGA West 2 Report]
                 # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
@@ -434,6 +409,7 @@ class CampbellBozorgnia2014(GMPE):
                 pga = get_mean_values(self.SJ, C_PGA, ctx, pga1100)
                 idx = mean[m] <= pga
                 mean[m, idx] = pga[idx]
+                mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
             # Get stddevs for PGA on basement rock
             tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)

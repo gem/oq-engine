@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -38,19 +38,13 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-cbd_polygon = shapely.geometry.Polygon(
-    [(172.6259, -43.5209), (172.6505, -43.5209),
-     (172.6505, -43.5399), (172.6124, -43.5400),
-     (172.6123, -43.5289), (172.6124, -43.5245),
-     (172.6220, -43.5233)])
-
-
 def _adjust_mean_model(region, in_cshm, in_cbd, imt_per, b13_mean):
     dL2L = dS2S = np.array(np.zeros(np.shape(b13_mean)))
     # If the site is in the CBD polygon, get dL2L and dS2S terms
-    # Only apply the dL2L term only to sites located in the CBD.
-    dL2L[in_cbd & in_cshm] = _get_dL2L(imt_per)
-    dS2S[in_cbd & in_cshm] = _get_dS2S(region, imt_per)
+    if in_cshm is True:
+        # Only apply the dL2L term only to sites located in the CBD.
+        dL2L[in_cbd == 1] = _get_dL2L(imt_per)
+        dS2S[in_cbd == 1] = _get_dS2S(region, imt_per)
     return b13_mean + dL2L + dS2S
 
 
@@ -61,9 +55,14 @@ def _check_in_cbd_polygon(lons, lats):
     in the Christchurch District Plan. See Figure 4.4 of Van Houtte and
     Abbott (2019).
     """
+    polygon = shapely.geometry.Polygon(
+        [(172.6259, -43.5209), (172.6505, -43.5209),
+         (172.6505, -43.5399), (172.6124, -43.5400),
+         (172.6123, -43.5289), (172.6124, -43.5245),
+         (172.6220, -43.5233)])
     points = [shapely.geometry.Point(lons[ind], lats[ind])
               for ind in np.arange(len(lons))]
-    in_cbd = np.array([cbd_polygon.contains(point) for point in points])
+    in_cbd = np.asarray([polygon.contains(point) for point in points])
     return in_cbd
 
 
@@ -151,10 +150,11 @@ def set_adjusted_stddevs(
         srf_sigma = np.array(np.ones(np.shape(in_cbd)))
         srf_phi = np.array(np.ones(np.shape(in_cbd)))
         srf_tau = np.array(np.ones(np.shape(in_cbd)))
-        srf_sigma[in_cshm & in_cbd] = _get_SRF_sigma(imt_per)
-        srf_phi[in_cshm & in_cbd] = _get_SRF_phi(imt_per)
-        # The tau reduction term is not used in this implementation
-        # srf_tau[in_cbd == True] = _get_SRF_tau(imt_per)
+        if in_cshm == 1:
+            srf_sigma[in_cbd == 1] = _get_SRF_sigma(imt_per)
+            srf_phi[in_cbd == 1] = _get_SRF_phi(imt_per)
+            # The tau reduction term is not used in this implementation
+            # srf_tau[in_cbd == True] = _get_SRF_tau(imt_per)
 
         # Add 'additional sigma' specified in the Canterbury Seismic
         # Hazard Model to total sigma, eq. 21
@@ -440,6 +440,22 @@ def _interp_function(y_ip1, y_i, t_ip1, t_i, imt_per):
     """
     return y_i + (y_ip1 - y_i) / (t_ip1 - t_i) * (imt_per - t_i)
 
+def get_epistemic_sigma(ctx):
+    """This function gives the epistemic sigma computed following USGS-2014 approach. Also, note that the events are counted in each magnitude and distance bins.
+    However, the epistemic sigma is based on NZ SMDB v1.0"""
+
+    n = 2
+    dist_func_5_6 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/11), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/38), 0.4*np.sqrt(n/94)))
+
+    dist_func_6_7 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/7), 0.4*np.sqrt(n/13)))
+
+    dist_func_7_above = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/2), 0.4*np.sqrt(n/4)))
+
+    sigma_epi = np.where((ctx.mag>=5) & (ctx.mag<6), dist_func_5_6, np.where((ctx.mag >=6) & (ctx.mag < 7), dist_func_6_7, dist_func_7_above))
+
+    return sigma_epi
+
+
 
 class Bradley2013(GMPE):
     """
@@ -491,6 +507,10 @@ class Bradley2013(GMPE):
 
     additional_sigma = 0.
 
+    def __init__(self, sigma_mu_epsilon=0.0, **kwargs):
+        super().__init__(sigma_mu_epsilon=sigma_mu_epsilon, **kwargs)
+        self.sigma_mu_epsilon = sigma_mu_epsilon
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -510,6 +530,8 @@ class Bradley2013(GMPE):
             # amplification is constant
             v1 = _get_v1(imt)
             mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1)
+            if self.sigma_mu_epsilon:
+                mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             set_stddevs(self.additional_sigma, ctx, C, ln_y_ref, exp1, exp2,
                         sig[m], tau[m], phi[m])
 
@@ -807,6 +829,24 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
     #: not have code that can be made available.
     non_verified = True
 
+    def set_parameters(self, rup):
+        """
+        Checks if any part of the rupture surface mesh is located within the
+        intended boundaries of the Canterbury Seismic Hazard Model in
+        Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
+        of Christchurch, Earthquake Spectra, 30(1), 17-29.
+        """
+        lats = np.ravel(rup.surface.mesh.array[1])
+        lons = np.ravel(rup.surface.mesh.array[0])
+        # These coordinates are provided by M Gerstenberger (personal
+        # communication, 10 August 2018)
+        polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
+                                            (173.2, -43.9), (171.6, -43.9)])
+        points_in_polygon = [
+            shapely.geometry.Point(lons[i], lats[i]).within(polygon)
+            for i in np.arange(len(lons))]
+        self.in_cshm = any(points_in_polygon)
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -819,8 +859,8 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
         # Check if the sites are located in the CBD polygon
         in_cbd = _check_in_cbd_polygon(ctx.lon, ctx.lat)
         # Fix CBD site terms before dS2S modification.
-        ctx.vs30[in_cbd] = 250
-        ctx.z1pt0[in_cbd] = 330
+        ctx.vs30[in_cbd == 1] = 250
+        ctx.z1pt0[in_cbd == 1] = 330
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             imt_per = imt.period
@@ -837,11 +877,11 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
             b13_mean = _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1)
             # Adjust mean and standard deviation
             mean[m] = _adjust_mean_model(
-                self.region, ctx.in_cshm, in_cbd, imt_per, b13_mean)
+                self.region, self.in_cshm, in_cbd, imt_per, b13_mean)
             mean[m] += convert_to_LHC(imt)
             set_adjusted_stddevs(
                 name, self.additional_sigma, ctx, C, ln_y_ref, exp1, exp2,
-                ctx.in_cshm, in_cbd, imt_per, sig[m], tau[m], phi[m])
+                self.in_cshm, in_cbd, imt_per, sig[m], tau[m], phi[m])
 
 
 class Bradley2013bChchMapsAdditionalSigma(Bradley2013bChchMaps):
