@@ -117,7 +117,6 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
             C = self.COEFFS[imt]
             pga_rock = BA14._get_pga_on_rock(
                 self.kind, self.region, self.sof, c_pga, ctx)
-            breakpoint()
             mean[m] = (
                 BA14._get_magnitude_scaling_term(self.sof, C, ctx) +
                 BA14._get_path_scaling(self.kind, self.region, C, ctx) +

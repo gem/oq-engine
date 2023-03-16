@@ -28,7 +28,7 @@ import openquake.hazardlib.gsim.atkinson_macias_2009 as AM09
 import openquake.hazardlib.gsim.can20.can_shm6_active_crust as CanadaSHM6_ASC
 import openquake.hazardlib.gsim.ghofrani_atkinson_2014 as GA14
 import openquake.hazardlib.gsim.zhao_2006 as ZH06
-import openquake.hazardlib.gsim.can20.can_shm6_inslab as CanadaSHM6_InSlab
+import openquake.hazardlib.gsim.can20.can_shm6_inslab as CAN_inslab
 from scipy.constants import g
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA, PGV
@@ -148,8 +148,6 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
                                                     self.MAX_SA_EXTRAP,
                                                     self.MIN_SA_EXTRAP)
 
-
-
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -174,32 +172,30 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
             # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
             # inter and intra event terms, plus the magnitude-squared term
             # correction factor (equation 5 p. 909)
-            
+
             mean[m] = ZH06._compute_magnitude_term(C, ctx.mag) +\
                 ZH06._compute_distance_term(C, ctx.mag, ctx.rrup) +\
                 ZH06._compute_focal_depth_term(C, self.HYPO_DEPTH) +\
-                CanadaSHM6_InSlab._compute_site_class_term_CanadaSHM6(C, ctx, imt) +\
+                CAN_inslab._compute_site_class_term_CanadaSHM6(C,
+                                                               ctx, imt) +\
                 ZH06._compute_magnitude_squared_term(P=0.0, M=6.3,
-                                                Q=C_SINTER['QI'],
-                                                W=C_SINTER['WI'],
-                                                mag=ctx.mag) +\
+                                                     Q=C_SINTER['QI'],
+                                                     W=C_SINTER['WI'],
+                                                     mag=ctx.mag) +\
                 C_SINTER['SI']
-             # convert from cm/s**2 to g
+            # convert from cm/s**2 to g
             mean[m] = np.log((np.exp(mean[m]) * C_SF["MF"]) * 1e-2 / g)
 
             ZH06._set_stddevs(
                 sig[m], tau[m], phi[m], C['sigma'], C_SINTER['tauI'])
-           
 
             if extrapolate:
                 mean[m] += extrapolation_factor(
                     self.extrapolate_GMM, ctx, imt, target_imt)
 
             if target_imt == PGV:
-                
-                mean[m] = (0.897*mean[m]) + 4.835
-            
 
+                mean[m] = (0.897*mean[m]) + 4.835
 
     # Coefs taken from ZhaoEtAl2006SInter
     COEFFS_SINTER = CoeffsTable(sa_damping=5, table="""\
@@ -316,7 +312,7 @@ def _get_site_term_ga14(C, vs30, imt):
 
     # CanadaSHM6 hard rock site factor
     F = CanadaSHM6_hardrock_site_factor(GA14_1100, GA14_2000,
-                                  vs30[vs30 >= 1100], imt)
+                                        vs30[vs30 >= 1100], imt)
 
     # for Vs30 > 1100 set to CanadaSHM6 factor
     GA14_vs[vs30 >= 1100] = np.log10(np.exp(F))
@@ -367,7 +363,6 @@ class CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia(
             GhofraniAtkinson2014Cascadia.COEFFS, self.MAX_SA, self.MIN_SA,
             self.MAX_SA_EXTRAP, self.MIN_SA_EXTRAP)
 
-
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -375,7 +370,7 @@ class CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia(
         for spec of input and result values.
         """
         for m, imt in enumerate(imts):
-            
+
             # Extrapolation
             extrapolate, imt, target_imt = _set_extrapolation(imt, self)
 
@@ -384,10 +379,10 @@ class CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia(
 
             # Compute the median
             mean[m] = (GA14._get_magnitude_term(C, ctx.mag) +
-                     GA14._get_distance_term(
+                       GA14._get_distance_term(
                          C, ctx.rrup, np.bool_(ctx.backarc)) +
-                     _get_site_term_ga14(C, ctx.vs30, imt) +
-                     GA14._get_scaling_term(self.kind, C, ctx.rrup))
+                       _get_site_term_ga14(C, ctx.vs30, imt) +
+                       GA14._get_scaling_term(self.kind, C, ctx.rrup))
 
             # Convert mean from cm/s and cm/s/s and from common logarithm to
             # natural logarithm
