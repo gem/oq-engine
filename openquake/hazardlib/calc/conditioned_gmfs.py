@@ -633,16 +633,16 @@ def _compute_spatial_cross_correlation_matrix(
         spatial_correl, cross_correl_within):
     if imt_1 == imt_2:
         # Since we have a single IMT, no cross-correlation terms to be computed
-        spatial_correlation_matrix = correlation.jbcorrelation(
-            distance_matrix, imt_1, spatial_correl.vs30_clustering
+        spatial_correlation_matrix = spatial_correl._get_correlation_matrix(
+            distance_matrix, imt_1
         )
         spatial_cross_correlation_matrix = spatial_correlation_matrix
     else:
-        spatial_correlation_matrix_1 = correlation.jbcorrelation(
-            distance_matrix, imt_1, spatial_correl.vs30_clustering
+        spatial_correlation_matrix_1 = spatial_correl._get_correlation_matrix(
+            distance_matrix, imt_1
         )
-        spatial_correlation_matrix_2 = correlation.jbcorrelation(
-            distance_matrix, imt_2, spatial_correl.vs30_clustering
+        spatial_correlation_matrix_2 = spatial_correl._get_correlation_matrix(
+            distance_matrix, imt_2
         )
         spatial_correlation_matrix = numpy.maximum(
             spatial_correlation_matrix_1, spatial_correlation_matrix_2
