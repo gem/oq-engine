@@ -202,7 +202,7 @@ CASE10_TARGET_IMTS = [PGA()]
 
 
 CASE01_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([0, 0]), "PGA_std": [0, 0]})
-CASE02_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([-1, -1]), "PGA_std": [0, 0]})
+CASE02_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([1, -1]), "PGA_std": [0, 0]})
 CASE03_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([1]), "PGA_std": [0]})
 CASE04_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([1, 1]), "PGA_std": [0, 0]})
 CASE05_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([1, -1]), "PGA_std": [0, 0]})

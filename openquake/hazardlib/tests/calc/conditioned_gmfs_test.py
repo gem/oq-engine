@@ -59,6 +59,33 @@ class SetUSGSTestCase(unittest.TestCase):
         assert numpy.max(sig) > 0.8 and numpy.max(sig) < 1.0
         plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
         
+    def test_case_02(self):
+        case_name = "test_case_02"
+        rupture = test_data.RUP
+        gmm = test_data.ZeroMeanGMM()
+        station_sitecol = test_data.CASE02_STATION_SITECOL
+        station_data = test_data.CASE02_STATION_DATA
+        observed_imt_strs = test_data.CASE02_OBSERVED_IMTS
+        target_sitecol = test_data.CASE02_TARGET_SITECOL
+        target_imts = test_data.CASE02_TARGET_IMTS
+        spatial_correl = test_data.DummySpatialCorrelationModel()
+        cross_correl_between = GodaAtkinson2009()
+        cross_correl_within = test_data.DummyCrossCorrelationWithin()
+        maximum_distance = test_data.MAX_DIST
+        mean_covs = get_conditioned_mean_and_covariance(
+            rupture, gmm, station_sitecol, station_data,
+            observed_imt_strs, target_sitecol, target_imts,
+            spatial_correl, cross_correl_between, cross_correl_within,
+            maximum_distance)
+        mu = mean_covs[0][target_imts[0].string].flatten()
+        sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
+        numpy.testing.assert_allclose(numpy.min(mu), -1.0, rtol=1e-4)
+        numpy.testing.assert_allclose(numpy.max(mu), 1.0, rtol=1e-4)
+        numpy.testing.assert_almost_equal(numpy.min(numpy.abs(mu)), 0.0, decimal=5)
+        numpy.testing.assert_almost_equal(numpy.min(sig), 0, decimal=5)
+        assert numpy.max(sig) > 0.8 and numpy.max(sig) < 1.0
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+
 
 # Useful for debugging purposes. Recreates the plots on
 # https://usgs.github.io/shakemap/manual4_0/tg_verification.html
