@@ -1113,6 +1113,8 @@ class FullLogicTree(object):
         :param srm: source model realization index
         :returns: list of sources with the same base source ID
         """
+        if not self.trti: # empty gsim_lt
+            return srcs
         out = []
         sd = self.source_model_lt.source_data
         for src in srcs:
