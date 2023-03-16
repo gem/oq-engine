@@ -23,6 +23,9 @@ https://usgs.github.io/shakemap/manual4_0/tg_verification.html`.
 """
 import unittest
 
+import matplotlib.pyplot as plt
+import numpy
+
 from openquake.hazardlib.calc.conditioned_gmfs import \
     get_conditioned_mean_and_covariance
 from openquake.hazardlib.cross_correlation import GodaAtkinson2009
@@ -31,7 +34,7 @@ from openquake.hazardlib.tests.calc import \
 
 
 class SetUSGSTestCase(unittest.TestCase):
-    def test_case_0001(self):
+    def test_case_01(self):
         rupture = test_data.RUP
         gmm = test_data.ZeroMeanGMM()
         station_sitecol = test_data.CASE01_STATION_SITECOL
@@ -44,15 +47,10 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
         mean_covs = get_conditioned_mean_and_covariance(
-            rupture,
-            gmm,
-            station_sitecol,
-            station_data,
-            observed_imt_strs,
-            target_sitecol,
-            target_imts,
-            spatial_correl,
-            cross_correl_between,
-            cross_correl_within,
-            maximum_distance,
-        )
+            rupture, gmm, station_sitecol, station_data,
+            observed_imt_strs, target_sitecol, target_imts,
+            spatial_correl, cross_correl_between, cross_correl_within,
+            maximum_distance)
+        numpy.testing.assert_allclose(numpy.zeros_like(mean_covs[0]["PGA"]), mean_covs[0]["PGA"])
+        numpy.testing.assert_almost_equal(numpy.min(mean_covs[1]["PGA"]), 0)
+        assert numpy.max(mean_covs[1]["PGA"]) > 0.8 and numpy.max(mean_covs[1]["PGA"]) < 1.0
