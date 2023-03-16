@@ -1633,7 +1633,7 @@ def get_cmakers(src_groups, full_lt, oq):
         all_trt_smrs = []
         for sg in src_groups:
             src = sg.sources[0]
-            all_trt_smrs.append(src.trt_smr)
+            all_trt_smrs.append(src.trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     cmakers = []
     for grp_id, trt_smrs in enumerate(all_trt_smrs):
