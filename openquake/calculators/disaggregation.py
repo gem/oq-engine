@@ -267,7 +267,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.curves = []  # curves for z=0, populated in self.get_curves
         curves = [self.get_curve(sid, rlzs[sid]) for sid in self.sitecol.sids]
         if oq.iml_disagg:
-            poes = numpy.array(curves)  # shape (N, R, M)
+            poes = numpy.array(curves)  # shape (N, Z, M)
             mean = numpy.zeros((self.M, self.N))
             for m in range(self.M):
                 for sid in self.sitecol.sids:
