@@ -121,7 +121,7 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
             for z, rlz in enumerate(rlzs):
                 try:
                     g = dis.g_by_rlz[rlz]
-                except KeyError:
+                except KeyError:  # non-contributing rlz
                     continue
                 iml2 = iml3[:, :, z]
                 if iml2.sum() == 0:
