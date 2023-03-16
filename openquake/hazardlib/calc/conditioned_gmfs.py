@@ -584,6 +584,12 @@ def get_conditioned_mean_and_covariance(
         # for the target sites
         cov_BY_BY_yD = numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T])
 
+        # Both conditioned covariance matrices can contain extremely
+        # small negative values due to limitations of floating point
+        # operations (~ -10^-17 to -10^-15), these are clipped to zero
+        cov_WY_WY_wD = cov_WY_WY_wD.clip(min=0)
+        cov_BY_BY_yD = cov_BY_BY_yD.clip(min=0)
+
         # Finally, compute the conditioned mean
         # of the ground motion at the target sites
         mu_Y_yD = mu_Y + mu_BY_yD + RC @ (zeta_D - mu_BD_yD)
