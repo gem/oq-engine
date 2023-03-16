@@ -226,7 +226,7 @@ def check_tricky_ids(smdict):
                 found.append(srcid)
     if found:
         logging.warning('Found different sources with same ID %s',
-                        ' '.join(found))
+                        general.shortlist(found))
 
 
 def fix_geometry_sections(smdict, h5):

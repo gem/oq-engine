@@ -850,7 +850,9 @@ class SourceModelLogicTree(object):
         """
         sd = self.source_data
         u, c = numpy.unique(sd['source'], return_counts=1)
-        return {src: sd[sd['source'] == src]['branch'] for src in u[c > 1]}
+        dic = group_array(sd, 'source')
+        # AUS event based was hanging with a slower implementation
+        return {src: dic[src]['branch'] for src in u[c > 1]}
 
     # SourceModelLogicTree
     def __toh5__(self):
