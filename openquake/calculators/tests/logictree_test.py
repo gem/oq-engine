@@ -21,7 +21,7 @@ import unittest
 import numpy
 from openquake.baselib import general, config
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import contexts
+from openquake.hazardlib import contexts, calc
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -29,8 +29,8 @@ from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, NOT_DARWIN)
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_06, case_07, case_08, case_09, case_10, case_11,
-    case_13, case_14, case_15, case_16, case_17, case_20, case_21, case_28,
-    case_30, case_31, case_36, case_39, case_45, case_46,
+    case_13, case_14, case_15, case_16, case_17, case_19, case_20, case_21,
+    case_28, case_30, case_31, case_36, case_39, case_45, case_46,
     case_52, case_56, case_58, case_59, case_67, case_68, case_71, case_73,
     case_79, case_83)
 
@@ -233,6 +233,20 @@ hazard_uhs-std.csv
             case_17.__file__)
         ids = decode(self.calc.datastore['source_info']['source_id'])
         numpy.testing.assert_equal(ids, ['A;0', 'A;1', 'B'])
+
+    def test_case_19(self):
+        # test for nontrivial GMPE logictree and AvgGMPE
+        self.assert_curves_ok([
+            'hazard_curve-mean_PGA.csv',
+            'hazard_curve-mean_SA(0.1).csv',
+            'hazard_curve-mean_SA(0.15).csv',
+        ], case_19.__file__, delta=1E-5)
+
+        # checking the mean rates
+        mean_poes = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L1)
+        mean_rates = calc.disagg.to_rates(mean_poes)
+        rates_by_source = self.calc.datastore['disagg_by_src'][0]  # (M, L1, Ns)
+        aac(mean_rates, rates_by_source.sum(axis=2), atol=2E-7)
 
     def test_case_20(self):
         # Source geometry enumeration, apply_to_sources
