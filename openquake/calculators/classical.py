@@ -868,11 +868,15 @@ def sanity_check(source_id, rates, disagg_by_src):
     """
     Check that the rates computed with the restricted logic tree and
     restricted groups are consistent with the full rates.
+
+    :param source_id: base ID of a source
+    :param rates: matrix of rates of shape (M, L1)
+    :param disagg_by_src: dataset with shape (N, M, L1, Ns)
     """
     js = json.loads(disagg_by_src.attrs['json'])
     srcidx = js['src_id'].index(source_id)
-    rates2D = disagg_by_src[0, :, :, srcidx]  # shape (M, L1)
-    numpy.testing.assert_allclose(rates2D, rates)
+    expected_rates = disagg_by_src[0, :, :, srcidx]  # shape (M, L1)
+    numpy.testing.assert_allclose(rates, expected_rates)
 
 
 def disagg_by_source(parent, csm, mon):
@@ -904,6 +908,7 @@ def disagg_by_source(parent, csm, mon):
     items = []
     for source_id, rates5D, rates2D in smap:
         if oq.use_rates:
+            logging.info('Checking the mean rates for source %s', source_id)
             sanity_check(source_id, rates2D, parent.getitem('disagg_by_src'))
         items.append((source_id, rates5D))
     return items
