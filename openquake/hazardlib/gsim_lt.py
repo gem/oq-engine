@@ -19,6 +19,7 @@
 import io
 import os
 import ast
+import copy
 import json
 import logging
 import operator
@@ -290,14 +291,14 @@ class GsimLogicTree(object):
         :param trts: a subset of tectonic region types
         :returns: a reduced GsimLogicTree instance
         """
-        new = object.__new__(self.__class__)
-        vars(new).update(vars(self))
+        new = copy.deepcopy(self)
+        new.values = {trt: self.values[trt] for trt in trts}
         if trts != {'*'}:
             new.branches = []
             for br in self.branches:
-                branch = BranchTuple(br.trt, br.id, br.gsim, br.weight,
-                                     br.trt in trts)
-                new.branches.append(branch)
+                if br.trt in trts:
+                    branch = BranchTuple(br.trt, br.id, br.gsim, br.weight, 1)
+                    new.branches.append(branch)
         return new
 
     def collapse(self, branchset_ids):
@@ -416,7 +417,8 @@ class GsimLogicTree(object):
                     bt.weight.dic['weight'] = 1.
                     break
             tot = sum(weights)
-            assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
+            assert tot.is_one(), '%s in branchset %s' % (
+                tot, branchset.attrib['branchSetID'])
             if duplicated(branch_ids):
                 raise InvalidLogicTree(
                     'There where duplicated branchIDs in %s' %
@@ -458,7 +460,7 @@ class GsimLogicTree(object):
                    for i, trt in enumerate(self.values)]
         rlzs = []
         for i in range(n):
-            weight = 1
+            weight = ImtWeight.new(1.)
             lt_path = []
             lt_uid = []
             value = []
@@ -495,15 +497,6 @@ class GsimLogicTree(object):
                          for gsim in self.values[trt]}
         return ddic
 
-    def get_rlzs_by_g(self):
-        """
-        :returns: an array of lists of g-indices
-        """
-        lst = []
-        for rlzs_by_gsim in self.get_rlzs_by_gsim_trt().values():
-            lst.extend(rlzs_by_gsim.values())
-        return numpy.array(lst)
-
     def __iter__(self):
         """
         Yield :class:`openquake.hazardlib.logictree.Realization` instances
@@ -514,7 +507,7 @@ class GsimLogicTree(object):
             groups.append([b for b in self.branches if b.trt == trt])
         # with T tectonic region types there are T groups and T branches
         for i, branches in enumerate(itertools.product(*groups)):
-            weight = 1
+            weight = ImtWeight.new(1.)
             lt_path = []
             lt_uid = []
             value = []

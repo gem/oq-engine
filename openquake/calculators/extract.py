@@ -1017,20 +1017,6 @@ def extract_mfd(dstore, what):
     return ArrayWrapper((), {k: numpy.array(v) for k, v in dic.items()})
 
 
-@extract.add('mean_std_curves')
-def extract_mean_std_curves(dstore, what):
-    """
-    Yield imls/IMT and poes/IMT containg mean and stddev for all sites
-    """
-    rlzs = dstore['full_lt'].get_realizations()
-    w = [rlz.weight for rlz in rlzs]
-    getter = getters.PmapGetter(dstore, w)
-    arr = getter.get_mean().array
-    for imt in getter.imtls:
-        yield 'imls/' + imt, getter.imtls[imt]
-        yield 'poes/' + imt, arr[:, getter.imtls(imt)]
-
-
 @extract.add('composite_risk_model.attrs')
 def crm_attrs(dstore, what):
     """
@@ -1223,14 +1209,10 @@ def extract_disagg_by_src(dstore, what):
         'hcurves-stats', imt=imt, stat='mean', site_id=site_id)[0, 0, 0]
     lvl_id = get_lvl(mean, oq.imtls[imt], float(poe))
     imt_id = list(oq.imtls).index(imt)
-    poes = dset[site_id, :, imt_id, lvl_id]  # shape (R, Ns)
-    if oq.collect_rlzs:  # already averaged
-        poes = poes[0, :]
-    else:  # compute the average
-        poes = dstore['weights'][:] @ poes
+    rates = dset[site_id, imt_id, lvl_id]  # shape Ns
     arr = numpy.zeros(len(src_id), [('src_id', '<S16'), ('poe', '<f8')])
     arr['src_id'] = src_id
-    arr['poe'] = poes[:len(src_id)]
+    arr['poe'] = disagg.to_probs(rates[:len(src_id)])
     arr.sort(order='poe')
     return ArrayWrapper(arr[::-1], dict(site_id=site_id, imt=imt, poe=poe))
 

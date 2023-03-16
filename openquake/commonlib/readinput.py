@@ -674,6 +674,11 @@ def get_source_model_lt(oqparam, branchID=None):
         instance
     """
     smlt = get_smlt(vars(oqparam), branchID)
+    srcids = set(smlt.source_data['source'])
+    for src in oqparam.reqv_ignore_sources:
+        if src not in srcids:
+            raise NameError('The source %r in reqv_ignore_sources does '
+                            'not exist in the source model(s)' % src)
     if len(oqparam.source_id) == 1:  # reduce to a single source
         return smlt.reduce(oqparam.source_id[0])
     return smlt
@@ -731,12 +736,9 @@ def get_full_lt(oqparam, branchID=None):
                 'try to use sampling or reduce the source model' % p)
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
-    dupl = []
-    for src_id, sms in source_model_lt.sms_by_src.items():
-        if len(sms) > 1:
-            dupl.append(src_id)
+    dupl = source_model_lt.get_nontrivial_sources()
     if dupl:
-        logging.info('There are %d non-unique source IDs', len(dupl))
+        logging.info('There are {:_d} nontrivial sources'.format(len(dupl)))
     return full_lt
 
 
@@ -815,6 +817,7 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
     :param h5:
          an open hdf5.File where to store the source info
     """
+    logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
     full_lt = get_full_lt(oqparam, branchID)
     path = get_cache_path(oqparam, h5)
     if os.path.exists(path):
@@ -942,7 +945,7 @@ def get_station_data(oqparam):
         station_cols = ["STATION_ID", "LONGITUDE", "LATITUDE"]
         cols = []
         for im in imts:
-            stddev_str = "STDDEV" if imt == "MMI" else "LN_SIGMA"
+            stddev_str = "STDDEV" if im == "MMI" else "LN_SIGMA"
             cols.append(im + '_VALUE')
             cols.append(im + '_' + stddev_str)
         station_data = pandas.DataFrame(sdata[cols].values, columns=im_cols)
@@ -1234,7 +1237,18 @@ def get_reinsurance(oqparam, assetcol=None):
         raise InvalidFile('%s: aggregate_by=%s' %
                           (fname, oqparam.aggregate_by))
     [(key, fname)] = oqparam.inputs['reinsurance'].items()
-    return reinsurance.parse(fname, assetcol.tagcol.policy_idx)
+    p, t, f = reinsurance.parse(fname, assetcol.tagcol.policy_idx)
+    
+    # check ideductible
+    arr = assetcol.array
+    for pol_no, deduc in zip(p.policy, p.deductible):
+        if deduc:
+            ideduc = arr[arr['policy'] == pol_no]['ideductible']
+            if ideduc.any():
+                pol = assetcol.tagcol.policy[pol_no]
+                raise InvalidFile('%s: for policy %s there is a deductible '
+                                  'also in the exposure!' % (fname, pol))
+    return p, t, f
 
 
 def get_input_files(oqparam):

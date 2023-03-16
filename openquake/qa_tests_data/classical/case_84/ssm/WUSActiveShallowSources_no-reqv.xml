@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="US NSHMP - All Western US (exc. California) active shallow sources"
+    >
+        <pointSource
+        id="pnt_no_reqv"
+        name="Point 12267 - USD 1.0"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>
+                        -123.4 46.4
+                    </gml:pos>
+                </gml:Point>
+                <upperSeismoDepth>
+                    1.0
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    15.0
+                </lowerSeismoDepth>
+            </pointGeometry>
+            <incrementalMFD
+            binWidth="0.1"
+            minMag="6.55"
+            >
+                <occurRates>
+                    1.1474864581491944e-02 9.544376637194214e-03 7.938666704576903e-03 6.6030953557261e-03 5.49221549402927e-03 4.568225871022316e-03 3.799684777730302e-03 3.160440139726377e-03
+                </occurRates>
+            </incrementalMFD>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                2.0
+            </ruptAspectRatio>
+            <nodalPlaneDist>
+                <nodalPlane dip="50.0" probability="0.5" rake="90.0" strike="90.0"/>
+                <nodalPlane dip="90.0" probability="0.5" rake="0.0" strike="90.0"/>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth depth="7.5" probability="1.0"/>
+            </hypoDepthDist>
+        </pointSource>
+    </sourceModel>
+</nrml>

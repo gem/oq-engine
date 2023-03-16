@@ -39,6 +39,8 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
 
+rlzs_by_g_dt = numpy.dtype([('rlzs', hdf5.vuint32), ('weight', float)])
+
 
 def source_data(sources):
     data = AccumDict(accum=[])
@@ -116,8 +118,10 @@ def preclassical(srcs, sites, cmaker, monitor):
         dic['after'] = len(split_sources)
         yield dic
     else:
+        cnt = 0
         for msr, block in groupby(split_sources, msr_name).items():
-            dic = grid_point_sources(block, spacing, msr, monitor)
+            dic = grid_point_sources(block, spacing, msr, cnt, monitor)
+            cnt = dic.pop('cnt')
             for src in dic[grp_id]:
                 src.num_ruptures = src.count_ruptures()
             # this is also prefiltering the split sources
@@ -140,17 +144,15 @@ class PreClassicalCalculator(base.HazardCalculator):
         super().init()
         if self.oqparam.hazard_calculation_id:
             self.full_lt = self.datastore.parent['full_lt']
-            trt_smrs = self.datastore.parent['trt_smrs'][:]
         else:
             self.full_lt = self.csm.full_lt
-            trt_smrs = self.csm.get_trt_smrs()
-        self.grp_ids = numpy.arange(len(trt_smrs))
-        rlzs_by_g = []
-        for t in trt_smrs:
-            for rlzs in self.full_lt.get_rlzs_by_gsim(t).values():
-                rlzs_by_g.append(rlzs)
-        self.datastore.hdf5.save_vlen(
-            'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
+        arr = numpy.zeros(self.full_lt.Gt, rlzs_by_g_dt)
+        for g, rlzs in enumerate(self.full_lt.rlzs_by_g.values()):
+            arr[g]['rlzs'] = rlzs
+            arr[g]['weight'] = self.full_lt.g_weights[g]['weight']
+        dset = self.datastore.create_dset(
+            'rlzs_by_g', rlzs_by_g_dt, (self.full_lt.Gt,), fillvalue=None)
+        dset[:] = arr
 
     def store(self):
         # store full_lt, trt_smrs, toms
@@ -161,6 +163,7 @@ class PreClassicalCalculator(base.HazardCalculator):
              for sg in self.csm.src_groups], hdf5.vstr)
 
     def populate_csm(self):
+        oq = self.oqparam
         csm = self.csm
         self.store()
         cmakers = read_cmakers(self.datastore, csm.full_lt)
@@ -170,15 +173,16 @@ class PreClassicalCalculator(base.HazardCalculator):
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
         normal_sources = []
-        reqv = 'reqv' in self.oqparam.inputs
+        reqv = 'reqv' in oq.inputs
         if reqv:
             logging.warning(
                 'Using equivalent distance approximation and '
                 'collapsing hypocenters and nodal planes')
         for sg in csm.src_groups:
-            if reqv and sg.trt in self.oqparam.inputs['reqv']:
+            if reqv and sg.trt in oq.inputs['reqv']:
                 for src in sg:
-                    collapse_nphc(src)
+                    if src.source_id not in oq.reqv_ignore_sources:
+                        collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
             if sg.atomic:
                 cmakers[grp_id].set_weight(sg, sites)
@@ -209,7 +213,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                     others.append(src)
             check_maxmag(pointlike)
             if pointsources or pointlike:
-                if self.oqparam.ps_grid_spacing:
+                if oq.ps_grid_spacing:
                     # do not split the pointsources
                     smap.submit(
                         (pointsources + pointlike, sites, cmakers[grp_id]))

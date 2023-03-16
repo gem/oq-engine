@@ -29,7 +29,7 @@ from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.gsim.bradley_2013 import Bradley2013
-from openquake.hazardlib import sourceconverter, probability_map
+from openquake.hazardlib import sourceconverter
 
 DATA_PATH = os.path.dirname(__file__)
 aac = numpy.testing.assert_allclose
@@ -143,7 +143,7 @@ class DisaggregateTestCase(unittest.TestCase):
         dis = disagg.Disaggregator([self.sources[0]], self.site, self.cmaker,
                                    self.bin_edges)
         iml3 = numpy.array([[[.01]]])
-        mat3 = dis.disagg_mag_dist_eps(iml3)[..., 0, 0, 0]
+        mat3 = dis.disagg_mag_dist_eps(iml3, [1.])[..., 0, 0]
         bymag = pprod(disagg.to_probs(mat3), axis=(1, 2))
         aac(bymag, [0.9873275537163634,
                     0.9580616631998118,
@@ -273,23 +273,10 @@ def test_single_source(job_ini):
     job_ini = os.path.join(DATA_PATH, 'data', 'disagg', job_ini)
     inp = read_input(job_ini)
     oq = inp.oq
-    assert len(inp.sitecol) == 1  # single site test
-    L = oq.imtls.size
-    R = inp.full_lt.get_num_paths()
-    G = sum(len(cm.gsims) for cm in inp.cmakers)
-    pmap = probability_map.ProbabilityMap(inp.sitecol.sids, L, G).fill(0)
-    rlzs_by_g = []
-    for grp, cmaker in zip(inp.groups, inp.cmakers):
-        for rlzs in cmaker.gsims.values():
-            rlzs_by_g.append(rlzs)
-        ctxs = cmaker.from_srcs(grp, inp.sitecol)
-        pmap.array[:, :, cmaker.gidx] = cmaker.get_pmap(
-            ctxs).array  # shape (L, G)
-
-    iml4 = pmap.expand(rlzs_by_g).interp4D(oq.imtls, oq.poes)
-    edges, shapedic = disagg.get_edges_shapedic(oq, inp.sitecol)
-    dis = disagg.Disaggregator(grp, inp.sitecol, cmaker, edges)
-    rlz = R - 1
-    for magi in range(dis.Ma):
-        dis.init(magi, src_mutex={})
-        print(dis.disagg6D(iml4[0, :, :, rlz], rlz))
+    edges_shapedic = disagg.get_edges_shapedic(oq, inp.sitecol)
+    srcid, rates5D, rates2D = disagg.by_source(
+        inp.groups, inp.sitecol, inp.full_lt, edges_shapedic, oq)
+    # rates5D has shape (Ma, D, E, M, P), rates2D shape (M, L1)
+    print(srcid)
+    print(rates5D.sum(axis=(1, 2)))
+    print(rates2D)

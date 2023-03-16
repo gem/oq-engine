@@ -67,7 +67,7 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
 def _make_nrml(content):
     return ("""<?xml version="1.0" encoding="UTF-8"?>
     <nrml xmlns:gml="http://www.opengis.net/gml"\
-          xmlns="http://openquake.org/xmlns/nrml/0.5">\
+          xmlns="http://openquake.org/xmlns/nrml/0.4">\
         %s
     </nrml>""" % content)
 

@@ -32,11 +32,12 @@ from functools import lru_cache
 import numpy
 import scipy.stats
 
-from openquake.baselib.general import AccumDict, groupby, pprod, humansize
+from openquake.baselib.general import AccumDict, groupby, humansize
 from openquake.baselib.performance import idx_start_stop, Monitor
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
+from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
@@ -477,25 +478,22 @@ class Disaggregator(object):
             mats.append(mat)
         return numpy.average(mats, weights=self.weights, axis=0)
 
-    def disagg_mag_dist_eps(self, iml3, src_mutex={}):
+    def disagg_mag_dist_eps(self, iml3, rlz_weights, src_mutex={}):
         """
         :param iml3: an array of shape (M, P, Z)
         :param src_mutex: a dictionary src_id -> weight, default empty
-        :returns: a 6D matrix of rates of shape (Ma, D, E, M, P, Z)
+        :returns: a 5D matrix of rates of shape (Ma, D, E, M, P)
         """
         M, P, Z = iml3.shape
-        assert Z == self.cmaker.Z, (Z, self.cmaker.Z)
-        out = numpy.zeros((self.Ma, self.D, self.E, M, P, Z))
+        out = numpy.zeros((self.Ma, self.D, self.E, M, P))
         for magi in range(self.Ma):
             try:
                 self.init(magi, src_mutex)
             except FarAwayRupture:
                 continue
-            z = 0
             for rlz, g in self.g_by_rlz.items():
-                mat6 = self.disagg6D(iml3[:, :, z], g)
-                out[magi, ..., z] = pprod(mat6, axis=(1, 2))
-                z += 1
+                mat6 = self.disagg6D(iml3[:, :, rlz], g)
+                out[magi] += mat6.sum(axis=(1, 2)) * rlz_weights[rlz]
         return out
 
     def __repr__(self):
@@ -661,20 +659,43 @@ def reduce_groups(src_groups, source_id):
     return groups
 
 
-def by_source(reduced_lt, groups, sitecol, bin_edges, oq):
+def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
+              monitor=Monitor()):
     """
-    Compute disaggregation for the given source
+    Compute disaggregation for the given source.
+
+    :returns: rates of shape (Ma, D, E, M, P), rates of shape (M, L1)
     """
-    rlzs = reduced_lt.rlzs
-    disaggs = []
+    assert len(sitecol) == 1, sitecol
+    if not hasattr(reduced_lt, 'rlzs_by_g'):
+        reduced_lt.init()
+    edges, s = edges_shapedic
+    L = oq.imtls.size
+    rates1D = numpy.zeros(L)
+    rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
+    source_id = groups[0].sources[0].source_id.split(';')[0]
     cmakers = get_cmakers(groups, reduced_lt, oq)
+    ws = reduced_lt.rlzs['weight']
+    pmap = ProbabilityMap(sitecol.sids, L, reduced_lt.Gt).fill(0)
+    disaggs = []
     for c, cmaker in enumerate(cmakers):
-        print(list(cmaker.gsims.values()))
+        all_rlzs = list(cmaker.gsims.values())
+        G = len(all_rlzs)
+        ctxs = cmaker.from_srcs(groups[c], sitecol)
+        if not ctxs:
+            continue
+        poes = cmaker.get_pmap(ctxs).array[0]  # shape (L, G)
+        for c, g in enumerate(cmaker.gidx):
+            i = c % G
+            pmap.array[0, :, g] += poes[:, i]
+            rates1D += to_rates(poes[:, i]) * ws[all_rlzs[i]].sum()
         try:
-            dis = Disaggregator(groups[c], sitecol, cmaker, bin_edges)
+            dis = Disaggregator(ctxs, sitecol, cmaker, edges)
         except FarAwayRupture:
-            pass  # source corresponding to a noncontributing realization
+            continue  # source corresponding to a noncontributing realization
         else:
             disaggs.append(dis)
-    assert disaggs, '%s does not contribute??' % reduced_lt.source_id
-    return disaggs
+    iml3 = pmap.expand(reduced_lt).interp4D(oq.imtls, oq.poes)[0]  # MPZ
+    for dis in disaggs:
+        rates5D += dis.disagg_mag_dist_eps(iml3, ws)
+    return source_id, rates5D, rates1D.reshape(s['M'], L // len(oq.imtls))

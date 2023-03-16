@@ -1,4 +1,21 @@
   [Michele Simionato]
+  * Fixed the source ID generation for CollapsedPointSources
+  * Fixed the error message for wrong weights in the gsim logic tree file
+  * Fixed KeyError in calculations using the EasternCan15Mid with PGA
+  * Replaced hard-coded limit to 25 levels in the MRD postprocessor
+    with a simple warning
+
+  [Kendra Johnson]
+  * Added a job parameter 'reqv_ignore_sources', which indicates which
+    sources - specified as a list of thier source ids - should not be collapsed
+    using the equivalent distance
+
+  [Michele Simionato]
+  * Extended (re)insurance calculations to manage insurance deductibles at asset
+    level
+  * Internal: added a parameter `use_rates` to compute statistical hazard curves
+    in terms of rates, not probabilities
+  * Changed `disagg_by_src` to work in terms of rates, not probabilities
   * Added command `oq runpsha <lon> <lat>` for mosaic PSHA calculations
   * Enhanced --reuse-input to reuse preclassical calculations if possible
   * Normalized IMTs in the `minimum_intensity` dictionary (i.e. SA(1.)=>SA(1.0))
