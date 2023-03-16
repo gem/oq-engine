@@ -23,7 +23,6 @@ extracting a specific PMF from the result of :func:`disaggregation`.
 """
 
 import re
-import copy
 import operator
 import collections
 import itertools
@@ -448,7 +447,7 @@ class Disaggregator(object):
                                               self.src_mutex['weight'])
                             if s in src_ids]
 
-    def disagg6D(self, iml2, rlz):
+    def disagg6D(self, iml2, g):
         """
         Disaggregate a single realization.
 
@@ -458,7 +457,6 @@ class Disaggregator(object):
         imlog2 = numpy.zeros_like(iml2)
         for m, imt in enumerate(self.cmaker.imts):
             imlog2[m] = to_distribution_values(iml2[m], imt)
-        g = self.g_by_rlz[rlz]
         if not self.src_mutex:
             return _disaggregate(self.ctx, self.mea, self.std, self.cmaker,
                                  g, imlog2, self.bin_edges, self.epsstar,
@@ -631,35 +629,7 @@ def disaggregation(
 
 # ###################### disagg by source ################################ #
 
-def get_smr(source_id):
-    # i.e. SHD-AS-ITAS318;0.0 => 0
-    try:
-        suffix = source_id.split(';')[1]
-    except IndexError:  # no ";"
-        return 0
-    smr = int(suffix.split('.')[0])
-    return smr
-
-
-def reduce_groups(src_groups, source_id):
-    """
-    :returns: a reduced list of groups containing fragments of the same source
-    """
-    groups = []
-    for sg in src_groups:
-        ok = []
-        for src in sg:
-            if re.split('[:;.]', src.source_id)[0] == source_id:
-                src.trt_smr = get_smr(src.source_id)
-                ok.append(src)
-        if ok:
-            grp = copy.copy(sg)
-            grp.sources = ok
-            groups.append(grp)
-    return groups
-
-
-def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
+def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
               monitor=Monitor()):
     """
     Compute disaggregation for the given source.
@@ -673,7 +643,7 @@ def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     L = oq.imtls.size
     rates1D = numpy.zeros(L)
     rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
-    source_id = groups[0].sources[0].source_id.split(';')[0]
+    source_id = re.split('[:;.]', groups[0].sources[0].source_id)[0]
     cmakers = get_cmakers(groups, reduced_lt, oq)
     ws = reduced_lt.rlzs['weight']
     pmap = ProbabilityMap(sitecol.sids, L, reduced_lt.Gt).fill(0)
@@ -684,11 +654,12 @@ def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
         ctxs = cmaker.from_srcs(groups[c], sitecol)
         if not ctxs:
             continue
-        poes = cmaker.get_pmap(ctxs).array[0]  # shape (L, G)
+        poes = cmaker.get_pmap(ctxs).array[0]
+        rates = to_rates(poes)  # shape (L, G)
         for c, g in enumerate(cmaker.gidx):
             i = c % G
             pmap.array[0, :, g] += poes[:, i]
-            rates1D += to_rates(poes[:, i]) * ws[all_rlzs[i]].sum()
+            rates1D += rates[:, i] * ws[all_rlzs[i]].sum()
         try:
             dis = Disaggregator(ctxs, sitecol, cmaker, edges)
         except FarAwayRupture:
