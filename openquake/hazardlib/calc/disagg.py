@@ -684,11 +684,12 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
         ctxs = cmaker.from_srcs(groups[c], sitecol)
         if not ctxs:
             continue
-        poes = cmaker.get_pmap(ctxs).array[0]  # shape (L, G)
+        poes = cmaker.get_pmap(ctxs).array[0]
+        rates = to_rates(poes)  # shape (L, G)
         for c, g in enumerate(cmaker.gidx):
             i = c % G
             pmap.array[0, :, g] += poes[:, i]
-            rates1D += to_rates(poes[:, i]) * ws[all_rlzs[i]].sum()
+            rates1D += rates[:, i] * ws[all_rlzs[i]].sum()
         try:
             dis = Disaggregator(ctxs, sitecol, cmaker, edges)
         except FarAwayRupture:

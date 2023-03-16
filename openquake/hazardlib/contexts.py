@@ -584,7 +584,8 @@ class ContextMaker(object):
         ctxs = []
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
         for i, src in enumerate(srcs):
-            src.id = i
+            if src.id == -1:  # not set yet
+                src.id = i
             sites = srcfilter.get_close_sites(src)
             if sites is not None:
                 ctxs.extend(self.get_ctx_iter(src, sites))
@@ -987,6 +988,7 @@ class ContextMaker(object):
                 poes = numpy.concatenate(list(self._gen_poes(kctx)))
                 yield poes, ctxt, invs
 
+    # used in source_disagg
     def get_pmap(self, ctxs, tom=None, rup_mutex={}):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
@@ -1665,8 +1667,7 @@ def read_cmakers(dstore, full_lt=None):
         oq.af = None
     trt_smrs = dstore['trt_smrs'][:]
     if full_lt is None:
-        full_lt = dstore['full_lt']
-        full_lt.init()
+        full_lt = dstore['full_lt'].init()
     cmakers = get_cmakers(trt_smrs, full_lt, oq)
     if 'delta_rates' in dstore:  # aftershock
         for cmaker in cmakers:
