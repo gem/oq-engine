@@ -315,6 +315,7 @@ def _log_hinge(x, x0, a, b0, b1, delta):
     terms, as described in Equation 4.3
     """
     xdiff = x - x0
+    xdiff = xdiff.astype('float64')
     return a + b0 * xdiff + (b1 - b0) * delta * np.log(1 + np.exp(xdiff /
                                                                   delta))
 
@@ -348,6 +349,7 @@ def get_depth_term(C, trt, ztor):
         z_b, zref = CONSTS["z_b_slab"], CONSTS["z_ref_slab"]
     z_break = z_b + dz_b
     ref_z = z_break - zref
+
     return _log_hinge(ztor, z_break, c_9 * ref_z, c_9,
                       CONSTS["c_10"], CONSTS["delta_z"])
 
