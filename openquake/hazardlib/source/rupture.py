@@ -732,6 +732,11 @@ class EBRupture(object):
         self.scenario = scenario
 
     @property
+    def trt_smrs(self):
+        # used only in hazardlib/tests/calc/scenario_test.py
+        return self.trt_smr,
+
+    @property
     def tectonic_region_type(self):
         return self.rupture.tectonic_region_type
 
