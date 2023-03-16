@@ -35,6 +35,7 @@ from openquake.hazardlib.tests.calc import \
 
 class SetUSGSTestCase(unittest.TestCase):
     def test_case_01(self):
+        case_name = "test_case_01"
         rupture = test_data.RUP
         gmm = test_data.ZeroMeanGMM()
         station_sitecol = test_data.CASE01_STATION_SITECOL
@@ -51,6 +52,34 @@ class SetUSGSTestCase(unittest.TestCase):
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
             maximum_distance)
-        numpy.testing.assert_allclose(numpy.zeros_like(mean_covs[0]["PGA"]), mean_covs[0]["PGA"])
-        numpy.testing.assert_almost_equal(numpy.min(mean_covs[1]["PGA"]), 0)
-        assert numpy.max(mean_covs[1]["PGA"]) > 0.8 and numpy.max(mean_covs[1]["PGA"]) < 1.0
+        mu = mean_covs[0][target_imts[0].string].flatten()
+        sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
+        numpy.testing.assert_allclose(numpy.zeros_like(mu), mu)
+        numpy.testing.assert_almost_equal(numpy.min(sig), 0)
+        assert numpy.max(sig) > 0.8 and numpy.max(sig) < 1.0
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        
+
+# Useful for debugging purposes. Recreates the plots on
+# https://usgs.github.io/shakemap/manual4_0/tg_verification.html
+# Original code is from the ShakeMap XTestPlot module:
+# https://github.com/usgs/shakemap/blob/main/shakemap/coremods/xtestplot.py
+def plot_test_results(lons, means, stds, target_imt, case_name):
+    fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
+    plt.subplots_adjust(hspace=0.1)
+    ax[0].plot(lons, means, color="k", label="mean")
+    ax[0].plot(
+        lons, means + stds, "--b", label="mean +/- stddev"
+    )
+    ax[0].plot(lons, means - stds, "--b")
+    ax[1].plot(lons, stds, "-.r", label="stddev")
+    plt.xlabel("Longitude")
+    ax[0].set_ylabel(f"Mean ln({target_imt}) (g)")
+    ax[1].set_ylabel(f"Stddev ln({target_imt}) (g)")
+    ax[0].legend(loc="best")
+    ax[1].legend(loc="best")
+    ax[0].set_title(case_name)
+    ax[0].grid()
+    ax[1].grid()
+    ax[1].set_ylim(bottom=0)
+    plt.show()

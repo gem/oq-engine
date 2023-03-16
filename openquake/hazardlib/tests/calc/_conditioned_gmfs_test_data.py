@@ -37,9 +37,9 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
 MAG = 6.0
-LON = -122.00000
-LAT = 38.00000
-DEP = 5.0
+LON = -122
+LAT = 38
+DEP = 5
 VS30 = 780
 MAX_DIST = IntegrationDistance.new('300')
 
