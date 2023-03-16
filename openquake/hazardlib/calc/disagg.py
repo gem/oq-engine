@@ -659,7 +659,7 @@ def reduce_groups(src_groups, source_id):
     return groups
 
 
-def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
+def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
               monitor=Monitor()):
     """
     Compute disaggregation for the given source.
@@ -673,7 +673,7 @@ def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     L = oq.imtls.size
     rates1D = numpy.zeros(L)
     rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
-    source_id = groups[0].sources[0].source_id.split(';')[0]
+    source_id = re.split('[:;.]', groups[0].sources[0].source_id)[0]
     cmakers = get_cmakers(groups, reduced_lt, oq)
     ws = reduced_lt.rlzs['weight']
     pmap = ProbabilityMap(sitecol.sids, L, reduced_lt.Gt).fill(0)
