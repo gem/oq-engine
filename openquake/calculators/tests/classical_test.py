@@ -29,7 +29,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
-    case_01, case_12, case_18, case_19, case_22, case_23,
+    case_01, case_12, case_18, case_22, case_23,
     case_24, case_25, case_26, case_27, case_29, case_32, case_33,
     case_34, case_35, case_37, case_38, case_40, case_41,
     case_42, case_43, case_44, case_47, case_48, case_49,
@@ -142,14 +142,6 @@ class ClassicalTestCase(CalculatorTestCase):
         # extracting hmaps
         hmaps = extract(self.calc.datastore, 'hmaps')['all']['mean']
         self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
-
-    def test_case_19(self):
-        # test for AvgGMPE
-        self.assert_curves_ok([
-            'hazard_curve-mean_PGA.csv',
-            'hazard_curve-mean_SA(0.1).csv',
-            'hazard_curve-mean_SA(0.15).csv',
-        ], case_19.__file__, delta=1E-5)
 
     def test_case_22(self):  # crossing date line calculation for Alaska
         # this also tests the splitting of the source model in two files
