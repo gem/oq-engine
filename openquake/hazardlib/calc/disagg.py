@@ -631,34 +631,6 @@ def disaggregation(
 
 # ###################### disagg by source ################################ #
 
-def get_smr(source_id):
-    # i.e. SHD-AS-ITAS318;0.0 => 0
-    try:
-        suffix = source_id.split(';')[1]
-    except IndexError:  # no ";"
-        return 0
-    smr = int(suffix.split('.')[0])
-    return smr
-
-
-def reduce_groups(src_groups, source_id):
-    """
-    :returns: a reduced list of groups containing fragments of the same source
-    """
-    groups = []
-    for sg in src_groups:
-        ok = []
-        for src in sg:
-            if re.split('[:;.]', src.source_id)[0] == source_id:
-                src.trt_smr = get_smr(src.source_id)
-                ok.append(src)
-        if ok:
-            grp = copy.copy(sg)
-            grp.sources = ok
-            groups.append(grp)
-    return groups
-
-
 def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
               monitor=Monitor()):
     """
