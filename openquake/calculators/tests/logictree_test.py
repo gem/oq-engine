@@ -344,7 +344,7 @@ hazard_uhs-std.csv
             case_21.__file__, delta=1E-7)
 
     def test_case_28(self):  # North Africa
-        # MultiPointSource with modify MFD logic tree
+        # MultiPointSource with modify MFD logic tree and collapse_gsim
         out = self.run_calc(case_28.__file__, 'job.ini', exports='csv')
         for f in out['uhs', 'csv']:
             self.assertEqualFiles('expected/' + strip_calc_id(f), f)
@@ -355,6 +355,11 @@ hazard_uhs-std.csv
         ae(info['grp_id'], [0, 1, 2])
         ae(info['weight'] > 0, [True, True, True])
         ae(info['trti'], [0, 0, 1])
+
+        # check collapse_gsim_logic_tree
+        aw = extract(self.calc.datastore, 'realizations')
+        tbl = general.gettemp(text_table(aw.array, ext='org'))
+        self.assertEqualFiles('expected/realizations.org', tbl)
 
     def test_case_30(self):
         # point on the international data line
