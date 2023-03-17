@@ -40,8 +40,9 @@ def main(parent_id):
         csm.init(full_lt)
         mon = performance.Monitor(
             'disaggregate by source', measuremem=True, h5=dstore.hdf5)
-        for source_id, disagg_rates in disagg_by_source(parent, csm, mon):
-            dstore['disagg/' + source_id] = disagg_rates
+        for source_id, disagg_rates, haz_rates in disagg_by_source(parent, csm, mon):
+            dstore['disagg-source/' + source_id] = dict(rates5D=disagg_rates,
+                                                        rates2D=haz_rates)
 
 
 if __name__ == '__main__':
