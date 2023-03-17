@@ -138,6 +138,31 @@ class SetUSGSTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
         plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
 
+    def test_case_05(self):
+        case_name = "test_case_05"
+        rupture = test_data.RUP
+        gmm = test_data.ZeroMeanGMM()
+        station_sitecol = test_data.CASE05_STATION_SITECOL
+        station_data = test_data.CASE05_STATION_DATA
+        observed_imt_strs = test_data.CASE05_OBSERVED_IMTS
+        target_sitecol = test_data.CASE05_TARGET_SITECOL
+        target_imts = test_data.CASE05_TARGET_IMTS
+        spatial_correl = test_data.DummySpatialCorrelationModel()
+        cross_correl_between = GodaAtkinson2009()
+        cross_correl_within = test_data.DummyCrossCorrelationWithin()
+        maximum_distance = test_data.MAX_DIST
+        mean_covs = get_conditioned_mean_and_covariance(
+            rupture, gmm, station_sitecol, station_data,
+            observed_imt_strs, target_sitecol, target_imts,
+            spatial_correl, cross_correl_between, cross_correl_within,
+            maximum_distance)
+        mu = mean_covs[0][target_imts[0].string].flatten()
+        sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
+        numpy.testing.assert_allclose(numpy.zeros_like(mu), mu, atol=1e-4)
+        numpy.testing.assert_allclose(numpy.min(sig), 0, atol=1e-4)
+        numpy.testing.assert_allclose(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+
 # Useful for debugging purposes. Recreates the plots on
 # https://usgs.github.io/shakemap/manual4_0/tg_verification.html
 # Original code is from the ShakeMap XTestPlot module:
