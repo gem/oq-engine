@@ -24,7 +24,7 @@ import h5py
 from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby, block_splitter
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import read_cmakers, basename
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -160,6 +160,24 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.datastore['toms'] = numpy.array(
             [sg.get_tom_toml(self.oqparam.investigation_time)
              for sg in self.csm.src_groups], hdf5.vstr)
+        if self.oqparam.disagg_by_src:
+            oq = self.oqparam
+            self.M = len(oq.imtls)
+            self.L1 = oq.imtls.size // self.M
+            sources = sorted(set(map(basename, self.csm.get_sources())))
+            size, msg = general.get_nbytes_msg(
+                dict(N=self.N, M=self.M, L1=self.L1, Ns=len(sources)))
+            if size > TWO32:
+                raise RuntimeError(
+                    'The matrix disagg_by_src is too large: %s' % msg)
+            size = self.N * self.M * self.L1 * len(sources) * 8
+            logging.info('Creating disagg_by_src of size %s',
+                         general.humansize(size))
+            arr = numpy.zeros((self.N, self.M, self.L1, len(sources)))
+            dic = dict(shape_descr=['site_id', 'imt', 'lvl', 'src_id'],
+                       site_id=self.N, imt=list(self.oqparam.imtls),
+                       lvl=self.L1, src_id=sources)
+            self.datastore['disagg_by_src'] = hdf5.ArrayWrapper(arr, dic)
 
     def populate_csm(self):
         oq = self.oqparam

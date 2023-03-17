@@ -34,7 +34,8 @@ import pandas
 from openquake.baselib import general, hdf5
 from openquake.baselib import performance, parallel, python3compat
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import InvalidFile, site, stats
+from openquake.hazardlib import (
+    InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
@@ -42,8 +43,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels, reinsurance
-from openquake.commonlib import (
-    readinput, logictree, datastore, source_reader, logs)
+from openquake.commonlib import readinput, datastore, logs
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 
