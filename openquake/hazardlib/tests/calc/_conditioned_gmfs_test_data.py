@@ -150,7 +150,7 @@ CASE01_TARGET_SITECOL = SiteCollection(
     [
         Site(location=Point(lon, lat), vs30=VS30)
         for (lon, lat) in list(
-            zip(numpy.linspace(-122.5, -121.5, 241), numpy.repeat(38.0, 241))
+            zip(numpy.round(numpy.linspace(-122.5, -121.5, 241), 5), numpy.repeat(38.0, 241))
         )
     ]
 )
@@ -158,7 +158,7 @@ CASE02_TARGET_SITECOL = SiteCollection(
     [
         Site(location=Point(lon, lat), vs30=VS30)
         for (lon, lat) in list(
-            zip(numpy.linspace(-123, -121, 481), numpy.repeat(38.0, 481))
+            zip(numpy.round(numpy.linspace(-123, -121, 481), 5), numpy.repeat(38.0, 481))
         )
     ]
 )
@@ -254,8 +254,8 @@ class ZeroMeanGMM(GMPE):
     #: Required rupture parameter is only the magnitude
     REQUIRES_RUPTURE_PARAMETERS = {"mag"}
 
-    #: Required distance measure is rrup (closest distance to rupture)
-    REQUIRES_DISTANCES = {"rrup"}
+    #: Required distance measure is rjb (Joyner-Boore distance)
+    REQUIRES_DISTANCES = {"rjb"}
 
     # Shear-wave velocity for reference soil conditions in [m/s])
     DEFINED_FOR_REFERENCE_VELOCITY = 780
