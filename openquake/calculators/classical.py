@@ -18,7 +18,6 @@
 
 import io
 import os
-import json
 import time
 import psutil
 import logging
@@ -33,8 +32,7 @@ except ImportError:
 from openquake.baselib import (
     performance, parallel, hdf5, config, python3compat, workerpool as w)
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize,
-    get_nbytes_msg, pprod)
+    AccumDict, DictArray, block_splitter, groupby, humansize, pprod)
 from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
@@ -352,12 +350,12 @@ class Hazard:
         """
         Store data inside disagg_by_src
         """
-        disagg_by_src = self.datastore['disagg_by_src'][()]
+        disagg_by_src = self.datastore['disagg_by_src/array'][()]
         for key, pmap in pmaps.items():
             if isinstance(key, str):
                 # in case of disagg_by_src key is a source ID
                 disagg_by_src[..., self.srcidx[key]] = self.get_rates(pmap)
-        self.datastore['disagg_by_src'][:] = disagg_by_src
+        self.datastore['disagg_by_src/array'][:] = disagg_by_src
 
 
 @base.calculators.add('classical', 'ucerf_classical')
@@ -448,31 +446,6 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_df('rup', descr, 'gzip')
         # NB: the relevant ruptures are less than the effective ruptures,
         # which are a preclassical concept
-        if self.oqparam.disagg_by_src:
-            self.create_disagg_by_src()
-
-    def create_disagg_by_src(self):
-        """
-        :returns: the unique source IDs contained in the composite model
-        """
-        oq = self.oqparam
-        self.M = len(oq.imtls)
-        self.L1 = oq.imtls.size // self.M
-        sources = list(self.csm.source_info)
-        size, msg = get_nbytes_msg(
-            dict(N=self.N, M=self.M, L1=self.L1, Ns=len(sources)))
-        if size > TWO32:
-            raise RuntimeError(
-                'The matrix disagg_by_src is too large: %s' % msg)
-        size = self.N * self.M * self.L1 * len(sources) * 8
-        logging.info('Creating disagg_by_src of size %s', humansize(size))
-        self.datastore.create_dset(
-            'disagg_by_src', F32,
-            (self.N,self.M, self.L1, len(sources)))
-        self.datastore.set_shape_descr(
-            'disagg_by_src', site_id=self.N,
-            imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
-        return sources
 
     def init_poes(self):
         self.cfactor = numpy.zeros(3)
@@ -696,14 +669,18 @@ class ClassicalCalculator(base.HazardCalculator):
                 # enable reduction of the array disagg_by_src
                 arr = self.disagg_by_src = self.datastore['disagg_by_src'][:]
                 arr, srcids = semicolon_aggregate(arr, srcids)
-                self.datastore['disagg_by_src'][:] = arr
-                self.datastore.set_shape_descr(
-                    'disagg_by_src', site_id=self.N,
-                    imt=list(oq.imtls), lvl=self.L1, src_id=srcids)
+                del self.datastore['disagg_by_src']
+                self.datastore['disagg_by_src'] = hdf5.ArrayWrapper(
+                    arr, dict(shape_descr=['site_id', 'imt', 'lvl', 'src_id'],
+                              site_id=self.N, imt=list(oq.imtls), lvl=self.L1,
+                              src_id=srcids))
 
         if 'disagg_by_src' in self.datastore and self.N == 1 and len(oq.poes):
-            disagg_by_source(self.datastore, self.csm,
-                             self.monitor('disaggregate by source'))
+            triples = disagg_by_source(self.datastore, self.csm,
+                                       self.monitor('disaggregate by source'))
+            for source_id, rates5D, rates2D in triples:
+                self.datastore['disagg_source/' + source_id] = dict(
+                    rates5D=rates5D, rates2D=rates2D)
 
     def _create_hcurves_maps(self):
         oq = self.oqparam
@@ -873,9 +850,10 @@ def sanity_check(source_id, rates, disagg_by_src):
     :param rates: matrix of rates of shape (M, L1)
     :param disagg_by_src: dataset with shape (N, M, L1, Ns)
     """
-    js = json.loads(disagg_by_src.attrs['json'])
-    srcidx = js['src_id'].index(source_id)
-    expected_rates = disagg_by_src[0, :, :, srcidx]  # shape (M, L1)
+    srcids = disagg_by_src.src_id[:]
+    srcid = source_id.encode('utf8')
+    srcidx = numpy.where(srcids == srcid)[0][0]
+    expected_rates = disagg_by_src.array[0, :, :, srcidx]  # shape (M, L1)
     numpy.testing.assert_allclose(rates, expected_rates)
 
 
@@ -909,6 +887,6 @@ def disagg_by_source(parent, csm, mon):
     for source_id, rates5D, rates2D in smap:
         if oq.use_rates:
             logging.info('Checking the mean rates for source %s', source_id)
-            sanity_check(source_id, rates2D, parent.getitem('disagg_by_src'))
-        items.append((source_id, rates5D))
+            sanity_check(source_id, rates2D, parent['disagg_by_src'])
+        items.append((source_id, rates5D, rates2D))
     return items
