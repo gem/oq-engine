@@ -1126,7 +1126,7 @@ class FullLogicTree(object):
             else:
                 trti = self.trti[src.tectonic_region_type]
             if smr is None:
-                if not hasattr('sd'):  # cache source_data by source
+                if not hasattr(self, 'sd'):  # cache source_data by source
                     self.sd = group_array(self.source_model_lt.source_data, 'source')
                 brids = set(self.sd[srcid]['branch'])
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
