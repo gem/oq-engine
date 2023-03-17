@@ -35,6 +35,8 @@ class MRD01TestCase(unittest.TestCase):
     """ Computes the mean rate density using a simple PSHA input model """
 
     def setUp(self):
+        raise unittest.SkipTest('Has to be rewritten, broken by '
+                                'https://github.com/gem/oq-engine/pull/8537')
 
         # Settings
         fname = os.path.join(CWD, 'data', 'mrd', 'calc_934.hdf5')

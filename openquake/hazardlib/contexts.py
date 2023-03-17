@@ -1627,13 +1627,10 @@ def get_cmakers(src_groups, full_lt, oq):
     :param oq: object containing the calculation parameters
     :returns: list of ContextMakers associated to the given src_groups
     """
-    if not src_groups:
-        all_trt_smrs = [(ts,) for ts in full_lt._rlzs_by]
-    else:
-        all_trt_smrs = []
-        for sg in src_groups:
-            src = sg.sources[0]
-            all_trt_smrs.append(src.trt_smrs)
+    all_trt_smrs = []
+    for sg in src_groups:
+        src = sg.sources[0]
+        all_trt_smrs.append(src.trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     cmakers = []
     for grp_id, trt_smrs in enumerate(all_trt_smrs):
@@ -1666,12 +1663,9 @@ def read_cmakers(dstore, csm=None):
     else:
         oq.af = None
     if csm is None:
-        full_lt = dstore['full_lt'].init()
-        groups = []
-    else:
-        full_lt = csm.full_lt
-        groups = csm.src_groups
-    cmakers = get_cmakers(groups, full_lt, oq)
+        csm = dstore['_csm']
+        csm.full_lt = dstore['full_lt'].init()
+    cmakers = get_cmakers(csm.src_groups, csm.full_lt, oq)
     if 'delta_rates' in dstore:  # aftershock
         for cmaker in cmakers:
             cmaker.deltagetter = DeltaRatesGetter(dstore)
