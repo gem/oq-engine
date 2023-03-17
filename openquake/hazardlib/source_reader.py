@@ -428,7 +428,7 @@ class CompositeSourceModel:
         """
         :returns: an array of trt_smrs
         """
-        keys = [sg.sources[0].trt_smr for sg in self.src_groups]
+        keys = [sg.sources[0].trt_smrs for sg in self.src_groups]
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(trt_smr, numpy.uint32) for trt_smr in keys]
 
