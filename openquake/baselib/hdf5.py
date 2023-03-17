@@ -656,19 +656,17 @@ class ArrayWrapper(object):
             self.array[idx] = val
 
     def __toh5__(self):
-        arr = getattr(self, 'array', ())
-        if len(arr):
-            return arr, self.to_dict()
         return self.to_dict(), {}
 
-    def __fromh5__(self, array, attrs):
-        self.__init__(array, attrs)
+    def __fromh5__(self, dic, attrs):
+        vars(self).update(dic)
+        vars(self).update(attrs)
 
     def __repr__(self):
         if hasattr(self, 'shape_descr'):
             assert len(self.shape) == len(self.shape_descr), (
                 self.shape_descr, self.shape)
-            lst = ['%s=%d' % (descr, size)
+            lst = ['%s=%d' % (descr.decode('utf8'), size)
                    for descr, size in zip(self.shape_descr, self.shape)]
             return '<%s(%s)>' % (self.__class__.__name__, ', '.join(lst))
         elif hasattr(self, 'shape'):
@@ -765,8 +763,7 @@ class ArrayWrapper(object):
         """
         Convert the public attributes into a dictionary
         """
-        return {k: v for k, v in vars(self).items()
-                if k != 'array' and not k.startswith('_')}
+        return {k: v for k, v in vars(self).items() if not k.startswith('_')}
 
 
 def decode_array(values):
