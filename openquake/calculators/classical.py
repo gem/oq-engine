@@ -676,8 +676,11 @@ class ClassicalCalculator(base.HazardCalculator):
                               src_id=srcids))
 
         if 'disagg_by_src' in self.datastore and self.N == 1 and len(oq.poes):
-            disagg_by_source(self.datastore, self.csm,
-                             self.monitor('disaggregate by source'))
+            triples = disagg_by_source(self.datastore, self.csm,
+                                       self.monitor('disaggregate by source'))
+            for source_id, rates5D, rates2D in triples:
+                self.datastore['disagg_source/' + source_id] = dict(
+                    rates5D=rates5D, rates2D=rates2D)
 
     def _create_hcurves_maps(self):
         oq = self.oqparam
@@ -885,5 +888,5 @@ def disagg_by_source(parent, csm, mon):
         if oq.use_rates:
             logging.info('Checking the mean rates for source %s', source_id)
             sanity_check(source_id, rates2D, parent['disagg_by_src'])
-        items.append((source_id, rates5D))
+        items.append((source_id, rates5D, rates2D))
     return items
