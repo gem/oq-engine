@@ -138,6 +138,28 @@ class SetUSGSTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
         plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
 
+    def test_case_04b(self):
+        case_name = "test_case_04b"
+        rupture = test_data.RUP
+        gmm = test_data.ZeroMeanGMM()
+        station_sitecol = test_data.CASE04B_STATION_SITECOL
+        station_data = test_data.CASE04_STATION_DATA
+        observed_imt_strs = test_data.CASE04_OBSERVED_IMTS
+        target_sitecol = test_data.CASE04_TARGET_SITECOL
+        target_imts = test_data.CASE04_TARGET_IMTS
+        spatial_correl = test_data.DummySpatialCorrelationModel()
+        cross_correl_between = GodaAtkinson2009()
+        cross_correl_within = test_data.DummyCrossCorrelationWithin()
+        maximum_distance = test_data.MAX_DIST
+        mean_covs = get_conditioned_mean_and_covariance(
+            rupture, gmm, station_sitecol, station_data,
+            observed_imt_strs, target_sitecol, target_imts,
+            spatial_correl, cross_correl_between, cross_correl_within,
+            maximum_distance)
+        mu = mean_covs[0][target_imts[0].string].flatten()
+        sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+
     def test_case_05(self):
         case_name = "test_case_05"
         rupture = test_data.RUP
@@ -163,10 +185,56 @@ class SetUSGSTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
         plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
 
-# Useful for debugging purposes. Recreates the plots on
+    def test_case_06(self):
+        case_name = "test_case_06"
+        rupture = test_data.RUP
+        gmm = test_data.ZeroMeanGMM()
+        station_sitecol = test_data.CASE06_STATION_SITECOL
+        station_data = test_data.CASE06_STATION_DATA
+        observed_imt_strs = test_data.CASE06_OBSERVED_IMTS
+        target_sitecol = test_data.CASE06_TARGET_SITECOL
+        target_imts = test_data.CASE06_TARGET_IMTS
+        spatial_correl = test_data.DummySpatialCorrelationModel()
+        cross_correl_between = GodaAtkinson2009()
+        cross_correl_within = test_data.DummyCrossCorrelationWithin()
+        maximum_distance = test_data.MAX_DIST
+        mean_covs = get_conditioned_mean_and_covariance(
+            rupture, gmm, station_sitecol, station_data,
+            observed_imt_strs, target_sitecol, target_imts,
+            spatial_correl, cross_correl_between, cross_correl_within,
+            maximum_distance)
+        mu = mean_covs[0][target_imts[0].string].flatten()
+        sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+
+    def test_case_07(self):
+        case_name = "test_case_07"
+        rupture = test_data.RUP
+        gmm = test_data.ZeroMeanGMM()
+        station_sitecol = test_data.CASE07_STATION_SITECOL
+        station_data = test_data.CASE07_STATION_DATA
+        observed_imt_strs = test_data.CASE07_OBSERVED_IMTS
+        target_sitecol = test_data.CASE07_TARGET_SITECOL
+        target_imts = test_data.CASE07_TARGET_IMTS
+        spatial_correl = test_data.DummySpatialCorrelationModel()
+        cross_correl_between = GodaAtkinson2009()
+        cross_correl_within = test_data.DummyCrossCorrelationWithin()
+        maximum_distance = test_data.MAX_DIST
+        mean_covs = get_conditioned_mean_and_covariance(
+            rupture, gmm, station_sitecol, station_data,
+            observed_imt_strs, target_sitecol, target_imts,
+            spatial_correl, cross_correl_between, cross_correl_within,
+            maximum_distance)
+        mu = [mu[0][0] for mu in mean_covs[0].values()]
+        sig = numpy.sqrt([var[0][0] for var in mean_covs[1].values()])
+        periods = [imt.period for imt in target_imts]
+        plot_test_results_spectra(periods, mu, sig, case_name)
+
+# Functions useful for debugging purposes. Recreates the plots on
 # https://usgs.github.io/shakemap/manual4_0/tg_verification.html
-# Original code is from the ShakeMap XTestPlot module:
+# Original code is from the ShakeMap XTestPlot and XTestPlotSpectra modules:
 # https://github.com/usgs/shakemap/blob/main/shakemap/coremods/xtestplot.py
+# https://github.com/usgs/shakemap/blob/main/shakemap/coremods/xtestplot_spectra.py
 def plot_test_results(lons, means, stds, target_imt, case_name):
     fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
     plt.subplots_adjust(hspace=0.1)
@@ -179,6 +247,26 @@ def plot_test_results(lons, means, stds, target_imt, case_name):
     plt.xlabel("Longitude")
     ax[0].set_ylabel(f"Mean ln({target_imt}) (g)")
     ax[1].set_ylabel(f"Stddev ln({target_imt}) (g)")
+    ax[0].legend(loc="best")
+    ax[1].legend(loc="best")
+    ax[0].set_title(case_name)
+    ax[0].grid()
+    ax[1].grid()
+    ax[1].set_ylim(bottom=0)
+    plt.show()
+
+def plot_test_results_spectra(periods, means, stds, case_name):
+    fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
+    plt.subplots_adjust(hspace=0.1)
+    ax[0].semilogx(periods, means, color="k", label="mean")
+    ax[0].semilogx(
+        periods, means + stds, "--b", label="mean +/- stddev"
+    )
+    ax[0].semilogx(periods, means - stds, "--b")
+    ax[1].semilogx(periods, stds, "-.r", label="stddev")
+    plt.xlabel("Period (s)")
+    ax[0].set_ylabel(f"Mean ln(SA) (g)")
+    ax[1].set_ylabel(f"Stddev ln(SA) (g)")
     ax[0].legend(loc="best")
     ax[1].legend(loc="best")
     ax[0].set_title(case_name)

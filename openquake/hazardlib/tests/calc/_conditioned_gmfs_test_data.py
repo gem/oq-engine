@@ -199,10 +199,7 @@ CASE03_TARGET_IMTS = [PGA()]
 CASE04_TARGET_IMTS = [PGA()]
 CASE05_TARGET_IMTS = [PGA()]
 CASE06_TARGET_IMTS = [PGA()]
-CASE07_TARGET_IMTS = [
-    valid.intensity_measure_type("SA(" + str(period)[:4] + ")")
-    for period in numpy.logspace(-1, 1, 19)
-]
+CASE07_TARGET_IMTS = [SA(str(period)) for period in numpy.logspace(-1, 1, 199)]
 CASE08_TARGET_IMTS = [PGA()]
 CASE09_TARGET_IMTS = [PGA()]
 CASE10_TARGET_IMTS = [PGA()]
