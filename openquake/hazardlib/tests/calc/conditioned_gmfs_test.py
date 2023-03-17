@@ -230,11 +230,49 @@ class SetUSGSTestCase(unittest.TestCase):
         periods = [imt.period for imt in target_imts]
         plot_test_results_spectra(periods, mu, sig, case_name)
 
+    def test_case_08(self):
+        case_name = "test_case_08"
+        rupture = test_data.RUP
+        gmm = test_data.ZeroMeanGMM()
+        station_sitecol = test_data.CASE08_STATION_SITECOL
+        station_data_list = test_data.CASE08_STATION_DATA_LIST
+        observed_imt_strs = test_data.CASE08_OBSERVED_IMTS
+        target_sitecol = test_data.CASE08_TARGET_SITECOL
+        target_imts = test_data.CASE08_TARGET_IMTS
+        spatial_correl = test_data.DummySpatialCorrelationModel()
+        cross_correl_between = GodaAtkinson2009()
+        cross_correl_within = test_data.DummyCrossCorrelationWithin()
+        maximum_distance = test_data.MAX_DIST
+        std_addon_d = test_data.CASE08_STD_ADDON_D
+        bias_mean = test_data.CASE08_BD_YD
+        conditioned_mean_obs = test_data.CASE08_MU_YD_OBS
+        conditioned_std_obs = test_data.CASE08_SIG_YD_OBS
+        conditioned_std_far = test_data.CASE08_SIG_YD_FAR
+        mus = []
+        sigs = []
+        for i, station_data in enumerate(station_data_list):
+            mean_covs = get_conditioned_mean_and_covariance(
+                rupture, gmm, station_sitecol, station_data,
+                observed_imt_strs, target_sitecol, target_imts,
+                spatial_correl, cross_correl_between, cross_correl_within,
+                maximum_distance)
+            mu = mean_covs[0][target_imts[0].string].flatten()
+            sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
+            numpy.testing.assert_allclose(numpy.min(mu), bias_mean[i], rtol=1e-4)
+            numpy.testing.assert_allclose(numpy.max(mu), conditioned_mean_obs[i], rtol=1e-4)
+            numpy.testing.assert_allclose(numpy.min(sig), conditioned_std_obs[i], rtol=1e-4)
+            numpy.testing.assert_allclose(numpy.max(sig), conditioned_std_far[i], rtol=1e-4)
+            mus.append(mu)
+            sigs.append(sig)
+        plot_test_results_multi(target_sitecol.lons, mus, sigs, std_addon_d, target_imts[0].string, case_name)
+
 # Functions useful for debugging purposes. Recreates the plots on
 # https://usgs.github.io/shakemap/manual4_0/tg_verification.html
-# Original code is from the ShakeMap XTestPlot and XTestPlotSpectra modules:
+# Original code is from the ShakeMap plotting modules 
+# XTestPlot, XTestPlotSpectra, and XTestPlotMulti:
 # https://github.com/usgs/shakemap/blob/main/shakemap/coremods/xtestplot.py
 # https://github.com/usgs/shakemap/blob/main/shakemap/coremods/xtestplot_spectra.py
+# https://github.com/usgs/shakemap/blob/main/shakemap/coremods/xtestplot_multi.py
 def plot_test_results(lons, means, stds, target_imt, case_name):
     fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
     plt.subplots_adjust(hspace=0.1)
@@ -267,6 +305,26 @@ def plot_test_results_spectra(periods, means, stds, case_name):
     plt.xlabel("Period (s)")
     ax[0].set_ylabel(f"Mean ln(SA) (g)")
     ax[1].set_ylabel(f"Stddev ln(SA) (g)")
+    ax[0].legend(loc="best")
+    ax[1].legend(loc="best")
+    ax[0].set_title(case_name)
+    ax[0].grid()
+    ax[1].grid()
+    ax[1].set_ylim(bottom=0)
+    plt.show()
+
+def plot_test_results_multi(lons, means_list, stds_list, std_addon, target_imt, case_name):
+    colors = ["k", "b", "g", "r", "c", "m"]
+    fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
+    plt.subplots_adjust(hspace=0.1)
+    for i in range(len(means_list)):
+        means = means_list[i]
+        stds = stds_list[i]
+        ax[0].plot(lons, means, color=colors[i], label=r"$\sigma_\epsilon = %.2f$" % std_addon[i])
+        ax[1].plot(lons, stds, "-.", color=colors[i], label=r"$\sigma_\epsilon = %.2f$" % std_addon[i])
+    plt.xlabel("Longitude")
+    ax[0].set_ylabel(f"Mean ln({target_imt}) (g)")
+    ax[1].set_ylabel(f"Stddev ln({target_imt}) (g)")
     ax[0].legend(loc="best")
     ax[1].legend(loc="best")
     ax[0].set_title(case_name)
