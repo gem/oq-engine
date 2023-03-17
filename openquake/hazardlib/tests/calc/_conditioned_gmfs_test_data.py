@@ -75,6 +75,13 @@ CASE04_STATION_SITECOL = CASE05_STATION_SITECOL = SiteCollection(
     ]
 )
 
+CASE04B_STATION_SITECOL = SiteCollection(
+    [
+        Site(location=Point(-122.17083, 38.00000), custom_site_id="AZ.AAA"),
+        Site(location=Point(-121.17083, 38.00000), custom_site_id="AZ.BBB"),
+    ]
+)
+
 CASE06_STATION_SITECOL = SiteCollection(
     [
         Site(location=Point(-122.75000, 38.00000), custom_site_id="AZ.AAA"),
