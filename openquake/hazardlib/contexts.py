@@ -1622,18 +1622,15 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
 
 def get_cmakers(src_groups, full_lt, oq):
     """
-    :params src_groups: a list of SourceGroups (or trt_smrs arrays)
+    :params src_groups: a list of SourceGroups
     :param full_lt: a FullLogicTree instance
     :param oq: object containing the calculation parameters
     :returns: list of ContextMakers associated to the given src_groups
     """
-    if isinstance(src_groups, numpy.ndarray):  # passed trt_smrs
-        all_trt_smrs = src_groups
-    else:
-        all_trt_smrs = []
-        for sg in src_groups:
-            src = sg.sources[0]
-            all_trt_smrs.append(src.trt_smrs)
+    all_trt_smrs = []
+    for sg in src_groups:
+        src = sg.sources[0]
+        all_trt_smrs.append(src.trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     cmakers = []
     for grp_id, trt_smrs in enumerate(all_trt_smrs):
@@ -1650,10 +1647,10 @@ def get_cmakers(src_groups, full_lt, oq):
     return cmakers
 
 
-def read_cmakers(dstore, full_lt=None):
+def read_cmakers(dstore, csm=None):
     """
     :param dstore: a DataStore-like object
-    :param full_lt: a FullLogicTree instance, if given
+    :param csm: a CompositeSourceModel instance or None
     :returns: a list of ContextMaker instances, one per source group
     """
     from openquake.hazardlib.site_amplification import AmplFunction
@@ -1665,10 +1662,10 @@ def read_cmakers(dstore, full_lt=None):
         oq.af = AmplFunction.from_dframe(df)
     else:
         oq.af = None
-    trt_smrs = dstore['trt_smrs'][:]
-    if full_lt is None:
-        full_lt = dstore['full_lt'].init()
-    cmakers = get_cmakers(trt_smrs, full_lt, oq)
+    if csm is None:
+        csm = dstore['_csm']
+        csm.full_lt = dstore['full_lt'].init()
+    cmakers = get_cmakers(csm.src_groups, csm.full_lt, oq)
     if 'delta_rates' in dstore:  # aftershock
         for cmaker in cmakers:
             cmaker.deltagetter = DeltaRatesGetter(dstore)

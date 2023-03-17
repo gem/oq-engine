@@ -292,17 +292,13 @@ def short_repr(lst):
 
 @view.add('full_lt')
 def view_full_lt(token, dstore):
-    full_lt = dstore['full_lt']
+    full_lt = dstore['full_lt'].init()
     num_paths = full_lt.get_num_potential_paths()
     if not full_lt.num_samples and num_paths > 15000:
         return '<%d realizations>' % num_paths
-    try:
-        rlzs_by_gsim_list = map(full_lt.get_rlzs_by_gsim, dstore['trt_smrs'])
-    except KeyError:  # for scenario trt_smrs is missing
-        rlzs_by_gsim_list = [full_lt._rlzs_by_gsim(0)]
     header = ['grp_id', 'gsim', 'rlzs']
     rows = []
-    for grp_id, rbg in enumerate(rlzs_by_gsim_list):
+    for grp_id, rbg in full_lt._rlzs_by.items():
         for gsim, rlzs in rbg.items():
             rows.append((grp_id, repr(str(gsim)), short_repr(rlzs)))
     return numpy.array(rows, dt(header))
@@ -1211,11 +1207,10 @@ def view_composite_source_model(token, dstore):
     Show the structure of the CompositeSourceModel in terms of grp_id
     """
     lst = []
-    trt_smrs = dstore['trt_smrs'][:]
+    full_lt = dstore['full_lt'].init()
     for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
-        trts, sm_rlzs = numpy.divmod(trt_smrs[grp_id], 2**24)
-        lst.append((str(grp_id), to_str(trts), to_str(sm_rlzs), len(df)))
-    return numpy.array(lst, dt('grp_id trt smrs num_sources'))
+        lst.append((str(grp_id), full_lt.trts[df.trti.unique()[0]], len(df)))
+    return numpy.array(lst, dt('grp_id trt num_sources'))
 
 
 @view.add('branches')
