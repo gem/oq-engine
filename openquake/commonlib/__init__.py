@@ -18,4 +18,3 @@
 
 # keep the following line to have a __version__
 from openquake.baselib import __version__
-from openquake.hazardlib import source_reader

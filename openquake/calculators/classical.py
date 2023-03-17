@@ -18,7 +18,6 @@
 
 import io
 import os
-import json
 import time
 import psutil
 import logging
@@ -33,8 +32,7 @@ except ImportError:
 from openquake.baselib import (
     performance, parallel, hdf5, config, python3compat, workerpool as w)
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize,
-    get_nbytes_msg, pprod)
+    AccumDict, DictArray, block_splitter, groupby, humansize, pprod)
 from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
@@ -352,12 +350,12 @@ class Hazard:
         """
         Store data inside disagg_by_src
         """
-        disagg_by_src = self.datastore['disagg_by_src'][()]
+        disagg_by_src = self.datastore['disagg_by_src/array'][()]
         for key, pmap in pmaps.items():
             if isinstance(key, str):
                 # in case of disagg_by_src key is a source ID
                 disagg_by_src[..., self.srcidx[key]] = self.get_rates(pmap)
-        self.datastore['disagg_by_src'][:] = disagg_by_src
+        self.datastore['disagg_by_src/array'][:] = disagg_by_src
 
 
 @base.calculators.add('classical', 'ucerf_classical')
@@ -448,30 +446,6 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_df('rup', descr, 'gzip')
         # NB: the relevant ruptures are less than the effective ruptures,
         # which are a preclassical concept
-        if self.oqparam.disagg_by_src:
-            self.create_disagg_by_src()
-
-    def create_disagg_by_src(self):
-        """
-        :returns: the unique source IDs contained in the composite model
-        """
-        oq = self.oqparam
-        self.M = len(oq.imtls)
-        self.L1 = oq.imtls.size // self.M
-        sources = list(self.csm.source_info)
-        size, msg = get_nbytes_msg(
-            dict(N=self.N, M=self.M, L1=self.L1, Ns=len(sources)))
-        if size > TWO32:
-            raise RuntimeError(
-                'The matrix disagg_by_src is too large: %s' % msg)
-        size = self.N * self.M * self.L1 * len(sources) * 8
-        logging.info('Creating disagg_by_src of size %s', humansize(size))
-        arr = numpy.zeros((self.N, self.M, self.L1, len(sources)))
-        dic = dict(shape_descr=['site_id', 'imt', 'lvl', 'src_id'],
-                   site_id=self.N, imt=list(self.oqparam.imtls),
-                   lvl=self.L1, src_id=sources)
-        self.datastore['disagg_by_src'] = hdf5.ArrayWrapper(arr, dic)
-        return sources
 
     def init_poes(self):
         self.cfactor = numpy.zeros(3)

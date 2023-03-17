@@ -659,7 +659,11 @@ class ArrayWrapper(object):
         return self.to_dict(), {}
 
     def __fromh5__(self, dic, attrs):
-        vars(self).update(dic)
+        for k, v in dic.items():
+            if isinstance(v, h5py.Dataset):
+                setattr(self, k, v[()])
+            else:
+                setattr(self, k, v)
         vars(self).update(attrs)
 
     def __repr__(self):

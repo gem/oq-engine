@@ -291,13 +291,11 @@ hazard_uhs-std.csv
         # disagg_by_src
         self.run_calc(case_20.__file__, 'job_bis.ini')
         dbs = self.calc.datastore['disagg_by_src']
-        attrs = json.loads(dbs.attrs['json'])
-        self.assertEqual(attrs, {
-            'shape_descr': ['site_id', 'imt', 'lvl', 'src_id'],
-            'site_id': 1,
-            'imt': ['PGA', 'SA(1.0)'],
-            'lvl': 4,
-            'src_id': ['CHAR1', 'COMFLT1', 'SFLT1']})
+        ae(dbs.shape_descr, [b'site_id', b'imt', b'lvl', b'src_id'])
+        ae(dbs.site_id, 1)
+        ae(dbs.imt, [b'PGA', b'SA(1.0)'])
+        ae(dbs.lvl, 4)
+        ae(dbs.src_id, [b'CHAR1', b'COMFLT1', b'SFLT1'])
 
         # testing extract_disagg_by_src
         aw = extract(self.calc.datastore, 'disagg_by_src?imt=PGA&poe=1E-3')

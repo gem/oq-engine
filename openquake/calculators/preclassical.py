@@ -198,7 +198,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
         logging.info('Starting preclassical with %d source groups',
                      len(sources_by_key))
-        self.datastore.swmr_on()
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
             pointsources, pointlike, others = [], [], []
@@ -294,5 +293,23 @@ class PreClassicalCalculator(base.HazardCalculator):
 
     def post_execute(self, csm):
         """
-        Do nothing
+        Save disagg_by_src
         """
+        if self.oqparam.disagg_by_src:
+            oq = self.oqparam
+            self.M = len(oq.imtls)
+            self.L1 = oq.imtls.size // self.M
+            sources = list(self.csm.source_info)
+            size, msg = general.get_nbytes_msg(
+                dict(N=self.N, M=self.M, L1=self.L1, Ns=len(sources)))
+            if size > TWO32:
+                raise RuntimeError(
+                    'The matrix disagg_by_src is too large: %s' % msg)
+            size = self.N * self.M * self.L1 * len(sources) * 8
+            logging.info('Creating disagg_by_src of size %s',
+                         general.humansize(size))
+            arr = numpy.zeros((self.N, self.M, self.L1, len(sources)))
+            dic = dict(shape_descr=['site_id', 'imt', 'lvl', 'src_id'],
+                       site_id=self.N, imt=list(self.oqparam.imtls),
+                       lvl=self.L1, src_id=sources)
+            self.datastore['disagg_by_src'] = hdf5.ArrayWrapper(arr, dic)
