@@ -216,6 +216,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
         logging.info('Starting preclassical with %d source groups',
                      len(sources_by_key))
+        self.datastore.swmr_on()
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
             pointsources, pointlike, others = [], [], []
@@ -310,4 +311,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         return self.csm
 
     def post_execute(self, csm):
-        pass
+        """
+        Do nothing
+        """
