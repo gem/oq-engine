@@ -158,6 +158,10 @@ class SetUSGSTestCase(unittest.TestCase):
             maximum_distance)
         mu = mean_covs[0][target_imts[0].string].flatten()
         sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
+        numpy.testing.assert_allclose(numpy.min(mu), 0.52970, rtol=1e-4)
+        numpy.testing.assert_allclose(numpy.max(mu), 1)
+        numpy.testing.assert_allclose(numpy.min(sig), 0, atol=1e-4)
+        numpy.testing.assert_allclose(numpy.max(sig), 0.89955, rtol=1e-4)
         # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
 
     def test_case_05(self):
