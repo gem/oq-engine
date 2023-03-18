@@ -483,13 +483,12 @@ def get_conditioned_mean_and_covariance(
         # Compute the distribution of the conditional between-event
         # residual B|Y2=y2
         mu_BD_yD = T_D @ mu_HD_yD
-        cov_BD_BD_yD = numpy.sqrt(
-            numpy.diag(numpy.linalg.multi_dot([T_D, cov_HD_HD_yD, T_D.T])))
+        cov_BD_BD_yD = numpy.linalg.multi_dot([T_D, cov_HD_HD_yD, T_D.T])
 
-        # Get the nominal bias and its variance as the means of the
-        # conditional between-event residual mean and covariance
+        # Get the nominal bias and its standard deviation as the means of the
+        # conditional between-event residual mean and standard deviation
         nominal_bias_mean = numpy.mean(mu_BD_yD)
-        nominal_bias_stddev = numpy.sqrt(numpy.mean(cov_BD_BD_yD))
+        nominal_bias_stddev = numpy.sqrt(numpy.mean(numpy.diag(cov_BD_BD_yD)))
         logging.info(
             "GMM: %s, IMT: %s, Nominal bias mean: %.3f, Nominal bias stddev: %.3f",
             gmm_name, target_imt.string, nominal_bias_mean, nominal_bias_stddev)
