@@ -21,7 +21,7 @@ import unittest
 import numpy
 from openquake.baselib import general, config
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import contexts
+from openquake.hazardlib import contexts, calc
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -235,12 +235,18 @@ hazard_uhs-std.csv
         numpy.testing.assert_equal(ids, ['A;0', 'A;1', 'B'])
 
     def test_case_19(self):
-        # test for AvgGMPE
+        # test for nontrivial GMPE logictree and AvgGMPE
         self.assert_curves_ok([
             'hazard_curve-mean_PGA.csv',
             'hazard_curve-mean_SA(0.1).csv',
             'hazard_curve-mean_SA(0.15).csv',
         ], case_19.__file__, delta=1E-5)
+
+        # checking the mean rates
+        mean_poes = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L1)
+        mean_rates = calc.disagg.to_rates(mean_poes)
+        rates_by_source = self.calc.datastore['disagg_by_src'][0]  # (M, L1, Ns)
+        aac(mean_rates, rates_by_source.sum(axis=2), atol=2E-7)
 
     def test_case_20(self):
         # Source geometry enumeration, apply_to_sources
@@ -285,13 +291,11 @@ hazard_uhs-std.csv
         # disagg_by_src
         self.run_calc(case_20.__file__, 'job_bis.ini')
         dbs = self.calc.datastore['disagg_by_src']
-        attrs = json.loads(dbs.attrs['json'])
-        self.assertEqual(attrs, {
-            'shape_descr': ['site_id', 'imt', 'lvl', 'src_id'],
-            'site_id': 1,
-            'imt': ['PGA', 'SA(1.0)'],
-            'lvl': 4,
-            'src_id': ['CHAR1', 'COMFLT1', 'SFLT1']})
+        ae(dbs.shape_descr, [b'site_id', b'imt', b'lvl', b'src_id'])
+        ae(dbs.site_id, 1)
+        ae(dbs.imt, [b'PGA', b'SA(1.0)'])
+        ae(dbs.lvl, 4)
+        ae(dbs.src_id, [b'CHAR1', b'COMFLT1', b'SFLT1'])
 
         # testing extract_disagg_by_src
         aw = extract(self.calc.datastore, 'disagg_by_src?imt=PGA&poe=1E-3')

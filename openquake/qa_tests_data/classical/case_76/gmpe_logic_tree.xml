@@ -5,84 +5,84 @@
         <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                             applyToTectonicRegionType="Active Shallow Crust">
 
-           <logicTreeBranch branchID="b1">
+           <logicTreeBranch branchID="b11">
                     <uncertaintyModel>CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b2">
+           <logicTreeBranch branchID="b12">
                     <uncertaintyModel>CanadaSHM6_ActiveCrust_BooreEtAl2014</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b3">
+           <logicTreeBranch branchID="b13">
                     <uncertaintyModel>CanadaSHM6_ActiveCrust_CampbellBozorgnia2014</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b4">
+           <logicTreeBranch branchID="b14">
                     <uncertaintyModel>CanadaSHM6_ActiveCrust_ChiouYoungs2014</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b5">
+           <logicTreeBranch branchID="b15">
                     <uncertaintyModel>CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab30</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b6">
+           <logicTreeBranch branchID="b16">
                     <uncertaintyModel>CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b7">
+           <logicTreeBranch branchID="b17">
                     <uncertaintyModel>CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia30</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b8">
+           <logicTreeBranch branchID="b18">
                     <uncertaintyModel>CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b9">
+           <logicTreeBranch branchID="b19">
                     <uncertaintyModel>CanadaSHM6_InSlab_GarciaEtAl2005SSlab30</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b10">
+           <logicTreeBranch branchID="b20">
                     <uncertaintyModel>CanadaSHM6_InSlab_GarciaEtAl2005SSlab55</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b11">
+           <logicTreeBranch branchID="b21">
                     <uncertaintyModel>CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia30</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b12">
+           <logicTreeBranch branchID="b22">
                     <uncertaintyModel>CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b13">
+           <logicTreeBranch branchID="b23">
                     <uncertaintyModel>CanadaSHM6_Interface_AbrahamsonEtAl2015SInter</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b14">
+           <logicTreeBranch branchID="b24">
                     <uncertaintyModel>CanadaSHM6_Interface_AtkinsonMacias2009</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b15">
+           <logicTreeBranch branchID="b25">
                     <uncertaintyModel>CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b16">
+           <logicTreeBranch branchID="b26">
                     <uncertaintyModel>CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
-           <logicTreeBranch branchID="b17">
-                    <uncertaintyModel submodel="01">CanadaSHM6_StableCrust_NGAEast</uncertaintyModel>
-                    <uncertaintyWeight>0.05</uncertaintyWeight>
-           </logicTreeBranch>
-           <logicTreeBranch branchID="b18">
-                    <uncertaintyModel submodel="high">CanadaSHM6_StableCrust_AA13</uncertaintyModel>
-                    <uncertaintyWeight>0.05</uncertaintyWeight>
-           </logicTreeBranch>
-           <logicTreeBranch branchID="b19">
+           <logicTreeBranch branchID="b27">
                     <uncertaintyModel submodel="central">CanadaSHM6_StableCrust_AA13</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
-           </logicTreeBranch>
-           <logicTreeBranch branchID="b20">
+           </logicTreeBranch>           
+           <logicTreeBranch branchID="b28">
+                    <uncertaintyModel submodel="high">CanadaSHM6_StableCrust_AA13</uncertaintyModel>
+                    <uncertaintyWeight>0.05</uncertaintyWeight>
+           </logicTreeBranch>           
+           <logicTreeBranch branchID="b29">
                     <uncertaintyModel submodel="low">CanadaSHM6_StableCrust_AA13</uncertaintyModel>
+                    <uncertaintyWeight>0.05</uncertaintyWeight>
+           </logicTreeBranch>
+           <logicTreeBranch branchID="b30">
+                    <uncertaintyModel submodel="01">CanadaSHM6_StableCrust_NGAEast</uncertaintyModel>
                     <uncertaintyWeight>0.05</uncertaintyWeight>
            </logicTreeBranch>
            

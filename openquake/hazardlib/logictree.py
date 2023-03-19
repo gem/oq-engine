@@ -844,13 +844,14 @@ class SourceModelLogicTree(object):
             bsnodes.append(Node('logicTreeBranchSet', dic, nodes=brnodes))
         return Node('logicTree', {'logicTreeID': 'lt'}, nodes=bsnodes)
 
-    def get_nontrivial_sources(self):
+    def get_duplicated_sources(self):
         """
         :returns: {src_id: affected branches}
         """
-        sd = self.source_data
-        u, c = numpy.unique(sd['source'], return_counts=1)
-        return {src: sd[sd['source'] == src]['branch'] for src in u[c > 1]}
+        sd = group_array(self.source_data, 'source')
+        u, c = numpy.unique(self.source_data['source'], return_counts=1)
+        # AUS event based was hanging with a slower implementation
+        return {src: sd[src]['branch'] for src in u[c > 1]}
 
     # SourceModelLogicTree
     def __toh5__(self):
@@ -1113,8 +1114,9 @@ class FullLogicTree(object):
         :param srm: source model realization index
         :returns: list of sources with the same base source ID
         """
+        if not self.trti: # empty gsim_lt
+            return srcs
         out = []
-        sd = self.source_model_lt.source_data
         for src in srcs:
             srcid = re.split('[:;.]', src.source_id)[0]
             if source_id and srcid != source_id:
@@ -1123,8 +1125,10 @@ class FullLogicTree(object):
                 trti = 0
             else:
                 trti = self.trti[src.tectonic_region_type]
-            brids = set(sd[sd['source'] == srcid]['branch'])
             if smr is None:
+                if not hasattr(self, 'sd'):  # cache source_data by source
+                    self.sd = group_array(self.source_model_lt.source_data, 'source')
+                brids = set(self.sd[srcid]['branch'])
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs
                             if set(sm_rlz.lt_path) & brids)
