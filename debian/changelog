@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Fixed conditional spectrum calculator with multiple sites
+  * Fixed conditional spectrum calculator with multiple sites and implemented
+    parallelization
   * Fixed the source ID generation for CollapsedPointSources
   * Fixed the error message for wrong weights in the gsim logic tree file
   * Fixed KeyError in calculations using the EasternCan15Mid with PGA
