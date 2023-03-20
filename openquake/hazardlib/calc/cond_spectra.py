@@ -122,7 +122,8 @@ def get_cs_out(cmaker, ctxt, imti, imls, tom, _c=None):
             probs = tom.get_probability_one_or_more_occurrences(
                 ctx.occurrence_rate)  # shape U
         # For every GMM
-        for i, g in enumerate(cmaker.gidx):
+        for c, g in enumerate(cmaker.gidx):
+            i = c % len(cmaker.gsims)
             _cs_out(mean_stds[:, i], probs, rho, imti, imls, cmaker.poes,
                     cmaker.phi_b, cmaker.investigation_time,
                     out[g][:, sid], _c[:, sid] if _c is not None else None)
