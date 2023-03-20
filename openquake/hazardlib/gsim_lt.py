@@ -193,7 +193,7 @@ class GsimLogicTree(object):
         self._ltnode = ltnode or nrml.read(fname).logicTree
         self.bsetdict = {}
         self.shortener = {}
-        self.branches = self._build_trts_branches(trts)  # sorted by trt
+        self.branches = self._build_branches(trts)  # sorted by trt
         if trts != ['*']:
             # reduce self.values to the listed TRTs
             values = {}
@@ -360,7 +360,7 @@ class GsimLogicTree(object):
                 num *= val
         return num
 
-    def _build_trts_branches(self, tectonic_region_types):
+    def _build_branches(self, tectonic_region_types):
         # do the parsing, called at instantiation time to populate .values
         trts = []
         branches = []

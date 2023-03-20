@@ -502,5 +502,5 @@ class GMPE(GroundShakingIntensityModel):
             mL1 = m * L1
             if imtweight and imtweight.dic.get(imt) == 0:
                 # set by the engine when parsing the gsim logictree
-                # when 0 ignore the contribution: see _build_trts_branches
+                # when 0 ignore the contribution: see _build_branches
                 out[:, mL1:mL1 + L1] = 0

@@ -12,7 +12,7 @@
 | case_19 | Test AvgGMPE                                                               |
 | case_20 | Nontrivial source model logic tree with 8+4 realizations changing surfaces |
 | case_21 | Source Specific Logic Tree with 27 realizations                            |
-| case_28 | MultiPointSource with modify MFD logic tree                                |
+| case_28 | Test collapse_gsim_logic_tree                                              |
 | case_31 | Source Specific Logic Tree                                                 |
 | case_36 | Advanced applyToSources                                                    |
 | case_45 | MMI with disagg_by_src and sampling                                        |
