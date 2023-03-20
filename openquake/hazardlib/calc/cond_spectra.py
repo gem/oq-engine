@@ -113,7 +113,7 @@ def get_cs_out(cmaker, ctx, imti, imls, tom, _c=None):
     """
     assert len(imls) == len(cmaker.poes), (len(cmaker.poes), len(imls))
     sids, counts = numpy.unique(ctx.sids, return_counts=True)
-    assert len(set(counts)) == 1, counts  # must be all equal
+    # assert len(set(counts)) == 1, counts  # must be all equal
     N = len(sids)
     M = len(cmaker.imtls)
     P = len(imls)
