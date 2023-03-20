@@ -335,12 +335,13 @@ def _build_groups(full_lt, smdict):
     return groups
 
 
-def reduce_sources(sources_with_same_id):
+def reduce_sources(sources_with_same_id, full_lt):
     """
     :param sources_with_same_id: a list of sources with the same source_id
     :returns: a list of truly unique sources, ordered by trt_smr
     """
     out = []
+    srcid = sources_with_same_id[0].source_id
     add_checksums(sources_with_same_id)
     for srcs in general.groupby(sources_with_same_id, checksum).values():
         # duplicate sources: same id, same checksum
@@ -349,6 +350,8 @@ def reduce_sources(sources_with_same_id):
             src.trt_smr = tuple(s.trt_smr for s in srcs)
         else:
             src.trt_smr = src.trt_smr,
+        # tup = full_lt.get_trt_smrs(srcid)
+        # assert src.trt_smr == tup, (src.trt_smr, tup)
         out.append(src)
     out.sort(key=operator.attrgetter('trt_smr'))
     return out
@@ -371,7 +374,7 @@ def _get_csm(full_lt, groups):
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
             if len(srcs) > 1:
-                srcs = reduce_sources(srcs)
+                srcs = reduce_sources(srcs, full_lt)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
             # set ._wkt attribute (for later storage in the source_wkt dataset)
