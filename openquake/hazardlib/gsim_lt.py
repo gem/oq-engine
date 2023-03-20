@@ -311,6 +311,7 @@ class GsimLogicTree(object):
         new = object.__new__(self.__class__)
         vars(new).update(vars(self))
         new.branches = []
+        trti = 0
         for trt, grp in itertools.groupby(self.branches, lambda b: b.trt):
             bs_id = self.bsetdict[trt]
             brs = []
@@ -330,10 +331,13 @@ class GsimLogicTree(object):
                 gsim = AvgPoeGMPE(**kwargs)
                 gsim._toml = _toml
                 new.values[trt] = [gsim]
-                branch = BranchTuple(trt, bs_id, gsim, sum(weights), True)
+                br_id = 'gA' + str(trti)
+                new.shortener[br_id] = keyno(br_id, trti, 0, self.filename)
+                branch = BranchTuple(trt, br_id, gsim, sum(weights), True)
                 new.branches.append(branch)
             else:
                 new.branches.append(br)
+            trti += 1
         return new
 
     def get_num_branches(self):
