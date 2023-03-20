@@ -33,68 +33,53 @@ def outdict(M, N, P, start, stop):
 
 def _cs_out(mean_stds, probs, rho, imti, imls, cs_poes,
             phi_b, invtime, c, _c=None):
-    M, N, O, P = c.shape
-    U = len(probs) // N
+    M, O, P = c.shape
+    mu = mean_stds[0]  # shape (M, U)
+    sig = mean_stds[1]  # shape (M, U)
 
-    # For every site
-    for n in range(N):
-        # NB: to understand the code below, consider the case with
-        # N=3 sites and U=2 ruptures; then there are N*U=6 indices:
-        # 0: first site
-        # 1: second site
-        # 2: third site
-        # 3: first site
-        # 4: second site
-        # 5: third site
-        # i.e. idxs = [0, 3], [1, 4], [2, 5] for sites 0, 1, 2
-        slc = slice(n, N * U, N)  # U indices
+    for p, iml in enumerate(imls):
 
-        mu = mean_stds[0, :, slc]  # shape (M, U)
-        sig = mean_stds[1, :, slc]  # shape (M, U)
+        # Calculate the contribution of each rupture to the total
+        # probability of occurrence for the reference IMT. Both
+        # `eps` and `poes` have shape U
+        eps = (numpy.log(iml) - mu[imti]) / sig[imti]
+        poes = truncnorm_sf(phi_b, eps)
 
-        for p, iml in enumerate(imls):
+        # Converting to rates and dividing by the rate of
+        # exceedance of the reference IMT and level
+        ws = -numpy.log((1. - probs) ** poes) / invtime
 
-            # Calculate the contribution of each rupture to the total
-            # probability of occurrence for the reference IMT. Both
-            # `eps` and `poes` have shape U
-            eps = (numpy.log(iml) - mu[imti]) / sig[imti]
-            poes = truncnorm_sf(phi_b, eps)
+        # Normalizing by the AfE for the investigated IMT and level
+        ws /= -numpy.log(1. - cs_poes[p])
 
-            # Converting to rates and dividing by the rate of
-            # exceedance of the reference IMT and level
-            ws = -numpy.log((1. - probs[slc]) ** poes) / invtime
+        # weights not summing up to 1
+        c[:, 0, p] = ws.sum()
 
-            # Normalizing by the AfE for the investigated IMT and level
-            ws /= -numpy.log(1. - cs_poes[p])
+        # For each intensity measure type
+        for m in range(len(mu)):
 
-            # weights not summing up to 1
-            c[:, n, 0, p] = ws.sum()
+            # Equation 14 in Lin et al. (2013)
+            term1 = mu[m] + rho[m] * eps * sig[m]
+            c[m, 1, p] = ws @ term1
 
-            # For each intensity measure type
-            for m in range(len(mu)):
+            # This is executed only if we already have the final CS
+            if _c is not None:
 
-                # Equation 14 in Lin et al. (2013)
-                term1 = mu[m] + rho[m] * eps * sig[m]
-                c[m, n, 1, p] = ws @ term1
-
-                # This is executed only if we already have the final CS
-                if _c is not None:
-
-                    # Equation 15 in Lin et al. (2013)
-                    term2 = sig[m] * (1. - rho[m]**2)**0.5
-                    term3 = term1 - _c[m, n, 1, p]
-                    c[m, n, 2, p] = ws @ (term2**2 + term3**2)
+                # Equation 15 in Lin et al. (2013)
+                term2 = sig[m] * (1. - rho[m]**2)**0.5
+                term3 = term1 - _c[m, 1, p]
+                c[m, 2, p] = ws @ (term2**2 + term3**2)
 
 
 # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-def get_cs_out(cmaker, ctx, imti, imls, tom, _c=None):
+def get_cs_out(cmaker, ctxt, imti, imls, tom, _c=None):
     """
     Compute the contributions to the conditional spectra, in a form
     suitable for later composition.
 
     NB: at the present if works only for poissonian contexts
 
-    :param ctx:
+    :param ctxt:
        a context array
     :param imti:
         IMT index in the range 0..M-1
@@ -112,35 +97,35 @@ def get_cs_out(cmaker, ctx, imti, imls, tom, _c=None):
 
     """
     assert len(imls) == len(cmaker.poes), (len(cmaker.poes), len(imls))
-    sids, counts = numpy.unique(ctx.sids, return_counts=True)
-    assert len(set(counts)) == 1, counts  # must be all equal
+    sids = numpy.unique(ctxt.sids)
     N = len(sids)
     M = len(cmaker.imtls)
     P = len(imls)
 
     # This is the output dictionary as explained above
     out = outdict(M, N, P, cmaker.gidx.min(), cmaker.gidx.max() + 1)
-
-    mean_stds = cmaker.get_mean_stds([ctx])  # (4, G, M, N*U)
     imt_ref = cmaker.imts[imti]
     rho = numpy.array([cmaker.cross_correl.get_correlation(imt_ref, imt)
                        for imt in cmaker.imts])
+    for sid in sids:
+        ctx = ctxt[ctxt.sids == sid]
+        mean_stds = cmaker.get_mean_stds([ctx])  # (4, G, M, U)
 
-    # This computes the probability of at least one occurrence
-    # probs = 1 - exp(-occurrence_rates*time_span). NOTE that we
-    # assume the contexts here are homogenous i.e. they either use
-    # the occurrence rate or the probability of occurrence in the
-    # investigation time
-    if len(ctx.probs_occur[0]):
-        probs = numpy.array([numpy.sum(p[1:]) for p in ctx.probs_occur])
-    else:
-        probs = tom.get_probability_one_or_more_occurrences(
-            ctx.occurrence_rate)  # shape N * U
-    # For every GMM
-    for i, g in enumerate(cmaker.gidx):
-        _cs_out(mean_stds[:, i], probs, rho, imti, imls, cmaker.poes,
-                cmaker.phi_b, cmaker.investigation_time,
-                out[g], _c if _c is not None else None)
+        # This computes the probability of at least one occurrence
+        # probs = 1 - exp(-occurrence_rates*time_span). NOTE that we
+        # assume the contexts here are homogenous i.e. they either use
+        # the occurrence rate or the probability of occurrence in the
+        # investigation time
+        if len(ctx.probs_occur[0]):
+            probs = numpy.array([numpy.sum(p[1:]) for p in ctx.probs_occur])
+        else:
+            probs = tom.get_probability_one_or_more_occurrences(
+                ctx.occurrence_rate)  # shape U
+        # For every GMM
+        for i, g in enumerate(cmaker.gidx):
+            _cs_out(mean_stds[:, i], probs, rho, imti, imls, cmaker.poes,
+                    cmaker.phi_b, cmaker.investigation_time,
+                    out[g][:, sid], _c[:, sid] if _c is not None else None)
     return out
 
 
