@@ -221,6 +221,9 @@ def check_tricky_ids(smdict):
     found = []
     for srcid, srcs in acc.items():
         if len(srcs) > 1:  # duplicated ID
+            if any(getattr(src, 'mutex_weight', 0) for src in srcs):
+                raise RuntimeError('Mutually exclusive sources cannot be '
+                                   'duplicated: %s', srcid)
             add_checksums(srcs)
             if len(general.groupby(srcs, checksum)) > 1:
                 found.append(srcid)
