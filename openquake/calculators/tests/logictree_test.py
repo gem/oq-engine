@@ -354,6 +354,11 @@ hazard_uhs-std.csv
         ae(info['weight'] > 0, [True, True, True])
         ae(info['trti'], [0, 0, 1])
 
+        # check collapse_gsim_logic_tree
+        aw = extract(self.calc.datastore, 'realizations')
+        tbl = general.gettemp(text_table(aw.array, ext='org'))
+        self.assertEqualFiles('expected/realizations.org', tbl)
+
     def test_case_30(self):
         # point on the international data line
         # this is also a test with IMT-dependent weights

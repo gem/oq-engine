@@ -313,8 +313,7 @@ class Hazard:
         for trt_smr in pmap.trt_smrs:
             allrlzs = self.full_lt.get_rlzs_by_gsim(trt_smr).values()
             for i, rlzs in enumerate(allrlzs):
-                for rlz in rlzs:
-                    out[:, :] += rates[:, :, i] * self.weights[rlz]
+                out[:, :] += rates[:, :, i] * self.weights[rlzs].sum()
         return out.reshape((self.N, M, L1))
 
     def store_poes(self, g, pnes, pnes_sids):
@@ -576,9 +575,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 logging.debug('Producing %d inner tiles', ntiles)
 
             if oq.disagg_by_src:  # possible only with a single tile
-                if sg.src_interdep == 'mutex':
-                    raise RuntimeError(
-                        'You cannot use disagg_by_src with mutex sources')
                 blks = groupby(sg, basename).values()
             elif sg.atomic or sg.weight <= maxw:
                 blks = [sg]

@@ -18,7 +18,7 @@
 
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.calculators.export import export
-from openquake.qa_tests_data.conditional_spectrum import case_1
+from openquake.qa_tests_data.conditional_spectrum import case_1, case_2
 
 
 class ConditionalSpectrumTestCase(CalculatorTestCase):
@@ -37,3 +37,10 @@ class ConditionalSpectrumTestCase(CalculatorTestCase):
         [f0, f1] = export(('cs-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/conditional-spectrum-0.csv', f0)
         self.assertEqualFiles('expected/conditional-spectrum-1.csv', f1)
+
+    def test_case_2(self):
+        # test with two source models and two sites
+        self.run_calc(case_2.__file__, 'job.ini')
+        [f0, f1] = export(('cs-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/cs-0.csv', f0)
+        self.assertEqualFiles('expected/cs-1.csv', f1)

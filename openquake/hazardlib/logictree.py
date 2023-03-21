@@ -1091,15 +1091,19 @@ class FullLogicTree(object):
         """
         :returns: a tuple of indices trt_smr for the given source
         """
-        if not hasattr(self, 'source_data'):  # fake logic tree
+        try:
+            sd = self.source_model_lt.source_data
+        except AttributeError:  # fake logic tree
             return 0,
-        sd = self.source_model_lt.source_data
         if src_id is None:
             return tuple(trti * TWO24 + sm_rlz.ordinal
                          for sm_rlz in self.sm_rlzs
                          for trti in self.trti)
 
-        sd = sd[sd['source'] == src_id]
+        if not hasattr(self, 'sd'):  # cache source_data by source
+            self.sd = group_array(
+                self.source_model_lt.source_data, 'source')
+        sd = self.sd[src_id]
         trt = sd['trt'][0]  # all same trt
         trti = 0 if trt == '*' else self.trti[trt]
         brids = set(sd['branch'])
@@ -1127,7 +1131,8 @@ class FullLogicTree(object):
                 trti = self.trti[src.tectonic_region_type]
             if smr is None:
                 if not hasattr(self, 'sd'):  # cache source_data by source
-                    self.sd = group_array(self.source_model_lt.source_data, 'source')
+                    self.sd = group_array(
+                        self.source_model_lt.source_data, 'source')
                 brids = set(self.sd[srcid]['branch'])
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs

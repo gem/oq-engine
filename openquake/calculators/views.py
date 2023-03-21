@@ -292,19 +292,15 @@ def short_repr(lst):
 
 @view.add('full_lt')
 def view_full_lt(token, dstore):
-    full_lt = dstore['full_lt']
+    full_lt = dstore['full_lt'].init()
     num_paths = full_lt.get_num_potential_paths()
     if not full_lt.num_samples and num_paths > 15000:
         return '<%d realizations>' % num_paths
-    try:
-        rlzs_by_gsim_list = map(full_lt.get_rlzs_by_gsim, dstore['trt_smrs'])
-    except KeyError:  # for scenario trt_smrs is missing
-        rlzs_by_gsim_list = [full_lt._rlzs_by_gsim(0)]
-    header = ['grp_id', 'gsim', 'rlzs']
+    header = ['trt_smr', 'gsim', 'rlzs']
     rows = []
-    for grp_id, rbg in enumerate(rlzs_by_gsim_list):
+    for trt_smr, rbg in full_lt._rlzs_by.items():
         for gsim, rlzs in rbg.items():
-            rows.append((grp_id, repr(str(gsim)), short_repr(rlzs)))
+            rows.append((trt_smr, repr(str(gsim)), short_repr(rlzs)))
     return numpy.array(rows, dt(header))
 
 

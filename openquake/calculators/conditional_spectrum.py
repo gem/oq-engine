@@ -22,7 +22,7 @@ Conditional spectrum calculator, inspired by the disaggregation calculator
 import logging
 import numpy
 
-from openquake.baselib import general
+from openquake.baselib import general, parallel
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.probability_map import (
     compute_hazard_maps, get_mean_curve)
@@ -108,17 +108,17 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         # IMPORTANT!! we rely on the fact that the classical part
         # of the calculation stores the ruptures in chunks of constant
         # grp_id, therefore it is possible to build (start, stop) slices
-        out = general.AccumDict()  # grp_id => dict
 
         # Computing CS
         toms = decode(dstore['toms'][:])
         ctx_by_grp = read_ctx_by_grp(dstore)
+        smap = parallel.Starmap(get_cs_out, h5=self.datastore.hdf5)
         for gid, ctx in ctx_by_grp.items():
             tom = valid.occurrence_model(toms[gid])
             cmaker = self.cmakers[gid]
-            cmaker.poes = oq.poes
-            out += get_cs_out(cmaker, ctx, imti, self.imls, tom)
-
+            smap.submit((cmaker, ctx, imti, self.imls, tom))
+        out = smap.reduce()
+        
         # Apply weights and get two dictionaries with integer keys
         # (corresponding to the rlz ID) and array values
         # of shape (M, N, 3, P) where:
@@ -129,10 +129,11 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         outdic, outmean = self._apply_weights(out)
 
         # Computing standard deviation
+        smap = parallel.Starmap(get_cs_out, h5=self.datastore.hdf5)
         for gid, ctx in ctx_by_grp.items():
             cmaker = self.cmakers[gid]
-            cmaker.poes = oq.poes
-            res = get_cs_out(cmaker, ctx, imti, self.imls, tom, outmean[0])
+            smap.submit((cmaker, ctx, imti, self.imls, tom, outmean[0]))
+        for res in smap:
             for g in res:
                 out[g][:, :, 2] += res[g][:, :, 2]  # STDDEV
         return out
