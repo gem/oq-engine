@@ -23,7 +23,6 @@ https://usgs.github.io/shakemap/manual4_0/tg_verification.html`.
 """
 import unittest
 
-import matplotlib.pyplot as plt
 import numpy
 
 from openquake.hazardlib.calc.conditioned_gmfs import \
@@ -323,6 +322,7 @@ class SetUSGSTestCase(unittest.TestCase):
 # https://github.com/usgs/shakemap/blob/main/shakemap/coremods/xtestplot_spectra.py
 # https://github.com/usgs/shakemap/blob/main/shakemap/coremods/xtestplot_multi.py
 def plot_test_results(lons, means, stds, target_imt, case_name):
+    import matplotlib.pyplot as plt
     fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
     plt.subplots_adjust(hspace=0.1)
     ax[0].plot(lons, means, color="k", label="mean")
@@ -343,6 +343,7 @@ def plot_test_results(lons, means, stds, target_imt, case_name):
     plt.show()
 
 def plot_test_results_spectra(periods, means, stds, case_name):
+    import matplotlib.pyplot as plt
     fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
     plt.subplots_adjust(hspace=0.1)
     ax[0].semilogx(periods, means, color="k", label="mean")
@@ -363,6 +364,7 @@ def plot_test_results_spectra(periods, means, stds, case_name):
     plt.show()
 
 def plot_test_results_multi(lons, means_list, stds_list, std_addon, target_imt, case_name):
+    import matplotlib.pyplot as plt
     colors = ["k", "b", "g", "r", "c", "m"]
     fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
     plt.subplots_adjust(hspace=0.1)
