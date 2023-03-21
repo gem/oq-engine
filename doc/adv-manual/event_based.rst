@@ -305,6 +305,7 @@ are essentially the same thing, since a loss curve is just an array of
 PMLs, one for each return period. 
 
 For instance:
+
 .. code-block:: python
 
    >>> from openquake.risklib.scientific import losses_by_period
