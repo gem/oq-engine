@@ -187,7 +187,12 @@ def get_csm(oq, full_lt, h5=None):
                               h5=h5 if h5 else None).reduce()
     parallel.Starmap.shutdown()  # save memory
     fix_geometry_sections(smdict, h5)
-    check_tricky_ids(smdict)
+
+    found = find_false_duplicates(smdict)
+    if found:
+        logging.warning('Found different sources with same ID %s',
+                        general.shortlist(found))
+
     logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
 
@@ -209,9 +214,9 @@ def add_checksums(srcs):
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
 
 
-def check_tricky_ids(smdict):
+def find_false_duplicates(smdict):
     """
-    Discriminated different sources with same ID by changing the ID
+    Discriminate different sources with same ID (false duplicates)
     """
     acc = general.AccumDict(accum=[])
     atomic = set()
@@ -233,9 +238,7 @@ def check_tricky_ids(smdict):
             add_checksums(srcs)
             if len(general.groupby(srcs, checksum)) > 1:
                 found.append(srcid)
-    if found:
-        logging.warning('Found different sources with same ID %s',
-                        general.shortlist(found))
+    return found
 
 
 def fix_geometry_sections(smdict, h5):
