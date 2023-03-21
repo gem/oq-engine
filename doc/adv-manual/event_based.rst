@@ -343,8 +343,8 @@ Aggregate loss curves
 ~~~~~~~~~~~~~~~~~~~~~
 In some cases the computation of the PML is particularly simple and
 you can do it by hand: this happens when the ratio
-``eff_time/return_period`` is an integer. Consider for instance an
-``eff_time=10,000`` of years and ``return_period=2,000`` of years;
+``eff_time/return_period`` is an integer. Consider for instance a case with
+``eff_time=10,000`` years and ``return_period=2,000`` years;
 suppose there are the following 10 losses aggregating the commercial
 and residential buildings of an exposure:
 
@@ -353,8 +353,8 @@ and residential buildings of an exposure:
 >>> losses_RES = np.array([0, 800, 200, 0, 500, 1200, 250, 600, 300, 150])
 
 The loss curve associate the highest loss to 10,000 years, the second
-highest to 10,000/2 years, the third highest to 10,000/3 years, the
-fourth highest to 10,000/4 years, the fifth highest to 10,000 / 5 years
+highest to 10,000 / 2 years, the third highest to 10,000 / 3 years, the
+fourth highest to 10,000 / 4 years, the fifth highest to 10,000 / 5 years
 and so on until the lowest loss is associated to 10,000 / 10 years.
 Since the return period is 2,000 = 10,000 / 5 to compute the MPL
 it is enough to take the fifth loss ordered in descending order:
