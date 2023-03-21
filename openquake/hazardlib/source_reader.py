@@ -214,13 +214,19 @@ def check_tricky_ids(smdict):
     Discriminated different sources with same ID by changing the ID
     """
     acc = general.AccumDict(accum=[])
+    atomic = set()
     for smodel in smdict.values():
         for sgroup in smodel.src_groups:
             for src in sgroup:
                 acc[src.source_id].append(src)
+                if sgroup.atomic:
+                    atomic.add(src.source_id)
     found = []
     for srcid, srcs in acc.items():
         if len(srcs) > 1:  # duplicated ID
+            if any(src.source_id in atomic for src in srcs):
+                raise RuntimeError('Sources in atomic groups cannot be '
+                                   'duplicated: %s', srcid)
             if any(getattr(src, 'mutex_weight', 0) for src in srcs):
                 raise RuntimeError('Mutually exclusive sources cannot be '
                                    'duplicated: %s', srcid)

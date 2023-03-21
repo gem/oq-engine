@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Forbidden duplicate sources in atomic groups
+  * Forbidden duplicate mutually exclusive sources
   * Fixed conditional spectrum calculator with multiple sites and implemented
     parallelization
   * Fixed the source ID generation for CollapsedPointSources
