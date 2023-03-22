@@ -1147,11 +1147,10 @@ def view_risk_by_event(token, dstore):
     df = dstore.read_df('risk_by_event', sel=dict(loss_id=loss_id))
     del df['loss_id']
     del df['variance']
-    agg_keys = dstore['agg_keys'][:]
-    df = df[df.agg_id < df.agg_id.max()].sort_values('loss', ascending=False)
-    df['agg_key'] = decode(agg_keys[df.agg_id.to_numpy()])
+    df = df[df.agg_id == df.agg_id.max()].sort_values('loss', ascending=False)
+    del df['agg_id']
     out = io.StringIO()
-    df[:99].to_csv(out, sep='\t', index=False, float_format='%.1f',
+    df[:49].to_csv(out, sep='\t', index=False, float_format='%.1f',
                    line_terminator='\r\n')
     return out.getvalue()
 
