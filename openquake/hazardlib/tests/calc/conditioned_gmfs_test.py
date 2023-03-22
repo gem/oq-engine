@@ -27,7 +27,6 @@ import numpy
 
 from openquake.hazardlib.calc.conditioned_gmfs import \
     get_conditioned_mean_and_covariance
-from openquake.hazardlib.cross_correlation import GodaAtkinson2009
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
 
@@ -43,7 +42,7 @@ class SetUSGSTestCase(unittest.TestCase):
         target_sitecol = test_data.CASE01_TARGET_SITECOL
         target_imts = test_data.CASE01_TARGET_IMTS
         spatial_correl = test_data.DummySpatialCorrelationModel()
-        cross_correl_between = GodaAtkinson2009()
+        cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
         mean_covs = get_conditioned_mean_and_covariance(
@@ -56,7 +55,7 @@ class SetUSGSTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(numpy.zeros_like(mu), mu)
         numpy.testing.assert_almost_equal(numpy.min(sig), 0)
         assert numpy.max(sig) > 0.8 and numpy.max(sig) < 1.0
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
         
     def test_case_02(self):
         case_name = "test_case_02"
@@ -68,7 +67,7 @@ class SetUSGSTestCase(unittest.TestCase):
         target_sitecol = test_data.CASE02_TARGET_SITECOL
         target_imts = test_data.CASE02_TARGET_IMTS
         spatial_correl = test_data.DummySpatialCorrelationModel()
-        cross_correl_between = GodaAtkinson2009()
+        cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
         mean_covs = get_conditioned_mean_and_covariance(
@@ -83,7 +82,7 @@ class SetUSGSTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(numpy.min(numpy.abs(mu)), 0, atol=1e-4)
         numpy.testing.assert_allclose(numpy.min(sig), 0, atol=1e-4)
         assert numpy.max(sig) > 0.8 and numpy.max(sig) < 1.0
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
 
     def test_case_03(self):
         case_name = "test_case_03"
@@ -95,7 +94,7 @@ class SetUSGSTestCase(unittest.TestCase):
         target_sitecol = test_data.CASE03_TARGET_SITECOL
         target_imts = test_data.CASE03_TARGET_IMTS
         spatial_correl = test_data.DummySpatialCorrelationModel()
-        cross_correl_between = GodaAtkinson2009()
+        cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
         mean_covs = get_conditioned_mean_and_covariance(
@@ -109,7 +108,7 @@ class SetUSGSTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(numpy.max(mu), 1, rtol=1e-4)
         numpy.testing.assert_allclose(numpy.min(sig), 0, rtol=1e-4)
         numpy.testing.assert_allclose(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
 
     def test_case_04(self):
         case_name = "test_case_04"
@@ -121,7 +120,7 @@ class SetUSGSTestCase(unittest.TestCase):
         target_sitecol = test_data.CASE04_TARGET_SITECOL
         target_imts = test_data.CASE04_TARGET_IMTS
         spatial_correl = test_data.DummySpatialCorrelationModel()
-        cross_correl_between = GodaAtkinson2009()
+        cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
         mean_covs = get_conditioned_mean_and_covariance(
@@ -135,7 +134,7 @@ class SetUSGSTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(numpy.max(mu), 1)
         numpy.testing.assert_allclose(numpy.min(sig), 0, atol=1e-4)
         numpy.testing.assert_allclose(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
 
     def test_case_04b(self):
         case_name = "test_case_04b"
@@ -147,7 +146,7 @@ class SetUSGSTestCase(unittest.TestCase):
         target_sitecol = test_data.CASE04_TARGET_SITECOL
         target_imts = test_data.CASE04_TARGET_IMTS
         spatial_correl = test_data.DummySpatialCorrelationModel()
-        cross_correl_between = GodaAtkinson2009()
+        cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
         mean_covs = get_conditioned_mean_and_covariance(
@@ -161,7 +160,7 @@ class SetUSGSTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(numpy.max(mu), 1)
         numpy.testing.assert_allclose(numpy.min(sig), 0, atol=1e-4)
         numpy.testing.assert_allclose(numpy.max(sig), 0.89955, rtol=1e-4)
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
 
     def test_case_05(self):
         case_name = "test_case_05"
@@ -173,7 +172,7 @@ class SetUSGSTestCase(unittest.TestCase):
         target_sitecol = test_data.CASE05_TARGET_SITECOL
         target_imts = test_data.CASE05_TARGET_IMTS
         spatial_correl = test_data.DummySpatialCorrelationModel()
-        cross_correl_between = GodaAtkinson2009()
+        cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
         mean_covs = get_conditioned_mean_and_covariance(
@@ -186,7 +185,7 @@ class SetUSGSTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(numpy.zeros_like(mu), mu, atol=1e-4)
         numpy.testing.assert_allclose(numpy.min(sig), 0, atol=1e-4)
         numpy.testing.assert_allclose(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
 
     def test_case_06(self):
         case_name = "test_case_06"
@@ -198,7 +197,7 @@ class SetUSGSTestCase(unittest.TestCase):
         target_sitecol = test_data.CASE06_TARGET_SITECOL
         target_imts = test_data.CASE06_TARGET_IMTS
         spatial_correl = test_data.DummySpatialCorrelationModel()
-        cross_correl_between = GodaAtkinson2009()
+        cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
         mean_covs = get_conditioned_mean_and_covariance(
@@ -208,7 +207,7 @@ class SetUSGSTestCase(unittest.TestCase):
             maximum_distance)
         mu = mean_covs[0][target_imts[0].string].flatten()
         sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
 
     def test_case_07(self):
         case_name = "test_case_07"
@@ -220,7 +219,7 @@ class SetUSGSTestCase(unittest.TestCase):
         target_sitecol = test_data.CASE07_TARGET_SITECOL
         target_imts = test_data.CASE07_TARGET_IMTS
         spatial_correl = test_data.DummySpatialCorrelationModel()
-        cross_correl_between = GodaAtkinson2009()
+        cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
         mean_covs = get_conditioned_mean_and_covariance(
@@ -231,7 +230,7 @@ class SetUSGSTestCase(unittest.TestCase):
         mu = [mu[0][0] for mu in mean_covs[0].values()]
         sig = numpy.sqrt([var[0][0] for var in mean_covs[1].values()])
         periods = [imt.period for imt in target_imts]
-        # plot_test_results_spectra(periods, mu, sig, case_name)
+        plot_test_results_spectra(periods, mu, sig, case_name)
 
     def test_case_08(self):
         case_name = "test_case_08"
@@ -243,7 +242,7 @@ class SetUSGSTestCase(unittest.TestCase):
         target_sitecol = test_data.CASE08_TARGET_SITECOL
         target_imts = test_data.CASE08_TARGET_IMTS
         spatial_correl = test_data.DummySpatialCorrelationModel()
-        cross_correl_between = GodaAtkinson2009()
+        cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
         std_addon_d = test_data.CASE08_STD_ADDON_D
@@ -267,7 +266,7 @@ class SetUSGSTestCase(unittest.TestCase):
             numpy.testing.assert_allclose(numpy.max(sig), conditioned_std_far[i], rtol=1e-4)
             mus.append(mu)
             sigs.append(sig)
-        # plot_test_results_multi(target_sitecol.lons, mus, sigs, std_addon_d, target_imts[0].string, case_name)
+        plot_test_results_multi(target_sitecol.lons, mus, sigs, std_addon_d, target_imts[0].string, case_name)
 
     def test_case_09(self):
         case_name = "test_case_09"
@@ -279,7 +278,7 @@ class SetUSGSTestCase(unittest.TestCase):
         target_sitecol = test_data.CASE09_TARGET_SITECOL
         target_imts = test_data.CASE09_TARGET_IMTS
         spatial_correl = test_data.DummySpatialCorrelationModel()
-        cross_correl_between = GodaAtkinson2009()
+        cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
         mean_covs = get_conditioned_mean_and_covariance(
@@ -289,7 +288,7 @@ class SetUSGSTestCase(unittest.TestCase):
             maximum_distance)
         mu = mean_covs[0][target_imts[0].string].flatten()
         sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
 
     def test_case_10(self):
         case_name = "test_case_10"
@@ -301,7 +300,7 @@ class SetUSGSTestCase(unittest.TestCase):
         target_sitecol = test_data.CASE10_TARGET_SITECOL
         target_imts = test_data.CASE10_TARGET_IMTS
         spatial_correl = test_data.DummySpatialCorrelationModel()
-        cross_correl_between = GodaAtkinson2009()
+        cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
         mean_covs = get_conditioned_mean_and_covariance(
@@ -311,7 +310,7 @@ class SetUSGSTestCase(unittest.TestCase):
             maximum_distance)
         mu = mean_covs[0][target_imts[0].string].flatten()
         sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
 
 
 # Functions useful for debugging purposes. Recreates the plots on
