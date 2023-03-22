@@ -715,13 +715,14 @@ class ReinsuranceTestCase(CalculatorTestCase):
                               fname, delta=2E-4)
 
     def test_ideductible_exposure(self):
-        self.run_calc(reinsurance_5.__file__, 'job_1.ini')  # 4 policies
+        # this is a test with pure insurance
+        self.run_calc(reinsurance_5.__file__, 'job_1.ini')  # 2 policies
         [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-aggcurves.csv',
                               fname, delta=2E-4)
 
         # check moving the ideductible in the exposure produce the same aggcurve
-        self.run_calc(reinsurance_5.__file__, 'job_2.ini')  # 2 policies
+        self.run_calc(reinsurance_5.__file__, 'job_2.ini')  # 1 policy
         [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-aggcurves.csv',
                               fname, delta=2E-4)
