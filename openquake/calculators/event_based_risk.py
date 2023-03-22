@@ -328,6 +328,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             sec_losses.append(
                 partial(total_losses, kind=oq.total_losses, ideduc=ideduc))
         elif ideduc:
+            # subtract the insurance deductible for a single loss_type
             [lt] = oq.loss_types
             sec_losses.append(partial(total_losses, kind=lt, ideduc=ideduc))
             
