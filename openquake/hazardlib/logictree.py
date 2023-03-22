@@ -447,21 +447,21 @@ class SourceModelLogicTree(object):
         self.info = collect_info(self.filename, self.branchID)
         # the list is populated in collect_source_model_data
         self.source_data = []
-        for depth, blnode in enumerate(tree_node.nodes):
-            [bsnode] = bsnodes(self.filename, blnode)
-            self.parse_branchset(bsnode, depth)
+        for bsno, bnode in enumerate(tree_node.nodes):
+            [bsnode] = bsnodes(self.filename, bnode)
+            self.parse_branchset(bsnode, bsno)
         self.source_data = numpy.array(self.source_data, source_dt)
         unique = numpy.unique(self.source_data['fname'])
         dt = time.time() - t0
         logging.info('Validated source model logic tree with %d underlying '
                      'files in %.2f seconds', len(unique), dt)
 
-    def parse_branchset(self, branchset_node, depth):
+    def parse_branchset(self, branchset_node, bsno):
         """
         :param branchset_ node:
             ``etree.Element`` object with tag "logicTreeBranchSet".
-        :param depth:
-            The sequential number of this branching level, based on 0.
+        :param bsno:
+            The sequential number of the branchset, starting from 0.
 
         Enumerates children branchsets and call :meth:`parse_branchset`,
         :meth:`validate_branchset`, :meth:`parse_branches` and finally
@@ -486,7 +486,7 @@ class SourceModelLogicTree(object):
         if bsid in self.bsetdict:
             raise nrml.DuplicatedID('%s in %s' % (bsid, self.filename))
         self.bsetdict[bsid] = attrs
-        self.validate_branchset(branchset_node, depth, branchset)
+        self.validate_branchset(branchset_node, bsno, branchset)
         self.parse_branches(branchset_node, branchset)
         dummies = []  # dummy branches in case of applyToBranches
         if self.root_branchset is None:  # not set yet
@@ -706,7 +706,7 @@ class SourceModelLogicTree(object):
                         ": applyToBranches"" must be specified together with"
                         " applyToSources")
 
-    def validate_branchset(self, branchset_node, depth, branchset):
+    def validate_branchset(self, branchset_node, bsno, branchset):
         """
         See superclass' method for description and signature specification.
 
@@ -717,7 +717,7 @@ class SourceModelLogicTree(object):
         * All other branchsets must not be of type "sourceModel"
           or "gmpeModel".
         """
-        if depth == 0:
+        if bsno == 0:
             if branchset.uncertainty_type != 'sourceModel':
                 raise LogicTreeError(
                     branchset_node, self.filename,
