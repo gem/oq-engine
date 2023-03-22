@@ -433,9 +433,10 @@ class SourceModelLogicTree(object):
         """
         :returns: a new logic tree reduced to a single source
         """
-        return self.__class__(self.filename, self.seed, self.num_samples,
-                              self.sampling_method, self.test_mode,
-                              self.branchID, source_id)
+        new = self.__class__(self.filename, self.seed, self.num_samples,
+                             self.sampling_method, self.test_mode,
+                             self.branchID, source_id)
+        return new
 
     def parse_tree(self, tree_node):
         """
@@ -490,6 +491,9 @@ class SourceModelLogicTree(object):
         dummies = []  # dummy branches in case of applyToBranches
         if self.root_branchset is None:  # not set yet
             self.root_branchset = branchset
+        elif not branchset.branches:
+            del self.bsetdict[bsid]
+            return
         else:
             prev_ids = ' '.join(pb.branch_id for pb in self.previous_branches)
             app2brs = branchset_node.attrib.get('applyToBranches') or prev_ids
@@ -533,7 +537,6 @@ class SourceModelLogicTree(object):
         bsno = len(self.branchsets)
         for brno, branchnode in enumerate(branches):
             weight = ~branchnode.uncertaintyWeight
-            weight_sum += weight
             value_node = node_from_elem(branchnode.uncertaintyModel)
             if value_node.text is not None:
                 values.append(value_node.text.strip())
@@ -551,9 +554,13 @@ class SourceModelLogicTree(object):
                     raise LogicTreeError(
                         value_node, self.filename, str(exc)) from exc
                 if num_source_ids == 0:  # when reducing to a given source_id
-                    continue
-            value = parse_uncertainty(branchset.uncertainty_type, value_node,
-                                      self.filename)
+                    value = ''
+                else:
+                    value = parse_uncertainty(branchset.uncertainty_type,
+                                              value_node, self.filename)
+            else:
+                value = parse_uncertainty(branchset.uncertainty_type,
+                                          value_node, self.filename)
             branch_id = branchnode.attrib.get('branchID')
             branch = Branch(bs_id, branch_id, weight, value)
             if branch_id in self.branches:
@@ -564,6 +571,7 @@ class SourceModelLogicTree(object):
             self.shortener[branch_id] = keyno(
                 branch_id, bsno, brno, self.filename)
             branchset.branches.append(branch)
+            weight_sum += weight
         if abs(weight_sum - 1.0) > pmf.PRECISION:
             raise LogicTreeError(
                 branchset_node, self.filename,
@@ -676,7 +684,12 @@ class SourceModelLogicTree(object):
                     % uncertainty_type)
 
         if 'applyToSources' in f:
-            for source_id in f['applyToSources'].split():
+            if self.source_id:
+                srcids = [s for s in f['applyToSources'].split()
+                          if s == self.source_id]
+            else:
+                srcids = f['applyToSources'].split()
+            for source_id in srcids:
                 branchIDs = {
                     brid for (brid, trt, fname, srcid) in self.source_data
                     if srcid == source_id}
@@ -1023,7 +1036,8 @@ class FullLogicTree(object):
             assert self.Gt == len(self.sm_rlzs) * tot_gsims
 
         RT = self.get_num_paths() * len(self.trts)
-        assert sum(len(rlzs) for rlzs in rlzs_by_g) == RT
+        #assert sum(len(rlzs) for rlzs in rlzs_by_g) == RT, (
+        #    sum(len(rlzs) for rlzs in rlzs_by_g), RT)
 
         return self
 

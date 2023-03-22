@@ -641,11 +641,11 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
         reduced_lt.init()
     edges, s = edges_shapedic
     L = oq.imtls.size
-    rates1D = numpy.zeros(L)
     rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
     source_id = re.split('[:;.]', groups[0].sources[0].source_id)[0]
     cmakers = get_cmakers(groups, reduced_lt, oq)
     ws = reduced_lt.rlzs['weight']
+    assert len(ws) == reduced_lt.Gt, (len(ws), reduced_lt.Gt)
     pmap = ProbabilityMap(sitecol.sids, L, reduced_lt.Gt).fill(0)
     disaggs = []
     for c, cmaker in enumerate(cmakers):
@@ -655,11 +655,9 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
         if not ctxs:
             continue
         poes = cmaker.get_pmap(ctxs).array[0]
-        rates = to_rates(poes)  # shape (L, G)
         for c, g in enumerate(cmaker.gidx):
             i = c % G
-            pmap.array[0, :, g] += poes[:, i]
-            rates1D += rates[:, i] * ws[all_rlzs[i]].sum()
+            pmap.array[0, :, g] = poes[:, i]
         try:
             dis = Disaggregator(ctxs, sitecol, cmaker, edges)
         except FarAwayRupture:
@@ -669,4 +667,6 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     iml3 = pmap.expand(reduced_lt).interp4D(oq.imtls, oq.poes)[0]  # MPZ
     for dis in disaggs:
         rates5D += dis.disagg_mag_dist_eps(iml3, ws)
+    gws = [gw['weight'] for gw in reduced_lt.g_weights]
+    rates1D = to_rates(pmap.array[0]) @ gws / sum(gws)  # shape L
     return source_id, rates5D, rates1D.reshape(s['M'], L // len(oq.imtls))
