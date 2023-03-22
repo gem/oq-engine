@@ -366,7 +366,7 @@ class SourceModelLogicTree(object):
         dic = dict(filename='fake.xml', seed=0, num_samples=0,
                    sampling_method='early_weights', num_paths=1,
                    is_source_specific=0, source_data=[],
-                   tectonic_region_types=set(),
+                   tectonic_region_types=set(), source_id=None,
                    bsetdict='{"bs0": {"uncertaintyType": "sourceModel"}}')
         self.__fromh5__(arr, dic)
         return self
