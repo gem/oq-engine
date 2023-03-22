@@ -107,6 +107,8 @@ def get_trt_by_src(source_model_file, source_id=None):
         pieces = TRT_REGEX.split(xml.replace("'", '"'))  # fix single quotes
         for text, trt in zip(pieces[2::2], pieces[1::2]):
             for src_id in ID_REGEX.findall(text):
+                # disagg/case_12
+                src_id = src_id.split(':')[0]  # colon convention
                 if source_id:
                     if source_id == src_id:
                         trt_by_src[src_id] = trt
@@ -114,7 +116,7 @@ def get_trt_by_src(source_model_file, source_id=None):
                     trt_by_src[src_id] = trt
     else:  # parse the XML with ElementTree
         for src in node.fromstring(xml)[0]:
-            src_id = src.attrib['id']
+            src_id = src.attrib['id'].split(':')[0]  # colon convention
             if source_id:
                 if source_id == src_id:
                     trt_by_src[src_id] = src.attrib['tectonicRegion']
