@@ -542,6 +542,8 @@ class SourceModelLogicTree(object):
             value_node = node_from_elem(branchnode.uncertaintyModel)
             if value_node.text is not None:
                 values.append(value_node.text.strip())
+            value = parse_uncertainty(branchset.uncertainty_type,
+                                      value_node, self.filename)
             if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
                 if self.branchID and branchnode['branchID'] != self.branchID:
                     continue
@@ -557,12 +559,6 @@ class SourceModelLogicTree(object):
                         value_node, self.filename, str(exc)) from exc
                 if num_source_ids == 0:  # when reducing to a given source_id
                     value = ''
-                else:
-                    value = parse_uncertainty(branchset.uncertainty_type,
-                                              value_node, self.filename)
-            else:
-                value = parse_uncertainty(branchset.uncertainty_type,
-                                          value_node, self.filename)
             branch_id = branchnode.attrib.get('branchID')
             branch = Branch(bs_id, branch_id, weight, value)
             if branch_id in self.branches:
