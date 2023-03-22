@@ -68,12 +68,10 @@ class LogicTreeTestCase(CalculatorTestCase):
 
     def test_case_05(self):
         # use_rates, two sources, two uncertainties per source, full_enum
-        raise unittest.SkipTest
         self.assert_curves_ok(['curve-mean.csv'], case_05.__file__)
 
     def test_case_05_bis(self):
         # use_rates, two sources, two uncertainties per source, sampling
-        raise unittest.SkipTest
         self.assert_curves_ok(['curve-mean-bis.csv'], case_05.__file__)
 
     def test_case_06(self):
