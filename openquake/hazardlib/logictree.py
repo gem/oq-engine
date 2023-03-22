@@ -96,7 +96,7 @@ TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
 
 # this is very fast
-def get_trt_by_src(source_model_file):
+def get_trt_by_src(source_model_file, source_id=None):
     """
     :returns: a dictionary source ID -> tectonic region type of the source
     """
@@ -107,10 +107,19 @@ def get_trt_by_src(source_model_file):
         pieces = TRT_REGEX.split(xml.replace("'", '"'))  # fix single quotes
         for text, trt in zip(pieces[2::2], pieces[1::2]):
             for src_id in ID_REGEX.findall(text):
-                trt_by_src[src_id] = trt
+                if source_id:
+                    if source_id == src_id:
+                        trt_by_src[src_id] = trt
+                else:
+                    trt_by_src[src_id] = trt
     else:  # parse the XML with ElementTree
         for src in node.fromstring(xml)[0]:
-            trt_by_src[src.attrib['id']] = src.attrib['tectonicRegion']
+            src_id = src.attrib['id']
+            if source_id:
+                if source_id == src_id:
+                    trt_by_src[src_id] = src.attrib['tectonicRegion']
+            else:
+                trt_by_src[src_id] = src.attrib['tectonicRegion']
     return trt_by_src
 
 
@@ -362,7 +371,7 @@ class SourceModelLogicTree(object):
 
     def __init__(self, filename, seed=0, num_samples=0,
                  sampling_method='early_weights', test_mode=False,
-                 branchID=None):
+                 branchID=None, source_id=None):
         self.filename = filename
         self.basepath = os.path.dirname(filename)
         # NB: converting the random_seed into an integer is needed on Windows
@@ -371,6 +380,7 @@ class SourceModelLogicTree(object):
         self.sampling_method = sampling_method
         self.test_mode = test_mode
         self.branchID = branchID  # used to read only one sourceModel branch
+        self.source_id = None
         self.branches = {}  # branch_id -> branch
         self.bsetdict = {}
         self.previous_branches = []
@@ -532,12 +542,6 @@ class SourceModelLogicTree(object):
         self.previous_branches = branchset.branches + dummies
         self.branchsets.append(branchset)
 
-    def get_num_paths(self):
-        """
-        :returns: the number of paths in the logic tree
-        """
-        return self.num_samples if self.num_samples else self.num_paths
-
     def parse_branches(self, branchset_node, branchset):
         """
         Create and attach branches at ``branchset_node`` to ``branchset``.
@@ -570,15 +574,18 @@ class SourceModelLogicTree(object):
             if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
                 if self.branchID and branchnode['branchID'] != self.branchID:
                     continue
+                num_source_ids = 0
                 try:
                     for fname in value_node.text.strip().split():
                         if (fname.endswith(('.xml', '.nrml'))
                                 and not self.test_mode):
-                            self.collect_source_model_data(
+                            num_source_ids += self.collect_source_model_data(
                                 branchnode['branchID'], fname)
                 except Exception as exc:
                     raise LogicTreeError(
                         value_node, self.filename, str(exc)) from exc
+                if num_source_ids == 0:
+                    continue
             value = parse_uncertainty(branchset.uncertainty_type, value_node,
                                       self.filename)
             branch_id = branchnode.attrib.get('branchID')
@@ -600,6 +607,12 @@ class SourceModelLogicTree(object):
                 branchset_node, self.filename,
                 "there are duplicate values in uncertaintyModel: " +
                 ' '.join(values))
+
+    def get_num_paths(self):
+        """
+        :returns: the number of paths in the logic tree
+        """
+        return self.num_samples if self.num_samples else self.num_paths
 
     def __iter__(self):
         """
@@ -772,15 +785,19 @@ class SourceModelLogicTree(object):
         return open(os.path.join(self.basepath, source_model_file),
                     encoding='utf-8')
 
-    def collect_source_model_data(self, branch_id, source_model):
+    def collect_source_model_data(self, branch_id, fname):
         """
         Parse source model file and collect information about source ids,
         source types and tectonic region types available in it. That
         information is used then for :meth:`validate_filters` and
         :meth:`validate_uncertainty_value`.
+
+        :param branch_id: source model logic tree branch ID
+        :param fname: relative filename for the current source model portion
+        :returns: the number of sources in the source model portion
         """
-        with self._get_source_model(source_model) as sm:
-            trt_by_src = get_trt_by_src(sm)
+        with self._get_source_model(fname) as sm:
+            trt_by_src = get_trt_by_src(sm, self.source_id)
         if self.basepath:
             path = sm.name[len(self.basepath) + 1:]
         else:
@@ -793,6 +810,7 @@ class SourceModelLogicTree(object):
                     '%s: contain invalid ID %s' % (sm.name, src_id))
             self.source_data.append((branch_id, trt, path, src_id))
             self.tectonic_region_types.add(trt)
+        return len(trt_by_src)
 
     def bset_values(self, lt_path):
         """
