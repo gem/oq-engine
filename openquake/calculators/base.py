@@ -242,14 +242,13 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 if self.result is not None:
                     self.post_execute(self.result)
                 self.export(kw.get('exports', ''))
-            except Exception:
+            except Exception as exc:
                 if kw.get('pdb'):  # post-mortem debug
                     tb = sys.exc_info()[2]
                     traceback.print_tb(tb)
                     pdb.post_mortem(tb)
                 else:
-                    logging.critical('', exc_info=True)
-                    raise
+                    raise exc from None
             finally:
                 if shutdown:
                     parallel.Starmap.shutdown()
