@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import json
 import unittest
 import numpy
 from openquake.baselib import general, config
@@ -28,9 +27,9 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, NOT_DARWIN)
 from openquake.qa_tests_data.logictree import (
-    case_01, case_02, case_06, case_07, case_08, case_09, case_10, case_11,
-    case_13, case_14, case_15, case_16, case_17, case_19, case_20, case_21,
-    case_28, case_30, case_31, case_36, case_39, case_45, case_46,
+    case_01, case_02, case_05, case_06, case_07, case_08, case_09, case_10,
+    case_11, case_13, case_14, case_15, case_16, case_17, case_19, case_20,
+    case_21, case_28, case_30, case_31, case_36, case_39, case_45, case_46,
     case_52, case_56, case_58, case_59, case_67, case_68, case_71, case_73,
     case_79, case_83)
 
@@ -66,6 +65,16 @@ class LogicTreeTestCase(CalculatorTestCase):
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve.csv', fname)
+
+    def test_case_05(self):
+        # use_rates, two sources, two uncertainties per source, full_enum
+        raise unittest.SkipTest
+        self.assert_curves_ok(['curve-mean.csv'], case_05.__file__)
+
+    def test_case_05_bis(self):
+        # use_rates, two sources, two uncertainties per source, sampling
+        raise unittest.SkipTest
+        self.assert_curves_ok(['curve-mean-bis.csv'], case_05.__file__)
 
     def test_case_06(self):
         # two source model, use_rates and disagg_by_src
