@@ -380,7 +380,7 @@ class SourceModelLogicTree(object):
         self.sampling_method = sampling_method
         self.test_mode = test_mode
         self.branchID = branchID  # used to read only one sourceModel branch
-        self.source_id = None
+        self.source_id = source_id
         self.branches = {}  # branch_id -> branch
         self.bsetdict = {}
         self.previous_branches = []
@@ -433,43 +433,9 @@ class SourceModelLogicTree(object):
         """
         :returns: a new logic tree reduced to a single source
         """
-        new = copy.deepcopy(self)
-        sd = self.source_data
-        new.source_id = source_id
-        new.source_data = sd[sd['source'] == source_id]
-        okbranches = set(new.source_data['branch'])
-        okpaths = group_array(new.source_data, 'fname')
-        new.tectonic_region_types = set(new.source_data['trt'])
-        for bset, dic in zip(new.branchsets, new.bsetdict.values()):
-            if bset.uncertainty_type in ('sourceModel', 'extendModel'):
-                same = []  # branches with the source, all same contribution
-                zero = []  # branches without the source, all zeros
-                for br in bset.branches:
-                    if br.branch_id in okbranches:
-                        br.value =  ' '.join(p for p in br.value.split()
-                                             if p in okpaths)
-                        same.append(br)
-                    else:
-                        br.value = ''
-                        zero.append(br)
-                newbranches = []
-                if same:
-                    b1 = same[0]
-                    for br in same[1:]:
-                        b1.weight += br.weight
-                    newbranches.append(b1)
-                if zero:
-                    b0 = zero[0]
-                    for br in zero[1:]:
-                        b0.weight += br.weight
-                    newbranches.append(b0)
-                bset.branches = newbranches
-            ats = dic.get('applyToSources')
-            if ats and source_id not in ats:
-                bset.collapse()
-                del dic['applyToSources']
-        new.num_paths = count_paths(new.root_branchset.branches)
-        return new
+        return self.__class__(self.filename, self.seed, self.num_samples,
+                              self.sampling_method, self.test_mode,
+                              self.branchID, source_id)
 
     def parse_tree(self, tree_node):
         """
@@ -584,7 +550,7 @@ class SourceModelLogicTree(object):
                 except Exception as exc:
                     raise LogicTreeError(
                         value_node, self.filename, str(exc)) from exc
-                if num_source_ids == 0:
+                if num_source_ids == 0:  # when reducing to a given source_id
                     continue
             value = parse_uncertainty(branchset.uncertainty_type, value_node,
                                       self.filename)

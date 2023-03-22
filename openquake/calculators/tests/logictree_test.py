@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import json
 import unittest
 import numpy
 from openquake.baselib import general, config
@@ -532,7 +531,8 @@ hazard_uhs-std.csv
         # extendModel with sampling and reduction to single source
         self.run_calc(case_68.__file__, 'job1.ini')
 
-        # check the reduction from 1o to 2 realizations
+        # check the reduction from 10 to 2 realizations
+        import pdb; pdb.set_trace()
         rlzs = extract(self.calc.datastore, 'realizations').array
         ae(rlzs['branch_path'], [b'AA~A', b'B.~A'])
         aac(rlzs['weight'], [.7, .3])
