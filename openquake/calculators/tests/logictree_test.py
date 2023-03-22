@@ -68,12 +68,10 @@ class LogicTreeTestCase(CalculatorTestCase):
 
     def test_case_05(self):
         # use_rates, two sources, two uncertainties per source, full_enum
-        raise unittest.SkipTest
         self.assert_curves_ok(['curve-mean.csv'], case_05.__file__)
 
     def test_case_05_bis(self):
         # use_rates, two sources, two uncertainties per source, sampling
-        raise unittest.SkipTest
         self.assert_curves_ok(['curve-mean-bis.csv'], case_05.__file__)
 
     def test_case_06(self):
@@ -541,10 +539,10 @@ hazard_uhs-std.csv
         # extendModel with sampling and reduction to single source
         self.run_calc(case_68.__file__, 'job1.ini')
 
-        # check the reduction from 1o to 2 realizations
+        # check the reduction from 10 to 3 realizations
         rlzs = extract(self.calc.datastore, 'realizations').array
-        ae(rlzs['branch_path'], [b'AA~A', b'B.~A'])
-        aac(rlzs['weight'], [.7, .3])
+        ae(rlzs['branch_path'], [b'AA~A', b'AB~A', b'B.~A'])
+        aac(rlzs['weight'], [.4, .3, .3])
 
         # check the hazard curves
         fnames = export(('hcurves', 'csv'), self.calc.datastore)
