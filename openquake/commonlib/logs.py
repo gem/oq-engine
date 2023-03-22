@@ -144,7 +144,7 @@ class LogStreamHandler(logging.StreamHandler):
         super().__init__()
         self.job_id = job_id
 
-    def emit(self, record):  # pylint: disable=E0202
+    def emit(self, record):
         _update_log_record(self, record)
         super().emit(record)
 
@@ -158,7 +158,7 @@ class LogFileHandler(logging.FileHandler):
         self.job_id = job_id
         self.log_file = log_file
 
-    def emit(self, record):  # pylint: disable=E0202
+    def emit(self, record):
         _update_log_record(self, record)
         super().emit(record)
 
