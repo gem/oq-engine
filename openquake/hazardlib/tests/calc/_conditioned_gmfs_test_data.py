@@ -27,7 +27,7 @@ import pandas
 
 from openquake.hazardlib import const, valid
 from openquake.hazardlib.correlation import BaseCorrelationModel
-from openquake.hazardlib.cross_correlation import CrossCorrelation
+from openquake.hazardlib.cross_correlation import CrossCorrelation, CrossCorrelationBetween
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT, PGA, SA
@@ -338,3 +338,41 @@ class DummyCrossCorrelationWithin(CrossCorrelation):
         Ts = min(T1, T2)
         Tl = max(T1, T2)
         return Ts/Tl
+    
+
+class DummyCrossCorrelationBetween(CrossCorrelationBetween):
+    """
+    Trivial cross-period correlation model to be used only in simple test
+    cases, where the correlation is simply the ratio of the spectral periods
+    (that is, Ts/Tl where Ts is the smaller period and Tl is the larger).
+    *Not* meant to be used in real calculations.
+    """
+    cache = {}  # periods -> correlation matrix
+
+    def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
+        """
+        :returns: a scalar in the range 0..1
+        """
+        if from_imt == to_imt:
+            return 1
+
+        T1 = from_imt.period
+        T2 = to_imt.period
+        Ts = min(T1, T2)
+        Tl = max(T1, T2)
+        return Ts/Tl
+    
+    def get_inter_eps(self, imts, num_events):
+        pass
+
+    def _get_correlation_matrix(self, imts):
+        # cached on the periods
+        periods = tuple(imt.period for imt in imts)
+        try:
+            return self.cache[periods]
+        except KeyError:
+            self.cache[periods] = corma = numpy.zeros((len(imts), len(imts)))
+        for i, imi in enumerate(imts):
+            for j, imj in enumerate(imts):
+                corma[i, j] = self.get_correlation(imi, imj)
+        return corma
