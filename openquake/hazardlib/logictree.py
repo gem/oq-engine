@@ -1038,8 +1038,8 @@ class FullLogicTree(object):
             assert self.Gt == len(self.sm_rlzs) * tot_gsims
 
         RT = self.get_num_paths() * len(self.trts)
-        #assert sum(len(rlzs) for rlzs in rlzs_by_g) == RT, (
-        #    sum(len(rlzs) for rlzs in rlzs_by_g), RT)
+        assert sum(len(rlzs) for rlzs in rlzs_by_g) == RT, (
+            sum(len(rlzs) for rlzs in rlzs_by_g), RT)
 
         return self
 

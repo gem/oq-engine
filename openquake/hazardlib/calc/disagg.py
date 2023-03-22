@@ -645,7 +645,6 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     source_id = re.split('[:;.]', groups[0].sources[0].source_id)[0]
     cmakers = get_cmakers(groups, reduced_lt, oq)
     ws = reduced_lt.rlzs['weight']
-    assert len(ws) == reduced_lt.Gt, (len(ws), reduced_lt.Gt)
     pmap = ProbabilityMap(sitecol.sids, L, reduced_lt.Gt).fill(0)
     disaggs = []
     for c, cmaker in enumerate(cmakers):
@@ -668,5 +667,5 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     for dis in disaggs:
         rates5D += dis.disagg_mag_dist_eps(iml3, ws)
     gws = [gw['weight'] for gw in reduced_lt.g_weights]
-    rates1D = to_rates(pmap.array[0]) @ gws / sum(gws)  # shape L
+    rates1D = to_rates(pmap.array[0]) @ gws  # shape L
     return source_id, rates5D, rates1D.reshape(s['M'], L // len(oq.imtls))
