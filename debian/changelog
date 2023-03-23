@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Tracebacks were printed 3 times in the console: this is finally fixed
   * Forbidden duplicate sources in atomic groups
   * Forbidden duplicate mutually exclusive sources
   * Fixed conditional spectrum calculator with multiple sites and implemented
