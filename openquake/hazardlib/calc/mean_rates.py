@@ -27,8 +27,8 @@ def to_rates(probs):
     """
     Convert an array of probabilities into an array of rates
 
-    >>> round(to_rates(.8), 6)
-    1.609438
+    >>> numpy.round(to_rates(numpy.array([.8])), 6)
+    array([1.609438])
     """
     pnes = 1. - probs
     pnes[pnes == 0] = 1E-45  # minimum float32
@@ -39,8 +39,8 @@ def to_probs(rates):
     """
     Convert an array of rates into an array of probabilities
 
-    >>> round(to_probs(1.609438), 6)
-    0.8
+    >>> numpy.round(to_probs(numpy.array([1.609438])), 6)
+    array([0.8])
     """
     return 1. - numpy.exp(- rates)
 
