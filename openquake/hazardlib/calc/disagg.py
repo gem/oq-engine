@@ -56,7 +56,9 @@ def to_rates(probs):
     >>> round(to_rates(.8), 6)
     1.609438
     """
-    return - numpy.log(1. - probs)
+    pnes = 1. - probs
+    pnes[pnes == 0] = 1E-45  # minimum float32
+    return - numpy.log(pnes)
 
 
 def to_probs(rates):
