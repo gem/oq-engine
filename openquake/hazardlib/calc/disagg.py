@@ -36,7 +36,6 @@ from openquake.baselib.performance import idx_start_stop, Monitor
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
-from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
@@ -45,30 +44,11 @@ from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
 from openquake.hazardlib.contexts import (
     ContextMaker, FarAwayRupture, get_cmakers)
+from openquake.hazardlib.calc.mean_rates import (
+    calc_gmap, calc_mean_rates, to_rates, to_probs)
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
-
-def to_rates(probs):
-    """
-    Convert an array of probabilities into an array of rates
-
-    >>> round(to_rates(.8), 6)
-    1.609438
-    """
-    pnes = 1. - probs
-    pnes[pnes == 0] = 1E-45  # minimum float32
-    return - numpy.log(pnes)
-
-
-def to_probs(rates):
-    """
-    Convert an array of rates into an array of probabilities
-
-    >>> round(to_probs(1.609438), 6)
-    0.8
-    """
-    return 1. - numpy.exp(- rates)
 
 
 def assert_same_shape(arrays):
@@ -642,32 +622,13 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     if not hasattr(reduced_lt, 'rlzs_by_g'):
         reduced_lt.init()
     edges, s = edges_shapedic
-    L = oq.imtls.size
     rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
     source_id = re.split('[:;.]', groups[0].sources[0].source_id)[0]
-    cmakers = get_cmakers(groups, reduced_lt, oq)
+    gmap, ctxs, cmakers = calc_gmap(groups, reduced_lt, sitecol, oq)
+    iml3 = gmap.expand(reduced_lt).interp4D(oq.imtls, oq.poes)[0]  # MPZ
     ws = reduced_lt.rlzs['weight']
-    pmap = ProbabilityMap(sitecol.sids, L, reduced_lt.Gt).fill(0)
-    disaggs = []
-    for c, cmaker in enumerate(cmakers):
-        all_rlzs = list(cmaker.gsims.values())
-        G = len(all_rlzs)
-        ctxs = cmaker.from_srcs(groups[c], sitecol)
-        if not ctxs:
-            continue
-        poes = cmaker.get_pmap(ctxs).array[0]
-        for c, g in enumerate(cmaker.gidx):
-            i = c % G
-            pmap.array[0, :, g] = poes[:, i]
-        try:
-            dis = Disaggregator(ctxs, sitecol, cmaker, edges)
-        except FarAwayRupture:
-            continue  # source corresponding to a noncontributing realization
-        else:
-            disaggs.append(dis)
-    iml3 = pmap.expand(reduced_lt).interp4D(oq.imtls, oq.poes)[0]  # MPZ
-    for dis in disaggs:
+    for ctx, cmaker in zip(ctxs, cmakers):
+        dis = Disaggregator([ctx], sitecol, cmaker, edges)
         rates5D += dis.disagg_mag_dist_eps(iml3, ws)
-    gws = [gw['weight'] for gw in reduced_lt.g_weights]
-    rates1D = to_rates(pmap.array[0]) @ gws  # shape L
-    return source_id, rates5D, rates1D.reshape(s['M'], L // len(oq.imtls))
+    rates2D = calc_mean_rates(gmap, reduced_lt.g_weights, oq.imtls)[0]
+    return source_id, rates5D, rates2D
