@@ -63,7 +63,9 @@ def gzpik(obj):
 
 def fragmentno(src):
     "Postfix after :.; as an integer"
+    # in disagg/case-12 one has source IDs like 'SL_kerton:665!1'
     fragment = re.split('[:.;]', src.source_id, 1)[1]
+    fragment = fragment.split('!')[0]
     return int(fragment.replace('.', '').replace(';', ''))
 
 
@@ -236,7 +238,12 @@ def find_false_duplicates(smdict):
                 raise RuntimeError('Mutually exclusive sources cannot be '
                                    'duplicated: %s', srcid)
             add_checksums(srcs)
-            if len(general.groupby(srcs, checksum)) > 1:
+            gb = general.groupby(srcs, checksum)
+            if len(gb) > 1:
+                for i, same_checksum in enumerate(gb.values()):
+                    # sources with the same checksum get the same ID
+                    for src in same_checksum:
+                        src.source_id += '!%d' % i
                 found.append(srcid)
     return found
 
