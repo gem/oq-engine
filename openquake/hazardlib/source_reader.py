@@ -219,6 +219,7 @@ def add_checksums(srcs):
 def find_false_duplicates(smdict):
     """
     Discriminate different sources with same ID (false duplicates)
+    and put a question mark in their source ID
     """
     acc = general.AccumDict(accum=[])
     atomic = set()

@@ -96,7 +96,7 @@ TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
 
 # this is very fast
-def get_trt_by_src(source_model_file, source_id=None):
+def get_trt_by_src(source_model_file, source_id=''):
     """
     :returns: a dictionary source ID -> tectonic region type of the source
     """
@@ -190,7 +190,7 @@ def get_eff_rlzs(sm_rlzs, gsim_rlzs):
 Info = collections.namedtuple('Info', 'smpaths h5paths applytosources')
 
 
-def collect_info(smltpath, branchID=None):
+def collect_info(smltpath, branchID=''):
     """
     Given a path to a source model logic tree, collect all of the
     path names to the source models it contains.
@@ -366,14 +366,14 @@ class SourceModelLogicTree(object):
         dic = dict(filename='fake.xml', seed=0, num_samples=0,
                    sampling_method='early_weights', num_paths=1,
                    is_source_specific=0, source_data=[],
-                   tectonic_region_types=set(), source_id=None,
+                   tectonic_region_types=set(), source_id='', branchID='',
                    bsetdict='{"bs0": {"uncertaintyType": "sourceModel"}}')
         self.__fromh5__(arr, dic)
         return self
 
     def __init__(self, filename, seed=0, num_samples=0,
                  sampling_method='early_weights', test_mode=False,
-                 branchID=None, source_id=None):
+                 branchID='', source_id=''):
         self.filename = filename
         self.basepath = os.path.dirname(filename)
         # NB: converting the random_seed into an integer is needed on Windows
@@ -481,6 +481,8 @@ class SourceModelLogicTree(object):
                    if filtername in branchset_node.attrib)
         self.validate_filters(branchset_node, uncertainty_type, dic)
         filters = self.parse_filters(branchset_node, uncertainty_type, dic)
+        if 'applyToSources' in filters and not filters['applyToSources']:
+            return  # ignore the branchset
 
         ordinal = len(self.bsetdict)
         branchset = BranchSet(uncertainty_type, ordinal, filters)
@@ -490,6 +492,7 @@ class SourceModelLogicTree(object):
         self.bsetdict[bsid] = attrs
         self.validate_branchset(branchset_node, bsno, branchset)
         self.parse_branches(branchset_node, branchset)
+
         dummies = []  # dummy branches in case of applyToBranches
         if self.root_branchset is None:  # not set yet
             self.root_branchset = branchset
@@ -623,7 +626,10 @@ class SourceModelLogicTree(object):
         splitting into lists.
         """
         if 'applyToSources' in filters:
-            filters['applyToSources'] = filters['applyToSources'].split()
+            srcs = filters['applyToSources'].split()
+            if self.source_id:
+                srcs = [src for src in srcs if src == self.source_id]
+            filters['applyToSources'] = srcs
         if 'applyToBranches' in filters:
             filters['applyToBranches'] = filters['applyToBranches'].split()
         return filters
@@ -864,6 +870,8 @@ class SourceModelLogicTree(object):
         attrs['filename'] = self.filename
         attrs['num_paths'] = self.num_paths
         attrs['is_source_specific'] = self.is_source_specific
+        attrs['source_id'] = self.source_id
+        attrs['branchID'] = self.branchID
         return numpy.array(tbl, branch_dt), attrs
 
     # SourceModelLogicTree
@@ -958,6 +966,13 @@ class LtRealization(object):
 
     def __hash__(self):
         return hash(repr(self))
+
+
+def _get_smr(source_id):
+    # 'src1;0.0' => 0
+    suffix = source_id.split(';')[1]
+    smr = suffix.split('.')[0]
+    return int(smr)
 
 
 class FullLogicTree(object):
@@ -1125,6 +1140,9 @@ class FullLogicTree(object):
                 trti = 0
             else:
                 trti = self.trti[src.tectonic_region_type]
+            if smr is None and ';' in src.source_id:
+                # assume <base_id>;<smr>
+                smr = _get_smr(src.source_id)
             if smr is None:
                 if not hasattr(self, 'sd'):  # cache source_data by source
                     self.sd = group_array(
@@ -1140,7 +1158,7 @@ class FullLogicTree(object):
             out.append(src)
         return out
 
-    def reduce_groups(self, src_groups, source_id=None):
+    def reduce_groups(self, src_groups, source_id=''):
         """
         Filter the sources and set the tuple .trt_smr
         """

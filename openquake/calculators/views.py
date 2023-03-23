@@ -35,7 +35,7 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree
+from openquake.hazardlib import logictree, calc
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util
@@ -922,6 +922,20 @@ def view_extreme_gmvs(token, dstore):
                 msg += '\n%s' % exdf.set_index('rup')
         return msg
     return msg + '\nCould not extract extreme GMVs for ' + imt0
+
+
+@view.add('mean_rates')
+def view_mean_rates(token, dstore):
+    """
+    Display mean hazard rates for the first site
+    """
+    oq = dstore['oqparam']
+    assert oq.use_rates
+    poes = dstore.sel('hcurves-stats', site_id=0, stat='mean')[0, 0]  # N, R, M, L1
+    rates = numpy.zeros(poes.shape[1], dt(oq.imtls))
+    for m, imt in enumerate(oq.imtls):
+        rates[imt] = calc.disagg.to_rates(poes[m])
+    return rates
 
 
 @view.add('mean_disagg')

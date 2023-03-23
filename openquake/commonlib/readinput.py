@@ -665,7 +665,7 @@ def get_rupture(oqparam):
     return rup
 
 
-def get_source_model_lt(oqparam, branchID=None):
+def get_source_model_lt(oqparam, branchID=''):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -684,7 +684,7 @@ def get_source_model_lt(oqparam, branchID=None):
     return smlt
 
 
-def get_full_lt(oqparam, branchID=None):
+def get_full_lt(oqparam, branchID=''):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -809,7 +809,7 @@ def get_cache_path(oqparam, h5=None):
     return ''
 
 
-def get_composite_source_model(oqparam, h5=None, branchID=None):
+def get_composite_source_model(oqparam, h5=None, branchID=''):
     """
     Parse the XML and build a complete composite source model in memory.
 
