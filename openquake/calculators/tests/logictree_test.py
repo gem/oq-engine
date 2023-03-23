@@ -72,7 +72,9 @@ class LogicTreeTestCase(CalculatorTestCase):
 
     def test_case_05_bis(self):
         # use_rates, two sources, two uncertainties per source, sampling
-        self.assert_curves_ok(['curve-mean-bis.csv'], case_05.__file__)
+        self.run_calc(case_05.__file__, 'job_bis.ini')
+        [fname] = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/curve-mean-bis.csv', fname)
 
     def test_case_06(self):
         # two source model, use_rates and disagg_by_src
