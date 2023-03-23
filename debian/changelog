@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the source seed generation to not depend on the source ID suffix
   * Tracebacks were printed 3 times in the console: this is finally fixed
   * Forbidden duplicate sources in atomic groups
   * Forbidden duplicate mutually exclusive sources

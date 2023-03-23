@@ -237,6 +237,8 @@ def find_false_duplicates(smdict):
                                    'duplicated: %s', srcid)
             add_checksums(srcs)
             if len(general.groupby(srcs, checksum)) > 1:
+                for i, src in enumerate(srcs):
+                    src.source_id += '!%d' % i
                 found.append(srcid)
     return found
 
