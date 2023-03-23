@@ -45,7 +45,7 @@ from openquake.hazardlib.gsim.base import to_distribution_values
 from openquake.hazardlib.contexts import (
     ContextMaker, FarAwayRupture, get_cmakers)
 from openquake.hazardlib.calc.mean_rates import (
-    calc_gmap, calc_mean_rates, to_rates, to_probs)
+    calc_rmap, calc_mean_rates, to_rates, to_probs)
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
@@ -624,11 +624,11 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     edges, s = edges_shapedic
     rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
     source_id = re.split('[:;.]', groups[0].sources[0].source_id)[0]
-    gmap, ctxs, cmakers = calc_gmap(groups, reduced_lt, sitecol, oq)
-    iml3 = gmap.expand(reduced_lt).interp4D(oq.imtls, oq.poes)[0]  # MPZ
+    rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
+    iml3 = rmap.expand(reduced_lt).interp4D(oq.imtls, oq.poes)[0]  # MPZ
     ws = reduced_lt.rlzs['weight']
     for ctx, cmaker in zip(ctxs, cmakers):
         dis = Disaggregator([ctx], sitecol, cmaker, edges)
         rates5D += dis.disagg_mag_dist_eps(iml3, ws)
-    rates2D = calc_mean_rates(gmap, reduced_lt.g_weights, oq.imtls)[0]
+    rates2D = calc_mean_rates(rmap, reduced_lt.g_weights, oq.imtls)[0]
     return source_id, rates5D, rates2D

@@ -45,36 +45,37 @@ def to_probs(rates):
     return 1. - numpy.exp(- rates)
 
 
-def calc_gmap(src_groups, full_lt, sitecol, oq):
+def calc_rmap(src_groups, full_lt, sitecol, oq):
     """
     :returns: a ProbabilityMap of shape (N, L, Gt)
     """
     oq.use_rates = True
     oq.disagg_by_src = False
     L = oq.imtls.size
-    gmap = ProbabilityMap(sitecol.sids, L, full_lt.Gt).fill(0)
+    rmap = ProbabilityMap(sitecol.sids, L, full_lt.Gt).fill(0)
     cmakers = get_cmakers(src_groups, full_lt, oq)
     ctxs = []
     for group, cmaker in zip(src_groups, cmakers):
         G = len(cmaker.gsims)
         dic = classical(group, sitecol, cmaker)
+        rates = to_rates(dic['pmap'].array)
         ctxs.append(numpy.concatenate(dic['rup_data']).view(numpy.recarray))
         for i, g in enumerate(cmaker.gidx):
-            gmap.array[:, :, g] = dic['pmap'].array[:, :, i % G]
-    return gmap, ctxs, cmakers
+            # += tested in logictree/case_05
+            rmap.array[:, :, g] += rates[:, :, i % G]
+    return rmap, ctxs, cmakers
 
 
-def calc_mean_rates(gmap, gweights, imtls):
+def calc_mean_rates(rmap, gweights, imtls):
     """
     :returns: mean hazard rates as an array of shape (N, M, L1)
     """
     M = len(imtls)
     L1 = imtls.size // M
-    N = len(gmap.array)
-    grates = to_rates(gmap.array)  # shape (N, L, Gt)
+    N = len(rmap.array)
     rates = numpy.zeros((N, M, L1))
     for m, imt in enumerate(imtls):
-        rates[:, m, :] = grates[:, imtls(imt), :] @ [gw[imt] for gw in gweights]
+        rates[:, m, :] = rmap.array[:, imtls(imt), :] @ [gw[imt] for gw in gweights]
     return rates
 
 
@@ -85,8 +86,8 @@ def main(job_ini):
     csm = readinput.get_composite_source_model(oq)
     sitecol = readinput.get_site_collection(oq)
     assert len(sitecol) <= oq.max_sites_disagg, sitecol
-    gmap, ctxs, cmakers = calc_gmap(csm.src_groups, csm.full_lt, sitecol, oq)
-    rates = calc_mean_rates(gmap, csm.full_lt.g_weights, oq.imtls)
+    rmap, ctxs, cmakers = calc_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
+    rates = calc_mean_rates(rmap, csm.full_lt.g_weights, oq.imtls)
     N, M, L1 = rates.shape
     mrates = numpy.zeros((N, L1), oq.imt_dt())
     for m, imt in enumerate(oq.imtls):

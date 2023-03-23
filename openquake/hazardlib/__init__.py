@@ -148,7 +148,7 @@ def read_hparams(job_ini):
     return params
 
 
-def get_smlt(hparams, branchID=None, sourceID=None):
+def get_smlt(hparams, branchID='', sourceID=''):
     """
     :param hparams:
         dictionary of hazard parameters
@@ -170,7 +170,7 @@ def get_smlt(hparams, branchID=None, sourceID=None):
     return smlt
 
 
-def get_flt(hparams, branchID=None):
+def get_flt(hparams, branchID=''):
     """
     :param hparams:
         dictionary of hazard parameters
