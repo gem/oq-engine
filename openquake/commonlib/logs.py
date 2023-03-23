@@ -145,8 +145,9 @@ class LogStreamHandler(logging.StreamHandler):
         self.job_id = job_id
 
     def emit(self, record):
-        _update_log_record(self, record)
-        super().emit(record)
+        if record.levelname != 'CRITICAL':
+            _update_log_record(self, record)
+            super().emit(record)
 
 
 class LogFileHandler(logging.FileHandler):
@@ -171,7 +172,7 @@ class LogDatabaseHandler(logging.Handler):
         super().__init__()
         self.job_id = job_id
 
-    def emit(self, record):  # pylint: disable=E0202
+    def emit(self, record):
         dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
               '%s/%s' % (record.processName, record.process),
               record.getMessage())
@@ -229,12 +230,9 @@ class LogContext:
     def __enter__(self):
         if not logging.root.handlers:  # first time
             level = LEVELS.get(self.log_level, self.log_level)
-            logging.basicConfig(level=level)
+            logging.basicConfig(level=level, handlers=[])
         f = '[%(asctime)s #{} {}%(levelname)s] %(message)s'.format(
             self.calc_id, self.tag + ' ' if self.tag else '')
-        for handler in logging.root.handlers:
-            fmt = logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S')
-            handler.setFormatter(fmt)
         self.handlers = [LogDatabaseHandler(self.calc_id)] \
             if self.usedb else []
         if self.log_file is None:
@@ -245,6 +243,8 @@ class LogContext:
         else:
             self.handlers.append(LogFileHandler(self.calc_id, self.log_file))
         for handler in self.handlers:
+            handler.setFormatter(
+                logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S'))
             logging.root.addHandler(handler)
         return self
 
