@@ -968,6 +968,13 @@ class LtRealization(object):
         return hash(repr(self))
 
 
+def _get_smr(source_id):
+    # 'src1;0.0' => 0
+    suffix = source_id.split(';')[1]
+    smr = suffix.split('.')[0]
+    return int(smr)
+
+
 class FullLogicTree(object):
     """
     The full logic tree as composition of
@@ -1133,6 +1140,9 @@ class FullLogicTree(object):
                 trti = 0
             else:
                 trti = self.trti[src.tectonic_region_type]
+            if smr is None and ';' in src.source_id:
+                # FIXME: this only works in absence of false duplicates
+                smr = _get_smr(src.source_id)
             if smr is None:
                 if not hasattr(self, 'sd'):  # cache source_data by source
                     self.sd = group_array(

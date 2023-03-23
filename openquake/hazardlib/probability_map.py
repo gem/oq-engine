@@ -361,6 +361,7 @@ class ProbabilityMap(object):
             for sid in range(N):
                 for rlz in rlzs:
                     out.array[sid, :, rlz] += self.array[sid, :, g]
+                # NB: for probabilities use
                 # combine_probs(out.array[sid], self.array[sid, :, g], rlzs)
         return out
 
