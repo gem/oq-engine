@@ -217,6 +217,7 @@ def add_checksums(srcs):
 def find_false_duplicates(smdict):
     """
     Discriminate different sources with same ID (false duplicates)
+    and put a question mark in their source ID
     """
     acc = general.AccumDict(accum=[])
     atomic = set()
@@ -237,6 +238,8 @@ def find_false_duplicates(smdict):
                                    'duplicated: %s', srcid)
             add_checksums(srcs)
             if len(general.groupby(srcs, checksum)) > 1:
+                for i, src in enumerate(srcs):
+                    src.source_id = src.source_id + '!%d' % i
                 found.append(srcid)
     return found
 

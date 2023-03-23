@@ -1141,7 +1141,7 @@ class FullLogicTree(object):
             else:
                 trti = self.trti[src.tectonic_region_type]
             if smr is None and ';' in src.source_id:
-                # FIXME: this only works in absence of false duplicates
+                # assume <base_id>;<smr>
                 smr = _get_smr(src.source_id)
             if smr is None:
                 if not hasattr(self, 'sd'):  # cache source_data by source
