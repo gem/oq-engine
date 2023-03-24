@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import numpy
 from openquake.baselib import sap
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -109,4 +110,5 @@ main.job_ini = 'path to a job.ini file'
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     sap.run(main)
