@@ -114,9 +114,9 @@ class LogicTreeTestCase(CalculatorTestCase):
 
         # check the weights of the sources
         info = self.calc.datastore.read_df('source_info', 'source_id')
-        self.assertEqual(info.loc[b'1'].weight, 184)
-        self.assertEqual(info.loc[b'2'].weight, 118)
-        self.assertEqual(info.loc[b'3'].weight, 3914)
+        self.assertEqual(info.loc[b'1'].weight, 276)
+        self.assertEqual(info.loc[b'2'].weight, 177)
+        self.assertEqual(info.loc[b'3'].weight, 5871)
 
     def test_case_07_bis(self):
         # same as 07 but with sampling
