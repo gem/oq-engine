@@ -633,7 +633,7 @@ def get_gsim_lt(oqparam, trts=('*',)):
         for branch in gsim_lt.branches:
             for k, w in sorted(branch.weight.dic.items()):
                 if k != 'weight':
-                    logging.warning(
+                    logging.debug(
                         'Using weight=%s instead of %s for %s %s',
                         branch.weight.dic['weight'], w, branch.gsim, k)
                     del branch.weight.dic[k]
