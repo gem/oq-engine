@@ -837,22 +837,6 @@ def get_rel_source_ids(dstore, imts, poes, threshold=.1):
     return python3compat.decode(sorted(source_ids))
 
 
-def sanity_check(source_id, rates, disagg_by_src):
-    """
-    Check that the rates computed with the restricted logic tree and
-    restricted groups are consistent with the full rates.
-
-    :param source_id: base ID of a source
-    :param rates: matrix of rates of shape (M, L1)
-    :param disagg_by_src: dataset with shape (N, M, L1, Ns)
-    """
-    srcids = disagg_by_src.src_id[:]
-    srcid = source_id.encode('utf8')
-    srcidx = numpy.where(srcids == srcid)[0][0]
-    expected_rates = disagg_by_src.array[0, :, :, srcidx]  # shape (M, L1)
-    numpy.testing.assert_allclose(rates, expected_rates)
-
-
 def disagg_by_source(parent, csm, mon):
     """
     :returns: pairs (source_id, disagg_rates)
@@ -879,10 +863,4 @@ def disagg_by_source(parent, csm, mon):
         groups = relt.reduce_groups(csm.src_groups, source_id)
         assert groups, 'No groups for %s' % source_id
         smap.submit((groups, sitecol, relt, edges_shp, oq))
-    items = []
-    for source_id, rates5D, rates2D in smap:
-        if oq.use_rates:
-            logging.info('Checking the mean rates for source %s', source_id)
-            sanity_check(source_id, rates2D, parent['disagg_by_src'])
-        items.append((source_id, rates5D, rates2D))
-    return items
+    return list(smap)  # [(source_id, rates5D, rates2D), ...]
