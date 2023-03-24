@@ -931,7 +931,7 @@ def view_mean_rates(token, dstore):
     """
     oq = dstore['oqparam']
     assert oq.use_rates
-    poes = dstore.sel('hcurves-stats', site_id=0, stat='mean')[0, 0]  # N, R, M, L1
+    poes = dstore.sel('hcurves-stats', site_id=0, stat='mean')[0, 0]  # NRML1
     rates = numpy.zeros(poes.shape[1], dt(oq.imtls))
     for m, imt in enumerate(oq.imtls):
         rates[imt] = calc.disagg.to_rates(poes[m])
