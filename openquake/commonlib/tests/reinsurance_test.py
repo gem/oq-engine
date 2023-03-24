@@ -56,7 +56,7 @@ def by_policy_event(agglosses_df, policy_df, treaty_df):
         df = reinsurance.by_policy(agglosses_df, dict(policy), treaty_df)
         dfs.append(df)
     rbp = pandas.concat(dfs)
-    rbe = reinsurance._by_event(rbp, treaty_df)
+    rbe = reinsurance.by_event(rbp, treaty_df)
     return rbp, rbe
 
 
@@ -139,7 +139,7 @@ event_id,policy_id,retention,claim,prop1,prop2,policy_grp
 1,       2,        1500, 5000, 2000.0,1500.0,AB
 1,       3,         600, 3000, 1500.0, 900.0,AB
 1,       4,        1800, 6000, 2400.0,1800.0,AB''')
-        byevent = reinsurance._by_event(bypolicy, treaty_df)
+        byevent = reinsurance.by_event(bypolicy, treaty_df)
         assert_ok(byevent, _df('''\
 event_id,retention,claim,prop1,prop2,over_A
        1,13200.0,26000,5000.0,7800.0,6900'''))
