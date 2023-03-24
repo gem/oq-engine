@@ -514,7 +514,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.execute_par(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
-            raise RuntimeError('Filtered away all ruptures??')
+            raise RuntimeError('There are no ruptures close to the sites')
         logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
             int(self.cfactor[1]), int(self.cfactor[0]),
             self.cfactor[1] / self.cfactor[0]))

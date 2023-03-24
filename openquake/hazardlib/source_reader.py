@@ -26,7 +26,7 @@ import gzip
 import zlib
 import numpy
 
-from openquake.baselib import parallel, general, hdf5
+from openquake.baselib import parallel, general, hdf5, python3compat
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.lt import apply_uncertainties
@@ -502,9 +502,8 @@ class CompositeSourceModel:
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         assert len(source_data) < TWO32, len(source_data)
-        for src_id, grp_id, nsites, weight, ctimes in zip(
-                source_data['src_id'], source_data['grp_id'],
-                source_data['nsites'],
+        for src_id, nsites, weight, ctimes in python3compat.zip(
+                source_data['src_id'], source_data['nsites'],
                 source_data['weight'], source_data['ctimes']):
             baseid = basename(src_id)
             row = self.source_info[baseid]
