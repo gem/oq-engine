@@ -26,7 +26,7 @@ from openquake.engine.engine import create_jobs, run_jobs
 
 # for instance, to run the demos in parallel:
 # python -m openquake.engine.multirun demos/hazard
-def main(dirname, job_ini='job.ini', multi=True, **kw):
+def main(dirname, job_ini='job.ini', concurrent=0, **kw):
     assert os.path.exists(dirname), dirname
     inis = []
     for cwd, dirs, files in os.walk(dirname):
@@ -41,8 +41,8 @@ def main(dirname, job_ini='job.ini', multi=True, **kw):
     from openquake.server import dbserver  # avoid CodeDependencyError
     dbserver.ensure_on()
     t0 = time.time()
-    if multi:  # in parallel
-        ctxs = run_jobs(create_jobs(inis, multi=True))
+    if concurrent:  # in parallel
+        ctxs = run_jobs(create_jobs(inis, multi=True), concurrent)
         out = [(ctx.calc_id, ini) for ctx, ini in zip(ctxs, inis)]
     else:  # sequentially
         out = []
