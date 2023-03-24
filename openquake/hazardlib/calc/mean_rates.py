@@ -81,6 +81,10 @@ def calc_mean_rates(rmap, gweights, imtls):
 
 
 def main(job_ini):
+    """
+    Compute the mean rates from scratch without parallelization
+    (useful when debugging single site calculations)
+    """
     from openquake.commonlib import readinput
     from openquake.calculators.views import text_table
     oq = readinput.get_oqparam(job_ini)
@@ -100,6 +104,8 @@ def main(job_ini):
         mrates[imt] = rates[:, m]
     print('Mean hazard rates for the first site')
     print(text_table(mrates[0], ext='org'))
+
+main.job_ini = 'path to a job.ini file'
 
 
 if __name__ == '__main__':
